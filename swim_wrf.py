@@ -29,6 +29,7 @@ LICENSE
     This script is in the public domain.
 
 VERSION
+    0.6   - adding WRF high res winds
     0.5.1 - SPEED (and new microphysics) ~50x faster
     0.5   - added LT winds & fancy 3D grid(?)
     0.4   - adding PBL mixing and (stupid) radiative cooling 1.5K/day
@@ -708,12 +709,17 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
 
     gkern=gauss_kern(40)
     wrf_base=WRF_Reader(file_search,sfc=sfc_file_search,bilin=True,nn=False)
+    wrfwinds=WRF_Reader(wind_files,bilin=False,nn=True, windonly=True)
     timestep=1.0*60.0*60.0 #3hrs
     oldweather=None
     print("Off and running...")
+    windweather=wrfwinds.next()
     weather=wrf_base.next()
+    weather.u=windweather.u
+    weather.v=windweather.v
+    weather.w=windweather.w
     # topo_adjust_weather(topo, wrf_base.topo, weather)
-    topo_adjust_weather(wrf_base.hgt3d, weather.hgt, weather)
+    # topo_adjust_weather(wrf_base.hgt3d, weather.hgt, weather)
     r_matrix=None
     if use_linear_winds:
         # for use with the linear theory winds
@@ -740,7 +746,7 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
     processPool=None
     print("Reading WRF")
     q=Queue()
-    p1=Process(target=simul_next,args=(wrf_base,q,r_matrix,Fzs,padx,pady))
+    p1=Process(target=simul_next,args=(wrf_base,wrfwinds,q,r_matrix,Fzs,padx,pady))
     p1.start()
     done=False
     pIOlist=[None for i in range(8)]
@@ -750,15 +756,8 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
         weather=q.get()
         wrf_base.time_inc()
         p1.join()
-        p1=Process(target=simul_next,args=(wrf_base,q,r_matrix,Fzs,padx,pady))
+        p1=Process(target=simul_next,args=(wrf_base,wrfwinds,q,r_matrix,Fzs,padx,pady))
         p1.start()
-        # topo_adjust_weather(topo, wrf_base.topo, weather)
-        # topo_adjust_weather(wrf_base.hgt3d, weather.hgt, weather)
-        # if use_linear_winds:
-        #     (junku,junkv,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
-        #     lt_winds.update_winds(wrf_base.hgt3d,Fzs,weather.u,weather.v,weather.w,dx=wrfres,
-        #                           Ndsq=1E-5,r_matrix=r_matrix,padx=padx,pady=pady)
-        # (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
 
         update_weather(weather,oldweather)
         t2=time.time()
