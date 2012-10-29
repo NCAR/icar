@@ -350,8 +350,14 @@ class WRF_Reader(object):
         print('Calculating XY match lookup table, this may take a while.')
         if self._nn:
             (x,y)=match_xy(nlat,nlon,wlat,wlon)
+            (xu,yv)=match_xy(nulat,nulon,wlat,wlon)
+            (xv,yv)=match_xy(nvlat,nvlon,wlat,wlon)
             self.x=x.astype('i')
             self.y=y.astype('i')
+            self.xu=xu.astype('i')
+            self.yu=yu.astype('i')
+            self.xv=xv.astype('i')
+            self.yv=yv.astype('i')
             self.topo=hgt[y,x]
             maxheight=maxheight[y,x][halfk:-halfk,halfk:-halfk]
             self.make_model_domain(nlevels,maxheight,hires_topo)
@@ -406,11 +412,25 @@ class WRF_Reader(object):
         maxy=self.y.max()+1
         curx=self.x-minx
         cury=self.y-miny
+
+        minxu=self.xu.min()
+        maxxu=self.xu.max()+1
+        minyu=self.yu.min()
+        maxyu=self.yu.max()+1
+        curxu=self.xu-minxu
+        curyu=self.yu-minyu
+
+        minxv=self.x.min()
+        maxxv=self.x.max()+1
+        minyv=self.y.min()
+        maxyv=self.y.max()+1
+        curxv=self.x-minxv
+        curyv=self.y-minyv
         plevels=self.usepressures
         d=swim_io.Dataset(self._filenames[curfile], 'r')
         if self.windonly:
-            wind_u=d.variables[self.uvar][:,miny:maxy,minx:maxx][plevels,curx,cury]
-            wind_v=d.variables[self.vvar][:,miny:maxy,minx:maxx][plevels,curx,cury]
+            wind_u=d.variables[self.uvar][:,minyu:maxyu,minxu:maxxu][plevels,curxu,curyu]
+            wind_v=d.variables[self.vvar][:,minyv:maxyv,minxv:maxxv][plevels,curxv,curyv]
             temperature=None
             pressure=None
             specific_humidity=None
@@ -420,15 +440,15 @@ class WRF_Reader(object):
             pressure=d.variables[self.hvar][:,miny:maxy,minx:maxx][plevels,curx,cury]
             specific_humidity=d.variables[self.qvvar][:,miny:maxy,minx:maxx][plevels,curx,cury]
             relative_humidity=specific_humidity.copy()
-            wind_u=d.variables[self.uvar][:,miny:maxy,minx:maxx][plevels,curx,cury]
-            wind_v=d.variables[self.vvar][:,miny:maxy,minx:maxx][plevels,curx,cury]
+            wind_u=d.variables[self.uvar][:,minyu:maxyu,minxu:maxxu][plevels,curxu,curyu]
+            wind_v=d.variables[self.vvar][:,minyv:maxyv,minxv:maxxv][plevels,curxv,curyv]
         d.close()
 
         datestr=self._filenames[curfile].split('.')[1]
 
         self._curfile+=1
         N=wind_v.shape
-        N[0]+=1 #v is staggered in y direction
+        N[2]+=1 #v is staggered in y direction
         return Bunch(ta=temperature, p=pressure,
                      sh=specific_humidity, 
                      rh=relative_humidity, 
