@@ -372,7 +372,7 @@ class WRF_Reader(object):
             self.make_model_domain(nlevels,MH,hires_topo)
             
         
-    def __init__(self, file_search,sfc=None,nn=True, bilin=False, *args, **kwargs):
+    def __init__(self, file_search,sfc=None,nn=True, bilin=False, windonly=False, *args, **kwargs):
         super(WRF_Reader,self).__init__(*args, **kwargs)
         self._filenames=np.sort(glob.glob(file_search))
         if sfc!=None:
@@ -383,6 +383,7 @@ class WRF_Reader(object):
         elif bilin:
             self._nn=False
             self._bilin=True
+        self.windonly=windonly
         self.init_xy(self._filenames[0])
         self.curpos=19*24-2
         # d=swim_io.Dataset(self._filenames[self._curfile], 'r')
@@ -405,24 +406,33 @@ class WRF_Reader(object):
         maxy=self.y.max()+1
         curx=self.x-minx
         cury=self.y-miny
-        
+        plevels=self.usepressures
         d=swim_io.Dataset(self._filenames[curfile], 'r')
-        temperature=d.variables[self.tvar][:,miny:maxy,minx:maxx][:,curx,cury]
-        pressure=d.variables[self.hvar][:,miny:maxy,minx:maxx][:,curx,cury]
-        specific_humidity=d.variables[self.qcvar][:,miny:maxy,minx:maxx][:,curx,cury]
-        relative_humidity=d.variables[self.qvvar][:,miny:maxy,minx:maxx][:,curx,cury]
-        wind_u=d.variables[self.uvar][:,miny:maxy,minx:maxx][:,curx,cury]
-        wind_v=d.variables[self.vvar][:,miny:maxy,minx:maxx][:,curx,cury]
+        if self.windonly:
+            wind_u=d.variables[self.uvar][:,miny:maxy,minx:maxx][plevels,curx,cury]
+            wind_v=d.variables[self.vvar][:,miny:maxy,minx:maxx][plevels,curx,cury]
+            temperature=None
+            pressure=None
+            specific_humidity=None
+            relative_humidity=None
+        else:
+            temperature=d.variables[self.tvar][:,miny:maxy,minx:maxx][plevels,curx,cury]
+            pressure=d.variables[self.hvar][:,miny:maxy,minx:maxx][plevels,curx,cury]
+            specific_humidity=d.variables[self.qvvar][:,miny:maxy,minx:maxx][plevels,curx,cury]
+            relative_humidity=specific_humidity.copy()
+            wind_u=d.variables[self.uvar][:,miny:maxy,minx:maxx][plevels,curx,cury]
+            wind_v=d.variables[self.vvar][:,miny:maxy,minx:maxx][plevels,curx,cury]
         d.close()
 
         datestr=self._filenames[curfile].split('.')[1]
 
         self._curfile+=1
-        
+        N=wind_v.shape
+        N[0]+=1 #v is staggered in y direction
         return Bunch(ta=temperature, p=pressure,
                      sh=specific_humidity, 
                      rh=relative_humidity, 
-                     u=wind_u, v=wind_v,
+                     u=wind_u, v=wind_v,w=np.zeros(N,dtype=np.float32,order="F")
                      date=datestr)
     
     def convolve2to3(self,data,kern,mode="same"):
@@ -528,35 +538,68 @@ class WRF_Reader(object):
         Nxy=curx.shape[0:2]
         N=[Nz,Nxy[0],Nxy[1]]
         
-        potential_temperature=np.zeros(N,dtype=np.float32,order="F")
-        hgt=np.zeros(N,dtype=np.float32,order="F")
-        qc=np.zeros(N,dtype=np.float32,order="F")
-        # qi=np.zeros(N,dtype=np.float32) #for now qi is added to qc so we don't have to worry about ni
-        specific_humidity=np.zeros(N,dtype=np.float32,order="F")
         wind_u=np.zeros(N,dtype=np.float32,order="F")
         wind_v=np.zeros(N,dtype=np.float32,order="F")
-        pressure=np.zeros(N,dtype=np.float32,order="F")
         
-        # Note, this currently reads all pressure levels from disk then subsets to "usepressures"
-        curdata=d.variables[self.pvar_pert][self.curpos,...]
-        curdata=(curdata[usepressures,:,:]+self.base_pressure)[:,miny:maxy,minx:maxx]
-        for i in range(4):pressure+=curdata[:,cury[:,:,i],curx[:,:,i]]*w[:,:,i]
-        curdata=d.variables[self.tvar][self.curpos,...][:,miny:maxy,minx:maxx][usepressures,:,:]+300
-        for i in range(4):potential_temperature+=curdata[:,cury[:,:,i],curx[:,:,i]]*w[:,:,i]
-        curdata=(d.variables[self.gphvar_pert][self.curpos,...][usepressures,:,:]+self.base_gph)[:,miny:maxy,minx:maxx]
-        for i in range(4):hgt+=curdata[:,cury[:,:,i],curx[:,:,i]]*w[:,:,i]
-        curdata=d.variables[self.qcvar][self.curpos,...][:,miny:maxy,minx:maxx][usepressures,:,:]
-        for i in range(4):qc+=curdata[:,cury[:,:,i],curx[:,:,i]]*w[:,:,i]
-        curdata=d.variables[self.qivar][self.curpos,...][:,miny:maxy,minx:maxx][usepressures,:,:]
-        for i in range(4):qc+=curdata[:,cury[:,:,i],curx[:,:,i]]*w[:,:,i]
-        curdata=d.variables[self.qvvar][self.curpos,...][:,miny:maxy,minx:maxx][usepressures,:,:]
-        for i in range(4):specific_humidity+=curdata[:,cury[:,:,i],curx[:,:,i]]*w[:,:,i]
-        # curdata=d.variables[self.uvar][self.curpos,...][:,minuy:maxuy,minux:maxux][usepressures,:,:]
-        curdata=fast_mean.fast_smooth(d.variables[self.uvar][self.curpos,...][:,minuy:maxuy,minux:maxux][usepressures,:,:],offset)
-        for i in range(4):wind_u+=curdata[:,curuy[:,:,i],curux[:,:,i]]*wu[:,:,i]
-        # curdata=d.variables[self.vvar][self.curpos,...][:,minvy:maxvy,minvx:maxvx][usepressures,:,:]
-        curdata=fast_mean.fast_smooth(d.variables[self.vvar][self.curpos,...][:,minvy:maxvy,minvx:maxvx][usepressures,:,:],offset)
-        for i in range(4):wind_v+=curdata[:,curvy[:,:,i],curvx[:,:,i]]*wv[:,:,i]
+        if self.windonly:
+            curdata=fast_mean.fast_smooth(d.variables[self.uvar][self.curpos,...][:,minuy:maxuy,minux:maxux][usepressures,:,:],offset)
+            for i in range(4):wind_u+=curdata[:,curuy[:,:,i],curux[:,:,i]]*wu[:,:,i]
+            # curdata=d.variables[self.vvar][self.curpos,...][:,minvy:maxvy,minvx:maxvx][usepressures,:,:]
+            curdata=fast_mean.fast_smooth(d.variables[self.vvar][self.curpos,...][:,minvy:maxvy,minvx:maxvx][usepressures,:,:],offset)
+            for i in range(4):wind_v+=curdata[:,curvy[:,:,i],curvx[:,:,i]]*wv[:,:,i]
+            potential_temperature=None
+            hgt=None
+            qc=None
+            specific_humidity=None
+            pressure=None
+            qr=None
+            nr=None
+            qs=None
+            qi=None
+            ni=None
+            qg=None
+        else:
+            potential_temperature=np.zeros(N,dtype=np.float32,order="F")
+            hgt=np.zeros(N,dtype=np.float32,order="F")
+            qc=np.zeros(N,dtype=np.float32,order="F")
+            # qi=np.zeros(N,dtype=np.float32) #for now qi is added to qc so we don't have to worry about ni
+            specific_humidity=np.zeros(N,dtype=np.float32,order="F")
+            pressure=np.zeros(N,dtype=np.float32,order="F")
+            
+            # Note, this currently reads all pressure levels from disk then subsets to "usepressures"
+            curdata=d.variables[self.pvar_pert][self.curpos,...]
+            curdata=(curdata[usepressures,:,:]+self.base_pressure)[:,miny:maxy,minx:maxx]
+            for i in range(4):pressure+=curdata[:,cury[:,:,i],curx[:,:,i]]*w[:,:,i]
+            curdata=d.variables[self.tvar][self.curpos,...][:,miny:maxy,minx:maxx][usepressures,:,:]+300
+            for i in range(4):potential_temperature+=curdata[:,cury[:,:,i],curx[:,:,i]]*w[:,:,i]
+            curdata=(d.variables[self.gphvar_pert][self.curpos,...][usepressures,:,:]+self.base_gph)[:,miny:maxy,minx:maxx]
+            for i in range(4):hgt+=curdata[:,cury[:,:,i],curx[:,:,i]]*w[:,:,i]
+            curdata=d.variables[self.qcvar][self.curpos,...][:,miny:maxy,minx:maxx][usepressures,:,:]
+            for i in range(4):qc+=curdata[:,cury[:,:,i],curx[:,:,i]]*w[:,:,i]
+            curdata=d.variables[self.qivar][self.curpos,...][:,miny:maxy,minx:maxx][usepressures,:,:]
+            for i in range(4):qc+=curdata[:,cury[:,:,i],curx[:,:,i]]*w[:,:,i]
+            curdata=d.variables[self.qvvar][self.curpos,...][:,miny:maxy,minx:maxx][usepressures,:,:]
+            for i in range(4):specific_humidity+=curdata[:,cury[:,:,i],curx[:,:,i]]*w[:,:,i]
+            # curdata=d.variables[self.uvar][self.curpos,...][:,minuy:maxuy,minux:maxux][usepressures,:,:]
+            curdata=fast_mean.fast_smooth(d.variables[self.uvar][self.curpos,...][:,minuy:maxuy,minux:maxux][usepressures,:,:],offset)
+            for i in range(4):wind_u+=curdata[:,curuy[:,:,i],curux[:,:,i]]*wu[:,:,i]
+            # curdata=d.variables[self.vvar][self.curpos,...][:,minvy:maxvy,minvx:maxvx][usepressures,:,:]
+            curdata=fast_mean.fast_smooth(d.variables[self.vvar][self.curpos,...][:,minvy:maxvy,minvx:maxvx][usepressures,:,:],offset)
+            for i in range(4):wind_v+=curdata[:,curvy[:,:,i],curvx[:,:,i]]*wv[:,:,i]
+
+            potential_temperature=potential_temperature[:,halfk:-halfk,halfk:-halfk]
+            pressure=pressure[:,halfk:-halfk,halfk:-halfk]
+            specific_humidity=specific_humidity[:,halfk:-halfk,halfk:-halfk]
+            hgt=hgt[:,halfk:-halfk,halfk:-halfk]/9.8
+            qc=qc[:,halfk:-halfk,halfk:-halfk]
+            
+            qr=np.zeros(N,dtype=np.float32,order="F")
+            nr=np.zeros(N,dtype=np.float32,order="F")
+            qs=np.zeros(N,dtype=np.float32,order="F")
+            qi=np.zeros(N,dtype=np.float32,order="F")
+            ni=np.zeros(N,dtype=np.float32,order="F")
+            qg=np.zeros(N,dtype=np.float32,order="F")
+            
         
         self.curpos+=1
         kernelsize=np.int(np.floor(halfk))
@@ -564,11 +607,6 @@ class WRF_Reader(object):
         #        wind_v=wind_v[:,halfk:-halfk,halfk:-halfk]
         wind_u=fast_mean.fast_smooth(wind_u,halfk)[:,halfk:-halfk,halfk:-halfk]
         wind_v=fast_mean.fast_smooth(wind_v,halfk)[:,halfk:-halfk,halfk:-halfk]
-        potential_temperature=potential_temperature[:,halfk:-halfk,halfk:-halfk]
-        pressure=pressure[:,halfk:-halfk,halfk:-halfk]
-        specific_humidity=specific_humidity[:,halfk:-halfk,halfk:-halfk]
-        hgt=hgt[:,halfk:-halfk,halfk:-halfk]/9.8
-        qc=qc[:,halfk:-halfk,halfk:-halfk]
         N=qc.shape
         #        print(wind_u.max(),wind_v.max())
         if self._sfc_files!=None:
@@ -583,7 +621,7 @@ class WRF_Reader(object):
             # print(pblindex.max(),pblindex.min(),pblindex.mean())
         else:
             sfc=None
-            
+        
         d.close()
         self.time_inc()
         return Bunch(p=pressure,th=potential_temperature,
@@ -591,9 +629,7 @@ class WRF_Reader(object):
                      qv=specific_humidity/(1-specific_humidity), 
                      u=wind_u, v=wind_v,w=np.zeros(N,dtype=np.float32,order="F"),
                      date=datestr,sfc=sfc,
-                     qr=np.zeros(N,dtype=np.float32,order="F"),nr=np.zeros(N,dtype=np.float32,order="F"),
-                     qs=np.zeros(N,dtype=np.float32,order="F"),qi=np.zeros(N,dtype=np.float32,order="F"),
-                     ni=np.zeros(N,dtype=np.float32,order="F"),qg=np.zeros(N,dtype=np.float32,order="F"),
+                     qr=qr,qi=qi,qs=qs,qg=qg,ni=ni,nr=nr
                      )
 
     def time_inc(self):
