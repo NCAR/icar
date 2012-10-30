@@ -99,9 +99,6 @@ elif wrfres==4000:
     topofile=base_dir+'4km_wrf_output.nc'
 outputdir='output/'
 
-#calibrations:
-#  in convert_p dz*0.99
-
 
 def match_xy(lat1,lon1,lat2,lon2):
     N=lat2.shape
@@ -240,7 +237,7 @@ def convert_p(p,h,dz):
     # p    in pascals
     # h,dz in meters
     slp = p/(1 - 2.25577E-5*h)**5.25588
-    pout=slp*(1 - 2.25577E-5*(h+dz*0.99))**5.25588
+    pout=slp*(1 - 2.25577E-5*(h+dz))**5.25588
     return pout
 
 def fix_top_bottom(topo,dz):
