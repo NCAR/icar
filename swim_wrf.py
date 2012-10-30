@@ -59,6 +59,7 @@ import swim_fast as swim # a faster version of the hand off between python and f
 import fast_mean # inline C to do a running spatial mean
 import lt_winds #computes Linear Theory 3D winds
 
+
 NPROCESSORS=2 #not used currently
 R=8.3144621 # J/mol/K
 cp=29.19 # J/mol/K   =1.012 J/g/K
@@ -731,15 +732,38 @@ def adjust_winds(u,v,w,prestaggered=False):
     for i in range(w.shape[0]-1):
         w[i+1,1:-1,1:-1]=w[i,1:-1,1:-1]-divergance[i+1,:,:]
     return(ustag,vstag,w)
+    
+def rotate_winds(u,v,hgt,dx=4000.0,rotation=None):
+    if rotation=None:
+        urot=np.cos(np.atan(np.abs(hgt[:,:,1:]-hgt[:,:,:-1])/dx))
+        vrot=np.cos(np.atan(np.abs(hgt[:,1:,:]-hgt[:,:-1,:])/dx))
+        rotation=[urot,vrot]
+    else:
+        urot,vrot=rotation
+    u*=urot
+    v*=vrot
+    return rotation
+    
 
-def simul_next(base,q,r_matrix,Fzs,padx,pady):
+def simul_next(base,wrfwinds,q,r_matrix,Fzs,padx,pady):
     weather=base.next()
     topo_adjust_weather(base.hgt3d, weather.hgt, weather)
     if use_linear_winds:
         (junku,junkv,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
-        ndsq=np.mean((weather.t[1:,...]-weather.t[:-1,...])/(base.hgt3d[1:,...]-base.hgt3d[:-1,...]))
+        # calculate the (squared) brunt vaisala frequency
+        ndsq=9.8/weather.t.mean()*np.mean((weather.t[1:,...]-weather.t[:-1,...])/(base.hgt3d[1:,...]-base.hgt3d[:-1,...]))
         lt_winds.update_winds(base.hgt3d,Fzs,weather.u,weather.v,weather.w,dx=wrfres,
-                              Ndsq=1E-5,r_matrix=r_matrix,padx=padx,pady=pady)
+                              Ndsq=ndsq,r_matrix=r_matrix,padx=padx,pady=pady,rotation=False)
+        rotate_winds(wind.u,wind.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
+    elif use_wrf_winds:
+        wind=wrfwinds.next()
+        rotate_winds(wind.u,wind.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
+        weather.u=wind.u
+        weather.v=wind.v
+    else:
+        r_matrix=rotate_winds(weather.u,weather.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
+
+
     (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
     
     q.put(weather)
@@ -773,11 +797,13 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
 
     gkern=gauss_kern(40)
     wrf_base=WRF_Reader(file_search,sfc=sfc_file_search,bilin=True,nn=False)
-    wrfwinds=WRF_Reader(wind_files,bilin=False,nn=True, windonly=True)
+    if use_wrf_winds:
+        wrfwinds=WRF_Reader(wind_files,bilin=False,nn=True, windonly=True)
+    else:
+        wrfwinds=None
     timestep=1.0*60.0*60.0 #3hrs
     oldweather=None
     print("Off and running...")
-    windweather=wrfwinds.next()
     weather=wrf_base.next()
     weather.u=windweather.u
     weather.v=windweather.v
@@ -792,8 +818,13 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
         (junku,junkv,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
         r_matrix=lt_winds.update_winds(wrf_base.hgt3d,Fzs,weather.u,weather.v,weather.w,dx=wrfres,
                                       Ndsq=1E-5,r_matrix=None,padx=padx,pady=pady)
+    elif use_wrf_winds:
+        wind=wrfwinds.next()
+        r_matrix=rotate_winds(wind.u,wrf.v,wrf_base.hgt3d,dx=wrfres,rotation=None)
+        weather.u=wind.u
+        weather.v=wind.v
     else:
-        r_matrix=None
+        r_matrix=rotate_winds(weather.u,weather.v,wrf_base.hgt3d,dx=wrfres,rotation=None)
         padx=None
         pady=None
         Fzs=None
@@ -805,7 +836,6 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
     print("Initializing microphysics...")
     swim_lib.swim_step.init(physics) #calls thompson_init internally if physics==1
 
-    #processPool=Pool(NPROCESSORS)
     print(oldweather.date)
     processPool=None
     print("Reading WRF")
@@ -818,7 +848,11 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
     while not done:
         t1=time.time()
         weather=q.get()
+        # because of the way the next time step is read now, the state of this object does not get updated
+        # so update the time step for it here
         wrf_base.time_inc()
+        if use_wrf_winds:
+            wrfwinds.time_inc()
         p1.join()
         p1=Process(target=simul_next,args=(wrf_base,wrfwinds,q,r_matrix,Fzs,padx,pady))
         p1.start()
@@ -868,8 +902,6 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
 
         oldweather=weather
     wrf_base.close()
-    if processPool:
-        processPool.close()
 
 
 
