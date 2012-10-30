@@ -293,23 +293,23 @@ class WRF_Reader(object):
     _geoLUT=None
     topo=None
     # atm variables in WRF 3d files
-    timevar="Times"
-    tvar='T'
-    hvar='HGT'
-    gphvar_base="PHB"
-    gphvar_pert="PH"
-    pvar_base="PB"
-    pvar_pert="P"
-    qcvar='QCLOUD'
-    qvvar='QVAPOR'
-    qivar='QICE'
-    wvar='W'
-    uvar='U'
-    vvar='V'
-    pblvar='PBLH'
+    timevar="Times"      # time...                                  1D
+    hvar='HGT'           #terran height(?)                  [m]     2D
+    tvar='T'             #potential temperature (-300)      [K]     3D
+    gphvar_base="PHB"    #base geopotential height          [m]     3D
+    gphvar_pert="PH"     #geopotential height perturbation  [m]     3D
+    pvar_base="PB"       #base pressure                     [pa]    3D
+    pvar_pert="P"        # pressure perturbation            [pa]    3D
+    qcvar='QCLOUD'       # cloud water mixing ratio         [kg/kg] 3D
+    qvvar='QVAPOR'       # water vapor mixing ratio         [kg/kg] 3D
+    qivar='QICE'         # cloud ice mixing ratio           [kg/kg] 3D
+    wvar='W'             # vertical winds                   [pa/s]  3D NOT USED
+    uvar='U'             # U wind component                 [m/s]   3D 
+    vvar='V'             # V wind component                 [m/s]   3D 
     # land surface variables in WRF files
-    lhvar="LH"
-    shvar="HFX"
+    pblvar='PBLH'        # PBL height                       [m]     2D
+    lhvar="LH"           # Latent heat flux from surface    [W/m^2] 2D
+    shvar="HFX"          # Sensible heat flux from surface  [W/m^2] 2D
 
     def make_model_domain(self,nlevels,maxheight,topo):
         sz=topo.shape
@@ -335,8 +335,8 @@ class WRF_Reader(object):
         nvlat=d.variables['XLAT_V'][0,:,:]
         nvlon=d.variables['XLONG_V'][0,:,:]
         hgt=d.variables['HGT'][0,:,:]
-        nlevels=20
-        self.usepressures=np.arange(nlevels)
+        self.nlevels=20
+        self.usepressures=np.arange(self.nlevels)
         self.base_pressure=d.variables[self.pvar_base][0,...][self.usepressures,...]
         self.base_gph=d.variables[self.gphvar_base][0,...][self.usepressures,...]
         maxheight=self.base_gph[-1,:,:]/9.8
@@ -346,6 +346,8 @@ class WRF_Reader(object):
         hires_topo=swim_io.read_nc(wrffilename,var='HGT').data[0,sub_y0:sub_y1,sub_x0:sub_x1][halfk:-halfk,halfk:-halfk]
         print('Calculating XY match lookup table, this may take a while.')
         if self._nn:
+            wlat=wlat[halfk:-halfk,halfk:-halfk]
+            wlon=wlon[halfk:-halfk,halfk:-halfk]
             (x,y)=match_xy(nlat,nlon,wlat,wlon)
             (xu,yv)=match_xy(nulat,nulon,wlat,wlon)
             (xv,yv)=match_xy(nvlat,nvlon,wlat,wlon)
@@ -357,7 +359,7 @@ class WRF_Reader(object):
             self.yv=yv.astype('i')
             self.topo=hgt[y,x]
             maxheight=maxheight[y,x][halfk:-halfk,halfk:-halfk]
-            self.make_model_domain(nlevels,maxheight,hires_topo)
+            self.make_model_domain(self.nlevels,maxheight,hires_topo)
             
         elif self._bilin:
             self._geoLUT=match_xy_bilin(nlat,nlon,wlat,wlon)
@@ -372,7 +374,7 @@ class WRF_Reader(object):
             MH=np.zeros(curx.shape[0:2],dtype=np.float32)
             for i in range(4):MH+=maxheight[cury[:,:,i],curx[:,:,i]]*w[:,:,i]
             MH=MH[halfk:-halfk,halfk:-halfk]
-            self.make_model_domain(nlevels,MH,hires_topo)
+            self.make_model_domain(self.nlevels,MH,hires_topo)
             
         
     def __init__(self, file_search,sfc=None,nn=True, bilin=False, windonly=False, *args, **kwargs):
@@ -426,8 +428,9 @@ class WRF_Reader(object):
         plevels=self.usepressures
         d=swim_io.Dataset(self._filenames[curfile], 'r')
         if self.windonly:
-            wind_u=d.variables[self.uvar][:,minyu:maxyu,minxu:maxxu][plevels,curxu,curyu]
-            wind_v=d.variables[self.vvar][:,minyv:maxyv,minxv:maxxv][plevels,curxv,curyv]
+            wind_u=d.variables[self.uvar][self.curpos,...][:,minyu:maxyu,minxu:maxxu][plevels,curxu,curyu]
+            wind_v=d.variables[self.vvar][self.curpos,...][:,minyv:maxyv,minxv:maxxv][plevels,curxv,curyv]
+            hgt=(d.variables[self.gphvar_pert][self.curpos,...][usepressures,:,:]+self.base_gph)[:,miny:maxy,minx:maxx]/9.8
             temperature=None
             pressure=None
             specific_humidity=None
@@ -439,14 +442,15 @@ class WRF_Reader(object):
             relative_humidity=specific_humidity.copy()
             wind_u=d.variables[self.uvar][:,minyu:maxyu,minxu:maxxu][plevels,curxu,curyu]
             wind_v=d.variables[self.vvar][:,minyv:maxyv,minxv:maxxv][plevels,curxv,curyv]
+            hgt=(d.variables[self.gphvar_pert][self.curpos,...][usepressures,:,:]+self.base_gph)[:,miny:maxy,minx:maxx]/9.8
         d.close()
 
         datestr=self._filenames[curfile].split('.')[1]
 
-        self._curfile+=1
+        self.time_inc()
         N=wind_v.shape
         N[2]+=1 #v is staggered in y direction
-        return Bunch(ta=temperature, p=pressure,
+        return Bunch(ta=temperature, p=pressure,hgt=hgt
                      sh=specific_humidity, 
                      rh=relative_humidity, 
                      u=wind_u, v=wind_v,w=np.zeros(N,dtype=np.float32,order="F")
@@ -564,8 +568,11 @@ class WRF_Reader(object):
             # curdata=d.variables[self.vvar][self.curpos,...][:,minvy:maxvy,minvx:maxvx][usepressures,:,:]
             curdata=fast_mean.fast_smooth(d.variables[self.vvar][self.curpos,...][:,minvy:maxvy,minvx:maxvx][usepressures,:,:],offset)
             for i in range(4):wind_v+=curdata[:,curvy[:,:,i],curvx[:,:,i]]*wv[:,:,i]
+            # we also want geopotential height so we can properly interpolate vertically if necessary
+            curdata=(d.variables[self.gphvar_pert][self.curpos,...][usepressures,:,:]+self.base_gph)[:,miny:maxy,minx:maxx]
+            for i in range(4):hgt+=curdata[:,cury[:,:,i],curx[:,:,i]]*w[:,:,i]
+            hgt=hgt[:,halfk:-halfk,halfk:-halfk]/9.8
             potential_temperature=None
-            hgt=None
             qc=None
             specific_humidity=None
             pressure=None
@@ -628,14 +635,13 @@ class WRF_Reader(object):
         #        print(wind_u.max(),wind_v.max())
         if self._sfc_files!=None:
             sfc=self._next_surface(self.curpos)
-            # print(sfc.pblh.max(),sfc.pblh.min(),sfc.pblh.mean())
             sfc.pblh+=hgt[0,:,:]
+            # convert the pblh into a vertical index into the 3D arrays
             pblindex=np.argmin(np.abs(sfc.pblh[np.newaxis,:,:]-hgt),axis=0)
             pblindex[pblindex<2]=2
             pblindex[pblindex>=17]=16
             sfc.pblh=pblindex+1
             
-            # print(pblindex.max(),pblindex.min(),pblindex.mean())
         else:
             sfc=None
         
