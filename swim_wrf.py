@@ -428,21 +428,21 @@ class WRF_Reader(object):
         plevels=self.usepressures
         d=swim_io.Dataset(self._filenames[curfile], 'r')
         if self.windonly:
-            wind_u=d.variables[self.uvar][self.curpos,...][:,minyu:maxyu,minxu:maxxu][plevels,curxu,curyu]
-            wind_v=d.variables[self.vvar][self.curpos,...][:,minyv:maxyv,minxv:maxxv][plevels,curxv,curyv]
-            hgt=(d.variables[self.gphvar_pert][self.curpos,...][usepressures,:,:]+self.base_gph)[:,miny:maxy,minx:maxx]/9.8
+            wind_u=d.variables[self.uvar][self.curpos,:,minyu:maxyu,minxu:maxxu][plevels,curyu,curxu]
+            wind_v=d.variables[self.vvar][self.curpos,:,minyv:maxyv,minxv:maxxv][plevels,curyv,curxv]
+            hgt=(d.variables[self.gphvar_pert][self.curpos,:,miny:maxy,minx:maxx][plevels,cury,curx]+self.base_gph)/9.8
             temperature=None
             pressure=None
             specific_humidity=None
             relative_humidity=None
         else:
-            temperature=d.variables[self.tvar][:,miny:maxy,minx:maxx][plevels,curx,cury]
-            pressure=d.variables[self.hvar][:,miny:maxy,minx:maxx][plevels,curx,cury]
-            specific_humidity=d.variables[self.qvvar][:,miny:maxy,minx:maxx][plevels,curx,cury]
+            temperature=d.variables[self.tvar][self.curpos,:,miny:maxy,minx:maxx][plevels,cury,curx]
+            pressure=d.variables[self.hvar][self.curpos,:,miny:maxy,minx:maxx][plevels,cury,curx]
+            specific_humidity=d.variables[self.qvvar][self.curpos,:,miny:maxy,minx:maxx][plevels,cury,curx]
             relative_humidity=specific_humidity.copy()
-            wind_u=d.variables[self.uvar][:,minyu:maxyu,minxu:maxxu][plevels,curxu,curyu]
-            wind_v=d.variables[self.vvar][:,minyv:maxyv,minxv:maxxv][plevels,curxv,curyv]
-            hgt=(d.variables[self.gphvar_pert][self.curpos,...][usepressures,:,:]+self.base_gph)[:,miny:maxy,minx:maxx]/9.8
+            wind_u=d.variables[self.uvar][self.curpos,:,minyu:maxyu,minxu:maxxu][plevels,curyu,curxu]
+            wind_v=d.variables[self.vvar][self.curpos,:,minyv:maxyv,minxv:maxxv][plevels,curyv,curxv]
+            hgt=(d.variables[self.gphvar_pert][self.curpos,:,miny:maxy,minx:maxx][plevels,cury,curx]+self.base_gph)/9.8
         d.close()
 
         datestr=self._filenames[curfile].split('.')[1]
@@ -719,9 +719,13 @@ def update_weather(newatm,oldatm):
             #     oldatm[k][:,1:-1,1:-1][tmp]=newatm[k][:,1:-1,1:-1][tmp]
 
 # Force vertical convergence/divergence to balance horizontal convergence/divergence
-def adjust_winds(u,v,w):
-    ustag=(u[:,:,1:]+u[:,:,:-1])/2
-    vstag=(v[:,1:,:]+v[:,:-1,:])/2
+def adjust_winds(u,v,w,prestaggered=False):
+    if not prestaggered:
+        ustag=(u[:,:,1:]+u[:,:,:-1])/2
+        vstag=(v[:,1:,:]+v[:,:-1,:])/2
+    else:
+        ustag=u
+        vstag=v
     divergance=(ustag[:,1:-1,1:]-ustag[:,1:-1,:-1])+(vstag[:,1:,1:-1]-vstag[:,:-1,1:-1])
     w[0,1:-1,1:-1]=-divergance[0,:,:]
     for i in range(w.shape[0]-1):
@@ -733,6 +737,7 @@ def simul_next(base,q,r_matrix,Fzs,padx,pady):
     topo_adjust_weather(base.hgt3d, weather.hgt, weather)
     if use_linear_winds:
         (junku,junkv,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
+        ndsq=np.mean((weather.t[1:,...]-weather.t[:-1,...])/(base.hgt3d[1:,...]-base.hgt3d[:-1,...]))
         lt_winds.update_winds(base.hgt3d,Fzs,weather.u,weather.v,weather.w,dx=wrfres,
                               Ndsq=1E-5,r_matrix=r_matrix,padx=padx,pady=pady)
     (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
@@ -834,20 +839,31 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
         t3=time.time()
         curdate=weather.date
         
-        for proc in pIOlist:
-            if proc!=None:
-                proc.join()
-        pIOlist[0]=Process(target=parallel_output,args=(outputdir+'swim_p_'+str(curdate),Nx,Ny,-1,'precip',P,curdate))
-        pIOlist[1]=Process(target=parallel_output,args=(outputdir+'swim_t_'+str(curdate),Nx,Ny,Nz,'temp',weather.th,curdate))
-        pIOlist[2]=Process(target=parallel_output,args=(outputdir+'swim_qv_'+str(curdate),Nx,Ny,Nz,'qv',weather.qv,curdate))
-        pIOlist[3]=Process(target=parallel_output,args=(outputdir+'swim_qc_'+str(curdate),Nx,Ny,Nz,'qc',weather.qc,curdate))
-        pIOlist[4]=Process(target=parallel_output,args=(outputdir+'swim_pres_'+str(curdate),Nx,Ny,Nz,'pressure',weather.p,curdate))
-        pIOlist[5]=Process(target=parallel_output,args=(outputdir+'swim_qi_'+str(curdate),Nx,Ny,Nz,'qi',weather.qi,curdate))
-        pIOlist[6]=Process(target=parallel_output,args=(outputdir+'swim_qs_'+str(curdate),Nx,Ny,Nz,'qs',weather.qs,curdate))
-        pIOlist[7]=Process(target=parallel_output,args=(outputdir+'swim_qr_'+str(curdate),Nx,Ny,Nz,'qr',weather.qr,curdate))
-        for proc in pIOlist:
-            if proc!=None:
-                proc.start()
+        outputnames=['swim_p_','swim_t_','swim_qv_','swim_qc_','swim_pres_','swim_qi_','swim_qs_','swim_qr_']
+        varnames=['precip','temp','qv','qc','pressure','qi','qs','qr']
+        outputvars=[P,weather.th,weather.qv,weather.qc,weather.p,weather.qi,weather.qs,weather.qr]
+        Nzvalues=[-1,Nz,Nz,Nz,Nz,Nz,Nz,Nz]
+        for i in range(len(varnames)):
+            pIOlist[i].join()
+            pIOlist[i]=Process(target=parallel_output,args=(outputdir+outputnames[i]+str(curdate),
+                                                            Nx,Ny,Nzvalues[i],
+                                                            varnames[i],outputvars[i],curdate))
+            pIOlist[i].start()
+
+        # for proc in pIOlist:
+        #     if proc!=None:
+        #         proc.join()
+        # pIOlist[0]=Process(target=parallel_output,args=(outputdir+'swim_p_'+str(curdate),Nx,Ny,-1,'precip',P,curdate))
+        # pIOlist[1]=Process(target=parallel_output,args=(outputdir+'swim_t_'+str(curdate),Nx,Ny,Nz,'temp',weather.th,curdate))
+        # pIOlist[2]=Process(target=parallel_output,args=(outputdir+'swim_qv_'+str(curdate),Nx,Ny,Nz,'qv',weather.qv,curdate))
+        # pIOlist[3]=Process(target=parallel_output,args=(outputdir+'swim_qc_'+str(curdate),Nx,Ny,Nz,'qc',weather.qc,curdate))
+        # pIOlist[4]=Process(target=parallel_output,args=(outputdir+'swim_pres_'+str(curdate),Nx,Ny,Nz,'pressure',weather.p,curdate))
+        # pIOlist[5]=Process(target=parallel_output,args=(outputdir+'swim_qi_'+str(curdate),Nx,Ny,Nz,'qi',weather.qi,curdate))
+        # pIOlist[6]=Process(target=parallel_output,args=(outputdir+'swim_qs_'+str(curdate),Nx,Ny,Nz,'qs',weather.qs,curdate))
+        # pIOlist[7]=Process(target=parallel_output,args=(outputdir+'swim_qr_'+str(curdate),Nx,Ny,Nz,'qr',weather.qr,curdate))
+        # for proc in pIOlist:
+        #     if proc!=None:
+        #         proc.start()
         
 
         oldweather=weather
