@@ -13,12 +13,12 @@ if __name__ == '__main__':
     if re.match("mirage",host):
         host="mirage"
     install_dirs=dict(lobuche="/Users/gutmann/Dropbox/bin/python/statdown/",
-                      mirage="~/bin/python/",
-                      hydrolab="~/bin/python/",
+                      mirage="/glade/home/gutmann/bin/python/",
+                      hydrolab="/home/gutmann/bin/python/",
                       nomad="/Users/gutmann/Dropbox/bin/python/statdown/",
                       pakaldi="/Users/gutmann/Dropbox/bin/python/statdown/")
-    install(install_dirs[uname])
+    install(install_dirs[host])
     os.chdir("lib")
-    install(install_dirs[uname]+"lib/")
+    install(install_dirs[host]+"lib/")
     os.chdir("../")
                       
