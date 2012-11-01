@@ -271,14 +271,15 @@ def fix_top_bottom(topo,dz):
 
     
 def topo_preprocess(topo):
-    acceptable_topo_diff=np.max(np.diff(topo))
+    acceptable_topo_diff=np.max(np.diff(topo))/2
     vpad=0.0
     hpad=0.0
-    if np.max(np.abs(topo[0,:]-topo[-1,:]))>acceptable_topo_diff:
+    if np.max(np.abs(topo[0,:]-topo[-1,:]))>acceptable_topo_diff: # more a less a given
         (topo,vpad)=fix_top_bottom(topo,acceptable_topo_diff)
-    if np.max(np.abs(topo[:,0]-topo[:,-1]))>acceptable_topo_diff:
+    if np.max(np.abs(topo[:,0]-topo[:,-1]))>acceptable_topo_diff: # ditto
         (topo,hpad)=fix_top_bottom(topo.T,acceptable_topo_diff)
         topo=topo.T
+    topo-=topo.min() #this might matter more than I thought... and maybe all edges should get to 0?
     return topo,vpad,hpad
     
 
@@ -750,7 +751,7 @@ def simul_next(base,wrfwinds,q,r_matrix,Fzs,padx,pady):
     topo_adjust_weather(base.hgt3d, weather.hgt, weather)
     if use_linear_winds:
         (junku,junkv,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
-        # calculate the (squared) brunt vaisala frequency
+        # calculate the (squared) brunt vaisala frequency might be better off with the dry value (subtract cap_gamma?)
         ndsq=9.8/weather.t.mean()*np.mean((weather.t[1:,...]-weather.t[:-1,...])/(base.hgt3d[1:,...]-base.hgt3d[:-1,...]))
         lt_winds.update_winds(base.hgt3d,Fzs,weather.u,weather.v,weather.w,dx=wrfres,
                               Ndsq=ndsq,r_matrix=r_matrix,padx=padx,pady=pady,rotation=False)
