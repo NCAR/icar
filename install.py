@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import os,shutil,glob
+import os,shutil,glob,re
 
 def install(install_dir):
     pyfiles=glob.glob("*.py")
