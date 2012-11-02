@@ -35,36 +35,42 @@ def read_nc(filename,var=None,proj=None,returnNCvar=False):
     return Bunch(data=outputdata,proj=outputproj)
 
 
-def write1d(NCfile,data,varname="data"):
+def write1d(NCfile,data,varname="data",units=None):
     nx=data.size
     NCfile.create_dimension('x', nx)
     NCfile.create_variable(varname,'f',('x',))
     NCfile.variables[varname][:]=data.astype('f')
+    if units!=None:
+        NCfile.variables[varname].units=units
 
-def write2d(NCfile,data,varname="data"):
+def write2d(NCfile,data,varname="data",units=None):
     (ny,nx)=data.shape
     NCfile.create_dimension('x', nx)
     NCfile.create_dimension('y', ny)
     NCfile.create_variable(varname,'f',('y','x'))
     NCfile.variables[varname][:]=data.astype('f')
+    if units!=None:
+        NCfile.variables[varname].units=units
 
-def write3d(NCfile,data,varname="data"):
+def write3d(NCfile,data,varname="data",units=None):
     (nz,ny,nx)=data.shape
     NCfile.create_dimension('x', nx)
     NCfile.create_dimension('y', ny)
     NCfile.create_dimension('z', nz)
     NCfile.create_variable(varname,'f',('z','y','x'))
     NCfile.variables[varname][:]=data.astype('f')
+    if units!=None:
+        NCfile.variables[varname].units=units
 
-def write(filename,data,varname="data"):
+def write(filename,data,varname="data",units=None):
     history = 'Created : ' + time.ctime() +'\nusing simple ncio.write by:'+os.environ['USER']
     NCfile=Nio.open_file(filename,mode="w",format="nc",history=history)
     if len(data.shape)==1:
-        write1d(NCfile,data,varname=varname)
+        write1d(NCfile,data,varname=varname,units=units)
     if len(data.shape)==2:
-        write2d(NCfile,data,varname=varname)
+        write2d(NCfile,data,varname=varname,units=units)
     if len(data.shape)==3:
-        write3d(NCfile,data,varname=varname)
+        write3d(NCfile,data,varname=varname,units=units)
     NCfile.close()
 
 
