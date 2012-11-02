@@ -21,6 +21,7 @@ def printhelp():
         -d = diff install dir files with local files
         -h = print this help message
         (not all options can be passed as arguments instead e.g. install.py d )
+        use remote_git_status to check for server differences
         """)
 
 if __name__ == '__main__':
