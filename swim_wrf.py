@@ -66,7 +66,9 @@ cp=29.19 # J/mol/K   =1.012 J/g/K
 g=9.81 # m/s^2
 physics=int(1) #1=thompson other=simple
 use_linear_winds=False #flag to use linear theory winds or not
-use_linear_winds=True  #comment out one or the other
+# use_linear_winds=True  #comment out one or the other
+use_wrf_winds=False # ditto for wrf_based winds
+# use_wrf_winds=True
 
 # this is the half kernel window size for smoothing applied to the input data (wind)
 halfk=8
@@ -452,10 +454,10 @@ class WRF_Reader(object):
         self.time_inc()
         N=wind_v.shape
         N[2]+=1 #v is staggered in y direction
-        return Bunch(ta=temperature, p=pressure,hgt=hgt
+        return Bunch(ta=temperature, p=pressure,hgt=hgt,
                      sh=specific_humidity, 
                      rh=relative_humidity, 
-                     u=wind_u, v=wind_v,w=np.zeros(N,dtype=np.float32,order="F")
+                     u=wind_u, v=wind_v,w=np.zeros(N,dtype=np.float32,order="F"),
                      date=datestr)
     
     def convolve2to3(self,data,kern,mode="same"):
@@ -735,37 +737,47 @@ def adjust_winds(u,v,w,prestaggered=False):
     return(ustag,vstag,w)
     
 def rotate_winds(u,v,hgt,dx=4000.0,rotation=None):
-    if rotation=None:
-        urot=np.cos(np.atan(np.abs(hgt[:,:,1:]-hgt[:,:,:-1])/dx))
-        vrot=np.cos(np.atan(np.abs(hgt[:,1:,:]-hgt[:,:-1,:])/dx))
+    if rotation==None:
+        urot=np.cos(np.arctan(np.abs(hgt[:,:,1:]-hgt[:,:,:-1])/dx))
+        vrot=np.cos(np.arctan(np.abs(hgt[:,1:,:]-hgt[:,:-1,:])/dx))
         rotation=[urot,vrot]
     else:
         urot,vrot=rotation
-    u*=urot
-    v*=vrot
+    u/=urot
+    v/=vrot
     return rotation
     
 
 def simul_next(base,wrfwinds,q,r_matrix,Fzs,padx,pady):
     weather=base.next()
     topo_adjust_weather(base.hgt3d, weather.hgt, weather)
+
     if use_linear_winds:
         (junku,junkv,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
         # calculate the (squared) brunt vaisala frequency might be better off with the dry value (subtract cap_gamma?)
         ndsq=9.8/weather.t.mean()*np.mean((weather.t[1:,...]-weather.t[:-1,...])/(base.hgt3d[1:,...]-base.hgt3d[:-1,...]))
         lt_winds.update_winds(base.hgt3d,Fzs,weather.u,weather.v,weather.w,dx=wrfres,
                               Ndsq=ndsq,r_matrix=r_matrix,padx=padx,pady=pady,rotation=False)
-        rotate_winds(wind.u,wind.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
+        weather.u=(weather.u[:,:,1:]+weather.u[:,:,:-1])/2
+        weather.v=(weather.v[:,1:,:]+weather.v[:,:-1,:])/2
+        rotate_winds(weather.u,weather.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
+        (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
     elif use_wrf_winds:
         wind=wrfwinds.next()
-        rotate_winds(wind.u,wind.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
+        wind.u=(wind.u[:,:,1:]+wind.u[:,:,:-1])/2
+        wind.v=(wind.v[:,1:,:]+wind.v[:,:-1,:])/2
+        r_matrix=rotate_winds(wind.u,wind.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
         weather.u=wind.u
         weather.v=wind.v
+        (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
     else:
+        weather.u=(weather.u[:,:,1:]+weather.u[:,:,:-1])/2
+        weather.v=(weather.v[:,1:,:]+weather.v[:,:-1,:])/2
         r_matrix=rotate_winds(weather.u,weather.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
+        (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
 
 
-    (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
+    # (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
     
     q.put(weather)
 
@@ -806,9 +818,6 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
     oldweather=None
     print("Off and running...")
     weather=wrf_base.next()
-    weather.u=windweather.u
-    weather.v=windweather.v
-    weather.w=windweather.w
     # topo_adjust_weather(topo, wrf_base.topo, weather)
     # topo_adjust_weather(wrf_base.hgt3d, weather.hgt, weather)
     r_matrix=None
@@ -819,17 +828,25 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
         (junku,junkv,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
         r_matrix=lt_winds.update_winds(wrf_base.hgt3d,Fzs,weather.u,weather.v,weather.w,dx=wrfres,
                                       Ndsq=1E-5,r_matrix=None,padx=padx,pady=pady)
+        (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,
+                                        prestaggered=(weather.v.shape[1]!=weather.u.shape[1]))
+
     elif use_wrf_winds:
         wind=wrfwinds.next()
-        r_matrix=rotate_winds(wind.u,wrf.v,wrf_base.hgt3d,dx=wrfres,rotation=None)
+        wind.u=(wind.u[:,:,1:]+wind.u[:,:,:-1])/2
+        wind.v=(wind.v[:,1:,:]+wind.v[:,:-1,:])/2
+        r_matrix=rotate_winds(wind.u,wind.v,wrf_base.hgt3d,dx=wrfres,rotation=None)
         weather.u=wind.u
         weather.v=wind.v
+        (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
     else:
+        weather.u=(weather.u[:,:,1:]+weather.u[:,:,:-1])/2
+        weather.v=(weather.v[:,1:,:]+weather.v[:,:-1,:])/2
         r_matrix=rotate_winds(weather.u,weather.v,wrf_base.hgt3d,dx=wrfres,rotation=None)
+        (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
         padx=None
         pady=None
         Fzs=None
-    (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
     (Nz,Ny,Nx)=weather.qv.shape
     oldt=weather.th.copy()
     oldweather=weather
