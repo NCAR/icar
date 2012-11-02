@@ -5,14 +5,15 @@ import sys,getopt,subprocess
 def install(install_dir,copyout,diff):
     pyfiles=glob.glob("*.py")
     for curfile in pyfiles:
-        if diff:
-            print("Diff for: "+curfile)
-            subprocess.call("diff "+curfile+" "+install_dir+curfile,shell=True)
-        else:
-            if copyout:
-                shutil.copy2(install_dir+curfile,curfile)
+        if curfile!="install.py":
+            if diff:
+                print("Diff for: "+curfile)
+                subprocess.call("diff "+curfile+" "+install_dir+curfile,shell=True)
             else:
-                shutil.copy2(curfile,install_dir)
+                if copyout:
+                    shutil.copy2(install_dir+curfile,curfile)
+                else:
+                    shutil.copy2(curfile,install_dir)
         
 def printhelp():
     print("""

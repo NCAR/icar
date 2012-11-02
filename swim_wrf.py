@@ -621,12 +621,13 @@ class WRF_Reader(object):
             hgt=hgt[:,halfk:-halfk,halfk:-halfk]/9.8
             qc=qc[:,halfk:-halfk,halfk:-halfk]
             
-            qr=np.zeros(N,dtype=np.float32,order="F")
-            nr=np.zeros(N,dtype=np.float32,order="F")
-            qs=np.zeros(N,dtype=np.float32,order="F")
-            qi=np.zeros(N,dtype=np.float32,order="F")
-            ni=np.zeros(N,dtype=np.float32,order="F")
-            qg=np.zeros(N,dtype=np.float32,order="F")
+            N2=[Nz,Nxy[0]-halfk*2,Nxy[1]-halfk*2]
+            qr=np.zeros(N2,dtype=np.float32,order="F")
+            nr=np.zeros(N2,dtype=np.float32,order="F")
+            qs=np.zeros(N2,dtype=np.float32,order="F")
+            qi=np.zeros(N2,dtype=np.float32,order="F")
+            ni=np.zeros(N2,dtype=np.float32,order="F")
+            qg=np.zeros(N2,dtype=np.float32,order="F")
             
         
         self.curpos+=1
@@ -654,7 +655,7 @@ class WRF_Reader(object):
         return Bunch(p=pressure,th=potential_temperature,
                      sh=specific_humidity, hgt=hgt,qc=qc,
                      qv=specific_humidity/(1-specific_humidity), 
-                     u=wind_u, v=wind_v,w=np.zeros(N,dtype=np.float32,order="F"),
+                     u=wind_u, v=wind_v,w=np.zeros(N2,dtype=np.float32,order="F"),
                      date=datestr,sfc=sfc,
                      qr=qr,qi=qi,qs=qs,qg=qg,ni=ni,nr=nr
                      )
@@ -896,28 +897,13 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
         outputvars=[P,weather.th,weather.qv,weather.qc,weather.p,weather.qi,weather.qs,weather.qr]
         Nzvalues=[-1,Nz,Nz,Nz,Nz,Nz,Nz,Nz]
         for i in range(len(varnames)):
-            pIOlist[i].join()
+            if pIOlist[i]!=None:
+                pIOlist[i].join()
             pIOlist[i]=Process(target=parallel_output,args=(outputdir+outputnames[i]+str(curdate),
                                                             Nx,Ny,Nzvalues[i],
                                                             varnames[i],outputvars[i],curdate))
             pIOlist[i].start()
-
-        # for proc in pIOlist:
-        #     if proc!=None:
-        #         proc.join()
-        # pIOlist[0]=Process(target=parallel_output,args=(outputdir+'swim_p_'+str(curdate),Nx,Ny,-1,'precip',P,curdate))
-        # pIOlist[1]=Process(target=parallel_output,args=(outputdir+'swim_t_'+str(curdate),Nx,Ny,Nz,'temp',weather.th,curdate))
-        # pIOlist[2]=Process(target=parallel_output,args=(outputdir+'swim_qv_'+str(curdate),Nx,Ny,Nz,'qv',weather.qv,curdate))
-        # pIOlist[3]=Process(target=parallel_output,args=(outputdir+'swim_qc_'+str(curdate),Nx,Ny,Nz,'qc',weather.qc,curdate))
-        # pIOlist[4]=Process(target=parallel_output,args=(outputdir+'swim_pres_'+str(curdate),Nx,Ny,Nz,'pressure',weather.p,curdate))
-        # pIOlist[5]=Process(target=parallel_output,args=(outputdir+'swim_qi_'+str(curdate),Nx,Ny,Nz,'qi',weather.qi,curdate))
-        # pIOlist[6]=Process(target=parallel_output,args=(outputdir+'swim_qs_'+str(curdate),Nx,Ny,Nz,'qs',weather.qs,curdate))
-        # pIOlist[7]=Process(target=parallel_output,args=(outputdir+'swim_qr_'+str(curdate),Nx,Ny,Nz,'qr',weather.qr,curdate))
-        # for proc in pIOlist:
-        #     if proc!=None:
-        #         proc.start()
         
-
         oldweather=weather
     wrf_base.close()
 
