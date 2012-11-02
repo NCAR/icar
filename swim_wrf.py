@@ -881,8 +881,8 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
         print("-------------------------------------------------")
         print(weather.date)
         print("-------------------------------------------------")
-        # P=swim.swim2d(topo,weather,oldweather,newp,newu,newv,neww,swim_lib,dTdt,processPool,timestep=timestep,dx=wrfres)
         P=swim.swim2d(topo,weather,oldweather,swim_lib,processPool,physics,timestep=timestep,dx=wrfres)
+        
         print("Finished Timestep")
         print("Total Time:"+str(time.time()-t3))
         print("     phyics:"+str(time.time()-t2))
