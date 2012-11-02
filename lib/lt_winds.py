@@ -153,11 +153,11 @@ def linear_winds(Fzs, U,V,z,dx=4000.0,dy=4000.0,Ndsq  = 1E-5):
     v_hat=Ny*Nx*np.real(fft.ifft2(fft.ifftshift(v_hat)))
     return(u_hat,v_hat,w_hat)
     
-def update_winds(z,Fzs,U,V,W,dx=4000.0,Ndsq=1E-5,r_matrix=None,padx=0,pady=0):
-    returnR=False
-    if r_matrix==None:
+def update_winds(z,Fzs,U,V,W,dx=4000.0,Ndsq=1E-5,r_matrix=None,padx=0,pady=0,rotation=True):
+    
+    if r_matrix==None and rotation:
         r_matrix=np.array(generate_rotation_matrix(z.transpose((1,2,0)),dx=dx))
-        returnR=True
+    
     sz=U.shape
     windfield=np.empty((sz[1],sz[2],sz[0],3),dtype="f")
     endx=np.choose(padx==0,[-padx,None])
@@ -167,7 +167,8 @@ def update_winds(z,Fzs,U,V,W,dx=4000.0,Ndsq=1E-5,r_matrix=None,padx=0,pady=0):
         windfield[:,:,i,0]=U[i,:,:]+uh[pady:endy,padx:endx]
         windfield[:,:,i,1]=V[i,:,:]+vh[pady:endy,padx:endx]
         windfield[:,:,i,2]=W[i,:,:]+wh[pady:endy,padx:endx]
-    rotate_winds(r_matrix,windfield)
+    if rotation:
+        rotate_winds(r_matrix,windfield)
     for i in range(U.shape[0]):
         U[i,:,:]=windfield[:,:,i,0]
         V[i,:,:]=windfield[:,:,i,1]

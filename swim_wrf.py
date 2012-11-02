@@ -30,7 +30,7 @@ LICENSE
 
 VERSION
     0.6   - adding WRF high res winds
-    0.5.1 - SPEED (and new microphysics) ~50x faster
+    0.5.1 - SPEED (esp. with new microphysics ~50x faster)
     0.5   - added LT winds & fancy 3D grid(?)
     0.4   - adding PBL mixing and (stupid) radiative cooling 1.5K/day
     0.3   - WRF based (previously from swim_narr.py)
@@ -65,8 +65,8 @@ R=8.3144621 # J/mol/K
 cp=29.19 # J/mol/K   =1.012 J/g/K
 g=9.81 # m/s^2
 physics=int(1) #1=thompson other=simple
-use_linear_winds=False #flag to use linear theory winds or not
-# use_linear_winds=True  #comment out one or the other
+# use_linear_winds=False #flag to use linear theory winds or not
+use_linear_winds=True  #comment out one or the other
 use_wrf_winds=False # ditto for wrf_based winds
 # use_wrf_winds=True
 
@@ -92,6 +92,7 @@ wrfres=4000.0
 io_ratio=36000.0/wrfres #this is the ratio of the input grid (36km) to the output grid (4km)
 
 file_search="forcing/wrfout_d01_200*00"
+wind_file="winds/wrfout_d01_200*00"
 sfc_file_search=file_search
 base_dir="baseline_info/"
 if wrfres==2000:
@@ -273,7 +274,7 @@ def fix_top_bottom(topo,dz):
 
     
 def topo_preprocess(topo):
-    acceptable_topo_diff=np.max(np.diff(topo))/2
+    acceptable_topo_diff=np.max(np.diff(topo))/2.0
     vpad=0.0
     hpad=0.0
     if np.max(np.abs(topo[0,:]-topo[-1,:]))>acceptable_topo_diff: # more a less a given
@@ -281,7 +282,8 @@ def topo_preprocess(topo):
     if np.max(np.abs(topo[:,0]-topo[:,-1]))>acceptable_topo_diff: # ditto
         (topo,hpad)=fix_top_bottom(topo.T,acceptable_topo_diff)
         topo=topo.T
-    topo-=topo.min() #this might matter more than I thought... and maybe all edges should get to 0?
+    #this might matter more than I thought... and maybe all edges should get exactly to 0?
+    topo-=(topo[0,:].mean()+topo[-1,:].mean()+topo[:,0].mean()+topo[:,-1].mean())/4.0
     return topo,vpad,hpad
     
 
@@ -756,13 +758,26 @@ def simul_next(base,wrfwinds,q,r_matrix,Fzs,padx,pady):
     if use_linear_winds:
         (junku,junkv,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
         # calculate the (squared) brunt vaisala frequency might be better off with the dry value (subtract cap_gamma?)
-        ndsq=9.8/weather.t.mean()*np.mean((weather.t[1:,...]-weather.t[:-1,...])/(base.hgt3d[1:,...]-base.hgt3d[:-1,...]))
+        ndsq=9.8/weather.th.mean()*np.mean((weather.th[1:,...]-weather.th[:-1,...])/(base.hgt3d[1:,...]-base.hgt3d[:-1,...]))
+        print("Ndsq=",ndsq)
+        if ndsq>0.02:ndsq=0.2
+        # print("raw winds Umax=",weather.u.max())
+        # print("raw winds Vmax=",weather.v.max())
+        # print("raw winds Wmax=",weather.w.max())
         lt_winds.update_winds(base.hgt3d,Fzs,weather.u,weather.v,weather.w,dx=wrfres,
                               Ndsq=ndsq,r_matrix=r_matrix,padx=padx,pady=pady,rotation=False)
+        print("LT winds Umax=",weather.u.max())
+        print("LT winds Vmax=",weather.v.max())
+        print("LT winds Wmax=",weather.w.max())
+        weather.u=fast_mean.fast_smooth(weather.u,5)
+        weather.v=fast_mean.fast_smooth(weather.v,5)
         weather.u=(weather.u[:,:,1:]+weather.u[:,:,:-1])/2
         weather.v=(weather.v[:,1:,:]+weather.v[:,:-1,:])/2
         rotate_winds(weather.u,weather.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
         (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
+        print("adjusted LT winds Umax=",weather.u.max())
+        print("adjusted LT winds Vmax=",weather.v.max())
+        print("adjusted LT winds Wmax=",weather.w.max())
     elif use_wrf_winds:
         wind=wrfwinds.next()
         wind.u=(wind.u[:,:,1:]+wind.u[:,:,:-1])/2
@@ -819,20 +834,26 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
     oldweather=None
     print("Off and running...")
     weather=wrf_base.next()
-    # topo_adjust_weather(topo, wrf_base.topo, weather)
-    # topo_adjust_weather(wrf_base.hgt3d, weather.hgt, weather)
     r_matrix=None
     if use_linear_winds:
         # for use with the linear theory winds
         (lt_topo,pady,padx)=topo_preprocess(topo)
-        Fzs=fft.fftshift(fft.fft2(lt_topo))/(Nx*Ny)
+        Fzs=fft.fftshift(fft.fft2(lt_topo))/((Nx+padx*2)*(Ny+pady*2))
         (junku,junkv,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
         r_matrix=lt_winds.update_winds(wrf_base.hgt3d,Fzs,weather.u,weather.v,weather.w,dx=wrfres,
-                                      Ndsq=1E-5,r_matrix=None,padx=padx,pady=pady)
-        (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,
-                                        prestaggered=(weather.v.shape[1]!=weather.u.shape[1]))
-
+                                      Ndsq=1E-5,r_matrix=None,padx=padx,pady=pady,rotation=False)
+        # (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,
+        #                                 prestaggered=(weather.v.shape[1]!=weather.u.shape[1]))
+        weather.u=fast_mean.fast_smooth(weather.u,5)
+        weather.v=fast_mean.fast_smooth(weather.v,5)
+        weather.u=(weather.u[:,:,1:]+weather.u[:,:,:-1])/2
+        weather.v=(weather.v[:,1:,:]+weather.v[:,:-1,:])/2
+        
+        r_matrix=rotate_winds(weather.u,weather.v,wrf_base.hgt3d,dx=wrfres,rotation=None)
+        (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
+        
     elif use_wrf_winds:
+        # to use high resolution WRF winds as a "TRUTH" run
         wind=wrfwinds.next()
         wind.u=(wind.u[:,:,1:]+wind.u[:,:,:-1])/2
         wind.v=(wind.v[:,1:,:]+wind.v[:,:-1,:])/2
@@ -852,18 +873,18 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
     oldt=weather.th.copy()
     oldweather=weather
     
-    print("Initializing microphysics...")
-    swim_lib.swim_step.init(physics) #calls thompson_init internally if physics==1
-
-    print(oldweather.date)
-    processPool=None
     print("Reading WRF")
     q=Queue()
     p1=Process(target=simul_next,args=(wrf_base,wrfwinds,q,r_matrix,Fzs,padx,pady))
     p1.start()
     done=False
-    pIOlist=[None for i in range(8)]
-    t1=t2=t3=time.time()
+    print("Initializing microphysics...")
+    swim_lib.swim_step.init(physics) #calls thompson_init internally if physics==1
+
+    print(oldweather.date)
+    processPool=None
+    pIOlist=[None for i in range(11)]
+    t1=t2=t3=t4=time.time()
     while not done:
         t1=time.time()
         weather=q.get()
@@ -883,24 +904,31 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
         print(weather.date)
         print("-------------------------------------------------")
         P=swim.swim2d(topo,weather,oldweather,swim_lib,processPool,physics,timestep=timestep,dx=wrfres)
-        
+            
+        t4=time.time()
         print("Finished Timestep")
-        print("Total Time:"+str(time.time()-t3))
-        print("     phyics:"+str(time.time()-t2))
-        print("     output:"+str(t1-t3))
+        print("Total Time:"+str(t4-t3))
         print("     input :"+str(t2-t1))
+        print("     phyics:"+str(t4-t2))
+        print("     output:"+str(t1-t3))
         t3=time.time()
         curdate=weather.date
         
-        outputnames=['swim_p_','swim_t_','swim_qv_','swim_qc_','swim_pres_','swim_qi_','swim_qs_','swim_qr_']
-        varnames=['precip','temp','qv','qc','pressure','qi','qs','qr']
-        outputvars=[P,weather.th,weather.qv,weather.qc,weather.p,weather.qi,weather.qs,weather.qr]
-        Nzvalues=[-1,Nz,Nz,Nz,Nz,Nz,Nz,Nz]
+        outputnames=['swim_p_','swim_t_','swim_qv_','swim_qc_','swim_pres_','swim_qi_','swim_qs_','swim_qr_',"swim_u","swim_v","swim_w"]
+        varnames=['precip','temp','qv','qc','pressure','qi','qs','qr',"u","v","w"]
+        outputvars=[P,weather.th,weather.qv,weather.qc,weather.p,weather.qi,weather.qs,weather.qr,weather.u,weather.v,weather.w]
         for i in range(len(varnames)):
+            if i>=len(pIOlist):
+                pIOlist.append(None)
             if pIOlist[i]!=None:
                 pIOlist[i].join()
+            if len(outputvars[i].shape)==2:
+                curz=-1
+                cury,curx=outputvars[i].shape
+            else:
+                curz,cury,curx=outputvars[i].shape
             pIOlist[i]=Process(target=parallel_output,args=(outputdir+outputnames[i]+str(curdate),
-                                                            Nx,Ny,Nzvalues[i],
+                                                            curx,cury,curz,
                                                             varnames[i],outputvars[i],curdate))
             pIOlist[i].start()
         
