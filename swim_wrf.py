@@ -65,10 +65,10 @@ R=8.3144621 # J/mol/K
 cp=29.19 # J/mol/K   =1.012 J/g/K
 g=9.81 # m/s^2
 physics=int(1) #1=thompson other=simple
-# use_linear_winds=False #flag to use linear theory winds or not
-use_linear_winds=True  #comment out one or the other
-use_wrf_winds=False # ditto for wrf_based winds
-# use_wrf_winds=True
+use_linear_winds=False #flag to use linear theory winds or not
+# use_linear_winds=True  #comment out one or the other
+# use_wrf_winds=False # ditto for wrf_based winds
+use_wrf_winds=True
 
 # this is the half kernel window size for smoothing applied to the input data (wind)
 halfk=8
@@ -92,7 +92,7 @@ wrfres=4000.0
 io_ratio=36000.0/wrfres #this is the ratio of the input grid (36km) to the output grid (4km)
 
 file_search="forcing/wrfout_d01_200*00"
-wind_file="winds/wrfout_d01_200*00"
+wind_files="winds/wrfout_d01_200*00"
 sfc_file_search=file_search
 base_dir="baseline_info/"
 if wrfres==2000:
@@ -355,7 +355,7 @@ class WRF_Reader(object):
             wlat=wlat[halfk:-halfk,halfk:-halfk]
             wlon=wlon[halfk:-halfk,halfk:-halfk]
             (x,y)=match_xy(nlat,nlon,wlat,wlon)
-            (xu,yv)=match_xy(nulat,nulon,wlat,wlon)
+            (xu,yu)=match_xy(nulat,nulon,wlat,wlon)
             (xv,yv)=match_xy(nvlat,nvlon,wlat,wlon)
             self.x=x.astype('i')
             self.y=y.astype('i')
@@ -363,8 +363,9 @@ class WRF_Reader(object):
             self.yu=yu.astype('i')
             self.xv=xv.astype('i')
             self.yv=yv.astype('i')
-            self.topo=hgt[y,x]
-            maxheight=maxheight[y,x][halfk:-halfk,halfk:-halfk]
+            self.topo=hgt[self.y,self.x]
+            maxheight=maxheight[self.y,self.x]
+            self.base_gph=self.base_gph[:,self.y,self.x]
             self.make_model_domain(self.nlevels,maxheight,hires_topo)
             
         elif self._bilin:
@@ -396,7 +397,9 @@ class WRF_Reader(object):
             self._bilin=True
         self.windonly=windonly
         self.init_xy(self._filenames[0])
-        self.curpos=19*24-2
+        self.curpos=19*24
+        if windonly:
+            self.curpos=0
         # d=swim_io.Dataset(self._filenames[self._curfile], 'r')
         # npos=d.variables[self.vvar].shape[0]-1
         # self.curpos=npos-10
@@ -434,9 +437,12 @@ class WRF_Reader(object):
         plevels=self.usepressures
         d=swim_io.Dataset(self._filenames[curfile], 'r')
         if self.windonly:
-            wind_u=d.variables[self.uvar][self.curpos,:,minyu:maxyu,minxu:maxxu][plevels,curyu,curxu]
-            wind_v=d.variables[self.vvar][self.curpos,:,minyv:maxyv,minxv:maxxv][plevels,curyv,curxv]
-            hgt=(d.variables[self.gphvar_pert][self.curpos,:,miny:maxy,minx:maxx][plevels,cury,curx]+self.base_gph)/9.8
+            wind_u=d.variables[self.uvar][self.curpos,:,minyu:maxyu,minxu:maxxu][plevels,...]
+            wind_u=wind_u[:,curyu,curxu]
+            wind_v=d.variables[self.vvar][self.curpos,:,minyv:maxyv,minxv:maxxv][plevels,...]
+            wind_v=wind_v[:,curyv,curxv]
+            hgt=d.variables[self.gphvar_pert][self.curpos,:,miny:maxy,minx:maxx][plevels,...]
+            hgt=(hgt[:,cury,curx]+self.base_gph)/9.8
             temperature=None
             pressure=None
             specific_humidity=None
@@ -449,12 +455,13 @@ class WRF_Reader(object):
             wind_u=d.variables[self.uvar][self.curpos,:,minyu:maxyu,minxu:maxxu][plevels,curyu,curxu]
             wind_v=d.variables[self.vvar][self.curpos,:,minyv:maxyv,minxv:maxxv][plevels,curyv,curxv]
             hgt=(d.variables[self.gphvar_pert][self.curpos,:,miny:maxy,minx:maxx][plevels,cury,curx]+self.base_gph)/9.8
+
+        datestr=''.join(d.variables[self.timevar][self.curpos])
         d.close()
 
-        datestr=self._filenames[curfile].split('.')[1]
 
         self.time_inc()
-        N=wind_v.shape
+        N=list(wind_v.shape)
         N[2]+=1 #v is staggered in y direction
         return Bunch(ta=temperature, p=pressure,hgt=hgt,
                      sh=specific_humidity, 
@@ -824,6 +831,9 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
     topo=topoinfo.data[0,sub_y0+halfk:yendpt,sub_x0+halfk:xendpt]
     (Ny,Nx)=topo.shape
 
+    # wrfwinds=WRF_Reader(wind_files,bilin=False,nn=True, windonly=True)
+    # wind=wrfwinds.next()
+
     gkern=gauss_kern(40)
     wrf_base=WRF_Reader(file_search,sfc=sfc_file_search,bilin=True,nn=False)
     if use_wrf_winds:
@@ -861,6 +871,9 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
         weather.u=wind.u
         weather.v=wind.v
         (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
+        padx=None
+        pady=None
+        Fzs=None
     else:
         weather.u=(weather.u[:,:,1:]+weather.u[:,:,:-1])/2
         weather.v=(weather.v[:,1:,:]+weather.v[:,:-1,:])/2
