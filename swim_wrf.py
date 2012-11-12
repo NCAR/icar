@@ -789,14 +789,16 @@ def simul_next(base,wrfwinds,q,r_matrix,Fzs,padx,pady):
         wind=wrfwinds.next()
         wind.u=(wind.u[:,:,1:]+wind.u[:,:,:-1])/2
         wind.v=(wind.v[:,1:,:]+wind.v[:,:-1,:])/2
-        r_matrix=rotate_winds(wind.u,wind.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
+        if r_matrix !=None:
+            r_matrix=rotate_winds(wind.u,wind.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
         weather.u=wind.u
         weather.v=wind.v
         (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
     else:
         weather.u=(weather.u[:,:,1:]+weather.u[:,:,:-1])/2
         weather.v=(weather.v[:,1:,:]+weather.v[:,:-1,:])/2
-        r_matrix=rotate_winds(weather.u,weather.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
+        if r_matrix !=None:
+            r_matrix=rotate_winds(weather.u,weather.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
         (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
 
 
@@ -867,7 +869,8 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
         wind=wrfwinds.next()
         wind.u=(wind.u[:,:,1:]+wind.u[:,:,:-1])/2
         wind.v=(wind.v[:,1:,:]+wind.v[:,:-1,:])/2
-        r_matrix=rotate_winds(wind.u,wind.v,wrf_base.hgt3d,dx=wrfres,rotation=None)
+        # r_matrix=rotate_winds(wind.u,wind.v,wrf_base.hgt3d,dx=wrfres,rotation=None)
+        r_matrix=None
         weather.u=wind.u
         weather.v=wind.v
         (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
