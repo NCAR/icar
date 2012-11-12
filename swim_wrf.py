@@ -877,7 +877,8 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
     else:
         weather.u=(weather.u[:,:,1:]+weather.u[:,:,:-1])/2
         weather.v=(weather.v[:,1:,:]+weather.v[:,:-1,:])/2
-        r_matrix=rotate_winds(weather.u,weather.v,wrf_base.hgt3d,dx=wrfres,rotation=None)
+        # r_matrix=rotate_winds(weather.u,weather.v,wrf_base.hgt3d,dx=wrfres,rotation=None)
+        r_matrix=None
         (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
         padx=None
         pady=None
@@ -927,7 +928,7 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
         t3=time.time()
         curdate=weather.date
         
-        outputnames=['swim_p_','swim_t_','swim_qv_','swim_qc_','swim_pres_','swim_qi_','swim_qs_','swim_qr_',"swim_u","swim_v","swim_w"]
+        outputnames=['swim_p_','swim_t_','swim_qv_','swim_qc_','swim_pres_','swim_qi_','swim_qs_','swim_qr_',"swim_u_","swim_v_","swim_w_"]
         varnames=['precip','temp','qv','qc','pressure','qi','qs','qr',"u","v","w"]
         outputvars=[P,weather.th,weather.qv,weather.qc,weather.p,weather.qi,weather.qs,weather.qr,weather.u,weather.v,weather.w]
         for i in range(len(varnames)):
