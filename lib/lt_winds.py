@@ -19,7 +19,7 @@ def rotate_winds(rot_matrix,windfield):
 def generate_rotation_matrix(z,dx=4000.0):
     '''Calculate rotation matrices for each x,y,z model grid cell
     
-    This is also likely to be painfully slow, and could be speed up
+    This is painfully slow, and could also run faster in C or fortran
     However, this should only need to be run once at the begining, so
     it probably isnt worth spending much time on for now'''
     sz=z.shape
@@ -113,20 +113,21 @@ def test_topo():
     zs[2,...]+=2000
     return (zs,Fzs)
 
-def linear_winds(Fzs, U,V,z,dx=4000.0,dy=4000.0,Ndsq  = 1E-5):
+def linear_winds(Fzs, U,V,z,dx=4000.0,dy=4000.0,Ndsq  = 1E-8):
     # see Appendix A of Barstad and Gronas (2006) Tellus,58A,2-18
-    # % -------------------------------------------------------------------------------
-    # Ndsq  = 0.003**2      # % dry BV freq sq. was 0.01 initially Idar suggested 0.005
-                            # should be calculated from the real atm profile
-    f  = 0.938e-4           # rad/s Coriolis frequency for 40deg north
-    # %---------------------------------------------------------------------------------
+    # -------------------------------------------------------------------------------
+    # Ndsq  = 0.003**2      # dry BV freq sq. was 0.01**2 initially, Idar suggested 0.005**2
+    # 1E-8 keeps it relatively stable, no wild oscillations
+                            # could/should be calculated from the real atm profile with limits
+    f  = 9.37e-5           # rad/s Coriolis frequency for 40deg north
+    # ---------------------------------------------------------------------------------
     
     (Ny,Nx)=Fzs.shape
     # % Compute 2D k and l wavenumber fields (this could be done once not on every pass)
     # (meshgrid may be faster?)
     k    = np.linspace(-np.pi/dx,np.pi/dx,Nx).reshape((1,Nx)).repeat(Ny,axis=0)
     l    = np.linspace(-np.pi/dy,np.pi/dy,Ny).reshape((Ny,1)).repeat(Nx,axis=1)
-    i=1j #np.sqrt(np.complex(-1))
+    i=1j # = np.sqrt(np.complex(-1))
     
     sig  = U*k+V*l
     denom = sig**2-f**2
@@ -134,43 +135,82 @@ def linear_winds(Fzs, U,V,z,dx=4000.0,dy=4000.0,Ndsq  = 1E-5):
     kl[kl==0]=1E-30
     sig[sig==0]=1E-30
     
-    msq = (Ndsq/denom * kl).astype('complex')          # % vertical wave number, hydrostatic
-    mimag=np.zeros((Ny,Nx)).astype('complex')
-    mimag.imag=(np.sqrt(-msq)).real
-    m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
+    # sigmabar=sigma_i-i*alpha
+    # alpha = ??
+    # sigma_i= sigma intrinsic (=Uk+Vl given steady state)
+    
+    # mimag=np.zeros((Ny,Nx)).astype('complex')
+    # msq = (Ndsq/denom * kl).astype('complex')          # % vertical wave number, hydrostatic
+    # mimag.imag=(np.sqrt(-msq)).real
+    # m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
 
-    m2 = np.sqrt(((Ndsq-sig**2)/denom * kl).astype('complex'))          # % vertical wave number, hydrostatic
-    mimag.imag=(np.sqrt(-msq)).real
-    m2=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
+    # mimag=np.zeros((Ny,Nx)).astype('complex')
+    # m2 = ((Ndsq-sig**2)/denom * kl).astype('complex')          # % vertical wave number, hydrostatic
+    # mimag.imag=(np.sqrt(-m2)).real
+    # m=np.where(m2>=0, (np.sign(sig)*np.sqrt(m2)).astype('complex'), mimag)
+    # print(np.abs((m-np.sqrt(m2)).imag).max()) # = 0
+    # print(np.abs((m-np.sqrt(m2)).real).max()) # = 0
     
-    neta=Fzs*np.exp(i*m2*z)
-    w_hat=i*sig*neta
-    u_hat=(-m2*(sig*k-i*l*f)*i*neta)/kl
-    v_hat=(-m2*(sig*l+i*k*f)*i*neta)/kl
+    m = np.sqrt(((Ndsq-sig**2)/denom * kl).astype('complex'))          # % vertical wave number, hydrostatic
     
+    ineta=i*Fzs*np.exp(i*m*z)
+    w_hat=sig*ineta
+    
+    ineta/=kl/(-m*sig)
+    u_hat=k*ineta
+    v_hat=l*ineta
+    # temporarily removed coriolis term
+    # u_hat = -m*(sig*k)*i*neta/kl
+    # v_hat = -m*(sig*l)*i*neta/kl
+    # with coriolis : 
+    # u_hat = -m*(sig*k-i*l*f)*i*neta/kl
+    # v_hat = -m*(sig*l+i*k*f)*i*neta/kl
+    
+    # pull it back out of fourier space. 
     w_hat=Ny*Nx*np.real(fft.ifft2(fft.ifftshift(w_hat)))
     u_hat=Ny*Nx*np.real(fft.ifft2(fft.ifftshift(u_hat)))
     v_hat=Ny*Nx*np.real(fft.ifft2(fft.ifftshift(v_hat)))
     return(u_hat,v_hat,w_hat)
     
 def update_winds(z,Fzs,U,V,W,dx=4000.0,Ndsq=1E-5,r_matrix=None,padx=0,pady=0,rotation=True):
+    """Called from the simple weather model to update the U,V,W wind fields based on linear theory
     
+    z = 3D grid (nz x ny x nx) elevations (m)
+    Fzs = FFT(terrain)
+    U = 3D input wind field (m/s)
+    V = 3D input wind field (m/s)
+    W = 3D input wind field (m/s)
+    dx = grid cell spacing (m)
+    Ndsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability
+    r_matrix = rotation matrix to be used to rotate winds from real space into the 3D z grid
+    padx,padx = padding added to the sides for the sake of the fft 
+            this padding is removed after generating the linear wind field
+    rotation = boolean if we should rotate winds to the grid or not (allows external procedures to be used)
+    """
+    # if we are performing a rotation and dont already have an r_matrix, generate it here from the z field
     if r_matrix==None and rotation:
         r_matrix=np.array(generate_rotation_matrix(z.transpose((1,2,0)),dx=dx))
     
+    # setup
     sz=U.shape
     windfield=np.empty((sz[1],sz[2],sz[0],3),dtype="f")
     endx=np.choose(padx==0,[-padx,None])
     endy=np.choose(pady==0,[-pady,None])
+    # loop over z levels computing linear wind perturbation
     for i in range(U.shape[0]):
+        # uses z as the mean height of this layer because the layer thicknesses vary
         uh,vh,wh=linear_winds(Fzs,U[i,:,:].mean(),V[i,:,:].mean(),(z[i,:,:]-z[0,:,:]).mean(),dx=dx,dy=dx,Ndsq=Ndsq)
+        # add linear wind perturbations back to large scale wind field
         windfield[:,:,i,0]=U[i,:,:]+uh[pady:endy,padx:endx]
         windfield[:,:,i,1]=V[i,:,:]+vh[pady:endy,padx:endx]
         windfield[:,:,i,2]=W[i,:,:]+wh[pady:endy,padx:endx]
+    # if we are performing the rotation internally, do that last
     if rotation:
         rotate_winds(r_matrix,windfield)
+    # now update the output U,V,W variables with the windfield
     for i in range(U.shape[0]):
         U[i,:,:]=windfield[:,:,i,0]
         V[i,:,:]=windfield[:,:,i,1]
         W[i,:,:]=windfield[:,:,i,2]
+    # return r_matrix for use in future calls so we don't have to compute it every time
     return r_matrix
