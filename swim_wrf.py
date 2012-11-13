@@ -366,6 +366,7 @@ class WRF_Reader(object):
             self.topo=hgt[self.y,self.x]
             maxheight=maxheight[self.y,self.x]
             self.base_gph=self.base_gph[:,self.y,self.x]
+            self.base_pressure=self.base_pressure[:,self.y,self.x]
             self.make_model_domain(self.nlevels,maxheight,hires_topo)
             
         elif self._bilin:
@@ -443,9 +444,15 @@ class WRF_Reader(object):
             wind_v=wind_v[:,curyv,curxv]
             hgt=d.variables[self.gphvar_pert][self.curpos,:,miny:maxy,minx:maxx][plevels,...]
             hgt=(hgt[:,cury,curx]+self.base_gph)/9.8
-            temperature=None
-            pressure=None
-            specific_humidity=None
+            temperature=d.variables[self.tvar][self.curpos,:,miny:maxy,minx:maxx][plevels,...]
+            temperature=temperature[:,cury,curx]+300
+            pressure=d.variables[self.hvar][self.curpos,:,miny:maxy,minx:maxx][plevels,...]
+            pressure=pressure[:cury,curx]+self.base_pressure
+            specific_humidity=d.variables[self.qvvar][self.curpos,:,miny:maxy,minx:maxx][plevels,...]
+            specific_humidity=specific_humidity[:cury,curx]
+            # temperature=None
+            # pressure=None
+            # specific_humidity=None
             relative_humidity=None
         else:
             temperature=d.variables[self.tvar][self.curpos,:,miny:maxy,minx:maxx][plevels,cury,curx]
@@ -463,8 +470,8 @@ class WRF_Reader(object):
         self.time_inc()
         N=list(wind_v.shape)
         N[2]+=1 #v is staggered in y direction
-        return Bunch(ta=temperature, p=pressure,hgt=hgt,
-                     sh=specific_humidity, 
+        return Bunch(th=temperature, p=pressure,hgt=hgt,
+                     qv=specific_humidity/(1-specific_humidity), 
                      rh=relative_humidity, 
                      u=wind_u, v=wind_v,w=np.zeros(N,dtype=np.float32,order="F"),
                      date=datestr)
@@ -794,6 +801,9 @@ def simul_next(base,wrfwinds,q,r_matrix,Fzs,padx,pady):
         weather.u=wind.u
         weather.v=wind.v
         (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
+        weather.p=wind.p
+        weather.th=wind.th
+        weather.qv=wind.qv
     else:
         weather.u=(weather.u[:,:,1:]+weather.u[:,:,:-1])/2
         weather.v=(weather.v[:,1:,:]+weather.v[:,:-1,:])/2
@@ -873,6 +883,9 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
         r_matrix=None
         weather.u=wind.u
         weather.v=wind.v
+        weather.p=wind.p
+        weather.th=wind.th
+        weather.qv=wind.qv
         (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
         padx=None
         pady=None
