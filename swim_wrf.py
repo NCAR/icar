@@ -446,17 +446,17 @@ class WRF_Reader(object):
             hgt=(hgt[:,cury,curx]+self.base_gph)/9.8
             temperature=d.variables[self.tvar][self.curpos,:,miny:maxy,minx:maxx][plevels,...]
             temperature=temperature[:,cury,curx]+300
-            pressure=d.variables[self.hvar][self.curpos,:,miny:maxy,minx:maxx][plevels,...]
-            pressure=pressure[:cury,curx]+self.base_pressure
             specific_humidity=d.variables[self.qvvar][self.curpos,:,miny:maxy,minx:maxx][plevels,...]
-            specific_humidity=specific_humidity[:cury,curx]
+            specific_humidity=specific_humidity[:,cury,curx]
+            pressure=d.variables[self.pvar_pert][self.curpos,:,miny:maxy,minx:maxx][plevels,...]
+            pressure=pressure[:,cury,curx]+self.base_pressure
             # temperature=None
             # pressure=None
             # specific_humidity=None
             relative_humidity=None
         else:
             temperature=d.variables[self.tvar][self.curpos,:,miny:maxy,minx:maxx][plevels,cury,curx]
-            pressure=d.variables[self.hvar][self.curpos,:,miny:maxy,minx:maxx][plevels,cury,curx]
+            pressure=d.variables[self.pvar_pert][self.curpos,:,miny:maxy,minx:maxx][plevels,cury,curx]
             specific_humidity=d.variables[self.qvvar][self.curpos,:,miny:maxy,minx:maxx][plevels,cury,curx]
             relative_humidity=specific_humidity.copy()
             wind_u=d.variables[self.uvar][self.curpos,:,minyu:maxyu,minxu:maxxu][plevels,curyu,curxu]
@@ -856,6 +856,7 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
     oldweather=None
     print("Off and running...")
     weather=wrf_base.next()
+    topo_adjust_weather(wrf_base.hgt3d, weather.hgt, weather)
     r_matrix=None
     if use_linear_winds:
         # for use with the linear theory winds
