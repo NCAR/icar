@@ -662,7 +662,6 @@ class WRF_Reader(object):
             pblindex[pblindex<2]=2
             pblindex[pblindex>=17]=16
             sfc.pblh=pblindex+1
-            
         else:
             sfc=None
         
@@ -856,6 +855,7 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
     oldweather=None
     print("Off and running...")
     weather=wrf_base.next()
+    print("Mean PBL model level= "+str(weather.sfc.pblh.mean()))
     topo_adjust_weather(wrf_base.hgt3d, weather.hgt, weather)
     r_matrix=None
     if use_linear_winds:
@@ -919,6 +919,8 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
     while not done:
         t1=time.time()
         weather=q.get()
+        print("Mean PBL model level= "+str(weather.sfc.pblh.mean()))
+        
         # because of the way the next time step is read now, the state of this object does not get updated
         # so update the time step for it here
         wrf_base.time_inc()
