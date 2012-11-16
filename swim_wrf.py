@@ -65,10 +65,10 @@ R=8.3144621 # J/mol/K
 cp=29.19 # J/mol/K   =1.012 J/g/K
 g=9.81 # m/s^2
 physics=int(1) #1=thompson other=simple
-use_linear_winds=False #flag to use linear theory winds or not
-# use_linear_winds=True  #comment out one or the other
+# use_linear_winds=False #flag to use linear theory winds or not
+use_linear_winds=True  #comment out one or the other
 # use_wrf_winds=False # ditto for wrf_based winds
-use_wrf_winds=True
+# use_wrf_winds=True
 
 # this is the half kernel window size for smoothing applied to the input data (wind)
 halfk=8
@@ -338,7 +338,7 @@ class WRF_Reader(object):
         if use_linear_winds:
             slopes=slopes.mean()
             self.hgt3d=(topo[np.newaxis,...].repeat(nlevels,axis=0)+
-                    slopes*np.arange(nlevels)
+                    slopes*np.arange(nlevels))
         elif use_wrf_winds:
             self.hgt3d=(swim_io.read_nc(self._filenames[0],var=self.gphvar_base)
                     .data[0,self.usepressures,self.sub_y0:sub_y1,sub_x0:sub_x1]/9.81)
