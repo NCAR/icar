@@ -95,8 +95,8 @@ def test_topo():
     ym    = Ly/2
     am    = 5000.0       # % mountain half-width (m)
     
-    Nx    = np.round(Lx/dx)+1   # % no of grid pts
-    Ny    = np.round(Ly/dy)+1
+    Nx    = np.round(Lx/dx)   # % no of grid pts
+    Ny    = np.round(Ly/dy)
     
     # % 2D distance arrays
     x     = np.linspace(0,Lx,Nx).reshape((1,Nx)).repeat(Ny,axis=0)  
@@ -106,19 +106,21 @@ def test_topo():
     # % Make the mountain (theoretical)
     xyratio = 1. # ratio of x to y mountain half-width in domain
     zs=hm*np.exp(-(((x-xm)*xyratio)**2+(y-ym)**2)/am**2)  # % Gaussian
+    zs=(zs**3)/(hm**2) # make the mountain sharper
     
     Fzs   = fft.fftshift(fft.fft2(zs))/(Nx*Ny)
-    zs=zs[np.newaxis,:,:].repeat(3,axis=0)
-    zs[1,...]+=1000
-    zs[2,...]+=2000
+    # zs=zs[np.newaxis,:,:].repeat(3,axis=0)
+    # zs[1,...]+=1000
+    # zs[2,...]+=2000
     return (zs,Fzs)
 
 def linear_winds(Fzs, U,V,z,dx=4000.0,dy=4000.0,Ndsq  = 1E-8):
     # see Appendix A of Barstad and Gronas (2006) Tellus,58A,2-18
     # -------------------------------------------------------------------------------
     # Ndsq  = 0.003**2      # dry BV freq sq. was 0.01**2 initially, Idar suggested 0.005**2
-    # 1E-8 keeps it relatively stable, no wild oscillations
-                            # could/should be calculated from the real atm profile with limits
+    # 1E-8 keeps it relatively stable, no wild oscillations in u,v
+    # but 1E-8 doesn't damp vertical winds with height very fast
+    # could/should be calculated from the real atm profile with limits
     f  = 9.37e-5           # rad/s Coriolis frequency for 40deg north
     # ---------------------------------------------------------------------------------
     
@@ -163,6 +165,8 @@ def linear_winds(Fzs, U,V,z,dx=4000.0,dy=4000.0,Ndsq  = 1E-8):
     # u_hat = -m*(sig*k)*i*neta/kl
     # v_hat = -m*(sig*l)*i*neta/kl
     # with coriolis : 
+    # u_hat = -m*(sig*k-i*l*f)*ineta/kl
+    # v_hat = -m*(sig*l+i*k*f)*ineta/kl
     # u_hat = -m*(sig*k-i*l*f)*i*neta/kl
     # v_hat = -m*(sig*l+i*k*f)*i*neta/kl
     
