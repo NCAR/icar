@@ -55,7 +55,7 @@ def fast_smooth(data,windowsize):
     nz,nx,ny = data.shape
 
     code = """
-            #line 10 "fast_mean.py"
+            #line 58 "fast_mean.py"
             double n,cursum,lastsum,nextsum;
             int j;
             n=(windowsize*2+1)*(windowsize*2+1);

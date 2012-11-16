@@ -114,7 +114,7 @@ def test_topo():
     # zs[2,...]+=2000
     return (zs,Fzs)
 
-def linear_winds(Fzs, U,V,z,dx=4000.0,dy=4000.0,Ndsq  = 1E-8):
+def linear_winds(Fzs, U,V,z,dx=4000.0,dy=4000.0,Ndsq  = 1E-8,outputP=False):
     # see Appendix A of Barstad and Gronas (2006) Tellus,58A,2-18
     # -------------------------------------------------------------------------------
     # Ndsq  = 0.003**2      # dry BV freq sq. was 0.01**2 initially, Idar suggested 0.005**2
@@ -158,6 +158,17 @@ def linear_winds(Fzs, U,V,z,dx=4000.0,dy=4000.0,Ndsq  = 1E-8):
     ineta=i*Fzs*np.exp(i*m*z)
     w_hat=sig*ineta
     
+    if outputP:
+        tauc=2000.0
+        tauf=1000.0
+        hw=2000.0
+        cwqv=0.00268
+        FSterm = (cwqv*ineta*sig*np.exp(-z*(1-i*m*hw)/hw)/  # % simple, hydrostatic solution (eqn 16 in SB'04)
+                     (1-i*m*hw))                                            # see BS'11 for z0 component
+        FPterm = FSterm/((1+i*sig*tauc)*(1+i*sig*tauf))                     # % this also include time delays and dynamics (eqn 5 in SB'04)
+        P=Ny*Nx*np.real(fft.ifft2(fft.ifftshift(FPterm)))
+        P[P<0]=0
+        
     ineta/=kl/(-m*sig)
     u_hat=k*ineta
     v_hat=l*ineta
@@ -169,11 +180,15 @@ def linear_winds(Fzs, U,V,z,dx=4000.0,dy=4000.0,Ndsq  = 1E-8):
     # v_hat = -m*(sig*l+i*k*f)*ineta/kl
     # u_hat = -m*(sig*k-i*l*f)*i*neta/kl
     # v_hat = -m*(sig*l+i*k*f)*i*neta/kl
+
+        
     
     # pull it back out of fourier space. 
     w_hat=Ny*Nx*np.real(fft.ifft2(fft.ifftshift(w_hat)))
     u_hat=Ny*Nx*np.real(fft.ifft2(fft.ifftshift(u_hat)))
     v_hat=Ny*Nx*np.real(fft.ifft2(fft.ifftshift(v_hat)))
+    if outputP:
+        return (P,u_hat,v_hat,w_hat)
     return(u_hat,v_hat,w_hat)
     
 def update_winds(z,Fzs,U,V,W,dx=4000.0,Ndsq=1E-5,r_matrix=None,padx=0,pady=0,rotation=True):

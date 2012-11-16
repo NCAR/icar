@@ -273,17 +273,31 @@ def fix_top_bottom(topo,dz):
     return outputtopo,padding
 
     
-def topo_preprocess(topo):
-    acceptable_topo_diff=np.max(np.diff(topo))/2.0
+def topo_preprocess(topo,test=False):
+    acceptable_topo_diff=np.max(np.diff(topo))/3.0
     vpad=0.0
     hpad=0.0
+    
+    if test:
+        topo=topo.copy() #dont change the topo that is outside this routine
+        t1=np.arange(16.0,-1,-1.0)[np.newaxis,:].repeat(160,axis=0)/18.0
+        zt=topo[91:251,:17]
+        topo[91:251,:17]=1500*t1+zt*(1-t1)
+    
+        t1=np.arange(13.0)[:,np.newaxis].repeat(40,axis=1)/12.0
+        zt=topo[250:,78:118]
+        topo[250:,78:118]=2200*t1+zt*(1-t1)
+    
+        topo[245:,:50]=1500
+        topo[topo<1500]=1500
+    
     if np.max(np.abs(topo[0,:]-topo[-1,:]))>acceptable_topo_diff: # more a less a given
         (topo,vpad)=fix_top_bottom(topo,acceptable_topo_diff)
     if np.max(np.abs(topo[:,0]-topo[:,-1]))>acceptable_topo_diff: # ditto
         (topo,hpad)=fix_top_bottom(topo.T,acceptable_topo_diff)
         topo=topo.T
     #this might matter more than I thought... and maybe all edges should get exactly to 0?
-    topo-=(topo[0,:].mean()+topo[-1,:].mean()+topo[:,0].mean()+topo[:,-1].mean())/4.0
+    topo-=topo.min() #1500# (topo[0,:].mean()+topo[-1,:].mean()+topo[:,0].mean()+topo[:,-1].mean())/4.0
     return topo,vpad,hpad
     
 
@@ -319,13 +333,19 @@ class WRF_Reader(object):
 
     def make_model_domain(self,nlevels,maxheight,topo):
         sz=topo.shape
+        
         slopes=(maxheight-topo)/nlevels
-        self.hgt3d=(topo[np.newaxis,...].repeat(nlevels,axis=0)+
-                slopes[np.newaxis,...].repeat(nlevels,axis=0)*
-                np.arange(nlevels)[:,np.newaxis].repeat(sz[0]*sz[1],axis=1).reshape((nlevels,sz[0],sz[1])))
-        # self.hgt3d=(swim_io.read_nc(filename,var=self.gphvar_base)
-        #         .data[0,self.usepressures,self.sub_y0:sub_y1,sub_x0:sub_x1]/g)
-        # smooth_edges(self.hgt3d)
+        if use_linear_winds:
+            slopes=slopes.mean()
+            self.hgt3d=(topo[np.newaxis,...].repeat(nlevels,axis=0)+
+                    slopes*np.arange(nlevels)
+        elif use_wrf_winds:
+            self.hgt3d=(swim_io.read_nc(self._filenames[0],var=self.gphvar_base)
+                    .data[0,self.usepressures,self.sub_y0:sub_y1,sub_x0:sub_x1]/9.81)
+        else:
+            self.hgt3d=(topo[np.newaxis,...].repeat(nlevels,axis=0)+
+                    slopes[np.newaxis,...].repeat(nlevels,axis=0)*
+                    np.arange(nlevels)[:,np.newaxis].repeat(sz[0]*sz[1],axis=1).reshape((nlevels,sz[0],sz[1])))
         
     
     def init_xy(self,driverfilename='forcing/wrfout_d01_2000-10-01_00:00:00'):
@@ -762,6 +782,28 @@ def rotate_winds(u,v,hgt,dx=4000.0,rotation=None):
     u/=urot
     v/=vrot
     return rotation
+
+def calc_ndsq(weather,base):
+    R  = 287.0
+    Rv = 461.0
+    cp = 1004.0
+    L   = 2.5e6
+    g  = 9.81
+    ratio = 18.015/28.964
+
+    t0 = 273.15
+    p0=weather.p[0,...]
+    pii=1.0/((100000.0/p0)**(R/cp))
+    T2m=weather.th[0,...]*pii
+    
+    es = 611.21*np.exp(17.502*(T2m-t0)/(T2m-32.19))
+    qs0 = ratio * es/(p0-es)
+
+    cap_gamma = -(g * (1.+(L*qs0.mean())/(R*T2m.mean())) / (cp + (L**2 * qs0.mean()*ratio) / (R*T2m.mean()**2)))
+    env_gamma = weather.th.mean()*np.mean((weather.th[1:,...]-weather.th[:-1,...])/(base.hgt3d[1:,...]-base.hgt3d[:-1,...]))
+    ndsq=(g/T2m)*(env_gamma-cap_gamma)
+    ndsq=min(1e-5,ndsq)
+    return ndsq
     
 
 def simul_next(base,wrfwinds,q,r_matrix,Fzs,padx,pady):
@@ -770,10 +812,9 @@ def simul_next(base,wrfwinds,q,r_matrix,Fzs,padx,pady):
 
     if use_linear_winds:
         (junku,junkv,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
-        # calculate the (squared) brunt vaisala frequency might be better off with the dry value (subtract cap_gamma?)
-        ndsq=9.8/weather.th.mean()*np.mean((weather.th[1:,...]-weather.th[:-1,...])/(base.hgt3d[1:,...]-base.hgt3d[:-1,...]))
+        # calculate the (squared) brunt vaisala frequency, better off with the dry value (subtract cap_gamma)
+        ndsq=calc_ndsq(weather,base)
         print("Ndsq=",ndsq)
-        if ndsq>0.02:ndsq=0.2
         # print("raw winds Umax=",weather.u.max())
         # print("raw winds Vmax=",weather.v.max())
         # print("raw winds Wmax=",weather.w.max())
@@ -782,34 +823,39 @@ def simul_next(base,wrfwinds,q,r_matrix,Fzs,padx,pady):
         print("LT winds Umax=",weather.u.max())
         print("LT winds Vmax=",weather.v.max())
         print("LT winds Wmax=",weather.w.max())
-        weather.u=fast_mean.fast_smooth(weather.u,5)
-        weather.v=fast_mean.fast_smooth(weather.v,5)
-        weather.u=(weather.u[:,:,1:]+weather.u[:,:,:-1])/2
-        weather.v=(weather.v[:,1:,:]+weather.v[:,:-1,:])/2
-        rotate_winds(weather.u,weather.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
-        (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
-        print("adjusted LT winds Umax=",weather.u.max())
-        print("adjusted LT winds Vmax=",weather.v.max())
-        print("adjusted LT winds Wmax=",weather.w.max())
+        # weather.u=fast_mean.fast_smooth(weather.u,5)
+        # weather.v=fast_mean.fast_smooth(weather.v,5)
+        # weather.u=(weather.u[:,:,1:]+weather.u[:,:,:-1])/2
+        # weather.v=(weather.v[:,1:,:]+weather.v[:,:-1,:])/2
+        # if r_matrix!=None:
+        #     rotate_winds(weather.u,weather.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
+        # (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
+        # print("adjusted LT winds Umax=",weather.u.max())
+        # print("adjusted LT winds Vmax=",weather.v.max())
+        # print("adjusted LT winds Wmax=",weather.w.max())
     elif use_wrf_winds:
         wind=wrfwinds.next()
-        wind.u=(wind.u[:,:,1:]+wind.u[:,:,:-1])/2
-        wind.v=(wind.v[:,1:,:]+wind.v[:,:-1,:])/2
-        if r_matrix !=None:
-            r_matrix=rotate_winds(wind.u,wind.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
+        wind.u=fast_mean.fast_smooth(wind.u,2)
+        wind.v=fast_mean.fast_smooth(wind.v,2)
+        # wind.u=(wind.u[:,:,1:]+wind.u[:,:,:-1])/2
+        # wind.v=(wind.v[:,1:,:]+wind.v[:,:-1,:])/2
+        # if r_matrix !=None:
+        #     r_matrix=rotate_winds(wind.u,wind.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
         weather.u=wind.u
         weather.v=wind.v
-        (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
+        # (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
         weather.p=wind.p
         weather.th=wind.th
         weather.qv=wind.qv
-    else:
-        weather.u=(weather.u[:,:,1:]+weather.u[:,:,:-1])/2
-        weather.v=(weather.v[:,1:,:]+weather.v[:,:-1,:])/2
-        if r_matrix !=None:
-            r_matrix=rotate_winds(weather.u,weather.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
-        (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
+    # else:
+    #     weather.u=(weather.u[:,:,1:]+weather.u[:,:,:-1])/2
+    #     weather.v=(weather.v[:,1:,:]+weather.v[:,:-1,:])/2
 
+    weather.u=(weather.u[:,:,1:]+weather.u[:,:,:-1])/2
+    weather.v=(weather.v[:,1:,:]+weather.v[:,:-1,:])/2
+    if r_matrix !=None:
+        r_matrix=rotate_winds(weather.u,weather.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
+    (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
 
     # (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
     
@@ -847,10 +893,8 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
 
     gkern=gauss_kern(40)
     wrf_base=WRF_Reader(file_search,sfc=sfc_file_search,bilin=True,nn=False)
-    if use_wrf_winds:
-        wrfwinds=WRF_Reader(wind_files,bilin=False,nn=True, windonly=True)
-    else:
-        wrfwinds=None
+    wrfwinds=None
+    
     timestep=1.0*60.0*60.0 #3hrs
     oldweather=None
     print("Off and running...")
@@ -863,19 +907,22 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
         (lt_topo,pady,padx)=topo_preprocess(topo)
         Fzs=fft.fftshift(fft.fft2(lt_topo))/((Nx+padx*2)*(Ny+pady*2))
         (junku,junkv,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
+        Ndsq=calc_ndsq(weather,wrf_base)
         r_matrix=lt_winds.update_winds(wrf_base.hgt3d,Fzs,weather.u,weather.v,weather.w,dx=wrfres,
-                                      Ndsq=1E-5,r_matrix=None,padx=padx,pady=pady,rotation=False)
+                                      Ndsq=Ndsq,r_matrix=None,padx=padx,pady=pady,rotation=False)
         # (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,
         #                                 prestaggered=(weather.v.shape[1]!=weather.u.shape[1]))
-        weather.u=fast_mean.fast_smooth(weather.u,5)
-        weather.v=fast_mean.fast_smooth(weather.v,5)
+        # weather.u=fast_mean.fast_smooth(weather.u,5)
+        # weather.v=fast_mean.fast_smooth(weather.v,5)
         weather.u=(weather.u[:,:,1:]+weather.u[:,:,:-1])/2
         weather.v=(weather.v[:,1:,:]+weather.v[:,:-1,:])/2
         
-        r_matrix=rotate_winds(weather.u,weather.v,wrf_base.hgt3d,dx=wrfres,rotation=None)
+        # r_matrix=rotate_winds(weather.u,weather.v,wrf_base.hgt3d,dx=wrfres,rotation=None)
         (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
         
     elif use_wrf_winds:
+        wrfwinds=WRF_Reader(wind_files,bilin=False,nn=True, windonly=True)
+        wrf_base.hgt3d=wrfwinds.hgt3d #if we are using winds from wrf, we need to use the 3d domain from wrf too
         # to use high resolution WRF winds as a "TRUTH" run
         wind=wrfwinds.next()
         wind.u=(wind.u[:,:,1:]+wind.u[:,:,:-1])/2
@@ -884,6 +931,8 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
         r_matrix=None
         weather.u=wind.u
         weather.v=wind.v
+        weather.u=fast_mean.fast_smooth(weather.u,2)
+        weather.v=fast_mean.fast_smooth(weather.v,2)
         weather.p=wind.p
         weather.th=wind.th
         weather.qv=wind.qv
