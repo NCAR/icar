@@ -53,10 +53,10 @@ def swim2d(z,atm,oldatm,swim,processPool,physics=0, timestep=None,dx=2000.0):# ,
     
     # calculate the maximum advection dt which still meets the Courant condition (here 0.5 for 2d 0.33 for 3d)
     # dt=0.49/np.max(np.abs(U[1:,:,:])/dx+np.abs(V[:,:,1:])/dx) # for 2d advection
-    dt=0.33/max((np.max(np.abs(W[1:,:,1:])+np.abs(U[1:,:,:])+np.abs(V[:,:,1:]))/dx),
+    dt=0.3/max((np.max(np.abs(W[1:,:,1:])+np.abs(U[1:,:,:])+np.abs(V[:,:,1:]))/dx),
             (np.max(np.abs(newW[1:,:,1:])+np.abs(newU[1:,:,:])+np.abs(newV[:,:,1:]))/dx)) # for 3d advection?
     # print(dx*0.33/dt)
-    if dt>120:dt=120.0 # maximum dt = 120 seconds even if winds happen to be 0 so that the microphysics will be stable? 
+    if dt>60:dt=60.0 # maximum dt = 120? 60? 30? seconds even if winds happen to be 0 so that the microphysics will be stable? 
     # ensure that dt goes into timestep evenly
     ntimes=np.ceil(timestep/dt)
     dt=timestep/ntimes

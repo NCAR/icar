@@ -217,7 +217,7 @@ def update_winds(z,Fzs,U,V,W,dx=4000.0,Ndsq=1E-5,r_matrix=None,padx=0,pady=0,rot
     endy=np.choose(pady==0,[-pady,None])
     # loop over z levels computing linear wind perturbation
     for i in range(U.shape[0]):
-        # uses z as the mean height of this layer because the layer thicknesses vary
+        # uses z as the mean height of this layer because the layer thicknesses could vary (they dont currently...)
         uh,vh,wh=linear_winds(Fzs,U[i,:,:].mean(),V[i,:,:].mean(),(z[i,:,:]-z[0,:,:]).mean(),dx=dx,dy=dx,Ndsq=Ndsq)
         # add linear wind perturbations back to large scale wind field
         windfield[:,:,i,0]=U[i,:,:]+uh[pady:endy,padx:endx]

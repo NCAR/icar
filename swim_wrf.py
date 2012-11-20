@@ -784,6 +784,7 @@ def rotate_winds(u,v,hgt,dx=4000.0,rotation=None):
     return rotation
 
 def calc_ndsq(weather,base):
+    return 1.0e-6
     R  = 287.0
     Rv = 461.0
     cp = 1004.0
@@ -805,7 +806,7 @@ def calc_ndsq(weather,base):
     dry_gamma=np.mean(env_gamma-cap_gamma)
     print(T2m.mean(),env_gamma.mean(),cap_gamma.mean(),dry_gamma)
     ndsq=(g/T2m.mean())*(dry_gamma)
-    ndsq=max(min(1e-5,ndsq),1e-10)
+    ndsq=max(min(1e-5,ndsq),1e-8)
     return ndsq
     
 
