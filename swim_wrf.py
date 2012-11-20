@@ -67,7 +67,7 @@ g=9.81 # m/s^2
 physics=int(1) #1=thompson other=simple
 # use_linear_winds=False #flag to use linear theory winds or not
 use_linear_winds=True  #comment out one or the other
-# use_wrf_winds=False # ditto for wrf_based winds
+use_wrf_winds=False # ditto for wrf_based winds
 # use_wrf_winds=True
 
 # this is the half kernel window size for smoothing applied to the input data (wind)
@@ -338,7 +338,7 @@ class WRF_Reader(object):
         if use_linear_winds:
             slopes=slopes.mean()
             self.hgt3d=(topo[np.newaxis,...].repeat(nlevels,axis=0)+
-                    slopes*np.arange(nlevels))
+                    slopes[np.newaxis,...]*np.arange(nlevels)[:,np.newaxis,np.newaxis])
         elif use_wrf_winds:
             self.hgt3d=(swim_io.read_nc(self._filenames[0],var=self.gphvar_base)
                     .data[0,self.usepressures,self.sub_y0:sub_y1,sub_x0:sub_x1]/9.81)
@@ -793,16 +793,19 @@ def calc_ndsq(weather,base):
 
     t0 = 273.15
     p0=weather.p[0,...]
-    pii=1.0/((100000.0/p0)**(R/cp))
-    T2m=weather.th[0,...]*pii
+    pii=1.0/((100000.0/weather.p)**(R/cp))
+    T2m=weather.th[0,...]*pii[0,...]
     
     es = 611.21*np.exp(17.502*(T2m-t0)/(T2m-32.19))
     qs0 = ratio * es/(p0-es)
 
-    cap_gamma = -(g * (1.+(L*qs0.mean())/(R*T2m.mean())) / (cp + (L**2 * qs0.mean()*ratio) / (R*T2m.mean()**2)))
-    env_gamma = weather.th.mean()*np.mean((weather.th[1:,...]-weather.th[:-1,...])/(base.hgt3d[1:,...]-base.hgt3d[:-1,...]))
-    ndsq=(g/T2m)*(env_gamma-cap_gamma)
-    ndsq=min(1e-5,ndsq)
+    cap_gamma = -(g * (1.+(L*qs0)/(R*T2m)) / (cp + (L**2 * qs0*ratio) / (R*T2m**2)))
+    env_gamma = np.mean(np.diff(weather.th*pii,axis=0)/np.diff(base.hgt3d,axis=0),axis=0)
+    
+    dry_gamma=np.mean(env_gamma-cap_gamma)
+    print(T2m.mean(),env_gamma.mean(),cap_gamma.mean(),dry_gamma)
+    ndsq=(g/T2m.mean())*(dry_gamma)
+    ndsq=max(min(1e-5,ndsq),1e-10)
     return ndsq
     
 
