@@ -207,7 +207,7 @@ module swim_step
                 temperature(:,:,i)=th(:,:,i)*pii(:,:,i) ! K should convert to J? =T *rho*cp*dvol??
     !           compute air density
                 rho(:,:,i)=p(:,:,i)/(R*temperature(:,:,i))
-				th(:,:,i)=th(:,:,i)*rho(:,:,i)
+! 				th(:,:,i)=th(:,:,i)*rho(:,:,i)
                 qv(:,:,i)=qv(:,:,i)*rho(:,:,i)
                 qc(:,:,i)=qc(:,:,i)*rho(:,:,i)
                 qr(:,:,i)=qr(:,:,i)*rho(:,:,i)
@@ -240,7 +240,7 @@ module swim_step
             !$omp shared(pii,th,qv,qc,qr,qi,qs,qg,rho,p,u,v,w,dth,dqv,dp,du,dv,dw)
             !$omp do
             do i=jds,jde
-				th(:,:,i)=th(:,:,i)/rho(:,:,i)
+! 				th(:,:,i)=th(:,:,i)/rho(:,:,i)
                 qv(:,:,i)=qv(:,:,i)/rho(:,:,i)
                 qc(:,:,i)=qc(:,:,i)/rho(:,:,i)
                 qr(:,:,i)=qr(:,:,i)/rho(:,:,i)

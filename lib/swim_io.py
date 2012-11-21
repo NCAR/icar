@@ -4,9 +4,20 @@ import os
 import numpy as np
 import Nio
 from bunch import Bunch
+import glob
 
 def Dataset(filename,mode="r",format="nc"):
     return Nio.open_file(filename,mode=mode,format=format)
+
+def read_files(pattern,var=None,returnNCvar=False,axis=None):
+    files=glob.glob(pattern)
+    d=[]
+    for f in files:
+        d.append(read_nc(f,var=var,returnNCvar=returnNCvar).data)
+    if axis!=None:
+        d=np.concatenate(d,axis=axis)
+    return d
+    
 
 def read_nc(filename,var=None,proj=None,returnNCvar=False):
     '''read a netCDF file and return the specified variable
