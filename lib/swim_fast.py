@@ -1,5 +1,6 @@
 from __future__ import print_function
 import numpy as np
+import time
 
 R=8.3144621 # J/mol/K
 cp=29.19 # J/mol/K   =1.012 J/g/K
@@ -15,6 +16,7 @@ def get_potential_t(atm):
 
 # def swim2d(z,atm,oldatm,newp,newu,newv,neww,swim,dTdt,processPool, timestep=None,dx=2000.0):# ,fname=None):
 def swim2d(z,atm,oldatm,swim,processPool,physics=0, timestep=None,dx=2000.0):# ,fname=None):
+    t0=time.time()
     N=z.shape
     if timestep==None:
         timestep=3*60.0*60.0 # seconds
@@ -99,6 +101,8 @@ def swim2d(z,atm,oldatm,swim,processPool,physics=0, timestep=None,dx=2000.0):# ,
     pblh=np.array(oldatm.sfc.pblh,order="F",dtype="i")
     # SURFACE FLUXES
     physics=int(physics)
+    t1=time.time()
+    print("FORTRAN setup="+str(t1-t0))
     swim.swim_step.timestep(ntimes,U,V,W,
                 sensible_heat, latent_heat,pblh,
                 qv,qc,qr,qi,qs,qg,ni,nr, 
@@ -108,6 +112,8 @@ def swim2d(z,atm,oldatm,swim,processPool,physics=0, timestep=None,dx=2000.0):# ,
                 int(ids),int(ide), int(jds),int(jde), int(kds),int(kde), # domain dims
                 int(ims),int(ime), int(jms),int(jme), int(kms),int(kme), # memory dims
                 int(its),int(ite), int(jts),int(jte), int(kts),int(kte))
+    t2=time.time()
+    print("FORTRAN runtime="+str(t2-t1))
                 
     atm.th=th.transpose([1,0,2])
     atm.qv=qv.transpose([1,0,2])
@@ -119,5 +125,6 @@ def swim2d(z,atm,oldatm,swim,processPool,physics=0, timestep=None,dx=2000.0):# ,
     atm.qs=qs.transpose([1,0,2])
     atm.qg=qg.transpose([1,0,2])
 
+    print("FORTRAN takedown="+str(time.time()-t2))
     return pptrain+pptgraul+pptsnow
     

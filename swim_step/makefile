@@ -1,15 +1,59 @@
-#F90=gfortran
-#FFLAGS=-x f95-cpp-input -fopenmp -D__OPENMP -lgomp -O3
-#F2PYFLAGS=--fcompiler=gnu95 --f90flags='-x f95-cpp-input -fopenmp -D__OPENMP' -lgomp --opt="-O3" -DF2PY_REPORT_ON_ARRAY_COPY=1
+#NOTE From here to ------: code to guess machine install directory and fortran compiler
+# all this can be removed and replaced with F90= and INSTALLDIR= examples are below
+NODENAME := $(shell uname -n)
 
-F90=ifort
-FFLAGS=-fpp -fast -openmp -c
-INSTALLDIR=~/bin/python/lib/
+# UNAME := $(shell uname)
+# ifeq ($(UNAME), Linux)
+# 	INSTALLDIR=~/bin/python/lib/
+# endif
+# ifeq ($(UNAME), Darwin)
+# 	INSTALLDIR=~/Dropbox/bin/python/lib/
+# endif
+
+ifeq ($(NODENAME), mirage0)
+	F90=ifort
+	INSTALLDIR=~/bin/python/lib/
+endif
+ifeq ($(NODENAME), mirage1)
+	F90=ifort
+	INSTALLDIR=~/bin/python/lib/
+endif
+ifeq ($(NODENAME), mirage2)
+	F90=ifort
+	INSTALLDIR=~/bin/python/lib/
+endif
+ifeq ($(NODENAME), mirage4)
+	F90=ifort
+	INSTALLDIR=~/bin/python/lib/
+endif
+ifeq ($(NODENAME), mirage5)
+	F90=ifort
+	INSTALLDIR=~/bin/python/lib/
+endif
+ifeq ($(NODENAME), hydrolab)
+	F90=gfortran
+	INSTALLDIR=~/bin/python/lib/
+endif
+ifeq ($(NODENAME), lobuche)
+	F90=gfortran
+	INSTALLDIR=~/Dropbox/bin/python/lib/
+endif
+
+#------------------------------------------------------
+#  based on fortran compiler specified above, set up appropriate fortran and f2py flags
+ifeq ($(F90), gfortran)
+	FFLAGS=-x f95-cpp-input -fopenmp -D__OPENMP -lgomp -O3
+	F2PYFLAGS=--fcompiler=gnu95 --f90flags='-x f95-cpp-input -fopenmp -D__OPENMP' -lgomp --opt="-O3" -DF2PY_REPORT_ON_ARRAY_COPY=1
+endif
+ifeq ($(F90), ifort)
+	FFLAGS=-fpp -fast -openmp -c
+	F2PYFLAGS=--fcompiler=intelem --f90flags='-fpp -openmp' -lguide --opt='-fast' -DF2PY_REPORT_ON_ARRAY_COPY=1
+endif
 
 F2PY=f2py
-F2PYFLAGS=--fcompiler=intelem --f90flags='-fpp -openmp' -lguide --opt='-fast' -DF2PY_REPORT_ON_ARRAY_COPY=1
 
 
+# you shouldn't need to alter anything below this point
 all: swim.so
 
 swim.so:swim.pyf swim_all.f90
