@@ -244,14 +244,19 @@ def convert_p(p,h,dz):
     pout=slp*(1 - 2.25577E-5*(h+dz))**5.25588
     return pout
 
-def fix_top_bottom(topo,dz):
-    # find the worst dz between the top and bottom of the dataset
-    worst_offset=np.max(np.abs(topo[0,:]-topo[-1,:]))
-    # find the minimum distance required to smoothly transition between those
-    # two endpoints
-    mindist=np.round(worst_offset/(dz/50.0))
-    # calculate the mid point / average topography that will be the new borders
-    aves=(topo[0,:]+topo[-1,:])/2.0
+def fix_top_bottom(topo,dz,edgevalue=None):
+    if edgevalue==None:
+        # find the worst dz between the top and bottom of the dataset
+        worst_offset=np.max(np.abs(topo[0,:]-topo[-1,:]))
+        # find the minimum distance required to smoothly transition between those
+        # two endpoints
+        mindist=np.round(worst_offset/(dz/50.0))
+        # calculate the mid point / average topography that will be the new borders
+        aves=(topo[0,:]+topo[-1,:])/2.0
+    else:
+        aves=np.array([edgevalue])
+        worst_offset=max(np.max(np.abs(topo[0,:]-edgevalue)),np.max(np.abs(topo[-1,:]-edgevalue)))
+        mindist=np.round(worst_offset/(dz/50.0)/2)
     # create the output topography array
     sz=topo.shape
     if mindist%2==1:
@@ -277,6 +282,7 @@ def topo_preprocess(topo,test=False):
     acceptable_topo_diff=np.max(np.diff(topo))/3.0
     vpad=0.0
     hpad=0.0
+    edgevalue=(topo[0,:].mean()+topo[-1,:].mean()+topo[:,0].mean()+topo[:,-1].mean())/4.0
     
     if test:
         topo=topo.copy() #dont change the topo that is outside this routine
@@ -292,12 +298,13 @@ def topo_preprocess(topo,test=False):
         topo[topo<1500]=1500
     
     if np.max(np.abs(topo[0,:]-topo[-1,:]))>acceptable_topo_diff: # more a less a given
-        (topo,vpad)=fix_top_bottom(topo,acceptable_topo_diff)
+        (topo,vpad)=fix_top_bottom(topo,acceptable_topo_diff,edgevalue=edgevalue)
     if np.max(np.abs(topo[:,0]-topo[:,-1]))>acceptable_topo_diff: # ditto
-        (topo,hpad)=fix_top_bottom(topo.T,acceptable_topo_diff)
+        (topo,hpad)=fix_top_bottom(topo.T,acceptable_topo_diff,edgevalue=edgevalue)
         topo=topo.T
     #this might matter more than I thought... and maybe all edges should get exactly to 0?
-    topo-=topo.min() #1500# (topo[0,:].mean()+topo[-1,:].mean()+topo[:,0].mean()+topo[:,-1].mean())/4.0
+    # topo-=topo.min() #1500# (topo[0,:].mean()+topo[-1,:].mean()+topo[:,0].mean()+topo[:,-1].mean())/4.0
+    topo-=edgevalue
     return topo,vpad,hpad
     
 
