@@ -29,6 +29,8 @@ LICENSE
     This script is in the public domain.
 
 VERSION
+    0.6.1 - provided commandline and inputfile option handling. 
+            and (slightly) streamlined main()
     0.6   - adding WRF high res winds
     0.5.1 - SPEED (esp. with new microphysics ~50x faster)
     0.5   - added LT winds & fancy 3D grid(?)
@@ -810,10 +812,14 @@ def calc_ndsq(weather,base):
     return ndsq
     
 
-def simul_next(base,wrfwinds,q,r_matrix,Fzs,padx,pady):
+def simul_next(base,wrfwinds,q,r_matrix,Fzs,padx,pady,options=None):
     weather=base.next()
     topo_adjust_weather(base.hgt3d, weather.hgt, weather)
 
+    if options!=None:
+        use_linear_winds=options.use_linear_winds
+        use_wrf_winds=options.use_wrf_winds
+        
     if use_linear_winds:
         (junku,junkv,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
         # calculate the (squared) brunt vaisala frequency, better off with the dry value (subtract cap_gamma)
@@ -874,6 +880,65 @@ def parallel_output(filename,Nx,Ny,Nz,varname,data,curdate):
         ncout=swim_io.NC_writer(filename,Nx,Ny,var=varname)
     ncout.appendToVar(data, date=outputcurdate)
     ncout.close()
+    
+
+
+class Forcing_Reader(object):
+    old=None
+    new=None
+    
+    base=None
+    wrfwinds=None
+    q=None
+    r_matrix=None
+    Fzs=None
+    padx=None
+    pady=None
+    
+    def __init__(options,domain):
+        self.q=Queue()
+        self.base=
+
+    def next(self):
+        self.old=self.new
+        self.new=self.q.get()
+        self.calc_deltas(old,new)
+
+        p1=Process(target=simul_next,args=(self.base,self.wrfwinds,self.q,self.r_matrix,self.Fzs,self.padx,self.pady))
+        p1.start()
+        
+        deltas=calc_deltas(self.old,self.new)
+        return Bunch(old=self.old,new=self.new,deltas=self.deltas)
+
+    def __iter__(self):
+        return self
+    def close(self):
+        pass
+    def __enter__(self):
+        return self
+    def __exit__(self):
+        self.close()
+    def __del__(self):
+        self.close()
+        super(Forcing_Reader,self).__del__()
+
+
+def main(options):
+    """Main program setup domain/forcing and loop over input data"""
+    domain=setup_domain(options)
+    
+    forcing=Forcing_Reader(options,domain)
+
+    swim_lib.init(options.physics)
+    t0=time.time()
+    for weather in forcing:
+        t1=time.time()
+        swim.time_step(domain,weather,swim_lib,options)
+        t2=time.time()
+        write_output(weather,options)
+        t3=time.time()
+        if options.verbose:
+            print(phyt)
     
 
 def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_data/baseline_info/2km_wrf_input_d01'):
@@ -1021,8 +1086,75 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
         oldweather=weather
     wrf_base.close()
 
-
-
+def default_options():
+    """Return a structure of default options"""
+    return Bunch(forcing_dir="forcing",domain_dir="baseline_info", 
+                use_linear_winds=False, use_wrf_winds=False,
+                wrfres=4000.0,
+                output_dir="output")
+    
+def read_options_file(filename):
+    """Simple procedure to read through a file for key-value pairs
+    
+    lines should be key=value
+    white space is stripped
+    Anything after a # is treated as a comment. 
+    """
+    output=default_options()
+    with open(filename,'ru') as f:
+        for l in f:
+            l=l.split("#")[0]
+            if re.match(".*=.*",l):
+                k,v=l.split("=")
+                output[k.strip()]=v.strip()
+    return output
+    
+def setup_options(args):
+    """Set up options for this model run. 
+    
+    Default options are set up by default_options()
+    If args.inputfilename exists, options are read from file as key value pairs, overriding defaults
+    if options are specified on the commandline, they override values in the input file
+    """
+    if args.inputfile!=None:
+        options=default_options()
+    else:
+        options=read_options_file(args.inputfile)
+    
+    for k in args.keys():
+        if k!="inputfile":
+            if args[k]!=None:
+                options[k]=args[k]
+    return options
+    
 
 if __name__ == '__main__':
-    main()
+    try:
+        parser= argparse.ArgumentParser(description='A high resolution Simple Weather (interpolation) Model (SWIM)')
+        parser.add_argument('inputfile', default=None,nargs="?",action='store',
+                            description="Input file specifying all other options, specified command line options will override")
+        parser.add_argument('forcing_dir', default=None,nargs="?",action='store',
+                            description="Directory containing coarse resolution WRF model data")
+        parser.add_argument('domain_dir', default=None,nargs="?",action='store',
+                            description="Directory containing high resolution model domain information \n"
+                            +"(as from a single high resolution WRF input or output file)")
+        parser.add_argument('-v', '--version',action='version',version='SWIM v0.6.1')
+        parser.add_argument ('--verbose', action='store_true',
+                default=False, help='verbose output', dest='verbose')
+        args = parser.parse_args()
+        
+        options=setup_options(args)
+        exit_code = main(options)
+
+        if exit_code is None:
+            exit_code = 0
+        sys.exit(exit_code)
+    except KeyboardInterrupt, e: # Ctrl-C
+        raise e
+    except SystemExit, e: # sys.exit()
+        raise e
+    except Exception, e:
+        print('ERROR, UNEXPECTED EXCEPTION')
+        print(str(e))
+        traceback.print_exc()
+        os._exit(1)
