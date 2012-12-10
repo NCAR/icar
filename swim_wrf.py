@@ -239,6 +239,7 @@ def simul_next(base,wrfwinds,q,r_matrix,Fzs,padx,pady,options=None,forcing=None)
     if options!=None:
         use_linear_winds=options.use_linear_winds
         use_wrf_winds=options.use_wrf_winds
+        wrfres=options.wrfres
     if forcing!=None:
         Fzs=forcing.Fzs
         padx=forcing.padx
@@ -301,7 +302,7 @@ class Forcing_Reader(object):
             self.Fzs=fft.fftshift(fft.fft2(self.lt_topo))/((Nx+self.padx*2)*(Ny+self.pady*2))
             
         if options.use_wrf_winds:
-            self.wrfwinds=WRF_Reader(options.wind_files,bilin=False,nn=True, windonly=True)
+            self.wrfwinds=WRF_Reader(options.wind_files,bilin=False,nn=True, windonly=True,options=options)
             self.base.hgt3d=self.wrfwinds.hgt3d #if we are using winds from wrf, we need to use the 3d domain from wrf too
             
         self.reader_process=Process(target=simul_next,args=(self.base,self.wrfwinds,self.q,self.r_matrix,self.Fzs,self.padx,self.pady,options))
@@ -446,7 +447,6 @@ def main(options):
         t2=time.time()
         write_output(outputlist,weather,options)
         t3=time.time()
-        print(options.clearold)
         if options.verbose:
             print("Finished Timestep:"+str(weather.old.date))
             print("Total Time:"+str(t3-t0))
@@ -659,7 +659,13 @@ def setup_options(args):
             # all elements in it (i.e. lists of lists are allowed, but all sub-elements must be lists)
             options[k]=convert_iterable(options[k],doptions[k])
         else:
-            options[k]=type(doptions[k])(options[k])
+            if type(doptions[k])==type(True):
+                if str(options[k]).strip().lower()=="false":
+                    options[k]=False
+                else:
+                    options[k]=True
+            else:
+                options[k]=type(doptions[k])(options[k])
     return options
     
 
