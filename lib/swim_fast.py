@@ -10,11 +10,18 @@ def get_real_t(atm,potentialT):
 def get_potential_t(atm):
     return atm.ta*(100000.0/atm.p)**(R/cp)
 
-
-# dx=2000.0
-
-# def swim2d(z,atm,oldatm,newp,newu,newv,neww,swim,dTdt,processPool, timestep=None,dx=2000.0):# ,fname=None):
-def swim2d(z,atm,oldatm,swim,processPool,physics=0, timestep=None,dx=2000.0):# ,fname=None):
+def swim2d(domain,weather,swim,options):
+    # modified to work with new calling sequence.  
+    # Eventually this whole routine should get cleaned up too
+    # currently just recasting arrays to order="F" is taking ~1sec, 
+    # with simplified microphysics this is becoming important
+    physics=options.physics
+    oldatm=weather.old
+    atm=weather.new
+    z=domain.topo
+    dx=options.wrfres
+    timestep=options.timestep
+    
     N=z.shape
     if timestep==None:
         timestep=3*60.0*60.0 # seconds
@@ -55,7 +62,10 @@ def swim2d(z,atm,oldatm,swim,processPool,physics=0, timestep=None,dx=2000.0):# ,
     # dt=0.49/np.max(np.abs(U[1:,:,:])/dx+np.abs(V[:,:,1:])/dx) # for 2d advection
     dt=0.3/max((np.max(np.abs(W[1:,:,1:])+np.abs(U[1:,:,:])+np.abs(V[:,:,1:]))/dx),
             (np.max(np.abs(newW[1:,:,1:])+np.abs(newU[1:,:,:])+np.abs(newV[:,:,1:]))/dx)) # for 3d advection?
-    # print(dx*0.33/dt)
+    # physics could be speed up by converting to 1D advection (courant must be <1 so ~3x fewer time steps)
+    #  but then physics should provide alternating direction advection calculations.
+    # and since we try to keep dt<~60 for microphysics anyway, this may not matter too much
+    # maybe look at different microphysics (e.g. cuda implementation of WSM6?) :)
     if dt>60:dt=60.0 # maximum dt = 120? 60? 30? seconds even if winds happen to be 0 so that the microphysics will be stable? 
     # ensure that dt goes into timestep evenly
     ntimes=np.ceil(timestep/dt)

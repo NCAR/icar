@@ -51,12 +51,14 @@ import argparse # requires python >=2.7
 from multiprocessing import Pool,Queue,Process
 import glob
 import time
+import copy
+import re
 # "Standard" 3rd party modules
 import numpy.fft as fft
 from scipy.signal import convolve
 import numpy as np
 # my common modules
-import units
+# import units
 from bunch import Bunch
 # swim specific modules
 import swim_io # this class combines the functionality of the three file IO classes below
@@ -164,20 +166,6 @@ def topo_adjust_weather(hitopo,lowtopo,weather):
         weather.p=convert_p(weather.p,weather.hgt,dz[np.newaxis,:,:].repeat(weather.p.shape[0],axis=0))
     else:
         weather.p=convert_p(weather.p,weather.hgt,dz)
-
-
-def gauss_kern(size, sizey=None):
-    """ Returns a normalized 2D gauss kernel array for convolutions """
-    size = int(size)    
-    if not sizey:
-        sizey = size
-    else:
-        sizey = int(sizey)               
-    x, y = np.mgrid[-size:size+1, -sizey:sizey+1]
-    g = np.exp(-(x**2/float(size)+y**2/float(sizey)))
-    g=g[size/2:-size/2,sizey/2:-sizey/2]
-    return g / g.sum()
-
 
 def update_weather(newatm,oldatm):
     """Copies internal weather information from the old hi res atmosphere to the new one
@@ -305,7 +293,7 @@ class Forcing_Reader(object):
     
     def __init__(self,options,domain):
         self.q=Queue()
-        self.base=WRF_Reader(options.file_search,sfc=options.sfc_file_search,bilin=True,nn=False)
+        self.base=WRF_Reader(options.file_search,sfc=options.sfc_file_search,bilin=True,nn=False,options=options)
         
         if options.use_linear_winds:
             (self.lt_topo,self.pady,self.padx)=topo_preprocess(domain.topo)
@@ -336,7 +324,7 @@ class Forcing_Reader(object):
          
         # deltas=self.calc_deltas(self.old,self.new)
         deltas=None
-        return Bunch(old=self.old,new=self.new,deltas=self.deltas)
+        return Bunch(old=self.old,new=self.new,deltas=deltas)
 
     def __iter__(self):
         return self
@@ -351,7 +339,7 @@ class Forcing_Reader(object):
         self.close()
     def __del__(self):
         self.close()
-        super(Forcing_Reader,self).__del__()
+        # super(Forcing_Reader,self).__del__()
 
 
 
@@ -381,17 +369,18 @@ def write_output(outputlist,weather,options):
         else:
             if outputlist[i]:
                 outputlist[i].join()
-        outputlist[i]=Process(target=parallel_output,args=(options.output_base+options.output_fnames[i],options.output_varnames[i],
-                                                           weather.old.date,weather.new[v].copy()))
+        outputlist[i]=Process(target=parallel_output,args=(options.output_base+options.output_fnames[i]+str(weather.old.date)[:-6],options.output_varnames[i],
+                                                           weather.new[v].copy(),str(weather.old.date)))
         outputlist[i].start()
 
 def setup_domain(options):
     """Get topography info"""
     try:
         topovarname=options.topovarname
-    except KeyError:
+    except KeyError,AttributeError:
         topovarname="HGT"
-    
+    sub_y0,sub_y1,sub_x0,sub_x1=options.subset
+    halfk=options.halfk    
     topoinfo=swim_io.read_nc(options.topofile,var=topovarname)
     if sub_x1==None:
         xendpt=-halfk
@@ -405,8 +394,16 @@ def setup_domain(options):
     # (Ny,Nx)=topo.shape
     return Bunch(topo=topo)
 
+
+def write_parameter_file(options):
+    with open(options.output_base+"parameters.txt",'w') as f:
+        for k in options.keys():
+            f.write(k+" = "+str(options[k]).replace("[","").replace("]","")
+                    .replace("(","").replace(")","").replace("'","")+"\n")
+        
 def initialize(options):
     """Initialization"""
+    write_parameter_file(options)
     # initialze physics engine as necessary
     swim_lib.swim_step.init(options.physics)
     # remove old output files if specified
@@ -418,19 +415,22 @@ def initialize(options):
             os.remove(o)
 
     # set up an empty list for the output processes
-    outputlist=[None]*len(option.output)
+    outputlist=[None]*len(options.output)
     return outputlist
 
 def main(options):
     """Main program: initialization,setup domain/forcing, and loop over input data"""
-    # any initialization that has to occur and returns a list for output process management
-    outputlist=initialize(options)
     # domain could/should include linear wind topography?
     domain=setup_domain(options)
     
     # forcing object supplies methods and datastructures to loop over all forcing
     # data contained in files specified by options. 
     forcing=Forcing_Reader(options,domain)
+
+    # any initialization that has to occur and returns a list for output process management
+    #  perform after setting up forcing so initialization of e.g. microphysics can happen
+    #  in parallel with the first/second forcing read that is set up in the the forcing reader init
+    outputlist=initialize(options)
     
     # timeing information
     t0=time.time()
@@ -446,6 +446,7 @@ def main(options):
         t2=time.time()
         write_output(outputlist,weather,options)
         t3=time.time()
+        print(options.clearold)
         if options.verbose:
             print("Finished Timestep:"+str(weather.old.date))
             print("Total Time:"+str(t3-t0))
@@ -457,7 +458,7 @@ def main(options):
     print("Exiting")
     
 
-def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_data/baseline_info/2km_wrf_input_d01'):
+def main_old(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_data/baseline_info/2km_wrf_input_d01'):
     oldfiles=glob.glob(outputdir+"*.nc")
     for old in oldfiles:
         os.remove(old)
@@ -465,7 +466,7 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
     # wrfwinds=WRF_Reader(wind_files,bilin=False,nn=True, windonly=True)
     # wind=wrfwinds.next()
 
-    gkern=gauss_kern(40)
+    # gkern=gauss_kern(40)
     wrf_base=WRF_Reader(file_search,sfc=sfc_file_search,bilin=True,nn=False)
     wrfwinds=None
     
@@ -566,6 +567,7 @@ def default_options():
                  sfc_file_search="forcing/wrfout_d01_200*00",
                  domain_dir="baseline_info", 
                  topofile="baseline_info/4km_wrf_output.nc",
+                 topovarname="HGT",
                  baseline_file="baseline_info/4km_wrf_output.nc",
                  use_linear_winds=False, 
                  use_wrf_winds=False,
@@ -574,8 +576,9 @@ def default_options():
                  nlevels=20,
                  halfk=8,
                  subset=(30,-30,30,-30),
+                 timestep=1.0*60*60, #time step between forcing changes [seconds] (1hr)
                  verbose=True,
-                 physics=int(1),
+                 physics=int(0),
                  clearold=True,
                  output_base="output/",
                  output_fnames=['swim_p_','swim_t_','swim_qv_','swim_qc_','swim_pres_','swim_qi_','swim_qs_','swim_qr_',"swim_u_","swim_v_","swim_w_"],
@@ -591,7 +594,7 @@ def read_options_file(filename):
     Anything after a # is treated as a comment. 
     """
     output=default_options()
-    with open(filename,'ru') as f:
+    with open(filename,'r') as f:
         for l in f:
             l=l.split("#")[0]
             if re.match(".*=.*",l):
@@ -611,16 +614,19 @@ def convert_iterable(inputdata, default):
         outputlist=[]
         default_type=type(default[0])
         for cur in temp_value:
-            if (type(default[0])!=str) and (iterable(default[0])):
+            cur=cur.strip()
+            if (type(default[0])!=str) and (np.iterable(default[0])):
                 outputlist.append(convert_iterable(cur,default[0]))
             else:
                 outputlist.append(default_type(cur))
-    if type(default)==np.ndarray:
-        # for some readon ndarray's new/init doesn't convert an iterable, it treats it as the shape...
-        output=np.array(outputlist,dtype=default.dtype)
+        if type(default)==np.ndarray:
+            # for some readon ndarray's new/init doesn't convert an iterable, it treats it as the shape...
+            output=np.array(outputlist,dtype=default.dtype)
+        else:
+            output=type(default)(outputlist)
     else:
-        output=type(default)(outputlist)
-    return 
+        output=inputdata
+    return output
 
     
 def setup_options(args):
@@ -631,27 +637,29 @@ def setup_options(args):
     if options are specified on the commandline, they override values in the input file
     """
     doptions=default_options()
-    if args.inputfile!=None:
-        options=doptions.copy()
+    
+    if args.inputfile==None:
+        #note simple copy does not work obj.copy returns a dict and copy.copy() 
+        # doesn't duplicate internal elements so the type casting below will not work properly
+        options=copy.deepcopy(doptions) 
     else:
         options=read_options_file(args.inputfile)
     
-    for k in args.keys():
+    argdict=args.__dict__
+    for k in argdict.keys():
         if k!="inputfile":
-            if args[k]!=None:
-                options[k]=args[k]
+            if argdict[k]!=None:
+                options[k]=argdict[k]
     
     # in case we read these options in from either an input file or the commandline
     #  we need to make sure the types are what the default options sets up
     for k in doptions.keys():
-        if type(doptions[k])!=str:
-            if iterable(doptions[k]):
-                # if the default option is actually an iterable (e.g. tuple,list) recursively convert 
-                # all elements in it (i.e. lists of lists are allowed, but all sub-elements must be lists)
-                options[k]=convert_iterable(options[k],doptions[k])
-            else:
-                options[k]=type(doptions[k])(options[k])
-                
+        if (type(doptions[k])!=str) and (np.iterable(doptions[k])):
+            # if the default option is actually an iterable (e.g. tuple,list) recursively convert 
+            # all elements in it (i.e. lists of lists are allowed, but all sub-elements must be lists)
+            options[k]=convert_iterable(options[k],doptions[k])
+        else:
+            options[k]=type(doptions[k])(options[k])
     return options
     
 
@@ -659,15 +667,15 @@ if __name__ == '__main__':
     try:
         parser= argparse.ArgumentParser(description='A high resolution Simple Weather (interpolation) Model (SWIM)')
         parser.add_argument('inputfile', default=None,nargs="?",action='store',
-                            description="Input file specifying all other options, specified command line options will override")
+                            help="Input file specifying all other options, specified command line options will override")
         parser.add_argument('forcing_dir', default=None,nargs="?",action='store',
-                            description="Directory containing coarse resolution WRF model data")
+                            help="Directory containing coarse resolution WRF model data")
         parser.add_argument('domain_dir', default=None,nargs="?",action='store',
-                            description="Directory containing high resolution model domain information \n"
+                            help="Directory containing high resolution model domain information \n"
                             +"(as from a single high resolution WRF input or output file)")
         parser.add_argument('-v', '--version',action='version',version='SWIM v0.6.1')
         parser.add_argument ('--verbose', action='store_true',
-                default=False, help='verbose output', dest='verbose')
+                default=True, help='verbose output', dest='verbose')
         args = parser.parse_args()
         
         options=setup_options(args)

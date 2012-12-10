@@ -1,8 +1,26 @@
+import glob
 import numpy as np
+
+from bunch import Bunch
+import swim_io
+import fast_mean # inline C to do a running spatial mean
 
 R=8.3144621 # J/mol/K
 cp=29.19 # J/mol/K   =1.012 J/g/K
 g=9.81 # m/s^2
+
+def gauss_kern(size, sizey=None):
+    """ Returns a normalized 2D gauss kernel array for convolutions """
+    size = int(size)    
+    if not sizey:
+        sizey = size
+    else:
+        sizey = int(sizey)               
+    x, y = np.mgrid[-size:size+1, -sizey:sizey+1]
+    g = np.exp(-(x**2/float(size)+y**2/float(sizey)))
+    g=g[size/2:-size/2,sizey/2:-sizey/2]
+    return g / g.sum()
+
 
 def match_xy(lat1,lon1,lat2,lon2):
     N=lat2.shape
@@ -169,11 +187,11 @@ class WRF_Reader(object):
         sz=topo.shape
         
         slopes=(maxheight-topo)/nlevels
-        if use_linear_winds:
+        if self.use_linear_winds:
             slopes=slopes.mean()
             self.hgt3d=(topo[np.newaxis,...].repeat(nlevels,axis=0)+
                     slopes[np.newaxis,...]*np.arange(nlevels)[:,np.newaxis,np.newaxis])
-        elif use_wrf_winds:
+        elif self.use_wrf_winds:
             self.hgt3d=(swim_io.read_nc(self._filenames[0],var=self.gphvar_base)
                     .data[0,self.usepressures,self.sub_y0:sub_y1,sub_x0:sub_x1]/9.81)
         else:
@@ -189,6 +207,10 @@ class WRF_Reader(object):
             wrffilename=options.baseline_file
         halfk=options.halfk
         sub_y0,sub_y1,sub_x0,sub_x1=options.subset
+        self.sub_y0=sub_y0
+        self.sub_y1=sub_y1
+        self.sub_x0=sub_x0
+        self.sub_x1=sub_x1
         d=swim_io.Dataset(driverfilename, 'r')
         nlat=d.variables['XLAT'][0,:,:]
         nlon=d.variables['XLONG'][0,:,:]
@@ -243,7 +265,12 @@ class WRF_Reader(object):
         
     def __init__(self, file_search,sfc=None,nn=True, bilin=False, windonly=False, options=None,*args, **kwargs):
         super(WRF_Reader,self).__init__(*args, **kwargs)
+        self.use_linear_winds=options.use_linear_winds
+        self.use_wrf_winds=options.use_wrf_winds
+        self.halfk=options.halfk
         self._filenames=np.sort(glob.glob(file_search))
+        self.io_ratio=options.io_ratio
+        self.windonly=windonly
         if sfc!=None:
             self._sfc_files=glob.glob(sfc)
         if nn:
@@ -252,8 +279,6 @@ class WRF_Reader(object):
         elif bilin:
             self._nn=False
             self._bilin=True
-        self.io_ratio=options.io_ratio
-        self.windonly=windonly
         self.init_xy(self._filenames[0],options)
         self.curpos=19*24
         if windonly:
@@ -335,6 +360,7 @@ class WRF_Reader(object):
         x=geoLUT[:,:,:,1]
         y=geoLUT[:,:,:,0]
         w=geoLUT[:,:,:,2]
+        halfk=self.halfk
         offset=np.int(np.ceil(halfk/self.io_ratio))
         minx=x.min().astype('i')-offset 
         maxx=x.max().astype('i')+offset
@@ -387,6 +413,7 @@ class WRF_Reader(object):
         xv=self._geoLUTv[:,:,:,1]
         yv=self._geoLUTv[:,:,:,0]
         wv=self._geoLUTv[:,:,:,2]
+        halfk=self.halfk
         offset=np.int(np.ceil(halfk/self.io_ratio))
         minx=x.min().astype('i')-offset
         maxx=x.max().astype('i')+offset
