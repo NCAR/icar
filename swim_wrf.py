@@ -64,182 +64,14 @@ import swim as swim_lib #this is the meet of the fortran code
 import swim_fast as swim # a faster version of the hand off between python and fortran
 import fast_mean # inline C to do a running spatial mean
 import lt_winds #computes Linear Theory 3D winds
+from wrf_reader import WRF_Reader
 
 R=8.3144621 # J/mol/K
 cp=29.19 # J/mol/K   =1.012 J/g/K
 g=9.81 # m/s^2
 physics=int(1) #1=thompson other=simple
-# use_linear_winds=False #flag to use linear theory winds or not
-use_linear_winds=True  #comment out one or the other
-use_wrf_winds=False # ditto for wrf_based winds
-# use_wrf_winds=True
-
-# this is the half kernel window size for smoothing applied to the input data (wind)
-halfk=8
-# Note, this defines the subdomain within the WRF 2km model run to use
-# sub_y0=125-halfk
-# sub_y1=400+halfk
-# sub_x0=220-halfk
-# sub_x1=400+halfk
-# io_ratio=8.0 #this is the ratio of the input grid (NARR 32km) to the output grid (WRF 2km)
-# wrfres=2000.0
-# to use the entire WRF domain use this instead, but be careful of the smoothing above...: 
-sub_y0=0
-sub_y1=None
-sub_x0=0
-sub_x1=None
-sub_y0=30
-sub_y1=-30
-sub_x0=30
-sub_x1=-30
-wrfres=4000.0
-io_ratio=36000.0/wrfres #this is the ratio of the input grid (36km) to the output grid (4km)
-
-file_search="forcing/wrfout_d01_200*00"
-wind_files="winds/wrfout_d01_200*00"
-sfc_file_search=file_search
-base_dir="baseline_info/"
-if wrfres==2000:
-    # topofile='/d2/gutmann/usbr/narr_data/baseline_info/2km_wrf_input_d01'
-    topofile=base_dir+'2km_wrf_input_d01'
-elif wrfres==4000:
-    # topofile='/d2/gutmann/usbr/narr_data/baseline_info/4km_wrf_output.nc'
-    topofile=base_dir+'4km_wrf_output.nc'
-outputdir='output/'
 
 
-def match_xy(lat1,lon1,lat2,lon2):
-    N=lat2.shape
-    x=np.zeros(N)
-    y=np.zeros(N)
-    winhalfsize=2
-
-    for i in range(N[1]):
-        j=0
-        dists=(lat1-lat2[j,i])**2 + (lon1-lon2[j,i])**2
-        (lasty,lastx)=np.unravel_index(dists.argmin(), dists.shape)
-        (prevx,prevy)=(lastx,lasty)
-        latwin=lat1[lasty-winhalfsize:lasty+winhalfsize,lastx-winhalfsize:lastx+winhalfsize]
-        lonwin=lon1[lasty-winhalfsize:lasty+winhalfsize,lastx-winhalfsize:lastx+winhalfsize]
-        for j in range(N[0]):
-            if (prevx!=lastx) or (prevy!=lasty):
-                latwin=lat1[lasty-winhalfsize:lasty+winhalfsize,lastx-winhalfsize:lastx+winhalfsize]
-                lonwin=lon1[lasty-winhalfsize:lasty+winhalfsize,lastx-winhalfsize:lastx+winhalfsize]
-                (prevx,prevy)=(lastx,lasty)
-            dists=(latwin-lat2[j,i])**2+(lonwin-lon2[j,i])**2
-            (newy,newx)=np.unravel_index(dists.argmin(), dists.shape)
-            
-            # print(j,i,newx,newy)
-            lastx=(newx-winhalfsize)+lastx
-            lasty=(newy-winhalfsize)+lasty
-            x[j,i]=lastx
-            y[j,i]=lasty
-        
-    return (x,y)
- 
-def bilin_weights(yi,y,xi,x):
-    x0=np.abs((xi-x[0])/(x[1]-x[0]))
-    x1=1-x0 # np.abs((xi-x[1])/(x[1]-x[0]))
-    x2=np.abs((xi-x[2])/(x[3]-x[2]))
-    x3=1-x2 # np.abs((xi-x[3])/(x[3]-x[2]))
-    y5=y[0]*x1+y[1]*x0
-    y6=y[2]*x3+y[3]*x2
-    f1=(yi-y5)/(y6-y5)
-    f2=1-f1# (y6-yi)/(y6-y5)
-    return np.array([x1*f2,x0*f2,x3*f1,x2*f1])
-    
-    
-def match_xy_bilin(lat1,lon1,lat2,lon2):
-    N1=lat1.shape
-    N=lat2.shape
-    out=np.zeros((N[0],N[1],4,3))
-    x=np.zeros(4).astype('i')
-    y=np.zeros(4).astype('i')
-    winhalfsize=5
-    
-    dxinc=np.sign(lon1[1,1]-lon1[0,0]).astype('i')
-    dyinc=np.sign(lat1[1,1]-lat1[0,0]).astype('i')
-
-    for i in range(N[1]):
-        j=0
-        dists=(lat1-lat2[j,i])**2 + (lon1-lon2[j,i])**2
-        (lasty,lastx)=np.unravel_index(dists.argmin(), dists.shape)
-        (prevx,prevy)=(lastx,lasty)
-        ymin=lasty-winhalfsize
-        if ymin<0:ymin=0
-        ymax=lasty+winhalfsize
-        if ymax>=N1[0]:ymax=N1[0]-1
-        xmin=lastx-winhalfsize
-        if xmin<0:xmin=0
-        xmax=lastx+winhalfsize
-        if xmax>=N1[1]:xmax=N1[1]-1
-        latwin=lat1[ymin:ymax,xmin:xmax]
-        lonwin=lon1[ymin:ymax,xmin:xmax]
-        for j in range(N[0]):
-            if (prevx!=lastx) or (prevy!=lasty):
-                ymin=lasty-winhalfsize
-                if ymin<0:ymin=0
-                ymax=lasty+winhalfsize
-                if ymax>=N1[0]:ymax=N1[0]-1
-                xmin=lastx-winhalfsize
-                if xmin<0:xmin=0
-                xmax=lastx+winhalfsize
-                if xmax>=N1[1]:xmax=N1[1]-1
-                latwin=lat1[ymin:ymax,xmin:xmax]
-                lonwin=lon1[ymin:ymax,xmin:xmax]
-                (prevx,prevy)=(lastx,lasty)
-            dists=(latwin-lat2[j,i])**2+(lonwin-lon2[j,i])**2
-            (newy,newx)=np.unravel_index(dists.argmin(), dists.shape)
-            lastx=xmin+newx
-            lasty=ymin+newy
-            x[0]=newx
-            y[0]=newy
-            if latwin[newy,newx]<lat2[j,i]:
-                if lonwin[newy,newx]<lon2[j,i]:
-                    x[1]=newx+dxinc
-                    x[2]=newx
-                    x[3]=newx+dxinc
-                    y[1]=newy
-                    y[2]=newy+dyinc
-                    y[3]=newy+dyinc
-                else:
-                    x[1]=newx-dxinc
-                    x[2]=newx
-                    x[3]=newx-dxinc
-                    y[1]=newy
-                    y[2]=newy+dyinc
-                    y[3]=newy+dyinc
-            else:
-                if lonwin[newy,newx]<lon2[j,i]:
-                    x[1]=newx+dxinc
-                    x[2]=newx
-                    x[3]=newx+dxinc
-                    y[1]=newy
-                    y[2]=newy-dyinc
-                    y[3]=newy-dyinc
-                else:
-                    x[1]=newx-dxinc
-                    x[2]=newx
-                    x[3]=newx-dxinc
-                    y[1]=newy
-                    y[2]=newy-dyinc
-                    y[3]=newy-dyinc
-            x[x<0]=0
-            y[y<0]=0
-            x[x>=(xmax-xmin)]=xmax-xmin-1
-            y[y>=(ymax-ymin)]=ymax-ymin-1
-                    
-            # bilinear interpolation for an arbitrary grid spacing 
-            # (must be a grid, but this will handle a lot of irregularities)
-            weights=bilin_weights(lat2[j,i],latwin[y,x],lon2[j,i],lonwin[y,x])
-
-            out[j,i,:,0]=y+ymin
-            out[j,i,:,1]=x+xmin
-            out[j,i,:,2]=weights
-        
-    return out
-              
-                
 def convert_p(p,h,dz):
     '''Convert p [Pa] at elevation h [m] by shifting its elevation by dz [m]'''
     # p    in pascals
@@ -248,18 +80,20 @@ def convert_p(p,h,dz):
     pout=slp*(1 - 2.25577E-5*(h+dz))**5.25588
     return pout
 
-def fix_top_bottom(topo,dz):
+def fix_top_bottom(topo,dz,edge):
     # find the worst dz between the top and bottom of the dataset
-    worst_offset=np.max(np.abs(topo[0,:]-topo[-1,:]))
+    worst_offset=np.max([np.abs(topo[0,:]-edge),np.abs(topo[-1,:]-edge)])
     # find the minimum distance required to smoothly transition between those
     # two endpoints
-    mindist=np.round(worst_offset/(dz/50.0))
+    mindist=np.round(worst_offset/(dz/2.0))*2
     # calculate the mid point / average topography that will be the new borders
-    aves=(topo[0,:]+topo[-1,:])/2.0
+    aves=np.zeros(topo.shape[1])+edge # (topo[0,:]+topo[-1,:])/2.0
     # create the output topography array
     sz=topo.shape
-    if mindist%2==1:
-        mindist+=1
+    # this isn't necessary anymore because mindist is now calculated to the actual edge
+    #  then multiplied by 2
+    # if mindist%2==1:
+    #     mindist+=1
     outputtopo=np.zeros((sz[0]+mindist,sz[1]))
     # fill in everything inside the padding zone with the original topography
     padding=np.round(mindist/2.0)
@@ -278,10 +112,11 @@ def fix_top_bottom(topo,dz):
 
     
 def topo_preprocess(topo,test=False):
-    acceptable_topo_diff=np.max(np.diff(topo))/3.0
+    acceptable_topo_diff=np.max(np.diff(topo))/2.0
     vpad=0.0
     hpad=0.0
     
+    edge=np.min([topo[0,:].min(),topo[-1,:].min(),topo[:,0].min(),topo[:,-1].min()])
     if test:
         topo=topo.copy() #dont change the topo that is outside this routine
         t1=np.arange(16.0,-1,-1.0)[np.newaxis,:].repeat(160,axis=0)/18.0
@@ -295,436 +130,31 @@ def topo_preprocess(topo,test=False):
         topo[245:,:50]=1500
         topo[topo<1500]=1500
     
-    if np.max(np.abs(topo[0,:]-topo[-1,:]))>acceptable_topo_diff: # more a less a given
-        (topo,vpad)=fix_top_bottom(topo,acceptable_topo_diff)
-    if np.max(np.abs(topo[:,0]-topo[:,-1]))>acceptable_topo_diff: # ditto
-        (topo,hpad)=fix_top_bottom(topo.T,acceptable_topo_diff)
-        topo=topo.T
+
+    (topo,vpad)=fix_top_bottom(topo,acceptable_topo_diff,edge)
+    (topo,hpad)=fix_top_bottom(topo.T,acceptable_topo_diff,edge)
+    topo=topo.T
     #this might matter more than I thought... and maybe all edges should get exactly to 0?
-    topo-=topo.min() #1500# (topo[0,:].mean()+topo[-1,:].mean()+topo[:,0].mean()+topo[:,-1].mean())/4.0
-    return topo,vpad,hpad
+    topo-=edge #1500# (topo[0,:].mean()+topo[-1,:].mean()+topo[:,0].mean()+topo[:,-1].mean())/4.0
+
+    if (topo.shape[0]+30)<512:
+        xtra_vpad=(512-topo.shape[0])/2
+    elif (topo.shape[0]+30)<1024:
+        xtra_vpad=(1024-topo.shape[0])/2
+    else:
+        xtra_vpad=50
+    if (topo.shape[1]+30)<512:
+        xtra_hpad=(512-topo.shape[1])/2
+    elif (topo.shape[1]+30)<1024:
+        xtra_hpad=(1024-topo.shape[1])/2
+    else:
+        xtra_hpad=50
+    xtra_vpad=int(xtra_vpad)
+    xtra_hpad=int(xtra_hpad)
+    newtopo=np.zeros((topo.shape[0]+xtra_vpad*2,topo.shape[1]+xtra_hpad*2),dtype=topo.dtype)
+    newtopo[xtra_vpad:xtra_vpad+topo.shape[0],xtra_hpad:xtra_hpad+topo.shape[1]]=topo
+    return newtopo,xtra_vpad+vpad,xtra_hpad+hpad
     
-
-class WRF_Reader(object):
-    _filenames=None
-    _sfc_files=None
-    _curfile=0
-    curpos=0
-    x=-99
-    y=-99
-    _bilin=False
-    _nn=True
-    _geoLUT=None
-    topo=None
-    # atm variables in WRF 3d files
-    timevar="Times"      # time...                                  1D
-    hvar='HGT'           #terran height(?)                  [m]     2D
-    tvar='T'             #potential temperature (-300)      [K]     3D
-    gphvar_base="PHB"    #base geopotential height          [m]     3D
-    gphvar_pert="PH"     #geopotential height perturbation  [m]     3D
-    pvar_base="PB"       #base pressure                     [pa]    3D
-    pvar_pert="P"        # pressure perturbation            [pa]    3D
-    qcvar='QCLOUD'       # cloud water mixing ratio         [kg/kg] 3D
-    qvvar='QVAPOR'       # water vapor mixing ratio         [kg/kg] 3D
-    qivar='QICE'         # cloud ice mixing ratio           [kg/kg] 3D
-    wvar='W'             # vertical winds                   [pa/s]  3D NOT USED
-    uvar='U'             # U wind component                 [m/s]   3D 
-    vvar='V'             # V wind component                 [m/s]   3D 
-    # land surface variables in WRF files
-    pblvar='PBLH'        # PBL height                       [m]     2D
-    lhvar="LH"           # Latent heat flux from surface    [W/m^2] 2D
-    shvar="HFX"          # Sensible heat flux from surface  [W/m^2] 2D
-
-    def make_model_domain(self,nlevels,maxheight,topo):
-        sz=topo.shape
-        
-        slopes=(maxheight-topo)/nlevels
-        if use_linear_winds:
-            slopes=slopes.mean()
-            self.hgt3d=(topo[np.newaxis,...].repeat(nlevels,axis=0)+
-                    slopes[np.newaxis,...]*np.arange(nlevels)[:,np.newaxis,np.newaxis])
-        elif use_wrf_winds:
-            self.hgt3d=(swim_io.read_nc(self._filenames[0],var=self.gphvar_base)
-                    .data[0,self.usepressures,self.sub_y0:sub_y1,sub_x0:sub_x1]/9.81)
-        else:
-            self.hgt3d=(topo[np.newaxis,...].repeat(nlevels,axis=0)+
-                    slopes[np.newaxis,...].repeat(nlevels,axis=0)*
-                    np.arange(nlevels)[:,np.newaxis].repeat(sz[0]*sz[1],axis=1).reshape((nlevels,sz[0],sz[1])))
-        
-    
-    def init_xy(self,driverfilename='forcing/wrfout_d01_2000-10-01_00:00:00'):
-        if wrfres==2000:
-            wrffilename=bas_dir+'2km_wrf_input_d01'
-        elif wrfres==4000:
-            wrffilename=base_dir+'4km_wrf_output.nc'
-        d=swim_io.Dataset(driverfilename, 'r')
-        nlat=d.variables['XLAT'][0,:,:]
-        nlon=d.variables['XLONG'][0,:,:]
-        nulat=d.variables['XLAT_U'][0,:,:]
-        nulon=d.variables['XLONG_U'][0,:,:]
-        nvlat=d.variables['XLAT_V'][0,:,:]
-        nvlon=d.variables['XLONG_V'][0,:,:]
-        hgt=d.variables['HGT'][0,:,:]
-        self.nlevels=20
-        self.usepressures=np.arange(self.nlevels)
-        self.base_pressure=d.variables[self.pvar_base][0,...][self.usepressures,...]
-        self.base_gph=d.variables[self.gphvar_base][0,...][self.usepressures,...]
-        maxheight=self.base_gph[-1,:,:]/9.8
-        d.close()
-        wlat=swim_io.read_nc(wrffilename,var='XLAT').data[0,sub_y0:sub_y1,sub_x0:sub_x1]
-        wlon=swim_io.read_nc(wrffilename,var='XLONG').data[0,sub_y0:sub_y1,sub_x0:sub_x1]
-        hires_topo=swim_io.read_nc(wrffilename,var='HGT').data[0,sub_y0:sub_y1,sub_x0:sub_x1][halfk:-halfk,halfk:-halfk]
-        print('Calculating XY match lookup table, this may take a while.')
-        if self._nn:
-            wlat=wlat[halfk:-halfk,halfk:-halfk]
-            wlon=wlon[halfk:-halfk,halfk:-halfk]
-            (x,y)=match_xy(nlat,nlon,wlat,wlon)
-            (xu,yu)=match_xy(nulat,nulon,wlat,wlon)
-            (xv,yv)=match_xy(nvlat,nvlon,wlat,wlon)
-            self.x=x.astype('i')
-            self.y=y.astype('i')
-            self.xu=xu.astype('i')
-            self.yu=yu.astype('i')
-            self.xv=xv.astype('i')
-            self.yv=yv.astype('i')
-            self.topo=hgt[self.y,self.x]
-            maxheight=maxheight[self.y,self.x]
-            self.base_gph=self.base_gph[:,self.y,self.x]
-            self.base_pressure=self.base_pressure[:,self.y,self.x]
-            self.make_model_domain(self.nlevels,maxheight,hires_topo)
-            
-        elif self._bilin:
-            self._geoLUT=match_xy_bilin(nlat,nlon,wlat,wlon)
-            self._geoLUTu=match_xy_bilin(nulat,nulon,wlat,wlon)
-            self._geoLUTv=match_xy_bilin(nvlat,nvlon,wlat,wlon)
-            curx=(self._geoLUT[:,:,:,1]).astype('i')
-            cury=(self._geoLUT[:,:,:,0]).astype('i')
-            w=self._geoLUT[:,:,:,2]
-            self.topo=np.zeros(curx.shape[0:2],dtype=np.float32)
-            for i in range(4):self.topo+=hgt[cury[:,:,i],curx[:,:,i]]*w[:,:,i]
-            self.topo=self.topo[halfk:-halfk,halfk:-halfk]
-            MH=np.zeros(curx.shape[0:2],dtype=np.float32)
-            for i in range(4):MH+=maxheight[cury[:,:,i],curx[:,:,i]]*w[:,:,i]
-            MH=MH[halfk:-halfk,halfk:-halfk]
-            self.make_model_domain(self.nlevels,MH,hires_topo)
-            
-        
-    def __init__(self, file_search,sfc=None,nn=True, bilin=False, windonly=False, *args, **kwargs):
-        super(WRF_Reader,self).__init__(*args, **kwargs)
-        self._filenames=np.sort(glob.glob(file_search))
-        if sfc!=None:
-            self._sfc_files=glob.glob(sfc)
-        if nn:
-            self._nn=True
-            self._bilin=False
-        elif bilin:
-            self._nn=False
-            self._bilin=True
-        self.windonly=windonly
-        self.init_xy(self._filenames[0])
-        self.curpos=19*24
-        if windonly:
-            self.curpos=0
-        # d=swim_io.Dataset(self._filenames[self._curfile], 'r')
-        # npos=d.variables[self.vvar].shape[0]-1
-        # self.curpos=npos-10
-        # d.close()
-    
-    
-    # we are our own iterator...
-    def __iter__(self):
-        return self
-
-    def nextNN(self):
-        curfile=self._curfile
-        if curfile>=len(self._filenames):
-            raise StopIteration
-        minx=self.x.min()
-        maxx=self.x.max()+1
-        miny=self.y.min()
-        maxy=self.y.max()+1
-        curx=self.x-minx
-        cury=self.y-miny
-
-        minxu=self.xu.min()
-        maxxu=self.xu.max()+1
-        minyu=self.yu.min()
-        maxyu=self.yu.max()+1
-        curxu=self.xu-minxu
-        curyu=self.yu-minyu
-
-        minxv=self.x.min()
-        maxxv=self.x.max()+1
-        minyv=self.y.min()
-        maxyv=self.y.max()+1
-        curxv=self.x-minxv
-        curyv=self.y-minyv
-        plevels=self.usepressures
-        d=swim_io.Dataset(self._filenames[curfile], 'r')
-        if self.windonly:
-            wind_u=d.variables[self.uvar][self.curpos,:,minyu:maxyu,minxu:maxxu][plevels,...]
-            wind_u=wind_u[:,curyu,curxu]
-            wind_v=d.variables[self.vvar][self.curpos,:,minyv:maxyv,minxv:maxxv][plevels,...]
-            wind_v=wind_v[:,curyv,curxv]
-            hgt=d.variables[self.gphvar_pert][self.curpos,:,miny:maxy,minx:maxx][plevels,...]
-            hgt=(hgt[:,cury,curx]+self.base_gph)/9.8
-            temperature=d.variables[self.tvar][self.curpos,:,miny:maxy,minx:maxx][plevels,...]
-            temperature=temperature[:,cury,curx]+300
-            specific_humidity=d.variables[self.qvvar][self.curpos,:,miny:maxy,minx:maxx][plevels,...]
-            specific_humidity=specific_humidity[:,cury,curx]
-            pressure=d.variables[self.pvar_pert][self.curpos,:,miny:maxy,minx:maxx][plevels,...]
-            pressure=pressure[:,cury,curx]+self.base_pressure
-            # temperature=None
-            # pressure=None
-            # specific_humidity=None
-            relative_humidity=None
-        else:
-            temperature=d.variables[self.tvar][self.curpos,:,miny:maxy,minx:maxx][plevels,cury,curx]
-            pressure=d.variables[self.pvar_pert][self.curpos,:,miny:maxy,minx:maxx][plevels,cury,curx]
-            specific_humidity=d.variables[self.qvvar][self.curpos,:,miny:maxy,minx:maxx][plevels,cury,curx]
-            relative_humidity=specific_humidity.copy()
-            wind_u=d.variables[self.uvar][self.curpos,:,minyu:maxyu,minxu:maxxu][plevels,curyu,curxu]
-            wind_v=d.variables[self.vvar][self.curpos,:,minyv:maxyv,minxv:maxxv][plevels,curyv,curxv]
-            hgt=(d.variables[self.gphvar_pert][self.curpos,:,miny:maxy,minx:maxx][plevels,cury,curx]+self.base_gph)/9.8
-
-        datestr=''.join(d.variables[self.timevar][self.curpos])
-        d.close()
-
-
-        self.time_inc()
-        N=list(wind_v.shape)
-        N[2]+=1 #v is staggered in y direction
-        return Bunch(th=temperature, p=pressure,hgt=hgt,
-                     qv=specific_humidity/(1-specific_humidity), 
-                     rh=relative_humidity, 
-                     u=wind_u, v=wind_v,w=np.zeros(N,dtype=np.float32,order="F"),
-                     date=datestr)
-    
-    def convolve2to3(self,data,kern,mode="same"):
-        if mode!="same":
-            i=0
-            datatmp=convolve(data[i,:,:],kern,mode=mode)
-            n=datatmp.shape
-            outputdata=np.zeros((data.shape[0],n[0],n[1]))
-            outputdata[0,:,:]=datatmp
-            for i in range(data.shape[0]-1):
-                outputdata[i+1,:,:]=convolve(data[i+1,:,:],kern,mode=mode)
-        else:
-            for i in range(data.shape[0]):
-                data[i,:,:]=convolve(data[i,:,:],kern,mode=mode)
-        return data
-    
-
-    def _next_surface(self,curpos):
-        geoLUT=self._geoLUT
-        x=geoLUT[:,:,:,1]
-        y=geoLUT[:,:,:,0]
-        w=geoLUT[:,:,:,2]
-        offset=np.int(np.ceil(halfk/io_ratio))
-        minx=x.min().astype('i')-offset 
-        maxx=x.max().astype('i')+offset
-        miny=y.min().astype('i')-offset
-        maxy=y.max().astype('i')+offset
-        curx=(x-minx).astype('i')
-        cury=(y-miny).astype('i')
-        d=swim_io.Dataset(self._sfc_files[self._curfile], 'r')
-        Nxy=curx.shape[0:2]
-        sensible_heat=np.zeros(Nxy,dtype=np.float32)
-        latent_heat=np.zeros(Nxy,dtype=np.float32)
-        pblh=np.zeros(Nxy,dtype=np.float32)
-        # longwave_up=np.zeros(Nxy,dtype=np.float32)
-        # albedo=np.zeros(Nxy,dtype=np.float32)
-        
-        gaussian=gauss_kern(2)
-        
-        curdata=d.variables[self.shvar][curpos,miny:maxy,minx:maxx]
-        for i in range(4):sensible_heat+=np.float32(curdata[cury[:,:,i],curx[:,:,i]]*w[:,:,i])
-        curdata=d.variables[self.lhvar][curpos,miny:maxy,minx:maxx]
-        for i in range(4):latent_heat+=np.float32(curdata[cury[:,:,i],curx[:,:,i]]*w[:,:,i])
-        curdata=d.variables[self.pblvar][curpos,miny:maxy,minx:maxx]
-        for i in range(4):pblh+=np.float32(curdata[cury[:,:,i],curx[:,:,i]]*w[:,:,i])
-        # curdata=convolve(d.variables[self.LWuvar][miny:maxy,minx:maxx],gaussian,mode="same")
-        # for i in range(4):longwave_up+=np.float32(curdata[cury[:,:,i],curx[:,:,i]]*w[:,:,i])
-        # curdata=convolve(d.variables[self.albvar][miny:maxy,minx:maxx],gaussian,mode="same")
-        # for i in range(4):albedo+=np.float32(curdata[cury[:,:,i],curx[:,:,i]]*w[:,:,i])
-        d.close()
-        sensible_heat=sensible_heat[halfk:-halfk,halfk:-halfk]/6
-        latent_heat=latent_heat[halfk:-halfk,halfk:-halfk]/6
-        pblh=pblh[halfk:-halfk,halfk:-halfk]
-        # print(sensible_heat.max())
-        # print(latent_heat.max(),sensible_heat.max())
-        return Bunch(sensible_heat=sensible_heat,latent_heat=latent_heat,pblh=pblh)
-        # longwave_up=longwave_up[halfk:-halfk,halfk:-halfk]
-        # albedo=albedo[halfk:-halfk,halfk:-halfk]
-        # return Bunch(sensible_heat=-sensible_heat,latent_heat=-latent_heat,
-        #              longwave_up=longwave_up,albedo=albedo/100.0)
-
-        
-    
-    def nextBilin(self):
-        curfile=self._curfile
-        if curfile>=len(self._filenames):
-            raise StopIteration
-        x=self._geoLUT[:,:,:,1]
-        y=self._geoLUT[:,:,:,0]
-        w=self._geoLUT[:,:,:,2]
-        xu=self._geoLUTu[:,:,:,1]
-        yu=self._geoLUTu[:,:,:,0]
-        wu=self._geoLUTu[:,:,:,2]
-        xv=self._geoLUTv[:,:,:,1]
-        yv=self._geoLUTv[:,:,:,0]
-        wv=self._geoLUTv[:,:,:,2]
-        offset=np.int(np.ceil(halfk/io_ratio))
-        minx=x.min().astype('i')-offset
-        maxx=x.max().astype('i')+offset
-        miny=y.min().astype('i')-offset
-        maxy=y.max().astype('i')+offset
-        curx=(x-minx).astype('i')
-        cury=(y-miny).astype('i')
-        minux= xu.min().astype('i')-offset
-        maxux= xu.max().astype('i')+offset
-        minuy= yu.min().astype('i')-offset
-        maxuy= yu.max().astype('i')+offset
-        curux=(xu-minux).astype('i')
-        curuy=(yu-minuy).astype('i')
-        minvx= xv.min().astype('i')-offset
-        maxvx= xv.max().astype('i')+offset
-        minvy= yv.min().astype('i')-offset
-        maxvy= yv.max().astype('i')+offset
-        curvx=(xv-minvx).astype('i')
-        curvy=(yv-minvy).astype('i')
-
-        d=swim_io.Dataset(self._filenames[curfile], 'r')
-        
-        datestr=''.join(d.variables[self.timevar][self.curpos])
-        usepressures=self.usepressures
-        
-        Nz=usepressures.size
-        Nxy=curx.shape[0:2]
-        N=[Nz,Nxy[0],Nxy[1]]
-        
-        wind_u=np.zeros(N,dtype=np.float32,order="F")
-        wind_v=np.zeros(N,dtype=np.float32,order="F")
-        
-        if self.windonly:
-            curdata=fast_mean.fast_smooth(d.variables[self.uvar][self.curpos,...][:,minuy:maxuy,minux:maxux][usepressures,:,:],offset)
-            for i in range(4):wind_u+=curdata[:,curuy[:,:,i],curux[:,:,i]]*wu[:,:,i]
-            # curdata=d.variables[self.vvar][self.curpos,...][:,minvy:maxvy,minvx:maxvx][usepressures,:,:]
-            curdata=fast_mean.fast_smooth(d.variables[self.vvar][self.curpos,...][:,minvy:maxvy,minvx:maxvx][usepressures,:,:],offset)
-            for i in range(4):wind_v+=curdata[:,curvy[:,:,i],curvx[:,:,i]]*wv[:,:,i]
-            # we also want geopotential height so we can properly interpolate vertically if necessary
-            curdata=(d.variables[self.gphvar_pert][self.curpos,...][usepressures,:,:]+self.base_gph)[:,miny:maxy,minx:maxx]
-            for i in range(4):hgt+=curdata[:,cury[:,:,i],curx[:,:,i]]*w[:,:,i]
-            hgt=hgt[:,halfk:-halfk,halfk:-halfk]/9.8
-            potential_temperature=None
-            qc=None
-            specific_humidity=None
-            pressure=None
-            qr=None
-            nr=None
-            qs=None
-            qi=None
-            ni=None
-            qg=None
-        else:
-            potential_temperature=np.zeros(N,dtype=np.float32,order="F")
-            hgt=np.zeros(N,dtype=np.float32,order="F")
-            qc=np.zeros(N,dtype=np.float32,order="F")
-            # qi=np.zeros(N,dtype=np.float32) #for now qi is added to qc so we don't have to worry about ni
-            specific_humidity=np.zeros(N,dtype=np.float32,order="F")
-            pressure=np.zeros(N,dtype=np.float32,order="F")
-            
-            # Note, this currently reads all pressure levels from disk then subsets to "usepressures"
-            curdata=d.variables[self.pvar_pert][self.curpos,...]
-            curdata=(curdata[usepressures,:,:]+self.base_pressure)[:,miny:maxy,minx:maxx]
-            for i in range(4):pressure+=curdata[:,cury[:,:,i],curx[:,:,i]]*w[:,:,i]
-            curdata=d.variables[self.tvar][self.curpos,...][:,miny:maxy,minx:maxx][usepressures,:,:]+300
-            for i in range(4):potential_temperature+=curdata[:,cury[:,:,i],curx[:,:,i]]*w[:,:,i]
-            curdata=(d.variables[self.gphvar_pert][self.curpos,...][usepressures,:,:]+self.base_gph)[:,miny:maxy,minx:maxx]
-            for i in range(4):hgt+=curdata[:,cury[:,:,i],curx[:,:,i]]*w[:,:,i]
-            curdata=d.variables[self.qcvar][self.curpos,...][:,miny:maxy,minx:maxx][usepressures,:,:]
-            for i in range(4):qc+=curdata[:,cury[:,:,i],curx[:,:,i]]*w[:,:,i]
-            curdata=d.variables[self.qivar][self.curpos,...][:,miny:maxy,minx:maxx][usepressures,:,:]
-            for i in range(4):qc+=curdata[:,cury[:,:,i],curx[:,:,i]]*w[:,:,i]
-            curdata=d.variables[self.qvvar][self.curpos,...][:,miny:maxy,minx:maxx][usepressures,:,:]
-            for i in range(4):specific_humidity+=curdata[:,cury[:,:,i],curx[:,:,i]]*w[:,:,i]
-            # curdata=d.variables[self.uvar][self.curpos,...][:,minuy:maxuy,minux:maxux][usepressures,:,:]
-            curdata=fast_mean.fast_smooth(d.variables[self.uvar][self.curpos,...][:,minuy:maxuy,minux:maxux][usepressures,:,:],offset)
-            for i in range(4):wind_u+=curdata[:,curuy[:,:,i],curux[:,:,i]]*wu[:,:,i]
-            # curdata=d.variables[self.vvar][self.curpos,...][:,minvy:maxvy,minvx:maxvx][usepressures,:,:]
-            curdata=fast_mean.fast_smooth(d.variables[self.vvar][self.curpos,...][:,minvy:maxvy,minvx:maxvx][usepressures,:,:],offset)
-            for i in range(4):wind_v+=curdata[:,curvy[:,:,i],curvx[:,:,i]]*wv[:,:,i]
-
-            potential_temperature=potential_temperature[:,halfk:-halfk,halfk:-halfk]
-            pressure=pressure[:,halfk:-halfk,halfk:-halfk]
-            specific_humidity=specific_humidity[:,halfk:-halfk,halfk:-halfk]
-            hgt=hgt[:,halfk:-halfk,halfk:-halfk]/9.8
-            qc=qc[:,halfk:-halfk,halfk:-halfk]
-            
-            N2=[Nz,Nxy[0]-halfk*2,Nxy[1]-halfk*2]
-            qr=np.zeros(N2,dtype=np.float32,order="F")
-            nr=np.zeros(N2,dtype=np.float32,order="F")
-            qs=np.zeros(N2,dtype=np.float32,order="F")
-            qi=np.zeros(N2,dtype=np.float32,order="F")
-            ni=np.zeros(N2,dtype=np.float32,order="F")
-            qg=np.zeros(N2,dtype=np.float32,order="F")
-            
-        
-        self.curpos+=1
-        kernelsize=np.int(np.floor(halfk))
-        #        wind_u=wind_u[:,halfk:-halfk,halfk:-halfk]
-        #        wind_v=wind_v[:,halfk:-halfk,halfk:-halfk]
-        wind_u=fast_mean.fast_smooth(wind_u,halfk)[:,halfk:-halfk,halfk:-halfk]
-        wind_v=fast_mean.fast_smooth(wind_v,halfk)[:,halfk:-halfk,halfk:-halfk]
-        N=qc.shape
-        #        print(wind_u.max(),wind_v.max())
-        if self._sfc_files!=None:
-            sfc=self._next_surface(self.curpos)
-            sfc.pblh+=hgt[0,:,:]
-            # convert the pblh into a vertical index into the 3D arrays
-            pblindex=np.argmin(np.abs(sfc.pblh[np.newaxis,:,:]-hgt),axis=0)
-            pblindex[pblindex<2]=2
-            pblindex[pblindex>=17]=16
-            sfc.pblh=pblindex+1
-        else:
-            sfc=None
-        
-        d.close()
-        self.time_inc()
-        return Bunch(p=pressure,th=potential_temperature,
-                     sh=specific_humidity, hgt=hgt,qc=qc,
-                     qv=specific_humidity/(1-specific_humidity), 
-                     u=wind_u, v=wind_v,w=np.zeros(N2,dtype=np.float32,order="F"),
-                     date=datestr,sfc=sfc,
-                     qr=qr,qi=qi,qs=qs,qg=qg,ni=ni,nr=nr
-                     )
-
-    def time_inc(self):
-        self.curpos+=1
-        d=swim_io.Dataset(self._filenames[self._curfile], 'r')
-        npos=d.variables[self.vvar].shape[0]-1
-        if self.curpos>=npos:
-            self._curfile+=1
-            self.curpos=0
-        d.close()
-        
-        
-    def next(self):
-        if self._geoLUT==None:
-            return self.nextNN()
-        else:
-            return self.nextBilin()
-            
-    def close(self):
-        pass
-    def __enter__(self):
-        return self
-    
-    def __exit__(self):
-        self.close()
-    
-    def __del__(self):
-        self.close()
         
 def topo_adjust_weather(hitopo,lowtopo,weather):
     N=hitopo.shape
@@ -1136,11 +566,17 @@ def default_options():
                  sfc_file_search="forcing/wrfout_d01_200*00",
                  domain_dir="baseline_info", 
                  topofile="baseline_info/4km_wrf_output.nc",
+                 baseline_file="baseline_info/4km_wrf_output.nc",
                  use_linear_winds=False, 
                  use_wrf_winds=False,
                  wrfres=4000.0,
+                 io_ratio=36.0/4.0, #ratio of low res driver to high res model grids
+                 nlevels=20,
+                 halfk=8,
+                 subset=(30,-30,30,-30),
                  verbose=True,
                  physics=int(1),
+                 clearold=True,
                  output_base="output/",
                  output_fnames=['swim_p_','swim_t_','swim_qv_','swim_qc_','swim_pres_','swim_qi_','swim_qs_','swim_qr_',"swim_u_","swim_v_","swim_w_"],
                  output_varnames=['precip','temp','qv','qc','pressure','qi','qs','qr',"u","v","w"],
@@ -1161,7 +597,31 @@ def read_options_file(filename):
             if re.match(".*=.*",l):
                 k,v=l.split("=")
                 output[k.strip()]=v.strip()
+            elif re.match(".*:.*",l):
+                k,v=l.split(":")
+                output[k.strip()]=v.strip()
     return output
+    
+
+def convert_iterable(inputdata, default):
+    if type(inputdata)==str:
+        temp_value=inputdata.split(",")
+        if len(temp_value)==1:
+            temp_value=inputdata.strip().split()
+        outputlist=[]
+        default_type=type(default[0])
+        for cur in temp_value:
+            if (type(default[0])!=str) and (iterable(default[0])):
+                outputlist.append(convert_iterable(cur,default[0]))
+            else:
+                outputlist.append(default_type(cur))
+    if type(default)==np.ndarray:
+        # for some readon ndarray's new/init doesn't convert an iterable, it treats it as the shape...
+        output=np.array(outputlist,dtype=default.dtype)
+    else:
+        output=type(default)(outputlist)
+    return 
+
     
 def setup_options(args):
     """Set up options for this model run. 
@@ -1170,8 +630,9 @@ def setup_options(args):
     If args.inputfilename exists, options are read from file as key value pairs, overriding defaults
     if options are specified on the commandline, they override values in the input file
     """
+    doptions=default_options()
     if args.inputfile!=None:
-        options=default_options()
+        options=doptions.copy()
     else:
         options=read_options_file(args.inputfile)
     
@@ -1179,6 +640,18 @@ def setup_options(args):
         if k!="inputfile":
             if args[k]!=None:
                 options[k]=args[k]
+    
+    # in case we read these options in from either an input file or the commandline
+    #  we need to make sure the types are what the default options sets up
+    for k in doptions.keys():
+        if type(doptions[k])!=str:
+            if iterable(doptions[k]):
+                # if the default option is actually an iterable (e.g. tuple,list) recursively convert 
+                # all elements in it (i.e. lists of lists are allowed, but all sub-elements must be lists)
+                options[k]=convert_iterable(options[k],doptions[k])
+            else:
+                options[k]=type(doptions[k])(options[k])
+                
     return options
     
 
