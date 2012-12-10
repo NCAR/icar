@@ -197,10 +197,10 @@ def adjust_winds(u,v,w,prestaggered=False):
     else:
         ustag=u
         vstag=v
-    divergance=(ustag[:,1:-1,1:]-ustag[:,1:-1,:-1])+(vstag[:,1:,1:-1]-vstag[:,:-1,1:-1])
-    w[0,1:-1,1:-1]=-divergance[0,:,:]
+    divergence=(ustag[:,1:-1,1:]-ustag[:,1:-1,:-1])+(vstag[:,1:,1:-1]-vstag[:,:-1,1:-1])
+    w[0,1:-1,1:-1]=-divergence[0,:,:]
     for i in range(w.shape[0]-1):
-        w[i+1,1:-1,1:-1]=w[i,1:-1,1:-1]-divergance[i+1,:,:]
+        w[i+1,1:-1,1:-1]=w[i,1:-1,1:-1]-divergence[i+1,:,:]
     return(ustag,vstag,w)
     
 def rotate_winds(u,v,hgt,dx=4000.0,rotation=None):
