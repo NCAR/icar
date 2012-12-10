@@ -20,6 +20,10 @@ EXIT STATUS
 
     None
 
+WARNING/KNOWN/LIKELY ISSUES
+    This may fail on windows because windows does not have a proper "fork()"
+    As a result, dictionaries in classes passed to subprocesses get re-initialized (or somesuch)
+
 AUTHOR
 
     Ethan Gutmann - gutmann@ucar.edu
@@ -43,11 +47,11 @@ VERSION
 import sys
 import os
 import traceback
-#import argparse # requires python >=2.7
+import argparse # requires python >=2.7
 from multiprocessing import Pool,Queue,Process
 import glob
 import time
-# Standard 3rd party modules
+# "Standard" 3rd party modules
 import numpy.fft as fft
 from scipy.signal import convolve
 import numpy as np
@@ -61,8 +65,6 @@ import swim_fast as swim # a faster version of the hand off between python and f
 import fast_mean # inline C to do a running spatial mean
 import lt_winds #computes Linear Theory 3D winds
 
-
-NPROCESSORS=2 #not used currently
 R=8.3144621 # J/mol/K
 cp=29.19 # J/mol/K   =1.012 J/g/K
 g=9.81 # m/s^2
@@ -752,9 +754,9 @@ def update_weather(newatm,oldatm):
         while maintaining the updated boundary conditions of the new atmosphere"""
     for k in newatm.keys():
         if (k!="hgt") and (k!="date") and (k!="sfc") and (k!="p") and (k!="u") and (k!="v") and (k!="w"):
-            #newatm[k][:,1:-1,1:-1]=oldatm[k][:,1:-1,1:-1]
-            tmp=np.where(np.isfinite(oldatm[k][:,1:-1,1:-1]))
-            newatm[k][:,1:-1,1:-1][tmp]=oldatm[k][:,1:-1,1:-1][tmp]
+            newatm[k][:,1:-1,1:-1]=oldatm[k][:,1:-1,1:-1]
+            # tmp=np.where(np.isfinite(oldatm[k][:,1:-1,1:-1]))
+            # newatm[k][:,1:-1,1:-1][tmp]=oldatm[k][:,1:-1,1:-1][tmp]
             # tmp=np.where(~np.isfinite(oldatm[k][:,1:-1,1:-1]))
             # if len(tmp[0])>0:
             #     print("BROKEN:"+str(oldatm.date))
@@ -812,75 +814,45 @@ def calc_ndsq(weather,base):
     return ndsq
     
 
-def simul_next(base,wrfwinds,q,r_matrix,Fzs,padx,pady,options=None):
+def simul_next(base,wrfwinds,q,r_matrix,Fzs,padx,pady,options=None,forcing=None):
     weather=base.next()
     topo_adjust_weather(base.hgt3d, weather.hgt, weather)
 
     if options!=None:
         use_linear_winds=options.use_linear_winds
         use_wrf_winds=options.use_wrf_winds
-        
+    if forcing!=None:
+        Fzs=forcing.Fzs
+        padx=forcing.padx
+        pady=forcing.pady
+        r_matrix=forcing.r_matrix
+    
     if use_linear_winds:
         (junku,junkv,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
         # calculate the (squared) brunt vaisala frequency, better off with the dry value (subtract cap_gamma)
         ndsq=calc_ndsq(weather,base)
-        print("Ndsq=",ndsq)
-        # print("raw winds Umax=",weather.u.max())
-        # print("raw winds Vmax=",weather.v.max())
-        # print("raw winds Wmax=",weather.w.max())
         lt_winds.update_winds(base.hgt3d,Fzs,weather.u,weather.v,weather.w,dx=wrfres,
                               Ndsq=ndsq,r_matrix=r_matrix,padx=padx,pady=pady,rotation=False)
-        print("LT winds Umax=",weather.u.max())
-        print("LT winds Vmax=",weather.v.max())
-        print("LT winds Wmax=",weather.w.max())
         # weather.u=fast_mean.fast_smooth(weather.u,5)
         # weather.v=fast_mean.fast_smooth(weather.v,5)
-        # weather.u=(weather.u[:,:,1:]+weather.u[:,:,:-1])/2
-        # weather.v=(weather.v[:,1:,:]+weather.v[:,:-1,:])/2
-        # if r_matrix!=None:
-        #     rotate_winds(weather.u,weather.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
-        # (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
-        # print("adjusted LT winds Umax=",weather.u.max())
-        # print("adjusted LT winds Vmax=",weather.v.max())
-        # print("adjusted LT winds Wmax=",weather.w.max())
     elif use_wrf_winds:
         wind=wrfwinds.next()
-        wind.u=fast_mean.fast_smooth(wind.u,2)
-        wind.v=fast_mean.fast_smooth(wind.v,2)
-        # wind.u=(wind.u[:,:,1:]+wind.u[:,:,:-1])/2
-        # wind.v=(wind.v[:,1:,:]+wind.v[:,:-1,:])/2
-        # if r_matrix !=None:
-        #     r_matrix=rotate_winds(wind.u,wind.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
+        # wind.u=fast_mean.fast_smooth(wind.u,2)
+        # wind.v=fast_mean.fast_smooth(wind.v,2)
         weather.u=wind.u
         weather.v=wind.v
-        # (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
-        weather.p=wind.p
-        weather.th=wind.th
-        weather.qv=wind.qv
-    # else:
-    #     weather.u=(weather.u[:,:,1:]+weather.u[:,:,:-1])/2
-    #     weather.v=(weather.v[:,1:,:]+weather.v[:,:-1,:])/2
+        # weather.p=wind.p
+        # weather.th=wind.th
+        # weather.qv=wind.qv
 
     weather.u=(weather.u[:,:,1:]+weather.u[:,:,:-1])/2
     weather.v=(weather.v[:,1:,:]+weather.v[:,:-1,:])/2
     if r_matrix !=None:
         r_matrix=rotate_winds(weather.u,weather.v,base.hgt3d,dx=wrfres,rotation=r_matrix)
     (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w,prestaggered=True)
-
-    # (weather.u,weather.v,weather.w)=adjust_winds(weather.u,weather.v,weather.w)
     
     q.put(weather)
 
-def parallel_output(filename,Nx,Ny,Nz,varname,data,curdate):
-    outputcurdate=''.join(''.join(''.join(curdate.split('-')).split('_')).split(':'))
-
-    if Nz>0:
-        ncout=swim_io.NC_writer(filename,Nx,Ny,Nz,var=varname)
-    else:
-        ncout=swim_io.NC_writer(filename,Nx,Ny,var=varname)
-    ncout.appendToVar(data, date=outputcurdate)
-    ncout.close()
-    
 
 
 class Forcing_Reader(object):
@@ -888,32 +860,61 @@ class Forcing_Reader(object):
     new=None
     
     base=None
-    wrfwinds=None
     q=None
+    reader_process=None
+    # rotation matrix to rotate winds into the real domain
     r_matrix=None
-    Fzs=None
-    padx=None
-    pady=None
     
-    def __init__(options,domain):
+    # specific to useing WRF winds (and other variables) directly
+    wrfwinds=None
+
+    # specific to linear winds
+    Fzs=None #FFT of topography with smoothed borders
+    padx=None #padding required to smooth topography
+    pady=None 
+    
+    def __init__(self,options,domain):
         self.q=Queue()
-        self.base=
+        self.base=WRF_Reader(options.file_search,sfc=options.sfc_file_search,bilin=True,nn=False)
+        
+        if options.use_linear_winds:
+            (self.lt_topo,self.pady,self.padx)=topo_preprocess(domain.topo)
+            Ny,Nx=domain.topo.shape
+            self.Fzs=fft.fftshift(fft.fft2(self.lt_topo))/((Nx+self.padx*2)*(Ny+self.pady*2))
+            
+        if options.use_wrf_winds:
+            self.wrfwinds=WRF_Reader(options.wind_files,bilin=False,nn=True, windonly=True)
+            self.base.hgt3d=self.wrfwinds.hgt3d #if we are using winds from wrf, we need to use the 3d domain from wrf too
+            
+        self.reader_process=Process(target=simul_next,args=(self.base,self.wrfwinds,self.q,self.r_matrix,self.Fzs,self.padx,self.pady,options))
+        self.reader_process.start()
+        self.new=self.q.get()
+        # if base is copied... can I time_inc() and spawn off the next process before the last one finishes?
+        self.base.time_inc()
+        self.reader_process=Process(target=simul_next,args=(self.base,self.wrfwinds,self.q,self.r_matrix,self.Fzs,self.padx,self.pady,options))
+        self.reader_process.start()
 
     def next(self):
         self.old=self.new
         self.new=self.q.get()
-        self.calc_deltas(old,new)
+        self.base.time_inc() #note this seems to be necessary because putting it in its own thread copies the reader object(?)
 
-        p1=Process(target=simul_next,args=(self.base,self.wrfwinds,self.q,self.r_matrix,self.Fzs,self.padx,self.pady))
-        p1.start()
-        
-        deltas=calc_deltas(self.old,self.new)
+        self.reader_process=Process(target=simul_next,args=(self.base,self.wrfwinds,self.q,self.r_matrix,self.Fzs,self.padx,self.pady,options))
+        self.reader_process.start()
+
+        update_weather(self.new,self.old)
+         
+        # deltas=self.calc_deltas(self.old,self.new)
+        deltas=None
         return Bunch(old=self.old,new=self.new,deltas=self.deltas)
 
     def __iter__(self):
         return self
     def close(self):
-        pass
+        if self.base!=None:
+            self.base.close()
+        if self.wrfwinds!=None:
+            self.wrwinds.close()
     def __enter__(self):
         return self
     def __exit__(self):
@@ -923,29 +924,45 @@ class Forcing_Reader(object):
         super(Forcing_Reader,self).__del__()
 
 
-def main(options):
-    """Main program setup domain/forcing and loop over input data"""
-    domain=setup_domain(options)
-    
-    forcing=Forcing_Reader(options,domain)
 
-    swim_lib.init(options.physics)
-    t0=time.time()
-    for weather in forcing:
-        t1=time.time()
-        swim.time_step(domain,weather,swim_lib,options)
-        t2=time.time()
-        write_output(weather,options)
-        t3=time.time()
-        if options.verbose:
-            print(phyt)
+def parallel_output(filename,varname,data,curdate):
+    """Write an outputfile, self-contained so it can be called in its own thread"""
+    outputcurdate=''.join(''.join(''.join(curdate.split('-')).split('_')).split(':'))
+    sz=data.shape
+    if len(sz)==3:
+        Nz,Ny,Nx=sz
+        ncout=swim_io.NC_writer(filename,Nx,Ny,Nz,var=varname)
+    else:
+        Ny,Nx=sz
+        ncout=swim_io.NC_writer(filename,Nx,Ny,var=varname)
+    ncout.appendToVar(data, date=outputcurdate)
+    ncout.close()
     
+def write_output(outputlist,weather,options):
+    """Write output files in independant threads.
+    
+    Loops over output specified in the options and spawns a new thread for each. 
+    Because this is parallelized, .copy() variables into new arrays to prevent the next input possibly overwriting these. 
+    (NOTE I'm pretty sure this shouldn't actually happen, so we could try removing that copy,
+    but then you are technically in a race condition. )"""
+    for i,v in enumerate(options.output):
+        if i>len(outputlist):
+            outputlist.append(None)
+        else:
+            if outputlist[i]:
+                outputlist[i].join()
+        outputlist[i]=Process(target=parallel_output,args=(options.output_base+options.output_fnames[i],options.output_varnames[i],
+                                                           weather.old.date,weather.new[v].copy()))
+        outputlist[i].start()
 
-def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_data/baseline_info/2km_wrf_input_d01'):
-    oldfiles=glob.glob(outputdir+"*.nc")
-    for old in oldfiles:
-        os.remove(old)
-    topoinfo=swim_io.read_nc(topofile,var='HGT')
+def setup_domain(options):
+    """Get topography info"""
+    try:
+        topovarname=options.topovarname
+    except KeyError:
+        topovarname="HGT"
+    
+    topoinfo=swim_io.read_nc(options.topofile,var=topovarname)
     if sub_x1==None:
         xendpt=-halfk
     else:
@@ -955,7 +972,65 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
     else:
         yendpt=sub_y1-halfk
     topo=topoinfo.data[0,sub_y0+halfk:yendpt,sub_x0+halfk:xendpt]
-    (Ny,Nx)=topo.shape
+    # (Ny,Nx)=topo.shape
+    return Bunch(topo=topo)
+
+def initialize(options):
+    """Initialization"""
+    # initialze physics engine as necessary
+    swim_lib.swim_step.init(options.physics)
+    # remove old output files if specified
+    if options.clearold:
+        # find old output files
+        oldfiles=glob.glob(options.output_base+"*.nc")
+        # loop over files, deleting them
+        for o in oldfiles:
+            os.remove(o)
+
+    # set up an empty list for the output processes
+    outputlist=[None]*len(option.output)
+    return outputlist
+
+def main(options):
+    """Main program: initialization,setup domain/forcing, and loop over input data"""
+    # any initialization that has to occur and returns a list for output process management
+    outputlist=initialize(options)
+    # domain could/should include linear wind topography?
+    domain=setup_domain(options)
+    
+    # forcing object supplies methods and datastructures to loop over all forcing
+    # data contained in files specified by options. 
+    forcing=Forcing_Reader(options,domain)
+    
+    # timeing information
+    t0=time.time()
+    # loop over all boundary conditions
+    for weather in forcing:
+        print(" ")
+        print("-------------------------------------------------")
+        print(weather.old.date)
+        print("-------------------------------------------------")
+        t1=time.time()
+        # set up data for and call Fortran physics time stepping library (in swim_lib)
+        swim.swim2d(domain,weather,swim_lib,options)
+        t2=time.time()
+        write_output(outputlist,weather,options)
+        t3=time.time()
+        if options.verbose:
+            print("Finished Timestep:"+str(weather.old.date))
+            print("Total Time:"+str(t3-t0))
+            print("     input :"+str(t1-t0))
+            print("     phyics:"+str(t2-t1))
+            print("     output:"+str(t3-t2))
+        t0=time.time()
+    forcing.close()
+    print("Exiting")
+    
+
+def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_data/baseline_info/2km_wrf_input_d01'):
+    oldfiles=glob.glob(outputdir+"*.nc")
+    for old in oldfiles:
+        os.remove(old)
 
     # wrfwinds=WRF_Reader(wind_files,bilin=False,nn=True, windonly=True)
     # wind=wrfwinds.next()
@@ -1050,48 +1125,27 @@ def main(): # (file_search="nc3d/merged*.nc",topofile='/d2/gutmann/usbr/narr_dat
 
         update_weather(weather,oldweather)
         t2=time.time()
-        print(" ")
-        print("-------------------------------------------------")
-        print(weather.date)
-        print("-------------------------------------------------")
         P=swim.swim2d(topo,weather,oldweather,swim_lib,processPool,physics,timestep=timestep,dx=wrfres)
-            
-        t4=time.time()
-        print("Finished Timestep")
-        print("Total Time:"+str(t4-t3))
-        print("     input :"+str(t2-t1))
-        print("     phyics:"+str(t4-t2))
-        print("     output:"+str(t1-t3))
-        t3=time.time()
-        curdate=weather.date
-        
-        outputnames=['swim_p_','swim_t_','swim_qv_','swim_qc_','swim_pres_','swim_qi_','swim_qs_','swim_qr_',"swim_u_","swim_v_","swim_w_"]
-        varnames=['precip','temp','qv','qc','pressure','qi','qs','qr',"u","v","w"]
-        outputvars=[P,weather.th,weather.qv,weather.qc,weather.p,weather.qi,weather.qs,weather.qr,weather.u,weather.v,weather.w]
-        for i in range(len(varnames)):
-            if i>=len(pIOlist):
-                pIOlist.append(None)
-            if pIOlist[i]!=None:
-                pIOlist[i].join()
-            if len(outputvars[i].shape)==2:
-                curz=-1
-                cury,curx=outputvars[i].shape
-            else:
-                curz,cury,curx=outputvars[i].shape
-            pIOlist[i]=Process(target=parallel_output,args=(outputdir+outputnames[i]+str(curdate),
-                                                            curx,cury,curz,
-                                                            varnames[i],outputvars[i],curdate))
-            pIOlist[i].start()
-        
-        oldweather=weather
     wrf_base.close()
 
 def default_options():
     """Return a structure of default options"""
-    return Bunch(forcing_dir="forcing",domain_dir="baseline_info", 
-                use_linear_winds=False, use_wrf_winds=False,
-                wrfres=4000.0,
-                output_dir="output")
+    return Bunch(forcing_dir="forcing",
+                 file_search="forcing/wrfout_d01_200*00",
+                 wind_files="winds/wrfout_d01_200*00",
+                 sfc_file_search="forcing/wrfout_d01_200*00",
+                 domain_dir="baseline_info", 
+                 topofile="baseline_info/4km_wrf_output.nc",
+                 use_linear_winds=False, 
+                 use_wrf_winds=False,
+                 wrfres=4000.0,
+                 verbose=True,
+                 physics=int(1),
+                 output_base="output/",
+                 output_fnames=['swim_p_','swim_t_','swim_qv_','swim_qc_','swim_pres_','swim_qi_','swim_qs_','swim_qr_',"swim_u_","swim_v_","swim_w_"],
+                 output_varnames=['precip','temp','qv','qc','pressure','qi','qs','qr',"u","v","w"],
+                 output=["p","th","qv","qc","p","qi","qs","qr","u","v","w"])
+                
     
 def read_options_file(filename):
     """Simple procedure to read through a file for key-value pairs
