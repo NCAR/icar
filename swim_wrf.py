@@ -255,10 +255,14 @@ def simul_next(base,wrfwinds,q,r_matrix,Fzs,padx,pady,options=None,forcing=None)
         use_linear_winds=options.use_linear_winds
         use_wrf_winds=options.use_wrf_winds
         wrfres=options.wrfres
-        if options.const_U!=-9999.0:
+        if options.const_U!=None:
             weather.u=weather.u*0+options.const_U
-        if options.const_V!=-9999.0:
+        if options.const_V!=None:
             weather.v=weather.v*0+options.const_V
+        if options.const_qv!=None:
+            weather.qv=weather.qv*0+np.array(options.const_qv)[:,np.newaxis,np.newaxis]
+        if options.const_t!=None:
+            weather.qv=weather.qv*0+np.array(options.const_qv)[:,np.newaxis,np.newaxis]
     if forcing!=None:
         Fzs=forcing.Fzs
         padx=forcing.padx
@@ -503,8 +507,10 @@ def main(options):
 def default_options():
     """Return a structure of default options"""
     return Bunch(constant_forcing=False,
-                 const_U=-9999.0,
-                 const_V=-9999.0,
+                 const_U =None,
+                 const_V =None,
+                 const_qv=None,
+                 const_t =None,
                  forcing_dir="forcing",
                  file_search="forcing/wrfout_d01_200*00",
                  wind_files="winds/wrfout_d01_200*00",
