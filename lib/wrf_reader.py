@@ -200,7 +200,7 @@ class WRF_Reader(object):
                     np.arange(nlevels)[:,np.newaxis].repeat(sz[0]*sz[1],axis=1).reshape((nlevels,sz[0],sz[1])))
         
     
-    def init_xy(self,driverfilename='forcing/wrfout_d01_2000-10-01_00:00:00',options=None):
+    def init_xy(self,driverfilename='forcing/wrfout_d01_2000-10-01_00:00:00',domain=None,options=None):
         if options.wrfres==2000:
             wrffilename=options.baseline_file
         elif options.wrfres==4000:
@@ -227,7 +227,10 @@ class WRF_Reader(object):
         d.close()
         wlat=swim_io.read_nc(wrffilename,var='XLAT').data[0,sub_y0:sub_y1,sub_x0:sub_x1]
         wlon=swim_io.read_nc(wrffilename,var='XLONG').data[0,sub_y0:sub_y1,sub_x0:sub_x1]
-        hires_topo=swim_io.read_nc(wrffilename,var='HGT').data[0,sub_y0:sub_y1,sub_x0:sub_x1][halfk:-halfk,halfk:-halfk]
+        if domain!=None:
+            hires_topo=domain.topo
+        else:
+            hires_topo=swim_io.read_nc(wrffilename,var='HGT').data[0,sub_y0:sub_y1,sub_x0:sub_x1][halfk:-halfk,halfk:-halfk]
         print('Calculating XY match lookup table, this may take a while.')
         if self._nn:
             wlat=wlat[halfk:-halfk,halfk:-halfk]
@@ -263,7 +266,7 @@ class WRF_Reader(object):
             self.make_model_domain(self.nlevels,MH,hires_topo)
             
         
-    def __init__(self, file_search,sfc=None,nn=True, bilin=False, windonly=False, options=None,*args, **kwargs):
+    def __init__(self, file_search,sfc=None,nn=True, bilin=False, windonly=False, domain=None, options=None,*args, **kwargs):
         super(WRF_Reader,self).__init__(*args, **kwargs)
         self.use_linear_winds=options.use_linear_winds
         self.use_wrf_winds=options.use_wrf_winds
@@ -279,7 +282,7 @@ class WRF_Reader(object):
         elif bilin:
             self._nn=False
             self._bilin=True
-        self.init_xy(self._filenames[0],options)
+        self.init_xy(self._filenames[0],domain=domain,options=options)
         self.curpos=19*24
         if windonly:
             self.curpos=0

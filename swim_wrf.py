@@ -318,7 +318,8 @@ class Forcing_Reader(object):
     
     def __init__(self,options,domain):
         self.q=Queue()
-        self.base=WRF_Reader(options.file_search,sfc=options.sfc_file_search,bilin=True,nn=False,options=options)
+        self.base=WRF_Reader(options.file_search,sfc=options.sfc_file_search,
+                            bilin=True,nn=False,domain=domain,options=options)
         
         self.constant_forcing=options.constant_forcing
         
@@ -328,7 +329,8 @@ class Forcing_Reader(object):
             self.Fzs=fft.fftshift(fft.fft2(self.lt_topo))/((Nx+self.padx*2)*(Ny+self.pady*2))
             
         if options.use_wrf_winds:
-            self.wrfwinds=WRF_Reader(options.wind_files,bilin=False,nn=True, windonly=True,options=options)
+            self.wrfwinds=WRF_Reader(options.wind_files,bilin=False,nn=True, 
+                                     windonly=True,domain=domain,options=options)
             self.base.hgt3d=self.wrfwinds.hgt3d #if we are using winds from wrf, we need to use the 3d domain from wrf too
             
         self.reader_process=Process(target=simul_next,
@@ -408,8 +410,8 @@ def write_output(outputlist,weather,options):
             if outputlist[i]:
                 outputlist[i].join()
         outputlist[i]=Process(target=parallel_output,
-                              args=(options.output_base+options.output_fnames[i]+str(weather.old.date)[:-6],
-                                    options.output_varnames[i],weather.new[v].copy(),str(weather.old.date)))
+                              args=(options.output_base+"swim_"+v+"_"+str(weather.old.date)[:-6],
+                                    v,weather.new[v].copy(),str(weather.old.date[:-6])))
         outputlist[i].start()
 
 def setup_domain(options):
@@ -437,8 +439,9 @@ def setup_domain(options):
 def write_parameter_file(options):
     with open(options.output_base+"parameters.txt",'w') as f:
         for k in options.keys():
-            f.write(k+" = "+str(options[k]).replace("[","").replace("]","")
-                    .replace("(","").replace(")","").replace("'","")+"\n")
+            f.write(k+" = "+str(options[k])+"\n")
+            # note in the old (non-ast.literal_eval) style, 
+            # the characters: (,),[,],",', etc. must all be replaced with " "
         
 def initialize(options):
     """Initialization"""
@@ -520,9 +523,9 @@ def default_options():
                  physics=int(0),
                  clearold=True,
                  output_base="output/",
-                 output_fnames=['swim_p_','swim_t_','swim_qv_','swim_qc_','swim_pres_','swim_qi_','swim_qs_','swim_qr_',"swim_u_","swim_v_","swim_w_"],
-                 output_varnames=['precip','temp','qv','qc','pressure','qi','qs','qr',"u","v","w"],
                  output=["precip","th","qv","qc","p","qi","qs","qr","u","v","w"])
+                 # output_fnames=['swim_p_','swim_t_','swim_qv_','swim_qc_','swim_pres_','swim_qi_','swim_qs_','swim_qr_',"swim_u_","swim_v_","swim_w_"],
+                 # output_varnames=['precip','temp','qv','qc','pressure','qi','qs','qr',"u","v","w"],
                 
     
 def read_options_file(filename):
@@ -588,6 +591,7 @@ def setup_options(args):
     for k in argdict.keys():
         if k!="inputfile":
             if argdict[k]!=None:
+                print(k,argdict[k])
                 options[k]=ast.literal_eval(argdict[k])
     
     # NOTE THE USE of ast.literal_eval makes the following unnecessary, left in for now. 
@@ -623,7 +627,7 @@ if __name__ == '__main__':
                             +"(as from a single high resolution WRF input or output file)")
         parser.add_argument('-v', '--version',action='version',version='SWIM v0.6.1')
         parser.add_argument ('--verbose', action='store_true',
-                default=True, help='verbose output', dest='verbose')
+                default=None, help='verbose output', dest='verbose')
         args = parser.parse_args()
         
         options=setup_options(args)
