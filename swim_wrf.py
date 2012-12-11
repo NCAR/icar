@@ -262,7 +262,7 @@ def simul_next(base,wrfwinds,q,r_matrix,Fzs,padx,pady,options=None,forcing=None)
         if options.const_qv!=None:
             weather.qv=weather.qv*0+np.array(options.const_qv)[:,np.newaxis,np.newaxis]
         if options.const_t!=None:
-            weather.qv=weather.qv*0+np.array(options.const_qv)[:,np.newaxis,np.newaxis]
+            weather.th=weather.th*0+np.array(options.const_t)[:,np.newaxis,np.newaxis]
     if forcing!=None:
         Fzs=forcing.Fzs
         padx=forcing.padx
@@ -548,10 +548,14 @@ def read_options_file(filename):
         for l in f:
             l=l.split("#")[0]
             if re.match(".*=.*",l):
-                k,v=l.split("=")
+                inputlist=l.split("=")
+                k=inputlist[0]
+                v="=".join(inputlist[1:])
                 output[k.strip()]=ast.literal_eval(v.strip())
             elif re.match(".*:.*",l):
-                k,v=l.split(":")
+                inputlist=l.split("=")
+                k=inputlist[0]
+                v="=".join(inputlist[1:])
                 output[k.strip()]=ast.literal_eval(v.strip())
     return output
     
