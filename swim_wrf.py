@@ -301,6 +301,10 @@ class Forcing_Reader(object):
     Fzs=None #FFT of topography with smoothed borders
     padx=None #padding required to smooth topography
     pady=None 
+    # for constant forcing, we need to store the start date
+    #  so all outputfiles can have a number added to that date
+    init_date=""
+    curdate=0
     
     def __init__(self,options,domain):
         self.q=Queue()
@@ -324,6 +328,7 @@ class Forcing_Reader(object):
         if self.constant_forcing:
             self.old=self.new
         # if base is copied... can I time_inc() and spawn off the next process before the last one finishes?
+        self.init_date=self.new.date
         if not self.constant_forcing
             self.base.time_inc()
         self.reader_process=Process(target=simul_next,
@@ -333,6 +338,8 @@ class Forcing_Reader(object):
     def next(self):
         self.old=self.new
         if self.constant_forcing:
+            self.old.date=self.init_date[:-6]+"_{0:05d}".format(self.curdate)+self.init_date[-6:]
+            self.curdate+=1
             return Bunch(old=self.old,new=self.new,deltas=None)
         self.new=self.q.get()
         self.base.time_inc() #note this seems to be necessary because putting it in its own thread copies the reader object(?)
@@ -390,8 +397,9 @@ def write_output(outputlist,weather,options):
         else:
             if outputlist[i]:
                 outputlist[i].join()
-        outputlist[i]=Process(target=parallel_output,args=(options.output_base+options.output_fnames[i]+str(weather.old.date)[:-6],options.output_varnames[i],
-                                                           weather.new[v].copy(),str(weather.old.date)))
+        outputlist[i]=Process(target=parallel_output,
+                              args=(options.output_base+options.output_fnames[i]+str(weather.old.date)[:-6],
+                                    options.output_varnames[i],weather.new[v].copy(),str(weather.old.date)))
         outputlist[i].start()
 
 def setup_domain(options):
