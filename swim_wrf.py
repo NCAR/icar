@@ -305,11 +305,16 @@ class Forcing_Reader(object):
     #  so all outputfiles can have a number added to that date
     init_date=""
     curdate=0
+    # values to use to make U and V fields constant in space and time
+    const_U=None
+    const_V=None
     
     def __init__(self,options,domain):
         self.q=Queue()
         self.base=WRF_Reader(options.file_search,sfc=options.sfc_file_search,bilin=True,nn=False,options=options)
         
+        self.const_U=options.const_U
+        self.const_V=options.const_V
         self.constant_forcing=options.constant_forcing
         
         if options.use_linear_winds:
@@ -331,9 +336,14 @@ class Forcing_Reader(object):
         self.init_date=self.new.date
         if not self.constant_forcing
             self.base.time_inc()
-        self.reader_process=Process(target=simul_next,
-                args=(self.base,self.wrfwinds,self.q,self.r_matrix,self.Fzs,self.padx,self.pady,options))
-        self.reader_process.start()
+            self.reader_process=Process(target=simul_next,
+                    args=(self.base,self.wrfwinds,self.q,self.r_matrix,self.Fzs,self.padx,self.pady,options))
+            self.reader_process.start()
+        else:
+            if self.const_U!=None:
+                self.new.u=self.new.u*0+self.const_U
+            if self.const_V!=None:
+                self.new.v=self.new.v*0+self.const_V
 
     def next(self):
         self.old=self.new
@@ -488,6 +498,8 @@ def main(options):
 def default_options():
     """Return a structure of default options"""
     return Bunch(constant_forcing=False,
+                 const_U=None,
+                 const_V=None,
                  forcing_dir="forcing",
                  file_search="forcing/wrfout_d01_200*00",
                  wind_files="winds/wrfout_d01_200*00",
