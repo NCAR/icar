@@ -306,6 +306,8 @@ class Forcing_Reader(object):
         self.q=Queue()
         self.base=WRF_Reader(options.file_search,sfc=options.sfc_file_search,bilin=True,nn=False,options=options)
         
+        self.constant_forcing=options.constant_forcing
+        
         if options.use_linear_winds:
             (self.lt_topo,self.pady,self.padx)=topo_preprocess(domain.topo)
             Ny,Nx=domain.topo.shape
@@ -315,20 +317,28 @@ class Forcing_Reader(object):
             self.wrfwinds=WRF_Reader(options.wind_files,bilin=False,nn=True, windonly=True,options=options)
             self.base.hgt3d=self.wrfwinds.hgt3d #if we are using winds from wrf, we need to use the 3d domain from wrf too
             
-        self.reader_process=Process(target=simul_next,args=(self.base,self.wrfwinds,self.q,self.r_matrix,self.Fzs,self.padx,self.pady,options))
+        self.reader_process=Process(target=simul_next,
+                args=(self.base,self.wrfwinds,self.q,self.r_matrix,self.Fzs,self.padx,self.pady,options))
         self.reader_process.start()
         self.new=self.q.get()
+        if self.constant_forcing:
+            self.old=self.new
         # if base is copied... can I time_inc() and spawn off the next process before the last one finishes?
-        self.base.time_inc()
-        self.reader_process=Process(target=simul_next,args=(self.base,self.wrfwinds,self.q,self.r_matrix,self.Fzs,self.padx,self.pady,options))
+        if not self.constant_forcing
+            self.base.time_inc()
+        self.reader_process=Process(target=simul_next,
+                args=(self.base,self.wrfwinds,self.q,self.r_matrix,self.Fzs,self.padx,self.pady,options))
         self.reader_process.start()
 
     def next(self):
         self.old=self.new
+        if self.constant_forcing:
+            return Bunch(old=self.old,new=self.new,deltas=None)
         self.new=self.q.get()
         self.base.time_inc() #note this seems to be necessary because putting it in its own thread copies the reader object(?)
 
-        self.reader_process=Process(target=simul_next,args=(self.base,self.wrfwinds,self.q,self.r_matrix,self.Fzs,self.padx,self.pady,options))
+        self.reader_process=Process(target=simul_next,
+                args=(self.base,self.wrfwinds,self.q,self.r_matrix,self.Fzs,self.padx,self.pady,options))
         self.reader_process.start()
 
         update_weather(self.new,self.old)
@@ -469,7 +479,8 @@ def main(options):
 
 def default_options():
     """Return a structure of default options"""
-    return Bunch(forcing_dir="forcing",
+    return Bunch(constant_forcing=False,
+                 forcing_dir="forcing",
                  file_search="forcing/wrfout_d01_200*00",
                  wind_files="winds/wrfout_d01_200*00",
                  sfc_file_search="forcing/wrfout_d01_200*00",
