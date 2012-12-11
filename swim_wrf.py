@@ -3,18 +3,18 @@
 """
 SYNOPSIS
 
-    swim_wrf.py [-h] [--verbose] [-v, --version] [WRF_filename] [hi_res_topofile]
+    swim_wrf.py [-h] [--verbose] [-v, --version] [parameter_file]
 
 DESCRIPTION
     Reads forcing data to drive the: 
         Simple Weather Interpolation Model  (SWIM)
+        Pseudo-Dynamical Downscaling Model (PDDM)
         Physics based Orographic Precipitation model (POP)
         Hybrid Orographic Precipitation model (HOP)
-        or similar silly acronyms / abbreviations (SSAA)
 
 EXAMPLES
 
-    swim_wrf.py
+    swim_wrf.py parameters.txt
 
 EXIT STATUS
 
@@ -22,7 +22,9 @@ EXIT STATUS
 
 WARNING/KNOWN/LIKELY ISSUES
     This may fail on windows because windows does not have a proper "fork()"
-    As a result, dictionaries in classes passed to subprocesses get re-initialized (or somesuch)
+    As a result, dictionaries in classes passed to sub-processes can effectively 
+    get re-initialized (or somesuch). Not sure what that will do to the Bunch class which has __dict__
+    IF this is an issue, it can be fixed by removing the parallel wrapper around the IO code. 
 
 AUTHOR
 
@@ -30,13 +32,13 @@ AUTHOR
 
 LICENSE
 
-    This script is in the public domain.
+    This program is in the public domain.
 
 VERSION
     0.6.1 - provided commandline and inputfile option handling. 
             and (slightly) streamlined main()
     0.6   - adding WRF high res winds
-    0.5.1 - SPEED (esp. with new microphysics ~50x faster)
+    0.5.1 - SPEED (esp. with new microphysics [physics=0] ~50x faster)
     0.5   - added LT winds & fancy 3D grid(?)
     0.4   - adding PBL mixing and (stupid) radiative cooling 1.5K/day
     0.3   - WRF based (previously from swim_narr.py)
@@ -53,6 +55,7 @@ import glob
 import time
 import copy
 import re
+import ast #used to convert strings in parameter file to python variables
 # "Standard" 3rd party modules
 import numpy.fft as fft
 from scipy.signal import convolve
@@ -478,7 +481,7 @@ def main(options):
         print("-------------------------------------------------")
         t1=time.time()
         # set up data for and call Fortran physics time stepping library (in swim_lib)
-        swim.swim2d(domain,weather,swim_lib,options)
+        weather.new.precip=swim.swim2d(domain,weather,swim_lib,options)
         t2=time.time()
         write_output(outputlist,weather,options)
         t3=time.time()
@@ -519,7 +522,7 @@ def default_options():
                  output_base="output/",
                  output_fnames=['swim_p_','swim_t_','swim_qv_','swim_qc_','swim_pres_','swim_qi_','swim_qs_','swim_qr_',"swim_u_","swim_v_","swim_w_"],
                  output_varnames=['precip','temp','qv','qc','pressure','qi','qs','qr',"u","v","w"],
-                 output=["p","th","qv","qc","p","qi","qs","qr","u","v","w"])
+                 output=["precip","th","qv","qc","p","qi","qs","qr","u","v","w"])
                 
     
 def read_options_file(filename):
@@ -535,10 +538,10 @@ def read_options_file(filename):
             l=l.split("#")[0]
             if re.match(".*=.*",l):
                 k,v=l.split("=")
-                output[k.strip()]=v.strip()
+                output[k.strip()]=ast.literal_eval(v)
             elif re.match(".*:.*",l):
                 k,v=l.split(":")
-                output[k.strip()]=v.strip()
+                output[k.strip()]=ast.literal_eval(v)
     return output
     
 
@@ -585,23 +588,26 @@ def setup_options(args):
     for k in argdict.keys():
         if k!="inputfile":
             if argdict[k]!=None:
-                options[k]=argdict[k]
+                options[k]=ast.literal_eval(argdict[k])
     
+    # NOTE THE USE of ast.literal_eval makes the following unnecessary, left in for now. 
+    # if for some reason ast doesn't get the type right (e.g. int instead of float?)
+    #  this code could still be useful, albeit it is not quite as generic as ast. 
     # in case we read these options in from either an input file or the commandline
     #  we need to make sure the types are what the default options sets up
-    for k in doptions.keys():
-        if (type(doptions[k])!=str) and (np.iterable(doptions[k])):
-            # if the default option is actually an iterable (e.g. tuple,list) recursively convert 
-            # all elements in it (i.e. lists of lists are allowed, but all sub-elements must be lists)
-            options[k]=convert_iterable(options[k],doptions[k])
-        else:
-            if type(doptions[k])==type(True):
-                if str(options[k]).strip().lower()=="false":
-                    options[k]=False
-                else:
-                    options[k]=True
-            else:
-                options[k]=type(doptions[k])(options[k])
+    # for k in doptions.keys():
+    #     if (type(doptions[k])!=str) and (np.iterable(doptions[k])):
+    #         # if the default option is actually an iterable (e.g. tuple,list) recursively convert 
+    #         # all elements in it (i.e. lists of lists are allowed, but all sub-elements must be lists)
+    #         options[k]=convert_iterable(options[k],doptions[k])
+    #     else:
+    #         if type(doptions[k])==type(True):
+    #             if str(options[k]).strip().lower()=="false":
+    #                 options[k]=False
+    #             else:
+    #                 options[k]=True
+    #         else:
+    #             options[k]=type(doptions[k])(options[k])
     return options
     
 
