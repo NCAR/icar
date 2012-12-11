@@ -14,7 +14,7 @@ DESCRIPTION
 
 EXAMPLES
 
-    swim_wrf.py parameters.txt
+    swim_wrf.py swim_parameters.txt
 
 EXIT STATUS
 
@@ -106,6 +106,8 @@ def fix_top_bottom(topo,dz,edgevalue=None):
     sz=topo.shape
     if mindist%2==1:
         mindist+=1
+    if mindist<2:
+        mindist=2
     outputtopo=np.zeros((sz[0]+mindist,sz[1]))
     # fill in everything inside the padding zone with the original topography
     padding=np.round(mindist/2.0)
@@ -117,7 +119,7 @@ def fix_top_bottom(topo,dz,edgevalue=None):
     border=aves.reshape((1,-1)).repeat(padding,axis=0)
     topo_top=topo[0,:].reshape((1,-1)).repeat(padding,axis=0)
     topo_bottom=topo[-1,:].reshape((1,-1)).repeat(padding,axis=0)
-    
+
     outputtopo[:padding,:]=(1-fade)*border + fade*topo_top
     outputtopo[-padding:,:]=fade*border + (1-fade)*topo_bottom
     return outputtopo,padding
@@ -437,9 +439,9 @@ def setup_domain(options):
 
 
 def write_parameter_file(options):
-    with open(options.output_base+"parameters.txt",'w') as f:
+    with open(options.output_base+"swim_parameters.txt",'w') as f:
         for k in options.keys():
-            f.write(k+" = "+str(options[k])+"\n")
+            f.write(k+" = "+repr(options[k])+"\n")
             # note in the old (non-ast.literal_eval) style, 
             # the characters: (,),[,],",', etc. must all be replaced with " "
         
@@ -541,10 +543,10 @@ def read_options_file(filename):
             l=l.split("#")[0]
             if re.match(".*=.*",l):
                 k,v=l.split("=")
-                output[k.strip()]=ast.literal_eval(v)
+                output[k.strip()]=ast.literal_eval(v.strip())
             elif re.match(".*:.*",l):
                 k,v=l.split(":")
-                output[k.strip()]=ast.literal_eval(v)
+                output[k.strip()]=ast.literal_eval(v.strip())
     return output
     
 
@@ -592,7 +594,7 @@ def setup_options(args):
         if k!="inputfile":
             if argdict[k]!=None:
                 print(k,argdict[k])
-                options[k]=ast.literal_eval(argdict[k])
+                options[k]=ast.literal_eval(argdict[k].strip())
     
     # NOTE THE USE of ast.literal_eval makes the following unnecessary, left in for now. 
     # if for some reason ast doesn't get the type right (e.g. int instead of float?)
