@@ -250,6 +250,10 @@ def simul_next(base,wrfwinds,q,r_matrix,Fzs,padx,pady,options=None,forcing=None)
         use_linear_winds=options.use_linear_winds
         use_wrf_winds=options.use_wrf_winds
         wrfres=options.wrfres
+        if options.const_U!=-9999.0:
+            weather.u=weather.u*0+options.const_U
+        if options.const_V!=-9999.0:
+            weather.v=weather.v*0+options.const_V
     if forcing!=None:
         Fzs=forcing.Fzs
         padx=forcing.padx
@@ -313,8 +317,6 @@ class Forcing_Reader(object):
         self.q=Queue()
         self.base=WRF_Reader(options.file_search,sfc=options.sfc_file_search,bilin=True,nn=False,options=options)
         
-        self.const_U=options.const_U
-        self.const_V=options.const_V
         self.constant_forcing=options.constant_forcing
         
         if options.use_linear_winds:
@@ -334,16 +336,11 @@ class Forcing_Reader(object):
             self.old=self.new
         # if base is copied... can I time_inc() and spawn off the next process before the last one finishes?
         self.init_date=self.new.date
-        if not self.constant_forcing
+        if not self.constant_forcing:
             self.base.time_inc()
             self.reader_process=Process(target=simul_next,
                     args=(self.base,self.wrfwinds,self.q,self.r_matrix,self.Fzs,self.padx,self.pady,options))
             self.reader_process.start()
-        else:
-            if self.const_U!=None:
-                self.new.u=self.new.u*0+self.const_U
-            if self.const_V!=None:
-                self.new.v=self.new.v*0+self.const_V
 
     def next(self):
         self.old=self.new
@@ -498,8 +495,8 @@ def main(options):
 def default_options():
     """Return a structure of default options"""
     return Bunch(constant_forcing=False,
-                 const_U=None,
-                 const_V=None,
+                 const_U=-9999.0,
+                 const_V=-9999.0,
                  forcing_dir="forcing",
                  file_search="forcing/wrfout_d01_200*00",
                  wind_files="winds/wrfout_d01_200*00",
