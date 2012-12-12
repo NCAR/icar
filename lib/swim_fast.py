@@ -100,9 +100,9 @@ def swim2d(domain,weather,swim,options):
     V*=dt/dx
     W*=dt/dx # note vertical coordinates are in pressure space (dz!=dx), 
              # but w was calculating to balance u,v assuming dz=dx
-    W*=-1
-    dw*=-1
-    print("W*=-1")
+    # W*=-1
+    # dw*=-1
+    # print("W*=-1")
     print("dt="+str(dt))
 
     # SURFACE FLUXES
@@ -113,6 +113,9 @@ def swim2d(domain,weather,swim,options):
     physics=int(physics)
     t1=time.time()
     print("FORTRAN setup="+str(t1-t0))
+    # print(U[100:104,13,99:104]/dt*dx)
+    # print(V[100:104,13,99:104]/dt*dx)
+    # print(W[100:104,13,99:104]/dt*dx)
     swim.swim_step.timestep(ntimes,U,V,W,
                 sensible_heat, latent_heat,pblh,
                 qv,qc,qr,qi,qs,qg,ni,nr, 

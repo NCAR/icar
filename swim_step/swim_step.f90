@@ -157,13 +157,15 @@ module swim_step
         ny=ide
         nz=kde
         nx=jde
-        if (dt_in.LT.30.0) then
-            adv_steps=floor(30/dt_in)
-            dt_m=dt_in*adv_steps
-        else
-            adv_steps=1
-            dt_m=dt_in
-        endif
+!         if (dt_in.LT.30.0) then
+!             adv_steps=floor(30/dt_in)
+!             dt_m=dt_in*adv_steps
+!         else
+!             adv_steps=1
+!             dt_m=dt_in
+!         endif
+		dt_m=dt_in
+		adv_steps=1
 		if (debug.eq.1) then
 			write(*,*) "in swim_step"
 		endif
@@ -221,20 +223,65 @@ module swim_step
             !$omp end parallel
 ! Run advection on each scalar independantly 
 ! (could all be done in their own thread? but advection is parallelized internally)
-            call advect3d(qv,u,v,w,ny,nz,nx)
-            call advect3d(th,u,v,w,ny,nz,nx)
-            call advect3d(qc,u,v,w,ny,nz,nx)
-            call advect3d(qr,u,v,w,ny,nz,nx)
-            call advect3d(qs,u,v,w,ny,nz,nx)
+! 			write(*,*) "------------------------"
+! 			write(*,*) th(100,13,100:104)
+! 			write(*,*) th(101,13,100:104)
+! 			write(*,*) th(102,13,100:104)
+! 			write(*,*) th(103,13,100:104)
+! 			write(*,*) "------------------------"
+! 			write(*,*) th(100,12,100:104)
+! 			write(*,*) th(101,12,100:104)
+! 			write(*,*) th(102,12,100:104)
+! 			write(*,*) th(103,12,100:104)
+! 			write(*,*) "------------------------"
+! 			write(*,*) th(100,11,100:104)
+! 			write(*,*) th(101,11,100:104)
+! 			write(*,*) th(102,11,100:104)
+! 			write(*,*) th(103,11,100:104)
+			
+            call advect3d(qv,u,v,w,ny,nz,nx,0)
+            call advect3d(th,u,v,w,ny,nz,nx,0)
+            call advect3d(qc,u,v,w,ny,nz,nx,0)
+            call advect3d(qr,u,v,w,ny,nz,nx,0)
+            call advect3d(qs,u,v,w,ny,nz,nx,0)
 			if (physics.EQ.1) then
-	            call advect3d(qi,u,v,w,ny,nz,nx)
-	            call advect3d(qg,u,v,w,ny,nz,nx)
-	            call advect3d(nr,u,v,w,ny,nz,nx)
-	            call advect3d(ni,u,v,w,ny,nz,nx)
+	            call advect3d(qi,u,v,w,ny,nz,nx,0)
+	            call advect3d(qg,u,v,w,ny,nz,nx,0)
+	            call advect3d(nr,u,v,w,ny,nz,nx,0)
+	            call advect3d(ni,u,v,w,ny,nz,nx,0)
 			endif
 			if (debug.eq.1) then
 				write(*,*) "done advection"
 			endif
+! 			write(*,*) "----------q_post--------------"
+! 			write(*,*) th(100,12,100:104)
+! 			write(*,*) th(101,12,100:104)
+! 			write(*,*) th(102,12,100:104)
+! 			write(*,*) th(103,12,100:104)
+! 			write(*,*) "------------------------"
+! 			write(*,*) "----------U--------------"
+! 			write(*,*) u(100,12,99:104)/dt_in*4000.0
+! 			write(*,*) u(101,12,99:104)/dt_in*4000.0
+! 			write(*,*) u(102,12,99:104)/dt_in*4000.0
+! 			write(*,*) u(103,12,99:104)/dt_in*4000.0
+! 			write(*,*) "----------V--------------"
+! 			write(*,*) v(99,12,100:104)/dt_in*4000.0
+! 			write(*,*) v(100,12,100:104)/dt_in*4000.0
+! 			write(*,*) v(101,12,100:104)/dt_in*4000.0
+! 			write(*,*) v(102,12,100:104)/dt_in*4000.0
+! 			write(*,*) v(103,12,100:104)/dt_in*4000.0
+! 			write(*,*) "----------W15--------------"
+! 			write(*,*) w(100,12,100:104)/dt_in*4000.0
+! 			write(*,*) w(101,12,100:104)/dt_in*4000.0
+! 			write(*,*) w(102,12,100:104)/dt_in*4000.0
+! 			write(*,*) w(103,12,100:104)/dt_in*4000.0
+! 			write(*,*) "----------W14--------------"
+! 			write(*,*) w(100,11,100:104)/dt_in*4000.0
+! 			write(*,*) w(101,11,100:104)/dt_in*4000.0
+! 			write(*,*) w(102,11,100:104)/dt_in*4000.0
+! 			write(*,*) w(103,11,100:104)/dt_in*4000.0
+! 			write(*,*) "------------------------"
+! 			write(*,*) "------------------------"
 			
             !$omp parallel firstprivate(jds,jde) private(i) &
             !$omp shared(pii,th,qv,qc,qr,qi,qs,qg,rho,p,u,v,w,dth,dqv,dp,du,dv,dw)

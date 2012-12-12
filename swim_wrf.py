@@ -85,6 +85,16 @@ def convert_p(p,h,dz):
     pout=slp*(1 - 2.25577E-5*(h+dz))**5.25588
     return pout
 
+
+def topo_adjust_weather(hitopo,lowtopo,weather):
+    N=hitopo.shape
+    # just adjust all pressures by dz (difference between coarse topo and high res topo)
+    dz=hitopo-lowtopo
+    if len(dz.shape)==2:
+        weather.p=convert_p(weather.p,weather.hgt,dz[np.newaxis,:,:].repeat(weather.p.shape[0],axis=0))
+    else:
+        weather.p=convert_p(weather.p,weather.hgt,dz)
+
 def fix_top_bottom(topo,dz,edgevalue=None):
     if edgevalue==None:
         # find the worst dz between the top and bottom of the dataset
@@ -172,15 +182,6 @@ def topo_preprocess(topo,test=False):
     return newtopo,xtra_vpad+vpad,xtra_hpad+hpad
     
         
-def topo_adjust_weather(hitopo,lowtopo,weather):
-    N=hitopo.shape
-    # just adjust all pressures by dz (difference between coarse topo and high res topo)
-    dz=hitopo-lowtopo
-    if len(dz.shape)==2:
-        weather.p=convert_p(weather.p,weather.hgt,dz[np.newaxis,:,:].repeat(weather.p.shape[0],axis=0))
-    else:
-        weather.p=convert_p(weather.p,weather.hgt,dz)
-
 def update_weather(newatm,oldatm):
     """Copies internal weather information from the old hi res atmosphere to the new one
         while maintaining the updated boundary conditions of the new atmosphere"""
@@ -220,7 +221,8 @@ def rotate_winds(u,v,hgt,dx=4000.0,rotation=None):
     return rotation
 
 def calc_ndsq(weather,base):
-    return 1.0e-6
+    return 6.37e-5
+    # return 1.0e-6
     R  = 287.0
     Rv = 461.0
     cp = 1004.0
@@ -248,9 +250,9 @@ def calc_ndsq(weather,base):
 
 def simul_next(base,wrfwinds,q,r_matrix,Fzs,padx,pady,options=None,forcing=None):
     weather=base.next()
-    weather.qv/=1.05
     topo_adjust_weather(base.hgt3d, weather.hgt, weather)
-
+    
+    # weather.qv/=1.05
     if options!=None:
         use_linear_winds=options.use_linear_winds
         use_wrf_winds=options.use_wrf_winds
@@ -259,8 +261,16 @@ def simul_next(base,wrfwinds,q,r_matrix,Fzs,padx,pady,options=None,forcing=None)
             weather.u=weather.u*0+options.const_U
         if options.const_V!=None:
             weather.v=weather.v*0+options.const_V
+        if options.const_p!=None:
+            if np.iterable(options.const_p):
+                weather.p=weather.p*0+np.array(options.const_p)[:,np.newaxis,np.newaxis]
+                topo_adjust_weather(base.hgt3d,0*weather.hgt+base.hgt3d[:,0,0][:,np.newaxis,np.newaxis],weather)
+            else:
+                weather.p=weather.p*0+options.const_p
+                topo_adjust_weather(base.hgt3d,0*weather.hgt,weather)
         if options.const_qv!=None:
             weather.qv=weather.qv*0+np.array(options.const_qv)[:,np.newaxis,np.newaxis]
+            weather.qc*=0
         if options.const_t!=None:
             weather.th=weather.th*0+np.array(options.const_t)[:,np.newaxis,np.newaxis]
     if forcing!=None:
@@ -511,6 +521,7 @@ def default_options():
                  const_V =None,
                  const_qv=None,
                  const_t =None,
+                 const_p =None,
                  forcing_dir="forcing",
                  file_search="forcing/wrfout_d01_200*00",
                  wind_files="winds/wrfout_d01_200*00",
@@ -532,8 +543,6 @@ def default_options():
                  clearold=True,
                  output_base="output/",
                  output=["precip","th","qv","qc","p","qi","qs","qr","u","v","w"])
-                 # output_fnames=['swim_p_','swim_t_','swim_qv_','swim_qc_','swim_pres_','swim_qi_','swim_qs_','swim_qr_',"swim_u_","swim_v_","swim_w_"],
-                 # output_varnames=['precip','temp','qv','qc','pressure','qi','qs','qr',"u","v","w"],
                 
     
 def read_options_file(filename):

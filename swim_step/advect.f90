@@ -23,26 +23,48 @@ module advect
 
     end subroutine flux2
 
-    subroutine advect3d(q,u,v,w,ny,nz,nx)
+    subroutine advect3d(q,u,v,w,ny,nz,nx,debug)
 	    real,dimension(1:ny,1:nz,1:nx), intent(inout) :: q
 	    real,dimension(1:ny,1:nz,1:nx), intent(in) :: w
         real,dimension(1:ny,1:nz,1:nx-1),intent(in) :: u
         real,dimension(1:ny-1,1:nz,1:nx),intent(in) :: v
-		integer, intent(in) :: ny,nz,nx
+		integer, intent(in) :: ny,nz,nx,debug
         ! interal parameters
         integer :: err,i
+	    real,dimension(1:ny,1:nz,1:nx) :: qin
         real, dimension(1:ny-2,1:nz,1) :: f1,f2,f3,f4
         real, dimension(1:ny-2,1:nz-2,1) ::f5,f6
         !$omp parallel shared(q,u,v,w) firstprivate(nx,ny,nz) private(i,f1,f2,f3,f4,f5,f6)
         !$omp do
+        do i=1,nx
+			qin(:,:,i)=q(:,:,i)
+		enddo
+        !$omp end do
+        !$omp do
         do i=2,nx-1
-           call flux2(q(2:ny-1,:,i),q(2:ny-1,:,i+1),u(2:ny-1,:,i-1),ny-2,nz,1,f1)  !Ux1
-           call flux2(q(2:ny-1,:,i-1),q(2:ny-1,:,i),u(2:ny-1,:,i),ny-2,nz,1,f2)  !Ux0
-           call flux2(q(2:ny-1,:,i),q(3:ny,:,i),v(1:ny-2,:,i),ny-2,nz,1,f3)  !Vy1
-           call flux2(q(1:ny-2,:,i),q(2:ny-1,:,i),v(2:ny-1,:,i),ny-2,nz,1,f4)  !Vy0
-           call flux2(q(2:ny-1,2:nz-1,i),q(2:ny-1,3:nz,i),w(2:ny-1,2:nz-1,i),ny-2,nz-2,1,f5)
-           call flux2(q(2:ny-1,1:nz-2,i),q(2:ny-1,2:nz-1,i),w(2:ny-1,1:nz-2,i),ny-2,nz-2,1,f6)
+! 			note f1,f2 are largely duplicates (ditto f3,f4 and f5,f6)
+! 			this is just a convenient notation for now. 
+           call flux2(qin(2:ny-1,:,i),qin(2:ny-1,:,i+1),u(2:ny-1,:,i),ny-2,nz,1,f1)  !Ux1
+           call flux2(qin(2:ny-1,:,i-1),qin(2:ny-1,:,i),u(2:ny-1,:,i-1),ny-2,nz,1,f2)  !Ux0
+           call flux2(qin(2:ny-1,:,i),qin(3:ny,:,i),v(2:ny-1,:,i),ny-2,nz,1,f3)  !Vy1
+           call flux2(qin(1:ny-2,:,i),qin(2:ny-1,:,i),v(1:ny-2,:,i),ny-2,nz,1,f4)  !Vy0
+           call flux2(qin(2:ny-1,2:nz-1,i),qin(2:ny-1,3:nz,i),w(2:ny-1,2:nz-1,i),ny-2,nz-2,1,f5)
+           call flux2(qin(2:ny-1,1:nz-2,i),qin(2:ny-1,2:nz-1,i),w(2:ny-1,1:nz-2,i),ny-2,nz-2,1,f6)
 
+		   if ((debug.eq.1).and.(i>100).and.(i<105)) then
+			   write(*,*) "----------",i,"------------"
+			   write(*,*) "   u   =", u(101:103,12,i)*300
+			   write(*,*) "horizontal=", (f1(100:102,12,1)-f2(100:102,12,1)) + (f3(100:102,12,1)-f4(100:102,12,1))
+			   write(*,*) " horizon  =", f1(100:102,12,1)
+			   write(*,*) " horizon  =", f2(100:102,12,1)
+! 			   write(*,*) "horizontal=", v(101:103,12,1)
+! 			   write(*,*) "horizontal=", (f3(100:102,12,1)-f4(100:102,12,1))
+			   write(*,*) "   w   =", w(101:103,12,i)*300
+			   write(*,*) "   w   =", w(101:103,13,i)*300
+			   write(*,*) " vertical =", f5(100:102,11,1)-f6(100:102,11,1)
+			   write(*,*) " vertical =", f5(100:102,11,1)
+			   write(*,*) " vertical =", f6(100:102,11,1)
+		   endif
            ! perform horizontal advection
            q(2:ny-1,:,i)=q(2:ny-1,:,i) - (f1(:,:,1)-f2(:,:,1)) - (f3(:,:,1)-f4(:,:,1))
            ! then vertical (order doesn't matter because fluxes f1-6 are calculated before applying them)
