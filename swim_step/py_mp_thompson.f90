@@ -852,7 +852,7 @@
 !       do i = 1, 256
 !          mp_debug(i:i) = char(0)
 !       enddo
-!$omp do 
+!$omp do schedule(guided)
       j_loop:  do j = j_start, j_end
       i_loop:  do i = i_start, i_end
 

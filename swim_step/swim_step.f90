@@ -157,15 +157,15 @@ module swim_step
         ny=ide
         nz=kde
         nx=jde
-!         if (dt_in.LT.30.0) then
-!             adv_steps=floor(30/dt_in)
-!             dt_m=dt_in*adv_steps
-!         else
-!             adv_steps=1
-!             dt_m=dt_in
-!         endif
-		dt_m=dt_in
-		adv_steps=1
+        if (dt_in.LT.30.0) then
+            adv_steps=floor(30/dt_in)
+            dt_m=dt_in*adv_steps
+        else
+            adv_steps=1
+            dt_m=dt_in
+        endif
+! 		dt_m=dt_in
+! 		adv_steps=1
 		if (debug.eq.1) then
 			write(*,*) "in swim_step"
 		endif

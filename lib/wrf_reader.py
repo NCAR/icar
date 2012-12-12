@@ -283,7 +283,8 @@ class WRF_Reader(object):
             self._nn=False
             self._bilin=True
         self.init_xy(self._filenames[0],domain=domain,options=options)
-        self.curpos=19*24
+        # self.curpos=19*24
+        self.curpos=0
         if windonly:
             self.curpos=0
     
