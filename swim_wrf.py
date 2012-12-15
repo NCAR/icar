@@ -538,6 +538,7 @@ def default_options():
                  halfk=8,
                  subset=(30,-30,30,-30),
                  timestep=1.0*60*60, #time step between forcing changes [seconds] (1hr)
+                 start_position=0,
                  verbose=True,
                  physics=int(0),
                  clearold=True,
