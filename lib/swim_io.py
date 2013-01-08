@@ -73,7 +73,7 @@ def write3d(NCfile,data,varname="data",units=None):
     if units!=None:
         NCfile.variables[varname].units=units
 
-def write(filename,data,varname="data",units=None):
+def write(filename,data,varname="data",units=None,lat=None,lon=None):
     history = 'Created : ' + time.ctime() +'\nusing simple ncio.write by:'+os.environ['USER']
     NCfile=Nio.open_file(filename,mode="w",format="nc",history=history)
     if len(data.shape)==1:
@@ -82,6 +82,20 @@ def write(filename,data,varname="data",units=None):
         write2d(NCfile,data,varname=varname,units=units)
     if len(data.shape)==3:
         write3d(NCfile,data,varname=varname,units=units)
+    
+    if lat!=None:
+        if len(lat.shape)>1:
+            NCfile.create_variable("lat",'f',('y','x'))
+        else:
+            NCfile.create_variable("lat",'f',('y',))
+        NCfile.variables["lat"][:]=lat.astype('f')
+    if lon!=None:
+        if len(lon.shape)>1:
+            NCfile.create_variable("lon",'f',('y','x'))
+        else:
+            NCfile.create_variable("lon",'f',('x',))
+        NCfile.variables["lon"][:]=lon.astype('f')
+    
     NCfile.close()
 
 
