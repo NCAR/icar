@@ -288,6 +288,7 @@ def simul_next(base,wrfwinds,q,r_matrix,Fzs,padx,pady,options=None,forcing=None)
         # weather.u=fast_mean.fast_smooth(weather.u,5)
         # weather.v=fast_mean.fast_smooth(weather.v,5)
     elif use_wrf_winds:
+        print("LOADING WRF WINDS")
         wind=wrfwinds.next()
         # wind.u=fast_mean.fast_smooth(wind.u,2)
         # wind.v=fast_mean.fast_smooth(wind.v,2)
