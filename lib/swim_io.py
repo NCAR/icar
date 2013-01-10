@@ -25,11 +25,16 @@ def read_nc(filename,var=None,proj=None,returnNCvar=False):
     output is a structure :
         data:raw data as an array
         proj:string representation of the projection information
+        atts:data attribute dictionary (if any)
+    if (returnNCvar==True) then the Nio file is note closed and the Nio 
+        representation of the variable is returned instead of being read into 
+        memory immediately.  
     '''
     d=Nio.open_file(filename, mode='r',format="nc")
     outputdata=None
     if var != None:
         data=d.variables[var]
+        attributes=d.variables.__dict__
         if returnNCvar:
             outputdata=data
         else:
@@ -37,13 +42,13 @@ def read_nc(filename,var=None,proj=None,returnNCvar=False):
     outputproj=None
     if proj!=None:
         projection=d.variables[proj]
-        outputproj=projection.__str__()
+        outputproj=str(projection)
     
     
     if returnNCvar:
-        return Bunch(data=outputdata,proj=outputproj,ncfile=d)
+        return Bunch(data=outputdata,proj=outputproj,ncfile=d,atts=attributes)
     d.close()
-    return Bunch(data=outputdata,proj=outputproj)
+    return Bunch(data=outputdata,proj=outputproj,atts=attributes)
 
 
 def write1d(NCfile,data,varname="data",units=None):
@@ -73,7 +78,27 @@ def write3d(NCfile,data,varname="data",units=None):
     if units!=None:
         NCfile.variables[varname].units=units
 
-def write(filename,data,varname="data",units=None,lat=None,lon=None):
+def write4d(NCfile,data,varname="data",units=None):
+    (nt,nz,ny,nx)=data.shape
+    NCfile.create_dimension('x', nx)
+    NCfile.create_dimension('y', ny)
+    NCfile.create_dimension('z', nz)
+    NCfile.create_dimension('t', nt)
+    NCfile.create_variable(varname,'f',('t','z','y','x'))
+    NCfile.variables[varname][:]=data.astype('f')
+    if units!=None:
+        NCfile.variables[varname].units=units
+
+
+def addvar(NCfile,data,varname,dims,datatype='f',attributes=None):
+    NCfile.create_variable(varname,datatype,dims)
+    NCfile.variables[varname][:]=data.astype(datatype)
+    if attributes:
+        for k in attributes.keys():
+            NCfile.variables[varname].__setattr__(k,attributes[k])
+
+def write(filename,data,varname="data",units=None,lat=None,lon=None,extravars=None):
+    """write(filename,data,varname="data",units=None,lat=None,lon=None,extravars=None)"""
     history = 'Created : ' + time.ctime() +'\nusing simple ncio.write by:'+os.environ['USER']
     NCfile=Nio.open_file(filename,mode="w",format="nc",history=history)
     if len(data.shape)==1:
@@ -82,6 +107,8 @@ def write(filename,data,varname="data",units=None,lat=None,lon=None):
         write2d(NCfile,data,varname=varname,units=units)
     if len(data.shape)==3:
         write3d(NCfile,data,varname=varname,units=units)
+    if len(data.shape)==4:
+        write4d(NCfile,data,varname=varname,units=units)
     
     if lat!=None:
         if len(lat.shape)>1:
@@ -96,6 +123,10 @@ def write(filename,data,varname="data",units=None,lat=None,lon=None):
             NCfile.create_variable("lon",'f',('x',))
         NCfile.variables["lon"][:]=lon.astype('f')
     
+    if extravars:
+        for e in extravars:
+            addvar(NCfile,e.data,d.name,e.dims,d.data.dtype,e.attributes)
+    
     NCfile.close()
 
 
@@ -106,10 +137,8 @@ class NC_writer(object):
     ny=0
     nz=None
     def __init__(self, filename,nx,ny,nz=None,var=None):
-        # self.NCfile=Dataset(filename,'w')
-        history = 'Created : ' + time.ctime() + '\nby:'+os.environ['USER']+", using NC_writer Class"
+        history = 'Created : ' + time.ctime() + '\nby:'+os.environ['USER']+" using NC_writer Class"
         self.NCfile=Nio.open_file(filename,mode='w',format="nc",history=history)
-        # self.NCfile.creator = 'NC_write Class by:'+os.environ['USER']
         self.NCfile.create_dimension('time', 0)
         self.NCfile.create_dimension('lat', ny)
         self.ny=ny
@@ -151,8 +180,9 @@ class NC_writer(object):
             self.NCfile=None
             
     def __del__(self):
-        if self.NCfile:
-            self.NCfile.close()
-            self.NCfile=None
+        self.close()
+        # if self.NCfile:
+        #     self.NCfile.close()
+        #     self.NCfile=None
         # super(NC_writer,self).__del__()
             
