@@ -34,7 +34,7 @@ def read_nc(filename,var=None,proj=None,returnNCvar=False):
     outputdata=None
     if var != None:
         data=d.variables[var]
-        attributes=d.variables.__dict__
+        attributes=d.variables[var].__dict__
         if returnNCvar:
             outputdata=data
         else:
@@ -51,41 +51,41 @@ def read_nc(filename,var=None,proj=None,returnNCvar=False):
     return Bunch(data=outputdata,proj=outputproj,atts=attributes)
 
 
-def write1d(NCfile,data,varname="data",units=None):
+def write1d(NCfile,data,varname="data",units=None,dtype='f'):
     nx=data.size
     NCfile.create_dimension('x', nx)
-    NCfile.create_variable(varname,'f',('x',))
-    NCfile.variables[varname][:]=data.astype('f')
+    NCfile.create_variable(varname,dtype,('x',))
+    NCfile.variables[varname][:]=data.astype(dtype)
     if units!=None:
         NCfile.variables[varname].units=units
 
-def write2d(NCfile,data,varname="data",units=None):
+def write2d(NCfile,data,varname="data",units=None,dtype='f'):
     (ny,nx)=data.shape
     NCfile.create_dimension('x', nx)
     NCfile.create_dimension('y', ny)
-    NCfile.create_variable(varname,'f',('y','x'))
-    NCfile.variables[varname][:]=data.astype('f')
+    NCfile.create_variable(varname,dtype,('y','x'))
+    NCfile.variables[varname][:]=data.astype(dtype)
     if units!=None:
         NCfile.variables[varname].units=units
 
-def write3d(NCfile,data,varname="data",units=None):
+def write3d(NCfile,data,varname="data",units=None,dtype='f'):
     (nz,ny,nx)=data.shape
     NCfile.create_dimension('x', nx)
     NCfile.create_dimension('y', ny)
     NCfile.create_dimension('z', nz)
-    NCfile.create_variable(varname,'f',('z','y','x'))
-    NCfile.variables[varname][:]=data.astype('f')
+    NCfile.create_variable(varname,dtype,('z','y','x'))
+    NCfile.variables[varname][:]=data.astype(dtype)
     if units!=None:
         NCfile.variables[varname].units=units
 
-def write4d(NCfile,data,varname="data",units=None):
+def write4d(NCfile,data,varname="data",units=None,dtype='f'):
     (nt,nz,ny,nx)=data.shape
     NCfile.create_dimension('x', nx)
     NCfile.create_dimension('y', ny)
     NCfile.create_dimension('z', nz)
     NCfile.create_dimension('t', nt)
-    NCfile.create_variable(varname,'f',('t','z','y','x'))
-    NCfile.variables[varname][:]=data.astype('f')
+    NCfile.create_variable(varname,dtype,('t','z','y','x'))
+    NCfile.variables[varname][:]=data.astype(dtype)
     if units!=None:
         NCfile.variables[varname].units=units
 
@@ -97,18 +97,18 @@ def addvar(NCfile,data,varname,dims,datatype='f',attributes=None):
         for k in attributes.keys():
             NCfile.variables[varname].__setattr__(k,attributes[k])
 
-def write(filename,data,varname="data",units=None,lat=None,lon=None,extravars=None):
-    """write(filename,data,varname="data",units=None,lat=None,lon=None,extravars=None)"""
+def write(filename,data,dtype='f',varname="data",units=None,lat=None,lon=None,extravars=None):
+    """write(filename,data,dtype='f',varname="data",units=None,lat=None,lon=None,extravars=None)"""
     history = 'Created : ' + time.ctime() +'\nusing simple ncio.write by:'+os.environ['USER']
     NCfile=Nio.open_file(filename,mode="w",format="nc",history=history)
     if len(data.shape)==1:
-        write1d(NCfile,data,varname=varname,units=units)
+        write1d(NCfile,data,varname=varname,units=units,dtype=dtype)
     if len(data.shape)==2:
-        write2d(NCfile,data,varname=varname,units=units)
+        write2d(NCfile,data,varname=varname,units=units,dtype=dtype)
     if len(data.shape)==3:
-        write3d(NCfile,data,varname=varname,units=units)
+        write3d(NCfile,data,varname=varname,units=units,dtype=dtype)
     if len(data.shape)==4:
-        write4d(NCfile,data,varname=varname,units=units)
+        write4d(NCfile,data,varname=varname,units=units,dtype=dtype)
     
     if lat!=None:
         if len(lat.shape)>1:
@@ -125,7 +125,7 @@ def write(filename,data,varname="data",units=None,lat=None,lon=None,extravars=No
     
     if extravars:
         for e in extravars:
-            addvar(NCfile,e.data,d.name,e.dims,d.data.dtype,e.attributes)
+            addvar(NCfile,e.data,e.name,e.dims,e.dtype,e.attributes)
     
     NCfile.close()
 
