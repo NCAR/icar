@@ -10,26 +10,9 @@ NODENAME := $(shell uname -n)
 # 	INSTALLDIR=~/Dropbox/bin/python/lib/
 # endif
 
-ifeq ($(NODENAME), mirage0)
-	F90=ifort
-	INSTALLDIR=~/bin/python/lib/
-endif
-ifeq ($(NODENAME), mirage1)
-	F90=ifort
-	INSTALLDIR=~/bin/python/lib/
-endif
-ifeq ($(NODENAME), mirage2)
-	F90=ifort
-	INSTALLDIR=~/bin/python/lib/
-endif
-ifeq ($(NODENAME), mirage4)
-	F90=ifort
-	INSTALLDIR=~/bin/python/lib/
-endif
-ifeq ($(NODENAME), mirage5)
-	F90=ifort
-	INSTALLDIR=~/bin/python/lib/
-endif
+F90=ifort
+INSTALLDIR=~/bin/python/lib/
+
 ifeq ($(NODENAME), hydrolab)
 	F90=gfortran
 	INSTALLDIR=~/bin/python/lib/
@@ -47,7 +30,7 @@ ifeq ($(F90), gfortran)
 endif
 ifeq ($(F90), ifort)
 	FFLAGS=-fpp -fast -openmp -c
-	F2PYFLAGS=--fcompiler=intelem --f90flags='-fpp -openmp' -lguide --opt='-fast' -DF2PY_REPORT_ON_ARRAY_COPY=1
+	F2PYFLAGS=--fcompiler=intelem --f90flags='-fpp -openmp' -liomp5 --opt='-fast' -DF2PY_REPORT_ON_ARRAY_COPY=1
 endif
 
 F2PY=f2py
