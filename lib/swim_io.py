@@ -14,6 +14,7 @@ def read_files(pattern,var="data",returnNCvar=False,axis=None):
         files=pattern
     else:
         files=glob.glob(pattern)
+    files.sort()
     d=[]
     for f in files:
         d.append(read_nc(f,var=var,returnNCvar=returnNCvar).data)
