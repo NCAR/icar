@@ -193,7 +193,11 @@ class WRF_Reader(object):
                     slopes[np.newaxis,...]*np.arange(nlevels)[:,np.newaxis,np.newaxis])
         elif self.use_wrf_winds:
             self.hgt3d=(swim_io.read_nc(self._filenames[0],var=self.gphvar_base)
-                    .data[0,self.usepressures,self.sub_y0:sub_y1,sub_x0:sub_x1]/9.81)
+                    .data[0,self.usepressures,self.sub_y0:self.sub_y1,self.sub_x0:self.sub_x1]/9.81)
+            if topo.shape[0]<self.hgt3d.shape[1]:
+                halfk=(self.hgt3d.shape[1]-topo.shape[0])/2
+                self.hgt3d=self.hgt3d[:,halfk:-halfk,halfk:-halfk]
+                
         else:
             self.hgt3d=(topo[np.newaxis,...].repeat(nlevels,axis=0)+
                     slopes[np.newaxis,...].repeat(nlevels,axis=0)*
@@ -283,7 +287,7 @@ class WRF_Reader(object):
             self._nn=False
             self._bilin=True
         self.init_xy(self._filenames[0],domain=domain,options=options)
-        self.curpos=19*24
+        self.curpos=options.start_position
         if windonly:
             self.curpos=0
     
