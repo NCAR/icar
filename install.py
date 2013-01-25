@@ -38,8 +38,11 @@ if __name__ == '__main__':
     host=os.uname()[1].split(".")[0]
     if re.match("mirage",host):
         host="mirage"
+    if re.match("yslogin",host):
+        host="yellowstone"
     install_dirs=dict(lobuche="/Users/gutmann/Dropbox/bin/python/statdown/",
                       mirage="/glade/home/gutmann/bin/python/",
+                      yellowstone="/glade/u/home/gutmann/bin/python/",
                       hydrolab="/home/gutmann/bin/python/",
                       nomad="/Users/gutmann/Dropbox/bin/python/statdown/",
                       pakaldi="/Users/gutmann/Dropbox/bin/python/statdown/")
