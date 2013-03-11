@@ -7,7 +7,7 @@ SYNOPSIS
 
 DESCRIPTION
     Reads forcing data to drive the: 
-        Simple Weather Interpolation Model  (SWIM)
+        Simple Weather (Interpolation) Model  (SWIM)
         Pseudo-Dynamical Downscaling Model (PDDM)
         Physics based Orographic Precipitation model (POP)
         Hybrid Orographic Precipitation model (HOP)
@@ -23,8 +23,9 @@ EXIT STATUS
 WARNING/KNOWN/LIKELY ISSUES
     This may fail on windows because windows does not have a proper "fork()"
     As a result, dictionaries in classes passed to sub-processes can effectively 
-    get re-initialized (or somesuch). Not sure what that will do to the Bunch class which has __dict__
-    IF this is an issue, it can be fixed by removing the parallel wrapper around the IO code. 
+    get re-initialized (or somesuch). Not sure what that will do to the Bunch class which 
+    relies on an internal __dict__.  IF this is an issue, it can be fixed by removing 
+    the parallel wrapper around the IO code. 
 
 AUTHOR
 
