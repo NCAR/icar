@@ -1,7 +1,7 @@
 module init
-	use io_routines
-	use geo_reader
 	use data_structures
+	use io_routines
+! 	use geo_reader
 	implicit none
 	contains
 	
@@ -48,8 +48,8 @@ module init
 		type(domain_type), intent(out):: domain
 		integer:: ny,nz,nx
 		
-		allocate(domain%reader)
-		call domain%reader%init(domain)
+! 		allocate(domain%reader)
+! 		call domain%reader%init(domain)
 ! 		these are the only fields we read initial conditions for
 		call io_read3d(options%init_conditions_file,"p",domain%p)
 		call io_read3d(options%init_conditions_file,"u",domain%u)
@@ -93,4 +93,3 @@ module init
 		
 	end subroutine init_domain
 end module
-			
