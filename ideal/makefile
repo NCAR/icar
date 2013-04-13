@@ -1,6 +1,5 @@
-OBJS=advect.o io_routines.o data_structures.o init.o mp_driver.o \
-		mp_thompson.o driver.o output.o wind.o linear_winds.o
-WINDOBJS=io_routines.o data_structures.o init.o tests/test_wind.o wind.o linear_winds.o output.o
+INSTALLDIR=~/bin/
+
 
 DEBUGFLAGS = -g
 FOFLAGS= -c
@@ -47,6 +46,20 @@ endif
 LFLAGS=$(LINK) ${LIBNETCDF} -L${LIBFFT}
 FFLAGS=$(COMP) ${INCNETCDF} -I${INCFFT}
 
+OBJS=advect.o io_routines.o data_structures.o init.o mp_driver.o \
+		mp_thompson.o driver.o output.o wind.o linear_winds.o
+WINDOBJS=io_routines.o data_structures.o init.o tests/test_wind.o wind.o linear_winds.o output.o
+
+all:ideal
+	
+
+install:ideal
+	cp swim_ideal ${INSTALLDIR}
+
+clean:
+	rm *.o *.mod swim_ideal
+	
+
 ideal:${OBJS} 
 	${F90} ${LFLAGS} ${OBJS} -o swim_ideal  -lm -lfftw3
 
@@ -89,10 +102,3 @@ wind.o:wind.f90 linear_winds.o
 linear_winds.o:linear_winds.f90
 	${F90} ${FOFLAGS} ${FFLAGS} linear_winds.f90
 
-
-# %.o : %.f90
-#         $(F90) $(FOLAGS) $(FFLAGS) $< -o $@
-
-	
-clean:
-	rm *.o *.mod
