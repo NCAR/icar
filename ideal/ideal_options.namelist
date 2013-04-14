@@ -3,6 +3,11 @@ init_conditions_file="../../test_data/init.nc",
 output_file="../../test_output/ideal"
 /
 
+&var_list
+latvar="XLAT",
+lonvar="XLONG"
+/
+
 &parameters
 ntimesteps=1000,
 timestep=1,

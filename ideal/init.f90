@@ -1,9 +1,22 @@
 module init
 	use data_structures
 	use io_routines
-! 	use geo_reader
+	use geo
 	implicit none
 	contains
+	
+	subroutine init_model(options_filename,options,domain,boundary)
+		implicit none
+		character(len=*), intent(in) :: options_filename
+		type(options_type), intent(out) :: options
+		type(domain_type), intent(out):: domain
+		type(bc_type), intent(out):: boundary
+		
+		call init_options(options_filename,options)
+		call init_domain(options,domain)
+		call init_bc(options,domain,boundary)
+		
+	end subroutine init_model
 	
 	subroutine init_options(options_filename,options)
 		implicit none
@@ -11,23 +24,28 @@ module init
 		type(options_type), intent(out) :: options
 		
 		character(len=100) :: init_conditions_file, output_file
+		character(len=100) :: latvar,lonvar
 		real :: dx
 		integer :: name_unit,ntimesteps,outputinterval,timestep
 		integer :: pbl,lsm,mp,rad,conv,adv,wind
 		
 		namelist /files_list/ init_conditions_file,output_file
+		namelist /var_list/ latvar,lonvar
 		namelist /parameters/ ntimesteps,outputinterval,timestep,dx
 		namelist /physics/ pbl,lsm,mp,rad,conv,adv,wind
 		
 		
 		open(io_newunit(name_unit), file=options_filename)
 		read(name_unit,nml=files_list)
+		read(name_unit,nml=var_list)
 		read(name_unit,nml=parameters)
 		read(name_unit,nml=physics)
 		close(name_unit)
 		
 		options%init_conditions_file=init_conditions_file
 		options%output_file=output_file
+		options%latvar=latvar
+		options%lonvar=lonvar
 		options%ntimesteps=ntimesteps
 		options%outputinterval=outputinterval
 		options%timestep=timestep
@@ -63,6 +81,9 @@ module init
 		call io_read3d(options%init_conditions_file,"z",domain%z)
 		call io_read3d(options%init_conditions_file,"dz",domain%dz)
 		call io_read2d(options%init_conditions_file,"hgt",domain%terrain)
+
+		call io_read2d(options%init_conditions_file,options%latvar,domain%lat)
+		call io_read2d(options%init_conditions_file,options%lonvar,domain%lon)
 				
 		ny=size(domain%p,1)
 		nz=size(domain%p,2)
@@ -92,4 +113,26 @@ module init
 		domain%dt=options%dt
 		
 	end subroutine init_domain
+	
+	subroutine init_bc_data(options,boundary)
+		implicit none
+		type(options_type), intent(in) :: options
+		type(bc_type), intent(out):: boundary
+		
+		call io_read2d(options%boundary_file,options%latvar,boundary%lat)
+		call io_read2d(options%boundary_file,options%lonvar,boundary%lon)
+		
+	end subroutine init_bc_data
+	
+	subroutine init_bc(options,domain,boundary)
+		implicit none
+		type(options_type), intent(in) :: options
+		type(domain_type), intent(in):: domain
+		type(bc_type), intent(out):: boundary
+		
+		call init_bc_data(options,boundary)
+		call geo_setup_lut(domain,boundary)
+		
+		
+	end subroutine init_bc
 end module

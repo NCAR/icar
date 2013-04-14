@@ -16,10 +16,10 @@ module geo_reader
 	end type reader_type
 	
 contains
-	function geo_LUT(geolo,geohi)
+	subroutine geo_LUT(geohi, geolo)
 		implicit none
-		type(geolut)::geo_LUT
-		type(geo_info),intent(in)::geolo,geohi
+		type(domain_type),intent(in)::domain
+		type(bc_type),intent(in)::boundary
 		integer :: nx,ny
 		
 		ny=size(geolo%lat,1)

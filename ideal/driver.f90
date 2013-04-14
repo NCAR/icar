@@ -13,8 +13,7 @@ program ideal
 	real :: dt
 	integer::i
 	
-	call init_options("ideal_options.namelist",options)
-	call init_domain(options,domain)
+	call init_model("ideal_options.namelist",options,domain,boundary)
 	call mp_init(options%physics%microphysics)
 	
 	! linear theory winds if specified else just balance dudx+dvdy+dwdz = 0
