@@ -68,6 +68,8 @@ module init
 		
 ! 		allocate(domain%reader)
 ! 		call domain%reader%init(domain)
+! 		eventually may want to make these read from a low res BC or init file? 
+
 ! 		these are the only fields we read initial conditions for
 		call io_read3d(options%init_conditions_file,"p",domain%p)
 		call io_read3d(options%init_conditions_file,"u",domain%u)
@@ -85,6 +87,7 @@ module init
 		call io_read2d(options%init_conditions_file,options%latvar,domain%lat)
 		call io_read2d(options%init_conditions_file,options%lonvar,domain%lon)
 				
+! 		any variables that aren't read from an initial conditions file should be allocated and initialized to 0
 		ny=size(domain%p,1)
 		nz=size(domain%p,2)
 		nx=size(domain%p,3)
