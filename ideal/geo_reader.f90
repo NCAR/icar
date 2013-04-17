@@ -47,8 +47,8 @@ contains
 		implicit none
 		type(bc_type),intent(in)::lo
 		real,intent(in)::lat,lon
-		real::mindist, curdist,dx,dy
-		integer::x,y,nx,ny,xc,yc,xw,yw,xsign,ysign,iterations,xstep,ystep
+		real::mindist, curdist,dx,dy,xsign,ysign
+		integer::x,y,nx,ny,xc,yc,xw,yw,iterations,xstep,ystep
 		
 		ny=size(lo%lat,1)
 		nx=size(lo%lat,2)
@@ -99,9 +99,9 @@ contains
 			yw=yc
 	!		use xsign and ysign in case lat/lon don't increase in a positive index direction
 			ysign=1
-			call sign(ysign,lo%lat(2,1)-lo%lat(1,1))
+			write(*,*) sign(ysign,lo%lat(2,1)-lo%lat(1,1))
 			xsign=1
-			call sign(xsign,lo%lon(2,1)-lo%lon(1,1))
+			write(*,*) sign(xsign,lo%lon(2,1)-lo%lon(1,1))
 		
 	! 		use a O(log(n)) search instead of O(n^2)
 	! 		start at the halfway point and find the best direction to take in both directions

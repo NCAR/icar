@@ -1,8 +1,8 @@
 module output
-use netcdf
-use io_routines
-use data_structures
-implicit none
+	use netcdf
+	use io_routines
+	use data_structures
+	implicit none
 contains
 	subroutine write_domain(domain,options,timestep)
 		implicit none

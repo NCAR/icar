@@ -10,22 +10,26 @@ contains
 		real, dimension(:,:),allocatable::tempdata
 		integer::nx,ny,nz
 		
-		allocate(domain%lat(100,100))
-		allocate(domain%lon(100,100))
+! 		allocate(domain%lat(100,100))
+! 		allocate(domain%lon(100,100))
+! 		
+! 		call io_read2d(filename,"XLAT",tempdata)
+! 		nx=size(tempdata,1)
+! 		ny=size(tempdata,2)
+! 		write(*,*) "domain raw lat nx,ny", nx,ny
+! 		domain%lat=tempdata(nx/2-50:nx/2+49,ny/2-50:ny/2+49)
+! 		deallocate(tempdata)
+! 		
+! 		call io_read2d(filename,"XLONG",tempdata)
+! 		domain%lat=tempdata(nx/2-50:nx/2+49,ny/2-50:ny/2+49)
+! 		deallocate(tempdata)
+
+		write(*,*) filename
 		
-		call io_read2d(filename,"XLAT",tempdata)
-		nx=size(tempdata,1)
-		ny=size(tempdata,2)
-		write(*,*) "domain raw lat nx,ny", nx,ny
-		domain%lat=tempdata(nx/2-50:nx/2+49,ny/2-50:ny/2+49)
-		deallocate(tempdata)
-		
-		call io_read2d(filename,"XLONG",tempdata)
-		domain%lat=tempdata(nx/2-50:nx/2+49,ny/2-50:ny/2+49)
-		deallocate(tempdata)
-		
-		ny=100
-		nx=100
+		call io_read2d(filename,"XLAT",domain%lat)
+		call io_read2d(filename,"XLONG",domain%lon)
+		ny=size(domain%lat,1)
+		nx=size(domain%lat,2)
 		nz=3
 		
 		allocate(domain%w(ny,nz,nx))
@@ -35,7 +39,7 @@ contains
 	
 	subroutine init_lowres(filename,bc)
 		implicit none
-		character, intent(in) :: filename
+		character(len=*), intent(in) :: filename
 		type(bc_type),intent(inout)::bc
 
 		integer::nx,ny,nz,i,j
@@ -62,12 +66,13 @@ program test_geo
 	use load_data
 	
 	implicit none
-	character::lo_res_file="lo.nc"
-	character::hi_res_file="hi.nc"
-	character::output_file="out.nc"
+	character(len=100)::lo_res_file="lo.nc"
+	character(len=100)::hi_res_file="hi.nc"
+	character(len=100)::output_file="out.nc"
 	type(domain_type)::domain
 	type(bc_type)::bc
 	integer::nx,ny,nz
+	real,allocatable,dimension(:,:,:)::temp_data
 
 	call init_hires(hi_res_file,domain)
 	call init_lowres(lo_res_file,bc)
@@ -78,6 +83,10 @@ program test_geo
 	ny=size(domain%w,3)
 	call geo_interp(domain%w,bc%w,bc%geolut,.FALSE.,nx,nz,ny)
 	call io_write3d(output_file,"W",domain%w)
+
+	call io_write3di("geolutx.nc","lut",bc%geolut%x)
+	call io_write3di("geoluty.nc","lut",bc%geolut%y)
+	call io_write3d("geolutw.nc","lut",bc%geolut%w)
 	
 	
 end program test_geo

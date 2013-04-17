@@ -1,7 +1,7 @@
 module io_routines
 	use netcdf
 	implicit none
-	contains
+contains
 
 	subroutine io_getdims(filename,varname,dims)
 		implicit none
@@ -118,6 +118,44 @@ module io_routines
 		! Close the file, freeing all resources.
 		call check( nf90_close(ncid) )
 	end subroutine io_write3d
+
+	subroutine io_write3di(filename,varname,data_out)
+		implicit none
+	    ! This is the name of the data file and variable we will read. 
+		character(len=*), intent(in) :: filename, varname
+		integer,intent(in) :: data_out(:,:,:)
+		
+		! We are reading 2D data, a nx x ny grid. 
+		integer :: nx,ny,nz
+		integer, parameter :: ndims = 3
+		! This will be the netCDF ID for the file and data variable.
+		integer :: ncid, varid,temp_dimid,dimids(ndims)
+
+		nx=size(data_out,1)
+		nz=size(data_out,2)
+		ny=size(data_out,3)
+		
+		! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
+		! the file.
+		call check( nf90_create(filename, NF90_CLOBBER, ncid) )
+! 		define the dimensions
+		call check( nf90_def_dim(ncid, "y", ny, temp_dimid) )
+		dimids(1)=temp_dimid
+		call check( nf90_def_dim(ncid, "z", nz, temp_dimid) )
+		dimids(2)=temp_dimid
+		call check( nf90_def_dim(ncid, "x", nx, temp_dimid) )
+		dimids(3)=temp_dimid
+		
+		! Create the variable returns varid of the data variable
+		call check( nf90_def_var(ncid, varname, NF90_INT, dimids, varid) )
+		! End define mode. This tells netCDF we are done defining metadata.
+		call check( nf90_enddef(ncid) )
+		
+		call check( nf90_put_var(ncid, varid, data_out) )
+	
+		! Close the file, freeing all resources.
+		call check( nf90_close(ncid) )
+	end subroutine io_write3di
 
 
 	subroutine io_write2d(filename,varname,data_out)

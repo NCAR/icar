@@ -7,9 +7,8 @@ module linear_theory_winds
     use fft
     use data_structures
     implicit none
-    contains
-    
-    
+contains
+	
     real function calc_stability(domain)
         implicit none
         type(domain_type),intent(in)::domain

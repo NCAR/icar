@@ -10,6 +10,7 @@ program ideal
 	implicit none
 	type(options_type) :: options
 	type(domain_type)  :: domain
+	type(bc_type)  :: boundary
 	real :: dt
 	integer::i
 	

@@ -135,7 +135,7 @@ module init
 		type(bc_type), intent(out):: boundary
 		
 		call init_bc_data(options,boundary)
-		call geo_setup_lut(domain,boundary)
+		call geo_LUT(domain,boundary)
 		
 		
 	end subroutine init_bc
