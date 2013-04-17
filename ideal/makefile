@@ -18,8 +18,8 @@ ifeq ($(F90), ifort)
 	HDF_PATH  = /usr/local/hdf5-1.8.7
 	NCDF_PATH = /usr/local/netcdf-4.1.3/ifort-12.0.5
 	LOCL_PATH = /usr/local
-	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf -L$(HDF_PATH)/lib -lhdf5_hl -lhdf5 -L$(LOCL_PATH)/lib -lsz -lz
-	INCNETCDF = -I$(NCDF_PATH)/include -I$(HDF_PATH)/include
+	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf #-L$(HDF_PATH)/lib -lhdf5_hl -lhdf5 -L$(LOCL_PATH)/lib -lsz -lz
+	INCNETCDF = -I$(NCDF_PATH)/include #-I$(HDF_PATH)/include
 endif
 
 
@@ -47,7 +47,7 @@ LFLAGS=$(LINK) ${LIBNETCDF} -L${LIBFFT}
 FFLAGS=$(COMP) ${INCNETCDF} -I${INCFFT}
 
 OBJS=advect.o io_routines.o data_structures.o init.o mp_driver.o \
-		mp_thompson.o driver.o output.o wind.o linear_winds.o
+		mp_thompson.o driver.o output.o wind.o linear_winds.o geo_reader.o
 WINDOBJS=io_routines.o data_structures.o init.o tests/test_wind.o wind.o linear_winds.o output.o
 
 all:ideal
@@ -66,6 +66,10 @@ ideal:${OBJS}
 test_init:tests/test_init.f90 init.o
 	${F90} ${FFLAGS} tests/test_init.f90 io_routines.f90 data_structures.f90 init.f90 -o test_init
 
+test_geo:tests/test_geo.f90 geo_reader.o io_routines.o data_structures.o
+	${F90} ${FFLAGS} tests/test_geo.f90 io_routines.f90 data_structures.f90 geo_reader.f90 -o test_geo -lnetcdf
+
+
 test_winds:${WINDOBJS}
 	${F90} ${LFLAGS} -L${FFTLIB} ${WINDOBJS} -o test_wind -lfftw3 -lm
 
@@ -81,8 +85,11 @@ io_routines.o:io_routines.f90 data_structures.o
 data_structures.o:data_structures.f90
 	${F90} ${FOFLAGS} ${FFLAGS} data_structures.f90
 
-init.o:init.f90 data_structures.o io_routines.o
+init.o:init.f90 data_structures.o io_routines.o geo_reader.o
 	${F90} ${FOFLAGS} ${FFLAGS} init.f90
+
+geo_reader.o:geo_reader.f90 data_structures.o
+	${F90} ${FOFLAGS} ${FFLAGS} geo_reader.f90
 
 mp_thompson.o:mp_thompson.f90
 	${F90} ${FOFLAGS} ${FFLAGS} mp_thompson.f90

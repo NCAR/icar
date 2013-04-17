@@ -23,13 +23,13 @@ module init
 		character(len=*), intent(in) :: options_filename
 		type(options_type), intent(out) :: options
 		
-		character(len=100) :: init_conditions_file, output_file
+		character(len=100) :: init_conditions_file, output_file, boundary_file
 		character(len=100) :: latvar,lonvar
 		real :: dx
 		integer :: name_unit,ntimesteps,outputinterval,timestep
 		integer :: pbl,lsm,mp,rad,conv,adv,wind
 		
-		namelist /files_list/ init_conditions_file,output_file
+		namelist /files_list/ init_conditions_file,output_file,boundary_file
 		namelist /var_list/ latvar,lonvar
 		namelist /parameters/ ntimesteps,outputinterval,timestep,dx
 		namelist /physics/ pbl,lsm,mp,rad,conv,adv,wind
@@ -43,6 +43,7 @@ module init
 		close(name_unit)
 		
 		options%init_conditions_file=init_conditions_file
+		options%boundary_file=boundary_file
 		options%output_file=output_file
 		options%latvar=latvar
 		options%lonvar=lonvar

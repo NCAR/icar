@@ -19,9 +19,10 @@ module geo
 contains
 	
 	function bilin_weights(yi,y,xi,x)
-		real,intent(out)::bilin_weights(4)
+		implicit none
 		real,intent(in)::yi,y(4),xi,x(4)
 		real::x0,x1,x2,x3,y5,y6,f1,f2
+		real, dimension(4) ::bilin_weights
 		
 	    x0=abs((xi-x(0))/(x(1)-x(0)))
 	    x1=1-x0
@@ -34,7 +35,7 @@ contains
 		bilin_weights=(/x1*f2,x0*f2,x3*f1,x2*f1/)
 	end function bilin_weights
 	
-	function find_location(lo,lat,lon)
+	type(position) function find_location(lo,lat,lon)
 ! Find a location lat,lon in lo%lat,lon grids
 !  Assumes that the lat/lon grids are semi-regular (dx/dy aren't constant but they are nearly so)
 !  Calculates dx/dy at the middle of the lat/lon grids, then calculates the location of lat,lon
@@ -45,10 +46,9 @@ contains
 !  return a position datatype that includes the found x/y location
 		implicit none
 		type(bc_type),intent(in)::lo
-		type(position),intent(out)::find_location
 		real,intent(in)::lat,lon
-		real::mindist, curdist
-		integer::x,y,nx,ny,xc,yc,xw,yw,xsign,ysign,iterations
+		real::mindist, curdist,dx,dy
+		integer::x,y,nx,ny,xc,yc,xw,yw,xsign,ysign,iterations,xstep,ystep
 		
 		ny=size(lo%lat,1)
 		nx=size(lo%lat,2)
@@ -67,7 +67,7 @@ contains
 ! 		if the grid is highly regular, we will only iterate 1-2x, highly irregular might require more iterations
 ! 		in the diabolical case, this could fail? 
 		iterations=0
-		while (((xstep>1).or.(ystep>1)).and.iterations<20) do
+		do while (((xstep>1).or.(ystep>1)).and.iterations<20)
 			iterations=iterations+1
 ! 			update the current x/y locations
 ! 			force it to be <nx-1 so we can calculate dx from (xc+1)-xc
@@ -107,7 +107,7 @@ contains
 	! 		start at the halfway point and find the best direction to take in both directions
 	! 		could probably do something smarter still by calculating dlat,dlon, 
 	! 		assuming that is "constant" and starting your search there...
-			while ((xw>1).or.(y1>1)) do
+			do while ((xw>1).or.(yw>1))
 ! 				figure out which direction to step, then step half of the last step distance
 				if (lo%lat(yc,xc)>lat) then
 					yw=yw/2+1
@@ -145,13 +145,13 @@ contains
 	end function find_location
 		
 		
-	function find_surrounding(lo,lat,lon,pos)
+	type(fourpos) function find_surrounding(lo,lat,lon,pos)
 ! 		given a closest position, return the 4 points surrounding the lat/lon position in lo%lat/lon
 ! 		assumes pos is not an edge point in the lat/lon grid...
+		implicit none
 		type(bc_type),intent(in)::lo
 		real,intent(in)::lat,lon
 		type(position),intent(in)::pos
-		type(four_pos),intent(out)::find_surrounding
 		
 		if ((lo%lat(pos%x,pos%y)-lat) > 0) then
 			find_surrounding%y=(/pos%y,pos%y,pos%y-1,pos%y-1/)
@@ -170,8 +170,8 @@ contains
 	subroutine geo_LUT(hi, lo)
 		implicit none
 		type(domain_type),intent(in)::hi
-		type(bc_type),intent(in)::lo
-		type(four_pos)::xy
+		type(bc_type),intent(inout)::lo
+		type(fourpos)::xy
 		type(position)::curpos,lastpos
 		integer :: nx,ny,i,j
 		
@@ -183,7 +183,6 @@ contains
 		allocate(lo%geolut%y(4,ny,nx))
 		allocate(lo%geolut%w(4,ny,nx))
 		
-		windowsize=3
 		do i=1,nx
 			lastpos=find_location(lo,hi%lat(i,1),hi%lon(i,1))
 			do j=1,ny
@@ -195,11 +194,6 @@ contains
 				lo%geolut%w(:,i,j)=bilin_weights(hi%lat(j,i),lo%lat(xy%y,xy%x),hi%lon(j,i),lo%lon(xy%y,xy%x))
 			enddo
 		enddo
-				
-		
-! 		lo%geolut%x=0
-! 		lo%geolut%y=0
-! 		lo%geolut%w=0.0
 		
 	end subroutine geo_LUT
 	
@@ -215,7 +209,7 @@ contains
 
 ! 		if we are only processing the boundary, then make x and y increments be the size of the array
 ! 		so we only hit the edges of the array
-		if boundary_only then
+		if (boundary_only) then
 ! 		use the geographic lookup table generated earlier to
 ! 		compute a bilinear interpolation from lo to hi
 ! 		first loop over all x elements on the y ends
@@ -267,4 +261,4 @@ contains
 			
 	end subroutine geo_interp
 		
-end module geo_reader
+end module geo

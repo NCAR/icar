@@ -4,9 +4,9 @@ module data_structures
 	type position
 		integer::x,y
 	end type position
-	type four_pos
+	type fourpos
 		integer::x(4),y(4)
-	end type four_pos
+	end type fourpos
 	
 	type geo_look_up_table
 		integer,allocatable,dimension(:,:,:)::x,y
@@ -23,6 +23,8 @@ module data_structures
 	end type domain_type
 	
 	type bc_type
+		real, allocatable, dimension(:,:,:) :: u,v,w,p,th,dz,z
+		real, allocatable, dimension(:,:,:) :: qv,cloud,ice,nice,qrain,nrain,qsnow,qgrau
 		real, allocatable, dimension(:,:) :: lat,lon,terrain
 		type(geo_look_up_table)::geolut
 	end type bc_type
@@ -38,7 +40,7 @@ module data_structures
 	end type physics_type
 		
 	type options_type
-		character (len=100) :: init_conditions_file
+		character (len=100) :: init_conditions_file,boundary_file
 		character (len=100) :: output_file
 		character (len=100) :: latvar,lonvar
 		integer :: ntimesteps,timestep,outputinterval
