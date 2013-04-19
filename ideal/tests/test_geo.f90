@@ -10,22 +10,6 @@ contains
 		real, dimension(:,:),allocatable::tempdata
 		integer::nx,ny,nz
 		
-! 		allocate(domain%lat(100,100))
-! 		allocate(domain%lon(100,100))
-! 		
-! 		call io_read2d(filename,"XLAT",tempdata)
-! 		nx=size(tempdata,1)
-! 		ny=size(tempdata,2)
-! 		write(*,*) "domain raw lat nx,ny", nx,ny
-! 		domain%lat=tempdata(nx/2-50:nx/2+49,ny/2-50:ny/2+49)
-! 		deallocate(tempdata)
-! 		
-! 		call io_read2d(filename,"XLONG",tempdata)
-! 		domain%lat=tempdata(nx/2-50:nx/2+49,ny/2-50:ny/2+49)
-! 		deallocate(tempdata)
-
-		write(*,*) filename
-		
 		call io_read2d(filename,"XLAT",domain%lat)
 		call io_read2d(filename,"XLONG",domain%lon)
 		ny=size(domain%lat,1)
@@ -41,7 +25,6 @@ contains
 		implicit none
 		character(len=*), intent(in) :: filename
 		type(bc_type),intent(inout)::bc
-
 		integer::nx,ny,nz,i,j
 		
 		call io_read2d(filename,"XLAT",bc%lat)
@@ -49,8 +32,7 @@ contains
 		nx=size(bc%lat,1)
 		nz=3
 		ny=size(bc%lat,2)
-		write(*,*) "BC nx,nz,ny", nx,nz,ny
-		allocate(bc%w(ny,nz,nx))
+		allocate(bc%w(nx,nz,ny))
 		do i=1,nx
 			do j=1,ny
 				bc%w(i,:,j)=i+j
@@ -71,22 +53,17 @@ program test_geo
 	character(len=100)::output_file="out.nc"
 	type(domain_type)::domain
 	type(bc_type)::bc
-	integer::nx,ny,nz
-	real,allocatable,dimension(:,:,:)::temp_data
 
 	call init_hires(hi_res_file,domain)
 	call init_lowres(lo_res_file,bc)
 	
 	call geo_LUT(domain,bc)
-	nx=size(domain%w,1)
-	nz=size(domain%w,2)
-	ny=size(domain%w,3)
-	call geo_interp(domain%w,bc%w,bc%geolut,.FALSE.,nx,nz,ny)
-	call io_write3d(output_file,"W",domain%w)
-
-	call io_write3di("geolutx.nc","lut",bc%geolut%x)
-	call io_write3di("geoluty.nc","lut",bc%geolut%y)
-	call io_write3d("geolutw.nc","lut",bc%geolut%w)
+	call geo_interp(domain%w,bc%w,bc%geolut,.FALSE.)
 	
+	call io_write3d(output_file,"W",domain%w)
+	call io_write3d("out_lo.nc","W",bc%w)
+	call io_write3di("out_geolutx.nc","lut",bc%geolut%x)
+	call io_write3di("out_geoluty.nc","lut",bc%geolut%y)
+	call io_write3d("out_geolutw.nc","lut",bc%geolut%w)
 	
 end program test_geo

@@ -20,18 +20,30 @@ contains
 	
 	function bilin_weights(yi,y,xi,x)
 		implicit none
-		real,intent(in)::yi,y(4),xi,x(4)
+		real,intent(in)::yi,y(0:3),xi,x(0:3)
 		real::x0,x1,x2,x3,y5,y6,f1,f2
 		real, dimension(4) ::bilin_weights
-		
-	    x0=abs((xi-x(0))/(x(1)-x(0)))
+		if ((x(1)-x(0))==0) then
+			x0=1
+		else
+		    x0=abs((xi-x(0))/(x(1)-x(0)))
+		endif
 	    x1=1-x0
-	    x2=abs((xi-x(2))/(x(3)-x(2)))
+		if ((x(3)-x(2))==0) then
+			x2=1
+		else
+		    x2=abs((xi-x(2))/(x(3)-x(2)))
+		endif
 	    x3=1-x2
 	    y5=y(0)*x1+y(1)*x0
 	    y6=y(2)*x3+y(3)*x2
-	    f1=(yi-y5)/(y6-y5)
+		if ((y6-y5)==0) then
+			f1=1
+		else
+		    f1=(yi-y5)/(y6-y5)
+		endif
 	    f2=1-f1
+		
 		bilin_weights=(/x1*f2,x0*f2,x3*f1,x2*f1/)
 	end function bilin_weights
 	
@@ -50,16 +62,16 @@ contains
 		real::mindist, curdist,dx,dy,xsign,ysign
 		integer::x,y,nx,ny,xc,yc,xw,yw,iterations,xstep,ystep
 		
-		ny=size(lo%lat,1)
-		nx=size(lo%lat,2)
+		nx=size(lo%lat,1)
+		ny=size(lo%lat,2)
 ! 		calcualte dx/dy at the middle of the grid
-		dx=lo%lon(1,2)-lo%lon(1,1)
-		dy=lo%lat(2,1)-lo%lat(1,1)
+		dx=lo%lon(2,1)-lo%lon(1,1)
+		dy=lo%lat(1,2)-lo%lat(1,1)
 ! 		current/starting position = the middle of the grid
-		yc=ny/2
 		xc=nx/2
-		x=lo%lon(yc,xc)
-		y=lo%lat(yc,xc)
+		yc=ny/2
+		x=lo%lon(xc,yc)
+		y=lo%lat(xc,yc)
 ! 		steps to take = the difference the between the current point and the input point / dx
 		xstep=(lon-x)/dx
 		ystep=(lat-y)/dy
@@ -71,68 +83,79 @@ contains
 			iterations=iterations+1
 ! 			update the current x/y locations
 ! 			force it to be <nx-1 so we can calculate dx from (xc+1)-xc
-			xc=min(1,max(nx-1,xc+xstep))
-			yc=min(1,max(ny-1,yc+ystep))
-			x=lo%lon(yc,xc)
-			y=lo%lat(yc,xc)
+			xc=max(1,min(nx-1,xc+xstep))
+			yc=max(1,min(ny-1,yc+ystep))
+			x=lo%lon(xc,yc)
+			y=lo%lat(xc,yc)
 ! 			calculate a new dx/dy and x/y step
-			dx=lo%lon(yc,xc+1)-lo%lon(yc,xc)
-			dy=lo%lat(yc+1,xc)-lo%lat(yc,xc)
+			dx=lo%lon(xc+1,yc)-lo%lon(xc,yc)
+			dy=lo%lat(xc,yc+1)-lo%lat(xc,yc)
 			xstep=NINT((lon-x)/dx)
 			ystep=NINT((lat-y)/dy)
 		enddo
 ! 		because one or both steps could actually be 1... 
 !       this is deliberate so we can find the edge of the array if necessary
-		xc=min(1,max(nx,xc+xstep))
-		yc=min(1,max(ny,yc+ystep))
+		xc=max(1,min(nx,xc+xstep))
+		yc=max(1,min(ny,yc+ystep))
 		
 ! 		in case we hit some pathologically varying dx case 
 ! 		use a "straightforward" log(n) search
 		if (iterations>=20) then
-		
-			ny=size(lo%lat,1)
-			nx=size(lo%lat,2)
+			nx=size(lo%lat,1)
+			ny=size(lo%lat,2)
 		
 			xc=nx/2
 			yc=ny/2
 			xw=xc
 			yw=yc
 	!		use xsign and ysign in case lat/lon don't increase in a positive index direction
-			ysign=1
-			write(*,*) sign(ysign,lo%lat(2,1)-lo%lat(1,1))
-			xsign=1
-			write(*,*) sign(xsign,lo%lon(2,1)-lo%lon(1,1))
+			ysign=sign(1.0,lo%lat(1,2)-lo%lat(1,1))
+			xsign=sign(1.0,lo%lon(2,1)-lo%lon(1,1))
 		
 	! 		use a O(log(n)) search instead of O(n^2)
 	! 		start at the halfway point and find the best direction to take in both directions
-	! 		could probably do something smarter still by calculating dlat,dlon, 
-	! 		assuming that is "constant" and starting your search there...
 			do while ((xw>1).or.(yw>1))
 ! 				figure out which direction to step, then step half of the last step distance
-				if (lo%lat(yc,xc)>lat) then
-					yw=yw/2+1
-					yc=yc+ysign*yw
-				endif
-				if (lo%lat(yc,xc)<lat) then
-					yw=yw/2+1
+				if (lo%lat(xc,yc)>lat) then
+					if (yw==2) then
+						yw=1
+					else
+						yw=yw/2+1
+					endif
 					yc=yc-ysign*yw
 				endif
-				if (lo%lon(yc,xc)>lon) then
-					xw=xw/2+1
-					xc=xc+xsign*xw
+				if (lo%lat(xc,yc)<lat) then
+					if (yw==2) then
+						yw=1
+					else
+						yw=yw/2+1
+					endif
+					yc=yc+ysign*yw
 				endif
-				if (lo%lon(yc,xc)<lon) then
-					xw=xw/2+1
+				if (lo%lon(xc,yc)>lon) then
+					if (xw==2) then
+						xw=1
+					else
+						xw=xw/2+1
+					endif
 					xc=xc-xsign*xw
+				endif
+				if (lo%lon(xc,yc)<lon) then
+					if (xw==2) then
+						xw=1
+					else
+						xw=xw/2+1
+					endif
+					xc=xc+xsign*xw
 				endif
 			enddo
 		endif
 		
 ! 		once we have a "good" location we need to find the actual minimum (we could be above or below it by 1)
 		mindist=9999.9
-		do x=min(1,xc-1),max(nx,xc+1)
-			do y=min(1,yc-1),max(ny,yc+1)
-				curdist=sqrt((lo%lat(y,x)-lat)**2 + (lo%lon(y,x)-lon)**2)
+		do x=max(1,xc-1),min(nx,xc+1)
+			do y=max(1,yc-1),min(ny,yc+1)
+				curdist=sqrt((lo%lat(x,y)-lat)**2 + (lo%lon(x,y)-lon)**2)
 				if (curdist<mindist) then
 					mindist=curdist
 					xw=x
@@ -140,6 +163,7 @@ contains
 				endif
 			enddo
 		enddo
+		
 		find_location%x=xw
 		find_location%y=yw
 	end function find_location
@@ -173,40 +197,47 @@ contains
 		type(bc_type),intent(inout)::lo
 		type(fourpos)::xy
 		type(position)::curpos,lastpos
-		integer :: nx,ny,i,j
+		integer :: nx,ny,i,j,k
+		real,dimension(4) :: lat,lon
 		
-		write(*,*) "WARNING MUST THINK MORE ABOUT x,y ordering here"
-		ny=size(hi%lat,1)
-		nx=size(hi%lat,2)
+		nx=size(hi%lat,1)
+		ny=size(hi%lat,2)
 		
-		allocate(lo%geolut%x(4,ny,nx))
-		allocate(lo%geolut%y(4,ny,nx))
-		allocate(lo%geolut%w(4,ny,nx))
+		allocate(lo%geolut%x(4,nx,ny))
+		allocate(lo%geolut%y(4,nx,ny))
+		allocate(lo%geolut%w(4,nx,ny))
 		
-		do i=1,nx
-			lastpos=find_location(lo,hi%lat(i,1),hi%lon(i,1))
-			do j=1,ny
+		do j=1,ny
+! 			lastpos=find_location(lo,hi%lat(1,j),hi%lon(1,j))
+			do i=1,nx
 ! 				curpos=next_pos(lo,hi,i,j,lastpos,windowsize)
 				curpos=find_location(lo,hi%lat(i,j),hi%lon(i,j))
 				xy=find_surrounding(lo,hi%lat(i,j),hi%lon(i,j),curpos)
-				lo%geolut%x(:,j,i)=xy%x
-				lo%geolut%y(:,j,i)=xy%y
-				lo%geolut%w(:,i,j)=bilin_weights(hi%lat(j,i),lo%lat(xy%y,xy%x),hi%lon(j,i),lo%lon(xy%y,xy%x))
+				lo%geolut%x(:,i,j)=xy%x
+				lo%geolut%y(:,i,j)=xy%y
+				do k=1,4
+					lat(k)=lo%lat(xy%x(k),xy%y(k))
+					lon(k)=lo%lon(xy%x(k),xy%y(k))
+				enddo
+				lo%geolut%w(:,i,j)=bilin_weights(hi%lat(i,j),lat,hi%lon(i,j),lon)
 			enddo
 		enddo
 		
 	end subroutine geo_LUT
 	
-	subroutine geo_interp(fieldout,fieldin,geolut,boundary_only,nx,nz,ny)
+	subroutine geo_interp(fieldout,fieldin,geolut,boundary_only)
 		implicit none
-		real,intent(inout)::fieldout(nx,nz,ny)
+		real,intent(inout)::fieldout(:,:,:)
 		real,intent(in)::fieldin(:,:,:)
 		type(geo_look_up_table),intent(in)::geolut
 		logical,intent(in)::boundary_only
-		integer,intent(in)::nx,nz,ny
+		integer::nx,nz,ny
 		integer:: i,j,k,l,localx,localy,kstep,istep
 		real::localw
-
+		
+		nx=size(fieldout,1)
+		nz=size(fieldout,2)
+		ny=size(fieldout,3)
 ! 		if we are only processing the boundary, then make x and y increments be the size of the array
 ! 		so we only hit the edges of the array
 		if (boundary_only) then
@@ -229,7 +260,7 @@ contains
 ! 		then loop over all y elements on the x ends
 			do k=1,ny
 				do j=1,nz
-					do i=2,nx-1,nx-3
+					do i=1,nx,nx-1
 						fieldout(i,j,k)=0
 						do l=1,4
 							localx=geolut%x(l,i,k)

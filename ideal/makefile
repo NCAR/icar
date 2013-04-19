@@ -17,7 +17,8 @@ ifeq ($(F90), ifort)
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
 endif
-
+COMP=-g
+link=-g
 # on yellowstone:
 ifeq ($(LMOD_FAMILY_COMPILER),gnu)
 	F90=gfortran
@@ -63,11 +64,13 @@ install:ideal
 
 clean:
 	rm *.o *.mod
-	
+
+allclean:cleanall
+		
 cleanall: 
-	rm *.o *.mod tests/*.o tests/*.mod swim_ideal test_geo test_wind # test_init
+	rm *.o *.mod tests/*.o tests/*.mod swim_ideal geo_test wind_test # test_init
 	
-tests: test_geo test_winds #test_init
+tests: geo_test wind_test #test_init
 
 
 ideal:${OBJS} 
@@ -77,11 +80,11 @@ ideal:${OBJS}
 # test_init:tests/test_init.f90 init.o
 # 	${F90} ${FFLAGS} tests/test_init.f90 io_routines.f90 data_structures.f90 init.f90 -o test_init
 
-test_geo:${GEOOBJS}
-	${F90} ${LFLAGS} ${GEOOBJS} -o test_geo
+geo_test:${GEOOBJS}
+	${F90} ${LFLAGS} ${GEOOBJS} -o geo_test
 
-test_winds:${WINDOBJS}
-	${F90} ${LFLAGS} ${WINDOBJS} -o test_wind -lfftw3 -lm
+wind_test:${WINDOBJS}
+	${F90} ${LFLAGS} ${WINDOBJS} -o wind_test -lfftw3 -lm
 
 
 
