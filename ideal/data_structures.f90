@@ -23,11 +23,16 @@ module data_structures
 	end type domain_type
 	
 	type bc_type
-		real, allocatable, dimension(:,:,:) :: u,v,w,p,th,dz,z
-		real, allocatable, dimension(:,:,:) :: qv,cloud,ice,nice,qrain,nrain,qsnow,qgrau
+		real, allocatable, dimension(:,:,:) :: dz,z,u,v,w,p,th,qv
+		real, allocatable, dimension(:,:,:) :: dudt,dvdt,dwdt,dpdt,dthdt,dqvdt,dqcdt
 		real, allocatable, dimension(:,:) :: lat,lon,terrain
 		type(geo_look_up_table)::geolut
+		type(domain_type)::next_domain
 	end type bc_type
+	
+! 	type io_type
+! 		real, allocatable, dimension(:,:,:) :: u,v,w,p,th,qv,cloud
+! 	end type io_type
 	
 	type physics_type
 		integer::microphysics
@@ -43,8 +48,8 @@ module data_structures
 		character (len=100) :: init_conditions_file,boundary_file
 		character (len=100) :: output_file
 		character (len=100) :: latvar,lonvar
-		integer :: ntimesteps,timestep,outputinterval
-		real :: dx,dt
+		integer :: ntimesteps
+		real :: dx,io_dt,outputinterval
 		type(physics_type)::physics
 	end type options_type
 end module data_structures	

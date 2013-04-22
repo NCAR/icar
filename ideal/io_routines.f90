@@ -1,6 +1,7 @@
 module io_routines
 	use netcdf
 	implicit none
+	integer,parameter::io_maxDims=10
 contains
 
 	subroutine io_getdims(filename,varname,dims)
@@ -9,8 +10,7 @@ contains
 		integer,intent(out) :: dims(:)
 		
 		integer :: ncid, varid,numDims,dimlen,i
-		integer, parameter :: maxdims=100
-		integer,dimension(maxdims) :: dimIds
+		integer,dimension(io_maxDims) :: dimIds
 		
 ! 		open the netcdf file
 		call check(nf90_open(filename, NF90_NOWRITE, ncid))
@@ -25,16 +25,22 @@ contains
 		end do
 	end subroutine io_getdims
 	
-	subroutine io_read3d(filename,varname,data_in)
+	subroutine io_read3d(filename,varname,data_in,extradim)
 		implicit none
 	    ! This is the name of the data_in file and variable we will read. 
 		character(len=*), intent(in) :: filename, varname
 		real,intent(out),allocatable :: data_in(:,:,:)
-		
-		integer,parameter :: maxdims=10 !fortran may limit to 7?
-		integer, dimension(maxdims) :: diminfo !will hold dimension lengths
+		integer, intent(in),optional :: extradim
+		integer, dimension(io_maxDims)  :: diminfo !will hold dimension lengths
+		integer, dimension(io_maxDims)  :: dimstart
 		! This will be the netCDF ID for the file and data_in variable.
 		integer :: ncid, varid
+		if present(extradim) then
+			dimstart=extradim
+			dimstart(1:3)=1
+		else
+			dimstart=1
+		endif
 		
 ! 		Read the dimension lengths
 		call io_getdims(filename,varname,diminfo)
@@ -45,24 +51,44 @@ contains
 		! Get the varid of the data_in variable, based on its name.
 		call check(nf90_inq_varid(ncid, varname, varid))
 		
-		! Read the data_in.
-		call check(nf90_get_var(ncid, varid, data_in))
+		! Read the data_in. skip the slowest varying indices if there are more than 3 dimensions (typically this will be time)
+		if (diminfo(1)>3) then
+			diminfo(5:diminfo(1)+1)=1 ! set count for extra dims to 1
+			call check(nf90_get_var(ncid, varid, data_in,&
+									dimstart(1:diminfo(1)), &				! start  = 1 or extradim
+									[ diminfo(i+1), i=1,diminfo(1)) ],&		! count=n or 1
+									[ (1,           i=1,diminfo(1)) ] ))	! for all dims, stride = 1
+		else		
+			call check(nf90_get_var(ncid, varid, data_in))
+		endif
+!         function nf90_get_var(ncid, varid, values, start, stride, map)
+!           integer,                         intent( in) :: ncid, varid
+!           any valid type, scalar or array of any rank, &
+!                                            intent(out) :: values
+!           integer, dimension(:), optional, intent( in) :: start, count, stride, map
+!           integer                                      :: nf90_get_var
 	
 		! Close the file, freeing all resources.
 		call check( nf90_close(ncid) )
 		
 	end subroutine io_read3d
 
-	subroutine io_read2d(filename,varname,data_in)
+	subroutine io_read2d(filename,varname,data_in,extradim)
 		implicit none
 	    ! This is the name of the data_in file and variable we will read. 
 		character(len=*), intent(in) :: filename, varname
 		real,intent(out),allocatable :: data_in(:,:)
-		
-		integer,parameter :: maxdims=10 !fortran may limit to 7?
-		integer, dimension(maxdims) :: diminfo !will hold dimension lengths
+		integer, intent(in),optional :: extradim
+		integer, dimension(io_maxDims)  :: diminfo ! will hold dimension lengths
+		integer, dimension(io_maxDims)  :: dimstart
 		! This will be the netCDF ID for the file and data_in variable.
 		integer :: ncid, varid
+		if present(extradim) then
+			dimstart=extradim
+			dimstart(1:3)=1
+		else
+			dimstart=1
+		endif
 		
 ! 		Read the dimension lengths
 		call io_getdims(filename,varname,diminfo)
@@ -74,8 +100,18 @@ contains
 		! Get the varid of the data_in variable, based on its name.
 		call check(nf90_inq_varid(ncid, varname, varid))
 		
-		! Read the data_in.
-		call check(nf90_get_var(ncid, varid, data_in))
+		! Read the data_in. skip the slowest varying indices if there are more than 3 dimensions (typically this will be time)
+		if (diminfo(1)>2) then
+			diminfo(4:diminfo(1)+1)=1 ! set count for extra dims to 1
+			call check(nf90_get_var(ncid, varid, data_in,&
+									dimstart(1:diminfo(1)), &				! start  = 1 or extradim
+									[ diminfo(i+1), i=1,diminfo(1)) ],&		! count=n or 1
+									[ (1,           i=1,diminfo(1)) ] ))	! for all dims, stride = 1
+		else		
+			call check(nf90_get_var(ncid, varid, data_in))
+		endif
+! 		! Read the data_in.
+! 		call check(nf90_get_var(ncid, varid, data_in))
 	
 		! Close the file, freeing all resources.
 		call check( nf90_close(ncid) )

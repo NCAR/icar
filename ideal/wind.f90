@@ -19,6 +19,7 @@ module wind
 		allocate(dv(ny-2,nx-2))
 		allocate(divergence(ny-2,nx-2))
 		
+		stop "STOPPING: Balance U/V has x/y dims mixed up still!!"
 ! 		loop over domain levels
 		do i=1,nz
 ! 			calculate horizontal divergence
@@ -40,10 +41,16 @@ module wind
 	subroutine update_winds(domain,options)
 		type(domain_type),intent(inout)::domain
 		type(options_type),intent(in)::options
+		integer::nx,ny
 		
 ! 		linear winds
 		if (options%physics%windtype==1) then
 			call linear_perturb(domain)
+		else
+			nx=size(domain%u,1)
+			ny=size(domain%u,3)
+			domain%u(1:nx-1,:,:)=(domain%u(1:nx-1,:,:)+domain%u(2:nx,:,:))/2
+			domain%v(:,:,1:ny-1)=(domain%v(:,:,1:ny-1)+domain%v(:,:,2:ny))/2
 		endif
 		
 		call balance_uvw(domain)

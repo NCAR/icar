@@ -54,13 +54,15 @@ FFLAGS=$(COMP) ${INCNETCDF} -I${INCFFT}
 
 OBJS=advect.o io_routines.o data_structures.o init.o mp_driver.o \
 		mp_thompson.o driver.o output.o wind.o linear_winds.o geo_reader.o
+IDEALOBJS=advect.o io_routines.o data_structures.o init.o mp_driver.o \
+		mp_thompson.o ideal.o output.o wind.o linear_winds.o geo_reader.o
 WINDOBJS=io_routines.o data_structures.o init.o tests/test_wind.o wind.o linear_winds.o output.o geo_reader.o
 GEOOBJS=io_routines.o data_structures.o tests/test_geo.o geo_reader.o
 
-all:ideal
+all:real
 
-install:ideal
-	cp swim_ideal ${INSTALLDIR}
+install:real
+	cp swim_real ${INSTALLDIR}
 
 clean:
 	rm *.o *.mod
@@ -68,15 +70,19 @@ clean:
 allclean:cleanall
 		
 cleanall: 
-	rm *.o *.mod tests/*.o tests/*.mod swim_ideal geo_test wind_test # test_init
+	rm *.o *.mod tests/*.o tests/*.mod swim_real swim_ideal geo_test wind_test # test_init
 	
 tests: geo_test wind_test #test_init
 
+real:${OBJS} 
+	${F90} ${LFLAGS} ${OBJS} -o swim_real  -lm -lfftw3
 
-ideal:${OBJS} 
-	${F90} ${LFLAGS} ${OBJS} -o swim_ideal  -lm -lfftw3
+ideal:${IDEALOBJS} 
+	${F90} ${LFLAGS} ${IDEALOBJS} -o swim_ideal  -lm -lfftw3
 
 
+# NOTE: too many changes in data structures/init have broken this test, could be fixed if necessary, 
+#       but not worth the time right now. 
 # test_init:tests/test_init.f90 init.o
 # 	${F90} ${FFLAGS} tests/test_init.f90 io_routines.f90 data_structures.f90 init.f90 -o test_init
 
@@ -90,6 +96,9 @@ wind_test:${WINDOBJS}
 
 driver.o:driver.f90 advect.o data_structures.o init.o mp_driver.o output.o wind.o
 	${F90} ${FOFLAGS} ${FFLAGS} driver.f90
+
+ideal.o:ideal.f90 advect.o data_structures.o init.o mp_driver.o output.o wind.o
+	${F90} ${FOFLAGS} ${FFLAGS} ideal.f90
 
 advect.o:advect.f90 data_structures.o
 	${F90} ${FOFLAGS} ${FFLAGS} advect.f90

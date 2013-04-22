@@ -1,6 +1,11 @@
 module geo
 	use data_structures
 	implicit none
+	
+	private
+	public::geo_LUT
+	public::geo_interp
+	
 ! 	type geo_info
 ! 		real,allocatable,dimension(:,:)::lat,lon
 ! 	end type geo_info
