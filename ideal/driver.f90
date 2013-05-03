@@ -16,14 +16,14 @@ program real
 ! 	initialize microphysics code (e.g. compute look up tables in Thompson et al)
 	call mp_init(options%physics%microphysics) !this could easily be moved to init_model...
 ! 	read initial conditions from the boundary file
-	call bc_init(domain,boundary,options,0)
+	call bc_init(domain,boundary,options)
 	
 ! 	note that a timestep here is an IO timestep O(1hr), not a physics timestep O(20s)
 	do i=1,options%ntimesteps
 ! 		update boundary conditions (dXdt variables)
-		call bc_update(domain,boundary,options,i)
+		call bc_update(domain,boundary,options)
 ! 		this is the meat of the model, run all the physics for the current time step
-		call step(domain,options)
+		call step(domain,options,boundary)
 ! 		finally write the output for this timestep
 		call write_domain(domain,options,i)
 	end do

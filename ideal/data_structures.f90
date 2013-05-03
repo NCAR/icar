@@ -48,8 +48,9 @@ module data_structures
 		character (len=100) :: init_conditions_file,boundary_file
 		character (len=100) :: output_file
 		character (len=100) :: latvar,lonvar
-		integer :: ntimesteps
-		real :: dx,io_dt,outputinterval
+		logical :: readz
+		integer :: ntimesteps,nz
+		real :: dx,io_dt,outputinterval,dz
 		type(physics_type)::physics
 	end type options_type
 end module data_structures	

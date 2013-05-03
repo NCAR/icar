@@ -12,7 +12,7 @@ program test_init
 	call init_domain(options,domain)
 	
 	write(*,*) options%init_conditions_file,options%output_file
-	write(*,*) options%ntimesteps,options%timestep,options%outputinterval
+	write(*,*) options%ntimesteps,options%outputinterval
 	call update_winds(domain,options)
 	nz=size(domain%w,2)
 	ny=size(domain%w,1)

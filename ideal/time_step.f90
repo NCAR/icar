@@ -16,8 +16,8 @@ contains
 		real,dimension(:,:,:), intent(in) :: dXdt
 		integer::nx,ny
 		
-		nx=size(d1,1)
-		ny=size(d1,3)
+		nx=size(curdata,1)
+		ny=size(curdata,3)
 
 		curdata(1,:,:) =curdata(1,:,:) +dXdt(:,1:ny,1)
 		curdata(nx,:,:)=curdata(nx,:,:)+dXdt(:,1:ny,2)
@@ -29,7 +29,7 @@ contains
 	subroutine forcing_update(domain,bc)
 		implicit none
 		type(domain_type),intent(inout)::domain
-		type(boundary_type),intent(inout)::bc
+		type(bc_type),intent(inout)::bc
 		
 		domain%u=domain%u+bc%dudt
 		domain%v=domain%v+bc%dvdt
@@ -38,7 +38,7 @@ contains
 ! 		dXdt for qv,qc,th are only applied to the boundarys
 		call boundary_update(domain%th,bc%dthdt)
 		call boundary_update(domain%qv,bc%dqvdt)
-		call boundary_update(domain%qc,bc%dqcdt)
+		call boundary_update(domain%cloud,bc%dqcdt)
 	end subroutine forcing_update		
 
 
@@ -57,20 +57,21 @@ contains
 	end subroutine apply_dt
 	
 	
-	subroutine step(domain,options,nc)
+	subroutine step(domain,options,bc)
 		implicit none
 		type(domain_type),intent(inout)::domain
-		type(boundary_type),intent(inout)::bc
+		type(bc_type),intent(inout)::bc
 		type(options_type),intent(in)::options
 		integer::i,ntimesteps
-		real::dt
+		real::dt,dtnext
 		
 		! courant condition for 3D advection... could make 3 x 1D to maximize dt? esp. w/linear wind speedups...
 		dt=floor(options%dx/max(max(maxval(domain%u),maxval(domain%v)),maxval(domain%w))/3.0)
 ! 		pick the minimum dt from the begining or the end of the current timestep
-		dt=min(dt,floor(options%dx/max(max(maxval(bc%next_domain%u), &
-											maxval(bc%next_domain%v+bc%dvdt)), &
-											maxval(bc%next_domain%w+bc%dwdt))/3.0))
+		dtnext=floor(options%dx/max(max(maxval(bc%next_domain%u), &
+										maxval(bc%next_domain%v+bc%dvdt)), &
+										maxval(bc%next_domain%w+bc%dwdt))/3.0)
+		dt=min(dt,dtnext)
 ! 		make dt an integer fraction of the full timestep
 		dt=options%io_dt/ceiling(options%io_dt/dt)
 ! 		calcualte the number of timesteps

@@ -76,10 +76,10 @@ contains
 		implicit none
 		type(options_type), intent(in) :: options
 		type(domain_type), intent(out):: domain
-		integer:: ny,nz,nx
+		integer:: ny,nz,nx,i
 		
 ! 		these are the only required variables on a high-res grid, lat, lon, and terrain elevation
-		call io_read2d(options%init_conditions_file,"hgt",domain%terrain)
+		call io_read2d(options%init_conditions_file,"HGT",domain%terrain)
 		call io_read2d(options%init_conditions_file,options%latvar,domain%lat)
 		call io_read2d(options%init_conditions_file,options%lonvar,domain%lon)
 		
@@ -88,7 +88,7 @@ contains
 		nz=options%nz
 		
 ! 		if a 3d grid was also specified, then read those data in
-		if options%readz then
+		if (options%readz) then
 			call io_read3d(options%init_conditions_file,"z", domain%z)
 ! 			dz also has to be calculated from the 3d z file
 			allocate(domain%dz(ny,nz,nx))
@@ -99,7 +99,7 @@ contains
 ! 			and z[1]+i*dz for the res
 			allocate(domain%z(ny,nz,nx))
 			do i=1,nz
-				domain%z(:,i,:)=domain%hgt+(i*options%dz)-(options%dz/2)
+				domain%z(:,i,:)=domain%terrain+(i*options%dz)-(options%dz/2)
 			enddo
 ! 			here dz is just constant, but must be on a 3d grid for microphysics code
 			allocate(domain%dz(ny,nz,nx))
@@ -149,7 +149,7 @@ contains
 		implicit none
 		type(options_type), intent(in) :: options
 		type(bc_type), intent(out):: boundary
-		integer::nx,ny
+		integer::nx,ny,nz
 		
 ! 		these variables are required for any boundary/forcing file type
 		call io_read2d(options%boundary_file,options%latvar,boundary%lat)
@@ -186,7 +186,7 @@ contains
 		
 ! 		set up base data
 		call init_bc_data(options,boundary)
-		call init_domain(options,bc%next_domain) !set up a domain to hold the forcing for the next time step
+		call init_domain(options,boundary%next_domain) !set up a domain to hold the forcing for the next time step
 ! 		create the geographic look up table used to calculate boundary forcing data
 		call geo_LUT(domain,boundary)
 		

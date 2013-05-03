@@ -34,8 +34,9 @@ contains
 		integer, dimension(io_maxDims)  :: diminfo !will hold dimension lengths
 		integer, dimension(io_maxDims)  :: dimstart
 		! This will be the netCDF ID for the file and data_in variable.
-		integer :: ncid, varid
-		if present(extradim) then
+		integer :: ncid, varid,i
+		
+		if (present(extradim)) then
 			dimstart=extradim
 			dimstart(1:3)=1
 		else
@@ -56,7 +57,7 @@ contains
 			diminfo(5:diminfo(1)+1)=1 ! set count for extra dims to 1
 			call check(nf90_get_var(ncid, varid, data_in,&
 									dimstart(1:diminfo(1)), &				! start  = 1 or extradim
-									[ diminfo(i+1), i=1,diminfo(1)) ],&		! count=n or 1
+									[ (diminfo(i+1), i=1,diminfo(1)) ],&		! count=n or 1
 									[ (1,           i=1,diminfo(1)) ] ))	! for all dims, stride = 1
 		else		
 			call check(nf90_get_var(ncid, varid, data_in))
@@ -82,8 +83,8 @@ contains
 		integer, dimension(io_maxDims)  :: diminfo ! will hold dimension lengths
 		integer, dimension(io_maxDims)  :: dimstart
 		! This will be the netCDF ID for the file and data_in variable.
-		integer :: ncid, varid
-		if present(extradim) then
+		integer :: ncid, varid,i
+		if (present(extradim)) then
 			dimstart=extradim
 			dimstart(1:3)=1
 		else
@@ -105,7 +106,7 @@ contains
 			diminfo(4:diminfo(1)+1)=1 ! set count for extra dims to 1
 			call check(nf90_get_var(ncid, varid, data_in,&
 									dimstart(1:diminfo(1)), &				! start  = 1 or extradim
-									[ diminfo(i+1), i=1,diminfo(1)) ],&		! count=n or 1
+									[ (diminfo(i+1), i=1,diminfo(1)) ],&		! count=n or 1
 									[ (1,           i=1,diminfo(1)) ] ))	! for all dims, stride = 1
 		else		
 			call check(nf90_get_var(ncid, varid, data_in))

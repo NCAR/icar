@@ -24,11 +24,13 @@ contains
 	subroutine read_var(highres,filename,varname,geolut,curstep,boundary_only)
 		implicit none
 		real,dimension(:,:,:),intent(out)::highres
-		character(len=255),intent(in) :: filename,varname
-		integer,dimension(:,:,:),intent(in) :: geolut
+		character(len=*),intent(in) :: filename,varname
+		type(geo_look_up_table),intent(in) :: geolut
 		integer,intent(in)::curstep
 		logical, intent(in) :: boundary_only
-		real,dimension(:,:,:) :: inputdata
+		real,dimension(:,:,:),allocatable :: inputdata
+		integer,dimension(io_maxDims)::dims
+		integer::nx,ny,nz
 		
 		call io_getdims(filename,varname, dims)
 		call io_read3d(filename,varname,inputdata,curstep)
@@ -46,9 +48,9 @@ contains
 			inputdata=inputdata+300
 		endif
 		
-		call geo_interp(highres,
+		call geo_interp(highres, &
 						reshape(inputdata(1:nx,1:ny,1:nz),[nx,nz,ny],order=[1,3,2]), &
-						bc%geolut,boundary_only)
+						geolut,boundary_only)
 						
 	end subroutine read_var
 	
@@ -58,7 +60,7 @@ contains
 		type(bc_type),intent(inout)::bc
 		type(options_type),intent(in)::options
 		integer,dimension(io_maxDims)::dims	!note, io_maxDims is included from io_routines.
-		real,dimension(:,:,:)::inputdata
+		real,dimension(:,:,:),allocatable::inputdata
 		
 		curfile=1
 		curstep=1
@@ -67,7 +69,7 @@ contains
 		file_list(curfile)=options%boundary_file
 		
 		call io_getdims(file_list(curfile),"P", dims)
-		if dims(1)==3 then
+		if (dims(1)==3) then
 			steps_in_file=1
 		else
 			steps_in_file=dims(dims(1)+1) !dims(1) = ndims
@@ -81,7 +83,7 @@ contains
 		call read_var(domain%cloud,file_list(curfile),"QCLOUD", bc%geolut,curstep,.False.)
 		call read_var(domain%ice,  file_list(curfile),"QICE",   bc%geolut,curstep,.False.)
 		
-		update_winds(domain,options)
+		call update_winds(domain,options)
 	end subroutine bc_init
 
 
@@ -115,28 +117,30 @@ contains
 
 		call update_edges(bc%dthdt,bc%next_domain%th,domain%th)
 		call update_edges(bc%dqvdt,bc%next_domain%qv,domain%qv)
-		call update_edges(bc%dqcdt,bc%next_domain%qc,domain%qc)
+		call update_edges(bc%dqcdt,bc%next_domain%cloud,domain%cloud)
 	end subroutine update_dxdt
 	
 	
 	subroutine bc_update(domain,bc,options)
 		implicit none
-		type(domain_type),intent(inout)::domain,next_domain
+		type(domain_type),intent(inout)::domain
 		type(bc_type),intent(inout)::bc
 		type(options_type),intent(in)::options
 		integer,dimension(io_maxDims)::dims	!note, io_maxDims is included from io_routines.
-		real,dimension(:,:,:)::inputdata
+		real,dimension(:,:,:),allocatable::inputdata
+		integer::nx,ny,nz
 		
 		curstep=curstep+1
 		if (curstep>steps_in_file) then
 			curfile=curfile+1
 			curstep=1
 			call io_getdims(file_list(curfile),"P", dims)
-			if dims(1)==3 then
+			if (dims(1)==3) then
 				steps_in_file=1
 			else
 				steps_in_file=dims(dims(1)+1) !dims(1) = ndims
 			endif
+		endif
 		if (curfile>nfiles) then
 			stop "Ran out of files to process!"
 		endif
@@ -153,7 +157,7 @@ contains
 		call read_var(bc%next_domain%cloud,file_list(curfile),"QCLOUD", bc%geolut,curstep,.TRUE.)
 		call read_var(bc%next_domain%ice,  file_list(curfile),"QICE",   bc%geolut,curstep,.TRUE.)
 		
-		update_winds(bc%next_domain,options)
-		update_dxdt(bc,domain)
-	end subroutine bc_init
-	
+		call update_winds(bc%next_domain,options)
+		call update_dxdt(bc,domain)
+	end subroutine bc_update
+end module boundary_conditions
