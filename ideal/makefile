@@ -48,9 +48,13 @@ ifeq ($(LMOD_FAMILY_COMPILER),pgi)
 	INCNETCDF =  
 endif	
 
+# this seems like it should be a solution to the missing library problem, but it doesn't work
+# LFLAGS=$(LINK) ${LIBNETCDF} -L${LIBFFT} -openmp-link=static -static-intel -Bstatic
+# instead copy required libraries into a directory accessible on compute nodes and set LD_RUN_PATH e.g.
+# export LD_RUN_PATH=$LD_RUN_PATH:/path/to/libraries/lib:/home/gutmann/usr/local/lib
 
 LFLAGS=$(LINK) ${LIBNETCDF} -L${LIBFFT}
-FFLAGS=$(COMP) ${INCNETCDF} -I${INCFFT}
+FFLAGS=$(COMP) ${INCNETCDF} -I${INCFFT} -u
 
 OBJS=advect.o io_routines.o data_structures.o init.o mp_driver.o \
 		mp_thompson.o driver.o output.o wind.o linear_winds.o geo_reader.o
