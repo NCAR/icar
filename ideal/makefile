@@ -44,7 +44,7 @@ F90=ifort
 LIBFFT=/home/gutmann/usr/local/lib
 INCFFT=/home/gutmann/usr/local/include
 ifeq ($(F90), ifort)
-	COMP=-fpp -openmp -liomp5 -fast -c
+	COMP=-fpp -openmp -liomp5 -fast -c -u
 	LINK=-fpp -openmp -liomp5
 	NCDF_PATH = /usr/local/netcdf-4.1.3/ifort-12.0.5
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
@@ -54,7 +54,7 @@ endif
 # on yellowstone:
 ifeq ($(LMOD_FAMILY_COMPILER),gnu)
 	F90=gfortran
-	COMP=-fopenmp -lgomp -O3 -c
+	COMP=-fopenmp -lgomp -O3 -c -fimplicit-none
 	LINK=-fopenmp -lgomp
 	LIBFFT=/glade/u/home/gutmann/usr/local/lib
 	INCFFT=/glade/u/home/gutmann/usr/local/include
@@ -63,7 +63,7 @@ ifeq ($(LMOD_FAMILY_COMPILER),gnu)
 endif 
 ifeq ($(LMOD_FAMILY_COMPILER),intel)
 	F90=ifort
-	COMP=-fpp -openmp -liomp5 -fast -c
+	COMP=-fpp -openmp -liomp5 -fast -c -u
 	LINK=-fpp -openmp -liomp5
 	LIBFFT=/glade/u/home/gutmann/usr/local/lib
 	INCFFT=/glade/u/home/gutmann/usr/local/include
@@ -87,6 +87,10 @@ endif
 # 
 ###################################################################
 ###################################################################
+# this seems like it should be a solution to the missing library problem, but it doesn't work
+# LFLAGS=$(LINK) ${LIBNETCDF} -L${LIBFFT} -openmp-link=static -static-intel -Bstatic
+# instead copy required libraries into a directory accessible on compute nodes and set LD_RUN_PATH e.g.
+# export LD_RUN_PATH=$LD_RUN_PATH:/path/to/libraries/lib:/home/gutmann/usr/local/lib
 LFLAGS=$(LINK) ${LIBNETCDF} -L${LIBFFT}
 FFLAGS=$(COMP) ${INCNETCDF} -I${INCFFT}
 
