@@ -10,8 +10,8 @@ NODENAME := $(shell uname -n)
 # 	INSTALLDIR=~/Dropbox/bin/python/lib/
 # endif
 
-F90=ifort
-# F90=gfortran
+# F90=ifort
+F90=gfortran
 INSTALLDIR=~/bin/python/lib/
 
 ifeq ($(NODENAME), hydrolab)

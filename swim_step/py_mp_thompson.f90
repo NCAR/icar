@@ -1,24 +1,3 @@
-!  -*- f90 -*-
-!qv1d=np.array((2.0+np.zeros(10))/1000.0,order='F').astype('f')
-!qc1d=np.array(np.arange(10)*0.0,order='F').astype('f')
-!qi1d=np.array(np.arange(10)*0.0,order='F').astype('f')
-!qr1d=np.array(np.arange(10)*0.0,order='F').astype('f')
-!qs1d=np.array(np.arange(10)*0.0,order='F').astype('f')
-!qg1d=np.array(np.arange(10)*0.0,order='F').astype('f')
-!ni1d=np.zeros(10,order='F').astype('f')
-!nr1d=np.zeros(10,order='F').astype('f')
-!dzq=np.array(np.arange(10)*100,order='F').astype('f')+100
-!p1d=np.array(1000000-dzq.cumsum()*98,order='F').astype('f')
-!t1d=np.array(280-(dzq.cumsum()/100.0),order='F').astype('f')
-!pptrain=np.zeros((1,),order='F').astype('f')
-!pptsnow=np.zeros((1,),order='F').astype('f')
-!pptgraul=np.zeros((1,),order='F').astype('f')
-!pptice=np.zeros((1,),order='F').astype('f')
-!kts=1
-!kte=10
-!dt=float(20.0)
-!ii=0
-!jj=0
 !+---+-----------------------------------------------------------------+
 !.. This subroutine computes the moisture tendencies of water vapor,
 !.. cloud droplets, rain, cloud ice (pristine), snow, and graupel.
@@ -794,6 +773,7 @@
       LOGICAL:: dBZ_tstep
 
 !+---+
+
 
 !$OMP PARALLEL DEFAULT(PRIVATE) FIRSTPRIVATE(ids,ide,jds,jde,kds,kde,ims,ime,jms,jme,&
 !$OMP kms,kme,its,ite,jts,jte,kts,kte,itimestep) &
@@ -2980,6 +2960,14 @@
       km_e = ntb_r*ntb_r1 - 1
 ! #endif
 
+!$omp parallel default(private) & 
+!$omp shared(tcs_racs1,tmr_racs1,tcs_racs2,tmr_racs2,tcr_sacr1,tms_sacr1)&
+!$omp shared(tcr_sacr2,tms_sacr2,tnr_racs1,tnr_racs2,tnr_sacr1,tnr_sacr2) & 
+!$omp private(second,a_,b_,n2,km,M2,M3,oM3,Mrat,M0,slam1,slam2,i,j,k,m,n,lam_exp,lamr,N0_r,N_r,loga_) &
+!$omp private(t1,t2,t3,t4,z1,z2,z3,z4,y1,y2,y3,y4,N_s,massr,masss,dvs,dvr) &
+!$omp firstprivate(km_s,km_e,vr,vs) &
+!$omp firstprivate(Dr,dtr,dts,Ds,crg,cre,cse,ore1,org2,org1,obmr,oams)
+	  !$omp do
       do km = km_s, km_e
          m = km / ntb_r1 + 1
          k = mod( km , ntb_r1 ) + 1
@@ -3108,6 +3096,8 @@
             enddo
          enddo
       enddo
+	  !$omp end do
+	  !$omp end parallel
 
 !..Note wrf_dm_gatherv expects zero-based km_s, km_e (J. Michalakes, 2009Oct30).
 
