@@ -32,6 +32,7 @@ INSTALLDIR=~/bin/
 ###################################################################
 #   Various compiler specific flags, may need to edit
 ###################################################################
+NODENAME := $(shell uname -n)
 
 # on hydro-c1:
 # note on hydro-c1 /usr/local is not available on compute nodes so 
@@ -43,6 +44,26 @@ INSTALLDIR=~/bin/
 F90=ifort
 LIBFFT=/home/gutmann/usr/local/lib
 INCFFT=/home/gutmann/usr/local/include
+ifeq ($(NODENAME), Nomad-2.local)
+	NODENAME=Nomad.local
+endif
+ifeq ($(NODENAME), nomad.lan)
+	NODENAME=Nomad.local
+endif
+ifeq ($(NODENAME), vpn54.ucar.edu)
+	NODENAME=Nomad.local
+endif
+ifeq ($(NODENAME), Nomad.local)
+	F90=gfortran
+	COMP=-fopenmp -lgomp -O3 -c -fimplicit-none
+	LINK=-fopenmp -lgomp
+	LIBFFT=/Users/gutmann/usr/local/lib
+	INCFFT=/Users/gutmann/usr/local/include
+	NCDF_PATH = /Users/gutmann/usr/local/
+	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
+	INCNETCDF = -I$(NCDF_PATH)/include
+endif
+
 ifeq ($(F90), ifort)
 	COMP=-fpp -openmp -liomp5 -fast -c -u
 	LINK=-fpp -openmp -liomp5

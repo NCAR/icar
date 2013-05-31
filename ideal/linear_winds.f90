@@ -54,8 +54,8 @@ contains
         real,allocatable,dimension(:,:)::k,l,kl,sig
         complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::denom,what,w_hat,uhat,u_hat,vhat,v_hat,m,ineta
         real::gain,offset !used in setting up k and l arrays
-        integer::nx,ny,nz,i,midpoint
-        real::U,V,z
+        integer::nx,ny,nz,i,midpoint,z
+        real::U,V
 		real,parameter::pi=3.1415927
         type(C_PTR) :: plan
         
@@ -116,14 +116,6 @@ contains
 			enddo
 			l(ny/2+1,1)=l(ny+1,2)
 			ny=ny+1
-!  note, this is a standard fftshift, not an ifftshift
-! 			ny=ny-1
-! 			do i=1,ny/2
-! 				l(1,i+1)=l(2,i+ny/2+1)
-! 				l(1,i+ny/2+1)=l(2,i)
-! 			enddo
-! 			l(1,1)=l(2,ny/2+1)
-! 			ny=ny+1
 		else
 			! even
 			do i=1,ny/2

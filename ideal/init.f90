@@ -16,12 +16,16 @@ contains
 		type(bc_type), intent(out):: boundary
 		
 ! 		read in options file
+		write(*,*) "Init Options"
 		call init_options(options_filename,options)
 ! 		allocate and initialize the domain
+		write(*,*) "Init Domain"
 		call init_domain(options,domain)
 ! 		allocate and initialize the boundary conditions structure (includes 3D grids too...)
 !		this might be more apropriately though of as a forcing data structure (for low res model)
+		write(*,*) "Init Boundaries"
 		call init_bc(options,domain,boundary)
+		write(*,*) "Finished Initialization"
 		
 	end subroutine init_model
 	
@@ -145,10 +149,11 @@ contains
 		
 	end subroutine init_domain
 	
-	subroutine init_bc_data(options,boundary)
+	subroutine init_bc_data(options,boundary,domain)
 		implicit none
 		type(options_type), intent(in) :: options
 		type(bc_type), intent(out):: boundary
+		type(domain_type), intent(in):: domain
 		integer::nx,ny,nz
 		
 ! 		these variables are required for any boundary/forcing file type
@@ -156,9 +161,9 @@ contains
 		call io_read2d(options%boundary_file,options%lonvar,boundary%lon)
 		call io_read2d(options%boundary_file,"HGT",boundary%terrain)
 		
-		nx=size(boundary%lat,1)
+		nx=size(domain%lat,1)
 		nz=options%nz
-		ny=size(boundary%lat,2)
+		ny=size(domain%lat,2)
 ! 		all other structures must be allocated and initialized, but will be set on a forcing timestep
 ! 		this also makes it easier to change how these variables are read from various forcing model file structures
 		allocate(boundary%dudt(nx,nz,ny))
@@ -185,7 +190,7 @@ contains
 		type(bc_type), intent(out):: boundary
 		
 ! 		set up base data
-		call init_bc_data(options,boundary)
+		call init_bc_data(options,boundary,domain)
 		call init_domain(options,boundary%next_domain) !set up a domain to hold the forcing for the next time step
 ! 		create the geographic look up table used to calculate boundary forcing data
 		call geo_LUT(domain,boundary)
