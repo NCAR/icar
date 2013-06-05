@@ -28,28 +28,41 @@ contains
 		type(geo_look_up_table),intent(in) :: geolut
 		integer,intent(in)::curstep
 		logical, intent(in) :: boundary_only
-		real,dimension(:,:,:),allocatable :: inputdata
+		real,dimension(:,:,:),allocatable :: inputdata,extra_data
 		integer,dimension(io_maxDims)::dims
 		integer::nx,ny,nz
 		
+! 		Read the data in
 		call io_getdims(filename,varname, dims)
 		call io_read3d(filename,varname,inputdata,curstep)
 		
 		nx=dims(1)
 		ny=dims(2)
 		nz=dims(3)
+! 		perform destaggering and unit conversion on specific variables
 		if (varname=="U") then
 			nx=nx-1
-			inputdata(1:nx,:,:)=(inputdata(1:nx,:,:)+inputdata(2:nx+1,:,:))/2
+			inputdata(:,:,1:nx)=(inputdata(:,:,1:nx)+inputdata(:,:,2:nx+1))/2
 		else if (varname=="V") then
 			ny=ny-1
 			inputdata(:,1:ny,:)=(inputdata(:,1:ny,:)+inputdata(:,2:ny+1,:))/2
 		else if (varname=="T") then
 			inputdata=inputdata+300
+		else if (varname=="P") then
+			call io_read3d(filename,"PB",extra_data,curstep)
+			inputdata=inputdata+extra_data
+			deallocate(extra_data)
+		else if (varname=="PH") then
+			call io_read3d(filename,"PHB",extra_data,curstep)
+			inputdata=(inputdata+extra_data)/9.8
+			nz=nz-1
+			inputdata(1:nz,:,:)=(inputdata(1:nz,:,:)+inputdata(2:nz+1,:,:))/2
+			deallocate(extra_data)
 		endif
 		
+! 		interpolate data onto the high resolution grid after re-arranging the dimensions. 
 		call geo_interp(highres, &
-						reshape(inputdata(1:nx,1:ny,1:nz),[nx,nz,ny],order=[1,3,2]), &
+						reshape(inputdata(1:nz,1:ny,1:nx),[nx,nz,ny],order=[3,1,2]), &
 						geolut,boundary_only)
 						
 	end subroutine read_var
@@ -61,6 +74,7 @@ contains
 		type(options_type),intent(in)::options
 		integer,dimension(io_maxDims)::dims	!note, io_maxDims is included from io_routines.
 		real,dimension(:,:,:),allocatable::inputdata
+		logical :: boundary_value
 		
 		curfile=1
 		curstep=1
@@ -75,13 +89,14 @@ contains
 			steps_in_file=dims(dims(1)+1) !dims(1) = ndims
 		endif
 		
-		call read_var(domain%u,    file_list(curfile),"U",      bc%geolut,curstep,.False.)
-		call read_var(domain%v,    file_list(curfile),"V",      bc%geolut,curstep,.False.)
-		call read_var(domain%p,    file_list(curfile),"P",      bc%geolut,curstep,.False.)
-		call read_var(domain%th,   file_list(curfile),"T",      bc%geolut,curstep,.False.)
-		call read_var(domain%qv,   file_list(curfile),"QVAPOR", bc%geolut,curstep,.False.)
-		call read_var(domain%cloud,file_list(curfile),"QCLOUD", bc%geolut,curstep,.False.)
-		call read_var(domain%ice,  file_list(curfile),"QICE",   bc%geolut,curstep,.False.)
+		boundary_value=.False.
+		call read_var(domain%u,    file_list(curfile),"U",      bc%geolut,curstep,boundary_value)
+		call read_var(domain%v,    file_list(curfile),"V",      bc%geolut,curstep,boundary_value)
+		call read_var(domain%p,    file_list(curfile),"P",      bc%geolut,curstep,boundary_value)
+		call read_var(domain%th,   file_list(curfile),"T",      bc%geolut,curstep,boundary_value)
+		call read_var(domain%qv,   file_list(curfile),"QVAPOR", bc%geolut,curstep,boundary_value)
+		call read_var(domain%cloud,file_list(curfile),"QCLOUD", bc%geolut,curstep,boundary_value)
+		call read_var(domain%ice,  file_list(curfile),"QICE",   bc%geolut,curstep,boundary_value)
 		
 		call update_winds(domain,options)
 	end subroutine bc_init
@@ -129,6 +144,7 @@ contains
 		integer,dimension(io_maxDims)::dims	!note, io_maxDims is included from io_routines.
 		real,dimension(:,:,:),allocatable::inputdata
 		integer::nx,ny,nz
+		logical :: use_boundary,use_interior
 		
 		curstep=curstep+1
 		if (curstep>steps_in_file) then
@@ -149,13 +165,15 @@ contains
 		nz=dims(4)
 		allocate(inputdata(nx,nz,ny))
 		
-		call read_var(bc%next_domain%u,    file_list(curfile),"U",      bc%geolut,curstep,.False.)
-		call read_var(bc%next_domain%v,    file_list(curfile),"V",      bc%geolut,curstep,.False.)
-		call read_var(bc%next_domain%p,    file_list(curfile),"P",      bc%geolut,curstep,.False.)
-		call read_var(bc%next_domain%th,   file_list(curfile),"T",      bc%geolut,curstep,.TRUE.)
-		call read_var(bc%next_domain%qv,   file_list(curfile),"QVAPOR", bc%geolut,curstep,.TRUE.)
-		call read_var(bc%next_domain%cloud,file_list(curfile),"QCLOUD", bc%geolut,curstep,.TRUE.)
-		call read_var(bc%next_domain%ice,  file_list(curfile),"QICE",   bc%geolut,curstep,.TRUE.)
+		use_interior=.False.
+		use_boundary=.True.
+		call read_var(bc%next_domain%u,    file_list(curfile),"U",      bc%geolut,curstep,use_interior)
+		call read_var(bc%next_domain%v,    file_list(curfile),"V",      bc%geolut,curstep,use_interior)
+		call read_var(bc%next_domain%p,    file_list(curfile),"P",      bc%geolut,curstep,use_interior)
+		call read_var(bc%next_domain%th,   file_list(curfile),"T",      bc%geolut,curstep,use_boundary)
+		call read_var(bc%next_domain%qv,   file_list(curfile),"QVAPOR", bc%geolut,curstep,use_boundary)
+		call read_var(bc%next_domain%cloud,file_list(curfile),"QCLOUD", bc%geolut,curstep,use_boundary)
+		call read_var(bc%next_domain%ice,  file_list(curfile),"QICE",   bc%geolut,curstep,use_boundary)
 		
 		call update_winds(bc%next_domain,options)
 		call update_dxdt(bc,domain)

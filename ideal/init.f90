@@ -83,65 +83,67 @@ contains
 		integer:: ny,nz,nx,i
 		
 ! 		these are the only required variables on a high-res grid, lat, lon, and terrain elevation
-		call io_read2d(options%init_conditions_file,"HGT",domain%terrain)
-		call io_read2d(options%init_conditions_file,options%latvar,domain%lat)
-		call io_read2d(options%init_conditions_file,options%lonvar,domain%lon)
+		call io_read2d(options%init_conditions_file,"HGT",domain%terrain,1)
+		call io_read2d(options%init_conditions_file,options%latvar,domain%lat,1)
+		call io_read2d(options%init_conditions_file,options%lonvar,domain%lon,1)
 		
-		ny=size(domain%lat,1)
-		nx=size(domain%lat,2)
+! 		use the lat variable to define the x and y dimensions for all other variables
+		nx=size(domain%lat,1)
+		ny=size(domain%lat,2)
+! 		assumes nz is defined in the options
 		nz=options%nz
 		
 ! 		if a 3d grid was also specified, then read those data in
 		if (options%readz) then
 			call io_read3d(options%init_conditions_file,"z", domain%z)
 ! 			dz also has to be calculated from the 3d z file
-			allocate(domain%dz(ny,nz,nx))
+			allocate(domain%dz(nx,nz,ny))
 			domain%dz(:,1:nz-1,:)=domain%z(:,2:nz,:)-domain%z(:,1:nz-1,:)
 			domain%dz(:,nz,:)=domain%dz(:,nz-1,:)
 		else
 ! 			otherwise, set up the z grid to be evenly spaced in z using the terrain +dz/2 for the base
 ! 			and z[1]+i*dz for the res
-			allocate(domain%z(ny,nz,nx))
+			allocate(domain%z(nx,nz,ny))
 			do i=1,nz
 				domain%z(:,i,:)=domain%terrain+(i*options%dz)-(options%dz/2)
 			enddo
 ! 			here dz is just constant, but must be on a 3d grid for microphysics code
-			allocate(domain%dz(ny,nz,nx))
+			allocate(domain%dz(nx,nz,ny))
 			domain%dz=options%dz
 		endif
 		
 ! 		all other variables should be allocated and initialized to 0
-		allocate(domain%p(ny,nz,nx))
+		allocate(domain%p(nx,nz,ny))
 		domain%p=0
-		allocate(domain%u(ny,nz,nx))
+		allocate(domain%u(nx,nz,ny))
 		domain%u=0
-		allocate(domain%v(ny,nz,nx))
+		allocate(domain%v(nx,nz,ny))
 		domain%v=0
-		allocate(domain%th(ny,nz,nx))
+		allocate(domain%th(nx,nz,ny))
 		domain%th=0
-		allocate(domain%qv(ny,nz,nx))
+		allocate(domain%qv(nx,nz,ny))
 		domain%qv=0
-		allocate(domain%cloud(ny,nz,nx))
+		allocate(domain%cloud(nx,nz,ny))
 		domain%cloud=0
-		allocate(domain%w(ny,nz,nx))
+		allocate(domain%w(nx,nz,ny))
 		domain%w=0
-		allocate(domain%ice(ny,nz,nx))
+		allocate(domain%ice(nx,nz,ny))
 		domain%ice=0
-		allocate(domain%nice(ny,nz,nx))
+		allocate(domain%nice(nx,nz,ny))
 		domain%nice=0
-		allocate(domain%qrain(ny,nz,nx))
+		allocate(domain%qrain(nx,nz,ny))
 		domain%qrain=0
-		allocate(domain%nrain(ny,nz,nx))
+		allocate(domain%nrain(nx,nz,ny))
 		domain%nrain=0
-		allocate(domain%qsnow(ny,nz,nx))
+		allocate(domain%qsnow(nx,nz,ny))
 		domain%qsnow=0
-		allocate(domain%qgrau(ny,nz,nx))
+		allocate(domain%qgrau(nx,nz,ny))
 		domain%qgrau=0
-		allocate(domain%rain(ny,nx))
+		allocate(domain%rain(nx,ny))
 		domain%rain=0
-		allocate(domain%snow(ny,nx))
+		allocate(domain%snow(nx,ny))
 		domain%snow=0
-		allocate(domain%graupel(ny,nx))
+		allocate(domain%graupel(nx,ny))
 		domain%graupel=0
 		
 ! 		store dx in domain as well as options, read as an option, but it is more appropriate in domain

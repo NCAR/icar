@@ -84,9 +84,10 @@ contains
 		integer, dimension(io_maxDims)  :: dimstart
 		! This will be the netCDF ID for the file and data_in variable.
 		integer :: ncid, varid,i
+
 		if (present(extradim)) then
 			dimstart=extradim
-			dimstart(1:3)=1
+			dimstart(1:2)=1
 		else
 			dimstart=1
 		endif
