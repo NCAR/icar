@@ -19,20 +19,23 @@ contains
 		! This will be the netCDF ID for the file and data variable.
 		integer :: ncid, varid(nvars),temp_id,dimids(ndims)
 
-		ny=size(domain%qv,1)
+		nx=size(domain%qv,1)
 		nz=size(domain%qv,2)
-		nx=size(domain%qv,3)
+		ny=size(domain%qv,3)
 		
 		! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
 		! the file.
 		write(filename,"(A,I5.5)") trim(options%output_file),timestep
+		if (options%debug) then
+			write(*,*) trim(filename)
+		endif
 		call check( nf90_create(filename, NF90_CLOBBER, ncid) )
 ! 		define the dimensions
-		call check( nf90_def_dim(ncid, "y", ny, temp_id) )
+		call check( nf90_def_dim(ncid, "x", nx, temp_id) )
 		dimids(1)=temp_id
 		call check( nf90_def_dim(ncid, "z", nz, temp_id) )
 		dimids(2)=temp_id
-		call check( nf90_def_dim(ncid, "x", nx, temp_id) )
+		call check( nf90_def_dim(ncid, "y", ny, temp_id) )
 		dimids(3)=temp_id
 		
 		! Create the variable returns varid of the data variable

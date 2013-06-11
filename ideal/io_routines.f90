@@ -94,7 +94,6 @@ contains
 		
 ! 		Read the dimension lengths
 		call io_getdims(filename,varname,diminfo)
-		print*, filename,varname,diminfo(1:diminfo(1)+1)
 		allocate(data_in(diminfo(2),diminfo(3)))
 		! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
 		! the file.

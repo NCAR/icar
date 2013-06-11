@@ -36,13 +36,14 @@ contains
 		call io_getdims(filename,varname, dims)
 		call io_read3d(filename,varname,inputdata,curstep)
 		
-		nx=dims(1)
-		ny=dims(2)
-		nz=dims(3)
+! 		note dims(1)=ndims
+		nx=dims(2)
+		ny=dims(3)
+		nz=dims(4)
 ! 		perform destaggering and unit conversion on specific variables
 		if (varname=="U") then
 			nx=nx-1
-			inputdata(:,:,1:nx)=(inputdata(:,:,1:nx)+inputdata(:,:,2:nx+1))/2
+			inputdata(1:nx,:,:)=(inputdata(1:nx,:,:)+inputdata(2:nx+1,:,:))/2
 		else if (varname=="V") then
 			ny=ny-1
 			inputdata(:,1:ny,:)=(inputdata(:,1:ny,:)+inputdata(:,2:ny+1,:))/2
@@ -56,13 +57,13 @@ contains
 			call io_read3d(filename,"PHB",extra_data,curstep)
 			inputdata=(inputdata+extra_data)/9.8
 			nz=nz-1
-			inputdata(1:nz,:,:)=(inputdata(1:nz,:,:)+inputdata(2:nz+1,:,:))/2
+			inputdata(:,:,1:nz)=(inputdata(:,:,1:nz)+inputdata(:,:,2:nz+1))/2
 			deallocate(extra_data)
 		endif
 		
 ! 		interpolate data onto the high resolution grid after re-arranging the dimensions. 
 		call geo_interp(highres, &
-						reshape(inputdata(1:nz,1:ny,1:nx),[nx,nz,ny],order=[3,1,2]), &
+						reshape(inputdata(1:nx,1:ny,1:nz),[nx,nz,ny],order=[1,3,2]), &
 						geolut,boundary_only)
 						
 	end subroutine read_var
@@ -106,15 +107,20 @@ contains
 		implicit none
 		real,dimension(:,:,:), intent(inout) :: dxdt
 		real,dimension(:,:,:), intent(in) :: d1,d2
-		integer :: nx,ny
+		integer :: nx,nz,ny,i
 
 		nx=size(d1,1)
+		nz=size(d1,2)
 		ny=size(d1,3)
-
-		dxdt(:,:ny,1)=d1(1,:,:) -d2(1,:,:)
-		dxdt(:,:ny,2)=d1(nx,:,:)-d2(nx,:,:)
-		dxdt(:,:nx,3)=d1(:,:,1) -d2(:,:,1)
-		dxdt(:,:nx,4)=d1(:,:,ny)-d2(:,:,ny)
+! 		write(*,*) shape(d1)
+! 		write(*,*) shape(d2)
+! 		write(*,*) shape(dxdt)
+		do i=1,nz
+			dxdt(i,:ny,1)=d1(1,i,:) -d2(1,i,:)
+			dxdt(i,:ny,2)=d1(nx,i,:)-d2(nx,i,:)
+			dxdt(i,:nx,3)=d1(:,i,1) -d2(:,i,1)
+			dxdt(i,:nx,4)=d1(:,i,ny)-d2(:,i,ny)
+		enddo
 		dxdt(:,1,3:4)=0
 		dxdt(:,nx,3:4)=0
 	end subroutine update_edges

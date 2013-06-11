@@ -40,12 +40,13 @@ contains
 		character(len=100) :: latvar,lonvar
 		real :: dx,outputinterval
 		integer :: name_unit,ntimesteps
-		integer :: pbl,lsm,mp,rad,conv,adv,wind
+		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz
+		logical :: readz,debug
 		
 ! 		set up namelist structures
 		namelist /files_list/ init_conditions_file,output_file,boundary_file
 		namelist /var_list/ latvar,lonvar
-		namelist /parameters/ ntimesteps,outputinterval,dx
+		namelist /parameters/ ntimesteps,outputinterval,dx,readz,nz,debug
 		namelist /physics/ pbl,lsm,mp,rad,conv,adv,wind
 		
 ! 		read namelists
@@ -66,6 +67,9 @@ contains
 		options%ntimesteps=ntimesteps
 		options%io_dt=outputinterval
 		options%dx=dx
+		options%readz=readz
+		options%nz=nz
+		options%debug=debug
 		options%physics%boundarylayer=pbl
 		options%physics%convection=conv
 		options%physics%advection=adv
@@ -95,6 +99,9 @@ contains
 		
 ! 		if a 3d grid was also specified, then read those data in
 		if (options%readz) then
+			if (options%debug) then
+				write(*,*) "Reading 3D Z data"
+			endif
 			call io_read3d(options%init_conditions_file,"z", domain%z)
 ! 			dz also has to be calculated from the 3d z file
 			allocate(domain%dz(nx,nz,ny))
@@ -111,7 +118,9 @@ contains
 			allocate(domain%dz(nx,nz,ny))
 			domain%dz=options%dz
 		endif
-		
+		if (options%debug) then
+			write(*,*) "allocating domain wide memory"
+		endif
 ! 		all other variables should be allocated and initialized to 0
 		allocate(domain%p(nx,nz,ny))
 		domain%p=0

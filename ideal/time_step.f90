@@ -14,15 +14,18 @@ contains
 		implicit none
 		real,dimension(:,:,:), intent(inout) :: curdata
 		real,dimension(:,:,:), intent(in) :: dXdt
-		integer::nx,ny
+		integer::nx,nz,ny,i
 		
 		nx=size(curdata,1)
+		nz=size(curdata,2)
 		ny=size(curdata,3)
 
-		curdata(1,:,:) =curdata(1,:,:) +dXdt(:,1:ny,1)
-		curdata(nx,:,:)=curdata(nx,:,:)+dXdt(:,1:ny,2)
-		curdata(:,:,1) =curdata(:,:,1) +dXdt(:,1:nx,3)
-		curdata(:,:,ny)=curdata(:,:,ny)+dXdt(:,1:nx,4)
+		do i=1,nz
+			curdata(1,i,:) =curdata(1,i,:) +dXdt(i,1:ny,1)
+			curdata(nx,i,:)=curdata(nx,i,:)+dXdt(i,1:ny,2)
+			curdata(:,i,1) =curdata(:,i,1) +dXdt(i,1:nx,3)
+			curdata(:,i,ny)=curdata(:,i,ny)+dXdt(i,1:nx,4)
+		enddo
 	end subroutine boundary_update
 	
 	

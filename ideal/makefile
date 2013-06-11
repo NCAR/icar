@@ -28,6 +28,7 @@
 #  Specify where you want the resulting executable installed
 ###################################################################
 INSTALLDIR=~/bin/
+DEBUG=debugomp
 
 ###################################################################
 #   Various compiler specific flags, may need to edit
@@ -65,13 +66,21 @@ ifeq ($(NODENAME), Nomad.local)
 endif
 
 ifeq ($(F90), ifort)
-	COMP=-fpp -openmp -liomp5 -fast -c -u
-	LINK=-fpp -openmp -liomp5
+	COMP= -openmp -liomp5 -fast -c -u
+	LINK= -openmp -liomp5
+	
 	NCDF_PATH = /usr/local/netcdf-4.1.3/ifort-12.0.5
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
 endif
-
+ifeq ($(DEBUG), debug)
+	COMP= -g -c -fast -u -check all -check noarg_temp_created -traceback -fpe0
+	LINK= #-g -check -traceback -fpe0
+endif
+ifeq ($(DEBUG), debugomp)
+	COMP= -openmp -liomp5 -c -fast -u -check all -check noarg_temp_created -traceback -fpe0
+	LINK= -openmp -liomp5 # -check -traceback -fpe0
+endif
 # on yellowstone:
 ifeq ($(LMOD_FAMILY_COMPILER),gnu)
 	F90=gfortran
@@ -139,8 +148,8 @@ clean:
 
 allclean:cleanall
 		
-cleanall: 
-	rm *.o *.mod tests/*.o tests/*.mod swim_real swim_ideal geo_test wind_test # test_init
+cleanall: clean
+	rm tests/*.o tests/*.mod swim_real swim_ideal geo_test wind_test # test_init
 	
 tests: geo_test wind_test #test_init
 

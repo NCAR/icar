@@ -52,7 +52,7 @@ module advection
            call flux2(qin(2:nx-1,:,i-1),qin(2:nx-1,:,i),v(2:nx-1,:,i-1),nx-2,nz,1,f4)  !Vy0
            call flux2(qin(2:nx-1,2:nz-1,i),qin(2:nx-1,3:nz,i),w(2:nx-1,2:nz-1,i),nx-2,nz-2,1,f5)
            call flux2(qin(2:nx-1,1:nz-2,i),qin(2:nx-1,2:nz-1,i),w(2:nx-1,1:nz-2,i),nx-2,nz-2,1,f6)
-
+		   
            ! perform horizontal advection
            q(2:nx-1,:,i)=q(2:nx-1,:,i) - (f1(:,:,1)-f2(:,:,1)) - (f3(:,:,1)-f4(:,:,1))
            ! then vertical (order doesn't matter because fluxes f1-6 are calculated before applying them)
