@@ -9,7 +9,7 @@ init_conditions_file="../../test_data/init.nc"
 	else:
 		z=hgt+dz*nth_level-dz/2
 
-boundary_file="../../test_output/boundary.nc"
+boundary_file="../../test_data/boundary.nc"
 	lat,lon 2D real
 	HGT 2D real (terrain height)
 	driving variables: 3D real

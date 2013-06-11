@@ -22,7 +22,7 @@ program real
 	do i=1,options%ntimesteps
 ! 		update boundary conditions (dXdt variables)
 		call bc_update(domain,boundary,options)
-! 		this is the meat of the model, run all the physics for the current time step
+! 		this is the meat of the model, run all the physics for the current time step looping over internal timesteps
 		call step(domain,options,boundary)
 ! 		finally write the output for this timestep
 		call write_domain(domain,options,i)
