@@ -23,6 +23,9 @@ contains
 			call check(nf90_inquire_dimension(ncid, dimIds(i), len = dimlen))
 			dims(i+1)=dimlen
 		end do
+		! Close the file, freeing all resources.
+		call check( nf90_close(ncid) )
+		
 	end subroutine io_getdims
 	
 	subroutine io_read3d(filename,varname,data_in,extradim)
@@ -62,14 +65,8 @@ contains
 		else		
 			call check(nf90_get_var(ncid, varid, data_in))
 		endif
-!         function nf90_get_var(ncid, varid, values, start, stride, map)
-!           integer,                         intent( in) :: ncid, varid
-!           any valid type, scalar or array of any rank, &
-!                                            intent(out) :: values
-!           integer, dimension(:), optional, intent( in) :: start, count, stride, map
-!           integer                                      :: nf90_get_var
-	
 		! Close the file, freeing all resources.
+! 		write(*,*) "Closing file",filename
 		call check( nf90_close(ncid) )
 		
 	end subroutine io_read3d
