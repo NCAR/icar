@@ -96,6 +96,8 @@ module advection
 		call advect3d(domain%qsnow,U,V,W,nx,nz,ny,0)
 		call advect3d(domain%qgrau,U,V,W,nx,nz,ny,0)
 		
+		deallocate(U,V,W)
+		
 	end subroutine advect
 
 

@@ -177,7 +177,7 @@ contains
             domain%u(:,z,1:nx-1)=domain%u(:,z,1:nx-1)+real(u_hat(:,1:nx-1)+u_hat(:,2:nx))/2
             domain%v(1:ny-1,z,:)=domain%v(1:ny-1,z,:)+real(v_hat(1:ny-1,:)+v_hat(2:ny,:))/2
 		end do
-		deallocate(k,l,kl,sig,denom,uhat,u_hat,vhat,v_hat,m,ineta)
+		deallocate(k,l,kl,sig,denom,what,w_hat,uhat,u_hat,vhat,v_hat,m,ineta)
     end subroutine linear_winds
     
     

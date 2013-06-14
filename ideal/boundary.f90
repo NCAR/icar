@@ -76,6 +76,7 @@ contains
 		integer,dimension(io_maxDims)::dims	!note, io_maxDims is included from io_routines.
 		real,dimension(:,:,:),allocatable::inputdata
 		logical :: boundary_value
+		integer::nx,ny
 		
 		curfile=1
 		curstep=1
@@ -91,6 +92,8 @@ contains
 		endif
 		
 		boundary_value=.False.
+		nx=size(domain%u,1)
+		ny=size(domain%u,3)
 		call read_var(domain%u,    file_list(curfile),"U",      bc%geolut,curstep,boundary_value)
 		call read_var(domain%v,    file_list(curfile),"V",      bc%geolut,curstep,boundary_value)
 		call read_var(domain%p,    file_list(curfile),"P",      bc%geolut,curstep,boundary_value)
@@ -141,6 +144,22 @@ contains
 		call update_edges(bc%dqcdt,bc%next_domain%cloud,domain%cloud)
 	end subroutine update_dxdt
 	
+	subroutine update_pressure(pressure,temperature,hgt_lo,hgt_hi)
+		real,dimension(:,:,:), intent(inout) :: pressure
+		real,dimension(:,:,:), intent(in) :: temperature
+		real,dimension(:,:), intent(in) :: hgt_lo,hgt_hi
+		real,dimension(:,:),allocatable::slp
+		integer :: nx,ny,nz,i
+		nx=size(pressure,1)
+		nz=size(pressure,2)
+		ny=size(pressure,3)
+		allocate(slp(nx,ny))
+		do i=1,nz
+		    slp = pressure(:,i,:)/(1 - 2.25577E-5*hgt_lo)**5.25588
+			pressure(:,i,:) = slp * (1 - 2.25577e-5 * hgt_hi)**5.25588
+		enddo
+		deallocate(slp)
+	end subroutine update_pressure
 	
 	subroutine bc_update(domain,bc,options)
 		implicit none
@@ -148,9 +167,9 @@ contains
 		type(bc_type),intent(inout)::bc
 		type(options_type),intent(in)::options
 		integer,dimension(io_maxDims)::dims	!note, io_maxDims is included from io_routines.
-		real,dimension(:,:,:),allocatable::inputdata
-		integer::nx,ny,nz
 		logical :: use_boundary,use_interior
+	    real, parameter :: R=287.058 ! J/(kg K) specific gas constant for air
+	    real, parameter :: cp = 1012.0 ! specific heat capacity of moist STP air? J/kg/K
 		
 		curstep=curstep+1
 		if (curstep>steps_in_file) then
@@ -163,13 +182,10 @@ contains
 				steps_in_file=dims(dims(1)+1) !dims(1) = ndims
 			endif
 		endif
+		
 		if (curfile>nfiles) then
 			stop "Ran out of files to process!"
 		endif
-		nx=dims(2)
-		ny=dims(3)
-		nz=dims(4)
-		allocate(inputdata(nx,nz,ny))
 		
 		use_interior=.False.
 		use_boundary=.True.
@@ -181,6 +197,8 @@ contains
 		call read_var(bc%next_domain%cloud,file_list(curfile),"QCLOUD", bc%geolut,curstep,use_boundary)
 		call read_var(bc%next_domain%ice,  file_list(curfile),"QICE",   bc%geolut,curstep,use_boundary)
 		
+		call update_pressure(bc%next_domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
+							 bc%next_domain%terrain,domain%terrain)
 		call update_winds(bc%next_domain,options)
 		call update_dxdt(bc,domain)
 	end subroutine bc_update

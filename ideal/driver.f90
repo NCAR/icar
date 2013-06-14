@@ -10,7 +10,7 @@ program real
 	type(options_type) :: options
 	type(domain_type)  :: domain
 	type(bc_type)      :: boundary
-	integer::i
+	integer::i,nx,ny
 	
 	call init_model("real_options.namelist",options,domain,boundary)
 ! 	initialize microphysics code (e.g. compute look up tables in Thompson et al)
@@ -20,7 +20,8 @@ program real
 ! 	read initial conditions from the boundary file
 	write(*,*) "Initializing Boundary conditions"
 	call bc_init(domain,boundary,options)
-	
+	nx=size(domain%u,1)
+	ny=size(domain%u,3)
 ! 	note that a timestep here is an IO timestep O(1hr), not a physics timestep O(20s)
 	do i=1,options%ntimesteps
 		write(*,*) "Timestep:", i, "  of ", options%ntimesteps
@@ -30,6 +31,7 @@ program real
 		call step(domain,options,boundary)
 ! 		finally write the output for this timestep
 		call write_domain(domain,options,i)
+		write(*,*) i,options%ntimesteps
 	end do
 	
 end program real

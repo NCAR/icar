@@ -38,7 +38,7 @@ contains
 		
 		character(len=100) :: init_conditions_file, output_file, boundary_file
 		character(len=100) :: latvar,lonvar
-		real :: dx,outputinterval
+		real :: dx,outputinterval,dz
 		integer :: name_unit,ntimesteps
 		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz
 		logical :: readz,debug
@@ -46,7 +46,7 @@ contains
 ! 		set up namelist structures
 		namelist /files_list/ init_conditions_file,output_file,boundary_file
 		namelist /var_list/ latvar,lonvar
-		namelist /parameters/ ntimesteps,outputinterval,dx,readz,nz,debug
+		namelist /parameters/ ntimesteps,outputinterval,dx,readz,nz,debug,dz
 		namelist /physics/ pbl,lsm,mp,rad,conv,adv,wind
 		
 ! 		read namelists
@@ -67,6 +67,7 @@ contains
 		options%ntimesteps=ntimesteps
 		options%io_dt=outputinterval
 		options%dx=dx
+		options%dz=dz
 		options%readz=readz
 		options%nz=nz
 		options%debug=debug
@@ -79,6 +80,14 @@ contains
 		options%physics%windtype=wind
 		
 	end subroutine init_options
+	
+	subroutine remove_edges(domain,edgesize)
+		type(domain_type), intent(inout) :: domain
+		integer, intent(in)::edgesize
+		
+		write(*,*) "reduce edges here..."
+		
+	end subroutine remove_edges
 			
 	subroutine init_domain(options, domain)
 		implicit none
@@ -91,6 +100,9 @@ contains
 		call io_read2d(options%init_conditions_file,options%latvar,domain%lat,1)
 		call io_read2d(options%init_conditions_file,options%lonvar,domain%lon,1)
 		
+		if(options%buffer>0) then
+			call remove_edges(domain,options%buffer)
+		endif
 ! 		use the lat variable to define the x and y dimensions for all other variables
 		nx=size(domain%lat,1)
 		ny=size(domain%lat,2)
@@ -194,17 +206,35 @@ contains
 		
 	end subroutine init_bc_data
 	
+	subroutine interpolate_topo(bc,domain)
+		type(bc_type), intent(inout) :: bc
+		type(domain_type), intent(in) :: domain
+		real, allocatable, dimension(:,:)::terrain_temp
+		integer::nx1,ny1,nx2,ny2
+! 		nx1=size(domain%terrain,1)
+! 		ny1=size(domain%terrain,2)
+! 		nx2=size(bc%terrain,1)
+! 		ny2=size(bc%terrain,2)
+! 		allocate(terrain_temp(nx2,ny2))
+! 		terrain_temp=bc%terrain
+! 		deallocate(bc%terrain)
+! 		allocate(bc%terrain(nx1,ny1))
+		call geo_interp2d(bc%next_domain%terrain,bc%terrain,bc%geolut)
+	end subroutine interpolate_topo
+	
 	subroutine init_bc(options,domain,boundary)
 		implicit none
 		type(options_type), intent(in) :: options
 		type(domain_type), intent(in):: domain
 		type(bc_type), intent(out):: boundary
-		
+			
 ! 		set up base data
 		call init_bc_data(options,boundary,domain)
 		call init_domain(options,boundary%next_domain) !set up a domain to hold the forcing for the next time step
 ! 		create the geographic look up table used to calculate boundary forcing data
 		call geo_LUT(domain,boundary)
+		
+		call interpolate_topo(boundary,domain)
 		
 	end subroutine init_bc
 end module

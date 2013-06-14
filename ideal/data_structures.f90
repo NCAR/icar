@@ -49,6 +49,7 @@ module data_structures
 		character (len=100) :: output_file
 		character (len=100) :: latvar,lonvar
 		logical :: readz, debug
+		integer :: buffer=0
 		integer :: ntimesteps,nz
 		real :: dx,io_dt,outputinterval,dz
 		type(physics_type)::physics

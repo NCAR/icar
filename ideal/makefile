@@ -28,7 +28,7 @@
 #  Specify where you want the resulting executable installed
 ###################################################################
 INSTALLDIR=~/bin/
-DEBUG=debugomp
+# DEBUG=no
 
 ###################################################################
 #   Various compiler specific flags, may need to edit
@@ -74,11 +74,11 @@ ifeq ($(F90), ifort)
 	INCNETCDF = -I$(NCDF_PATH)/include
 endif
 ifeq ($(DEBUG), debug)
-	COMP= -g -c -fast -u -check all -check noarg_temp_created -traceback -fpe0
-	LINK= #-g -check -traceback -fpe0
+	COMP= -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0
+	LINK=  # -check -traceback -fpe0
 endif
 ifeq ($(DEBUG), debugomp)
-	COMP= -openmp -liomp5 -c -fast -u -check all -check noarg_temp_created -traceback -fpe0
+	COMP= -openmp -liomp5 -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0
 	LINK= -openmp -liomp5 # -check -traceback -fpe0
 endif
 # on yellowstone:

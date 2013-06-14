@@ -4,7 +4,7 @@ module geo
 	
 	private
 	public::geo_LUT
-	public::geo_interp
+	public::geo_interp,geo_interp2d
 	
 ! 	type geo_info
 ! 		real,allocatable,dimension(:,:)::lat,lon
@@ -106,6 +106,7 @@ contains
 ! 		in case we hit some pathologically varying dx case 
 ! 		use a "straightforward" log(n) search
 		if (iterations>=20) then
+			write(*,*) "   Using log(n) search for :",lat,lon
 			nx=size(lo%lat,1)
 			ny=size(lo%lat,2)
 		
@@ -117,7 +118,7 @@ contains
 			ysign=sign(1.0,lo%lat(1,2)-lo%lat(1,1))
 			xsign=sign(1.0,lo%lon(2,1)-lo%lon(1,1))
 		
-	! 		use a O(log(n)) search instead of O(n^2)
+	! 		use a O(log(n)) search instead of O(nxm)
 	! 		start at the halfway point and find the best direction to take in both directions
 			do while ((xw>1).or.(yw>1))
 ! 				figure out which direction to step, then step half of the last step distance
@@ -156,10 +157,10 @@ contains
 			enddo
 		endif
 		
-! 		once we have a "good" location we need to find the actual minimum (we could be above or below it by 1)
+! 		once we have a "good" location we need to find the actual minimum (we could be above or below it by 1 or 2)
 		mindist=9999.9
-		do x=max(1,xc-1),min(nx,xc+1)
-			do y=max(1,yc-1),min(ny,yc+1)
+		do x=max(1,xc-5),min(nx,xc+5)
+			do y=max(1,yc-5),min(ny,yc+5)
 				curdist=sqrt((lo%lat(x,y)-lat)**2 + (lo%lon(x,y)-lon)**2)
 				if (curdist<mindist) then
 					mindist=curdist
@@ -168,6 +169,20 @@ contains
 				endif
 			enddo
 		enddo
+
+! naive version that may actually be fast enough...
+! 		mindist=9999.9
+! 		do x=1,nx
+! 			do y=1,ny
+! 				curdist=sqrt((lo%lat(x,y)-lat)**2 + (lo%lon(x,y)-lon)**2)
+! 				if (curdist<mindist) then
+! 					mindist=curdist
+! 					xw=x
+! 					yw=y
+! 				endif
+! 			enddo
+! 		enddo
+
 		
 		find_location%x=xw
 		find_location%y=yw
@@ -296,5 +311,31 @@ contains
 		endif
 			
 	end subroutine geo_interp
+	
+	subroutine geo_interp2d(fieldout, fieldin, geolut)
+		real, dimension(:,:),intent(out) :: fieldout
+		real, dimension(:,:),intent(in) :: fieldin
+		type(geo_look_up_table),intent(in)::geolut
+		integer::i,k,l,ny,nx,localx,localy
+		real::localw
 		
+		nx=size(fieldout,1)
+		ny=size(fieldout,2)
+		! use the geographic lookup table generated earlier to
+		! compute a bilinear interpolation from lo to hi
+		do k=1,ny
+			do i=1,nx
+				fieldout(i,k)=0
+				do l=1,4
+					localx=geolut%x(l,i,k)
+					localy=geolut%y(l,i,k)
+					localw=geolut%w(l,i,k)
+					fieldout(i,k)=fieldout(i,k)+fieldin(localx,localy)*localw
+				enddo
+			enddo
+		enddo
+		
+	end subroutine  geo_interp2d
+
+	
 end module geo

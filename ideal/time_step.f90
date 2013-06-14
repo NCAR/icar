@@ -65,8 +65,11 @@ contains
 		type(domain_type),intent(inout)::domain
 		type(bc_type),intent(inout)::bc
 		type(options_type),intent(in)::options
-		integer::i,ntimesteps
+		integer::i,ntimesteps,nx,ny,nz
 		real::dt,dtnext
+		real,dimension(:,:,:),allocatable::rho,pii
+	    real, parameter :: R=287.058 ! J/(kg K) specific gas constant for air
+	    real, parameter :: cp = 1012.0 ! specific heat capacity of moist STP air? J/kg/K
 		
 		! courant condition for 3D advection... could make 3 x 1D to maximize dt? esp. w/linear wind speedups...
 		dt=floor(options%dx/max(max(maxval(domain%u),maxval(domain%v)),maxval(domain%w))/3.0)
@@ -76,14 +79,25 @@ contains
 										maxval(bc%next_domain%w+bc%dwdt))/3.0)
 		dt=min(dt,dtnext)
 ! 		make dt an integer fraction of the full timestep
+		dt=min(dt,60.0)
 		dt=options%io_dt/ceiling(options%io_dt/dt)
 ! 		calcualte the number of timesteps
 		ntimesteps=options%io_dt/dt
 		
 		call apply_dt(bc,ntimesteps)
-		
+		nx=size(domain%p,1)
+		nz=size(domain%p,2)
+		ny=size(domain%p,3)
+! 		allocate(rho(nx,nz,ny),pii(nx,nz,ny))
+		write(*,*) dt,ntimesteps
 		do i=1,ntimesteps
+! 			pii=(100000.0/domain%p)**(R/cp)
+! 			rho=0.622*domain%p/(R*(domain%th/pii)*(domain%qv+0.622))
+! 			write(*,*) minval(rho),maxval(rho), minval(domain%th), maxval(domain%th), minval(domain%cloud), maxval(domain%cloud), minval(domain%qv), maxval(domain%qv)
 			call advect(domain,options,dt,options%dx)
+! 			pii=(100000.0/domain%p)**(R/cp)
+! 			rho=0.622*domain%p/(R*(domain%th/pii)*(domain%qv+0.622))
+! 			write(*,*) minval(rho),maxval(rho), minval(domain%th), maxval(domain%th), minval(domain%cloud), maxval(domain%cloud), minval(domain%qv), maxval(domain%qv)
 			call mp(domain,options,dt)
 	! 		call lsm(domain,options,dt)
 	! 		call pbl(domain,options,dt)
@@ -91,5 +105,6 @@ contains
 			
 			call forcing_update(domain,bc)
 		enddo
+! 		deallocate(rho,pii)
 	end subroutine step
 end module time_step
