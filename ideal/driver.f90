@@ -13,6 +13,7 @@ program real
 	integer::i,nx,ny
 	
 	call init_model("real_options.namelist",options,domain,boundary)
+	write(*,*) options%nfiles, options%boundary_files
 ! 	initialize microphysics code (e.g. compute look up tables in Thompson et al)
 	write(*,*) "Initializing microphysics"
 ! 	write(*,*) "WARNING: NOT Initializing microphysics"

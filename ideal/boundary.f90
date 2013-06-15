@@ -80,9 +80,9 @@ contains
 		
 		curfile=1
 		curstep=1
-		nfiles=1
+		nfiles=options%nfiles
 		allocate(file_list(nfiles))
-		file_list(curfile)=options%boundary_file
+		file_list=options%boundary_files
 		
 		call io_getdims(file_list(curfile),"P", dims)
 		if (dims(1)==3) then

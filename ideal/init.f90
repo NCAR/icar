@@ -36,31 +36,35 @@ contains
 		character(len=*), intent(in) :: options_filename
 		type(options_type), intent(out) :: options
 		
-		character(len=100) :: init_conditions_file, output_file, boundary_file
+		character(len=100) :: init_conditions_file, output_file
+		character(len=100),allocatable:: boundary_files(:)
 		character(len=100) :: latvar,lonvar
 		real :: dx,outputinterval,dz
-		integer :: name_unit,ntimesteps
+		integer :: name_unit,ntimesteps,nfiles
 		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz
 		logical :: readz,debug
 		
 ! 		set up namelist structures
-		namelist /files_list/ init_conditions_file,output_file,boundary_file
 		namelist /var_list/ latvar,lonvar
-		namelist /parameters/ ntimesteps,outputinterval,dx,readz,nz,debug,dz
+		namelist /parameters/ ntimesteps,outputinterval,dx,readz,nz,debug,dz,nfiles
+		namelist /files_list/ init_conditions_file,output_file,boundary_files
 		namelist /physics/ pbl,lsm,mp,rad,conv,adv,wind
 		
 ! 		read namelists
 		open(io_newunit(name_unit), file=options_filename)
-		read(name_unit,nml=files_list)
 		read(name_unit,nml=var_list)
 		read(name_unit,nml=parameters)
 		read(name_unit,nml=physics)
+		allocate(boundary_files(nfiles))
+		read(name_unit,nml=files_list)
 		close(name_unit)
 		
 ! 		could probably simplify and read these all right from the namelist file, 
 ! 		but this way we can change the names in the file independant of the internal variable names
 		options%init_conditions_file=init_conditions_file
-		options%boundary_file=boundary_file
+		options%nfiles=nfiles
+		allocate(options%boundary_files(nfiles))
+		options%boundary_files=boundary_files
 		options%output_file=output_file
 		options%latvar=latvar
 		options%lonvar=lonvar
@@ -180,9 +184,9 @@ contains
 		integer::nx,ny,nz
 		
 ! 		these variables are required for any boundary/forcing file type
-		call io_read2d(options%boundary_file,options%latvar,boundary%lat)
-		call io_read2d(options%boundary_file,options%lonvar,boundary%lon)
-		call io_read2d(options%boundary_file,"HGT",boundary%terrain)
+		call io_read2d(options%boundary_files(1),options%latvar,boundary%lat)
+		call io_read2d(options%boundary_files(1),options%lonvar,boundary%lon)
+		call io_read2d(options%boundary_files(1),"HGT",boundary%terrain)
 		
 		nx=size(domain%lat,1)
 		nz=options%nz

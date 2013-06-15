@@ -94,12 +94,12 @@ contains
 ! 			pii=(100000.0/domain%p)**(R/cp)
 ! 			rho=0.622*domain%p/(R*(domain%th/pii)*(domain%qv+0.622))
 ! 			write(*,*) minval(rho),maxval(rho), minval(domain%th), maxval(domain%th), minval(domain%cloud), maxval(domain%cloud), minval(domain%qv), maxval(domain%qv)
-			write(*,*) "pre-adv", i,ntimesteps
+! 			write(*,*) "pre-adv", i,ntimesteps
 			call advect(domain,options,dt,options%dx)
 ! 			pii=(100000.0/domain%p)**(R/cp)
 ! 			rho=0.622*domain%p/(R*(domain%th/pii)*(domain%qv+0.622))
 ! 			write(*,*) minval(rho),maxval(rho), minval(domain%th), maxval(domain%th), minval(domain%cloud), maxval(domain%cloud), minval(domain%qv), maxval(domain%qv)
-			write(*,*) "pre-MP", i,ntimesteps
+! 			write(*,*) "pre-MP", i,ntimesteps
 			call mp(domain,options,dt)
 	! 		call lsm(domain,options,dt)
 	! 		call pbl(domain,options,dt)
@@ -107,7 +107,7 @@ contains
 			write(*,*) i,ntimesteps
 			
 			call forcing_update(domain,bc)
-			write(*,*) i,ntimesteps
+! 			write(*,*) i,ntimesteps
 		enddo
 ! 		deallocate(rho,pii)
 	end subroutine step
