@@ -31,7 +31,6 @@ program real
 		call step(domain,options,boundary)
 ! 		finally write the output for this timestep
 		call write_domain(domain,options,i)
-		write(*,*) i,options%ntimesteps
 	end do
 	
 end program real
