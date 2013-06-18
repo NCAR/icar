@@ -45,13 +45,11 @@ NODENAME := $(shell uname -n)
 F90=ifort
 LIBFFT=/home/gutmann/usr/local/lib
 INCFFT=/home/gutmann/usr/local/include
+
 ifeq ($(NODENAME), Nomad-2.local)
 	NODENAME=Nomad.local
 endif
 ifeq ($(NODENAME), nomad.lan)
-	NODENAME=Nomad.local
-endif
-ifeq ($(NODENAME), vpn54.ucar.edu)
 	NODENAME=Nomad.local
 endif
 ifeq ($(NODENAME), Nomad.local)
@@ -73,14 +71,25 @@ ifeq ($(F90), ifort)
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
 endif
+
+# Various debuging options.  Set the DEBUG variable with "make DEBUG=debugslow" etc.
+ifeq ($(DEBUG), debugslow)
+	COMP= -debug -c -u -check all -check noarg_temp_created -traceback -fpe0
+	LINK=  # -check -traceback -fpe0
+endif
 ifeq ($(DEBUG), debug)
 	COMP= -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0
 	LINK=  # -check -traceback -fpe0
+endif
+ifeq ($(DEBUG), debugompslow)
+	COMP= -openmp -liomp5 -debug -c -u -check all -check noarg_temp_created -traceback -fpe0
+	LINK= -openmp -liomp5 # -check -traceback -fpe0
 endif
 ifeq ($(DEBUG), debugomp)
 	COMP= -openmp -liomp5 -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0
 	LINK= -openmp -liomp5 # -check -traceback -fpe0
 endif
+
 # on yellowstone:
 ifeq ($(LMOD_FAMILY_COMPILER),gnu)
 	F90=gfortran
