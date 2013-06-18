@@ -690,16 +690,16 @@
 !     call table_dropEvap
 
 !..Initialize various constants for computing radar reflectivity.
-      xam_r = am_r
-      xbm_r = bm_r
-      xmu_r = mu_r
-      xam_s = am_s
-      xbm_s = bm_s
-      xmu_s = mu_s
-      xam_g = am_g
-      xbm_g = bm_g
-      xmu_g = mu_g
-      call radar_init
+!       xam_r = am_r
+!       xbm_r = bm_r
+!       xmu_r = mu_r
+!       xam_s = am_s
+!       xbm_s = bm_s
+!       xmu_s = mu_s
+!       xam_g = am_g
+!       xbm_g = bm_g
+!       xmu_g = mu_g
+!       call radar_init
 
       if (.not. iiwarm) then
 
@@ -740,7 +740,6 @@
                               RAINNC, RAINNCV, &
                               SNOWNC, SNOWNCV, &
                               GRAUPELNC, GRAUPELNCV, SR, &
-                              refl_10cm, diagflag, do_radar_ref,      &
                               ids,ide, jds,jde, kds,kde, &             ! domain dims
                               ims,ime, jms,jme, kms,kme, &             ! memory dims
                               its,ite, jts,jte, kts,kte)               ! tile dims
@@ -776,16 +775,12 @@
       INTEGER:: jmax_qc,jmax_qr,jmax_qi,jmax_qs,jmax_qg,jmax_ni,jmax_nr
       INTEGER:: kmax_qc,kmax_qr,kmax_qi,kmax_qs,kmax_qg,kmax_ni,kmax_nr
       INTEGER:: i_start, j_start, i_end, j_end
-      LOGICAL, OPTIONAL, INTENT(IN) :: diagflag
-      INTEGER, OPTIONAL, INTENT(IN) :: do_radar_ref
 
 !+---+
 
 
-	diagflag = .false.
-	do_radar_ref = 0
 !$OMP PARALLEL DEFAULT(PRIVATE) FIRSTPRIVATE(ids,ide,jds,jde,kds,kde,ims,ime,jms,jme,&
-!$OMP kms,kme,its,ite,jts,jte,kts,kte,itimestep,diagflag,do_radar_ref) &
+!$OMP kms,kme,its,ite,jts,jte,kts,kte,itimestep) &
 !$OMP SHARED(RAINNCV,RAINNC,SNOWNCV,SNOWNC,GRAUPELNCV,GRAUPELNC,SR,th,pii,p,dz,qv,qc,&
 !$OMP qi,qr,qs,qg,ni,nr,pcp_ra,pcp_sn,pcp_gr,pcp_ic,dt_in)
       
