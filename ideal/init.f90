@@ -36,18 +36,18 @@ contains
 		character(len=*), intent(in) :: options_filename
 		type(options_type), intent(out) :: options
 		
-		character(len=100) :: init_conditions_file, output_file
-		character(len=100),allocatable:: boundary_files(:)
-		character(len=100) :: latvar,lonvar
+		character(len=MAXFILELENGTH) :: init_conditions_file, output_file
+		character(len=MAXFILELENGTH),allocatable:: boundary_files(:),ext_wind_files(:)
+		character(len=MAXVARLENGTH) :: latvar,lonvar
 		real :: dx,outputinterval,dz
 		integer :: name_unit,ntimesteps,nfiles
-		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz
-		logical :: readz,debug
+		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz,n_ext_winds
+		logical :: readz,debug,external_winds
 		
 ! 		set up namelist structures
 		namelist /var_list/ latvar,lonvar
-		namelist /parameters/ ntimesteps,outputinterval,dx,readz,nz,debug,dz,nfiles
-		namelist /files_list/ init_conditions_file,output_file,boundary_files
+		namelist /parameters/ ntimesteps,outputinterval,dx,readz,nz,debug,dz,nfiles,external_winds,n_ext_winds
+		namelist /files_list/ init_conditions_file,output_file,boundary_files,ext_wind_files
 		namelist /physics/ pbl,lsm,mp,rad,conv,adv,wind
 		
 ! 		read namelists
@@ -56,6 +56,9 @@ contains
 		read(name_unit,nml=parameters)
 		read(name_unit,nml=physics)
 		allocate(boundary_files(nfiles))
+		if(external_winds)then
+			allocate(ext_wind_files(n_ext_winds))
+		endif
 		read(name_unit,nml=files_list)
 		close(name_unit)
 		
@@ -73,6 +76,11 @@ contains
 		options%dx=dx
 		options%dz=dz
 		options%readz=readz
+		options%external_winds=external_winds
+		options%n_ext_winds=n_ext_winds
+		if(external_winds)then
+			allocate(options%ext_wind_files(n_ext_winds))
+		endif
 		options%nz=nz
 		options%debug=debug
 		options%physics%boundarylayer=pbl
@@ -210,21 +218,18 @@ contains
 		
 	end subroutine init_bc_data
 	
-	subroutine interpolate_topo(bc,domain)
-		type(bc_type), intent(inout) :: bc
-		type(domain_type), intent(in) :: domain
-		real, allocatable, dimension(:,:)::terrain_temp
-		integer::nx1,ny1,nx2,ny2
-! 		nx1=size(domain%terrain,1)
-! 		ny1=size(domain%terrain,2)
-! 		nx2=size(bc%terrain,1)
-! 		ny2=size(bc%terrain,2)
-! 		allocate(terrain_temp(nx2,ny2))
-! 		terrain_temp=bc%terrain
-! 		deallocate(bc%terrain)
-! 		allocate(bc%terrain(nx1,ny1))
-		call geo_interp2d(bc%next_domain%terrain,bc%terrain,bc%geolut)
-	end subroutine interpolate_topo
+	subroutine init_ext_winds(options,bc)
+		type(options_type), intent(in) :: options
+		type(bc_type),intent(inout) :: bc
+			
+		real, allocatable, dimension(:,:,:) :: u,v
+		real, allocatable, dimension(:,:) :: lat,lon
+		
+		call io_read2d(options%ext_wind_files(1),options%latvar,bc%ext_winds%lat)
+		call io_read2d(options%ext_wind_files(1),options%lonvar,bc%ext_winds%lon)
+		call geo_LUT(bc%next_domain, bc%ext_winds)
+	end subroutine init_ext_winds
+	
 	
 	subroutine init_bc(options,domain,boundary)
 		implicit none
@@ -238,7 +243,11 @@ contains
 ! 		create the geographic look up table used to calculate boundary forcing data
 		call geo_LUT(domain,boundary)
 		
-		call interpolate_topo(boundary,domain)
+		if (options%external_winds) then
+			call init_ext_winds(options,boundary)
+		endif
+		
+		call geo_interp2d(boundary%next_domain%terrain,boundary%terrain,boundary%geolut)
 		
 	end subroutine init_bc
 end module

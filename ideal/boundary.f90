@@ -94,8 +94,10 @@ contains
 		boundary_value=.False.
 		nx=size(domain%u,1)
 		ny=size(domain%u,3)
-		call read_var(domain%u,    file_list(curfile),"U",      bc%geolut,curstep,boundary_value)
-		call read_var(domain%v,    file_list(curfile),"V",      bc%geolut,curstep,boundary_value)
+		if (.not. options%external_winds) then
+			call read_var(domain%u,    file_list(curfile),"U",      bc%geolut,curstep,boundary_value)
+			call read_var(domain%v,    file_list(curfile),"V",      bc%geolut,curstep,boundary_value)
+		endif
 		call read_var(domain%p,    file_list(curfile),"P",      bc%geolut,curstep,boundary_value)
 		call read_var(domain%th,   file_list(curfile),"T",      bc%geolut,curstep,boundary_value)
 		call read_var(domain%qv,   file_list(curfile),"QVAPOR", bc%geolut,curstep,boundary_value)

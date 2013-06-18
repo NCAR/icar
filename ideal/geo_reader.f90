@@ -62,7 +62,7 @@ contains
 !  Once that "within 1" position is found, search all cells in a 3x3 grid for the minimum distance
 !  return a position datatype that includes the found x/y location
 		implicit none
-		type(bc_type),intent(in)::lo
+		class(interpolable_type),intent(in)::lo
 		real,intent(in)::lat,lon
 		real::mindist, curdist,dx,dy,xsign,ysign
 		integer::x,y,nx,ny,xc,yc,xw,yw,iterations,xstep,ystep
@@ -193,7 +193,7 @@ contains
 ! 		given a closest position, return the 4 points surrounding the lat/lon position in lo%lat/lon
 ! 		assumes pos is not an edge point in the lat/lon grid...
 		implicit none
-		type(bc_type),intent(in)::lo
+		class(interpolable_type),intent(in)::lo
 		real,intent(in)::lat,lon
 		type(position),intent(in)::pos
 		
@@ -214,7 +214,7 @@ contains
 	subroutine geo_LUT(hi, lo)
 		implicit none
 		type(domain_type),intent(in)::hi
-		type(bc_type),intent(inout)::lo
+		class(interpolable_type),intent(inout)::lo
 		type(fourpos)::xy
 		type(position)::curpos,lastpos
 		integer :: nx,ny,i,j,k

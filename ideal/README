@@ -1,3 +1,5 @@
+NOTE namelist file in git repo is not in sync with code!
+
 Required Input files/variables
 
 init_conditions_file="../../test_data/init.nc"

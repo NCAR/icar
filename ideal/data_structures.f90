@@ -1,5 +1,8 @@
 module data_structures
 	use, intrinsic :: iso_c_binding
+
+	integer,parameter::MAXFILELENGTH=100
+	integer,parameter::MAXVARLENGTH=100
 	
 	type position
 		integer::x,y
@@ -22,13 +25,24 @@ module data_structures
 		real::dx,dt
 	end type domain_type
 	
-	type bc_type
+	type interpolable_type
+		real, allocatable, dimension(:,:) :: lat,lon
+		type(geo_look_up_table)::geolut
+	end type interpolable_type
+		
+	type, extends(interpolable_type) :: wind_type
+		real, allocatable, dimension(:,:,:) :: u,v
+		integer :: nfiles
+	end type wind_type
+
+	type, extends(interpolable_type) :: bc_type
 		real, allocatable, dimension(:,:,:) :: dz,z,u,v,w,p,th,qv
 		real, allocatable, dimension(:,:,:) :: dudt,dvdt,dwdt,dpdt,dthdt,dqvdt,dqcdt
-		real, allocatable, dimension(:,:) :: lat,lon,terrain
-		type(geo_look_up_table)::geolut
+		real, allocatable, dimension(:,:) :: terrain
 		type(domain_type)::next_domain
+		type(wind_type)::ext_winds
 	end type bc_type
+
 	
 	type physics_type
 		integer::microphysics
@@ -41,13 +55,13 @@ module data_structures
 	end type physics_type
 		
 	type options_type
-		character (len=100) :: init_conditions_file
-		character (len=100), allocatable::boundary_files(:)
-		character (len=100) :: output_file
-		character (len=100) :: latvar,lonvar
-		logical :: readz, debug
+		character (len=MAXFILELENGTH) :: init_conditions_file
+		character (len=MAXFILELENGTH), allocatable::boundary_files(:),ext_wind_files(:)
+		character (len=MAXFILELENGTH) :: output_file
+		character (len=MAXVARLENGTH) :: latvar,lonvar
+		logical :: readz, debug, external_winds
 		integer :: buffer=0
-		integer :: ntimesteps,nz,nfiles
+		integer :: ntimesteps,nz,nfiles,n_ext_winds
 		real :: dx,io_dt,outputinterval,dz
 		type(physics_type)::physics
 	end type options_type
