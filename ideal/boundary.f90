@@ -15,8 +15,13 @@ module boundary_conditions
 	private
 ! 	these could be better stored in bc_type and initialized in init_bc?
 	character (len=255),dimension(:),allocatable :: file_list
+! 	manage file pointer and position in file for boundary conditions
 	integer::curfile,curstep
 	integer::steps_in_file,nfiles
+! 	manage file pointer and position in file for external winds
+	character (len=255),dimension(:),allocatable :: ext_winds_file_list
+	integer::ext_winds_curfile,ext_winds_curstep
+	integer::ext_winds_steps_in_file,ext_winds_nfiles
 	
 	public::bc_init
 	public::bc_update
@@ -68,6 +73,31 @@ contains
 						
 	end subroutine read_var
 	
+	subroutine init_ext_winds(domain,bc,options)
+		implicit none
+		type(domain_type),intent(inout)::domain
+		type(bc_type),intent(inout)::bc
+		type(options_type),intent(in)::options
+		integer,dimension(io_maxDims)::dims	!note, io_maxDims is included from io_routines.
+		
+		ext_winds_curfile=1
+		ext_winds_curstep=1
+		ext_winds_nfiles=options%ext_winds_nfiles
+		allocate(ext_winds_file_list(ext_winds_nfiles))
+		ext_winds_file_list=options%ext_wind_files
+
+		call io_getdims(ext_winds_file_list(ext_winds_curfile),"U", dims)
+		if (dims(1)==3) then
+			ext_winds_steps_in_file=1
+		else
+			ext_winds_steps_in_file=dims(dims(1)+1) !dims(1) = ndims
+		endif
+		
+		call read_var(domain%u,    ext_winds_file_list(ext_winds_curfile),"U",      bc%ext_winds%geolut,ext_winds_curstep,.FALSE.)
+		call read_var(domain%v,    ext_winds_file_list(ext_winds_curfile),"V",      bc%ext_winds%geolut,ext_winds_curstep,.FALSE.)
+		
+	end subroutine init_ext_winds
+	
 	subroutine bc_init(domain,bc,options)
 		implicit none
 		type(domain_type),intent(inout)::domain
@@ -97,6 +127,8 @@ contains
 		if (.not. options%external_winds) then
 			call read_var(domain%u,    file_list(curfile),"U",      bc%geolut,curstep,boundary_value)
 			call read_var(domain%v,    file_list(curfile),"V",      bc%geolut,curstep,boundary_value)
+		else
+			call init_ext_winds(domain,bc,options)
 		endif
 		call read_var(domain%p,    file_list(curfile),"P",      bc%geolut,curstep,boundary_value)
 		call read_var(domain%th,   file_list(curfile),"T",      bc%geolut,curstep,boundary_value)
@@ -147,6 +179,7 @@ contains
 	end subroutine update_dxdt
 	
 	subroutine update_pressure(pressure,temperature,hgt_lo,hgt_hi)
+		implicit none
 		real,dimension(:,:,:), intent(inout) :: pressure
 		real,dimension(:,:,:), intent(in) :: temperature
 		real,dimension(:,:), intent(in) :: hgt_lo,hgt_hi
@@ -162,6 +195,36 @@ contains
 		enddo
 		deallocate(slp)
 	end subroutine update_pressure
+	
+	subroutine update_ext_winds(bc,options)
+		implicit none
+		type(bc_type),intent(inout)::bc
+		type(options_type),intent(in)::options
+		integer,dimension(io_maxDims)::dims	!note, io_maxDims is included from io_routines.
+		logical :: use_boundary,use_interior
+		
+		ext_winds_curstep=ext_winds_curstep+1
+		if (ext_winds_curstep>ext_winds_steps_in_file) then
+			ext_winds_curfile=ext_winds_curfile+1
+			ext_winds_curstep=1
+			call io_getdims(ext_winds_file_list(ext_winds_curfile),"U", dims)
+			if (dims(1)==3) then
+				ext_winds_steps_in_file=1
+			else
+				ext_winds_steps_in_file=dims(dims(1)+1) !dims(1) = ndims
+			endif
+		endif
+		
+		if (ext_winds_curfile>ext_winds_nfiles) then
+			stop "Ran out of files to process!"
+		endif
+		
+		use_interior=.False.
+		use_boundary=.True.
+		call read_var(bc%next_domain%u,    ext_winds_file_list(ext_winds_curfile),"U",      bc%ext_winds%geolut,ext_winds_curstep,use_interior)
+		call read_var(bc%next_domain%v,    ext_winds_file_list(ext_winds_curfile),"V",      bc%ext_winds%geolut,ext_winds_curstep,use_interior)
+	
+	end subroutine update_ext_winds
 	
 	subroutine bc_update(domain,bc,options)
 		implicit none
@@ -191,8 +254,12 @@ contains
 		
 		use_interior=.False.
 		use_boundary=.True.
-		call read_var(bc%next_domain%u,    file_list(curfile),"U",      bc%geolut,curstep,use_interior)
-		call read_var(bc%next_domain%v,    file_list(curfile),"V",      bc%geolut,curstep,use_interior)
+		if (.not.options%external_winds) then
+			call read_var(bc%next_domain%u,    file_list(curfile),"U",      bc%geolut,curstep,use_interior)
+			call read_var(bc%next_domain%v,    file_list(curfile),"V",      bc%geolut,curstep,use_interior)
+		else
+			call update_ext_winds(bc,options)
+		endif
 		call read_var(bc%next_domain%p,    file_list(curfile),"P",      bc%geolut,curstep,use_interior)
 		call read_var(bc%next_domain%th,   file_list(curfile),"T",      bc%geolut,curstep,use_boundary)
 		call read_var(bc%next_domain%qv,   file_list(curfile),"QVAPOR", bc%geolut,curstep,use_boundary)

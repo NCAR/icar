@@ -61,7 +61,7 @@ module data_structures
 		character (len=MAXVARLENGTH) :: latvar,lonvar
 		logical :: readz, debug, external_winds
 		integer :: buffer=0
-		integer :: ntimesteps,nz,nfiles,n_ext_winds
+		integer :: ntimesteps,nz,nfiles,ext_winds_nfiles
 		real :: dx,io_dt,outputinterval,dz
 		type(physics_type)::physics
 	end type options_type

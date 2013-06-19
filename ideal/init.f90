@@ -77,7 +77,7 @@ contains
 		options%dz=dz
 		options%readz=readz
 		options%external_winds=external_winds
-		options%n_ext_winds=n_ext_winds
+		options%ext_winds_nfiles=n_ext_winds
 		if(external_winds)then
 			allocate(options%ext_wind_files(n_ext_winds))
 		endif
