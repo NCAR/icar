@@ -26,6 +26,37 @@ module boundary_conditions
 	public::bc_init
 	public::bc_update
 contains
+	subroutine smooth_wind(wind)
+		real, intent(inout), dimension(:,:,:):: wind
+		real,allocatable,dimension(:,:,:)::inputwind
+		integer::i,j,k,nx,ny,nz,windowsize
+		nx=size(wind,1)
+		ny=size(wind,2)
+		nz=size(wind,3)
+		allocate(inputwind(nx,ny,nz))
+		inputwind=wind
+		windowsize=4
+		
+		!$omp parallel firstprivate(windowsize,nx,ny,nz),private(i,j,k),shared(wind,inputwind)
+		!$omp do
+		do k=1,nz
+			do j=1+windowsize,ny-windowsize
+				do i=1+windowsize,nx-windowsize
+					wind(i,j,k)=sum(inputwind(i-windowsize:i+windowsize,j-windowsize:j+windowsize,k))/((windowsize*2+1)**2)
+				enddo
+			enddo
+		enddo
+		!$omp end do
+		!$omp end parallel
+		do i=1,windowsize
+			wind(:,i,:)=wind(:,1+windowsize,:)
+			wind(:,ny-i+1,:)=wind(:,ny-windowsize,:)
+			wind(i,:,:)=wind(1+windowsize,:,:)
+			wind(nx-i+1,:,:)=wind(nx-windowsize,:,:)
+		enddo
+		deallocate(inputwind)
+	end subroutine smooth_wind
+	
 	subroutine read_var(highres,filename,varname,geolut,curstep,boundary_only)
 		implicit none
 		real,dimension(:,:,:),intent(out)::highres
@@ -35,7 +66,7 @@ contains
 		logical, intent(in) :: boundary_only
 		real,dimension(:,:,:),allocatable :: inputdata,extra_data
 		integer,dimension(io_maxDims)::dims
-		integer::nx,ny,nz
+		integer::nx,ny,nz,subnz,i
 		
 ! 		Read the data in
 		call io_getdims(filename,varname, dims)
@@ -45,13 +76,34 @@ contains
 		nx=dims(2)
 		ny=dims(3)
 		nz=dims(4)
+! 		if (subnz.ne.nz) then
+! 			allocate(extra_data(nx,ny,nz))
+! 			extra_data=inputdata
+! 			deallocate(inputdata)
+! 			allocate(inputdata(nx,ny,subnz))
+! 			inputdata=extra_data(:,:,1:subnz)
+! 			nz=subnz
+! 			deallocate(extra_data)
+! 		endif
 ! 		perform destaggering and unit conversion on specific variables
 		if (varname=="U") then
+			allocate(extra_data(nx,ny,nz))
+			extra_data=inputdata
+			deallocate(inputdata)
 			nx=nx-1
-			inputdata(1:nx,:,:)=(inputdata(1:nx,:,:)+inputdata(2:nx+1,:,:))/2
+			allocate(inputdata(nx,ny,nz))
+			inputdata=(extra_data(1:nx,:,:)+extra_data(2:nx+1,:,:))/2
+			call smooth_wind(inputdata)
+			deallocate(extra_data)
 		else if (varname=="V") then
+			allocate(extra_data(nx,ny,nz))
+			extra_data=inputdata
+			deallocate(inputdata)
 			ny=ny-1
-			inputdata(:,1:ny,:)=(inputdata(:,1:ny,:)+inputdata(:,2:ny+1,:))/2
+			allocate(inputdata(nx,ny,nz))
+			inputdata=(extra_data(:,1:ny,:)+extra_data(:,2:ny+1,:))/2
+			call smooth_wind(inputdata)
+			deallocate(extra_data)
 		else if (varname=="T") then
 			inputdata=inputdata+300
 		else if (varname=="P") then
@@ -65,15 +117,27 @@ contains
 			inputdata(:,:,1:nz)=(inputdata(:,:,1:nz)+inputdata(:,:,2:nz+1))/2
 			deallocate(extra_data)
 		endif
-		
 ! 		interpolate data onto the high resolution grid after re-arranging the dimensions. 
+		nz=min(nz,size(highres,2))
+		allocate(extra_data(nx,nz,ny))
+		do i=1,nz
+			extra_data(:,i,:)=inputdata(:,:,i)
+		enddo
+! 		extra_data=reshape(inputdata,[nx,nz,ny],order=[1,3,2])
+		write(*,*) varname
+		write(*,*) maxval(extra_data),minval(extra_data)
+		write(*,*) maxval(geolut%w),minval(geolut%w)
 		call geo_interp(highres, &
-						reshape(inputdata(1:nx,1:ny,1:nz),[nx,nz,ny],order=[1,3,2]), &
+						extra_data, &
+! 						reshape(inputdata,[nx,nz,ny],order=[1,3,2]), &
 						geolut,boundary_only)
+		deallocate(extra_data)
+		deallocate(inputdata)
+		write(*,*) maxval(highres),minval(highres)
 						
 	end subroutine read_var
 	
-	subroutine init_ext_winds(domain,bc,options)
+	subroutine ext_winds_init(domain,bc,options)
 		implicit none
 		type(domain_type),intent(inout)::domain
 		type(bc_type),intent(inout)::bc
@@ -96,7 +160,7 @@ contains
 		call read_var(domain%u,    ext_winds_file_list(ext_winds_curfile),"U",      bc%ext_winds%geolut,ext_winds_curstep,.FALSE.)
 		call read_var(domain%v,    ext_winds_file_list(ext_winds_curfile),"V",      bc%ext_winds%geolut,ext_winds_curstep,.FALSE.)
 		
-	end subroutine init_ext_winds
+	end subroutine ext_winds_init
 	
 	subroutine bc_init(domain,bc,options)
 		implicit none
@@ -128,7 +192,7 @@ contains
 			call read_var(domain%u,    file_list(curfile),"U",      bc%geolut,curstep,boundary_value)
 			call read_var(domain%v,    file_list(curfile),"V",      bc%geolut,curstep,boundary_value)
 		else
-			call init_ext_winds(domain,bc,options)
+			call ext_winds_init(domain,bc,options)
 		endif
 		call read_var(domain%p,    file_list(curfile),"P",      bc%geolut,curstep,boundary_value)
 		call read_var(domain%th,   file_list(curfile),"T",      bc%geolut,curstep,boundary_value)

@@ -41,12 +41,12 @@ contains
 		character(len=MAXVARLENGTH) :: latvar,lonvar
 		real :: dx,outputinterval,dz
 		integer :: name_unit,ntimesteps,nfiles
-		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz,n_ext_winds
+		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz,n_ext_winds,buffer
 		logical :: readz,debug,external_winds
 		
 ! 		set up namelist structures
 		namelist /var_list/ latvar,lonvar
-		namelist /parameters/ ntimesteps,outputinterval,dx,readz,nz,debug,dz,nfiles,external_winds,n_ext_winds
+		namelist /parameters/ ntimesteps,outputinterval,dx,readz,nz,debug,dz,nfiles,external_winds,n_ext_winds,buffer
 		namelist /files_list/ init_conditions_file,output_file,boundary_files,ext_wind_files
 		namelist /physics/ pbl,lsm,mp,rad,conv,adv,wind
 		
@@ -76,10 +76,12 @@ contains
 		options%dx=dx
 		options%dz=dz
 		options%readz=readz
+		options%buffer=buffer
 		options%external_winds=external_winds
 		options%ext_winds_nfiles=n_ext_winds
 		if(external_winds)then
 			allocate(options%ext_wind_files(n_ext_winds))
+			options%ext_wind_files=ext_wind_files
 		endif
 		options%nz=nz
 		options%debug=debug
@@ -96,9 +98,31 @@ contains
 	subroutine remove_edges(domain,edgesize)
 		type(domain_type), intent(inout) :: domain
 		integer, intent(in)::edgesize
+		integer::nx1,ny1,nx2,ny2
+		real,allocatable,dimension(:,:)::temp_data
 		
-		write(*,*) "reduce edges here..."
+		nx1=size(domain%lat,1)
+		ny1=size(domain%lat,2)
+		nx2=nx1-(edgesize*2)
+		ny2=ny1-(edgesize*2)
+		allocate(temp_data(nx1,ny1))
 		
+		temp_data=domain%lat
+		deallocate(domain%lat)
+		allocate(domain%lat(nx2,ny2))
+		domain%lat=temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
+
+		temp_data=domain%lon
+		deallocate(domain%lon)
+		allocate(domain%lon(nx2,ny2))
+		domain%lon=temp_data(edgesize:nx1-edgesize,edgesize:ny1-edgesize)
+
+		temp_data=domain%terrain
+		deallocate(domain%terrain)
+		allocate(domain%terrain(nx2,ny2))
+		domain%terrain=temp_data(edgesize:nx1-edgesize,edgesize:ny1-edgesize)
+
+		deallocate(temp_data)
 	end subroutine remove_edges
 			
 	subroutine init_domain(options, domain)
@@ -227,7 +251,15 @@ contains
 		
 		call io_read2d(options%ext_wind_files(1),options%latvar,bc%ext_winds%lat)
 		call io_read2d(options%ext_wind_files(1),options%lonvar,bc%ext_winds%lon)
+		write(*,*) maxval(bc%ext_winds%lat),minval(bc%ext_winds%lat)
+		write(*,*) maxval(bc%next_domain%lat),minval(bc%next_domain%lat)
+		write(*,*) "Setting up ext wind geoLUT"
 		call geo_LUT(bc%next_domain, bc%ext_winds)
+		call io_write3di("geolut_x.nc","data",bc%ext_winds%geolut%x)
+		call io_write3di("geolut_y.nc","data",bc%ext_winds%geolut%y)
+		call io_write3d("geolut_w.nc","data",bc%ext_winds%geolut%w)
+		call io_write2d("lat.nc","data",bc%ext_winds%lat)
+		call io_write2d("lon.nc","data",bc%ext_winds%lon)
 	end subroutine init_ext_winds
 	
 	

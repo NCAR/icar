@@ -64,8 +64,8 @@ contains
 		implicit none
 		class(interpolable_type),intent(in)::lo
 		real,intent(in)::lat,lon
-		real::mindist, curdist,dx,dy,xsign,ysign
-		integer::x,y,nx,ny,xc,yc,xw,yw,iterations,xstep,ystep
+		real::mindist, curdist,dx,dy,xsign,ysign,x,y
+		integer::nx,ny,xc,yc,xw,yw,iterations,xstep,ystep
 		
 		nx=size(lo%lat,1)
 		ny=size(lo%lat,2)
@@ -84,7 +84,7 @@ contains
 ! 		if the grid is highly regular, we will only iterate 1-2x, highly irregular might require more iterations
 ! 		in the diabolical case, this could fail? 
 		iterations=0
-		do while (((xstep>1).or.(ystep>1)).and.iterations<20)
+		do while (((abs(xstep)>1).or.(abs(ystep)>1)).and.iterations<20)
 			iterations=iterations+1
 ! 			update the current x/y locations
 ! 			force it to be <nx-1 so we can calculate dx from (xc+1)-xc
@@ -93,8 +93,16 @@ contains
 			x=lo%lon(xc,yc)
 			y=lo%lat(xc,yc)
 ! 			calculate a new dx/dy and x/y step
-			dx=lo%lon(xc+1,yc)-lo%lon(xc,yc)
-			dy=lo%lat(xc,yc+1)-lo%lat(xc,yc)
+			if (xc<nx) then
+				dx=lo%lon(xc+1,yc)-lo%lon(xc,yc)
+			else
+				dx=lo%lon(xc,yc)-lo%lon(xc-1,yc)
+			endif
+			if(yc<ny) then
+				dy=lo%lat(xc,yc+1)-lo%lat(xc,yc)
+			else
+				dy=lo%lat(xc,yc)-lo%lat(xc,yc-1)
+			endif
 			xstep=NINT((lon-x)/dx)
 			ystep=NINT((lat-y)/dy)
 		enddo
@@ -106,7 +114,7 @@ contains
 ! 		in case we hit some pathologically varying dx case 
 ! 		use a "straightforward" log(n) search
 		if (iterations>=20) then
-			write(*,*) "   Using log(n) search for :",lat,lon
+! 			write(*,*) "   Using log(n) search for :",lat,lon
 			nx=size(lo%lat,1)
 			ny=size(lo%lat,2)
 		
@@ -120,7 +128,11 @@ contains
 		
 	! 		use a O(log(n)) search instead of O(nxm)
 	! 		start at the halfway point and find the best direction to take in both directions
-			do while ((xw>1).or.(yw>1))
+			iterations=0
+			do while (((xw>2).or.(yw>2)).and.iterations<20)
+				iterations=iterations+1
+				xc=min(max(xc,1),nx)
+				yc=min(max(yc,1),ny)
 ! 				figure out which direction to step, then step half of the last step distance
 				if (lo%lat(xc,yc)>lat) then
 					if (yw==2) then
@@ -138,6 +150,10 @@ contains
 					endif
 					yc=yc+ysign*yw
 				endif
+! 				in case lat is exactly equal to lat(xc,yc)
+				if (lo%lat(xc,yc)==lat) then
+					yw=0
+				endif
 				if (lo%lon(xc,yc)>lon) then
 					if (xw==2) then
 						xw=1
@@ -154,38 +170,47 @@ contains
 					endif
 					xc=xc+xsign*xw
 				endif
-			enddo
-		endif
-		
-! 		once we have a "good" location we need to find the actual minimum (we could be above or below it by 1 or 2)
-		mindist=9999.9
-		do x=max(1,xc-5),min(nx,xc+5)
-			do y=max(1,yc-5),min(ny,yc+5)
-				curdist=sqrt((lo%lat(x,y)-lat)**2 + (lo%lon(x,y)-lon)**2)
-				if (curdist<mindist) then
-					mindist=curdist
-					xw=x
-					yw=y
+! 				in case lon is exactly equal to lon(xc,yc)
+				if (lo%lon(xc,yc)==lon) then
+					xw=0
 				endif
 			enddo
-		enddo
-
-! naive version that may actually be fast enough...
-! 		mindist=9999.9
-! 		do x=1,nx
-! 			do y=1,ny
-! 				curdist=sqrt((lo%lat(x,y)-lat)**2 + (lo%lon(x,y)-lon)**2)
-! 				if (curdist<mindist) then
-! 					mindist=curdist
-! 					xw=x
-! 					yw=y
-! 				endif
-! 			enddo
-! 		enddo
+! 			write(*,*) "   found: ",lo%lat(xc,yc),lo%lon(xc,yc),"  iterations=",iterations
+		endif
+! 		iterations=30
+! 		once we have a "good" location we need to find the actual minimum (we could be above or below it by 1 or 2)
+		if (iterations<20) then
+			mindist=9999.9
+			do xw=max(1,xc-15),min(nx,xc+15)
+				do yw=max(1,yc-15),min(ny,yc+15)
+					curdist=sqrt((lo%lat(xw,yw)-lat)**2 + (lo%lon(xw,yw)-lon)**2)
+					if (curdist<mindist) then
+						mindist=curdist
+						x=xw
+						y=yw
+					endif
+				enddo
+			enddo
+		else
+			write(*,*) "using n^2 search..."
+			write(*,*) lat,lon,nx,ny
+	! 	naive version that may actually be fast enough...
+			mindist=9999.9
+			do xw=1,nx
+				do yw=1,ny
+					curdist=sqrt((lo%lat(xw,yw)-lat)**2 + (lo%lon(xw,yw)-lon)**2)
+					if (curdist<mindist) then
+						mindist=curdist
+						x=xw
+						y=yw
+					endif
+				enddo
+			enddo
+		endif
 
 		
-		find_location%x=xw
-		find_location%y=yw
+		find_location%x=x
+		find_location%y=y
 	end function find_location
 		
 		

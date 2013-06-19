@@ -72,11 +72,14 @@ contains
 	    real, parameter :: cp = 1012.0 ! specific heat capacity of moist STP air? J/kg/K
 		
 		! courant condition for 3D advection... could make 3 x 1D to maximize dt? esp. w/linear wind speedups...
-		dt=floor(options%dx/max(max(maxval(domain%u),maxval(domain%v)),maxval(domain%w))/3.0)
+		dt=(options%dx/max(max(maxval(abs(domain%u)),maxval(abs(domain%v))),maxval(abs(domain%w)))/3.0)
 ! 		pick the minimum dt from the begining or the end of the current timestep
-		dtnext=floor(options%dx/max(max(maxval(bc%next_domain%u), &
-										maxval(bc%next_domain%v+bc%dvdt)), &
-										maxval(bc%next_domain%w+bc%dwdt))/3.0)
+		dtnext=(options%dx/max(max(maxval(abs(bc%next_domain%u)), &
+										maxval(abs(bc%next_domain%v))), &
+										maxval(abs(bc%next_domain%w)))/3.0)
+		write(*,*) maxval(bc%next_domain%w), maxval(bc%next_domain%v), maxval(bc%next_domain%u)
+		write(*,*) minval(bc%next_domain%w), minval(bc%next_domain%v), minval(bc%next_domain%u)
+		write(*,*) maxval(domain%w), maxval(domain%v), maxval(domain%u)
 		dt=min(dt,dtnext)
 ! 		make dt an integer fraction of the full timestep
 		dt=min(dt,60.0)
@@ -107,7 +110,6 @@ contains
 			write(*,*) i,ntimesteps
 			
 			call forcing_update(domain,bc)
-! 			write(*,*) i,ntimesteps
 		enddo
 ! 		deallocate(rho,pii)
 	end subroutine step
