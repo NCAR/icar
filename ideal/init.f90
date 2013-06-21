@@ -58,7 +58,10 @@ contains
 		allocate(boundary_files(nfiles))
 		if(external_winds)then
 			allocate(ext_wind_files(n_ext_winds))
+		else
+			allocate(ext_wind_files(200))
 		endif
+		
 		read(name_unit,nml=files_list)
 		close(name_unit)
 		
@@ -78,8 +81,8 @@ contains
 		options%readz=readz
 		options%buffer=buffer
 		options%external_winds=external_winds
-		options%ext_winds_nfiles=n_ext_winds
 		if(external_winds)then
+			options%ext_winds_nfiles=n_ext_winds
 			allocate(options%ext_wind_files(n_ext_winds))
 			options%ext_wind_files=ext_wind_files
 		endif
@@ -92,6 +95,8 @@ contains
 		options%physics%microphysics=mp
 		options%physics%radiation=rad
 		options%physics%windtype=wind
+		
+		deallocate(ext_wind_files)
 		
 	end subroutine init_options
 	
