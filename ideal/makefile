@@ -64,29 +64,30 @@ ifeq ($(NODENAME), Nomad.local)
 endif
 
 ifeq ($(F90), ifort)
-	COMP= -openmp -liomp5 -fast -c -u
+	COMP= -openmp -liomp5 -fast -c -u -check all -check noarg_temp_created -fpe0 -fast-transcendentals -xhost
 	LINK= -openmp -liomp5
 	
-	NCDF_PATH = /usr/local/netcdf-4.1.3/ifort-12.0.5
+	# NCDF_PATH = /usr/local/netcdf-4.1.3/ifort-12.0.5
+	NCDF_PATH = /home/gutmann/.usr/local
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
 endif
-
+# F90=/usr/local/ifort-2013.4.183/bin/ifort
 # Various debuging options.  Set the DEBUG variable with "make DEBUG=debugslow" etc.
 ifeq ($(DEBUG), debugslow)
-	COMP= -debug -c -u -check all -check noarg_temp_created -traceback -fpe0
+	COMP= -debug -c -u -check all -check noarg_temp_created -traceback
 	LINK=  # -check -traceback -fpe0
 endif
 ifeq ($(DEBUG), debug)
-	COMP= -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0
+	COMP= -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0 -fast-transcendentals -xhost
 	LINK=  # -check -traceback -fpe0
 endif
 ifeq ($(DEBUG), debugompslow)
-	COMP= -openmp -liomp5 -debug -c -u -check all -check noarg_temp_created -traceback -fpe0
+	COMP= -openmp -liomp5 -debug -c -u -check all -check noarg_temp_created -traceback
 	LINK= -openmp -liomp5 # -check -traceback -fpe0
 endif
 ifeq ($(DEBUG), debugomp)
-	COMP= -openmp -liomp5 -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0
+	COMP= -openmp -liomp5 -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0 -fast-transcendentals -xhost
 	LINK= -openmp -liomp5 # -check -traceback -fpe0
 endif
 

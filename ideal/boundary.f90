@@ -35,7 +35,7 @@ contains
 		nz=size(wind,3)
 		allocate(inputwind(nx,ny,nz))
 		inputwind=wind
-		windowsize=4
+		windowsize=3
 		
 		!$omp parallel firstprivate(windowsize,nx,ny,nz),private(i,j,k),shared(wind,inputwind)
 		!$omp do
@@ -57,13 +57,14 @@ contains
 		deallocate(inputwind)
 	end subroutine smooth_wind
 	
-	subroutine read_var(highres,filename,varname,geolut,curstep,boundary_only)
+	subroutine read_var(highres,filename,varname,geolut,curstep,boundary_only,low_res_terrain)
 		implicit none
 		real,dimension(:,:,:),intent(out)::highres
 		character(len=*),intent(in) :: filename,varname
 		type(geo_look_up_table),intent(in) :: geolut
 		integer,intent(in)::curstep
 		logical, intent(in) :: boundary_only
+		real,optional,dimension(:,:,:) :: low_res_terrain
 		real,dimension(:,:,:),allocatable :: inputdata,extra_data
 		integer,dimension(io_maxDims)::dims
 		integer::nx,ny,nz,subnz,i
@@ -124,16 +125,12 @@ contains
 			extra_data(:,i,:)=inputdata(:,:,i)
 		enddo
 ! 		extra_data=reshape(inputdata,[nx,nz,ny],order=[1,3,2])
-		write(*,*) varname
-		write(*,*) maxval(extra_data),minval(extra_data)
-		write(*,*) maxval(geolut%w),minval(geolut%w)
 		call geo_interp(highres, &
 						extra_data, &
 ! 						reshape(inputdata,[nx,nz,ny],order=[1,3,2]), &
 						geolut,boundary_only)
 		deallocate(extra_data)
 		deallocate(inputdata)
-		write(*,*) maxval(highres),minval(highres)
 						
 	end subroutine read_var
 	
@@ -162,6 +159,51 @@ contains
 		
 	end subroutine ext_winds_init
 	
+	subroutine remove_linear_winds(domain,bc,options,filename,curstep)
+        implicit none
+		type(domain_type), intent(inout) :: domain
+		type(bc_type), intent(inout) :: bc
+		type(options_type),intent(in) :: options
+		character(len=*),intent(in) :: filename
+		integer,intent(in)::curstep
+		integer,dimension(io_maxDims)::dims !note, io_maxDims is included from io_routines.
+		real,allocatable,dimension(:,:,:)::inputdata,extra_data
+		logical :: reverse_winds=.TRUE.
+		integer :: nx,ny,nz,nz_output
+		
+		call io_getdims(filename,"U", dims)
+		nx=dims(2)-1
+		ny=dims(3)
+		nz=dims(4)
+		nz_output=size(bc%u,2)
+		
+		allocate(inputdata(nx,ny,nz_output))
+		
+! 		load low-res U data
+		allocate(extra_data(nx+1,ny,nz))
+		call io_read3d(filename,"U",extra_data,curstep)
+		inputdata=(extra_data(1:nx,:,:nz_output)+extra_data(2:nx+1,:,:nz_output))/2
+		call smooth_wind(inputdata)
+		deallocate(extra_data)
+		bc%u=reshape(inputdata,[nx,nz_output,ny],order=[1,3,2])
+		
+! 		load low-res V data
+		allocate(extra_data(nx,ny+1,nz))
+		call io_read3d(filename,"V",extra_data,curstep)
+		inputdata=(extra_data(:,1:ny+1,:nz_output)+extra_data(:,2:ny+1,:nz_output))/2
+		call smooth_wind(inputdata)
+		bc%v=reshape(inputdata,[nx,nz_output,ny],order=[1,3,2])
+		deallocate(extra_data,inputdata)
+		
+! 		remove the low-res linear wind contribution effect
+		call linear_perturb(bc,reverse_winds)
+! 		finally interpolate low res winds to the high resolutions grid
+		call geo_interp(domain%u, bc%u,bc%geolut,.FALSE.)
+		call geo_interp(domain%v, bc%v,bc%geolut,.FALSE.)
+		
+	end subroutine remove_linear_winds
+	
+	
 	subroutine bc_init(domain,bc,options)
 		implicit none
 		type(domain_type),intent(inout)::domain
@@ -188,11 +230,13 @@ contains
 		boundary_value=.False.
 		nx=size(domain%u,1)
 		ny=size(domain%u,3)
-		if (.not. options%external_winds) then
+		if (options%external_winds) then
+			call ext_winds_init(domain,bc,options)
+		elseif (options%remove_lowres_linear) then
+			call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
+		else
 			call read_var(domain%u,    file_list(curfile),"U",      bc%geolut,curstep,boundary_value)
 			call read_var(domain%v,    file_list(curfile),"V",      bc%geolut,curstep,boundary_value)
-		else
-			call ext_winds_init(domain,bc,options)
 		endif
 		call read_var(domain%p,    file_list(curfile),"P",      bc%geolut,curstep,boundary_value)
 		call read_var(domain%th,   file_list(curfile),"T",      bc%geolut,curstep,boundary_value)
@@ -213,9 +257,6 @@ contains
 		nx=size(d1,1)
 		nz=size(d1,2)
 		ny=size(d1,3)
-! 		write(*,*) shape(d1)
-! 		write(*,*) shape(d2)
-! 		write(*,*) shape(dxdt)
 		do i=1,nz
 			dxdt(i,:ny,1)=d1(1,i,:) -d2(1,i,:)
 			dxdt(i,:ny,2)=d1(nx,i,:)-d2(nx,i,:)
@@ -290,6 +331,7 @@ contains
 	
 	end subroutine update_ext_winds
 	
+	
 	subroutine bc_update(domain,bc,options)
 		implicit none
 		type(domain_type),intent(inout)::domain
@@ -318,11 +360,13 @@ contains
 		
 		use_interior=.False.
 		use_boundary=.True.
-		if (.not.options%external_winds) then
+		if (options%external_winds) then
+			call ext_winds_init(domain,bc,options)
+		elseif (options%remove_lowres_linear) then
+			call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
+		else
 			call read_var(bc%next_domain%u,    file_list(curfile),"U",      bc%geolut,curstep,use_interior)
 			call read_var(bc%next_domain%v,    file_list(curfile),"V",      bc%geolut,curstep,use_interior)
-		else
-			call update_ext_winds(bc,options)
 		endif
 		call read_var(bc%next_domain%p,    file_list(curfile),"P",      bc%geolut,curstep,use_interior)
 		call read_var(bc%next_domain%th,   file_list(curfile),"T",      bc%geolut,curstep,use_boundary)

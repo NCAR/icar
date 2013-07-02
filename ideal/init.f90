@@ -42,11 +42,13 @@ contains
 		real :: dx,outputinterval,dz
 		integer :: name_unit,ntimesteps,nfiles
 		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz,n_ext_winds,buffer
-		logical :: readz,debug,external_winds
+		logical :: readz,debug,external_winds,remove_lowres_linear
+		n_ext_winds=200
 		
 ! 		set up namelist structures
 		namelist /var_list/ latvar,lonvar
-		namelist /parameters/ ntimesteps,outputinterval,dx,readz,nz,debug,dz,nfiles,external_winds,n_ext_winds,buffer
+		namelist /parameters/ ntimesteps,outputinterval,dx,readz,nz,debug,dz,nfiles, &
+							  external_winds,n_ext_winds,buffer,remove_lowres_linear
 		namelist /files_list/ init_conditions_file,output_file,boundary_files,ext_wind_files
 		namelist /physics/ pbl,lsm,mp,rad,conv,adv,wind
 		
@@ -59,7 +61,7 @@ contains
 		if(external_winds)then
 			allocate(ext_wind_files(n_ext_winds))
 		else
-			allocate(ext_wind_files(200))
+			allocate(ext_wind_files(n_ext_winds))
 		endif
 		
 		read(name_unit,nml=files_list)
@@ -81,6 +83,7 @@ contains
 		options%readz=readz
 		options%buffer=buffer
 		options%external_winds=external_winds
+		options%remove_lowres_linear=remove_lowres_linear
 		if(external_winds)then
 			options%ext_winds_nfiles=n_ext_winds
 			allocate(options%ext_wind_files(n_ext_winds))
@@ -134,6 +137,7 @@ contains
 		implicit none
 		type(options_type), intent(in) :: options
 		type(domain_type), intent(out):: domain
+		real,dimension(45)::fulldz
 		integer:: ny,nz,nx,i
 		
 ! 		these are the only required variables on a high-res grid, lat, lon, and terrain elevation
@@ -164,12 +168,20 @@ contains
 ! 			otherwise, set up the z grid to be evenly spaced in z using the terrain +dz/2 for the base
 ! 			and z[1]+i*dz for the res
 			allocate(domain%z(nx,nz,ny))
-			do i=1,nz
-				domain%z(:,i,:)=domain%terrain+(i*options%dz)-(options%dz/2)
+			allocate(domain%dz(nx,nz,ny))
+! 			domain%dz=options%dz
+! 			mean layer thicknesses from a 36km WRF run over the "CO-headwaters" domain
+			fulldz=[36.,   51.,   58.,   73.,   74.,  111.,  113.,  152.,  155.,  157.,  160.,  245., &
+				   251.,  258.,  265.,  365.,  379.,  395.,  413.,  432.,  453.,  476.,  503.,  533., &
+				   422.,  443.,  467.,  326.,  339.,  353.,  369.,  386.,  405.,  426.,  450.,  477., &
+				   455.,  429.,  396.,  357.,  311.,  325.,  340.,  356.,  356.]
+			domain%dz(:,1,:)=fulldz(1)
+			domain%z(:,1,:)=domain%terrain+fulldz(1)/2
+			do i=2,nz
+				domain%z(:,i,:)=domain%z(:,i-1,:)+(fulldz(i)+fulldz(i-1))/2
+				domain%dz(:,i,:)=fulldz(i)
 			enddo
 ! 			here dz is just constant, but must be on a 3d grid for microphysics code
-			allocate(domain%dz(nx,nz,ny))
-			domain%dz=options%dz
 		endif
 		if (options%debug) then
 			write(*,*) "allocating domain wide memory"
@@ -218,18 +230,44 @@ contains
 		type(options_type), intent(in) :: options
 		type(bc_type), intent(out):: boundary
 		type(domain_type), intent(in):: domain
-		integer::nx,ny,nz
+		real,dimension(45)::fulldz
+		integer::nx,ny,nz,i
 		
 ! 		these variables are required for any boundary/forcing file type
 		call io_read2d(options%boundary_files(1),options%latvar,boundary%lat)
 		call io_read2d(options%boundary_files(1),options%lonvar,boundary%lon)
 		call io_read2d(options%boundary_files(1),"HGT",boundary%terrain)
 		
-		nx=size(domain%lat,1)
+		nx=size(boundary%lat,1)
 		nz=options%nz
-		ny=size(domain%lat,2)
+		ny=size(boundary%lat,2)
+		
+		allocate(boundary%z(nx,nz,ny))
+		allocate(boundary%dz(nx,nz,ny))
+! 			domain%dz=options%dz
+! 			mean layer thicknesses from a 36km WRF run over the "CO-headwaters" domain
+		fulldz=[36.,   51.,   58.,   73.,   74.,  111.,  113.,  152.,  155.,  157.,  160.,  245., &
+			   251.,  258.,  265.,  365.,  379.,  395.,  413.,  432.,  453.,  476.,  503.,  533., &
+			   422.,  443.,  467.,  326.,  339.,  353.,  369.,  386.,  405.,  426.,  450.,  477., &
+			   455.,  429.,  396.,  357.,  311.,  325.,  340.,  356.,  356.]
+		boundary%dz(:,1,:)=fulldz(1)
+		boundary%z(:,1,:)=boundary%terrain+fulldz(1)/2
+		do i=2,nz
+			boundary%z(:,i,:)=boundary%z(:,i-1,:)+(fulldz(i)+fulldz(i-1))/2
+			boundary%dz(:,i,:)=fulldz(i)
+		enddo
+	
+		
 ! 		all other structures must be allocated and initialized, but will be set on a forcing timestep
 ! 		this also makes it easier to change how these variables are read from various forcing model file structures
+		allocate(boundary%u(nx,nz,ny))
+		boundary%u=0
+		allocate(boundary%v(nx,nz,ny))
+		boundary%v=0
+		
+		nx=size(domain%lat,1)
+		ny=size(domain%lat,2)
+		
 		allocate(boundary%dudt(nx,nz,ny))
 		boundary%dudt=0
 		allocate(boundary%dvdt(nx,nz,ny))
@@ -274,6 +312,8 @@ contains
 		type(domain_type), intent(in):: domain
 		type(bc_type), intent(out):: boundary
 			
+		write(*,*) "WARNING hardcoded low-res dx=36km"
+		boundary%dx=36000.0
 ! 		set up base data
 		call init_bc_data(options,boundary,domain)
 		call init_domain(options,boundary%next_domain) !set up a domain to hold the forcing for the next time step

@@ -40,16 +40,24 @@ module wind
 	subroutine update_winds(domain,options)
 		type(domain_type),intent(inout)::domain
 		type(options_type),intent(in)::options
-		integer::nx,ny
+		real,allocatable,dimension(:,:,:)::temparray
+		integer::nx,ny,nz,i,j
 		
 ! 		linear winds
 		if (options%physics%windtype==1) then
 			call linear_perturb(domain)
 		else
 			nx=size(domain%u,1)
+			nz=size(domain%u,2)
 			ny=size(domain%u,3)
-			domain%u(1:nx-1,:,:)=(domain%u(1:nx-1,:,:)+domain%u(2:nx,:,:))/2
-			domain%v(:,:,1:ny-1)=(domain%v(:,:,1:ny-1)+domain%v(:,:,2:ny))/2
+! I'm not sure the temparray is necessary. I was getting a segfault (sometimes) before changing this... 
+! but sometimes I wasn't so the error may be elsewhere. 
+			allocate(temparray(nx,nz,ny))
+			temparray=domain%u
+			domain%u(1:nx-1,:,:)=(temparray(1:nx-1,:,:)+temparray(2:nx,:,:))/2
+			temparray=domain%v
+			domain%v(:,:,1:ny-1)=(temparray(:,:,1:ny-1)+temparray(:,:,2:ny))/2
+			deallocate(temparray)
 		endif
 		
 		call balance_uvw(domain)

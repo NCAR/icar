@@ -11,7 +11,7 @@ contains
 	
     real function calc_stability(domain)
         implicit none
-        type(domain_type),intent(in)::domain
+        class(linearizable_type),intent(in)::domain
         calc_stability=6.37e-5
 !         real, parameter :: R  = 287.0
 !         real, parameter :: Rv = 461.0
@@ -37,7 +37,7 @@ contains
 !         calc_stability=ndsq
     end function calc_stability
     
-    subroutine linear_winds(domain,Ndsq)
+    subroutine linear_winds(domain,Ndsq,reverse)
 !         # see Appendix A of Barstad and Gronas (2006) Tellus,58A,2-18
 !         # -------------------------------------------------------------------------------
 !         # Ndsq  = 0.003**2      # dry BV freq sq. was 0.01**2 initially, Idar suggested 0.005**2
@@ -48,8 +48,9 @@ contains
 !         # ---------------------------------------------------------------------------------
 		use, intrinsic :: iso_c_binding
         implicit none
-        type(domain_type),intent(inout)::domain
+        class(linearizable_type),intent(inout)::domain
         real, intent(in)::Ndsq
+		logical, intent(in), optional :: reverse
         complex,parameter :: j= (0,1)
         real,allocatable,dimension(:,:)::k,l,kl,sig
         complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::denom,what,w_hat,uhat,u_hat,vhat,v_hat,m,ineta
@@ -59,9 +60,9 @@ contains
 		real,parameter::pi=3.1415927
         type(C_PTR) :: plan
         
-        ny=size(domain%p,1)
-        nz=size(domain%p,2)
-        nx=size(domain%p,3)
+		ny=size(domain%u,1)
+		nz=size(domain%u,2)
+		nx=size(domain%u,3)
         
         allocate(k(ny,nx))
         allocate(l(ny,nx))
@@ -119,9 +120,9 @@ contains
 		else
 			! even
 			do i=1,ny/2
-				gain=l(1,i)
-				l(1,i)=l(1,i+ny/2)
-				l(1,i+ny/2)=gain
+				gain=l(i,1)
+				l(i,1)=l(i+ny/2,1)
+				l(i+ny/2,1)=gain
 			enddo
 		endif
 
@@ -173,9 +174,13 @@ contains
             call fftw_execute_dft(plan, vhat,v_hat)
             call fftw_destroy_plan(plan)
 			
-!             domain%w(:,z,:)=domain%w(:,z,:)+real(w_hat)!*(ny*nx)
-            domain%u(:,z,1:nx-1)=domain%u(:,z,1:nx-1)+real(u_hat(:,1:nx-1)+u_hat(:,2:nx))/2
-            domain%v(1:ny-1,z,:)=domain%v(1:ny-1,z,:)+real(v_hat(1:ny-1,:)+v_hat(2:ny,:))/2
+			if (present(reverse)) then
+	            domain%u(:,z,1:nx-1)=domain%u(:,z,1:nx-1)-real(u_hat(:,1:nx-1)+u_hat(:,2:nx))/2
+	            domain%v(1:ny-1,z,:)=domain%v(1:ny-1,z,:)-real(v_hat(1:ny-1,:)+v_hat(2:ny,:))/2
+			else
+	            domain%u(:,z,1:nx-1)=domain%u(:,z,1:nx-1)+real(u_hat(:,1:nx-1)+u_hat(:,2:nx))/2
+	            domain%v(1:ny-1,z,:)=domain%v(1:ny-1,z,:)+real(v_hat(1:ny-1,:)+v_hat(2:ny,:))/2
+			endif
 		end do
 		deallocate(k,l,kl,sig,denom,what,w_hat,uhat,u_hat,vhat,v_hat,m,ineta)
     end subroutine linear_winds
@@ -183,13 +188,13 @@ contains
     
     subroutine setup_linwinds(domain)
         implicit none
-        type(domain_type),intent(inout)::domain
+        class(linearizable_type),intent(inout)::domain
 		complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::complex_terrain
         type(C_PTR) :: plan
         integer::nx,ny
         
-        ny=size(domain%p,1)
-        nx=size(domain%p,3)
+        ny=size(domain%terrain,1)
+        nx=size(domain%terrain,2)
 
         write(*,*) "Fzs setup"
         allocate(domain%fzs(ny,nx))
@@ -213,11 +218,11 @@ contains
 	
 	subroutine stagger_winds(domain)
         implicit none
-        type(domain_type),intent(inout)::domain
+        class(linearizable_type),intent(inout)::domain
 		integer :: nx,ny
 		
-		ny=size(domain%p,1)
-		nx=size(domain%p,3)
+		ny=size(domain%terrain,1)
+		nx=size(domain%terrain,2)
 		
 		domain%u(:,:,1:nx-1)=(domain%u(:,:,1:nx-1)+domain%u(:,:,2:nx))/2
 		domain%v(1:ny-1,:,:)=(domain%v(1:ny-1,:,:)+domain%v(2:ny,:,:))/2
@@ -226,12 +231,12 @@ contains
 	
 	subroutine rotate_wind_field(domain)
         implicit none
-        type(domain_type),intent(inout)::domain
+        class(linearizable_type),intent(inout)::domain
 		integer :: nx,ny,nz,i
 		
-		ny=size(domain%p,1)
-		nz=size(domain%p,2)
-		nx=size(domain%p,3)
+		ny=size(domain%u,1)
+		nz=size(domain%u,2)
+		nx=size(domain%u,3)
 		do i=1,nz
 			domain%u(:,i,1:nx-1)=domain%u(:,i,1:nx-1)*domain%dzdx
 			domain%v(1:ny-1,i,:)=domain%v(1:ny-1,i,:)*domain%dzdy
@@ -239,11 +244,12 @@ contains
 		
 	end subroutine rotate_wind_field
 	
-    subroutine linear_perturb(domain)
+    subroutine linear_perturb(domain,reverse)
 !         Called from the simple weather model to update the U,V,W wind fields based on linear theory
 !         Ndsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability
         implicit none
-        type(domain_type),intent(inout)::domain
+        class(linearizable_type),intent(inout)::domain
+		logical, intent(in), optional :: reverse
 		real::stability
         
         stability=calc_stability(domain)
@@ -254,7 +260,7 @@ contains
 ! 		domain%dz=domain%dz*3
 		
 		call stagger_winds(domain)
-		call linear_winds(domain,stability)
+		call linear_winds(domain,stability,reverse)
 		call rotate_wind_field(domain)
         
         

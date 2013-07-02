@@ -16,14 +16,6 @@ module data_structures
 		real,allocatable,dimension(:,:,:)::w
 	end type geo_look_up_table
 	
-	type domain_type
-		real, allocatable, dimension(:,:,:) :: u,v,w,p,th,dz,z
-		real, allocatable, dimension(:,:,:) :: qv,cloud,ice,nice,qrain,nrain,qsnow,qgrau
-		real, allocatable, dimension(:,:) :: terrain,rain,snow,graupel,dzdx,dzdy
-		real, allocatable, dimension(:,:) :: lat,lon
-		complex(C_DOUBLE_COMPLEX), allocatable, dimension(:,:) :: fzs
-		real::dx,dt
-	end type domain_type
 	
 	type interpolable_type
 		real, allocatable, dimension(:,:) :: lat,lon
@@ -34,11 +26,24 @@ module data_structures
 		real, allocatable, dimension(:,:,:) :: u,v
 		integer :: nfiles
 	end type wind_type
+	
+	type, extends(interpolable_type) :: linearizable_type
+		real, allocatable, dimension(:,:,:):: u,v,dz,z
+		real, allocatable, dimension(:,:) :: terrain,dzdx,dzdy
+		complex(C_DOUBLE_COMPLEX), allocatable, dimension(:,:) :: fzs
+		real::dx
+	end type linearizable_type
+	
+	type, extends(linearizable_type) :: domain_type
+		real, allocatable, dimension(:,:,:) :: p,th,w
+		real, allocatable, dimension(:,:,:) :: qv,cloud,ice,nice,qrain,nrain,qsnow,qgrau
+		real, allocatable, dimension(:,:) :: rain,snow,graupel
+		real::dt
+	end type domain_type
 
-	type, extends(interpolable_type) :: bc_type
-		real, allocatable, dimension(:,:,:) :: dz,z,u,v,w,p,th,qv
+	type, extends(linearizable_type) :: bc_type
+		real, allocatable, dimension(:,:,:) :: p,th,qv
 		real, allocatable, dimension(:,:,:) :: dudt,dvdt,dwdt,dpdt,dthdt,dqvdt,dqcdt
-		real, allocatable, dimension(:,:) :: terrain
 		type(domain_type)::next_domain
 		type(wind_type)::ext_winds
 	end type bc_type
@@ -59,7 +64,7 @@ module data_structures
 		character (len=MAXFILELENGTH), allocatable::boundary_files(:),ext_wind_files(:)
 		character (len=MAXFILELENGTH) :: output_file
 		character (len=MAXVARLENGTH) :: latvar,lonvar
-		logical :: readz, debug, external_winds
+		logical :: readz, debug, external_winds,remove_lowres_linear
 		integer :: buffer=0
 		integer :: ntimesteps,nz,nfiles,ext_winds_nfiles
 		real :: dx,io_dt,outputinterval,dz
