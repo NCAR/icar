@@ -338,7 +338,7 @@ contains
 	end subroutine geo_interp
 	
 	subroutine geo_interp2d(fieldout, fieldin, geolut)
-		real, dimension(:,:),intent(out) :: fieldout
+		real, dimension(:,:),intent(inout) :: fieldout
 		real, dimension(:,:),intent(in) :: fieldin
 		type(geo_look_up_table),intent(in)::geolut
 		integer::i,k,l,ny,nx,localx,localy

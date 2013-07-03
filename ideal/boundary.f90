@@ -59,7 +59,7 @@ contains
 	
 	subroutine read_var(highres,filename,varname,geolut,curstep,boundary_only,low_res_terrain)
 		implicit none
-		real,dimension(:,:,:),intent(out)::highres
+		real,dimension(:,:,:),intent(inout)::highres
 		character(len=*),intent(in) :: filename,varname
 		type(geo_look_up_table),intent(in) :: geolut
 		integer,intent(in)::curstep
@@ -200,7 +200,6 @@ contains
 ! 		finally interpolate low res winds to the high resolutions grid
 		call geo_interp(domain%u, bc%u,bc%geolut,.FALSE.)
 		call geo_interp(domain%v, bc%v,bc%geolut,.FALSE.)
-		
 	end subroutine remove_linear_winds
 	
 	
@@ -233,6 +232,7 @@ contains
 		if (options%external_winds) then
 			call ext_winds_init(domain,bc,options)
 		elseif (options%remove_lowres_linear) then
+			write(*,*) "removing winds"
 			call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
 		else
 			call read_var(domain%u,    file_list(curfile),"U",      bc%geolut,curstep,boundary_value)
@@ -363,7 +363,8 @@ contains
 		if (options%external_winds) then
 			call ext_winds_init(domain,bc,options)
 		elseif (options%remove_lowres_linear) then
-			call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
+			write(*,*) "removing winds (update)"
+			call remove_linear_winds(bc%next_domain,bc,options,file_list(curfile),curstep)
 		else
 			call read_var(bc%next_domain%u,    file_list(curfile),"U",      bc%geolut,curstep,use_interior)
 			call read_var(bc%next_domain%v,    file_list(curfile),"V",      bc%geolut,curstep,use_interior)

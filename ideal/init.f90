@@ -11,9 +11,9 @@ contains
 	subroutine init_model(options_filename,options,domain,boundary)
 		implicit none
 		character(len=*), intent(in) :: options_filename
-		type(options_type), intent(out) :: options
-		type(domain_type), intent(out):: domain
-		type(bc_type), intent(out):: boundary
+		type(options_type), intent(inout) :: options
+		type(domain_type), intent(inout):: domain
+		type(bc_type), intent(inout):: boundary
 		
 ! 		read in options file
 		write(*,*) "Init Options"
@@ -26,7 +26,6 @@ contains
 		write(*,*) "Init Boundaries"
 		call init_bc(options,domain,boundary)
 		write(*,*) "Finished Initialization"
-		
 	end subroutine init_model
 	
 	subroutine init_options(options_filename,options)
@@ -34,7 +33,7 @@ contains
 ! 		options data structure
 		implicit none
 		character(len=*), intent(in) :: options_filename
-		type(options_type), intent(out) :: options
+		type(options_type), intent(inout) :: options
 		
 		character(len=MAXFILELENGTH) :: init_conditions_file, output_file
 		character(len=MAXFILELENGTH),allocatable:: boundary_files(:),ext_wind_files(:)
@@ -136,7 +135,7 @@ contains
 	subroutine init_domain(options, domain)
 		implicit none
 		type(options_type), intent(in) :: options
-		type(domain_type), intent(out):: domain
+		type(domain_type), intent(inout):: domain
 		real,dimension(45)::fulldz
 		integer:: ny,nz,nx,i
 		
@@ -228,7 +227,7 @@ contains
 	subroutine init_bc_data(options,boundary,domain)
 		implicit none
 		type(options_type), intent(in) :: options
-		type(bc_type), intent(out):: boundary
+		type(bc_type), intent(inout):: boundary
 		type(domain_type), intent(in):: domain
 		real,dimension(45)::fulldz
 		integer::nx,ny,nz,i
@@ -310,7 +309,7 @@ contains
 		implicit none
 		type(options_type), intent(in) :: options
 		type(domain_type), intent(in):: domain
-		type(bc_type), intent(out):: boundary
+		type(bc_type), intent(inout):: boundary
 			
 		write(*,*) "WARNING hardcoded low-res dx=36km"
 		boundary%dx=36000.0

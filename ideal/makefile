@@ -76,19 +76,19 @@ endif
 # Various debuging options.  Set the DEBUG variable with "make DEBUG=debugslow" etc.
 ifeq ($(DEBUG), debugslow)
 	COMP= -debug -c -u -check all -check noarg_temp_created -traceback
-	LINK=  # -check -traceback -fpe0
+	LINK=  
 endif
 ifeq ($(DEBUG), debug)
 	COMP= -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0 -fast-transcendentals -xhost
-	LINK=  # -check -traceback -fpe0
+	LINK=  
 endif
 ifeq ($(DEBUG), debugompslow)
 	COMP= -openmp -liomp5 -debug -c -u -check all -check noarg_temp_created -traceback
-	LINK= -openmp -liomp5 # -check -traceback -fpe0
+	LINK= -openmp -liomp5
 endif
 ifeq ($(DEBUG), debugomp)
 	COMP= -openmp -liomp5 -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0 -fast-transcendentals -xhost
-	LINK= -openmp -liomp5 # -check -traceback -fpe0
+	LINK= -openmp -liomp5
 endif
 
 # on yellowstone:

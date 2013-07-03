@@ -68,16 +68,22 @@ contains
 		integer::i,ntimesteps,tenp
 		real::dt,dtnext
 		
+		write(*,*) domain%dx
+		write(*,*) maxval(abs(domain%u)),maxval(abs(domain%v)),maxval(abs(domain%w))
+		write(*,*) maxval(abs(bc%next_domain%u)),maxval(abs(bc%next_domain%v)),maxval(abs(bc%next_domain%w))
 		! courant condition for 3D advection... could make 3 x 1D to maximize dt? esp. w/linear wind speedups...
-		dt=(options%dx/max(max(maxval(abs(domain%u)),maxval(abs(domain%v))),maxval(abs(domain%w)))/3.0)
+		dt=(domain%dx/max(max(maxval(abs(domain%u)),maxval(abs(domain%v))),maxval(abs(domain%w)))/3.0)
 ! 		pick the minimum dt from the begining or the end of the current timestep
-		dtnext=(options%dx/max(max(maxval(abs(bc%next_domain%u)), &
+		dtnext=(domain%dx/max(max(maxval(abs(bc%next_domain%u)), &
 										maxval(abs(bc%next_domain%v))), &
 										maxval(abs(bc%next_domain%w)))/3.0)
 
 		dt=min(dt,dtnext)
 ! 		make dt an integer fraction of the full timestep
 		dt=min(dt,60.0)
+		if (dt<1e-5) then
+			stop "ERROR time step too small"
+		endif
 		dt=options%io_dt/ceiling(options%io_dt/dt)
 ! 		calculate the number of timesteps
 		ntimesteps=options%io_dt/dt
@@ -90,7 +96,7 @@ contains
 				write(*,*) nint((100.0*i)/ntimesteps), "%"
 				tenp=tenp+10
 			endif
-			call advect(domain,options,dt,options%dx)
+			call advect(domain,options,dt)
 			call mp(domain,options,dt)
 	! 		call lsm(domain,options,dt)
 	! 		call pbl(domain,options,dt)

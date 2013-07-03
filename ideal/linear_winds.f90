@@ -209,6 +209,7 @@ contains
 
 		allocate(domain%dzdx(ny,nx-1))
 		allocate(domain%dzdy(ny-1,nx))
+		write(*,*) domain%dx
 		domain%dzdx=sqrt((domain%terrain(:,2:nx)-domain%terrain(:,1:nx-1))**2+domain%dx**2)/domain%dx
 		domain%dzdy=sqrt((domain%terrain(2:ny,:)-domain%terrain(1:ny-1,:))**2+domain%dx**2)/domain%dx
 		

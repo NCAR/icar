@@ -67,14 +67,16 @@ module advection
         !$omp end parallel
     end subroutine advect3d
 
-	subroutine advect(domain,options,dt,dx)
+	subroutine advect(domain,options,dt)
 		type(domain_type),intent(inout)::domain
 		type(options_type),intent(in)::options
-		real,intent(in)::dt,dx
+		real,intent(in)::dt
 		
+		real::dx
 		integer::nx,nz,ny
 		real,dimension(:,:,:),allocatable::U,V,W
-		
+			
+		dx=domain%dx
 		nx=size(domain%dz,1)
 		nz=size(domain%dz,2)
 		ny=size(domain%dz,3)
