@@ -41,13 +41,14 @@ contains
 		real :: dx,outputinterval,dz
 		integer :: name_unit,ntimesteps,nfiles
 		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz,n_ext_winds,buffer
-		logical :: readz,debug,external_winds,remove_lowres_linear
+		logical :: readz,debug,external_winds,remove_lowres_linear,mean_winds,mean_fields
 		n_ext_winds=200
 		
 ! 		set up namelist structures
 		namelist /var_list/ latvar,lonvar
 		namelist /parameters/ ntimesteps,outputinterval,dx,readz,nz,debug,dz,nfiles, &
-							  external_winds,n_ext_winds,buffer,remove_lowres_linear
+							  external_winds,n_ext_winds,buffer,&
+							  remove_lowres_linear,mean_winds,mean_fields
 		namelist /files_list/ init_conditions_file,output_file,boundary_files,ext_wind_files
 		namelist /physics/ pbl,lsm,mp,rad,conv,adv,wind
 		
@@ -82,12 +83,14 @@ contains
 		options%readz=readz
 		options%buffer=buffer
 		options%external_winds=external_winds
-		options%remove_lowres_linear=remove_lowres_linear
 		if(external_winds)then
 			options%ext_winds_nfiles=n_ext_winds
 			allocate(options%ext_wind_files(n_ext_winds))
 			options%ext_wind_files=ext_wind_files
 		endif
+		options%remove_lowres_linear=remove_lowres_linear
+		options%mean_winds=mean_winds
+		options%mean_fields=mean_fields
 		options%nz=nz
 		options%debug=debug
 		options%physics%boundarylayer=pbl

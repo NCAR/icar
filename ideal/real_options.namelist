@@ -16,6 +16,8 @@ external_winds=.FALSE.,
 n_ext_winds=12,
 
 remove_lowres_linear=.TRUE.,
+mean_winds=.FALSE.,
+mean_fields=.FALSE.,
 
 buffer=10,
 

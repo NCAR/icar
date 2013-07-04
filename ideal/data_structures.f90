@@ -64,7 +64,7 @@ module data_structures
 		character (len=MAXFILELENGTH), allocatable::boundary_files(:),ext_wind_files(:)
 		character (len=MAXFILELENGTH) :: output_file
 		character (len=MAXVARLENGTH) :: latvar,lonvar
-		logical :: readz, debug, external_winds,remove_lowres_linear
+		logical :: readz, debug, external_winds,remove_lowres_linear,mean_winds,mean_fields
 		integer :: buffer=0
 		integer :: ntimesteps,nz,nfiles,ext_winds_nfiles
 		real :: dx,io_dt,outputinterval,dz

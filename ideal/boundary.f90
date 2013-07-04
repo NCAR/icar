@@ -22,6 +22,9 @@ module boundary_conditions
 	character (len=255),dimension(:),allocatable :: ext_winds_file_list
 	integer::ext_winds_curfile,ext_winds_curstep
 	integer::ext_winds_steps_in_file,ext_winds_nfiles
+
+    real, parameter :: R=287.058 ! J/(kg K) specific gas constant for air
+    real, parameter :: cp = 1012.0 ! specific heat capacity of moist STP air? J/kg/K
 	
 	public::bc_init
 	public::bc_update
@@ -180,7 +183,7 @@ contains
 		allocate(inputdata(nx,ny,nz_output))
 		
 ! 		load low-res U data
-		allocate(extra_data(nx+1,ny,nz))
+! 		allocate(extra_data(nx+1,ny,nz))
 		call io_read3d(filename,"U",extra_data,curstep)
 		inputdata=(extra_data(1:nx,:,:nz_output)+extra_data(2:nx+1,:,:nz_output))/2
 		call smooth_wind(inputdata)
@@ -188,7 +191,7 @@ contains
 		bc%u=reshape(inputdata,[nx,nz_output,ny],order=[1,3,2])
 		
 ! 		load low-res V data
-		allocate(extra_data(nx,ny+1,nz))
+! 		allocate(extra_data(nx,ny+1,nz))
 		call io_read3d(filename,"V",extra_data,curstep)
 		inputdata=(extra_data(:,1:ny+1,:nz_output)+extra_data(:,2:ny+1,:nz_output))/2
 		call smooth_wind(inputdata)
@@ -202,6 +205,28 @@ contains
 		call geo_interp(domain%v, bc%v,bc%geolut,.FALSE.)
 	end subroutine remove_linear_winds
 	
+	subroutine mean_winds(domain,filename,curstep)
+		type(domain_type), intent(inout) :: domain
+		character(len=*),intent(in)::filename
+		integer,intent(in)::curstep
+		
+		real,allocatable,dimension(:,:,:)::extra_data
+		integer,dimension(io_maxDims)::dims
+		integer::nx,ny,nz
+		
+		nz=size(domain%u,2)
+		
+! 		load low-res U data
+		call io_read3d(filename,"U",extra_data,curstep)
+		domain%u=sum(extra_data(:,:,:nz))/size(extra_data)
+		deallocate(extra_data)
+
+! 		load low-res V data
+		call io_read3d(filename,"V",extra_data,curstep)
+		domain%v=sum(extra_data(:,:,:nz))/size(extra_data)
+		deallocate(extra_data)
+				
+	end subroutine mean_winds
 	
 	subroutine bc_init(domain,bc,options)
 		implicit none
@@ -211,7 +236,7 @@ contains
 		integer,dimension(io_maxDims)::dims	!note, io_maxDims is included from io_routines.
 		real,dimension(:,:,:),allocatable::inputdata
 		logical :: boundary_value
-		integer::nx,ny
+		integer::nx,ny,nz,i
 		
 		curfile=1
 		curstep=1
@@ -232,8 +257,9 @@ contains
 		if (options%external_winds) then
 			call ext_winds_init(domain,bc,options)
 		elseif (options%remove_lowres_linear) then
-			write(*,*) "removing winds"
 			call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
+		elseif (options%mean_winds) then
+			call mean_winds(domain,file_list(curfile),curstep)
 		else
 			call read_var(domain%u,    file_list(curfile),"U",      bc%geolut,curstep,boundary_value)
 			call read_var(domain%v,    file_list(curfile),"V",      bc%geolut,curstep,boundary_value)
@@ -244,6 +270,19 @@ contains
 		call read_var(domain%cloud,file_list(curfile),"QCLOUD", bc%geolut,curstep,boundary_value)
 		call read_var(domain%ice,  file_list(curfile),"QICE",   bc%geolut,curstep,boundary_value)
 		
+		call update_pressure(domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
+							 bc%next_domain%terrain,domain%terrain)
+							 
+ 		nz=size(domain%th,2)
+ 		if (options%mean_fields) then
+ 			do i=1,nz
+ 				domain%th(:,i,:)=sum(domain%th(:,i,:))/size(domain%th(:,i,:))
+ 				domain%qv(:,i,:)=sum(domain%qv(:,i,:))/size(domain%qv(:,i,:))
+ 				domain%cloud(:,i,:)=sum(domain%cloud(:,i,:))/size(domain%cloud(:,i,:))
+ 				domain%ice(:,i,:)=sum(domain%ice(:,i,:))/size(domain%ice(:,i,:))
+ 			enddo
+ 		endif
+
 		call update_winds(domain,options)
 	end subroutine bc_init
 
@@ -339,8 +378,7 @@ contains
 		type(options_type),intent(in)::options
 		integer,dimension(io_maxDims)::dims	!note, io_maxDims is included from io_routines.
 		logical :: use_boundary,use_interior
-	    real, parameter :: R=287.058 ! J/(kg K) specific gas constant for air
-	    real, parameter :: cp = 1012.0 ! specific heat capacity of moist STP air? J/kg/K
+		integer::i,nz
 		
 		curstep=curstep+1
 		if (curstep>steps_in_file) then
@@ -363,8 +401,9 @@ contains
 		if (options%external_winds) then
 			call ext_winds_init(domain,bc,options)
 		elseif (options%remove_lowres_linear) then
-			write(*,*) "removing winds (update)"
 			call remove_linear_winds(bc%next_domain,bc,options,file_list(curfile),curstep)
+		elseif (options%mean_winds) then
+			call mean_winds(bc%next_domain,file_list(curfile),curstep)
 		else
 			call read_var(bc%next_domain%u,    file_list(curfile),"U",      bc%geolut,curstep,use_interior)
 			call read_var(bc%next_domain%v,    file_list(curfile),"V",      bc%geolut,curstep,use_interior)
@@ -377,6 +416,16 @@ contains
 		
 		call update_pressure(bc%next_domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
 							 bc%next_domain%terrain,domain%terrain)
+		nz=size(bc%next_domain%th,2)
+		if (options%mean_fields) then
+			do i=1,nz
+				bc%next_domain%th(:,i,:)=sum(bc%next_domain%th(:,i,:))/size(bc%next_domain%th(:,i,:))
+				bc%next_domain%qv(:,i,:)=sum(bc%next_domain%qv(:,i,:))/size(bc%next_domain%qv(:,i,:))
+				bc%next_domain%cloud(:,i,:)=sum(bc%next_domain%cloud(:,i,:))/size(bc%next_domain%cloud(:,i,:))
+				bc%next_domain%ice(:,i,:)=sum(bc%next_domain%ice(:,i,:))/size(bc%next_domain%ice(:,i,:))
+			enddo
+		endif
+		
 		call update_winds(bc%next_domain,options)
 		call update_dxdt(bc,domain)
 	end subroutine bc_update
