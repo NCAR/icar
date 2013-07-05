@@ -13,15 +13,24 @@ dz=100.0,
 nz=25,
 
 external_winds=.FALSE.,
-n_ext_winds=12,
-
 remove_lowres_linear=.TRUE.,
 mean_winds=.FALSE.,
 mean_fields=.FALSE.,
+restart=.FALSE.,
 
 buffer=10,
 
 debug=.TRUE.
+/
+
+&ext_winds_info
+n_ext_winds=12,
+ext_wind_files="winds/Month01.nc","winds/Month02.nc","winds/Month03.nc","winds/Month04.nc","winds/Month05.nc","winds/Month06.nc","winds/Month07.nc","winds/Month08.nc","winds/Month09.nc","winds/Month10.nc","winds/Month11.nc","winds/Month12.nc"
+/
+
+&restart_info
+restart_step=101,
+restart_file="output/swim_out00100"
 /
 
 &physics
@@ -40,6 +49,5 @@ output_file="output_many_lev/swim_out",
 
 boundary_files="forcing/wrfout_d01_2008-01-01_00:00:00","forcing/wrfout_d01_2008-05-01_00:00:00","forcing/wrfout_d01_2008-09-01_00:00:00"
 
-ext_wind_files="winds/Month01.nc","winds/Month02.nc","winds/Month03.nc","winds/Month04.nc","winds/Month05.nc","winds/Month06.nc","winds/Month07.nc","winds/Month08.nc","winds/Month09.nc","winds/Month10.nc","winds/Month11.nc","winds/Month12.nc"
 /
 

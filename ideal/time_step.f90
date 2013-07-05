@@ -3,6 +3,7 @@ module time_step
 	use microphysics        ! mp
 	use wind                ! update_winds
 	use advection           ! advect
+	use iso_fortran_env
 	
 	implicit none
 	private
@@ -68,9 +69,6 @@ contains
 		integer::i,ntimesteps,tenp
 		real::dt,dtnext
 		
-		write(*,*) domain%dx
-		write(*,*) maxval(abs(domain%u)),maxval(abs(domain%v)),maxval(abs(domain%w))
-		write(*,*) maxval(abs(bc%next_domain%u)),maxval(abs(bc%next_domain%v)),maxval(abs(bc%next_domain%w))
 		! courant condition for 3D advection... could make 3 x 1D to maximize dt? esp. w/linear wind speedups...
 		dt=(domain%dx/max(max(maxval(abs(domain%u)),maxval(abs(domain%v))),maxval(abs(domain%w)))/3.0)
 ! 		pick the minimum dt from the begining or the end of the current timestep
@@ -89,13 +87,14 @@ contains
 		ntimesteps=options%io_dt/dt
 		
 		call apply_dt(bc,ntimesteps)
-		write(*,*) dt,ntimesteps
+		write(*,*) "dt=",dt, "nsteps=",ntimesteps
 		tenp=10
 		do i=1,ntimesteps
-			if (i>=(ntimesteps*tenp/100.0)) then
-				write(*,*) nint((100.0*i)/ntimesteps), "%"
-				tenp=tenp+10
-			endif
+! 			if (i>=(ntimesteps*tenp/100.0)) then
+! 				write(*,"(i4)",advance='no') nint((100.0*i)/ntimesteps)
+! 				call flush(Output_Unit) !note fortran doesn't flush data until there is a newline anyway...
+! 				tenp=tenp+10
+! 			endif
 			call advect(domain,options,dt)
 			call mp(domain,options,dt)
 	! 		call lsm(domain,options,dt)

@@ -35,36 +35,55 @@ contains
 		character(len=*), intent(in) :: options_filename
 		type(options_type), intent(inout) :: options
 		
-		character(len=MAXFILELENGTH) :: init_conditions_file, output_file
+		character(len=MAXFILELENGTH) :: init_conditions_file, output_file,restart_file
 		character(len=MAXFILELENGTH),allocatable:: boundary_files(:),ext_wind_files(:)
 		character(len=MAXVARLENGTH) :: latvar,lonvar
 		real :: dx,outputinterval,dz
 		integer :: name_unit,ntimesteps,nfiles
-		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz,n_ext_winds,buffer
-		logical :: readz,debug,external_winds,remove_lowres_linear,mean_winds,mean_fields
+		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz,n_ext_winds,buffer,restart_step
+		logical :: readz,debug,external_winds,remove_lowres_linear,mean_winds,mean_fields,restart
 		n_ext_winds=200
 		
 ! 		set up namelist structures
 		namelist /var_list/ latvar,lonvar
 		namelist /parameters/ ntimesteps,outputinterval,dx,readz,nz,debug,dz,nfiles, &
-							  external_winds,n_ext_winds,buffer,&
-							  remove_lowres_linear,mean_winds,mean_fields
-		namelist /files_list/ init_conditions_file,output_file,boundary_files,ext_wind_files
+							  external_winds,buffer,n_ext_winds,&
+							  remove_lowres_linear,mean_winds,mean_fields,restart
+		namelist /files_list/ init_conditions_file,output_file,boundary_files
+		namelist /restart_info/ restart_step,restart_file
+		namelist /ext_winds_info/ n_ext_winds,ext_wind_files
 		namelist /physics/ pbl,lsm,mp,rad,conv,adv,wind
 		
 ! 		read namelists
 		open(io_newunit(name_unit), file=options_filename)
 		read(name_unit,nml=var_list)
 		read(name_unit,nml=parameters)
+		
+		if (restart) then
+			read(name_unit,nml=restart_info)
+			options%restart=restart
+			options%restart_step=restart_step
+			options%restart_file=restart_file
+		endif
+
 		read(name_unit,nml=physics)
+		
 		allocate(boundary_files(nfiles))
-		if(external_winds)then
+		read(name_unit,nml=files_list)
+		
+		if (external_winds) then
+			write(*,*) n_ext_winds
 			allocate(ext_wind_files(n_ext_winds))
-		else
-			allocate(ext_wind_files(n_ext_winds))
+			write(*,*) n_ext_winds
+			read(name_unit,nml=ext_winds_info)
+			write(*,*) n_ext_winds
+			options%external_winds=external_winds
+			options%ext_winds_nfiles=n_ext_winds
+			allocate(options%ext_wind_files(n_ext_winds))
+			options%ext_wind_files=ext_wind_files
+			deallocate(ext_wind_files)
 		endif
 		
-		read(name_unit,nml=files_list)
 		close(name_unit)
 		
 ! 		could probably simplify and read these all right from the namelist file, 
@@ -73,6 +92,7 @@ contains
 		options%nfiles=nfiles
 		allocate(options%boundary_files(nfiles))
 		options%boundary_files=boundary_files
+		deallocate(boundary_files)
 		options%output_file=output_file
 		options%latvar=latvar
 		options%lonvar=lonvar
@@ -82,12 +102,6 @@ contains
 		options%dz=dz
 		options%readz=readz
 		options%buffer=buffer
-		options%external_winds=external_winds
-		if(external_winds)then
-			options%ext_winds_nfiles=n_ext_winds
-			allocate(options%ext_wind_files(n_ext_winds))
-			options%ext_wind_files=ext_wind_files
-		endif
 		options%remove_lowres_linear=remove_lowres_linear
 		options%mean_winds=mean_winds
 		options%mean_fields=mean_fields
@@ -100,8 +114,6 @@ contains
 		options%physics%microphysics=mp
 		options%physics%radiation=rad
 		options%physics%windtype=wind
-		
-		deallocate(ext_wind_files)
 		
 	end subroutine init_options
 	

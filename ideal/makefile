@@ -103,8 +103,9 @@ ifeq ($(LMOD_FAMILY_COMPILER),gnu)
 endif 
 ifeq ($(LMOD_FAMILY_COMPILER),intel)
 	F90=ifort
-	COMP=-fpp -openmp -liomp5 -fast -c -u
-	LINK=-fpp -openmp -liomp5
+	COMP= -openmp -liomp5 -fast -c -u -fast-transcendentals -xhost
+	# COMP= -openmp -liomp5 -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0
+	LINK= -openmp -liomp5
 	LIBFFT=/glade/u/home/gutmann/usr/local/lib
 	INCFFT=/glade/u/home/gutmann/usr/local/include
 	LIBNETCDF = -lnetcdff -lnetcdf

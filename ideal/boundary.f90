@@ -143,7 +143,7 @@ contains
 		type(bc_type),intent(inout)::bc
 		type(options_type),intent(in)::options
 		integer,dimension(io_maxDims)::dims	!note, io_maxDims is included from io_routines.
-		
+		write(*,*) "ext_winds_init"
 		ext_winds_curfile=1
 		ext_winds_curstep=1
 		ext_winds_nfiles=options%ext_winds_nfiles
@@ -228,6 +228,49 @@ contains
 				
 	end subroutine mean_winds
 	
+	subroutine load_restart_file(domain,restart_file)
+		type(domain_type), intent(inout) :: domain
+		character(len=*),intent(in)::restart_file
+		real,allocatable,dimension(:,:,:)::inputdata
+		
+		call io_read3d(restart_file,"u",inputdata)
+		domain%u=inputdata
+		deallocate(inputdata)
+		call io_read3d(restart_file,"v",inputdata)
+		domain%v=inputdata
+		deallocate(inputdata)
+		call io_read3d(restart_file,"qv",inputdata)
+		domain%qv=inputdata
+		deallocate(inputdata)
+		call io_read3d(restart_file,"qc",inputdata)
+		domain%cloud=inputdata
+		deallocate(inputdata)
+		call io_read3d(restart_file,"qr",inputdata)
+		domain%qrain=inputdata
+		deallocate(inputdata)
+		call io_read3d(restart_file,"qi",inputdata)
+		domain%ice=inputdata
+		deallocate(inputdata)
+		call io_read3d(restart_file,"qs",inputdata)
+		domain%qsnow=inputdata
+		deallocate(inputdata)
+		call io_read3d(restart_file,"qg",inputdata)
+		domain%qgrau=inputdata
+		deallocate(inputdata)
+		call io_read3d(restart_file,"nr",inputdata)
+		domain%nrain=inputdata
+		deallocate(inputdata)
+		call io_read3d(restart_file,"ni",inputdata)
+		domain%nice=inputdata
+		deallocate(inputdata)
+		call io_read3d(restart_file,"p",inputdata)
+		domain%p=inputdata
+		deallocate(inputdata)
+		call io_read3d(restart_file,"th",inputdata)
+		domain%th=inputdata
+		deallocate(inputdata)
+	end subroutine load_restart_file
+	
 	subroutine bc_init(domain,bc,options)
 		implicit none
 		type(domain_type),intent(inout)::domain
@@ -237,13 +280,17 @@ contains
 		real,dimension(:,:,:),allocatable::inputdata
 		logical :: boundary_value
 		integer::nx,ny,nz,i
+		real::domainsize
 		
 		curfile=1
-		curstep=1
+		if (options%restart) then
+			curstep=options%restart_step
+		else
+			curstep=1
+		endif
 		nfiles=options%nfiles
 		allocate(file_list(nfiles))
 		file_list=options%boundary_files
-		
 		call io_getdims(file_list(curfile),"P", dims)
 		if (dims(1)==3) then
 			steps_in_file=1
@@ -251,39 +298,60 @@ contains
 			steps_in_file=dims(dims(1)+1) !dims(1) = ndims
 		endif
 		
-		boundary_value=.False.
-		nx=size(domain%u,1)
-		ny=size(domain%u,3)
-		if (options%external_winds) then
-			call ext_winds_init(domain,bc,options)
-		elseif (options%remove_lowres_linear) then
-			call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
-		elseif (options%mean_winds) then
-			call mean_winds(domain,file_list(curfile),curstep)
-		else
-			call read_var(domain%u,    file_list(curfile),"U",      bc%geolut,curstep,boundary_value)
-			call read_var(domain%v,    file_list(curfile),"V",      bc%geolut,curstep,boundary_value)
-		endif
-		call read_var(domain%p,    file_list(curfile),"P",      bc%geolut,curstep,boundary_value)
-		call read_var(domain%th,   file_list(curfile),"T",      bc%geolut,curstep,boundary_value)
-		call read_var(domain%qv,   file_list(curfile),"QVAPOR", bc%geolut,curstep,boundary_value)
-		call read_var(domain%cloud,file_list(curfile),"QCLOUD", bc%geolut,curstep,boundary_value)
-		call read_var(domain%ice,  file_list(curfile),"QICE",   bc%geolut,curstep,boundary_value)
+		curstep=curstep+1
+		do while (curstep>steps_in_file)
+			curfile=curfile+1
+			if (curfile>nfiles) then
+				stop "Ran out of files to process!"
+			endif
+			curstep=curstep-steps_in_file !instead of setting=1, this way we can set an arbitrary starting point multiple files in
+			call io_getdims(file_list(curfile),"P", dims)
+			if (dims(1)==3) then
+				steps_in_file=1
+			else
+				steps_in_file=dims(dims(1)+1) !dims(1) = ndims; dims(ndims+1)=ntimesteps
+			endif
+		enddo
 		
-		call update_pressure(domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
-							 bc%next_domain%terrain,domain%terrain)
+		if (options%restart) then
+			call load_restart_file(domain,options%restart_file)
+		else
+			boundary_value=.False.
+			nx=size(domain%u,1)
+			ny=size(domain%u,3)
+			if (options%external_winds) then
+				call ext_winds_init(domain,bc,options)
+			elseif (options%remove_lowres_linear) then
+				call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
+			elseif (options%mean_winds) then
+				call mean_winds(domain,file_list(curfile),curstep)
+			else
+				call read_var(domain%u,    file_list(curfile),"U",      bc%geolut,curstep,boundary_value)
+				call read_var(domain%v,    file_list(curfile),"V",      bc%geolut,curstep,boundary_value)
+			endif
+			call read_var(domain%p,    file_list(curfile),"P",      bc%geolut,curstep,boundary_value)
+			call read_var(domain%th,   file_list(curfile),"T",      bc%geolut,curstep,boundary_value)
+			call read_var(domain%qv,   file_list(curfile),"QVAPOR", bc%geolut,curstep,boundary_value)
+			call read_var(domain%cloud,file_list(curfile),"QCLOUD", bc%geolut,curstep,boundary_value)
+			call read_var(domain%ice,  file_list(curfile),"QICE",   bc%geolut,curstep,boundary_value)
+		
+			call update_pressure(domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
+								 bc%next_domain%terrain,domain%terrain)
 							 
- 		nz=size(domain%th,2)
- 		if (options%mean_fields) then
- 			do i=1,nz
- 				domain%th(:,i,:)=sum(domain%th(:,i,:))/size(domain%th(:,i,:))
- 				domain%qv(:,i,:)=sum(domain%qv(:,i,:))/size(domain%qv(:,i,:))
- 				domain%cloud(:,i,:)=sum(domain%cloud(:,i,:))/size(domain%cloud(:,i,:))
- 				domain%ice(:,i,:)=sum(domain%ice(:,i,:))/size(domain%ice(:,i,:))
- 			enddo
- 		endif
+	 		nz=size(domain%th,2)
+			domainsize=size(domain%th,1)*size(domain%th,3)
+	 		if (options%mean_fields) then
+	 			do i=1,nz
+	 				domain%th(:,i,:)=sum(domain%th(:,i,:))/domainsize
+	 				domain%qv(:,i,:)=sum(domain%qv(:,i,:))/domainsize
+	 				domain%cloud(:,i,:)=sum(domain%cloud(:,i,:))/domainsize
+	 				domain%ice(:,i,:)=sum(domain%ice(:,i,:))/domainsize
+	 			enddo
+	 		endif
+			
+			call update_winds(domain,options)
+		endif
 
-		call update_winds(domain,options)
 	end subroutine bc_init
 
 
@@ -378,28 +446,27 @@ contains
 		type(options_type),intent(in)::options
 		integer,dimension(io_maxDims)::dims	!note, io_maxDims is included from io_routines.
 		logical :: use_boundary,use_interior
-		integer::i,nz
+		integer::i,nz,nx,ny
 		
 		curstep=curstep+1
-		if (curstep>steps_in_file) then
+		do while (curstep>steps_in_file)
 			curfile=curfile+1
-			curstep=1
+			if (curfile>nfiles) then
+				stop "Ran out of files to process!"
+			endif
+			curstep=curstep-steps_in_file !instead of setting=1, this way we can set an arbitrary starting point multiple files in
 			call io_getdims(file_list(curfile),"P", dims)
 			if (dims(1)==3) then
 				steps_in_file=1
 			else
-				steps_in_file=dims(dims(1)+1) !dims(1) = ndims
+				steps_in_file=dims(dims(1)+1) !dims(1) = ndims; dims(ndims+1)=ntimesteps
 			endif
-		endif
-		
-		if (curfile>nfiles) then
-			stop "Ran out of files to process!"
-		endif
+		enddo
 		
 		use_interior=.False.
 		use_boundary=.True.
 		if (options%external_winds) then
-			call ext_winds_init(domain,bc,options)
+			call update_ext_winds(bc,options)
 		elseif (options%remove_lowres_linear) then
 			call remove_linear_winds(bc%next_domain,bc,options,file_list(curfile),curstep)
 		elseif (options%mean_winds) then
@@ -416,13 +483,30 @@ contains
 		
 		call update_pressure(bc%next_domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
 							 bc%next_domain%terrain,domain%terrain)
+		nx=size(bc%next_domain%th,1)
 		nz=size(bc%next_domain%th,2)
+		ny=size(bc%next_domain%th,3)
 		if (options%mean_fields) then
 			do i=1,nz
-				bc%next_domain%th(:,i,:)=sum(bc%next_domain%th(:,i,:))/size(bc%next_domain%th(:,i,:))
-				bc%next_domain%qv(:,i,:)=sum(bc%next_domain%qv(:,i,:))/size(bc%next_domain%qv(:,i,:))
-				bc%next_domain%cloud(:,i,:)=sum(bc%next_domain%cloud(:,i,:))/size(bc%next_domain%cloud(:,i,:))
-				bc%next_domain%ice(:,i,:)=sum(bc%next_domain%ice(:,i,:))/size(bc%next_domain%ice(:,i,:))
+				bc%next_domain%th(1,i,:)=sum(bc%next_domain%th(1,i,:))/ny
+				bc%next_domain%th(nx,i,:)=sum(bc%next_domain%th(nx,i,:))/ny
+				bc%next_domain%th(:,i,1)=sum(bc%next_domain%th(:,i,1))/nx
+				bc%next_domain%th(:,i,ny)=sum(bc%next_domain%th(:,i,ny))/nx
+				
+				bc%next_domain%qv(1,i,:)=sum(bc%next_domain%qv(1,i,:))/ny
+				bc%next_domain%qv(nx,i,:)=sum(bc%next_domain%qv(nx,i,:))/ny
+				bc%next_domain%qv(:,i,1)=sum(bc%next_domain%qv(:,i,1))/nx
+				bc%next_domain%qv(:,i,ny)=sum(bc%next_domain%qv(:,i,ny))/nx
+
+				bc%next_domain%cloud(1,i,:)=sum(bc%next_domain%cloud(1,i,:))/ny
+				bc%next_domain%cloud(nx,i,:)=sum(bc%next_domain%cloud(nx,i,:))/ny
+				bc%next_domain%cloud(:,i,1)=sum(bc%next_domain%cloud(:,i,1))/nx
+				bc%next_domain%cloud(:,i,ny)=sum(bc%next_domain%cloud(:,i,ny))/nx
+
+				bc%next_domain%ice(1,i,:)=sum(bc%next_domain%ice(1,i,:))/ny
+				bc%next_domain%ice(nx,i,:)=sum(bc%next_domain%ice(nx,i,:))/ny
+				bc%next_domain%ice(:,i,1)=sum(bc%next_domain%ice(:,i,1))/nx
+				bc%next_domain%ice(:,i,ny)=sum(bc%next_domain%ice(:,i,ny))/nx
 			enddo
 		endif
 		

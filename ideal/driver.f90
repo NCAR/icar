@@ -10,10 +10,9 @@ program real
 	type(options_type) :: options
 	type(domain_type)  :: domain
 	type(bc_type)      :: boundary
-	integer::i,nx,ny
+	integer::i,nx,ny,start_point
 	
 	call init_model("real_options.namelist",options,domain,boundary)
-	write(*,*) options%nfiles, options%boundary_files
 ! 	initialize microphysics code (e.g. compute look up tables in Thompson et al)
 	write(*,*) "Initializing microphysics"
 ! 	write(*,*) "WARNING: NOT Initializing microphysics"
@@ -21,10 +20,15 @@ program real
 ! 	read initial conditions from the boundary file
 	write(*,*) "Initializing Boundary conditions"
 	call bc_init(domain,boundary,options)
+	if (options%restart) then
+		start_point=options%restart_step
+	else
+		start_point=1
+	endif
 	nx=size(domain%u,1)
 	ny=size(domain%u,3)
 ! 	note that a timestep here is an IO timestep O(1hr), not a physics timestep O(20s)
-	do i=1,options%ntimesteps
+	do i=start_point,options%ntimesteps
 		write(*,*) "Timestep:", i, "  of ", options%ntimesteps
 ! 		update boundary conditions (dXdt variables)
 		call bc_update(domain,boundary,options)

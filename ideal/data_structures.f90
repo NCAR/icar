@@ -62,11 +62,11 @@ module data_structures
 	type options_type
 		character (len=MAXFILELENGTH) :: init_conditions_file
 		character (len=MAXFILELENGTH), allocatable::boundary_files(:),ext_wind_files(:)
-		character (len=MAXFILELENGTH) :: output_file
+		character (len=MAXFILELENGTH) :: output_file,restart_file
 		character (len=MAXVARLENGTH) :: latvar,lonvar
-		logical :: readz, debug, external_winds,remove_lowres_linear,mean_winds,mean_fields
+		logical :: readz, debug, external_winds,remove_lowres_linear,mean_winds,mean_fields,restart
 		integer :: buffer=0
-		integer :: ntimesteps,nz,nfiles,ext_winds_nfiles
+		integer :: ntimesteps,nz,nfiles,ext_winds_nfiles,restart_step
 		real :: dx,io_dt,outputinterval,dz
 		type(physics_type)::physics
 	end type options_type
