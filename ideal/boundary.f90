@@ -143,19 +143,38 @@ contains
 		type(bc_type),intent(inout)::bc
 		type(options_type),intent(in)::options
 		integer,dimension(io_maxDims)::dims	!note, io_maxDims is included from io_routines.
-		write(*,*) "ext_winds_init"
+		! MODULE variables : ext_winds_ curstep, curfile, nfiles, steps_in_file, file_list
 		ext_winds_curfile=1
-		ext_winds_curstep=1
+		if (options%restart) then
+			ext_winds_curstep=options%restart_step
+		else
+			ext_winds_curstep=1
+		endif
 		ext_winds_nfiles=options%ext_winds_nfiles
 		allocate(ext_winds_file_list(ext_winds_nfiles))
 		ext_winds_file_list=options%ext_wind_files
-
 		call io_getdims(ext_winds_file_list(ext_winds_curfile),"U", dims)
 		if (dims(1)==3) then
 			ext_winds_steps_in_file=1
 		else
 			ext_winds_steps_in_file=dims(dims(1)+1) !dims(1) = ndims
 		endif
+		
+! 		ext_winds_curstep=ext_winds_curstep+1
+		do while (ext_winds_curstep>ext_winds_steps_in_file)
+			ext_winds_curfile=ext_winds_curfile+1
+			if (ext_winds_curfile>ext_winds_nfiles) then
+				stop "Ran out of files to process!"
+			endif
+			ext_winds_curstep=ext_winds_curstep-ext_winds_steps_in_file 
+			!instead of setting=1, this way we can set an arbitrary starting point multiple files in
+			call io_getdims(ext_winds_file_list(ext_winds_curfile),"U", dims)
+			if (dims(1)==3) then
+				ext_winds_steps_in_file=1
+			else
+				ext_winds_steps_in_file=dims(dims(1)+1) !dims(1) = ndims; dims(ndims+1)=ntimesteps
+			endif
+		enddo
 		
 		call read_var(domain%u,    ext_winds_file_list(ext_winds_curfile),"U",      bc%ext_winds%geolut,ext_winds_curstep,.FALSE.)
 		call read_var(domain%v,    ext_winds_file_list(ext_winds_curfile),"V",      bc%ext_winds%geolut,ext_winds_curstep,.FALSE.)
@@ -281,6 +300,7 @@ contains
 		logical :: boundary_value
 		integer::nx,ny,nz,i
 		real::domainsize
+		! MODULE variables : curstep, curfile, nfiles, steps_in_file, file_list
 		
 		curfile=1
 		if (options%restart) then
@@ -298,7 +318,6 @@ contains
 			steps_in_file=dims(dims(1)+1) !dims(1) = ndims
 		endif
 		
-		curstep=curstep+1
 		do while (curstep>steps_in_file)
 			curfile=curfile+1
 			if (curfile>nfiles) then
@@ -315,6 +334,9 @@ contains
 		
 		if (options%restart) then
 			call load_restart_file(domain,options%restart_file)
+			if (options%external_winds) then
+				call ext_winds_init(domain,bc,options)
+			endif
 		else
 			boundary_value=.False.
 			nx=size(domain%u,1)
@@ -414,7 +436,7 @@ contains
 		type(options_type),intent(in)::options
 		integer,dimension(io_maxDims)::dims	!note, io_maxDims is included from io_routines.
 		logical :: use_boundary,use_interior
-		
+		! MODULE variables : ext_winds_ curstep, curfile, nfiles, steps_in_file, file_list
 		ext_winds_curstep=ext_winds_curstep+1
 		if (ext_winds_curstep>ext_winds_steps_in_file) then
 			ext_winds_curfile=ext_winds_curfile+1
@@ -447,6 +469,7 @@ contains
 		integer,dimension(io_maxDims)::dims	!note, io_maxDims is included from io_routines.
 		logical :: use_boundary,use_interior
 		integer::i,nz,nx,ny
+		! MODULE variables : curstep, curfile, nfiles, steps_in_file, file_list
 		
 		curstep=curstep+1
 		do while (curstep>steps_in_file)
