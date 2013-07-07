@@ -29,16 +29,16 @@ module boundary_conditions
 	public::bc_init
 	public::bc_update
 contains
-	subroutine smooth_wind(wind)
+	subroutine smooth_wind(wind,windowsize)
 		real, intent(inout), dimension(:,:,:):: wind
+		integer,intent(in)::windowsize
 		real,allocatable,dimension(:,:,:)::inputwind
-		integer::i,j,k,nx,ny,nz,windowsize
+		integer::i,j,k,nx,ny,nz
 		nx=size(wind,1)
 		ny=size(wind,2)
 		nz=size(wind,3)
 		allocate(inputwind(nx,ny,nz))
 		inputwind=wind
-		windowsize=3
 		
 		!$omp parallel firstprivate(windowsize,nx,ny,nz),private(i,j,k),shared(wind,inputwind)
 		!$omp do
@@ -97,7 +97,7 @@ contains
 			nx=nx-1
 			allocate(inputdata(nx,ny,nz))
 			inputdata=(extra_data(1:nx,:,:)+extra_data(2:nx+1,:,:))/2
-			call smooth_wind(inputdata)
+			call smooth_wind(inputdata,2)
 			deallocate(extra_data)
 		else if (varname=="V") then
 			allocate(extra_data(nx,ny,nz))
@@ -106,7 +106,7 @@ contains
 			ny=ny-1
 			allocate(inputdata(nx,ny,nz))
 			inputdata=(extra_data(:,1:ny,:)+extra_data(:,2:ny+1,:))/2
-			call smooth_wind(inputdata)
+			call smooth_wind(inputdata,2)
 			deallocate(extra_data)
 		else if (varname=="T") then
 			inputdata=inputdata+300
@@ -205,7 +205,7 @@ contains
 ! 		allocate(extra_data(nx+1,ny,nz))
 		call io_read3d(filename,"U",extra_data,curstep)
 		inputdata=(extra_data(1:nx,:,:nz_output)+extra_data(2:nx+1,:,:nz_output))/2
-		call smooth_wind(inputdata)
+		call smooth_wind(inputdata,3)
 		deallocate(extra_data)
 		bc%u=reshape(inputdata,[nx,nz_output,ny],order=[1,3,2])
 		
@@ -213,7 +213,7 @@ contains
 ! 		allocate(extra_data(nx,ny+1,nz))
 		call io_read3d(filename,"V",extra_data,curstep)
 		inputdata=(extra_data(:,1:ny+1,:nz_output)+extra_data(:,2:ny+1,:nz_output))/2
-		call smooth_wind(inputdata)
+		call smooth_wind(inputdata,3)
 		bc%v=reshape(inputdata,[nx,nz_output,ny],order=[1,3,2])
 		deallocate(extra_data,inputdata)
 		
@@ -350,6 +350,8 @@ contains
 			else
 				call read_var(domain%u,    file_list(curfile),"U",      bc%geolut,curstep,boundary_value)
 				call read_var(domain%v,    file_list(curfile),"V",      bc%geolut,curstep,boundary_value)
+				call smooth_wind(domain%u,8)
+				call smooth_wind(domain%v,8)
 			endif
 			call read_var(domain%p,    file_list(curfile),"P",      bc%geolut,curstep,boundary_value)
 			call read_var(domain%th,   file_list(curfile),"T",      bc%geolut,curstep,boundary_value)
@@ -497,6 +499,8 @@ contains
 		else
 			call read_var(bc%next_domain%u,    file_list(curfile),"U",      bc%geolut,curstep,use_interior)
 			call read_var(bc%next_domain%v,    file_list(curfile),"V",      bc%geolut,curstep,use_interior)
+			call smooth_wind(bc%next_domain%u,8)
+			call smooth_wind(bc%next_domain%v,8)
 		endif
 		call read_var(bc%next_domain%p,    file_list(curfile),"P",      bc%geolut,curstep,use_interior)
 		call read_var(bc%next_domain%th,   file_list(curfile),"T",      bc%geolut,curstep,use_boundary)
