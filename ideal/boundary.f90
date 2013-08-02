@@ -364,6 +364,8 @@ contains
 			ny=size(domain%u,3)
 			if (options%external_winds) then
 				call ext_winds_init(domain,bc,options)
+				call smooth_wind(domain%u,1,3)
+				call smooth_wind(domain%v,1,3)
 			elseif (options%remove_lowres_linear) then
 				call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
 			elseif (options%mean_winds) then
@@ -513,6 +515,8 @@ contains
 		use_boundary=.True.
 		if (options%external_winds) then
 			call update_ext_winds(bc,options)
+			call smooth_wind(bc%next_domain%u,1,3)
+			call smooth_wind(bc%next_domain%v,1,3)
 		elseif (options%remove_lowres_linear) then
 			call remove_linear_winds(bc%next_domain,bc,options,file_list(curfile),curstep)
 		elseif (options%mean_winds) then
@@ -520,10 +524,8 @@ contains
 		else
 			call read_var(bc%next_domain%u,    file_list(curfile),"U",      bc%geolut,curstep,use_interior)
 			call read_var(bc%next_domain%v,    file_list(curfile),"V",      bc%geolut,curstep,use_interior)
-			write(*,*) maxval(abs(bc%next_domain%u)),maxval(abs(bc%next_domain%v))
 			call smooth_wind(bc%next_domain%u,smoothing_window,3)
 			call smooth_wind(bc%next_domain%v,smoothing_window,3)
-			write(*,*) maxval(abs(bc%next_domain%u)),maxval(abs(bc%next_domain%v))
 		endif
 		call read_var(bc%next_domain%p,    file_list(curfile),"P",      bc%geolut,curstep,use_interior)
 		call read_var(bc%next_domain%th,   file_list(curfile),"T",      bc%geolut,curstep,use_boundary)
