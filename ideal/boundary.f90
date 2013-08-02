@@ -24,7 +24,7 @@ module boundary_conditions
 	integer::ext_winds_curfile,ext_winds_curstep
 	integer::ext_winds_steps_in_file,ext_winds_nfiles
 
-	integer,parameter::smoothing_window=9
+	integer,parameter::smoothing_window=14
     real, parameter :: R=287.058 ! J/(kg K) specific gas constant for air
     real, parameter :: cp = 1012.0 ! specific heat capacity of moist STP air? J/kg/K
 	
@@ -196,6 +196,7 @@ contains
 		real,allocatable,dimension(:,:,:)::inputdata,extra_data
 		logical :: reverse_winds=.TRUE.
 		integer :: nx,ny,nz,nz_output
+		character(len=255) :: outputfilename
 		
 		call io_getdims(filename,"U", dims)
 		nx=dims(2)-1
@@ -218,9 +219,20 @@ contains
 		call smooth_wind(inputdata,2,2)
 		bc%v=reshape(inputdata,[nx,nz_output,ny],order=[1,3,2])
 		deallocate(extra_data,inputdata)
-		
+! 		if (options%debug) then
+! 			write(outputfilename,"(A,I5.5)") "U_pre",curstep
+! 			call io_write3d(outputfilename,"data",bc%u)
+! 			write(outputfilename,"(A,I5.5)") "V_pre",curstep
+! 			call io_write3d(outputfilename,"data",bc%v)
+! 		endif
 ! 		remove the low-res linear wind contribution effect
 		call linear_perturb(bc,reverse_winds)
+! 		if (options%debug) then
+! 			write(outputfilename,"(A,I5.5)") "U_post",curstep
+! 			call io_write3d(outputfilename,"data",bc%u)
+! 			write(outputfilename,"(A,I5.5)") "V_post",curstep
+! 			call io_write3d(outputfilename,"data",bc%v)
+! 		endif
 		
 ! 		finally interpolate low res winds to the high resolutions grid
 		call geo_interp(domain%u, bc%u,bc%geolut,.FALSE.)
@@ -548,10 +560,7 @@ contains
 			enddo
 		endif
 		
-		write(*,*) maxval(abs(domain%u)),maxval(abs(domain%v)),maxval(abs(domain%w))
-		write(*,*) maxval(abs(bc%next_domain%u)),maxval(abs(bc%next_domain%v)),maxval(abs(bc%next_domain%w))
 		call update_winds(bc%next_domain,options)
-		write(*,*) maxval(abs(bc%next_domain%u)),maxval(abs(bc%next_domain%v)),maxval(abs(bc%next_domain%w))
 		call update_dxdt(bc,domain)
 	end subroutine bc_update
 end module boundary_conditions

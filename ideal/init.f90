@@ -41,13 +41,13 @@ contains
 		real :: dx,outputinterval,dz
 		integer :: name_unit,ntimesteps,nfiles
 		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz,n_ext_winds,buffer,restart_step
-		logical :: readz,debug,external_winds,remove_lowres_linear,mean_winds,mean_fields,restart
+		logical :: readz,debug,external_winds,remove_lowres_linear,mean_winds,mean_fields,restart,add_low_topo
 		n_ext_winds=200
 		
 ! 		set up namelist structures
 		namelist /var_list/ latvar,lonvar
 		namelist /parameters/ ntimesteps,outputinterval,dx,readz,nz,debug,dz,nfiles, &
-							  external_winds,buffer,n_ext_winds,&
+							  external_winds,buffer,n_ext_winds,add_low_topo,&
 							  remove_lowres_linear,mean_winds,mean_fields,restart
 		namelist /files_list/ init_conditions_file,output_file,boundary_files
 		namelist /restart_info/ restart_step,restart_file
@@ -103,6 +103,7 @@ contains
 		options%readz=readz
 		options%buffer=buffer
 		options%remove_lowres_linear=remove_lowres_linear
+		options%add_low_topo=add_low_topo
 		options%mean_winds=mean_winds
 		options%mean_fields=mean_fields
 		options%nz=nz
@@ -342,7 +343,7 @@ contains
 	subroutine init_bc(options,domain,boundary)
 		implicit none
 		type(options_type), intent(in) :: options
-		type(domain_type), intent(in):: domain
+		type(domain_type), intent(inout):: domain
 		type(bc_type), intent(inout):: boundary
 			
 		write(*,*) "WARNING hardcoded low-res dx=36km"
@@ -366,6 +367,9 @@ contains
 ! 		the correct way would probably be to adjust all low-res pressures to Sea level before interpolating
 ! 		then pressure adjustments all occur from SLP. 
 		call geo_interp2d(boundary%next_domain%terrain,boundary%terrain,boundary%geolut)
+		if (options%add_low_topo) then
+			domain%terrain=domain%terrain+(boundary%next_domain%terrain-sum(boundary%next_domain%terrain)/size(boundary%next_domain%terrain))
+		endif
 		
 	end subroutine init_bc
 end module
