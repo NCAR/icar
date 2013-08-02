@@ -3,7 +3,7 @@ module time_step
 	use microphysics        ! mp
 	use wind                ! update_winds
 	use advection           ! advect
-	use iso_fortran_env
+! 	use iso_fortran_env     ! FLUSH removed because it didn't help
 	
 	implicit none
 	private
@@ -11,6 +11,7 @@ module time_step
 	
 contains
 	
+! 	update just the edges of curdata by adding dXdt
 	subroutine boundary_update(curdata,dXdt)
 		implicit none
 		real,dimension(:,:,:), intent(inout) :: curdata
@@ -29,7 +30,7 @@ contains
 		enddo
 	end subroutine boundary_update
 	
-	
+! 	updated all fields in domain using the respective dXdt variables
 	subroutine forcing_update(domain,bc)
 		implicit none
 		type(domain_type),intent(inout)::domain
@@ -46,6 +47,8 @@ contains
 	end subroutine forcing_update		
 
 
+! 	Divides dXdt variables by n timesteps so that after adding it N times we will be at the
+! 	correct final value. 
 	subroutine apply_dt(bc,nsteps)
 		implicit none
 		type(bc_type), intent(inout) :: bc
@@ -61,6 +64,7 @@ contains
 	end subroutine apply_dt
 	
 	
+!	Step forward one IO time step. 
 	subroutine step(domain,options,bc)
 		implicit none
 		type(domain_type),intent(inout)::domain
@@ -69,38 +73,39 @@ contains
 		integer::i,ntimesteps,tenp
 		real::dt,dtnext
 		
-		! courant condition for 3D advection... could make 3 x 1D to maximize dt? esp. w/linear wind speedups...
+! 		compute internal timestep dt to maintain stability
+! 		courant condition for 3D advection... could make 3 x 1D to maximize dt? esp. w/linear wind speedups...
+! 		this is probably safer than it needs to be...
 		dt=(domain%dx/max(max(maxval(abs(domain%u)),maxval(abs(domain%v))),maxval(abs(domain%w)))/3.0)
 ! 		pick the minimum dt from the begining or the end of the current timestep
 		dtnext=(domain%dx/max(max(maxval(abs(bc%next_domain%u)), &
 										maxval(abs(bc%next_domain%v))), &
 										maxval(abs(bc%next_domain%w)))/3.0)
-
 		dt=min(dt,dtnext)
-! 		make dt an integer fraction of the full timestep
-		dt=min(dt,60.0)
+! 		set an upper bound on dt to keep the microphysics stable?
+		dt=min(dt,180.0)
+! 		if we have a crazy small time step just throw an error
 		if (dt<1e-5) then
+			write(*,*) "dt=",dt
 			stop "ERROR time step too small"
 		endif
+		
+! 		make dt an integer fraction of the full timestep
 		dt=options%io_dt/ceiling(options%io_dt/dt)
 ! 		calculate the number of timesteps
 		ntimesteps=options%io_dt/dt
 		
+! 		adjust the boundary condition dXdt values for the number of time steps
 		call apply_dt(bc,ntimesteps)
 		write(*,*) "dt=",dt, "nsteps=",ntimesteps
-		tenp=10
+! 		now just loop over internal timesteps computing all physics in order (operator splitting...)
 		do i=1,ntimesteps
-! 			if (i>=(ntimesteps*tenp/100.0)) then
-! 				write(*,"(i4)",advance='no') nint((100.0*i)/ntimesteps)
-! 				call flush(Output_Unit) !note fortran doesn't flush data until there is a newline anyway...
-! 				tenp=tenp+10
-! 			endif
 			call advect(domain,options,dt)
 			call mp(domain,options,dt)
 	! 		call lsm(domain,options,dt)
 	! 		call pbl(domain,options,dt)
 	! 		call radiation(domain,options,dt)
-			
+! 			apply/update boundary conditions including internal wind and pressure changes. 
 			call forcing_update(domain,bc)
 		enddo
 	end subroutine step

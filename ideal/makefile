@@ -64,10 +64,10 @@ ifeq ($(NODENAME), Nomad.local)
 endif
 
 ifeq ($(F90), ifort)
-	COMP= -openmp -liomp5 -fast -c -u -check all -check noarg_temp_created -fpe0 -fast-transcendentals -xhost
+	COMP= -openmp -liomp5 -fast -c -u -fpe0 #-fast-transcendentals -xhost
 	LINK= -openmp -liomp5
-	
-	# NCDF_PATH = /usr/local/netcdf-4.1.3/ifort-12.0.5
+
+# NCDF_PATH = /usr/local/netcdf-4.1.3/ifort-12.0.5
 	NCDF_PATH = /home/gutmann/.usr/local
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
@@ -104,7 +104,7 @@ endif
 ifeq ($(LMOD_FAMILY_COMPILER),intel)
 	F90=ifort
 	COMP= -openmp -liomp5 -fast -c -u #-fast-transcendentals -xhost
-	# COMP= -openmp -liomp5 -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0
+#	COMP= -openmp -liomp5 -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0
 	LINK= -openmp -liomp5
 	LIBFFT=/glade/u/home/gutmann/usr/local/lib
 	INCFFT=/glade/u/home/gutmann/usr/local/include
@@ -137,10 +137,10 @@ FFLAGS=$(COMP) ${INCNETCDF} -I${INCFFT}
 
 OBJS=advect.o io_routines.o data_structures.o init.o mp_driver.o time_step.o boundary.o \
 		mp_thompson.o driver.o output.o wind.o linear_winds.o geo_reader.o
-		
+
 IDEALOBJS=advect.o io_routines.o data_structures.o init.o mp_driver.o \
 		mp_thompson.o ideal.o output.o wind.o linear_winds.o geo_reader.o
-		
+
 WINDOBJS=io_routines.o data_structures.o init.o tests/test_wind.o wind.o linear_winds.o output.o geo_reader.o
 
 GEOOBJS=io_routines.o data_structures.o tests/test_geo.o geo_reader.o
@@ -158,10 +158,9 @@ clean:
 	rm *.o *.mod
 
 allclean:cleanall
-		
+
 cleanall: clean
 	rm tests/*.o tests/*.mod swim_real swim_ideal geo_test wind_test # test_init
-	
 tests: geo_test wind_test #test_init
 
 real:${OBJS} 
@@ -199,7 +198,7 @@ init.o:init.f90 data_structures.o io_routines.o geo_reader.o
 
 time_step.o:time_step.f90 data_structures.o mp_driver.o wind.o advect.o
 	${F90} ${FFLAGS} time_step.f90
-	
+
 boundary.o:boundary.f90 data_structures.o io_routines.o wind.o geo_reader.o
 	${F90} ${FFLAGS} boundary.f90
 
@@ -210,7 +209,7 @@ boundary.o:boundary.f90 data_structures.o io_routines.o wind.o geo_reader.o
 
 output.o:output.f90 data_structures.o io_routines.o
 	${F90} ${FFLAGS} output.f90
-	
+
 io_routines.o:io_routines.f90 data_structures.o
 	${F90} ${FFLAGS} io_routines.f90
 
@@ -232,7 +231,7 @@ mp_thompson.o:mp_thompson.f90
 ###################################################################
 advect.o:advect.f90 data_structures.o
 	${F90} ${FFLAGS} advect.f90
-	
+
 wind.o:wind.f90 linear_winds.o
 	${F90} ${FFLAGS} wind.f90
 

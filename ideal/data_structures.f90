@@ -41,6 +41,7 @@ module data_structures
 		real::dx
 	end type linearizable_type
 	
+! 	All fields needed in the domain
 	type, extends(linearizable_type) :: domain_type
 		real, allocatable, dimension(:,:,:) :: p,th,w
 		real, allocatable, dimension(:,:,:) :: qv,cloud,ice,nice,qrain,nrain,qsnow,qgrau
@@ -70,7 +71,8 @@ module data_structures
 		integer::convection
 		integer::windtype
 	end type physics_type
-		
+	
+! 	store all model options
 	type options_type
 ! 		file names
 		character (len=MAXFILELENGTH) :: init_conditions_file

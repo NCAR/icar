@@ -146,7 +146,47 @@ contains
 
 		deallocate(temp_data)
 	end subroutine remove_edges
-			
+	
+! 	allocate all arrays in domain
+	subroutine domain_allocation(domain,nx,nz,ny)
+		type(domain_type), intent(inout) :: domain
+		integer,intent(in)::nx,nz,ny
+		allocate(domain%p(nx,nz,ny))
+		domain%p=0
+		allocate(domain%u(nx,nz,ny))
+		domain%u=0
+		allocate(domain%v(nx,nz,ny))
+		domain%v=0
+		allocate(domain%th(nx,nz,ny))
+		domain%th=0
+		allocate(domain%qv(nx,nz,ny))
+		domain%qv=0
+		allocate(domain%cloud(nx,nz,ny))
+		domain%cloud=0
+		allocate(domain%w(nx,nz,ny))
+		domain%w=0
+		allocate(domain%ice(nx,nz,ny))
+		domain%ice=0
+		allocate(domain%nice(nx,nz,ny))
+		domain%nice=0
+		allocate(domain%qrain(nx,nz,ny))
+		domain%qrain=0
+		allocate(domain%nrain(nx,nz,ny))
+		domain%nrain=0
+		allocate(domain%qsnow(nx,nz,ny))
+		domain%qsnow=0
+		allocate(domain%qgrau(nx,nz,ny))
+		domain%qgrau=0
+		allocate(domain%rain(nx,ny))
+		domain%rain=0
+		allocate(domain%snow(nx,ny))
+		domain%snow=0
+		allocate(domain%graupel(nx,ny))
+		domain%graupel=0
+		
+	end subroutine domain_allocation
+	
+! 	initialize the domain e.g. lat,lon,terrain, 3D z coordinate
 	subroutine init_domain(options, domain)
 		implicit none
 		type(options_type), intent(in) :: options
@@ -201,44 +241,35 @@ contains
 			write(*,*) "allocating domain wide memory"
 		endif
 ! 		all other variables should be allocated and initialized to 0
-		allocate(domain%p(nx,nz,ny))
-		domain%p=0
-		allocate(domain%u(nx,nz,ny))
-		domain%u=0
-		allocate(domain%v(nx,nz,ny))
-		domain%v=0
-		allocate(domain%th(nx,nz,ny))
-		domain%th=0
-		allocate(domain%qv(nx,nz,ny))
-		domain%qv=0
-		allocate(domain%cloud(nx,nz,ny))
-		domain%cloud=0
-		allocate(domain%w(nx,nz,ny))
-		domain%w=0
-		allocate(domain%ice(nx,nz,ny))
-		domain%ice=0
-		allocate(domain%nice(nx,nz,ny))
-		domain%nice=0
-		allocate(domain%qrain(nx,nz,ny))
-		domain%qrain=0
-		allocate(domain%nrain(nx,nz,ny))
-		domain%nrain=0
-		allocate(domain%qsnow(nx,nz,ny))
-		domain%qsnow=0
-		allocate(domain%qgrau(nx,nz,ny))
-		domain%qgrau=0
-		allocate(domain%rain(nx,ny))
-		domain%rain=0
-		allocate(domain%snow(nx,ny))
-		domain%snow=0
-		allocate(domain%graupel(nx,ny))
-		domain%graupel=0
+		call domain_allocation(domain,nx,nz,ny)
 		
 ! 		store dx in domain as well as options, read as an option, but it is more appropriate in domain
 		domain%dx=options%dx
 		
 	end subroutine init_domain
 	
+! 	allocate arrays in boundary condition data structure
+	subroutine boundary_allocate(boundary,nx,nz,ny)
+		type(bc_type), intent(inout) :: boundary
+		integer,intent(in)::nx,nz,ny
+		
+		allocate(boundary%dudt(nx,nz,ny))
+		boundary%dudt=0
+		allocate(boundary%dvdt(nx,nz,ny))
+		boundary%dvdt=0
+		allocate(boundary%dwdt(nx,nz,ny))
+		boundary%dwdt=0
+		allocate(boundary%dpdt(nx,nz,ny))
+		boundary%dpdt=0
+		allocate(boundary%dthdt(nz,max(nx,ny),4))
+		boundary%dthdt=0
+		allocate(boundary%dqvdt(nz,max(nx,ny),4))
+		boundary%dqvdt=0
+		allocate(boundary%dqcdt(nz,max(nx,ny),4))
+		boundary%dqcdt=0
+	end subroutine boundary_allocate
+	
+! 	initialize the boundary condition data structure e.g. lat,lon,terrain,3D Z coord
 	subroutine init_bc_data(options,boundary,domain)
 		implicit none
 		type(options_type), intent(in) :: options
@@ -272,7 +303,8 @@ contains
 		enddo
 	
 		
-! 		all other structures must be allocated and initialized, but will be set on a forcing timestep
+! 		all other structures must be allocated and initialized, but will be set on a high-res grid
+! 		u/v are seperate so we can read them on the low res grid and adjust/rm-linearwinds before interpolating
 ! 		this also makes it easier to change how these variables are read from various forcing model file structures
 		allocate(boundary%u(nx,nz,ny))
 		boundary%u=0
@@ -282,23 +314,10 @@ contains
 		nx=size(domain%lat,1)
 		ny=size(domain%lat,2)
 		
-		allocate(boundary%dudt(nx,nz,ny))
-		boundary%dudt=0
-		allocate(boundary%dvdt(nx,nz,ny))
-		boundary%dvdt=0
-		allocate(boundary%dwdt(nx,nz,ny))
-		boundary%dwdt=0
-		allocate(boundary%dpdt(nx,nz,ny))
-		boundary%dpdt=0
-		allocate(boundary%dthdt(nz,max(nx,ny),4))
-		boundary%dthdt=0
-		allocate(boundary%dqvdt(nz,max(nx,ny),4))
-		boundary%dqvdt=0
-		allocate(boundary%dqcdt(nz,max(nx,ny),4))
-		boundary%dqcdt=0
-		
+		call boundary_allocate(boundary,nx,nz,ny)
 	end subroutine init_bc_data
 	
+! 	initialize the external wind system (GEOLUT)
 	subroutine init_ext_winds(options,bc)
 		type(options_type), intent(in) :: options
 		type(bc_type),intent(inout) :: bc
@@ -312,14 +331,14 @@ contains
 		write(*,*) maxval(bc%next_domain%lat),minval(bc%next_domain%lat)
 		write(*,*) "Setting up ext wind geoLUT"
 		call geo_LUT(bc%next_domain, bc%ext_winds)
-		call io_write3di("geolut_x.nc","data",bc%ext_winds%geolut%x)
-		call io_write3di("geolut_y.nc","data",bc%ext_winds%geolut%y)
-		call io_write3d("geolut_w.nc","data",bc%ext_winds%geolut%w)
-		call io_write2d("lat.nc","data",bc%ext_winds%lat)
-		call io_write2d("lon.nc","data",bc%ext_winds%lon)
+! 		if (options%debug) then
+! 			call io_write3di("geolut_x.nc","data",bc%ext_winds%geolut%x)
+! 			call io_write3di("geolut_y.nc","data",bc%ext_winds%geolut%y)
+! 			call io_write3d("geolut_w.nc","data",bc%ext_winds%geolut%w)
+! 		endif
 	end subroutine init_ext_winds
 	
-	
+! 	initialize the boundary condiditions (init data structures and GEOLUT)
 	subroutine init_bc(options,domain,boundary)
 		implicit none
 		type(options_type), intent(in) :: options
@@ -333,11 +352,19 @@ contains
 		call init_domain(options,boundary%next_domain) !set up a domain to hold the forcing for the next time step
 ! 		create the geographic look up table used to calculate boundary forcing data
 		call geo_LUT(domain,boundary)
+! 		if (options%debug) then
+! 			call io_write3di("bcgeolut_x.nc","data",boundary%geolut%x)
+! 			call io_write3di("bcgeolut_y.nc","data",boundary%geolut%y)
+! 			call io_write3d("bcgeolut_w.nc","data",boundary%geolut%w)
+! 		endif
 		
 		if (options%external_winds) then
 			call init_ext_winds(options,boundary)
 		endif
 		
+! 		interpolate the low-res terrain to the high-res grid for pressure adjustments. 
+! 		the correct way would probably be to adjust all low-res pressures to Sea level before interpolating
+! 		then pressure adjustments all occur from SLP. 
 		call geo_interp2d(boundary%next_domain%terrain,boundary%terrain,boundary%geolut)
 		
 	end subroutine init_bc

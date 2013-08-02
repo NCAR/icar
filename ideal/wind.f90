@@ -2,7 +2,9 @@ module wind
 	use linear_theory_winds
 	use data_structures
 	implicit none
-	contains
+	private
+	public::update_winds
+contains
 
 	subroutine balance_uvw(domain)
 ! Forces u,v, and w fields to balance
@@ -37,6 +39,7 @@ module wind
 		deallocate(du,dv,divergence)
 	end subroutine balance_uvw
 	
+! 	apply wind field physics and adjustments
 	subroutine update_winds(domain,options)
 		type(domain_type),intent(inout)::domain
 		type(options_type),intent(in)::options
@@ -46,6 +49,7 @@ module wind
 ! 		linear winds
 		if (options%physics%windtype==1) then
 			call linear_perturb(domain)
+! 		assumes even flow over the mountains
 		else
 			nx=size(domain%u,1)
 			nz=size(domain%u,2)

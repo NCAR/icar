@@ -4,6 +4,7 @@ module io_routines
 	integer,parameter::io_maxDims=10
 contains
 
+! 	return a rank 1 array N=ndims+1, dims[1]=ndims, dims[i+1]=length of dimension i for a given variable
 	subroutine io_getdims(filename,varname,dims)
 		implicit none
 		character(len=*), intent(in) :: filename,varname

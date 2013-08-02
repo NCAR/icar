@@ -6,21 +6,6 @@ module geo
 	public::geo_LUT
 	public::geo_interp,geo_interp2d
 	
-! 	type geo_info
-! 		real,allocatable,dimension(:,:)::lat,lon
-! 	end type geo_info
-! initial template for a reader_type object for now abandoned...
-! 	type reader_type
-! 		real, allocatable, dimension(:,:,:) :: datavar
-! 		real, allocatable, dimension(:,:,:) :: qv,cloud,ice,nice,qrain,nrain,qsnow,qgrau
-! 		real, allocatable, dimension(:,:) :: terrain,rain,snow,graupel,dzdx,dzdy
-! 		type(geolut)::geolut
-! 		real::dx,dt
-! 	contains
-! 		procedure :: init
-! 		procedure :: next_BC
-! 	end type reader_type
-	
 contains
 	
 	function bilin_weights(yi,y,xi,x)
@@ -61,6 +46,15 @@ contains
 !  position is within 1 gridcell of the current position
 !  Once that "within 1" position is found, search all cells in a 3x3 grid for the minimum distance
 !  return a position datatype that includes the found x/y location
+! 
+! currently tries up to three methods to find the location 
+! 	1) assume relatively even dxdy and compute location (iterate a <20times)
+!   2) use a log(n) search (divide and conquer) also iterate <20times)
+!   a) if 1 or 2 are approximately successful: 
+! 		search a small region around the "best" point to find the real best point
+!   3) in the diabolical case where 1 and 2 fail (not sure this will ever happen) just search every single location (n^2)
+!   
+
 		implicit none
 		class(interpolable_type),intent(in)::lo
 		real,intent(in)::lat,lon
@@ -80,9 +74,12 @@ contains
 ! 		steps to take = the difference the between the current point and the input point / dx
 		xstep=(lon-x)/dx
 		ystep=(lat-y)/dy
+		
+!	CASE 1 assume a quasi regular dx/dy and caluate new location
 ! 		while we need to step by more than one grid cell, iterate
 ! 		if the grid is highly regular, we will only iterate 1-2x, highly irregular might require more iterations
 ! 		in the diabolical case, this could fail? 
+! 		in most cases this succeeds with a few iterations. 
 		iterations=0
 		do while (((abs(xstep)>1).or.(abs(ystep)>1)).and.iterations<20)
 			iterations=iterations+1
@@ -111,6 +108,7 @@ contains
 		xc=max(1,min(nx,xc+xstep))
 		yc=max(1,min(ny,yc+ystep))
 		
+!	CASE 2 use a log(n search)
 ! 		in case we hit some pathologically varying dx case 
 ! 		use a "straightforward" log(n) search
 		if (iterations>=20) then
@@ -175,9 +173,8 @@ contains
 					xw=0
 				endif
 			enddo
-! 			write(*,*) "   found: ",lo%lat(xc,yc),lo%lon(xc,yc),"  iterations=",iterations
 		endif
-! 		iterations=30
+
 ! 		once we have a "good" location we need to find the actual minimum (we could be above or below it by 1 or 2)
 		if (iterations<20) then
 			mindist=9999.9
@@ -192,9 +189,11 @@ contains
 				enddo
 			enddo
 		else
+!	CASE 3 search every possible grid cell!
 			write(*,*) "using n^2 search..."
+! 			note which point this is for debugging purposes, we really shouldn't get here
 			write(*,*) lat,lon,nx,ny
-	! 	naive version that may actually be fast enough...
+! 			naive search
 			mindist=9999.9
 			do xw=1,nx
 				do yw=1,ny
@@ -236,9 +235,10 @@ contains
 		
 	end function find_surrounding			
 	
+! 	compute the geographic look up table from LOw resolution grid to HIgh resolution grid
 	subroutine geo_LUT(hi, lo)
 		implicit none
-		type(domain_type),intent(in)::hi
+		class(interpolable_type),intent(in)::hi
 		class(interpolable_type),intent(inout)::lo
 		type(fourpos)::xy
 		type(position)::curpos,lastpos

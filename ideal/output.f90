@@ -4,6 +4,11 @@ module output
 	use data_structures
 	implicit none
 contains
+! 	simple routine to write all domain data from this current time step to the output file. 
+!   note these are instantaneous fields, precip etc are accumulated fluxes. 
+! 	u/v are destaggered first
+! 	We could accumulated multiple time periods per file at some point, but this routine would
+!   still serve as a good restart file
 	subroutine write_domain(domain,options,timestep)
 		implicit none
 	    ! This is the name of the data file and variable we will read. 
@@ -29,7 +34,9 @@ contains
 		if (options%debug) then
 			write(*,*) trim(filename)
 		endif
+! 		create the file (clobbering any existing files!)
 		call check( nf90_create(filename, NF90_CLOBBER, ncid) )
+		
 ! 		define the dimensions
 		call check( nf90_def_dim(ncid, "x", nx, temp_id) )
 		dimids(1)=temp_id
@@ -66,6 +73,7 @@ contains
 		call check( nf90_def_var(ncid, "th", NF90_REAL, dimids, temp_id) )
 		varid(13)=temp_id
 		
+! 		surface precip fluxes
 		call check( nf90_def_var(ncid, "rain", NF90_REAL, dimids(1:3:2), temp_id) )
 		varid(14)=temp_id
 		call check( nf90_def_var(ncid, "snow", NF90_REAL, dimids(1:3:2), temp_id) )
@@ -76,6 +84,7 @@ contains
 		! End define mode. This tells netCDF we are done defining metadata.
 		call check( nf90_enddef(ncid) )
 		
+! 		write the actual data
 		call check( nf90_put_var(ncid, varid(1),  domain%qv) )
 		call check( nf90_put_var(ncid, varid(2),  domain%cloud) )
 		call check( nf90_put_var(ncid, varid(3),  domain%ice) )
@@ -84,15 +93,15 @@ contains
 		call check( nf90_put_var(ncid, varid(6),  domain%qgrau) )
 		call check( nf90_put_var(ncid, varid(7),  domain%nrain) )
 		call check( nf90_put_var(ncid, varid(8),  domain%nice) )
-		call check( nf90_put_var(ncid, varid(9),  domain%u(1:nx,:,:)) )
-		call check( nf90_put_var(ncid, varid(10), domain%v(:,:,1:ny)) )
+		call check( nf90_put_var(ncid, varid(9), (domain%u(1:nx,:,:)+domain%u(2:nx+1,:,:))/2) )
+		call check( nf90_put_var(ncid, varid(10),(domain%v(:,:,1:ny)+domain%v(:,:,2:ny+1))/2) )
 		call check( nf90_put_var(ncid, varid(11), domain%w) )
 		call check( nf90_put_var(ncid, varid(12), domain%p) )
 		call check( nf90_put_var(ncid, varid(13), domain%th) )
 		call check( nf90_put_var(ncid, varid(14), domain%rain) )
 		call check( nf90_put_var(ncid, varid(15), domain%snow) )
 		call check( nf90_put_var(ncid, varid(16), domain%graupel) )
-	
+		
 		! Close the file, freeing all resources.
 		call check( nf90_close(ncid) )
 	end subroutine write_domain

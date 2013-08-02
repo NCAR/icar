@@ -2,7 +2,10 @@ module advection
 	use data_structures
     
     implicit none
-    contains
+	private
+	public::advect
+	
+contains
     subroutine flux2(l,r,U,nx,nz,ny,f)
     !     Calculate the donor cell flux function
     !     l = left gridcell scalar 
@@ -67,6 +70,7 @@ module advection
         !$omp end parallel
     end subroutine advect3d
 
+! 	primary entry point, advect all scalars in domain
 	subroutine advect(domain,options,dt)
 		type(domain_type),intent(inout)::domain
 		type(options_type),intent(in)::options
@@ -81,11 +85,13 @@ module advection
 		nz=size(domain%dz,2)
 		ny=size(domain%dz,3)
 		
+! 		calculate U,V,W normalized for dt/dx
 		allocate(U(nx-1,nz,ny))
 		U=domain%u(1:nx-1,:,:)*dt/dx
 		allocate(V(nx,nz,ny-1))
 		V=domain%v(:,:,1:ny-1)*dt/dx
 		allocate(W(nx,nz,ny))
+! 		note, even though dz!=dx, W is computed from the divergence in U/V so it is scaled by dx/dz already
 		W=domain%w*dt/dx
 		
 		call advect3d(domain%th,   U,V,W,nx,nz,ny,0)

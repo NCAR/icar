@@ -12,6 +12,7 @@ program real
 	type(bc_type)      :: boundary
 	integer::i,nx,ny,start_point
 	
+! 	initialize model including options, terrain, lat, lon data. 
 	call init_model("real_options.namelist",options,domain,boundary)
 ! 	initialize microphysics code (e.g. compute look up tables in Thompson et al)
 	write(*,*) "Initializing microphysics"
@@ -32,7 +33,7 @@ program real
 		write(*,*) "Timestep:", i, "  of ", options%ntimesteps
 ! 		update boundary conditions (dXdt variables)
 		call bc_update(domain,boundary,options)
-! 		this is the meat of the model, run all the physics for the current time step looping over internal timesteps
+! 		this is the meat of the model physics, run all the physics for the current time step looping over internal timesteps
 		call step(domain,options,boundary)
 ! 		finally write the output for this timestep
 		call write_domain(domain,options,i)

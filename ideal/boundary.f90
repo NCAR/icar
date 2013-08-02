@@ -4,11 +4,12 @@ module boundary_conditions
 ! 		This should serve as a basis for any additional file types, and can be 
 ! 		readily modified.  At some point this could be modified to check the 
 ! 		type if input file being specified, and call an appropriate routine. 
-! 		e.g. if options.inputtype=="WRF" then call wrf_init/update()
+! 		e.g. if options%inputtype=="WRF" then call wrf_init/update()
 ! ----------------------------------------------------------------------------
 	use io_routines
 	use data_structures
 	use wind
+	use linear_theory_winds
 	use geo
 	
 	implicit none
@@ -23,15 +24,19 @@ module boundary_conditions
 	integer::ext_winds_curfile,ext_winds_curstep
 	integer::ext_winds_steps_in_file,ext_winds_nfiles
 
+	integer,parameter::smoothing_window=9
     real, parameter :: R=287.058 ! J/(kg K) specific gas constant for air
     real, parameter :: cp = 1012.0 ! specific heat capacity of moist STP air? J/kg/K
 	
 	public::bc_init
 	public::bc_update
 contains
-	subroutine smooth_wind(wind,windowsize)
+	
+! 	smooth an array (written for wind but will work for anything)
+	subroutine smooth_wind(wind,windowsize,ydim)
 		real, intent(inout), dimension(:,:,:):: wind
 		integer,intent(in)::windowsize
+		integer,intent(in)::ydim
 		real,allocatable,dimension(:,:,:)::inputwind
 		integer::i,j,k,nx,ny,nz
 		nx=size(wind,1)
@@ -43,23 +48,27 @@ contains
 		!$omp parallel firstprivate(windowsize,nx,ny,nz),private(i,j,k),shared(wind,inputwind)
 		!$omp do
 		do k=1,nz
-			do j=1+windowsize,ny-windowsize
-				do i=1+windowsize,nx-windowsize
-					wind(i,j,k)=sum(inputwind(i-windowsize:i+windowsize,j-windowsize:j+windowsize,k))/((windowsize*2+1)**2)
+			do j=1,ny
+				do i=1,nx
+					if (ydim==2) then
+						wind(i,j,k)=sum(inputwind(max(i-windowsize,1):min(nx,i+windowsize),max(1,j-windowsize):min(ny,j+windowsize),k)) &
+							/ ((min(nx,i+windowsize)-max(i-windowsize,1)+1) * (min(ny,j+windowsize)-max(1,j-windowsize)+1))
+					else
+						wind(i,j,k)=sum(inputwind(max(i-windowsize,1):min(nx,i+windowsize),j,max(1,k-windowsize):min(nz,k+windowsize))) &
+							/ ((min(nx,i+windowsize)-max(i-windowsize,1)+1) * (min(nz,k+windowsize)-max(1,k-windowsize)+1))
+					endif
 				enddo
 			enddo
 		enddo
 		!$omp end do
 		!$omp end parallel
-		do i=1,windowsize
-			wind(:,i,:)=wind(:,1+windowsize,:)
-			wind(:,ny-i+1,:)=wind(:,ny-windowsize,:)
-			wind(i,:,:)=wind(1+windowsize,:,:)
-			wind(nx-i+1,:,:)=wind(nx-windowsize,:,:)
-		enddo
+		
 		deallocate(inputwind)
 	end subroutine smooth_wind
 	
+! 	generic routine to read a low res variable (varname) from a netcdf file (filename) at the current time step (curstep)
+!   then interpolate it to the high res grid either in 3D or at the boundaries only (boundary_only)
+! 	applies modifications specificaly for U,V,T,P and PH variables
 	subroutine read_var(highres,filename,varname,geolut,curstep,boundary_only,low_res_terrain)
 		implicit none
 		real,dimension(:,:,:),intent(inout)::highres
@@ -68,9 +77,10 @@ contains
 		integer,intent(in)::curstep
 		logical, intent(in) :: boundary_only
 		real,optional,dimension(:,:,:) :: low_res_terrain
+		
 		real,dimension(:,:,:),allocatable :: inputdata,extra_data
 		integer,dimension(io_maxDims)::dims
-		integer::nx,ny,nz,subnz,i
+		integer::nx,ny,nz,i
 		
 ! 		Read the data in
 		call io_getdims(filename,varname, dims)
@@ -80,15 +90,7 @@ contains
 		nx=dims(2)
 		ny=dims(3)
 		nz=dims(4)
-! 		if (subnz.ne.nz) then
-! 			allocate(extra_data(nx,ny,nz))
-! 			extra_data=inputdata
-! 			deallocate(inputdata)
-! 			allocate(inputdata(nx,ny,subnz))
-! 			inputdata=extra_data(:,:,1:subnz)
-! 			nz=subnz
-! 			deallocate(extra_data)
-! 		endif
+		
 ! 		perform destaggering and unit conversion on specific variables
 		if (varname=="U") then
 			allocate(extra_data(nx,ny,nz))
@@ -97,7 +99,7 @@ contains
 			nx=nx-1
 			allocate(inputdata(nx,ny,nz))
 			inputdata=(extra_data(1:nx,:,:)+extra_data(2:nx+1,:,:))/2
-			call smooth_wind(inputdata,2)
+			call smooth_wind(inputdata,2,2)
 			deallocate(extra_data)
 		else if (varname=="V") then
 			allocate(extra_data(nx,ny,nz))
@@ -106,7 +108,7 @@ contains
 			ny=ny-1
 			allocate(inputdata(nx,ny,nz))
 			inputdata=(extra_data(:,1:ny,:)+extra_data(:,2:ny+1,:))/2
-			call smooth_wind(inputdata,2)
+			call smooth_wind(inputdata,2,2)
 			deallocate(extra_data)
 		else if (varname=="T") then
 			inputdata=inputdata+300
@@ -121,6 +123,7 @@ contains
 			inputdata(:,:,1:nz)=(inputdata(:,:,1:nz)+inputdata(:,:,2:nz+1))/2
 			deallocate(extra_data)
 		endif
+		
 ! 		interpolate data onto the high resolution grid after re-arranging the dimensions. 
 		nz=min(nz,size(highres,2))
 		allocate(extra_data(nx,nz,ny))
@@ -130,13 +133,13 @@ contains
 ! 		extra_data=reshape(inputdata,[nx,nz,ny],order=[1,3,2])
 		call geo_interp(highres, &
 						extra_data, &
-! 						reshape(inputdata,[nx,nz,ny],order=[1,3,2]), &
 						geolut,boundary_only)
 		deallocate(extra_data)
 		deallocate(inputdata)
 						
 	end subroutine read_var
 	
+! 	initialize the eternal winds information (filenames, nfiles, etc) and read the initial conditions
 	subroutine ext_winds_init(domain,bc,options)
 		implicit none
 		type(domain_type),intent(inout)::domain
@@ -181,6 +184,7 @@ contains
 		
 	end subroutine ext_winds_init
 	
+! 	remove linear theory topographic winds perturbations from the low resolution wind field. 
 	subroutine remove_linear_winds(domain,bc,options,filename,curstep)
         implicit none
 		type(domain_type), intent(inout) :: domain
@@ -201,29 +205,29 @@ contains
 		
 		allocate(inputdata(nx,ny,nz_output))
 		
+! 		first read in the low-res U and V data directly
 ! 		load low-res U data
-! 		allocate(extra_data(nx+1,ny,nz))
 		call io_read3d(filename,"U",extra_data,curstep)
 		inputdata=(extra_data(1:nx,:,:nz_output)+extra_data(2:nx+1,:,:nz_output))/2
-		call smooth_wind(inputdata,3)
+		call smooth_wind(inputdata,2,2)
 		deallocate(extra_data)
 		bc%u=reshape(inputdata,[nx,nz_output,ny],order=[1,3,2])
-		
 ! 		load low-res V data
-! 		allocate(extra_data(nx,ny+1,nz))
 		call io_read3d(filename,"V",extra_data,curstep)
 		inputdata=(extra_data(:,1:ny+1,:nz_output)+extra_data(:,2:ny+1,:nz_output))/2
-		call smooth_wind(inputdata,3)
+		call smooth_wind(inputdata,2,2)
 		bc%v=reshape(inputdata,[nx,nz_output,ny],order=[1,3,2])
 		deallocate(extra_data,inputdata)
 		
 ! 		remove the low-res linear wind contribution effect
 		call linear_perturb(bc,reverse_winds)
+		
 ! 		finally interpolate low res winds to the high resolutions grid
 		call geo_interp(domain%u, bc%u,bc%geolut,.FALSE.)
 		call geo_interp(domain%v, bc%v,bc%geolut,.FALSE.)
 	end subroutine remove_linear_winds
 	
+! for test cases compute the mean winds and make them constant everywhere...
 	subroutine mean_winds(domain,filename,curstep)
 		type(domain_type), intent(inout) :: domain
 		character(len=*),intent(in)::filename
@@ -247,6 +251,7 @@ contains
 				
 	end subroutine mean_winds
 	
+! 	if we are restarting from a given point, initialize the domain from the given restart file
 	subroutine load_restart_file(domain,restart_file)
 		type(domain_type), intent(inout) :: domain
 		character(len=*),intent(in)::restart_file
@@ -290,6 +295,7 @@ contains
 		deallocate(inputdata)
 	end subroutine load_restart_file
 	
+! 	initialize the boundary conditions (read inital conditions, etc.)
 	subroutine bc_init(domain,bc,options)
 		implicit none
 		type(domain_type),intent(inout)::domain
@@ -302,6 +308,8 @@ contains
 		real::domainsize
 		! MODULE variables : curstep, curfile, nfiles, steps_in_file, file_list
 		
+! 		in case we are using a restart file we have some trickery to do here to find the proper file to be reading from
+!       and set the current time step appropriately... should probably be moved to a subroutine. 
 		curfile=1
 		if (options%restart) then
 			curstep=options%restart_step
@@ -332,6 +340,7 @@ contains
 			endif
 		enddo
 		
+! 		load the restart file
 		if (options%restart) then
 			call load_restart_file(domain,options%restart_file)
 			if (options%external_winds) then
@@ -350,8 +359,8 @@ contains
 			else
 				call read_var(domain%u,    file_list(curfile),"U",      bc%geolut,curstep,boundary_value)
 				call read_var(domain%v,    file_list(curfile),"V",      bc%geolut,curstep,boundary_value)
-				call smooth_wind(domain%u,8)
-				call smooth_wind(domain%v,8)
+				call smooth_wind(domain%u,smoothing_window,3)
+				call smooth_wind(domain%v,smoothing_window,3)
 			endif
 			call read_var(domain%p,    file_list(curfile),"P",      bc%geolut,curstep,boundary_value)
 			call read_var(domain%th,   file_list(curfile),"T",      bc%geolut,curstep,boundary_value)
@@ -499,8 +508,10 @@ contains
 		else
 			call read_var(bc%next_domain%u,    file_list(curfile),"U",      bc%geolut,curstep,use_interior)
 			call read_var(bc%next_domain%v,    file_list(curfile),"V",      bc%geolut,curstep,use_interior)
-			call smooth_wind(bc%next_domain%u,8)
-			call smooth_wind(bc%next_domain%v,8)
+			write(*,*) maxval(abs(bc%next_domain%u)),maxval(abs(bc%next_domain%v))
+			call smooth_wind(bc%next_domain%u,smoothing_window,3)
+			call smooth_wind(bc%next_domain%v,smoothing_window,3)
+			write(*,*) maxval(abs(bc%next_domain%u)),maxval(abs(bc%next_domain%v))
 		endif
 		call read_var(bc%next_domain%p,    file_list(curfile),"P",      bc%geolut,curstep,use_interior)
 		call read_var(bc%next_domain%th,   file_list(curfile),"T",      bc%geolut,curstep,use_boundary)
@@ -537,7 +548,10 @@ contains
 			enddo
 		endif
 		
+		write(*,*) maxval(abs(domain%u)),maxval(abs(domain%v)),maxval(abs(domain%w))
+		write(*,*) maxval(abs(bc%next_domain%u)),maxval(abs(bc%next_domain%v)),maxval(abs(bc%next_domain%w))
 		call update_winds(bc%next_domain,options)
+		write(*,*) maxval(abs(bc%next_domain%u)),maxval(abs(bc%next_domain%v)),maxval(abs(bc%next_domain%w))
 		call update_dxdt(bc,domain)
 	end subroutine bc_update
 end module boundary_conditions
