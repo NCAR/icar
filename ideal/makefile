@@ -199,7 +199,7 @@ init.o:init.f90 data_structures.o io_routines.o geo_reader.o
 time_step.o:time_step.f90 data_structures.o mp_driver.o wind.o advect.o
 	${F90} ${FFLAGS} time_step.f90
 
-boundary.o:boundary.f90 data_structures.o io_routines.o wind.o geo_reader.o
+boundary.o:boundary.f90 data_structures.o io_routines.o wind.o geo_reader.o output.o
 	${F90} ${FFLAGS} boundary.f90
 
 

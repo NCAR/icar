@@ -14,6 +14,38 @@ module data_structures
 		integer::x(4),y(4)
 	end type fourpos
 	
+!------------------------------------------------
+! 
+! General Field Definitions
+!
+! ---- 3D fields ----
+! u     = wind in east direction        [m/s]
+! v     = wind in north direction       [m/s]
+! w     = wind in vertical direction    [m/s] (scaled by dx/dz)
+! 
+! p     = pressure                      [pa]
+! th    = potential temperature         [K]
+!
+! qv    = vapor pressure (mixing ratio) [kg/kg]
+! qc    = cloud water                   [kg/kg]
+! qi    = cloud ice                     [kg/kg]
+! qrain = rain mixing ratio             [kg/kg]
+! qsnow = snow mixing ratio             [kg/kg]
+! qgrau = graupel mixing ratio          [kg/kg]
+! nice  = ice number concentration      [1/cm^3]
+! nrain = rain number concentration     [1/cm^3]
+!
+! ---- 2D fields ----
+! rain  = rain+snow+graupel at surface  [mm]
+! snow  = snow at surface               [mm]
+! graupel = graupel at surface          [mm]
+!
+! ---- model structure ----
+! terrain = surface elevation           [m]
+! z = model layer height (at mid point) [m]
+! dz = layer thickness                  [m]
+!------------------------------------------------
+
 ! 	a geographic look up table for spatial interpolation, from x,y with weight w
 	type geo_look_up_table
 		integer,allocatable,dimension(:,:,:)::x,y
@@ -37,7 +69,7 @@ module data_structures
 ! 		linear theory computes u,v at z
 		real, allocatable, dimension(:,:,:):: u,v,dz,z
 		real, allocatable, dimension(:,:) :: terrain,dzdx,dzdy
-		complex(C_DOUBLE_COMPLEX), allocatable, dimension(:,:) :: fzs
+		complex(C_DOUBLE_COMPLEX), allocatable, dimension(:,:) :: fzs !FFT(terrain)
 		real::dx
 	end type linearizable_type
 	

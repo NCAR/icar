@@ -368,7 +368,7 @@ contains
 ! 		then pressure adjustments all occur from SLP. 
 		call geo_interp2d(boundary%next_domain%terrain,boundary%terrain,boundary%geolut)
 		if (options%add_low_topo) then
-			domain%terrain=domain%terrain+(boundary%next_domain%terrain-sum(boundary%next_domain%terrain)/size(boundary%next_domain%terrain))
+			domain%terrain=domain%terrain+(boundary%next_domain%terrain-sum(boundary%next_domain%terrain)/size(boundary%next_domain%terrain))/2.0
 		endif
 		
 	end subroutine init_bc

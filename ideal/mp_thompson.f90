@@ -680,9 +680,7 @@
 
 !..Collision efficiency between rain/snow and cloud water.
 !       CALL wrf_debug(200, '  creating qc collision eff tables')
-	  write(*,*) "Efrw"
       call table_Efrw
-	  write(*,*) "Efsw"
       call table_Efsw
 
 !..Drop evaporation.
@@ -715,12 +713,10 @@
 
 !..Cloud water and rain freezing (Bigg, 1953).
       ! CALL wrf_debug(200, '  creating freezing of water drops table')
-	  write(*,*) "freezeH20"
       call freezeH2O
 
 !..Conversion of some ice mass into snow category.
       ! CALL wrf_debug(200, '  creating ice converting to snow table')
-	  write(*,*) "qi_aut_qs"
       call qi_aut_qs
 
       endif

@@ -7,6 +7,8 @@ module microphysics
 	real, parameter :: cp = 1012.0 ! specific heat capacity of moist STP air? J/kg/K
 	real, parameter :: g=9.81 ! gravity m/s^2
 
+	real,allocatable,dimension(:,:,:)::pii,SR
+
 contains
 	subroutine mp_init(physics_level)
 		integer, intent(in)::physics_level
@@ -17,7 +19,6 @@ contains
 		type(domain_type),intent(inout)::domain
 		type(options_type),intent(in)::options
 		real,intent(in)::dt_in
-		real,allocatable,dimension(:,:,:)::pii,SR
 		integer ::ids,ide,jds,jde,kds,kde,itimestep=1
 		
 		ids=1
@@ -27,9 +28,15 @@ contains
 		jds=1
 		jde=size(domain%qv,3)
 		
-		allocate(pii(ids:ide,kds:kde,jds:jde))
-		allocate(SR(ids:ide,kds:kde,jds:jde))
-		SR=0
+		if (.not.allocated(pii)) then
+			allocate(pii(ids:ide,kds:kde,jds:jde))
+		endif
+		if (.not.allocated(SR)) then
+			allocate(SR(ids:ide,kds:kde,jds:jde))
+	! 		snow rain ratio
+			SR=0
+		endif
+! 		used to convert potential temperature to sensible temperature
 		pii=1.0/((100000.0/domain%p)**(R/cp))
 		
 		call mp_gt_driver(domain%qv, domain%cloud, domain%qrain, domain%ice, &
@@ -45,4 +52,13 @@ contains
 		deallocate(pii,SR)
 						
 	end subroutine mp
+	
+	subroutine mp_finish()
+		if (allocated(pii)) then
+			deallocate(pii)
+		endif
+		if (allocated(SR)) then
+			deallocate(SR)
+		endif
+	end subroutine mp_finish
 end module microphysics
