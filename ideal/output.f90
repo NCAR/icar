@@ -30,7 +30,11 @@ contains
 		
 		! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
 		! the file.
-		write(filename,"(A,I5.5)") trim(options%output_file),timestep
+		if (timestep<0) then
+			write(filename,"(A,A)") trim(options%output_file),".restart"
+		else
+			write(filename,"(A,I5.5)") trim(options%output_file),timestep
+		endif
 		if (options%debug) then
 			write(*,*) trim(filename)
 		endif

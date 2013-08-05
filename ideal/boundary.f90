@@ -11,6 +11,7 @@ module boundary_conditions
 	use wind
 	use linear_theory_winds
 	use geo
+	use output
 	
 	implicit none
 	private
@@ -178,7 +179,7 @@ contains
 				ext_winds_steps_in_file=dims(dims(1)+1) !dims(1) = ndims; dims(ndims+1)=ntimesteps
 			endif
 		enddo
-		
+		write(*,*) "Initial ext wind file:step=",ext_winds_curfile," : ",ext_winds_curstep
 		call read_var(domain%u,    ext_winds_file_list(ext_winds_curfile),"U",      bc%ext_winds%geolut,ext_winds_curstep,.FALSE.)
 		call read_var(domain%v,    ext_winds_file_list(ext_winds_curfile),"V",      bc%ext_winds%geolut,ext_winds_curstep,.FALSE.)
 		
@@ -358,6 +359,8 @@ contains
 			if (options%external_winds) then
 				call ext_winds_init(domain,bc,options)
 			endif
+			call update_winds(domain,options)
+			call write_domain(domain,options,-1)
 		else
 			boundary_value=.False.
 			nx=size(domain%u,1)
