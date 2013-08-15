@@ -91,6 +91,12 @@ ifeq ($(DEBUG), debugomp)
 	LINK= -openmp -liomp5
 endif
 
+ifeq ($(DEBUG), profile)
+	COMP= -openmp -liomp5 -p -c -fast -u -fast-transcendentals -xhost
+	LINK= -openmp -liomp5 -p
+endif
+
+
 # on yellowstone:
 ifeq ($(LMOD_FAMILY_COMPILER),gnu)
 	F90=gfortran

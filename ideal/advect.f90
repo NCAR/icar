@@ -93,7 +93,7 @@ contains
 		allocate(W(nx,nz,ny))
 ! 		note, even though dz!=dx, W is computed from the divergence in U/V so it is scaled by dx/dz already
 		W=domain%w*dt/dx
-		
+! 		should probably be converting to mass (q*rho) before advecting, then back again... but testing showed minimal difference
 		call advect3d(domain%th,   U,V,W,nx,nz,ny,0)
 		call advect3d(domain%qv,   U,V,W,nx,nz,ny,0)
 		call advect3d(domain%cloud,U,V,W,nx,nz,ny,0)
