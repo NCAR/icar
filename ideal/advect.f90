@@ -36,9 +36,10 @@ contains
         ! interal parameters
         integer :: err,i
 	    real,dimension(1:nx,1:nz,1:ny) :: qin
-        real, dimension(1:nx-2,1:nz,1) :: f1,f2,f3,f4
-        real, dimension(1:nx-2,1:nz-2,1) ::f5,f6
-        !$omp parallel shared(q,u,v,w) firstprivate(nx,ny,nz) private(i,f1,f2,f3,f4,f5,f6)
+        real, dimension(1:nx-1,1:nz,1) :: f1 ! there used to be an f2 to store f[x+1]
+        real, dimension(1:nx-2,1:nz,1) :: f3,f4
+        real, dimension(1:nx-2,1:nz-1,1) ::f5
+        !$omp parallel shared(q,u,v,w) firstprivate(nx,ny,nz) private(i,f1,f3,f4,f5)
         !$omp do
         do i=1,ny
 			qin(:,:,i)=q(:,:,i)
@@ -46,25 +47,21 @@ contains
         !$omp end do
         !$omp do
         do i=2,ny-1
-! 			note f1,f2 are largely duplicates (ditto f5,f6 and f3,f4 between loops (e.g. f3=previous f4))
-! 			this is just a convenient notation for now. 
-! 			ideally this redundancy should be used to decrease the number of flux2 calls (cut in 1/2)
-           call flux2(qin(2:nx-1,:,i),qin(3:nx,:,i),u(2:nx-1,:,i),nx-2,nz,1,f1)  !Ux1
-           call flux2(qin(1:nx-2,:,i),qin(2:nx-1,:,i),u(1:nx-2,:,i),nx-2,nz,1,f2)  !Ux0
+! 			calculate fluxes between grid cells
+           call flux2(qin(1:nx-1,:,i),qin(2:nx,:,i),u(1:nx-1,:,i),nx-1,nz,1,f1)  !Ux1
            call flux2(qin(2:nx-1,:,i),qin(2:nx-1,:,i+1),v(2:nx-1,:,i),nx-2,nz,1,f3)  !Vy1
            call flux2(qin(2:nx-1,:,i-1),qin(2:nx-1,:,i),v(2:nx-1,:,i-1),nx-2,nz,1,f4)  !Vy0
-           call flux2(qin(2:nx-1,2:nz-1,i),qin(2:nx-1,3:nz,i),w(2:nx-1,2:nz-1,i),nx-2,nz-2,1,f5)
-           call flux2(qin(2:nx-1,1:nz-2,i),qin(2:nx-1,2:nz-1,i),w(2:nx-1,1:nz-2,i),nx-2,nz-2,1,f6)
+           call flux2(qin(2:nx-1,1:nz-1,i),qin(2:nx-1,2:nz,i),w(2:nx-1,1:nz-1,i),nx-2,nz-1,1,f5)
 		   
            ! perform horizontal advection
-           q(2:nx-1,:,i)=q(2:nx-1,:,i) - (f1(:,:,1)-f2(:,:,1)) - (f3(:,:,1)-f4(:,:,1))
+           q(2:nx-1,:,i)=q(2:nx-1,:,i) - (f1(2:nx-1,:,1)-f1(1:nx-2,:,1)) - (f3(:,:,1)-f4(:,:,1))
            ! then vertical (order doesn't matter because fluxes f1-6 are calculated before applying them)
            ! add fluxes to middle layers
-           q(2:nx-1,2:nz-1,i)=q(2:nx-1,2:nz-1,i)-(f5(:,:,1)-f6(:,:,1))
+           q(2:nx-1,2:nz-1,i)=q(2:nx-1,2:nz-1,i)-(f5(:,2:nz-1,1)-f5(:,1:nz-2,1))
            ! add fluxes to bottom layer
-           q(2:nx-1,1,i)=q(2:nx-1,1,i)-f6(:,1,1)
+           q(2:nx-1,1,i)=q(2:nx-1,1,i)-f5(:,1,1)
            ! add fluxes to top layer
-           q(2:nx-1,nz,i)=q(2:nx-1,nz,i)-(qin(2:nx-1,nz,i)*w(2:nx-1,nz,i)-f5(:,nz-2,1))
+           q(2:nx-1,nz,i)=q(2:nx-1,nz,i)-(qin(2:nx-1,nz,i)*w(2:nx-1,nz,i)-f5(:,nz-1,1))
         enddo
         !$omp end do
         !$omp end parallel
