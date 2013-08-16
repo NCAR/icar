@@ -836,146 +836,141 @@
          pptsnow = 0.
          pptgraul = 0.
          pptice = 0.
-!          RAINNCV(i,j) = 0.
-!          IF ( PRESENT (snowncv) ) THEN
-!             SNOWNCV(i,j) = 0.
-!          ENDIF
-!          IF ( PRESENT (graupelncv) ) THEN
-!             GRAUPELNCV(i,j) = 0.
-!          ENDIF
-!          SR(i,j) = 0.
+         RAINNCV(i,j) = 0.
+         IF ( PRESENT (snowncv) ) THEN
+            SNOWNCV(i,j) = 0.
+         ENDIF
+         IF ( PRESENT (graupelncv) ) THEN
+            GRAUPELNCV(i,j) = 0.
+         ENDIF
+         SR(i,j) = 0.
 
-!          do k = kts, kte
-         t1d = th(i,:,j)*pii(i,:,j)
-         p1d = p(i,:,j)
-         dz1d = dz(i,:,j)
-         qv1d = qv(i,:,j)
-         qc1d = qc(i,:,j)
-         qi1d = qi(i,:,j)
-         qr1d = qr(i,:,j)
-         qs1d = qs(i,:,j)
-         qg1d = qg(i,:,j)
-         ni1d = ni(i,:,j)
-         nr1d = nr(i,:,j)
- !          enddo
+         do k = kts, kte
+            t1d(k) = th(i,k,j)*pii(i,k,j)
+            p1d(k) = p(i,k,j)
+            dz1d(k) = dz(i,k,j)
+            qv1d(k) = qv(i,k,j)
+            qc1d(k) = qc(i,k,j)
+            qi1d(k) = qi(i,k,j)
+            qr1d(k) = qr(i,k,j)
+            qs1d(k) = qs(i,k,j)
+            qg1d(k) = qg(i,k,j)
+            ni1d(k) = ni(i,k,j)
+            nr1d(k) = nr(i,k,j)
+         enddo
 
-!          call mp_thompson(qv(i,:,j), qc(i,:,j), qi(i,:,j), qr(i,:,j), qs(i,:,j), qg(i,:,j), ni(i,:,j), &
-!                       nr(i,:,j), t1d, p1d, dz(i,:,j), &
-!                       pptrain, pptsnow, pptgraul, pptice, &
-!                       kts, kte, dt, i, j)
          call mp_thompson(qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d, &
                       nr1d, t1d, p1d, dz1d, &
                       pptrain, pptsnow, pptgraul, pptice, &
                       kts, kte, dt, i, j)
 
-!          pcp_ra(i,j) = pptrain
-!          pcp_sn(i,j) = pptsnow
-!          pcp_gr(i,j) = pptgraul
-!          pcp_ic(i,j) = pptice
-!          RAINNCV(i,j) = pptrain + pptsnow + pptgraul + pptice
+         pcp_ra(i,j) = pptrain
+         pcp_sn(i,j) = pptsnow
+         pcp_gr(i,j) = pptgraul
+         pcp_ic(i,j) = pptice
+         RAINNCV(i,j) = pptrain + pptsnow + pptgraul + pptice
          RAINNC(i,j) = RAINNC(i,j) + pptrain + pptsnow + pptgraul + pptice
-!          IF ( PRESENT(snowncv) .AND. PRESENT(snownc) ) THEN
-!             SNOWNCV(i,j) = pptsnow + pptice
+         IF ( PRESENT(snowncv) .AND. PRESENT(snownc) ) THEN
+            SNOWNCV(i,j) = pptsnow + pptice
             SNOWNC(i,j) = SNOWNC(i,j) + pptsnow + pptice
-!          ENDIF
-!          IF ( PRESENT(graupelncv) .AND. PRESENT(graupelnc) ) THEN
-!             GRAUPELNCV(i,j) = pptgraul
+         ENDIF
+         IF ( PRESENT(graupelncv) .AND. PRESENT(graupelnc) ) THEN
+            GRAUPELNCV(i,j) = pptgraul
             GRAUPELNC(i,j) = GRAUPELNC(i,j) + pptgraul
-!          ENDIF
-!          SR(i,j) = (pptsnow + pptgraul + pptice)/(RAINNCV(i,j)+1.e-12)
+         ENDIF
+         SR(i,j) = (pptsnow + pptgraul + pptice)/(RAINNCV(i,j)+1.e-12)
 
-        qv(i,:,j) = qv1d
-        qc(i,:,j) = qc1d
-        qi(i,:,j) = qi1d
-        qr(i,:,j) = qr1d
-        qs(i,:,j) = qs1d
-        qg(i,:,j) = qg1d
-        ni(i,:,j) = ni1d
-        nr(i,:,j) = nr1d
-        th(i,:,j) = t1d/pii(i,:,j)
-!          do k = kts, kte
-!             if (qc1d(k) .gt. qc_max) then
-!              imax_qc = i
-!              jmax_qc = j
-!              kmax_qc = k
-!              qc_max = qc1d(k)
+         do k = kts, kte
+            qv(i,k,j) = qv1d(k)
+            qc(i,k,j) = qc1d(k)
+            qi(i,k,j) = qi1d(k)
+            qr(i,k,j) = qr1d(k)
+            qs(i,k,j) = qs1d(k)
+            qg(i,k,j) = qg1d(k)
+            ni(i,k,j) = ni1d(k)
+            nr(i,k,j) = nr1d(k)
+            th(i,k,j) = t1d(k)/pii(i,k,j)
+            if (qc1d(k) .gt. qc_max) then
+             imax_qc = i
+             jmax_qc = j
+             kmax_qc = k
+             qc_max = qc1d(k)
 !             elseif (qc1d(k) .lt. 0.0) then
 !              write(mp_debug,*) 'WARNING, negative qc ', qc1d(k),        &
 !                         ' at i,j,k=', i,j,k
              ! CALL wrf_debug(150, mp_debug)
-!             endif
-!             if (qr1d(k) .gt. qr_max) then
-!              imax_qr = i
-!              jmax_qr = j
-!              kmax_qr = k
-!              qr_max = qr1d(k)
+            endif
+            if (qr1d(k) .gt. qr_max) then
+             imax_qr = i
+             jmax_qr = j
+             kmax_qr = k
+             qr_max = qr1d(k)
 !             elseif (qr1d(k) .lt. 0.0) then
 !              write(mp_debug,*) 'WARNING, negative qr ', qr1d(k),        &
 !                         ' at i,j,k=', i,j,k
              ! CALL wrf_debug(150, mp_debug)
-!             endif
-!             if (nr1d(k) .gt. nr_max) then
-!              imax_nr = i
-!              jmax_nr = j
-!              kmax_nr = k
-!              nr_max = nr1d(k)
+            endif
+            if (nr1d(k) .gt. nr_max) then
+             imax_nr = i
+             jmax_nr = j
+             kmax_nr = k
+             nr_max = nr1d(k)
 !             elseif (nr1d(k) .lt. 0.0) then
 !              write(mp_debug,*) 'WARNING, negative nr ', nr1d(k),        &
 !                         ' at i,j,k=', i,j,k
              ! CALL wrf_debug(150, mp_debug)
-!             endif
-!             if (qs1d(k) .gt. qs_max) then
-!              imax_qs = i
-!              jmax_qs = j
-!              kmax_qs = k
-!              qs_max = qs1d(k)
+            endif
+            if (qs1d(k) .gt. qs_max) then
+             imax_qs = i
+             jmax_qs = j
+             kmax_qs = k
+             qs_max = qs1d(k)
 !             elseif (qs1d(k) .lt. 0.0) then
 !              write(mp_debug,*) 'WARNING, negative qs ', qs1d(k),        &
 !                         ' at i,j,k=', i,j,k
              ! CALL wrf_debug(150, mp_debug)
-!             endif
-!             if (qi1d(k) .gt. qi_max) then
-!              imax_qi = i
-!              jmax_qi = j
-!              kmax_qi = k
-!              qi_max = qi1d(k)
+            endif
+            if (qi1d(k) .gt. qi_max) then
+             imax_qi = i
+             jmax_qi = j
+             kmax_qi = k
+             qi_max = qi1d(k)
 !             elseif (qi1d(k) .lt. 0.0) then
 !              write(mp_debug,*) 'WARNING, negative qi ', qi1d(k),        &
 !                         ' at i,j,k=', i,j,k
              ! CALL wrf_debug(150, mp_debug)
-!             endif
-!             if (qg1d(k) .gt. qg_max) then
-!              imax_qg = i
-!              jmax_qg = j
-!              kmax_qg = k
-!              qg_max = qg1d(k)
+            endif
+            if (qg1d(k) .gt. qg_max) then
+             imax_qg = i
+             jmax_qg = j
+             kmax_qg = k
+             qg_max = qg1d(k)
 !             elseif (qg1d(k) .lt. 0.0) then
 !              write(mp_debug,*) 'WARNING, negative qg ', qg1d(k),        &
 !                         ' at i,j,k=', i,j,k
              ! CALL wrf_debug(150, mp_debug)
-!             endif
-!             if (ni1d(k) .gt. ni_max) then
-!              imax_ni = i
-!              jmax_ni = j
-!              kmax_ni = k
-!              ni_max = ni1d(k)
+            endif
+            if (ni1d(k) .gt. ni_max) then
+             imax_ni = i
+             jmax_ni = j
+             kmax_ni = k
+             ni_max = ni1d(k)
 !             elseif (ni1d(k) .lt. 0.0) then
 !              write(mp_debug,*) 'WARNING, negative ni ', ni1d(k),        &
 !                         ' at i,j,k=', i,j,k
              ! CALL wrf_debug(150, mp_debug)
-!             endif
-!             if (qv1d(k) .lt. 0.0) then
-! 				write(*,*) "ERROR: qv<0"
-!              if (k.lt.kte-2 .and. k.gt.kts+1) then
-!                 qv(i,k,j) = 0.5*(qv(i,k-1,j) + qv(i,k+1,j))
-!              else
-!                 qv(i,k,j) = 1.E-7
-!              endif
+            endif
+            if (qv1d(k) .lt. 0.0) then
+             if (k.lt.kte-2 .and. k.gt.kts+1) then
+                qv(i,k,j) = 0.5*(qv(i,k-1,j) + qv(i,k+1,j))
+             else
+                qv(i,k,j) = 1.E-7
+             endif
 !              write(mp_debug,*) 'WARNING, negative qv ', qv1d(k),        &
 !                         ' at i,j,k=', i,j,k
              ! CALL wrf_debug(150, mp_debug)
-!             endif
-!          enddo
+            endif
+         enddo
 
 !          IF ( PRESENT (diagflag) ) THEN
 !          if (diagflag .and. do_radar_ref == 1) then
