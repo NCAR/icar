@@ -37,9 +37,9 @@ contains
         ! interal parameters
         integer :: err,i
 	    real,dimension(1:nx,1:nz,1:ny) :: qin
-        real, dimension(1:nx-1,1:nz,1) :: f1 ! there used to be an f2 to store f[x+1]
-        real, dimension(1:nx-2,1:nz,1) :: f3,f4
-        real, dimension(1:nx-2,1:nz-1,1) ::f5
+        real, dimension(1:nx-1,1:nz) :: f1 ! there used to be an f2 to store f[x+1]
+        real, dimension(1:nx-2,1:nz) :: f3,f4
+        real, dimension(1:nx-2,1:nz-1) ::f5
         !$omp parallel shared(q,u,v,w) firstprivate(nx,ny,nz) private(i,f1,f3,f4,f5)
         !$omp do
         do i=1,ny
@@ -48,21 +48,27 @@ contains
         !$omp end do
         !$omp do
         do i=2,ny-1
+! 			by manually inlining the flux2 call we should remove extra array copies that the compiler didn't seem to be able to remove. 
+! 			equivalent flux2 calls are left in for reference (commented) to restore recall that fx arrays should be 3D : n x m x 1
 ! 			calculate fluxes between grid cells
-           call flux2(qin(1:nx-1,:,i),qin(2:nx,:,i),u(1:nx-1,:,i),nx-1,nz,1,f1)  !Ux1
-           call flux2(qin(2:nx-1,:,i),qin(2:nx-1,:,i+1),v(2:nx-1,:,i),nx-2,nz,1,f3)  !Vy1
-           call flux2(qin(2:nx-1,:,i-1),qin(2:nx-1,:,i),v(2:nx-1,:,i-1),nx-2,nz,1,f4)  !Vy0
-           call flux2(qin(2:nx-1,1:nz-1,i),qin(2:nx-1,2:nz,i),w(2:nx-1,1:nz-1,i),nx-2,nz-1,1,f5)
+           f1= ((u(1:nx-1,:,i)+ABS(u(1:nx-1,:,i))) * qin(1:nx-1,:,i) + (u(1:nx-1,:,i)-ABS(u(1:nx-1,:,i))) * qin(2:nx,:,i))/2
+!            call flux2(qin(1:nx-1,:,i),qin(2:nx,:,i),u(1:nx-1,:,i),nx-1,nz,1,f1)  !Ux1
+           f3= ((v(2:nx-1,:,i)+ABS(v(2:nx-1,:,i))) * qin(2:nx-1,:,i) + (v(2:nx-1,:,i)-ABS(v(2:nx-1,:,i))) * qin(2:nx-1,:,i+1))/2
+! 		   call flux2(qin(2:nx-1,:,i),qin(2:nx-1,:,i+1),v(2:nx-1,:,i),nx-2,nz,1,f3)  !Vy1
+		   f4= ((v(2:nx-1,:,i-1)+ABS(v(2:nx-1,:,i-1))) * qin(2:nx-1,:,i-1) + (v(2:nx-1,:,i-1)-ABS(v(2:nx-1,:,i-1))) * qin(2:nx-1,:,i))/2
+!            call flux2(qin(2:nx-1,:,i-1),qin(2:nx-1,:,i),v(2:nx-1,:,i-1),nx-2,nz,1,f4)  !Vy0
+		   f5= ((w(2:nx-1,1:nz-1,i)+ABS(w(2:nx-1,1:nz-1,i))) * qin(2:nx-1,1:nz-1,i) + (w(2:nx-1,1:nz-1,i)-ABS(w(2:nx-1,1:nz-1,i))) * qin(2:nx-1,2:nz,i))/2
+!            call flux2(qin(2:nx-1,1:nz-1,i),qin(2:nx-1,2:nz,i),w(2:nx-1,1:nz-1,i),nx-2,nz-1,1,f5)
 		   
            ! perform horizontal advection
-           q(2:nx-1,:,i)=q(2:nx-1,:,i) - (f1(2:nx-1,:,1)-f1(1:nx-2,:,1)) - (f3(:,:,1)-f4(:,:,1))
+           q(2:nx-1,:,i)=q(2:nx-1,:,i) - (f1(2:nx-1,:)-f1(1:nx-2,:)) - (f3(:,:)-f4(:,:))
            ! then vertical (order doesn't matter because fluxes f1-6 are calculated before applying them)
            ! add fluxes to middle layers
-           q(2:nx-1,2:nz-1,i)=q(2:nx-1,2:nz-1,i)-(f5(:,2:nz-1,1)-f5(:,1:nz-2,1))
+           q(2:nx-1,2:nz-1,i)=q(2:nx-1,2:nz-1,i)-(f5(:,2:nz-1)-f5(:,1:nz-2))
            ! add fluxes to bottom layer
-           q(2:nx-1,1,i)=q(2:nx-1,1,i)-f5(:,1,1)
+           q(2:nx-1,1,i)=q(2:nx-1,1,i)-f5(:,1)
            ! add fluxes to top layer
-           q(2:nx-1,nz,i)=q(2:nx-1,nz,i)-(qin(2:nx-1,nz,i)*w(2:nx-1,nz,i)-f5(:,nz-1,1))
+           q(2:nx-1,nz,i)=q(2:nx-1,nz,i)-(qin(2:nx-1,nz,i)*w(2:nx-1,nz,i)-f5(:,nz-1))
         enddo
         !$omp end do
         !$omp end parallel
@@ -82,19 +88,16 @@ contains
 		nz=size(domain%dz,2)
 		ny=size(domain%dz,3)
 		
-! 		calculate U,V,W normalized for dt/dx
+! 		if this if the first time we are called, we need to allocate the module level arrays
 		if (.not.allocated(U_m)) then
-! 			write(*,*) "Allocating U"
 			allocate(U_m(nx-1,nz,ny))
-		endif
-		U_m=domain%u(1:nx-1,:,:)*dt/dx
-		if (.not.allocated(V_m)) then
 			allocate(V_m(nx,nz,ny-1))
-		endif
-		V_m=domain%v(:,:,1:ny-1)*dt/dx
-		if (.not.allocated(W_m)) then
 			allocate(W_m(nx,nz,ny))
 		endif
+		
+! 		calculate U,V,W normalized for dt/dx
+		U_m=domain%u(1:nx-1,:,:)*dt/dx
+		V_m=domain%v(:,:,1:ny-1)*dt/dx
 ! 		note, even though dz!=dx, W is computed from the divergence in U/V so it is scaled by dx/dz already
 		W_m=domain%w*dt/dx
 ! 		should probably be converting to mass (q*rho) before advecting, then back again... but testing showed minimal difference
@@ -107,8 +110,6 @@ contains
 		call advect3d(domain%nrain,U_m,V_m,W_m,nx,nz,ny,0)
 		call advect3d(domain%qsnow,U_m,V_m,W_m,nx,nz,ny,0)
 		call advect3d(domain%qgrau,U_m,V_m,W_m,nx,nz,ny,0)
-		
-! 		deallocate(U,V,W)
 		
 	end subroutine advect
 
