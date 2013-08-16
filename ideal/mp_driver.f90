@@ -12,7 +12,9 @@ module microphysics
 contains
 	subroutine mp_init(physics_level)
 		integer, intent(in)::physics_level
-		call thompson_init()
+		if (physics_level==1) then
+			call thompson_init()
+		endif
 	end subroutine mp_init
 	
 	subroutine mp(domain,options,dt_in)
@@ -49,7 +51,7 @@ contains
 						ids,ide, jds,jde, kds,kde, &    ! domain dims
 						ids,ide, jds,jde, kds,kde, &    ! memory dims
 						ids+1,ide-1, jds+1,jde-1, kds,kde)      ! tile dims
-		deallocate(pii,SR)
+! 		deallocate(pii,SR)
 						
 	end subroutine mp
 	
