@@ -345,6 +345,7 @@ contains
 		type(options_type), intent(in) :: options
 		type(domain_type), intent(inout):: domain
 		type(bc_type), intent(inout):: boundary
+		integer::i
 			
 		write(*,*) "WARNING hardcoded low-res dx=36km"
 		boundary%dx=36000.0
@@ -369,6 +370,9 @@ contains
 		call geo_interp2d(boundary%next_domain%terrain,boundary%terrain,boundary%geolut)
 		if (options%add_low_topo) then
 			domain%terrain=domain%terrain+(boundary%next_domain%terrain-sum(boundary%next_domain%terrain)/size(boundary%next_domain%terrain))/2.0
+			do i=1,size(domain%z,2)
+				domain%z(:,i,:)=domain%z(:,i,:)+(boundary%next_domain%terrain-sum(boundary%next_domain%terrain)/size(boundary%next_domain%terrain))/2.0
+			enddo
 		endif
 		
 	end subroutine init_bc

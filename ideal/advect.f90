@@ -3,10 +3,11 @@ module advection
     
     implicit none
 	private
+	real,dimension(:,:,:),allocatable::U_m,V_m,W_m
 	public::advect
 	
 contains
-    subroutine flux2(l,r,U,nx,nz,ny,f)
+    subroutine flux2(l,r,u,nx,nz,ny,f)
     !     Calculate the donor cell flux function
     !     l = left gridcell scalar 
     !     r = right gridcell scalar
@@ -17,13 +18,13 @@ contains
     !     we can run on the entire grid simultaneously, and avoid branches
 
     !   arguments
-        real, dimension(1:nx,1:nz,1:ny), intent(in) :: l,r,U
+        real, dimension(1:nx,1:nz,1:ny), intent(in) :: l,r,u
         real, dimension(1:nx,1:nz,1:ny), intent(inout) :: f
         integer,intent(in) :: ny,nz,nx
         !   internal parameter
         integer ::  err,i!,j,Ny,Nz,Nx
         !   main code
-        f= ((U+ABS(U)) * l + (U-ABS(U)) * r)/2
+        f= ((u+ABS(U)) * l + (u-ABS(U)) * r)/2
 
     end subroutine flux2
 
@@ -75,7 +76,6 @@ contains
 		
 		real::dx
 		integer::nx,nz,ny
-		real,dimension(:,:,:),allocatable::U,V,W
 			
 		dx=domain%dx
 		nx=size(domain%dz,1)
@@ -83,25 +83,32 @@ contains
 		ny=size(domain%dz,3)
 		
 ! 		calculate U,V,W normalized for dt/dx
-		allocate(U(nx-1,nz,ny))
-		U=domain%u(1:nx-1,:,:)*dt/dx
-		allocate(V(nx,nz,ny-1))
-		V=domain%v(:,:,1:ny-1)*dt/dx
-		allocate(W(nx,nz,ny))
+		if (.not.allocated(U_m)) then
+! 			write(*,*) "Allocating U"
+			allocate(U_m(nx-1,nz,ny))
+		endif
+		U_m=domain%u(1:nx-1,:,:)*dt/dx
+		if (.not.allocated(V_m)) then
+			allocate(V_m(nx,nz,ny-1))
+		endif
+		V_m=domain%v(:,:,1:ny-1)*dt/dx
+		if (.not.allocated(W_m)) then
+			allocate(W_m(nx,nz,ny))
+		endif
 ! 		note, even though dz!=dx, W is computed from the divergence in U/V so it is scaled by dx/dz already
-		W=domain%w*dt/dx
+		W_m=domain%w*dt/dx
 ! 		should probably be converting to mass (q*rho) before advecting, then back again... but testing showed minimal difference
-		call advect3d(domain%th,   U,V,W,nx,nz,ny,0)
-		call advect3d(domain%qv,   U,V,W,nx,nz,ny,0)
-		call advect3d(domain%cloud,U,V,W,nx,nz,ny,0)
-		call advect3d(domain%ice,  U,V,W,nx,nz,ny,0)
-		call advect3d(domain%nice, U,V,W,nx,nz,ny,0)
-		call advect3d(domain%qrain,U,V,W,nx,nz,ny,0)
-		call advect3d(domain%nrain,U,V,W,nx,nz,ny,0)
-		call advect3d(domain%qsnow,U,V,W,nx,nz,ny,0)
-		call advect3d(domain%qgrau,U,V,W,nx,nz,ny,0)
+		call advect3d(domain%th,   U_m,V_m,W_m,nx,nz,ny,0)
+		call advect3d(domain%qv,   U_m,V_m,W_m,nx,nz,ny,0)
+		call advect3d(domain%cloud,U_m,V_m,W_m,nx,nz,ny,0)
+		call advect3d(domain%ice,  U_m,V_m,W_m,nx,nz,ny,0)
+		call advect3d(domain%nice, U_m,V_m,W_m,nx,nz,ny,0)
+		call advect3d(domain%qrain,U_m,V_m,W_m,nx,nz,ny,0)
+		call advect3d(domain%nrain,U_m,V_m,W_m,nx,nz,ny,0)
+		call advect3d(domain%qsnow,U_m,V_m,W_m,nx,nz,ny,0)
+		call advect3d(domain%qgrau,U_m,V_m,W_m,nx,nz,ny,0)
 		
-		deallocate(U,V,W)
+! 		deallocate(U,V,W)
 		
 	end subroutine advect
 
