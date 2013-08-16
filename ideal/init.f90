@@ -41,12 +41,12 @@ contains
 		real :: dx,outputinterval,dz
 		integer :: name_unit,ntimesteps,nfiles
 		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz,n_ext_winds,buffer,restart_step
-		logical :: readz,debug,external_winds,remove_lowres_linear,mean_winds,mean_fields,restart,add_low_topo
+		logical :: readz,decrease_dz,debug,external_winds,remove_lowres_linear,mean_winds,mean_fields,restart,add_low_topo
 		n_ext_winds=200
 		
 ! 		set up namelist structures
 		namelist /var_list/ latvar,lonvar
-		namelist /parameters/ ntimesteps,outputinterval,dx,readz,nz,debug,dz,nfiles, &
+		namelist /parameters/ ntimesteps,outputinterval,dx,readz,decrease_dz,nz,debug,dz,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,&
 							  remove_lowres_linear,mean_winds,mean_fields,restart
 		namelist /files_list/ init_conditions_file,output_file,boundary_files
@@ -101,6 +101,7 @@ contains
 		options%dx=dx
 		options%dz=dz
 		options%readz=readz
+		options%decrease_dz=decrease_dz
 		options%buffer=buffer
 		options%remove_lowres_linear=remove_lowres_linear
 		options%add_low_topo=add_low_topo
@@ -193,6 +194,8 @@ contains
 		type(options_type), intent(in) :: options
 		type(domain_type), intent(inout):: domain
 		real,dimension(45)::fulldz
+		real::totalthickness
+		real,dimension(:,:),allocatable::newthickness
 		integer:: ny,nz,nx,i
 		
 ! 		these are the only required variables on a high-res grid, lat, lon, and terrain elevation
@@ -230,12 +233,27 @@ contains
 				   251.,  258.,  265.,  365.,  379.,  395.,  413.,  432.,  453.,  476.,  503.,  533., &
 				   422.,  443.,  467.,  326.,  339.,  353.,  369.,  386.,  405.,  426.,  450.,  477., &
 				   455.,  429.,  396.,  357.,  311.,  325.,  340.,  356.,  356.]
-			domain%dz(:,1,:)=fulldz(1)
-			domain%z(:,1,:)=domain%terrain+fulldz(1)/2
-			do i=2,nz
-				domain%z(:,i,:)=domain%z(:,i-1,:)+(fulldz(i)+fulldz(i-1))/2
-				domain%dz(:,i,:)=fulldz(i)
-			enddo
+				 
+! 		    make layer thickness decrease over high terrain (and increase over low terrain)
+			if (options%decrease_dz) then
+				allocate(newthickness(nx,ny))
+				totalthickness=sum(fulldz)
+				newthickness=totalthickness - (domain%terrain - sum(domain%terrain)/size(domain%terrain))
+				domain%dz(:,1,:)=fulldz(1)*newthickness/totalthickness
+				domain%z(:,1,:)=domain%dz(:,1,:)/2
+				do i=2,nz
+					domain%dz(:,i,:)=fulldz(i)*newthickness/totalthickness
+					domain%z(:,i,:)=domain%z(:,i-1,:)+(domain%dz(:,i,:)+domain%dz(:,i-1,:))/2
+				enddo
+				deallocate(newthickness)
+			else
+				domain%dz(:,1,:)=fulldz(1)
+				domain%z(:,1,:)=domain%terrain+fulldz(1)/2
+				do i=2,nz
+					domain%z(:,i,:)=domain%z(:,i-1,:)+(fulldz(i)+fulldz(i-1))/2
+					domain%dz(:,i,:)=fulldz(i)
+				enddo
+			endif
 ! 			here dz is just constant, but must be on a 3d grid for microphysics code
 		endif
 		if (options%debug) then

@@ -113,7 +113,7 @@ module data_structures
 ! 		variable names from init/BC/wind/... files
 		character (len=MAXVARLENGTH) :: latvar,lonvar,uvar,vvar,pvar,thvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar
 ! 		various boolean options
-		logical :: readz, debug, external_winds,remove_lowres_linear,mean_winds,mean_fields,restart,add_low_topo
+		logical :: readz, decrease_dz, debug, external_winds,remove_lowres_linear,mean_winds,mean_fields,restart,add_low_topo
 ! 		buffer to remove from all sides of the high res grid supplied
 		integer :: buffer=0
 ! 		various integer parameters/options
