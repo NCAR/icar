@@ -7,7 +7,7 @@ module advection
 	public::advect
 	
 contains
-    subroutine flux2(l,r,u,nx,nz,ny,f)
+    subroutine flux2(l,r,U,nx,nz,ny,f)
     !     Calculate the donor cell flux function
     !     l = left gridcell scalar 
     !     r = right gridcell scalar
@@ -18,13 +18,13 @@ contains
     !     we can run on the entire grid simultaneously, and avoid branches
 
     !   arguments
-        real, dimension(1:nx,1:nz,1:ny), intent(in) :: l,r,u
+        real, dimension(1:nx,1:nz,1:ny), intent(in) :: l,r,U
         real, dimension(1:nx,1:nz,1:ny), intent(inout) :: f
         integer,intent(in) :: ny,nz,nx
         !   internal parameter
         integer ::  err,i!,j,Ny,Nz,Nx
         !   main code
-        f= ((u+ABS(U)) * l + (u-ABS(U)) * r)/2
+        f= ((U+ABS(U)) * l + (U-ABS(U)) * r)/2
 
     end subroutine flux2
 
