@@ -237,14 +237,16 @@ contains
 ! 		    make layer thickness decrease over high terrain (and increase over low terrain)
 			if (options%decrease_dz) then
 				allocate(newthickness(nx,ny))
-				totalthickness=sum(fulldz)
+				totalthickness=sum(fulldz(1:nz))
 				newthickness=totalthickness - (domain%terrain - sum(domain%terrain)/size(domain%terrain))
 				domain%dz(:,1,:)=fulldz(1)*newthickness/totalthickness
-				domain%z(:,1,:)=domain%dz(:,1,:)/2
+				domain%z(:,1,:)=domain%terrain+domain%dz(:,1,:)/2
 				do i=2,nz
 					domain%dz(:,i,:)=fulldz(i)*newthickness/totalthickness
 					domain%z(:,i,:)=domain%z(:,i-1,:)+(domain%dz(:,i,:)+domain%dz(:,i-1,:))/2
 				enddo
+! 				call io_write3d("z_layers.nc","data",domain%z)
+! 				call io_write2d("newthick.nc","data",newthickness)
 				deallocate(newthickness)
 			else
 				domain%dz(:,1,:)=fulldz(1)
