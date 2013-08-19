@@ -9,17 +9,18 @@ ntimesteps=29290,
 outputinterval=3600,
 dx=4000.0,
 readz=.FALSE.,
+decrease_dz=.TRUE.,
 dz=100.0,
 nz=25,
 
 external_winds=.FALSE.,
 remove_lowres_linear=.FALSE.,
-add_low_topo=.TRUE.,
+add_low_topo=.True.,
 mean_winds=.FALSE.,
 mean_fields=.FALSE.,
 restart=.FALSE.,
 
-buffer=20,
+buffer=10,
 
 debug=.TRUE.
 /
@@ -50,4 +51,3 @@ boundary_files="forcing/wrfout_d01_2005-09-01_00:00:00","forcing/wrfout_d01_2006
 n_ext_winds=12,
 ext_wind_files="winds/Month01.nc","winds/Month02.nc","winds/Month03.nc","winds/Month04.nc","winds/Month05.nc","winds/Month06.nc","winds/Month07.nc","winds/Month08.nc","winds/Month09.nc","winds/Month10.nc","winds/Month11.nc","winds/Month12.nc"
 /
-

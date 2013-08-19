@@ -338,6 +338,23 @@ contains
 		call boundary_allocate(boundary,nx,nz,ny)
 	end subroutine init_bc_data
 	
+    subroutine setup_extwinds(domain)
+        implicit none
+        type(wind_type),intent(inout)::domain
+        integer::nx,ny
+        
+        ny=size(domain%terrain,1)
+        nx=size(domain%terrain,2)
+
+		! dzdx/y used in rotating windfield back to terrain following grid in a simple fashion
+		allocate(domain%dzdx(ny,nx-1))
+		allocate(domain%dzdy(ny-1,nx))
+		domain%dzdx=sqrt((domain%terrain(:,2:nx)-domain%terrain(:,1:nx-1))**2+domain%dx**2)/domain%dx
+		domain%dzdy=sqrt((domain%terrain(2:ny,:)-domain%terrain(1:ny-1,:))**2+domain%dx**2)/domain%dx
+		        
+    end subroutine
+	
+	
 ! 	initialize the external wind system (GEOLUT)
 	subroutine init_ext_winds(options,bc)
 		type(options_type), intent(in) :: options
@@ -346,6 +363,7 @@ contains
 		real, allocatable, dimension(:,:,:) :: u,v
 		real, allocatable, dimension(:,:) :: lat,lon
 		
+		call io_read2d(options%ext_wind_files(1),"HGT",bc%ext_winds%terrain,1)
 		call io_read2d(options%ext_wind_files(1),options%latvar,bc%ext_winds%lat)
 		call io_read2d(options%ext_wind_files(1),options%lonvar,bc%ext_winds%lon)
 		write(*,*) maxval(bc%ext_winds%lat),minval(bc%ext_winds%lat)
@@ -357,6 +375,10 @@ contains
 ! 			call io_write3di("geolut_y.nc","data",bc%ext_winds%geolut%y)
 ! 			call io_write3d("geolut_w.nc","data",bc%ext_winds%geolut%w)
 ! 		endif
+! 		force all weight to be on the first x,y pair...
+		bc%ext_winds%geolut%w(2:,:,:)=0
+		bc%ext_winds%geolut%w(1,:,:)=1
+		bc%ext_winds%dx=bc%next_domain%dx
 	end subroutine init_ext_winds
 	
 ! 	initialize the boundary condiditions (init data structures and GEOLUT)

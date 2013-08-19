@@ -140,6 +140,25 @@ contains
 						
 	end subroutine read_var
 	
+! 	rotate winds from real space back to terrain following grid (approximately)
+!   assumes a simple slope transform in u and v independantly
+	subroutine rotate_ext_wind_field(domain,ext_winds)
+        implicit none
+        type(domain_type),intent(inout)::domain
+        type(wind_type),intent(inout)::ext_winds
+		integer :: nx,ny,nz,i
+	
+		ny=size(domain%u,1)
+		nz=size(domain%u,2)
+		nx=size(domain%u,3)
+		do i=1,nz
+			domain%u(:,i,1:nx-1)=domain%u(:,i,1:nx-1)*ext_winds%dzdx
+			domain%v(1:ny-1,i,:)=domain%v(1:ny-1,i,:)*ext_winds%dzdy
+		end do
+	
+	end subroutine rotate_ext_wind_field
+
+	
 ! 	initialize the eternal winds information (filenames, nfiles, etc) and read the initial conditions
 	subroutine ext_winds_init(domain,bc,options)
 		implicit none
@@ -182,7 +201,7 @@ contains
 		write(*,*) "Initial ext wind file:step=",ext_winds_curfile," : ",ext_winds_curstep
 		call read_var(domain%u,    ext_winds_file_list(ext_winds_curfile),"U",      bc%ext_winds%geolut,ext_winds_curstep,.FALSE.)
 		call read_var(domain%v,    ext_winds_file_list(ext_winds_curfile),"V",      bc%ext_winds%geolut,ext_winds_curstep,.FALSE.)
-		
+		call rotate_ext_wind_field(domain,bc%ext_winds)
 	end subroutine ext_winds_init
 	
 ! 	remove linear theory topographic winds perturbations from the low resolution wind field. 
@@ -485,6 +504,7 @@ contains
 		use_boundary=.True.
 		call read_var(bc%next_domain%u,    ext_winds_file_list(ext_winds_curfile),"U",      bc%ext_winds%geolut,ext_winds_curstep,use_interior)
 		call read_var(bc%next_domain%v,    ext_winds_file_list(ext_winds_curfile),"V",      bc%ext_winds%geolut,ext_winds_curstep,use_interior)
+		call rotate_ext_wind_field(bc%next_domain,bc%ext_winds)
 	
 	end subroutine update_ext_winds
 	
