@@ -345,7 +345,7 @@ contains
         
         ny=size(domain%terrain,1)
         nx=size(domain%terrain,2)
-
+		
 		! dzdx/y used in rotating windfield back to terrain following grid in a simple fashion
 		allocate(domain%dzdx(ny,nx-1))
 		allocate(domain%dzdy(ny-1,nx))
@@ -379,6 +379,7 @@ contains
 		bc%ext_winds%geolut%w(2:,:,:)=0
 		bc%ext_winds%geolut%w(1,:,:)=1
 		bc%ext_winds%dx=bc%next_domain%dx
+		call setup_extwinds(bc%ext_winds)
 	end subroutine init_ext_winds
 	
 ! 	initialize the boundary condiditions (init data structures and GEOLUT)

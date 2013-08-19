@@ -148,9 +148,9 @@ contains
         type(wind_type),intent(inout)::ext_winds
 		integer :: nx,ny,nz,i
 	
-		ny=size(domain%u,1)
-		nz=size(domain%u,2)
-		nx=size(domain%u,3)
+		ny=size(domain%z,1)
+		nz=size(domain%z,2)
+		nx=size(domain%z,3)
 		do i=1,nz
 			domain%u(:,i,1:nx-1)=domain%u(:,i,1:nx-1)*ext_winds%dzdx
 			domain%v(1:ny-1,i,:)=domain%v(1:ny-1,i,:)*ext_winds%dzdy
@@ -386,8 +386,8 @@ contains
 			ny=size(domain%u,3)
 			if (options%external_winds) then
 				call ext_winds_init(domain,bc,options)
-				call smooth_wind(domain%u,1,3)
-				call smooth_wind(domain%v,1,3)
+! 				call smooth_wind(domain%u,1,3)
+! 				call smooth_wind(domain%v,1,3)
 			elseif (options%remove_lowres_linear) then
 				call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
 			elseif (options%mean_winds) then
@@ -538,8 +538,8 @@ contains
 		use_boundary=.True.
 		if (options%external_winds) then
 			call update_ext_winds(bc,options)
-			call smooth_wind(bc%next_domain%u,1,3)
-			call smooth_wind(bc%next_domain%v,1,3)
+! 			call smooth_wind(bc%next_domain%u,1,3)
+! 			call smooth_wind(bc%next_domain%v,1,3)
 		elseif (options%remove_lowres_linear) then
 			call remove_linear_winds(bc%next_domain,bc,options,file_list(curfile),curstep)
 		elseif (options%mean_winds) then
