@@ -6,9 +6,15 @@ end module fft
 module linear_theory_winds
     use fft
     use data_structures
+	use io_routines
     implicit none
 	private
 	public::linear_perturb
+	
+    real,allocatable,dimension(:,:)::k,l,kl,sig
+    complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::denom,uhat,u_hat,vhat,v_hat,m,ineta
+	integer,parameter::buffer=50
+	
 contains
 	
     real function calc_stability(domain)
@@ -56,8 +62,6 @@ contains
         real, intent(in)::Ndsq
 		logical, intent(in), optional :: reverse
         complex,parameter :: j= (0,1)
-        real,allocatable,dimension(:,:)::k,l,kl,sig
-        complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::denom,what,w_hat,uhat,u_hat,vhat,v_hat,m,ineta
         real::gain,offset !used in setting up k and l arrays
         integer::nx,ny,nz,i,midpoint,z
         real::U,V
@@ -69,84 +73,87 @@ contains
 		nx=size(domain%u,3)
         
 ! 		these should be stored in a separate data structure... and allocated/deallocated in a subroutine
-        allocate(k(ny,nx))
-        allocate(l(ny,nx))
-        allocate(kl(ny,nx))
-        allocate(sig(ny,nx))
-        allocate(denom(ny,nx))
-        allocate(what(ny,nx))
-        allocate(w_hat(ny,nx))
-        allocate(uhat(ny,nx))
-        allocate(u_hat(ny,nx))
-        allocate(vhat(ny,nx))
-        allocate(v_hat(ny,nx))
-        allocate(m(ny,nx))
-        allocate(ineta(ny,nx))
+! 		for not these are reallocated/deallocated everytime so we can use it for different sized domains (e.g. coarse and fine)
+! 		maybe linear winds need to be embedded in an object instead of a module to avoid this problem...
+		if (.not.allocated(k)) then
+	        allocate(k(ny,nx))
+	        allocate(l(ny,nx))
+	        allocate(kl(ny,nx))
+	        allocate(sig(ny,nx))
+	        allocate(denom(ny,nx))
+	        allocate(uhat(ny,nx))
+	        allocate(u_hat(ny,nx))
+	        allocate(vhat(ny,nx))
+	        allocate(v_hat(ny,nx))
+	        allocate(m(ny,nx))
+	        allocate(ineta(ny,nx))
         
-!         # % Compute 2D k and l wavenumber fields (could be stored in options or domain or something)
-        offset=pi/domain%dx
-        gain=2*offset/(nx-1)
-		k(1,:) = (/((i*gain-offset),i=0,nx-1)/)
-		! foolishly inefficient ifftshift should just fix the array
-		! creation above and or move to a separate subroutine or store the results for later reuse...
-		if (mod(nx,2)==1) then
-			! odd
-			k(2,:)=k(1,:)
-			nx=nx-1
-			do i=1,nx/2
-				k(1,i)=k(2,i+nx/2)
-				k(1,i+nx/2+1)=k(2,i)
-			enddo
-			k(1,nx/2+1)=k(2,nx+1)
-			nx=nx+1
-		else
-			! even
-			do i=1,nx/2
-				gain=k(1,i)
-				k(1,i)=k(1,i+nx/2)
-				k(1,i+nx/2)=gain
-			enddo
-		endif
+	!         # % Compute 2D k and l wavenumber fields (could be stored in options or domain or something)
+	        offset=pi/domain%dx
+	        gain=2*offset/(nx-1)
+			k(1,:) = (/((i*gain-offset),i=0,nx-1)/)
+			! foolishly inefficient ifftshift should just fix the array
+			! creation above and or move to a separate subroutine or store the results for later reuse...
+			if (mod(nx,2)==1) then
+				! odd
+				k(2,:)=k(1,:)
+				nx=nx-1
+				do i=1,nx/2
+					k(1,i)=k(2,i+nx/2)
+					k(1,i+nx/2+1)=k(2,i)
+				enddo
+				k(1,nx/2+1)=k(2,nx+1)
+				nx=nx+1
+			else
+				! even
+				do i=1,nx/2
+					gain=k(1,i)
+					k(1,i)=k(1,i+nx/2)
+					k(1,i+nx/2)=gain
+				enddo
+			endif
 		
-        gain=2*offset/(ny-1)
-		l(:,1) = (/((i*gain-offset),i=0,ny-1)/)
-		! foolishly inefficient ifftshift should just fix the array
-		! creation above l is separated from k because they only need to be processed in one dimension each. 
-		if (mod(ny,2)==1) then
-			! odd
-			l(:,2)=l(:,1)
-			ny=ny-1
-			do i=1,ny/2
-				l(i,1)=l(i+ny/2,2)
-				l(i+ny/2+1,1)=l(i,2)
-			enddo
-			l(ny/2+1,1)=l(ny+1,2)
-			ny=ny+1
-		else
-			! even
-			do i=1,ny/2
-				gain=l(i,1)
-				l(i,1)=l(i+ny/2,1)
-				l(i+ny/2,1)=gain
-			enddo
+	        gain=2*offset/(ny-1)
+			l(:,1) = (/((i*gain-offset),i=0,ny-1)/)
+			! foolishly inefficient ifftshift should just fix the array
+			! creation above l is separated from k because they only need to be processed in one dimension each. 
+			if (mod(ny,2)==1) then
+				! odd
+				l(:,2)=l(:,1)
+				ny=ny-1
+				do i=1,ny/2
+					l(i,1)=l(i+ny/2,2)
+					l(i+ny/2+1,1)=l(i,2)
+				enddo
+				l(ny/2+1,1)=l(ny+1,2)
+				ny=ny+1
+			else
+				! even
+				do i=1,ny/2
+					gain=l(i,1)
+					l(i,1)=l(i+ny/2,1)
+					l(i+ny/2,1)=gain
+				enddo
+			endif
+
+	! 		once we have computed the ifftshift in the first column/row just copy that for all other columns/rows
+	! 		for k
+	        do i=2,ny
+	            k(i,:)=k(1,:)
+	        end do
+	! 		for l
+	        do i=2,nx
+	            l(:,i)=l(:,1)
+	        end do
+        
+	! 		finally compute the kl combination array
+	        kl = k**2+l**2
+	        WHERE (kl==0.0) kl=1e-20
 		endif
 
-! 		once we have computed the ifftshift in the first column/row just copy that for all other columns/rows
-! 		for k
-        do i=2,ny
-            k(i,:)=k(1,:)
-        end do
-! 		for l
-        do i=2,nx
-            l(:,i)=l(:,1)
-        end do
-        
-! 		finally compute the kl combination array
-        kl = k**2+l**2
-        WHERE (kl==0.0) kl=1e-20
 		
 ! 		process each array independantly
-! 		note fftw_plan_... may not be threadsafe so this can't be OMP parallelized without fulling that outside of the loop. 
+! 		note fftw_plan_... may not be threadsafe so this can't be OMP parallelized without pulling that outside of the loop. 
 ! 		to parallelize, compute uhat,vhat in parallel
 ! 		then compute the plans serially
 ! 		then perform ffts etc in parallel
@@ -182,6 +189,7 @@ contains
 ! 			call fftw_execute_dft(plan, what,w_hat)
 ! 			call fftw_destroy_plan(plan)
 			
+! 			it should be possible to store the plan and execute it everytime rather than recreating it everytime, doesn't matter too much 
             plan = fftw_plan_dft_2d(nx,ny, uhat,u_hat, FFTW_BACKWARD,FFTW_ESTIMATE)
             call fftw_execute_dft(plan, uhat,u_hat)
             call fftw_destroy_plan(plan)
@@ -201,10 +209,43 @@ contains
 			endif
 		end do
 ! 		finally deallocate all temporary arrays that were created... should be a datastructure and a subroutine...
-		deallocate(k,l,kl,sig,denom,what,w_hat,uhat,u_hat,vhat,v_hat,m,ineta)
+		deallocate(k,l,kl,sig,denom,uhat,u_hat,vhat,v_hat,m,ineta)
     end subroutine linear_winds
     
     
+	subroutine add_buffer_topo(terrain,buffer_topo)
+!		add a smoothed buffer around the edge of the terrain to prevent crazy wrap around effects
+! 		in the FFT due to discontinuities between the left and right (top and bottom) edges of the domain
+        implicit none
+		real, dimension(:,:), intent(in) :: terrain
+		complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:), intent(out):: buffer_topo
+		real, dimension(:,:),allocatable :: real_terrain
+		integer::nx,ny,i,pos
+		real::weight
+		
+		ny=size(terrain,1)+buffer*2
+		nx=size(terrain,2)+buffer*2
+		allocate(buffer_topo(ny,nx))
+		buffer_topo=minval(terrain)
+		buffer_topo(buffer:ny-buffer,buffer:nx-buffer)=terrain
+		do i=1,buffer
+			weight=i/(real(buffer)*2)
+			pos=buffer-i
+			buffer_topo(pos+1,buffer:nx-buffer-1)  =terrain(1,1:nx-buffer*2)*(1-weight)+terrain(ny-buffer*2,1:nx-buffer*2)*weight
+			buffer_topo(ny-pos-1,buffer:nx-buffer-1) =terrain(1,1:nx-buffer*2)*(weight)  +terrain(ny-buffer*2,1:nx-buffer*2)*(1-weight)
+			buffer_topo(buffer:ny-buffer-1,pos+1)  =terrain(1:ny-buffer*2,1)*(1-weight)+terrain(1:ny-buffer*2,nx-buffer*2)*weight
+			buffer_topo(buffer:ny-buffer-1,nx-pos-1) =terrain(1:ny-buffer*2,1)*(weight)  +terrain(1:ny-buffer*2,nx-buffer*2)*(1-weight)
+		enddo
+! 		clearly something isn't quiet right here...
+		buffer_topo(ny,:)=buffer_topo(ny-1,:)
+		buffer_topo(:,nx)=buffer_topo(:,nx-1)
+		allocate(real_terrain(ny,nx))
+		real_terrain=buffer_topo
+		call io_write2d("complex_terrain.nc","HGT",real_terrain)
+		deallocate(real_terrain)
+		
+	end subroutine add_buffer_topo
+	
 ! 	called from linear_perturb the first time perturb is called
 ! 	compute FFT(terrain), and dzdx,dzdy components
     subroutine setup_linwinds(domain)
@@ -214,13 +255,13 @@ contains
         type(C_PTR) :: plan
         integer::nx,ny
         
-        ny=size(domain%terrain,1)
-        nx=size(domain%terrain,2)
+		call add_buffer_topo(domain%terrain,complex_terrain)
+        ny=size(complex_terrain,1)
+        nx=size(complex_terrain,2)
 
         write(*,*) "Fzs setup"
         allocate(domain%fzs(ny,nx))
-        allocate(complex_terrain(ny,nx))
-		complex_terrain=domain%terrain
+		
 ! 		calculate the fourier transform of the terrain for use in linear winds
         plan = fftw_plan_dft_2d(nx,ny, complex_terrain,domain%fzs, FFTW_FORWARD,FFTW_ESTIMATE)
         call fftw_execute_dft(plan, complex_terrain,domain%fzs)
@@ -228,6 +269,8 @@ contains
 ! 		normalize FFT by N - grid cells
 		domain%fzs=domain%fzs/(nx*ny)
 
+        ny=size(domain%terrain,1)
+        nx=size(domain%terrain,2)
 ! 		dzdx/y used in rotating windfield back to terrain following grid in a simple fashion
 		allocate(domain%dzdx(ny,nx-1))
 		allocate(domain%dzdy(ny-1,nx))

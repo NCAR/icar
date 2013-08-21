@@ -72,29 +72,7 @@ ifeq ($(F90), ifort)
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
 endif
-# F90=/usr/local/ifort-2013.4.183/bin/ifort
-# Various debuging options.  Set the DEBUG variable with "make DEBUG=debugslow" etc.
-ifeq ($(DEBUG), debugslow)
-	COMP= -debug -c -u -check all -check noarg_temp_created -traceback
-	LINK=  
-endif
-ifeq ($(DEBUG), debug)
-	COMP= -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0 -fast-transcendentals -xhost
-	LINK=  
-endif
-ifeq ($(DEBUG), debugompslow)
-	COMP= -openmp -liomp5 -debug -c -u -check all -check noarg_temp_created -traceback
-	LINK= -openmp -liomp5
-endif
-ifeq ($(DEBUG), debugomp)
-	COMP= -openmp -liomp5 -debug -c -fast -u -traceback -fpe0 -fast-transcendentals -xhost
-	LINK= -openmp -liomp5
-endif
 
-ifeq ($(DEBUG), profile)
-	COMP= -openmp -liomp5 -p -c -fast -u -fast-transcendentals -xhost
-	LINK= -openmp -liomp5 -p
-endif
 
 
 # on yellowstone:
@@ -126,6 +104,31 @@ ifeq ($(LMOD_FAMILY_COMPILER),pgi)
 	LIBNETCDF = -lnetcdff -lnetcdf
 	INCNETCDF =  # netcdf includes are setup by the yellowstone module system
 endif	
+
+
+# F90=/usr/local/ifort-2013.4.183/bin/ifort
+# Various debuging options.  Set the DEBUG variable with "make DEBUG=debugslow" etc.
+ifeq ($(DEBUG), debugslow)
+	COMP= -debug -c -u -check all -check noarg_temp_created -traceback
+	LINK=  
+endif
+ifeq ($(DEBUG), debug)
+	COMP= -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0 -fast-transcendentals -xhost
+	LINK=  
+endif
+ifeq ($(DEBUG), debugompslow)
+	COMP= -openmp -liomp5 -debug -c -u -check all -check noarg_temp_created -traceback
+	LINK= -openmp -liomp5
+endif
+ifeq ($(DEBUG), debugomp)
+	COMP= -openmp -liomp5 -debug -c -fast -u -traceback -fpe0 -fast-transcendentals -xhost
+	LINK= -openmp -liomp5
+endif
+
+ifeq ($(DEBUG), profile)
+	COMP= -openmp -liomp5 -p -c -fast -u -fast-transcendentals -xhost
+	LINK= -openmp -liomp5 -p
+endif
 
 ###################################################################
 ###################################################################
