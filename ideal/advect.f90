@@ -18,6 +18,7 @@ contains
     !     we can run on the entire grid simultaneously, and avoid branches
 
     !   arguments
+		implicit none
         real, dimension(1:nx,1:nz,1:ny), intent(in) :: l,r,U
         real, dimension(1:nx,1:nz,1:ny), intent(inout) :: f
         integer,intent(in) :: ny,nz,nx
