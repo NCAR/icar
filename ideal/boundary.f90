@@ -140,6 +140,25 @@ contains
 						
 	end subroutine read_var
 	
+! 	rotate winds from real space back to terrain following grid (approximately)
+!   assumes a simple slope transform in u and v independantly
+	subroutine rotate_ext_wind_field(domain,ext_winds)
+        implicit none
+        type(domain_type),intent(inout)::domain
+        type(wind_type),intent(inout)::ext_winds
+		integer :: nx,ny,nz,i
+	
+		ny=size(domain%z,1)
+		nz=size(domain%z,2)
+		nx=size(domain%z,3)
+		do i=1,nz
+			domain%u(:,i,1:nx-1)=domain%u(:,i,1:nx-1)*ext_winds%dzdx
+			domain%v(1:ny-1,i,:)=domain%v(1:ny-1,i,:)*ext_winds%dzdy
+		end do
+	
+	end subroutine rotate_ext_wind_field
+
+	
 ! 	initialize the eternal winds information (filenames, nfiles, etc) and read the initial conditions
 	subroutine ext_winds_init(domain,bc,options)
 		implicit none
@@ -182,7 +201,7 @@ contains
 		write(*,*) "Initial ext wind file:step=",ext_winds_curfile," : ",ext_winds_curstep
 		call read_var(domain%u,    ext_winds_file_list(ext_winds_curfile),"U",      bc%ext_winds%geolut,ext_winds_curstep,.FALSE.)
 		call read_var(domain%v,    ext_winds_file_list(ext_winds_curfile),"V",      bc%ext_winds%geolut,ext_winds_curstep,.FALSE.)
-		
+		call rotate_ext_wind_field(domain,bc%ext_winds)
 	end subroutine ext_winds_init
 	
 ! 	remove linear theory topographic winds perturbations from the low resolution wind field. 
@@ -254,12 +273,12 @@ contains
 		
 ! 		load low-res U data
 		call io_read3d(filename,"U",extra_data,curstep)
-		domain%u=sum(extra_data(:,:,:nz))/size(extra_data)
+		domain%u=sum(extra_data(:,:,:nz))/size(extra_data(:,:,:nz))
 		deallocate(extra_data)
 
 ! 		load low-res V data
 		call io_read3d(filename,"V",extra_data,curstep)
-		domain%v=sum(extra_data(:,:,:nz))/size(extra_data)
+		domain%v=sum(extra_data(:,:,:nz))/size(extra_data(:,:,:nz))
 		deallocate(extra_data)
 				
 	end subroutine mean_winds
@@ -367,8 +386,8 @@ contains
 			ny=size(domain%u,3)
 			if (options%external_winds) then
 				call ext_winds_init(domain,bc,options)
-				call smooth_wind(domain%u,1,3)
-				call smooth_wind(domain%v,1,3)
+! 				call smooth_wind(domain%u,1,3)
+! 				call smooth_wind(domain%v,1,3)
 			elseif (options%remove_lowres_linear) then
 				call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
 			elseif (options%mean_winds) then
@@ -485,6 +504,7 @@ contains
 		use_boundary=.True.
 		call read_var(bc%next_domain%u,    ext_winds_file_list(ext_winds_curfile),"U",      bc%ext_winds%geolut,ext_winds_curstep,use_interior)
 		call read_var(bc%next_domain%v,    ext_winds_file_list(ext_winds_curfile),"V",      bc%ext_winds%geolut,ext_winds_curstep,use_interior)
+		call rotate_ext_wind_field(bc%next_domain,bc%ext_winds)
 	
 	end subroutine update_ext_winds
 	
@@ -518,8 +538,8 @@ contains
 		use_boundary=.True.
 		if (options%external_winds) then
 			call update_ext_winds(bc,options)
-			call smooth_wind(bc%next_domain%u,1,3)
-			call smooth_wind(bc%next_domain%v,1,3)
+! 			call smooth_wind(bc%next_domain%u,1,3)
+! 			call smooth_wind(bc%next_domain%v,1,3)
 		elseif (options%remove_lowres_linear) then
 			call remove_linear_winds(bc%next_domain,bc,options,file_list(curfile),curstep)
 		elseif (options%mean_winds) then

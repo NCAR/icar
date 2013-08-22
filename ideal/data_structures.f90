@@ -61,6 +61,8 @@ module data_structures
 ! 	type to contain external wind fields, only real addition is nfiles... maybe this could be folded in elsewhere?
 	type, extends(interpolable_type) :: wind_type
 		real, allocatable, dimension(:,:,:) :: u,v
+		real, allocatable, dimension(:,:) :: terrain,dzdx,dzdy
+		real :: dx
 		integer :: nfiles
 	end type wind_type
 
