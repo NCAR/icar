@@ -273,12 +273,12 @@ contains
 		
 ! 		load low-res U data
 		call io_read3d(filename,"U",extra_data,curstep)
-		domain%u=sum(extra_data(:,:,:nz))/size(extra_data)
+		domain%u=sum(extra_data(:,:,:nz))/size(extra_data(:,:,:nz))
 		deallocate(extra_data)
 
 ! 		load low-res V data
 		call io_read3d(filename,"V",extra_data,curstep)
-		domain%v=sum(extra_data(:,:,:nz))/size(extra_data)
+		domain%v=sum(extra_data(:,:,:nz))/size(extra_data(:,:,:nz))
 		deallocate(extra_data)
 				
 	end subroutine mean_winds
