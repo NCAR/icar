@@ -51,13 +51,17 @@ contains
 ! 			by manually inlining the flux2 call we should remove extra array copies that the compiler didn't seem to be able to remove. 
 ! 			equivalent flux2 calls are left in for reference (commented) to restore recall that fx arrays should be 3D : n x m x 1
 ! 			calculate fluxes between grid cells
-           f1= ((u(1:nx-1,:,i)+ABS(u(1:nx-1,:,i))) * qin(1:nx-1,:,i) + (u(1:nx-1,:,i)-ABS(u(1:nx-1,:,i))) * qin(2:nx,:,i))/2
+           f1= ((u(1:nx-1,:,i)+ABS(u(1:nx-1,:,i))) * qin(1:nx-1,:,i) + &
+		    (u(1:nx-1,:,i)-ABS(u(1:nx-1,:,i))) * qin(2:nx,:,i))/2
 !            call flux2(qin(1:nx-1,:,i),qin(2:nx,:,i),u(1:nx-1,:,i),nx-1,nz,1,f1)  !Ux1
-           f3= ((v(2:nx-1,:,i)+ABS(v(2:nx-1,:,i))) * qin(2:nx-1,:,i) + (v(2:nx-1,:,i)-ABS(v(2:nx-1,:,i))) * qin(2:nx-1,:,i+1))/2
+           f3= ((v(2:nx-1,:,i)+ABS(v(2:nx-1,:,i))) * qin(2:nx-1,:,i) + &
+		    (v(2:nx-1,:,i)-ABS(v(2:nx-1,:,i))) * qin(2:nx-1,:,i+1))/2
 ! 		   call flux2(qin(2:nx-1,:,i),qin(2:nx-1,:,i+1),v(2:nx-1,:,i),nx-2,nz,1,f3)  !Vy1
-		   f4= ((v(2:nx-1,:,i-1)+ABS(v(2:nx-1,:,i-1))) * qin(2:nx-1,:,i-1) + (v(2:nx-1,:,i-1)-ABS(v(2:nx-1,:,i-1))) * qin(2:nx-1,:,i))/2
+		   f4= ((v(2:nx-1,:,i-1)+ABS(v(2:nx-1,:,i-1))) * qin(2:nx-1,:,i-1) + &
+		    (v(2:nx-1,:,i-1)-ABS(v(2:nx-1,:,i-1))) * qin(2:nx-1,:,i))/2
 !            call flux2(qin(2:nx-1,:,i-1),qin(2:nx-1,:,i),v(2:nx-1,:,i-1),nx-2,nz,1,f4)  !Vy0
-		   f5= ((w(2:nx-1,1:nz-1,i)+ABS(w(2:nx-1,1:nz-1,i))) * qin(2:nx-1,1:nz-1,i) + (w(2:nx-1,1:nz-1,i)-ABS(w(2:nx-1,1:nz-1,i))) * qin(2:nx-1,2:nz,i))/2
+		   f5= ((w(2:nx-1,1:nz-1,i)+ABS(w(2:nx-1,1:nz-1,i))) * qin(2:nx-1,1:nz-1,i) + &
+		    (w(2:nx-1,1:nz-1,i)-ABS(w(2:nx-1,1:nz-1,i))) * qin(2:nx-1,2:nz,i))/2
 !            call flux2(qin(2:nx-1,1:nz-1,i),qin(2:nx-1,2:nz,i),w(2:nx-1,1:nz-1,i),nx-2,nz-1,1,f5)
 		   
            ! perform horizontal advection
