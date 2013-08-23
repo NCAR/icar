@@ -231,7 +231,7 @@ contains
 			if (options%debug) then
 				write(*,*) "Reading 3D Z data"
 			endif
-			call io_read3d(options%init_conditions_file,"z", domain%z)
+			call io_read3d(options%init_conditions_file,"Z", domain%z)
 ! 			dz also has to be calculated from the 3d z file
 			allocate(domain%dz(nx,nz,ny))
 			domain%dz(:,1:nz-1,:)=domain%z(:,2:nz,:)-domain%z(:,1:nz-1,:)
@@ -357,15 +357,14 @@ contains
         type(wind_type),intent(inout)::domain
         integer::nx,ny
         
-        ny=size(domain%terrain,1)
-        nx=size(domain%terrain,2)
+        nx=size(domain%terrain,1)
+        ny=size(domain%terrain,2)
 		
 		! dzdx/y used in rotating windfield back to terrain following grid in a simple fashion
-		allocate(domain%dzdx(ny,nx-1))
-		allocate(domain%dzdy(ny-1,nx))
-		domain%dzdx=sqrt((domain%terrain(:,2:nx)-domain%terrain(:,1:nx-1))**2+domain%dx**2)/domain%dx
-		domain%dzdy=sqrt((domain%terrain(2:ny,:)-domain%terrain(1:ny-1,:))**2+domain%dx**2)/domain%dx
-		        
+		allocate(domain%dzdx(nx-1,ny))
+		allocate(domain%dzdy(nx,ny-1))
+		domain%dzdx=sqrt((domain%terrain(2:nx,:)-domain%terrain(1:nx-1,:))**2+domain%dx**2)/domain%dx
+		domain%dzdy=sqrt((domain%terrain(:,2:ny)-domain%terrain(:,1:ny-1))**2+domain%dx**2)/domain%dx
     end subroutine
 	
 	

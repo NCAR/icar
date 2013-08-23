@@ -38,19 +38,21 @@ contains
 	! 		snow rain ratio
 			SR=0
 		endif
-! 		used to convert potential temperature to sensible temperature
-		pii=1.0/((100000.0/domain%p)**(R/cp))
+		if (options%physics%microphysics==1) then
+	! 		used to convert potential temperature to sensible temperature
+			pii=1.0/((100000.0/domain%p)**(R/cp))
 		
-		call mp_gt_driver(domain%qv, domain%cloud, domain%qrain, domain%ice, &
-		                domain%qsnow, domain%qgrau, domain%nice, domain%nrain, &
-						domain%th, pii, domain%p, domain%dz, dt_in, itimestep, &
-						domain%rain, domain%rain, &
-						domain%snow, domain%snow, &
-						domain%graupel, domain%graupel, &
-						SR, &
-						ids,ide, jds,jde, kds,kde, &    ! domain dims
-						ids,ide, jds,jde, kds,kde, &    ! memory dims
-						ids+1,ide-1, jds+1,jde-1, kds,kde)      ! tile dims
+			call mp_gt_driver(domain%qv, domain%cloud, domain%qrain, domain%ice, &
+			                domain%qsnow, domain%qgrau, domain%nice, domain%nrain, &
+							domain%th, pii, domain%p, domain%dz, dt_in, itimestep, &
+							domain%rain, domain%rain, &
+							domain%snow, domain%snow, &
+							domain%graupel, domain%graupel, &
+							SR, &
+							ids,ide, jds,jde, kds,kde, &    ! domain dims
+							ids,ide, jds,jde, kds,kde, &    ! memory dims
+							ids+1,ide-1, jds+1,jde-1, kds,kde)      ! tile dims
+		endif
 ! 		deallocate(pii,SR)
 						
 	end subroutine mp

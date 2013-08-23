@@ -1,0 +1,103 @@
+#!/usr/bin/env python
+import glob,os
+
+import numpy as np
+
+from bunch import Bunch
+from stat_down import myio as io
+import load_data
+
+def adjust_p(p,h,dz):
+    '''Convert p [Pa] at elevation h [m] by shifting its elevation by dz [m]'''
+    # p    in pascals
+    # h,dz in meters
+    # slp = p/(1 - 2.25577E-5*h)**5.25588
+    # p=slp*(1 - 2.25577E-5*(h+dz))**5.25588
+    p*=(1 - 2.25577E-5*(h+dz))**5.25588
+
+def update_base(base,filename,nz):
+    data=load_data.cols(filename)
+    nz=min(data.shape[0]-1,nz)
+    base.z=data[:nz,0]
+    base.dz=np.diff(data[:nz+1,0]).reshape((1,nz,1,1))
+    base.th=data[:nz,1].reshape((1,nz,1,1))
+    base.qv=data[:nz,2].reshape((1,nz,1,1))/1000.0
+
+def main():
+    filename="ideal"
+    nx,nz,ny=(200.,20.,20)
+    dims=[1,nz,ny,nx]
+    
+    lonmin=-110.0; lonmax=-100.0; dlon=(lonmax-lonmin)/nx
+    latmin=35.0; latmax=45.0; dlat=(latmax-latmin)/ny
+
+    base=Bunch(u=10.0,w=0.0,v=0.0,
+               qv=0.0013,qc=0.0,
+               p=100000.0,
+               th=np.arange(273.0,300,(300-273.0)/nz).reshape((nz,1,1)),
+               dz=100.0)
+    base.z=np.arange(0,nz*base.dz,base.dz)
+    if glob.glob("sounding.txt"):
+        update_base(base,"sounding.txt",nz)
+        nz=base.th.size
+        dims=[1,nz,ny,nx]
+    
+    u=np.zeros(dims,dtype="f")+base.u
+    w=np.zeros(dims,dtype="f")+base.w
+    v=np.zeros(dims,dtype="f")+base.v
+    qv=np.zeros(dims,dtype="f")+base.qv
+    qc=np.zeros(dims,dtype="f")+base.qc
+    coscurve=np.cos(np.arange(dims[3])/dims[3]*2*np.pi+np.pi)+1
+    hgt=(coscurve*1000).reshape((1,nx)).repeat(ny,axis=0)
+    
+    lon=np.arange(lonmin,lonmax,dlon)
+    lat=np.arange(latmin,latmax,dlat)
+    lon,lat=np.meshgrid(lon,lat)
+    
+    dz=np.zeros(dims)+base.dz
+    z=np.zeros(dims,dtype="f")+base.z.reshape((1,nz,1,1))+hgt.reshape((1,1,ny,nx))
+    
+    layer1=(dz[0,:,:]/2)
+    z[0,:,:]+=layer1
+    for i in range(1,int(nz)):
+        z[:,i,:,:]=z[:,i-1,:,:]+(dz[:,i-1,:,:]+dz[:,i,:,:])/2.0
+    
+    p=np.zeros(dims,dtype="f")+base.p
+    adjust_p(p,0.0,z)
+    th=np.zeros(dims,dtype="f")+base.th
+    
+    lat=lat.reshape((1,ny,nx))
+    lon=lon.reshape((1,ny,nx))
+    hgt=hgt.reshape((1,ny,nx))
+    
+    d3dname=("t","z","y","x")
+    d2dname=("t","y","x")
+    g=9.81
+    othervars=[Bunch(data=v,  name="V",     dims=d3dname,dtype="f",attributes=dict(units="m/s",  description="Horizontal (y) wind speed")),
+               Bunch(data=w,  name="W",     dims=d3dname,dtype="f",attributes=dict(units="m/s",  description="Vertical wind speed")),
+               Bunch(data=qv, name="QVAPOR",dims=d3dname,dtype="f",attributes=dict(units="kg/kg",description="Water vapor mixing ratio")),
+               Bunch(data=qc, name="QCLOUD",dims=d3dname,dtype="f",attributes=dict(units="kg/kg",description="Cloud water mixing ratio")),
+               Bunch(data=qc, name="QICE",  dims=d3dname,dtype="f",attributes=dict(units="kg/kg",description="Cloud ice mixing ratio")),
+               Bunch(data=p*0,name="P",     dims=d3dname,dtype="f",attributes=dict(units="Pa",   description="Pressure (perturbation)")),
+               Bunch(data=p,  name="PB",    dims=d3dname,dtype="f",attributes=dict(units="Pa",   description="Pressure (base)")),
+               Bunch(data=th-300, name="T", dims=d3dname,dtype="f",attributes=dict(units="K",    description="Potential temperature")),
+               Bunch(data=dz, name="dz",    dims=d3dname,dtype="f",attributes=dict(units="m",    description="Layer thickness")),
+               Bunch(data=z,  name="Z",     dims=d3dname,dtype="f",attributes=dict(units="m",    description="Layer Height AGL")),
+               Bunch(data=z*0,name="PH",    dims=d3dname,dtype="f",attributes=dict(units="m2/s2",description="Geopotential Height ASL (perturbation)")),
+               Bunch(data=z*g,name="PHB",   dims=d3dname,dtype="f",attributes=dict(units="m2/s2",description="Geopotential Height ASL (base)")),
+               Bunch(data=lat,name="XLAT",  dims=d2dname,dtype="f",attributes=dict(units="deg",  description="Latitude")),
+               Bunch(data=lon,name="XLONG", dims=d2dname,dtype="f",attributes=dict(units="deg",  description="Longitude")),
+               Bunch(data=hgt,name="HGT",   dims=d2dname,dtype="f",attributes=dict(units="m",    description="Terrain Elevation"))
+               ]
+    fileexists=glob.glob(filename) or glob.glob(filename+".nc")
+    if fileexists:
+        print("Removing : "+fileexists[0])
+        os.remove(fileexists[0])
+    
+    io.write(filename,  u,varname="U", dims=d3dname,dtype="f",attributes=dict(units="m/s",description="Horizontal (x) wind speed"),
+            extravars=othervars)
+
+
+if __name__ == '__main__':
+    main()
+

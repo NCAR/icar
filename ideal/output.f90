@@ -97,8 +97,13 @@ contains
 		call check( nf90_put_var(ncid, varid(6),  domain%qgrau) )
 		call check( nf90_put_var(ncid, varid(7),  domain%nrain) )
 		call check( nf90_put_var(ncid, varid(8),  domain%nice) )
-		call check( nf90_put_var(ncid, varid(9), (domain%u(1:nx,:,:)+domain%u(2:nx+1,:,:))/2) )
-		call check( nf90_put_var(ncid, varid(10),(domain%v(:,:,1:ny)+domain%v(:,:,2:ny+1))/2) )
+		if (options%ideal) then
+			call check( nf90_put_var(ncid, varid(9), domain%u(1:nx,:,:)) )
+			call check( nf90_put_var(ncid, varid(10),domain%v(:,:,1:ny)) )
+		else
+			call check( nf90_put_var(ncid, varid(9), (domain%u(1:nx,:,:)+domain%u(2:nx+1,:,:))/2) )
+			call check( nf90_put_var(ncid, varid(10),(domain%v(:,:,1:ny)+domain%v(:,:,2:ny+1))/2) )
+		endif
 		call check( nf90_put_var(ncid, varid(11), domain%w) )
 		call check( nf90_put_var(ncid, varid(12), domain%p) )
 		call check( nf90_put_var(ncid, varid(13), domain%th) )
