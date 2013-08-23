@@ -348,29 +348,32 @@ contains
 		else
 			curstep=1
 		endif
+		
 		nfiles=options%nfiles
 		allocate(file_list(nfiles))
 		file_list=options%boundary_files
-		call io_getdims(file_list(curfile),"P", dims)
-		if (dims(1)==3) then
-			steps_in_file=1
-		else
-			steps_in_file=dims(dims(1)+1) !dims(1) = ndims
-		endif
-		
-		do while (curstep>steps_in_file)
-			curfile=curfile+1
-			if (curfile>nfiles) then
-				stop "Ran out of files to process!"
-			endif
-			curstep=curstep-steps_in_file !instead of setting=1, this way we can set an arbitrary starting point multiple files in
+		if (.not.options%ideal) then
 			call io_getdims(file_list(curfile),"P", dims)
 			if (dims(1)==3) then
 				steps_in_file=1
 			else
-				steps_in_file=dims(dims(1)+1) !dims(1) = ndims; dims(ndims+1)=ntimesteps
+				steps_in_file=dims(dims(1)+1) !dims(1) = ndims
 			endif
-		enddo
+		
+			do while (curstep>steps_in_file)
+				curfile=curfile+1
+				if (curfile>nfiles) then
+					stop "Ran out of files to process!"
+				endif
+				curstep=curstep-steps_in_file !instead of setting=1, this way we can set an arbitrary starting point multiple files in
+				call io_getdims(file_list(curfile),"P", dims)
+				if (dims(1)==3) then
+					steps_in_file=1
+				else
+					steps_in_file=dims(dims(1)+1) !dims(1) = ndims; dims(ndims+1)=ntimesteps
+				endif
+			enddo
+		endif
 		
 ! 		load the restart file
 		if (options%restart) then
@@ -519,20 +522,22 @@ contains
 		integer::i,nz,nx,ny
 		! MODULE variables : curstep, curfile, nfiles, steps_in_file, file_list
 		
-		curstep=curstep+1
-		do while (curstep>steps_in_file)
-			curfile=curfile+1
-			if (curfile>nfiles) then
-				stop "Ran out of files to process!"
-			endif
-			curstep=curstep-steps_in_file !instead of setting=1, this way we can set an arbitrary starting point multiple files in
-			call io_getdims(file_list(curfile),"P", dims)
-			if (dims(1)==3) then
-				steps_in_file=1
-			else
-				steps_in_file=dims(dims(1)+1) !dims(1) = ndims; dims(ndims+1)=ntimesteps
-			endif
-		enddo
+		if (.not.options%ideal) then
+			curstep=curstep+1
+			do while (curstep>steps_in_file)
+				curfile=curfile+1
+				if (curfile>nfiles) then
+					stop "Ran out of files to process!"
+				endif
+				curstep=curstep-steps_in_file !instead of setting=1, this way we can set an arbitrary starting point multiple files in
+				call io_getdims(file_list(curfile),"P", dims)
+				if (dims(1)==3) then
+					steps_in_file=1
+				else
+					steps_in_file=dims(dims(1)+1) !dims(1) = ndims; dims(ndims+1)=ntimesteps
+				endif
+			enddo
+		endif
 		
 		use_interior=.False.
 		use_boundary=.True.

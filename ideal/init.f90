@@ -37,16 +37,18 @@ contains
 		
 		character(len=MAXFILELENGTH) :: init_conditions_file, output_file,restart_file
 		character(len=MAXFILELENGTH),allocatable:: boundary_files(:),ext_wind_files(:)
-		character(len=MAXVARLENGTH) :: latvar,lonvar
+		character(len=MAXVARLENGTH) :: latvar,lonvar,version
 		real :: dx,outputinterval,dz
 		integer :: name_unit,ntimesteps,nfiles
 		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz,n_ext_winds,buffer,restart_step
-		logical :: readz,decrease_dz,debug,external_winds,remove_lowres_linear,mean_winds,mean_fields,restart,add_low_topo
+		logical :: ideal, readz,decrease_dz,debug,external_winds,remove_lowres_linear,&
+		           mean_winds,mean_fields,restart,add_low_topo
 		n_ext_winds=200
 		
 ! 		set up namelist structures
+		namelist /model_version/ version
 		namelist /var_list/ latvar,lonvar
-		namelist /parameters/ ntimesteps,outputinterval,dx,readz,decrease_dz,nz,debug,dz,nfiles, &
+		namelist /parameters/ ntimesteps,outputinterval,dx,ideal,readz,decrease_dz,nz,debug,dz,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,&
 							  remove_lowres_linear,mean_winds,mean_fields,restart
 		namelist /files_list/ init_conditions_file,output_file,boundary_files
@@ -56,6 +58,14 @@ contains
 		
 ! 		read namelists
 		open(io_newunit(name_unit), file=options_filename)
+		read(name_unit,nml=model_version)
+		if (version.ne."0.5.1") then
+			write(*,*) "Model version does not match namelist version"
+			write(*,*) "  Model version: 0.5.1"
+			write(*,*) "  Namelist version:",version
+			stop
+		endif
+		write(*,*) "Model version: ",version
 		read(name_unit,nml=var_list)
 		read(name_unit,nml=parameters)
 		
@@ -100,6 +110,10 @@ contains
 		options%io_dt=outputinterval
 		options%dx=dx
 		options%dz=dz
+		options%ideal=ideal
+		if (ideal) then
+			write(*,*) "Running Idealized simulation (time step does not advance)"
+		endif
 		options%readz=readz
 		options%decrease_dz=decrease_dz
 		options%buffer=buffer

@@ -1,3 +1,6 @@
+&model_version
+version="0.5.1"
+/
 &var_list
 latvar="XLAT",
 lonvar="XLONG"
@@ -13,6 +16,7 @@ decrease_dz=.TRUE.,
 dz=100.0,
 nz=25,
 
+ideal=false,
 external_winds=.FALSE.,
 remove_lowres_linear=.FALSE.,
 add_low_topo=.True.,
