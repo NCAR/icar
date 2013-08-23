@@ -192,10 +192,10 @@ wind_test:${WINDOBJS}
 #   driver code for 
 ###################################################################
 
-driver.o:driver.f90 advect.o data_structures.o init.o mp_driver.o output.o wind.o
+driver.o:driver.f90 advect.o data_structures.o init.o mp_driver.o output.o wind.o boundary.o
 	${F90} ${FFLAGS} driver.f90
 
-ideal.o:ideal.f90 advect.o data_structures.o init.o mp_driver.o output.o wind.o
+ideal.o:ideal.f90 advect.o data_structures.o init.o mp_driver.o output.o wind.o boundary.o
 	${F90} ${FFLAGS} ideal.f90
 
 ###################################################################
@@ -208,7 +208,7 @@ init.o:init.f90 data_structures.o io_routines.o geo_reader.o
 time_step.o:time_step.f90 data_structures.o mp_driver.o wind.o advect.o
 	${F90} ${FFLAGS} time_step.f90
 
-boundary.o:boundary.f90 data_structures.o io_routines.o wind.o geo_reader.o output.o
+boundary.o:boundary.f90 data_structures.o io_routines.o wind.o geo_reader.o output.o linear_winds.o
 	${F90} ${FFLAGS} boundary.f90
 
 
@@ -244,7 +244,7 @@ advect.o:advect.f90 data_structures.o
 wind.o:wind.f90 linear_winds.o
 	${F90} ${FFLAGS} wind.f90
 
-linear_winds.o:linear_winds.f90
+linear_winds.o:linear_winds.f90 io_routines.o
 	${F90} ${FFLAGS} linear_winds.f90
 
 
