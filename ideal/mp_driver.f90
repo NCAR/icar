@@ -2,10 +2,11 @@ module microphysics
 	use data_structures
 	use module_mp_thompson
 	implicit none
-	real, parameter :: LH_vaporization=2260000.0 ! J/kg
-	real, parameter :: R=287.058 ! J/(kg K) specific gas constant for air
-	real, parameter :: cp = 1012.0 ! specific heat capacity of moist STP air? J/kg/K
-	real, parameter :: g=9.81 ! gravity m/s^2
+! 	these are now defined in data_structures.f90
+! 	real, parameter :: LH_vaporization=2260000.0 ! J/kg
+! 	real, parameter :: R=287.058 ! J/(kg K) specific gas constant for air
+! 	real, parameter :: cp = 1012.0 ! specific heat capacity of moist STP air? J/kg/K
+! 	real, parameter :: g=9.81 ! gravity m/s^2
 
 	real,allocatable,dimension(:,:,:)::pii,SR
 

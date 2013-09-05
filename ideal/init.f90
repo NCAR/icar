@@ -1,4 +1,11 @@
 module init
+! ----------------------------------------------------------------------------
+! 	NOTE: This module was initially written to read WRF output files as input.
+! 		This should serve as a basis for any additional file types, and can be 
+! 		readily modified.  At some point this could be modified to check the 
+! 		type if input file being specified, and call an appropriate routine. 
+! 		e.g. if options%inputtype=="WRF" then call wrf_init/update()
+! ----------------------------------------------------------------------------
 	use data_structures
 	use io_routines
 	use geo
@@ -82,11 +89,8 @@ contains
 		read(name_unit,nml=files_list)
 		
 		if (external_winds) then
-			write(*,*) n_ext_winds
 			allocate(ext_wind_files(n_ext_winds))
-			write(*,*) n_ext_winds
 			read(name_unit,nml=ext_winds_info)
-			write(*,*) n_ext_winds
 			options%external_winds=external_winds
 			options%ext_winds_nfiles=n_ext_winds
 			allocate(options%ext_wind_files(n_ext_winds))
@@ -234,7 +238,7 @@ contains
 			call io_read3d(options%init_conditions_file,"Z", domain%z)
 ! 			dz also has to be calculated from the 3d z file
 			allocate(domain%dz(nx,nz,ny))
-			domain%dz(:,1:nz-1,:)=domain%z(:,2:nz,:)-domain%z(:,1:nz-1,:)
+			domain%dz(:,1:nz-1,:)=domain%z(:,:,2:nz)-domain%z(:,:,1:nz-1)
 			domain%dz(:,nz,:)=domain%dz(:,nz-1,:)
 		else
 ! 			otherwise, set up the z grid to be evenly spaced in z using the terrain +dz/2 for the base
@@ -250,6 +254,7 @@ contains
 				 
 ! 		    make layer thickness decrease over high terrain (and increase over low terrain)
 			if (options%decrease_dz) then
+				write(*,*) "Decreasing dz with height"
 				allocate(newthickness(nx,ny))
 				totalthickness=sum(fulldz(1:nz))
 				newthickness=totalthickness - (domain%terrain - sum(domain%terrain)/size(domain%terrain))
@@ -259,8 +264,6 @@ contains
 					domain%dz(:,i,:)=fulldz(i)*newthickness/totalthickness
 					domain%z(:,i,:)=domain%z(:,i-1,:)+(domain%dz(:,i,:)+domain%dz(:,i-1,:))/2
 				enddo
-! 				call io_write3d("z_layers.nc","data",domain%z)
-! 				call io_write2d("newthick.nc","data",newthickness)
 				deallocate(newthickness)
 			else
 				domain%dz(:,1,:)=fulldz(1)

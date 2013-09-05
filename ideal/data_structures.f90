@@ -3,6 +3,11 @@ module data_structures
 
 	integer,parameter::MAXFILELENGTH=100
 	integer,parameter::MAXVARLENGTH=100
+
+	real, parameter :: LH_vaporization=2260000.0 ! J/kg
+    real, parameter :: R=287.058   ! J/(kg K) specific gas constant for air
+    real, parameter :: cp = 1012.0 ! J/kg/K   specific heat capacity of moist STP air? 
+	real, parameter :: g = 9.81    ! m/s^2    gravity
 	
 ! 	various data structures for use in geographic interpolation routines
 ! 	contains the location of a specific grid point
@@ -14,7 +19,19 @@ module data_structures
 		integer::x(4),y(4)
 	end type fourpos
 	
-!------------------------------------------------
+! 	a geographic look up table for spatial interpolation, from x,y with weight w
+	type geo_look_up_table
+		integer,allocatable,dimension(:,:,:)::x,y
+		real,allocatable,dimension(:,:,:)::w
+	end type geo_look_up_table
+	
+!   generic interpolable type so geo interpolation routines will work on winds, domain, or boundary conditions. 	
+	type interpolable_type
+		real, allocatable, dimension(:,:) :: lat,lon
+		type(geo_look_up_table)::geolut
+	end type interpolable_type
+
+	!------------------------------------------------
 ! 
 ! General Field Definitions
 !
@@ -27,8 +44,8 @@ module data_structures
 ! th    = potential temperature         [K]
 !
 ! qv    = vapor pressure (mixing ratio) [kg/kg]
-! qc    = cloud water                   [kg/kg]
-! qi    = cloud ice                     [kg/kg]
+! cloud = cloud water                   [kg/kg]
+! ice   = cloud ice                     [kg/kg]
 ! qrain = rain mixing ratio             [kg/kg]
 ! qsnow = snow mixing ratio             [kg/kg]
 ! qgrau = graupel mixing ratio          [kg/kg]
@@ -46,18 +63,6 @@ module data_structures
 ! dz = layer thickness                  [m]
 !------------------------------------------------
 
-! 	a geographic look up table for spatial interpolation, from x,y with weight w
-	type geo_look_up_table
-		integer,allocatable,dimension(:,:,:)::x,y
-		real,allocatable,dimension(:,:,:)::w
-	end type geo_look_up_table
-	
-!   generic interpolable type so geo interpolation routines will work on winds, domain, or boundary conditions. 	
-	type interpolable_type
-		real, allocatable, dimension(:,:) :: lat,lon
-		type(geo_look_up_table)::geolut
-	end type interpolable_type
-	
 ! 	type to contain external wind fields, only real addition is nfiles... maybe this could be folded in elsewhere?
 	type, extends(interpolable_type) :: wind_type
 		real, allocatable, dimension(:,:,:) :: u,v
@@ -87,6 +92,7 @@ module data_structures
 	type, extends(linearizable_type) :: bc_type
 ! 		not sure these are used anymore...
 		real, allocatable, dimension(:,:,:) :: p,th,qv
+! 		dXdt variables are the change in variable X between two forcing time steps
 ! 		wind and pressure dXdt fields applied to full 3d grid, others applied only to boundaries
 		real, allocatable, dimension(:,:,:) :: dudt,dvdt,dwdt,dpdt,dthdt,dqvdt,dqcdt
 ! 		store the full 3D grid for the next time step to compute dXdt fields

@@ -117,7 +117,7 @@ ifeq ($(DEBUG), debug)
 	LINK=  
 endif
 ifeq ($(DEBUG), debugompslow)
-	COMP= -openmp -liomp5 -debug -c -u -check all -check noarg_temp_created -traceback
+	COMP= -openmp -liomp5 -debug -c -u  -fpe0 -traceback -check all -check noarg_temp_created
 	LINK= -openmp -liomp5
 endif
 ifeq ($(DEBUG), debugomp)

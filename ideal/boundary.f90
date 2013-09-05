@@ -26,8 +26,9 @@ module boundary_conditions
 	integer::ext_winds_steps_in_file,ext_winds_nfiles
 
 	integer,parameter::smoothing_window=14
-    real, parameter :: R=287.058 ! J/(kg K) specific gas constant for air
-    real, parameter :: cp = 1012.0 ! specific heat capacity of moist STP air? J/kg/K
+!   these are now specified in data_structures.f90
+!     real, parameter :: R=287.058 ! J/(kg K) specific gas constant for air
+!     real, parameter :: cp = 1012.0 ! specific heat capacity of moist STP air? J/kg/K
 	
 	public::bc_init
 	public::bc_update
@@ -384,6 +385,7 @@ contains
 			call update_winds(domain,options)
 			call write_domain(domain,options,-1)
 		else
+! 			else load data from the first Boundary conditions file
 			boundary_value=.False.
 			nx=size(domain%u,1)
 			ny=size(domain%u,3)
