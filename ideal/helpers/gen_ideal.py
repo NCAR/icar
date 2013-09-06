@@ -7,6 +7,17 @@ from bunch import Bunch
 from stat_down import myio as io
 import load_data
 
+case_study=2
+wind_speed=10.0
+
+xdomain=[800,500,100]
+xdomain=[1500,1000,200]
+dx=2.0
+# nx,nz,ny
+master_dims=list([(xdomain[0]/dx,20,5),
+                  (xdomain[1]/dx,20,5),
+                  (xdomain[2]/dx,20,5)])
+
 def adjust_p(p,h,dz):
     '''Convert p [Pa] at elevation h [m] by shifting its elevation by dz [m]'''
     # p    in pascals
@@ -16,6 +27,11 @@ def adjust_p(p,h,dz):
     p*=(1 - 2.25577E-5*(h+dz))**5.25588
 
 def update_base(base,filename,nz):
+    """update the base information using data from a sounding file
+    
+    filename should be a space delimited text file with 3 columns
+        height [m], potential temperature [K], and specific humidity [g/kg]"""
+    print("Using Sounding from : "+filename)
     data=load_data.cols(filename)
     nz=min(data.shape[0]-1,nz)
     base.z=data[:nz,0]
@@ -23,15 +39,45 @@ def update_base(base,filename,nz):
     base.th=data[:nz,1].reshape((1,nz,1,1))
     base.qv=data[:nz,2].reshape((1,nz,1,1))/1000.0
 
+def build_topography(experiment,dims):
+    """create the topography to be used for a given case study"""
+    
+    # experiment                        D1      D2      D3
+    # h         height of the hill    1800    1400    1040   [meters]
+    # sigma     half-width              60      40       3.1 [grid cells]
+    # z0        base of the hill      1700    2000    2200   [meters]
+    # G         number of grids        420     250      52   [grid cells]
+
+    Nx    = dims[3]                               # % length of domain  (grid cells)
+    hm    = [1800.0,1400.0,1040.0][experiment]    # % mnt height (m)
+    xm    = Nx/2.0                                # % mountain location in domain (grid cell)
+    am    = [60.0,40.0,3.1][experiment]           # % mountain half-width (grid cells)
+
+    dx    = 2000.0                                # % grid spacing (m)
+    Lx    = Nx*dx                                 # % length of domain (m)
+    x     = np.linspace(0,Lx,Nx)                  # % distance array (m)
+    zo    = [1700.0,2000.0,2200.0][experiment]    # mountain base height (m) NOT REALLY USED CORRECTLY YET, NEED to truncate the sounding...
+    zo    = 0.0
+    
+    
+    zs=hm/(1.0+((x/dx-xm)/am)**2.)
+    # zs-=zs[0]
+    zs=zs.reshape((1,dims[3])).repeat(dims[2],axis=0)
+    return zs
+
 def main():
-    filename="ideal"
-    nx,nz,ny=(200.,20.,20)
+    filename="ideal_{}_{}".format(case_study,int(wind_speed))
+    print(filename)
+    nx,nz,ny=master_dims[case_study]
     dims=[1,nz,ny,nx]
     
-    lonmin=-110.0; lonmax=-100.0; dlon=(lonmax-lonmin)/nx
-    latmin=35.0; latmax=45.0; dlat=(latmax-latmin)/ny
+    # this is just arbitrary for now
+    dlon=dx/111.1
+    dlat=dx/111.1
+    lonmin=-110.0; lonmax=lonmin+nx*dlon
+    latmin=40.0; latmax=latmin+ny*dlat
 
-    base=Bunch(u=10.0,w=0.0,v=0.0,
+    base=Bunch(u=wind_speed,w=0.0,v=0.0,
                qv=0.0013,qc=0.0,
                p=100000.0,
                th=np.arange(273.0,300,(300-273.0)/nz).reshape((nz,1,1)),
@@ -47,11 +93,14 @@ def main():
     v=np.zeros(dims,dtype="f")+base.v
     qv=np.zeros(dims,dtype="f")+base.qv
     qc=np.zeros(dims,dtype="f")+base.qc
-    coscurve=np.cos(np.arange(dims[3])/dims[3]*2*np.pi+np.pi)+1
-    hgt=(coscurve*1000).reshape((1,nx)).repeat(ny,axis=0)
     
-    lon=np.arange(lonmin,lonmax,dlon)
-    lat=np.arange(latmin,latmax,dlat)
+    # simple topography = a cosine
+    # coscurve=np.cos(np.arange(dims[3])/dims[3]*2*np.pi+np.pi)+1
+    # hgt=(coscurve*1000).reshape((1,nx)).repeat(ny,axis=0)
+    hgt=build_topography(case_study,dims)
+    
+    lon=np.arange(lonmin,lonmax,dlon)[:nx]
+    lat=np.arange(latmin,latmax,dlat)[:ny]
     lon,lat=np.meshgrid(lon,lat)
     
     dz=np.zeros(dims)+base.dz
@@ -82,7 +131,7 @@ def main():
                Bunch(data=p,  name="PB",    dims=d3dname,dtype="f",attributes=dict(units="Pa",   description="Pressure (base)")),
                Bunch(data=th-300, name="T", dims=d3dname,dtype="f",attributes=dict(units="K",    description="Potential temperature")),
                Bunch(data=dz, name="dz",    dims=d3dname,dtype="f",attributes=dict(units="m",    description="Layer thickness")),
-               Bunch(data=z,  name="Z",     dims=d3dname,dtype="f",attributes=dict(units="m",    description="Layer Height AGL")),
+               Bunch(data=z,  name="Z",     dims=d3dname,dtype="f",attributes=dict(units="m",    description="Layer Height AGL (also ASL here)")),
                Bunch(data=z*0,name="PH",    dims=d3dname,dtype="f",attributes=dict(units="m2/s2",description="Geopotential Height ASL (perturbation)")),
                Bunch(data=z*g,name="PHB",   dims=d3dname,dtype="f",attributes=dict(units="m2/s2",description="Geopotential Height ASL (base)")),
                Bunch(data=lat,name="XLAT",  dims=d2dname,dtype="f",attributes=dict(units="deg",  description="Latitude")),
@@ -99,5 +148,9 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    for case in range(3):
+        for ws in [5,10,15,25]:
+            wind_speed=float(ws)
+            case_study=case
+            main()
 

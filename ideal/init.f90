@@ -140,14 +140,17 @@ contains
 	subroutine remove_edges(domain,edgesize)
 		type(domain_type), intent(inout) :: domain
 		integer, intent(in)::edgesize
-		integer::nx1,ny1,nx2,ny2
+		integer::nx1,ny1,nx2,ny2,nz
 		real,allocatable,dimension(:,:)::temp_data
+		real,allocatable,dimension(:,:,:)::temp_data3d
 		
 		nx1=size(domain%lat,1)
 		ny1=size(domain%lat,2)
 		nx2=nx1-(edgesize*2)
 		ny2=ny1-(edgesize*2)
+! 		nz=size(domain%z,2)
 		allocate(temp_data(nx1,ny1))
+! 		allocate(temp_data3d(nx1,nz,ny1))
 		
 		temp_data=domain%lat
 		deallocate(domain%lat)
@@ -164,7 +167,18 @@ contains
 		allocate(domain%terrain(nx2,ny2))
 		domain%terrain=temp_data(edgesize:nx1-edgesize,edgesize:ny1-edgesize)
 
+! 		temp_data3d=domain%z
+! 		deallocate(domain%z)
+! 		allocate(domain%z(nx2,nz,ny2))
+! 		domain%z=temp_data(edgesize:nx1-edgesize,:,edgesize:ny1-edgesize)
+! 
+! 		temp_data3d=domain%dz
+! 		deallocate(domain%dz)
+! 		allocate(domain%dz(nx2,nz,ny2))
+! 		domain%dz=temp_data(edgesize:nx1-edgesize,:,edgesize:ny1-edgesize)
+! 
 		deallocate(temp_data)
+! 		deallocate(temp_data,temp_data3d)
 	end subroutine remove_edges
 	
 ! 	allocate all arrays in domain
@@ -214,7 +228,8 @@ contains
 		real,dimension(45)::fulldz
 		real::totalthickness
 		real,dimension(:,:),allocatable::newthickness
-		integer:: ny,nz,nx,i
+		real,dimension(:,:,:),allocatable::temporary_z
+		integer:: ny,nz,nx,i,buf
 		
 ! 		these are the only required variables on a high-res grid, lat, lon, and terrain elevation
 		call io_read2d(options%init_conditions_file,"HGT",domain%terrain,1)
@@ -232,14 +247,21 @@ contains
 		
 ! 		if a 3d grid was also specified, then read those data in
 		if (options%readz) then
-			if (options%debug) then
-				write(*,*) "Reading 3D Z data"
-			endif
 			call io_read3d(options%init_conditions_file,"Z", domain%z)
 ! 			dz also has to be calculated from the 3d z file
 			allocate(domain%dz(nx,nz,ny))
-			domain%dz(:,1:nz-1,:)=domain%z(:,:,2:nz)-domain%z(:,:,1:nz-1)
+			allocate(temporary_z(nx,nz,ny))
+			buf=options%buffer
+			do i=1,nz-1
+				domain%dz(:,i,:)=domain%z(buf+1:nx-buf,buf+1:ny-buf,i+1)-domain%z(buf+1:nx-buf,buf+1:ny-buf,i)
+				temporary_z(:,i,:)=domain%z(buf+1:nx-buf,buf+1:ny-buf,i)
+			enddo
+			temporary_z(:,nz,:)=domain%z(buf+1:nx-buf,buf+1:ny-buf,nz)
 			domain%dz(:,nz,:)=domain%dz(:,nz-1,:)
+			deallocate(domain%z)
+			allocate(domain%z(nx,nz,ny))
+			domain%z=temporary_z
+			deallocate(temporary_z)
 		else
 ! 			otherwise, set up the z grid to be evenly spaced in z using the terrain +dz/2 for the base
 ! 			and z[1]+i*dz for the res
@@ -274,9 +296,6 @@ contains
 				enddo
 			endif
 ! 			here dz is just constant, but must be on a 3d grid for microphysics code
-		endif
-		if (options%debug) then
-			write(*,*) "allocating domain wide memory"
 		endif
 ! 		all other variables should be allocated and initialized to 0
 		call domain_allocation(domain,nx,nz,ny)
@@ -382,8 +401,6 @@ contains
 		call io_read2d(options%ext_wind_files(1),"HGT",bc%ext_winds%terrain,1)
 		call io_read2d(options%ext_wind_files(1),options%latvar,bc%ext_winds%lat)
 		call io_read2d(options%ext_wind_files(1),options%lonvar,bc%ext_winds%lon)
-		write(*,*) maxval(bc%ext_winds%lat),minval(bc%ext_winds%lat)
-		write(*,*) maxval(bc%next_domain%lat),minval(bc%next_domain%lat)
 		write(*,*) "Setting up ext wind geoLUT"
 		call geo_LUT(bc%next_domain, bc%ext_winds)
 ! 		if (options%debug) then

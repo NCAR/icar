@@ -87,6 +87,9 @@ contains
 ! 		if we have a crazy small time step just throw an error
 		if (dt<1e-5) then
 			write(*,*) "dt=",dt
+			write(*,*) "Umax",maxval(abs(domain%u)),maxval(abs(bc%next_domain%u))
+			write(*,*) "Vmax",maxval(abs(domain%v)),maxval(abs(bc%next_domain%v))
+			write(*,*) "Wmax",maxval(abs(domain%w)),maxval(abs(bc%next_domain%w))
 			stop "ERROR time step too small"
 		endif
 		

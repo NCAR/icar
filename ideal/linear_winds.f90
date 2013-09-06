@@ -43,7 +43,7 @@ contains
 !     
 !         dry_gamma=sum(env_gamma-cap_gamma)/size(env_gamma)
 !         ndsq=(g/(sum(T2m)/size(T2m)))*(dry_gamma)
-!         ndsq=max(min(1e-5,ndsq),1e-8)
+!         ndsq=max(min(1e-4,ndsq),1e-8)
 !         calc_stability=ndsq
     end function calc_stability
     

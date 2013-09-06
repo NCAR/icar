@@ -49,6 +49,9 @@ contains
 ! 		linear winds
 		if (options%physics%windtype==1) then
 			call linear_perturb(domain)
+			if (options%ideal) then
+				domain%v=0
+			endif
 ! 		assumes even flow over the mountains
 		else
 			nx=size(domain%u,1)
