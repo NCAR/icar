@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import glob,os
+from copy import copy
 
 import numpy as np
 
@@ -14,9 +15,9 @@ xdomain=[800,500,100]
 xdomain=[1500,1000,200]
 dx=2.0
 # nx,nz,ny
-master_dims=list([(xdomain[0]/dx,20,5),
-                  (xdomain[1]/dx,20,5),
-                  (xdomain[2]/dx,20,5)])
+master_dims=list([(xdomain[0]/dx*2,20,5),
+                  (xdomain[1]/dx*2,20,5),
+                  (xdomain[2]/dx*2,20,5)])
 
 def adjust_p(p,h,dz):
     '''Convert p [Pa] at elevation h [m] by shifting its elevation by dz [m]'''
@@ -88,9 +89,13 @@ def main():
         nz=base.th.size
         dims=[1,nz,ny,nx]
     
-    u=np.zeros(dims,dtype="f")+base.u
+    udims=copy(dims)
+    udims[-1]+=1
+    vdims=copy(dims)
+    vdims[-2]+=1
+    u=np.zeros(udims,dtype="f")+base.u
     w=np.zeros(dims,dtype="f")+base.w
-    v=np.zeros(dims,dtype="f")+base.v
+    v=np.zeros(vdims,dtype="f")+base.v
     qv=np.zeros(dims,dtype="f")+base.qv
     qc=np.zeros(dims,dtype="f")+base.qc
     
@@ -120,9 +125,11 @@ def main():
     hgt=hgt.reshape((1,ny,nx))
     
     d3dname=("t","z","y","x")
+    ud3dname=("t","z","y","xu")
+    vd3dname=("t","z","yv","x")
     d2dname=("t","y","x")
     g=9.81
-    othervars=[Bunch(data=v,  name="V",     dims=d3dname,dtype="f",attributes=dict(units="m/s",  description="Horizontal (y) wind speed")),
+    othervars=[Bunch(data=v,  name="V",    dims=vd3dname,dtype="f",attributes=dict(units="m/s",  description="Horizontal (y) wind speed")),
                Bunch(data=w,  name="W",     dims=d3dname,dtype="f",attributes=dict(units="m/s",  description="Vertical wind speed")),
                Bunch(data=qv, name="QVAPOR",dims=d3dname,dtype="f",attributes=dict(units="kg/kg",description="Water vapor mixing ratio")),
                Bunch(data=qc, name="QCLOUD",dims=d3dname,dtype="f",attributes=dict(units="kg/kg",description="Cloud water mixing ratio")),
@@ -143,7 +150,7 @@ def main():
         print("Removing : "+fileexists[0])
         os.remove(fileexists[0])
     
-    io.write(filename,  u,varname="U", dims=d3dname,dtype="f",attributes=dict(units="m/s",description="Horizontal (x) wind speed"),
+    io.write(filename,  u,varname="U", dims=ud3dname,dtype="f",attributes=dict(units="m/s",description="Horizontal (x) wind speed"),
             extravars=othervars)
 
 

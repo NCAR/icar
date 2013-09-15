@@ -164,6 +164,7 @@ contains
             sig  = U*k+V*l
             denom = sig**2!-f**2
             WHERE (sig==0.0) sig=1e-20
+			where(denom.eq.0) denom=1e-20
 !         # mimag=np.zeros((Ny,Nx)).astype('complex')
 ! 		  # two possible non-hydrostatic versions
 !         # msq = (Ndsq/denom * kl).astype('complex')          # % vertical wave number, hydrostatic
@@ -227,6 +228,7 @@ contains
 		nx=size(terrain,2)+buffer*2
 		allocate(buffer_topo(ny,nx))
 		buffer_topo=minval(terrain)
+		
 		buffer_topo(buffer:ny-buffer,buffer:nx-buffer)=terrain
 		do i=1,buffer
 			weight=i/(real(buffer)*2)

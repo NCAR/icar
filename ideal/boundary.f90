@@ -101,7 +101,7 @@ contains
 			nx=nx-1
 			allocate(inputdata(nx,ny,nz))
 			inputdata=(extra_data(1:nx,:,:)+extra_data(2:nx+1,:,:))/2
-			call smooth_wind(inputdata,2,2)
+			call smooth_wind(inputdata,1,2)
 			deallocate(extra_data)
 		else if (varname=="V") then
 			allocate(extra_data(nx,ny,nz))
@@ -110,7 +110,7 @@ contains
 			ny=ny-1
 			allocate(inputdata(nx,ny,nz))
 			inputdata=(extra_data(:,1:ny,:)+extra_data(:,2:ny+1,:))/2
-			call smooth_wind(inputdata,2,2)
+			call smooth_wind(inputdata,1,2)
 			deallocate(extra_data)
 		else if (varname=="T") then
 			inputdata=inputdata+300
@@ -400,8 +400,10 @@ contains
 			else
 				call read_var(domain%u,    file_list(curfile),"U",      bc%geolut,curstep,boundary_value)
 				call read_var(domain%v,    file_list(curfile),"V",      bc%geolut,curstep,boundary_value)
-				call smooth_wind(domain%u,smoothing_window,3)
-				call smooth_wind(domain%v,smoothing_window,3)
+				if (.not.options%ideal)then
+					call smooth_wind(domain%u,smoothing_window,3)
+					call smooth_wind(domain%v,smoothing_window,3)
+				endif
 			endif
 			call read_var(domain%p,    file_list(curfile),"P",      bc%geolut,curstep,boundary_value)
 			call read_var(domain%th,   file_list(curfile),"T",      bc%geolut,curstep,boundary_value)
@@ -554,8 +556,10 @@ contains
 		else
 			call read_var(bc%next_domain%u,    file_list(curfile),"U",      bc%geolut,curstep,use_interior)
 			call read_var(bc%next_domain%v,    file_list(curfile),"V",      bc%geolut,curstep,use_interior)
-			call smooth_wind(bc%next_domain%u,smoothing_window,3)
-			call smooth_wind(bc%next_domain%v,smoothing_window,3)
+			if (.not.options%ideal)then
+				call smooth_wind(bc%next_domain%u,smoothing_window,3)
+				call smooth_wind(bc%next_domain%v,smoothing_window,3)
+			endif
 		endif
 		call read_var(bc%next_domain%p,    file_list(curfile),"P",      bc%geolut,curstep,use_interior)
 		call read_var(bc%next_domain%th,   file_list(curfile),"T",      bc%geolut,curstep,use_boundary)
