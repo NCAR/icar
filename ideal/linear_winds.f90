@@ -38,9 +38,10 @@ contains
 !         es = 611.21*exp(17.502*(T2m-t0)/(T2m-32.19))
 !         qs0 = ratio * es/(p0-es)
 ! 
-!         cap_gamma = -(g * (1.+(L*qs0)/(R*T2m)) / (cp + (L**2 * qs0*ratio) / (R*T2m**2)))
-!         env_gamma = np.mean(np.diff(weather.th*pii,axis=0)/np.diff(base.hgt3d,axis=0),axis=0)
-!     
+!! STILL NEEDS TO BE CONVERTED FROM PYTHON
+!!         cap_gamma = -(g * (1.+(L*qs0)/(R*T2m)) / (cp + (L**2 * qs0*ratio) / (R*T2m**2)))
+!!         env_gamma = np.mean(np.diff(weather.th*pii,axis=0)/np.diff(base.hgt3d,axis=0),axis=0)
+!!     
 !         dry_gamma=sum(env_gamma-cap_gamma)/size(env_gamma)
 !         ndsq=(g/(sum(T2m)/size(T2m)))*(dry_gamma)
 !         ndsq=max(min(1e-4,ndsq),1e-8)
@@ -63,87 +64,90 @@ contains
 		logical, intent(in), optional :: reverse
         complex,parameter :: j= (0,1)
         real::gain,offset !used in setting up k and l arrays
-        integer::nx,ny,nz,i,midpoint,z
+        integer::nx,ny,nz,i,midpoint,z,realnx,realny
         real::U,V
 		real,parameter::pi=3.1415927
         type(C_PTR) :: plan
         
-		ny=size(domain%u,1)
+		nx=size(domain%fzs,1)
 		nz=size(domain%u,2)
-		nx=size(domain%u,3)
+		ny=size(domain%fzs,2)
+		
+		realnx=size(domain%z,1)
+		realny=size(domain%z,3)
         
 ! 		these should be stored in a separate data structure... and allocated/deallocated in a subroutine
 ! 		for now these are reallocated/deallocated everytime so we can use it for different sized domains (e.g. coarse and fine)
 ! 		maybe linear winds need to be embedded in an object instead of a module to avoid this problem...
 		if (.not.allocated(k)) then
-	        allocate(k(ny,nx))
-	        allocate(l(ny,nx))
-	        allocate(kl(ny,nx))
-	        allocate(sig(ny,nx))
-	        allocate(denom(ny,nx))
-	        allocate(uhat(ny,nx))
-	        allocate(u_hat(ny,nx))
-	        allocate(vhat(ny,nx))
-	        allocate(v_hat(ny,nx))
-	        allocate(m(ny,nx))
-	        allocate(ineta(ny,nx))
+	        allocate(k(nx,ny))
+	        allocate(l(nx,ny))
+	        allocate(kl(nx,ny))
+	        allocate(sig(nx,ny))
+	        allocate(denom(nx,ny))
+	        allocate(uhat(nx,ny))
+	        allocate(u_hat(nx,ny))
+	        allocate(vhat(nx,ny))
+	        allocate(v_hat(nx,ny))
+	        allocate(m(nx,ny))
+	        allocate(ineta(nx,ny))
         
 	!         # % Compute 2D k and l wavenumber fields (could be stored in options or domain or something)
 	        offset=pi/domain%dx
 	        gain=2*offset/(nx-1)
-			k(1,:) = (/((i*gain-offset),i=0,nx-1)/)
+			k(:,1) = (/((i*gain-offset),i=0,nx-1)/)
 			! foolishly inefficient ifftshift should just fix the array
 			! creation above and or move to a separate subroutine or store the results for later reuse...
 			if (mod(nx,2)==1) then
 				! odd
-				k(2,:)=k(1,:)
+				k(:,2)=k(:,1)
 				nx=nx-1
 				do i=1,nx/2
-					k(1,i)=k(2,i+nx/2)
-					k(1,i+nx/2+1)=k(2,i)
+					k(i,1)=k(i+nx/2,2)
+					k(i+nx/2+1,1)=k(i,2)
 				enddo
-				k(1,nx/2+1)=k(2,nx+1)
+				k(nx/2+1,1)=k(nx+1,2)
 				nx=nx+1
 			else
 				! even
 				do i=1,nx/2
-					gain=k(1,i)
-					k(1,i)=k(1,i+nx/2)
-					k(1,i+nx/2)=gain
+					gain=k(i,1)
+					k(i,1)=k(i+nx/2,1)
+					k(i+nx/2,1)=gain
 				enddo
 			endif
 		
 	        gain=2*offset/(ny-1)
-			l(:,1) = (/((i*gain-offset),i=0,ny-1)/)
+			l(1,:) = (/((i*gain-offset),i=0,ny-1)/)
 			! foolishly inefficient ifftshift should just fix the array
 			! creation above l is separated from k because they only need to be processed in one dimension each. 
 			if (mod(ny,2)==1) then
 				! odd
-				l(:,2)=l(:,1)
+				l(2,:)=l(1,:)
 				ny=ny-1
 				do i=1,ny/2
-					l(i,1)=l(i+ny/2,2)
-					l(i+ny/2+1,1)=l(i,2)
+					l(1,i)=l(2,i+ny/2)
+					l(1,i+ny/2+1)=l(2,i)
 				enddo
-				l(ny/2+1,1)=l(ny+1,2)
+				l(1,ny/2+1)=l(2,ny+1)
 				ny=ny+1
 			else
 				! even
 				do i=1,ny/2
-					gain=l(i,1)
-					l(i,1)=l(i+ny/2,1)
-					l(i+ny/2,1)=gain
+					gain=l(1,i)
+					l(1,i)=l(1,i+ny/2)
+					l(1,i+ny/2)=gain
 				enddo
 			endif
 
 	! 		once we have computed the ifftshift in the first column/row just copy that for all other columns/rows
 	! 		for k
 	        do i=2,ny
-	            k(i,:)=k(1,:)
+	            k(:,i)=k(:,1)
 	        end do
 	! 		for l
 	        do i=2,nx
-	            l(:,i)=l(:,1)
+	            l(i,:)=l(1,:)
 	        end do
         
 	! 		finally compute the kl combination array
@@ -159,8 +163,8 @@ contains
 ! 		then perform ffts etc in parallel
 ! 		finally destroy plans serially
         do z=1,nz
-            U=sum(domain%u(:,z,:))/(nx*ny)
-            V=sum(domain%v(:,z,:))/(nx*ny)
+            U=sum(domain%u(:realnx-1,z,:))/((realnx-1)*realny)
+            V=sum(domain%v(:,z,:realny-1))/(realnx*(realny-1))
             sig  = U*k+V*l
             where(sig==0.0) sig=1e-10
             denom = sig**2!-f**2
@@ -175,7 +179,8 @@ contains
 ! 
             m = sqrt(((Ndsq-sig**2)/denom * kl))         ! # % vertical wave number, hydrostatic
     		
-            ineta=j*domain%fzs*exp(j*m*sum(domain%z(:,z,:)-domain%z(:,1,:)+domain%dz(:,z,:)/2)/(nx*ny))
+! 			i*fzs*exp(i*m*z_AGL)
+            ineta=j*domain%fzs*exp(j*m*sum(domain%z(:,z,:)-domain%z(:,1,:)+domain%dz(:,z,:)/2)/(realnx*realny))
 !             what=sig*ineta
 
 !           # with coriolis : 
@@ -192,22 +197,26 @@ contains
 ! 			call fftw_destroy_plan(plan)
 			
 ! 			it should be possible to store the plan and execute it everytime rather than recreating it everytime, doesn't matter too much 
-            plan = fftw_plan_dft_2d(nx,ny, uhat,u_hat, FFTW_BACKWARD,FFTW_ESTIMATE)
+            plan = fftw_plan_dft_2d(ny,nx, uhat,u_hat, FFTW_BACKWARD,FFTW_ESTIMATE)
             call fftw_execute_dft(plan, uhat,u_hat)
             call fftw_destroy_plan(plan)
 			
-            plan = fftw_plan_dft_2d(nx,ny, vhat,v_hat, FFTW_BACKWARD,FFTW_ESTIMATE)
+            plan = fftw_plan_dft_2d(ny,nx, vhat,v_hat, FFTW_BACKWARD,FFTW_ESTIMATE)
             call fftw_execute_dft(plan, vhat,v_hat)
             call fftw_destroy_plan(plan)
 			
 ! 			if we are removing linear winds from a low res field, subtract u_hat v_hat instead
 ! 			u/vhat are first staggered to apply to u/v appropriately...
 			if (present(reverse)) then
-	            domain%u(:,z,1:nx-1)=domain%u(:,z,1:nx-1)-real(u_hat(:,1:nx-1)+u_hat(:,2:nx))/2
-	            domain%v(1:ny-1,z,:)=domain%v(1:ny-1,z,:)-real(v_hat(1:ny-1,:)+v_hat(2:ny,:))/2
+	            domain%u(1:realnx-1,z,:)=domain%u(:realnx-1,z,:) - &
+					real(u_hat(buffer:nx-buffer-1,buffer:ny-buffer)+u_hat(buffer+1:nx-buffer,buffer:ny-buffer))/2
+	            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) - &
+					real(v_hat(buffer:nx-buffer,buffer:ny-buffer-1)+v_hat(buffer:nx-buffer,buffer+1:ny-buffer))/2
 			else
-	            domain%u(:,z,1:nx-1)=domain%u(:,z,1:nx-1)+real(u_hat(:,1:nx-1)+u_hat(:,2:nx))/2
-	            domain%v(1:ny-1,z,:)=domain%v(1:ny-1,z,:)+real(v_hat(1:ny-1,:)+v_hat(2:ny,:))/2
+	            domain%u(1:realnx-1,z,:)=domain%u(:realnx-1,z,:) + &
+					real(u_hat(buffer:nx-buffer-1,buffer:ny-buffer)+u_hat(buffer+1:nx-buffer,buffer:ny-buffer))/2
+	            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) + &
+					real(v_hat(buffer:nx-buffer,buffer:ny-buffer-1)+v_hat(buffer:nx-buffer,buffer+1:ny-buffer))/2
 			endif
 		end do
 ! 		finally deallocate all temporary arrays that were created... should be a datastructure and a subroutine...
@@ -224,7 +233,7 @@ contains
 		real, dimension(:,:),allocatable :: real_terrain
 		integer::nx,ny,i,pos
 		real::weight
-		
+! 		WARNING x,y dimensions are swapped this doesn't affect output but may confuse readability
 		ny=size(terrain,1)+buffer*2
 		nx=size(terrain,2)+buffer*2
 		allocate(buffer_topo(ny,nx))
@@ -235,9 +244,9 @@ contains
 			weight=i/(real(buffer)*2)
 			pos=buffer-i
 			buffer_topo(pos+1,buffer:nx-buffer-1)  =terrain(1,1:nx-buffer*2)*(1-weight)+terrain(ny-buffer*2,1:nx-buffer*2)*weight
-			buffer_topo(ny-pos-1,buffer:nx-buffer-1) =terrain(1,1:nx-buffer*2)*(weight)  +terrain(ny-buffer*2,1:nx-buffer*2)*(1-weight)
+			buffer_topo(ny-pos-1,buffer:nx-buffer-1) =terrain(1,1:nx-buffer*2)*(weight)+terrain(ny-buffer*2,1:nx-buffer*2)*(1-weight)
 			buffer_topo(buffer:ny-buffer-1,pos+1)  =terrain(1:ny-buffer*2,1)*(1-weight)+terrain(1:ny-buffer*2,nx-buffer*2)*weight
-			buffer_topo(buffer:ny-buffer-1,nx-pos-1) =terrain(1:ny-buffer*2,1)*(weight)  +terrain(1:ny-buffer*2,nx-buffer*2)*(1-weight)
+			buffer_topo(buffer:ny-buffer-1,nx-pos-1) =terrain(1:ny-buffer*2,1)*(weight)+terrain(1:ny-buffer*2,nx-buffer*2)*(1-weight)
 		enddo
 ! 		clearly something isn't quiet right here...
 		buffer_topo(ny,:)=buffer_topo(ny-1,:)
@@ -259,26 +268,26 @@ contains
         integer::nx,ny
         
 		call add_buffer_topo(domain%terrain,complex_terrain)
-        ny=size(complex_terrain,1)
-        nx=size(complex_terrain,2)
+        nx=size(complex_terrain,1)
+        ny=size(complex_terrain,2)
 
         write(*,*) "Fzs setup"
-        allocate(domain%fzs(ny,nx))
+        allocate(domain%fzs(nx,ny))
 		
 ! 		calculate the fourier transform of the terrain for use in linear winds
-        plan = fftw_plan_dft_2d(nx,ny, complex_terrain,domain%fzs, FFTW_FORWARD,FFTW_ESTIMATE)
+        plan = fftw_plan_dft_2d(ny,nx, complex_terrain,domain%fzs, FFTW_FORWARD,FFTW_ESTIMATE)
         call fftw_execute_dft(plan, complex_terrain,domain%fzs)
         call fftw_destroy_plan(plan)
 ! 		normalize FFT by N - grid cells
 		domain%fzs=domain%fzs/(nx*ny)
 
-        ny=size(domain%terrain,1)
-        nx=size(domain%terrain,2)
+        nx=size(domain%terrain,1)
+        ny=size(domain%terrain,2)
 ! 		dzdx/y used in rotating windfield back to terrain following grid in a simple fashion
-		allocate(domain%dzdx(ny,nx-1))
-		allocate(domain%dzdy(ny-1,nx))
-		domain%dzdx=sqrt((domain%terrain(:,2:nx)-domain%terrain(:,1:nx-1))**2+domain%dx**2)/domain%dx
-		domain%dzdy=sqrt((domain%terrain(2:ny,:)-domain%terrain(1:ny-1,:))**2+domain%dx**2)/domain%dx
+		allocate(domain%dzdx(nx-1,ny))
+		allocate(domain%dzdy(nx,ny-1))
+		domain%dzdx=sqrt((domain%terrain(2:nx,:)-domain%terrain(1:nx-1,:))**2+domain%dx**2)/domain%dx
+		domain%dzdy=sqrt((domain%terrain(:,2:ny)-domain%terrain(:,1:ny-1))**2+domain%dx**2)/domain%dx
 		
 ! 		cleanup temporary array
 		deallocate(complex_terrain)
@@ -307,12 +316,12 @@ contains
         class(linearizable_type),intent(inout)::domain
 		integer :: nx,ny,nz,i
 		
-		ny=size(domain%u,1)
+		nx=size(domain%u,1)
 		nz=size(domain%u,2)
-		nx=size(domain%u,3)
+		ny=size(domain%u,3)
 		do i=1,nz
-			domain%u(:,i,1:nx-1)=domain%u(:,i,1:nx-1)*domain%dzdx
-			domain%v(1:ny-1,i,:)=domain%v(1:ny-1,i,:)*domain%dzdy
+			domain%u(1:nx-1,i,:)=domain%u(1:nx-1,i,:)*domain%dzdx
+			domain%v(:,i,1:ny-1)=domain%v(:,i,1:ny-1)*domain%dzdy
 		end do
 		
 	end subroutine rotate_wind_field

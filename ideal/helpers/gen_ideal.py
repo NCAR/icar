@@ -16,9 +16,9 @@ xdomain=[1500,1000,200]
 xdomain=[1500,1000,500]
 dx=2.0
 # nx,nz,ny
-master_dims=list([(xdomain[0]/dx*2,20,10),
-                  (xdomain[1]/dx*2,20,10),
-                  (xdomain[2]/dx*2,20,10)])
+master_dims=list([(xdomain[0]/dx*2,20,5),
+                  (xdomain[1]/dx*2,20,5),
+                  (xdomain[2]/dx*2,20,5)])
 
 def adjust_p(p,h,dz):
     '''Convert p [Pa] at elevation h [m] by shifting its elevation by dz [m]'''
@@ -108,6 +108,14 @@ def main():
     lon=np.arange(lonmin,lonmax,dlon)[:nx]
     lat=np.arange(latmin,latmax,dlat)[:ny]
     lon,lat=np.meshgrid(lon,lat)
+
+    ulon=np.arange(lonmin-dlon/2,lonmax+dlon/2,dlon)[:nx+1]
+    ulat=np.arange(latmin,latmax,dlat)[:ny]
+    ulon,ulat=np.meshgrid(ulon,ulat)
+
+    vlon=np.arange(lonmin,lonmax,dlon)[:nx]
+    vlat=np.arange(latmin-dlat/2,latmax+dlat/2,dlat)[:ny+1]
+    vlon,vlat=np.meshgrid(vlon,vlat)
     
     dz=np.zeros(dims)+base.dz
     z=np.zeros(dims,dtype="f")+base.z.reshape((1,nz,1,1))+hgt.reshape((1,1,ny,nx))
@@ -127,7 +135,9 @@ def main():
     
     d3dname=("t","z","y","x")
     ud3dname=("t","z","y","xu")
+    ud2dname=("t","y","xu")
     vd3dname=("t","z","yv","x")
+    vd2dname=("t","yv","x")
     d2dname=("t","y","x")
     g=9.81
     othervars=[Bunch(data=v,  name="V",    dims=vd3dname,dtype="f",attributes=dict(units="m/s",  description="Horizontal (y) wind speed")),
@@ -144,6 +154,10 @@ def main():
                Bunch(data=z*g,name="PHB",   dims=d3dname,dtype="f",attributes=dict(units="m2/s2",description="Geopotential Height ASL (base)")),
                Bunch(data=lat,name="XLAT",  dims=d2dname,dtype="f",attributes=dict(units="deg",  description="Latitude")),
                Bunch(data=lon,name="XLONG", dims=d2dname,dtype="f",attributes=dict(units="deg",  description="Longitude")),
+               Bunch(data=ulat,name="XLAT_U",dims=ud2dname,dtype="f",attributes=dict(units="deg",  description="Latitude on U stagger")),
+               Bunch(data=ulon,name="XLONG_U",dims=ud2dname,dtype="f",attributes=dict(units="deg",  description="Longitude on U stagger")),
+               Bunch(data=vlat,name="XLAT_V",dims=vd2dname,dtype="f",attributes=dict(units="deg",  description="Latitude on V stagger")),
+               Bunch(data=vlon,name="XLONG_V",dims=vd2dname,dtype="f",attributes=dict(units="deg",  description="Longitude on V stagger")),
                Bunch(data=hgt,name="HGT",   dims=d2dname,dtype="f",attributes=dict(units="m",    description="Terrain Elevation"))
                ]
     fileexists=glob.glob(filename) or glob.glob(filename+".nc")
