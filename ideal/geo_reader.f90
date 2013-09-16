@@ -9,6 +9,8 @@ module geo
 contains
 	
 	function bilin_weights(yi,y,xi,x)
+! calculate the weights to use for bilinear interpolation between surrounding points x, y
+!	to position xi,yi
 		implicit none
 		real,intent(in)::yi,y(0:3),xi,x(0:3)
 		real::x0,x1,x2,x3,y5,y6,f1,f2
@@ -271,6 +273,7 @@ contains
 	end subroutine geo_LUT
 	
 	subroutine boundary_interpolate(fieldout, fieldin, geolut)
+! interpolate boundaries of fieldout to fieldin using geolut
 		implicit none
 		real,intent(inout)::fieldout(:,:,:)
 		real,intent(in)::fieldin(:,:,:)
@@ -316,6 +319,9 @@ contains
 	end subroutine boundary_interpolate
 	
 	subroutine geo_interp(fieldout,fieldin,geolut,boundary_only)
+! interpolate fieldout to fieldin using geolut.  
+! if boundary_only is true, call boundary_interpolate instead
+! loops over y,z,x but geolut is only defined over x,y (for now)
 		implicit none
 		real,intent(inout)::fieldout(:,:,:)
 		real,intent(in)::fieldin(:,:,:)

@@ -13,11 +13,12 @@ wind_speed=10.0
 
 xdomain=[800,500,100]
 xdomain=[1500,1000,200]
+xdomain=[1500,1000,500]
 dx=2.0
 # nx,nz,ny
-master_dims=list([(xdomain[0]/dx*2,20,5),
-                  (xdomain[1]/dx*2,20,5),
-                  (xdomain[2]/dx*2,20,5)])
+master_dims=list([(xdomain[0]/dx*2,20,10),
+                  (xdomain[1]/dx*2,20,10),
+                  (xdomain[2]/dx*2,20,10)])
 
 def adjust_p(p,h,dz):
     '''Convert p [Pa] at elevation h [m] by shifting its elevation by dz [m]'''

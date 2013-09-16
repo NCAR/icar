@@ -73,7 +73,7 @@ contains
 		nx=size(domain%u,3)
         
 ! 		these should be stored in a separate data structure... and allocated/deallocated in a subroutine
-! 		for not these are reallocated/deallocated everytime so we can use it for different sized domains (e.g. coarse and fine)
+! 		for now these are reallocated/deallocated everytime so we can use it for different sized domains (e.g. coarse and fine)
 ! 		maybe linear winds need to be embedded in an object instead of a module to avoid this problem...
 		if (.not.allocated(k)) then
 	        allocate(k(ny,nx))
@@ -162,9 +162,10 @@ contains
             U=sum(domain%u(:,z,:))/(nx*ny)
             V=sum(domain%v(:,z,:))/(nx*ny)
             sig  = U*k+V*l
+            where(sig==0.0) sig=1e-10
             denom = sig**2!-f**2
-            WHERE (sig==0.0) sig=1e-20
-			where(denom.eq.0) denom=1e-20
+			
+! 			where(denom.eq.0) denom=1e-20
 !         # mimag=np.zeros((Ny,Nx)).astype('complex')
 ! 		  # two possible non-hydrostatic versions
 !         # msq = (Ndsq/denom * kl).astype('complex')          # % vertical wave number, hydrostatic
