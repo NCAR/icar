@@ -66,6 +66,7 @@ module data_structures
 ! 	type to contain external wind fields, only real addition is nfiles... maybe this could be folded in elsewhere?
 	type, extends(interpolable_type) :: wind_type
 		real, allocatable, dimension(:,:,:) :: u,v
+		type(interpolable_type)::u_geo,v_geo
 		real, allocatable, dimension(:,:) :: terrain,dzdx,dzdy
 		real :: dx
 		integer :: nfiles
@@ -75,6 +76,7 @@ module data_structures
 	type, extends(interpolable_type) :: linearizable_type
 ! 		linear theory computes u,v at z
 		real, allocatable, dimension(:,:,:):: u,v,dz,z
+		type(interpolable_type)::u_geo,v_geo
 		real, allocatable, dimension(:,:) :: terrain,dzdx,dzdy
 		complex(C_DOUBLE_COMPLEX), allocatable, dimension(:,:) :: fzs !FFT(terrain)
 		real::dx
@@ -95,6 +97,8 @@ module data_structures
 ! 		dXdt variables are the change in variable X between two forcing time steps
 ! 		wind and pressure dXdt fields applied to full 3d grid, others applied only to boundaries
 		real, allocatable, dimension(:,:,:) :: dudt,dvdt,dwdt,dpdt,dthdt,dqvdt,dqcdt
+		real,allocatable,dimension(:,:)::lowres_terrain
+		real,allocatable,dimension(:,:,:)::lowres_z
 ! 		store the full 3D grid for the next time step to compute dXdt fields
 		type(domain_type)::next_domain
 ! 		if we are using external winds, store them here temporarily... does this need to be separate from next_domain other than nfiles?

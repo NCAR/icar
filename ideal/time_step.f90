@@ -84,8 +84,8 @@ contains
 		dt=min(dt,dtnext)
 ! 		set an upper bound on dt to keep the microphysics stable?
 		dt=min(dt,50.0) !better min=180?
-! 		if we have a crazy small time step just throw an error
-		if (dt<1e-5) then
+! 		if we have too small a time step just throw an error
+		if (dt<1e-1) then
 			write(*,*) "dt=",dt
 			write(*,*) "Umax",maxval(abs(domain%u)),maxval(abs(bc%next_domain%u))
 			write(*,*) "Vmax",maxval(abs(domain%v)),maxval(abs(bc%next_domain%v))

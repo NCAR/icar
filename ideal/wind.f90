@@ -59,11 +59,17 @@ contains
 			ny=size(domain%u,3)
 ! I'm not sure the temparray is necessary. I was getting a segfault (sometimes) before changing this... 
 ! but sometimes I wasn't so the error may be elsewhere. 
+!  
+! 	U and V are now staggered on input so now we just offset by 1
+! 
 			allocate(temparray(nx,nz,ny))
 			temparray=domain%u
-			domain%u(1:nx-1,:,:)=(temparray(1:nx-1,:,:)+temparray(2:nx,:,:))/2
+			domain%u(1:nx-1,:,:)=temparray(2:nx,:,:)
+			deallocate(temparray)
+			
+			allocate(temparray(nx-1,nz,ny+1))
 			temparray=domain%v
-			domain%v(:,:,1:ny-1)=(temparray(:,:,1:ny-1)+temparray(:,:,2:ny))/2
+			domain%v(:,:,1:ny-1)=temparray(:,:,2:ny)
 			deallocate(temparray)
 		endif
 		

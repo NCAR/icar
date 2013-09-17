@@ -320,7 +320,7 @@ contains
 		nz=size(domain%u,2)
 		ny=size(domain%u,3)
 		do i=1,nz
-			domain%u(1:nx-1,i,:)=domain%u(1:nx-1,i,:)*domain%dzdx
+			domain%u(1:nx-2,i,:)=domain%u(1:nx-2,i,:)*domain%dzdx
 			domain%v(:,i,1:ny-1)=domain%v(:,i,1:ny-1)*domain%dzdy
 		end do
 		
@@ -343,7 +343,7 @@ contains
         stability=calc_stability(domain)
 		
 ! 		This staggering isn't really needed? when linear winds are computed based on mean windfield?
-		call stagger_winds(domain)
+! 		call stagger_winds(domain)
 		call linear_winds(domain,stability,reverse)
 		call rotate_wind_field(domain)
         
