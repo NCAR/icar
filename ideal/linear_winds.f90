@@ -209,14 +209,14 @@ contains
 ! 			u/vhat are first staggered to apply to u/v appropriately...
 			if (present(reverse)) then
 	            domain%u(1:realnx-1,z,:)=domain%u(:realnx-1,z,:) - &
-					real(u_hat(buffer:nx-buffer-1,buffer:ny-buffer)+u_hat(buffer+1:nx-buffer,buffer:ny-buffer))/2
+					real(u_hat(1+buffer:nx-buffer-1,1+buffer:ny-buffer)+u_hat(2+buffer:nx-buffer,1+buffer:ny-buffer))/2
 	            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) - &
-					real(v_hat(buffer:nx-buffer,buffer:ny-buffer-1)+v_hat(buffer:nx-buffer,buffer+1:ny-buffer))/2
+					real(v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer-1)+v_hat(1+buffer:nx-buffer,2+buffer:ny-buffer))/2
 			else
 	            domain%u(1:realnx-1,z,:)=domain%u(:realnx-1,z,:) + &
-					real(u_hat(buffer:nx-buffer-1,buffer:ny-buffer)+u_hat(buffer+1:nx-buffer,buffer:ny-buffer))/2
+					real(u_hat(1+buffer:nx-buffer-1,1+buffer:ny-buffer)+u_hat(2+buffer:nx-buffer,1+buffer:ny-buffer))/2
 	            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) + &
-					real(v_hat(buffer:nx-buffer,buffer:ny-buffer-1)+v_hat(buffer:nx-buffer,buffer+1:ny-buffer))/2
+					real(v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer-1)+v_hat(1+buffer:nx-buffer,2+buffer:ny-buffer))/2
 			endif
 		end do
 ! 		finally deallocate all temporary arrays that were created... should be a datastructure and a subroutine...
@@ -239,15 +239,16 @@ contains
 		allocate(buffer_topo(ny,nx))
 		buffer_topo=minval(terrain)
 		
-		buffer_topo(buffer:ny-buffer,buffer:nx-buffer)=terrain
+		buffer_topo(1+buffer:ny-buffer,1+buffer:nx-buffer)=terrain
 		do i=1,buffer
 			weight=i/(real(buffer)*2)
 			pos=buffer-i
-			buffer_topo(pos+1,buffer:nx-buffer-1)  =terrain(1,1:nx-buffer*2)*(1-weight)+terrain(ny-buffer*2,1:nx-buffer*2)*weight
-			buffer_topo(ny-pos-1,buffer:nx-buffer-1) =terrain(1,1:nx-buffer*2)*(weight)+terrain(ny-buffer*2,1:nx-buffer*2)*(1-weight)
-			buffer_topo(buffer:ny-buffer-1,pos+1)  =terrain(1:ny-buffer*2,1)*(1-weight)+terrain(1:ny-buffer*2,nx-buffer*2)*weight
-			buffer_topo(buffer:ny-buffer-1,nx-pos-1) =terrain(1:ny-buffer*2,1)*(weight)+terrain(1:ny-buffer*2,nx-buffer*2)*(1-weight)
+			buffer_topo(pos+1,1+buffer:nx-buffer)  =terrain(1,1:nx-buffer*2)*(1-weight)+terrain(ny-buffer*2,1:nx-buffer*2)*weight
+			buffer_topo(ny-pos-1,1+buffer:nx-buffer) =terrain(1,1:nx-buffer*2)*(weight)+terrain(ny-buffer*2,1:nx-buffer*2)*(1-weight)
+			buffer_topo(1+buffer:ny-buffer,pos+1)  =terrain(1:ny-buffer*2,1)*(1-weight)+terrain(1:ny-buffer*2,nx-buffer*2)*weight
+			buffer_topo(1+buffer:ny-buffer,nx-pos-1) =terrain(1:ny-buffer*2,1)*(weight)+terrain(1:ny-buffer*2,nx-buffer*2)*(1-weight)
 		enddo
+		print*, "There may be a problem in linear_winds-add_buffer_topo"
 ! 		clearly something isn't quiet right here...
 		buffer_topo(ny,:)=buffer_topo(ny-1,:)
 		buffer_topo(:,nx)=buffer_topo(:,nx-1)
