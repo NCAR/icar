@@ -52,6 +52,14 @@ endif
 ifeq ($(NODENAME), nomad.lan)
 	NODENAME=Nomad.local
 endif
+ifeq ($(NODENAME), Patthar.local)
+	NODENAME=Nomad.local
+endif
+ifeq ($(NODENAME), vpn66.ucar.edu)
+	NODENAME=Nomad.local
+endif
+
+
 ifeq ($(NODENAME), Nomad.local)
 	F90=gfortran
 	COMP=-fopenmp -lgomp -O3 -c -fimplicit-none
@@ -61,6 +69,8 @@ ifeq ($(NODENAME), Nomad.local)
 	NCDF_PATH = /Users/gutmann/usr/local/
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
+	
+	# DEBUG:=g+$(DEBUG)
 endif
 
 ifeq ($(F90), ifort)
@@ -109,11 +119,17 @@ endif
 # F90=/usr/local/ifort-2013.4.183/bin/ifort
 # Various debuging options.  Set the DEBUG variable with "make DEBUG=debugslow" etc.
 ifeq ($(DEBUG), debugslow)
-	COMP= -debug -c -u -check all -check noarg_temp_created -traceback
-	LINK=  
+	ifeq ($(F90), ifort)
+		COMP= -debug -c -u -check all -check noarg_temp_created -traceback
+		LINK=  
+	endif
 endif
 ifeq ($(DEBUG), debug)
 	COMP= -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0 -fast-transcendentals -xhost
+	LINK=  
+endif
+ifeq ($(DEBUG), gdebug)
+	COMP= -c -g -fbounds-check -fbacktrace -finit-real=nan
 	LINK=  
 endif
 ifeq ($(DEBUG), debugompslow)

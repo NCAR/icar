@@ -53,11 +53,15 @@ contains
 			do j=1,ny
 				do i=1,nx
 					if (ydim==2) then
-						wind(i,j,k)=sum(inputwind(max(i-windowsize,1):min(nx,i+windowsize),max(1,j-windowsize):min(ny,j+windowsize),k)) &
-							/ ((min(nx,i+windowsize)-max(i-windowsize,1)+1) * (min(ny,j+windowsize)-max(1,j-windowsize)+1))
+						wind(i,j,k)=sum(inputwind(max(i-windowsize,1):min(nx,i+windowsize), &
+						                          max(1,j-windowsize):min(ny,j+windowsize),k)) &
+							/ ((min(nx,i+windowsize)-max(i-windowsize,1)+1) &
+							 * (min(ny,j+windowsize)-max(1,j-windowsize)+1))
 					else
-						wind(i,j,k)=sum(inputwind(max(i-windowsize,1):min(nx,i+windowsize),j,max(1,k-windowsize):min(nz,k+windowsize))) &
-							/ ((min(nx,i+windowsize)-max(i-windowsize,1)+1) * (min(nz,k+windowsize)-max(1,k-windowsize)+1))
+						wind(i,j,k)=sum(inputwind(max(i-windowsize,1):min(nx,i+windowsize), &
+						                          j,max(1,k-windowsize):min(nz,k+windowsize))) &
+							/ ((min(nx,i+windowsize)-max(i-windowsize,1)+1) &
+							 * (min(nz,k+windowsize)-max(1,k-windowsize)+1))
 					endif
 				enddo
 			enddo
@@ -202,8 +206,10 @@ contains
 			enddo
 		endif
 		write(*,*) "Initial ext wind file:step=",ext_winds_curfile," : ",ext_winds_curstep
-		call read_var(domain%u,    ext_winds_file_list(ext_winds_curfile),"U",      bc%ext_winds%geolut,ext_winds_curstep,.FALSE.)
-		call read_var(domain%v,    ext_winds_file_list(ext_winds_curfile),"V",      bc%ext_winds%geolut,ext_winds_curstep,.FALSE.)
+		call read_var(domain%u,    ext_winds_file_list(ext_winds_curfile),"U", &
+		      bc%ext_winds%geolut,ext_winds_curstep,.FALSE.)
+		call read_var(domain%v,    ext_winds_file_list(ext_winds_curfile),"V", &
+		      bc%ext_winds%geolut,ext_winds_curstep,.FALSE.)
 		call rotate_ext_wind_field(domain,bc%ext_winds)
 	end subroutine ext_winds_init
 	
@@ -510,8 +516,10 @@ contains
 		
 		use_interior=.False.
 		use_boundary=.True.
-		call read_var(bc%next_domain%u,    ext_winds_file_list(ext_winds_curfile),"U",      bc%ext_winds%geolut,ext_winds_curstep,use_interior)
-		call read_var(bc%next_domain%v,    ext_winds_file_list(ext_winds_curfile),"V",      bc%ext_winds%geolut,ext_winds_curstep,use_interior)
+		call read_var(bc%next_domain%u,    ext_winds_file_list(ext_winds_curfile),"U", &
+		     bc%ext_winds%geolut,ext_winds_curstep,use_interior)
+		call read_var(bc%next_domain%v,    ext_winds_file_list(ext_winds_curfile),"V", &
+		     bc%ext_winds%geolut,ext_winds_curstep,use_interior)
 		call rotate_ext_wind_field(bc%next_domain,bc%ext_winds)
 	
 	end subroutine update_ext_winds

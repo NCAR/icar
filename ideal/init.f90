@@ -50,7 +50,6 @@ contains
 		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz,n_ext_winds,buffer,restart_step
 		logical :: ideal, readz,decrease_dz,debug,external_winds,remove_lowres_linear,&
 		           mean_winds,mean_fields,restart,add_low_topo
-		n_ext_winds=200
 		
 ! 		set up namelist structures
 		namelist /model_version/ version
@@ -62,6 +61,7 @@ contains
 		namelist /restart_info/ restart_step,restart_file
 		namelist /ext_winds_info/ n_ext_winds,ext_wind_files
 		namelist /physics/ pbl,lsm,mp,rad,conv,adv,wind
+		n_ext_winds=200
 		
 ! 		read namelists
 		open(io_newunit(name_unit), file=options_filename)
@@ -249,14 +249,16 @@ contains
 		if (options%readz) then
 			call io_read3d(options%init_conditions_file,"Z", domain%z)
 ! 			dz also has to be calculated from the 3d z file
+			buf=options%buffer
 			allocate(domain%dz(nx,nz,ny))
 			allocate(temporary_z(nx,nz,ny))
-			buf=options%buffer
+			print*, "Check domain%z,dz dimensions"
+			print*, nx,shape(domain%z), shape(domain%dz), buf
 			do i=1,nz-1
-				domain%dz(:,i,:)=domain%z(buf+1:nx-buf,buf+1:ny-buf,i+1)-domain%z(buf+1:nx-buf,buf+1:ny-buf,i)
-				temporary_z(:,i,:)=domain%z(buf+1:nx-buf,buf+1:ny-buf,i)
+				domain%dz(:,i,:)=domain%z(buf+1:nx+buf,buf+1:ny+buf,i+1)-domain%z(buf+1:nx+buf,buf+1:ny+buf,i)
+				temporary_z(:,i,:)=domain%z(buf+1:nx+buf,buf+1:ny+buf,i)
 			enddo
-			temporary_z(:,nz,:)=domain%z(buf+1:nx-buf,buf+1:ny-buf,nz)
+			temporary_z(:,nz,:)=domain%z(buf+1:nx+buf,buf+1:ny+buf,nz)
 			domain%dz(:,nz,:)=domain%dz(:,nz-1,:)
 			deallocate(domain%z)
 			allocate(domain%z(nx,nz,ny))
@@ -445,9 +447,11 @@ contains
 ! 		then pressure adjustments all occur from SLP. 
 		call geo_interp2d(boundary%next_domain%terrain,boundary%terrain,boundary%geolut)
 		if (options%add_low_topo) then
-			domain%terrain=domain%terrain+(boundary%next_domain%terrain-sum(boundary%next_domain%terrain)/size(boundary%next_domain%terrain))/2.0
+			domain%terrain=domain%terrain+(boundary%next_domain%terrain-sum(boundary%next_domain%terrain) &
+											 /size(boundary%next_domain%terrain))/2.0
 			do i=1,size(domain%z,2)
-				domain%z(:,i,:)=domain%z(:,i,:)+(boundary%next_domain%terrain-sum(boundary%next_domain%terrain)/size(boundary%next_domain%terrain))/2.0
+				domain%z(:,i,:)=domain%z(:,i,:)+(boundary%next_domain%terrain-sum(boundary%next_domain%terrain) &
+												 /size(boundary%next_domain%terrain))/2.0
 			enddo
 		endif
 		
