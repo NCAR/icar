@@ -160,12 +160,12 @@ contains
 		temp_data=domain%lon
 		deallocate(domain%lon)
 		allocate(domain%lon(nx2,ny2))
-		domain%lon=temp_data(edgesize:nx1-edgesize,edgesize:ny1-edgesize)
+		domain%lon=temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
 
 		temp_data=domain%terrain
 		deallocate(domain%terrain)
 		allocate(domain%terrain(nx2,ny2))
-		domain%terrain=temp_data(edgesize:nx1-edgesize,edgesize:ny1-edgesize)
+		domain%terrain=temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
 
 ! 		temp_data3d=domain%z
 ! 		deallocate(domain%z)
@@ -252,8 +252,6 @@ contains
 			buf=options%buffer
 			allocate(domain%dz(nx,nz,ny))
 			allocate(temporary_z(nx,nz,ny))
-			print*, "Check domain%z,dz dimensions"
-			print*, nx,shape(domain%z), shape(domain%dz), buf
 			do i=1,nz-1
 				domain%dz(:,i,:)=domain%z(buf+1:nx+buf,buf+1:ny+buf,i+1)-domain%z(buf+1:nx+buf,buf+1:ny+buf,i)
 				temporary_z(:,i,:)=domain%z(buf+1:nx+buf,buf+1:ny+buf,i)

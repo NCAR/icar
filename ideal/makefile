@@ -28,7 +28,7 @@
 #  Specify where you want the resulting executable installed
 ###################################################################
 INSTALLDIR=~/bin/
-# DEBUG=no
+# DEBUG=debugompslow
 
 ###################################################################
 #   Various compiler specific flags, may need to edit
@@ -42,6 +42,8 @@ NODENAME := $(shell uname -n)
 # LD_RUN_PATH=$LD_RUN_PATH:/usr/local/netcdf-4.1.3/ifort-12.0.5/lib:/home/gutmann/usr/local/lib:/usr/local/netcdf3-ifort/lib
 # in your environment to point to the libraries you will need so the locations will be encoded in the 
 #  compiled binary and you don't need to set LD_LIBRARY_PATH at runtime. 
+
+#default parameters, overwritten with machine/compiler specific options below if known
 F90=ifort
 LIBFFT=/home/gutmann/usr/local/lib
 INCFFT=/home/gutmann/usr/local/include
@@ -49,13 +51,10 @@ INCFFT=/home/gutmann/usr/local/include
 ifeq ($(NODENAME), Nomad-2.local)
 	NODENAME=Nomad.local
 endif
-ifeq ($(NODENAME), nomad.lan)
-	NODENAME=Nomad.local
-endif
 ifeq ($(NODENAME), Patthar.local)
 	NODENAME=Nomad.local
 endif
-ifeq ($(NODENAME), vpn66.ucar.edu)
+ifeq ($(NODENAME), vpn44.ucar.edu)
 	NODENAME=Nomad.local
 endif
 
@@ -123,28 +122,47 @@ ifeq ($(DEBUG), debugslow)
 		COMP= -debug -debug-parameters all -traceback -ftrapuv -g -fpe0 -c -u -check all -check noarg_temp_created -CB
 		LINK=  
 	endif
+	ifeq ($(F90), gfortran)
+		COMP= -c -g -fbounds-check -fbacktrace -finit-real=nan
+		LINK=  
+	endif
 endif
 ifeq ($(DEBUG), debug)
-	COMP= -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0 -fast-transcendentals -xhost
-	LINK=  
-endif
-ifeq ($(DEBUG), gdebug)
-	COMP= -c -g -fbounds-check -fbacktrace -finit-real=nan
-	LINK=  
+	ifeq ($(F90), ifort)
+		COMP= -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0 -fast-transcendentals -xhost
+		LINK=  
+	endif
+	ifeq ($(F90), gfortran)
+		COMP= -c -g -fbounds-check -fbacktrace -finit-real=nan
+		LINK=  
+	endif
 endif
 ifeq ($(DEBUG), debugompslow)
-	COMP= -openmp -liomp5 -debug -debug-parameters all -traceback -ftrapuv -g -fpe0 -c -u -check all -check noarg_temp_created -CB
-	LINK= -openmp -liomp5
+	ifeq ($(F90), ifort)
+		COMP= -openmp -liomp5 -debug -debug-parameters all -traceback -ftrapuv -g -fpe0 -c -u -check all -check noarg_temp_created -CB
+		COMP= -openmp -liomp5 -debug -c -u  -fpe0 -traceback -check all -check noarg_temp_created
+		LINK= -openmp -liomp5
+	endif
+	ifeq ($(F90), gfortran)
+		COMP= -fopenmp -lgomp -c -g -fbounds-check -fbacktrace -finit-real=nan
+		LINK= -fopenmp -lgomp  
+	endif
 endif
 ifeq ($(DEBUG), debugomp)
-	COMP= -openmp -liomp5 -debug -c -fast -u -traceback -fpe0 -fast-transcendentals -xhost
-	LINK= -openmp -liomp5
+	ifeq ($(F90), ifort)
+		COMP= -openmp -liomp5 -debug -c -fast -u -traceback -fpe0 -fast-transcendentals -xhost
+		LINK= -openmp -liomp5
+	endif
+	ifeq ($(F90), gfortran)
+		COMP= -fopenmp -lgomp -c -g -fbounds-check -fbacktrace -finit-real=nan
+		LINK= -fopenmp -lgomp  
+	endif
 endif
 
-ifeq ($(DEBUG), profile)
-	COMP= -openmp -liomp5 -p -c -fast -u -fast-transcendentals -xhost
-	LINK= -openmp -liomp5 -p
-endif
+# ifeq ($(DEBUG), profile)
+# 	COMP= -openmp -liomp5 -p -c -fast -u -fast-transcendentals -xhost
+# 	LINK= -openmp -liomp5 -p
+# endif
 
 ###################################################################
 ###################################################################

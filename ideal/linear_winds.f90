@@ -12,7 +12,7 @@ module linear_theory_winds
 	public::linear_perturb
 	
     real,allocatable,dimension(:,:)::k,l,kl,sig
-    complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::denom,uhat,u_hat,vhat,v_hat,m,ineta
+    complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::denom,uhat,u_hat,vhat,v_hat,m,ineta,msq
 	integer,parameter::buffer=50
 	
 contains
@@ -64,7 +64,7 @@ contains
 		logical, intent(in), optional :: reverse
         complex,parameter :: j= (0,1)
         real::gain,offset !used in setting up k and l arrays
-        integer::nx,ny,nz,i,midpoint,z,realnx,realny
+        integer::nx,ny,nz,i,midpoint,z,realnx,realny,x,y
         real::U,V
 		real,parameter::pi=3.1415927
         type(C_PTR) :: plan
@@ -90,6 +90,7 @@ contains
 	        allocate(vhat(nx,ny))
 	        allocate(v_hat(nx,ny))
 	        allocate(m(nx,ny))
+	        allocate(msq(nx,ny))
 	        allocate(ineta(nx,ny))
         
 	!         # % Compute 2D k and l wavenumber fields (could be stored in options or domain or something)
@@ -152,7 +153,7 @@ contains
         
 	! 		finally compute the kl combination array
 	        kl = k**2+l**2
-	        WHERE (kl==0.0) kl=1e-20
+	        WHERE (kl==0.0) kl=1e-15
 		endif
 
 		
@@ -162,11 +163,12 @@ contains
 ! 		then compute the plans serially
 ! 		then perform ffts etc in parallel
 ! 		finally destroy plans serially
+		m=1
         do z=1,nz
             U=sum(domain%u(:realnx-1,z,:))/((realnx-1)*realny)
             V=sum(domain%v(:,z,:realny-1))/(realnx*(realny-1))
             sig  = U*k+V*l
-            where(sig==0.0) sig=1e-10
+            where(sig==0.0) sig=1e-15
             denom = sig**2!-f**2
 			
 ! 			where(denom.eq.0) denom=1e-20
@@ -177,10 +179,15 @@ contains
 !         # mimag.imag=(np.sqrt(-msq)).real
 !         # m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
 ! 
+			msq = (Ndsq/denom * (k**2))
+		    real(sqrt(-msq))
+		    m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
             m = sqrt(((Ndsq-sig**2)/denom * kl))         ! # % vertical wave number, hydrostatic
     		
 ! 			i*fzs*exp(i*m*z_AGL)
-            ineta=j*domain%fzs*exp(j*m*sum(domain%z(:,z,:)-domain%z(:,1,:)+domain%dz(:,z,:)/2)/(realnx*realny))
+            ineta=j*domain%fzs*exp(j*m* &
+					sum(domain%z(:,z,:)-domain%z(:,1,:)+domain%dz(:,z,:)/2) &
+					/(realnx*realny))
 !             what=sig*ineta
 
 !           # with coriolis : 
@@ -209,14 +216,14 @@ contains
 ! 			u/vhat are first staggered to apply to u/v appropriately...
 			if (present(reverse)) then
 	            domain%u(1:realnx-1,z,:)=domain%u(:realnx-1,z,:) - &
-					real(u_hat(buffer:nx-buffer-1,buffer:ny-buffer)+u_hat(buffer+1:nx-buffer,buffer:ny-buffer))/2
+					real(u_hat(1+buffer:nx-buffer-1,1+buffer:ny-buffer)+u_hat(2+buffer:nx-buffer,1+buffer:ny-buffer))/2
 	            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) - &
-					real(v_hat(buffer:nx-buffer,buffer:ny-buffer-1)+v_hat(buffer:nx-buffer,buffer+1:ny-buffer))/2
+					real(v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer-1)+v_hat(1+buffer:nx-buffer,2+buffer:ny-buffer))/2
 			else
 	            domain%u(1:realnx-1,z,:)=domain%u(:realnx-1,z,:) + &
-					real(u_hat(buffer:nx-buffer-1,buffer:ny-buffer)+u_hat(buffer+1:nx-buffer,buffer:ny-buffer))/2
+					real(u_hat(1+buffer:nx-buffer-1,1+buffer:ny-buffer)+u_hat(2+buffer:nx-buffer,1+buffer:ny-buffer))/2
 	            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) + &
-					real(v_hat(buffer:nx-buffer,buffer:ny-buffer-1)+v_hat(buffer:nx-buffer,buffer+1:ny-buffer))/2
+					real(v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer-1)+v_hat(1+buffer:nx-buffer,2+buffer:ny-buffer))/2
 			endif
 		end do
 ! 		finally deallocate all temporary arrays that were created... should be a datastructure and a subroutine...
@@ -239,15 +246,16 @@ contains
 		allocate(buffer_topo(ny,nx))
 		buffer_topo=minval(terrain)
 		
-		buffer_topo(buffer:ny-buffer,buffer:nx-buffer)=terrain
+		buffer_topo(1+buffer:ny-buffer,1+buffer:nx-buffer)=terrain
 		do i=1,buffer
 			weight=i/(real(buffer)*2)
 			pos=buffer-i
-			buffer_topo(pos+1,buffer:nx-buffer-1)  =terrain(1,1:nx-buffer*2)*(1-weight)+terrain(ny-buffer*2,1:nx-buffer*2)*weight
-			buffer_topo(ny-pos-1,buffer:nx-buffer-1) =terrain(1,1:nx-buffer*2)*(weight)+terrain(ny-buffer*2,1:nx-buffer*2)*(1-weight)
-			buffer_topo(buffer:ny-buffer-1,pos+1)  =terrain(1:ny-buffer*2,1)*(1-weight)+terrain(1:ny-buffer*2,nx-buffer*2)*weight
-			buffer_topo(buffer:ny-buffer-1,nx-pos-1) =terrain(1:ny-buffer*2,1)*(weight)+terrain(1:ny-buffer*2,nx-buffer*2)*(1-weight)
+			buffer_topo(pos+1,1+buffer:nx-buffer)  =terrain(1,1:nx-buffer*2)*(1-weight)+terrain(ny-buffer*2,1:nx-buffer*2)*weight
+			buffer_topo(ny-pos-1,1+buffer:nx-buffer) =terrain(1,1:nx-buffer*2)*(weight)+terrain(ny-buffer*2,1:nx-buffer*2)*(1-weight)
+			buffer_topo(1+buffer:ny-buffer,pos+1)  =terrain(1:ny-buffer*2,1)*(1-weight)+terrain(1:ny-buffer*2,nx-buffer*2)*weight
+			buffer_topo(1+buffer:ny-buffer,nx-pos-1) =terrain(1:ny-buffer*2,1)*(weight)+terrain(1:ny-buffer*2,nx-buffer*2)*(1-weight)
 		enddo
+		print*, "There may be a problem in linear_winds-add_buffer_topo"
 ! 		clearly something isn't quiet right here...
 		buffer_topo(ny,:)=buffer_topo(ny-1,:)
 		buffer_topo(:,nx)=buffer_topo(:,nx-1)
