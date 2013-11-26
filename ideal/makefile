@@ -120,7 +120,7 @@ endif
 # Various debuging options.  Set the DEBUG variable with "make DEBUG=debugslow" etc.
 ifeq ($(DEBUG), debugslow)
 	ifeq ($(F90), ifort)
-		COMP= -debug -c -u -check all -check noarg_temp_created -traceback
+		COMP= -debug -debug-parameters all -traceback -ftrapuv -g -fpe0 -c -u -check all -check noarg_temp_created -CB
 		LINK=  
 	endif
 endif
@@ -133,7 +133,7 @@ ifeq ($(DEBUG), gdebug)
 	LINK=  
 endif
 ifeq ($(DEBUG), debugompslow)
-	COMP= -openmp -liomp5 -debug -c -u  -fpe0 -traceback -check all -check noarg_temp_created
+	COMP= -openmp -liomp5 -debug -debug-parameters all -traceback -ftrapuv -g -fpe0 -c -u -check all -check noarg_temp_created -CB
 	LINK= -openmp -liomp5
 endif
 ifeq ($(DEBUG), debugomp)
