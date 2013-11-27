@@ -153,12 +153,12 @@ contains
         type(wind_type),intent(inout)::ext_winds
 		integer :: nx,ny,nz,i
 	
-		ny=size(domain%z,1)
+		nx=size(domain%z,1)
 		nz=size(domain%z,2)
-		nx=size(domain%z,3)
+		ny=size(domain%z,3)
 		do i=1,nz
-			domain%u(:,i,1:nx-1)=domain%u(:,i,1:nx-1)*ext_winds%dzdx
-			domain%v(1:ny-1,i,:)=domain%v(1:ny-1,i,:)*ext_winds%dzdy
+			domain%u(1:nx-1,i,:)=domain%u(1:nx-1,i,:)*ext_winds%dzdx
+			domain%v(:,i,1:ny-1)=domain%v(:,i,1:ny-1)*ext_winds%dzdy
 		end do
 	
 	end subroutine rotate_ext_wind_field
