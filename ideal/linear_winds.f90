@@ -12,7 +12,7 @@ module linear_theory_winds
 	public::linear_perturb
 	
     real,allocatable,dimension(:,:)::k,l,kl,sig
-    complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::denom,uhat,u_hat,vhat,v_hat,m,ineta,msq
+    complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::denom,uhat,u_hat,vhat,v_hat,m,ineta,msq,mimag
 	integer,parameter::buffer=50
 	
 contains
@@ -91,6 +91,7 @@ contains
 	        allocate(v_hat(nx,ny))
 	        allocate(m(nx,ny))
 	        allocate(msq(nx,ny))
+	        allocate(mimag(nx,ny))
 	        allocate(ineta(nx,ny))
         
 	!         # % Compute 2D k and l wavenumber fields (could be stored in options or domain or something)
@@ -179,18 +180,24 @@ contains
 !         # mimag.imag=(np.sqrt(-msq)).real
 !         # m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
 ! 
-			msq = (Ndsq/denom * (k**2))
-		    real(sqrt(-msq))
-		    m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
-            m = sqrt(((Ndsq-sig**2)/denom * kl))         ! # % vertical wave number, hydrostatic
-    		
-! 			i*fzs*exp(i*m*z_AGL)
+! mimag=np.zeros(Nx).astype('complex')
+! mimag.imag=(np.sqrt(-msq)).real
+! m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
+
+			msq = Ndsq/denom * kl
+			mimag=0
+		    mimag=mimag+(real(sqrt(-msq))*j)
+! 		    m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
+            m = sqrt(msq)         ! # % vertical wave number, hydrostatic
+			where(sig<0) m=m*-1   ! equivilant to m=m*sign(sig)
+    		where(real(msq)<0) m=mimag
+			
             ineta=j*domain%fzs*exp(j*m* &
 					sum(domain%z(:,z,:)-domain%z(:,1,:)+domain%dz(:,z,:)/2) &
 					/(realnx*realny))
 !             what=sig*ineta
 
-!           # with coriolis : 
+!           # with coriolis : [+/-]j*[l/k]*f
 !           uhat = (0-m)*(sig*k-j*l*f)*ineta/kl
 !           vhat = (0-m)*(sig*l+j*k*f)*ineta/kl
 !           # removed coriolis term
@@ -199,9 +206,6 @@ contains
             vhat=l*ineta
 
 !           pull it back out of fourier space. 
-! 			plan = fftw_plan_dft_2d(nx,ny, what,w_hat, FFTW_BACKWARD,FFTW_ESTIMATE)
-! 			call fftw_execute_dft(plan, what,w_hat)
-! 			call fftw_destroy_plan(plan)
 			
 ! 			it should be possible to store the plan and execute it everytime rather than recreating it everytime, doesn't matter too much 
             plan = fftw_plan_dft_2d(ny,nx, uhat,u_hat, FFTW_BACKWARD,FFTW_ESTIMATE)
@@ -227,7 +231,7 @@ contains
 			endif
 		end do
 ! 		finally deallocate all temporary arrays that were created... should be a datastructure and a subroutine...
-		deallocate(k,l,kl,sig,denom,uhat,u_hat,vhat,v_hat,m,ineta)
+		deallocate(k,l,kl,sig,denom,uhat,u_hat,vhat,v_hat,m,ineta,msq,mimag)
     end subroutine linear_winds
     
     
@@ -240,26 +244,25 @@ contains
 		real, dimension(:,:),allocatable :: real_terrain
 		integer::nx,ny,i,pos
 		real::weight
-! 		WARNING x,y dimensions are swapped this doesn't affect output but may confuse readability
-		ny=size(terrain,1)+buffer*2
-		nx=size(terrain,2)+buffer*2
-		allocate(buffer_topo(ny,nx))
+		nx=size(terrain,1)+buffer*2
+		ny=size(terrain,2)+buffer*2
+		allocate(buffer_topo(nx,ny))
 		buffer_topo=minval(terrain)
 		
-		buffer_topo(1+buffer:ny-buffer,1+buffer:nx-buffer)=terrain
+		buffer_topo(1+buffer:nx-buffer,1+buffer:ny-buffer)=terrain
 		do i=1,buffer
 			weight=i/(real(buffer)*2)
 			pos=buffer-i
-			buffer_topo(pos+1,1+buffer:nx-buffer)  =terrain(1,1:nx-buffer*2)*(1-weight)+terrain(ny-buffer*2,1:nx-buffer*2)*weight
-			buffer_topo(ny-pos-1,1+buffer:nx-buffer) =terrain(1,1:nx-buffer*2)*(weight)+terrain(ny-buffer*2,1:nx-buffer*2)*(1-weight)
-			buffer_topo(1+buffer:ny-buffer,pos+1)  =terrain(1:ny-buffer*2,1)*(1-weight)+terrain(1:ny-buffer*2,nx-buffer*2)*weight
-			buffer_topo(1+buffer:ny-buffer,nx-pos-1) =terrain(1:ny-buffer*2,1)*(weight)+terrain(1:ny-buffer*2,nx-buffer*2)*(1-weight)
+			buffer_topo(pos+1,1+buffer:ny-buffer)    =terrain(1,1:ny-buffer*2)*(1-weight)+terrain(nx-buffer*2,1:ny-buffer*2)*   weight
+			buffer_topo(nx-pos-1,1+buffer:ny-buffer) =terrain(1,1:ny-buffer*2)*(  weight)+terrain(nx-buffer*2,1:ny-buffer*2)*(1-weight)
+			buffer_topo(1+buffer:nx-buffer,pos+1)    =terrain(1:nx-buffer*2,1)*(1-weight)+terrain(1:nx-buffer*2,ny-buffer*2)*   weight
+			buffer_topo(1+buffer:nx-buffer,ny-pos-1) =terrain(1:nx-buffer*2,1)*(  weight)+terrain(1:nx-buffer*2,ny-buffer*2)*(1-weight)
 		enddo
 		print*, "There may be a problem in linear_winds-add_buffer_topo"
 ! 		clearly something isn't quiet right here...
-		buffer_topo(ny,:)=buffer_topo(ny-1,:)
-		buffer_topo(:,nx)=buffer_topo(:,nx-1)
-		allocate(real_terrain(ny,nx))
+		buffer_topo(nx,:)=buffer_topo(nx-1,:)
+		buffer_topo(:,ny)=buffer_topo(:,ny-1)
+		allocate(real_terrain(nx,ny))
 		real_terrain=buffer_topo
 		call io_write2d("complex_terrain.nc","HGT",real_terrain)
 		deallocate(real_terrain)
@@ -308,12 +311,12 @@ contains
         class(linearizable_type),intent(inout)::domain
 		integer :: nx,ny
 		
-		ny=size(domain%terrain,1)
-		nx=size(domain%terrain,2)
+		nx=size(domain%terrain,1)
+		ny=size(domain%terrain,2)
 ! 		compute u at x mid-point
-		domain%u(:,:,1:nx-1)=(domain%u(:,:,1:nx-1)+domain%u(:,:,2:nx))/2
+		domain%u(1:nx-1,:,:)=(domain%u(1:nx-1,:,:)+domain%u(2:nx,:,:))/2
 ! 		compute v at y mid-point
-		domain%v(1:ny-1,:,:)=(domain%v(1:ny-1,:,:)+domain%v(2:ny,:,:))/2
+		domain%v(:,:,1:ny-1)=(domain%v(:,:,1:ny-1)+domain%v(:,:,2:ny))/2
 		
 	end subroutine stagger_winds
 	
