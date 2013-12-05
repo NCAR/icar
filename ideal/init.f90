@@ -142,43 +142,67 @@ contains
 		integer, intent(in)::edgesize
 		integer::nx1,ny1,nx2,ny2,nz
 		real,allocatable,dimension(:,:)::temp_data
-		real,allocatable,dimension(:,:,:)::temp_data3d
 		
 		nx1=size(domain%lat,1)
 		ny1=size(domain%lat,2)
 		nx2=nx1-(edgesize*2)
 		ny2=ny1-(edgesize*2)
-! 		nz=size(domain%z,2)
+		
 		allocate(temp_data(nx1,ny1))
-! 		allocate(temp_data3d(nx1,nz,ny1))
 		
 		temp_data=domain%lat
 		deallocate(domain%lat)
 		allocate(domain%lat(nx2,ny2))
 		domain%lat=temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
-
+		
 		temp_data=domain%lon
 		deallocate(domain%lon)
 		allocate(domain%lon(nx2,ny2))
+
 		domain%lon=temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
 
 		temp_data=domain%terrain
 		deallocate(domain%terrain)
 		allocate(domain%terrain(nx2,ny2))
 		domain%terrain=temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
-
-! 		temp_data3d=domain%z
-! 		deallocate(domain%z)
-! 		allocate(domain%z(nx2,nz,ny2))
-! 		domain%z=temp_data(edgesize:nx1-edgesize,:,edgesize:ny1-edgesize)
-! 
-! 		temp_data3d=domain%dz
-! 		deallocate(domain%dz)
-! 		allocate(domain%dz(nx2,nz,ny2))
-! 		domain%dz=temp_data(edgesize:nx1-edgesize,:,edgesize:ny1-edgesize)
-! 
+		
 		deallocate(temp_data)
-! 		deallocate(temp_data,temp_data3d)
+		
+		nx1=size(domain%u_geo%lat,1)
+		ny1=size(domain%u_geo%lat,2)
+		nx2=nx1-(edgesize*2)
+		ny2=ny1-(edgesize*2)
+		
+		allocate(temp_data(nx1,ny1))
+		temp_data=domain%u_geo%lat
+		deallocate(domain%u_geo%lat)
+		allocate(domain%u_geo%lat(nx2,ny2))
+		domain%u_geo%lat=temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
+		
+		temp_data=domain%u_geo%lon
+		deallocate(domain%u_geo%lon)
+		allocate(domain%u_geo%lon(nx2,ny2))
+		domain%u_geo%lon=temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
+
+		deallocate(temp_data)
+		
+		nx1=size(domain%v_geo%lat,1)
+		ny1=size(domain%v_geo%lat,2)
+		nx2=nx1-(edgesize*2)
+		ny2=ny1-(edgesize*2)
+		
+		allocate(temp_data(nx1,ny1))
+		temp_data=domain%v_geo%lat
+		deallocate(domain%v_geo%lat)
+		allocate(domain%v_geo%lat(nx2,ny2))
+		domain%v_geo%lat=temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
+		
+		temp_data=domain%v_geo%lon
+		deallocate(domain%v_geo%lon)
+		allocate(domain%v_geo%lon(nx2,ny2))
+		domain%v_geo%lon=temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
+		
+		deallocate(temp_data)
 	end subroutine remove_edges
 	
 ! 	allocate all arrays in domain
@@ -187,9 +211,9 @@ contains
 		integer,intent(in)::nx,nz,ny
 		allocate(domain%p(nx,nz,ny))
 		domain%p=0
-		allocate(domain%u(nx,nz,ny))
+		allocate(domain%u(nx+1,nz,ny))
 		domain%u=0
-		allocate(domain%v(nx,nz,ny))
+		allocate(domain%v(nx,nz,ny+1))
 		domain%v=0
 		allocate(domain%th(nx,nz,ny))
 		domain%th=0
@@ -235,6 +259,10 @@ contains
 		call io_read2d(options%init_conditions_file,"HGT",domain%terrain,1)
 		call io_read2d(options%init_conditions_file,options%latvar,domain%lat,1)
 		call io_read2d(options%init_conditions_file,options%lonvar,domain%lon,1)
+		call io_read2d(options%init_conditions_file,"XLAT_U",domain%u_geo%lat,1)
+		call io_read2d(options%init_conditions_file,"XLONG_U",domain%u_geo%lon,1)
+		call io_read2d(options%init_conditions_file,"XLAT_V",domain%v_geo%lat,1)
+		call io_read2d(options%init_conditions_file,"XLONG_V",domain%v_geo%lon,1)
 		
 		if(options%buffer>0) then
 			call remove_edges(domain,options%buffer)
@@ -310,9 +338,9 @@ contains
 		type(bc_type), intent(inout) :: boundary
 		integer,intent(in)::nx,nz,ny
 		
-		allocate(boundary%dudt(nx,nz,ny))
+		allocate(boundary%dudt(nx+1,nz,ny))
 		boundary%dudt=0
-		allocate(boundary%dvdt(nx,nz,ny))
+		allocate(boundary%dvdt(nx,nz,ny+1))
 		boundary%dvdt=0
 		allocate(boundary%dwdt(nx,nz,ny))
 		boundary%dwdt=0
@@ -338,6 +366,10 @@ contains
 ! 		these variables are required for any boundary/forcing file type
 		call io_read2d(options%boundary_files(1),options%latvar,boundary%lat)
 		call io_read2d(options%boundary_files(1),options%lonvar,boundary%lon)
+		call io_read2d(options%boundary_files(1),"XLAT_U",boundary%u_geo%lat)
+		call io_read2d(options%boundary_files(1),"XLONG_U",boundary%u_geo%lon)
+		call io_read2d(options%boundary_files(1),"XLAT_V",boundary%v_geo%lat)
+		call io_read2d(options%boundary_files(1),"XLONG_V",boundary%v_geo%lon)
 		call io_read2d(options%boundary_files(1),"HGT",boundary%terrain)
 		
 		nx=size(boundary%lat,1)
@@ -401,16 +433,24 @@ contains
 		call io_read2d(options%ext_wind_files(1),"HGT",bc%ext_winds%terrain,1)
 		call io_read2d(options%ext_wind_files(1),options%latvar,bc%ext_winds%lat)
 		call io_read2d(options%ext_wind_files(1),options%lonvar,bc%ext_winds%lon)
-		write(*,*) "Setting up ext wind geoLUT"
-		call geo_LUT(bc%next_domain, bc%ext_winds)
+		call io_read2d(options%ext_wind_files(1),"XLAT_U",bc%ext_winds%u_geo%lat)
+		call io_read2d(options%ext_wind_files(1),"XLONG_U",bc%ext_winds%u_geo%lon)
+		call io_read2d(options%ext_wind_files(1),"XLAT_V",bc%ext_winds%v_geo%lat)
+		call io_read2d(options%ext_wind_files(1),"XLONG_V",bc%ext_winds%v_geo%lon)
+		write(*,*) "Setting up ext wind geoLUTs"
+		call geo_LUT(bc%next_domain, bc%ext_winds%u_geo)
+		call geo_LUT(bc%next_domain, bc%ext_winds%v_geo)
 ! 		if (options%debug) then
 ! 			call io_write3di("geolut_x.nc","data",bc%ext_winds%geolut%x)
 ! 			call io_write3di("geolut_y.nc","data",bc%ext_winds%geolut%y)
 ! 			call io_write3d("geolut_w.nc","data",bc%ext_winds%geolut%w)
 ! 		endif
 ! 		force all weight to be on the first x,y pair...
-		bc%ext_winds%geolut%w(2:,:,:)=0
-		bc%ext_winds%geolut%w(1,:,:)=1
+! 		this assumes the "external winds" file is on the exact same grid as the high res model grid
+		bc%ext_winds%u_geo%geolut%w(2:,:,:)=0
+		bc%ext_winds%u_geo%geolut%w(1,:,:)=1
+		bc%ext_winds%v_geo%geolut%w(2:,:,:)=0
+		bc%ext_winds%v_geo%geolut%w(1,:,:)=1
 		bc%ext_winds%dx=bc%next_domain%dx
 		call setup_extwinds(bc%ext_winds)
 	end subroutine init_ext_winds
@@ -429,7 +469,10 @@ contains
 		call init_bc_data(options,boundary,domain)
 		call init_domain(options,boundary%next_domain) !set up a domain to hold the forcing for the next time step
 ! 		create the geographic look up table used to calculate boundary forcing data
+		write(*,*) "Setting up domain geographic Look Up Tables"
 		call geo_LUT(domain,boundary)
+		call geo_LUT(domain%u_geo,boundary%u_geo)
+		call geo_LUT(domain%v_geo,boundary%v_geo)
 ! 		if (options%debug) then
 ! 			call io_write3di("bcgeolut_x.nc","data",boundary%geolut%x)
 ! 			call io_write3di("bcgeolut_y.nc","data",boundary%geolut%y)
@@ -443,6 +486,8 @@ contains
 ! 		interpolate the low-res terrain to the high-res grid for pressure adjustments. 
 ! 		the correct way would probably be to adjust all low-res pressures to Sea level before interpolating
 ! 		then pressure adjustments all occur from SLP. 
+! 		This should be done on a separate lowres terrain grid so the embedded high res terrain grid can also be used in pressure adjustments on each time step...
+! 		allocate(boundary%lowres_terrain(nx,ny))
 		call geo_interp2d(boundary%next_domain%terrain,boundary%terrain,boundary%geolut)
 		if (options%add_low_topo) then
 			domain%terrain=domain%terrain+(boundary%next_domain%terrain-sum(boundary%next_domain%terrain) &

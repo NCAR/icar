@@ -97,25 +97,11 @@ contains
 		ny=dims(3)
 		nz=dims(4)
 		
-! 		perform destaggering and unit conversion on specific variables
+! 		perform unit conversion on specific variables
 		if (varname=="U") then
-			allocate(extra_data(nx,ny,nz))
-			extra_data=inputdata
-			deallocate(inputdata)
-			nx=nx-1
-			allocate(inputdata(nx,ny,nz))
-			inputdata=(extra_data(1:nx,:,:)+extra_data(2:nx+1,:,:))/2
 			call smooth_wind(inputdata,1,2)
-			deallocate(extra_data)
 		else if (varname=="V") then
-			allocate(extra_data(nx,ny,nz))
-			extra_data=inputdata
-			deallocate(inputdata)
-			ny=ny-1
-			allocate(inputdata(nx,ny,nz))
-			inputdata=(extra_data(:,1:ny,:)+extra_data(:,2:ny+1,:))/2
 			call smooth_wind(inputdata,1,2)
-			deallocate(extra_data)
 		else if (varname=="T") then
 			inputdata=inputdata+300
 		else if (varname=="P") then
@@ -206,10 +192,10 @@ contains
 			enddo
 		endif
 		write(*,*) "Initial ext wind file:step=",ext_winds_curfile," : ",ext_winds_curstep
-		call read_var(domain%u,    ext_winds_file_list(ext_winds_curfile),"U", &
-		      bc%ext_winds%geolut,ext_winds_curstep,.FALSE.)
-		call read_var(domain%v,    ext_winds_file_list(ext_winds_curfile),"V", &
-		      bc%ext_winds%geolut,ext_winds_curstep,.FALSE.)
+		call read_var(domain%u,    ext_winds_file_list(ext_winds_curfile),"U",  &
+		      bc%ext_winds%u_geo%geolut,ext_winds_curstep,.FALSE.)
+		call read_var(domain%v,    ext_winds_file_list(ext_winds_curfile),"V",  &
+		      bc%ext_winds%v_geo%geolut,ext_winds_curstep,.FALSE.)
 		call rotate_ext_wind_field(domain,bc%ext_winds)
 	end subroutine ext_winds_init
 	
@@ -228,7 +214,7 @@ contains
 		character(len=255) :: outputfilename
 		
 		call io_getdims(filename,"U", dims)
-		nx=dims(2)-1
+		nx=dims(2)
 		ny=dims(3)
 		nz=dims(4)
 		nz_output=size(bc%u,2)
@@ -238,13 +224,15 @@ contains
 ! 		first read in the low-res U and V data directly
 ! 		load low-res U data
 		call io_read3d(filename,"U",extra_data,curstep)
-		inputdata=(extra_data(1:nx,:,:nz_output)+extra_data(2:nx+1,:,:nz_output))/2
+		inputdata=extra_data(1:nx,1:ny,:nz_output)
 		call smooth_wind(inputdata,2,2)
-		deallocate(extra_data)
 		bc%u=reshape(inputdata,[nx,nz_output,ny],order=[1,3,2])
+		deallocate(extra_data,inputdata)
+		
+		allocate(inputdata(nx-1,ny+1,nz_output))
 ! 		load low-res V data
 		call io_read3d(filename,"V",extra_data,curstep)
-		inputdata=(extra_data(:,1:ny+1,:nz_output)+extra_data(:,2:ny+1,:nz_output))/2
+		inputdata=extra_data(1:nx-1,1:ny+1,:nz_output)
 		call smooth_wind(inputdata,2,2)
 		bc%v=reshape(inputdata,[nx,nz_output,ny],order=[1,3,2])
 		deallocate(extra_data,inputdata)
@@ -264,8 +252,8 @@ contains
 ! 		endif
 		
 ! 		finally interpolate low res winds to the high resolutions grid
-		call geo_interp(domain%u, bc%u,bc%geolut,.FALSE.)
-		call geo_interp(domain%v, bc%v,bc%geolut,.FALSE.)
+		call geo_interp(domain%u, bc%u,bc%u_geo%geolut,.FALSE.)
+		call geo_interp(domain%v, bc%v,bc%v_geo%geolut,.FALSE.)
 	end subroutine remove_linear_winds
 	
 ! for test cases compute the mean winds and make them constant everywhere...
@@ -298,6 +286,7 @@ contains
 		character(len=*),intent(in)::restart_file
 		real,allocatable,dimension(:,:,:)::inputdata
 		
+		write(*,*) "WARNING Restart file may not be correct since setting U/V on staggered grids" 
 		call io_read3d(restart_file,"u",inputdata)
 		domain%u=inputdata
 		deallocate(inputdata)
@@ -404,8 +393,8 @@ contains
 			elseif (options%mean_winds) then
 				call mean_winds(domain,file_list(curfile),curstep)
 			else
-				call read_var(domain%u,    file_list(curfile),"U",      bc%geolut,curstep,boundary_value)
-				call read_var(domain%v,    file_list(curfile),"V",      bc%geolut,curstep,boundary_value)
+				call read_var(domain%u,    file_list(curfile),"U",      bc%u_geo%geolut,curstep,boundary_value)
+				call read_var(domain%v,    file_list(curfile),"V",      bc%v_geo%geolut,curstep,boundary_value)
 				if (.not.options%ideal)then
 					call smooth_wind(domain%u,smoothing_window,3)
 					call smooth_wind(domain%v,smoothing_window,3)
@@ -517,9 +506,9 @@ contains
 		use_interior=.False.
 		use_boundary=.True.
 		call read_var(bc%next_domain%u,    ext_winds_file_list(ext_winds_curfile),"U", &
-		     bc%ext_winds%geolut,ext_winds_curstep,use_interior)
+		              bc%ext_winds%u_geo%geolut,ext_winds_curstep,use_interior)
 		call read_var(bc%next_domain%v,    ext_winds_file_list(ext_winds_curfile),"V", &
-		     bc%ext_winds%geolut,ext_winds_curstep,use_interior)
+		              bc%ext_winds%v_geo%geolut,ext_winds_curstep,use_interior)
 		call rotate_ext_wind_field(bc%next_domain,bc%ext_winds)
 	
 	end subroutine update_ext_winds
@@ -562,8 +551,8 @@ contains
 		elseif (options%mean_winds) then
 			call mean_winds(bc%next_domain,file_list(curfile),curstep)
 		else
-			call read_var(bc%next_domain%u,    file_list(curfile),"U",      bc%geolut,curstep,use_interior)
-			call read_var(bc%next_domain%v,    file_list(curfile),"V",      bc%geolut,curstep,use_interior)
+			call read_var(bc%next_domain%u,    file_list(curfile),"U",      bc%u_geo%geolut,curstep,use_interior)
+			call read_var(bc%next_domain%v,    file_list(curfile),"V",      bc%v_geo%geolut,curstep,use_interior)
 			if (.not.options%ideal)then
 				call smooth_wind(bc%next_domain%u,smoothing_window,3)
 				call smooth_wind(bc%next_domain%v,smoothing_window,3)
