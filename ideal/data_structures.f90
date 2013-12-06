@@ -123,7 +123,9 @@ module data_structures
 		character (len=MAXFILELENGTH), allocatable::boundary_files(:),ext_wind_files(:)
 		character (len=MAXFILELENGTH) :: output_file,restart_file
 ! 		variable names from init/BC/wind/... files
-		character (len=MAXVARLENGTH) :: latvar,lonvar,uvar,vvar,pvar,thvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar
+		character (len=MAXVARLENGTH) :: latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
+										hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi, &
+										pvar,tvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar,hgtvar
 ! 		various boolean options
 		logical :: ideal,readz, decrease_dz, debug, external_winds,remove_lowres_linear,&
 				   mean_winds,mean_fields,restart,add_low_topo
@@ -132,7 +134,7 @@ module data_structures
 ! 		various integer parameters/options
 		integer :: ntimesteps,nz,nfiles,ext_winds_nfiles,restart_step
 ! 		various real parameters/options
-		real :: dx,io_dt,outputinterval,dz
+		real :: dx,dxlow,io_dt,outputinterval,dz
 ! 		defines which physics package to be used. 
 		type(physics_type)::physics
 	end type options_type

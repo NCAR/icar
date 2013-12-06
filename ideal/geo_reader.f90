@@ -39,7 +39,50 @@ contains
 		bilin_weights=(/x1*f2,x0*f2,x3*f1,x2*f1/)
 	end function bilin_weights
 	
-	type(position) function find_location(lo,lat,lon)
+	! 	xw=minxw(xw,lo%lon,xc,yc,lon)
+	integer function minxw(xw,longrid,xpos,ypos,lon)
+		integer, intent(in)::xw,xpos,ypos
+		real,intent(in)::longrid(:,:),lon
+		real::curdist,dx
+		integer::nx
+		
+		nx=size(longrid,1)
+		curdist=abs(lon-longrid(xpos,ypos))
+		if (xpos<nx) then
+			dx=abs(longrid(xpos,ypos)-longrid(xpos+1,ypos))
+		else
+			dx=abs(longrid(xpos,ypos)-longrid(xpos-1,ypos))
+		endif
+		minxw=max(xw,ceiling(curdist/dx))
+		if (minxw>xw) then
+			if (minxw>4) then
+				minxw=ceiling(minxw*0.8)
+			endif
+		endif
+	end function minxw
+	! 	yw=minyw(yw,lo%lat,xc,yc,lat)
+	integer function minyw(yw,latgrid,xpos,ypos,lat)
+		integer, intent(in)::yw,xpos,ypos
+		real,intent(in)::latgrid(:,:),lat
+		real::curdist,dx
+		integer::ny
+		
+		ny=size(latgrid,2)
+		curdist=abs(lat-latgrid(xpos,ypos))
+		if (ypos<ny) then
+			dx=abs(latgrid(xpos,ypos)-latgrid(xpos,ypos+1))
+		else
+			dx=abs(latgrid(xpos,ypos)-latgrid(xpos,ypos-1))
+		endif
+		minyw=max(yw,ceiling(curdist/dx))
+		if (minyw>yw) then
+			if (minyw>4) then
+				minyw=ceiling(minyw*0.8)
+			endif
+		endif
+	end function minyw
+	
+	type(position) function find_location(lo,lat,lon,lastpos)
 ! Find a location lat,lon in lo%lat,lon grids
 !  Assumes that the lat/lon grids are semi-regular (dx/dy aren't constant but they are nearly so)
 !  Calculates dx/dy at the middle of the lat/lon grids, then calculates the location of lat,lon
@@ -60,6 +103,7 @@ contains
 		implicit none
 		class(interpolable_type),intent(in)::lo
 		real,intent(in)::lat,lon
+		type(position),intent(in)::lastpos
 		real::mindist, curdist,dx,dy,xsign,ysign,x,y
 		integer::nx,ny,xc,yc,xw,yw,iterations,xstep,ystep
 		
@@ -69,8 +113,10 @@ contains
 		dx=lo%lon(2,1)-lo%lon(1,1)
 		dy=lo%lat(1,2)-lo%lat(1,1)
 ! 		current/starting position = the middle of the grid
-		xc=nx/2
-		yc=ny/2
+! 		xc=nx/2
+! 		yc=ny/2
+		xc=lastpos%x
+		yc=lastpos%y
 		x=lo%lon(xc,yc)
 		y=lo%lat(xc,yc)
 ! 		steps to take = the difference the between the current point and the input point / dx
@@ -142,6 +188,7 @@ contains
 					endif
 					yc=yc-ysign*yw
 				endif
+				yc=min(max(yc,1),ny)
 				if (lo%lat(xc,yc)<lat) then
 					if (yw==2) then
 						yw=1
@@ -150,6 +197,7 @@ contains
 					endif
 					yc=yc+ysign*yw
 				endif
+				yc=min(max(yc,1),ny)
 ! 				in case lat is exactly equal to lat(xc,yc)
 				if (lo%lat(xc,yc)==lat) then
 					yw=0
@@ -162,6 +210,7 @@ contains
 					endif
 					xc=xc-xsign*xw
 				endif
+				xc=min(max(xc,1),nx)
 				if (lo%lon(xc,yc)<lon) then
 					if (xw==2) then
 						xw=1
@@ -170,10 +219,13 @@ contains
 					endif
 					xc=xc+xsign*xw
 				endif
+				xc=min(max(xc,1),nx)
 ! 				in case lon is exactly equal to lon(xc,yc)
 				if (lo%lon(xc,yc)==lon) then
 					xw=0
 				endif
+				xw=minxw(xw,lo%lon,xc,yc,lon)
+				yw=minyw(yw,lo%lat,xc,yc,lat)
 			enddo
 		endif
 
@@ -193,8 +245,9 @@ contains
 		else
 !	CASE 3 search every possible grid cell!
 			write(*,*) "using n^2 search..."
-! 			note which point this is for debugging purposes, we really shouldn't get here
-			write(*,*) lat,lon,nx,ny
+! 			note which point this is for debugging purposes, we really shouldn't get here (often)
+			write(*,*) lat,lon,lo%lat(xc,yc),lo%lon(xc,yc)
+			write(*,*) xc,yc,nx,ny
 ! 			naive search
 			mindist=9999.9
 			do xw=1,nx
@@ -215,13 +268,14 @@ contains
 	end function find_location
 		
 		
-	type(fourpos) function find_surrounding(lo,lat,lon,pos)
+	type(fourpos) function find_surrounding(lo,lat,lon,pos,nx,ny)
 ! 		given a closest position, return the 4 points surrounding the lat/lon position in lo%lat/lon
 ! 		assumes pos is not an edge point in the lat/lon grid...
 		implicit none
 		class(interpolable_type),intent(in)::lo
 		real,intent(in)::lat,lon
 		type(position),intent(in)::pos
+		integer,intent(in) :: nx,ny
 		
 		if ((lo%lat(pos%x,pos%y)-lat) > 0) then
 			find_surrounding%y=(/pos%y,pos%y,pos%y-1,pos%y-1/)
@@ -234,6 +288,8 @@ contains
 		else
 			find_surrounding%x=(/pos%x,pos%x+1,pos%x,pos%x+1/)
 		endif
+		find_surrounding%x=min(max(find_surrounding%x,1),nx)
+		find_surrounding%y=min(max(find_surrounding%y,1),ny)
 		
 	end function find_surrounding			
 	
@@ -253,13 +309,17 @@ contains
 		allocate(lo%geolut%x(4,nx,ny))
 		allocate(lo%geolut%y(4,nx,ny))
 		allocate(lo%geolut%w(4,nx,ny))
+
+		curpos%x=1
+		curpos%y=1
 		
 		do j=1,ny
-! 			lastpos=find_location(lo,hi%lat(1,j),hi%lon(1,j))
+			curpos%x=1
+			lastpos=find_location(lo,hi%lat(1,j),hi%lon(1,j),curpos)
 			do i=1,nx
 ! 				curpos=next_pos(lo,hi,i,j,lastpos,windowsize)
-				curpos=find_location(lo,hi%lat(i,j),hi%lon(i,j))
-				xy=find_surrounding(lo,hi%lat(i,j),hi%lon(i,j),curpos)
+				curpos=find_location(lo,hi%lat(i,j),hi%lon(i,j),lastpos)
+				xy=find_surrounding(lo,hi%lat(i,j),hi%lon(i,j),curpos,nx,ny)
 				lo%geolut%x(:,i,j)=xy%x
 				lo%geolut%y(:,i,j)=xy%y
 				do k=1,4

@@ -96,7 +96,7 @@ ifeq ($(LMOD_FAMILY_COMPILER),gnu)
 endif 
 ifeq ($(LMOD_FAMILY_COMPILER),intel)
 	F90=ifort
-	COMP= -openmp -liomp5 -fast -c -u #-fast-transcendentals -xhost
+	COMP= -openmp -liomp5 -fast -c -u -fpe0 -fast-transcendentals -xhost
 #	COMP= -openmp -liomp5 -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0
 	LINK= -openmp -liomp5
 	LIBFFT=/glade/u/home/gutmann/usr/local/lib
@@ -192,9 +192,9 @@ GEOOBJS=io_routines.o data_structures.o tests/test_geo.o geo_reader.o
 #   User facing rules
 ###################################################################
 
-all:real
+all:swim_real
 
-install:real
+install:swim_real
 	cp swim_real ${INSTALLDIR}
 
 clean:
@@ -205,6 +205,9 @@ allclean:cleanall
 cleanall: clean
 	rm tests/*.o tests/*.mod swim_real swim_ideal geo_test wind_test # test_init
 tests: geo_test wind_test #test_init
+
+swim_real:${OBJS}
+	${F90} ${LFLAGS} ${OBJS} -o swim_real  -lm -lfftw3
 
 real:${OBJS} 
 	${F90} ${LFLAGS} ${OBJS} -o swim_real  -lm -lfftw3
@@ -239,7 +242,7 @@ ideal.o:ideal.f90 advect.o data_structures.o init.o mp_driver.o output.o wind.o 
 init.o:init.f90 data_structures.o io_routines.o geo_reader.o
 	${F90} ${FFLAGS} init.f90
 
-time_step.o:time_step.f90 data_structures.o mp_driver.o wind.o advect.o
+time_step.o:time_step.f90 data_structures.o mp_driver.o wind.o advect.o output.o
 	${F90} ${FFLAGS} time_step.f90
 
 boundary.o:boundary.f90 data_structures.o io_routines.o wind.o geo_reader.o output.o linear_winds.o

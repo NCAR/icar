@@ -192,9 +192,9 @@ contains
 			enddo
 		endif
 		write(*,*) "Initial ext wind file:step=",ext_winds_curfile," : ",ext_winds_curstep
-		call read_var(domain%u,    ext_winds_file_list(ext_winds_curfile),"U",  &
+		call read_var(domain%u,    ext_winds_file_list(ext_winds_curfile),options%uvar,  &
 		      bc%ext_winds%u_geo%geolut,ext_winds_curstep,.FALSE.)
-		call read_var(domain%v,    ext_winds_file_list(ext_winds_curfile),"V",  &
+		call read_var(domain%v,    ext_winds_file_list(ext_winds_curfile),options%vvar,  &
 		      bc%ext_winds%v_geo%geolut,ext_winds_curstep,.FALSE.)
 		call rotate_ext_wind_field(domain,bc%ext_winds)
 	end subroutine ext_winds_init
@@ -223,7 +223,7 @@ contains
 		
 ! 		first read in the low-res U and V data directly
 ! 		load low-res U data
-		call io_read3d(filename,"U",extra_data,curstep)
+		call io_read3d(filename,options%uvar,extra_data,curstep)
 		inputdata=extra_data(1:nx,1:ny,:nz_output)
 		call smooth_wind(inputdata,2,2)
 		bc%u=reshape(inputdata,[nx,nz_output,ny],order=[1,3,2])
@@ -231,7 +231,7 @@ contains
 		
 		allocate(inputdata(nx-1,ny+1,nz_output))
 ! 		load low-res V data
-		call io_read3d(filename,"V",extra_data,curstep)
+		call io_read3d(filename,options%vvar,extra_data,curstep)
 		inputdata=extra_data(1:nx-1,1:ny+1,:nz_output)
 		call smooth_wind(inputdata,2,2)
 		bc%v=reshape(inputdata,[nx,nz_output,ny],order=[1,3,2])
@@ -257,10 +257,11 @@ contains
 	end subroutine remove_linear_winds
 	
 ! for test cases compute the mean winds and make them constant everywhere...
-	subroutine mean_winds(domain,filename,curstep)
+	subroutine mean_winds(domain,filename,curstep,options)
 		type(domain_type), intent(inout) :: domain
 		character(len=*),intent(in)::filename
 		integer,intent(in)::curstep
+		type(options_type):: options
 		
 		real,allocatable,dimension(:,:,:)::extra_data
 		integer,dimension(io_maxDims)::dims
@@ -269,12 +270,12 @@ contains
 		nz=size(domain%u,2)
 		
 ! 		load low-res U data
-		call io_read3d(filename,"U",extra_data,curstep)
+		call io_read3d(filename,options%uvar,extra_data,curstep)
 		domain%u=sum(extra_data(:,:,:nz))/size(extra_data(:,:,:nz))
 		deallocate(extra_data)
 
 ! 		load low-res V data
-		call io_read3d(filename,"V",extra_data,curstep)
+		call io_read3d(filename,options%vvar,extra_data,curstep)
 		domain%v=sum(extra_data(:,:,:nz))/size(extra_data(:,:,:nz))
 		deallocate(extra_data)
 				
@@ -391,20 +392,20 @@ contains
 			elseif (options%remove_lowres_linear) then
 				call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
 			elseif (options%mean_winds) then
-				call mean_winds(domain,file_list(curfile),curstep)
+				call mean_winds(domain,file_list(curfile),curstep,options)
 			else
-				call read_var(domain%u,    file_list(curfile),"U",      bc%u_geo%geolut,curstep,boundary_value)
-				call read_var(domain%v,    file_list(curfile),"V",      bc%v_geo%geolut,curstep,boundary_value)
+				call read_var(domain%u,    file_list(curfile),options%uvar,      bc%u_geo%geolut,curstep,boundary_value)
+				call read_var(domain%v,    file_list(curfile),options%vvar,      bc%v_geo%geolut,curstep,boundary_value)
 				if (.not.options%ideal)then
 					call smooth_wind(domain%u,smoothing_window,3)
 					call smooth_wind(domain%v,smoothing_window,3)
 				endif
 			endif
-			call read_var(domain%p,    file_list(curfile),"P",      bc%geolut,curstep,boundary_value)
-			call read_var(domain%th,   file_list(curfile),"T",      bc%geolut,curstep,boundary_value)
-			call read_var(domain%qv,   file_list(curfile),"QVAPOR", bc%geolut,curstep,boundary_value)
-			call read_var(domain%cloud,file_list(curfile),"QCLOUD", bc%geolut,curstep,boundary_value)
-			call read_var(domain%ice,  file_list(curfile),"QICE",   bc%geolut,curstep,boundary_value)
+			call read_var(domain%p,    file_list(curfile),options%pvar,      bc%geolut,curstep,boundary_value)
+			call read_var(domain%th,   file_list(curfile),options%tvar,      bc%geolut,curstep,boundary_value)
+			call read_var(domain%qv,   file_list(curfile),options%qvvar,     bc%geolut,curstep,boundary_value)
+			call read_var(domain%cloud,file_list(curfile),options%qcvar,     bc%geolut,curstep,boundary_value)
+			call read_var(domain%ice,  file_list(curfile),options%qivar,     bc%geolut,curstep,boundary_value)
 		
 			call update_pressure(domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
 								 bc%next_domain%terrain,domain%terrain)
@@ -505,9 +506,9 @@ contains
 		
 		use_interior=.False.
 		use_boundary=.True.
-		call read_var(bc%next_domain%u,    ext_winds_file_list(ext_winds_curfile),"U", &
+		call read_var(bc%next_domain%u,    ext_winds_file_list(ext_winds_curfile),options%uvar, &
 		              bc%ext_winds%u_geo%geolut,ext_winds_curstep,use_interior)
-		call read_var(bc%next_domain%v,    ext_winds_file_list(ext_winds_curfile),"V", &
+		call read_var(bc%next_domain%v,    ext_winds_file_list(ext_winds_curfile),options%vvar, &
 		              bc%ext_winds%v_geo%geolut,ext_winds_curstep,use_interior)
 		call rotate_ext_wind_field(bc%next_domain,bc%ext_winds)
 	
@@ -549,20 +550,20 @@ contains
 		elseif (options%remove_lowres_linear) then
 			call remove_linear_winds(bc%next_domain,bc,options,file_list(curfile),curstep)
 		elseif (options%mean_winds) then
-			call mean_winds(bc%next_domain,file_list(curfile),curstep)
+			call mean_winds(bc%next_domain,file_list(curfile),curstep,options)
 		else
-			call read_var(bc%next_domain%u,    file_list(curfile),"U",      bc%u_geo%geolut,curstep,use_interior)
-			call read_var(bc%next_domain%v,    file_list(curfile),"V",      bc%v_geo%geolut,curstep,use_interior)
+			call read_var(bc%next_domain%u,    file_list(curfile),options%uvar,     bc%u_geo%geolut,curstep,use_interior)
+			call read_var(bc%next_domain%v,    file_list(curfile),options%vvar,     bc%v_geo%geolut,curstep,use_interior)
 			if (.not.options%ideal)then
 				call smooth_wind(bc%next_domain%u,smoothing_window,3)
 				call smooth_wind(bc%next_domain%v,smoothing_window,3)
 			endif
 		endif
-		call read_var(bc%next_domain%p,    file_list(curfile),"P",      bc%geolut,curstep,use_interior)
-		call read_var(bc%next_domain%th,   file_list(curfile),"T",      bc%geolut,curstep,use_boundary)
-		call read_var(bc%next_domain%qv,   file_list(curfile),"QVAPOR", bc%geolut,curstep,use_boundary)
-		call read_var(bc%next_domain%cloud,file_list(curfile),"QCLOUD", bc%geolut,curstep,use_boundary)
-		call read_var(bc%next_domain%ice,  file_list(curfile),"QICE",   bc%geolut,curstep,use_boundary)
+		call read_var(bc%next_domain%p,    file_list(curfile),options%pvar,     bc%geolut,curstep,use_interior)
+		call read_var(bc%next_domain%th,   file_list(curfile),options%tvar,     bc%geolut,curstep,use_boundary)
+		call read_var(bc%next_domain%qv,   file_list(curfile),options%qvvar,    bc%geolut,curstep,use_boundary)
+		call read_var(bc%next_domain%cloud,file_list(curfile),options%qcvar,    bc%geolut,curstep,use_boundary)
+		call read_var(bc%next_domain%ice,  file_list(curfile),options%qivar,    bc%geolut,curstep,use_boundary)
 		
 		call update_pressure(bc%next_domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
 							 bc%next_domain%terrain,domain%terrain)

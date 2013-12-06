@@ -44,8 +44,10 @@ contains
 		
 		character(len=MAXFILELENGTH) :: init_conditions_file, output_file,restart_file
 		character(len=MAXFILELENGTH),allocatable:: boundary_files(:),ext_wind_files(:)
-		character(len=MAXVARLENGTH) :: latvar,lonvar,version
-		real :: dx,outputinterval,dz
+		character(len=MAXVARLENGTH) :: latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
+										hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,     &
+										pvar,tvar,qvvar,qcvar,qivar,hgtvar,version
+		real :: dx,dxlow,outputinterval,dz
 		integer :: name_unit,ntimesteps,nfiles
 		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz,n_ext_winds,buffer,restart_step
 		logical :: ideal, readz,decrease_dz,debug,external_winds,remove_lowres_linear,&
@@ -53,8 +55,10 @@ contains
 		
 ! 		set up namelist structures
 		namelist /model_version/ version
-		namelist /var_list/ latvar,lonvar
-		namelist /parameters/ ntimesteps,outputinterval,dx,ideal,readz,decrease_dz,nz,debug,dz,nfiles, &
+		namelist /var_list/ pvar,tvar,qvvar,qcvar,qivar,hgtvar,&
+							latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
+							hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi 
+		namelist /parameters/ ntimesteps,outputinterval,dx,dxlow,ideal,readz,decrease_dz,nz,debug,dz,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,&
 							  remove_lowres_linear,mean_winds,mean_fields,restart
 		namelist /files_list/ init_conditions_file,output_file,boundary_files
@@ -66,9 +70,9 @@ contains
 ! 		read namelists
 		open(io_newunit(name_unit), file=options_filename)
 		read(name_unit,nml=model_version)
-		if (version.ne."0.5.1") then
+		if (version.ne."0.5.2") then
 			write(*,*) "Model version does not match namelist version"
-			write(*,*) "  Model version: 0.5.1"
+			write(*,*) "  Model version: 0.5.2"
 			write(*,*) "  Namelist version:",version
 			stop
 		endif
@@ -110,9 +114,32 @@ contains
 		options%output_file=output_file
 		options%latvar=latvar
 		options%lonvar=lonvar
+		options%latvar=latvar
+		options%lonvar=lonvar
+		options%uvar=uvar
+		options%ulat=ulat
+		options%ulon=ulon
+		options%vvar=vvar
+		options%vlat=vlat
+		options%vlon=vlon
+		options%pvar=pvar
+		options%tvar=tvar
+		options%qvvar=qvvar
+		options%qcvar=qcvar
+		options%qivar=qivar
+		options%hgtvar=hgtvar
+		options%hgt_hi=hgt_hi
+		options%lat_hi=lat_hi
+		options%lon_hi=lon_hi
+		options%ulat_hi=ulat_hi
+		options%ulon_hi=ulon_hi
+		options%vlat_hi=vlat_hi
+		options%vlon_hi=vlon_hi
+		
 		options%ntimesteps=ntimesteps
 		options%io_dt=outputinterval
 		options%dx=dx
+		options%dxlow=dxlow
 		options%dz=dz
 		options%ideal=ideal
 		if (ideal) then
@@ -256,13 +283,13 @@ contains
 		integer:: ny,nz,nx,i,buf
 		
 ! 		these are the only required variables on a high-res grid, lat, lon, and terrain elevation
-		call io_read2d(options%init_conditions_file,"HGT",domain%terrain,1)
-		call io_read2d(options%init_conditions_file,options%latvar,domain%lat,1)
-		call io_read2d(options%init_conditions_file,options%lonvar,domain%lon,1)
-		call io_read2d(options%init_conditions_file,"XLAT_U",domain%u_geo%lat,1)
-		call io_read2d(options%init_conditions_file,"XLONG_U",domain%u_geo%lon,1)
-		call io_read2d(options%init_conditions_file,"XLAT_V",domain%v_geo%lat,1)
-		call io_read2d(options%init_conditions_file,"XLONG_V",domain%v_geo%lon,1)
+		call io_read2d(options%init_conditions_file,options%hgt_hi,domain%terrain,1)
+		call io_read2d(options%init_conditions_file,options%lat_hi,domain%lat,1)
+		call io_read2d(options%init_conditions_file,options%lon_hi,domain%lon,1)
+		call io_read2d(options%init_conditions_file,options%ulat_hi,domain%u_geo%lat,1)
+		call io_read2d(options%init_conditions_file,options%ulon_hi,domain%u_geo%lon,1)
+		call io_read2d(options%init_conditions_file,options%vlat_hi,domain%v_geo%lat,1)
+		call io_read2d(options%init_conditions_file,options%vlon_hi,domain%v_geo%lon,1)
 		
 		if(options%buffer>0) then
 			call remove_edges(domain,options%buffer)
@@ -275,6 +302,9 @@ contains
 		
 ! 		if a 3d grid was also specified, then read those data in
 		if (options%readz) then
+			if (.not.options%ideal) then
+				write(*,*) "Reading Z only recommended for ideal runs at the moment"
+			endif
 			call io_read3d(options%init_conditions_file,"Z", domain%z)
 ! 			dz also has to be calculated from the 3d z file
 			buf=options%buffer
@@ -366,11 +396,11 @@ contains
 ! 		these variables are required for any boundary/forcing file type
 		call io_read2d(options%boundary_files(1),options%latvar,boundary%lat)
 		call io_read2d(options%boundary_files(1),options%lonvar,boundary%lon)
-		call io_read2d(options%boundary_files(1),"XLAT_U",boundary%u_geo%lat)
-		call io_read2d(options%boundary_files(1),"XLONG_U",boundary%u_geo%lon)
-		call io_read2d(options%boundary_files(1),"XLAT_V",boundary%v_geo%lat)
-		call io_read2d(options%boundary_files(1),"XLONG_V",boundary%v_geo%lon)
-		call io_read2d(options%boundary_files(1),"HGT",boundary%terrain)
+		call io_read2d(options%boundary_files(1),options%ulat,boundary%u_geo%lat)
+		call io_read2d(options%boundary_files(1),options%ulon,boundary%u_geo%lon)
+		call io_read2d(options%boundary_files(1),options%vlat,boundary%v_geo%lat)
+		call io_read2d(options%boundary_files(1),options%vlon,boundary%v_geo%lon)
+		call io_read2d(options%boundary_files(1),options%hgtvar,boundary%terrain)
 		
 		nx=size(boundary%lat,1)
 		nz=options%nz
@@ -430,13 +460,13 @@ contains
 		real, allocatable, dimension(:,:,:) :: u,v
 		real, allocatable, dimension(:,:) :: lat,lon
 		
-		call io_read2d(options%ext_wind_files(1),"HGT",bc%ext_winds%terrain,1)
+		call io_read2d(options%ext_wind_files(1),options%hgt_hi,bc%ext_winds%terrain,1)
 		call io_read2d(options%ext_wind_files(1),options%latvar,bc%ext_winds%lat)
 		call io_read2d(options%ext_wind_files(1),options%lonvar,bc%ext_winds%lon)
-		call io_read2d(options%ext_wind_files(1),"XLAT_U",bc%ext_winds%u_geo%lat)
-		call io_read2d(options%ext_wind_files(1),"XLONG_U",bc%ext_winds%u_geo%lon)
-		call io_read2d(options%ext_wind_files(1),"XLAT_V",bc%ext_winds%v_geo%lat)
-		call io_read2d(options%ext_wind_files(1),"XLONG_V",bc%ext_winds%v_geo%lon)
+		call io_read2d(options%ext_wind_files(1),options%ulat_hi,bc%ext_winds%u_geo%lat)
+		call io_read2d(options%ext_wind_files(1),options%ulon_hi,bc%ext_winds%u_geo%lon)
+		call io_read2d(options%ext_wind_files(1),options%vlat_hi,bc%ext_winds%v_geo%lat)
+		call io_read2d(options%ext_wind_files(1),options%vlon_hi,bc%ext_winds%v_geo%lon)
 		write(*,*) "Setting up ext wind geoLUTs"
 		call geo_LUT(bc%next_domain, bc%ext_winds%u_geo)
 		call geo_LUT(bc%next_domain, bc%ext_winds%v_geo)
@@ -463,8 +493,7 @@ contains
 		type(bc_type), intent(inout):: boundary
 		integer::i
 			
-		write(*,*) "WARNING hardcoded low-res dx=36km"
-		boundary%dx=36000.0
+		boundary%dx=options%dxlow
 ! 		set up base data
 		call init_bc_data(options,boundary,domain)
 		call init_domain(options,boundary%next_domain) !set up a domain to hold the forcing for the next time step
