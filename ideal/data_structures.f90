@@ -86,7 +86,7 @@ module data_structures
 	type, extends(linearizable_type) :: domain_type
 		real, allocatable, dimension(:,:,:) :: p,th,w
 		real, allocatable, dimension(:,:,:) :: qv,cloud,ice,nice,qrain,nrain,qsnow,qgrau
-		real, allocatable, dimension(:,:) :: rain,snow,graupel
+		real, allocatable, dimension(:,:) :: rain,snow,graupel,sensible_heat,latent_heat,pbl_height
 		real::dt
 	end type domain_type
 
@@ -97,6 +97,8 @@ module data_structures
 ! 		dXdt variables are the change in variable X between two forcing time steps
 ! 		wind and pressure dXdt fields applied to full 3d grid, others applied only to boundaries
 		real, allocatable, dimension(:,:,:) :: dudt,dvdt,dwdt,dpdt,dthdt,dqvdt,dqcdt
+! 		sh, lh, and pblh fields are only 2d
+		real, allocatable, dimension(:,:) :: dshdt,dlhdt,dpblhdt
 		real,allocatable,dimension(:,:)::lowres_terrain
 		real,allocatable,dimension(:,:,:)::lowres_z
 ! 		store the full 3D grid for the next time step to compute dXdt fields
@@ -125,7 +127,8 @@ module data_structures
 ! 		variable names from init/BC/wind/... files
 		character (len=MAXVARLENGTH) :: latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
 										hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi, &
-										pvar,tvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar,hgtvar
+										pvar,tvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar,hgtvar, &
+										shvar,lhvar,pblhvar
 ! 		various boolean options
 		logical :: ideal,readz, decrease_dz, debug, external_winds,remove_lowres_linear,&
 				   mean_winds,mean_fields,restart,add_low_topo

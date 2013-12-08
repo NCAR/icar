@@ -46,7 +46,7 @@ contains
 		character(len=MAXFILELENGTH),allocatable:: boundary_files(:),ext_wind_files(:)
 		character(len=MAXVARLENGTH) :: latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
 										hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,     &
-										pvar,tvar,qvvar,qcvar,qivar,hgtvar,version
+										pvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,version
 		real :: dx,dxlow,outputinterval,dz
 		integer :: name_unit,ntimesteps,nfiles
 		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz,n_ext_winds,buffer,restart_step
@@ -55,7 +55,7 @@ contains
 		
 ! 		set up namelist structures
 		namelist /model_version/ version
-		namelist /var_list/ pvar,tvar,qvvar,qcvar,qivar,hgtvar,&
+		namelist /var_list/ pvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
 							latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
 							hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi 
 		namelist /parameters/ ntimesteps,outputinterval,dx,dxlow,ideal,readz,decrease_dz,nz,debug,dz,nfiles, &
@@ -70,9 +70,9 @@ contains
 ! 		read namelists
 		open(io_newunit(name_unit), file=options_filename)
 		read(name_unit,nml=model_version)
-		if (version.ne."0.5.2") then
+		if (version.ne."0.6") then
 			write(*,*) "Model version does not match namelist version"
-			write(*,*) "  Model version: 0.5.2"
+			write(*,*) "  Model version: 0.6"
 			write(*,*) "  Namelist version:",version
 			stop
 		endif
@@ -117,6 +117,9 @@ contains
 		options%latvar=latvar
 		options%lonvar=lonvar
 		options%uvar=uvar
+		options%shvar=shvar
+		options%lhvar=lhvar
+		options%pblhvar=pblhvar
 		options%ulat=ulat
 		options%ulon=ulon
 		options%vvar=vvar
@@ -268,6 +271,12 @@ contains
 		domain%snow=0
 		allocate(domain%graupel(nx,ny))
 		domain%graupel=0
+		allocate(domain%sensible_heat(nx,ny))
+		domain%sensible_heat=0
+		allocate(domain%latent_heat(nx,ny))
+		domain%latent_heat=0
+		allocate(domain%pbl_height(nx,ny))
+		domain%pbl_height=0
 		
 	end subroutine domain_allocation
 	
@@ -382,6 +391,12 @@ contains
 		boundary%dqvdt=0
 		allocate(boundary%dqcdt(nz,max(nx,ny),4))
 		boundary%dqcdt=0
+		allocate(boundary%dlhdt(nx,ny))
+		boundary%dlhdt=0
+		allocate(boundary%dshdt(nx,ny))
+		boundary%dshdt=0
+		allocate(boundary%dpblhdt(nx,ny))
+		boundary%dpblhdt=0
 	end subroutine boundary_allocate
 	
 ! 	initialize the boundary condition data structure e.g. lat,lon,terrain,3D Z coord

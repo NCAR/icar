@@ -130,6 +130,27 @@ contains
 		deallocate(inputdata)
 						
 	end subroutine read_var
+
+! 	generic routine to read a low res variable (varname) from a netcdf file (filename) at the current time step (curstep)
+!   then interpolate it to the high res grid either in 3D or at the boundaries only (boundary_only)
+! 	applies modifications specificaly for U,V,T,P and PH variables
+	subroutine read_2dvar(highres,filename,varname,geolut,curstep)
+		implicit none
+		real,dimension(:,:),intent(inout)::highres
+		character(len=*),intent(in) :: filename,varname
+		type(geo_look_up_table),intent(in) :: geolut
+		integer,intent(in)::curstep
+	
+		real,dimension(:,:),allocatable :: inputdata
+	
+! 		Read the data in
+		call io_read2d(filename,varname,inputdata,curstep)
+! 		interpolate data onto the high resolution grid after re-arranging the dimensions. 
+		call geo_interp2d(highres,inputdata,geolut)
+		deallocate(inputdata)
+					
+	end subroutine read_2dvar
+
 	
 ! 	rotate winds from real space back to terrain following grid (approximately)
 !   assumes a simple slope transform in u and v independantly
@@ -406,6 +427,10 @@ contains
 			call read_var(domain%qv,   file_list(curfile),options%qvvar,     bc%geolut,curstep,boundary_value)
 			call read_var(domain%cloud,file_list(curfile),options%qcvar,     bc%geolut,curstep,boundary_value)
 			call read_var(domain%ice,  file_list(curfile),options%qivar,     bc%geolut,curstep,boundary_value)
+
+			call read_2dvar(domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep)
+			call read_2dvar(domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep)
+			call read_2dvar(domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep)
 		
 			call update_pressure(domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
 								 bc%next_domain%terrain,domain%terrain)
@@ -456,6 +481,10 @@ contains
 		bc%dvdt=bc%next_domain%v-domain%v
 		bc%dwdt=bc%next_domain%w-domain%w
 		bc%dpdt=bc%next_domain%p-domain%p
+		
+		bc%dshdt  =bc%next_domain%sensible_heat-domain%sensible_heat
+		bc%dlhdt  =bc%next_domain%latent_heat-domain%latent_heat
+		bc%dpblhdt=bc%next_domain%pbl_height-domain%pbl_height
 
 		call update_edges(bc%dthdt,bc%next_domain%th,domain%th)
 		call update_edges(bc%dqvdt,bc%next_domain%qv,domain%qv)
@@ -564,7 +593,11 @@ contains
 		call read_var(bc%next_domain%qv,   file_list(curfile),options%qvvar,    bc%geolut,curstep,use_boundary)
 		call read_var(bc%next_domain%cloud,file_list(curfile),options%qcvar,    bc%geolut,curstep,use_boundary)
 		call read_var(bc%next_domain%ice,  file_list(curfile),options%qivar,    bc%geolut,curstep,use_boundary)
-		
+
+		call read_2dvar(bc%next_domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep)
+		call read_2dvar(bc%next_domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep)
+		call read_2dvar(bc%next_domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep)
+	
 		call update_pressure(bc%next_domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
 							 bc%next_domain%terrain,domain%terrain)
 		nx=size(bc%next_domain%th,1)

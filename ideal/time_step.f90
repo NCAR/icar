@@ -1,6 +1,7 @@
 module time_step
 	use data_structures     ! *_type  types
 	use microphysics        ! mp
+	use lsm
 	use wind                ! update_winds
 	use advection           ! advect
 ! 	use iso_fortran_env     ! FLUSH removed because it didn't help
@@ -107,7 +108,7 @@ contains
 		do i=1,ntimesteps
 			call advect(domain,options,dt)
 			call mp(domain,options,dt)
-	! 		call lsm(domain,options,dt)
+			call lsm_driver(domain,options,dt)
 	! 		call pbl(domain,options,dt)
 	! 		call radiation(domain,options,dt)
 ! 			apply/update boundary conditions including internal wind and pressure changes. 

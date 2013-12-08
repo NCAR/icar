@@ -179,7 +179,7 @@ LFLAGS=$(LINK) ${LIBNETCDF} -L${LIBFFT}
 FFLAGS=$(COMP) ${INCNETCDF} -I${INCFFT}
 
 OBJS=advect.o io_routines.o data_structures.o init.o mp_driver.o time_step.o boundary.o \
-		mp_thompson.o driver.o output.o wind.o linear_winds.o geo_reader.o
+		mp_thompson.o driver.o output.o wind.o linear_winds.o geo_reader.o lsm.o
 
 IDEALOBJS=advect.o io_routines.o data_structures.o init.o mp_driver.o \
 		mp_thompson.o ideal.o output.o wind.o linear_winds.o geo_reader.o
@@ -242,7 +242,7 @@ ideal.o:ideal.f90 advect.o data_structures.o init.o mp_driver.o output.o wind.o 
 init.o:init.f90 data_structures.o io_routines.o geo_reader.o
 	${F90} ${FFLAGS} init.f90
 
-time_step.o:time_step.f90 data_structures.o mp_driver.o wind.o advect.o output.o
+time_step.o:time_step.f90 data_structures.o mp_driver.o wind.o advect.o output.o lsm.o
 	${F90} ${FFLAGS} time_step.f90
 
 boundary.o:boundary.f90 data_structures.o io_routines.o wind.o geo_reader.o output.o linear_winds.o
@@ -271,6 +271,12 @@ mp_driver.o:mp_thompson.o data_structures.o mp_driver.f90
 
 mp_thompson.o:mp_thompson.f90
 	${F90} ${FFLAGS} mp_thompson.f90
+
+###################################################################
+#   Land Surface code
+###################################################################
+lsm.o: lsm.f90 data_structures.o
+	${F90} ${FFLAGS} lsm.f90
 
 ###################################################################
 #   Various wind/advection related code
