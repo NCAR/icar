@@ -84,7 +84,7 @@ contains
 										maxval(abs(bc%next_domain%w)))/3.0)
 		dt=min(dt,dtnext)
 ! 		set an upper bound on dt to keep the microphysics stable?
-		dt=min(dt,50.0) !better min=180?
+		dt=min(dt,120.0) !better min=180?
 ! 		if we have too small a time step just throw an error
 		if (dt<1e-1) then
 			write(*,*) "dt=",dt

@@ -37,7 +37,6 @@ module lsm
 !       not really needed anymore variables for tracking statistics and modifying fluxes
         real :: factor,mxdT,mxdqv,temp,diffusionrate,coolingrate,sbconstant
 		
-		write(*,*) MINVAL(pblh),MAXVAL(pblh)
         temp=0.
         mxdT=0.
         mxdqv=0.
@@ -115,6 +114,10 @@ module lsm
 		nz=size(z,2)
 		ny=size(z,3)
 		pblh_i=1
+        !$omp parallel firstprivate(nx,ny,nz) &
+		!$omp private(i,j,k) &
+        !$omp shared(pblh_i,pblh)
+        !$omp do
 		do j=1,ny
 			do k=1,nz-1
 				do i=1,nx
@@ -124,6 +127,8 @@ module lsm
 				enddo
 			enddo
 		enddo
+        !$omp end do
+        !$omp end parallel
 		
 	end subroutine calc_pbl_index
 	
@@ -132,7 +137,7 @@ module lsm
 		type(domain_type),intent(inout)::domain
 		type(options_type),intent(in)::options
 		real,intent(in)::dt
-		integer::nx,ny,nz
+		integer::nx,ny,nz,j
 		
 		nx=size(domain%p,1)
 		nz=size(domain%p,2)
@@ -146,7 +151,16 @@ module lsm
 		if (options%physics%landsurface==1) then
 			call calc_pbl_index(domain%z,domain%pbl_height,pblh_i)
 			
-			pii=1.0/((100000.0/domain%p)**(R/cp))
+	        !$omp parallel firstprivate(nx,ny,nz) &
+			!$omp private(j) &
+	        !$omp shared(pii,domain)
+	        !$omp do
+			do j=1,ny
+				pii(:,:,j)=1.0/((100000.0/domain%p(:,:,j))**(R/cp))
+			enddo
+	        !$omp end do
+	        !$omp end parallel
+			
 			call simple_land_surface_fluxes(domain%th,domain%qv,domain%p,domain%dz,pii,dt, &
 											domain%sensible_heat,domain%latent_heat,pblh_i, &
 											1,nx,1,nz,1,ny)
