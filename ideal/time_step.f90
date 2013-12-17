@@ -1,6 +1,7 @@
 module time_step
 	use data_structures     ! *_type  types
 	use microphysics        ! mp
+	use convection
 	use lsm
 	use wind                ! update_winds
 	use advection           ! advect
@@ -108,6 +109,7 @@ contains
 		do i=1,ntimesteps
 			call advect(domain,options,dt)
 			call mp(domain,options,dt)
+			call convect(domain,options,dt)
 			call lsm_driver(domain,options,dt)
 	! 		call pbl(domain,options,dt)
 	! 		call radiation(domain,options,dt)
