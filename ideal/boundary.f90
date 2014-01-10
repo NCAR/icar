@@ -48,7 +48,7 @@ contains
 		inputwind=wind
 		
 		!$omp parallel firstprivate(windowsize,nx,ny,nz),private(i,j,k),shared(wind,inputwind)
-		!$omp do
+		!$omp do schedule(static)
 		do k=1,nz
 			do j=1,ny
 				do i=1,nx

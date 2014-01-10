@@ -46,11 +46,11 @@ module lsm
 		sbconstant=5.67e-8
 		coolingrate=1.5*(dt/(60.0*60.0*24.0)) *sbconstant / 300.0 !1.5K/day radiative cooling rate (300 = W/m^2 at 270K)
 
-!       OpenMP commands
+		!       OpenMP commands
         !$omp parallel firstprivate(jds,jde,ids,ide,kds,kde,diffusionrate,coolingrate) &
 		!$omp private(i,temperature,dTemp,lhdQV,rho,rhomean,means,f1,f2) &
         !$omp shared(pii,p,th,qv,dz,sensible_heat,latent_heat,pblh)
-        !$omp do
+        !$omp do schedule(static)
         do i=jds+1,jde-1
 !           loop over the last (slowest) dimension with the first (fastest) dimension processed internally
 !           compute the real temperature from the potential temperature
@@ -117,7 +117,7 @@ module lsm
         !$omp parallel firstprivate(nx,ny,nz) &
 		!$omp private(i,j,k) &
         !$omp shared(pblh_i,pblh)
-        !$omp do
+        !$omp do schedule(static)
 		do j=1,ny
 			do k=1,nz-1
 				do i=1,nx
@@ -154,7 +154,7 @@ module lsm
 	        !$omp parallel firstprivate(nx,ny,nz) &
 			!$omp private(j) &
 	        !$omp shared(pii,domain)
-	        !$omp do
+	        !$omp do schedule(static)
 			do j=1,ny
 				pii(:,:,j)=1.0/((100000.0/domain%p(:,:,j))**(R/cp))
 			enddo

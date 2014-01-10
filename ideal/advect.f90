@@ -41,13 +41,13 @@ contains
         real, dimension(1:nx-1,1:nz) :: f1 ! there used to be an f2 to store f[x+1]
         real, dimension(1:nx-2,1:nz) :: f3,f4
         real, dimension(1:nx-2,1:nz-1) ::f5
-        !$omp parallel shared(q,u,v,w) firstprivate(nx,ny,nz) private(i,f1,f3,f4,f5)
-        !$omp do
+        !$omp parallel shared(qin,q,u,v,w) firstprivate(nx,ny,nz) private(i,f1,f3,f4,f5)
+        !$omp do schedule(static)
         do i=1,ny
 			qin(:,:,i)=q(:,:,i)
 		enddo
         !$omp end do
-        !$omp do
+        !$omp do schedule(static)
         do i=2,ny-1
 ! 			by manually inlining the flux2 call we should remove extra array copies that the compiler didn't seem to be able to remove. 
 ! 			equivalent flux2 calls are left in for reference (commented) to restore recall that fx arrays should be 3D : n x m x 1

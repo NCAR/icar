@@ -229,7 +229,7 @@ wind_test:${WINDOBJS}
 #   driver code for 
 ###################################################################
 
-driver.o:driver.f90 advect.o data_structures.o init.o mp_driver.o output.o wind.o boundary.o
+driver.o:driver.f90 advect.o data_structures.o init.o mp_driver.o output.o wind.o boundary.o cu_driver.o
 	${F90} ${FFLAGS} driver.f90
 
 ideal.o:ideal.f90 advect.o data_structures.o init.o mp_driver.o output.o wind.o boundary.o

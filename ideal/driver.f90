@@ -5,6 +5,7 @@ program real
 	use microphysics        ! mp_init
 	use output              ! write_domain
 	use time_step			! step
+	use convection
 	
 	implicit none
 	type(options_type) :: options
@@ -18,6 +19,7 @@ program real
 	write(*,*) "Initializing microphysics"
 ! 	write(*,*) "WARNING: NOT Initializing microphysics"
 	call mp_init(options%physics%microphysics) !this could easily be moved to init_model...
+	call init_convection(domain,options)
 ! 	read initial conditions from the boundary file
 	write(*,*) "Initializing Boundary conditions"
 	call bc_init(domain,boundary,options)
