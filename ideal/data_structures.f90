@@ -86,7 +86,7 @@ module data_structures
 	type, extends(linearizable_type) :: domain_type
 		real, allocatable, dimension(:,:,:) :: p,th,w
 		real, allocatable, dimension(:,:,:) :: qv,cloud,ice,nice,qrain,nrain,qsnow,qgrau
-		real, allocatable, dimension(:,:) :: rain,snow,graupel,sensible_heat,latent_heat,pbl_height
+		real, allocatable, dimension(:,:) :: rain,crain,snow,graupel,sensible_heat,latent_heat,pbl_height
 		real::dt
 	end type domain_type
 
@@ -130,14 +130,14 @@ module data_structures
 										pvar,tvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar,hgtvar, &
 										shvar,lhvar,pblhvar
 ! 		various boolean options
-		logical :: ideal,readz, decrease_dz, debug, external_winds,remove_lowres_linear,&
+		logical :: ideal,readz, debug, external_winds,remove_lowres_linear,&
 				   mean_winds,mean_fields,restart,add_low_topo
 ! 		buffer to remove from all sides of the high res grid supplied
 		integer :: buffer=0
 ! 		various integer parameters/options
 		integer :: ntimesteps,nz,nfiles,ext_winds_nfiles,restart_step
 ! 		various real parameters/options
-		real :: dx,dxlow,io_dt,outputinterval,dz
+		real :: dx,dxlow,in_dt,out_dt,outputinterval,inputinterval
 ! 		defines which physics package to be used. 
 		type(physics_type)::physics
 	end type options_type

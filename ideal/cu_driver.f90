@@ -129,19 +129,12 @@ subroutine convect(domain,options,dt_in)
                 ,RUCUTEN, RVCUTEN                               &
                 ,.True.    ,.True.    ,.True.    ,.True.    ,.True.       &
 				)
-		write(*,*) "C Rain", MAXVAL(RAINCV), MINVAL(RAINCV)
-! 		write(*,*) "qv",     MAXVAL(RQVCUTEN), MINVAL(RQVCUTEN)
 		domain%qv=domain%qv+RQVCUTEN*dt_in
-! 		write(*,*) "qc",     MAXVAL(RQCCUTEN), MINVAL(RQCCUTEN)
 		domain%cloud=domain%cloud+RQCCUTEN*dt_in
-! 		write(*,*) "th",     MAXVAL(RTHCUTEN), MINVAL(RTHCUTEN)
 		domain%th=domain%th+RTHCUTEN*dt_in
-! 		write(*,*) "qi",     MAXVAL(RQICUTEN), MINVAL(RQICUTEN)
 		domain%ice=domain%ice+RQICUTEN*dt_in
-! 		write(*,*) "u",      MAXVAL(RUCUTEN), MINVAL(RUCUTEN)
-! 		write(*,*) "v",      MAXVAL(RVCUTEN), MINVAL(RVCUTEN)
-! 		write(*,*) "Exiting Tiedtke"
 		domain%rain=domain%rain+RAINCV
+		domain%crain=domain%crain+RAINCV
 	endif
 	
 	

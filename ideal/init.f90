@@ -47,10 +47,10 @@ contains
 		character(len=MAXVARLENGTH) :: latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
 										hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,     &
 										pvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,version
-		real :: dx,dxlow,outputinterval,dz
+		real :: dx,dxlow,outputinterval,inputinterval
 		integer :: name_unit,ntimesteps,nfiles
 		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz,n_ext_winds,buffer,restart_step
-		logical :: ideal, readz,decrease_dz,debug,external_winds,remove_lowres_linear,&
+		logical :: ideal, readz,debug,external_winds,remove_lowres_linear,&
 		           mean_winds,mean_fields,restart,add_low_topo
 		
 ! 		set up namelist structures
@@ -58,7 +58,7 @@ contains
 		namelist /var_list/ pvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
 							latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
 							hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi 
-		namelist /parameters/ ntimesteps,outputinterval,dx,dxlow,ideal,readz,decrease_dz,nz,debug,dz,nfiles, &
+		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,nz,debug,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,&
 							  remove_lowres_linear,mean_winds,mean_fields,restart
 		namelist /files_list/ init_conditions_file,output_file,boundary_files
@@ -70,9 +70,9 @@ contains
 ! 		read namelists
 		open(io_newunit(name_unit), file=options_filename)
 		read(name_unit,nml=model_version)
-		if (version.ne."0.6") then
+		if (version.ne."0.7") then
 			write(*,*) "Model version does not match namelist version"
-			write(*,*) "  Model version: 0.6"
+			write(*,*) "  Model version: 0.7"
 			write(*,*) "  Namelist version:",version
 			stop
 		endif
@@ -140,16 +140,15 @@ contains
 		options%vlon_hi=vlon_hi
 		
 		options%ntimesteps=ntimesteps
-		options%io_dt=outputinterval
+		options%in_dt=inputinterval
+		options%out_dt=outputinterval
 		options%dx=dx
 		options%dxlow=dxlow
-		options%dz=dz
 		options%ideal=ideal
 		if (ideal) then
 			write(*,*) "Running Idealized simulation (time step does not advance)"
 		endif
 		options%readz=readz
-		options%decrease_dz=decrease_dz
 		options%buffer=buffer
 		options%remove_lowres_linear=remove_lowres_linear
 		options%add_low_topo=add_low_topo
@@ -267,6 +266,8 @@ contains
 		domain%qgrau=0
 		allocate(domain%rain(nx,ny))
 		domain%rain=0
+		allocate(domain%crain(nx,ny))
+		domain%crain=0
 		allocate(domain%snow(nx,ny))
 		domain%snow=0
 		allocate(domain%graupel(nx,ny))
@@ -286,8 +287,6 @@ contains
 		type(options_type), intent(in) :: options
 		type(domain_type), intent(inout):: domain
 		real,dimension(45)::fulldz
-		real::totalthickness
-		real,dimension(:,:),allocatable::newthickness
 		real,dimension(:,:,:),allocatable::temporary_z
 		integer:: ny,nz,nx,i,buf
 		
@@ -334,35 +333,19 @@ contains
 ! 			and z[1]+i*dz for the res
 			allocate(domain%z(nx,nz,ny))
 			allocate(domain%dz(nx,nz,ny))
-! 			domain%dz=options%dz
 ! 			mean layer thicknesses from a 36km WRF run over the "CO-headwaters" domain
 			fulldz=[36.,   51.,   58.,   73.,   74.,  111.,  113.,  152.,  155.,  157.,  160.,  245., &
 				   251.,  258.,  265.,  365.,  379.,  395.,  413.,  432.,  453.,  476.,  503.,  533., &
 				   422.,  443.,  467.,  326.,  339.,  353.,  369.,  386.,  405.,  426.,  450.,  477., &
 				   455.,  429.,  396.,  357.,  311.,  325.,  340.,  356.,  356.]
 				 
-! 		    make layer thickness decrease over high terrain (and increase over low terrain)
-			if (options%decrease_dz) then
-				write(*,*) "Decreasing dz with height"
-				allocate(newthickness(nx,ny))
-				totalthickness=sum(fulldz(1:nz))
-				newthickness=totalthickness - (domain%terrain - sum(domain%terrain)/size(domain%terrain))
-				domain%dz(:,1,:)=fulldz(1)*newthickness/totalthickness
-				domain%z(:,1,:)=domain%terrain+domain%dz(:,1,:)/2
-				do i=2,nz
-					domain%dz(:,i,:)=fulldz(i)*newthickness/totalthickness
-					domain%z(:,i,:)=domain%z(:,i-1,:)+(domain%dz(:,i,:)+domain%dz(:,i-1,:))/2
-				enddo
-				deallocate(newthickness)
-			else
-				domain%dz(:,1,:)=fulldz(1)
-				domain%z(:,1,:)=domain%terrain+fulldz(1)/2
-				do i=2,nz
-					domain%z(:,i,:)=domain%z(:,i-1,:)+(fulldz(i)+fulldz(i-1))/2
-					domain%dz(:,i,:)=fulldz(i)
-				enddo
-			endif
-! 			here dz is just constant, but must be on a 3d grid for microphysics code
+			domain%dz(:,1,:)=fulldz(1)
+			domain%z(:,1,:)=domain%terrain+fulldz(1)/2
+			do i=2,nz
+				domain%z(:,i,:)=domain%z(:,i-1,:)+(fulldz(i)+fulldz(i-1))/2
+				domain%dz(:,i,:)=fulldz(i)
+			enddo
+
 		endif
 ! 		all other variables should be allocated and initialized to 0
 		call domain_allocation(domain,nx,nz,ny)
@@ -423,8 +406,7 @@ contains
 		
 		allocate(boundary%z(nx,nz,ny))
 		allocate(boundary%dz(nx,nz,ny))
-! 			domain%dz=options%dz
-! 			mean layer thicknesses from a 36km WRF run over the "CO-headwaters" domain
+!		mean layer thicknesses from a 36km WRF run over the "CO-headwaters" domain
 		fulldz=[36.,   51.,   58.,   73.,   74.,  111.,  113.,  152.,  155.,  157.,  160.,  245., &
 			   251.,  258.,  265.,  365.,  379.,  395.,  413.,  432.,  453.,  476.,  503.,  533., &
 			   422.,  443.,  467.,  326.,  339.,  353.,  369.,  386.,  405.,  426.,  450.,  477., &

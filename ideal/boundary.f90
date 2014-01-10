@@ -188,7 +188,7 @@ contains
 		ext_winds_nfiles=options%ext_winds_nfiles
 		allocate(ext_winds_file_list(ext_winds_nfiles))
 		ext_winds_file_list=options%ext_wind_files
-		call io_getdims(ext_winds_file_list(ext_winds_curfile),"U", dims)
+		call io_getdims(ext_winds_file_list(ext_winds_curfile),options%uvar, dims)
 		if (dims(1)==3) then
 			ext_winds_steps_in_file=1
 		else
@@ -204,7 +204,7 @@ contains
 				endif
 				ext_winds_curstep=ext_winds_curstep-ext_winds_steps_in_file 
 				!instead of setting=1, this way we can set an arbitrary starting point multiple files in
-				call io_getdims(ext_winds_file_list(ext_winds_curfile),"U", dims)
+				call io_getdims(ext_winds_file_list(ext_winds_curfile),options%uvar, dims)
 				if (dims(1)==3) then
 					ext_winds_steps_in_file=1
 				else
@@ -234,7 +234,7 @@ contains
 		integer :: nx,ny,nz,nz_output
 		character(len=255) :: outputfilename
 		
-		call io_getdims(filename,"U", dims)
+		call io_getdims(filename,options%uvar, dims)
 		nx=dims(2)
 		ny=dims(3)
 		nz=dims(4)
@@ -257,20 +257,8 @@ contains
 		call smooth_wind(inputdata,2,2)
 		bc%v=reshape(inputdata,[nx,nz_output,ny],order=[1,3,2])
 		deallocate(extra_data,inputdata)
-! 		if (options%debug) then
-! 			write(outputfilename,"(A,I5.5)") "U_pre",curstep
-! 			call io_write3d(outputfilename,"data",bc%u)
-! 			write(outputfilename,"(A,I5.5)") "V_pre",curstep
-! 			call io_write3d(outputfilename,"data",bc%v)
-! 		endif
 ! 		remove the low-res linear wind contribution effect
 		call linear_perturb(bc,reverse_winds)
-! 		if (options%debug) then
-! 			write(outputfilename,"(A,I5.5)") "U_post",curstep
-! 			call io_write3d(outputfilename,"data",bc%u)
-! 			write(outputfilename,"(A,I5.5)") "V_post",curstep
-! 			call io_write3d(outputfilename,"data",bc%v)
-! 		endif
 		
 ! 		finally interpolate low res winds to the high resolutions grid
 		call geo_interp(domain%u, bc%u,bc%u_geo%geolut,.FALSE.)
@@ -371,7 +359,7 @@ contains
 		nfiles=options%nfiles
 		allocate(file_list(nfiles))
 		file_list=options%boundary_files
-		call io_getdims(file_list(curfile),"P", dims)
+		call io_getdims(file_list(curfile),options%pvar, dims)
 		if (dims(1)==3) then
 			steps_in_file=1
 		else
@@ -385,7 +373,7 @@ contains
 					stop "Ran out of files to process!"
 				endif
 				curstep=curstep-steps_in_file !instead of setting=1, this way we can set an arbitrary starting point multiple files in
-				call io_getdims(file_list(curfile),"P", dims)
+				call io_getdims(file_list(curfile),options%pvar, dims)
 				if (dims(1)==3) then
 					steps_in_file=1
 				else
@@ -428,9 +416,15 @@ contains
 			call read_var(domain%cloud,file_list(curfile),options%qcvar,     bc%geolut,curstep,boundary_value)
 			call read_var(domain%ice,  file_list(curfile),options%qivar,     bc%geolut,curstep,boundary_value)
 
-			call read_2dvar(domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep)
-			call read_2dvar(domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep)
-			call read_2dvar(domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep)
+			if (options%physics%landsurface==1) then
+				call read_2dvar(domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep)
+				call read_2dvar(domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep)
+				call read_2dvar(domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep)
+			else
+				domain%sensible_heat=0
+				domain%latent_heat=0
+				domain%pbl_height=0
+			endif
 		
 			call update_pressure(domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
 								 bc%next_domain%terrain,domain%terrain)
@@ -521,7 +515,7 @@ contains
 			if (ext_winds_curstep>ext_winds_steps_in_file) then
 				ext_winds_curfile=ext_winds_curfile+1
 				ext_winds_curstep=1
-				call io_getdims(ext_winds_file_list(ext_winds_curfile),"U", dims)
+				call io_getdims(ext_winds_file_list(ext_winds_curfile),options%uvar, dims)
 				if (dims(1)==3) then
 					ext_winds_steps_in_file=1
 				else
@@ -562,7 +556,7 @@ contains
 					stop "Ran out of files to process!"
 				endif
 				curstep=curstep-steps_in_file !instead of setting=1, this way we can set an arbitrary starting point multiple files in
-				call io_getdims(file_list(curfile),"P", dims)
+				call io_getdims(file_list(curfile),options%pvar, dims)
 				if (dims(1)==3) then
 					steps_in_file=1
 				else
@@ -594,9 +588,15 @@ contains
 		call read_var(bc%next_domain%cloud,file_list(curfile),options%qcvar,    bc%geolut,curstep,use_boundary)
 		call read_var(bc%next_domain%ice,  file_list(curfile),options%qivar,    bc%geolut,curstep,use_boundary)
 
-		call read_2dvar(bc%next_domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep)
-		call read_2dvar(bc%next_domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep)
-		call read_2dvar(bc%next_domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep)
+		if (options%physics%landsurface==1) then
+			call read_2dvar(bc%next_domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep)
+			call read_2dvar(bc%next_domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep)
+			call read_2dvar(bc%next_domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep)
+		else
+			bc%next_domain%sensible_heat=0
+			bc%next_domain%latent_heat=0
+			bc%next_domain%pbl_height=0
+		endif
 	
 		call update_pressure(bc%next_domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
 							 bc%next_domain%terrain,domain%terrain)

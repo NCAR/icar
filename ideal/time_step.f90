@@ -67,13 +67,14 @@ contains
 	
 	
 !	Step forward one IO time step. 
-	subroutine step(domain,options,bc)
+	subroutine step(domain,options,bc,model_time,next_output)
 		implicit none
 		type(domain_type),intent(inout)::domain
 		type(bc_type),intent(inout)::bc
 		type(options_type),intent(in)::options
+		real*8,intent(inout)::model_time,next_output
 		integer::i,ntimesteps,tenp
-		real::dt,dtnext
+		real::dt,dtnext,end_time
 		
 ! 		compute internal timestep dt to maintain stability
 ! 		courant condition for 3D advection... could make 3 x 1D to maximize dt? esp. w/linear wind speedups...
@@ -98,9 +99,10 @@ contains
 		endif
 		
 ! 		make dt an integer fraction of the full timestep
-		dt=options%io_dt/ceiling(options%io_dt/dt)
+		dt=options%out_dt/ceiling(options%out_dt/dt)
 ! 		calculate the number of timesteps
-		ntimesteps=options%io_dt/dt
+		ntimesteps=ceiling(options%in_dt/dt)
+		end_time=model_time+options%in_dt
 		
 ! 		adjust the boundary condition dXdt values for the number of time steps
 		call apply_dt(bc,ntimesteps)
@@ -115,6 +117,17 @@ contains
 	! 		call radiation(domain,options,dt)
 ! 			apply/update boundary conditions including internal wind and pressure changes. 
 			call forcing_update(domain,bc)
+			
+			model_time=model_time+dt
+			if ((abs(model_time-next_output)<1e-2).or.(model_time>next_output)) then
+				call write_domain(domain,options,nint(model_time/options%out_dt))
+				next_output=next_output+options%out_dt
+			endif
+! 			in case out_dt and in_dt arent even multiples of each other.  Make sure we don't over step
+			if ((model_time+dt)>end_time) then
+				dt=end_time-model_time
+				write(*,*) "shortening time step:",dt
+			endif
 		enddo
 	end subroutine step
 end module time_step

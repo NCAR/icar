@@ -90,6 +90,8 @@ contains
 		varid(15)=temp_id
 		call check( nf90_def_var(ncid, "graupel", NF90_REAL, dimids(1:3:2), temp_id) )
 		varid(16)=temp_id
+		call check( nf90_def_var(ncid, "crain", NF90_REAL, dimids(1:3:2), temp_id) )
+		varid(17)=temp_id
 		
 		! End define mode. This tells netCDF we are done defining metadata.
 		call check( nf90_enddef(ncid) )
@@ -111,6 +113,7 @@ contains
 		call check( nf90_put_var(ncid, varid(14), domain%rain) )
 		call check( nf90_put_var(ncid, varid(15), domain%snow) )
 		call check( nf90_put_var(ncid, varid(16), domain%graupel) )
+		call check( nf90_put_var(ncid, varid(17), domain%crain) )
 		! Close the file, freeing all resources.
 		call check( nf90_close(ncid) )
 	end subroutine write_domain
