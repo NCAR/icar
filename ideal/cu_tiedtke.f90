@@ -25,12 +25,12 @@ MODULE module_cu_tiedtke
 !  Ends the parameters set
 !++++++++++++++++++++++++++++
      REAL,PRIVATE :: G,CPV
-     REAL :: API,A,EOMEGA,RD,RV,CPD,RCPD,VTMPC1,VTMPC2,   &
-             RHOH2O,ALV,ALS,ALF,CLW,TMELT,SOLC,STBO,DAYL,YEARL, &
+     REAL :: API,A,RD,RV,CPD,RCPD,VTMPC1,VTMPC2,   &
+             RHOH2O,ALV,ALS,ALF,TMELT, &
              C1ES,C2ES,C3LES,C3IES,C4LES,C4IES,C5LES,C5IES,ZRG 
     
      REAL :: ENTRPEN,ENTRSCV,ENTRMID,ENTRDD,CMFCTOP,RHM,RHC,    &
-             CMFCMAX,CMFCMIN,CMFDEPS,RHCDD,CPRCON,CRIRH,ZBUO0,  &
+             CMFCMAX,CMFCMIN,CMFDEPS,CPRCON,CRIRH,ZBUO0,  &
              fdbk,ZTAU
  
      INTEGER :: orgen,nturben,cutrigger
@@ -348,8 +348,9 @@ CONTAINS
       DELT=DT*STEPCU
       RDELT=1./DELT
 
+
 !-------------  J LOOP (OUTER) --------------------------------------------------
-!$omp parallel private(J,K,I,KM,ZI,ZL,DOT,SLIMSK,kp,zz,U1,V1,T1,Q1,Q2,Q3,&
+!$omp parallel private(J,K,I,KM,ZI,ZL,DOT,SLIMSK,kp,zz,U1,V1,T1,Q1,Q2,Q3,KTYPE,RN,&
 !$omp Q1B,Q1BL,OMG,GHT,PRSL,PRSI,sig1,EVAP,heatflux,rho2d,F_QV,F_QC,F_QR,F_QI,F_QS) &
 !$omp firstprivate(its,ite,jts,jte,kts,kte,DELT,RDELT,KX,IM,CU_ACT_FLAG) &
 !$omp default(shared)

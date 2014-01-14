@@ -44,11 +44,11 @@ contains
 		
 		character(len=MAXFILELENGTH) :: init_conditions_file, output_file,restart_file
 		character(len=MAXFILELENGTH),allocatable:: boundary_files(:),ext_wind_files(:)
-		character(len=MAXVARLENGTH) :: latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
+		character(len=MAXVARLENGTH) :: latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,&
 										hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,     &
 										pvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,version
 		real :: dx,dxlow,outputinterval,inputinterval
-		integer :: name_unit,ntimesteps,nfiles
+		integer :: name_unit,ntimesteps,nfiles,xmin,xmax,ymin,ymax
 		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz,n_ext_winds,buffer,restart_step
 		logical :: ideal, readz,debug,external_winds,remove_lowres_linear,&
 		           mean_winds,mean_fields,restart,add_low_topo
@@ -56,11 +56,11 @@ contains
 ! 		set up namelist structures
 		namelist /model_version/ version
 		namelist /var_list/ pvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
-							latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
+							latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar, &
 							hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi 
 		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,nz,debug,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,&
-							  remove_lowres_linear,mean_winds,mean_fields,restart
+							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax
 		namelist /files_list/ init_conditions_file,output_file,boundary_files
 		namelist /restart_info/ restart_step,restart_file
 		namelist /ext_winds_info/ n_ext_winds,ext_wind_files
@@ -70,9 +70,9 @@ contains
 ! 		read namelists
 		open(io_newunit(name_unit), file=options_filename)
 		read(name_unit,nml=model_version)
-		if (version.ne."0.7") then
+		if (version.ne."0.7.1") then
 			write(*,*) "Model version does not match namelist version"
-			write(*,*) "  Model version: 0.7"
+			write(*,*) "  Model version: 0.7.1"
 			write(*,*) "  Namelist version:",version
 			stop
 		endif
@@ -131,6 +131,7 @@ contains
 		options%qcvar=qcvar
 		options%qivar=qivar
 		options%hgtvar=hgtvar
+		options%zvar=zvar
 		options%hgt_hi=hgt_hi
 		options%lat_hi=lat_hi
 		options%lon_hi=lon_hi
@@ -155,6 +156,10 @@ contains
 		options%mean_winds=mean_winds
 		options%mean_fields=mean_fields
 		options%nz=nz
+		options%xmin=xmin
+		options%xmax=xmax
+		options%ymin=ymin
+		options%ymax=ymax
 		options%debug=debug
 		options%physics%boundarylayer=pbl
 		options%physics%convection=conv
@@ -313,7 +318,8 @@ contains
 			if (.not.options%ideal) then
 				write(*,*) "Reading Z only recommended for ideal runs at the moment"
 			endif
-			call io_read3d(options%init_conditions_file,"Z", domain%z)
+			
+			call io_read3d(options%init_conditions_file,options%zvar, domain%z)
 ! 			dz also has to be calculated from the 3d z file
 			buf=options%buffer
 			allocate(domain%dz(nx,nz,ny))
@@ -334,11 +340,15 @@ contains
 			allocate(domain%z(nx,nz,ny))
 			allocate(domain%dz(nx,nz,ny))
 ! 			mean layer thicknesses from a 36km WRF run over the "CO-headwaters" domain
-			fulldz=[36.,   51.,   58.,   73.,   74.,  111.,  113.,  152.,  155.,  157.,  160.,  245., &
-				   251.,  258.,  265.,  365.,  379.,  395.,  413.,  432.,  453.,  476.,  503.,  533., &
-				   422.,  443.,  467.,  326.,  339.,  353.,  369.,  386.,  405.,  426.,  450.,  477., &
-				   455.,  429.,  396.,  357.,  311.,  325.,  340.,  356.,  356.]
-				 
+! 			fulldz=[36.,   51.,   58.,   73.,   74.,  111.,  113.,  152.,  155.,  157.,  160.,  245., &
+! 				   251.,  258.,  265.,  365.,  379.,  395.,  413.,  432.,  453.,  476.,  503.,  533., &
+! 				   422.,  443.,  467.,  326.,  339.,  353.,  369.,  386.,  405.,  426.,  450.,  477., &
+! 				   455.,  429.,  396.,  357.,  311.,  325.,  340.,  356.,  356.]
+! 			mean layer thicknesses from ERAi domain
+		   fulldz=[   24.8,  36.5,  51.8,  70.1,  90.8, 113.5, 137.9, 163.7, 190.5, 218.1, 246.4, &
+		   			 275.1, 304.3, 333.6, 363.0, 392.4, 421.7, 450.8, 479.6, 508.0, 535.9, 563.2, &
+					 589.8, 615.7, 640.9, 665.5, 689.8, 714.1, 739.4, 767.2, 796.8, 826.6, 856.2, &
+					 885.1, 912.5, 937.9, 961.4, 979.4, 990.1, 976.6, 937.6, 900.1, 864.2, 829.6, 796.5]
 			domain%dz(:,1,:)=fulldz(1)
 			domain%z(:,1,:)=domain%terrain+fulldz(1)/2
 			do i=2,nz

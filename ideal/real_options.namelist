@@ -1,37 +1,68 @@
 &model_version
-version="0.5.1"
+version="0.7.1"
 /
+
 &var_list
+pvar="P",
+tvar="T",
+qvvar="QVAPOR",
+qcvar="QCLOUD",
+qivar="QICE",
 latvar="XLAT",
-lonvar="XLONG"
+lonvar="XLONG",
+uvar="U",
+ulat="XLAT_U",
+ulon="XLONG_U",
+vvar="V",
+vlat="XLAT_V",
+vlon="XLONG_V",
+hgtvar="HGT",
+zvar="Z"
+
+shvar="HFX",
+lhvar="LH",
+pblhvar="PBLH",
+
+lat_hi="XLAT_M",
+lon_hi="XLONG_M",
+ulat_hi="XLAT_U",
+ulon_hi="XLONG_U",
+vlat_hi="XLAT_V",
+vlon_hi="XLONG_V",
+hgt_hi="HGT_M"
 /
 
 &parameters
-nfiles=10,
-ntimesteps=29290,
+nfiles=2,
+ntimesteps=2920,
+inputinterval=10800,
 outputinterval=3600,
-dx=4000.0,
-readz=.FALSE.,
-decrease_dz=.TRUE.,
-dz=100.0,
-nz=25,
+dx=12000.0,
+dxlow=20000.0,
+readz=false,
+nz=30,
 
 ideal=false,
-external_winds=.FALSE.,
+external_winds=false,
+n_ext_winds=1,
 remove_lowres_linear=.FALSE.,
-add_low_topo=.True.,
+add_low_topo=.false.,
 mean_winds=.FALSE.,
 mean_fields=.FALSE.,
-restart=.FALSE.,
+restart=.false.,
 
-buffer=10,
+buffer=100,
+xmin=1,
+xmax=100,
+ymin=1,
+ymax=100,
 
 debug=.TRUE.
 /
 
 &restart_info
-restart_step=3687,
-restart_file="output/swim_out03686"
+restart_step=0,
+restart_file="oldoutput/swim_out00001"
 /
 
 &physics
@@ -45,13 +76,8 @@ wind=0
 /
 
 &files_list
-init_conditions_file="baseline/4km_wrf_output.nc",
+init_conditions_file="baseline/geo_12km_conus.nc",
 output_file="output/swim_out",
 
-boundary_files="forcing/wrfout_d01_2005-09-01_00:00:00","forcing/wrfout_d01_2006-01-01_00:00:00","forcing/wrfout_d01_2006-05-01_00:00:00","forcing/wrfout_d01_2006-09-01_00:00:00","forcing/wrfout_d01_2007-01-01_00:00:00","forcing/wrfout_d01_2007-05-01_00:00:00","forcing/wrfout_d01_2007-09-01_00:00:00","forcing/wrfout_d01_2008-01-01_00:00:00","forcing/wrfout_d01_2008-05-01_00:00:00","forcing/wrfout_d01_2008-09-01_00:00:00"
-/
-
-&ext_winds_info
-n_ext_winds=12,
-ext_wind_files="winds/Month01.nc","winds/Month02.nc","winds/Month03.nc","winds/Month04.nc","winds/Month05.nc","winds/Month06.nc","winds/Month07.nc","winds/Month08.nc","winds/Month09.nc","winds/Month10.nc","winds/Month11.nc","winds/Month12.nc"
+boundary_files= "forcing/wrfout_d01_2001-04-01_03:00:00_nsn", "forcing/wrfout_d01_2001-06-30_03:00:00_nsn"
 /

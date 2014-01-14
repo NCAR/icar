@@ -128,12 +128,12 @@ module data_structures
 		character (len=MAXVARLENGTH) :: latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
 										hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi, &
 										pvar,tvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar,hgtvar, &
-										shvar,lhvar,pblhvar
+										shvar,lhvar,pblhvar,zvar
 ! 		various boolean options
 		logical :: ideal,readz, debug, external_winds,remove_lowres_linear,&
 				   mean_winds,mean_fields,restart,add_low_topo
 ! 		buffer to remove from all sides of the high res grid supplied
-		integer :: buffer=0
+		integer :: buffer=0,ymin,ymax,xmin,xmax
 ! 		various integer parameters/options
 		integer :: ntimesteps,nz,nfiles,ext_winds_nfiles,restart_step
 ! 		various real parameters/options
