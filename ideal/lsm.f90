@@ -82,8 +82,8 @@ module lsm
 				f1(pblh(j,i):kde-1)=(qv(j,pblh(j,i):kde-1,i)-means(pblh(j,i):kde-1))*diffusionrate/5
 				f2(pblh(j,i):kde-1)=(qv(j,pblh(j,i)+1:kde,i)-means(pblh(j,i):kde-1))*diffusionrate/5
 ! 				add fluxes to grid cells
-				qv(j,kds:kde-1,i)=qv(j,kds:kde-1,i)-f1*rhomean(kds:kde-1)/rho(j,kds:kde-1)
-				qv(j,kds+1:kde,i)=qv(j,kds+1:kde,i)-f2*rhomean(kds+1:kde)/rho(j,kds+1:kde)
+				qv(j,kds:kde-1,i)=qv(j,kds:kde-1,i)-f1(kds:kde-1)*rhomean(kds:kde-1)/rho(j,kds:kde-1)
+				qv(j,kds+1:kde,i)=qv(j,kds+1:kde,i)-f2(kds:kde-1)*rhomean(kds+1:kde)/rho(j,kds+1:kde)
 
 ! 				same process for potential temperature
 				means(kds:kde-1)=(th(j,kds:kde-1,i)+th(j,kds+1:kde,i))/2
@@ -91,8 +91,8 @@ module lsm
 				f2(1:pblh(j,i)-1)=(th(j,2:pblh(j,i),i)-means(1:pblh(j,i)-1))*diffusionrate
 				f1(pblh(j,i):kde-1)=(th(j,pblh(j,i):kde-1,i)-means(pblh(j,i):kde-1))*diffusionrate/5
 				f2(pblh(j,i):kde-1)=(th(j,pblh(j,i)+1:kde,i)-means(pblh(j,i):kde-1))*diffusionrate/5
-				th(j,kds:kde-1,i)=th(j,kds:kde-1,i)-f1*rhomean(kds:kde-1)/rho(j,kds:kde-1)
-				th(j,kds+1:kde,i)=th(j,kds+1:kde,i)-f2*rhomean(kds+1:kde)/rho(j,kds+1:kde)
+				th(j,kds:kde-1,i)=th(j,kds:kde-1,i)-f1(kds:kde-1)*rhomean(kds:kde-1)/rho(j,kds:kde-1)
+				th(j,kds+1:kde,i)=th(j,kds+1:kde,i)-f2(kds:kde-1)*rhomean(kds+1:kde)/rho(j,kds+1:kde)
 			enddo
 			
 ! 			stupid radiative cooling th=th-coolingrate*(T^4)
