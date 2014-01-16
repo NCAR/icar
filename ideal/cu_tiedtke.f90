@@ -2483,8 +2483,13 @@ CONTAINS
          IF(LMFDUDV) THEN
             DO 224 JL=1,KLON
             IF(PMFD(JL,JK).LT.0.) THEN
-               PUD(JL,JK)=0.5*(PUU(JL,JK)+PUEN(JL,JK-1))
-               PVD(JL,JK)=0.5*(PVU(JL,JK)+PVEN(JL,JK-1))
+				if (jk.eq.1) then !edg
+	                PUD(JL,JK)=0.5*(PUU(JL,JK)+PUEN(JL,JK))
+	                PVD(JL,JK)=0.5*(PVU(JL,JK)+PVEN(JL,JK))
+				else
+	               PUD(JL,JK)=0.5*(PUU(JL,JK)+PUEN(JL,JK-1))
+	               PVD(JL,JK)=0.5*(PVU(JL,JK)+PVEN(JL,JK-1))
+			   end if
             END IF
   224       CONTINUE
          END IF
@@ -2719,7 +2724,9 @@ CONTAINS
             PMFD(JL,JK)=0.
             PMFDS(JL,JK)=0.
             PMFDQ(JL,JK)=0.
-            PDMFDP(JL,JK-1)=0.
+			if (jk.gt.1) then !edg with low model level top, things can get screwy and jk can endup = 1
+	            PDMFDP(JL,JK-1)=0.
+			end if
          END IF
       ELSE
          PMFU(JL,JK)=0.
@@ -2729,9 +2736,11 @@ CONTAINS
          PMFUQ(JL,JK)=0.
          PMFDQ(JL,JK)=0.
          PMFUL(JL,JK)=0.
-         PDMFUP(JL,JK-1)=0.
-         PDMFDP(JL,JK-1)=0.
-         PLUDE(JL,JK-1)=0.
+		 if (jk.gt.1) then !edg with low model level top, things can get screwy and jk can endup = 1
+	         PDMFUP(JL,JK-1)=0.
+	         PDMFDP(JL,JK-1)=0.
+	         PLUDE(JL,JK-1)=0.
+		end if
       END IF
   115 CONTINUE
   120 CONTINUE
@@ -2971,6 +2980,7 @@ CONTAINS
   100 CONTINUE
       DO 120 JK=KTOPM2,KLEV
       IK=JK-1
+      IF(JK.EQ.1) IK=1 !edg
       DO 110 JL=1,KLON
       IF(LDCUM(JL)) THEN
         ZMFUU(JL,JK)=PMFU(JL,JK)*(PUU(JL,JK)-PUEN(JL,IK))
@@ -3096,6 +3106,7 @@ CONTAINS
 !*    1.      CALCULATE ENTRAINMENT AND DETRAINMENT RATES
 ! -------------------------------------------------------
   100 CONTINUE
+         if (kk.eq.0) write(*,*) "KK=0!" !edg
          DO 150 JL=1,KLON
           IF( .NOT. LDCUM(JL).AND.KLAB(JL,KK+1).EQ.0.0.AND.  &
              PQEN(JL,KK).GT.0.80*PQSEN(JL,KK)) THEN
