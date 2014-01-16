@@ -86,7 +86,7 @@ module data_structures
 	type, extends(linearizable_type) :: domain_type
 		real, allocatable, dimension(:,:,:) :: p,th,w
 		real, allocatable, dimension(:,:,:) :: qv,cloud,ice,nice,qrain,nrain,qsnow,qgrau
-		real, allocatable, dimension(:,:) :: rain,crain,snow,graupel,sensible_heat,latent_heat,pbl_height
+		real, allocatable, dimension(:,:) :: rain,crain,snow,graupel,sensible_heat,latent_heat,pbl_height,landmask
 		real::dt
 	end type domain_type
 
@@ -125,7 +125,7 @@ module data_structures
 		character (len=MAXFILELENGTH), allocatable::boundary_files(:),ext_wind_files(:)
 		character (len=MAXFILELENGTH) :: output_file,restart_file
 ! 		variable names from init/BC/wind/... files
-		character (len=MAXVARLENGTH) :: latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
+		character (len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
 										hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi, &
 										pvar,tvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar,hgtvar, &
 										shvar,lhvar,pblhvar,zvar

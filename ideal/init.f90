@@ -44,10 +44,11 @@ contains
 		
 		character(len=MAXFILELENGTH) :: init_conditions_file, output_file,restart_file
 		character(len=MAXFILELENGTH),allocatable:: boundary_files(:),ext_wind_files(:)
-		character(len=MAXVARLENGTH) :: latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,&
+		character(len=MAXVARLENGTH) :: landvar="",latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,&
 										hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,     &
 										pvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,version
 		real :: dx,dxlow,outputinterval,inputinterval
+		real, allocatable, dimension(:) :: z_levels
 		integer :: name_unit,ntimesteps,nfiles,xmin,xmax,ymin,ymax
 		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz,n_ext_winds,buffer,restart_step
 		logical :: ideal, readz,debug,external_winds,remove_lowres_linear,&
@@ -56,11 +57,12 @@ contains
 ! 		set up namelist structures
 		namelist /model_version/ version
 		namelist /var_list/ pvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
-							latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar, &
+							landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar, &
 							hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi 
 		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,nz,debug,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,&
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax
+		namelist /z_info/ z_levels
 		namelist /files_list/ init_conditions_file,output_file,boundary_files
 		namelist /restart_info/ restart_step,restart_file
 		namelist /ext_winds_info/ n_ext_winds,ext_wind_files
@@ -79,6 +81,14 @@ contains
 		write(*,*) "Model version: ",version
 		read(name_unit,nml=var_list)
 		read(name_unit,nml=parameters)
+		
+		if (readdz) then
+			allocate(z_levels(nz))
+			read(name_unit,nml=z_info)
+			options%dz_levels=dz_levels
+		else
+			
+		endif
 		
 		if (restart) then
 			read(name_unit,nml=restart_info)
@@ -112,10 +122,12 @@ contains
 		options%boundary_files=boundary_files
 		deallocate(boundary_files)
 		options%output_file=output_file
+
 		options%latvar=latvar
 		options%lonvar=lonvar
 		options%latvar=latvar
 		options%lonvar=lonvar
+		options%hgtvar=hgtvar
 		options%uvar=uvar
 		options%shvar=shvar
 		options%lhvar=lhvar
@@ -130,7 +142,8 @@ contains
 		options%qvvar=qvvar
 		options%qcvar=qcvar
 		options%qivar=qivar
-		options%hgtvar=hgtvar
+		
+		options%landvar=landvar
 		options%zvar=zvar
 		options%hgt_hi=hgt_hi
 		options%lat_hi=lat_hi
@@ -199,6 +212,12 @@ contains
 		deallocate(domain%terrain)
 		allocate(domain%terrain(nx2,ny2))
 		domain%terrain=temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
+
+		temp_data=domain%landmask
+		deallocate(domain%landmask)
+		allocate(domain%landmask(nx2,ny2))
+		domain%landmask=temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
+
 		
 		deallocate(temp_data)
 		
@@ -303,6 +322,14 @@ contains
 		call io_read2d(options%init_conditions_file,options%ulon_hi,domain%u_geo%lon,1)
 		call io_read2d(options%init_conditions_file,options%vlat_hi,domain%v_geo%lat,1)
 		call io_read2d(options%init_conditions_file,options%vlon_hi,domain%v_geo%lon,1)
+		if (options%landvar/="") then
+			call io_read2d(options%init_conditions_file,options%landvar,domain%landmask,1)
+		else
+			nx=size(domain%lat,1)
+			ny=size(domain%lat,2)
+			allocate(domain%landmask(nx,ny))
+			domain%landmask=1 !if we weren't supplied a landmask field, assume all is land (what we care about anyway)
+		endif
 		
 		if(options%buffer>0) then
 			call remove_edges(domain,options%buffer)
@@ -345,15 +372,15 @@ contains
 ! 				   422.,  443.,  467.,  326.,  339.,  353.,  369.,  386.,  405.,  426.,  450.,  477., &
 ! 				   455.,  429.,  396.,  357.,  311.,  325.,  340.,  356.,  356.]
 ! 			mean layer thicknesses from ERAi domain
-		   fulldz=[   24.8,  36.5,  51.8,  70.1,  90.8, 113.5, 137.9, 163.7, 190.5, 218.1, 246.4, &
-		   			 275.1, 304.3, 333.6, 363.0, 392.4, 421.7, 450.8, 479.6, 508.0, 535.9, 563.2, &
-					 589.8, 615.7, 640.9, 665.5, 689.8, 714.1, 739.4, 767.2, 796.8, 826.6, 856.2, &
-					 885.1, 912.5, 937.9, 961.4, 979.4, 990.1, 976.6, 937.6, 900.1, 864.2, 829.6, 796.5]
-			domain%dz(:,1,:)=fulldz(1)
-			domain%z(:,1,:)=domain%terrain+fulldz(1)/2
+! 		   fulldz=[   24.8,  36.5,  51.8,  70.1,  90.8, 113.5, 137.9, 163.7, 190.5, 218.1, 246.4, &
+! 		   			 275.1, 304.3, 333.6, 363.0, 392.4, 421.7, 450.8, 479.6, 508.0, 535.9, 563.2, &
+! 					 589.8, 615.7, 640.9, 665.5, 689.8, 714.1, 739.4, 767.2, 796.8, 826.6, 856.2, &
+! 					 885.1, 912.5, 937.9, 961.4, 979.4, 990.1, 976.6, 937.6, 900.1, 864.2, 829.6, 796.5]
+			domain%dz(:,1,:)=options%dz_levels(1)
+			domain%z(:,1,:)=domain%terrain+options%dz_levels(1)/2
 			do i=2,nz
-				domain%z(:,i,:)=domain%z(:,i-1,:)+(fulldz(i)+fulldz(i-1))/2
-				domain%dz(:,i,:)=fulldz(i)
+				domain%z(:,i,:)=domain%z(:,i-1,:)+(options%dz_levels(i)+options%dz_levels(i-1))/2
+				domain%dz(:,i,:)=options%dz_levels(i)
 			enddo
 
 		endif

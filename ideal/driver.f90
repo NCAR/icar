@@ -35,7 +35,7 @@ program real
 ! 	note that a timestep here is an IO timestep O(1hr), not a physics timestep O(20s)
 	do i=start_point,options%ntimesteps
 		write(*,*) "Timestep:", i, "  of ", options%ntimesteps
-		write(*,*) "  Model time=",model_time/3600.0,"hrs"
+		write(*,*) "  Model time=",dnint(100*model_time/3600.0)/100.0,"hrs"
 ! 		update boundary conditions (dXdt variables)
 		call bc_update(domain,boundary,options)
 ! 		this is the meat of the model physics, run all the physics for the current time step looping over internal timesteps

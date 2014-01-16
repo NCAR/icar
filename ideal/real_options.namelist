@@ -17,11 +17,12 @@ vvar="V",
 vlat="XLAT_V",
 vlon="XLONG_V",
 hgtvar="HGT",
-zvar="Z"
+zvar="Z",
 
 shvar="HFX",
 lhvar="LH",
 pblhvar="PBLH",
+landvar="LANDMASK",
 
 lat_hi="XLAT_M",
 lon_hi="XLONG_M",

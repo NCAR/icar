@@ -88,8 +88,10 @@ subroutine convect(domain,options,dt_in)
 		allocate(XLAND(ids:ide,jds:jde))
 		allocate(RAINCV(ids:ide,jds:jde))
 		allocate(PRATEC(ids:ide,jds:jde))
-		write(*,*) ide,kde,jde
-		XLAND=2
+		
+		where(domain%landmask==1) XLAND=1 ! land
+		where(domain%landmask==0) XLAND=2 ! ocean (using LANDMASK as input)
+		where(domain%landmask==2) XLAND=2 ! ocean (using XLAND as input)
 		RAINCV=0
 		PRATEC=0
 	endif
@@ -124,7 +126,7 @@ subroutine convect(domain,options,dt_in)
                 ,domain%dz,p8,domain%p,XLAND,CU_ACT_FLAG                &
                 ,ids,ide, jds,jde, kds,kde-1                      &
                 ,ids,ide, jds,jde, kds,kde                      &
-                ,ids,ide, jds,jde, kds,kde-1					&
+                ,ids+1,ide-1, jds+1,jde-1, kds,kde-1					&
                 ,RTHCUTEN,RQVCUTEN,RQCCUTEN,RQICUTEN            &
                 ,RUCUTEN, RVCUTEN                               &
                 ,.True.    ,.True.    ,.True.    ,.True.    ,.True.       &
