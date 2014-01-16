@@ -42,7 +42,7 @@ module lsm
         mxdqv=0.
         factor=1.0 ! factor to scale land surface fluxes for tuning purposes
 		! diffusionrate*dq/dz must be < 1 (or even 0.5?) for model stability only if dt~>100
-		diffusionrate=dt/(1.0*60.0*60.0)*20 ! *20 = rate "constant" this should be based on stability and wind speed?
+		diffusionrate=dt/(1.0*60.0*60.0)*10 ! *10 = rate "constant" this should be based on stability and wind speed?
 		sbconstant=5.67e-8
 		coolingrate=1.5*(dt/(60.0*60.0*24.0)) *sbconstant / 300.0 !1.5K/day radiative cooling rate (300 = W/m^2 at 270K)
 
