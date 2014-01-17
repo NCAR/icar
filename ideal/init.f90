@@ -48,21 +48,22 @@ contains
 										hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,     &
 										pvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,version
 		real :: dx,dxlow,outputinterval,inputinterval
-		real, allocatable, dimension(:) :: z_levels
+		real, allocatable, dimension(:) :: dz_levels
 		integer :: name_unit,ntimesteps,nfiles,xmin,xmax,ymin,ymax
 		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz,n_ext_winds,buffer,restart_step
-		logical :: ideal, readz,debug,external_winds,remove_lowres_linear,&
+		logical :: ideal, readz,readdz,debug,external_winds,remove_lowres_linear,&
 		           mean_winds,mean_fields,restart,add_low_topo
+   		real,dimension(45)::fulldz
 		
 ! 		set up namelist structures
 		namelist /model_version/ version
 		namelist /var_list/ pvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
 							landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar, &
 							hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi 
-		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,nz,debug,nfiles, &
+		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,debug,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,&
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax
-		namelist /z_info/ z_levels
+		namelist /z_info/ dz_levels
 		namelist /files_list/ init_conditions_file,output_file,boundary_files
 		namelist /restart_info/ restart_step,restart_file
 		namelist /ext_winds_info/ n_ext_winds,ext_wind_files
@@ -72,22 +73,34 @@ contains
 ! 		read namelists
 		open(io_newunit(name_unit), file=options_filename)
 		read(name_unit,nml=model_version)
-		if (version.ne."0.7.1") then
+		if (version.ne."0.7.2") then
 			write(*,*) "Model version does not match namelist version"
-			write(*,*) "  Model version: 0.7.1"
+			write(*,*) "  Model version: 0.7.2"
 			write(*,*) "  Namelist version:",version
 			stop
 		endif
-		write(*,*) "Model version: ",version
+		write(*,*) "Model version: ",version, "uses landmask, working on better vertical interpolation"
 		read(name_unit,nml=var_list)
 		read(name_unit,nml=parameters)
 		
 		if (readdz) then
-			allocate(z_levels(nz))
+			allocate(dz_levels(nz),options%dz_levels(nz))
 			read(name_unit,nml=z_info)
 			options%dz_levels=dz_levels
+			deallocate(dz_levels)
 		else
-			
+! 			mean layer thicknesses from a 36km WRF run over the "CO-headwaters" domain
+! 			fulldz=[36.,   51.,   58.,   73.,   74.,  111.,  113.,  152.,  155.,  157.,  160.,  245., &
+! 				   251.,  258.,  265.,  365.,  379.,  395.,  413.,  432.,  453.,  476.,  503.,  533., &
+! 				   422.,  443.,  467.,  326.,  339.,  353.,  369.,  386.,  405.,  426.,  450.,  477., &
+! 				   455.,  429.,  396.,  357.,  311.,  325.,  340.,  356.,  356.]
+! 			mean layer thicknesses from ERAi domain
+		   fulldz=[   24.8,  36.5,  51.8,  70.1,  90.8, 113.5, 137.9, 163.7, 190.5, 218.1, 246.4, &
+		   			 275.1, 304.3, 333.6, 363.0, 392.4, 421.7, 450.8, 479.6, 508.0, 535.9, 563.2, &
+					 589.8, 615.7, 640.9, 665.5, 689.8, 714.1, 739.4, 767.2, 796.8, 826.6, 856.2, &
+					 885.1, 912.5, 937.9, 961.4, 979.4, 990.1, 976.6, 937.6, 900.1, 864.2, 829.6, 796.5]
+ 			allocate(options%dz_levels(nz))
+			options%dz_levels=fulldz(1:nz)
 		endif
 		
 		if (restart) then
@@ -310,7 +323,6 @@ contains
 		implicit none
 		type(options_type), intent(in) :: options
 		type(domain_type), intent(inout):: domain
-		real,dimension(45)::fulldz
 		real,dimension(:,:,:),allocatable::temporary_z
 		integer:: ny,nz,nx,i,buf
 		
@@ -366,16 +378,6 @@ contains
 ! 			and z[1]+i*dz for the res
 			allocate(domain%z(nx,nz,ny))
 			allocate(domain%dz(nx,nz,ny))
-! 			mean layer thicknesses from a 36km WRF run over the "CO-headwaters" domain
-! 			fulldz=[36.,   51.,   58.,   73.,   74.,  111.,  113.,  152.,  155.,  157.,  160.,  245., &
-! 				   251.,  258.,  265.,  365.,  379.,  395.,  413.,  432.,  453.,  476.,  503.,  533., &
-! 				   422.,  443.,  467.,  326.,  339.,  353.,  369.,  386.,  405.,  426.,  450.,  477., &
-! 				   455.,  429.,  396.,  357.,  311.,  325.,  340.,  356.,  356.]
-! 			mean layer thicknesses from ERAi domain
-! 		   fulldz=[   24.8,  36.5,  51.8,  70.1,  90.8, 113.5, 137.9, 163.7, 190.5, 218.1, 246.4, &
-! 		   			 275.1, 304.3, 333.6, 363.0, 392.4, 421.7, 450.8, 479.6, 508.0, 535.9, 563.2, &
-! 					 589.8, 615.7, 640.9, 665.5, 689.8, 714.1, 739.4, 767.2, 796.8, 826.6, 856.2, &
-! 					 885.1, 912.5, 937.9, 961.4, 979.4, 990.1, 976.6, 937.6, 900.1, 864.2, 829.6, 796.5]
 			domain%dz(:,1,:)=options%dz_levels(1)
 			domain%z(:,1,:)=domain%terrain+options%dz_levels(1)/2
 			do i=2,nz
@@ -504,11 +506,7 @@ contains
 		write(*,*) "Setting up ext wind geoLUTs"
 		call geo_LUT(bc%next_domain, bc%ext_winds%u_geo)
 		call geo_LUT(bc%next_domain, bc%ext_winds%v_geo)
-! 		if (options%debug) then
-! 			call io_write3di("geolut_x.nc","data",bc%ext_winds%geolut%x)
-! 			call io_write3di("geolut_y.nc","data",bc%ext_winds%geolut%y)
-! 			call io_write3d("geolut_w.nc","data",bc%ext_winds%geolut%w)
-! 		endif
+		
 ! 		force all weight to be on the first x,y pair...
 ! 		this assumes the "external winds" file is on the exact same grid as the high res model grid
 		bc%ext_winds%u_geo%geolut%w(2:,:,:)=0
@@ -536,11 +534,6 @@ contains
 		call geo_LUT(domain,boundary)
 		call geo_LUT(domain%u_geo,boundary%u_geo)
 		call geo_LUT(domain%v_geo,boundary%v_geo)
-! 		if (options%debug) then
-! 			call io_write3di("bcgeolut_x.nc","data",boundary%geolut%x)
-! 			call io_write3di("bcgeolut_y.nc","data",boundary%geolut%y)
-! 			call io_write3d("bcgeolut_w.nc","data",boundary%geolut%w)
-! 		endif
 		
 		if (options%external_winds) then
 			call init_ext_winds(options,boundary)
@@ -552,6 +545,7 @@ contains
 ! 		This should be done on a separate lowres terrain grid so the embedded high res terrain grid can also be used in pressure adjustments on each time step...
 ! 		allocate(boundary%lowres_terrain(nx,ny))
 		call geo_interp2d(boundary%next_domain%terrain,boundary%terrain,boundary%geolut)
+		call geo_interp(boundary%next_domain%z,boundary%z,boundary%geolut,.false.)
 		if (options%add_low_topo) then
 			domain%terrain=domain%terrain+(boundary%next_domain%terrain-sum(boundary%next_domain%terrain) &
 											 /size(boundary%next_domain%terrain))/2.0

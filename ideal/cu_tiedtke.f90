@@ -2339,7 +2339,11 @@ CONTAINS
          PMFUS(JL,JK)=(CPD*PTU(JL,JK)+PGEOH(JL,JK))*PMFU(JL,JK)
          PMFUQ(JL,JK)=PQU(JL,JK)*PMFU(JL,JK)
          PMFUL(JL,JK)=PLU(JL,JK)*PMFU(JL,JK)
-         PLUDE(JL,JK-1)=PMFUL(JL,JK)
+		 if (jk==1) then !edg
+	         PLUDE(JL,JK)=PMFUL(JL,JK)
+		 else
+	         PLUDE(JL,JK-1)=PMFUL(JL,JK)
+		end if			 
          PDMFUP(JL,JK)=0.
       END IF
   530 CONTINUE
@@ -2710,6 +2714,7 @@ CONTAINS
       IF(.NOT.LDCUM(JL)) KTYPE(JL)=0
   110 CONTINUE
       KTOPM2=ITOP-2
+	  if (KTOPM2==0) KTOPM2=1
       DO 120 JK=KTOPM2,KLEV
       DO 115 JL=1,KLON
       IF(LDCUM(JL).AND.JK.GE.KCTOP(JL)-1) THEN

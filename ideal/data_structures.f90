@@ -138,6 +138,7 @@ module data_structures
 		integer :: ntimesteps,nz,nfiles,ext_winds_nfiles,restart_step
 ! 		various real parameters/options
 		real :: dx,dxlow,in_dt,out_dt,outputinterval,inputinterval
+		real,allocatable,dimension(:)::dz_levels
 ! 		defines which physics package to be used. 
 		type(physics_type)::physics
 	end type options_type

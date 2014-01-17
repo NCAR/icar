@@ -427,7 +427,7 @@ contains
 			endif
 		
 			call update_pressure(domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
-								 bc%next_domain%terrain,domain%terrain)
+								 bc%next_domain%z,domain%z)
 							 
 	 		nz=size(domain%th,2)
 			domainsize=size(domain%th,1)*size(domain%th,3)
@@ -485,11 +485,10 @@ contains
 		call update_edges(bc%dqcdt,bc%next_domain%cloud,domain%cloud)
 	end subroutine update_dxdt
 	
-	subroutine update_pressure(pressure,temperature,hgt_lo,hgt_hi)
+	subroutine update_pressure(pressure,temperature,z_lo,z_hi)
 		implicit none
 		real,dimension(:,:,:), intent(inout) :: pressure
-		real,dimension(:,:,:), intent(in) :: temperature
-		real,dimension(:,:), intent(in) :: hgt_lo,hgt_hi
+		real,dimension(:,:,:), intent(in) :: temperature,z_lo,z_hi
 		real,dimension(:,:),allocatable::slp
 		integer :: nx,ny,nz,i
 		nx=size(pressure,1)
@@ -497,8 +496,8 @@ contains
 		ny=size(pressure,3)
 		allocate(slp(nx,ny))
 		do i=1,nz
-		    slp = pressure(:,i,:)/(1 - 2.25577E-5*hgt_lo)**5.25588
-			pressure(:,i,:) = slp * (1 - 2.25577e-5 * hgt_hi)**5.25588
+		    slp = pressure(:,i,:) / (1 - 2.25577E-5 * z_lo(:,i,:))**5.25588
+			pressure(:,i,:) = slp * (1 - 2.25577e-5 * z_hi(:,i,:))**5.25588
 		enddo
 		deallocate(slp)
 	end subroutine update_pressure
@@ -599,7 +598,7 @@ contains
 		endif
 	
 		call update_pressure(bc%next_domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
-							 bc%next_domain%terrain,domain%terrain)
+							 bc%next_domain%z,domain%z)
 		nx=size(bc%next_domain%th,1)
 		nz=size(bc%next_domain%th,2)
 		ny=size(bc%next_domain%th,3)

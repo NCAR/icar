@@ -255,8 +255,12 @@ contains
 			pos=buffer-i
 			buffer_topo(pos+1,1+buffer:ny-buffer)    =terrain(1,1:ny-buffer*2)*(1-weight)+terrain(nx-buffer*2,1:ny-buffer*2)*   weight
 			buffer_topo(nx-pos-1,1+buffer:ny-buffer) =terrain(1,1:ny-buffer*2)*(  weight)+terrain(nx-buffer*2,1:ny-buffer*2)*(1-weight)
-			buffer_topo(1+buffer:nx-buffer,pos+1)    =terrain(1:nx-buffer*2,1)*(1-weight)+terrain(1:nx-buffer*2,ny-buffer*2)*   weight
-			buffer_topo(1+buffer:nx-buffer,ny-pos-1) =terrain(1:nx-buffer*2,1)*(  weight)+terrain(1:nx-buffer*2,ny-buffer*2)*(1-weight)
+		enddo
+		do i=1,buffer
+			weight=i/(real(buffer)*2)
+			pos=buffer-i
+			buffer_topo(:,pos+1)    =buffer_topo(:,buffer+1)*(1-weight) + buffer_topo(:,ny-buffer)*   weight
+			buffer_topo(:,ny-pos-1) =buffer_topo(:,buffer+1)*(  weight) + buffer_topo(:,ny-buffer)*(1-weight)
 		enddo
 		print*, "There may be a problem in linear_winds-add_buffer_topo"
 ! 		clearly something isn't quiet right here...
@@ -282,7 +286,7 @@ contains
         nx=size(complex_terrain,1)
         ny=size(complex_terrain,2)
 
-        write(*,*) "Fzs setup"
+        write(*,*) "Initializing linear winds"
         allocate(domain%fzs(nx,ny))
 		
 ! 		calculate the fourier transform of the terrain for use in linear winds
