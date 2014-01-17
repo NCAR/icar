@@ -489,16 +489,23 @@ contains
 		implicit none
 		real,dimension(:,:,:), intent(inout) :: pressure
 		real,dimension(:,:,:), intent(in) :: temperature,z_lo,z_hi
-		real,dimension(:,:),allocatable::slp
-		integer :: nx,ny,nz,i
+		real,dimension(:,:,:),allocatable::slp
+		integer :: nx,ny,nz,i,j
 		nx=size(pressure,1)
 		nz=size(pressure,2)
 		ny=size(pressure,3)
-		allocate(slp(nx,ny))
-		do i=1,nz
-		    slp = pressure(:,i,:) / (1 - 2.25577E-5 * z_lo(:,i,:))**5.25588
-			pressure(:,i,:) = slp * (1 - 2.25577e-5 * z_hi(:,i,:))**5.25588
+		allocate(slp(nx,nz,ny))
+		!$omp parallel shared(slp,pressure, temperature,z_lo,z_hi) &
+		!$omp private(i,j) firstprivate(nx,ny,nz)
+		!$omp do 
+		do j=1,ny
+			do i=1,nz
+			    slp(:,i,j) = pressure(:,i,j) / (1 - 2.25577E-5 * z_lo(:,i,j))**5.25588
+				pressure(:,i,j) = slp(:,i,j) * (1 - 2.25577e-5 * z_hi(:,i,j))**5.25588
+			enddo
 		enddo
+		!$omp end do
+		!$omp end parallel
 		deallocate(slp)
 	end subroutine update_pressure
 	
