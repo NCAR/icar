@@ -118,18 +118,18 @@ subroutine convect(domain,options,dt_in)
 		!$omp end parallel	
 		
 ! 		write(*,*) "Entering Tiedtke"
-		call CU_TIEDTKE(                                    &
-                 dt_in,itimestep,STEPCU                            &
-                ,RAINCV,PRATEC,domain%latent_heat,domain%sensible_heat,ZNU(kds:kde) &
+		call CU_TIEDTKE(                                          &
+                 dt_in,itimestep,STEPCU                           &
+                ,RAINCV,PRATEC,domain%latent_heat/LH_vaporization,domain%sensible_heat,ZNU(kds:kde) &
                 ,U3D,V3D,domain%w,T3D,domain%qv,domain%cloud,domain%ice,pii,rho &
-                ,zed1,zed2 &
-                ,domain%dz,p8,domain%p,XLAND,CU_ACT_FLAG                &
+                ,zed1,zed2                                        &
+                ,domain%dz,p8,domain%p,XLAND,CU_ACT_FLAG          &
                 ,ids,ide, jds,jde, kds,kde-1                      &
-                ,ids,ide, jds,jde, kds,kde                      &
-                ,ids+1,ide-1, jds+1,jde-1, kds,kde-1					&
-                ,RTHCUTEN,RQVCUTEN,RQCCUTEN,RQICUTEN            &
-                ,RUCUTEN, RVCUTEN                               &
-                ,.True.    ,.True.    ,.True.    ,.True.    ,.True.       &
+                ,ids,ide, jds,jde, kds,kde                        &
+                ,ids,ide, jds,jde, kds,kde-1				      &
+                ,RTHCUTEN,RQVCUTEN,RQCCUTEN,RQICUTEN              &
+                ,RUCUTEN, RVCUTEN                                 &
+                ,.True.,.True.,.True.,.True.,.True.               &
 				)
 		domain%qv=domain%qv+RQVCUTEN*dt_in
 		domain%cloud=domain%cloud+RQCCUTEN*dt_in
