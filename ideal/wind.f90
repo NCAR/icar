@@ -24,17 +24,17 @@ contains
 ! 		loop over domain levels
 		do i=1,nz
 ! 			calculate horizontal divergence
-			dv=(domain%v(2:nx-1,i,2:ny-1) - domain%v(2:nx-1,i,1:ny-2))/domain%dx
-			du=(domain%u(2:nx-1,i,2:ny-1) - domain%u(1:nx-2,i,2:ny-1))/domain%dx
+			dv=(domain%v(2:nx-1,i,2:ny-1) - domain%v(2:nx-1,i,1:ny-2))!/domain%dx
+			du=(domain%u(2:nx-1,i,2:ny-1) - domain%u(1:nx-2,i,2:ny-1))!/domain%dx
 			divergence=du+dv
 			if (i==1) then
 ! 				if this is the first model level start from 0 at the ground
-				domain%w(2:nx-1,i,2:ny-1)=0-(divergence * (domain%dz(:,i,:)+domain%dz(:,i+1,:))/2.0)
+				domain%w(2:nx-1,i,2:ny-1)=0-(divergence)! * (domain%dz(:,i,:)+domain%dz(:,i+1,:))/2.0)
 			elseif (i==nz) then
-				domain%w(2:nx-1,i,2:ny-1)=domain%w(2:nx-1,i-1,2:ny-1)-(divergence * domain%dz(:,i,:))
+				domain%w(2:nx-1,i,2:ny-1)=domain%w(2:nx-1,i-1,2:ny-1)-(divergence)! * domain%dz(:,i,:))
 			else
 ! 				else calculate w as a change from w at the level below
-				domain%w(2:nx-1,i,2:ny-1)=domain%w(2:nx-1,i-1,2:ny-1)-(divergence * (domain%dz(:,i,:)+domain%dz(:,i+1,:))/2.0)
+				domain%w(2:nx-1,i,2:ny-1)=domain%w(2:nx-1,i-1,2:ny-1)-(divergence)! * (domain%dz(:,i,:)+domain%dz(:,i+1,:))/2.0)
 			endif
 		enddo
 		deallocate(du,dv,divergence)

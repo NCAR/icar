@@ -72,11 +72,11 @@ contains
            q(2:nx-1,:,i)=q(2:nx-1,:,i) - ((f1(2:nx-1,:)-f1(1:nx-2,:)) + (f3(:,:)-f4(:,:)))!/rho(2:nx-1,:,i)
            ! then vertical (order doesn't matter because fluxes f1-6 are calculated before applying them)
            ! add fluxes to middle layers
-           q(2:nx-1,2:nz-1,i)=q(2:nx-1,2:nz-1,i)-(f5(:,2:nz-1)-f5(:,1:nz-2))/dz(2:nx-1,2:nz-1,i)!/rho(2:nx-1,2:nz-1,i)
+           q(2:nx-1,2:nz-1,i)=q(2:nx-1,2:nz-1,i)-(f5(:,2:nz-1)-f5(:,1:nz-2))!/dz(2:nx-1,2:nz-1,i)!/rho(2:nx-1,2:nz-1,i)
            ! add fluxes to bottom layer
-           q(2:nx-1,1,i)=q(2:nx-1,1,i)-f5(:,1)/dz(2:nx-1,1,i)!/rho(2:nx-1,1,i)
+           q(2:nx-1,1,i)=q(2:nx-1,1,i)-f5(:,1)!/dz(2:nx-1,1,i)!/rho(2:nx-1,1,i)
            ! add fluxes to top layer
-           q(2:nx-1,nz,i)=q(2:nx-1,nz,i)-(qin(2:nx-1,nz,i)*w(2:nx-1,nz,i)-f5(:,nz-1))/dz(2:nx-1,nz,i)!/rho(2:nx-1,nz,i)
+           q(2:nx-1,nz,i)=q(2:nx-1,nz,i)-(qin(2:nx-1,nz,i)*w(2:nx-1,nz,i)-f5(:,nz-1))!/dz(2:nx-1,nz,i)!/rho(2:nx-1,nz,i)
         enddo
         !$omp end do
         !$omp end parallel
@@ -119,7 +119,7 @@ contains
 		U_m=domain%u(1:nx-1,:,:)*dt/dx! * (rho_m(1:nx-1,:,:)+rho_m(2:nx,:,:))/2.0
 		V_m=domain%v(:,:,1:ny-1)*dt/dx! * (rho_m(:,:,1:ny-1)+rho_m(:,:,2:ny))/2.0
 ! 		note, even though dz!=dx, W is computed from the divergence in U/V so it is scaled by dx/dz already
-		W_m=domain%w*dt
+		W_m=domain%w*dt/dx
 ! 		W_m(:,1:nz-1,:)=W_m(:,1:nz-1,:)/((domain%dz(:,1:nz-1)+domain%dz(:,2:nz))/2.0)
 ! 		W_m(:,nz,:)=W_m(:,nz,:)/domain%dz(:,nz)
 ! 		W_m(:,:nz-1,:) = W_m(:,:nz-1,:) * (rho_m(:,1:nz-1,:)+rho_m(:,2:nz,:))/2.0
