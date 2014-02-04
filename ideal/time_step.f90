@@ -110,9 +110,21 @@ contains
 ! 		now just loop over internal timesteps computing all physics in order (operator splitting...)
 		do i=1,ntimesteps
 			call advect(domain,options,dt)
+			if (minval(domain%qv)<1e-20) then
+				print *,"advection error",minval(domain%qv)
+			endif
 			call mp(domain,options,dt)
+			if (minval(domain%qv)<1e-20) then
+				print *,"MP error",minval(domain%qv)
+			endif
 			call convect(domain,options,dt)
+			if (minval(domain%qv)<1e-20) then
+				print *,"convection error",minval(domain%qv)
+			endif
 			call lsm_driver(domain,options,dt)
+			if (minval(domain%qv)<1e-20) then
+				print *,"LSM/PBL error",minval(domain%qv)
+			endif
 	! 		call pbl(domain,options,dt)
 	! 		call radiation(domain,options,dt)
 ! 			apply/update boundary conditions including internal wind and pressure changes. 
