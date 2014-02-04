@@ -15,12 +15,13 @@ contains
 		type(domain_type),intent(in)::domain
 		type(options_type),intent(in)::options
 		integer,intent(in)::timestep
+		real,allocatable,dimension(:,:,:)::pii,rho
 		character(len=255) :: filename
 		
 		! We are writing 3D data, a ny x nz x nx grid. 
 		integer :: nx,ny,nz,i
 		integer, parameter :: ndims = 3
-		integer, parameter :: nvars=17
+		integer, parameter :: nvars=19
 		! This will be the netCDF ID for the file and data variable.
 		integer :: ncid, varid(nvars),temp_id,x_id,y_id,xu_id,yv_id,dimids(ndims)
 
@@ -93,6 +94,11 @@ contains
 		call check( nf90_def_var(ncid, "crain", NF90_REAL, dimids(1:3:2), temp_id) )
 		varid(17)=temp_id
 		
+		call check( nf90_def_var(ncid, "pii",  NF90_REAL, dimids, temp_id) )
+		varid(18)=temp_id
+		call check( nf90_def_var(ncid, "rho", NF90_REAL, dimids, temp_id) )
+		varid(19)=temp_id
+		
 		! End define mode. This tells netCDF we are done defining metadata.
 		call check( nf90_enddef(ncid) )
 		
@@ -114,6 +120,16 @@ contains
 		call check( nf90_put_var(ncid, varid(15), domain%snow) )
 		call check( nf90_put_var(ncid, varid(16), domain%graupel) )
 		call check( nf90_put_var(ncid, varid(17), domain%crain) )
+		
+		allocate(pii(nx,nz,ny))
+		allocate(rho(nx,nz,ny))
+		pii=(domain%p/100000.0)**(R/cp)
+        rho=domain%p/(R*domain%th*pii) ! kg/m^3
+		call check( nf90_put_var(ncid, varid(18), pii) )
+		call check( nf90_put_var(ncid, varid(19), rho) )
+		deallocate(pii,rho)
+	
+		
 		! Close the file, freeing all resources.
 		call check( nf90_close(ncid) )
 	end subroutine write_domain

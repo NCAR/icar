@@ -26,42 +26,48 @@ module boundary_conditions
 	integer::ext_winds_steps_in_file,ext_winds_nfiles
 
 	integer,parameter::smoothing_window=14
-!   these are now specified in data_structures.f90
-!     real, parameter :: R=287.058 ! J/(kg K) specific gas constant for air
-!     real, parameter :: cp = 1012.0 ! specific heat capacity of moist STP air? J/kg/K
 	
 	public::bc_init
 	public::bc_update
 contains
 	
-! 	smooth an array (written for wind but will work for anything)
+! Smooth an array (written for wind but will work for anything)
+! only smooths over the first (x) and second or third (y) dimension
+! ydim can be specified to allow working with (x,y,z) data or (x,z,y) data
 	subroutine smooth_wind(wind,windowsize,ydim)
 		real, intent(inout), dimension(:,:,:):: wind
 		integer,intent(in)::windowsize
 		integer,intent(in)::ydim
 		real,allocatable,dimension(:,:,:)::inputwind
-		integer::i,j,k,nx,ny,nz
+		integer::i,j,k,nx,ny,nz,startx,endx,starty,endy
 		nx=size(wind,1)
-		ny=size(wind,2)
-		nz=size(wind,3)
-		allocate(inputwind(nx,ny,nz))
-		inputwind=wind
+		ny=size(wind,2) !note, this could be the Y or Z dimension
+		nz=size(wind,3) !note, this could be the Y or Z dimension
+		allocate(inputwind(nx,ny,nz)) ! Can't be module level because nx,ny,nz could change between calls, 
+									  ! could be part of a "smoothable" object to avoid allocate-deallocating constantly
+		inputwind=wind !make a copy so we always use the unsmoothed data when computing the smoothed data
 		
-		!$omp parallel firstprivate(windowsize,nx,ny,nz),private(i,j,k),shared(wind,inputwind)
+		!parallelize over the slowest dimension
+		!$omp parallel firstprivate(windowsize,nx,ny,nz), &
+		!$omp private(i,j,k,startx,endx,starty,endy),shared(wind,inputwind)
 		!$omp do schedule(static)
 		do k=1,nz
 			do j=1,ny
 				do i=1,nx
 					if (ydim==2) then
-						wind(i,j,k)=sum(inputwind(max(i-windowsize,1):min(nx,i+windowsize), &
-						                          max(1,j-windowsize):min(ny,j+windowsize),k)) &
-							/ ((min(nx,i+windowsize)-max(i-windowsize,1)+1) &
-							 * (min(ny,j+windowsize)-max(1,j-windowsize)+1))
-					else
-						wind(i,j,k)=sum(inputwind(max(i-windowsize,1):min(nx,i+windowsize), &
-						                          j,max(1,k-windowsize):min(nz,k+windowsize))) &
-							/ ((min(nx,i+windowsize)-max(i-windowsize,1)+1) &
-							 * (min(nz,k+windowsize)-max(1,k-windowsize)+1))
+						startx=max(i-windowsize,1)
+						endx  =min(nx,i+windowsize)
+						starty=max(1,j-windowsize)
+						endy  =min(ny,j+windowsize)
+						wind(i,j,k)=sum(inputwind(startx:endx,starty:endy,k)) &
+									/ ((endx-startx+1)*(endy-starty+1))
+					else ! ydim==3
+						startx=max(i-windowsize,1)
+						endx  =min(nx,i+windowsize)
+						starty=max(1,k-windowsize)
+						endy  =min(nz,k+windowsize)
+						wind(i,j,k)=sum(inputwind(startx:endx,j,starty:endy)) &
+									/ ((endx-startx+1)*(endy-starty+1))
 					endif
 				enddo
 			enddo

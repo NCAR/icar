@@ -156,7 +156,7 @@ module lsm
 	        !$omp shared(pii,domain)
 	        !$omp do schedule(static)
 			do j=1,ny
-				pii(:,:,j)=1.0/((100000.0/domain%p(:,:,j))**(R/cp))
+				pii(:,:,j)=(domain%p(:,:,j)/100000.0)**(R/cp)
 			enddo
 	        !$omp end do
 	        !$omp end parallel

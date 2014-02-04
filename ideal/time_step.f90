@@ -110,6 +110,9 @@ contains
 ! 		now just loop over internal timesteps computing all physics in order (operator splitting...)
 		do i=1,ntimesteps
 			call advect(domain,options,dt)
+			if (minval(domain%qv)<1e-10) then
+				call write_domain(domain,options,i+10000)
+			endif
 			call mp(domain,options,dt)
 			call convect(domain,options,dt)
 			call lsm_driver(domain,options,dt)

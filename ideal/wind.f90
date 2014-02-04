@@ -67,7 +67,8 @@ contains
 			domain%u(1:nx-1,:,:)=temparray(2:nx,:,:)
 			deallocate(temparray)
 			
-			allocate(temparray(nx-1,nz,ny+1))
+			ny=ny+1
+			allocate(temparray(nx-1,nz,ny))
 			temparray=domain%v
 			domain%v(:,:,1:ny-1)=temparray(:,:,2:ny)
 			deallocate(temparray)
