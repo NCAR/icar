@@ -29,11 +29,12 @@ contains
 
     end subroutine flux2
 
-    subroutine advect3d(q,u,v,w,nx,nz,ny,debug)
+    subroutine advect3d(q,u,v,w,dz,nx,nz,ny,debug)
 	    real,dimension(1:nx,1:nz,1:ny), intent(inout) :: q
 	    real,dimension(1:nx,1:nz,1:ny), intent(in) :: w
         real,dimension(1:nx-1,1:nz,1:ny),intent(in) :: u
         real,dimension(1:nx,1:nz,1:ny-1),intent(in) :: v
+	    real,dimension(1:nx,1:nz,1:ny), intent(in) :: dz
 ! 	    real,dimension(1:nx,1:nz,1:ny), intent(in) :: rho
 		integer, intent(in) :: ny,nz,nx,debug
         ! interal parameters
@@ -71,11 +72,11 @@ contains
            q(2:nx-1,:,i)=q(2:nx-1,:,i) - ((f1(2:nx-1,:)-f1(1:nx-2,:)) + (f3(:,:)-f4(:,:)))!/rho(2:nx-1,:,i)
            ! then vertical (order doesn't matter because fluxes f1-6 are calculated before applying them)
            ! add fluxes to middle layers
-           q(2:nx-1,2:nz-1,i)=q(2:nx-1,2:nz-1,i)-(f5(:,2:nz-1)-f5(:,1:nz-2))!/rho(2:nx-1,2:nz-1,i)
+           q(2:nx-1,2:nz-1,i)=q(2:nx-1,2:nz-1,i)-(f5(:,2:nz-1)-f5(:,1:nz-2))/dz(2:nx-1,2:nz-1,i)!/rho(2:nx-1,2:nz-1,i)
            ! add fluxes to bottom layer
-           q(2:nx-1,1,i)=q(2:nx-1,1,i)-f5(:,1)!/rho(2:nx-1,1,i)
+           q(2:nx-1,1,i)=q(2:nx-1,1,i)-f5(:,1)/dz(2:nx-1,1,i)!/rho(2:nx-1,1,i)
            ! add fluxes to top layer
-           q(2:nx-1,nz,i)=q(2:nx-1,nz,i)-(qin(2:nx-1,nz,i)*w(2:nx-1,nz,i)-f5(:,nz-1))!/rho(2:nx-1,nz,i)
+           q(2:nx-1,nz,i)=q(2:nx-1,nz,i)-(qin(2:nx-1,nz,i)*w(2:nx-1,nz,i)-f5(:,nz-1))/dz(2:nx-1,nz,i)!/rho(2:nx-1,nz,i)
         enddo
         !$omp end do
         !$omp end parallel
@@ -118,37 +119,39 @@ contains
 		U_m=domain%u(1:nx-1,:,:)*dt/dx! * (rho_m(1:nx-1,:,:)+rho_m(2:nx,:,:))/2.0
 		V_m=domain%v(:,:,1:ny-1)*dt/dx! * (rho_m(:,:,1:ny-1)+rho_m(:,:,2:ny))/2.0
 ! 		note, even though dz!=dx, W is computed from the divergence in U/V so it is scaled by dx/dz already
-		W_m=domain%w*dt/dx
+		W_m=domain%w*dt
+! 		W_m(:,1:nz-1,:)=W_m(:,1:nz-1,:)/((domain%dz(:,1:nz-1)+domain%dz(:,2:nz))/2.0)
+! 		W_m(:,nz,:)=W_m(:,nz,:)/domain%dz(:,nz)
 ! 		W_m(:,:nz-1,:) = W_m(:,:nz-1,:) * (rho_m(:,1:nz-1,:)+rho_m(:,2:nz,:))/2.0
 ! 		W_m(:,nz,:) = W_m(:,nz,:) * rho_m(:,nz,:)
 ! 		should probably be converting to mass (q*rho) before advecting, then back again... but testing showed minimal difference
-		domain%qv=domain%qv*rho_m
-		call advect3d(domain%qv,   U_m,V_m,W_m,nx,nz,ny,0)
-		domain%qv=domain%qv/rho_m
+! 		domain%qv=domain%qv*rho_m
+		call advect3d(domain%qv,   U_m,V_m,W_m,domain%dz,nx,nz,ny,0)
+! 		domain%qv=domain%qv/rho_m
 		
-		domain%cloud=domain%cloud*rho_m
-		call advect3d(domain%cloud,U_m,V_m,W_m,nx,nz,ny,0)
-		domain%cloud=domain%cloud/rho_m
+! 		domain%cloud=domain%cloud*rho_m
+		call advect3d(domain%cloud,U_m,V_m,W_m,domain%dz,nx,nz,ny,0)
+! 		domain%cloud=domain%cloud/rho_m
 		
-		domain%ice=domain%ice*rho_m
-		call advect3d(domain%ice,  U_m,V_m,W_m,nx,nz,ny,0)
-		domain%ice=domain%ice/rho_m
+! 		domain%ice=domain%ice*rho_m
+		call advect3d(domain%ice,  U_m,V_m,W_m,domain%dz,nx,nz,ny,0)
+! 		domain%ice=domain%ice/rho_m
 		
-		domain%qrain=domain%qrain*rho_m
-		call advect3d(domain%qrain,U_m,V_m,W_m,nx,nz,ny,0)
-		domain%qrain=domain%qrain/rho_m
+! 		domain%qrain=domain%qrain*rho_m
+		call advect3d(domain%qrain,U_m,V_m,W_m,domain%dz,nx,nz,ny,0)
+! 		domain%qrain=domain%qrain/rho_m
 		
-		domain%qsnow=domain%qsnow*rho_m
-		call advect3d(domain%qsnow,U_m,V_m,W_m,nx,nz,ny,0)
-		domain%qsnow=domain%qsnow/rho_m
+! 		domain%qsnow=domain%qsnow*rho_m
+		call advect3d(domain%qsnow,U_m,V_m,W_m,domain%dz,nx,nz,ny,0)
+! 		domain%qsnow=domain%qsnow/rho_m
 		
-		domain%qgrau=domain%qgrau*rho_m
-		call advect3d(domain%qgrau,U_m,V_m,W_m,nx,nz,ny,0)
-		domain%qgrau=domain%qgrau/rho_m
+! 		domain%qgrau=domain%qgrau*rho_m
+		call advect3d(domain%qgrau,U_m,V_m,W_m,domain%dz,nx,nz,ny,0)
+! 		domain%qgrau=domain%qgrau/rho_m
 		
-		call advect3d(domain%th,   U_m,V_m,W_m,nx,nz,ny,0)
-		call advect3d(domain%nice, U_m,V_m,W_m,nx,nz,ny,0)
-		call advect3d(domain%nrain,U_m,V_m,W_m,nx,nz,ny,0)
+		call advect3d(domain%th,   U_m,V_m,W_m,domain%dz,nx,nz,ny,0)
+		call advect3d(domain%nice, U_m,V_m,W_m,domain%dz,nx,nz,ny,0)
+		call advect3d(domain%nrain,U_m,V_m,W_m,domain%dz,nx,nz,ny,0)
 	end subroutine advect
 
 
