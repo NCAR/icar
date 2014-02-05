@@ -426,6 +426,7 @@ contains
 				call read_2dvar(domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep)
 				call read_2dvar(domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep)
 				call read_2dvar(domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep)
+				where(domain%latent_heat<0) domain%latent_heat=0
 			else
 				domain%sensible_heat=0
 				domain%latent_heat=0
@@ -604,6 +605,7 @@ contains
 			call read_2dvar(bc%next_domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep)
 			call read_2dvar(bc%next_domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep)
 			call read_2dvar(bc%next_domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep)
+			where(domain%latent_heat<0) domain%latent_heat=0
 		else
 			bc%next_domain%sensible_heat=0
 			bc%next_domain%latent_heat=0

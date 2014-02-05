@@ -106,16 +106,29 @@ contains
 		
 ! 		adjust the boundary condition dXdt values for the number of time steps
 		call apply_dt(bc,ntimesteps)
-		write(*,*) "dt=",dt, "nsteps=",ntimesteps
+		write(*,*) "    dt=",dt, "nsteps=",ntimesteps
 ! 		now just loop over internal timesteps computing all physics in order (operator splitting...)
 		do i=1,ntimesteps
 			call advect(domain,options,dt)
-			if (minval(domain%qv)<1e-10) then
-				call write_domain(domain,options,i+10000)
-			endif
+! 			if (minval(domain%qv)<1e-10) then
+! 				print *,"ADVECTION ERROR",minval(domain%qv)
+! 				call write_domain(domain,options,i+10000)
+! 			endif
 			call mp(domain,options,dt)
+! 			if (minval(domain%qv)<1e-10) then
+! 				print *,"MP ERROR",minval(domain%qv)
+! 				call write_domain(domain,options,i+10000)
+! 			endif
 			call convect(domain,options,dt)
+! 			if (minval(domain%qv)<1e-10) then
+! 				print *,"CONVECTION ERROR",minval(domain%qv)
+! 				call write_domain(domain,options,i+10000)
+! 			endif
 			call lsm_driver(domain,options,dt)
+! 			if (minval(domain%qv)<1e-10) then
+! 				print *,"LSM ERROR",minval(domain%qv)
+! 				call write_domain(domain,options,i+10000)
+! 			endif
 	! 		call pbl(domain,options,dt)
 	! 		call radiation(domain,options,dt)
 ! 			apply/update boundary conditions including internal wind and pressure changes. 
@@ -129,7 +142,9 @@ contains
 ! 			in case out_dt and in_dt arent even multiples of each other.  Make sure we don't over step
 			if ((model_time+dt)>end_time) then
 				dt=end_time-model_time
-				write(*,*) "shortening time step:",dt
+				if (i<ntimesteps) then
+					write(*,*) "    shortening time step:",dt
+				endif
 			endif
 		enddo
 	end subroutine step

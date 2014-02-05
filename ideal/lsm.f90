@@ -68,6 +68,8 @@ module lsm
             lhdQV=(latent_heat(ids+1:ide-1,i)/LH_vaporization*dt) / (rho(ids+1:ide-1,1)*dz(ids+1:ide-1,1,i)) / factor
 !           and add back to the mixing ratio
             qv(ids+1:ide-1,1,i)=qv(ids+1:ide-1,1,i)+lhdQV
+			!WARNING: this could mask errors in other places in the model...
+! 			where(qv(ids+1:ide-1,1,i)<1e-10) qv(ids+1:ide-1,1,i)=1e-10 ! in case lhdQV in negative and abs(lh) > qv
 
 !			stupid diffusion within the PBL	I should at least speed up/clean up the math at some point...
 			do j=ids+1,ide-1
