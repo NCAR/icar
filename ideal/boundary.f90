@@ -6,12 +6,12 @@ module boundary_conditions
 ! 		type if input file being specified, and call an appropriate routine. 
 ! 		e.g. if options%inputtype=="WRF" then call wrf_init/update()
 ! ----------------------------------------------------------------------------
-	use io_routines
 	use data_structures
-	use wind
-	use linear_theory_winds
-	use geo
-	use output
+	use io_routines,         only : io_getdims, io_read3d, io_maxDims, io_read2d
+	use wind,                only : update_winds
+	use linear_theory_winds, only : linear_perturb
+	use geo,                 only : geo_interp2d, geo_interp
+	use output,              only : write_domain
 	
 	implicit none
 	private

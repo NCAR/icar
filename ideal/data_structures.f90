@@ -131,7 +131,7 @@ module data_structures
 										shvar,lhvar,pblhvar,zvar
 ! 		various boolean options
 		logical :: ideal,readz, debug, external_winds,remove_lowres_linear,&
-				   mean_winds,mean_fields,restart,add_low_topo
+				   mean_winds,mean_fields,restart,add_low_topo,advect_density
 ! 		buffer to remove from all sides of the high res grid supplied
 		integer :: buffer=0,ymin,ymax,xmin,xmax
 ! 		various integer parameters/options

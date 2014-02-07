@@ -5,10 +5,15 @@ module init
 ! 		readily modified.  At some point this could be modified to check the 
 ! 		type if input file being specified, and call an appropriate routine. 
 ! 		e.g. if options%inputtype=="WRF" then call wrf_init/update()
+! 
+!   The module has been updated to allow arbitrary named variables
+!       this allows the use of e.g. ERAi, but still is not as flexible as it should be
+!       e.g. if a forcing doesn't contain one or more variable types it will not work. 
 ! ----------------------------------------------------------------------------
 	use data_structures
 	use io_routines
 	use geo
+	use model_tracking, only : print_model_diffs
 	
 	implicit none
 	private
@@ -23,16 +28,16 @@ contains
 		type(bc_type), intent(inout):: boundary
 		
 ! 		read in options file
-		write(*,*) "Init Options"
+		write(*,*) "Initializing Options"
 		call init_options(options_filename,options)
 ! 		allocate and initialize the domain
-		write(*,*) "Init Domain"
+		write(*,*) "Initializing Domain"
 		call init_domain(options,domain)
 ! 		allocate and initialize the boundary conditions structure (includes 3D grids too...)
 !		this might be more apropriately though of as a forcing data structure (for low res model)
-		write(*,*) "Init Boundaries"
+		write(*,*) "Initializing Boundaries"
 		call init_bc(options,domain,boundary)
-		write(*,*) "Finished Initialization"
+		write(*,*) "Finished basic initialization"
 	end subroutine init_model
 	
 	subroutine init_options(options_filename,options)
@@ -52,7 +57,7 @@ contains
 		integer :: name_unit,ntimesteps,nfiles,xmin,xmax,ymin,ymax
 		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz,n_ext_winds,buffer,restart_step
 		logical :: ideal, readz,readdz,debug,external_winds,remove_lowres_linear,&
-		           mean_winds,mean_fields,restart,add_low_topo
+		           mean_winds,mean_fields,restart,add_low_topo,advect_density
    		real,dimension(45)::fulldz
 		
 ! 		set up namelist structures
@@ -61,7 +66,7 @@ contains
 							landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar, &
 							hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi 
 		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,debug,nfiles, &
-							  external_winds,buffer,n_ext_winds,add_low_topo,&
+							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,&
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax
 		namelist /z_info/ dz_levels
 		namelist /files_list/ init_conditions_file,output_file,boundary_files
@@ -73,19 +78,27 @@ contains
 ! 		read namelists
 		open(io_newunit(name_unit), file=options_filename)
 		read(name_unit,nml=model_version)
-		if (version.ne."0.7.2") then
+		close(name_unit)
+		if (version.ne."0.7.3") then
 			write(*,*) "Model version does not match namelist version"
-			write(*,*) "  Model version: 0.7.2"
-			write(*,*) "  Namelist version:",version
+			write(*,*) "  Model version: 0.7.3"
+			write(*,*) "  Namelist version:",trim(version)
+			call print_model_diffs(version)
 			stop
 		endif
-		write(*,*) "Model version: ",version, "uses landmask, working on better vertical interpolation"
+		write(*,*) "Model version: ",trim(version)
+		open(io_newunit(name_unit), file=options_filename)
 		read(name_unit,nml=var_list)
+		close(name_unit)
+		open(io_newunit(name_unit), file=options_filename)
 		read(name_unit,nml=parameters)
+		close(name_unit)
 		
 		if (readdz) then
 			allocate(dz_levels(nz),options%dz_levels(nz))
+			open(io_newunit(name_unit), file=options_filename)
 			read(name_unit,nml=z_info)
+			close(name_unit)
 			options%dz_levels=dz_levels
 			deallocate(dz_levels)
 		else
@@ -104,20 +117,28 @@ contains
 		endif
 		
 		if (restart) then
+			open(io_newunit(name_unit), file=options_filename)
 			read(name_unit,nml=restart_info)
+			close(name_unit)
 			options%restart=restart
 			options%restart_step=restart_step
 			options%restart_file=restart_file
 		endif
 
+		open(io_newunit(name_unit), file=options_filename)
 		read(name_unit,nml=physics)
+		close(name_unit)
 		
 		allocate(boundary_files(nfiles))
+		open(io_newunit(name_unit), file=options_filename)
 		read(name_unit,nml=files_list)
+		close(name_unit)
 		
 		if (external_winds) then
 			allocate(ext_wind_files(n_ext_winds))
+			open(io_newunit(name_unit), file=options_filename)
 			read(name_unit,nml=ext_winds_info)
+			close(name_unit)
 			options%external_winds=external_winds
 			options%ext_winds_nfiles=n_ext_winds
 			allocate(options%ext_wind_files(n_ext_winds))
@@ -125,7 +146,6 @@ contains
 			deallocate(ext_wind_files)
 		endif
 		
-		close(name_unit)
 		
 ! 		could probably simplify and read these all right from the namelist file, 
 ! 		but this way we can change the names in the file independant of the internal variable names
@@ -181,12 +201,14 @@ contains
 		options%add_low_topo=add_low_topo
 		options%mean_winds=mean_winds
 		options%mean_fields=mean_fields
+		options%advect_density=advect_density
+		options%debug=debug
+		
 		options%nz=nz
 		options%xmin=xmin
 		options%xmax=xmax
 		options%ymin=ymin
 		options%ymax=ymax
-		options%debug=debug
 		options%physics%boundarylayer=pbl
 		options%physics%convection=conv
 		options%physics%advection=adv
