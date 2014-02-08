@@ -323,6 +323,12 @@ contains
 		domain%qsnow=0
 		allocate(domain%qgrau(nx,nz,ny))
 		domain%qgrau=0
+
+		allocate(domain%pii(nx,nz,ny))
+		domain%pii=0
+		allocate(domain%rho(nx,nz,ny))
+		domain%rho=0
+
 		allocate(domain%rain(nx,ny))
 		domain%rain=0
 		allocate(domain%crain(nx,ny))

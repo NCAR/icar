@@ -393,6 +393,8 @@ contains
 			if (options%external_winds) then
 				call ext_winds_init(domain,bc,options)
 			endif
+			domain%pii=(domain%p/100000.0)**(R/cp)
+	        domain%rho=domain%p/(R*domain%th*domain%pii) ! kg/m^3
 			call update_winds(domain,options)
 			call write_domain(domain,options,-1)
 		else
@@ -446,6 +448,9 @@ contains
 	 				domain%ice(:,i,:)=sum(domain%ice(:,i,:))/domainsize
 	 			enddo
 	 		endif
+
+			domain%pii=(domain%p/100000.0)**(R/cp)
+	        domain%rho=domain%p/(R*domain%th*domain%pii) ! kg/m^3
 			
 			call update_winds(domain,options)
 		endif
@@ -640,6 +645,8 @@ contains
 				bc%next_domain%ice(:,i,ny)=sum(bc%next_domain%ice(:,i,ny))/nx
 			enddo
 		endif
+		domain%pii=(domain%p/100000.0)**(R/cp)
+        bc%next_domain%rho=domain%p/(R*domain%th*domain%pii) ! kg/m^3
 		
 		call update_winds(bc%next_domain,options)
 		call update_dxdt(bc,domain)

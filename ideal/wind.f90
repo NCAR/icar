@@ -6,33 +6,62 @@ module wind
 	public::update_winds
 contains
 
-	subroutine balance_uvw(domain)
+	subroutine balance_uvw(domain,options)
 ! Forces u,v, and w fields to balance
 !       du/dx+dv/dy = dw/dz
 ! Starts by setting w out of the ground=0 then works through layers
 		type(domain_type),intent(inout)::domain
-		real, allocatable,dimension(:,:) ::du,dv,divergence
+		type(options_type),intent(in)::options
+		real, allocatable,dimension(:,:) ::du,dv,divergence,rhou,rhov,rhow
 		integer ::nx,ny,nz,i
 		nx=size(domain%w,1)
 		nz=size(domain%w,2)
 		ny=size(domain%w,3)
 		
+		if (options%advect_density) then
+			allocate(rhou(nx-1,ny-2))
+			allocate(rhov(nx-2,ny-1))
+			allocate(rhow(nx-2,ny-2))
+		endif
 		allocate(du(nx-2,ny-2))
 		allocate(dv(nx-2,ny-2))
 		allocate(divergence(nx-2,ny-2))
 		
 ! 		loop over domain levels
 		do i=1,nz
+			if (options%advect_density) then
+				rhou=(domain%rho(1:nx-1,i,2:ny-1) + domain%rho(2:nx,i,2:ny-1))/2
+				rhov=(domain%rho(2:nx-1,i,1:ny-1) + domain%rho(2:nx-1,i,2:ny))/2
+				if (i<nz) then
+					rhow=(domain%rho(2:nx-1,i,2:ny-1) + domain%rho(2:nx-1,i+1,2:ny-1))/2
+				else
+					rhow=domain%rho(2:nx-1,i,2:ny-1)
+				endif
+			endif
 ! 			calculate horizontal divergence
-			dv=domain%v(2:nx-1,i,2:ny-1) - domain%v(2:nx-1,i,1:ny-2)
-			du=domain%u(2:nx-1,i,2:ny-1) - domain%u(1:nx-2,i,2:ny-1)
+
+			if (options%advect_density) then
+				dv=rhov(:,2:ny-1)*domain%v(2:nx-1,i,2:ny-1) - rhov(:,1:ny-2)*domain%v(2:nx-1,i,1:ny-2)
+				du=rhou(2:nx-1,:)*domain%u(2:nx-1,i,2:ny-1) - rhou(1:nx-2,:)*domain%u(1:nx-2,i,2:ny-1)
+			else
+				dv=domain%v(2:nx-1,i,2:ny-1) - domain%v(2:nx-1,i,1:ny-2)
+				du=domain%u(2:nx-1,i,2:ny-1) - domain%u(1:nx-2,i,2:ny-1)
+			endif				
 			divergence=du+dv
 			if (i==1) then
 ! 				if this is the first model level start from 0 at the ground
-				domain%w(2:nx-1,i,2:ny-1)=0-divergence
+				if (options%advect_density) then
+					domain%w(2:nx-1,i,2:ny-1)=0-divergence/rhow
+				else
+					domain%w(2:nx-1,i,2:ny-1)=0-divergence
+				endif
 			else
 ! 				else calculate w as a change from w at the level below
-				domain%w(2:nx-1,i,2:ny-1)=domain%w(2:nx-1,i-1,2:ny-1)-divergence
+				if (options%advect_density) then
+					domain%w(2:nx-1,i,2:ny-1)=domain%w(2:nx-1,i-1,2:ny-1)-divergence/rhow
+				else
+					domain%w(2:nx-1,i,2:ny-1)=domain%w(2:nx-1,i-1,2:ny-1)-divergence
+				endif
 			endif
 		enddo
 		!NOTE w is scaled by dx/dz because it is balancing divergence over dx with a flow through dz
@@ -41,7 +70,7 @@ contains
 ! 		domain%w(:,:nz-1,:)=domain%w(:,:nz-1,:)/domain%dx * (domain%dz(:,1:nz-1,:)+domain%dz(:,2:nz,:))/2
 ! 		domain%w(:,nz,:)=domain%w(:,nz,:)/domain%dx * domain%dz(:,nz,:)
 		
-		deallocate(du,dv,divergence)
+		deallocate(du,dv,divergence,rhou,rhov,rhow)
 	end subroutine balance_uvw
 	
 ! 	apply wind field physics and adjustments
@@ -78,7 +107,7 @@ contains
 			deallocate(temparray)
 		endif
 		
-		call balance_uvw(domain)
+		call balance_uvw(domain,options)
 		
 	end subroutine update_winds
 end module wind
