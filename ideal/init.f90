@@ -303,14 +303,20 @@ contains
 		domain%u=0
 		allocate(domain%v(nx,nz,ny+1))
 		domain%v=0
+		allocate(domain%w(nx,nz,ny))
+		domain%w=0
+		allocate(domain%u_rho(nx+1,nz,ny))
+		domain%u_rho=0
+		allocate(domain%v_rho(nx,nz,ny+1))
+		domain%v_rho=0
+		allocate(domain%w_rho(nx,nz,ny))
+		domain%w_rho=0
 		allocate(domain%th(nx,nz,ny))
 		domain%th=0
 		allocate(domain%qv(nx,nz,ny))
 		domain%qv=0
 		allocate(domain%cloud(nx,nz,ny))
 		domain%cloud=0
-		allocate(domain%w(nx,nz,ny))
-		domain%w=0
 		allocate(domain%ice(nx,nz,ny))
 		domain%ice=0
 		allocate(domain%nice(nx,nz,ny))
@@ -427,26 +433,28 @@ contains
 		type(bc_type), intent(inout) :: boundary
 		integer,intent(in)::nx,nz,ny
 		
-		allocate(boundary%dudt(nx+1,nz,ny))
-		boundary%dudt=0
-		allocate(boundary%dvdt(nx,nz,ny+1))
-		boundary%dvdt=0
-		allocate(boundary%dwdt(nx,nz,ny))
-		boundary%dwdt=0
-		allocate(boundary%dpdt(nx,nz,ny))
-		boundary%dpdt=0
-		allocate(boundary%dthdt(nz,max(nx,ny),4))
-		boundary%dthdt=0
-		allocate(boundary%dqvdt(nz,max(nx,ny),4))
-		boundary%dqvdt=0
-		allocate(boundary%dqcdt(nz,max(nx,ny),4))
-		boundary%dqcdt=0
-		allocate(boundary%dlhdt(nx,ny))
-		boundary%dlhdt=0
-		allocate(boundary%dshdt(nx,ny))
-		boundary%dshdt=0
-		allocate(boundary%dpblhdt(nx,ny))
-		boundary%dpblhdt=0
+		allocate(boundary%du_dt(nx+1,nz,ny))
+		boundary%du_dt=0
+		allocate(boundary%dv_dt(nx,nz,ny+1))
+		boundary%dv_dt=0
+		allocate(boundary%dw_dt(nx,nz,ny))
+		boundary%dw_dt=0
+		allocate(boundary%dp_dt(nx,nz,ny))
+		boundary%dp_dt=0
+		allocate(boundary%drho_dt(nx,nz,ny))
+		boundary%drho_dt=0
+		allocate(boundary%dth_dt(nz,max(nx,ny),4))
+		boundary%dth_dt=0
+		allocate(boundary%dqv_dt(nz,max(nx,ny),4))
+		boundary%dqv_dt=0
+		allocate(boundary%dqc_dt(nz,max(nx,ny),4))
+		boundary%dqc_dt=0
+		allocate(boundary%dlh_dt(nx,ny))
+		boundary%dlh_dt=0
+		allocate(boundary%dsh_dt(nx,ny))
+		boundary%dsh_dt=0
+		allocate(boundary%dpblh_dt(nx,ny))
+		boundary%dpblh_dt=0
 	end subroutine boundary_allocate
 	
 ! 	initialize the boundary condition data structure e.g. lat,lon,terrain,3D Z coord
@@ -478,6 +486,10 @@ contains
 			   251.,  258.,  265.,  365.,  379.,  395.,  413.,  432.,  453.,  476.,  503.,  533., &
 			   422.,  443.,  467.,  326.,  339.,  353.,  369.,  386.,  405.,  426.,  450.,  477., &
 			   455.,  429.,  396.,  357.,  311.,  325.,  340.,  356.,  356.]
+!	   fulldz=[   24.8,  36.5,  51.8,  70.1,  90.8, 113.5, 137.9, 163.7, 190.5, 218.1, 246.4, &
+!	   			 275.1, 304.3, 333.6, 363.0, 392.4, 421.7, 450.8, 479.6, 508.0, 535.9, 563.2, &
+!				 589.8, 615.7, 640.9, 665.5, 689.8, 714.1, 739.4, 767.2, 796.8, 826.6, 856.2, &
+!				 885.1, 912.5, 937.9, 961.4, 979.4, 990.1, 976.6, 937.6, 900.1, 864.2, 829.6, 796.5]
 		boundary%dz(:,1,:)=fulldz(1)
 		boundary%z(:,1,:)=boundary%terrain+fulldz(1)/2
 		do i=2,nz

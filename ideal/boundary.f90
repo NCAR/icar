@@ -454,13 +454,18 @@ contains
 			
 			call update_winds(domain,options)
 		endif
+		!the will be put back into domain in bc_update so we need to copy them over here. 
+		bc%next_domain%pii=domain%pii
+		bc%next_domain%rho=domain%rho
 
 	end subroutine bc_init
 
 
-	subroutine update_edges(dxdt,d1,d2)
+	subroutine update_edges(dx_dt,d1,d2)
+! 		same as update_dxdt but only for the edges of the domains for 
+!       fields that are calculated internally (e.g. temperature and moisture)
 		implicit none
-		real,dimension(:,:,:), intent(inout) :: dxdt
+		real,dimension(:,:,:), intent(inout) :: dx_dt
 		real,dimension(:,:,:), intent(in) :: d1,d2
 		integer :: nx,nz,ny,i
 
@@ -468,40 +473,45 @@ contains
 		nz=size(d1,2)
 		ny=size(d1,3)
 		do i=1,nz
-			dxdt(i,:ny,1)=d1(1,i,:) -d2(1,i,:)
-			dxdt(i,:ny,2)=d1(nx,i,:)-d2(nx,i,:)
-			dxdt(i,:nx,3)=d1(:,i,1) -d2(:,i,1)
-			dxdt(i,:nx,4)=d1(:,i,ny)-d2(:,i,ny)
+			dx_dt(i,:ny,1)=d1(1,i,:) -d2(1,i,:)
+			dx_dt(i,:ny,2)=d1(nx,i,:)-d2(nx,i,:)
+			dx_dt(i,:nx,3)=d1(:,i,1) -d2(:,i,1)
+			dx_dt(i,:nx,4)=d1(:,i,ny)-d2(:,i,ny)
 		enddo
-		dxdt(:,1,3:4)=0
-		dxdt(:,nx,3:4)=0
+		dx_dt(:,1,3:4)=0
+		dx_dt(:,nx,3:4)=0
 	end subroutine update_edges
 	
 	
 	subroutine update_dxdt(bc,domain)
+! 		calculate changes between the current boundary conditions and the time step boundary conditions
+! 		these are used to linearly shift all fields between the two times. 
 		implicit none
 		type(bc_type), intent(inout) :: bc
 		type(domain_type), intent(in) :: domain
 		
-		bc%dudt=bc%next_domain%u-domain%u
-		bc%dvdt=bc%next_domain%v-domain%v
-		bc%dwdt=bc%next_domain%w-domain%w
-		bc%dpdt=bc%next_domain%p-domain%p
+		bc%du_dt=bc%next_domain%u-domain%u
+		bc%dv_dt=bc%next_domain%v-domain%v
+		bc%dw_dt=bc%next_domain%w-domain%w
+		bc%dp_dt=bc%next_domain%p-domain%p
+		bc%drho_dt=bc%next_domain%rho-domain%rho
 		
-		bc%dshdt  =bc%next_domain%sensible_heat-domain%sensible_heat
-		bc%dlhdt  =bc%next_domain%latent_heat-domain%latent_heat
-		bc%dpblhdt=bc%next_domain%pbl_height-domain%pbl_height
+		bc%dsh_dt  =bc%next_domain%sensible_heat-domain%sensible_heat
+		bc%dlh_dt  =bc%next_domain%latent_heat-domain%latent_heat
+		bc%dpblh_dt=bc%next_domain%pbl_height-domain%pbl_height
 
-		call update_edges(bc%dthdt,bc%next_domain%th,domain%th)
-		call update_edges(bc%dqvdt,bc%next_domain%qv,domain%qv)
-		call update_edges(bc%dqcdt,bc%next_domain%cloud,domain%cloud)
+		call update_edges(bc%dth_dt,bc%next_domain%th,domain%th)
+		call update_edges(bc%dqv_dt,bc%next_domain%qv,domain%qv)
+		call update_edges(bc%dqc_dt,bc%next_domain%cloud,domain%cloud)
 	end subroutine update_dxdt
 	
 	subroutine update_pressure(pressure,temperature,z_lo,z_hi)
+		!adjust the pressure field for the vertical shift between the low resolution domain
+		! and the high resolution domain. 
 		implicit none
 		real,dimension(:,:,:), intent(inout) :: pressure
 		real,dimension(:,:,:), intent(in) :: temperature,z_lo,z_hi
-		real,dimension(:,:,:),allocatable::slp
+		real,dimension(:,:,:),allocatable::slp !sea level pressure [Pa]
 		integer :: nx,ny,nz,i,j
 		nx=size(pressure,1)
 		nz=size(pressure,2)
@@ -645,9 +655,11 @@ contains
 				bc%next_domain%ice(:,i,ny)=sum(bc%next_domain%ice(:,i,ny))/nx
 			enddo
 		endif
-		domain%pii=(domain%p/100000.0)**(R/cp)
-        bc%next_domain%rho=domain%p/(R*domain%th*domain%pii) ! kg/m^3
+		domain%pii=bc%next_domain%pii
+		bc%next_domain%pii=(bc%next_domain%p/100000.0)**(R/cp)
 		
+		domain%rho=bc%next_domain%rho
+        bc%next_domain%rho=domain%p/(R*domain%th*domain%pii) ! kg/m^3
 		call update_winds(bc%next_domain,options)
 		call update_dxdt(bc,domain)
 	end subroutine bc_update

@@ -121,13 +121,13 @@ contains
 		call check( nf90_put_var(ncid, varid(16), domain%graupel) )
 		call check( nf90_put_var(ncid, varid(17), domain%crain) )
 		
-		allocate(pii(nx,nz,ny))
-		allocate(rho(nx,nz,ny))
-		pii=(domain%p/100000.0)**(R/cp)
-        rho=domain%p/(R*domain%th*pii) ! kg/m^3
-		call check( nf90_put_var(ncid, varid(18), pii) )
-		call check( nf90_put_var(ncid, varid(19), rho) )
-		deallocate(pii,rho)
+! 		allocate(pii(nx,nz,ny))
+! 		allocate(rho(nx,nz,ny))
+! 		pii=(domain%p/100000.0)**(R/cp)
+!         rho=domain%p/(R*domain%th*pii) ! kg/m^3
+! 		call check( nf90_put_var(ncid, varid(18), pii) )
+		call check( nf90_put_var(ncid, varid(19), domain%rho) )
+! 		deallocate(pii,rho)
 	
 		
 		! Close the file, freeing all resources.

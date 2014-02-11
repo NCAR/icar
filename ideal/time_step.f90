@@ -38,14 +38,15 @@ contains
 		type(domain_type),intent(inout)::domain
 		type(bc_type),intent(inout)::bc
 		
-		domain%u=domain%u+bc%dudt
-		domain%v=domain%v+bc%dvdt
-		domain%w=domain%w+bc%dwdt
-		domain%p=domain%p+bc%dpdt
+		domain%u=domain%u+bc%du_dt
+		domain%v=domain%v+bc%dv_dt
+		domain%w=domain%w+bc%dw_dt
+		domain%p=domain%p+bc%dp_dt
+		domain%rho=domain%rho+bc%drho_dt
 ! 		dXdt for qv,qc,th are only applied to the boundarys
-		call boundary_update(domain%th,bc%dthdt)
-		call boundary_update(domain%qv,bc%dqvdt)
-		call boundary_update(domain%cloud,bc%dqcdt)
+		call boundary_update(domain%th,bc%dth_dt)
+		call boundary_update(domain%qv,bc%dqv_dt)
+		call boundary_update(domain%cloud,bc%dqc_dt)
 	end subroutine forcing_update		
 
 
@@ -56,13 +57,14 @@ contains
 		type(bc_type), intent(inout) :: bc
 		integer,intent(in)::nsteps
 		
-		bc%dudt  =bc%dudt/nsteps
-		bc%dvdt  =bc%dvdt/nsteps
-		bc%dwdt  =bc%dwdt/nsteps
-		bc%dpdt  =bc%dpdt/nsteps
-		bc%dthdt =bc%dthdt/nsteps
-		bc%dqvdt =bc%dqvdt/nsteps
-		bc%dqcdt =bc%dqcdt/nsteps
+		bc%du_dt  =bc%du_dt/nsteps
+		bc%dv_dt  =bc%dv_dt/nsteps
+		bc%dw_dt  =bc%dw_dt/nsteps
+		bc%dp_dt  =bc%dp_dt/nsteps
+		bc%drho_dt=bc%drho_dt/nsteps
+		bc%dth_dt =bc%dth_dt/nsteps
+		bc%dqv_dt =bc%dqv_dt/nsteps
+		bc%dqc_dt =bc%dqc_dt/nsteps
 	end subroutine apply_dt
 	
 	
@@ -125,10 +127,10 @@ contains
 ! 				call write_domain(domain,options,i+10000)
 ! 			endif
 			call lsm_driver(domain,options,dt)
-! 			if (minval(domain%qv)<1e-10) then
-! 				print *,"LSM ERROR",minval(domain%qv)
-! 				call write_domain(domain,options,i+10000)
-! 			endif
+			if (minval(domain%th)<150) then
+				print *,"Temperature ERROR",minval(domain%th)
+				call write_domain(domain,options,i+10000)
+			endif
 	! 		call pbl(domain,options,dt)
 	! 		call radiation(domain,options,dt)
 ! 			apply/update boundary conditions including internal wind and pressure changes. 

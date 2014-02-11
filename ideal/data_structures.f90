@@ -84,7 +84,7 @@ module data_structures
 	
 ! 	All fields needed in the domain
 	type, extends(linearizable_type) :: domain_type
-		real, allocatable, dimension(:,:,:) :: p,th,w,pii,rho
+		real, allocatable, dimension(:,:,:) :: p,th,w,pii,rho,u_rho,v_rho,w_rho
 		real, allocatable, dimension(:,:,:) :: qv,cloud,ice,nice,qrain,nrain,qsnow,qgrau
 		real, allocatable, dimension(:,:) :: rain,crain,snow,graupel,sensible_heat,latent_heat,pbl_height,landmask
 		real::dt
@@ -96,9 +96,9 @@ module data_structures
 		real, allocatable, dimension(:,:,:) :: p,th,qv
 ! 		dXdt variables are the change in variable X between two forcing time steps
 ! 		wind and pressure dXdt fields applied to full 3d grid, others applied only to boundaries
-		real, allocatable, dimension(:,:,:) :: dudt,dvdt,dwdt,dpdt,dthdt,dqvdt,dqcdt
+		real, allocatable, dimension(:,:,:) :: du_dt,dv_dt,dw_dt,dp_dt,drho_dt,dth_dt,dqv_dt,dqc_dt
 ! 		sh, lh, and pblh fields are only 2d
-		real, allocatable, dimension(:,:) :: dshdt,dlhdt,dpblhdt
+		real, allocatable, dimension(:,:) :: dsh_dt,dlh_dt,dpblh_dt
 		real,allocatable,dimension(:,:)::lowres_terrain
 		real,allocatable,dimension(:,:,:)::lowres_z
 ! 		store the full 3D grid for the next time step to compute dXdt fields

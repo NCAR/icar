@@ -40,25 +40,23 @@ contains
 ! 			calculate horizontal divergence
 				dv=rhov(:,2:ny-1)*domain%v(2:nx-1,i,2:ny-1) - rhov(:,1:ny-2)*domain%v(2:nx-1,i,1:ny-2)
 				du=rhou(2:nx-1,:)*domain%u(2:nx-1,i,2:ny-1) - rhou(1:nx-2,:)*domain%u(1:nx-2,i,2:ny-1)
+				divergence=du+dv
+				if (i==1) then
+					! if this is the first model level start from 0 at the ground
+					domain%w(2:nx-1,i,2:ny-1)=0-divergence/rhow
+				else
+					! else calculate w as a change from w at the level below
+					domain%w(2:nx-1,i,2:ny-1)=domain%w(2:nx-1,i-1,2:ny-1)-divergence/rhow
+				endif
 			else
 				dv=domain%v(2:nx-1,i,2:ny-1) - domain%v(2:nx-1,i,1:ny-2)
 				du=domain%u(2:nx-1,i,2:ny-1) - domain%u(1:nx-2,i,2:ny-1)
-			endif
-			
-			divergence=du+dv
-			
-			if (i==1) then
-! 				if this is the first model level start from 0 at the ground
-				if (options%advect_density) then
-					domain%w(2:nx-1,i,2:ny-1)=0-divergence/rhow
-				else
+				divergence=du+dv
+				if (i==1) then
+					! if this is the first model level start from 0 at the ground
 					domain%w(2:nx-1,i,2:ny-1)=0-divergence
-				endif
-			else
-! 				else calculate w as a change from w at the level below
-				if (options%advect_density) then
-					domain%w(2:nx-1,i,2:ny-1)=domain%w(2:nx-1,i-1,2:ny-1)-divergence/rhow
 				else
+					! else calculate w as a change from w at the level below
 					domain%w(2:nx-1,i,2:ny-1)=domain%w(2:nx-1,i-1,2:ny-1)-divergence
 				endif
 			endif

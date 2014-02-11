@@ -29,13 +29,13 @@ contains
 
     end subroutine flux2
 
-    subroutine advect3d(q,u,v,w,dz,nx,nz,ny,debug,options)
+    subroutine advect3d(q,u,v,w,rho,dz,nx,nz,ny,debug,options)
 	    real,dimension(1:nx,1:nz,1:ny), intent(inout) :: q
 	    real,dimension(1:nx,1:nz,1:ny), intent(in) :: w
         real,dimension(1:nx-1,1:nz,1:ny),intent(in) :: u
         real,dimension(1:nx,1:nz,1:ny-1),intent(in) :: v
+	    real,dimension(1:nx,1:nz,1:ny), intent(in) :: rho
 	    real,dimension(1:nx,1:nz,1:ny), intent(in) :: dz
-! 	    real,dimension(1:nx,1:nz,1:ny), intent(in) :: rho
 		integer, intent(in) :: ny,nz,nx,debug
 		type(options_type), intent(in)::options
         ! interal parameters
@@ -44,7 +44,7 @@ contains
         real, dimension(1:nx-1,1:nz) :: f1 ! there used to be an f2 to store f[x+1]
         real, dimension(1:nx-2,1:nz) :: f3,f4
         real, dimension(1:nx-2,1:nz-1) ::f5
-        !$omp parallel shared(qin,q,u,v,w) firstprivate(nx,ny,nz) private(i,f1,f3,f4,f5)
+        !$omp parallel shared(qin,q,u,v,w,rho,dz) firstprivate(nx,ny,nz) private(i,f1,f3,f4,f5)
         !$omp do schedule(static)
         do i=1,ny
 			qin(:,:,i)=q(:,:,i)
@@ -69,17 +69,20 @@ contains
 		    (w(2:nx-1,1:nz-1,i)-ABS(w(2:nx-1,1:nz-1,i))) * qin(2:nx-1,2:nz,i))/2
 !            call flux2(qin(2:nx-1,1:nz-1,i),qin(2:nx-1,2:nz,i),w(2:nx-1,1:nz-1,i),nx-2,nz-1,1,f5)
 		   
-           ! perform horizontal advection
-           q(2:nx-1,:,i)=q(2:nx-1,:,i) - ((f1(2:nx-1,:)-f1(1:nx-2,:)) + (f3(:,:)-f4(:,:)))!/rho(2:nx-1,:,i)
-           ! then vertical (order doesn't matter because fluxes f1-6 are calculated before applying them)
 		   if (options%advect_density) then
+	           ! perform horizontal advection
+	           q(2:nx-1,:,i)=q(2:nx-1,:,i) - ((f1(2:nx-1,:)-f1(1:nx-2,:)) + (f3(:,:)-f4(:,:)))/rho(2:nx-1,:,i)
+	           ! then vertical (order doesn't matter because fluxes f1-6 are calculated before applying them)
 	           ! add fluxes to middle layers
-	           q(2:nx-1,2:nz-1,i)=q(2:nx-1,2:nz-1,i)-(f5(:,2:nz-1)-f5(:,1:nz-2))/dz(2:nx-1,2:nz-1,i)!/rho(2:nx-1,2:nz-1,i)
+	           q(2:nx-1,2:nz-1,i)=q(2:nx-1,2:nz-1,i)-(f5(:,2:nz-1)-f5(:,1:nz-2))/dz(2:nx-1,2:nz-1,i)/rho(2:nx-1,2:nz-1,i)
 	           ! add fluxes to bottom layer
-	           q(2:nx-1,1,i)=q(2:nx-1,1,i)-f5(:,1)/dz(2:nx-1,1,i)!/rho(2:nx-1,1,i)
+	           q(2:nx-1,1,i)=q(2:nx-1,1,i)-f5(:,1)/dz(2:nx-1,1,i)/rho(2:nx-1,1,i)
 	           ! add fluxes to top layer
-	           q(2:nx-1,nz,i)=q(2:nx-1,nz,i)-(qin(2:nx-1,nz,i)*w(2:nx-1,nz,i)-f5(:,nz-1))/dz(2:nx-1,nz,i)!/rho(2:nx-1,nz,i)
+	           q(2:nx-1,nz,i)=q(2:nx-1,nz,i)-(qin(2:nx-1,nz,i)*w(2:nx-1,nz,i)-f5(:,nz-1))/dz(2:nx-1,nz,i)/rho(2:nx-1,nz,i)
 		   else
+	           ! perform horizontal advection
+	           q(2:nx-1,:,i)=q(2:nx-1,:,i) - ((f1(2:nx-1,:)-f1(1:nx-2,:)) + (f3(:,:)-f4(:,:)))
+	           ! then vertical (order doesn't matter because fluxes f1-6 are calculated before applying them)
 	           ! add fluxes to middle layers
 	           q(2:nx-1,2:nz-1,i)=q(2:nx-1,2:nz-1,i)-(f5(:,2:nz-1)-f5(:,1:nz-2))
 	           ! add fluxes to bottom layer
@@ -132,50 +135,52 @@ contains
 			!$omp private(i) shared(pii_m,rho_m,domain,W_m)
 	        !$omp do schedule(static)
 			do i=1,ny
-				W_m(:,1:nz-1,i)=W_m(:,1:nz-1,i)/((domain%dz(:,1:nz-1,i)+domain%dz(:,2:nz,i))/2.0)
-				W_m(:,nz,i)=W_m(:,nz,i)/domain%dz(:,nz,i)
-				
-! 				pii_m(:,:,i)=(domain%p(:,:,i)/100000.0)**(R/cp)
-! 		        rho_m(:,:,i)=domain%p(:,:,i)/(R*domain%th(:,:,i)*pii_m(:,:,i)) ! kg/m^3
- 		        rho_m(:,:,i)=domain%rho(:,:,i) ! kg/m^3
-				domain%qv(:,:,i)   =domain%qv(:,:,i)*rho_m(:,:,i)
-				domain%cloud(:,:,i)=domain%cloud(:,:,i)*rho_m(:,:,i)
-				domain%ice(:,:,i)  =domain%ice(:,:,i)*rho_m(:,:,i)
-				domain%qrain(:,:,i)=domain%qrain(:,:,i)*rho_m(:,:,i)
-				domain%qsnow(:,:,i)=domain%qsnow(:,:,i)*rho_m(:,:,i)
-				domain%qgrau(:,:,i)=domain%qgrau(:,:,i)*rho_m(:,:,i)
-				domain%th(:,:,i)=domain%th(:,:,i)*rho_m(:,:,i)
+				W_m(:,1:nz-1,i)=W_m(:,1:nz-1,i) * domain%dz(:,1:nz-1,i) * &
+									((domain%rho(:,1:nz-1,i)+domain%rho(:,2:nz,i))/2.0)
+				W_m(:,nz,i)=W_m(:,nz,i) * domain%dz(:,nz,i) * (2*domain%rho(:,nz,i) - domain%rho(:,nz,i))
+				U_m(:,:,i)=U_m(:,:,i) * (rho_m(1:nx-1,:,i)+rho_m(2:nx,:,i))/2.0
+				if (i<ny) then
+					V_m(:,:,i)=V_m(:,:,i) * (rho_m(:,:,i)+rho_m(:,:,i+1))/2.0				
+				endif
+!  		        rho_m(:,:,i)=domain%rho(:,:,i) ! kg/m^3
+! 				domain%qv(:,:,i)   =domain%qv(:,:,i)*rho_m(:,:,i)
+! 				domain%cloud(:,:,i)=domain%cloud(:,:,i)*rho_m(:,:,i)
+! 				domain%ice(:,:,i)  =domain%ice(:,:,i)*rho_m(:,:,i)
+! 				domain%qrain(:,:,i)=domain%qrain(:,:,i)*rho_m(:,:,i)
+! 				domain%qsnow(:,:,i)=domain%qsnow(:,:,i)*rho_m(:,:,i)
+! 				domain%qgrau(:,:,i)=domain%qgrau(:,:,i)*rho_m(:,:,i)
+! 				domain%th(:,:,i)=domain%th(:,:,i)*rho_m(:,:,i)
 			enddo
 	        !$omp end do
 	        !$omp end parallel
 		endif
 
-		call advect3d(domain%qv,   U_m,V_m,W_m,domain%dz,nx,nz,ny,0,options)
-		call advect3d(domain%cloud,U_m,V_m,W_m,domain%dz,nx,nz,ny,0,options)
-		call advect3d(domain%ice,  U_m,V_m,W_m,domain%dz,nx,nz,ny,0,options)
-		call advect3d(domain%qrain,U_m,V_m,W_m,domain%dz,nx,nz,ny,0,options)
-		call advect3d(domain%qsnow,U_m,V_m,W_m,domain%dz,nx,nz,ny,0,options)
-		call advect3d(domain%qgrau,U_m,V_m,W_m,domain%dz,nx,nz,ny,0,options)
-		call advect3d(domain%th,   U_m,V_m,W_m,domain%dz,nx,nz,ny,0,options)
-! 		call advect3d(domain%nice, U_m,V_m,W_m,domain%dz,nx,nz,ny,0,options)
-! 		call advect3d(domain%nrain,U_m,V_m,W_m,domain%dz,nx,nz,ny,0,options)
+		call advect3d(domain%qv,   U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+		call advect3d(domain%cloud,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+		call advect3d(domain%ice,  U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+		call advect3d(domain%qrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+		call advect3d(domain%qsnow,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+		call advect3d(domain%qgrau,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+		call advect3d(domain%th,   U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+! 		call advect3d(domain%nice, U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+! 		call advect3d(domain%nrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
 		
-		if (options%advect_density) then
-	        !$omp parallel firstprivate(ny) &
-			!$omp private(i) shared(rho_m,domain)
-	        !$omp do schedule(static)
-			do i=1,ny
-				domain%qv(:,:,i)   =domain%qv(:,:,i)/rho_m(:,:,i)
-				domain%cloud(:,:,i)=domain%cloud(:,:,i)/rho_m(:,:,i)
-				domain%ice(:,:,i)  =domain%ice(:,:,i)/rho_m(:,:,i)
-				domain%qrain(:,:,i)=domain%qrain(:,:,i)/rho_m(:,:,i)
-				domain%qsnow(:,:,i)=domain%qsnow(:,:,i)/rho_m(:,:,i)
-				domain%qgrau(:,:,i)=domain%qgrau(:,:,i)/rho_m(:,:,i)
-				domain%th(:,:,i)=domain%th(:,:,i)/rho_m(:,:,i)
-			enddo
-	        !$omp end do
-	        !$omp end parallel
-		endif
+! 		if (options%advect_density) then
+! 	        !$omp parallel firstprivate(ny) &
+! 			!$omp private(i) shared(rho_m,domain)
+! 	        !$omp do schedule(static)
+! 			do i=1,ny
+! 				domain%qv(:,:,i)   =domain%qv(:,:,i)/rho_m(:,:,i)
+! 				domain%cloud(:,:,i)=domain%cloud(:,:,i)/rho_m(:,:,i)
+! 				domain%ice(:,:,i)  =domain%ice(:,:,i)/rho_m(:,:,i)
+! 				domain%qrain(:,:,i)=domain%qrain(:,:,i)/rho_m(:,:,i)
+! 				domain%qsnow(:,:,i)=domain%qsnow(:,:,i)/rho_m(:,:,i)
+! 				domain%qgrau(:,:,i)=domain%qgrau(:,:,i)/rho_m(:,:,i)
+! 				domain%th(:,:,i)=domain%th(:,:,i)/rho_m(:,:,i)
+! 			enddo
+! 	        !$omp end do
+! 	        !$omp end parallel
+! 		endif
 		
 	end subroutine advect
 
