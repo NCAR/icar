@@ -111,8 +111,10 @@ contains
 			allocate(U_m(nx-1,nz,ny))
 			allocate(V_m(nx,nz,ny-1))
 			allocate(W_m(nx,nz,ny))
-			allocate(rho_m(nx,nz,ny))
-			allocate(pii_m(nx,nz,ny))
+			if (options%advect_density) then
+				allocate(rho_m(nx,nz,ny))
+				allocate(pii_m(nx,nz,ny))
+			endif
 		endif
 ! 		rho_m(:,:,:)=1
 		
@@ -133,15 +135,16 @@ contains
 				W_m(:,1:nz-1,i)=W_m(:,1:nz-1,i)/((domain%dz(:,1:nz-1,i)+domain%dz(:,2:nz,i))/2.0)
 				W_m(:,nz,i)=W_m(:,nz,i)/domain%dz(:,nz,i)
 				
-				pii_m(:,:,i)=(domain%p(:,:,i)/100000.0)**(R/cp)
-		        rho_m(:,:,i)=domain%p(:,:,i)/(R*domain%th(:,:,i)*pii_m(:,:,i)) ! kg/m^3
-				
+! 				pii_m(:,:,i)=(domain%p(:,:,i)/100000.0)**(R/cp)
+! 		        rho_m(:,:,i)=domain%p(:,:,i)/(R*domain%th(:,:,i)*pii_m(:,:,i)) ! kg/m^3
+ 		        rho_m(:,:,i)=domain%rho(:,:,i) ! kg/m^3
 				domain%qv(:,:,i)   =domain%qv(:,:,i)*rho_m(:,:,i)
 				domain%cloud(:,:,i)=domain%cloud(:,:,i)*rho_m(:,:,i)
 				domain%ice(:,:,i)  =domain%ice(:,:,i)*rho_m(:,:,i)
 				domain%qrain(:,:,i)=domain%qrain(:,:,i)*rho_m(:,:,i)
 				domain%qsnow(:,:,i)=domain%qsnow(:,:,i)*rho_m(:,:,i)
 				domain%qgrau(:,:,i)=domain%qgrau(:,:,i)*rho_m(:,:,i)
+				domain%th(:,:,i)=domain%th(:,:,i)*rho_m(:,:,i)
 			enddo
 	        !$omp end do
 	        !$omp end parallel
@@ -154,8 +157,8 @@ contains
 		call advect3d(domain%qsnow,U_m,V_m,W_m,domain%dz,nx,nz,ny,0,options)
 		call advect3d(domain%qgrau,U_m,V_m,W_m,domain%dz,nx,nz,ny,0,options)
 		call advect3d(domain%th,   U_m,V_m,W_m,domain%dz,nx,nz,ny,0,options)
-		call advect3d(domain%nice, U_m,V_m,W_m,domain%dz,nx,nz,ny,0,options)
-		call advect3d(domain%nrain,U_m,V_m,W_m,domain%dz,nx,nz,ny,0,options)
+! 		call advect3d(domain%nice, U_m,V_m,W_m,domain%dz,nx,nz,ny,0,options)
+! 		call advect3d(domain%nrain,U_m,V_m,W_m,domain%dz,nx,nz,ny,0,options)
 		
 		if (options%advect_density) then
 	        !$omp parallel firstprivate(ny) &
@@ -168,6 +171,7 @@ contains
 				domain%qrain(:,:,i)=domain%qrain(:,:,i)/rho_m(:,:,i)
 				domain%qsnow(:,:,i)=domain%qsnow(:,:,i)/rho_m(:,:,i)
 				domain%qgrau(:,:,i)=domain%qgrau(:,:,i)/rho_m(:,:,i)
+				domain%th(:,:,i)=domain%th(:,:,i)/rho_m(:,:,i)
 			enddo
 	        !$omp end do
 	        !$omp end parallel
