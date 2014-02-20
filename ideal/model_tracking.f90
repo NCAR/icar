@@ -1,32 +1,60 @@
 module model_tracking
 	implicit none
-	character(len=255),allocatable,dimension(:)::versionlist,deltas
+	character(len=1024),allocatable,dimension(:)::versionlist,deltas
 contains
 	
 	subroutine init_model_diffs()
-		integer::n=2
+		integer::n=7
 		
 		allocate(versionlist(n))
 		allocate(deltas(n))
-		versionlist=["0.7.2","0.7.3"]
-		deltas=["","added advect_density: boolean use"]
+		versionlist=["0.5.1","0.5.2","0.6","0.7","0.7.1","0.7.2","0.7.3"]
+		deltas=["Earliest version in record", & 
+		"Added dxlow and variable name definitions pvar,tvar,qvvar,qcvar,qivar,     "// &
+		"      U/V:lat/lon:high/low res", &
+		"Added variable name definitions for sensible(shvar)/latent(lhvar) heat     "// &
+		"      fluxes and PBL height(pblhvar)", &
+		"Added input interval vs output interval timestepping, ?? also removed dz   "// &
+		"      and decrease_dz", &
+		"Added variable name definitions for zvar and landmask (landvar), added     "// &
+		"      readz:boolean,x/y:min/max:integer", &
+		"Removed x/y:min/max, Added dz_levels and z_info namelist", &
+		"Added advect_density: boolean use"]
 		
 	end subroutine init_model_diffs
 	
 	subroutine print_model_diffs(version)
 		character(len=*), intent(in) :: version
 		integer :: i,j
+		logical :: found_a_version=.false.
 		
 		write(*,*) "Model changes:"
-		call init_model_diffs()
+		if (.not.allocated(versionlist)) then
+			call init_model_diffs()
+		endif
+		
 		do i=1,size(versionlist)
 			if (version.eq.versionlist(i)) then
+				found_a_version=.true.
+				if (i<6) then
+					write(*,*) " (Versions <0.7.3 may not be as reliable)"
+				endif
 				do j=i+1,size(versionlist)
+					write(*,*) " "
 					write(*,*) "  "//trim(versionlist(j))
 					write(*,*) "    "//trim(deltas(j))
 				enddo
 			endif
 		enddo
-		
+		if (.not.found_a_version) then
+			write(*,*) "Unable to find a matching version"
+			write(*,*) "Available version history:"
+			write(*,*) " (Versions <0.7.3 may not be as reliable)"
+			do j=1,size(versionlist)
+				write(*,*) " "
+				write(*,*) " "//trim(versionlist(j))
+				write(*,*) "   "//trim(deltas(j))
+			enddo
+		endif
 	end subroutine print_model_diffs
 end module model_tracking
