@@ -3,7 +3,7 @@ module wind
 	use data_structures
 	implicit none
 	private
-	public::update_winds
+	public::update_winds,balance_uvw
 contains
 
 	subroutine balance_uvw(domain,options)
@@ -35,18 +35,24 @@ contains
 				if (i<nz) then
 					rhow=(domain%rho(2:nx-1,i,2:ny-1) + domain%rho(2:nx-1,i+1,2:ny-1))/2
 				else
-					rhow=domain%rho(2:nx-1,i,2:ny-1)
+					rhow=2*domain%rho(2:nx-1,i,2:ny-1)-domain%rho(2:nx-1,i-1,2:ny-1)
 				endif
 ! 			calculate horizontal divergence
-				dv=rhov(:,2:ny-1)*domain%v(2:nx-1,i,2:ny-1) - rhov(:,1:ny-2)*domain%v(2:nx-1,i,1:ny-2)
-				du=rhou(2:nx-1,:)*domain%u(2:nx-1,i,2:ny-1) - rhou(1:nx-2,:)*domain%u(1:nx-2,i,2:ny-1)
+				domain%vr(2:nx-1,i,1:ny-1)=rhov*domain%v(2:nx-1,i,1:ny-1) * domain%dz(1,i,1)*domain%dx
+				dv=domain%vr(2:nx-1,i,2:ny-1) - domain%vr(2:nx-1,i,1:ny-2)
+				
+				domain%ur(1:nx-1,i,2:ny-1)=rhou*domain%u(1:nx-1,i,2:ny-1) * domain%dz(1,i,1)*domain%dx
+				du=domain%ur(2:nx-1,i,2:ny-1) - domain%ur(1:nx-2,i,2:ny-1)
+				
 				divergence=du+dv
 				if (i==1) then
 					! if this is the first model level start from 0 at the ground
-					domain%w(2:nx-1,i,2:ny-1)=0-divergence/rhow
+					domain%wr(2:nx-1,i,2:ny-1)=0-divergence
+					domain%w(2:nx-1,i,2:ny-1)=0-divergence/rhow/(domain%dx**2)
 				else
 					! else calculate w as a change from w at the level below
-					domain%w(2:nx-1,i,2:ny-1)=domain%w(2:nx-1,i-1,2:ny-1)-divergence/rhow
+					domain%wr(2:nx-1,i,2:ny-1)=domain%wr(2:nx-1,i-1,2:ny-1)-divergence
+					domain%w(2:nx-1,i,2:ny-1)=domain%w(2:nx-1,i-1,2:ny-1)-divergence/rhow/(domain%dx**2)
 				endif
 			else
 				dv=domain%v(2:nx-1,i,2:ny-1) - domain%v(2:nx-1,i,1:ny-2)
@@ -67,7 +73,10 @@ contains
 ! 		domain%w(:,:nz-1,:)=domain%w(:,:nz-1,:)/domain%dx * (domain%dz(:,1:nz-1,:)+domain%dz(:,2:nz,:))/2
 ! 		domain%w(:,nz,:)=domain%w(:,nz,:)/domain%dx * domain%dz(:,nz,:)
 		
-		deallocate(du,dv,divergence,rhou,rhov,rhow)
+		deallocate(du,dv,divergence)
+		if (options%advect_density) then
+			deallocate(rhou,rhov,rhow)
+		endif
 	end subroutine balance_uvw
 	
 ! 	apply wind field physics and adjustments

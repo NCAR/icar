@@ -455,8 +455,8 @@ contains
 			call update_winds(domain,options)
 		endif
 		!the will be put back into domain in bc_update so we need to copy them over here. 
-		bc%next_domain%pii=domain%pii
-		bc%next_domain%rho=domain%rho
+! 		bc%next_domain%pii=domain%pii
+! 		bc%next_domain%rho=domain%rho
 
 	end subroutine bc_init
 
@@ -492,9 +492,9 @@ contains
 		
 		bc%du_dt=bc%next_domain%u-domain%u
 		bc%dv_dt=bc%next_domain%v-domain%v
-		bc%dw_dt=bc%next_domain%w-domain%w
+! 		bc%dw_dt=bc%next_domain%w-domain%w
 		bc%dp_dt=bc%next_domain%p-domain%p
-		bc%drho_dt=bc%next_domain%rho-domain%rho
+! 		bc%drho_dt=bc%next_domain%rho-domain%rho
 		
 		bc%dsh_dt  =bc%next_domain%sensible_heat-domain%sensible_heat
 		bc%dlh_dt  =bc%next_domain%latent_heat-domain%latent_heat
@@ -620,6 +620,7 @@ contains
 			call read_2dvar(bc%next_domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep)
 			call read_2dvar(bc%next_domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep)
 			call read_2dvar(bc%next_domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep)
+! 			NOTE, this is a kludge to prevent the model from sucking more moisture out of the lower model layer than exists
 			where(domain%latent_heat<0) domain%latent_heat=0
 		else
 			bc%next_domain%sensible_heat=0
@@ -655,12 +656,12 @@ contains
 				bc%next_domain%ice(:,i,ny)=sum(bc%next_domain%ice(:,i,ny))/nx
 			enddo
 		endif
-		domain%pii=bc%next_domain%pii
-		bc%next_domain%pii=(bc%next_domain%p/100000.0)**(R/cp)
+! 		domain%pii=bc%next_domain%pii
+! 		bc%next_domain%pii=(bc%next_domain%p/100000.0)**(R/cp)
 		
-		domain%rho=bc%next_domain%rho
-        bc%next_domain%rho=domain%p/(R*domain%th*domain%pii) ! kg/m^3
-		call update_winds(bc%next_domain,options)
+! 		domain%rho=bc%next_domain%rho
+!         bc%next_domain%rho=bc%next_domain%p/(R*domain%th*bc%next_domain%pii) ! kg/m^3
+! 		call update_winds(bc%next_domain,options)
 		call update_dxdt(bc,domain)
 	end subroutine bc_update
 end module boundary_conditions

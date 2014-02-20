@@ -297,6 +297,8 @@ contains
 	subroutine domain_allocation(domain,nx,nz,ny)
 		type(domain_type), intent(inout) :: domain
 		integer,intent(in)::nx,nz,ny
+		allocate(domain%ones(nx,nz,ny))
+		domain%ones=1
 		allocate(domain%p(nx,nz,ny))
 		domain%p=0
 		allocate(domain%u(nx+1,nz,ny))
@@ -305,6 +307,12 @@ contains
 		domain%v=0
 		allocate(domain%w(nx,nz,ny))
 		domain%w=0
+		allocate(domain%ur(nx+1,nz,ny))
+		domain%ur=0
+		allocate(domain%vr(nx,nz,ny+1))
+		domain%vr=0
+		allocate(domain%wr(nx,nz,ny))
+		domain%wr=0
 		allocate(domain%u_rho(nx+1,nz,ny))
 		domain%u_rho=0
 		allocate(domain%v_rho(nx,nz,ny+1))

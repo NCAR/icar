@@ -30,10 +30,10 @@ contains
 		kde=size(domain%qv,2)
 		jds=1
 		jde=size(domain%qv,3)
-		
-		if (.not.allocated(pii)) then
-			allocate(pii(ids:ide,kds:kde,jds:jde))
-		endif
+! 		
+! 		if (.not.allocated(pii)) then
+! 			allocate(pii(ids:ide,kds:kde,jds:jde))
+! 		endif
 		if (.not.allocated(SR)) then
 			allocate(SR(ids:ide,kds:kde,jds:jde))
 	! 		snow rain ratio
@@ -41,11 +41,11 @@ contains
 		endif
 		if (options%physics%microphysics==1) then
 	! 		used to convert potential temperature to sensible temperature
-			pii=1.0/((100000.0/domain%p)**(R/cp))
-		
+! 			pii=1.0/((100000.0/domain%p)**(R/cp))
+			
 			call mp_gt_driver(domain%qv, domain%cloud, domain%qrain, domain%ice, &
 			                domain%qsnow, domain%qgrau, domain%nice, domain%nrain, &
-							domain%th, pii, domain%p, domain%dz, dt_in, itimestep, &
+							domain%th, domain%pii, domain%p, domain%dz, dt_in, itimestep, &
 							domain%rain, domain%rain, &
 							domain%snow, domain%snow, &
 							domain%graupel, domain%graupel, &

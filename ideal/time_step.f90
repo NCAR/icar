@@ -1,12 +1,11 @@
 module time_step
 	use data_structures     ! *_type  types
-	use microphysics        ! mp
-	use convection
-	use lsm
-	use wind                ! update_winds
-	use advection           ! advect
-! 	use iso_fortran_env     ! FLUSH removed because it didn't help
-	use output
+	use microphysics,   only : mp
+	use convection,     only : convect
+	use lsm,            only : lsm_driver
+	use wind,           only : update_winds,balance_uvw
+	use advection,      only : advect
+	use output,         only : write_domain
 	implicit none
 	private
 	public :: step
@@ -33,20 +32,34 @@ contains
 	end subroutine boundary_update
 	
 ! 	updated all fields in domain using the respective dXdt variables
-	subroutine forcing_update(domain,bc)
+	subroutine forcing_update(domain,bc,options)
 		implicit none
 		type(domain_type),intent(inout)::domain
 		type(bc_type),intent(inout)::bc
-		
-		domain%u=domain%u+bc%du_dt
-		domain%v=domain%v+bc%dv_dt
-		domain%w=domain%w+bc%dw_dt
-		domain%p=domain%p+bc%dp_dt
-		domain%rho=domain%rho+bc%drho_dt
-! 		dXdt for qv,qc,th are only applied to the boundarys
+		type(options_type),intent(in)::options
+		integer::j,ny
+		ny=size(domain%p,3)
+        !$omp parallel firstprivate(ny) &
+		!$omp private(j) &
+        !$omp shared(bc,domain)
+        !$omp do schedule(static)
+		do j=1,ny
+			domain%u(:,:,j)=domain%u(:,:,j)+bc%du_dt(:,:,j)
+			domain%v(:,:,j)=domain%v(:,:,j)+bc%dv_dt(:,:,j)
+	! 		domain%w(:,:,j)=domain%w(:,:,j)+bc%dw_dt(:,:,j)
+			domain%p(:,:,j)=domain%p(:,:,j)+bc%dp_dt(:,:,j)
+			domain%pii(:,:,j)=(domain%p(:,:,j)/100000.0)**(R/cp)
+	        domain%rho(:,:,j)=domain%p(:,:,j)/(R*domain%th(:,:,j)*domain%pii(:,:,j)) ! kg/m^3
+		enddo
+        !$omp end do
+        !$omp end parallel
+		! v has one more y element than others
+		domain%v(:,:,ny)=domain%v(:,:,ny)+bc%dv_dt(:,:,ny)
+		! dXdt for qv,qc,th are only applied to the boundarys
 		call boundary_update(domain%th,bc%dth_dt)
 		call boundary_update(domain%qv,bc%dqv_dt)
 		call boundary_update(domain%cloud,bc%dqc_dt)
+		call balance_uvw(domain,options)
 	end subroutine forcing_update		
 
 
@@ -59,9 +72,9 @@ contains
 		
 		bc%du_dt  =bc%du_dt/nsteps
 		bc%dv_dt  =bc%dv_dt/nsteps
-		bc%dw_dt  =bc%dw_dt/nsteps
+! 		bc%dw_dt  =bc%dw_dt/nsteps
 		bc%dp_dt  =bc%dp_dt/nsteps
-		bc%drho_dt=bc%drho_dt/nsteps
+! 		bc%drho_dt=bc%drho_dt/nsteps
 		bc%dth_dt =bc%dth_dt/nsteps
 		bc%dqv_dt =bc%dqv_dt/nsteps
 		bc%dqc_dt =bc%dqc_dt/nsteps
@@ -111,6 +124,9 @@ contains
 		write(*,*) "    dt=",dt, "nsteps=",ntimesteps
 ! 		now just loop over internal timesteps computing all physics in order (operator splitting...)
 		do i=1,ntimesteps
+! 			write(*,*) i
+! 			call write_domain(domain,options,i+10000)
+			
 			call advect(domain,options,dt)
 ! 			if (minval(domain%qv)<1e-10) then
 ! 				print *,"ADVECTION ERROR",minval(domain%qv)
@@ -127,15 +143,14 @@ contains
 ! 				call write_domain(domain,options,i+10000)
 ! 			endif
 			call lsm_driver(domain,options,dt)
-			if (minval(domain%th)<150) then
-				print *,"Temperature ERROR",minval(domain%th)
-				call write_domain(domain,options,i+10000)
-			endif
+! 			if (minval(domain%th)<150) then
+! 			print *,"Temperature: ",minval(domain%th),maxval(domain%th)
+! 				call write_domain(domain,options,i+10000)
+! 			endif
 	! 		call pbl(domain,options,dt)
 	! 		call radiation(domain,options,dt)
 ! 			apply/update boundary conditions including internal wind and pressure changes. 
-			call forcing_update(domain,bc)
-			
+			call forcing_update(domain,bc,options)
 			model_time=model_time+dt
 			if ((abs(model_time-next_output)<1e-2).or.(model_time>next_output)) then
 				call write_domain(domain,options,nint(model_time/options%out_dt))
@@ -149,5 +164,19 @@ contains
 				endif
 			endif
 		enddo
+		print *,"Exiting time step"
+! 		print *, maxval(domain%th),minval(domain%th)
+		print *, maxval(domain%ones),minval(domain%ones)
+! 		if (options%advect_density) then
+! 			domain%th   =domain%th   /domain%ones
+! 			domain%qv   =domain%qv   /domain%ones
+! 			domain%cloud=domain%cloud/domain%ones
+! 			domain%ice  =domain%ice  /domain%ones
+! 			domain%qrain=domain%qrain/domain%ones
+! 			domain%qsnow=domain%qsnow/domain%ones
+! 			domain%ones=1
+! 		endif
+! 		print *, maxval(domain%th),minval(domain%th)
+		
 	end subroutine step
 end module time_step
