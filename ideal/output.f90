@@ -94,8 +94,8 @@ contains
 		call check( nf90_def_var(ncid, "crain", NF90_REAL, dimids(1:3:2), temp_id) )
 		varid(17)=temp_id
 		
-		call check( nf90_def_var(ncid, "pii",  NF90_REAL, dimids, temp_id) )
-		varid(18)=temp_id
+! 		call check( nf90_def_var(ncid, "pii",  NF90_REAL, dimids, temp_id) )
+! 		varid(18)=temp_id
 		call check( nf90_def_var(ncid, "rho", NF90_REAL, dimids, temp_id) )
 		varid(19)=temp_id
 		
@@ -120,14 +120,8 @@ contains
 		call check( nf90_put_var(ncid, varid(15), domain%snow) )
 		call check( nf90_put_var(ncid, varid(16), domain%graupel) )
 		call check( nf90_put_var(ncid, varid(17), domain%crain) )
-		
-! 		allocate(pii(nx,nz,ny))
-! 		allocate(rho(nx,nz,ny))
-! 		pii=(domain%p/100000.0)**(R/cp)
-!         rho=domain%p/(R*domain%th*pii) ! kg/m^3
-! 		call check( nf90_put_var(ncid, varid(18), pii) )
+! 		call check( nf90_put_var(ncid, varid(18), domain%pii) )
 		call check( nf90_put_var(ncid, varid(19), domain%rho) )
-! 		deallocate(pii,rho)
 	
 		
 		! Close the file, freeing all resources.

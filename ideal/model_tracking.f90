@@ -1,4 +1,6 @@
 module model_tracking
+! 	Module to track each version of the model developement
+!   Particularly the changes to the namelist required at each step
 	implicit none
 	character(len=1024),allocatable,dimension(:)::versionlist,deltas
 contains

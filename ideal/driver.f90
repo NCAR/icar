@@ -18,7 +18,6 @@ program real
 	call init_model("real_options.namelist",options,domain,boundary)
 ! 	initialize microphysics code (e.g. compute look up tables in Thompson et al)
 	write(*,*) "Initializing microphysics"
-! 	write(*,*) "WARNING: NOT Initializing microphysics"
 	call mp_init(options%physics%microphysics) !this could easily be moved to init_model...
 	call init_convection(domain,options)
 ! 	read initial conditions from the boundary file

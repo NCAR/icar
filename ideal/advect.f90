@@ -3,7 +3,7 @@ module advection
     
     implicit none
 	private
-	real,dimension(:,:,:),allocatable::U_m,V_m,W_m,pii_m,rho_m
+	real,dimension(:,:,:),allocatable::U_m,V_m,W_m
 	public::advect
 	
 contains
@@ -115,40 +115,21 @@ contains
 			allocate(V_m(nx,nz,ny-1))
 			allocate(W_m(nx,nz,ny))
 		endif
-! 		rho_m(:,:,:)=1
 		
 ! 		calculate U,V,W normalized for dt/dx
-		U_m=domain%u(1:nx-1,:,:)*dt/dx
-		V_m=domain%v(:,:,1:ny-1)*dt/dx
-! 		note, even though dz!=dx, W is computed from the divergence in U/V so it is scaled by dx/dz already
-		W_m=domain%w*dt/dx
 
 ! 		should probably be converting to mass (q*rho) before advecting, then back again... but testing showed minimal difference
 		if (options%advect_density) then
-! 			print *, maxval(domain%rho),minval(domain%rho)
-! 			print *, maxval(domain%th),minval(domain%th)
-! 	        !$omp parallel firstprivate(ny) &
-! 			!$omp private(i) shared(domain,W_m,U_m,V_m)
-! 	        !$omp do schedule(static)
-! 			do i=1,ny
-! 				W_m(:,1:nz-1,i)=W_m(:,1:nz-1,i) * &!domain%dz(:,1:nz-1,i) * &
-! 									((domain%rho(:,1:nz-1,i)+domain%rho(:,2:nz,i))/2.0)
-! 				W_m(:,nz,i)=W_m(:,nz,i) * (2*domain%rho(:,nz,i) - domain%rho(:,nz-1,i))! * domain%dz(:,nz,i)
-! 				U_m(:,:,i)=U_m(:,:,i) * (domain%rho(1:nx-1,:,i)+domain%rho(2:nx,:,i))/2.0
-! 				if (i<ny) then
-! 					V_m(:,:,i)=V_m(:,:,i) * (domain%rho(:,:,i)+domain%rho(:,:,i+1))/2.0				
-! 				endif
-! 			enddo
-! 	        !$omp end do
-! 	        !$omp end parallel
-			U_m=domain%ur(1:nx-1,:,:)*dt/dx**2
-			V_m=domain%vr(:,:,1:ny-1)*dt/dx**2
-			W_m=domain%wr*dt/dx**2
+			U_m=domain%ur(1:nx-1,:,:)*(dt/dx**2)
+			V_m=domain%vr(:,:,1:ny-1)*(dt/dx**2)
+			W_m=domain%wr*(dt/dx**2)
+		else
+			U_m=domain%u(1:nx-1,:,:)*(dt/dx)
+			V_m=domain%v(:,:,1:ny-1)*(dt/dx)
+	! 		note, even though dz!=dx, W is computed from the divergence in U/V so it is scaled by dx/dz already
+			W_m=domain%w*(dt/dx)
 		endif
 
-! 		print *,U_m(9,1,10),U_m(10,1,10),U_m(10,1,10)-U_m(9,1,10)
-! 		print *,V_m(10,1,9),V_m(10,1,10),V_m(10,1,10)-V_m(10,1,9)
-! 		print *,W_m(10,1,10),domain%dz(10,1,10)
 		call advect3d(domain%qv,   U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
 		call advect3d(domain%cloud,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
 		call advect3d(domain%ice,  U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
@@ -156,11 +137,8 @@ contains
 		call advect3d(domain%qsnow,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
 		call advect3d(domain%qgrau,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
 		call advect3d(domain%th,   U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
-		if (options%advect_density) then
-			call advect3d(domain%ones,   U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
-		endif
-! 		call advect3d(domain%nice, U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
-! 		call advect3d(domain%nrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+		call advect3d(domain%nice, U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+		call advect3d(domain%nrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
 		
 	end subroutine advect
 

@@ -82,7 +82,7 @@ contains
 		if (version.ne."0.7.3") then
 			write(*,*) "Model version does not match namelist version"
 			write(*,*) "  Model version: 0.7.3"
-			write(*,*) "  Namelist version:",trim(version)
+			write(*,*) "  Namelist version: ",trim(version)
 			call print_model_diffs(version)
 			stop
 		endif
@@ -297,8 +297,6 @@ contains
 	subroutine domain_allocation(domain,nx,nz,ny)
 		type(domain_type), intent(inout) :: domain
 		integer,intent(in)::nx,nz,ny
-		allocate(domain%ones(nx,nz,ny))
-		domain%ones=1
 		allocate(domain%p(nx,nz,ny))
 		domain%p=0
 		allocate(domain%u(nx+1,nz,ny))
@@ -313,12 +311,6 @@ contains
 		domain%vr=0
 		allocate(domain%wr(nx,nz,ny))
 		domain%wr=0
-		allocate(domain%u_rho(nx+1,nz,ny))
-		domain%u_rho=0
-		allocate(domain%v_rho(nx,nz,ny+1))
-		domain%v_rho=0
-		allocate(domain%w_rho(nx,nz,ny))
-		domain%w_rho=0
 		allocate(domain%th(nx,nz,ny))
 		domain%th=0
 		allocate(domain%qv(nx,nz,ny))
@@ -337,12 +329,10 @@ contains
 		domain%qsnow=0
 		allocate(domain%qgrau(nx,nz,ny))
 		domain%qgrau=0
-
 		allocate(domain%pii(nx,nz,ny))
 		domain%pii=0
 		allocate(domain%rho(nx,nz,ny))
 		domain%rho=0
-
 		allocate(domain%rain(nx,ny))
 		domain%rain=0
 		allocate(domain%crain(nx,ny))

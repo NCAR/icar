@@ -2,7 +2,6 @@ module lsm
 	use data_structures
 
     implicit none
-	real,allocatable,dimension(:,:,:)::pii
 	integer,allocatable,dimension(:,:)::pblh_i
 !     real, parameter :: LH_vaporization=2260000.0 ! J/kg
 !     real, parameter :: R=287.058 ! J/(kg K) specific gas constant for air
@@ -148,15 +147,11 @@ module lsm
 		nx=size(domain%p,1)
 		nz=size(domain%p,2)
 		ny=size(domain%p,3)
-! 		if (.not.allocated(pii)) then
-! 			allocate(pii(nx,nz,ny))
-! 		endif
 		if (.not.allocated(pblh_i)) then
 			allocate(pblh_i(nx,ny))
 		endif
 		if (options%physics%landsurface==1) then
 			call calc_pbl_index(domain%z,domain%pbl_height,pblh_i)
-			
 			
 			call simple_land_surface_fluxes(domain%th,domain%qv,domain%p,domain%dz,domain%pii,dt, &
 											domain%sensible_heat,domain%latent_heat,pblh_i, &

@@ -124,33 +124,17 @@ contains
 		write(*,*) "    dt=",dt, "nsteps=",ntimesteps
 ! 		now just loop over internal timesteps computing all physics in order (operator splitting...)
 		do i=1,ntimesteps
-! 			write(*,*) i
-! 			call write_domain(domain,options,i+10000)
-			
 			call advect(domain,options,dt)
-! 			if (minval(domain%qv)<1e-10) then
-! 				print *,"ADVECTION ERROR",minval(domain%qv)
-! 				call write_domain(domain,options,i+10000)
-! 			endif
 			call mp(domain,options,dt)
-! 			if (minval(domain%qv)<1e-10) then
-! 				print *,"MP ERROR",minval(domain%qv)
-! 				call write_domain(domain,options,i+10000)
-! 			endif
 			call convect(domain,options,dt)
-! 			if (minval(domain%qv)<1e-10) then
-! 				print *,"CONVECTION ERROR",minval(domain%qv)
-! 				call write_domain(domain,options,i+10000)
-! 			endif
 			call lsm_driver(domain,options,dt)
-! 			if (minval(domain%th)<150) then
-! 			print *,"Temperature: ",minval(domain%th),maxval(domain%th)
-! 				call write_domain(domain,options,i+10000)
-! 			endif
-	! 		call pbl(domain,options,dt)
-	! 		call radiation(domain,options,dt)
+! 			call pbl(domain,options,dt)
+! 			call radiation(domain,options,dt)
+
 ! 			apply/update boundary conditions including internal wind and pressure changes. 
 			call forcing_update(domain,bc,options)
+			
+! 			step model time forward
 			model_time=model_time+dt
 			if ((abs(model_time-next_output)<1e-2).or.(model_time>next_output)) then
 				call write_domain(domain,options,nint(model_time/options%out_dt))
@@ -164,19 +148,6 @@ contains
 				endif
 			endif
 		enddo
-		print *,"Exiting time step"
-! 		print *, maxval(domain%th),minval(domain%th)
-		print *, maxval(domain%ones),minval(domain%ones)
-! 		if (options%advect_density) then
-! 			domain%th   =domain%th   /domain%ones
-! 			domain%qv   =domain%qv   /domain%ones
-! 			domain%cloud=domain%cloud/domain%ones
-! 			domain%ice  =domain%ice  /domain%ones
-! 			domain%qrain=domain%qrain/domain%ones
-! 			domain%qsnow=domain%qsnow/domain%ones
-! 			domain%ones=1
-! 		endif
-! 		print *, maxval(domain%th),minval(domain%th)
 		
 	end subroutine step
 end module time_step

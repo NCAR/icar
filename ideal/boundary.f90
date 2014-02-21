@@ -454,9 +454,6 @@ contains
 			
 			call update_winds(domain,options)
 		endif
-		!the will be put back into domain in bc_update so we need to copy them over here. 
-! 		bc%next_domain%pii=domain%pii
-! 		bc%next_domain%rho=domain%rho
 
 	end subroutine bc_init
 
@@ -630,6 +627,7 @@ contains
 	
 		call update_pressure(bc%next_domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
 							 bc%next_domain%z,domain%z)
+		
 		nx=size(bc%next_domain%th,1)
 		nz=size(bc%next_domain%th,2)
 		ny=size(bc%next_domain%th,3)
@@ -656,12 +654,7 @@ contains
 				bc%next_domain%ice(:,i,ny)=sum(bc%next_domain%ice(:,i,ny))/nx
 			enddo
 		endif
-! 		domain%pii=bc%next_domain%pii
-! 		bc%next_domain%pii=(bc%next_domain%p/100000.0)**(R/cp)
 		
-! 		domain%rho=bc%next_domain%rho
-!         bc%next_domain%rho=bc%next_domain%p/(R*domain%th*bc%next_domain%pii) ! kg/m^3
-! 		call update_winds(bc%next_domain,options)
 		call update_dxdt(bc,domain)
 	end subroutine bc_update
 end module boundary_conditions
