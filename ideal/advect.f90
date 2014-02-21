@@ -29,24 +29,28 @@ contains
 
     end subroutine flux2
 
-    subroutine advect3d(q,u,v,w,nx,nz,ny,debug)
+    subroutine advect3d(q,u,v,w,rho,dz,nx,nz,ny,debug,options)
 	    real,dimension(1:nx,1:nz,1:ny), intent(inout) :: q
 	    real,dimension(1:nx,1:nz,1:ny), intent(in) :: w
         real,dimension(1:nx-1,1:nz,1:ny),intent(in) :: u
         real,dimension(1:nx,1:nz,1:ny-1),intent(in) :: v
+	    real,dimension(1:nx,1:nz,1:ny), intent(in) :: rho
+	    real,dimension(1:nx,1:nz,1:ny), intent(in) :: dz
 		integer, intent(in) :: ny,nz,nx,debug
+		type(options_type), intent(in)::options
         ! interal parameters
         integer :: err,i
 	    real,dimension(1:nx,1:nz,1:ny) :: qin
         real, dimension(1:nx-1,1:nz) :: f1 ! there used to be an f2 to store f[x+1]
         real, dimension(1:nx-2,1:nz) :: f3,f4
         real, dimension(1:nx-2,1:nz-1) ::f5
-        !$omp parallel shared(qin,q,u,v,w) firstprivate(nx,ny,nz) private(i,f1,f3,f4,f5)
+        !$omp parallel shared(qin,q,u,v,w,rho,dz) firstprivate(nx,ny,nz) private(i,f1,f3,f4,f5)
         !$omp do schedule(static)
         do i=1,ny
 			qin(:,:,i)=q(:,:,i)
 		enddo
         !$omp end do
+		!$omp barrier
         !$omp do schedule(static)
         do i=2,ny-1
 ! 			by manually inlining the flux2 call we should remove extra array copies that the compiler didn't seem to be able to remove. 
@@ -65,15 +69,27 @@ contains
 		    (w(2:nx-1,1:nz-1,i)-ABS(w(2:nx-1,1:nz-1,i))) * qin(2:nx-1,2:nz,i))/2
 !            call flux2(qin(2:nx-1,1:nz-1,i),qin(2:nx-1,2:nz,i),w(2:nx-1,1:nz-1,i),nx-2,nz-1,1,f5)
 		   
-           ! perform horizontal advection
-           q(2:nx-1,:,i)=q(2:nx-1,:,i) - (f1(2:nx-1,:)-f1(1:nx-2,:)) - (f3(:,:)-f4(:,:))
-           ! then vertical (order doesn't matter because fluxes f1-6 are calculated before applying them)
-           ! add fluxes to middle layers
-           q(2:nx-1,2:nz-1,i)=q(2:nx-1,2:nz-1,i)-(f5(:,2:nz-1)-f5(:,1:nz-2))
-           ! add fluxes to bottom layer
-           q(2:nx-1,1,i)=q(2:nx-1,1,i)-f5(:,1)
-           ! add fluxes to top layer
-           q(2:nx-1,nz,i)=q(2:nx-1,nz,i)-(qin(2:nx-1,nz,i)*w(2:nx-1,nz,i)-f5(:,nz-1))
+		   if (options%advect_density) then
+	           ! perform horizontal advection
+	           q(2:nx-1,:,i)=q(2:nx-1,:,i) - ((f1(2:nx-1,:)-f1(1:nx-2,:)) + (f3(:,:)-f4(:,:)))/rho(2:nx-1,:,i)/dz(2:nx-1,:,i)
+	           ! then vertical (order doesn't matter because fluxes f1-6 are calculated before applying them)
+	           ! add fluxes to middle layers
+	           q(2:nx-1,2:nz-1,i)=q(2:nx-1,2:nz-1,i)-(f5(:,2:nz-1)-f5(:,1:nz-2))/rho(2:nx-1,2:nz-1,i)/dz(2:nx-1,2:nz-1,i)
+	           ! add fluxes to bottom layer
+	           q(2:nx-1,1,i)=q(2:nx-1,1,i)-f5(:,1)/rho(2:nx-1,1,i)/dz(2:nx-1,1,i)
+	           ! add fluxes to top layer
+	           q(2:nx-1,nz,i)=q(2:nx-1,nz,i)-(qin(2:nx-1,nz,i)*w(2:nx-1,nz,i)-f5(:,nz-1))/dz(2:nx-1,nz,i)/rho(2:nx-1,nz,i)
+		   else
+	           ! perform horizontal advection
+	           q(2:nx-1,:,i)=q(2:nx-1,:,i) - ((f1(2:nx-1,:)-f1(1:nx-2,:)) + (f3(:,:)-f4(:,:)))
+	           ! then vertical (order doesn't matter because fluxes f1-6 are calculated before applying them)
+	           ! add fluxes to middle layers
+	           q(2:nx-1,2:nz-1,i)=q(2:nx-1,2:nz-1,i)-(f5(:,2:nz-1)-f5(:,1:nz-2))
+	           ! add fluxes to bottom layer
+	           q(2:nx-1,1,i)=q(2:nx-1,1,i)-f5(:,1)
+	           ! add fluxes to top layer
+	           q(2:nx-1,nz,i)=q(2:nx-1,nz,i)-(qin(2:nx-1,nz,i)*w(2:nx-1,nz,i)-f5(:,nz-1))
+		   endif
         enddo
         !$omp end do
         !$omp end parallel
@@ -86,7 +102,7 @@ contains
 		real,intent(in)::dt
 		
 		real::dx
-		integer::nx,nz,ny
+		integer::nx,nz,ny,i
 			
 		dx=domain%dx
 		nx=size(domain%dz,1)
@@ -101,20 +117,28 @@ contains
 		endif
 		
 ! 		calculate U,V,W normalized for dt/dx
-		U_m=domain%u(1:nx-1,:,:)*dt/dx
-		V_m=domain%v(:,:,1:ny-1)*dt/dx
-! 		note, even though dz!=dx, W is computed from the divergence in U/V so it is scaled by dx/dz already
-		W_m=domain%w*dt/dx
+
 ! 		should probably be converting to mass (q*rho) before advecting, then back again... but testing showed minimal difference
-		call advect3d(domain%th,   U_m,V_m,W_m,nx,nz,ny,0)
-		call advect3d(domain%qv,   U_m,V_m,W_m,nx,nz,ny,0)
-		call advect3d(domain%cloud,U_m,V_m,W_m,nx,nz,ny,0)
-		call advect3d(domain%ice,  U_m,V_m,W_m,nx,nz,ny,0)
-		call advect3d(domain%nice, U_m,V_m,W_m,nx,nz,ny,0)
-		call advect3d(domain%qrain,U_m,V_m,W_m,nx,nz,ny,0)
-		call advect3d(domain%nrain,U_m,V_m,W_m,nx,nz,ny,0)
-		call advect3d(domain%qsnow,U_m,V_m,W_m,nx,nz,ny,0)
-		call advect3d(domain%qgrau,U_m,V_m,W_m,nx,nz,ny,0)
+		if (options%advect_density) then
+			U_m=domain%ur(1:nx-1,:,:)*(dt/dx**2)
+			V_m=domain%vr(:,:,1:ny-1)*(dt/dx**2)
+			W_m=domain%wr*(dt/dx**2)
+		else
+			U_m=domain%u(1:nx-1,:,:)*(dt/dx)
+			V_m=domain%v(:,:,1:ny-1)*(dt/dx)
+	! 		note, even though dz!=dx, W is computed from the divergence in U/V so it is scaled by dx/dz already
+			W_m=domain%w*(dt/dx)
+		endif
+
+		call advect3d(domain%qv,   U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+		call advect3d(domain%cloud,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+		call advect3d(domain%ice,  U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+		call advect3d(domain%qrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+		call advect3d(domain%qsnow,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+		call advect3d(domain%qgrau,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+		call advect3d(domain%th,   U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+		call advect3d(domain%nice, U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+		call advect3d(domain%nrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
 		
 	end subroutine advect
 

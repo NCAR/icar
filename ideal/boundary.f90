@@ -6,12 +6,12 @@ module boundary_conditions
 ! 		type if input file being specified, and call an appropriate routine. 
 ! 		e.g. if options%inputtype=="WRF" then call wrf_init/update()
 ! ----------------------------------------------------------------------------
-	use io_routines
 	use data_structures
-	use wind
-	use linear_theory_winds
-	use geo
-	use output
+	use io_routines,         only : io_getdims, io_read3d, io_maxDims, io_read2d
+	use wind,                only : update_winds
+	use linear_theory_winds, only : linear_perturb
+	use geo,                 only : geo_interp2d, geo_interp
+	use output,              only : write_domain
 	
 	implicit none
 	private
@@ -26,42 +26,48 @@ module boundary_conditions
 	integer::ext_winds_steps_in_file,ext_winds_nfiles
 
 	integer,parameter::smoothing_window=14
-!   these are now specified in data_structures.f90
-!     real, parameter :: R=287.058 ! J/(kg K) specific gas constant for air
-!     real, parameter :: cp = 1012.0 ! specific heat capacity of moist STP air? J/kg/K
 	
 	public::bc_init
 	public::bc_update
 contains
 	
-! 	smooth an array (written for wind but will work for anything)
+! Smooth an array (written for wind but will work for anything)
+! only smooths over the first (x) and second or third (y) dimension
+! ydim can be specified to allow working with (x,y,z) data or (x,z,y) data
 	subroutine smooth_wind(wind,windowsize,ydim)
 		real, intent(inout), dimension(:,:,:):: wind
 		integer,intent(in)::windowsize
 		integer,intent(in)::ydim
 		real,allocatable,dimension(:,:,:)::inputwind
-		integer::i,j,k,nx,ny,nz
+		integer::i,j,k,nx,ny,nz,startx,endx,starty,endy
 		nx=size(wind,1)
-		ny=size(wind,2)
-		nz=size(wind,3)
-		allocate(inputwind(nx,ny,nz))
-		inputwind=wind
+		ny=size(wind,2) !note, this could be the Y or Z dimension
+		nz=size(wind,3) !note, this could be the Y or Z dimension
+		allocate(inputwind(nx,ny,nz)) ! Can't be module level because nx,ny,nz could change between calls, 
+									  ! could be part of a "smoothable" object to avoid allocate-deallocating constantly
+		inputwind=wind !make a copy so we always use the unsmoothed data when computing the smoothed data
 		
-		!$omp parallel firstprivate(windowsize,nx,ny,nz),private(i,j,k),shared(wind,inputwind)
+		!parallelize over the slowest dimension
+		!$omp parallel firstprivate(windowsize,nx,ny,nz), &
+		!$omp private(i,j,k,startx,endx,starty,endy),shared(wind,inputwind)
 		!$omp do schedule(static)
 		do k=1,nz
 			do j=1,ny
 				do i=1,nx
 					if (ydim==2) then
-						wind(i,j,k)=sum(inputwind(max(i-windowsize,1):min(nx,i+windowsize), &
-						                          max(1,j-windowsize):min(ny,j+windowsize),k)) &
-							/ ((min(nx,i+windowsize)-max(i-windowsize,1)+1) &
-							 * (min(ny,j+windowsize)-max(1,j-windowsize)+1))
-					else
-						wind(i,j,k)=sum(inputwind(max(i-windowsize,1):min(nx,i+windowsize), &
-						                          j,max(1,k-windowsize):min(nz,k+windowsize))) &
-							/ ((min(nx,i+windowsize)-max(i-windowsize,1)+1) &
-							 * (min(nz,k+windowsize)-max(1,k-windowsize)+1))
+						startx=max(i-windowsize,1)
+						endx  =min(nx,i+windowsize)
+						starty=max(1,j-windowsize)
+						endy  =min(ny,j+windowsize)
+						wind(i,j,k)=sum(inputwind(startx:endx,starty:endy,k)) &
+									/ ((endx-startx+1)*(endy-starty+1))
+					else ! ydim==3
+						startx=max(i-windowsize,1)
+						endx  =min(nx,i+windowsize)
+						starty=max(1,k-windowsize)
+						endy  =min(nz,k+windowsize)
+						wind(i,j,k)=sum(inputwind(startx:endx,j,starty:endy)) &
+									/ ((endx-startx+1)*(endy-starty+1))
 					endif
 				enddo
 			enddo
@@ -387,6 +393,8 @@ contains
 			if (options%external_winds) then
 				call ext_winds_init(domain,bc,options)
 			endif
+			domain%pii=(domain%p/100000.0)**(R/cp)
+	        domain%rho=domain%p/(R*domain%th*domain%pii) ! kg/m^3
 			call update_winds(domain,options)
 			call write_domain(domain,options,-1)
 		else
@@ -420,6 +428,7 @@ contains
 				call read_2dvar(domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep)
 				call read_2dvar(domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep)
 				call read_2dvar(domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep)
+				where(domain%latent_heat<0) domain%latent_heat=0
 			else
 				domain%sensible_heat=0
 				domain%latent_heat=0
@@ -439,6 +448,9 @@ contains
 	 				domain%ice(:,i,:)=sum(domain%ice(:,i,:))/domainsize
 	 			enddo
 	 		endif
+
+			domain%pii=(domain%p/100000.0)**(R/cp)
+	        domain%rho=domain%p/(R*domain%th*domain%pii) ! kg/m^3
 			
 			call update_winds(domain,options)
 		endif
@@ -446,9 +458,11 @@ contains
 	end subroutine bc_init
 
 
-	subroutine update_edges(dxdt,d1,d2)
+	subroutine update_edges(dx_dt,d1,d2)
+! 		same as update_dxdt but only for the edges of the domains for 
+!       fields that are calculated internally (e.g. temperature and moisture)
 		implicit none
-		real,dimension(:,:,:), intent(inout) :: dxdt
+		real,dimension(:,:,:), intent(inout) :: dx_dt
 		real,dimension(:,:,:), intent(in) :: d1,d2
 		integer :: nx,nz,ny,i
 
@@ -456,40 +470,45 @@ contains
 		nz=size(d1,2)
 		ny=size(d1,3)
 		do i=1,nz
-			dxdt(i,:ny,1)=d1(1,i,:) -d2(1,i,:)
-			dxdt(i,:ny,2)=d1(nx,i,:)-d2(nx,i,:)
-			dxdt(i,:nx,3)=d1(:,i,1) -d2(:,i,1)
-			dxdt(i,:nx,4)=d1(:,i,ny)-d2(:,i,ny)
+			dx_dt(i,:ny,1)=d1(1,i,:) -d2(1,i,:)
+			dx_dt(i,:ny,2)=d1(nx,i,:)-d2(nx,i,:)
+			dx_dt(i,:nx,3)=d1(:,i,1) -d2(:,i,1)
+			dx_dt(i,:nx,4)=d1(:,i,ny)-d2(:,i,ny)
 		enddo
-		dxdt(:,1,3:4)=0
-		dxdt(:,nx,3:4)=0
+		dx_dt(:,1,3:4)=0
+		dx_dt(:,nx,3:4)=0
 	end subroutine update_edges
 	
 	
 	subroutine update_dxdt(bc,domain)
+! 		calculate changes between the current boundary conditions and the time step boundary conditions
+! 		these are used to linearly shift all fields between the two times. 
 		implicit none
 		type(bc_type), intent(inout) :: bc
 		type(domain_type), intent(in) :: domain
 		
-		bc%dudt=bc%next_domain%u-domain%u
-		bc%dvdt=bc%next_domain%v-domain%v
-		bc%dwdt=bc%next_domain%w-domain%w
-		bc%dpdt=bc%next_domain%p-domain%p
+		bc%du_dt=bc%next_domain%u-domain%u
+		bc%dv_dt=bc%next_domain%v-domain%v
+! 		bc%dw_dt=bc%next_domain%w-domain%w
+		bc%dp_dt=bc%next_domain%p-domain%p
+! 		bc%drho_dt=bc%next_domain%rho-domain%rho
 		
-		bc%dshdt  =bc%next_domain%sensible_heat-domain%sensible_heat
-		bc%dlhdt  =bc%next_domain%latent_heat-domain%latent_heat
-		bc%dpblhdt=bc%next_domain%pbl_height-domain%pbl_height
+		bc%dsh_dt  =bc%next_domain%sensible_heat-domain%sensible_heat
+		bc%dlh_dt  =bc%next_domain%latent_heat-domain%latent_heat
+		bc%dpblh_dt=bc%next_domain%pbl_height-domain%pbl_height
 
-		call update_edges(bc%dthdt,bc%next_domain%th,domain%th)
-		call update_edges(bc%dqvdt,bc%next_domain%qv,domain%qv)
-		call update_edges(bc%dqcdt,bc%next_domain%cloud,domain%cloud)
+		call update_edges(bc%dth_dt,bc%next_domain%th,domain%th)
+		call update_edges(bc%dqv_dt,bc%next_domain%qv,domain%qv)
+		call update_edges(bc%dqc_dt,bc%next_domain%cloud,domain%cloud)
 	end subroutine update_dxdt
 	
 	subroutine update_pressure(pressure,temperature,z_lo,z_hi)
+		!adjust the pressure field for the vertical shift between the low resolution domain
+		! and the high resolution domain. 
 		implicit none
 		real,dimension(:,:,:), intent(inout) :: pressure
 		real,dimension(:,:,:), intent(in) :: temperature,z_lo,z_hi
-		real,dimension(:,:,:),allocatable::slp
+		real,dimension(:,:,:),allocatable::slp !sea level pressure [Pa]
 		integer :: nx,ny,nz,i,j
 		nx=size(pressure,1)
 		nz=size(pressure,2)
@@ -598,6 +617,8 @@ contains
 			call read_2dvar(bc%next_domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep)
 			call read_2dvar(bc%next_domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep)
 			call read_2dvar(bc%next_domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep)
+! 			NOTE, this is a kludge to prevent the model from sucking more moisture out of the lower model layer than exists
+			where(domain%latent_heat<0) domain%latent_heat=0
 		else
 			bc%next_domain%sensible_heat=0
 			bc%next_domain%latent_heat=0
@@ -606,6 +627,7 @@ contains
 	
 		call update_pressure(bc%next_domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
 							 bc%next_domain%z,domain%z)
+		
 		nx=size(bc%next_domain%th,1)
 		nz=size(bc%next_domain%th,2)
 		ny=size(bc%next_domain%th,3)
@@ -633,7 +655,6 @@ contains
 			enddo
 		endif
 		
-		call update_winds(bc%next_domain,options)
 		call update_dxdt(bc,domain)
 	end subroutine bc_update
 end module boundary_conditions

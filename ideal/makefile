@@ -178,7 +178,7 @@ endif
 LFLAGS=$(LINK) ${LIBNETCDF} -L${LIBFFT}
 FFLAGS=$(COMP) ${INCNETCDF} -I${INCFFT}
 
-OBJS=advect.o io_routines.o data_structures.o init.o mp_driver.o time_step.o boundary.o \
+OBJS=advect.o io_routines.o data_structures.o init.o mp_driver.o time_step.o boundary.o model_tracking.o \
 		mp_thompson.o cu_driver.o cu_tiedtke.o driver.o output.o wind.o linear_winds.o geo_reader.o lsm.o
 
 IDEALOBJS=advect.o io_routines.o data_structures.o init.o mp_driver.o \
@@ -239,7 +239,7 @@ ideal.o:ideal.f90 advect.o data_structures.o init.o mp_driver.o output.o wind.o 
 #   Core initial and boundary condition and time steping
 ###################################################################
 
-init.o:init.f90 data_structures.o io_routines.o geo_reader.o
+init.o:init.f90 data_structures.o io_routines.o geo_reader.o model_tracking.o
 	${F90} ${FFLAGS} init.f90
 
 time_step.o:time_step.f90 data_structures.o mp_driver.o wind.o advect.o output.o lsm.o cu_driver.o
@@ -306,6 +306,8 @@ linear_winds.o:linear_winds.f90 io_routines.o
 data_structures.o:data_structures.f90
 	${F90} ${FFLAGS} data_structures.f90
 
+model_tracking.o:model_tracking.f90
+	${F90} ${FFLAGS} model_tracking.f90
 
 ###################################################################
 #   Unit tests (may only work at their git tags?)
