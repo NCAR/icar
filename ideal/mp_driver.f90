@@ -12,6 +12,7 @@ module microphysics
 
 contains
 	subroutine mp_init(physics_level)
+		implicit none
 		integer, intent(in)::physics_level
 		if (physics_level==1) then
 			call thompson_init()
@@ -19,6 +20,7 @@ contains
 	end subroutine mp_init
 	
 	subroutine mp(domain,options,dt_in)
+		implicit none
 		type(domain_type),intent(inout)::domain
 		type(options_type),intent(in)::options
 		real,intent(in)::dt_in
@@ -54,6 +56,7 @@ contains
 	end subroutine mp
 	
 	subroutine mp_finish()
+		implicit none
 		if (allocated(SR)) then
 			deallocate(SR)
 		endif

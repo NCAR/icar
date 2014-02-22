@@ -16,6 +16,7 @@ module convection
 
 contains
 	subroutine init_convection(domain,options)
+		implicit none
 		type(domain_type), intent(in) :: domain
 		type(options_type), intent(in) :: options
 		integer::ids,ide,jds,jde,kds,kde
@@ -53,6 +54,7 @@ contains
 	end subroutine init_convection
 	
 subroutine convect(domain,options,dt_in)
+	implicit none
 	type(domain_type), intent(inout) :: domain
 	type(options_type), intent(in)   :: options
 	real, intent(in) ::dt_in

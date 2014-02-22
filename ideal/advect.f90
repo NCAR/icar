@@ -30,6 +30,7 @@ contains
     end subroutine flux2
 
     subroutine advect3d(q,u,v,w,rho,dz,nx,nz,ny,debug,options)
+		implicit none
 	    real,dimension(1:nx,1:nz,1:ny), intent(inout) :: q
 	    real,dimension(1:nx,1:nz,1:ny), intent(in) :: w
         real,dimension(1:nx-1,1:nz,1:ny),intent(in) :: u
@@ -97,6 +98,7 @@ contains
 
 ! 	primary entry point, advect all scalars in domain
 	subroutine advect(domain,options,dt)
+		implicit none
 		type(domain_type),intent(inout)::domain
 		type(options_type),intent(in)::options
 		real,intent(in)::dt
@@ -154,6 +156,7 @@ contains
     !     we can run on the entire grid simultaneously, and avoid branches
 
     !   arguments
+		implicit none
         real, dimension(1:ny,1:nz), intent(in) :: l,r,U
         real, dimension(1:ny,1:nz), intent(inout) :: f
         integer,intent(in) :: ny,nz
@@ -165,6 +168,7 @@ contains
     end subroutine flux2d
 
     subroutine advect2d(q,u,w,nx,nz)
+		implicit none
 	    real,dimension(nx,nz), intent(inout) :: q
         real,dimension(nx,nz),intent(in) :: u
 	    real,dimension(nx,nz), intent(in) :: w

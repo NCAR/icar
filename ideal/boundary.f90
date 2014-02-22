@@ -35,6 +35,7 @@ contains
 ! only smooths over the first (x) and second or third (y) dimension
 ! ydim can be specified to allow working with (x,y,z) data or (x,z,y) data
 	subroutine smooth_wind(wind,windowsize,ydim)
+		implicit none
 		real, intent(inout), dimension(:,:,:):: wind
 		integer,intent(in)::windowsize
 		integer,intent(in)::ydim
@@ -273,6 +274,7 @@ contains
 	
 ! for test cases compute the mean winds and make them constant everywhere...
 	subroutine mean_winds(domain,filename,curstep,options)
+		implicit none
 		type(domain_type), intent(inout) :: domain
 		character(len=*),intent(in)::filename
 		integer,intent(in)::curstep
@@ -298,6 +300,7 @@ contains
 	
 ! 	if we are restarting from a given point, initialize the domain from the given restart file
 	subroutine load_restart_file(domain,restart_file)
+		implicit none
 		type(domain_type), intent(inout) :: domain
 		character(len=*),intent(in)::restart_file
 		real,allocatable,dimension(:,:,:)::inputdata

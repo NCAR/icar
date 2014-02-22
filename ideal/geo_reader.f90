@@ -41,6 +41,7 @@ contains
 	
 	! 	xw=minxw(xw,lo%lon,xc,yc,lon)
 	integer function minxw(xw,longrid,xpos,ypos,lon)
+		implicit none
 		integer, intent(in)::xw,xpos,ypos
 		real,intent(in)::longrid(:,:),lon
 		real::curdist,dx
@@ -421,6 +422,7 @@ contains
 	
 	
 	subroutine geo_interp2d(fieldout, fieldin, geolut)
+		implicit none
 		real, dimension(:,:),intent(inout) :: fieldout
 		real, dimension(:,:),intent(in) :: fieldin
 		type(geo_look_up_table),intent(in)::geolut

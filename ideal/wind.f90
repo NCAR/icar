@@ -7,6 +7,7 @@ module wind
 contains
 
 	subroutine balance_uvw(domain,options)
+		implicit none
 ! Forces u,v, and w fields to balance
 !       du/dx+dv/dy = dw/dz
 ! Starts by setting w out of the ground=0 then works through layers
@@ -81,6 +82,7 @@ contains
 	
 ! 	apply wind field physics and adjustments
 	subroutine update_winds(domain,options)
+		implicit none
 		type(domain_type),intent(inout)::domain
 		type(options_type),intent(in)::options
 		real,allocatable,dimension(:,:,:)::temparray

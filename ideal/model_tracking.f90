@@ -6,6 +6,7 @@ module model_tracking
 contains
 	
 	subroutine init_model_diffs()
+		implicit none
 		integer::n=7
 		
 		allocate(versionlist(n))
@@ -26,6 +27,7 @@ contains
 	end subroutine init_model_diffs
 	
 	subroutine print_model_diffs(version)
+		implicit none
 		character(len=*), intent(in) :: version
 		integer :: i,j
 		logical :: found_a_version=.false.
@@ -59,4 +61,15 @@ contains
 			enddo
 		endif
 	end subroutine print_model_diffs
+	
+	subroutine finalize_model_diffs()
+		implicit none
+		if (allocated(versionlist)) then
+			deallocate(versionlist)
+		endif
+		if (allocated(deltas)) then
+			deallocate(deltas)
+		endif
+		
+	end subroutine finalize_model_diffs
 end module model_tracking

@@ -1,5 +1,6 @@
 module data_structures
 	use, intrinsic :: iso_c_binding
+	implicit none
 
 	integer,parameter::MAXFILELENGTH=100
 	integer,parameter::MAXVARLENGTH=100

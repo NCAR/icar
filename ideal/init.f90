@@ -220,6 +220,7 @@ contains
 	end subroutine init_options
 	
 	subroutine remove_edges(domain,edgesize)
+		implicit none
 		type(domain_type), intent(inout) :: domain
 		integer, intent(in)::edgesize
 		integer::nx1,ny1,nx2,ny2,nz
@@ -295,6 +296,7 @@ contains
 	
 ! 	allocate all arrays in domain
 	subroutine domain_allocation(domain,nx,nz,ny)
+		implicit none
 		type(domain_type), intent(inout) :: domain
 		integer,intent(in)::nx,nz,ny
 		allocate(domain%p(nx,nz,ny))
@@ -428,6 +430,7 @@ contains
 	
 ! 	allocate arrays in boundary condition data structure
 	subroutine boundary_allocate(boundary,nx,nz,ny)
+		implicit none
 		type(bc_type), intent(inout) :: boundary
 		integer,intent(in)::nx,nz,ny
 		
@@ -528,6 +531,7 @@ contains
 	
 ! 	initialize the external wind system (GEOLUT)
 	subroutine init_ext_winds(options,bc)
+		implicit none
 		type(options_type), intent(in) :: options
 		type(bc_type),intent(inout) :: bc
 			

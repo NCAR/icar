@@ -230,6 +230,7 @@ contains
 	end subroutine io_write2d
 	
 	subroutine check(status)
+		implicit none
 		integer, intent ( in) :: status
     
 		if(status /= nf90_noerr) then 
