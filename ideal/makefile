@@ -61,7 +61,7 @@ endif
 
 ifeq ($(NODENAME), Nomad.local)
 	F90=gfortran
-	COMP=-fopenmp -lgomp -O3 -c -fimplicit-none
+	COMP=-fopenmp -lgomp -O3 -c -fimplicit-none -ffree-line-length-none
 	LINK=-fopenmp -lgomp
 	LIBFFT=/Users/gutmann/usr/local/lib
 	INCFFT=/Users/gutmann/usr/local/include
@@ -87,7 +87,7 @@ endif
 # on yellowstone:
 ifeq ($(LMOD_FAMILY_COMPILER),gnu)
 	F90=gfortran
-	COMP=-fopenmp -lgomp -O3 -c -fimplicit-none
+	COMP=-fopenmp -lgomp -O3 -c -fimplicit-none -ffree-line-length-none
 	LINK=-fopenmp -lgomp
 	LIBFFT=/glade/u/home/gutmann/usr/local/lib
 	INCFFT=/glade/u/home/gutmann/usr/local/include
@@ -123,7 +123,7 @@ ifeq ($(DEBUG), debugslow)
 		LINK=  
 	endif
 	ifeq ($(F90), gfortran)
-		COMP= -c -g -fbounds-check -fbacktrace -finit-real=nan
+		COMP= -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK=  
 	endif
 endif
@@ -133,7 +133,7 @@ ifeq ($(DEBUG), debug)
 		LINK=  
 	endif
 	ifeq ($(F90), gfortran)
-		COMP= -c -g -fbounds-check -fbacktrace -finit-real=nan
+		COMP= -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK=  
 	endif
 endif
@@ -144,7 +144,7 @@ ifeq ($(DEBUG), debugompslow)
 		LINK= -openmp -liomp5
 	endif
 	ifeq ($(F90), gfortran)
-		COMP= -fopenmp -lgomp -c -g -fbounds-check -fbacktrace -finit-real=nan
+		COMP= -fopenmp -lgomp -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK= -fopenmp -lgomp  
 	endif
 endif
@@ -154,7 +154,7 @@ ifeq ($(DEBUG), debugomp)
 		LINK= -openmp -liomp5
 	endif
 	ifeq ($(F90), gfortran)
-		COMP= -fopenmp -lgomp -c -g -fbounds-check -fbacktrace -finit-real=nan
+		COMP= -fopenmp -lgomp -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK= -fopenmp -lgomp  
 	endif
 endif
