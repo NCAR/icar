@@ -2,10 +2,8 @@ program real
 	use init                ! init_model
 	use boundary_conditions ! bc_*    routines, constant in an ideal simulation? 
 	use data_structures     ! *_type  types
-	use microphysics        ! mp_init
 	use output              ! write_domain
 	use time_step			! step
-	use convection
 	
 	implicit none
 	type(options_type) :: options
@@ -16,10 +14,6 @@ program real
 	
 ! 	initialize model including options, terrain, lat, lon data. 
 	call init_model("real_options.namelist",options,domain,boundary)
-! 	initialize microphysics code (e.g. compute look up tables in Thompson et al)
-	write(*,*) "Initializing microphysics"
-	call mp_init(options%physics%microphysics) !this could easily be moved to init_model...
-	call init_convection(domain,options)
 ! 	read initial conditions from the boundary file
 	write(*,*) "Initializing Boundary conditions"
 	call bc_init(domain,boundary,options)

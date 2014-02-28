@@ -11,10 +11,10 @@ module microphysics
 	real,allocatable,dimension(:,:,:)::SR
 
 contains
-	subroutine mp_init(physics_level)
+	subroutine mp_init(options)
 		implicit none
-		integer, intent(in)::physics_level
-		if (physics_level==1) then
+		type(options_type), intent(in)::options
+		if (options%physics%microphysics==1) then
 			call thompson_init()
 		endif
 	end subroutine mp_init

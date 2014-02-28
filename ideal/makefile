@@ -179,7 +179,8 @@ LFLAGS=$(LINK) ${LIBNETCDF} -L${LIBFFT}
 FFLAGS=$(COMP) ${INCNETCDF} -I${INCFFT}
 
 OBJS=advect.o io_routines.o data_structures.o init.o mp_driver.o time_step.o boundary.o model_tracking.o \
-		mp_thompson.o cu_driver.o cu_tiedtke.o driver.o output.o wind.o linear_winds.o geo_reader.o lsm.o
+		mp_thompson.o cu_driver.o cu_tiedtke.o driver.o output.o wind.o linear_winds.o geo_reader.o lsm.o \
+		pbl_swm.o pbl_driver.o
 
 IDEALOBJS=advect.o io_routines.o data_structures.o init.o mp_driver.o \
 		mp_thompson.o ideal.o output.o wind.o linear_winds.o geo_reader.o
@@ -229,7 +230,7 @@ wind_test:${WINDOBJS}
 #   driver code for 
 ###################################################################
 
-driver.o:driver.f90 advect.o data_structures.o init.o mp_driver.o output.o wind.o boundary.o cu_driver.o
+driver.o:driver.f90 advect.o data_structures.o init.o output.o wind.o boundary.o
 	${F90} ${FFLAGS} driver.f90
 
 ideal.o:ideal.f90 advect.o data_structures.o init.o mp_driver.o output.o wind.o boundary.o
@@ -239,10 +240,10 @@ ideal.o:ideal.f90 advect.o data_structures.o init.o mp_driver.o output.o wind.o 
 #   Core initial and boundary condition and time steping
 ###################################################################
 
-init.o:init.f90 data_structures.o io_routines.o geo_reader.o model_tracking.o
+init.o:init.f90 data_structures.o io_routines.o geo_reader.o model_tracking.o mp_driver.o cu_driver.o pbl_driver.o
 	${F90} ${FFLAGS} init.f90
 
-time_step.o:time_step.f90 data_structures.o mp_driver.o wind.o advect.o output.o lsm.o cu_driver.o
+time_step.o:time_step.f90 data_structures.o mp_driver.o wind.o advect.o output.o lsm.o cu_driver.o pbl_driver.o
 	${F90} ${FFLAGS} time_step.f90
 
 boundary.o:boundary.f90 data_structures.o io_routines.o wind.o geo_reader.o output.o linear_winds.o
@@ -288,6 +289,16 @@ lsm.o: lsm.f90 data_structures.o
 	${F90} ${FFLAGS} lsm.f90
 
 ###################################################################
+#   Planetary Boundary Layer code
+###################################################################
+pbl_driver.o: pbl_driver.f90 pbl_swm.o data_structures.o
+	${F90} ${FFLAGS} pbl_driver.f90
+
+pbl_swm.o: pbl_swm.f90 data_structures.o
+	${F90} ${FFLAGS} pbl_swm.f90
+
+
+###################################################################
 #   Various wind/advection related code
 ###################################################################
 advect.o:advect.f90 data_structures.o
@@ -306,6 +317,9 @@ linear_winds.o:linear_winds.f90 io_routines.o
 data_structures.o:data_structures.f90
 	${F90} ${FFLAGS} data_structures.f90
 
+###################################################################
+#   Keep track of model versions for user information
+###################################################################
 model_tracking.o:model_tracking.f90
 	${F90} ${FFLAGS} model_tracking.f90
 

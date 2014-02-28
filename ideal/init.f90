@@ -13,6 +13,9 @@ module init
 	use data_structures
 	use io_routines
 	use geo
+	use microphysics        ! mp_init
+	use convection			! init_convection
+	use planetary_boundary_layer ! pbl_init
 	use model_tracking, only : print_model_diffs
 	
 	implicit none
@@ -37,8 +40,23 @@ contains
 !		this might be more apropriately though of as a forcing data structure (for low res model)
 		write(*,*) "Initializing Boundaries"
 		call init_bc(options,domain,boundary)
+		write(*,*) "Initializing Physics packages"
+		call init_physics(options,domain)
 		write(*,*) "Finished basic initialization"
+		
 	end subroutine init_model
+	
+	subroutine init_physics(options,domain)
+		type(options_type), intent(in) :: options
+		type(domain_type), intent(in) :: domain
+
+		! initialize microphysics code (e.g. compute look up tables in Thompson et al)
+		call mp_init(options) !this could easily be moved to init_model...
+		
+		call init_convection(domain,options)
+		
+		call pbl_init(domain,options)
+	end subroutine init_physics
 	
 	subroutine init_options(options_filename,options)
 ! 		reads a series of options from a namelist file and stores them in the 

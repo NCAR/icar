@@ -1,11 +1,12 @@
 module time_step
 	use data_structures     ! *_type  types
-	use microphysics,   only : mp
-	use convection,     only : convect
-	use lsm,            only : lsm_driver
-	use wind,           only : update_winds,balance_uvw
-	use advection,      only : advect
-	use output,         only : write_domain
+	use microphysics,                only : mp
+	use convection,                  only : convect
+	use lsm,                         only : lsm_driver
+	use wind,                        only : update_winds,balance_uvw
+	use advection,                   only : advect
+	use output,                      only : write_domain
+	use planetary_boundary_layer,    only : pbl
 	implicit none
 	private
 	public :: step
@@ -127,7 +128,7 @@ contains
 			call mp(domain,options,dt)
 			call convect(domain,options,dt)
 			call lsm_driver(domain,options,dt)
-! 			call pbl(domain,options,dt)
+			call pbl(domain,options,dt)
 ! 			call radiation(domain,options,dt)
 
 ! 			apply/update boundary conditions including internal wind and pressure changes. 
