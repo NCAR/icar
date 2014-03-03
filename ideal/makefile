@@ -82,7 +82,10 @@ ifeq ($(F90), ifort)
 	INCNETCDF = -I$(NCDF_PATH)/include
 endif
 
-
+# Consider adding vectorization "encouragement" to the compile lines
+#  ifort should vectorize to SSE with -fast, may need -axAVX to add AVX
+#  gcc will not do anything by default?, add -ftree-vectorize and optionally -mavx -march=corei7-avx
+#  actually, gcc may vectorize with -O3 now... may still need -msse4? no AVX without -mavx etc.
 
 # on yellowstone:
 ifeq ($(LMOD_FAMILY_COMPILER),gnu)
