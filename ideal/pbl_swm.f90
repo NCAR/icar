@@ -15,12 +15,26 @@ module pbl_simple
 	private
 	public :: simple_pbl, finalize_simple_pbl, init_simple_pbl
 	
-! 	note _m indicates module level variables
+! 	NOTE *_m indicates module level variables
 ! 	these variables are declared as module level variables so that they do not need to be allocated
 !   deallocated, and re-allocated all the time. 
+
+! 	gradient in the virtual potential temperature
 	real, allocatable, dimension(:,:,:) :: virt_pot_temp_zgradient_m
-	real, allocatable, dimension(:,:,:) :: rig_m,shear_m
-	real, allocatable, dimension(:,:,:) :: stability_m,prandtl_m,l_m,K_m,Kq_m
+! 	gradient in the richardson number
+	real, allocatable, dimension(:,:,:) :: rig_m
+! 	vertical wind shear (dwind / dz)
+	real, allocatable, dimension(:,:,:) :: shear_m
+! 	atmospheric stability
+	real, allocatable, dimension(:,:,:) :: stability_m
+! 	length scale that asymptotes from kappa*z to l0 (250m below)
+	real, allocatable, dimension(:,:,:) :: l_m
+! 	diffusion term for momentum
+	real, allocatable, dimension(:,:,:) :: K_m
+! 	diffusion term for scalars (K/prandtl)
+	real, allocatable, dimension(:,:,:) :: Kq_m
+! 	prandtl number to convert K for momentum to K for scalars
+	real, allocatable, dimension(:,:,:) :: prandtl_m
 	integer :: nx,nz,ny !NOTE these are subset from full domain e.g. nx-2,ny-2,nz-1
 	
 !	limits on Pr noted in HP96 page 2325 below eqn 13
@@ -48,14 +62,17 @@ contains
 			call calc_richardson_gradient(domain,j)
 			call calc_pbl_stability_function(j)
 			
+! 			from eqn 12 in HP96
 			do k=1,nz
 				l_m(:,k,j) = 1 / (1/(kappa*(domain%z(2:nx+1,k,j+1)-domain%terrain(2:nx+1,j+1))) + asymp_length_scale)
 			enddo
-! 			diffusion for momentum... can I ignore this term and go directly to scalars (saves memory)? 
+! 			diffusion for momentum... can I ignore this term and go directly to scalars (to save memory)? 
+! 			from HP96 eqn 11
 !           k = l**2 * stability * shear * dt/dz
 			K_m(:,:,j) = l_m(:,:,j)**2 * stability_m(:,:,j) * shear_m(:,:,j)
 ! 			diffusion for scalars
 			Kq_m(:,:,j)=K_m(:,:,j)/prandtl_m(:,:,j)
+! 			enforce limits specified in HP96
 			do k=1,nz
 				do i=1,nx
 					if (Kq_m(i,k,j)>1000) then
@@ -80,14 +97,13 @@ contains
 		integer,intent(in) :: j
 		real,dimension(nx,nz)::fluxes
 		
+! 		Eventually this should be made into an implicit solution to avoid substepping
 		! if gradient is downward (qv[z+1]>qv[z]) then flux is negative
 		fluxes=Kq_m(:,:,j)*rhomean*(q(2:nx+1,:nz,j+1)-q(2:nx+1,2:,j+1))
 		! first layer assumes no flow through the surface, that comes from the LSM
-		q(2:nx+1,1,j+1) = q(2:nx+1,1,j+1) - &
-								fluxes(:,1) / rho_dz(:,1)
+		q(2:nx+1,1,j+1)    = q(2:nx+1,1,j+1)    - fluxes(:,1) / rho_dz(:,1)
 		! middle layers (no change for top layer assuming flux in = flux out)
-		q(2:nx+1,2:nz,j+1) = q(2:nx+1,2:nz,j+1) - &
-		   					   (fluxes(:,2:nz)-fluxes(:,:nz-1)) / rho_dz
+		q(2:nx+1,2:nz,j+1) = q(2:nx+1,2:nz,j+1) - (fluxes(:,2:nz)-fluxes(:,:nz-1)) / rho_dz
 		
 	end subroutine diffuse_variable
 	
@@ -108,6 +124,7 @@ contains
 		! for most regions it is < 0.5, for the small regions it isn't just substep for now. 
 		nsubsteps=ceiling(2*maxval(Kq_m(:,:,j)/domain%dz(2:nx+1,:nz,j)))
 		Kq_m(:,:,j)=Kq_m(:,:,j)/nsubsteps
+! 		nsubsteps will typically be 1
 		do t=1,nsubsteps
 			! First water vapor
 			call diffuse_variable(domain%qv,rhomean,rho_dz,j)
@@ -119,8 +136,8 @@ contains
 			call diffuse_variable(domain%ice,rhomean,rho_dz,j)
 			! and snow
 			call diffuse_variable(domain%qsnow,rhomean,rho_dz,j)
+			! don't bother with rain or graupel assuming they are falling fast *enough* not entirely fair...
 		enddo
-		! don't bother with rain or graupel assuming they are falling fast *enough* not entirely fair...
 
 	end subroutine pbl_diffusion
 	
