@@ -18,7 +18,7 @@ module pbl_simple
 ! 	note _m indicates module level variables
 ! 	these variables are declared as module level variables so that they do not need to be allocated
 !   deallocated, and re-allocated all the time. 
-	real, allocatable, dimension(:,:,:), target ::virt_pot_temp_zgradient_m
+	real, allocatable, dimension(:,:,:) :: virt_pot_temp_zgradient_m
 	real, allocatable, dimension(:,:,:) :: rig_m,shear_m
 	real, allocatable, dimension(:,:,:) :: stability_m,prandtl_m,l_m,K_m,Kq_m
 	integer :: nx,nz,ny !NOTE these are subset from full domain e.g. nx-2,ny-2,nz-1
@@ -36,12 +36,12 @@ contains
 	subroutine simple_pbl(domain,dt)
 		type(domain_type), intent(inout) :: domain
 		real, intent(in)::dt
-		integer :: j,k
+		integer :: i,j,k
 		
-!       OpenMP parallelization		
-!c      omp parallel shared(domain,l_m,k_m,stability_m,shear_m) &
-!c      omp firstprivate(nz,ny,kappa,asymp_length_scale) private(k,j)
-!c      omp do
+!       OpenMP parallelization small static chunk size because we typically get a small area that takes most of the time (because of substepping)
+		!$omp parallel shared(domain,l_m,K_m,Kq_m,stability_m,prandtl_m,virt_pot_temp_zgradient_m,rig_m,shear_m) &
+		!$omp firstprivate(nx,nz,ny,dt) private(i,k,j)
+		!$omp do schedule(static, 2)
 		do j=1,ny
 			call calc_shear(domain,j)
 			call calc_virt_pot_temp_zgradient(domain,j)
@@ -51,81 +51,75 @@ contains
 			do k=1,nz
 				l_m(:,k,j) = 1 / (1/(kappa*(domain%z(2:nx+1,k,j+1)-domain%terrain(2:nx+1,j+1))) + asymp_length_scale)
 			enddo
-! 			diffusion for momentum... can I ignore this term? 
+! 			diffusion for momentum... can I ignore this term and go directly to scalars (saves memory)? 
 !           k = l**2 * stability * shear * dt/dz
-			K_m(:,:,j) = l_m(:,:,j)**2 * stability_m(:,:,j) * shear_m(:,:,j) * &
-						 dt/((domain%dz(2:nx+1,2:,j+1)+domain%dz(2:nx+1,:nz-1,j+1))/2)
+			K_m(:,:,j) = l_m(:,:,j)**2 * stability_m(:,:,j) * shear_m(:,:,j)
 ! 			diffusion for scalars
 			Kq_m(:,:,j)=K_m(:,:,j)/prandtl_m(:,:,j)
-			
+			do k=1,nz
+				do i=1,nx
+					if (Kq_m(i,k,j)>1000) then
+						Kq_m(i,k,j)=1000
+					elseif (Kq_m(i,k,j)<1) then
+						Kq_m(i,k,j)=1
+					endif
+				enddo
+			enddo
+			Kq_m(:,:,j)= Kq_m(:,:,j)* dt/((domain%dz(2:nx+1,2:,j+1)+domain%dz(2:nx+1,:nz-1,j+1))/2)
+
 			call pbl_diffusion(domain,j)
 		enddo
-!      omp end do
-!      omp end parallel
+		!$omp end do
+		!$omp end parallel
+		
 	end subroutine simple_pbl
+	
+	subroutine diffuse_variable(q,rhomean,rho_dz,j)
+		real, intent(inout),dimension(nx+2,nz+1,ny+2) :: q
+		real, intent(in),dimension(nx,nz) :: rhomean,rho_dz
+		integer,intent(in) :: j
+		real,dimension(nx,nz)::fluxes
+		
+		! if gradient is downward (qv[z+1]>qv[z]) then flux is negative
+		fluxes=Kq_m(:,:,j)*rhomean*(q(2:nx+1,:nz,j+1)-q(2:nx+1,2:,j+1))
+		! first layer assumes no flow through the surface, that comes from the LSM
+		q(2:nx+1,1,j+1) = q(2:nx+1,1,j+1) - &
+								fluxes(:,1) / rho_dz(:,1)
+		! middle layers (no change for top layer assuming flux in = flux out)
+		q(2:nx+1,2:nz,j+1) = q(2:nx+1,2:nz,j+1) - &
+		   					   (fluxes(:,2:nz)-fluxes(:,:nz-1)) / rho_dz
+		
+	end subroutine diffuse_variable
 	
 	subroutine pbl_diffusion(domain,j)
 		type(domain_type), intent(inout) :: domain
 		integer,intent(in) :: j
-		integer::i
-		real,dimension(nx,nz):: fluxes,rhomean,dz
+		integer::i,nsubsteps,t
+		real,dimension(nx,nz):: fluxes,rhomean,rho_dz
 		
-		! If this works, dz could be moved into the domain
-		! and calculated once at the begining of the simulation
 		rhomean=(domain%rho(2:nx+1,1:nz,j+1)+domain%rho(2:nx+1,2:,j+1))/2
-		dz=(domain%dz(2:nx+1,1:nz,j+1)+domain%dz(2:nx+1,2:,j+1))/2
-! 		qmeans=(domain%qv(:,1:nz-1,j)+domain%qv(:,2:nz,j))/2
+		rho_dz=domain%dz(2:nx+1,2:nz,j+1)*domain%rho(2:nx+1,2:nz,j+1)
 		
 		! note Kq_m already has dt/dz embedded in it
 		! diffusion fluxes within the PBL
 		! q = q + (k dq/dz)/dz *dt
+		
 		!if K >1 we are in violation of the CFL condition and we need to subset (or make implicit...)
-		write(*,*) maxval(Kq_m(:,:,j)),j
-		! First water vapor
-		fluxes=Kq_m(:,:,j)*rhomean*(domain%qv(2:nx+1,:nz,j+1)-domain%qv(2:nx+1,2:,j+1))
-		! first layer assumes no flow through the surface, that comes from the LSM
-		domain%qv(2:nx+1,1,j+1) = domain%qv(2:nx+1,1,j+1) + &
-								fluxes(:,1) / (domain%dz(2:nx+1,1,j+1)*domain%rho(2:nx+1,1,j+1))
-		! middle layers (no change for top layer assuming flux in = flux out)
-		domain%qv(2:nx+1,2:nz,j+1) = domain%qv(2:nx+1,2:nz,j+1) + &
-		   					   (fluxes(:,:nz-1)+fluxes(:,2:nz)) / (domain%dz(2:nx+1,2:nz,j+1)*domain%rho(2:nx+1,2:nz,j+1))
-
-		! ditto for potential temperature
-		fluxes=Kq_m(:,:,j)*rhomean*(domain%th(2:nx+1,:nz,j+1)-domain%th(2:nx+1,2:,j+1))
-		! first layer assumes no flow through the surface, that comes from the LSM
-		domain%th(2:nx+1,1,j+1) = domain%th(2:nx+1,1,j+1) + &
-								fluxes(:,1) / (domain%dz(2:nx+1,1,j+1)*domain%rho(2:nx+1,1,j+1))
-		! middle layers (no change for top layer assuming flux in = flux out)
-		domain%th(2:nx+1,2:nz,j+1) = domain%th(2:nx+1,2:nz,j+1) + &
-		   					   (fluxes(:,:nz-1)+fluxes(:,2:nz)) / (domain%dz(2:nx+1,2:nz,j+1)*domain%rho(2:nx+1,2:nz,j+1))
-	
-		! and cloud water
-		fluxes=Kq_m(:,:,j)*rhomean*(domain%cloud(2:nx+1,:nz,j+1)-domain%cloud(2:nx+1,2:,j+1))
-		! first layer assumes no flow through the surface, that comes from the LSM
-		domain%cloud(2:nx+1,1,j+1) = domain%cloud(2:nx+1,1,j+1) + &
-								fluxes(:,1) / (domain%dz(2:nx+1,1,j+1)*domain%rho(2:nx+1,1,j+1))
-		! middle layers (no change for top layer assuming flux in = flux out)
-		domain%cloud(2:nx+1,2:nz,j+1) = domain%cloud(2:nx+1,2:nz,j+1) + &
-		   					   (fluxes(:,:nz-1)+fluxes(:,2:nz)) / (domain%dz(2:nx+1,2:nz,j+1)*domain%rho(2:nx+1,2:nz,j+1))
-        !
-		! and cloud ice
-		fluxes=Kq_m(:,:,j)*rhomean*(domain%ice(2:nx+1,:nz,j+1)-domain%ice(2:nx+1,2:,j+1))
-		! first layer assumes no flow through the surface, that comes from the LSM
-		domain%ice(2:nx+1,1,j+1) = domain%ice(2:nx+1,1,j+1) + &
-								fluxes(:,1) / (domain%dz(2:nx+1,1,j+1)*domain%rho(2:nx+1,1,j+1))
-		! middle layers (no change for top layer assuming flux in = flux out)
-		domain%ice(2:nx+1,2:nz,j+1) = domain%ice(2:nx+1,2:nz,j+1) + &
-		   					   (fluxes(:,:nz-1)+fluxes(:,2:nz)) / (domain%dz(2:nx+1,2:nz,j+1)*domain%rho(2:nx+1,2:nz,j+1))
-		!
-		! and snow
-		fluxes=Kq_m(:,:,j)*rhomean*(domain%qsnow(2:nx+1,:nz,j+1)-domain%qsnow(2:nx+1,2:,j+1))
-		! first layer assumes no flow through the surface, that comes from the LSM
-		domain%qsnow(2:nx+1,1,j+1) = domain%qsnow(2:nx+1,1,j+1) + &
-								fluxes(:,1) / (domain%dz(2:nx+1,1,j+1)*domain%rho(2:nx+1,1,j+1))
-		! middle layers (no change for top layer assuming flux in = flux out)
-		domain%qsnow(2:nx+1,2:nz,j+1) = domain%qsnow(2:nx+1,2:nz,j+1) + &
-		   					   (fluxes(:,:nz-1)+fluxes(:,2:nz)) / (domain%dz(2:nx+1,2:nz,j+1)*domain%rho(2:nx+1,2:nz,j+1))
-
+		! for most regions it is < 0.5, for the small regions it isn't just substep for now. 
+		nsubsteps=ceiling(2*maxval(Kq_m(:,:,j)/domain%dz(2:nx+1,:nz,j)))
+		Kq_m(:,:,j)=Kq_m(:,:,j)/nsubsteps
+		do t=1,nsubsteps
+			! First water vapor
+			call diffuse_variable(domain%qv,rhomean,rho_dz,j)
+			! ditto for potential temperature
+			call diffuse_variable(domain%th,rhomean,rho_dz,j)
+			! and cloud water
+			call diffuse_variable(domain%cloud,rhomean,rho_dz,j)
+			! and cloud ice
+			call diffuse_variable(domain%ice,rhomean,rho_dz,j)
+			! and snow
+			call diffuse_variable(domain%qsnow,rhomean,rho_dz,j)
+		enddo
 		! don't bother with rain or graupel assuming they are falling fast *enough* not entirely fair...
 
 	end subroutine pbl_diffusion
@@ -141,6 +135,7 @@ contains
 		
 		shear_m(:,:,j)=abs(centered_winds(:,2:)-centered_winds(:,:nz-1))  &
 		              /((domain%dz(2:nx+1,:nz-1,j+1)+domain%dz(2:nx+1,2:,j+1))*0.5)
+		where(shear_m(:,:,j)<1e-5) shear_m(:,:,j)=1e-5
 	end subroutine calc_shear
 
 ! 	calculate the vertical gradient in virtual potential temperature
@@ -213,6 +208,8 @@ contains
 		temperature(:,:nz)= (temperature(:,:nz)+temperature(:,2:))*0.5
 		rig_m(:,:,j) =  g/temperature(:,:nz)  & 
 					   * virt_pot_temp_zgradient_m(:,:nz,j) * 1/(shear_m(:,:,j)**2)
+		where(rig_m(:,:,j)<-2.9) rig_m(:,:,j)=-2.9
+		
 	end subroutine calc_richardson_gradient
 	
 

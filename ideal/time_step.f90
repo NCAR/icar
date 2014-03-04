@@ -47,7 +47,7 @@ contains
 		do j=1,ny
 			domain%u(:,:,j)=domain%u(:,:,j)+bc%du_dt(:,:,j)
 			domain%v(:,:,j)=domain%v(:,:,j)+bc%dv_dt(:,:,j)
-	! 		domain%w(:,:,j)=domain%w(:,:,j)+bc%dw_dt(:,:,j)
+	! 		domain%w(:,:,j)=domain%w(:,:,j)+bc%dw_dt(:,:,j) ! this is now recalculated every time step (as are ur,vr,wr)
 			domain%p(:,:,j)=domain%p(:,:,j)+bc%dp_dt(:,:,j)
 			domain%pii(:,:,j)=(domain%p(:,:,j)/100000.0)**(R/cp)
 	        domain%rho(:,:,j)=domain%p(:,:,j)/(R*domain%th(:,:,j)*domain%pii(:,:,j)) ! kg/m^3
@@ -93,14 +93,14 @@ contains
 		real::dt,dtnext,end_time
 		
 ! 		compute internal timestep dt to maintain stability
-! 		courant condition for 3D advection... could make 3 x 1D to maximize dt? esp. w/linear wind speedups...
+! 		courant condition for 3D advection. Note that w is normalized by dx/dz
 		dt=(domain%dx/max(max(maxval(abs(domain%u)),maxval(abs(domain%v))),maxval(abs(domain%w)))/sqrt(3.0))
 ! 		pick the minimum dt from the begining or the end of the current timestep
 		dtnext=(domain%dx/max(max(maxval(abs(bc%next_domain%u)), &
-										maxval(abs(bc%next_domain%v))), &
-										maxval(abs(bc%next_domain%w)))/sqrt(3.0))
+								  maxval(abs(bc%next_domain%v))), &
+								  maxval(abs(bc%next_domain%w)))/sqrt(3.0))
 		dt=min(dt,dtnext)
-! 		set an upper bound on dt to keep the microphysics stable?
+! 		set an upper bound on dt to keep microphysics and convection stable (?) not sure what time is required here. 
 		dt=min(dt,120.0) !better min=180?
 ! 		if we have too small a time step just throw an error
 		if (dt<1e-1) then
@@ -116,7 +116,7 @@ contains
 ! 		make dt an integer fraction of the full timestep
 		dt=options%out_dt/ceiling(options%out_dt/dt)
 ! 		calculate the number of timesteps
-		ntimesteps=ceiling(options%in_dt/dt)
+		ntimesteps=nint(options%in_dt/dt)
 		end_time=model_time+options%in_dt
 		
 ! 		adjust the boundary condition dXdt values for the number of time steps
@@ -124,11 +124,11 @@ contains
 		write(*,*) "    dt=",dt, "nsteps=",ntimesteps
 ! 		now just loop over internal timesteps computing all physics in order (operator splitting...)
 		do i=1,ntimesteps
+			call lsm_driver(domain,options,dt)
+			call pbl(domain,options,dt)
 			call advect(domain,options,dt)
 			call mp(domain,options,dt)
 			call convect(domain,options,dt)
-			call lsm_driver(domain,options,dt)
-			call pbl(domain,options,dt)
 ! 			call radiation(domain,options,dt)
 
 ! 			apply/update boundary conditions including internal wind and pressure changes. 
@@ -136,7 +136,7 @@ contains
 			
 ! 			step model time forward
 			model_time=model_time+dt
-			if ((abs(model_time-next_output)<1e-2).or.(model_time>next_output)) then
+			if ((abs(model_time-next_output)<1e-1).or.(model_time>next_output)) then
 				call write_domain(domain,options,nint(model_time/options%out_dt))
 				next_output=next_output+options%out_dt
 			endif
