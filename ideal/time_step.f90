@@ -3,7 +3,7 @@ module time_step
 	use microphysics,                only : mp
 	use convection,                  only : convect
 	use lsm,                         only : lsm_driver
-	use wind,                        only : update_winds,balance_uvw
+	use wind,                        only : balance_uvw
 	use advection,                   only : advect
 	use output,                      only : write_domain
 	use planetary_boundary_layer,    only : pbl
@@ -60,6 +60,9 @@ contains
 		call boundary_update(domain%th,bc%dth_dt)
 		call boundary_update(domain%qv,bc%dqv_dt)
 		call boundary_update(domain%cloud,bc%dqc_dt)
+		
+		! because density changes with each time step, u/v/w have to be rebalanced as well. 
+		! could avoid this by assuming density doesn't change... but would need to keep an "old" density around
 		call balance_uvw(domain,options)
 	end subroutine forcing_update		
 

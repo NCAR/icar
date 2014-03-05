@@ -8,7 +8,7 @@ module boundary_conditions
 ! ----------------------------------------------------------------------------
 	use data_structures
 	use io_routines,         only : io_getdims, io_read3d, io_maxDims, io_read2d
-	use wind,                only : update_winds
+	use wind,                only : update_winds,balance_uvw
 	use linear_theory_winds, only : linear_perturb
 	use geo,                 only : geo_interp2d, geo_interp
 	use output,              only : write_domain
@@ -398,7 +398,7 @@ contains
 			endif
 			domain%pii=(domain%p/100000.0)**(R/cp)
 	        domain%rho=domain%p/(R*domain%th*domain%pii) ! kg/m^3
-			call update_winds(domain,options)
+			call balance_uvw(domain,options)
 			call write_domain(domain,options,-1)
 		else
 ! 			else load data from the first Boundary conditions file

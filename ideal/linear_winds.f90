@@ -166,8 +166,8 @@ contains
 ! 		finally destroy plans serially
 		m=1
         do z=1,nz
-            U=sum(domain%u(:realnx-1,z,:))/((realnx-1)*realny)
-            V=sum(domain%v(:,z,:realny-1))/(realnx*(realny-1))
+            U=sum(domain%u(1:realnx-1,z,:))/((realnx-1)*realny)
+            V=sum(domain%v(:,z,1:realny-1))/(realnx*(realny-1))
             sig  = U*k+V*l
             where(sig==0.0) sig=1e-15
             denom = sig**2!-f**2
@@ -296,50 +296,10 @@ contains
 ! 		normalize FFT by N - grid cells
 		domain%fzs=domain%fzs/(nx*ny)
 
-        nx=size(domain%terrain,1)
-        ny=size(domain%terrain,2)
-! 		dzdx/y used in rotating windfield back to terrain following grid in a simple fashion
-		allocate(domain%dzdx(nx-1,ny))
-		allocate(domain%dzdy(nx,ny-1))
-		domain%dzdx=sqrt((domain%terrain(2:nx,:)-domain%terrain(1:nx-1,:))**2+domain%dx**2)/domain%dx
-		domain%dzdy=sqrt((domain%terrain(:,2:ny)-domain%terrain(:,1:ny-1))**2+domain%dx**2)/domain%dx
-		
 ! 		cleanup temporary array
 		deallocate(complex_terrain)
         
     end subroutine
-	
-! 	stagger/destagger u/v grid
-	subroutine stagger_winds(domain)
-        implicit none
-        class(linearizable_type),intent(inout)::domain
-		integer :: nx,ny
-		
-		nx=size(domain%terrain,1)
-		ny=size(domain%terrain,2)
-! 		compute u at x mid-point
-		domain%u(1:nx-1,:,:)=(domain%u(1:nx-1,:,:)+domain%u(2:nx,:,:))/2
-! 		compute v at y mid-point
-		domain%v(:,:,1:ny-1)=(domain%v(:,:,1:ny-1)+domain%v(:,:,2:ny))/2
-		
-	end subroutine stagger_winds
-	
-! 	rotate winds from real space back to terrain following grid (approximately)
-!   assumes a simple slope transform in u and v independantly
-	subroutine rotate_wind_field(domain)
-        implicit none
-        class(linearizable_type),intent(inout)::domain
-		integer :: nx,ny,nz,i
-		
-		nx=size(domain%u,1)
-		nz=size(domain%u,2)
-		ny=size(domain%u,3)
-		do i=1,nz
-			domain%u(1:nx-2,i,:)=domain%u(1:nx-2,i,:)*domain%dzdx
-			domain%v(:,i,1:ny-1)=domain%v(:,i,1:ny-1)*domain%dzdy
-		end do
-		
-	end subroutine rotate_wind_field
 	
 ! 	Primary entry point!
 !   Called from the simple weather model to update the U,V,W wind fields based on linear theory
@@ -357,10 +317,7 @@ contains
 ! 		Ndsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability
         stability=calc_stability(domain)
 		
-! 		This staggering isn't really needed? when linear winds are computed based on mean windfield?
-! 		call stagger_winds(domain)
 		call linear_winds(domain,stability,reverse)
-		call rotate_wind_field(domain)
         
     end subroutine linear_perturb
 end module linear_theory_winds

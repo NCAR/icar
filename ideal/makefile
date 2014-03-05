@@ -86,6 +86,7 @@ endif
 #  ifort should vectorize to SSE with -fast, may need -axAVX to add AVX
 #  gcc will not do anything by default?, add -ftree-vectorize and optionally -mavx -march=corei7-avx
 #  actually, gcc may vectorize with -O3 now... may still need -msse4? no AVX without -mavx etc.
+#  could also add alignment in ifort with -align array64byte not sure why that isn't included in -fast
 
 # on yellowstone:
 ifeq ($(LMOD_FAMILY_COMPILER),gnu)
@@ -243,7 +244,7 @@ ideal.o:ideal.f90 advect.o data_structures.o init.o mp_driver.o output.o wind.o 
 #   Core initial and boundary condition and time steping
 ###################################################################
 
-init.o:init.f90 data_structures.o io_routines.o geo_reader.o model_tracking.o mp_driver.o cu_driver.o pbl_driver.o
+init.o:init.f90 data_structures.o io_routines.o geo_reader.o model_tracking.o mp_driver.o cu_driver.o pbl_driver.o wind.o
 	${F90} ${FFLAGS} init.f90
 
 time_step.o:time_step.f90 data_structures.o mp_driver.o wind.o advect.o output.o lsm.o cu_driver.o pbl_driver.o

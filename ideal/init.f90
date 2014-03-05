@@ -17,6 +17,7 @@ module init
 	use convection			! init_convection
 	use planetary_boundary_layer ! pbl_init
 	use model_tracking, only : print_model_diffs
+	use wind, only : init_winds
 	
 	implicit none
 	private
@@ -444,6 +445,7 @@ contains
 ! 		store dx in domain as well as options, read as an option, but it is more appropriate in domain
 		domain%dx=options%dx
 		
+		call init_winds(domain,options)
 	end subroutine init_domain
 	
 ! 	allocate arrays in boundary condition data structure

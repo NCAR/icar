@@ -6,6 +6,7 @@ module data_structures
 	integer,parameter::MAXVARLENGTH=100
 
 	real, parameter :: LH_vaporization=2260000.0 ! J/kg
+	! should be calculated as 2.5E6 + (2106.0 - 4218.0)*temp_degC
     real, parameter :: R=287.058   ! J/(kg K) specific gas constant for air
     real, parameter :: cp = 1012.0 ! J/kg/K   specific heat capacity of moist STP air? 
 	real, parameter :: g = 9.81    ! m/s^2    gravity
@@ -88,6 +89,8 @@ module data_structures
 		real, allocatable, dimension(:,:,:) :: p,th,w,pii,rho,ur,vr,wr
 		real, allocatable, dimension(:,:,:) :: qv,cloud,ice,nice,qrain,nrain,qsnow,qgrau
 		real, allocatable, dimension(:,:) :: rain,crain,snow,graupel,sensible_heat,latent_heat,pbl_height,landmask
+		
+		real, allocatable,dimension(:,:) :: sintheta,costheta
 		real::dt
 	end type domain_type
 
