@@ -17,6 +17,9 @@ program real
 ! 	read initial conditions from the boundary file
 	write(*,*) "Initializing Boundary conditions"
 	call bc_init(domain,boundary,options)
+	write(*,*) "Initializing Physics packages"
+	call init_physics(options,domain)
+	
 	if (options%restart) then
 		start_point=options%restart_step
 	else
@@ -29,6 +32,7 @@ program real
 	do i=start_point,options%ntimesteps
 		write(*,*) "Timestep:", i, "  of ", options%ntimesteps
 		write(*,*) "  Model time=",dnint(100*model_time/3600.0)/100.0,"hrs"
+		
 ! 		update boundary conditions (dXdt variables)
 		call bc_update(domain,boundary,options)
 ! 		this is the meat of the model physics, run all the physics for the current time step looping over internal timesteps

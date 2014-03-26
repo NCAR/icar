@@ -83,7 +83,6 @@ contains
 				enddo
 			enddo
 			Kq_m(:,:,j)= Kq_m(:,:,j)* dt/((domain%dz(2:nx+1,2:,j+1)+domain%dz(2:nx+1,:nz-1,j+1))/2)
-
 			call pbl_diffusion(domain,j)
 		enddo
 		!$omp end do
@@ -103,7 +102,7 @@ contains
 		! first layer assumes no flow through the surface, that comes from the LSM
 		q(2:nx+1,1,j+1)    = q(2:nx+1,1,j+1)    - fluxes(:,1) / rho_dz(:,1)
 		! middle layers (no change for top layer assuming flux in = flux out)
-		q(2:nx+1,2:nz,j+1) = q(2:nx+1,2:nz,j+1) - (fluxes(:,2:nz)-fluxes(:,:nz-1)) / rho_dz
+		q(2:nx+1,2:nz,j+1) = q(2:nx+1,2:nz,j+1) - (fluxes(:,2:nz)-fluxes(:,:nz-1)) / rho_dz(:,2:nz)
 		
 	end subroutine diffuse_variable
 	
@@ -122,10 +121,12 @@ contains
 		
 		!if K >1 we are in violation of the CFL condition and we need to subset (or make implicit...)
 		! for most regions it is < 0.5, for the small regions it isn't just substep for now. 
-		nsubsteps=ceiling(2*maxval(Kq_m(:,:,j)/domain%dz(2:nx+1,:nz,j)))
-		Kq_m(:,:,j)=Kq_m(:,:,j)/nsubsteps
+! 		nsubsteps=ceiling(2*maxval(Kq_m(:,:,j)/domain%dz(2:nx+1,:nz,j)))
+! 		Kq_m(:,:,j)=Kq_m(:,:,j)/nsubsteps
 ! 		nsubsteps will typically be 1
-		do t=1,nsubsteps
+! 		nsubsteps=1
+		where((2*Kq_m(:,:,j))>domain%dz(2:nx+1,:nz,j)) Kq_m(:,:,j)=domain%dz(2:nx+1,:nz,j)/2
+! 		do t=1,nsubsteps
 			! First water vapor
 			call diffuse_variable(domain%qv,rhomean,rho_dz,j)
 			! ditto for potential temperature
@@ -137,7 +138,7 @@ contains
 			! and snow
 			call diffuse_variable(domain%qsnow,rhomean,rho_dz,j)
 			! don't bother with rain or graupel assuming they are falling fast *enough* not entirely fair...
-		enddo
+! 		enddo
 
 	end subroutine pbl_diffusion
 	

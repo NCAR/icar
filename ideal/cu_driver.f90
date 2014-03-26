@@ -15,6 +15,24 @@ module convection
 											 0.046, 0.035, 0.025, 0.015, 0.005/)
 
 contains
+	subroutine znu_init(domain)
+		type(domain_type), intent(in) :: domain
+		integer::n_levels,i,xpt,ypt
+		real::ptop,psfc
+		
+		n_levels=size(domain%p,2)
+		
+		xpt=2
+		ypt=2
+		ptop=domain%p(xpt,n_levels,ypt)-(domain%p(xpt,n_levels-1,ypt)-domain%p(xpt,n_levels,ypt))/2.0 !NOT CORRECT
+		psfc=domain%p(xpt,1,ypt)+(domain%p(xpt,1,ypt)-domain%p(xpt,2,ypt))/2.0 !NOT CORRECT
+		ptop=max(ptop,10.0)
+		do i=1,n_levels
+			znu(i)=(domain%p(xpt,i,ypt)-ptop)/(psfc-ptop)
+		enddo
+		
+	end subroutine znu_init
+
 	subroutine init_convection(domain,options)
 		implicit none
 		type(domain_type), intent(in) :: domain
@@ -27,6 +45,8 @@ contains
 		kde=size(domain%qv,2)
 		jds=1
 		jde=size(domain%qv,3)
+
+		call znu_init(domain)
 		
 		if (options%physics%convection==1) then
 			write(*,*) "Initializing Tiedtke scheme"
@@ -58,8 +78,10 @@ subroutine convect(domain,options,dt_in)
 	type(domain_type), intent(inout) :: domain
 	type(options_type), intent(in)   :: options
 	real, intent(in) ::dt_in
-	integer ::ids,ide,jds,jde,kds,kde,i,itimestep=1,STEPCU=1
+	integer ::ids,ide,jds,jde,kds,kde,i,itimestep,STEPCU
 	
+	itimestep=1
+	STEPCU=1
 	ids=1
 	ide=size(domain%qv,1)
 	kds=1

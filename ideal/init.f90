@@ -21,7 +21,7 @@ module init
 	
 	implicit none
 	private
-	public::init_model
+	public::init_model,init_physics
 	
 contains
 	subroutine init_model(options_filename,options,domain,boundary)
@@ -41,8 +41,6 @@ contains
 !		this might be more apropriately though of as a forcing data structure (for low res model)
 		write(*,*) "Initializing Boundaries"
 		call init_bc(options,domain,boundary)
-		write(*,*) "Initializing Physics packages"
-		call init_physics(options,domain)
 		write(*,*) "Finished basic initialization"
 		
 	end subroutine init_model
@@ -503,14 +501,21 @@ contains
 		allocate(boundary%z(nx,nz,ny))
 		allocate(boundary%dz(nx,nz,ny))
 !		mean layer thicknesses from a 36km WRF run over the "CO-headwaters" domain
-		fulldz=[36.,   51.,   58.,   73.,   74.,  111.,  113.,  152.,  155.,  157.,  160.,  245., &
-			   251.,  258.,  265.,  365.,  379.,  395.,  413.,  432.,  453.,  476.,  503.,  533., &
-			   422.,  443.,  467.,  326.,  339.,  353.,  369.,  386.,  405.,  426.,  450.,  477., &
-			   455.,  429.,  396.,  357.,  311.,  325.,  340.,  356.,  356.]
-!	   fulldz=[   24.8,  36.5,  51.8,  70.1,  90.8, 113.5, 137.9, 163.7, 190.5, 218.1, 246.4, &
-!	   			 275.1, 304.3, 333.6, 363.0, 392.4, 421.7, 450.8, 479.6, 508.0, 535.9, 563.2, &
-!				 589.8, 615.7, 640.9, 665.5, 689.8, 714.1, 739.4, 767.2, 796.8, 826.6, 856.2, &
-!				 885.1, 912.5, 937.9, 961.4, 979.4, 990.1, 976.6, 937.6, 900.1, 864.2, 829.6, 796.5]
+! 		fulldz=[36.,   51.,   58.,   73.,   74.,  111.,  113.,  152.,  155.,  157.,  160.,  245., &
+! 			   251.,  258.,  265.,  365.,  379.,  395.,  413.,  432.,  453.,  476.,  503.,  533., &
+! 			   422.,  443.,  467.,  326.,  339.,  353.,  369.,  386.,  405.,  426.,  450.,  477., &
+! 			   455.,  429.,  396.,  357.,  311.,  325.,  340.,  356.,  356.]
+!		mean layer thicknesses from ERAi domain
+! 		fulldz=[   24.8,  36.5,  51.8,  70.1,  90.8, 113.5, 137.9, 163.7, 190.5, 218.1, 246.4, &
+! 	   			  275.1, 304.3, 333.6, 363.0, 392.4, 421.7, 450.8, 479.6, 508.0, 535.9, 563.2, &
+! 				  589.8, 615.7, 640.9, 665.5, 689.8, 714.1, 739.4, 767.2, 796.8, 826.6, 856.2, &
+! 				  885.1, 912.5, 937.9, 961.4, 979.4, 990.1, 976.6, 937.6, 900.1, 864.2, 829.6, 796.5]
+!		mean layer thicknesses from CCSM domain
+! 		fulldz(1:20)=[   110.4611, 284.2321, 491.552, 753.911, 950.716, 1200.556, 1377.235, 1409.965, 1357.270, 1404.227, &
+! 						 1369.426, 1439.705, 1436.62, 1552.31, 1618.72, 1850.671, 2138.704, 2896.219, 5217.467, 7916.972]
+
+		fulldz(:nz)=domain%dz(1,:,1)
+		
 		boundary%dz(:,1,:)=fulldz(1)
 		boundary%z(:,1,:)=boundary%terrain+fulldz(1)/2
 		do i=2,nz
