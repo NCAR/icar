@@ -30,6 +30,12 @@ contains
 			curdata(:,i,1) =curdata(:,i,1) +dXdt(i,1:nx,3)
 			curdata(:,i,ny)=curdata(:,i,ny)+dXdt(i,1:nx,4)
 		enddo
+		! correct possible rounding errors, primarily an issue of clouds...
+		where(curdata(1,:,:)<0) curdata(1,:,:)=0
+		where(curdata(nx,:,:)<0) curdata(nx,:,:)=0
+		where(curdata(:,:,1)<0) curdata(:,:,1)=0
+		where(curdata(:,:,ny)<0) curdata(:,:,ny)=0
+		
 	end subroutine boundary_update
 	
 ! 	updated all fields in domain using the respective dXdt variables
@@ -55,6 +61,7 @@ contains
         !$omp end do
         !$omp end parallel
 		! v has one more y element than others
+		ny=ny+1
 		domain%v(:,:,ny)=domain%v(:,:,ny)+bc%dv_dt(:,:,ny)
 		! dXdt for qv,qc,th are only applied to the boundarys
 		call boundary_update(domain%th,bc%dth_dt)
