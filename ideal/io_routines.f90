@@ -2,8 +2,10 @@ module io_routines
 	use netcdf
 	implicit none
 	integer,parameter::io_maxDims=10
+! 	All routines are public
 contains
 
+! read the dimensions of a variable in a given netcdf file
 ! 	return a rank 1 array N=ndims+1, dims[1]=ndims, dims[i+1]=length of dimension i for a given variable
 	subroutine io_getdims(filename,varname,dims)
 		implicit none
@@ -29,6 +31,9 @@ contains
 		
 	end subroutine io_getdims
 	
+!	Reads in a variable from a netcdf file, allocating memory in data_in for it.  
+!   if extradim is provided specifies this index for any extra dimensions (dims>3)
+!   	e.g. we may only want one time slice from a 3d variable
 	subroutine io_read3d(filename,varname,data_in,extradim)
 		implicit none
 	    ! This is the name of the data_in file and variable we will read. 
@@ -61,17 +66,18 @@ contains
 			diminfo(5:diminfo(1)+1)=1 ! set count for extra dims to 1
 			call check(nf90_get_var(ncid, varid, data_in,&
 									dimstart(1:diminfo(1)), &				! start  = 1 or extradim
-									[ (diminfo(i+1), i=1,diminfo(1)) ],&		! count=n or 1
-									[ (1,           i=1,diminfo(1)) ] ))	! for all dims, stride = 1
+									[ (diminfo(i+1), i=1,diminfo(1)) ],&	! count=n or 1 created through an implied do loop
+									[ (1,            i=1,diminfo(1)) ] ))	! for all dims, stride = 1     "  implied do loop
 		else		
 			call check(nf90_get_var(ncid, varid, data_in))
 		endif
 		! Close the file, freeing all resources.
-! 		write(*,*) "Closing file",filename
 		call check( nf90_close(ncid) )
 		
 	end subroutine io_read3d
 
+! Same as io_read3d but assumes we only want a 2d output array
+! also allows selecting an index from any extra dimensions (i.e. a single time slice)
 	subroutine io_read2d(filename,varname,data_in,extradim)
 		implicit none
 	    ! This is the name of the data_in file and variable we will read. 
@@ -104,22 +110,21 @@ contains
 			diminfo(4:diminfo(1)+1)=1 ! set count for extra dims to 1
 			call check(nf90_get_var(ncid, varid, data_in,&
 									dimstart(1:diminfo(1)), &				! start  = 1 or extradim
-									[ (diminfo(i+1), i=1,diminfo(1)) ],&		! count=n or 1
-									[ (1,           i=1,diminfo(1)) ] ))	! for all dims, stride = 1
+									[ (diminfo(i+1), i=1,diminfo(1)) ],&	! count=n or 1 created through an implied do loop
+									[ (1,            i=1,diminfo(1)) ] ))	! for all dims, stride = 1		" implied do loop
 		else		
 			call check(nf90_get_var(ncid, varid, data_in))
 		endif
-! 		! Read the data_in.
-! 		call check(nf90_get_var(ncid, varid, data_in))
 	
 		! Close the file, freeing all resources.
 		call check( nf90_close(ncid) )
 		
 	end subroutine io_read2d
 
+! 	write a data array to a file with a given variable name
 	subroutine io_write3d(filename,varname,data_out)
 		implicit none
-	    ! This is the name of the data file and variable we will read. 
+	    ! This is the name of the file and variable we will write. 
 		character(len=*), intent(in) :: filename, varname
 		real,intent(in) :: data_out(:,:,:)
 		
@@ -149,12 +154,14 @@ contains
 		! End define mode. This tells netCDF we are done defining metadata.
 		call check( nf90_enddef(ncid) )
 		
+		!write the actual data to the file
 		call check( nf90_put_var(ncid, varid, data_out) )
 	
 		! Close the file, freeing all resources.
 		call check( nf90_close(ncid) )
 	end subroutine io_write3d
 
+! 	same as for io_write3d but for integer arrays
 	subroutine io_write3di(filename,varname,data_out)
 		implicit none
 	    ! This is the name of the data file and variable we will read. 
@@ -193,7 +200,7 @@ contains
 		call check( nf90_close(ncid) )
 	end subroutine io_write3di
 
-
+! 	same as for io_write3d but for 2d arrays
 	subroutine io_write2d(filename,varname,data_out)
 		implicit none
 	    ! This is the name of the data file and variable we will read. 
@@ -229,6 +236,7 @@ contains
 		call check( nf90_close(ncid) )
 	end subroutine io_write2d
 	
+! 	simple error handling for common netcdf file errors
 	subroutine check(status)
 		implicit none
 		integer, intent ( in) :: status
@@ -239,12 +247,14 @@ contains
 		end if
 	end subroutine check  
 	
-	! This is a simple function to search for an available unit.
+	! Find an available file unit number.
 	! LUN_MIN and LUN_MAX define the range of possible LUNs to check.
 	! The UNIT value is returned by the function, and also by the optional
 	! argument. This allows the function to be used directly in an OPEN
 	! statement, and optionally save the result in a local variable.
 	! If no units are available, -1 is returned.
+	! Newer versions of fortran can do this automatically, but this keeps one thing
+	! a little more backwards compatible
 	integer function io_newunit(unit)
 		implicit none
 		integer, intent(out), optional :: unit

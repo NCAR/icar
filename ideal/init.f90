@@ -166,6 +166,9 @@ contains
 		
 ! 		could probably simplify and read these all right from the namelist file, 
 ! 		but this way we can change the names in the file independant of the internal variable names
+print *, "WARNING HARD CODED t_offset"
+		options%t_offset=290
+		options%pbvar="PB"
 		options%init_conditions_file=init_conditions_file
 		options%nfiles=nfiles
 		allocate(options%boundary_files(nfiles))

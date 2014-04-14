@@ -42,6 +42,7 @@ module pbl_simple
 	real, parameter :: pr_lower_limit = 0.25 !Prandtl number for stability
 	real, parameter :: asymp_length_scale = 1/250.0 !m from Hong and Pan (1996)
 	real, parameter :: kappa =0.4 !von Karman constant
+	real, parameter :: N_substeps=10. ! number of substeps to allow (puts a cap on K to match CFL)
 	! note, they actually use 30m because they only use this for free-atmosphere mixing
 	! but they note that 250m is used in the operational model for the full PBL mixing
 	
@@ -121,12 +122,11 @@ contains
 		
 		!if K >1 we are in violation of the CFL condition and we need to subset (or make implicit...)
 		! for most regions it is < 0.5, for the small regions it isn't just substep for now. 
-! 		nsubsteps=ceiling(2*maxval(Kq_m(:,:,j)/domain%dz(2:nx+1,:nz,j)))
-! 		Kq_m(:,:,j)=Kq_m(:,:,j)/nsubsteps
-! 		nsubsteps will typically be 1
-! 		nsubsteps=1
-		where((2*Kq_m(:,:,j))>domain%dz(2:nx+1,:nz,j)) Kq_m(:,:,j)=domain%dz(2:nx+1,:nz,j)/2
-! 		do t=1,nsubsteps
+		! nsubsteps will often be 1, but allow up to N sub-steps in extreme cases
+		where((Kq_m(:,:,j))>N_substeps*domain%dz(2:nx+1,:nz,j)) Kq_m(:,:,j)=domain%dz(2:nx+1,:nz,j)*N_substeps
+		nsubsteps=ceiling(2*maxval(Kq_m(:,:,j)/domain%dz(2:nx+1,:nz,j)))
+		Kq_m(:,:,j)=Kq_m(:,:,j)/nsubsteps
+		do t=1,nsubsteps
 			! First water vapor
 			call diffuse_variable(domain%qv,rhomean,rho_dz,j)
 			! ditto for potential temperature
@@ -138,7 +138,7 @@ contains
 			! and snow
 			call diffuse_variable(domain%qsnow,rhomean,rho_dz,j)
 			! don't bother with rain or graupel assuming they are falling fast *enough* not entirely fair...
-! 		enddo
+		enddo
 
 	end subroutine pbl_diffusion
 	
@@ -164,6 +164,7 @@ contains
 		
 ! 		first calculate the virtual potential temperature
 ! 		vth=th*(1+0.61*qv-(qc+qi+qr+qs))
+! 		note that domain variables are accessed at 2:nx-1 and j+1 because vth is only over the processing domain (1:n-2)
 		virt_pot_temp_zgradient_m(:,:,j)=domain%th(2:nx+1,:,j+1)* &
 				(1+0.61*domain%qv(2:nx+1,:,j+1) &
 				 -(domain%cloud(2:nx+1,:,j+1)+domain%ice(2:nx+1,:,j+1)+domain%qrain(2:nx+1,:,j+1)+domain%qsnow(2:nx+1,:,j+1)))
@@ -171,29 +172,10 @@ contains
 			virt_pot_temp_zgradient_m(:,k,j)=(virt_pot_temp_zgradient_m(:,k+1,j)-virt_pot_temp_zgradient_m(:,k,j)) &
 											 / ((domain%dz(2:nx+1,k,j+1)+domain%dz(2:nx+1,k+1,j+1))*0.5)
 		enddo
-! 			
-!		real,dimension(nx)::vth_row,last_vth_row
-!
-! 			OLDER code that will calculate virtual potential temperature gradient on full levels
-! 			! for the first model level save this level for the next one and calculate the gradient
-! 			! based only on the bottom two levels
-! 			if (k==1) then
-! 				last_vth_row=vth(:,k,j)
-! 				vth(:,k,j)=(vth(:,k+1,j)-vth(:,k,j))/domain%dz(:,k,j)
-! 			elseif (k==nz) then
-! 				! for the top model level calculate the gradient based only on the top two levels
-! 				vth(:,k,j)=(vth(:,k,j)-last_vth_row)/domain%dz(:,k,j)
-! 			else
-! 				! for all other levels, first save this level temporarily
-! 				vth_row=vth(:,k,j)
-! 				! then calculate the gradient across this level
-! 				vth(:,k,j)=(vth(:,k+1,j)-last_vth_row)/ &
-! 					((domain%dz(:,k-1,j)+domain%dz(:,k+1,j))*0.5+domain%dz(:,k,j))
-! 				! then store the saved level in the "last" level for the next iteration
-! 				last_vth_row=vth_row
-! 			endif
+		
 	end subroutine calc_virt_pot_temp_zgradient
 
+	! calculate the stability function based on HP96
 	subroutine calc_pbl_stability_function(j)
 		integer,intent(in)::j
 		integer::i,k
@@ -201,7 +183,9 @@ contains
 		stability_m(:,:,j) = exp(-8.5*rig_m(:,:,j)) + 0.15 / (rig_m(:,:,j)+3)
 ! 		HP96 eqn 13 continued
 		prandtl_m(:,:,j) = 1.5+3.08*rig_m(:,:,j)
-! 		limits on Pr noted in Hong and Pan (?)
+		
+! 		Impose limits as specified
+! 		on Pr noted in HP96
 		do k=1,size(prandtl_m,2)
 			do i=1,size(prandtl_m,1)
 				if (prandtl_m(i,k,j)>pr_upper_limit) then
@@ -211,11 +195,13 @@ contains
 				endif
 			enddo
 		enddo
-! 		alternatively... which is faster? 
+! 		alternatively... which is faster? the following *might* vectorize better, but memory bandwidth may be the limit anyway
 ! 		where(prandtl_m(:,:,j)>4) prandtl_m(:,:,j)=4
 ! 		where(prandtl_m(:,:,j)<0.25) prandtl_m(:,:,j)=0.25
 	end subroutine calc_pbl_stability_function
 	
+! 	calculate the gradient in the richardson number as specified in HP96
+!	rig = Richardson number Gradient
 	subroutine calc_richardson_gradient(domain,j)
 ! 		calculate the local gradient richardson number as in eqn. between 11 and 12 in HP96
 		type(domain_type), intent(inout) :: domain
@@ -250,6 +236,7 @@ contains
 		allocate(l_m(nx,nz,ny))
 	end subroutine init_simple_pbl
 	
+! 	deallocate memory if requested
 	subroutine finalize_simple_pbl()
 		if (allocated(virt_pot_temp_zgradient_m)) then
 			deallocate(virt_pot_temp_zgradient_m)

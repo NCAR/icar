@@ -34,36 +34,3 @@ program ideal
 	end do
 	
 end program ideal
-
-! # simple python code to visualize results.  
-! def vis(q,n=100,vmax=None,vmin=None):
-!   try:
-!     for i,cq in enumerate(q[:n]):
-!       plt.clf()
-!       plt.imshow(cq[:,:,1].T,vmax=vmax,vmin=vmin)
-!       plt.colorbar()
-!       plt.title(str(i))
-!       plt.draw()
-!       time.sleep(0.1)
-!     
-!   # allow us to break-in without spitting traceback error to the screen. 
-!   except KeyboardInterrupt:
-!     pass
-! 
-! w=io.read_files("ideal*","w")
-! u=io.read_files("ideal*","u")
-! th=io.read_files("ideal*","th")
-! qg=io.read_files("ideal*","qg")
-! qv=io.read_files("ideal*","qv")
-! qc=io.read_files("ideal*","qc")
-! qi=io.read_files("ideal*","qi")
-! qr=io.read_files("ideal*","qr")
-! qs=io.read_files("ideal*","qs")
-! rain=io.read_files("ideal*","rain")
-! snow=io.read_files("ideal*","snow")
-! graupel=io.read_files("ideal*","graupel")
-! raintotal=np.concatenate([r[np.newaxis,:,:] for r in rain])
-! snowtotal=np.concatenate([s[np.newaxis,:,:] for s in snow])
-! graupeltotal=np.concatenate([g[np.newaxis,:,:] for g in graupel])
-! plt.clf();plt.plot(raintotal.sum(axis=0)[:,1])
-! plt.plot(snowtotal.sum(axis=0)[:,1])

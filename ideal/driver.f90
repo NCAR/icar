@@ -1,17 +1,36 @@
+!-----------------------------------------
+!
+! Main Program
+!
+! Initialize options and memory in init_model
+! Read initial conditions in bc_init (from a restart file if requested)
+! initialize physics packages in init_physics (e.g. tiedke and thompson if used)
+! If this run is a restart run, then set start to the restart timestep
+!      in otherwords, ntimesteps is the number of BC updates from the beginning of the entire model 
+!      run, not just from the begining of this restart run
+! calculate model time in seconds based on the time between BC updates (in_dt)
+! Calculate the next model output time from current model time + output time delta (out_dt)
+!
+! Finally, loop until ntimesteps are reached updating boundary conditions and stepping the model forward
+!
+!-----------------------------------------
 program real
-	use init                ! init_model
-	use boundary_conditions ! bc_*    routines, constant in an ideal simulation? 
-	use data_structures     ! *_type  types
-	use output              ! write_domain
-	use time_step			! step
+	use init                ! init_model, init_physics             Initialize model (not initial conditions)
+	use boundary_conditions ! bc_init,bc_update                    Boundary and initial conditions
+	use data_structures     ! *_type datatypes                     Data-types and physical "constants"
+! 	use output              ! write_domain                        *Moved internal to "step"
+	use time_step			! step                                 Advance the model forward in time
 	
 	implicit none
 	type(options_type) :: options
 	type(domain_type)  :: domain
 	type(bc_type)      :: boundary
-	integer::i,nx,ny,start_point
-	real*8::model_time,next_output
+	integer            :: i,nx,ny,start_point
+	double precision   :: model_time,next_output
 	
+!-----------------------------------------
+!  Model Initialization
+!
 ! 	initialize model including options, terrain, lat, lon data. 
 	call init_model("real_options.namelist",options,domain,boundary)
 ! 	read initial conditions from the boundary file
@@ -25,9 +44,15 @@ program real
 	else
 		start_point=1
 	endif
+	!note, startpoint at the beginning is 1, but we want model time at this point to be 0, thus start_point-1
 	model_time=(start_point-1)*options%in_dt
 	next_output=model_time+options%out_dt
+!
+!-----------------------------------------
 	
+!-----------------------------------------
+!  Time Loop
+!
 ! 	note that a timestep here is an IO timestep O(1hr), not a physics timestep O(20s)
 	do i=start_point,options%ntimesteps
 		write(*,*) "Timestep:", i, "  of ", options%ntimesteps
@@ -41,6 +66,8 @@ program real
 !       this is now handled internal to step to make sub-Input timesteps in output easy. 
 ! 		call write_domain(domain,options,i)
 	end do
+!
+!-----------------------------------------
 	
 end program real
 

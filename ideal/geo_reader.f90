@@ -1,10 +1,12 @@
+! various functions used for spatial interpolation from low-res forcing grid to high-res model grid
 module geo
 	use data_structures
 	implicit none
 	
 	private
-	public::geo_LUT
-	public::geo_interp,geo_interp2d
+	public::geo_LUT ! Create a geographic Look up table
+	public::geo_interp ! apply geoLUT to interpolate in 2d for a 3d grid
+	public::geo_interp2d ! apply geoLUT to interpolate in 2d for a 2d grid
 	
 contains
 	
@@ -98,8 +100,8 @@ contains
 !   2) use a log(n) search (divide and conquer) also iterate <20times)
 !   a) if 1 or 2 are approximately successful: 
 ! 		search a small region around the "best" point to find the real best point
-!   3) in the diabolical case where 1 and 2 fail (not sure this will ever happen) just search every single location (n^2)
-!   
+!   3) in the diabolical case where 1 and 2 fail (rare) just search every single location (n^2)
+!   Could add a 2.5) downhill search algorithm...
 
 		implicit none
 		class(interpolable_type),intent(in)::lo

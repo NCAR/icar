@@ -6,10 +6,10 @@ module data_structures
 	integer,parameter::MAXVARLENGTH=100
 
 	real, parameter :: LH_vaporization=2260000.0 ! J/kg
-	! should be calculated as 2.5E6 + (2106.0 - 4218.0)*temp_degC
-    real, parameter :: R=287.058   ! J/(kg K) specific gas constant for air
-    real, parameter :: cp = 1012.0 ! J/kg/K   specific heat capacity of moist STP air? 
-	real, parameter :: g = 9.81    ! m/s^2    gravity
+	! should be calculated as 2.5E6 + (2106.0 - 4218.0)*temp_degC ?
+    real, parameter :: R  = 287.058 ! J/(kg K) specific gas constant for air
+    real, parameter :: cp = 1012.0  ! J/kg/K   specific heat capacity of moist STP air? 
+	real, parameter :: g  = 9.81    ! m/s^2    gravity
 	
 ! 	various data structures for use in geographic interpolation routines
 ! 	contains the location of a specific grid point
@@ -23,29 +23,32 @@ module data_structures
 	
 ! 	a geographic look up table for spatial interpolation, from x,y with weight w
 	type geo_look_up_table
+! 		x,y index positions, [n by m by 4] where there are 4 surrounding low-res points 
+! 		for every high resolution point grid point to interpolate to
 		integer,allocatable,dimension(:,:,:)::x,y
+! 		weights to use for each of the 4 surrounding gridpoints.  Sum(over axis 3) must be 1.0
 		real,allocatable,dimension(:,:,:)::w
 	end type geo_look_up_table
 	
-!   generic interpolable type so geo interpolation routines will work on winds, domain, or boundary conditions. 	
+!   generic interpolable type so geo interpolation routines will work on winds, domain, or boundary conditions. 
 	type interpolable_type
 		real, allocatable, dimension(:,:) :: lat,lon
 		type(geo_look_up_table)::geolut
 	end type interpolable_type
 
-	!------------------------------------------------
+!------------------------------------------------
 ! 
 ! General Field Definitions
 !
 ! ---- 3D fields ----
 ! u     = wind in east direction        [m/s]
 ! v     = wind in north direction       [m/s]
-! w     = wind in vertical direction    [m/s] (scaled by dx/dz)
+! w     = wind in vertical direction    [m/s] (possibly scaled by dx/dz)
 ! 
 ! p     = pressure                      [pa]
 ! th    = potential temperature         [K]
 !
-! qv    = vapor pressure (mixing ratio) [kg/kg]
+! qv    = water vapor (mixing ratio)    [kg/kg]
 ! cloud = cloud water                   [kg/kg]
 ! ice   = cloud ice                     [kg/kg]
 ! qrain = rain mixing ratio             [kg/kg]
@@ -55,14 +58,28 @@ module data_structures
 ! nrain = rain number concentration     [1/cm^3]
 !
 ! ---- 2D fields ----
-! rain  = rain+snow+graupel at surface  [mm]
+! rain  = rain+crain+snow+graupel       [mm]
+! crain = convective rain at surface    [mm]
 ! snow  = snow at surface               [mm]
 ! graupel = graupel at surface          [mm]
 !
+! sensible_heat = Sensible heat flux from surface          [W/m^2]
+! latent_heat   = Latent heat flux from surface            [W/m^2]
+! pbl_height    = Height of the planetary boundary layer   [m?]
+! landmask      = Map of Land vs Water grid cells          [0,1,2]
+!
+! ---- NOTE ----
+! dX_dt variables are the increment in boundary conditions between internal model time steps
+! some of these are 2d, some are 3d
+! 
 ! ---- model structure ----
 ! terrain = surface elevation           [m]
 ! z = model layer height (at mid point) [m]
 ! dz = layer thickness                  [m]
+!
+! sintheta = sine of the angle between grid and geographic coords   []
+! costheta = cosine of the angle between grid and geographic coords []
+! fzs      = buffered FFT(terrain) for linear wind calculations   
 !------------------------------------------------
 
 ! 	type to contain external wind fields, only real addition is nfiles... maybe this could be folded in elsewhere?
@@ -98,16 +115,17 @@ module data_structures
 	type, extends(linearizable_type) :: bc_type
 ! 		not sure these are used anymore...
 		real, allocatable, dimension(:,:,:) :: p,th,qv
-! 		dXdt variables are the change in variable X between two forcing time steps
-! 		wind and pressure dXdt fields applied to full 3d grid, others applied only to boundaries
+! 		dX_dt variables are the change in variable X between two forcing time steps
+! 		wind and pressure dX_dt fields applied to full 3d grid, others applied only to boundaries
 		real, allocatable, dimension(:,:,:) :: du_dt,dv_dt,dw_dt,dp_dt,drho_dt,dth_dt,dqv_dt,dqc_dt
 ! 		sh, lh, and pblh fields are only 2d
 		real, allocatable, dimension(:,:) :: dsh_dt,dlh_dt,dpblh_dt
 		real,allocatable,dimension(:,:)::lowres_terrain
 		real,allocatable,dimension(:,:,:)::lowres_z
-! 		store the full 3D grid for the next time step to compute dXdt fields
+! 		store the full high-res 3D grid for the next time step to compute dXdt fields
 		type(domain_type)::next_domain
-! 		if we are using external winds, store them here temporarily... does this need to be separate from next_domain other than nfiles?
+! 		if we are using external winds, store them here temporarily... 
+!       does this need to be separate from next_domain other than nfiles?
 		type(wind_type)::ext_winds
 	end type bc_type
 
@@ -131,7 +149,7 @@ module data_structures
 ! 		variable names from init/BC/wind/... files
 		character (len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
 										hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi, &
-										pvar,tvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar,hgtvar, &
+										pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar,hgtvar, &
 										shvar,lhvar,pblhvar,zvar
 ! 		various boolean options
 		logical :: ideal,readz, debug, external_winds,remove_lowres_linear,&
@@ -142,6 +160,8 @@ module data_structures
 		integer :: ntimesteps,nz,nfiles,ext_winds_nfiles,restart_step
 ! 		various real parameters/options
 		real :: dx,dxlow,in_dt,out_dt,outputinterval,inputinterval
+! 		offset to temperature because WRF outputs potential temperature-300
+		real :: t_offset
 		real,allocatable,dimension(:)::dz_levels
 ! 		defines which physics package to be used. 
 		type(physics_type)::physics

@@ -36,16 +36,21 @@ contains
 ! ydim can be specified to allow working with (x,y,z) data or (x,z,y) data
 	subroutine smooth_wind(wind,windowsize,ydim)
 		implicit none
-		real, intent(inout), dimension(:,:,:):: wind
-		integer,intent(in)::windowsize
-		integer,intent(in)::ydim
-		real,allocatable,dimension(:,:,:)::inputwind
-		integer::i,j,k,nx,ny,nz,startx,endx,starty,endy
+		real, intent(inout), dimension(:,:,:):: wind	! 3 dimensional wind field to be smoothed
+		integer,intent(in)::windowsize              	! halfwidth-1/2 of window to smooth over
+														! Specified in grid cells, (+/- windowsize)
+		integer,intent(in)::ydim                    	! the dimension to use for the y coordinate
+														! It can be 2, or 3 (but not 1)
+		real,allocatable,dimension(:,:,:)::inputwind    ! temporary array to store the input data in
+		integer::i,j,k,nx,ny,nz,startx,endx,starty,endy ! various array indices/bounds
+		
 		nx=size(wind,1)
-		ny=size(wind,2) !note, this could be the Y or Z dimension
-		nz=size(wind,3) !note, this could be the Y or Z dimension
+		ny=size(wind,2) !note, this could be the Y or Z dimension depending on ydim
+		nz=size(wind,3) !note, this could be the Y or Z dimension depending on ydim
+		! this is ~20MB that has to be allocated deallocated every call...
 		allocate(inputwind(nx,ny,nz)) ! Can't be module level because nx,ny,nz could change between calls, 
 									  ! could be part of a "smoothable" object to avoid allocate-deallocating constantly
+		
 		inputwind=wind !make a copy so we always use the unsmoothed data when computing the smoothed data
 		
 		!parallelize over the slowest dimension
@@ -55,18 +60,23 @@ contains
 		do k=1,nz
 			do j=1,ny
 				do i=1,nx
+					!note, this could be made a lot faster by adding the new head of the window and subtracting the old tail
 					if (ydim==2) then
+						!first find the current window bounds
 						startx=max(i-windowsize,1)
 						endx  =min(nx,i+windowsize)
 						starty=max(1,j-windowsize)
 						endy  =min(ny,j+windowsize)
+						! then compute the mean within that window (sum/n)
 						wind(i,j,k)=sum(inputwind(startx:endx,starty:endy,k)) &
 									/ ((endx-startx+1)*(endy-starty+1))
 					else ! ydim==3
+! 						! bounds and dimension are different if z is in the middle dimension
 						startx=max(i-windowsize,1)
 						endx  =min(nx,i+windowsize)
 						starty=max(1,k-windowsize)
 						endy  =min(nz,k+windowsize)
+						! then compute the mean within that window (sum/n)
 						wind(i,j,k)=sum(inputwind(startx:endx,j,starty:endy)) &
 									/ ((endx-startx+1)*(endy-starty+1))
 					endif
@@ -81,21 +91,21 @@ contains
 	
 ! 	generic routine to read a low res variable (varname) from a netcdf file (filename) at the current time step (curstep)
 !   then interpolate it to the high res grid either in 3D or at the boundaries only (boundary_only)
-! 	applies modifications specificaly for U,V,T,P and PH variables
-	subroutine read_var(highres,filename,varname,geolut,curstep,boundary_only,low_res_terrain)
+! 	applies modifications specificaly for U,V,T, and P variables
+	subroutine read_var(highres,filename,varname,geolut,curstep,boundary_only,options)
 		implicit none
 		real,dimension(:,:,:),intent(inout)::highres
 		character(len=*),intent(in) :: filename,varname
 		type(geo_look_up_table),intent(in) :: geolut
 		integer,intent(in)::curstep
 		logical, intent(in) :: boundary_only
-		real,optional,dimension(:,:,:) :: low_res_terrain
+		type(options_type),intent(in)::options
 		
 		real,dimension(:,:,:),allocatable :: inputdata,extra_data
 		integer,dimension(io_maxDims)::dims
 		integer::nx,ny,nz,i
 		
-! 		Read the data in
+! 		Read the data in, should be relatively fast because we are reading a low resolution forcing file
 		call io_getdims(filename,varname, dims)
 		call io_read3d(filename,varname,inputdata,curstep)
 		
@@ -104,23 +114,23 @@ contains
 		ny=dims(3)
 		nz=dims(4)
 		
-! 		perform unit conversion on specific variables
-		if (varname=="U") then
+! 		WARNING Hard coded variable specific variables
+		if (varname==options%uvar) then
 			call smooth_wind(inputdata,1,2)
-		else if (varname=="V") then
+		else if (varname==options%vvar) then
 			call smooth_wind(inputdata,1,2)
-		else if (varname=="T") then
-			inputdata=inputdata+300
-		else if (varname=="P") then
-			call io_read3d(filename,"PB",extra_data,curstep)
+		else if ((varname==options%tvar).and.(options%t_offset>0)) then
+			inputdata=inputdata+options%t_offset
+		else if ((varname==options%pvar).and.(options%pbvar.ne.'')) then
+			call io_read3d(filename,options%pbvar,extra_data,curstep)
 			inputdata=inputdata+extra_data
 			deallocate(extra_data)
-		else if (varname=="PH") then
-			call io_read3d(filename,"PHB",extra_data,curstep)
-			inputdata=(inputdata+extra_data)/9.8
-			nz=nz-1
-			inputdata(:,:,1:nz)=(inputdata(:,:,1:nz)+inputdata(:,:,2:nz+1))/2
-			deallocate(extra_data)
+! 		else if (varname=="PH") then
+! 			call io_read3d(filename,"PHB",extra_data,curstep)
+! 			inputdata=(inputdata+extra_data)/9.8
+! 			nz=nz-1
+! 			inputdata(:,:,1:nz)=(inputdata(:,:,1:nz)+inputdata(:,:,2:nz+1))/2
+! 			deallocate(extra_data)
 		endif
 		
 ! 		interpolate data onto the high resolution grid after re-arranging the dimensions. 
@@ -139,13 +149,14 @@ contains
 	end subroutine read_var
 
 ! 	generic routine to read a low res variable (varname) from a netcdf file (filename) at the current time step (curstep)
-!   then interpolate it to the high res grid either in 3D or at the boundaries only (boundary_only)
-! 	applies modifications specificaly for U,V,T,P and PH variables
-	subroutine read_2dvar(highres,filename,varname,geolut,curstep)
+!   then interpolate it to the high res grid either in 2D
+! 	Primarily used for surface variables: Sensible and latent heat fluxes, PBL height, skin temperature?
+	subroutine read_2dvar(highres,filename,varname,geolut,curstep,options)
 		implicit none
 		real,dimension(:,:),intent(inout)::highres
 		character(len=*),intent(in) :: filename,varname
 		type(geo_look_up_table),intent(in) :: geolut
+		type(options_type),intent(in) :: options
 		integer,intent(in)::curstep
 	
 		real,dimension(:,:),allocatable :: inputdata
@@ -221,9 +232,9 @@ contains
 		endif
 		write(*,*) "Initial ext wind file:step=",ext_winds_curfile," : ",ext_winds_curstep
 		call read_var(domain%u,    ext_winds_file_list(ext_winds_curfile),options%uvar,  &
-		      bc%ext_winds%u_geo%geolut,ext_winds_curstep,.FALSE.)
+		      bc%ext_winds%u_geo%geolut,ext_winds_curstep,.FALSE.,options)
 		call read_var(domain%v,    ext_winds_file_list(ext_winds_curfile),options%vvar,  &
-		      bc%ext_winds%v_geo%geolut,ext_winds_curstep,.FALSE.)
+		      bc%ext_winds%v_geo%geolut,ext_winds_curstep,.FALSE.,options)
 		call rotate_ext_wind_field(domain,bc%ext_winds)
 	end subroutine ext_winds_init
 	
@@ -414,23 +425,23 @@ contains
 			elseif (options%mean_winds) then
 				call mean_winds(domain,file_list(curfile),curstep,options)
 			else
-				call read_var(domain%u,    file_list(curfile),options%uvar,      bc%u_geo%geolut,curstep,boundary_value)
-				call read_var(domain%v,    file_list(curfile),options%vvar,      bc%v_geo%geolut,curstep,boundary_value)
+				call read_var(domain%u,    file_list(curfile),options%uvar,      bc%u_geo%geolut,curstep,boundary_value,options)
+				call read_var(domain%v,    file_list(curfile),options%vvar,      bc%v_geo%geolut,curstep,boundary_value,options)
 				if (.not.options%ideal)then
 					call smooth_wind(domain%u,smoothing_window,3)
 					call smooth_wind(domain%v,smoothing_window,3)
 				endif
 			endif
-			call read_var(domain%p,    file_list(curfile),options%pvar,      bc%geolut,curstep,boundary_value)
-			call read_var(domain%th,   file_list(curfile),options%tvar,      bc%geolut,curstep,boundary_value)
-			call read_var(domain%qv,   file_list(curfile),options%qvvar,     bc%geolut,curstep,boundary_value)
-			call read_var(domain%cloud,file_list(curfile),options%qcvar,     bc%geolut,curstep,boundary_value)
-			call read_var(domain%ice,  file_list(curfile),options%qivar,     bc%geolut,curstep,boundary_value)
+			call read_var(domain%p,    file_list(curfile),options%pvar,      bc%geolut,curstep,boundary_value,options)
+			call read_var(domain%th,   file_list(curfile),options%tvar,      bc%geolut,curstep,boundary_value,options)
+			call read_var(domain%qv,   file_list(curfile),options%qvvar,     bc%geolut,curstep,boundary_value,options)
+			call read_var(domain%cloud,file_list(curfile),options%qcvar,     bc%geolut,curstep,boundary_value,options)
+			call read_var(domain%ice,  file_list(curfile),options%qivar,     bc%geolut,curstep,boundary_value,options)
 
 			if (options%physics%landsurface==1) then
-				call read_2dvar(domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep)
-				call read_2dvar(domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep)
-				call read_2dvar(domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep)
+				call read_2dvar(domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep,options)
+				call read_2dvar(domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep,options)
+				call read_2dvar(domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep,options)
 				where(domain%latent_heat<0) domain%latent_heat=0
 			else
 				domain%sensible_heat=0
@@ -558,9 +569,9 @@ contains
 		use_interior=.False.
 		use_boundary=.True.
 		call read_var(bc%next_domain%u,    ext_winds_file_list(ext_winds_curfile),options%uvar, &
-		              bc%ext_winds%u_geo%geolut,ext_winds_curstep,use_interior)
+		              bc%ext_winds%u_geo%geolut,ext_winds_curstep,use_interior,options)
 		call read_var(bc%next_domain%v,    ext_winds_file_list(ext_winds_curfile),options%vvar, &
-		              bc%ext_winds%v_geo%geolut,ext_winds_curstep,use_interior)
+		              bc%ext_winds%v_geo%geolut,ext_winds_curstep,use_interior,options)
 		call rotate_ext_wind_field(bc%next_domain,bc%ext_winds)
 	
 	end subroutine update_ext_winds
@@ -603,23 +614,23 @@ contains
 		elseif (options%mean_winds) then
 			call mean_winds(bc%next_domain,file_list(curfile),curstep,options)
 		else
-			call read_var(bc%next_domain%u,    file_list(curfile),options%uvar,     bc%u_geo%geolut,curstep,use_interior)
-			call read_var(bc%next_domain%v,    file_list(curfile),options%vvar,     bc%v_geo%geolut,curstep,use_interior)
+			call read_var(bc%next_domain%u,    file_list(curfile),options%uvar,     bc%u_geo%geolut,curstep,use_interior,options)
+			call read_var(bc%next_domain%v,    file_list(curfile),options%vvar,     bc%v_geo%geolut,curstep,use_interior,options)
 			if (.not.options%ideal)then
 				call smooth_wind(bc%next_domain%u,smoothing_window,3)
 				call smooth_wind(bc%next_domain%v,smoothing_window,3)
 			endif
 		endif
-		call read_var(bc%next_domain%p,    file_list(curfile),options%pvar,     bc%geolut,curstep,use_interior)
-		call read_var(bc%next_domain%th,   file_list(curfile),options%tvar,     bc%geolut,curstep,use_boundary)
-		call read_var(bc%next_domain%qv,   file_list(curfile),options%qvvar,    bc%geolut,curstep,use_boundary)
-		call read_var(bc%next_domain%cloud,file_list(curfile),options%qcvar,    bc%geolut,curstep,use_boundary)
-		call read_var(bc%next_domain%ice,  file_list(curfile),options%qivar,    bc%geolut,curstep,use_boundary)
+		call read_var(bc%next_domain%p,    file_list(curfile),options%pvar,     bc%geolut,curstep,use_interior,options)
+		call read_var(bc%next_domain%th,   file_list(curfile),options%tvar,     bc%geolut,curstep,use_boundary,options)
+		call read_var(bc%next_domain%qv,   file_list(curfile),options%qvvar,    bc%geolut,curstep,use_boundary,options)
+		call read_var(bc%next_domain%cloud,file_list(curfile),options%qcvar,    bc%geolut,curstep,use_boundary,options)
+		call read_var(bc%next_domain%ice,  file_list(curfile),options%qivar,    bc%geolut,curstep,use_boundary,options)
 
 		if (options%physics%landsurface==1) then
-			call read_2dvar(bc%next_domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep)
-			call read_2dvar(bc%next_domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep)
-			call read_2dvar(bc%next_domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep)
+			call read_2dvar(bc%next_domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep,options)
+			call read_2dvar(bc%next_domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep,options)
+			call read_2dvar(bc%next_domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep,options)
 ! 			NOTE, this is a kludge to prevent the model from sucking more moisture out of the lower model layer than exists
 			where(domain%latent_heat<0) domain%latent_heat=0
 		else

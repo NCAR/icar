@@ -96,8 +96,8 @@ contains
 		
 ! 		call check( nf90_def_var(ncid, "pii",  NF90_REAL, dimids, temp_id) )
 ! 		varid(18)=temp_id
-		call check( nf90_def_var(ncid, "rho", NF90_REAL, dimids, temp_id) )
-		varid(19)=temp_id
+! 		call check( nf90_def_var(ncid, "rho", NF90_REAL, dimids, temp_id) )
+! 		varid(19)=temp_id
 		
 		! End define mode. This tells netCDF we are done defining metadata.
 		call check( nf90_enddef(ncid) )
@@ -121,7 +121,7 @@ contains
 		call check( nf90_put_var(ncid, varid(16), domain%graupel) )
 		call check( nf90_put_var(ncid, varid(17), domain%crain) )
 ! 		call check( nf90_put_var(ncid, varid(18), domain%pii) )
-		call check( nf90_put_var(ncid, varid(19), domain%rho) )
+! 		call check( nf90_put_var(ncid, varid(19), domain%rho) )
 	
 		
 		! Close the file, freeing all resources.
