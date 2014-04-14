@@ -184,7 +184,7 @@ FFLAGS=$(COMP) ${INCNETCDF} -I${INCFFT}
 
 OBJS=advect.o io_routines.o data_structures.o init.o mp_driver.o time_step.o boundary.o model_tracking.o \
 		mp_thompson.o cu_driver.o cu_tiedtke.o driver.o output.o wind.o linear_winds.o geo_reader.o lsm.o \
-		pbl_swm.o pbl_driver.o
+		pbl_swm.o pbl_driver.o mp_simple.o
 
 IDEALOBJS=advect.o io_routines.o data_structures.o init.o mp_driver.o \
 		mp_thompson.o ideal.o output.o wind.o linear_winds.o geo_reader.o
@@ -271,11 +271,14 @@ geo_reader.o:geo_reader.f90 data_structures.o
 #   Microphysics code
 ###################################################################
 
-mp_driver.o:mp_thompson.o data_structures.o mp_driver.f90
+mp_driver.o:mp_thompson.o mp_simple.o data_structures.o mp_driver.f90
 	${F90} ${FFLAGS} mp_driver.f90
 
 mp_thompson.o:mp_thompson.f90
 	${F90} ${FFLAGS} mp_thompson.f90
+
+mp_simple.o:mp_simple.f90
+	${F90} ${FFLAGS} mp_simple.f90
 	
 ###################################################################
 #   Convection code

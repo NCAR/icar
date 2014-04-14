@@ -1,6 +1,7 @@
 module microphysics
 	use data_structures
 	use module_mp_thompson, only: mp_gt_driver,thompson_init
+	use module_mp_simple, only:mp_simple_driver
 	implicit none
 ! 	these are now defined in data_structures.f90
 ! 	real, parameter :: LH_vaporization=2260000.0 ! J/kg
@@ -51,6 +52,10 @@ contains
 							ids,ide, jds,jde, kds,kde, &    ! domain dims
 							ids,ide, jds,jde, kds,kde, &    ! memory dims
 							ids+1,ide-1, jds+1,jde-1, kds,kde)      ! tile dims
+		elseif (options%physics%microphysics==2) then
+			call mp_simple_driver(domain%p,domain%th,domain%pii,domain%rho,domain%qv,domain%cloud, &
+							domain%qrain,domain%qsnow,domain%rain,domain%snow,&
+							dt_in,domain%dz,ide,jde,kde)
 		endif
 						
 	end subroutine mp
