@@ -105,8 +105,8 @@ ifeq ($(LMOD_FAMILY_COMPILER),intel)
 	LINK= -openmp -liomp5
 	LIBFFT=/glade/u/home/gutmann/usr/local/lib
 	INCFFT=/glade/u/home/gutmann/usr/local/include
-	LIBNETCDF = -lnetcdff -lnetcdf
-	INCNETCDF =  # netcdf includes are setup by the yellowstone module system
+	LIBNETCDF = -L/glade/apps/opt/netcdf/4.3.0/intel/12.1.5/lib -lnetcdff -lnetcdf
+	INCNETCDF = -I/glade/apps/opt/netcdf/4.3.0/intel/12.1.5/include # netcdf includes are setup by the yellowstone module system
 endif 
 ifeq ($(LMOD_FAMILY_COMPILER),pgi)
 	F90=pgf90

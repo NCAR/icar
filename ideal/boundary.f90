@@ -115,9 +115,9 @@ contains
 		nz=dims(4)
 		
 ! 		WARNING Hard coded variable specific variables
-		if (varname==options%uvar) then
+		if ((varname==options%uvar).and.(.not.options%ideal)) then
 			call smooth_wind(inputdata,1,2)
-		else if (varname==options%vvar) then
+		else if ((varname==options%vvar).and.(.not.options%ideal)) then
 			call smooth_wind(inputdata,1,2)
 		else if ((varname==options%tvar).and.(options%t_offset>0)) then
 			inputdata=inputdata+options%t_offset
@@ -668,6 +668,11 @@ contains
 				bc%next_domain%ice(:,i,ny)=sum(bc%next_domain%ice(:,i,ny))/nx
 			enddo
 		endif
+		bc%next_domain%pii=(bc%next_domain%p/100000.0)**(R/cp)
+        bc%next_domain%rho=bc%next_domain%p/(R*domain%th*bc%next_domain%pii) ! kg/m^3
+		
+		call update_winds(bc%next_domain,options)
+		
 		
 		call update_dxdt(bc,domain)
 	end subroutine bc_update

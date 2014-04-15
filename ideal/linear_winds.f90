@@ -166,10 +166,10 @@ contains
 ! 		finally destroy plans serially
 		m=1
         do z=1,nz
-!             U=sum(domain%u(1:realnx-1,z,:))/((realnx-1)*realny)
-!             V=sum(domain%v(:,z,1:realny-1))/(realnx*(realny-1))
-            U=domain%u(88,z,82)
-            V=domain%v(88,z,82)
+            U=sum(domain%u(1:realnx-1,z,:))/((realnx-1)*realny)
+            V=sum(domain%v(:,z,1:realny-1))/(realnx*(realny-1))
+!             U=domain%u(88,z,82)
+!             V=domain%v(88,z,82)
             sig  = U*k+V*l
             where(sig==0.0) sig=1e-15
             denom = sig**2!-f**2
@@ -218,6 +218,7 @@ contains
             call fftw_execute_dft(plan, vhat,v_hat)
             call fftw_destroy_plan(plan)
 			
+			write(*,*) "Max uhat=",z,maxval(real(u_hat))
 ! 			if we are removing linear winds from a low res field, subtract u_hat v_hat instead
 ! 			u/vhat are first staggered to apply to u/v appropriately...
 			if (present(reverse)) then

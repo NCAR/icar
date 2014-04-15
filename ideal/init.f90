@@ -167,7 +167,7 @@ contains
 ! 		could probably simplify and read these all right from the namelist file, 
 ! 		but this way we can change the names in the file independant of the internal variable names
 print *, "WARNING HARD CODED t_offset"
-		options%t_offset=290
+		options%t_offset=300
 		options%pbvar="PB"
 		options%init_conditions_file=init_conditions_file
 		options%nfiles=nfiles
@@ -407,10 +407,7 @@ print *, "WARNING HARD CODED t_offset"
 		nz=options%nz
 		
 ! 		if a 3d grid was also specified, then read those data in
-		if ((options%readz).and.(options%ideal)) then
-			if (.not.options%ideal) then
-				write(*,*) "Reading Z only recommended for ideal runs at the moment"
-			endif
+		if ((options%readz).and.(options%ideal).and.(options%zvar.ne."")) then
 			
 			call io_read3d(options%init_conditions_file,options%zvar, domain%z)
 ! 			dz also has to be calculated from the 3d z file
