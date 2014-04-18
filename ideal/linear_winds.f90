@@ -191,7 +191,7 @@ contains
 		    mimag=mimag+(real(sqrt(-msq))*j)
 ! 		    m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
             m = sqrt(msq)         ! # % vertical wave number, hydrostatic
-			where(sig<0) m=m*-1   ! equivilant to m=m*sign(sig)
+			where(sig<0) m=m*(-1)   ! equivilant to m=m*sign(sig)
     		where(real(msq)<0) m=mimag
 			
             ineta=j*domain%fzs*exp(j*m* &
@@ -218,7 +218,6 @@ contains
             call fftw_execute_dft(plan, vhat,v_hat)
             call fftw_destroy_plan(plan)
 			
-			write(*,*) "Max uhat=",z,maxval(real(u_hat))
 ! 			if we are removing linear winds from a low res field, subtract u_hat v_hat instead
 ! 			u/vhat are first staggered to apply to u/v appropriately...
 			if (present(reverse)) then
@@ -256,19 +255,15 @@ contains
 		do i=1,buffer
 			weight=i/(real(buffer)*2)
 			pos=buffer-i
-			buffer_topo(pos+1,1+buffer:ny-buffer)    =terrain(1,1:ny-buffer*2)*(1-weight)+terrain(nx-buffer*2,1:ny-buffer*2)*   weight
-			buffer_topo(nx-pos-1,1+buffer:ny-buffer) =terrain(1,1:ny-buffer*2)*(  weight)+terrain(nx-buffer*2,1:ny-buffer*2)*(1-weight)
+			buffer_topo(pos+1,1+buffer:ny-buffer)  =terrain(1,1:ny-buffer*2)*(1-weight)+terrain(nx-buffer*2,1:ny-buffer*2)*   weight
+			buffer_topo(nx-pos,1+buffer:ny-buffer) =terrain(1,1:ny-buffer*2)*(  weight)+terrain(nx-buffer*2,1:ny-buffer*2)*(1-weight)
 		enddo
 		do i=1,buffer
 			weight=i/(real(buffer)*2)
 			pos=buffer-i
-			buffer_topo(:,pos+1)    =buffer_topo(:,buffer+1)*(1-weight) + buffer_topo(:,ny-buffer)*   weight
-			buffer_topo(:,ny-pos-1) =buffer_topo(:,buffer+1)*(  weight) + buffer_topo(:,ny-buffer)*(1-weight)
+			buffer_topo(:,pos+1)  =buffer_topo(:,buffer+1)*(1-weight) + buffer_topo(:,ny-buffer)*   weight
+			buffer_topo(:,ny-pos) =buffer_topo(:,buffer+1)*(  weight) + buffer_topo(:,ny-buffer)*(1-weight)
 		enddo
-		print*, "There may be a problem in linear_winds-add_buffer_topo"
-! 		clearly something isn't quiet right here...
-		buffer_topo(nx,:)=buffer_topo(nx-1,:)
-		buffer_topo(:,ny)=buffer_topo(:,ny-1)
 		allocate(real_terrain(nx,ny))
 		real_terrain=buffer_topo
 		call io_write2d("complex_terrain.nc","HGT",real_terrain)

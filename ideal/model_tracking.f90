@@ -11,18 +11,23 @@ contains
 		
 		allocate(versionlist(n))
 		allocate(deltas(n))
-		versionlist=["0.5.1","0.5.2","0.6","0.7","0.7.1","0.7.2","0.7.3"]
-		deltas=["Earliest version in record", & 
+		versionlist=["0.5.1","0.5.2","0.6  ","0.7  ","0.7.1","0.7.2","0.7.3"]
+		deltas=[ & 
+		"Earliest version in record                                                 "// & 
+		"                                       ", &
 		"Added dxlow and variable name definitions pvar,tvar,qvvar,qcvar,qivar,     "// &
-		"      U/V:lat/lon:high/low res", &
+		"      U/V:lat/lon:high/low res         ", &
 		"Added variable name definitions for sensible(shvar)/latent(lhvar) heat     "// &
-		"      fluxes and PBL height(pblhvar)", &
+		"      fluxes and PBL height(pblhvar)   ", &
 		"Added input interval vs output interval timestepping, ?? also removed dz   "// &
-		"      and decrease_dz", &
+		"      and decrease_dz                  ", &
 		"Added variable name definitions for zvar and landmask (landvar), added     "// &
 		"      readz:boolean,x/y:min/max:integer", &
-		"Removed x/y:min/max, Added dz_levels and z_info namelist", &
-		"Added advect_density: boolean use"]
+		"Removed x/y:min/max, Added dz_levels and z_info namelist                   "// &
+		"                                       ", &
+		"Added advect_density: boolean use                                          "// &
+		"                                       " &
+		]
 		
 	end subroutine init_model_diffs
 	

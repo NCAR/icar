@@ -146,20 +146,15 @@ contains
 		real,allocatable,dimension(:,:,:)::temparray
 		integer::nx,ny,nz,i,j
 		
-		write(*,*) maxval(domain%u),minval(domain%u)
 		call make_winds_grid_relative(domain)
-		write(*,*) maxval(domain%u),minval(domain%u)
 		
 ! 		linear winds
 		if (options%physics%windtype==1) then
 			call linear_perturb(domain)
 		endif
-		write(*,*) maxval(domain%u),minval(domain%u)
 ! 		else assumes even flow over the mountains
 		call rotate_wind_field(domain)
-		write(*,*) maxval(domain%u),minval(domain%u)
 		call balance_uvw(domain,options)
-		write(*,*) maxval(domain%u),minval(domain%u)
 		
 	end subroutine update_winds
 	

@@ -198,14 +198,10 @@ module module_mp_simple
 		real,dimension(n) :: flux
 		integer :: i
 		
-		sediment=v(1)*q(1)*rho(1)
-! 		if ((sediment/dz(1))>(q(1)*rho(1))) then
-! 			stop "ERROR in sedimentation, CFL criteria broken"
-! ! 			sediment=q(1)*rho(1)*dz(1)
-! ! 			q(1)=0.
-! 		else
-		q(1)=q(1)-(sediment/dz(1)/rho(1))
-! 		endif
+! 	    calculate the mass of material falling out of the bottom model level
+		sediment=v(1)*q(1)*rho(1) ![m] * [kg/kg] * [kg/m^3] = [kg/m^2]
+! 		remove that from the bottom model layer. 
+		q(1)=q(1)-(sediment/dz(1)/rho(1)) ! [kg/m^2] / [m] / [kg/m^3] = [kg/kg]
 		
 		do i=1,n-1
 			flux(i)=v(i+1)*q(i+1)*rho(i+1)
@@ -217,15 +213,16 @@ module module_mp_simple
 	
 	end function
 
-	subroutine mp_simple(p,t,rho,qv,qc,qr,qs,rain,snow,dt,dz,nz)
+	subroutine mp_simple(p,t,rho,qv,qc,qr,qs,rain,snow,dt,dz,nz,debug)
 		implicit none
 		real,intent(inout),dimension(nz)::p,t,rho,qv,qc,qr,qs
 		real,intent(inout)::rain,snow
 		real,intent(in),dimension(nz)::dz
 		real,intent(in)::dt
 		integer,intent(in)::nz
+		logical,intent(in)::debug
 		real,dimension(nz)::fall_rate
-		real::cfl
+		real::cfl,temp
 		integer::i
 		
 ! 		fall_rate=2+(t-260)/5
@@ -241,17 +238,30 @@ module module_mp_simple
 			cfl=ceiling(maxval(dt/dz*fall_rate))
 			fall_rate=dt*fall_rate/cfl
 ! 			substepping to satisfy CFL criteria
-			do i=1,cfl
+			do i=1,nint(cfl)
 				rain=rain+sediment(qr,fall_rate,rho,dz,nz)
 			enddo
 		endif
 		if (maxval(qs)>SMALL_VALUE) then
-			fall_rate=2.0
+			fall_rate=1.5
 			cfl=ceiling(maxval(dt/dz*fall_rate))
 			fall_rate=dt*fall_rate/cfl
 ! 			substepping to satisfy CFL criteria
-			do i=1,cfl
-				snow=snow+sediment(qs,fall_rate,rho,dz,nz)*dz(1)
+			do i=1,nint(cfl)
+				temp=sediment(qs,fall_rate,rho,dz,nz)
+				snow=snow+temp
+				if ((qs(1).lt.0)) then
+					write(*,*) qs(1)
+				endif
+				if ((fall_rate(1).lt.0)) then
+					write(*,*) fall_rate(1)
+				endif
+				if ((rho(1).lt.0)) then
+					write(*,*) rho(1)
+				endif
+				if (temp.lt.0) then
+					write(*,*) temp,qs(1),fall_rate(1),rho(1)
+				endif
 			enddo
 		endif
 		
@@ -273,15 +283,12 @@ module module_mp_simple
 		!$omp firstprivate(dt,nx,ny,nz)
 		!$omp do
         do j=2,ny-1
-			if (j==2) then
-				write(*,*) nx,nz,ny,dt
-			endif
 	        do i=2,nx-1
 				t=th(i,:,j)*pii(i,:,j)
 				call mp_simple(p(i,:,j),t,rho(i,:,j),qv(i,:,j),&
 							qc(i,:,j),qr(i,:,j),qs(i,:,j),&
 							rain(i,j),snow(i,j),&
-							dt,dz(i,:,j),nz)
+							dt,dz(i,:,j),nz,((i==(nx/2+20)).and.(j==2)))
 				th(i,:,j)=t/pii(i,:,j)
 ! 				print*, maxval(t)
 ! 				if (minval(qc(i,:,j))<0) then

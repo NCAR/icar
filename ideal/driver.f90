@@ -61,9 +61,7 @@ program real
 		write(*,*) "  Model time=",dnint(100*model_time/3600.0)/100.0,"hrs"
 		
 ! 		update boundary conditions (dXdt variables)
-		write(*,*) maxval(domain%u),minval(domain%u)
 		call bc_update(domain,boundary,options)
-		write(*,*) maxval(domain%u),minval(domain%u)
 ! 		this is the meat of the model physics, run all the physics for the current time step looping over internal timesteps
 		call step(domain,options,boundary,model_time,next_output)
 ! 		finally write the output for this timestep
