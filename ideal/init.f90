@@ -1,23 +1,32 @@
 module init
 ! ----------------------------------------------------------------------------
-! 	NOTE: This module was initially written to read WRF output files as input.
+! 	Model Initialization includes allocating memory for boundary and domain 
+! 		data structures.  It reads all of the options from the namelist
+! 		file or file.  It also reads in Lat/Lon and Terrain data. Finally
+! 		There is a driver routine to initialize all model physics packages
+! 
+! 	This module was initially written to read WRF output files as input.
 ! 		This should serve as a basis for any additional file types, and can be 
 ! 		readily modified.  At some point this could be modified to check the 
 ! 		type if input file being specified, and call an appropriate routine. 
 ! 		e.g. if options%inputtype=="WRF" then call wrf_init/update()
 ! 
 !   The module has been updated to allow arbitrary named variables
-!       this allows the use of e.g. ERAi, but still is not as flexible as it should be
+!       this allows the use of e.g. ERAi, but still is not as flexible as it could be
 !       e.g. if a forcing doesn't contain one or more variable types it will not work. 
+!       Need to let varname=""
+!
+!   The use of various python wrapper scripts in helpers/ makes it easy to add new
+!       datasets, and make them conform to the expectations of the current system. 
 ! ----------------------------------------------------------------------------
 	use data_structures
-	use io_routines
-	use geo
-	use microphysics        ! mp_init
-	use convection			! init_convection
-	use planetary_boundary_layer ! pbl_init
-	use model_tracking, only : print_model_diffs
-	use wind, only : init_winds
+	use io_routines, only				: io_read2d, io_read3d, io_newunit
+	use geo, only						: geo_LUT, geo_interp, geo_interp2d
+	use microphysics, only				: mp_init
+	use convection, only				: init_convection
+	use planetary_boundary_layer, only	: pbl_init
+	use model_tracking, only			: print_model_diffs
+	use wind, only						: init_winds
 	
 	implicit none
 	private
@@ -46,6 +55,7 @@ contains
 	end subroutine init_model
 	
 	subroutine init_physics(options,domain)
+		implicit none
 		type(options_type), intent(in) :: options
 		type(domain_type), intent(in) :: domain
 
@@ -57,6 +67,182 @@ contains
 		call pbl_init(domain,options)
 	end subroutine init_physics
 	
+! 	read physics options to use from a namelist file
+	subroutine physics_namelist(filename,options)
+		implicit none
+		character(len=*),intent(in) :: filename
+		type(options_type), intent(inout) :: options
+		integer :: name_unit
+		
+! 		variables to be used in the namelist
+		integer::pbl,lsm,mp,rad,conv,adv,wind
+! 		define the namelist
+		namelist /physics/ pbl,lsm,mp,rad,conv,adv,wind
+		
+! 		default values for physics options (advection+linear winds+simple_microphysics)
+		pbl=0   ! 0 = no PBL, 1 = STUPID PBL (in LSM module), 2 = local PBL diffusion
+		lsm=0   ! 0 = no LSM, 1 = Fluxes from GCM
+		mp=2	! 0 = no MP,  1 = Thompson et al (2008), 2 = Linear microphysics
+		rad=0   ! 0 = no RAD, 1 = radiative cooling 1K/day (in LSM)
+		conv=0  ! 0 = no CONV,1 = Tiedke scheme
+		adv=1   ! 0 = no ADV, 1 = upwind advection scheme
+		wind=1  ! 0 = no LT,  1 = linear theory wind perturbations
+		
+! 		read the namelist
+		open(io_newunit(name_unit), file=filename)
+		read(name_unit,nml=physics)
+		close(name_unit)
+
+! 		store options
+		options%physics%boundarylayer=pbl
+		options%physics%convection=conv
+		options%physics%advection=adv
+		options%physics%landsurface=lsm
+		options%physics%microphysics=mp
+		options%physics%radiation=rad
+		options%physics%windtype=wind
+		
+	end subroutine physics_namelist
+	
+	subroutine var_namelist(filename,options)
+		implicit none
+		character(len=*),intent(in) :: filename
+		type(options_type), intent(inout) :: options
+		integer :: name_unit
+		character(len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,&
+										hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,     &
+										pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar
+		
+		namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
+							landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar, &
+							hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi 
+		
+		hgtvar="HGT"
+		latvar="XLAT"
+		lonvar="XLONG"
+		uvar="U"
+		ulat="XLAT_U"
+		ulon="XLONG_U"
+		vvar="V"
+		vlat="XLAT_V"
+		vlon="XLONG_V"
+		pvar="P"
+		pbvar="PB"
+		tvar="T"
+		qvvar="QVAPOR"
+		qcvar="QCLOUD"
+		qivar="QICE"
+		zvar="Z"
+		shvar="HFLX"
+		lhvar="LVFLX"
+		pblhvar="PBLH"
+		hgt_hi="HGT"
+		landvar="XLAND"
+		lat_hi="XLAT"
+		lon_hi="XLONG"
+		ulat_hi="XLAT_U"
+		ulon_hi="XLONG_U"
+		vlat_hi="XLAT_V"
+		vlon_hi="XLONG_V"
+		
+		
+		open(io_newunit(name_unit), file=filename)
+		read(name_unit,nml=var_list)
+		close(name_unit)
+
+! 		2D geometry variable names (for coarse model)
+		options%hgtvar=hgtvar
+		options%latvar=latvar
+		options%lonvar=lonvar
+! 		U varname and associated lat/lon var names
+		options%uvar=uvar
+		options%ulat=ulat
+		options%ulon=ulon
+! 		V varname and associated lat/lon var names
+		options%vvar=vvar
+		options%vlat=vlat
+		options%vlon=vlon
+! 		Primary model variable names
+		options%pbvar=pbvar
+		options%pvar=pvar
+		options%tvar=tvar
+		options%qvvar=qvvar
+		options%qcvar=qcvar
+		options%qivar=qivar
+! 		vertical coordinate
+		options%zvar=zvar
+! 		2D model variables (e.g. Land surface and PBL height)		
+		options%shvar=shvar
+		options%lhvar=lhvar
+		options%pblhvar=pblhvar
+		
+! 		separate variable names for the high resolution domain
+		options%hgt_hi=hgt_hi
+		options%landvar=landvar
+		options%lat_hi=lat_hi
+		options%lon_hi=lon_hi
+		options%ulat_hi=ulat_hi
+		options%ulon_hi=ulon_hi
+		options%vlat_hi=vlat_hi
+		options%vlon_hi=vlon_hi
+	end subroutine var_namelist
+	
+	subroutine parameters_namelist(filename,options)
+		implicit none
+		character(len=*),intent(in) :: filename
+		type(options_type), intent(inout) :: options
+		integer :: name_unit
+		
+		real :: dx,dxlow,outputinterval,inputinterval,t_offset
+		integer :: ntimesteps,nfiles,xmin,xmax,ymin,ymax
+		integer :: nz,n_ext_winds,buffer
+		logical :: ideal, readz,readdz,debug,external_winds,remove_lowres_linear,&
+		           mean_winds,mean_fields,restart,add_low_topo,advect_density
+		
+		
+		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,debug,nfiles, &
+							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,&
+							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax
+		
+		open(io_newunit(name_unit), file=filename)
+		read(name_unit,nml=parameters)
+		close(name_unit)
+		
+		write(*,*), "WARNING HARD CODED t_offset"
+		t_offset=300
+		options%t_offset=t_offset
+		options%nfiles=nfiles
+		options%ntimesteps=ntimesteps
+		options%in_dt=inputinterval
+		options%out_dt=outputinterval
+		options%dx=dx
+		options%dxlow=dxlow
+		options%ideal=ideal
+		if (ideal) then
+			write(*,*) "Running Idealized simulation (time step does not advance)"
+		endif
+		options%readz=readz
+		options%readdz=readdz
+		options%buffer=buffer
+		options%remove_lowres_linear=remove_lowres_linear
+		options%add_low_topo=add_low_topo
+		options%mean_winds=mean_winds
+		options%mean_fields=mean_fields
+		options%advect_density=advect_density
+		options%debug=debug
+		
+		options%external_winds=external_winds
+		options%ext_winds_nfiles=n_ext_winds
+		options%restart=restart
+		
+		options%nz=nz
+		options%xmin=xmin
+		options%xmax=xmax
+		options%ymin=ymin
+		options%ymax=ymax
+		
+	end subroutine parameters_namelist
+	
 	subroutine init_options(options_filename,options)
 ! 		reads a series of options from a namelist file and stores them in the 
 ! 		options data structure
@@ -64,33 +250,20 @@ contains
 		character(len=*), intent(in) :: options_filename
 		type(options_type), intent(inout) :: options
 		
+		character(len=MAXVARLENGTH) :: version
 		character(len=MAXFILELENGTH) :: init_conditions_file, output_file,restart_file
 		character(len=MAXFILELENGTH),allocatable:: boundary_files(:),ext_wind_files(:)
-		character(len=MAXVARLENGTH) :: landvar="",latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,&
-										hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,     &
-										pvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,version
-		real :: dx,dxlow,outputinterval,inputinterval
 		real, allocatable, dimension(:) :: dz_levels
-		integer :: name_unit,ntimesteps,nfiles,xmin,xmax,ymin,ymax
-		integer :: pbl,lsm,mp,rad,conv,adv,wind,nz,n_ext_winds,buffer,restart_step
-		logical :: ideal, readz,readdz,debug,external_winds,remove_lowres_linear,&
-		           mean_winds,mean_fields,restart,add_low_topo,advect_density
    		real,dimension(45)::fulldz
+		integer :: restart_step
+		integer :: name_unit
 		
 ! 		set up namelist structures
 		namelist /model_version/ version
-		namelist /var_list/ pvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
-							landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar, &
-							hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi 
-		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,debug,nfiles, &
-							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,&
-							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax
 		namelist /z_info/ dz_levels
 		namelist /files_list/ init_conditions_file,output_file,boundary_files
 		namelist /restart_info/ restart_step,restart_file
-		namelist /ext_winds_info/ n_ext_winds,ext_wind_files
-		namelist /physics/ pbl,lsm,mp,rad,conv,adv,wind
-		n_ext_winds=200
+		namelist /ext_winds_info/ ext_wind_files
 		
 ! 		read namelists
 		open(io_newunit(name_unit), file=options_filename)
@@ -104,141 +277,65 @@ contains
 			stop
 		endif
 		write(*,*) "Model version: ",trim(version)
-		open(io_newunit(name_unit), file=options_filename)
-		read(name_unit,nml=var_list)
-		close(name_unit)
-		open(io_newunit(name_unit), file=options_filename)
-		read(name_unit,nml=parameters)
-		close(name_unit)
 		
-		if (readdz) then
-			allocate(dz_levels(nz),options%dz_levels(nz))
+		call physics_namelist(options_filename,options)
+		call var_namelist(options_filename,options)
+		call parameters_namelist(options_filename,options)
+		
+		if (options%readdz) then
+			allocate(dz_levels(options%nz),options%dz_levels(options%nz))
+			
 			open(io_newunit(name_unit), file=options_filename)
 			read(name_unit,nml=z_info)
 			close(name_unit)
+			
 			options%dz_levels=dz_levels
 			deallocate(dz_levels)
 		else
-! 			mean layer thicknesses from a 36km WRF run over the "CO-headwaters" domain
+! 			default mean layer thicknesses from a 36km WRF run over the "CO-headwaters" domain
 			fulldz=[36.,   51.,   58.,   73.,   74.,  111.,  113.,  152.,  155.,  157.,  160.,  245., &
 				   251.,  258.,  265.,  365.,  379.,  395.,  413.,  432.,  453.,  476.,  503.,  533., &
 				   422.,  443.,  467.,  326.,  339.,  353.,  369.,  386.,  405.,  426.,  450.,  477., &
 				   455.,  429.,  396.,  357.,  311.,  325.,  340.,  356.,  356.]
-! 			mean layer thicknesses from ERAi domain
-! 		   fulldz=[   24.8,  36.5,  51.8,  70.1,  90.8, 113.5, 137.9, 163.7, 190.5, 218.1, 246.4, &
-! 		   			 275.1, 304.3, 333.6, 363.0, 392.4, 421.7, 450.8, 479.6, 508.0, 535.9, 563.2, &
-! 					 589.8, 615.7, 640.9, 665.5, 689.8, 714.1, 739.4, 767.2, 796.8, 826.6, 856.2, &
-! 					 885.1, 912.5, 937.9, 961.4, 979.4, 990.1, 976.6, 937.6, 900.1, 864.2, 829.6, 796.5]
- 			allocate(options%dz_levels(nz))
-			options%dz_levels=fulldz(1:nz)
+ 			allocate(options%dz_levels(options%nz))
+			options%dz_levels=fulldz(1:options%nz)
 		endif
 		
-		if (restart) then
+		if (options%restart) then
 			open(io_newunit(name_unit), file=options_filename)
 			read(name_unit,nml=restart_info)
 			close(name_unit)
-			options%restart=restart
+			
 			options%restart_step=restart_step
 			options%restart_file=restart_file
 		endif
 
-		open(io_newunit(name_unit), file=options_filename)
-		read(name_unit,nml=physics)
-		close(name_unit)
 		
-		allocate(boundary_files(nfiles))
+		allocate(boundary_files(options%nfiles))
 		open(io_newunit(name_unit), file=options_filename)
 		read(name_unit,nml=files_list)
 		close(name_unit)
 		
-		if (external_winds) then
-			allocate(ext_wind_files(n_ext_winds))
-			open(io_newunit(name_unit), file=options_filename)
-			read(name_unit,nml=ext_winds_info)
-			close(name_unit)
-			options%external_winds=external_winds
-			options%ext_winds_nfiles=n_ext_winds
-			allocate(options%ext_wind_files(n_ext_winds))
-			options%ext_wind_files=ext_wind_files
-			deallocate(ext_wind_files)
-		endif
-		
-		
-! 		could probably simplify and read these all right from the namelist file, 
-! 		but this way we can change the names in the file independant of the internal variable names
-print *, "WARNING HARD CODED t_offset"
-		options%t_offset=300
-		options%pbvar="PB"
 		options%init_conditions_file=init_conditions_file
-		options%nfiles=nfiles
-		allocate(options%boundary_files(nfiles))
+		allocate(options%boundary_files(options%nfiles))
 		options%boundary_files=boundary_files
 		deallocate(boundary_files)
 		options%output_file=output_file
-
-		options%latvar=latvar
-		options%lonvar=lonvar
-		options%latvar=latvar
-		options%lonvar=lonvar
-		options%hgtvar=hgtvar
-		options%uvar=uvar
-		options%shvar=shvar
-		options%lhvar=lhvar
-		options%pblhvar=pblhvar
-		options%ulat=ulat
-		options%ulon=ulon
-		options%vvar=vvar
-		options%vlat=vlat
-		options%vlon=vlon
-		options%pvar=pvar
-		options%tvar=tvar
-		options%qvvar=qvvar
-		options%qcvar=qcvar
-		options%qivar=qivar
 		
-		options%landvar=landvar
-		options%zvar=zvar
-		options%hgt_hi=hgt_hi
-		options%lat_hi=lat_hi
-		options%lon_hi=lon_hi
-		options%ulat_hi=ulat_hi
-		options%ulon_hi=ulon_hi
-		options%vlat_hi=vlat_hi
-		options%vlon_hi=vlon_hi
-		
-		options%ntimesteps=ntimesteps
-		options%in_dt=inputinterval
-		options%out_dt=outputinterval
-		options%dx=dx
-		options%dxlow=dxlow
-		options%ideal=ideal
-		if (ideal) then
-			write(*,*) "Running Idealized simulation (time step does not advance)"
+		if (options%external_winds) then
+			allocate(ext_wind_files(options%ext_winds_nfiles))
+			
+			open(io_newunit(name_unit), file=options_filename)
+			read(name_unit,nml=ext_winds_info)
+			close(name_unit)
+			
+			allocate(options%ext_wind_files(options%ext_winds_nfiles))
+			options%ext_wind_files=ext_wind_files
+			deallocate(ext_wind_files)
 		endif
-		options%readz=readz
-		options%buffer=buffer
-		options%remove_lowres_linear=remove_lowres_linear
-		options%add_low_topo=add_low_topo
-		options%mean_winds=mean_winds
-		options%mean_fields=mean_fields
-		options%advect_density=advect_density
-		options%debug=debug
-		
-		options%nz=nz
-		options%xmin=xmin
-		options%xmax=xmax
-		options%ymin=ymin
-		options%ymax=ymax
-		options%physics%boundarylayer=pbl
-		options%physics%convection=conv
-		options%physics%advection=adv
-		options%physics%landsurface=lsm
-		options%physics%microphysics=mp
-		options%physics%radiation=rad
-		options%physics%windtype=wind
-		
 	end subroutine init_options
 	
+! 	Allow running over a sub-domain, by removing the outer N grid cells from all sides of the domain (lat,lon,terrain)
 	subroutine remove_edges(domain,edgesize)
 		implicit none
 		type(domain_type), intent(inout) :: domain
@@ -500,29 +597,16 @@ print *, "WARNING HARD CODED t_offset"
 		
 		allocate(boundary%z(nx,nz,ny))
 		allocate(boundary%dz(nx,nz,ny))
-!		mean layer thicknesses from a 36km WRF run over the "CO-headwaters" domain
-! 		fulldz=[36.,   51.,   58.,   73.,   74.,  111.,  113.,  152.,  155.,  157.,  160.,  245., &
-! 			   251.,  258.,  265.,  365.,  379.,  395.,  413.,  432.,  453.,  476.,  503.,  533., &
-! 			   422.,  443.,  467.,  326.,  339.,  353.,  369.,  386.,  405.,  426.,  450.,  477., &
-! 			   455.,  429.,  396.,  357.,  311.,  325.,  340.,  356.,  356.]
-!		mean layer thicknesses from ERAi domain
-! 		fulldz=[   24.8,  36.5,  51.8,  70.1,  90.8, 113.5, 137.9, 163.7, 190.5, 218.1, 246.4, &
-! 	   			  275.1, 304.3, 333.6, 363.0, 392.4, 421.7, 450.8, 479.6, 508.0, 535.9, 563.2, &
-! 				  589.8, 615.7, 640.9, 665.5, 689.8, 714.1, 739.4, 767.2, 796.8, 826.6, 856.2, &
-! 				  885.1, 912.5, 937.9, 961.4, 979.4, 990.1, 976.6, 937.6, 900.1, 864.2, 829.6, 796.5]
-!		mean layer thicknesses from CCSM domain
-! 		fulldz(1:20)=[   110.4611, 284.2321, 491.552, 753.911, 950.716, 1200.556, 1377.235, 1409.965, 1357.270, 1404.227, &
-! 						 1369.426, 1439.705, 1436.62, 1552.31, 1618.72, 1850.671, 2138.704, 2896.219, 5217.467, 7916.972]
-
+		!assumes that vertical levels are identical in the forcing and model domain
 		fulldz(:nz)=domain%dz(1,:,1)
-		
+! 		set up the bc_data dz and z variables (vertical levels)
 		boundary%dz(:,1,:)=fulldz(1)
+! 		z is calculated from dz, dz is thickness of layers. 
 		boundary%z(:,1,:)=boundary%terrain+fulldz(1)/2
 		do i=2,nz
 			boundary%z(:,i,:)=boundary%z(:,i-1,:)+(fulldz(i)+fulldz(i-1))/2
 			boundary%dz(:,i,:)=fulldz(i)
 		enddo
-	
 		
 ! 		all other structures must be allocated and initialized, but will be set on a high-res grid
 ! 		u/v are seperate so we can read them on the low res grid and adjust/rm-linearwinds before interpolating
@@ -538,6 +622,9 @@ print *, "WARNING HARD CODED t_offset"
 		call boundary_allocate(boundary,nx,nz,ny)
 	end subroutine init_bc_data
 	
+	
+! 	sets up the data used to rotate the wind field when using an external
+! 	high-res wind field from e.g. a high res WRF run
     subroutine setup_extwinds(domain)
         implicit none
         type(wind_type),intent(inout)::domain
@@ -584,7 +671,9 @@ print *, "WARNING HARD CODED t_offset"
 		call setup_extwinds(bc%ext_winds)
 	end subroutine init_ext_winds
 	
+	
 ! 	initialize the boundary condiditions (init data structures and GEOLUT)
+!	initializes external winds if necessary, adds low-res terrain to the high-res domain if desired
 	subroutine init_bc(options,domain,boundary)
 		implicit none
 		type(options_type), intent(in) :: options
