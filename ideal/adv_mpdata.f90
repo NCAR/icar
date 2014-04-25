@@ -1,10 +1,10 @@
-module adv_upwind
+module adv_mpdata
 	use data_structures
     
     implicit none
 	private
 	real,dimension(:,:,:),allocatable::U_m,V_m,W_m
-	public::upwind
+	public::mpdata
 	
 contains
     subroutine flux2(l,r,U,nx,nz,ny,f)
@@ -28,6 +28,106 @@ contains
         f= ((U+ABS(U)) * l + (U-ABS(U)) * r)/2
 
     end subroutine flux2
+
+	subroutine advect2d(q,u,v,rho,dz,nx,nz,ny,options)
+!     horizontally advect a scalar q by wind field (u,v)
+!     q = input scalar field (e.g. cloud water [kg])
+!     u,v = horizontal and vertical wind speeds [m/s] on a staggered grid. normalized by dt/dx
+!     
+!     Algorithm from MPDATA: 
+!         Smolarkiewicz, PK and Margolin, LG (1998)
+!             MPDATA: A Finite-Differnce Solver for Geophysical Flows
+!             Journal of Computational Physics 140, p459-480. CP985901
+		real,dimension(:,:,:), intent(inout) :: q,u,v,rho,dz
+		integer,intent(in)::nx,nz,ny
+		type(options_type),intent(in) :: options
+		
+!     # The above calculation is just the standard upwind formulations
+!     # below, calculate the diffusivity correction term of MPDATA
+!     # f=np.double(0.5)
+!     # 
+!     # # define A,B [l,r,u,b] (see MPDATA review reference)
+!     # # l,r,u,b = left, right, upper, bottom edges of the grid cells
+!     # Al=(q1[1:-1,:-2]-q1[1:-1,1:-1])/(q1[1:-1,:-2]+q1[1:-1,1:-1])
+!     # Ar=(q1[1:-1,2:]-q1[1:-1,1:-1])/(q1[1:-1,2:]+q1[1:-1,1:-1])
+!     # Au=(q1[:-2,1:-1]-q1[1:-1,1:-1])/(q1[:-2,1:-1]+q1[1:-1,1:-1])
+!     # Ab=(q1[2:,1:-1]-q1[1:-1,1:-1])/(q1[2:,1:-1]+q1[1:-1,1:-1])
+!     # 
+!     # q11=q1[2:,2:]+q1[2:,1:-1]
+!     # Br=0.5*((q11-q1[:-2,2:]-q1[:-2,1:-1])
+!     #     /(q11+q1[:-2,2:]+q1[:-2,1:-1]))
+!     # q11=q1[2:,:-2]+q1[2:,1:-1]
+!     # Bl=0.5*((q11-q1[:-2,:-2]-q1[:-2,1:-1])
+!     #     /(q11+q1[:-2,:-2]+q1[:-2,1:-1]))
+!     # q11=q1[:-2,2:]+q1[1:-1,2:]
+!     # Bu=0.5*((q11-q1[:-2,:-2]-q1[1:-1,:-2])
+!     #     /(q11+q1[:-2,:-2]+q1[1:-1,:-2]))
+!     # q11=q1[2:,2:]+q1[1:-1,2:]
+!     # Bb=0.5*((q11-q1[2:,:-2]-q1[1:-1,:-2])
+!     #     /(q11+q1[2:,:-2]+q1[1:-1,:-2]))
+!     # 
+!     # # compute diffusion correction U/V terms (see MPDATA review reference)
+!     # Uabs=np.abs(U)
+!     # # first find U/V terms on the grid cell borders
+!     # curUabs=(Uabs[1:-1,:-2]+Uabs[1:-1,1:-1])/2
+!     # curU=Ux0
+!     # curV=(V[1:-1,:-2]+V[1:-1,1:-1])/2
+!     # # then compute Ul
+!     # Ul=curUabs*(1-curUabs)*Al - 2*f*curU*curV*Bl
+!     # # compute Ur using the same two steps
+!     # curUabs=(Uabs[1:-1,2:]+Uabs[1:-1,1:-1])/2
+!     # curU=Ux1
+!     # curV=(V[1:-1,2:]+V[1:-1,1:-1])/2
+!     # Ur=curUabs*(1-curUabs)*Ar - 2*f*curU*curV*Br
+!     # # compute Vu
+!     # Vabs=np.abs(V)
+!     # curVabs=(Vabs[:-2,1:-1]+Vabs[1:-1,1:-1])/2
+!     # curV=Vy0
+!     # curU=(U[:-2,1:-1]+U[1:-1,1:-1])/2
+!     # Vu=curVabs*(1-curVabs)*Bu - 2*f*curU*curV*Bu
+!     # # compute Vb
+!     # curVabs=(Vabs[2:,1:-1]+Vabs[1:-1,1:-1])/2
+!     # curV=Vy1
+!     # curU=(U[2:,1:-1]+U[1:-1,1:-1])/2
+!     # Vb=curVabs*(1-curVabs)*Bb - 2*f*curU*curV*Bb
+!     # 
+!     # q[1:-1,1:-1]=(q1[1:-1,1:-1]
+!     #     -(F(q1[1:-1,1:-1],q1[1:-1,2:],Ul)
+!     #     -F(q1[1:-1,:-2],q1[1:-1,1:-1],Ur))
+!     #     -(F(q1[1:-1,1:-1],q1[2:,1:-1],Vu)
+!     #     -F(q1[:-2,1:-1],q1[1:-1,1:-1],Vb)))
+	end subroutine advect2d
+
+
+	subroutine advect1d(q,u,rho,dz,nx,nz,ny,options)
+		real,dimension(:,:,:), intent(inout) :: q,u,rho,dz
+		integer,intent(in)::nx,nz,ny
+		type(options_type),intent(in) :: options
+		real,dimension(nx,nz,ny)::q1
+		real,dimension(nx,nz-1,ny)::U2,fluxes
+		integer::i
+		
+		q1=q
+
+!       This is the MPDATA diffusion correction term for 1D flow
+! 		U2 is the diffusion correction pseudo-velocity
+		U2=abs(u(:,1:nz-1,:))-u(:,1:nz-1,:)**2
+! 		note U2(nz)=0 because we assume q(nz+1)=q(nz), thus diffusion = 0
+		U2= U2 * (q1(:,2:nz,:)-q1(:,1:nz-1,:))/(q1(:,1:nz-1,:)+q1(:,2:nz,:))
+! 	    # Vl=(U2[:-2]+U2[1:-1])/2*(q1[:-2]-q1[1:-1])/(q1[:-2]+q1[1:-1])
+! 		fluxout=vr,fluxin=vl
+!         - (F(q1[1:-1],q1[2:],Vr) - F(q1[1:-1],q1[:-2],Vl)))
+
+! 	    # Vr=(U2[2:]+U2[1:-1])/2*(q1[2:]-q1[1:-1])/(q1[2:]+q1[1:-1])
+		
+! 		fluxes= ((U2+ABS(U2)) * q(:,1:nz-1,:)  +  (Ur-ABS(Ur)) * q(:,2:nz,:))/2
+
+! 		q(2:nx-1,2:nz-1,2:ny-1)=q1(2:nx-1,2:nz-1,2:ny-1) &
+! 				- (fluxes(2:nx-1,2:nz-1,2:ny-1) - fluxes(2:nx-1,1:nz-2,2:ny-1))
+! 		
+! 		q(2:nx-1,1,2:ny-1)=q(2:nx-1,1,2:ny-1) - fluxes(2:nx-1,1,2:ny-1)
+	end subroutine advect1d
+
 
     subroutine advect3d(q,u,v,w,rho,dz,nx,nz,ny,debug,options)
 		implicit none
@@ -97,7 +197,7 @@ contains
     end subroutine advect3d
 
 ! 	primary entry point, advect all scalars in domain
-	subroutine upwind(domain,options,dt)
+	subroutine mpdata(domain,options,dt)
 		implicit none
 		type(domain_type),intent(inout)::domain
 		type(options_type),intent(in)::options
@@ -119,20 +219,23 @@ contains
 		endif
 		
 ! 		calculate U,V,W normalized for dt/dx
-
-! 		should probably be converting to mass (q*rho) before advecting, then back again... but testing showed minimal difference
 		if (options%advect_density) then
 			U_m=domain%ur(1:nx-1,:,:)*(dt/dx**2)
 			V_m=domain%vr(:,:,1:ny-1)*(dt/dx**2)
+! 			note, even though dz!=dx, W is computed from the divergence in U/V so it is scaled by dx/dz already
 			W_m=domain%wr*(dt/dx**2)
 		else
 			U_m=domain%u(1:nx-1,:,:)*(dt/dx)
 			V_m=domain%v(:,:,1:ny-1)*(dt/dx)
-	! 		note, even though dz!=dx, W is computed from the divergence in U/V so it is scaled by dx/dz already
+! 			note, even though dz!=dx, W is computed from the divergence in U/V so it is scaled by dx/dz already
 			W_m=domain%w*(dt/dx)
 		endif
 
-		call advect3d(domain%qv,   U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+		call advect3d(domain%qv,   U_m,V_m,W_m,	domain%rho,domain%dz,nx,nz,ny,0,options)
+		!MPDATA advection correction
+! 		call advect2d(domain%qv,   U_m,V_m,		domain%rho,domain%dz,nx,nz,ny,options)
+! 		call advect1d(domain%qv,   W_m,			domain%rho,domain%dz,nx,nz,ny,options)
+		
 		call advect3d(domain%cloud,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
 		call advect3d(domain%qrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
 		call advect3d(domain%qsnow,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
@@ -143,6 +246,5 @@ contains
 			call advect3d(domain%nice, U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
 			call advect3d(domain%nrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
 		endif
-	end subroutine upwind
-	
-end module adv_upwind
+	end subroutine mpdata
+end module adv_mpdata
