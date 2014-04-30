@@ -6,6 +6,21 @@ module module_mp_simple
 	real, parameter :: SMALL_VALUE = 1E-15
 !     real, parameter :: mp_R=287.058 ! J/(kg K) specific gas constant for air
 !     real, parameter :: mp_g=9.81 ! gravity m/s^2
+
+! arbitrary calibratable timescales default values as used in the linear model
+! these should be pulled out to a parameter file for calibration purposes
+	real,parameter :: snow_const=1/2000.0 ! [1/s]
+	real,parameter :: rain_const=1/500.0  ! [1/s]
+	real,parameter :: freezing_threshold=273.15
+	
+! 	these are recalculated every call because they are a function of dt
+!   conversion "time" = exp(-const * dt)
+	real :: rain_evap=0.999
+	real :: snow_evap=0.999
+	real :: snow_melt=0.999
+	real :: cloud2rain=0.999
+	real :: cloud2snow=0.999
+
 	
 	contains
 	real function sat_mr(t,p)
@@ -21,7 +36,7 @@ module module_mp_simple
 ! 			Murray, F. W., 1967: On the computation of saturation vapor pressure. 
 ! 				Journal of Applied Meteorology, Vol. 6, pp. 203-204.
 ! 		Also notes a 6th order polynomial and look up table as viable options. 
-		if (t<273.15) then
+		if (t<freezing_threshold) then
 			a=21.8745584
 			b=7.66
 		else
@@ -56,14 +71,14 @@ module module_mp_simple
 			excess=qv-qvsat
 ! 			temperature change if all vapor is converted
 			deltat=excess*vapor2temp
-! 			Now calculate new saturated mixing ratio at the new hypothetical tempera
+! 			Now calculate new saturated mixing ratio at the new hypothetical temperature
 			qvsat=sat_mr(t+deltat*0.5,p)
 			excess=qv-qvsat
 			t=t+(excess*vapor2temp)
 			qv=qv-excess
 			qc=qc+excess
 			
-! 		if unsaturated anc clouds exist, evaporate clouds
+! 		if unsaturated and clouds exist, evaporate clouds
 		else if (qc>0) then
 			excess=qvsat-qv
 			if (excess<qc) then
@@ -94,12 +109,7 @@ module module_mp_simple
 		real,intent(in) :: conversion
 		real::delta
 		
-		delta=qc*conversion
-! 		if (delta>0) then
-! 			print*,"Converting to hydrometeor!", delta
-! 		else
-! 			print*, " no conversion???",qc,conversion
-! 		endif
+		delta=qc-(qc*conversion)
 		if (delta<qc) then
 			qc=qc-delta
 			q=q+delta
@@ -141,28 +151,20 @@ module module_mp_simple
 		implicit none
 		real, intent(inout) :: p,t,qv,qc,qr,qs
 		real,intent(in)::dt
-		real :: qvsat,rain_evap_time,snow_evap_time,cloud2rain_time,&
-				cloud2snow_time,snow_melt_time,&
-				L_evap,L_subl,L_melt
+		real :: qvsat,L_evap,L_subl,L_melt
 		
 		L_melt=LH_liquid !kJ/kg
 		L_evap=LH_vapor !kJ/kg
 		L_subl=L_melt+L_evap
-		!arbitrary calibratable timescales
-! 		rain_evap_time=100.0 !seconds
-! 		snow_evap_time=200.0 !seconds
-! 		snow_melt_time=100.0 !seconds
-		cloud2rain_time=500.0!seconds
-		cloud2snow_time=2000.0!seconds
 		
 		!convert cloud water to and from water vapor
 		call cloud_conversion(p,t,qv,qc,qvsat,dt)
 		! if there are no species to process we will just return
 		if ((qc+qr+qs) >SMALL_VALUE) then
 			if (qc>SMALL_VALUE) then
-				if (t>273.15) then
+				if (t>freezing_threshold) then
 					! convert cloud water to rain drops
-					call cloud2hydrometeor(qc,qr,dt/cloud2rain_time)
+					call cloud2hydrometeor(qc,qr,cloud2rain)
 ! 					if (qs>SMALL_VALUE) then
 ! 						! it is above freezing, so start melting any snow if present
 ! 						call phase_change(p,t,qs,100.,qr,L_melt,dt/snow_melt_time)
@@ -170,7 +172,7 @@ module module_mp_simple
 ! 					endif
 				else
 					! convert cloud water to snow flakes
-					call cloud2hydrometeor(qc,qs,dt/cloud2snow_time)
+					call cloud2hydrometeor(qc,qs,cloud2snow)
 					
 				endif
 			endif
@@ -277,7 +279,10 @@ module module_mp_simple
 		real,dimension(nz)::t
 		integer::i,j
 		
-! 		print*, nx,nz,ny,dt
+! 		calculate these once for every call because they are only a function of dt
+		cloud2snow=exp(-1.0*snow_const*dt)
+		cloud2rain=exp(-1.0*rain_const*dt)
+		
 		!$omp parallel private(i,j,t),&
 		!$omp shared(p,th,pii,qv,qc,qs,qr,rain,snow,dz),&
 		!$omp firstprivate(dt,nx,ny,nz)
@@ -290,19 +295,6 @@ module module_mp_simple
 							rain(i,j),snow(i,j),&
 							dt,dz(i,:,j),nz,((i==(nx/2+20)).and.(j==2)))
 				th(i,:,j)=t/pii(i,:,j)
-! 				print*, maxval(t)
-! 				if (minval(qc(i,:,j))<0) then
-! 					print*,i,j,minval(qc(i,:,j)), "cloud"
-! 				endif
-! 				if (minval(qv(i,:,j))<0) then
-! 					print*,i,j,minval(qv(i,:,j)), "vapor"
-! 				endif
-! 				if (minval(qr(i,:,j))<0) then
-! 					print*,i,j,minval(qr(i,:,j)), "rain"
-! 				endif
-! 				if (minval(qs(i,:,j))<0) then
-! 					print*,i,j,minval(qs(i,:,j)), "snow"
-! 				endif
 				
 			enddo
 		enddo
