@@ -1,11 +1,12 @@
 #!/usr/bin/env python
-import glob,os
+import glob,os,sys
 from copy import copy
 
 import numpy as np
 
 from bunch import Bunch
-from stat_down import myio as io
+# from stat_down import myio as io
+import mygis as io
 import load_data
 
 import netCDF4 as ncio
@@ -136,5 +137,9 @@ def main(inputfile):
 
 
 if __name__ == '__main__':
-    main("wrfinput_d01")
+    if len(sys.argv)>1:
+        filename=sys.argv[1]
+    else:
+        filename="wrfinput_d01"
+    main(filename)
 

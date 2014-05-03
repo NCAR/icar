@@ -204,12 +204,25 @@ contains
 							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,&
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax
 		
+! 		default parameters
+		mean_fields=.False.
+		mean_winds=.False.
+		external_winds=.False.
+		n_ext_winds=1
+		write(*,*), "Default t_offset=300"
+		t_offset=300
+		buffer=0
+		remove_lowres_linear=.False.
+		add_low_topo=.False.
+		advect_density=.True.
+		restart=.False.
+		ideal=.False.
+		debug=.False.
+		
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=parameters)
 		close(name_unit)
 		
-		write(*,*), "WARNING HARD CODED t_offset"
-		t_offset=300
 		options%t_offset=t_offset
 		options%nfiles=nfiles
 		options%ntimesteps=ntimesteps

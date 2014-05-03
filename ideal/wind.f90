@@ -104,10 +104,10 @@ contains
 		domain%v(:,:,:ny) = (domain%v(:,:,:ny)+domain%v(:,:,2:))/2
 		do j=1,ny
 			do k=1,nz
-				u=domain%u(:,k,j)*domain%costheta(:,j) + domain%v(:,k,j)*domain%sintheta(:,j)
-				v=domain%v(:,k,j)*domain%costheta(:,j) + domain%u(:,k,j)*domain%sintheta(:,j)
+				u=domain%u(:nx,k,j)*domain%costheta(:nx,j) + domain%v(:nx,k,j)*domain%sintheta(:nx,j)
+				v=domain%v(:nx,k,j)*domain%costheta(:nx,j) + domain%u(:nx,k,j)*domain%sintheta(:nx,j)
 				domain%u(:nx,k,j)=u
-				domain%v(:,k,j)=v
+				domain%v(:nx,k,j)=v
 			enddo
 		enddo
 		deallocate(u,v)
@@ -146,6 +146,8 @@ contains
 		real,allocatable,dimension(:,:,:)::temparray
 		integer::nx,ny,nz,i,j
 		
+		!note, this should only be called once per time step, DO NOT use update winds internal to the time step
+		print*, "rotating winds into the model grid"
 		call make_winds_grid_relative(domain)
 		
 ! 		linear winds

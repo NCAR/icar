@@ -101,6 +101,7 @@ module module_mp_simple
 			endif
 		endif
 		qc=max(qc,0.)
+		
 	end subroutine
 
 	subroutine cloud2hydrometeor(qc,q,conversion)
@@ -153,10 +154,10 @@ module module_mp_simple
 		real,intent(in)::dt
 		real :: qvsat,L_evap,L_subl,L_melt
 		
+		qvsat=1
 		L_melt=LH_liquid !kJ/kg
 		L_evap=LH_vapor !kJ/kg
 		L_subl=L_melt+L_evap
-		
 		!convert cloud water to and from water vapor
 		call cloud_conversion(p,t,qv,qc,qvsat,dt)
 		! if there are no species to process we will just return
@@ -204,7 +205,6 @@ module module_mp_simple
 		sediment=v(1)*q(1)*rho(1) ![m] * [kg/kg] * [kg/m^3] = [kg/m^2]
 ! 		remove that from the bottom model layer. 
 		q(1)=q(1)-(sediment/dz(1)/rho(1)) ! [kg/m^2] / [m] / [kg/m^3] = [kg/kg]
-		
 		do i=1,n-1
 			flux(i)=v(i+1)*q(i+1)*rho(i+1)
 		enddo
@@ -224,7 +224,7 @@ module module_mp_simple
 		integer,intent(in)::nz
 		logical,intent(in)::debug
 		real,dimension(nz)::fall_rate
-		real::cfl,temp
+		real::cfl,snowfall
 		integer::i
 		
 ! 		fall_rate=2+(t-260)/5
@@ -234,7 +234,7 @@ module module_mp_simple
 			call mp_conversions(p(i),t(i),qv(i),qc(i),qr(i),qs(i),dt)
 		enddo
 
-! SEDIMENTATION		
+! SEDIMENTATION	
 		if (maxval(qr)>SMALL_VALUE) then
 			fall_rate=10.0
 			cfl=ceiling(maxval(dt/dz*fall_rate))
@@ -250,20 +250,9 @@ module module_mp_simple
 			fall_rate=dt*fall_rate/cfl
 ! 			substepping to satisfy CFL criteria
 			do i=1,nint(cfl)
-				temp=sediment(qs,fall_rate,rho,dz,nz)
-				snow=snow+temp
-				if ((qs(1).lt.0)) then
-					write(*,*) qs(1)
-				endif
-				if ((fall_rate(1).lt.0)) then
-					write(*,*) fall_rate(1)
-				endif
-				if ((rho(1).lt.0)) then
-					write(*,*) rho(1)
-				endif
-				if (temp.lt.0) then
-					write(*,*) temp,qs(1),fall_rate(1),rho(1)
-				endif
+				snowfall=sediment(qs,fall_rate,rho,dz,nz)
+				snow=snow+snowfall
+				rain=rain+snowfall
 			enddo
 		endif
 		
@@ -282,9 +271,8 @@ module module_mp_simple
 ! 		calculate these once for every call because they are only a function of dt
 		cloud2snow=exp(-1.0*snow_const*dt)
 		cloud2rain=exp(-1.0*rain_const*dt)
-		
 		!$omp parallel private(i,j,t),&
-		!$omp shared(p,th,pii,qv,qc,qs,qr,rain,snow,dz),&
+		!$omp shared(p,th,pii,qv,qc,qs,qr,rain,snow,dz,cloud2snow,cloud2rain),&
 		!$omp firstprivate(dt,nx,ny,nz)
 		!$omp do
         do j=2,ny-1

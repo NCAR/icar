@@ -279,6 +279,7 @@ contains
 		real,intent(in)::lat,lon
 		type(position),intent(in)::pos
 		integer,intent(in) :: nx,ny
+		integer :: i
 		
 		if ((lo%lat(pos%x,pos%y)-lat) > 0) then
 			find_surrounding%y=(/pos%y,pos%y,pos%y-1,pos%y-1/)
@@ -291,8 +292,10 @@ contains
 		else
 			find_surrounding%x=(/pos%x,pos%x+1,pos%x,pos%x+1/)
 		endif
-		find_surrounding%x=min(max(find_surrounding%x,1),nx)
-		find_surrounding%y=min(max(find_surrounding%y,1),ny)
+		do i=1,4
+			find_surrounding%x(i)=min(max(find_surrounding%x(i),1),nx)
+			find_surrounding%y(i)=min(max(find_surrounding%y(i),1),ny)
+		enddo
 		
 	end function find_surrounding			
 	
@@ -303,11 +306,13 @@ contains
 		class(interpolable_type),intent(inout)::lo
 		type(fourpos)::xy
 		type(position)::curpos,lastpos
-		integer :: nx,ny,i,j,k
+		integer :: nx,ny,i,j,k,lo_nx,lo_ny
 		real,dimension(4) :: lat,lon
 		
 		nx=size(hi%lat,1)
 		ny=size(hi%lat,2)
+		lo_nx=size(lo%lat,1)
+		lo_ny=size(lo%lat,2)
 		
 		allocate(lo%geolut%x(4,nx,ny))
 		allocate(lo%geolut%y(4,nx,ny))
@@ -322,7 +327,7 @@ contains
 			do i=1,nx
 ! 				curpos=next_pos(lo,hi,i,j,lastpos,windowsize)
 				curpos=find_location(lo,hi%lat(i,j),hi%lon(i,j),lastpos)
-				xy=find_surrounding(lo,hi%lat(i,j),hi%lon(i,j),curpos,nx,ny)
+				xy=find_surrounding(lo,hi%lat(i,j),hi%lon(i,j),curpos,lo_nx,lo_ny)
 				lo%geolut%x(:,i,j)=xy%x
 				lo%geolut%y(:,i,j)=xy%y
 				do k=1,4

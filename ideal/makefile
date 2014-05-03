@@ -86,8 +86,8 @@ ifeq ($(LMOD_FAMILY_COMPILER),gnu)
 	F90=gfortran
 	LIBFFT=/glade/u/home/gutmann/usr/local/lib
 	INCFFT=/glade/u/home/gutmann/usr/local/include
-	LIBNETCDF = -lnetcdff -lnetcdf
-	INCNETCDF =  # netcdf includes are setup by the yellowstone module system
+	LIBNETCDF = -L/glade/apps/opt/netcdf/4.3.0/gnu/4.8.2/lib -lnetcdff -lnetcdf
+	INCNETCDF = -I/glade/apps/opt/netcdf/4.3.0/gnu/4.8.2/include # netcdf includes are setup by the yellowstone module system
 endif 
 ifeq ($(LMOD_FAMILY_COMPILER),intel)
 	F90=ifort
@@ -105,7 +105,6 @@ ifeq ($(LMOD_FAMILY_COMPILER),pgi)
 	LIBNETCDF = -lnetcdff -lnetcdf
 	INCNETCDF =  # netcdf includes are setup by the yellowstone module system
 endif	
-
 
 ########################################################################################
 # 

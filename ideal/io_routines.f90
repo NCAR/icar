@@ -16,18 +16,18 @@ contains
 		integer,dimension(io_maxDims) :: dimIds
 		
 ! 		open the netcdf file
-		call check(nf90_open(filename, NF90_NOWRITE, ncid))
+		call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
 		! Get the varid of the data_in variable, based on its name.
-		call check(nf90_inq_varid(ncid, varname, varid))
-		call check(nf90_inquire_variable(ncid, varid, ndims = numDims))
-		call check(nf90_inquire_variable(ncid, varid, dimids = dimIds(:numDims)))
+		call check(nf90_inq_varid(ncid, varname, varid),varname)
+		call check(nf90_inquire_variable(ncid, varid, ndims = numDims),varname)
+		call check(nf90_inquire_variable(ncid, varid, dimids = dimIds(:numDims)),varname)
 		dims(1)=numDims
 		do i=1,numDims
 			call check(nf90_inquire_dimension(ncid, dimIds(i), len = dimlen))
 			dims(i+1)=dimlen
 		end do
 		! Close the file, freeing all resources.
-		call check( nf90_close(ncid) )
+		call check( nf90_close(ncid),filename )
 		
 	end subroutine io_getdims
 	
@@ -57,9 +57,9 @@ contains
 		allocate(data_in(diminfo(2),diminfo(3),diminfo(4)))
 		! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
 		! the file.
-		call check(nf90_open(filename, NF90_NOWRITE, ncid))
+		call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
 		! Get the varid of the data_in variable, based on its name.
-		call check(nf90_inq_varid(ncid, varname, varid))
+		call check(nf90_inq_varid(ncid, varname, varid),varname)
 		
 		! Read the data_in. skip the slowest varying indices if there are more than 3 dimensions (typically this will be time)
 		if (diminfo(1)>3) then
@@ -67,12 +67,13 @@ contains
 			call check(nf90_get_var(ncid, varid, data_in,&
 									dimstart(1:diminfo(1)), &				! start  = 1 or extradim
 									[ (diminfo(i+1), i=1,diminfo(1)) ],&	! count=n or 1 created through an implied do loop
-									[ (1,            i=1,diminfo(1)) ] ))	! for all dims, stride = 1     "  implied do loop
+									[ (1,            i=1,diminfo(1)) ]),&	! for all dims, stride = 1     "  implied do loop
+									varname) !pass varname to check so it can give us more info
 		else		
-			call check(nf90_get_var(ncid, varid, data_in))
+			call check(nf90_get_var(ncid, varid, data_in),varname)
 		endif
 		! Close the file, freeing all resources.
-		call check( nf90_close(ncid) )
+		call check( nf90_close(ncid),filename)
 		
 	end subroutine io_read3d
 
@@ -101,9 +102,9 @@ contains
 		allocate(data_in(diminfo(2),diminfo(3)))
 		! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
 		! the file.
-		call check(nf90_open(filename, NF90_NOWRITE, ncid))
+		call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
 		! Get the varid of the data_in variable, based on its name.
-		call check(nf90_inq_varid(ncid, varname, varid))
+		call check(nf90_inq_varid(ncid, varname, varid),varname)
 		
 		! Read the data_in. skip the slowest varying indices if there are more than 3 dimensions (typically this will be time)
 		if (diminfo(1)>2) then
@@ -111,13 +112,14 @@ contains
 			call check(nf90_get_var(ncid, varid, data_in,&
 									dimstart(1:diminfo(1)), &				! start  = 1 or extradim
 									[ (diminfo(i+1), i=1,diminfo(1)) ],&	! count=n or 1 created through an implied do loop
-									[ (1,            i=1,diminfo(1)) ] ))	! for all dims, stride = 1		" implied do loop
+									[ (1,            i=1,diminfo(1)) ] ), &	! for all dims, stride = 1		" implied do loop
+									varname) !pass varname to check so it can give us more info
 		else		
-			call check(nf90_get_var(ncid, varid, data_in))
+			call check(nf90_get_var(ncid, varid, data_in),varname)
 		endif
 	
 		! Close the file, freeing all resources.
-		call check( nf90_close(ncid) )
+		call check( nf90_close(ncid),filename)
 		
 	end subroutine io_read2d
 
@@ -140,7 +142,7 @@ contains
 		
 		! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
 		! the file.
-		call check( nf90_create(filename, NF90_CLOBBER, ncid) )
+		call check( nf90_create(filename, NF90_CLOBBER, ncid), filename)
 ! 		define the dimensions
 		call check( nf90_def_dim(ncid, "x", nx, temp_dimid) )
 		dimids(1)=temp_dimid
@@ -150,15 +152,15 @@ contains
 		dimids(3)=temp_dimid
 		
 		! Create the variable returns varid of the data variable
-		call check( nf90_def_var(ncid, varname, NF90_REAL, dimids, varid) )
+		call check( nf90_def_var(ncid, varname, NF90_REAL, dimids, varid), varname)
 		! End define mode. This tells netCDF we are done defining metadata.
 		call check( nf90_enddef(ncid) )
 		
 		!write the actual data to the file
-		call check( nf90_put_var(ncid, varid, data_out) )
+		call check( nf90_put_var(ncid, varid, data_out), varname)
 	
 		! Close the file, freeing all resources.
-		call check( nf90_close(ncid) )
+		call check( nf90_close(ncid), filename)
 	end subroutine io_write3d
 
 ! 	same as for io_write3d but for integer arrays
@@ -237,12 +239,16 @@ contains
 	end subroutine io_write2d
 	
 ! 	simple error handling for common netcdf file errors
-	subroutine check(status)
+	subroutine check(status,extra)
 		implicit none
 		integer, intent ( in) :: status
+		character(len=*), optional, intent(in) :: extra
     
 		if(status /= nf90_noerr) then 
 			print *, trim(nf90_strerror(status))
+			if(present(extra)) then
+				print*, trim(extra)
+			endif
 			stop "Stopped"
 		end if
 	end subroutine check  
