@@ -5,11 +5,8 @@ from copy import copy
 import numpy as np
 
 from bunch import Bunch
-# from stat_down import myio as io
-import mygis as io
-import load_data
+import mygis
 
-import netCDF4 as ncio
 
 g=9.81
 
@@ -18,7 +15,7 @@ def adjust_p(p,hin,hout):
     # p    in pascals
     # h,dz in meters
     slp = p/(1 - 2.25577E-5*hin)**5.25588
-    p=slp*(1 - 2.25577E-5*hout)**5.25588
+    p[:]=slp*(1 - 2.25577E-5*hout)**5.25588
 
 
 def main(inputfile):
@@ -26,20 +23,20 @@ def main(inputfile):
     print(filename)
     yaxis=2
     yaxis2d=1
-    u   =io.read_nc(inputfile,"U").data.repeat(2,axis=yaxis)
-    # w   =io.read_nc(inputfile,"W").data.repeat(2,axis=yaxis)
-    v   =io.read_nc(inputfile,"V").data.repeat(2,axis=yaxis)[:,:,:-1,:] # v has one extra cell in y, so when doubling ydim we have to remove gridcell
-    qv  =io.read_nc(inputfile,"QVAPOR").data.repeat(2,axis=yaxis)
-    qc  =io.read_nc(inputfile,"QCLOUD").data.repeat(2,axis=yaxis)
-    qi  =io.read_nc(inputfile,"QICE").data.repeat(2,axis=yaxis)
-    th  =io.read_nc(inputfile,"T").data.repeat(2,axis=yaxis)
-    pb  =io.read_nc(inputfile,"PB").data.repeat(2,axis=yaxis)
-    p   =io.read_nc(inputfile,"P").data.repeat(2,axis=yaxis) + pb
-    ph  =io.read_nc(inputfile,"PH").data.repeat(2,axis=yaxis)
-    phb =io.read_nc(inputfile,"PHB").data.repeat(2,axis=yaxis)
+    u   =mygis.read_nc(inputfile,"U").data.repeat(2,axis=yaxis)
+    # w   =mygis.read_nc(inputfile,"W").data.repeat(2,axis=yaxis)
+    v   =mygis.read_nc(inputfile,"V").data.repeat(2,axis=yaxis)[:,:,:-1,:] # v has one extra cell in y, so when doubling ydim we have to remove gridcell
+    qv  =mygis.read_nc(inputfile,"QVAPOR").data.repeat(2,axis=yaxis)
+    qc  =mygis.read_nc(inputfile,"QCLOUD").data.repeat(2,axis=yaxis)
+    qi  =mygis.read_nc(inputfile,"QICE").data.repeat(2,axis=yaxis)
+    th  =mygis.read_nc(inputfile,"T").data.repeat(2,axis=yaxis)
+    pb  =mygis.read_nc(inputfile,"PB").data.repeat(2,axis=yaxis)
+    p   =mygis.read_nc(inputfile,"P").data.repeat(2,axis=yaxis) + pb
+    ph  =mygis.read_nc(inputfile,"PH").data.repeat(2,axis=yaxis)
+    phb =mygis.read_nc(inputfile,"PHB").data.repeat(2,axis=yaxis)
     
-    hgt =io.read_nc(inputfile,"HGT").data.repeat(2,axis=yaxis2d)
-    land=io.read_nc(inputfile,"XLAND").data.repeat(2,axis=yaxis2d)
+    hgt =mygis.read_nc(inputfile,"HGT").data.repeat(2,axis=yaxis2d)
+    land=mygis.read_nc(inputfile,"XLAND").data.repeat(2,axis=yaxis2d)
     
     nt,nz,ny,nx=qv.shape
     print(nx,ny,nz)
@@ -47,13 +44,16 @@ def main(inputfile):
     
     z=(ph+phb)/g
     dz=np.diff(z,axis=1)
-    
+    # dz shape = (time,nz-1,ny,nx)
+    # ph/phb are defined between model levels, we want z in the middle of each model level
+    # e.g. z[0]=0, but wrfz[0]=dz[0]/2 where dz[0]=z[1]-z[0]
     wrfz=np.zeros(dz.shape)
     wrfz[:,0,...]=dz[:,0,...]/2+hgt
     for i in range(1,nz):
         wrfz[:,i,:,:]=(dz[:,i,:,:]+dz[:,i-1,:,:])/2+wrfz[:,i-1,:,:]
     
     mean_dz=dz[0,...].mean(axis=1).mean(axis=1)
+    print("MEAN LEVELS:")
     print("dz_levels=[")
     for i in range(0,nz,10):
         curlist=[str(cur) for cur in mean_dz[i:i+10]]
@@ -61,6 +61,16 @@ def main(inputfile):
 
     curlist=[str(cur) for cur in mean_dz[i:]]
     print(",".join(curlist)+"]")
+    
+    print("FIRST LEVELS:")
+    print("dz_levels=[")
+    for i in range(0,nz,10):
+        curlist=[str(cur) for cur in dz[0,i:i+10,0,0]]
+        print(",".join(curlist)+",")
+
+    curlist=[str(cur) for cur in dz[0,i:,0,0]]
+    print(",".join(curlist)+"]")
+    
     
     dz=np.zeros(dz.shape)+mean_dz[np.newaxis,:,np.newaxis,np.newaxis]
     z=np.zeros(dz.shape)
@@ -70,9 +80,9 @@ def main(inputfile):
     
     adjust_p(p,wrfz,z)
     
-    
-    ncfile=ncio.Dataset(inputfile)
+    ncfile=mygis.Dataset(inputfile)
     dx=ncfile.getncattr("DX")
+    ncfile.close()
     dlon=dx/111.1
     dlat=dx/111.1
     lonmin=-110.0; lonmax=lonmin+nx*dlon
@@ -116,6 +126,7 @@ def main(inputfile):
                Bunch(data=th,  name="T",      dims=d3dname, dtype="f",attributes=dict(units="K",    description="Potential temperature")),
                Bunch(data=dz,  name="dz",     dims=d3dname, dtype="f",attributes=dict(units="m",    description="Layer thickness")),
                Bunch(data=z,   name="Z",      dims=d3dname, dtype="f",attributes=dict(units="m",    description="Layer Height AGL (also ASL here)")),
+               Bunch(data=wrfz,name="WRFZ",   dims=d3dname, dtype="f",attributes=dict(units="m",    description="Layer Height AGL (also ASL here) in the WRF input")),
                # Bunch(data=z*0, name="PH",     dims=d3dname, dtype="f",attributes=dict(units="m2/s2",description="Geopotential Height ASL (perturbation)")),
                # Bunch(data=z*g, name="PHB",    dims=d3dname, dtype="f",attributes=dict(units="m2/s2",description="Geopotential Height ASL (base)")),
                Bunch(data=lat, name="XLAT",   dims=d2dname, dtype="f",attributes=dict(units="deg",  description="Latitude")),
@@ -132,7 +143,7 @@ def main(inputfile):
         print("Removing : "+fileexists[0])
         os.remove(fileexists[0])
     
-    io.write(filename,  u,varname="U", dims=ud3dname,dtype="f",attributes=dict(units="m/s",description="Horizontal (x) wind speed"),
+    mygis.write(filename,  u,varname="U", dims=ud3dname,dtype="f",attributes=dict(units="m/s",description="Horizontal (x) wind speed"),
             extravars=othervars)
 
 
