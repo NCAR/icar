@@ -142,7 +142,9 @@ contains
 ! 			call radiation(domain,options,dt)
 
 ! 			apply/update boundary conditions including internal wind and pressure changes. 
-			call forcing_update(domain,bc,options)
+			if (.not.options%ideal) then
+				call forcing_update(domain,bc,options)
+			endif
 			
 ! 			step model time forward
 			model_time=model_time+dt

@@ -93,8 +93,8 @@ module data_structures
 
 ! 	generic linearizable type so we can add linear wind field to domain or remove it from low-res (BC) U/V
 	type, extends(interpolable_type) :: linearizable_type
-! 		linear theory computes u,v at z
-		real, allocatable, dimension(:,:,:):: u,v,dz,z
+! 		linear theory computes u,v at z.  Trying rho to mitigate boussinesq approx... 
+		real, allocatable, dimension(:,:,:):: u,v,dz,z,rho
 		type(interpolable_type)::u_geo,v_geo
 		real, allocatable, dimension(:,:) :: terrain,dzdx,dzdy
 		complex(C_DOUBLE_COMPLEX), allocatable, dimension(:,:) :: fzs !FFT(terrain)
@@ -103,7 +103,7 @@ module data_structures
 	
 ! 	All fields needed in the domain
 	type, extends(linearizable_type) :: domain_type
-		real, allocatable, dimension(:,:,:) :: p,th,w,pii,rho,ur,vr,wr
+		real, allocatable, dimension(:,:,:) :: p,th,w,pii,ur,vr,wr
 		real, allocatable, dimension(:,:,:) :: qv,cloud,ice,nice,qrain,nrain,qsnow,qgrau
 		real, allocatable, dimension(:,:) :: rain,crain,snow,graupel,sensible_heat,latent_heat,pbl_height,landmask
 		

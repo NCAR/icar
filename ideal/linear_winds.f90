@@ -6,7 +6,7 @@ end module fft
 module linear_theory_winds
     use fft
     use data_structures
-	use io_routines
+! 	use io_routines
     implicit none
 	private
 	public::linear_perturb
@@ -48,7 +48,7 @@ contains
 !         calc_stability=ndsq
     end function calc_stability
     
-    subroutine linear_winds(domain,Ndsq,reverse)
+    subroutine linear_winds(domain,Ndsq,reverse_flag,useDensity)
 !         # see Appendix A of Barstad and Gronas (2006) Tellus,58A,2-18
 !         # -------------------------------------------------------------------------------
 !         # Ndsq  = 0.003**2      # dry BV freq sq. was 0.01**2 initially, Idar suggested 0.005**2
@@ -61,7 +61,8 @@ contains
         implicit none
         class(linearizable_type),intent(inout)::domain
         real, intent(in)::Ndsq
-		logical, intent(in), optional :: reverse
+		logical, intent(in), optional :: reverse_flag,useDensity
+		logical::reverse
         complex,parameter :: j= (0,1)
         real::gain,offset !used in setting up k and l arrays
         integer::nx,ny,nz,i,midpoint,z,realnx,realny,x,y
@@ -69,6 +70,12 @@ contains
 		real,parameter::pi=3.1415927
         type(C_PTR) :: plan
         
+		if (.not.present(reverse_flag)) then
+			reverse=.False.
+		else
+			reverse=reverse_flag
+		endif
+		
 		nx=size(domain%fzs,1)
 		nz=size(domain%u,2)
 		ny=size(domain%fzs,2)
@@ -218,13 +225,27 @@ contains
             call fftw_execute_dft(plan, vhat,v_hat)
             call fftw_destroy_plan(plan)
 			
+			if (present(useDensity)) then
+				if (useDensity) then
+! 					if (z.eq.1) print*, "Using Density"
+! 					print*, minval(real(u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer)))
+! 					print*, maxval(real(u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer)))
+					u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer) = &
+						2*real(u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer))! / domain%rho(1:realnx,z,1:realny)
+					v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer) = &
+						2*real(v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer))! / domain%rho(1:realnx,z,1:realny)
+! 					print*, minval(real(u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer)))
+! 					print*, maxval(real(u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer)))
+				endif
+			endif
 ! 			if we are removing linear winds from a low res field, subtract u_hat v_hat instead
 ! 			u/vhat are first staggered to apply to u/v appropriately...
-			if (present(reverse)) then
-	            domain%u(1:realnx-1,z,:)=domain%u(:realnx-1,z,:) - &
-					real(u_hat(1+buffer:nx-buffer-1,1+buffer:ny-buffer)+u_hat(2+buffer:nx-buffer,1+buffer:ny-buffer))/2
-	            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) - &
-					real(v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer-1)+v_hat(1+buffer:nx-buffer,2+buffer:ny-buffer))/2
+			if (reverse) then
+! 					if (z.eq.1) print*, "Reversing winds"
+		            domain%u(1:realnx-1,z,:)=domain%u(:realnx-1,z,:) - &
+						real(u_hat(1+buffer:nx-buffer-1,1+buffer:ny-buffer)+u_hat(2+buffer:nx-buffer,1+buffer:ny-buffer))/2
+		            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) - &
+						real(v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer-1)+v_hat(1+buffer:nx-buffer,2+buffer:ny-buffer))/2
 			else
 	            domain%u(1:realnx-1,z,:)=domain%u(:realnx-1,z,:) + &
 					real(u_hat(1+buffer:nx-buffer-1,1+buffer:ny-buffer)+u_hat(2+buffer:nx-buffer,1+buffer:ny-buffer))/2
@@ -266,7 +287,6 @@ contains
 		enddo
 		allocate(real_terrain(nx,ny))
 		real_terrain=buffer_topo
-		call io_write2d("complex_terrain.nc","HGT",real_terrain)
 		deallocate(real_terrain)
 		
 	end subroutine add_buffer_topo
@@ -301,10 +321,10 @@ contains
 	
 ! 	Primary entry point!
 !   Called from the simple weather model to update the U,V,W wind fields based on linear theory
-    subroutine linear_perturb(domain,reverse)
+    subroutine linear_perturb(domain,reverse,useDensity)
         implicit none
         class(linearizable_type),intent(inout)::domain
-		logical, intent(in), optional :: reverse
+		logical, intent(in), optional :: reverse,useDensity
 		real::stability
         
 ! 		if linear_perturb hasn't been called before we need to perform some setup actions. 
@@ -315,7 +335,7 @@ contains
 ! 		Ndsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability
         stability=calc_stability(domain)
 		
-		call linear_winds(domain,stability,reverse)
+		call linear_winds(domain,stability,reverse,useDensity)
         
     end subroutine linear_perturb
 end module linear_theory_winds

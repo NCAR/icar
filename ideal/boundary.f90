@@ -465,7 +465,6 @@ contains
 
 			domain%pii=(domain%p/100000.0)**(R/cp)
 	        domain%rho=domain%p/(R*domain%th*domain%pii) ! kg/m^3
-			
 			call update_winds(domain,options)
 		endif
 

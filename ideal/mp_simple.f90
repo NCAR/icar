@@ -128,22 +128,14 @@ module module_mp_simple
 		real :: mass2temp,delta
 		mass2temp=Lheat/heat_capacity!*(p/(R*t)*dV))
 		
-		if (q1>SMALL_VALUE) then
-			delta=q1*change_rate
-			!make sure we don't over saturate the air
-			if (delta>(qmax-q2)) then
-				delta=qmax-q2
-			endif
-			q1=q1-delta
-			q2=q2+delta
-		else
-			delta=q1
-			if (delta>(qmax-q2)) then
-				delta=qmax-q2
-			endif
-			q2=q2+delta
-			q1=0.
+		delta=q1*change_rate
+		!make sure we don't over saturate the air
+		if (delta>(qmax-q2)) then
+			delta=qmax-q2
 		endif
+		
+		q1=q1-delta
+		q2=q2+delta
 		t=t+delta*mass2temp
 	
 	end subroutine
@@ -178,18 +170,18 @@ module module_mp_simple
 				endif
 			endif
 			! if unsaturated, evaporate any existing snow and rain
-! 			if (qv<qvsat) then
-! 				if (qr>SMALL_VALUE) then
-! 					! evaporate rain
-! 					call phase_change(p,t,qr,qvsat,qv,L_evap,dt/rain_evap_time)
-! ! 					write(*,*) "evap rain"
-! 				endif
-! 				if (qs>SMALL_VALUE) then
-! 					! sublimate snow
-! 					call phase_change(p,t,qs,qvsat,qv,L_subl,dt/snow_evap_time)
-! ! 					write(*,*) "evap snow"
-! 				endif
-! 			endif
+			if (qv<qvsat) then
+				if (qr>SMALL_VALUE) then
+					! evaporate rain
+					call phase_change(p,t,qr,qvsat,qv,L_evap,cloud2rain)
+! 					write(*,*) "evap rain"
+				endif
+				if (qs>SMALL_VALUE) then
+					! sublimate snow
+					call phase_change(p,t,qs,qvsat,qv,L_subl,cloud2snow)
+! 					write(*,*) "evap snow"
+				endif
+			endif
 		endif
 	end subroutine
 	

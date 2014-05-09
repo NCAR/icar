@@ -20,7 +20,7 @@ module init
 !       datasets, and make them conform to the expectations of the current system. 
 ! ----------------------------------------------------------------------------
 	use data_structures
-	use io_routines, only				: io_read2d, io_read3d, io_newunit
+	use io_routines, only				: io_read2d, io_read3d, io_newunit,io_write3d
 	use geo, only						: geo_LUT, geo_interp, geo_interp2d
 	use microphysics, only				: mp_init
 	use convection, only				: init_convection
@@ -200,7 +200,7 @@ contains
 		           mean_winds,mean_fields,restart,add_low_topo,advect_density
 		
 		
-		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,debug,nfiles, &
+		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,&
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax
 		
@@ -209,7 +209,6 @@ contains
 		mean_winds=.False.
 		external_winds=.False.
 		n_ext_winds=1
-		write(*,*), "Default t_offset=300"
 		t_offset=300
 		buffer=0
 		remove_lowres_linear=.False.
@@ -218,11 +217,20 @@ contains
 		restart=.False.
 		ideal=.False.
 		debug=.False.
+		readz=.False.
+		readdz=.True.
+		xmin=   1
+		ymin=   1
+		xmax= (-1)
+		ymax= (-1)
 		
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=parameters)
 		close(name_unit)
 		
+		if (t_offset.eq.300) then
+			write(*,*), "Default t_offset=300"
+		endif
 		options%t_offset=t_offset
 		options%nfiles=nfiles
 		options%ntimesteps=ntimesteps
@@ -256,30 +264,17 @@ contains
 		
 	end subroutine parameters_namelist
 	
-	subroutine init_options(options_filename,options)
-! 		reads a series of options from a namelist file and stores them in the 
-! 		options data structure
-		implicit none
-		character(len=*), intent(in) :: options_filename
-		type(options_type), intent(inout) :: options
-		
+	! check the version number in the namelist file and compare to the current model version
+	! if the namelist version doesn't match, print the differences between that version and this
+	! and STOP execution
+	subroutine version_check(filename)
+		character(len=*),intent(in) :: filename
 		character(len=MAXVARLENGTH) :: version
-		character(len=MAXFILELENGTH) :: init_conditions_file, output_file,restart_file
-		character(len=MAXFILELENGTH),allocatable:: boundary_files(:),ext_wind_files(:)
-		real, allocatable, dimension(:) :: dz_levels
-   		real,dimension(45)::fulldz
-		integer :: restart_step
-		integer :: name_unit
+		integer:: name_unit
 		
-! 		set up namelist structures
 		namelist /model_version/ version
-		namelist /z_info/ dz_levels
-		namelist /files_list/ init_conditions_file,output_file,boundary_files
-		namelist /restart_info/ restart_step,restart_file
-		namelist /ext_winds_info/ ext_wind_files
-		
 ! 		read namelists
-		open(io_newunit(name_unit), file=options_filename)
+		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=model_version)
 		close(name_unit)
 		if (version.ne."0.7.3") then
@@ -290,7 +285,29 @@ contains
 			stop
 		endif
 		write(*,*) "Model version: ",trim(version)
+	end subroutine version_check
+	
+	subroutine init_options(options_filename,options)
+! 		reads a series of options from a namelist file and stores them in the 
+! 		options data structure
+		implicit none
+		character(len=*), intent(in) :: options_filename
+		type(options_type), intent(inout) :: options
 		
+		character(len=MAXFILELENGTH) :: init_conditions_file, output_file,restart_file
+		character(len=MAXFILELENGTH),allocatable:: boundary_files(:),ext_wind_files(:)
+		real, allocatable, dimension(:) :: dz_levels
+   		real,dimension(45)::fulldz
+		integer :: restart_step
+		integer :: name_unit
+		
+! 		set up namelist structures
+		namelist /z_info/ dz_levels
+		namelist /files_list/ init_conditions_file,output_file,boundary_files
+		namelist /restart_info/ restart_step,restart_file
+		namelist /ext_winds_info/ ext_wind_files
+		
+		call version_check(options_filename)
 		call physics_namelist(options_filename,options)
 		call var_namelist(options_filename,options)
 		call parameters_namelist(options_filename,options)
@@ -545,7 +562,7 @@ contains
 				domain%z(:,i,:)=domain%z(:,i-1,:)+(options%dz_levels(i)+options%dz_levels(i-1))/2
 				domain%dz(:,i,:)=options%dz_levels(i)
 			enddo
-
+			
 		endif
 ! 		all other variables should be allocated and initialized to 0
 		call domain_allocation(domain,nx,nz,ny)
@@ -610,11 +627,11 @@ contains
 		
 		allocate(boundary%z(nx,nz,ny))
 		allocate(boundary%dz(nx,nz,ny))
-		!assumes that vertical levels are identical in the forcing and model domain
-		fulldz(:nz)=domain%dz(1,:,1)
-! 		set up the bc_data dz and z variables (vertical levels)
+		! assumes that vertical level thicknesses are identical in the forcing and model domain!
+		fulldz(:nz)=domain%dz(1,:nz,1)
+		! set up the bc_data dz and z variables (vertical levels)
 		boundary%dz(:,1,:)=fulldz(1)
-! 		z is calculated from dz, dz is thickness of layers. 
+		! z is calculated from dz, dz is thickness of layers. 
 		boundary%z(:,1,:)=boundary%terrain+fulldz(1)/2
 		do i=2,nz
 			boundary%z(:,i,:)=boundary%z(:,i-1,:)+(fulldz(i)+fulldz(i-1))/2
@@ -698,6 +715,9 @@ contains
 ! 		set up base data
 		call init_bc_data(options,boundary,domain)
 		call init_domain(options,boundary%next_domain) !set up a domain to hold the forcing for the next time step
+		call io_write3d("bc_z.nc","data",boundary%z)
+		call io_write3d("bc-nextd1_z.nc","data",boundary%next_domain%z)
+		call io_write3d("domain_z.nc","data",domain%z)
 ! 		create the geographic look up table used to calculate boundary forcing data
 		write(*,*) "Setting up domain geographic Look Up Tables"
 		call geo_LUT(domain,boundary)
@@ -715,6 +735,7 @@ contains
 ! 		allocate(boundary%lowres_terrain(nx,ny))
 		call geo_interp2d(boundary%next_domain%terrain,boundary%terrain,boundary%geolut)
 		call geo_interp(boundary%next_domain%z,boundary%z,boundary%geolut,.false.)
+		call io_write3d("bc-nextd2_z.nc","data",boundary%next_domain%z)
 		if (options%add_low_topo) then
 			domain%terrain=domain%terrain+(boundary%next_domain%terrain-sum(boundary%next_domain%terrain) &
 											 /size(boundary%next_domain%terrain))/2.0

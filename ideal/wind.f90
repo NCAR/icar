@@ -1,5 +1,5 @@
 module wind
-	use linear_theory_winds
+	use linear_theory_winds, only : linear_perturb
 	use data_structures
 	implicit none
 	private
@@ -146,16 +146,18 @@ contains
 		real,allocatable,dimension(:,:,:)::temparray
 		integer::nx,ny,nz,i,j
 		
-		!note, this should only be called once per time step, DO NOT use update winds internal to the time step
-		print*, "rotating winds into the model grid"
+!		rotate winds from cardinal directions to grid orientation (e.g. u is grid relative not truly E-W)
 		call make_winds_grid_relative(domain)
 		
 ! 		linear winds
 		if (options%physics%windtype==1) then
-			call linear_perturb(domain)
+			call linear_perturb(domain,.False.,options%advect_density)
 		endif
 ! 		else assumes even flow over the mountains
+
+!       rotate winds into the terrain following coordinate system
 		call rotate_wind_field(domain)
+! 		use horizontal divergence (convergence) to calculate vertical convergence (divergence)
 		call balance_uvw(domain,options)
 		
 	end subroutine update_winds
@@ -193,10 +195,17 @@ contains
 				dist=sqrt(dlat**2+dlon**2)
 				! sin/cos of angles for use in rotating fields later
 				domain%sintheta(i,j)=(-1)*dlat/dist
-				domain%costheta(i,j)=dlon/dist
+				domain%costheta(i,j)=abs(dlon/dist)
 			enddo
 		enddo
-		
+		if (options%debug) then
+			print*, "Domain Geometetry"
+			print*, "MAX / MIN SIN(theta) (ideally 0)"
+			print*, "   ", maxval(domain%sintheta), minval(domain%sintheta)
+			print*, "MAX / MIN COS(theta) (ideally 1)"
+			print*, "   ", maxval(domain%costheta), minval(domain%costheta)
+			print*, " "
+		endif
 ! 		dzdx/y used in rotating windfield back to terrain following grid in a simple fashion
 		allocate(domain%dzdx(nx-1,ny))
 		allocate(domain%dzdy(nx,ny-1))
