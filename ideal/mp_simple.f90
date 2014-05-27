@@ -209,7 +209,7 @@ module module_mp_simple
 
 	subroutine mp_simple(p,t,rho,qv,qc,qr,qs,rain,snow,dt,dz,nz,debug)
 		implicit none
-		real,intent(inout),dimension(nz)::p,t,rho,qv,qc,qr,qs
+		real,intent(inout),dimension(:)::p,t,rho,qv,qc,qr,qs
 		real,intent(inout)::rain,snow
 		real,intent(in),dimension(nz)::dz
 		real,intent(in)::dt
@@ -222,6 +222,7 @@ module module_mp_simple
 ! 		fall_rate=2+(t-260)/5
 ! 		where(fall_rate>10) fall_rate=10
 ! 		where(fall_rate<1.5) fall_rate=1.5
+! 		write(*,*) "mp_simple"
 		do i=1,nz
 			call mp_conversions(p(i),t(i),qv(i),qc(i),qr(i),qs(i),dt)
 		enddo
@@ -257,19 +258,30 @@ module module_mp_simple
 		real,intent(inout),dimension(nx,ny)::rain,snow
 		real,intent(in)::dt
 		integer,intent(in)::nx,ny,nz
-		real,dimension(nz)::t
+		real,dimension(:),allocatable::t
 		integer::i,j
 		
 ! 		calculate these once for every call because they are only a function of dt
 		cloud2snow=exp(-1.0*snow_const*dt)
 		cloud2rain=exp(-1.0*rain_const*dt)
+! 		write(*,*) nx,ny,nz
 		!$omp parallel private(i,j,t),&
 		!$omp shared(p,th,pii,qv,qc,qs,qr,rain,snow,dz,cloud2snow,cloud2rain),&
 		!$omp firstprivate(dt,nx,ny,nz)
+		allocate(t(nz))
 		!$omp do
         do j=2,ny-1
 	        do i=2,nx-1
 				t=th(i,:,j)*pii(i,:,j)
+! 				write(*,*) i,j,th(i,:,j)
+! 				write(*,*) i,j,pii(i,:,j)
+! 				write(*,*) i,j,rho(i,:,j)
+! 				write(*,*) i,j,qv(i,:,j)
+! 				write(*,*) i,j,qr(i,:,j)
+! 				write(*,*) i,j,qs(i,:,j)
+! 				write(*,*) i,j,qc(i,:,j)
+! 				write(*,*) i,j,t
+! 				write(*,*) i,j,dz(i,:,j)
 				call mp_simple(p(i,:,j),t,rho(i,:,j),qv(i,:,j),&
 							qc(i,:,j),qr(i,:,j),qs(i,:,j),&
 							rain(i,j),snow(i,j),&
@@ -279,6 +291,7 @@ module module_mp_simple
 			enddo
 		enddo
 		!$omp end do
+		deallocate(t)
 		!$omp end parallel
 	end subroutine mp_simple_driver
 end module

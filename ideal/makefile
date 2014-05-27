@@ -125,7 +125,7 @@ ifeq ($(F90), gfortran)
 endif
 # Intel fortran
 ifeq ($(F90), ifort)
-	COMP= -openmp -liomp5 -fast -c -u -fpe0 #-fast-transcendentals -xhost
+	COMP= -openmp -liomp5 -u -c -fast #-debug -traceback -debug-parameters all -check all# -fast -fpe0 #-fast-transcendentals -xhost
 	LINK= -openmp -liomp5
 endif
 # PGI fortran

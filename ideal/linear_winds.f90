@@ -226,16 +226,13 @@ contains
             call fftw_destroy_plan(plan)
 			
 			if (present(useDensity)) then
+				! if we are using density in the advection calculations, modify the linear perturbation
+				! to get the vertical velocities closer to what they would be without density (boussinesq)
 				if (useDensity) then
-! 					if (z.eq.1) print*, "Using Density"
-! 					print*, minval(real(u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer)))
-! 					print*, maxval(real(u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer)))
 					u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer) = &
 						2*real(u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer))! / domain%rho(1:realnx,z,1:realny)
 					v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer) = &
 						2*real(v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer))! / domain%rho(1:realnx,z,1:realny)
-! 					print*, minval(real(u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer)))
-! 					print*, maxval(real(u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer)))
 				endif
 			endif
 ! 			if we are removing linear winds from a low res field, subtract u_hat v_hat instead
@@ -264,7 +261,7 @@ contains
         implicit none
 		real, dimension(:,:), intent(in) :: terrain
 		complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:), intent(out):: buffer_topo
-		real, dimension(:,:),allocatable :: real_terrain
+! 		real, dimension(:,:),allocatable :: real_terrain
 		integer::nx,ny,i,pos
 		real::weight
 		nx=size(terrain,1)+buffer*2
@@ -285,9 +282,9 @@ contains
 			buffer_topo(:,pos+1)  =buffer_topo(:,buffer+1)*(1-weight) + buffer_topo(:,ny-buffer)*   weight
 			buffer_topo(:,ny-pos) =buffer_topo(:,buffer+1)*(  weight) + buffer_topo(:,ny-buffer)*(1-weight)
 		enddo
-		allocate(real_terrain(nx,ny))
-		real_terrain=buffer_topo
-		deallocate(real_terrain)
+! 		allocate(real_terrain(nx,ny))
+! 		real_terrain=buffer_topo
+! 		deallocate(real_terrain)
 		
 	end subroutine add_buffer_topo
 	

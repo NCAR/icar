@@ -61,23 +61,23 @@ contains
 			do j=1,ny
 				do i=1,nx
 					!note, this could be made a lot faster by adding the new head of the window and subtracting the old tail
-					if (ydim==2) then
-						!first find the current window bounds
-						startx=max(i-windowsize,1)
+					if (ydim==3) then
+						! bounds and dimension are different if z is in the middle dimension
+						startx=max(1, i-windowsize)
 						endx  =min(nx,i+windowsize)
-						starty=max(1,j-windowsize)
-						endy  =min(ny,j+windowsize)
-						! then compute the mean within that window (sum/n)
-						wind(i,j,k)=sum(inputwind(startx:endx,starty:endy,k)) &
-									/ ((endx-startx+1)*(endy-starty+1))
-					else ! ydim==3
-! 						! bounds and dimension are different if z is in the middle dimension
-						startx=max(i-windowsize,1)
-						endx  =min(nx,i+windowsize)
-						starty=max(1,k-windowsize)
+						starty=max(1, k-windowsize)
 						endy  =min(nz,k+windowsize)
 						! then compute the mean within that window (sum/n)
 						wind(i,j,k)=sum(inputwind(startx:endx,j,starty:endy)) &
+									/ ((endx-startx+1)*(endy-starty+1))
+					else ! ydim==2
+						!first find the current window bounds
+						startx=max(1, i-windowsize)
+						endx  =min(nx,i+windowsize)
+						starty=max(1, j-windowsize)
+						endy  =min(ny,j+windowsize)
+						! then compute the mean within that window (sum/n)
+						wind(i,j,k)=sum(inputwind(startx:endx,starty:endy,k)) &
 									/ ((endx-startx+1)*(endy-starty+1))
 					endif
 				enddo
