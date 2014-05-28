@@ -1,6 +1,7 @@
 module wind
 	use linear_theory_winds, only : linear_perturb
 	use data_structures
+! 	use output, only: write_domain
 	implicit none
 	private
 	public::update_winds,balance_uvw,init_winds
@@ -76,11 +77,11 @@ contains
 				endif
 			endif
 		enddo
-		!NOTE w is scaled by dx/dz because it is balancing divergence over dx with a flow through dz
-! 		could rescale below but for now this is left in the advection code (the only place it matters for now)
-!       this makes it easier to play with varying options for including varying dz and rho in advection. 
-! 		domain%w(:,:nz-1,:)=domain%w(:,:nz-1,:)/domain%dx * (domain%dz(:,1:nz-1,:)+domain%dz(:,2:nz,:))/2
-! 		domain%w(:,nz,:)=domain%w(:,nz,:)/domain%dx * domain%dz(:,nz,:)
+		! NOTE w is scaled by dx/dz because it is balancing divergence over dx with a flow through dz
+		! could rescale below but for now this is left in the advection code (the only place it matters for now)
+		! this makes it easier to play with varying options for including varying dz and rho in advection. 
+		! domain%w(:,:nz-1,:)=domain%w(:,:nz-1,:)/domain%dx * (domain%dz(:,1:nz-1,:)+domain%dz(:,2:nz,:))/2
+		! domain%w(:,nz,:)=domain%w(:,nz,:)/domain%dx * domain%dz(:,nz,:)
 		
 		deallocate(du,dv,divergence)
 		if (options%advect_density) then
@@ -146,18 +147,18 @@ contains
 		real,allocatable,dimension(:,:,:)::temparray
 		integer::nx,ny,nz,i,j
 		
-!		rotate winds from cardinal directions to grid orientation (e.g. u is grid relative not truly E-W)
+		! rotate winds from cardinal directions to grid orientation (e.g. u is grid relative not truly E-W)
 		call make_winds_grid_relative(domain)
 		
-! 		linear winds
+		! linear winds
 		if (options%physics%windtype==1) then
 			call linear_perturb(domain,.False.,options%advect_density)
 		endif
-! 		else assumes even flow over the mountains
+		! else assumes even flow over the mountains
 
-!       rotate winds into the terrain following coordinate system
+		! rotate winds into the terrain following coordinate system
 		call rotate_wind_field(domain)
-! 		use horizontal divergence (convergence) to calculate vertical convergence (divergence)
+		! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
 		call balance_uvw(domain,options)
 		
 	end subroutine update_winds

@@ -339,7 +339,7 @@ adv_mpdata.o:adv_mpdata.f90 data_structures.o
 wind.o:wind.f90 linear_winds.o data_structures.o
 	${F90} ${FFLAGS} wind.f90
 
-linear_winds.o:linear_winds.f90 io_routines.o data_structures.o
+linear_winds.o:linear_winds.f90 io_routines.o data_structures.o output.o
 	${F90} ${FFLAGS} linear_winds.f90
 
 

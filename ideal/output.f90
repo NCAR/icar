@@ -3,6 +3,8 @@ module output
 	use io_routines
 	use data_structures
 	implicit none
+	private
+	public :: write_domain
 contains
 ! 	simple routine to write all domain data from this current time step to the output file. 
 !   note these are instantaneous fields, precip etc are accumulated fluxes. 

@@ -6,7 +6,8 @@ end module fft
 module linear_theory_winds
     use fft
     use data_structures
-! 	use io_routines
+	use io_routines, only : io_write2d
+	use output, only : write_domain
     implicit none
 	private
 	public::linear_perturb
@@ -48,7 +49,7 @@ contains
 !         calc_stability=ndsq
     end function calc_stability
     
-    subroutine linear_winds(domain,Ndsq,reverse_flag,useDensity)
+    subroutine linear_winds(domain,Ndsq,reverse_flag,useDensity,debug)
 !         # see Appendix A of Barstad and Gronas (2006) Tellus,58A,2-18
 !         # -------------------------------------------------------------------------------
 !         # Ndsq  = 0.003**2      # dry BV freq sq. was 0.01**2 initially, Idar suggested 0.005**2
@@ -61,7 +62,7 @@ contains
         implicit none
         class(linearizable_type),intent(inout)::domain
         real, intent(in)::Ndsq
-		logical, intent(in), optional :: reverse_flag,useDensity
+		logical, intent(in), optional :: reverse_flag,useDensity,debug
 		logical::reverse
         complex,parameter :: j= (0,1)
         real::gain,offset !used in setting up k and l arrays
@@ -194,9 +195,9 @@ contains
 ! m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
 
 			msq = Ndsq/denom * kl
-			mimag=0
-		    mimag=mimag+(real(sqrt(-msq))*j)
-! 		    m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
+			! mimag=0 ! be sure to reset real and imaginary components
+		    mimag=0+(j*real(sqrt(-msq)))
+			! m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
             m = sqrt(msq)         ! # % vertical wave number, hydrostatic
 			where(sig<0) m=m*(-1)   ! equivilant to m=m*sign(sig)
     		where(real(msq)<0) m=mimag
@@ -225,6 +226,13 @@ contains
             call fftw_execute_dft(plan, vhat,v_hat)
             call fftw_destroy_plan(plan)
 			
+			! u/vhat are first staggered to apply to u/v appropriately...
+			! NOTE: we should be able to do this without the loop, but ifort -O was giving the wrong answer... possible compiler bug version 12.1.x?
+			do i=1,realny
+				u_hat(1+buffer:nx-buffer-1,i+buffer) = (u_hat(1+buffer:nx-buffer-1,i+buffer)+u_hat(2+buffer:nx-buffer,i+buffer))/2
+				v_hat(1+buffer:nx-buffer,i+buffer)   = (v_hat(1+buffer:nx-buffer,i+buffer)+v_hat(1+buffer:nx-buffer,i+buffer+1))/2
+			enddo
+			
 			if (present(useDensity)) then
 				! if we are using density in the advection calculations, modify the linear perturbation
 				! to get the vertical velocities closer to what they would be without density (boussinesq)
@@ -235,21 +243,31 @@ contains
 						2*real(v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer))! / domain%rho(1:realnx,z,1:realny)
 				endif
 			endif
-! 			if we are removing linear winds from a low res field, subtract u_hat v_hat instead
-! 			u/vhat are first staggered to apply to u/v appropriately...
+			! if we are removing linear winds from a low res field, subtract u_hat v_hat instead
+			! real(real()) extracts real component of complex, then converts to a real data type (may not be necessary except for IO?)
 			if (reverse) then
-! 					if (z.eq.1) print*, "Reversing winds"
-		            domain%u(1:realnx-1,z,:)=domain%u(:realnx-1,z,:) - &
-						real(u_hat(1+buffer:nx-buffer-1,1+buffer:ny-buffer)+u_hat(2+buffer:nx-buffer,1+buffer:ny-buffer))/2
-		            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) - &
-						real(v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer-1)+v_hat(1+buffer:nx-buffer,2+buffer:ny-buffer))/2
+		            domain%u(1:realnx-1,z,:)=domain%u(:realnx-1,z,:)  - real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer  ) ))
+		            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) - real(real(v_hat(1+buffer:nx-buffer,  1+buffer:realny+buffer-1) ))
 			else
-	            domain%u(1:realnx-1,z,:)=domain%u(:realnx-1,z,:) + &
-					real(u_hat(1+buffer:nx-buffer-1,1+buffer:ny-buffer)+u_hat(2+buffer:nx-buffer,1+buffer:ny-buffer))/2
-	            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) + &
-					real(v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer-1)+v_hat(1+buffer:nx-buffer,2+buffer:ny-buffer))/2
+	            domain%u(1:realnx-1,z,:)=domain%u(:realnx-1,z,:)  + real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer  ) ))
+	            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) + real(real(v_hat(1+buffer:nx-buffer,  1+buffer:realny+buffer-1) ))
+			endif
+			
+			if (present(debug).and.(z==1))then
+				if (debug) then
+					print*, (realnx-1)-(1)+1, (nx-buffer-1)-(1+buffer)+1, size(domain%u,3),(ny-buffer)-(1+buffer)+1
+					print*, (realnx-1)-(1)+1, (nx-buffer)-(2+buffer)+1, size(domain%u,3),(ny-buffer)-(1+buffer)+1
+					
+					print*, "realnx=",realnx, "; nx=",nx, "; buffer=",buffer
+					print*, "realny=",realny, "; ny=",ny!, buffer
+					print*, "Writing internal linear wind data"
+					call io_write2d("u_hat_sub2.nc","data",real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer))) )
+					call io_write2d("v_hat_sub2.nc","data",real(real(v_hat(1+buffer:nx-buffer,1+buffer:realny+buffer-1))) )
+				endif
 			endif
 		end do
+		
+		
 ! 		finally deallocate all temporary arrays that were created... should be a datastructure and a subroutine...
 		deallocate(k,l,kl,sig,denom,uhat,u_hat,vhat,v_hat,m,ineta,msq,mimag)
     end subroutine linear_winds
@@ -322,6 +340,7 @@ contains
         implicit none
         class(linearizable_type),intent(inout)::domain
 		logical, intent(in), optional :: reverse,useDensity
+		logical, save :: debug=.True.
 		real::stability
         
 ! 		if linear_perturb hasn't been called before we need to perform some setup actions. 
@@ -332,7 +351,8 @@ contains
 ! 		Ndsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability
         stability=calc_stability(domain)
 		
-		call linear_winds(domain,stability,reverse,useDensity)
+		call linear_winds(domain,stability,reverse,useDensity,debug)
+		debug=.False.
         
     end subroutine linear_perturb
 end module linear_theory_winds

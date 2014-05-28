@@ -54,7 +54,7 @@ contains
 		inputwind=wind !make a copy so we always use the unsmoothed data when computing the smoothed data
 		
 		!parallelize over the slowest dimension
-		!$omp parallel firstprivate(windowsize,nx,ny,nz), &
+		!$omp parallel firstprivate(windowsize,nx,ny,nz,ydim), &
 		!$omp private(i,j,k,startx,endx,starty,endy),shared(wind,inputwind)
 		!$omp do schedule(static)
 		do k=1,nz
