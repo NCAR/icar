@@ -120,7 +120,7 @@ endif
 
 # GNU fortran
 ifeq ($(F90), gfortran)
-	COMP=-fopenmp -lgomp -O3 -c -fimplicit-none -ffree-line-length-none
+	COMP=-fopenmp -lgomp -Ofast -c -fimplicit-none -ffree-line-length-none -ffast-math -march=native -funroll-loops -fno-protect-parens -flto
 	LINK=-fopenmp -lgomp
 endif
 # Intel fortran
