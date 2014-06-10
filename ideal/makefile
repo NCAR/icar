@@ -178,10 +178,16 @@ ifeq ($(DEBUG), debugomp)
 	endif
 endif
 
-# ifeq ($(DEBUG), profile)
-# 	COMP= -openmp -liomp5 -p -c -fast -u -fast-transcendentals -xhost
-# 	LINK= -openmp -liomp5 -p
-# endif
+PROF= 
+ifeq ($(DEBUG), profile)
+	ifeq ($(F90), ifort)
+		PROF=-g -debug inline-debug-info -shared-intel
+		COMP=-c -u -openmp -liomp5 -ipo -O3 -no-prec-div -xHost #because -fast includes -static
+	endif
+	ifeq ($(F90), gfortran)
+		PROF=-g
+	endif
+endif
 
 ###################################################################
 ###################################################################
@@ -194,8 +200,8 @@ endif
 # LFLAGS=$(LINK) ${LIBNETCDF} -L${LIBFFT} -openmp-link=static -static-intel -Bstatic
 # instead copy required libraries into a directory accessible on compute nodes and set LD_RUN_PATH e.g.
 # export LD_RUN_PATH=$LD_RUN_PATH:/path/to/libraries/lib:/home/gutmann/usr/local/lib
-LFLAGS=$(LINK) ${LIBNETCDF} -L${LIBFFT}
-FFLAGS=$(COMP) ${INCNETCDF} -I${INCFFT}
+LFLAGS=$(LINK) $(PROF) ${LIBNETCDF} -L${LIBFFT}
+FFLAGS=$(COMP) $(PROF) ${INCNETCDF} -I${INCFFT}
 
 OBJS=	io_routines.o data_structures.o init.o mp_driver.o time_step.o boundary.o model_tracking.o \
 		mp_thompson.o cu_driver.o cu_tiedtke.o driver.o output.o wind.o linear_winds.o geo_reader.o lsm.o \

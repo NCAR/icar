@@ -32,8 +32,8 @@ def main(inputfile):
     th  =mygis.read_nc(inputfile,"T").data.repeat(2,axis=yaxis)
     pb  =mygis.read_nc(inputfile,"PB").data.repeat(2,axis=yaxis)
     p   =mygis.read_nc(inputfile,"P").data.repeat(2,axis=yaxis) + pb
-    ph  =mygis.read_nc(inputfile,"PH").data.repeat(2,axis=yaxis)
     phb =mygis.read_nc(inputfile,"PHB").data.repeat(2,axis=yaxis)
+    ph  =mygis.read_nc(inputfile,"PH").data.repeat(2,axis=yaxis) + phb
     
     hgt =mygis.read_nc(inputfile,"HGT").data.repeat(2,axis=yaxis2d)
     land=mygis.read_nc(inputfile,"XLAND").data.repeat(2,axis=yaxis2d)
@@ -42,7 +42,7 @@ def main(inputfile):
     print(nx,ny,nz)
     dims=np.array(qv.shape)
     
-    z=(ph+phb)/g
+    z=(ph)/g
     dz=np.diff(z,axis=1)
     # dz shape = (time,nz-1,ny,nx)
     # ph/phb are defined between model levels, we want z in the middle of each model level
@@ -59,8 +59,12 @@ def main(inputfile):
         curlist=[str(cur) for cur in mean_dz[i:i+10]]
         print(",".join(curlist)+",")
 
-    curlist=[str(cur) for cur in mean_dz[i:]]
-    print(",".join(curlist)+"]")
+    if i+10<mean_dz.shape[0]:
+        curlist=[str(cur) for cur in mean_dz[i+10:]]
+        print(",".join(curlist)+"]")
+    else:
+        print("]")
+
     
     print("FIRST LEVELS:")
     print("dz_levels=[")
@@ -68,8 +72,11 @@ def main(inputfile):
         curlist=[str(cur) for cur in dz[0,i:i+10,0,0]]
         print(",".join(curlist)+",")
 
-    curlist=[str(cur) for cur in dz[0,i:,0,0]]
-    print(",".join(curlist)+"]")
+    if i+10<dz.shape[1]:
+        curlist=[str(cur) for cur in dz[0,i+10:,0,0]]
+        print(",".join(curlist)+"]")
+    else:
+        print("]")
     
     
     dz=np.zeros(dz.shape)+mean_dz[np.newaxis,:,np.newaxis,np.newaxis]

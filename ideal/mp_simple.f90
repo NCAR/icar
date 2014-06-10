@@ -59,10 +59,13 @@ module module_mp_simple
 !     real, parameter :: mp_g=9.81 ! gravity m/s^2
 
 ! arbitrary calibratable timescales default values as used in the linear model
-! these should be pulled out to a parameter file for calibration purposes
+! these should be pulled out to a parameter file for calibration purposes 
+! but this is approximately how they are implemented in SB04
     real,parameter :: snow_const=1/2000.0 ! [1/s]
     real,parameter :: rain_const=1/500.0  ! [1/s]
-    real,parameter :: freezing_threshold=273.15
+    real,parameter :: freezing_threshold=273.15 ! [K]
+	real,parameter :: snow_fall_rate=1.5  ! [m/s]
+	real,parameter :: rain_fall_rate=10.0 ! [m/s]
     
 !   these are recalculated every call because they are a function of dt
 !   conversion "time" = exp(-const * dt)
@@ -179,10 +182,10 @@ module module_mp_simple
         real :: mass2temp,delta
         mass2temp=Lheat/heat_capacity!*(p/(R*t)*dV))
         
-        delta=q1*change_rate
-        !make sure we don't over saturate the air
-        if (delta>(qmax-q2)) then
-            delta=qmax-q2
+        delta=q1-(q1*change_rate)
+        !make sure we don't over shoot saturation (use a 5% buffer)
+        if (delta>((qmax-q2)*0.95)) then
+            delta=(qmax-q2)*0.95
         endif
         
         q1=q1-delta
@@ -225,12 +228,10 @@ module module_mp_simple
                 if (qr>SMALL_VALUE) then
                     ! evaporate rain
                     call phase_change(p,t,qr,qvsat,qv,L_evap,cloud2rain)
-!                   write(*,*) "evap rain"
                 endif
                 if (qs>SMALL_VALUE) then
                     ! sublimate snow
                     call phase_change(p,t,qs,qvsat,qv,L_subl,cloud2snow)
-!                   write(*,*) "evap snow"
                 endif
             endif
         endif
@@ -273,12 +274,14 @@ module module_mp_simple
         
         if ((debug).and.(dt<1)) print*, "internal dt=",dt
         do i=1,nz
+			! convert specific humidity to mixing ratio
+			qv(i)=qv(i)/(1-qv(i))
             call mp_conversions(p(i),t(i),qv(i),qc(i),qr(i),qs(i),dt)
         enddo
 
         ! SEDIMENTATION for rain
         if (maxval(qr)>SMALL_VALUE) then
-            fall_rate=10.0
+            fall_rate=rain_fall_rate
             cfl=ceiling(maxval(dt/dz*fall_rate))
             fall_rate=dt*fall_rate/cfl
             ! substepping to satisfy CFL criteria
@@ -289,7 +292,7 @@ module module_mp_simple
         
         ! SEDIMENTATION for snow
         if (maxval(qs)>SMALL_VALUE) then
-            fall_rate=1.5
+            fall_rate=snow_fall_rate
             cfl=ceiling(maxval(dt/dz*fall_rate))
             fall_rate=dt*fall_rate/cfl
             ! substepping to satisfy CFL criteria
@@ -299,7 +302,10 @@ module module_mp_simple
                 rain=rain+snowfall
             enddo
         endif
-        
+        do i=1,nz
+			! convert mixing ratio back to specific humidity
+			qv(i)=qv(i)/(qv(i)+1)
+		enddo
     end subroutine mp_simple
 
 
