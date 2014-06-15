@@ -52,9 +52,14 @@ module module_mp_simple
     public::mp_simple_driver
     
     real, parameter :: LH_vapor=2.26E6 ! J/kg
+	real, parameter :: dLHvdt = 2400! APPROXIMATE increase in latent heat with a decrease in temperature (below 373.15K)
+									! derived from various curves plotted online
+									! not sure why this isn't 4186.0 (J/kg/K) (i.e. specific heat of water)
+									! NOTE, ice=2110 (J/kg/K), steam=2080 (J/kg/K)
     real, parameter :: LH_liquid=3.34E5 ! J/kg
-    real, parameter :: heat_capacity = 1021.0 ! air heat capacity J/kg/K
+    real, parameter :: heat_capacity = 1006.0 ! air heat capacity J/kg/K
     real, parameter :: SMALL_VALUE = 1E-15
+    real, parameter :: SMALL_PRESSURE = 1000. ! in Pa this is actually pretty small... 
 !     real, parameter :: mp_R=287.058 ! J/(kg K) specific gas constant for air
 !     real, parameter :: mp_g=9.81 ! gravity m/s^2
 
@@ -97,7 +102,7 @@ module module_mp_simple
             a=17.2693882
             b=35.86
         endif
-        e_s = 610.78* exp(a*(T-273.16)/(T-b)) !(Pa)
+        e_s = 610.78* exp(a*(t-273.16)/(t-b)) !(Pa)
 
 !       alternate formulations
 !       Polynomial:
@@ -107,56 +112,91 @@ module module_mp_simple
 !       e_s = 611.0*10.0**(7.5*(t-273.15)/(t-35.45))
         
         
+! 		if ((p-e_s)<0) then
+! 			print*, "e_s more than p!"
+! 			print*, p,e_s,t,p-e_s
+! 		endif
+		e_s=min(e_s,p-SMALL_PRESSURE)
         !from : http://www.srh.noaa.gov/images/epz/wxcalc/mixingRatio.pdf
-        sat_mr=0.62197*e_s/(p-e_s) !(kg/kg)
+        sat_mr=0.6219907*e_s/(p-e_s) !(kg/kg)
     end function sat_mr
     
+
     subroutine cloud_conversion(p,t,qv,qc,qvsat,dt)
         implicit none
         real,intent(inout)::t,qv,qc,qvsat
         real,intent(in)::dt,p
-        real :: vapor2temp,excess,deltat
-        vapor2temp=LH_vapor/heat_capacity
-        
-!       calculate the saturating mixing ratio
-        qvsat=sat_mr(t,p)
-!       if saturated create clouds
-        if (qv>qvsat) then
-            excess=qv-qvsat
-!           temperature change if all vapor is converted
-            deltat=excess*vapor2temp
-!           Now calculate new saturated mixing ratio at the new hypothetical temperature
-            qvsat=sat_mr(t+deltat*0.5,p)
-            excess=qv-qvsat
-            t=t+(excess*vapor2temp)
-            qv=qv-excess
-            qc=qc+excess
-            
-!       if unsaturated and clouds exist, evaporate clouds
-        else if (qc>0) then
-            excess=qvsat-qv
-            if (excess<qc) then
-                deltat=excess*vapor2temp
-                qvsat=sat_mr(t-deltat*0.5,p)
-                excess=qvsat-qv
-                if (excess<qc) then
+        real :: vapor2temp,excess,deltat,pre_qc,pre_qv,pre_t,lastqv
+		integer :: iteration
+		real :: maxerr
+		
+		maxerr=1e-6
+		iteration=0
+		lastqv=qv+maxerr*2
+        vapor2temp=(LH_vapor+(373.15-t)*dLHvdt)/heat_capacity
+        pre_qc=qc !DEBUG
+        pre_qv=qv !DEBUG
+        pre_t=t !DEBUG
+		excess=0
+		
+		do while ((abs(lastqv-qv)>maxerr).and.(iteration<5))
+			iteration=iteration+1
+			lastqv=qv
+			! calculate the saturating mixing ratio
+	        qvsat=sat_mr(t,p)
+			! if saturated create clouds
+	        if (qv>qvsat) then
+	            excess=(qv-qvsat)*0.95
+				! temperature change if all vapor is converted
+	            t=t+(excess*vapor2temp)
+	            qv=qv-excess
+	            qc=qc+excess
+			! if unsaturated and clouds exist, evaporate clouds
+	        else if (qc>0) then
+	            excess=(qvsat-qv)*0.95
+	            if (excess<qc) then
                     t=t-(excess*vapor2temp)
                     qv=qv+excess
                     qc=qc-excess
-                else
-                    qv=qv+qc
-                    t=t-(qc*vapor2temp)
-                    qc=0.
-                endif
-            else
-                qv=qv+qc
-                t=t-(qc*vapor2temp)
-                qc=0.
-            endif
-        endif
+	            else
+	                qv=qv+qc
+	                t=t-(qc*vapor2temp)
+					excess=qc
+	                qc=0.
+	            endif
+				excess=excess*-1 !DEBUG
+	        endif
+		enddo
+		if (iteration==5) then
+! 			print*, iteration
+! 			print*, pre_qc,pre_qv,pre_t,p
+! 			print*, qc, qv,t, qvsat
+! 			print*, sat_mr(pre_t,p),sat_mr(t,p), sat_mr(pre_t,p)-sat_mr(t,p)
+			qv=sat_mr(pre_t,p)
+			t=pre_t
+			qc=pre_qc
+		endif
+! 		if (t<170) then
+! 			t=170
+! 		else if (t>350) then
+! 			t=350
+! 		endif
+		
         qc=max(qc,0.)
+        if ((t>350).or.(qc>0.01).or.(qvsat>1)) then
+			deltat=excess*vapor2temp
+			print*, iteration
+			print*, pre_qc,pre_qv,pre_t,p
+			print*, qc, qv,t, qvsat
+			print*, sat_mr(pre_t,p),sat_mr(t,p), sat_mr(pre_t,p)-sat_mr(t,p)
+
+			print*, qv, qvsat, qc, pre_qc, t, excess, vapor2temp
+			print*, t-deltat, p, sat_mr(t-deltat,p)
+		endif
         
     end subroutine
+
+
 
     subroutine cloud2hydrometeor(qc,q,conversion)
         implicit none
@@ -183,12 +223,16 @@ module module_mp_simple
         mass2temp=Lheat/heat_capacity!*(p/(R*t)*dV))
         
         delta=q1-(q1*change_rate)
-        !make sure we don't over shoot saturation (use a 5% buffer)
-        if (delta>((qmax-q2)*0.95)) then
-            delta=(qmax-q2)*0.95
+        ! hopefully we don't over shoot saturation (use a 10% buffer)
+        if (delta>((qmax-q2)*0.90)) then
+            delta=(qmax-q2)*0.90
         endif
         
         q1=q1-delta
+		if (q1<0) then 
+			print*, q1,q2,delta,qmax,change_rate
+			stop
+		endif
         q2=q2+delta
         t=t+delta*mass2temp
     
@@ -201,9 +245,9 @@ module module_mp_simple
         real :: qvsat,L_evap,L_subl,L_melt
         
         qvsat=1
-        L_melt=LH_liquid !kJ/kg
-        L_evap=LH_vapor !kJ/kg
-        L_subl=L_melt+L_evap
+        L_melt=-1*LH_liquid  ! J/kg (should change with temperature)
+        L_evap=-1*(LH_vapor+(373.15-t)*dLHvdt)   ! J/kg
+        L_subl=L_melt+L_evap ! J/kg
         !convert cloud water to and from water vapor
         call cloud_conversion(p,t,qv,qc,qvsat,dt)
         ! if there are no species to process we will just return

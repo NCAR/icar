@@ -54,9 +54,9 @@ contains
 		inputwind=wind !make a copy so we always use the unsmoothed data when computing the smoothed data
 		
 		!parallelize over the slowest dimension
-		!$omp parallel firstprivate(windowsize,nx,ny,nz,ydim), &
-		!$omp private(i,j,k,startx,endx,starty,endy),shared(wind,inputwind)
-		!$omp do schedule(static)
+		!$no omp parallel firstprivate(windowsize,nx,ny,nz,ydim), &
+		!$no omp private(i,j,k,startx,endx,starty,endy),shared(wind,inputwind)
+		!$no omp do schedule(static)
 		do k=1,nz
 			do j=1,ny
 				do i=1,nx
@@ -83,8 +83,8 @@ contains
 				enddo
 			enddo
 		enddo
-		!$omp end do
-		!$omp end parallel
+		!$no omp end do
+		!$no omp end parallel
 		
 		deallocate(inputwind)
 	end subroutine smooth_wind
@@ -275,8 +275,9 @@ contains
 		call smooth_wind(inputdata,2,2)
 		bc%v=reshape(inputdata,[nx,nz_output,ny],order=[1,3,2])
 		deallocate(extra_data,inputdata)
+		
 ! 		remove the low-res linear wind contribution effect
-		call linear_perturb(bc,reverse_winds)
+		call linear_perturb(bc,reverse_winds,options%advect_density)
 		
 ! 		finally interpolate low res winds to the high resolutions grid
 		call geo_interp(domain%u, bc%u,bc%u_geo%geolut,.FALSE.)
@@ -450,7 +451,7 @@ contains
 			endif
 		
 			call update_pressure(domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
-								 bc%next_domain%z,domain%z)
+								 bc%lowres_z,domain%z)
 							 
 	 		nz=size(domain%th,2)
 			domainsize=size(domain%th,1)*size(domain%th,3)
@@ -639,7 +640,7 @@ contains
 		endif
 	
 		call update_pressure(bc%next_domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
-							 bc%next_domain%z,domain%z)
+							 bc%lowres_z,domain%z)
 		
 		nx=size(bc%next_domain%th,1)
 		nz=size(bc%next_domain%th,2)

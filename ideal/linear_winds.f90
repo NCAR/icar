@@ -18,6 +18,56 @@ module linear_theory_winds
 	
 contains
 	
+	subroutine fftshift2(fftimage, nx,ny)
+		implicit none
+		complex, intent(inout):: fftimage(nx,ny)
+		integer,intent(in)::nx,ny
+		complex :: tmp(nx, ny)
+		integer::i,j,ii,jj
+		
+		do i=1, nx
+			do j=1, ny
+			  ii = mod(i+(nx+1)/2,nx)
+			  if(ii==0) ii = nx
+			  
+			  jj = mod(j+(ny+1)/2,ny)
+			  if(jj==0) jj = ny
+			  
+			  tmp(ii,jj) = fftimage(i,j)
+			enddo
+		enddo
+		do i=1,nx
+			do j=1,ny
+			  fftimage(i,j) = tmp(i,j)
+			enddo
+		enddo
+	end subroutine fftshift2
+	subroutine fftshift2r(fftimage, nx,ny)
+		implicit none
+		real, intent(inout):: fftimage(nx,ny)
+		integer,intent(in)::nx,ny
+		real :: tmp(nx, ny)
+		integer::i,j,ii,jj
+		
+		do i=1, nx
+			do j=1, ny
+			  ii = mod(i+(nx+1)/2,nx)
+			  if(ii==0) ii = nx
+			  
+			  jj = mod(j+(ny+1)/2,ny)
+			  if(jj==0) jj = ny
+			  
+			  tmp(ii,jj) = fftimage(i,j)
+			enddo
+		enddo
+		do i=1,nx
+			do j=1,ny
+			  fftimage(i,j) = tmp(i,j)
+			enddo
+		enddo
+	end subroutine fftshift2r
+
+	
     real function calc_stability(domain)
         implicit none
         class(linearizable_type),intent(in)::domain
@@ -39,10 +89,10 @@ contains
 !         es = 611.21*exp(17.502*(T2m-t0)/(T2m-32.19))
 !         qs0 = ratio * es/(p0-es)
 ! 
+!         cap_gamma = -(g * (1.+(L*qs0)/(R*T2m)) / (cp + (L**2 * qs0*ratio) / (R*T2m**2)))
 !! STILL NEEDS TO BE CONVERTED FROM PYTHON
-!!         cap_gamma = -(g * (1.+(L*qs0)/(R*T2m)) / (cp + (L**2 * qs0*ratio) / (R*T2m**2)))
 !!         env_gamma = np.mean(np.diff(weather.th*pii,axis=0)/np.diff(base.hgt3d,axis=0),axis=0)
-!!     
+!     
 !         dry_gamma=sum(env_gamma-cap_gamma)/size(env_gamma)
 !         ndsq=(g/(sum(T2m)/size(T2m)))*(dry_gamma)
 !         ndsq=max(min(1e-4,ndsq),1e-8)
@@ -106,60 +156,18 @@ contains
 	        offset=pi/domain%dx
 	        gain=2*offset/(nx-1)
 			k(:,1) = (/((i*gain-offset),i=0,nx-1)/)
-			! foolishly inefficient ifftshift should just fix the array
-			! creation above and or move to a separate subroutine or store the results for later reuse...
-			if (mod(nx,2)==1) then
-				! odd
-				k(:,2)=k(:,1)
-				nx=nx-1
-				do i=1,nx/2
-					k(i,1)=k(i+nx/2,2)
-					k(i+nx/2+1,1)=k(i,2)
-				enddo
-				k(nx/2+1,1)=k(nx+1,2)
-				nx=nx+1
-			else
-				! even
-				do i=1,nx/2
-					gain=k(i,1)
-					k(i,1)=k(i+nx/2,1)
-					k(i+nx/2,1)=gain
-				enddo
-			endif
-		
+			do i=2,ny
+				k(:,i)=k(:,1)
+			enddo
+			call fftshift2r(k,nx,ny) !should this be ifftshift?
+			
 	        gain=2*offset/(ny-1)
 			l(1,:) = (/((i*gain-offset),i=0,ny-1)/)
-			! foolishly inefficient ifftshift should just fix the array
-			! creation above l is separated from k because they only need to be processed in one dimension each. 
-			if (mod(ny,2)==1) then
-				! odd
-				l(2,:)=l(1,:)
-				ny=ny-1
-				do i=1,ny/2
-					l(1,i)=l(2,i+ny/2)
-					l(1,i+ny/2+1)=l(2,i)
-				enddo
-				l(1,ny/2+1)=l(2,ny+1)
-				ny=ny+1
-			else
-				! even
-				do i=1,ny/2
-					gain=l(1,i)
-					l(1,i)=l(1,i+ny/2)
-					l(1,i+ny/2)=gain
-				enddo
-			endif
-
-	! 		once we have computed the ifftshift in the first column/row just copy that for all other columns/rows
-	! 		for k
-	        do i=2,ny
-	            k(:,i)=k(:,1)
-	        end do
-	! 		for l
-	        do i=2,nx
-	            l(i,:)=l(1,:)
-	        end do
-        
+			do i=2,nx
+				l(i,:)=l(1,:)
+			enddo
+			call fftshift2r(l,nx,ny) !should this be ifftshift?
+			
 	! 		finally compute the kl combination array
 	        kl = k**2+l**2
 	        WHERE (kl==0.0) kl=1e-15
@@ -195,8 +203,8 @@ contains
 ! m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
 
 			msq = Ndsq/denom * kl
-			! mimag=0 ! be sure to reset real and imaginary components
-		    mimag=0+(j*real(sqrt(-msq)))
+			mimag=0 ! be sure to reset real and imaginary components
+		    mimag=mimag+(real(sqrt(-msq))*j)
 			! m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
             m = sqrt(msq)         ! # % vertical wave number, hydrostatic
 			where(sig<0) m=m*(-1)   ! equivilant to m=m*sign(sig)
@@ -225,18 +233,18 @@ contains
             plan = fftw_plan_dft_2d(ny,nx, vhat,v_hat, FFTW_BACKWARD,FFTW_ESTIMATE)
             call fftw_execute_dft(plan, vhat,v_hat)
             call fftw_destroy_plan(plan)
-			
 			! u/vhat are first staggered to apply to u/v appropriately...
 			! NOTE: we should be able to do this without the loop, but ifort -O was giving the wrong answer... possible compiler bug version 12.1.x?
 			do i=1,realny
 				u_hat(1+buffer:nx-buffer-1,i+buffer) = (u_hat(1+buffer:nx-buffer-1,i+buffer)+u_hat(2+buffer:nx-buffer,i+buffer))/2
 				v_hat(1+buffer:nx-buffer,i+buffer)   = (v_hat(1+buffer:nx-buffer,i+buffer)+v_hat(1+buffer:nx-buffer,i+buffer+1))/2
 			enddo
-			
+			print*,U,V,sum(domain%z(:,z,:)-domain%z(:,1,:)+domain%dz(:,z,:)/2)/(realnx*realny),Ndsq,real(u_hat(169+buffer,146+buffer))
 			if (present(useDensity)) then
 				! if we are using density in the advection calculations, modify the linear perturbation
 				! to get the vertical velocities closer to what they would be without density (boussinesq)
 				if (useDensity) then
+					print*, "Using a density correction in linear winds"
 					u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer) = &
 						2*real(u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer))! / domain%rho(1:realnx,z,1:realny)
 					v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer) = &
@@ -246,8 +254,8 @@ contains
 			! if we are removing linear winds from a low res field, subtract u_hat v_hat instead
 			! real(real()) extracts real component of complex, then converts to a real data type (may not be necessary except for IO?)
 			if (reverse) then
-		            domain%u(1:realnx-1,z,:)=domain%u(:realnx-1,z,:)  - real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer  ) ))
-		            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) - real(real(v_hat(1+buffer:nx-buffer,  1+buffer:realny+buffer-1) ))
+	            domain%u(1:realnx-1,z,:)=domain%u(:realnx-1,z,:)  - real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer  ) ))
+	            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) - real(real(v_hat(1+buffer:nx-buffer,  1+buffer:realny+buffer-1) ))
 			else
 	            domain%u(1:realnx-1,z,:)=domain%u(:realnx-1,z,:)  + real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer  ) ))
 	            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) + real(real(v_hat(1+buffer:nx-buffer,  1+buffer:realny+buffer-1) ))
@@ -257,7 +265,7 @@ contains
 				if (debug) then
 					print*, (realnx-1)-(1)+1, (nx-buffer-1)-(1+buffer)+1, size(domain%u,3),(ny-buffer)-(1+buffer)+1
 					print*, (realnx-1)-(1)+1, (nx-buffer)-(2+buffer)+1, size(domain%u,3),(ny-buffer)-(1+buffer)+1
-					
+					print*, "U=",U, "    V=",V
 					print*, "realnx=",realnx, "; nx=",nx, "; buffer=",buffer
 					print*, "realny=",realny, "; ny=",ny!, buffer
 					print*, "Writing internal linear wind data"
@@ -279,7 +287,7 @@ contains
         implicit none
 		real, dimension(:,:), intent(in) :: terrain
 		complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:), intent(out):: buffer_topo
-! 		real, dimension(:,:),allocatable :: real_terrain
+		real, dimension(:,:),allocatable :: real_terrain
 		integer::nx,ny,i,pos
 		real::weight
 		nx=size(terrain,1)+buffer*2
@@ -300,9 +308,10 @@ contains
 			buffer_topo(:,pos+1)  =buffer_topo(:,buffer+1)*(1-weight) + buffer_topo(:,ny-buffer)*   weight
 			buffer_topo(:,ny-pos) =buffer_topo(:,buffer+1)*(  weight) + buffer_topo(:,ny-buffer)*(1-weight)
 		enddo
-! 		allocate(real_terrain(nx,ny))
-! 		real_terrain=buffer_topo
-! 		deallocate(real_terrain)
+		allocate(real_terrain(nx,ny))
+		real_terrain=buffer_topo
+		call io_write2d("complex_terrain.nc","data",real_terrain)
+		deallocate(real_terrain)
 		
 	end subroutine add_buffer_topo
 	
@@ -319,7 +328,7 @@ contains
         nx=size(complex_terrain,1)
         ny=size(complex_terrain,2)
 
-        write(*,*) "Initializing linear winds"
+        write(*,*) "Initializing linear winds : ",nx,ny
         allocate(domain%fzs(nx,ny))
 		
 ! 		calculate the fourier transform of the terrain for use in linear winds

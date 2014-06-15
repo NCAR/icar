@@ -21,7 +21,7 @@ contains
 		nz=size(domain%w,2)
 		ny=size(domain%w,3)
 		
-		! these could me module level to prevent lots of allocation/deallocation/reallocations
+		! these could be module level to prevent lots of allocation/deallocation/reallocations
 		if (options%advect_density) then
 			allocate(rhou(nx-1,ny-2))
 			allocate(rhov(nx-2,ny-1))
@@ -89,6 +89,8 @@ contains
 		endif
 	end subroutine balance_uvw
 	
+! 	Correct for a grid that is locally rotated with respect to EW,NS (e.g. at the edges of the domain)
+!   Assumes forcing winds are EW,NS relative, not grid relative. 
 	subroutine make_winds_grid_relative(domain)
 		type(domain_type), intent(inout) :: domain
 		real,dimension(:),allocatable :: u,v
@@ -148,7 +150,9 @@ contains
 		integer::nx,ny,nz,i,j
 		
 		! rotate winds from cardinal directions to grid orientation (e.g. u is grid relative not truly E-W)
-		call make_winds_grid_relative(domain)
+		if (.not.options%ideal) then
+			call make_winds_grid_relative(domain)
+		endif
 		
 		! linear winds
 		if (options%physics%windtype==1) then
@@ -157,7 +161,9 @@ contains
 		! else assumes even flow over the mountains
 
 		! rotate winds into the terrain following coordinate system
-		call rotate_wind_field(domain)
+		if (options%ideal) then
+			call rotate_wind_field(domain)
+		endif
 		! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
 		call balance_uvw(domain,options)
 		

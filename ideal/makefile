@@ -114,8 +114,7 @@ endif
 ########################################################################################
 # Consider adding vectorization "encouragement" to the compile lines
 #  ifort should vectorize to SSE with -fast, may need -axAVX to add AVX
-#  gcc will not do anything by default?, add -ftree-vectorize and optionally -mavx -march=corei7-avx
-#  actually, gcc may vectorize with -O3 now... may still need -msse4? no AVX without -mavx etc.
+#  gcc should vectorize with -Ofast (adds -ftree-vectorize) and optionally -mavx -march=corei7-avx
 #  could also add alignment in ifort with -align array64byte not sure why that isn't included in -fast
 
 # GNU fortran
@@ -125,7 +124,7 @@ ifeq ($(F90), gfortran)
 endif
 # Intel fortran
 ifeq ($(F90), ifort)
-	COMP= -openmp -liomp5 -u -c -fast #-debug -traceback -debug-parameters all -check all# -fast -fpe0 #-fast-transcendentals -xhost
+	COMP= -openmp -liomp5 -u -c -fast -ftz #-fast-transcendentals # not available in ifort <13: -align array64byte
 	LINK= -openmp -liomp5
 endif
 # PGI fortran
@@ -182,13 +181,17 @@ PROF=
 ifeq ($(DEBUG), profile)
 	ifeq ($(F90), ifort)
 		PROF=-g -debug inline-debug-info -shared-intel
-		COMP=-c -u -openmp -liomp5 -ipo -O3 -no-prec-div -xHost #because -fast includes -static
+		COMP=-c -u -openmp -liomp5 -ipo -O3 -no-prec-div -xHost -ftz #because -fast includes -static # not available in ifort <13 -align array64byte
 	endif
 	ifeq ($(F90), gfortran)
 		PROF=-g
 	endif
 endif
-
+ifeq ($(DEBUG), fast) # because -ipo takes forever for very little gain
+	ifeq ($(F90), ifort)
+		COMP=-c -u -openmp -liomp5 -O3 -no-prec-div -xHost -ftz
+	endif
+endif
 ###################################################################
 ###################################################################
 # 
