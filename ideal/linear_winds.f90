@@ -5,6 +5,7 @@ end module fft
 
 module linear_theory_winds
     use fft
+	use fftshifter
     use data_structures
 	use io_routines, only : io_write2d
 	use output, only : write_domain
@@ -18,54 +19,6 @@ module linear_theory_winds
 	
 contains
 	
-	subroutine fftshift2(fftimage, nx,ny)
-		implicit none
-		complex, intent(inout):: fftimage(nx,ny)
-		integer,intent(in)::nx,ny
-		complex :: tmp(nx, ny)
-		integer::i,j,ii,jj
-		
-		do i=1, nx
-			do j=1, ny
-			  ii = mod(i+(nx+1)/2,nx)
-			  if(ii==0) ii = nx
-			  
-			  jj = mod(j+(ny+1)/2,ny)
-			  if(jj==0) jj = ny
-			  
-			  tmp(ii,jj) = fftimage(i,j)
-			enddo
-		enddo
-		do i=1,nx
-			do j=1,ny
-			  fftimage(i,j) = tmp(i,j)
-			enddo
-		enddo
-	end subroutine fftshift2
-	subroutine fftshift2r(fftimage, nx,ny)
-		implicit none
-		real, intent(inout):: fftimage(nx,ny)
-		integer,intent(in)::nx,ny
-		real :: tmp(nx, ny)
-		integer::i,j,ii,jj
-		
-		do i=1, nx
-			do j=1, ny
-			  ii = mod(i+(nx+1)/2,nx)
-			  if(ii==0) ii = nx
-			  
-			  jj = mod(j+(ny+1)/2,ny)
-			  if(jj==0) jj = ny
-			  
-			  tmp(ii,jj) = fftimage(i,j)
-			enddo
-		enddo
-		do i=1,nx
-			do j=1,ny
-			  fftimage(i,j) = tmp(i,j)
-			enddo
-		enddo
-	end subroutine fftshift2r
 
 	
     real function calc_stability(domain)
@@ -159,14 +112,14 @@ contains
 			do i=2,ny
 				k(:,i)=k(:,1)
 			enddo
-			call fftshift2r(k,nx,ny) !should this be ifftshift?
+			call ifftshift(k) !should this be ifftshift?
 			
 	        gain=2*offset/(ny-1)
 			l(1,:) = (/((i*gain-offset),i=0,ny-1)/)
 			do i=2,nx
 				l(i,:)=l(1,:)
 			enddo
-			call fftshift2r(l,nx,ny) !should this be ifftshift?
+			call ifftshift(l) !should this be ifftshift?
 			
 	! 		finally compute the kl combination array
 	        kl = k**2+l**2
@@ -239,7 +192,7 @@ contains
 				u_hat(1+buffer:nx-buffer-1,i+buffer) = (u_hat(1+buffer:nx-buffer-1,i+buffer)+u_hat(2+buffer:nx-buffer,i+buffer))/2
 				v_hat(1+buffer:nx-buffer,i+buffer)   = (v_hat(1+buffer:nx-buffer,i+buffer)+v_hat(1+buffer:nx-buffer,i+buffer+1))/2
 			enddo
-			print*,U,V,sum(domain%z(:,z,:)-domain%z(:,1,:)+domain%dz(:,z,:)/2)/(realnx*realny),Ndsq,real(u_hat(169+buffer,146+buffer))
+! 			print*,U,V,sum(domain%z(:,z,:)-domain%z(:,1,:)+domain%dz(:,z,:)/2)/(realnx*realny),Ndsq,real(u_hat(169+buffer,146+buffer))
 			if (present(useDensity)) then
 				! if we are using density in the advection calculations, modify the linear perturbation
 				! to get the vertical velocities closer to what they would be without density (boussinesq)
