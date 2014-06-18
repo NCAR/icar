@@ -57,6 +57,7 @@ program real
 !
 ! 	note that a timestep here is an IO timestep O(1hr), not a physics timestep O(20s)
 	do i=start_point,options%ntimesteps
+		write(*,*) " ----------------------------------------------------------------------"
 		write(*,*) "Timestep:", i, "  of ", options%ntimesteps
 		write(*,*) "  Model time=",dnint(100*model_time/3600.0)/100.0,"hrs"
 		

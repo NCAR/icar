@@ -709,7 +709,7 @@ contains
 		type(options_type), intent(in) :: options
 		type(domain_type), intent(inout):: domain
 		type(bc_type), intent(inout):: boundary
-		integer::i
+		integer::i,nx,ny,nz
 			
 		boundary%dx=options%dxlow
 ! 		set up base data
@@ -728,20 +728,26 @@ contains
 			call init_ext_winds(options,boundary)
 		endif
 		
-! 		interpolate the low-res terrain to the high-res grid for pressure adjustments. 
-! 		the correct way would probably be to adjust all low-res pressures to Sea level before interpolating
-! 		then pressure adjustments all occur from SLP. 
-! 		This should be done on a separate lowres terrain grid so the embedded high res terrain grid can also be used in pressure adjustments on each time step...
-! 		allocate(boundary%lowres_terrain(nx,ny))
-		call geo_interp2d(boundary%next_domain%terrain,boundary%terrain,boundary%geolut)
-		call geo_interp(boundary%next_domain%z,boundary%z,boundary%geolut,.false.)
-		call io_write3d("bc-nextd2_z.nc","data",boundary%next_domain%z)
+		! interpolate the low-res terrain to the high-res grid for pressure adjustments. 
+		! the correct way would probably be to adjust all low-res pressures to Sea level before interpolating
+		! then pressure adjustments all occur from SLP. 
+		! This should be done on a separate lowres terrain grid so the embedded high res terrain grid 
+		! can also be used in pressure adjustments on each time step...
+		nx=size(domain%terrain,1)
+		ny=size(domain%terrain,2)
+		nz=size(domain%z,2)
+		allocate(boundary%lowres_terrain(nx,ny))
+		call geo_interp2d(boundary%lowres_terrain,boundary%terrain,boundary%geolut)
+		
+		allocate(boundary%lowres_z(nx,nz,ny))
+		call geo_interp(boundary%lowres_z,boundary%z,boundary%geolut,.false.)
+		call io_write3d("bc-nextd2_z.nc","data",boundary%lowres_z)
 		if (options%add_low_topo) then
-			domain%terrain=domain%terrain+(boundary%next_domain%terrain-sum(boundary%next_domain%terrain) &
-											 /size(boundary%next_domain%terrain))/2.0
+			domain%terrain=domain%terrain+(boundary%lowres_terrain-sum(boundary%lowres_terrain) &
+											 /size(boundary%lowres_terrain))/2.0
 			do i=1,size(domain%z,2)
-				domain%z(:,i,:)=domain%z(:,i,:)+(boundary%next_domain%terrain-sum(boundary%next_domain%terrain) &
-												 /size(boundary%next_domain%terrain))/2.0
+				domain%z(:,i,:)=domain%z(:,i,:)+(boundary%lowres_terrain-sum(boundary%lowres_terrain) &
+												 /size(boundary%lowres_terrain))/2.0
 			enddo
 		endif
 		

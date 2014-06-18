@@ -114,8 +114,7 @@ endif
 ########################################################################################
 # Consider adding vectorization "encouragement" to the compile lines
 #  ifort should vectorize to SSE with -fast, may need -axAVX to add AVX
-#  gcc will not do anything by default?, add -ftree-vectorize and optionally -mavx -march=corei7-avx
-#  actually, gcc may vectorize with -O3 now... may still need -msse4? no AVX without -mavx etc.
+#  gcc should vectorize with -Ofast (adds -ftree-vectorize) and optionally -mavx -march=corei7-avx
 #  could also add alignment in ifort with -align array64byte not sure why that isn't included in -fast
 
 # GNU fortran
@@ -125,7 +124,7 @@ ifeq ($(F90), gfortran)
 endif
 # Intel fortran
 ifeq ($(F90), ifort)
-	COMP= -openmp -liomp5 -u -c -fast #-debug -traceback -debug-parameters all -check all# -fast -fpe0 #-fast-transcendentals -xhost
+	COMP= -openmp -liomp5 -u -c -fast -ftz #-fast-transcendentals # not available in ifort <13: -align array64byte
 	LINK= -openmp -liomp5
 endif
 # PGI fortran
@@ -182,13 +181,17 @@ PROF=
 ifeq ($(DEBUG), profile)
 	ifeq ($(F90), ifort)
 		PROF=-g -debug inline-debug-info -shared-intel
-		COMP=-c -u -openmp -liomp5 -ipo -O3 -no-prec-div -xHost #because -fast includes -static
+		COMP=-c -u -openmp -liomp5 -ipo -O3 -no-prec-div -xHost -ftz #because -fast includes -static # not available in ifort <13 -align array64byte
 	endif
 	ifeq ($(F90), gfortran)
 		PROF=-g
 	endif
 endif
-
+ifeq ($(DEBUG), fast) # because -ipo takes forever for very little gain
+	ifeq ($(F90), ifort)
+		COMP=-c -u -openmp -liomp5 -O3 -no-prec-div -xHost -ftz
+	endif
+endif
 ###################################################################
 ###################################################################
 # 
@@ -205,7 +208,7 @@ FFLAGS=$(COMP) $(PROF) ${INCNETCDF} -I${INCFFT}
 
 OBJS=	io_routines.o data_structures.o init.o mp_driver.o time_step.o boundary.o model_tracking.o \
 		mp_thompson.o cu_driver.o cu_tiedtke.o driver.o output.o wind.o linear_winds.o geo_reader.o lsm.o \
-		pbl_swm.o pbl_driver.o mp_simple.o advection_driver.o adv_mpdata.o advect.o
+		pbl_swm.o pbl_driver.o mp_simple.o advection_driver.o adv_mpdata.o advect.o fftshift.o
 
 # IDEALOBJS=advect.o io_routines.o data_structures.o init.o mp_driver.o \
 # 		mp_thompson.o ideal.o output.o wind.o linear_winds.o geo_reader.o
@@ -229,8 +232,9 @@ clean:
 allclean:cleanall
 
 cleanall: clean
-	rm tests/*.o tests/*.mod swim_real swim_ideal #geo_test wind_test # test_init
-# tests: geo_test wind_test #test_init
+	rm tests/*.o tests/*.mod swim_real swim_ideal fftshift_test #geo_test wind_test # test_init
+
+tests: fftshift_tests #geo_test wind_test #test_init
 
 swim_real:${OBJS}
 	${F90} ${LFLAGS} ${OBJS} -o swim_real  -lm -lfftw3
@@ -249,6 +253,8 @@ swim_real:${OBJS}
 # 
 # wind_test:${WINDOBJS}
 # 	${F90} ${LFLAGS} ${WINDOBJS} -o wind_test -lfftw3 -lm
+fftshift_test: tests/test_fftshift.o fftshift.o
+	${F90} ${LFLAGS} tests/test_fftshift.o fftshift.o -o fftshift_test
 
 
 ###################################################################
@@ -345,8 +351,11 @@ adv_mpdata.o:adv_mpdata.f90 data_structures.o
 wind.o:wind.f90 linear_winds.o data_structures.o
 	${F90} ${FFLAGS} wind.f90
 
-linear_winds.o:linear_winds.f90 io_routines.o data_structures.o output.o
+linear_winds.o:linear_winds.f90 io_routines.o data_structures.o output.o fftshift.o
 	${F90} ${FFLAGS} linear_winds.f90
+
+fftshift.o:fftshift.f90
+	${F90} ${FFLAGS} fftshift.f90
 
 
 ###################################################################
@@ -367,7 +376,10 @@ model_tracking.o:model_tracking.f90
 # 
 # NOTE: too many changes in data structures/init have definitely broken these tests, could be fixed if necessary, 
 #       but not worth the time right now. 
-# 
+#
+tests/test_fftshift.o:fftshift.o tests/test_fftshift.f90
+	${F90} ${FFLAGS} tests/test_fftshift.f90 -o tests/test_fftshift.o
+	
 # tests/test_wind.o:tests/test_wind.f90 wind.o linear_winds.o
 # 	${F90} ${FFLAGS} tests/test_wind.f90 -o tests/test_wind.o
 # 

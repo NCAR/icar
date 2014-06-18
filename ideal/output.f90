@@ -23,7 +23,7 @@ contains
 		! We are writing 3D data, a ny x nz x nx grid. 
 		integer :: nx,ny,nz,i
 		integer, parameter :: ndims = 3
-		integer, parameter :: nvars=19
+		integer, parameter :: nvars=30
 		! This will be the netCDF ID for the file and data variable.
 		integer :: ncid, varid(nvars),temp_id,x_id,y_id,xu_id,yv_id,dimids(ndims)
 
@@ -98,8 +98,11 @@ contains
 		
 		call check( nf90_def_var(ncid, "z",  NF90_REAL, dimids, temp_id) )
 		varid(18)=temp_id
-! 		call check( nf90_def_var(ncid, "rho", NF90_REAL, dimids, temp_id) )
-! 		varid(19)=temp_id
+		call check( nf90_def_var(ncid, "rho", NF90_REAL, dimids, temp_id) )
+		varid(19)=temp_id
+! 		call check( nf90_def_var(ncid, "wr",  NF90_REAL, dimids, temp_id) )
+! 		varid(20)=temp_id
+
 		
 		! End define mode. This tells netCDF we are done defining metadata.
 		call check( nf90_enddef(ncid) )
@@ -123,7 +126,8 @@ contains
 		call check( nf90_put_var(ncid, varid(16), domain%graupel) )
 		call check( nf90_put_var(ncid, varid(17), domain%crain) )
 		call check( nf90_put_var(ncid, varid(18), domain%z) )
-! 		call check( nf90_put_var(ncid, varid(19), domain%rho) )
+		call check( nf90_put_var(ncid, varid(19), domain%rho) )
+! 		call check( nf90_put_var(ncid, varid(20), domain%wr) )
 	
 		
 		! Close the file, freeing all resources.
