@@ -267,13 +267,16 @@ contains
 	! check the version number in the namelist file and compare to the current model version
 	! if the namelist version doesn't match, print the differences between that version and this
 	! and STOP execution
-	subroutine version_check(filename)
+	subroutine version_check(filename,options)
 		character(len=*),intent(in) :: filename
-		character(len=MAXVARLENGTH) :: version
+		type(options_type),intent(inout)::options
+		character(len=MAXVARLENGTH) :: version,comment
 		integer:: name_unit
 		
-		namelist /model_version/ version
-! 		read namelists
+		namelist /model_version/ version,comment
+		!default comment:
+		comment="Model testing"
+		! read namelists
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=model_version)
 		close(name_unit)
@@ -284,6 +287,8 @@ contains
 			call print_model_diffs(version)
 			stop
 		endif
+		options%version=version
+		options%comment=comment
 		write(*,*) "Model version: ",trim(version)
 	end subroutine version_check
 	
@@ -307,7 +312,7 @@ contains
 		namelist /restart_info/ restart_step,restart_file
 		namelist /ext_winds_info/ ext_wind_files
 		
-		call version_check(options_filename)
+		call version_check(options_filename,options)
 		call physics_namelist(options_filename,options)
 		call var_namelist(options_filename,options)
 		call parameters_namelist(options_filename,options)

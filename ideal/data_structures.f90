@@ -142,6 +142,7 @@ module data_structures
 	
 ! 	store all model options
 	type options_type
+		character (len=MAXVARLENGTH) :: version,comment
 ! 		file names
 		character (len=MAXFILELENGTH) :: init_conditions_file
 		character (len=MAXFILELENGTH), allocatable::boundary_files(:),ext_wind_files(:)
