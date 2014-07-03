@@ -643,11 +643,15 @@ contains
 			boundary%dz(:,i,:)=fulldz(i)
 		enddo
 		
-! 		all other structures must be allocated and initialized, but will be set on a high-res grid
-! 		u/v are seperate so we can read them on the low res grid and adjust/rm-linearwinds before interpolating
-! 		this also makes it easier to change how these variables are read from various forcing model file structures
+		! all other structures must be allocated and initialized, but will be set on a high-res grid
+		! u/v are seperate so we can read them on the low res grid and adjust/rm-linearwinds before interpolating
+		! this also makes it easier to change how these variables are read from various forcing model file structures
+		nx=size(boundary%u_geo%lon,1)
+		ny=size(boundary%u_geo%lon,2)
 		allocate(boundary%u(nx,nz,ny))
 		boundary%u=0
+		nx=size(boundary%v_geo%lon,1)
+		ny=size(boundary%v_geo%lon,2)
 		allocate(boundary%v(nx,nz,ny))
 		boundary%v=0
 		
@@ -720,9 +724,7 @@ contains
 ! 		set up base data
 		call init_bc_data(options,boundary,domain)
 		call init_domain(options,boundary%next_domain) !set up a domain to hold the forcing for the next time step
-		call io_write3d("bc_z.nc","data",boundary%z)
-		call io_write3d("bc-nextd1_z.nc","data",boundary%next_domain%z)
-		call io_write3d("domain_z.nc","data",domain%z)
+		
 ! 		create the geographic look up table used to calculate boundary forcing data
 		write(*,*) "Setting up domain geographic Look Up Tables"
 		call geo_LUT(domain,boundary)
@@ -746,7 +748,7 @@ contains
 		
 		allocate(boundary%lowres_z(nx,nz,ny))
 		call geo_interp(boundary%lowres_z,boundary%z,boundary%geolut,.false.)
-		call io_write3d("bc-nextd2_z.nc","data",boundary%lowres_z)
+		
 		if (options%add_low_topo) then
 			domain%terrain=domain%terrain+(boundary%lowres_terrain-sum(boundary%lowres_terrain) &
 											 /size(boundary%lowres_terrain))/2.0

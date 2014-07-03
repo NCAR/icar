@@ -249,37 +249,39 @@ contains
 		integer,dimension(io_maxDims)::dims !note, io_maxDims is included from io_routines.
 		real,allocatable,dimension(:,:,:)::inputdata,extra_data
 		logical :: reverse_winds=.TRUE.
-		integer :: nx,ny,nz,nz_output
+		integer :: nx,ny,nz_output
 		character(len=255) :: outputfilename
 		
 		call io_getdims(filename,options%uvar, dims)
 		nx=dims(2)
 		ny=dims(3)
-		nz=dims(4)
 		nz_output=size(bc%u,2)
 		
 		allocate(inputdata(nx,ny,nz_output))
 		
-! 		first read in the low-res U and V data directly
-! 		load low-res U data
+		! first read in the low-res U and V data directly
+		! load low-res U data
 		call io_read3d(filename,options%uvar,extra_data,curstep)
 		inputdata=extra_data(1:nx,1:ny,:nz_output)
 		call smooth_wind(inputdata,2,2)
 		bc%u=reshape(inputdata,[nx,nz_output,ny],order=[1,3,2])
 		deallocate(extra_data,inputdata)
 		
-		allocate(inputdata(nx-1,ny+1,nz_output))
-! 		load low-res V data
+		call io_getdims(filename,options%vvar, dims)
+		nx=dims(2)
+		ny=dims(3)
+		allocate(inputdata(nx,ny,nz_output))
+		! load low-res V data
 		call io_read3d(filename,options%vvar,extra_data,curstep)
-		inputdata=extra_data(1:nx-1,1:ny+1,:nz_output)
+		inputdata=extra_data(1:nx,1:ny,:nz_output)
 		call smooth_wind(inputdata,2,2)
 		bc%v=reshape(inputdata,[nx,nz_output,ny],order=[1,3,2])
 		deallocate(extra_data,inputdata)
 		
-! 		remove the low-res linear wind contribution effect
+		! remove the low-res linear wind contribution effect
 		call linear_perturb(bc,reverse_winds,options%advect_density)
 		
-! 		finally interpolate low res winds to the high resolutions grid
+		! finally interpolate low res winds to the high resolutions grid
 		call geo_interp(domain%u, bc%u,bc%u_geo%geolut,.FALSE.)
 		call geo_interp(domain%v, bc%v,bc%v_geo%geolut,.FALSE.)
 	end subroutine remove_linear_winds
