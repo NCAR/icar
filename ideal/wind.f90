@@ -161,9 +161,7 @@ contains
 		! else assumes even flow over the mountains
 
 		! rotate winds into the terrain following coordinate system
-		if (options%ideal) then
-			call rotate_wind_field(domain)
-		endif
+		call rotate_wind_field(domain)
 		! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
 		call balance_uvw(domain,options)
 		
