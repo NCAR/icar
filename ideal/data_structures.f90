@@ -29,10 +29,20 @@ module data_structures
 ! 		weights to use for each of the 4 surrounding gridpoints.  Sum(over axis 3) must be 1.0
 		real,allocatable,dimension(:,:,:)::w
 	end type geo_look_up_table
+
+! 	A look up table for vertical interpolation. from z with weight w
+	type vert_look_up_table
+! 		z index positions for all x,y,z points (x 2 for above and below z levels)
+		integer,allocatable,dimension(:,:,:,:)::z
+! 		weights to use for each of the two surrounding points.  Sum (over axis 1) must be 1.0
+		real,allocatable,dimension(:,:,:,:)::w
+	end type vert_look_up_table
 	
 !   generic interpolable type so geo interpolation routines will work on winds, domain, or boundary conditions. 
 	type interpolable_type
 		real, allocatable, dimension(:,:) :: lat,lon
+		real, allocatable, dimension(:,:,:) :: z
+		type(vert_look_up_table)::vert_lut
 		type(geo_look_up_table)::geolut
 	end type interpolable_type
 
@@ -94,7 +104,7 @@ module data_structures
 ! 	generic linearizable type so we can add linear wind field to domain or remove it from low-res (BC) U/V
 	type, extends(interpolable_type) :: linearizable_type
 ! 		linear theory computes u,v at z.  Trying rho to mitigate boussinesq approx... 
-		real, allocatable, dimension(:,:,:):: u,v,dz,z,rho
+		real, allocatable, dimension(:,:,:):: u,v,dz,rho
 		type(interpolable_type)::u_geo,v_geo
 		real, allocatable, dimension(:,:) :: terrain,dzdx,dzdy
 		complex(C_DOUBLE_COMPLEX), allocatable, dimension(:,:) :: fzs !FFT(terrain)

@@ -20,8 +20,9 @@ module init
 !       datasets, and make them conform to the expectations of the current system. 
 ! ----------------------------------------------------------------------------
 	use data_structures
-	use io_routines, only				: io_read2d, io_read3d, io_newunit,io_write3d
+	use io_routines, only				: io_read2d, io_read3d, io_newunit,io_write3d,io_write3di
 	use geo, only						: geo_LUT, geo_interp, geo_interp2d
+	use vertical_interpolation, only	: vLUT
 	use microphysics, only				: mp_init
 	use convection, only				: init_convection
 	use planetary_boundary_layer, only	: pbl_init
@@ -209,7 +210,7 @@ contains
 		mean_winds=.False.
 		external_winds=.False.
 		n_ext_winds=1
-		t_offset=300
+		t_offset=(-9999)
 		buffer=0
 		remove_lowres_linear=.False.
 		add_low_topo=.False.
@@ -228,8 +229,15 @@ contains
 		read(name_unit,nml=parameters)
 		close(name_unit)
 		
-		if (t_offset.eq.300) then
-			write(*,*), "Default t_offset=300"
+		if (t_offset.eq.(-9999)) then
+			write(*,*), "WARNING, WARNING, WARNING"
+			write(*,*), "WARNING, WARNING, WARNING"
+			write(*,*), ""
+			write(*,*), "	Using default t_offset=300"
+			write(*,*), ""
+			write(*,*), "WARNING, WARNING, WARNING"
+			write(*,*), "WARNING, WARNING, WARNING"
+			t_offset=300
 		endif
 		options%t_offset=t_offset
 		options%nfiles=nfiles
@@ -504,6 +512,38 @@ contains
 		
 	end subroutine domain_allocation
 	
+	subroutine copy_z(input,output,interpolate_dim)
+		implicit none
+		class(interpolable_type), intent(in) :: input
+		class(interpolable_type), intent(inout) :: output
+		integer,intent(in)::interpolate_dim
+		
+		integer::nxi,nyi,nzi,nxo,nyo,nzo
+		
+		! dimensions of the input data
+		nxi=size(input%z,1)
+		nzi=size(input%z,2)
+		nyi=size(input%z,3)
+		! dimensions of the output data
+		nxo=size(output%lat,1)
+		nzo=nzi
+		nyo=size(output%lat,2)
+		
+		allocate(output%z(nxo,nzo,nyo))
+		if (interpolate_dim==1) then
+			output%z(2:nxo-1,:,:)=(input%z(1:nxi-1,:,:) + input%z(2:nxi,:,:))/2
+			output%z(1,:,:)=input%z(1,:,:)
+			output%z(nxo,:,:)=input%z(nxi,:,:)
+		else if (interpolate_dim==3) then
+			output%z(:,:,2:nyo-1)=(input%z(:,:,1:nyi-1) + input%z(:,:,2:nyi))/2
+			output%z(:,:,1)=input%z(:,:,1)
+			output%z(:,:,nyo)=input%z(:,:,nyi)
+		else
+			write(*,*) "Can not interpolate z data over z dimension"
+		endif
+		
+	end subroutine copy_z
+	
 ! 	initialize the domain e.g. lat,lon,terrain, 3D z coordinate
 	subroutine init_domain(options, domain)
 		implicit none
@@ -569,6 +609,9 @@ contains
 			enddo
 			
 		endif
+		call copy_z(domain,domain%u_geo,interpolate_dim=1)
+		call copy_z(domain,domain%v_geo,interpolate_dim=3)
+		
 ! 		all other variables should be allocated and initialized to 0
 		call domain_allocation(domain,nx,nz,ny)
 		
@@ -615,6 +658,7 @@ contains
 		type(bc_type), intent(inout):: boundary
 		type(domain_type), intent(in):: domain
 		real,dimension(45)::fulldz
+		real,dimension(:,:,:),allocatable::zbase
 		integer::nx,ny,nz,i
 		
 ! 		these variables are required for any boundary/forcing file type
@@ -626,22 +670,32 @@ contains
 		call io_read2d(options%boundary_files(1),options%vlon,boundary%v_geo%lon)
 		call io_read2d(options%boundary_files(1),options%hgtvar,boundary%terrain)
 		
-		nx=size(boundary%lat,1)
-		nz=options%nz
-		ny=size(boundary%lat,2)
 		
-		allocate(boundary%z(nx,nz,ny))
-		allocate(boundary%dz(nx,nz,ny))
-		! assumes that vertical level thicknesses are identical in the forcing and model domain!
-		fulldz(:nz)=domain%dz(1,:nz,1)
-		! set up the bc_data dz and z variables (vertical levels)
-		boundary%dz(:,1,:)=fulldz(1)
-		! z is calculated from dz, dz is thickness of layers. 
-		boundary%z(:,1,:)=boundary%terrain+fulldz(1)/2
-		do i=2,nz
-			boundary%z(:,i,:)=boundary%z(:,i-1,:)+(fulldz(i)+fulldz(i-1))/2
-			boundary%dz(:,i,:)=fulldz(i)
-		enddo
+		call io_read3d(options%boundary_files(1),options%zvar,boundary%lowres_z)
+		if (options%zvar=="PH") then
+			call io_read3d(options%boundary_files(1),"PHB",zbase)
+			nx=size(boundary%lowres_z,1)
+			ny=size(boundary%lowres_z,2)
+			nz=size(boundary%lowres_z,3)
+			boundary%lowres_z=reshape((boundary%lowres_z+zbase)/g,[nx,nz,ny],order=[1,3,2])
+			deallocate(zbase)
+		endif
+		
+! 		nx=size(boundary%lat,1)
+		nz=options%nz
+! 		ny=size(boundary%lat,2)
+! 		allocate(boundary%z(nx,nz,ny))
+! 		allocate(boundary%dz(nx,nz,ny))
+! 		! assumes that vertical level thicknesses are identical in the forcing and model domain!
+! 		fulldz(:nz)=domain%dz(1,:nz,1)
+! 		! set up the bc_data dz and z variables (vertical levels)
+! 		boundary%dz(:,1,:)=fulldz(1)
+! 		! z is calculated from dz, dz is thickness of layers.
+! 		boundary%z(:,1,:)=boundary%terrain+fulldz(1)/2
+! 		do i=2,nz
+! 			boundary%z(:,i,:)=boundary%z(:,i-1,:)+(fulldz(i)+fulldz(i-1))/2
+! 			boundary%dz(:,i,:)=fulldz(i)
+! 		enddo
 		
 		! all other structures must be allocated and initialized, but will be set on a high-res grid
 		! u/v are seperate so we can read them on the low res grid and adjust/rm-linearwinds before interpolating
@@ -710,7 +764,32 @@ contains
 		call setup_extwinds(bc%ext_winds)
 	end subroutine init_ext_winds
 	
-	
+	subroutine swap_z(bc)
+		type(bc_type), intent(inout) :: bc
+		real,allocatable,dimension(:,:,:) :: tempz
+		integer::nx,nz,ny
+		nx=size(bc%lowres_z,1)
+		nz=size(bc%lowres_z,2)
+		ny=size(bc%lowres_z,3)
+		allocate(tempz(nx,nz,ny))
+		tempz=bc%lowres_z
+		
+		nx=size(bc%z,1)
+		nz=size(bc%z,2)
+		ny=size(bc%z,3)
+		deallocate(bc%lowres_z)
+		allocate(bc%lowres_z(nx,nz,ny))
+		bc%lowres_z=bc%z
+
+		nx=size(tempz,1)
+		nz=size(tempz,2)
+		ny=size(tempz,3)
+		deallocate(bc%z)
+		allocate(bc%z(nx,nz,ny))
+		bc%z=tempz
+		deallocate(tempz)
+		
+	end subroutine swap_z
 ! 	initialize the boundary condiditions (init data structures and GEOLUT)
 !	initializes external winds if necessary, adds low-res terrain to the high-res domain if desired
 	subroutine init_bc(options,domain,boundary)
@@ -746,8 +825,18 @@ contains
 		allocate(boundary%lowres_terrain(nx,ny))
 		call geo_interp2d(boundary%lowres_terrain,boundary%terrain,boundary%geolut)
 		
-		allocate(boundary%lowres_z(nx,nz,ny))
-		call geo_interp(boundary%lowres_z,boundary%z,boundary%geolut,.false.)
+		allocate(boundary%z(nx,nz,ny))
+		call geo_interp(boundary%z,boundary%lowres_z,boundary%geolut,.false.)
+		
+		nx=size(domain%u_geo%lat,1)
+		ny=size(domain%u_geo%lat,2)
+		allocate(boundary%u_geo%z(nx,nz,ny))
+		call geo_interp(boundary%u_geo%z,boundary%lowres_z,boundary%u_geo%geolut,.false.)
+		
+		nx=size(domain%v_geo%lat,1)
+		ny=size(domain%v_geo%lat,2)
+		allocate(boundary%v_geo%z(nx,nz,ny))
+		call geo_interp(boundary%v_geo%z,boundary%lowres_z,boundary%v_geo%geolut,.false.)
 		
 		if (options%add_low_topo) then
 			domain%terrain=domain%terrain+(boundary%lowres_terrain-sum(boundary%lowres_terrain) &
@@ -757,6 +846,22 @@ contains
 												 /size(boundary%lowres_terrain))/2.0
 			enddo
 		endif
+		write(*,*) "Setting up vertical interpolation Look Up Tables"
+		call vLUT(domain,boundary)
+		call vLUT(domain%u_geo,boundary%u_geo)
+		call vLUT(domain%v_geo,boundary%v_geo)
+		call io_write3di("vlutz.nc","z",boundary%vert_lut%z(1,:,:,:))
+		call io_write3d("vlutw.nc","w",boundary%vert_lut%w(1,:,:,:))
+		call io_write3di("u_vlutz.nc","z",boundary%u_geo%vert_lut%z(1,:,:,:))
+		call io_write3d("u_vlutw.nc","w",boundary%u_geo%vert_lut%w(1,:,:,:))
+		call io_write3di("v_vlutz.nc","z",boundary%v_geo%vert_lut%z(1,:,:,:))
+		call io_write3d("v_vlutw.nc","w",boundary%v_geo%vert_lut%w(1,:,:,:))
+		
+		call io_write3d("bc_lowresz.nc","data",boundary%lowres_z)
+		call io_write3d("bc_hiresz.nc","data",boundary%z)
+		call io_write3d("domain_z.nc","data",domain%z)
+
+		call swap_z(boundary)
 		
 	end subroutine init_bc
 end module

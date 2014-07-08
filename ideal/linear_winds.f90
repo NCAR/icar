@@ -125,6 +125,8 @@ contains
 ! 		then perform ffts etc in parallel
 ! 		finally destroy plans serially
 		m=1
+		print*,shape(domain%u)
+		print*,realnx,nz,realny
         do z=1,nz
             U=sum(domain%u(1:realnx-1,z,:))/((realnx-1)*realny)
             V=sum(domain%v(:,z,1:realny-1))/(realnx*(realny-1))
@@ -156,7 +158,7 @@ contains
 	    		where(real(msq)<0) m=mimag
 			
 	            ineta=j*domain%fzs*exp(j*m* &
-						sum(domain%z(:,z,:)-domain%z(:,1,:)+domain%dz(:,z,:)/2) &
+						sum(domain%z(:,z,:)-domain%z(:,1,:)) &
 						/(realnx*realny))
 				!  what=sig*ineta
 

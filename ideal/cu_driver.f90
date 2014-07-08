@@ -6,14 +6,14 @@ module convection
 									   RTHCUTEN,RQVCUTEN,RQCCUTEN,RQICUTEN,    &
 					                   RUCUTEN,RVCUTEN
 	logical,allocatable,dimension(:,:)::CU_ACT_FLAG
-    REAL,allocatable,DIMENSION(:,:) ::XLAND, RAINCV, PRATEC
-	real,dimension(44) :: ZNU = (/0.9975, 0.9915, 0.984, 0.975, 0.965, 0.9525, 0.9375, &
-											 0.92, 0.9, 0.88, 0.86, 0.835, 0.805, 0.775, 0.745,   &
-											 0.71, 0.67, 0.63, 0.59, 0.55, 0.51, 0.47, 0.43, 0.39,&
-											 0.355, 0.325, 0.295, 0.27, 0.25, 0.23, 0.21, 0.19,   &
-											 0.17, 0.15, 0.13, 0.11, 0.09100001, 0.074, 0.059,    &
-											 0.046, 0.035, 0.025, 0.015, 0.005/)
-
+    real,allocatable,dimension(:,:) ::XLAND, RAINCV, PRATEC
+	real,allocatable,dimension(:) :: ZNU ! = (/0.9975, 0.9915, 0.984, 0.975, 0.965, 0.9525, 0.9375, &
+										!	 0.92, 0.9, 0.88, 0.86, 0.835, 0.805, 0.775, 0.745,   &
+										!	 0.71, 0.67, 0.63, 0.59, 0.55, 0.51, 0.47, 0.43, 0.39,&
+										!	 0.355, 0.325, 0.295, 0.27, 0.25, 0.23, 0.21, 0.19,   &
+										!	 0.17, 0.15, 0.13, 0.11, 0.09100001, 0.074, 0.059,    &
+										!	 0.046, 0.035, 0.025, 0.015, 0.005/)
+										
 contains
 	subroutine znu_init(domain)
 		type(domain_type), intent(in) :: domain
@@ -27,6 +27,7 @@ contains
 		ptop=domain%p(xpt,n_levels,ypt)-(domain%p(xpt,n_levels-1,ypt)-domain%p(xpt,n_levels,ypt))/2.0 !NOT CORRECT
 		psfc=domain%p(xpt,1,ypt)+(domain%p(xpt,1,ypt)-domain%p(xpt,2,ypt))/2.0 !NOT CORRECT
 		ptop=max(ptop,10.0)
+		allocate(znu(n_levels))
 		do i=1,n_levels
 			znu(i)=(domain%p(xpt,i,ypt)-ptop)/(psfc-ptop)
 		enddo
