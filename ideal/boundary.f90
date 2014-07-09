@@ -482,8 +482,8 @@ contains
 				domain%pbl_height=0
 			endif
 		
-			call update_pressure(domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
-								 bc%lowres_z,domain%z)
+! 			call update_pressure(domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
+! 								 bc%lowres_z,domain%z)
 							 
 	 		nz=size(domain%th,2)
 			domainsize=size(domain%th,1)*size(domain%th,3)
@@ -671,8 +671,8 @@ contains
 			bc%next_domain%pbl_height=0
 		endif
 	
-		call update_pressure(bc%next_domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
-							 bc%lowres_z,domain%z)
+! 		call update_pressure(bc%next_domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
+! 							 bc%lowres_z,domain%z)
 		
 		nx=size(bc%next_domain%th,1)
 		nz=size(bc%next_domain%th,2)

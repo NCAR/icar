@@ -18,7 +18,7 @@ program real
 	use init                ! init_model, init_physics             Initialize model (not initial conditions)
 	use boundary_conditions ! bc_init,bc_update                    Boundary and initial conditions
 	use data_structures     ! *_type datatypes                     Data-types and physical "constants"
-! 	use output              ! write_domain                        *Moved internal to "step"
+	use output              ! write_domain                         Used to output initial model state
 	use time_step			! step                                 Advance the model forward in time
 	
 	implicit none
@@ -50,6 +50,11 @@ program real
 	model_time=(start_point-1)*options%in_dt
 	next_output=model_time+options%out_dt
 	call bc_update(domain,boundary,options)
+	
+	! write the initial state of the model (primarily useful for debugging)
+	if (.not.options%restart) then
+		call write_domain(domain,options,nint(model_time/options%out_dt))
+	endif
 !
 !-----------------------------------------
 !-----------------------------------------
@@ -67,9 +72,7 @@ program real
 		endif
 ! 		this is the meat of the model physics, run all the physics for the current time step looping over internal timesteps
 		call step(domain,options,boundary,model_time,next_output)
-! 		finally write the output for this timestep
-!       this is now handled internal to step to make sub-Input timesteps in output easy. 
-! 		call write_domain(domain,options,i)
+
 	end do
 !
 !-----------------------------------------
