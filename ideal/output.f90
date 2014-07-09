@@ -60,6 +60,7 @@ contains
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"references","Gutmann et al. 2014: The Intermediate Complexity Atmospheric Model. JHM (in prep)"))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"comment",trim(options%comment)))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"contact","Ethan Gutmann : gutmann@ucar.edu"))
+		call check( nf90_put_att(ncid,NF90_GLOBAL,"git",VERSION))
 		
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"dx",options%dx))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"microphysics",options%physics%microphysics))

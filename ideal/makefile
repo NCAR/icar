@@ -106,6 +106,10 @@ ifeq ($(LMOD_FAMILY_COMPILER),pgi)
 	INCNETCDF =  # netcdf includes are setup by the yellowstone module system
 endif	
 
+# get GIT version info
+GIT_VERSION := $(shell git describe --long --dirty --all --always | sed -e's/heads\///')
+
+
 ########################################################################################
 # 
 # Once machine specific information is entered and compiler is specified, 
@@ -286,7 +290,7 @@ boundary.o:boundary.f90 data_structures.o io_routines.o wind.o geo_reader.o vint
 ###################################################################
 
 output.o:output.f90 data_structures.o io_routines.o
-	${F90} ${FFLAGS} output.f90
+	${F90} ${FFLAGS} -DVERSION=\"$(GIT_VERSION)\" -fpp output.f90
 
 io_routines.o:io_routines.f90 data_structures.o
 	${F90} ${FFLAGS} io_routines.f90
