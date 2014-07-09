@@ -156,9 +156,6 @@ contains
 ! 			in case out_dt and in_dt arent even multiples of each other.  Make sure we don't over step
 			if ((model_time+dt)>end_time) then
 				dt=end_time-model_time
-				if (i<ntimesteps) then
-					write(*,*) "    shortening time step:",dt
-				endif
 			endif
 		enddo
 		

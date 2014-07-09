@@ -189,7 +189,6 @@ contains
 			if (boundary_only) then
 				call vinterp_boundary(hi,lo,vlut)
 				return
-				write(*,*) "SOMETHING IS WRONG"
 			endif
 		endif
 		
