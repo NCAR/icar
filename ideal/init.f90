@@ -2,8 +2,9 @@ module init
 ! ----------------------------------------------------------------------------
 ! 	Model Initialization includes allocating memory for boundary and domain 
 ! 		data structures.  It reads all of the options from the namelist
-! 		file or file.  It also reads in Lat/Lon and Terrain data. Finally
-! 		There is a driver routine to initialize all model physics packages
+! 		file (or files).  It also reads in Lat/Lon and Terrain data.  This module
+!		also sets up geographic (and vertical) look uptables for the forcing data
+! 		Finally, there is a driver routine to initialize all model physics packages
 ! 
 ! 	This module was initially written to read WRF output files as input.
 ! 		This should serve as a basis for any additional file types, and can be 
@@ -18,6 +19,7 @@ module init
 !
 !   The use of various python wrapper scripts in helpers/ makes it easy to add new
 !       datasets, and make them conform to the expectations of the current system. 
+!		For now there are no plans to near term plans to substantially modify this. 
 ! ----------------------------------------------------------------------------
 	use data_structures
 	use io_routines, only				: io_read2d, io_read3d, io_newunit,io_write3d,io_write3di
@@ -671,18 +673,22 @@ contains
 		call io_read2d(options%boundary_files(1),options%hgtvar,boundary%terrain)
 		
 		
-		call io_read3d(options%boundary_files(1),options%zvar,boundary%lowres_z)
+		call io_read3d(options%boundary_files(1),options%zvar,zbase)
+		nx=size(zbase,1)
+		ny=size(zbase,2)
+		nz=size(zbase,3)
+		allocate(boundary%lowres_z(nx,nz,ny))
+		boundary%lowres_z=reshape(zbase,[nx,nz,ny],order=[1,3,2])
+		deallocate(zbase)
 		if (options%zvar=="PH") then
 			call io_read3d(options%boundary_files(1),"PHB",zbase)
-			nx=size(boundary%lowres_z,1)
-			ny=size(boundary%lowres_z,2)
-			nz=size(boundary%lowres_z,3)
-			boundary%lowres_z=reshape((boundary%lowres_z+zbase)/g,[nx,nz,ny],order=[1,3,2])
+			
+			boundary%lowres_z=(boundary%lowres_z+reshape(zbase,[nx,nz,ny],order=[1,3,2])) / g
 			deallocate(zbase)
 		endif
 		
 ! 		nx=size(boundary%lat,1)
-		nz=options%nz
+! 		nz=options%nz
 ! 		ny=size(boundary%lat,2)
 ! 		allocate(boundary%z(nx,nz,ny))
 ! 		allocate(boundary%dz(nx,nz,ny))
@@ -709,6 +715,7 @@ contains
 		allocate(boundary%v(nx,nz,ny))
 		boundary%v=0
 		
+		nz=options%nz
 		nx=size(domain%lat,1)
 		ny=size(domain%lat,2)
 		
@@ -790,6 +797,35 @@ contains
 		deallocate(tempz)
 		
 	end subroutine swap_z
+
+	subroutine move_lut(inputgeo,outputgeo)
+		! move the contents of one geographic look up table into another
+		! moving implies deletion of the initial data, so inputgeo is destroyed
+		type(geo_look_up_table), intent(inout) :: inputgeo,outputgeo
+		integer::nx,ny,nz
+		nx=size(inputgeo%x,1)
+		ny=size(inputgeo%x,2)
+		nz=size(inputgeo%x,3)
+		
+		allocate(outputgeo%x(nx,ny,nz))
+		allocate(outputgeo%y(nx,ny,nz))
+		allocate(outputgeo%w(nx,ny,nz))
+		
+		outputgeo%x=inputgeo%x
+		outputgeo%y=inputgeo%y
+		outputgeo%w=inputgeo%w
+		
+		call destroy_lut(inputgeo)
+	end subroutine move_lut
+	
+	subroutine destroy_lut(geolut)
+		! deallocate all memory associated with a geographic look up table
+		type(geo_look_up_table), intent(inout) :: geolut
+		deallocate(geolut%x)
+		deallocate(geolut%y)
+		deallocate(geolut%w)
+	end subroutine destroy_lut
+	
 ! 	initialize the boundary condiditions (init data structures and GEOLUT)
 !	initializes external winds if necessary, adds low-res terrain to the high-res domain if desired
 	subroutine init_bc(options,domain,boundary)
@@ -797,6 +833,7 @@ contains
 		type(options_type), intent(in) :: options
 		type(domain_type), intent(inout):: domain
 		type(bc_type), intent(inout):: boundary
+		type(geo_look_up_table) :: u_temp_geo,v_temp_geo
 		integer::i,nx,ny,nz
 			
 		boundary%dx=options%dxlow
@@ -806,6 +843,12 @@ contains
 		
 ! 		create the geographic look up table used to calculate boundary forcing data
 		write(*,*) "Setting up domain geographic Look Up Tables"
+		! set up a look up table from low-res grid center to high-res u-offset coordinates
+		call geo_LUT(domain%u_geo,boundary)
+		call move_lut(boundary%geolut,u_temp_geo)
+		! set up a look up table from low-res grid center to high-res v-offset coordinates
+		call geo_LUT(domain%v_geo,boundary)
+		call move_lut(boundary%geolut,v_temp_geo)
 		call geo_LUT(domain,boundary)
 		call geo_LUT(domain%u_geo,boundary%u_geo)
 		call geo_LUT(domain%v_geo,boundary%v_geo)
@@ -821,22 +864,25 @@ contains
 		! can also be used in pressure adjustments on each time step...
 		nx=size(domain%terrain,1)
 		ny=size(domain%terrain,2)
-		nz=size(domain%z,2)
 		allocate(boundary%lowres_terrain(nx,ny))
 		call geo_interp2d(boundary%lowres_terrain,boundary%terrain,boundary%geolut)
 		
+		nz=size(boundary%lowres_z,2)
 		allocate(boundary%z(nx,nz,ny))
 		call geo_interp(boundary%z,boundary%lowres_z,boundary%geolut,.false.)
 		
 		nx=size(domain%u_geo%lat,1)
 		ny=size(domain%u_geo%lat,2)
 		allocate(boundary%u_geo%z(nx,nz,ny))
-		call geo_interp(boundary%u_geo%z,boundary%lowres_z,boundary%u_geo%geolut,.false.)
+		call geo_interp(boundary%u_geo%z,boundary%lowres_z,u_temp_geo,.false.)
 		
 		nx=size(domain%v_geo%lat,1)
 		ny=size(domain%v_geo%lat,2)
 		allocate(boundary%v_geo%z(nx,nz,ny))
-		call geo_interp(boundary%v_geo%z,boundary%lowres_z,boundary%v_geo%geolut,.false.)
+		call geo_interp(boundary%v_geo%z,boundary%lowres_z,v_temp_geo,.false.)
+		
+		call destroy_lut(v_temp_geo)
+		call destroy_lut(u_temp_geo)
 		
 		if (options%add_low_topo) then
 			domain%terrain=domain%terrain+(boundary%lowres_terrain-sum(boundary%lowres_terrain) &
@@ -850,13 +896,20 @@ contains
 		call vLUT(domain,boundary)
 		call vLUT(domain%u_geo,boundary%u_geo)
 		call vLUT(domain%v_geo,boundary%v_geo)
-		call io_write3di("vlutz.nc","z",boundary%vert_lut%z(1,:,:,:))
-		call io_write3d("vlutw.nc","w",boundary%vert_lut%w(1,:,:,:))
+		call io_write3di("vlutz1.nc","z",boundary%vert_lut%z(1,:,:,:))
+		call io_write3di("vlutz2.nc","z",boundary%vert_lut%z(2,:,:,:))
+		call io_write3d("vlutw1.nc","w",boundary%vert_lut%w(1,:,:,:))
+		call io_write3d("vlutw2.nc","w",boundary%vert_lut%w(2,:,:,:))
+		
 		call io_write3di("u_vlutz.nc","z",boundary%u_geo%vert_lut%z(1,:,:,:))
 		call io_write3d("u_vlutw.nc","w",boundary%u_geo%vert_lut%w(1,:,:,:))
 		call io_write3di("v_vlutz.nc","z",boundary%v_geo%vert_lut%z(1,:,:,:))
 		call io_write3d("v_vlutw.nc","w",boundary%v_geo%vert_lut%w(1,:,:,:))
 		
+		call io_write3d("bc_hires_z_u.nc","data",boundary%u_geo%z)
+		call io_write3d("bc_hires_z_v.nc","data",boundary%v_geo%z)
+		call io_write3d("domain_z_u.nc","data",domain%u_geo%z)
+		call io_write3d("domain_z_v.nc","data",domain%v_geo%z)
 		call io_write3d("bc_lowresz.nc","data",boundary%lowres_z)
 		call io_write3d("bc_hiresz.nc","data",boundary%z)
 		call io_write3d("domain_z.nc","data",domain%z)

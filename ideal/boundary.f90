@@ -27,7 +27,7 @@ module boundary_conditions
 	integer::ext_winds_steps_in_file,ext_winds_nfiles
 
 	integer::smoothing_window=14 !(bc%dx/domain%dx) * smooth_n_coarse
-	integer::smooth_n_coarse=2
+	integer::smooth_n_coarse=5
 	
 	public::bc_init
 	public::bc_update
@@ -123,7 +123,7 @@ contains
 			call smooth_wind(inputdata,1,2)
 			
 		! For Temperature, we may need to add an offset (maybe this should be supplied as a subroutine parameter)
-		else if ((varname==options%tvar).and.(options%t_offset>0)) then
+		else if ((varname==options%tvar).and.(options%t_offset.ne.0)) then
 			inputdata=inputdata+options%t_offset
 		
 		! For pressure, we may need to add a base pressure offset read from pbvar
@@ -140,24 +140,20 @@ contains
 		! 	deallocate(extra_data)
 		endif
 		
-		! interpolate data onto the high resolution grid after re-arranging the dimensions and subsetting z dim(?). 
-		nz=min(nz,size(highres,2))
+		! interpolate data onto the high resolution grid after re-arranging the dimensions. 
 		allocate(extra_data(nx,nz,ny))
-		do i=1,nz
-			extra_data(:,i,:)=inputdata(:,:,i)
-		enddo
-! 		extra_data=reshape(inputdata,[nx,nz,ny],order=[1,3,2])
+		extra_data=reshape(inputdata,[nx,nz,ny],order=[1,3,2])
 		
 		! first interpolate to a high res grid (temporarily stored in inputdata)
 		deallocate(inputdata)
-		allocate(inputdata(size(highres,1),size(highres,2),size(highres,3)))
+		allocate(inputdata(size(highres,1),nz,size(highres,3)))
 		call geo_interp(inputdata, &
 						extra_data, &
 						geolut,boundary_only)
 		! Then apply vertical interpolation on that grid
 		call vinterp(highres, &
 						inputdata, &
-						vlut)
+						vlut,boundary_only)
 		deallocate(extra_data)
 		deallocate(inputdata)
 						
@@ -264,41 +260,59 @@ contains
 		integer,dimension(io_maxDims)::dims !note, io_maxDims is included from io_routines.
 		real,allocatable,dimension(:,:,:)::inputdata,extra_data
 		logical :: reverse_winds=.TRUE.
-		integer :: nx,ny,nz_output
+		integer :: nx,ny,nz
 		character(len=255) :: outputfilename
 		
-		call io_getdims(filename,options%uvar, dims)
-		nx=dims(2)
-		ny=dims(3)
-		nz_output=size(bc%u,2)
-		
-		allocate(inputdata(nx,ny,nz_output))
+! 		call io_getdims(filename,options%uvar, dims)
+		! note dims(1)=ndims
+! 		nx=dims(2)
+! 		ny=dims(3)
+! 		print*, trim(filename), trim(options%uvar), " dimensions:"
+! 		print*, dims(1:4)
 		
 		! first read in the low-res U and V data directly
 		! load low-res U data
 		call io_read3d(filename,options%uvar,extra_data,curstep)
-		inputdata=extra_data(1:nx,1:ny,:nz_output)
-		call smooth_wind(inputdata,1,2)
-		bc%u=reshape(inputdata,[nx,nz_output,ny],order=[1,3,2])
-		deallocate(extra_data,inputdata)
+		nx=size(extra_data,1)
+		ny=size(extra_data,2)
+		nz=size(extra_data,3)
+		call smooth_wind(extra_data,1,2)
+		bc%u=reshape(extra_data,[nx,nz,ny],order=[1,3,2])
+		deallocate(extra_data)
 		
-		call io_getdims(filename,options%vvar, dims)
-		nx=dims(2)
-		ny=dims(3)
-		allocate(inputdata(nx,ny,nz_output))
+! 		call io_getdims(filename,options%vvar, dims)
+! 		print*, trim(filename), trim(options%vvar), " dimensions:"
+! 		print*, dims(1:4)
+! 		nx=dims(2)
+! 		ny=dims(3)
 		! load low-res V data
 		call io_read3d(filename,options%vvar,extra_data,curstep)
-		inputdata=extra_data(1:nx,1:ny,:nz_output)
-		call smooth_wind(inputdata,1,2)
-		bc%v=reshape(inputdata,[nx,nz_output,ny],order=[1,3,2])
-		deallocate(extra_data,inputdata)
+		nx=size(extra_data,1)
+		ny=size(extra_data,2)
+		nz=size(extra_data,3)
+		call smooth_wind(extra_data,1,2)
+		bc%v=reshape(extra_data,[nx,nz,ny],order=[1,3,2])
+		deallocate(extra_data)
 		
 		! remove the low-res linear wind contribution effect
 		call linear_perturb(bc,reverse_winds,options%advect_density)
 		
 		! finally interpolate low res winds to the high resolutions grid
-		call geo_interp(domain%u, bc%u,bc%u_geo%geolut,.FALSE.)
-		call geo_interp(domain%v, bc%v,bc%v_geo%geolut,.FALSE.)
+		nx=size(domain%u,1)
+		nz=size(bc%u,2)
+		ny=size(domain%u,3)
+		allocate(extra_data(nx,nz,ny))
+		call geo_interp(extra_data, bc%u,bc%u_geo%geolut,.FALSE.)
+		call vinterp(domain%u,extra_data,bc%u_geo%vert_lut)
+		deallocate(extra_data)
+		
+		nx=size(domain%v,1)
+		nz=size(bc%v,2)
+		ny=size(domain%v,3)
+		allocate(extra_data(nx,nz,ny))
+		call geo_interp(extra_data, bc%v,bc%v_geo%geolut,.FALSE.)
+		call vinterp(domain%v,extra_data,bc%v_geo%vert_lut)
+		deallocate(extra_data)
 	end subroutine remove_linear_winds
 	
 ! for test cases compute the mean winds and make them constant everywhere...
@@ -334,7 +348,6 @@ contains
 		character(len=*),intent(in)::restart_file
 		real,allocatable,dimension(:,:,:)::inputdata
 		
-		write(*,*) "WARNING Restart file may not be correct since setting U/V on staggered grids" 
 		call io_read3d(restart_file,"u",inputdata)
 		domain%u=inputdata
 		deallocate(inputdata)

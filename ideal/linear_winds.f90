@@ -125,8 +125,8 @@ contains
 ! 		then perform ffts etc in parallel
 ! 		finally destroy plans serially
 		m=1
-		print*,shape(domain%u)
-		print*,realnx,nz,realny
+! 		print*,shape(domain%u)
+! 		print*,realnx,nz,realny
         do z=1,nz
             U=sum(domain%u(1:realnx-1,z,:))/((realnx-1)*realny)
             V=sum(domain%v(:,z,1:realny-1))/(realnx*(realny-1))
@@ -214,8 +214,8 @@ contains
 			
 				if (present(debug).and.(z==1))then
 					if (debug) then
-						print*, (realnx-1)-(1)+1, (nx-buffer-1)-(1+buffer)+1, size(domain%u,3),(ny-buffer)-(1+buffer)+1
-						print*, (realnx-1)-(1)+1, (nx-buffer)-(2+buffer)+1, size(domain%u,3),(ny-buffer)-(1+buffer)+1
+! 						print*, (realnx-1)-(1)+1, (nx-buffer-1)-(1+buffer)+1, size(domain%u,3),(ny-buffer)-(1+buffer)+1
+! 						print*, (realnx-1)-(1)+1, (nx-buffer)-(2+buffer)+1, size(domain%u,3),(ny-buffer)-(1+buffer)+1
 						print*, "U=",U, "    V=",V
 						print*, "realnx=",realnx, "; nx=",nx, "; buffer=",buffer
 						print*, "realny=",realny, "; ny=",ny!, buffer
