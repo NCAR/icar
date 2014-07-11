@@ -7,11 +7,11 @@ contains
 	
 	subroutine init_model_diffs()
 		implicit none
-		integer::n=7
+		integer::n=8
 		
 		allocate(versionlist(n))
 		allocate(deltas(n))
-		versionlist=["0.5.1","0.5.2","0.6  ","0.7  ","0.7.1","0.7.2","0.7.3"]
+		versionlist=["0.5.1","0.5.2","0.6  ","0.7  ","0.7.1","0.7.2","0.7.3","0.8  "]
 		deltas=[ & 
 		"Earliest version in record                                                 "// & 
 		"                                       ", &
@@ -26,7 +26,9 @@ contains
 		"Removed x/y:min/max, Added dz_levels and z_info namelist                   "// &
 		"                                       ", &
 		"Added advect_density: boolean use                                          "// &
-		"                                       " &
+		"                                       ", &
+		"Vertical interpolation requires zvar (can be PH / geopotential height)     "// &
+		"      Also added smooth_wind_distance  " &
 		]
 		
 	end subroutine init_model_diffs

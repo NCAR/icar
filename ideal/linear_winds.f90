@@ -18,7 +18,7 @@ contains
         implicit none
         class(linearizable_type),intent(in)::domain
 ! 		for now just return a default value to simplify things a bit...
-        calc_stability=6.37e-6
+        calc_stability=6.37e-5
 ! 		below are better calculations for Nd... 
 !         real, parameter :: R  = 287.0
 !         real, parameter :: Rv = 461.0
@@ -216,6 +216,7 @@ contains
 					if (debug) then
 ! 						print*, (realnx-1)-(1)+1, (nx-buffer-1)-(1+buffer)+1, size(domain%u,3),(ny-buffer)-(1+buffer)+1
 ! 						print*, (realnx-1)-(1)+1, (nx-buffer)-(2+buffer)+1, size(domain%u,3),(ny-buffer)-(1+buffer)+1
+						print*, "Ndsq = ", Ndsq
 						print*, "U=",U, "    V=",V
 						print*, "realnx=",realnx, "; nx=",nx, "; buffer=",buffer
 						print*, "realny=",realny, "; ny=",ny!, buffer

@@ -170,7 +170,7 @@ module data_structures
 ! 		various integer parameters/options
 		integer :: ntimesteps,nz,nfiles,ext_winds_nfiles,restart_step
 ! 		various real parameters/options
-		real :: dx,dxlow,in_dt,out_dt,outputinterval,inputinterval
+		real :: dx,dxlow,in_dt,out_dt,outputinterval,inputinterval,smooth_wind_distance
 ! 		offset to temperature because WRF outputs potential temperature-300
 		real :: t_offset
 		real,allocatable,dimension(:)::dz_levels

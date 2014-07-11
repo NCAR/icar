@@ -63,6 +63,7 @@ contains
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"git",VERSION))
 		
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"dx",options%dx))
+		call check( nf90_put_att(ncid,NF90_GLOBAL,"wind_smoothing",options%smooth_wind_distance))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"microphysics",options%physics%microphysics))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"advection",options%physics%advection))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"boundarylayer",options%physics%boundarylayer))

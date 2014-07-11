@@ -196,7 +196,7 @@ contains
 		type(options_type), intent(inout) :: options
 		integer :: name_unit
 		
-		real :: dx,dxlow,outputinterval,inputinterval,t_offset
+		real :: dx,dxlow,outputinterval,inputinterval,t_offset,smooth_wind_distance
 		integer :: ntimesteps,nfiles,xmin,xmax,ymin,ymax
 		integer :: nz,n_ext_winds,buffer
 		logical :: ideal, readz,readdz,debug,external_winds,remove_lowres_linear,&
@@ -204,7 +204,7 @@ contains
 		
 		
 		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug,nfiles, &
-							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,&
+							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,smooth_wind_distance, &
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax
 		
 ! 		default parameters
@@ -226,6 +226,7 @@ contains
 		ymin=   1
 		xmax= (-1)
 		ymax= (-1)
+		smooth_wind_distance=-9999
 		
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=parameters)
@@ -241,7 +242,14 @@ contains
 			write(*,*), "WARNING, WARNING, WARNING"
 			t_offset=300
 		endif
+		if (smooth_wind_distance.eq.(-9999)) then
+			smooth_wind_distance=dxlow*3
+			write(*,*), "Default smoothing distance = lowdx*3 = ", smooth_wind_distance
+		endif
+		
 		options%t_offset=t_offset
+		options%smooth_wind_distance=smooth_wind_distance
+		
 		options%nfiles=nfiles
 		options%ntimesteps=ntimesteps
 		options%in_dt=inputinterval
@@ -290,9 +298,9 @@ contains
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=model_version)
 		close(name_unit)
-		if (version.ne."0.7.3") then
+		if (version.ne."0.8") then
 			write(*,*) "Model version does not match namelist version"
-			write(*,*) "  Model version: 0.7.3"
+			write(*,*) "  Model version: 0.8"
 			write(*,*) "  Namelist version: ",trim(version)
 			call print_model_diffs(version)
 			stop
