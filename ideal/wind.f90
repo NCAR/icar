@@ -156,7 +156,7 @@ contains
 		
 		! linear winds
 		if (options%physics%windtype==1) then
-			call linear_perturb(domain,.False.,options%advect_density)
+			call linear_perturb(domain,options%vert_smooth,.False.,options%advect_density)
 		endif
 		! else assumes even flow over the mountains
 
