@@ -166,7 +166,7 @@ module data_structures
 		logical :: ideal,readz,readdz, debug, external_winds,remove_lowres_linear,&
 				   mean_winds,mean_fields,restart,add_low_topo,advect_density
 ! 		buffer to remove from all sides of the high res grid supplied
-		integer :: buffer=0,ymin,ymax,xmin,xmax
+		integer :: buffer=0,ymin,ymax,xmin,xmax,vert_smooth
 ! 		various integer parameters/options
 		integer :: ntimesteps,nz,nfiles,ext_winds_nfiles,restart_step
 ! 		various real parameters/options

@@ -45,7 +45,7 @@ contains
 !         calc_stability=ndsq
     end function calc_stability
     
-    subroutine linear_winds(domain,Ndsq,reverse_flag,useDensity,debug)
+    subroutine linear_winds(domain,Ndsq,vsmooth,reverse_flag,useDensity,debug)
 !         # see Appendix A of Barstad and Gronas (2006) Tellus,58A,2-18
 !         # -------------------------------------------------------------------------------
 !         # Ndsq  = 0.003**2      # dry BV freq sq. was 0.01**2 initially, Idar suggested 0.005**2
@@ -58,12 +58,14 @@ contains
         implicit none
         class(linearizable_type),intent(inout)::domain
         real, intent(in)::Ndsq
+		integer, intent(in)::vsmooth ! number of layers to smooth winds over in the vertical
 		logical, intent(in), optional :: reverse_flag,useDensity,debug
 		logical::reverse
         complex,parameter :: j= (0,1)
         real::gain,offset !used in setting up k and l arrays
-        integer::nx,ny,nz,i,midpoint,z,realnx,realny,x,y
+        integer::nx,ny,nz,i,midpoint,z,realnx,realny,x,y,bottom,top
         real::U,V
+		real,dimension(:),allocatable::U_layers,V_layers,preU_layers,preV_layers
 		real,parameter::pi=3.1415927
         type(C_PTR) :: plan
         
@@ -76,9 +78,31 @@ contains
 		nx=size(domain%fzs,1)
 		nz=size(domain%u,2)
 		ny=size(domain%fzs,2)
+		allocate(U_layers(nz))
+		allocate(V_layers(nz))
+		allocate(preU_layers(nz))
+		allocate(preV_layers(nz))
 		
 		realnx=size(domain%z,1)
 		realny=size(domain%z,3)
+		
+		do i=1,nz
+			preU_layers(i)=sum(domain%u(:(realnx-1),i,:))/((realnx-1)*realny)
+			preV_layers(i)=sum(domain%v(:,i,:(realny-1)))/(realnx*(realny-1))
+		enddo
+		do i=1,nz
+			bottom=i-vsmooth
+			top=i+vsmooth
+			if (bottom<1) then
+				bottom=1
+			endif
+			if (top>nz) then
+				top=nz
+			endif
+			U_layers(i)=sum(preU_layers(bottom:top))/(top-bottom+1)
+			V_layers(i)=sum(preV_layers(bottom:top))/(top-bottom+1)
+		enddo
+		
         
 ! 		these should be stored in a separate data structure... and allocated/deallocated in a subroutine
 ! 		for now these are reallocated/deallocated everytime so we can use it for different sized domains (e.g. coarse and fine)
@@ -128,8 +152,8 @@ contains
 ! 		print*,shape(domain%u)
 ! 		print*,realnx,nz,realny
         do z=1,nz
-            U=sum(domain%u(1:realnx-1,z,:))/((realnx-1)*realny)
-            V=sum(domain%v(:,z,1:realny-1))/(realnx*(realny-1))
+            U=U_layers(i)
+            V=V_layers(i)
 !             U=domain%u(88,z,82)
 !             V=domain%v(88,z,82)
 			if ((abs(U)+abs(V))>0.5) then
@@ -205,11 +229,15 @@ contains
 				! if we are removing linear winds from a low res field, subtract u_hat v_hat instead
 				! real(real()) extracts real component of complex, then converts to a real data type (may not be necessary except for IO?)
 				if (reverse) then
-		            domain%u(1:realnx-1,z,:)=domain%u(1:realnx-1,z,:) - real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer  ) ))
-		            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) - real(real(v_hat(1+buffer:nx-buffer,  1+buffer:realny+buffer-1) ))
+		            domain%u(1:realnx-1,z,:)=domain%u(1:realnx-1,z,:) - &
+						real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer  ) ))
+		            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) - &
+						real(real(v_hat(1+buffer:nx-buffer,  1+buffer:realny+buffer-1) ))
 				else
-		            domain%u(1:realnx-1,z,:)=domain%u(1:realnx-1,z,:) + real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer  ) ))
-		            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) + real(real(v_hat(1+buffer:nx-buffer,  1+buffer:realny+buffer-1) ))
+		            domain%u(1:realnx-1,z,:)=domain%u(1:realnx-1,z,:) + &
+						real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer  ) ))
+		            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) + &
+						real(real(v_hat(1+buffer:nx-buffer,  1+buffer:realny+buffer-1) ))
 				endif
 			
 				if (present(debug).and.(z==1))then
@@ -231,6 +259,7 @@ contains
 		
 ! 		finally deallocate all temporary arrays that were created... should be a datastructure and a subroutine...
 		deallocate(k,l,kl,sig,denom,uhat,u_hat,vhat,v_hat,m,ineta,msq,mimag)
+		deallocate(U_layers,V_layers,preU_layers,preV_layers)
     end subroutine linear_winds
     
     
@@ -299,9 +328,10 @@ contains
 	
 ! 	Primary entry point!
 !   Called from the simple weather model to update the U,V,W wind fields based on linear theory
-    subroutine linear_perturb(domain,reverse,useDensity)
+    subroutine linear_perturb(domain,vsmooth,reverse,useDensity)
         implicit none
         class(linearizable_type),intent(inout)::domain
+		integer, intent(in) :: vsmooth
 		logical, intent(in), optional :: reverse,useDensity
 		logical, save :: debug=.True.
 		real::stability
@@ -314,7 +344,7 @@ contains
 ! 		Ndsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability
         stability=calc_stability(domain)
 		
-		call linear_winds(domain,stability,reverse,useDensity,debug)
+		call linear_winds(domain,stability,vsmooth,reverse,useDensity,debug)
 		debug=.False.
         
     end subroutine linear_perturb

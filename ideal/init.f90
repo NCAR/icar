@@ -197,7 +197,7 @@ contains
 		integer :: name_unit
 		
 		real :: dx,dxlow,outputinterval,inputinterval,t_offset,smooth_wind_distance
-		integer :: ntimesteps,nfiles,xmin,xmax,ymin,ymax
+		integer :: ntimesteps,nfiles,xmin,xmax,ymin,ymax,vert_smooth
 		integer :: nz,n_ext_winds,buffer
 		logical :: ideal, readz,readdz,debug,external_winds,remove_lowres_linear,&
 		           mean_winds,mean_fields,restart,add_low_topo,advect_density
@@ -205,7 +205,7 @@ contains
 		
 		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,smooth_wind_distance, &
-							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax
+							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth
 		
 ! 		default parameters
 		mean_fields=.False.
@@ -227,6 +227,7 @@ contains
 		xmax= (-1)
 		ymax= (-1)
 		smooth_wind_distance=-9999
+		vert_smooth=2
 		
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=parameters)
@@ -248,7 +249,18 @@ contains
 		endif
 		
 		options%t_offset=t_offset
+		if (smooth_wind_distance<0) then 
+			write(*,*) "Wind smoothing must be a positive number"
+			write(*,*) "smooth_wind_distance = ",smooth_wind_distance
+			stop
+		endif
 		options%smooth_wind_distance=smooth_wind_distance
+		if (vert_smooth<0) then 
+			write(*,*) "Vertical smoothing must be a positive integer"
+			write(*,*) "vert_smooth = ",vert_smooth
+			stop
+		endif
+		options%vert_smooth=vert_smooth
 		
 		options%nfiles=nfiles
 		options%ntimesteps=ntimesteps
