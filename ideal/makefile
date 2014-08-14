@@ -13,10 +13,10 @@
 # Variables that need to be set by the user: 
 # 
 # INSTALLDIR : default = ~/bin/ 
-# LIBFFT     : location of fftw libraries 		default = ~/usr/local/lib
-# INCFFT     : location of fftw headers 		default = ~/usr/local/include
-# LIBNETCDF  : location of netdcdf libraries 	default = compiler/machine dependant
-# INCNETCDF  : location of netcdf headers 		default = compiler/machine dependant
+# LIBFFT     : location of fftw libraries 		default = /usr/local/lib
+# INCFFT     : location of fftw headers 		default = /usr/local/include
+# LIBNETCDF  : location of netdcdf libraries 	default = compiler/machine dependant /usr/local/lib
+# INCNETCDF  : location of netcdf headers 		default = compiler/machine dependant /usr/local/include
 # 
 # Dependencies: fftw, netcdf
 #	FFTW is available here: http://www.fftw.org/
@@ -24,11 +24,11 @@
 #	netcdf is available here: http://www.unidata.ucar.edu/software/netcdf/
 # 		netcdf is a fortran library and must be compiled with the same fortran
 # 		compiler you are using to be compatible
+
 ###################################################################
 #  Specify where you want the resulting executable installed
 ###################################################################
 INSTALLDIR=~/bin/
-# DEBUG=debugompslow  # specify on the command line with "make DEBUG=debugompslow" (etc.)
 
 ###################################################################
 #   Various compiler specific flags, may need to edit
@@ -210,44 +210,64 @@ endif
 LFLAGS=$(LINK) $(PROF) ${LIBNETCDF} -L${LIBFFT}
 FFLAGS=$(COMP) $(PROF) ${INCNETCDF} -I${INCFFT}
 
-OBJS=	io_routines.o data_structures.o init.o mp_driver.o time_step.o boundary.o model_tracking.o \
-		mp_thompson.o cu_driver.o cu_tiedtke.o driver.o output.o wind.o linear_winds.o geo_reader.o lsm.o \
-		pbl_swm.o pbl_driver.o mp_simple.o advection_driver.o adv_mpdata.o advect.o fftshift.o vinterp.o
+# Model directories
+BUILD=build/
+PHYS=physics/
+IO=io/
+MAIN=main/
+UTIL=utilities/
 
-# IDEALOBJS=advect.o io_routines.o data_structures.o init.o mp_driver.o \
-# 		mp_thompson.o ideal.o output.o wind.o linear_winds.o geo_reader.o
+OBJS=	$(BUILD)io_routines.o \
+		$(BUILD)data_structures.o \
+		$(BUILD)init.o \
+		$(BUILD)mp_driver.o \
+		$(BUILD)time_step.o \
+		$(BUILD)boundary.o \
+		$(BUILD)model_tracking.o \
+		$(BUILD)mp_thompson.o \
+		$(BUILD)cu_driver.o \
+		$(BUILD)cu_tiedtke.o \
+		$(BUILD)driver.o \
+		$(BUILD)output.o \
+		$(BUILD)wind.o \
+		$(BUILD)linear_winds.o \
+		$(BUILD)geo_reader.o \
+		$(BUILD)lsm.o \
+		$(BUILD)pbl_swm.o \
+		$(BUILD)pbl_driver.o \
+		$(BUILD)mp_simple.o \
+		$(BUILD)advection_driver.o \
+		$(BUILD)adv_mpdata.o \
+		$(BUILD)advect.o \
+		$(BUILD)fftshift.o \
+		$(BUILD)vinterp.o
+
 # 
-# WINDOBJS=io_routines.o data_structures.o init.o tests/test_wind.o wind.o linear_winds.o output.o geo_reader.o
+# WINDOBJS=io_routines.o $(BUILD)data_structures.o $(BUILD)init.o tests/test_wind.o $(BUILD)wind.o $(BUILD)linear_winds.o $(BUILD)output.o $(BUILD)geo_reader.o
 # 
-# GEOOBJS=io_routines.o data_structures.o tests/test_geo.o geo_reader.o
+# GEOOBJS=io_routines.o $(BUILD)data_structures.o tests/test_geo.o $(BUILD)geo_reader.o
 
 ###################################################################
 #   User facing rules
 ###################################################################
 
-all:swim_real
+all:icar
 
-install:swim_real
-	cp swim_real ${INSTALLDIR}
+install:icar
+	cp icar ${INSTALLDIR}
 
 clean:
-	rm *.o *.mod
+	rm $(BUILD)*.o *.mod
 
 allclean:cleanall
 
 cleanall: clean
-	rm tests/*.o tests/*.mod swim_real swim_ideal fftshift_test #geo_test wind_test # test_init
+	rm tests/*.o tests/*.mod icar fftshift_test #geo_test wind_test # test_init
 
 tests: fftshift_tests #geo_test wind_test #test_init
 
-swim_real:${OBJS}
-	${F90} ${LFLAGS} ${OBJS} -o swim_real  -lm -lfftw3
-
-# real:${OBJS} 
-# 	${F90} ${LFLAGS} ${OBJS} -o swim_real  -lm -lfftw3
-
-# ideal:${IDEALOBJS} 
-# 	${F90} ${LFLAGS} ${IDEALOBJS} -o swim_ideal  -lm -lfftw3
+icar:${OBJS}
+	${F90} ${LFLAGS} ${OBJS} -o icar  -lm -lfftw3
 
 ###################################################################
 #   test cases
@@ -257,126 +277,129 @@ swim_real:${OBJS}
 # 
 # wind_test:${WINDOBJS}
 # 	${F90} ${LFLAGS} ${WINDOBJS} -o wind_test -lfftw3 -lm
-fftshift_test: tests/test_fftshift.o fftshift.o
-	${F90} ${LFLAGS} tests/test_fftshift.o fftshift.o -o fftshift_test
+#
+fftshift_test: tests/test_fftshift.o $(BUILD)fftshift.o
+	${F90} ${LFLAGS} tests/test_fftshift.o $(BUILD)fftshift.o -o fftshift_test
 
 
 ###################################################################
 #   driver code for 
 ###################################################################
 
-driver.o:driver.f90 advection_driver.o data_structures.o init.o output.o wind.o boundary.o
-	${F90} ${FFLAGS} driver.f90
+$(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)advection_driver.o $(BUILD)data_structures.o $(BUILD)init.o \
+					$(BUILD)output.o $(BUILD)wind.o $(BUILD)boundary.o
+	${F90} ${FFLAGS} $(MAIN)driver.f90 -o $(BUILD)driver.o
 
-ideal.o:ideal.f90 advect.o data_structures.o init.o mp_driver.o output.o wind.o boundary.o
-	${F90} ${FFLAGS} ideal.f90
 
 ###################################################################
 #   Core initial and boundary condition and time steping
 ###################################################################
 
-init.o:init.f90 data_structures.o io_routines.o geo_reader.o vinterp.o model_tracking.o mp_driver.o cu_driver.o pbl_driver.o wind.o
-	${F90} ${FFLAGS} init.f90
+$(BUILD)init.o:$(MAIN)init.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)geo_reader.o $(BUILD)vinterp.o \
+					$(BUILD)model_tracking.o $(BUILD)mp_driver.o $(BUILD)cu_driver.o $(BUILD)pbl_driver.o $(BUILD)wind.o
+	${F90} ${FFLAGS} $(MAIN)init.f90 -o $(BUILD)init.o
 
-time_step.o:time_step.f90 data_structures.o mp_driver.o wind.o advection_driver.o output.o lsm.o cu_driver.o pbl_driver.o
-	${F90} ${FFLAGS} time_step.f90
+$(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)mp_driver.o $(BUILD)wind.o $(BUILD)advection_driver.o \
+					$(BUILD)output.o $(BUILD)lsm.o $(BUILD)cu_driver.o $(BUILD)pbl_driver.o
+	${F90} ${FFLAGS} $(MAIN)time_step.f90 -o $(BUILD)time_step.o
 
-boundary.o:boundary.f90 data_structures.o io_routines.o wind.o geo_reader.o vinterp.o output.o linear_winds.o
-	${F90} ${FFLAGS} boundary.f90
+$(BUILD)boundary.o:$(MAIN)boundary.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)wind.o $(BUILD)geo_reader.o \
+					$(BUILD)vinterp.o $(BUILD)output.o $(BUILD)linear_winds.o
+	${F90} ${FFLAGS} $(MAIN)boundary.f90 -o $(BUILD)boundary.o
 
 
 ###################################################################
 #   I/O routines
 ###################################################################
 
-output.o:output.f90 data_structures.o io_routines.o
-	${F90} ${FFLAGS} -DVERSION=\"$(GIT_VERSION)\" -fpp output.f90
+$(BUILD)output.o:$(IO)output.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o
+	${F90} ${FFLAGS} -DVERSION=\"$(GIT_VERSION)\" -fpp $(IO)output.f90 -o $(BUILD)output.o
 
-io_routines.o:io_routines.f90 data_structures.o
-	${F90} ${FFLAGS} io_routines.f90
+$(BUILD)io_routines.o:$(IO)io_routines.f90 $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(IO)io_routines.f90 -o $(BUILD)io_routines.o
 
-geo_reader.o:geo_reader.f90 data_structures.o
-	${F90} ${FFLAGS} geo_reader.f90
+$(BUILD)geo_reader.o:$(UTIL)geo_reader.f90 $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(UTIL)geo_reader.f90 -o $(BUILD)geo_reader.o
 
-vinterp.o: vinterp.f90 data_structures.o
-	${F90} ${FFLAGS} vinterp.f90
+$(BUILD)vinterp.o: $(UTIL)vinterp.f90 $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(UTIL)vinterp.f90 -o $(BUILD)vinterp.o
 	
 
 ###################################################################
 #   Microphysics code
 ###################################################################
 
-mp_driver.o:mp_thompson.o mp_simple.o data_structures.o mp_driver.f90
-	${F90} ${FFLAGS} mp_driver.f90
+$(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_thompson.o $(BUILD)mp_simple.o $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(PHYS)mp_driver.f90 -o $(BUILD)mp_driver.o
 
-mp_thompson.o:mp_thompson.f90
-	${F90} ${FFLAGS} mp_thompson.f90
+$(BUILD)mp_thompson.o:$(PHYS)mp_thompson.f90
+	${F90} ${FFLAGS} $(PHYS)mp_thompson.f90 -o $(BUILD)mp_thompson.o
 
-mp_simple.o:mp_simple.f90 data_structures.o
-	${F90} ${FFLAGS} mp_simple.f90
+$(BUILD)mp_simple.o:$(PHYS)mp_simple.f90 $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(PHYS)mp_simple.f90 -o $(BUILD)mp_simple.o
 	
 ###################################################################
 #   Convection code
 ###################################################################
-cu_driver.o:cu_tiedtke.o data_structures.o cu_driver.f90
-	${F90} ${FFLAGS} cu_driver.f90
+$(BUILD)cu_driver.o:$(PHYS)cu_driver.f90 $(BUILD)cu_tiedtke.o $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(PHYS)cu_driver.f90 -o $(BUILD)cu_driver.o
 
-cu_tiedtke.o:cu_tiedtke.f90
-	${F90} ${FFLAGS} cu_tiedtke.f90
+$(BUILD)cu_tiedtke.o:$(PHYS)cu_tiedtke.f90
+	${F90} ${FFLAGS} $(PHYS)cu_tiedtke.f90 -o $(BUILD)cu_tiedtke.o
 
 ###################################################################
 #   Land Surface code
 ###################################################################
-lsm.o: lsm.f90 data_structures.o
-	${F90} ${FFLAGS} lsm.f90
+$(BUILD)lsm.o: $(PHYS)lsm.f90 $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(PHYS)lsm.f90 -o $(BUILD)lsm.o
 
 ###################################################################
 #   Planetary Boundary Layer code
 ###################################################################
-pbl_driver.o: pbl_driver.f90 pbl_swm.o data_structures.o
-	${F90} ${FFLAGS} pbl_driver.f90
+$(BUILD)pbl_driver.o: $(PHYS)pbl_driver.f90 $(BUILD)pbl_swm.o $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(PHYS)pbl_driver.f90 -o $(BUILD)pbl_driver.o
 
-pbl_swm.o: pbl_swm.f90 data_structures.o
-	${F90} ${FFLAGS} pbl_swm.f90
+$(BUILD)pbl_swm.o: $(PHYS)pbl_swm.f90 $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(PHYS)pbl_swm.f90 -o $(BUILD)pbl_swm.o
 
 
 ###################################################################
 #   Advection related code
 ###################################################################
-advection_driver.o:advection_driver.f90 data_structures.o advect.o adv_mpdata.o
-	${F90} ${FFLAGS} advection_driver.f90
+$(BUILD)advection_driver.o:$(PHYS)advection_driver.f90 $(BUILD)data_structures.o $(BUILD)advect.o $(BUILD)adv_mpdata.o
+	${F90} ${FFLAGS} $(PHYS)advection_driver.f90 -o $(BUILD)advection_driver.o
 
-advect.o:advect.f90 data_structures.o
-	${F90} ${FFLAGS} advect.f90
+$(BUILD)advect.o:$(PHYS)advect.f90 $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(PHYS)advect.f90 -o $(BUILD)advect.o
 
-adv_mpdata.o:adv_mpdata.f90 data_structures.o
-	${F90} ${FFLAGS} adv_mpdata.f90
+$(BUILD)adv_mpdata.o:$(PHYS)adv_mpdata.f90 $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(PHYS)adv_mpdata.f90 -o $(BUILD)adv_mpdata.o
 
 
 ###################################################################
 #   Wind related code
 ###################################################################
-wind.o:wind.f90 linear_winds.o data_structures.o
-	${F90} ${FFLAGS} wind.f90
+$(BUILD)wind.o:$(PHYS)wind.f90 $(BUILD)linear_winds.o $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(PHYS)wind.f90 -o $(BUILD)wind.o
 
-linear_winds.o:linear_winds.f90 io_routines.o data_structures.o output.o fftshift.o
-	${F90} ${FFLAGS} linear_winds.f90
+$(BUILD)linear_winds.o:$(PHYS)linear_winds.f90 $(BUILD)io_routines.o $(BUILD)data_structures.o $(BUILD)output.o $(BUILD)fftshift.o
+	${F90} ${FFLAGS} $(PHYS)linear_winds.f90 -o $(BUILD)linear_winds.o
 
-fftshift.o:fftshift.f90
-	${F90} ${FFLAGS} fftshift.f90
+$(BUILD)fftshift.o:$(UTIL)fftshift.f90
+	${F90} ${FFLAGS} $(UTIL)fftshift.f90 -o $(BUILD)fftshift.o
 
 
 ###################################################################
 #   Generic data structures, used by almost everything
 ###################################################################
-data_structures.o:data_structures.f90
-	${F90} ${FFLAGS} data_structures.f90
+$(BUILD)data_structures.o:$(MAIN)data_structures.f90
+	${F90} ${FFLAGS} $(MAIN)data_structures.f90 -o $(BUILD)data_structures.o
 
 ###################################################################
 #   Keep track of model versions for user information
 ###################################################################
-model_tracking.o:model_tracking.f90
-	${F90} ${FFLAGS} model_tracking.f90
+$(BUILD)model_tracking.o:$(MAIN)model_tracking.f90
+	${F90} ${FFLAGS} $(MAIN)model_tracking.f90 -o $(BUILD)model_tracking.o
 
 ###################################################################
 #   Unit tests (may only work at their git tags?)
@@ -385,15 +408,15 @@ model_tracking.o:model_tracking.f90
 # NOTE: too many changes in data structures/init have definitely broken these tests, could be fixed if necessary, 
 #       but not worth the time right now. 
 #
-tests/test_fftshift.o:fftshift.o tests/test_fftshift.f90
-	${F90} ${FFLAGS} tests/test_fftshift.f90 -o tests/test_fftshift.o
+tests/test_$(BUILD)fftshift.o:$(BUILD)fftshift.o tests/test_$(UTIL)fftshift.f90
+	${F90} ${FFLAGS} tests/test_$(UTIL)fftshift.f90 -o tests/test_fftshift.o
 	
-# tests/test_wind.o:tests/test_wind.f90 wind.o linear_winds.o
-# 	${F90} ${FFLAGS} tests/test_wind.f90 -o tests/test_wind.o
+# tests/test_$(BUILD)wind.o:tests/test_$(PHYS)wind.f90 $(BUILD)wind.o $(BUILD)linear_winds.o
+# 	${F90} ${FFLAGS} tests/test_$(PHYS)wind.f90 -o tests/test_$(BUILD)wind.o
 # 
-# tests/test_geo.o:tests/test_geo.f90 geo_reader.o data_structures.o
+# tests/test_geo.o:tests/test_geo.f90 $(BUILD)geo_reader.o $(BUILD)data_structures.o
 # 	${F90} ${FFLAGS} tests/test_geo.f90 -o tests/test_geo.o
 # 
-# test_init:tests/test_init.f90 init.o
-# 	${F90} ${FFLAGS} tests/test_init.f90 io_routines.f90 data_structures.f90 init.f90 -o test_init
+# test_init:tests/test_$(MAIN)init.f90 $(BUILD)init.o
+# 	${F90} ${FFLAGS} tests/test_$(MAIN)init.f90 $(IO)io_routines.f90 $(MAIN)data_structures.f90 $(MAIN)init.f90 -o test_init
 
