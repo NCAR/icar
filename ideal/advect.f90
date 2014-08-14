@@ -3,7 +3,7 @@ module adv_upwind
     
     implicit none
 	private
-	real,dimension(:,:,:),allocatable::U_m,V_m,W_m
+	real,dimension(:,:,:),allocatable::U_m,V_m,W_m,lastqv_m
 	public::upwind
 	
 contains
@@ -116,8 +116,9 @@ contains
 			allocate(U_m(nx-1,nz,ny))
 			allocate(V_m(nx,nz,ny-1))
 			allocate(W_m(nx,nz,ny))
+			allocate(lastqv_m(nx,nz,ny))
 		endif
-		
+		lastqv_m=domain%qv
 ! 		calculate U,V,W normalized for dt/dx (dx**2 for density advection so we can skip a /dx in the actual advection code)
 		if (options%advect_density) then
 			U_m=domain%ur(1:nx-1,:,:)*(dt/dx**2)
@@ -141,6 +142,8 @@ contains
 			call advect3d(domain%nice, U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
 			call advect3d(domain%nrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
 		endif
+		
+		domain%qv_adv_tendency=(domain%qv-lastqv_m)/dt
 	end subroutine upwind
 	
 end module adv_upwind

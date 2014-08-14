@@ -115,6 +115,7 @@ module data_structures
 	type, extends(linearizable_type) :: domain_type
 		real, allocatable, dimension(:,:,:) :: p,th,w,pii,ur,vr,wr
 		real, allocatable, dimension(:,:,:) :: qv,cloud,ice,nice,qrain,nrain,qsnow,qgrau
+		real, allocatable, dimension(:,:,:) :: qv_adv_tendency,qv_pbl_tendency
 		real, allocatable, dimension(:,:) :: rain,crain,snow,graupel,sensible_heat,latent_heat,pbl_height,landmask
 		
 		real, allocatable,dimension(:,:) :: sintheta,costheta

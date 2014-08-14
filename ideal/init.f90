@@ -515,6 +515,10 @@ contains
 		domain%qgrau=0
 		allocate(domain%pii(nx,nz,ny))
 		domain%pii=0
+		allocate(domain%qv_adv_tendency(nx,nz,ny))
+		domain%qv_adv_tendency=0
+		allocate(domain%qv_pbl_tendency(nx,nz,ny))
+		domain%qv_pbl_tendency=0
 		allocate(domain%rho(nx,nz,ny))
 		domain%rho=0
 		allocate(domain%rain(nx,ny))
@@ -916,23 +920,23 @@ contains
 		call vLUT(domain,boundary)
 		call vLUT(domain%u_geo,boundary%u_geo)
 		call vLUT(domain%v_geo,boundary%v_geo)
-		call io_write3di("vlutz1.nc","z",boundary%vert_lut%z(1,:,:,:))
-		call io_write3di("vlutz2.nc","z",boundary%vert_lut%z(2,:,:,:))
-		call io_write3d("vlutw1.nc","w",boundary%vert_lut%w(1,:,:,:))
-		call io_write3d("vlutw2.nc","w",boundary%vert_lut%w(2,:,:,:))
-		
-		call io_write3di("u_vlutz.nc","z",boundary%u_geo%vert_lut%z(1,:,:,:))
-		call io_write3d("u_vlutw.nc","w",boundary%u_geo%vert_lut%w(1,:,:,:))
-		call io_write3di("v_vlutz.nc","z",boundary%v_geo%vert_lut%z(1,:,:,:))
-		call io_write3d("v_vlutw.nc","w",boundary%v_geo%vert_lut%w(1,:,:,:))
-		
-		call io_write3d("bc_hires_z_u.nc","data",boundary%u_geo%z)
-		call io_write3d("bc_hires_z_v.nc","data",boundary%v_geo%z)
-		call io_write3d("domain_z_u.nc","data",domain%u_geo%z)
-		call io_write3d("domain_z_v.nc","data",domain%v_geo%z)
-		call io_write3d("bc_lowresz.nc","data",boundary%lowres_z)
-		call io_write3d("bc_hiresz.nc","data",boundary%z)
-		call io_write3d("domain_z.nc","data",domain%z)
+! 		call io_write3di("vlutz1.nc","z",boundary%vert_lut%z(1,:,:,:))
+! 		call io_write3di("vlutz2.nc","z",boundary%vert_lut%z(2,:,:,:))
+! 		call io_write3d("vlutw1.nc","w",boundary%vert_lut%w(1,:,:,:))
+! 		call io_write3d("vlutw2.nc","w",boundary%vert_lut%w(2,:,:,:))
+!
+! 		call io_write3di("u_vlutz.nc","z",boundary%u_geo%vert_lut%z(1,:,:,:))
+! 		call io_write3d("u_vlutw.nc","w",boundary%u_geo%vert_lut%w(1,:,:,:))
+! 		call io_write3di("v_vlutz.nc","z",boundary%v_geo%vert_lut%z(1,:,:,:))
+! 		call io_write3d("v_vlutw.nc","w",boundary%v_geo%vert_lut%w(1,:,:,:))
+!
+! 		call io_write3d("bc_hires_z_u.nc","data",boundary%u_geo%z)
+! 		call io_write3d("bc_hires_z_v.nc","data",boundary%v_geo%z)
+! 		call io_write3d("domain_z_u.nc","data",domain%u_geo%z)
+! 		call io_write3d("domain_z_v.nc","data",domain%v_geo%z)
+! 		call io_write3d("bc_lowresz.nc","data",boundary%lowres_z)
+! 		call io_write3d("bc_hiresz.nc","data",boundary%z)
+! 		call io_write3d("domain_z.nc","data",domain%z)
 
 		call swap_z(boundary)
 		

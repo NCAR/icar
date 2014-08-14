@@ -2,7 +2,7 @@ module convection
 	use data_structures
 	use module_cu_tiedtke
 	implicit none
-	real,allocatable,dimension(:,:,:)::pii,p8,U3D,V3D,T3D,zed1,zed2,rho,                 &
+	real,allocatable,dimension(:,:,:)::p8,U3D,V3D,T3D, & !zed1,zed2,rho,pii,                 &
 									   RTHCUTEN,RQVCUTEN,RQCCUTEN,RQICUTEN,    &
 					                   RUCUTEN,RVCUTEN
 	logical,allocatable,dimension(:,:)::CU_ACT_FLAG
@@ -90,15 +90,15 @@ subroutine convect(domain,options,dt_in)
 	jds=1
 	jde=size(domain%qv,3)
 	
-	if (.not.allocated(pii)) then
-		allocate(pii(ids:ide,kds:kde,jds:jde))
-		pii=1
-		allocate(rho(ids:ide,kds:kde,jds:jde))
-		rho=1
-		allocate(zed1(ids:ide,kds:kde,jds:jde))
-		zed1=0
-		allocate(zed2(ids:ide,kds:kde,jds:jde))
-		zed2=0
+	if (.not.allocated(p8)) then
+! 		allocate(pii(ids:ide,kds:kde,jds:jde))
+! 		pii=1
+! 		allocate(rho(ids:ide,kds:kde,jds:jde))
+! 		rho=1
+! 		allocate(zed1(ids:ide,kds:kde,jds:jde))
+! 		zed1=0
+! 		allocate(zed2(ids:ide,kds:kde,jds:jde))
+! 		zed2=0
 		allocate(p8(ids:ide,kds:kde,jds:jde))
 		p8=0
 		allocate(U3D(ids:ide,kds:kde,jds:jde))
@@ -128,7 +128,7 @@ subroutine convect(domain,options,dt_in)
 		!$omp default(shared)
 		!$omp do schedule(static)
 		do i=ids,ide
-			pii(i,:,:)=1.0/((100000.0/domain%p(i,:,:))**(R/cp))
+! 			pii(i,:,:)=1.0/((100000.0/domain%p(i,:,:))**(R/cp))
 			RAINCV(i,:)=0
 			p8(i,:kde-1,:)=(domain%p(i,:kde-1,:)+domain%p(i,kds+1:,:))/2
 			p8(i,kde,:)=p8(i,kde-1,:)+(p8(i,kde-1,:)-p8(i,kde-2,:))
@@ -136,32 +136,39 @@ subroutine convect(domain,options,dt_in)
 				U3D(i,:,:)=(domain%u(i-1,:,:)+domain%u(i,:,:))/2
 			endif
 			V3D(i,:,:)=(domain%v(i,:,jds:jde)+domain%v(i,:,jds+1:jde+1))/2
-			T3D(i,:,:)=domain%th(i,:,:)*pii(i,:,:)
-			rho(i,:,:)=domain%p(i,:,:)/(R*T3D(i,:,:))
+			T3D(i,:,:)=domain%th(i,:,:)*domain%pii(i,:,:)
+! 			rho(i,:,:)=domain%p(i,:,:)/(R*T3D(i,:,:))
 		enddo
 		!$omp end do
 		!$omp end parallel	
-		
+
 ! 		write(*,*) "Entering Tiedtke"
+! 		write(*,*) "Advection tendency"
+! 		write(*,*) MAXVAL(domain%qv_adv_tendency(2:ide-1,:,2:jde-1)), MINVAL(domain%qv_adv_tendency(2:ide-1,:,2:jde-1))
+! 		write(*,*) "PBL tendency"
+! 		write(*,*) MAXVAL(domain%qv_pbl_tendency(2:ide-1,:,2:jde-1)), MINVAL(domain%qv_pbl_tendency(2:ide-1,:,2:jde-1))
 		call CU_TIEDTKE(                                          &
                  dt_in,itimestep,STEPCU                           &
                 ,RAINCV,PRATEC,domain%latent_heat/LH_vaporization,domain%sensible_heat,ZNU(kds:kde) &
-                ,U3D,V3D,domain%w,T3D,domain%qv,domain%cloud,domain%ice,pii,rho &
-                ,zed1,zed2                                        &
+                ,U3D,V3D,domain%w,T3D,domain%qv,domain%cloud,domain%ice,domain%pii,domain%rho &
+                ,domain%qv_adv_tendency,domain%qv_pbl_tendency    &
                 ,domain%dz,p8,domain%p,XLAND,CU_ACT_FLAG          &
-                ,ids,ide, jds,jde, kds,kde-1                      &
+                ,ids+1,ide-1, jds+1,jde-1, kds,kde-1              &
                 ,ids,ide, jds,jde, kds,kde                        &
-                ,ids,ide, jds,jde, kds,kde-1				      &
+                ,ids+1,ide-1, jds+1,jde-1, kds,kde-1		      &
                 ,RTHCUTEN,RQVCUTEN,RQCCUTEN,RQICUTEN              &
                 ,RUCUTEN, RVCUTEN                                 &
                 ,.True.,.True.,.True.,.True.,.True.               &
 				)
+! 		write(*,*) "QV range"
+! 		write(*,*) MAXVAL(RQVCUTEN(2:ide-1,:,2:jde-1)), MINVAL(RQVCUTEN(2:ide-1,:,2:jde-1))
 		domain%qv=domain%qv+RQVCUTEN*dt_in
 		domain%cloud=domain%cloud+RQCCUTEN*dt_in
 		domain%th=domain%th+RTHCUTEN*dt_in
 		domain%ice=domain%ice+RQICUTEN*dt_in
 		domain%rain=domain%rain+RAINCV
 		domain%crain=domain%crain+RAINCV
+! 		write(*,*) MAXVAL(domain%qv(2:ide-1,:,2:jde-1)), MINVAL(domain%qv(2:ide-1,:,2:jde-1))
 	endif
 	
 	

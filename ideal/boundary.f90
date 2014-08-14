@@ -94,7 +94,7 @@ contains
 ! 	generic routine to read a low res variable (varname) from a netcdf file (filename) at the current time step (curstep)
 !   then interpolate it to the high res grid either in 3D or at the boundaries only (boundary_only)
 ! 	applies modifications specificaly for U,V,T, and P variables
-	subroutine read_var(highres,filename,varname,geolut,vlut,curstep,boundary_only,options)
+	subroutine read_var(highres,filename,varname,geolut,vlut,curstep,boundary_only,options, z_lo, z_hi)
 		implicit none
 		real,dimension(:,:,:),intent(inout)::highres
 		character(len=*),intent(in) :: filename,varname
@@ -103,6 +103,7 @@ contains
 		integer,intent(in)::curstep
 		logical, intent(in) :: boundary_only
 		type(options_type),intent(in)::options
+		real,dimension(:,:,:),intent(in), optional ::z_lo, z_hi
 		
 		real,dimension(:,:,:),allocatable :: inputdata,extra_data
 		integer,dimension(io_maxDims)::dims
@@ -150,10 +151,15 @@ contains
 		call geo_interp(inputdata, &
 						extra_data, &
 						geolut,boundary_only)
+		
 		! Then apply vertical interpolation on that grid
-		call vinterp(highres, &
-						inputdata, &
-						vlut,boundary_only)
+		if (varname==options%pvar) then
+			highres=inputdata(:,:size(highres,2),:)
+			call update_pressure(highres,z_lo,z_hi)
+		else
+			call vinterp(highres, inputdata, &
+						 vlut,boundary_only)
+		endif
 		deallocate(extra_data)
 		deallocate(inputdata)
 						
@@ -466,7 +472,7 @@ contains
 					call smooth_wind(domain%v,smoothing_window,3)
 				endif
 			endif
-			call read_var(domain%p,    file_list(curfile),options%pvar,      bc%geolut,bc%vert_lut,curstep,boundary_value,options)
+			call read_var(domain%p,    file_list(curfile),options%pvar,      bc%geolut,bc%vert_lut,curstep,boundary_value,options,bc%lowres_z,domain%z)
 			call read_var(domain%th,   file_list(curfile),options%tvar,      bc%geolut,bc%vert_lut,curstep,boundary_value,options)
 			call read_var(domain%qv,   file_list(curfile),options%qvvar,     bc%geolut,bc%vert_lut,curstep,boundary_value,options)
 			call read_var(domain%cloud,file_list(curfile),options%qcvar,     bc%geolut,bc%vert_lut,curstep,boundary_value,options)
@@ -483,8 +489,7 @@ contains
 				domain%pbl_height=0
 			endif
 		
-! 			call update_pressure(domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
-! 								 bc%lowres_z,domain%z)
+! 			call update_pressure(domain%p,bc%lowres_z,domain%z)
 							 
 	 		nz=size(domain%th,2)
 			domainsize=size(domain%th,1)*size(domain%th,3)
@@ -549,19 +554,19 @@ contains
 		call update_edges(bc%dqc_dt,bc%next_domain%cloud,domain%cloud)
 	end subroutine update_dxdt
 	
-	subroutine update_pressure(pressure,temperature,z_lo,z_hi)
+	subroutine update_pressure(pressure,z_lo,z_hi)
 		!adjust the pressure field for the vertical shift between the low resolution domain
 		! and the high resolution domain. 
 		implicit none
 		real,dimension(:,:,:), intent(inout) :: pressure
-		real,dimension(:,:,:), intent(in) :: temperature,z_lo,z_hi
+		real,dimension(:,:,:), intent(in) :: z_lo,z_hi
 		real,dimension(:,:,:),allocatable::slp !sea level pressure [Pa]
 		integer :: nx,ny,nz,i,j
 		nx=size(pressure,1)
 		nz=size(pressure,2)
 		ny=size(pressure,3)
 		allocate(slp(nx,nz,ny))
-		!$omp parallel shared(slp,pressure, temperature,z_lo,z_hi) &
+		!$omp parallel shared(slp,pressure, z_lo,z_hi) &
 		!$omp private(i,j) firstprivate(nx,ny,nz)
 		!$omp do 
 		do j=1,ny
@@ -654,7 +659,7 @@ contains
 				call smooth_wind(bc%next_domain%v,smoothing_window,3)
 			endif
 		endif
-		call read_var(bc%next_domain%p,    file_list(curfile),options%pvar,     bc%geolut,bc%vert_lut,curstep,use_interior,options)
+		call read_var(bc%next_domain%p,    file_list(curfile),options%pvar,     bc%geolut,bc%vert_lut,curstep,use_interior,options,bc%lowres_z,domain%z)
 		call read_var(bc%next_domain%th,   file_list(curfile),options%tvar,     bc%geolut,bc%vert_lut,curstep,use_boundary,options)
 		call read_var(bc%next_domain%qv,   file_list(curfile),options%qvvar,    bc%geolut,bc%vert_lut,curstep,use_boundary,options)
 		call read_var(bc%next_domain%cloud,file_list(curfile),options%qcvar,    bc%geolut,bc%vert_lut,curstep,use_boundary,options)
@@ -672,8 +677,7 @@ contains
 			bc%next_domain%pbl_height=0
 		endif
 	
-! 		call update_pressure(bc%next_domain%p,domain%th/((100000.0/domain%p)**(R/cp)), &
-! 							 bc%lowres_z,domain%z)
+! 		call update_pressure(bc%next_domain%p,bc%lowres_z,domain%z)
 		
 		nx=size(bc%next_domain%th,1)
 		nz=size(bc%next_domain%th,2)

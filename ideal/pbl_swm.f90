@@ -35,6 +35,8 @@ module pbl_simple
 	real, allocatable, dimension(:,:,:) :: Kq_m
 ! 	prandtl number to convert K for momentum to K for scalars
 	real, allocatable, dimension(:,:,:) :: prandtl_m
+! 	input qv field to use in calculateing the qv_pbl_tendency
+	real, allocatable, dimension(:,:,:) :: lastqv_m
 	integer :: nx,nz,ny !NOTE these are subset from full domain e.g. nx-2,ny-2,nz-1
 	
 !	limits on Pr noted in HP96 page 2325 below eqn 13
@@ -54,10 +56,11 @@ contains
 		integer :: i,j,k
 		
 !       OpenMP parallelization small static chunk size because we typically get a small area that takes most of the time (because of substepping)
-		!$omp parallel shared(domain,l_m,K_m,Kq_m,stability_m,prandtl_m,virt_pot_temp_zgradient_m,rig_m,shear_m) &
+		!$omp parallel shared(domain,l_m,K_m,Kq_m,stability_m,prandtl_m,virt_pot_temp_zgradient_m,rig_m,shear_m,lastqv_m) &
 		!$omp firstprivate(nx,nz,ny,dt) private(i,k,j)
 		!$omp do schedule(static, 2)
 		do j=1,ny
+			lastqv_m(:,:,j+1)=domain%qv(:,:,j+1)
 			call calc_shear(domain,j)
 			call calc_virt_pot_temp_zgradient(domain,j)
 			call calc_richardson_gradient(domain,j)
@@ -85,6 +88,7 @@ contains
 			enddo
 			Kq_m(:,:,j)= Kq_m(:,:,j)* dt/((domain%dz(2:nx+1,2:,j+1)+domain%dz(2:nx+1,:nz-1,j+1))/2)
 			call pbl_diffusion(domain,j)
+			domain%qv_pbl_tendency(:,:,j+1)=(domain%qv(:,:,j+1)-lastqv_m(:,:,j+1))/dt
 		enddo
 		!$omp end do
 		!$omp end parallel
@@ -139,7 +143,6 @@ contains
 			call diffuse_variable(domain%qsnow,rhomean,rho_dz,j)
 			! don't bother with rain or graupel assuming they are falling fast *enough* not entirely fair...
 		enddo
-
 	end subroutine pbl_diffusion
 	
 	subroutine calc_shear(domain,j)
@@ -234,6 +237,7 @@ contains
 		allocate(K_m(nx,nz,ny))
 		allocate(Kq_m(nx,nz,ny))
 		allocate(l_m(nx,nz,ny))
+		allocate(lastqv_m(nx+2,nz+1,ny+2))
 	end subroutine init_simple_pbl
 	
 ! 	deallocate memory if requested
@@ -261,6 +265,9 @@ contains
 		endif
 		if (allocated(l_m)) then
 			deallocate(l_m)
+		endif
+		if (allocated(lastqv_m)) then
+			deallocate(lastqv_m)
 		endif
 	end subroutine finalize_simple_pbl
 end module pbl_simple
