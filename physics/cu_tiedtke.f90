@@ -2078,7 +2078,7 @@ CONTAINS
 
 ! let's define the levels in which the middle level convection could be activated
 	  leveltop=KLEVM1 !edg in case our model top is too low so we don't find anything below. 
-	  ! not sure this is needed but it broke occasionally before, SWM uses a substantially lower model top than WRF
+	  ! not sure this is needed but it broke occasionally before, ICAR uses a substantially lower model top than WRF
       do jk=KLEVM1,2,-1
       if(abs(paph(1,jk)*0.01 - 250) .lt. 50.) then
         leveltop = jk

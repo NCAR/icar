@@ -239,7 +239,7 @@ OBJS=	$(BUILD)io_routines.o \
 		$(BUILD)linear_winds.o \
 		$(BUILD)geo_reader.o \
 		$(BUILD)lsm.o \
-		$(BUILD)pbl_swm.o \
+		$(BUILD)pbl_simple.o \
 		$(BUILD)pbl_driver.o \
 		$(BUILD)mp_simple.o \
 		$(BUILD)advection_driver.o \
@@ -362,11 +362,11 @@ $(BUILD)lsm.o: $(PHYS)lsm.f90 $(BUILD)data_structures.o
 ###################################################################
 #   Planetary Boundary Layer code
 ###################################################################
-$(BUILD)pbl_driver.o: $(PHYS)pbl_driver.f90 $(BUILD)pbl_swm.o $(BUILD)data_structures.o
+$(BUILD)pbl_driver.o: $(PHYS)pbl_driver.f90 $(BUILD)pbl_simple.o $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)pbl_driver.f90 -o $(BUILD)pbl_driver.o
 
-$(BUILD)pbl_swm.o: $(PHYS)pbl_swm.f90 $(BUILD)data_structures.o
-	${F90} ${FFLAGS} $(PHYS)pbl_swm.f90 -o $(BUILD)pbl_swm.o
+$(BUILD)pbl_simple.o: $(PHYS)pbl_simple.f90 $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(PHYS)pbl_simple.f90 -o $(BUILD)pbl_simple.o
 
 
 ###################################################################
