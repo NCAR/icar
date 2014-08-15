@@ -25,7 +25,7 @@ Running the model:
 
 Required Input files/variables
 
-	real_options.namelist
+	icar_options.nml
 		This file specifies all other files and options.  
 	
 	Necessary netcdf files: 

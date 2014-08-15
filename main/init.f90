@@ -36,13 +36,14 @@ module init
 	public::init_model,init_physics
 	
 contains
-	subroutine init_model(options_filename,options,domain,boundary)
+	subroutine init_model(options,domain,boundary)
 		implicit none
-		character(len=*), intent(in) :: options_filename
 		type(options_type), intent(inout) :: options
 		type(domain_type), intent(inout):: domain
 		type(bc_type), intent(inout):: boundary
+		character(len=MAXFILELENGTH) :: options_filename
 		
+		options_filename=get_options_file()
 ! 		read in options file
 		write(*,*) "Initializing Options"
 		call init_options(options_filename,options)
@@ -56,6 +57,31 @@ contains
 		write(*,*) "Finished basic initialization"
 		
 	end subroutine init_model
+	
+	function get_options_file()
+		implicit none
+		character(len=MAXFILELENGTH) ::get_options_file
+		integer :: error
+		logical :: file_exists
+	
+		if (command_argument_count()>0) then
+			call get_command_argument(1,get_options_file, status=error)
+			if (error>0) then
+				get_options_file="icar_options.nml"
+			elseif (error==-1) then
+				write(*,*) "Options filename = ", trim(get_options_file), " ...<cutoff>"
+				write(*,*) "Maximum filename length = ", MAXFILELENGTH
+				stop("ERROR: options filename too long")
+			endif
+		else
+			get_options_file="icar_options.nml"
+		endif
+		write(*,*) "Options filename = ", trim(get_options_file)
+		INQUIRE(file=trim(get_options_file), exist=file_exists)
+		if (.not.file_exists) then
+			stop("Options file does not exist. ")
+		endif
+	end function
 	
 	subroutine init_physics(options,domain)
 		implicit none

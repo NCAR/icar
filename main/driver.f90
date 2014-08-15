@@ -27,12 +27,12 @@ program real
 	type(bc_type)      :: boundary
 	integer            :: i,nx,ny,start_point
 	double precision   :: model_time,next_output
-	
+		
 !-----------------------------------------
 !  Model Initialization
 !
 ! 	initialize model including options, terrain, lat, lon data. 
-	call init_model("real_options.namelist",options,domain,boundary)
+	call init_model(options,domain,boundary)
 ! 	read initial conditions from the boundary file
 	write(*,*) "Initializing Boundary conditions"
 	call bc_init(domain,boundary,options)
@@ -60,8 +60,9 @@ program real
 !-----------------------------------------
 !  Time Loop
 !
-! 	note that a timestep here is an IO timestep O(1hr), not a physics timestep O(20s)
+! 	note that a timestep here is a forcing input timestep O(1-3hr), not a physics timestep O(20-100s)
 	do i=start_point,options%ntimesteps
+		write(*,*) ""
 		write(*,*) " ----------------------------------------------------------------------"
 		write(*,*) "Timestep:", i, "  of ", options%ntimesteps
 		write(*,*) "  Model time=",dnint(100*model_time/3600.0)/100.0,"hrs"
