@@ -138,7 +138,6 @@ contains
 			call pbl(domain,options,dt)
 			call advect(domain,options,dt)
 			call mp(domain,options,dt)
-! 			call write_domain(domain,options,90000+i)
 			call convect(domain,options,dt)
 ! 			call radiation(domain,options,dt)
 
@@ -150,7 +149,7 @@ contains
 ! 			step model time forward
 			model_time=model_time+dt
 			if ((abs(model_time-next_output)<1e-1).or.(model_time>next_output)) then
-				call write_domain(domain,options,nint(model_time/options%out_dt))
+				call write_domain(domain,options,nint((model_time-options%time_zero)/options%out_dt))
 				next_output=next_output+options%out_dt
 			endif
 ! 			in case out_dt and in_dt arent even multiples of each other.  Make sure we don't over step

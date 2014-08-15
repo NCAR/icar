@@ -172,6 +172,7 @@ module data_structures
 		integer :: ntimesteps,nz,nfiles,ext_winds_nfiles,restart_step
 ! 		various real parameters/options
 		real :: dx,dxlow,in_dt,out_dt,outputinterval,inputinterval,smooth_wind_distance
+		double precision :: initial_mjd, time_zero
 ! 		offset to temperature because WRF outputs potential temperature-300
 		real :: t_offset
 		real,allocatable,dimension(:)::dz_levels

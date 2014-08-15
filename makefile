@@ -246,7 +246,9 @@ OBJS=	$(BUILD)io_routines.o \
 		$(BUILD)adv_mpdata.o \
 		$(BUILD)advect.o \
 		$(BUILD)fftshift.o \
-		$(BUILD)vinterp.o
+		$(BUILD)vinterp.o \
+		$(BUILD)time.o \
+		$(BUILD)string.o
 
 # 
 # WINDOBJS=io_routines.o $(BUILD)data_structures.o $(BUILD)init.o tests/test_wind.o $(BUILD)wind.o $(BUILD)linear_winds.o $(BUILD)output.o $(BUILD)geo_reader.o
@@ -293,7 +295,7 @@ fftshift_test: tests/test_fftshift.o $(BUILD)fftshift.o
 ###################################################################
 
 $(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)advection_driver.o $(BUILD)data_structures.o $(BUILD)init.o \
-					$(BUILD)output.o $(BUILD)wind.o $(BUILD)boundary.o
+					$(BUILD)output.o $(BUILD)wind.o $(BUILD)boundary.o $(BUILD)time.o $(BUILD)string.o
 	${F90} ${FFLAGS} $(MAIN)driver.f90 -o $(BUILD)driver.o
 
 
@@ -302,17 +304,23 @@ $(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)advection_driver.o $(BUILD)data_struc
 ###################################################################
 
 $(BUILD)init.o:$(MAIN)init.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)geo_reader.o $(BUILD)vinterp.o \
-					$(BUILD)model_tracking.o $(BUILD)mp_driver.o $(BUILD)cu_driver.o $(BUILD)pbl_driver.o $(BUILD)wind.o
+					$(BUILD)model_tracking.o $(BUILD)mp_driver.o $(BUILD)cu_driver.o $(BUILD)pbl_driver.o $(BUILD)wind.o \
+					$(BUILD)time.o
 	${F90} ${FFLAGS} $(MAIN)init.f90 -o $(BUILD)init.o
-
-$(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)mp_driver.o $(BUILD)wind.o $(BUILD)advection_driver.o \
-					$(BUILD)output.o $(BUILD)lsm.o $(BUILD)cu_driver.o $(BUILD)pbl_driver.o
-	${F90} ${FFLAGS} $(MAIN)time_step.f90 -o $(BUILD)time_step.o
 
 $(BUILD)boundary.o:$(MAIN)boundary.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)wind.o $(BUILD)geo_reader.o \
 					$(BUILD)vinterp.o $(BUILD)output.o $(BUILD)linear_winds.o
 	${F90} ${FFLAGS} $(MAIN)boundary.f90 -o $(BUILD)boundary.o
 
+$(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)mp_driver.o $(BUILD)wind.o $(BUILD)advection_driver.o \
+					$(BUILD)output.o $(BUILD)lsm.o $(BUILD)cu_driver.o $(BUILD)pbl_driver.o
+	${F90} ${FFLAGS} $(MAIN)time_step.f90 -o $(BUILD)time_step.o
+
+$(BUILD)time.o:$(UTIL)time.f90
+	${F90} ${FFLAGS} $(UTIL)time.f90 -o $(BUILD)time.o
+
+$(BUILD)string.o:$(UTIL)string.f90
+	${F90} ${FFLAGS} $(UTIL)string.f90 -o $(BUILD)string.o
 
 ###################################################################
 #   I/O routines
@@ -414,8 +422,8 @@ $(BUILD)model_tracking.o:$(MAIN)model_tracking.f90
 # NOTE: too many changes in data structures/init have definitely broken these tests, could be fixed if necessary, 
 #       but not worth the time right now. 
 #
-tests/test_$(BUILD)fftshift.o:$(BUILD)fftshift.o tests/test_$(UTIL)fftshift.f90
-	${F90} ${FFLAGS} tests/test_$(UTIL)fftshift.f90 -o tests/test_fftshift.o
+tests/test_$(BUILD)fftshift.o:$(BUILD)fftshift.o tests/test_fftshift.f90
+	${F90} ${FFLAGS} tests/test_fftshift.f90 -o tests/test_fftshift.o
 	
 # tests/test_$(BUILD)wind.o:tests/test_$(PHYS)wind.f90 $(BUILD)wind.o $(BUILD)linear_winds.o
 # 	${F90} ${FFLAGS} tests/test_$(PHYS)wind.f90 -o tests/test_$(BUILD)wind.o

@@ -30,6 +30,7 @@ module init
 	use planetary_boundary_layer, only	: pbl_init
 	use model_tracking, only			: print_model_diffs
 	use wind, only						: init_winds
+	use time, only						: date_to_mjd, parse_date
 	
 	implicit none
 	private
@@ -227,11 +228,14 @@ contains
 		integer :: nz,n_ext_winds,buffer
 		logical :: ideal, readz,readdz,debug,external_winds,remove_lowres_linear,&
 		           mean_winds,mean_fields,restart,add_low_topo,advect_density
+		character(len=MAXFILELENGTH) :: date
+		integer :: year, month, day, hour, minute, second
 		
 		
 		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,smooth_wind_distance, &
-							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth
+							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, date
+
 		
 ! 		default parameters
 		mean_fields=.False.
@@ -292,6 +296,9 @@ contains
 		options%ntimesteps=ntimesteps
 		options%in_dt=inputinterval
 		options%out_dt=outputinterval
+		call parse_date(date, year, month, day, hour, minute, second)
+		options%initial_mjd=date_to_mjd(year, month, day, hour, minute, second)
+		options%time_zero=((options%initial_mjd-50000) * 86400.0)
 		options%dx=dx
 		options%dxlow=dxlow
 		options%ideal=ideal
@@ -336,9 +343,9 @@ contains
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=model_version)
 		close(name_unit)
-		if (version.ne."0.8") then
+		if (version.ne."0.8.1") then
 			write(*,*) "Model version does not match namelist version"
-			write(*,*) "  Model version: 0.8"
+			write(*,*) "  Model version: 0.8.1"
 			write(*,*) "  Namelist version: ",trim(version)
 			call print_model_diffs(version)
 			stop

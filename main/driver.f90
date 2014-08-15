@@ -15,6 +15,7 @@
 !
 !-----------------------------------------
 program real
+	use time				! calendar_date, date_to_mjd           Convert between date and modified Julian Day
 	use init                ! init_model, init_physics             Initialize model (not initial conditions)
 	use boundary_conditions ! bc_init,bc_update                    Boundary and initial conditions
 	use data_structures     ! *_type datatypes                     Data-types and physical "constants"
@@ -26,6 +27,7 @@ program real
 	type(domain_type)  :: domain
 	type(bc_type)      :: boundary
 	integer            :: i,nx,ny,start_point
+	integer            :: year, month, day, hour, minute, second
 	double precision   :: model_time,next_output
 		
 !-----------------------------------------
@@ -47,13 +49,13 @@ program real
 		start_point=1
 	endif
 	!note, startpoint at the beginning is 1, but we want model time at this point to be 0, thus start_point-1
-	model_time=(start_point-1)*options%in_dt
+	model_time=(start_point-1)*options%in_dt + options%time_zero
 	next_output=model_time+options%out_dt
 	call bc_update(domain,boundary,options)
 	
 	! write the initial state of the model (primarily useful for debugging)
 	if (.not.options%restart) then
-		call write_domain(domain,options,nint(model_time/options%out_dt))
+		call write_domain(domain,options,nint((model_time-options%time_zero)/options%out_dt))
 	endif
 !
 !-----------------------------------------
@@ -65,7 +67,9 @@ program real
 		write(*,*) ""
 		write(*,*) " ----------------------------------------------------------------------"
 		write(*,*) "Timestep:", i, "  of ", options%ntimesteps
-		write(*,*) "  Model time=",dnint(100*model_time/3600.0)/100.0,"hrs"
+		write(*,*) "  Model time=",dnint(100*((model_time-options%time_zero)/3600.0))/100.0,"hrs"
+		call calendar_date(model_time/86400.0+50000,year, month, day, hour, minute, second)
+		write(*,'(A,i4,"/",i2.2"/"i2.2" "i2.2":"i2.2":"i2.2)') "  Date = ",year,month,day,hour,minute,second
 		
 		if (.not.options%ideal) then
 	! 		update boundary conditions (dXdt variables)

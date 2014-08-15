@@ -7,11 +7,11 @@ contains
 	
 	subroutine init_model_diffs()
 		implicit none
-		integer::n=8
+		integer::n=9
 		
 		allocate(versionlist(n))
 		allocate(deltas(n))
-		versionlist=["0.5.1","0.5.2","0.6  ","0.7  ","0.7.1","0.7.2","0.7.3","0.8  "]
+		versionlist=["0.5.1","0.5.2","0.6  ","0.7  ","0.7.1","0.7.2","0.7.3","0.8  ","0.8.1"]
 		deltas=[ & 
 		"Earliest version in record                                                 "// & 
 		"                                       ", &
@@ -28,7 +28,9 @@ contains
 		"Added advect_density: boolean use                                          "// &
 		"                                       ", &
 		"Vertical interpolation requires zvar (can be PH / geopotential height)     "// &
-		"      Also added smooth_wind_distance  " &
+		"      Also added smooth_wind_distance  ", &
+		"Added proper date tracking, requires date='yyyy/mm/dd hh:mm:ss' option     "// &
+		"      in namelist.                     " &
 		]
 		
 	end subroutine init_model_diffs
@@ -51,9 +53,9 @@ contains
 					write(*,*) " (Versions <0.7.3 may not be as reliable)"
 				endif
 				do j=i+1,size(versionlist)
-					write(*,*) " "
 					write(*,*) "  "//trim(versionlist(j))
 					write(*,*) "    "//trim(deltas(j))
+					write(*,*) " "
 				enddo
 			endif
 		enddo
