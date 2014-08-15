@@ -125,16 +125,22 @@ GIT_VERSION := $(shell git describe --long --dirty --all --always | sed -e's/hea
 ifeq ($(F90), gfortran)
 	COMP=-fopenmp -lgomp -Ofast -c -fimplicit-none -ffree-line-length-none -ffast-math -march=native -funroll-loops -fno-protect-parens -flto
 	LINK=-fopenmp -lgomp
+	PREPROC=-cpp
+	MODOUTPUT=-J $(BUILD)
 endif
 # Intel fortran
 ifeq ($(F90), ifort)
 	COMP= -openmp -liomp5 -u -c -fast -ftz #-fast-transcendentals # not available in ifort <13: -align array64byte
 	LINK= -openmp -liomp5
+	PREPROC=-fpp
+	MODOUTPUT=-module $(BUILD)
 endif
 # PGI fortran
 ifeq ($(F90), pgf90)
 	COMP=-fast -mp -c
 	LINK=-mp
+	PREPROC=-Mpreprocess
+	MODOUTPUT=
 endif
 
 
@@ -208,7 +214,7 @@ endif
 # instead copy required libraries into a directory accessible on compute nodes and set LD_RUN_PATH e.g.
 # export LD_RUN_PATH=$LD_RUN_PATH:/path/to/libraries/lib:/home/gutmann/usr/local/lib
 LFLAGS=$(LINK) $(PROF) ${LIBNETCDF} -L${LIBFFT}
-FFLAGS=$(COMP) $(PROF) ${INCNETCDF} -I${INCFFT}
+FFLAGS=$(COMP) $(PROF) ${INCNETCDF} -I${INCFFT} ${MODOUTPUT}
 
 # Model directories
 BUILD=build/
@@ -257,7 +263,7 @@ install:icar
 	cp icar ${INSTALLDIR}
 
 clean:
-	rm $(BUILD)*.o *.mod
+	rm $(BUILD)*.o $(BUILD)*.mod
 
 allclean:cleanall
 
@@ -313,7 +319,7 @@ $(BUILD)boundary.o:$(MAIN)boundary.f90 $(BUILD)data_structures.o $(BUILD)io_rout
 ###################################################################
 
 $(BUILD)output.o:$(IO)output.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o
-	${F90} ${FFLAGS} -DVERSION=\"$(GIT_VERSION)\" -fpp $(IO)output.f90 -o $(BUILD)output.o
+	${F90} ${FFLAGS} -DVERSION=\"$(GIT_VERSION)\" $(PREPROC) $(IO)output.f90 -o $(BUILD)output.o
 
 $(BUILD)io_routines.o:$(IO)io_routines.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(IO)io_routines.f90 -o $(BUILD)io_routines.o
