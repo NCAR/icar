@@ -629,9 +629,9 @@ CONTAINS
           PGEO(j,k)=G*poz(j,k)
           TT=ZTP1(j,k)
           ZQSAT(j,k)=TLUCUA(TT)/PAP(j,k)
-		  if (ZQSAT(j,k).eq.0) then
-			  print *,j,k,TLUCUA(tt), PAP(j,k)
-		  endif
+! 		  if (ZQSAT(j,k).eq.0) then
+! 			  print *,j,k,TLUCUA(tt), PAP(j,k)
+! 		  endif
           ZQSAT(j,k)=MIN(0.5,ZQSAT(j,k))
           ZQSAT(j,k)=ZQSAT(j,k)/(1.-VTMPC1*ZQSAT(j,k))
           PQTE(j,k)=pqvf(j,k)+pqvbl(j,k)

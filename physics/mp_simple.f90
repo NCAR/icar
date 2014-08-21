@@ -185,6 +185,7 @@ module module_mp_simple
         qc=max(qc,0.)
         if ((t>350).or.(qc>0.01).or.(qvsat>1)) then
 			deltat=excess*vapor2temp
+			print*, "mp_simple: data out of bounds"
 			print*, iteration
 			print*, pre_qc,pre_qv,pre_t,p
 			print*, qc, qv,t, qvsat
@@ -230,6 +231,7 @@ module module_mp_simple
         
         q1=q1-delta
 		if (q1<0) then 
+			print*, "phase_change"
 			print*, q1,q2,delta,qmax,change_rate
 			stop
 		endif

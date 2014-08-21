@@ -247,10 +247,10 @@ contains
 			enddo
 		else
 !	CASE 3 search every possible grid cell!
-			write(*,*) "using n^2 search..."
+! 			write(*,*) "using n^2 search..."
 ! 			note which point this is for debugging purposes, we really shouldn't get here (often)
-			write(*,*) lat,lon,lo%lat(xc,yc),lo%lon(xc,yc)
-			write(*,*) xc,yc,nx,ny
+! 			write(*,*) lat,lon,lo%lat(xc,yc),lo%lon(xc,yc)
+! 			write(*,*) xc,yc,nx,ny
 ! 			naive search
 			mindist=9999.9
 			do xw=1,nx
