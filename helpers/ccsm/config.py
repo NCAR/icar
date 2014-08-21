@@ -39,7 +39,7 @@ def update_info(info):
     
 
 def parse():
-    parser= argparse.ArgumentParser(description='Convert CCSM files to SWM input forcing files')
+    parser= argparse.ArgumentParser(description='Convert CCSM files to ICAR input forcing files')
     parser.add_argument('start_date',nargs="?",action='store',help="Specify starting date (yyyy-mm-dd)", default="2026-01-01")
     parser.add_argument('end_date',  nargs="?",action='store',help="Specify end date (yyyy-mm-dd)",      default="2099-12-31")
     parser.add_argument('lat_n',     nargs="?",action='store',help="northern latitude boundary",         default="60")
@@ -53,7 +53,7 @@ def parse():
     parser.add_argument('sfcfile',   nargs="?",action='store',help="CCSM surface files",                 default="_VAR__3hr_CCSM4_rcp85_r6i1p1__Y__M__D_0000-*.nc")
     
     parser.add_argument('-v', '--version',action='version',
-            version='CCSM2SWM v'+version)
+            version='CCSM2ICAR v'+version)
     parser.add_argument ('--verbose', action='store_true',
             default=False, help='verbose output', dest='verbose')
     args = parser.parse_args()

@@ -65,4 +65,4 @@ def write_file(date,info,ccsm):
     
     # write to output file
     swim_io.write(filename=filename,varname="qv",data=ccsm.qv,attributes=qvatts,dtype="f",
-                  extravars=extra_vars)#,history=" Produced by ccsm2swm v."+info.version)
+                  extravars=extra_vars)#,history=" Produced by ccsm2icar v."+info.version)

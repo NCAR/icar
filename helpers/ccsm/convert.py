@@ -29,7 +29,7 @@ def convert_atm(data):
     
     return output_data
 
-def ccsm2swm(data):
+def ccsm2icar(data):
     output_data=Bunch()
     atm=convert_atm(data.atm)
     

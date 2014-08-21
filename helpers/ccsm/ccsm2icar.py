@@ -17,7 +17,7 @@ def main(info):
     curpos=0
     while curtime<=info.end_date:
         raw_data=io_routines.load_data(curtime,info)
-        processed_data=convert.ccsm2swm(raw_data)
+        processed_data=convert.ccsm2icar(raw_data)
         output.write_file(curtime,info,processed_data)
         
         curpos+=raw_data.atm.ntimes
