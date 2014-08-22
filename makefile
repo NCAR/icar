@@ -223,31 +223,33 @@ IO=io/
 MAIN=main/
 UTIL=utilities/
 
-OBJS=	$(BUILD)io_routines.o \
-		$(BUILD)data_structures.o \
+OBJS=	$(BUILD)driver.o \
 		$(BUILD)init.o \
-		$(BUILD)mp_driver.o \
-		$(BUILD)time_step.o \
-		$(BUILD)boundary.o \
 		$(BUILD)model_tracking.o \
+		$(BUILD)boundary.o \
+		$(BUILD)time_step.o \
+		$(BUILD)output.o \
+		$(BUILD)io_routines.o \
+		$(BUILD)mp_driver.o \
 		$(BUILD)mp_thompson.o \
+		$(BUILD)mp_simple.o \
 		$(BUILD)cu_driver.o \
 		$(BUILD)cu_tiedtke.o \
-		$(BUILD)driver.o \
-		$(BUILD)output.o \
-		$(BUILD)wind.o \
-		$(BUILD)linear_winds.o \
-		$(BUILD)geo_reader.o \
+		$(BUILD)ra_driver.o \
+		$(BUILD)ra_simple.o \
 		$(BUILD)lsm.o \
-		$(BUILD)pbl_simple.o \
 		$(BUILD)pbl_driver.o \
-		$(BUILD)mp_simple.o \
+		$(BUILD)pbl_simple.o \
 		$(BUILD)advection_driver.o \
 		$(BUILD)adv_mpdata.o \
 		$(BUILD)advect.o \
+		$(BUILD)wind.o \
+		$(BUILD)linear_winds.o \
 		$(BUILD)fftshift.o \
+		$(BUILD)geo_reader.o \
 		$(BUILD)vinterp.o \
 		$(BUILD)time.o \
+		$(BUILD)data_structures.o \
 		$(BUILD)string.o
 
 # 
@@ -305,15 +307,15 @@ $(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)advection_driver.o $(BUILD)data_struc
 
 $(BUILD)init.o:$(MAIN)init.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)geo_reader.o $(BUILD)vinterp.o \
 					$(BUILD)model_tracking.o $(BUILD)mp_driver.o $(BUILD)cu_driver.o $(BUILD)pbl_driver.o $(BUILD)wind.o \
-					$(BUILD)time.o
+					$(BUILD)time.o $(BUILD)ra_driver.o
 	${F90} ${FFLAGS} $(MAIN)init.f90 -o $(BUILD)init.o
 
 $(BUILD)boundary.o:$(MAIN)boundary.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)wind.o $(BUILD)geo_reader.o \
 					$(BUILD)vinterp.o $(BUILD)output.o $(BUILD)linear_winds.o
 	${F90} ${FFLAGS} $(MAIN)boundary.f90 -o $(BUILD)boundary.o
 
-$(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)mp_driver.o $(BUILD)wind.o $(BUILD)advection_driver.o \
-					$(BUILD)output.o $(BUILD)lsm.o $(BUILD)cu_driver.o $(BUILD)pbl_driver.o
+$(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)mp_driver.o $(BUILD)wind.o $(BUILD)output.o \
+					$(BUILD)advection_driver.o $(BUILD)ra_driver.o $(BUILD)lsm.o $(BUILD)cu_driver.o $(BUILD)pbl_driver.o
 	${F90} ${FFLAGS} $(MAIN)time_step.f90 -o $(BUILD)time_step.o
 
 $(BUILD)time.o:$(UTIL)time.f90
@@ -361,6 +363,15 @@ $(BUILD)cu_driver.o:$(PHYS)cu_driver.f90 $(BUILD)cu_tiedtke.o $(BUILD)data_struc
 $(BUILD)cu_tiedtke.o:$(PHYS)cu_tiedtke.f90
 	${F90} ${FFLAGS} $(PHYS)cu_tiedtke.f90 -o $(BUILD)cu_tiedtke.o
 
+###################################################################
+#   Radiation code
+###################################################################
+
+$(BUILD)ra_driver.o:$(PHYS)ra_driver.f90 $(BUILD)ra_simple.o $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(PHYS)ra_driver.f90 -o $(BUILD)ra_driver.o
+
+$(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(PHYS)ra_simple.f90 -o $(BUILD)ra_simple.o
 ###################################################################
 #   Land Surface code
 ###################################################################

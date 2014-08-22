@@ -7,6 +7,7 @@ module time_step
 	use advection,                   only : advect
 	use output,                      only : write_domain
 	use planetary_boundary_layer,    only : pbl
+	use radiation, 					 only : rad
 	implicit none
 	private
 	public :: step
@@ -139,7 +140,7 @@ contains
 			call advect(domain,options,dt)
 			call mp(domain,options,dt)
 			call convect(domain,options,dt)
-! 			call radiation(domain,options,dt)
+			call rad(domain,options,dt)
 
 ! 			apply/update boundary conditions including internal wind and pressure changes. 
 			if (.not.options%ideal) then
