@@ -28,6 +28,7 @@ module init
 	use microphysics, only				: mp_init
 	use convection, only				: init_convection
 	use planetary_boundary_layer, only	: pbl_init
+	use radiation, only					: radiation_init
 	use model_tracking, only			: print_model_diffs
 	use wind, only						: init_winds
 	use time, only						: date_to_mjd, parse_date
@@ -95,6 +96,9 @@ contains
 		call init_convection(domain,options)
 		
 		call pbl_init(domain,options)
+		
+		call radiation_init(domain,options)
+		
 	end subroutine init_physics
 	
 ! 	read physics options to use from a namelist file
@@ -562,6 +566,12 @@ contains
 		domain%snow=0
 		allocate(domain%graupel(nx,ny))
 		domain%graupel=0
+		allocate(domain%swdown(nx,ny))
+		domain%swdown=0
+		allocate(domain%lwdown(nx,ny))
+		domain%lwdown=0
+		allocate(domain%cloudfrac(nx,ny))
+		domain%cloudfrac=0
 		allocate(domain%sensible_heat(nx,ny))
 		domain%sensible_heat=0
 		allocate(domain%latent_heat(nx,ny))
@@ -735,7 +745,8 @@ contains
 		ny=size(zbase,2)
 		nz=size(zbase,3)
 		allocate(boundary%lowres_z(nx,nz,ny))
-		boundary%lowres_z=reshape(zbase,[nx,nz,ny],order=[1,3,2])
+		write(*,*) "WARNING: HACK in init.f90 boundary init : z=z*9.8"
+		boundary%lowres_z=reshape(zbase*9.8,[nx,nz,ny],order=[1,3,2])
 		deallocate(zbase)
 		if (options%zvar=="PH") then
 			call io_read3d(options%boundary_files(1),"PHB",zbase)
