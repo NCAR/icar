@@ -57,7 +57,8 @@ contains
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"institution","National Center for Atmospheric Research"))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"source","Intermediate Complexity Atmospheric Model version:"//trim(options%version)))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"history","Created:"//todays_date_time//UTCoffset))
-		call check( nf90_put_att(ncid,NF90_GLOBAL,"references","Gutmann et al. 2014: The Intermediate Complexity Atmospheric Model. JHM (in prep)"))
+		call check( nf90_put_att(ncid,NF90_GLOBAL,"references", &
+					"Gutmann et al. 2014: The Intermediate Complexity Atmospheric Model. JHM (in prep)"))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"comment",trim(options%comment)))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"contact","Ethan Gutmann : gutmann@ucar.edu"))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"git",VERSION))

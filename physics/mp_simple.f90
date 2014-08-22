@@ -164,7 +164,7 @@ module module_mp_simple
 					excess=qc
 	                qc=0.
 	            endif
-				excess=excess*-1 !DEBUG
+				excess=excess*(-1) !DEBUG
 	        endif
 		enddo
 		if (iteration==5) then
