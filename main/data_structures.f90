@@ -10,6 +10,8 @@ module data_structures
     real, parameter :: R  = 287.058 ! J/(kg K) specific gas constant for air
     real, parameter :: cp = 1012.0  ! J/kg/K   specific heat capacity of moist STP air? 
 	real, parameter :: g  = 9.81    ! m/s^2    gravity
+	real, parameter :: pi = 3.1415927 ! pi
+	real, parameter :: stefan_boltzmann = 5.67e-8 ! the Stefan-Boltzmann constant
 	
 ! 	various data structures for use in geographic interpolation routines
 ! 	contains the location of a specific grid point

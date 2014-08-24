@@ -41,11 +41,14 @@
 !----------------------------------------------------------
 module module_ra_simple
 	use data_structures
+	use time
 	implicit none
 	real, allocatable, dimension(:,:) :: cos_lat_m,sin_lat_m
 	real, parameter :: So=1367.0 ! Solar "constant" W/m^2
+	real, parameter :: qcmin=1e-5 ! arbitrarily selected minimum "cloud" water content to affect radiation
 contains
 	subroutine ra_simple_init(domain,options)
+		implicit none
 		type(domain_type), intent(in) :: domain
 		type(options_type),intent(in)    :: options
 		integer :: nx,ny
@@ -56,8 +59,8 @@ contains
 		allocate(cos_lat_m(nx,ny))
 		allocate(sin_lat_m(nx,ny))
 		
-		cos_lat_m=cos(domain%lat)
-		sin_lat_m=sin(domain%lat)
+		cos_lat_m=cos(domain%lat/360.0 * 2*pi)
+		sin_lat_m=sin(domain%lat/360.0 * 2*pi)
 		
 	end subroutine ra_simple_init
 
@@ -66,9 +69,10 @@ contains
 
 	
 	function relative_humidity(t,qv,p,j,nx)
-		real,intent(out),dimension(nx) :: relative_humidity
+		implicit none
+		real,dimension(nx) :: relative_humidity
 		real,intent(in),dimension(nx)::t
-		real,intent(in),dimension(:,:,:)::qv
+		real,intent(in),dimension(:,:,:)::qv,p
 		integer,intent(in)::j,nx
 		real,dimension(nx) :: mr, e, es
 		
@@ -82,38 +86,116 @@ contains
 		relative_humidity= e/es
 	end function relative_humidity
 	
-	function shortwave(rh, cloud_cover, solar_elevation)
-		real, intent(inout) :: rh,cloud_cover,solar_elevation
+	function shortwave(cloud_cover, day_frac, solar_elevation,nx)
+		implicit none
+		real, dimension(nx) :: shortwave
+		real, intent(in), dimension(nx) :: day_frac, cloud_cover, solar_elevation
 		
-	end subroutine shortwave
+		real, dimension(nx) :: sin_solar_elev
+		integer, intent(in) :: nx
+		
+		sin_solar_elev = sin(solar_elevation)
+		shortwave=So * (1+0.035*cos(day_frac * 2*pi)) * sin_solar_elev * (0.48+0.29*sin_solar_elev)
+		
+		shortwave=shortwave * (1 - 0.75 * cloud_cover**3.4)
+		
+	end function shortwave
 	
-	subroutine ra_simple(theta,pii,qv,qc,qs,qr,p,swdown,lwdown,cloudfrac,lat,lon,date,options,dt)
+	function longwave(T_air, cloud_cover,nx)
+		implicit none
+		real, dimension(nx) :: longwave
+		real, intent(in), dimension(nx) :: T_air,cloud_cover
+		real, dimension(nx) :: effective_emissivity
+		integer, intent(in) :: nx
+		
+		effective_emissivity = 1 - 0.261 * exp((-7.77e-4) * (273.16-T_air)**2)
+		longwave = effective_emissivity * stefan_boltzmann * T_air**4
+		
+		longwave = longwave * (1+0.2*cloud_cover)
+	end function longwave
+	
+	function cloudfrac(rh,qc,nx)
+		implicit none
+		real,dimension(nx)::cloudfrac
+		real,intent(in),dimension(nx)::rh,qc
+		integer, intent(in) :: nx
+		real,dimension(nx)::temporary
+		
+		temporary=((1-rh)*qc)**0.25
+		where(temporary >1) temporary=1
+		where(temporary <0.0001) temporary=0.0001
+		
+		cloudfrac=(rh**0.25) * (1-exp((-2000*(qc-qcmin)) / temporary))
+		where(cloudfrac<0) cloudfrac=0
+		where(cloudfrac>1) cloudfrac=1
+		
+	end function
+	
+	function calc_solar_elevation(date,lon,j,nx,day_frac)
+		implicit none
+		real, dimension(nx) :: calc_solar_elevation
+		double precision, intent(in) :: date
+		real, dimension(:,:), intent(in) :: lon
+		integer,intent(in) :: j, nx
+		real, dimension(:), intent(out) :: day_frac
+		
+		integer :: i
+		real, dimension(nx) :: declination,day_of_year,hour_angle
+		
+		do i=1,nx
+			day_of_year(i) = floor(calc_day_of_year(date + lon(i,j)/360.0))
+			hour_angle(i) = 2*pi* mod(date + lon(i,j)/360.0,1.0)
+		end do
+		day_frac=day_of_year/365.25
+		
+		! fast approximation see : http://en.wikipedia.org/wiki/Position_of_the_Sun
+		declination = (-0.4091) * cos(2*pi/365*(day_of_year+10))
+		
+		calc_solar_elevation = acos(sin_lat_m(:,j) * sin(declination) + & 
+									cos_lat_m(:,j) * cos(declination * cos(hour_angle)))
+		
+	end function calc_solar_elevation
+	
+	subroutine ra_simple(theta,pii,qv,qc,qs,qr,p,swdown,lwdown,cloud_cover,lat,lon,date,options,dt)
+		implicit none
 		real,dimension(:,:,:), intent(inout) :: theta
 		real,dimension(:,:,:), intent(in) :: pii,qv,qc,qs,qr,p
-		real,dimension(:,:), intent(out) :: swdown,lwdown,cloudfrac
+		real,dimension(:,:), intent(out) :: swdown,lwdown,cloud_cover
 		real,dimension(:,:), intent(in) :: lat,lon
 		double precision, intent(in) :: date
 		type(options_type),intent(in)    :: options
 		real, intent(in) :: dt
-		integer :: nx,ny,j
-		real, allocatable, dimension(:) :: rh,T_air,solar_elevation
-		real :: solar_elevation
+		integer :: nx,ny,j,k,nz
+		real, allocatable, dimension(:) :: rh,T_air,solar_elevation, hydrometeors,day_frac
 		
 		
 		nx=size(lat,1)
 		ny=size(lat,2)
+		nz=size(qv,2)
 		
 		allocate(rh(nx))
 		allocate(T_air(nx))
 		allocate(solar_elevation(nx))
+		allocate(hydrometeors(nx))
+		allocate(day_frac(nx))
+		
 		do j=2,ny-1
-			solar_elevation=calc_solar_elevation(date,lon,j,nx)
-			T_air=theta(:,1,j)*pii(:,1,j)
-			rh=calc_rh(T_air,qv,p,j,nx)
 			
-			swdown(:,j) = shortwave(rh,cloud_cover,solar_elevation)
-			call longwave(T_air)
+			T_air=theta(:,1,j)*pii(:,1,j)
+			rh=relative_humidity(T_air,qv,p,j,nx)
+			hydrometeors=qc(:,1,j)+qs(:,1,j)+qr(:,1,j)
+			do k=2,nz
+				hydrometeors=hydrometeors+qc(:,k,j)+qs(:,k,j)+qr(:,k,j)
+			end do
+			
+			solar_elevation=calc_solar_elevation(date,lon,j,nx,day_frac)
+			
+			cloud_cover(:,j) = cloudfrac(rh,hydrometeors,nx)
+			swdown(:,j) = shortwave(day_frac,cloud_cover(:,j),solar_elevation,nx)
+			lwdown(:,j) = longwave(T_air,cloud_cover(:,j),nx)
 		end do
+		
+		deallocate(rh,T_air,solar_elevation, hydrometeors, day_frac)
 		
 	end subroutine ra_simple
 end module module_ra_simple

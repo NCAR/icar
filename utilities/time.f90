@@ -1,8 +1,31 @@
 module time
 	implicit none
+	integer, parameter :: GREGORIAN=0, NOLEAP=1, THREESIXTY=2
+	integer :: calendar
+	integer, dimension(13) :: month_start
 	private
-	public :: date_to_mjd, calendar_date, parse_date
+	public :: time_init, date_to_mjd, calendar_date, calc_day_of_year, parse_date
+	public :: GREGORIAN, NOLEAP, THREESIXTY
 contains
+
+	subroutine time_init(calendar_name)
+		implicit none
+		character(len=*), intent(in) :: calendar_name
+		
+		month_start=[0,31,59,90,120,151,181,212,243,273,304,334,366]
+		
+		if (trim(calendar_name)=="gregorian") then
+			calendar=GREGORIAN
+		else if (trim(calendar_name)=="noleap") then
+			calendar=NOLEAP
+		else if (trim(calendar_name)=="360-day") then
+			calendar=THREESIXTY
+		else
+			print*, "Unknown Calendar", calendar_name
+			stop
+		endif
+	end subroutine time_init
+	
 	!   algorithms from Wikipedia: http://en.wikipedia.org/wiki/Julian_day
 	!   originally from Richards, E. G. (2013). Calendars. In S. E. Urban & P. K. Seidelmann, eds. 
 	!                   Explanatory Supplement to the Astronomical Almanac, 3rd ed. (pp. 585–624). 
@@ -15,14 +38,20 @@ contains
 		double precision :: d,m,y
 		integer :: a,b
 
-		a = (14-month)/12
-		y = year+4800-a
-		m = month+12*a-3
-		! Gregorian calendar
-		b = day + floor((153*m+2)/5) + 365*y + floor(y/4) - floor(y/100) + floor(y/400) - 32045
-		! Julian calendar
-! 		b = day + floor(153*m+2/5) + 365*y + floor(y/4) - 32083
-		date_to_mjd = b + (((second/60d+0)+minute)/60d+0 + hour-12)/24.0 - 2400000.5
+		if (calendar==GREGORIAN) then
+			a = (14-month)/12
+			y = year+4800-a
+			m = month+12*a-3
+			! Gregorian calendar
+			b = day + floor((153*m+2)/5) + 365*y + floor(y/4) - floor(y/100) + floor(y/400) - 32045
+			! Julian calendar
+			! b = day + floor(153*m+2/5) + 365*y + floor(y/4) - 32083
+			date_to_mjd = b + (((second/60d+0)+minute)/60d+0 + hour-12)/24.0 - 2400000.5
+		else if (calendar==NOLEAP) then
+			date_to_mjd = year*365 + month_start(month) + day + (hour + (minute+second/60d+0)/60d+0)/24d+0
+		else if (calendar==THREESIXTY) then
+			date_to_mjd = year*360 + month*30 + day + (hour + (minute+second/60d+0)/60d+0)/24d+0
+		end if
 
 	end function date_to_mjd
 
@@ -35,14 +64,29 @@ contains
 		integer ::f,e,g,h, jday
 		double precision :: day_fraction
 		
-		jday=nint(mjd+2400000.5)
-		f=jday+j+(((4*jday+B)/146097)*3)/4+C
-		e=r*f+v
-		g=mod(e,p)/r
-		h=u*g+w
-		day=mod(h,s)/u+1
-		month=mod(h/s+m,n)+1
-		year=e/p-y+(n+m-month)/n
+		if (calendar==GREGORIAN) then
+			jday=nint(mjd+2400000.5)
+			f=jday+j+(((4*jday+B)/146097)*3)/4+C
+			e=r*f+v
+			g=mod(e,p)/r
+			h=u*g+w
+			day=mod(h,s)/u+1
+			month=mod(h/s+m,n)+1
+			year=e/p-y+(n+m-month)/n
+		else if (calendar==NOLEAP) then
+			year=floor(mjd/365)
+			day_fraction=mjd - year*365
+			do f=1,12
+				if (day_fraction<month_start(f+1)) then
+					month=f
+				endif
+			end do
+			day = floor(day_fraction - month_start(month))
+		else if (calendar==THREESIXTY) then
+			year=floor(mjd/360)
+			month=floor(mod(mjd,360.0)/12)
+			day=floor(mod(mjd,30.0))
+		end if
 		
 		day_fraction=mod(mjd,1.0)
 		hour=floor(day_fraction*24+1e-5)
@@ -55,6 +99,22 @@ contains
 		
 	end subroutine
 
+	function calc_day_of_year(mjd)
+		implicit none
+		real :: calc_day_of_year
+		double precision, intent(in) :: mjd
+		
+		integer :: year, month, day, hour, minute, second
+		
+		if (calendar==GREGORIAN) then
+			call calendar_date(mjd,year, month, day, hour, minute, second)
+			calc_day_of_year = mjd - date_to_mjd(year, 1,1,0,0,0)
+		else if (calendar==NOLEAP) then
+			calc_day_of_year = mod(mjd,365.0)
+		else if (calendar==THREESIXTY) then
+			calc_day_of_year = mod(mjd,360.0)
+		endif
+	end function calc_day_of_year
 
 	subroutine parse_date(date, year, month, day, hour, min, sec)
 	  implicit none

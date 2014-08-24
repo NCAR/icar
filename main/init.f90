@@ -31,7 +31,7 @@ module init
 	use radiation, only					: radiation_init
 	use model_tracking, only			: print_model_diffs
 	use wind, only						: init_winds
-	use time, only						: date_to_mjd, parse_date
+	use time, only						: date_to_mjd, parse_date, time_init
 	
 	implicit none
 	private
@@ -232,13 +232,14 @@ contains
 		integer :: nz,n_ext_winds,buffer
 		logical :: ideal, readz,readdz,debug,external_winds,remove_lowres_linear,&
 		           mean_winds,mean_fields,restart,add_low_topo,advect_density
-		character(len=MAXFILELENGTH) :: date
+		character(len=MAXFILELENGTH) :: date, calendar
 		integer :: year, month, day, hour, minute, second
 		
 		
 		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,smooth_wind_distance, &
-							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, date
+							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
+							  date, calendar
 
 		
 ! 		default parameters
@@ -262,6 +263,7 @@ contains
 		ymax= (-1)
 		smooth_wind_distance=-9999
 		vert_smooth=2
+		calendar="gregorian"
 		
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=parameters)
@@ -301,6 +303,7 @@ contains
 		options%in_dt=inputinterval
 		options%out_dt=outputinterval
 		call parse_date(date, year, month, day, hour, minute, second)
+		call time_init(calendar)
 		options%initial_mjd=date_to_mjd(year, month, day, hour, minute, second)
 		options%time_zero=((options%initial_mjd-50000) * 86400.0)
 		options%dx=dx
