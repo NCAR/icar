@@ -147,18 +147,24 @@ contains
 		
 		do i=1,nx
 			day_of_year(i) = floor(calc_day_of_year(date + lon(i,j)/360.0))
-			hour_angle(i) = 2*pi* mod(date + lon(i,j)/360.0,1.0)
+			hour_angle(i) = 2*pi* mod(date+0.5 + lon(i,j)/360.0,1.0)
 		end do
 		day_frac=day_of_year/365.25
 		
 		! fast approximation see : http://en.wikipedia.org/wiki/Position_of_the_Sun
-		declination = (-0.4091) * cos(2*pi/365*(day_of_year+10))
-! 		print*, sin_lat_m(nx/2,j), hour_angle(nx/2)
-! 		print*, day_of_year(nx/2), day_frac(nx/2), declination(nx/2)
+		declination = (-0.4091) * cos(2.0*pi/365.0*(day_of_year+10))
 		calc_solar_elevation = sin_lat_m(:,j) * sin(declination) + & 
-							   cos_lat_m(:,j) * cos(declination * cos(hour_angle))
-		calc_solar_elevation = acos(calc_solar_elevation)
+							   cos_lat_m(:,j) * cos(declination) * cos(hour_angle)
+		calc_solar_elevation = asin(calc_solar_elevation)
 		
+! 		if (j==10) then
+! 			print*, " "
+! 			print*, "hr  = ",hour_angle(10)/2/pi *24 !, (hour_angle(10)/2/pi - lon(10,j)/360.0) *24
+! 			print*, "dec = ",declination(10)/2/pi*360, sin(calc_solar_elevation(10))
+! 			print*, "elev= ",calc_solar_elevation(10)/2.0/pi * 360.0 !, calc_solar_elevation(10)
+! 			print*, sin_lat_m(10,j), sin(declination(10)), cos_lat_m(10,j), cos(declination(10)), cos(hour_angle(10))
+! 		endif
+		where(calc_solar_elevation<0) calc_solar_elevation=0
 	end function calc_solar_elevation
 	
 	subroutine ra_simple(theta,pii,qv,qc,qs,qr,p,swdown,lwdown,cloud_cover,lat,lon,date,options,dt)
@@ -174,6 +180,8 @@ contains
 		real, allocatable, dimension(:) :: rh,T_air,solar_elevation, hydrometeors,day_frac
 		
 		
+		!$omp parallel private(nx,ny,nz,j,rh,T_air,solar_elevation,hydrometeors,day_frac) &
+		!$omp shared(theta,pii,qv,p,qc,qs,qr,date,lon,cloud_cover,swdown,lwdown)
 		nx=size(lat,1)
 		ny=size(lat,2)
 		nz=size(qv,2)
@@ -184,10 +192,12 @@ contains
 		allocate(hydrometeors(nx))
 		allocate(day_frac(nx))
 		
+		!$omp do
 		do j=2,ny-1
 			
 			T_air=theta(:,1,j)*pii(:,1,j)
 			rh=relative_humidity(T_air,qv,p,j,nx)
+			
 			hydrometeors=qc(:,1,j)+qs(:,1,j)+qr(:,1,j)
 			do k=2,nz
 				hydrometeors=hydrometeors+qc(:,k,j)+qs(:,k,j)+qr(:,k,j)
@@ -198,9 +208,16 @@ contains
 			cloud_cover(:,j) = cloudfrac(rh,hydrometeors,nx)
 			swdown(:,j) = shortwave(day_frac,cloud_cover(:,j),solar_elevation,nx)
 			lwdown(:,j) = longwave(T_air,cloud_cover(:,j),nx)
+! 			if (j==10) then
+! 				print*, "Cloud=",cloud_cover(10,10)
+! 				print*, "SW = ", swdown(10,10)
+! 				print*, "LW = ", lwdown(10,10)
+! 			endif
 		end do
+		!$omp end do
 		
 		deallocate(rh,T_air,solar_elevation, hydrometeors, day_frac)
+		!$omp end parallel
 		
 	end subroutine ra_simple
 end module module_ra_simple
