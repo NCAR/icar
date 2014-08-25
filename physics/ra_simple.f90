@@ -81,7 +81,7 @@ contains
 		! convert mixing ratio to vapor pressure
 		e=mr*p(:,1,j)/(0.62197+mr)
 		! convert temperature to saturated vapor pressure
-		es=6.112*exp(17.67*(t-273.15)/(t-29.65))
+		es=611.2*exp(17.67*(t-273.15)/(t-29.65))
 		! finally return relative humidity
 		relative_humidity= e/es
 	end function relative_humidity
@@ -125,7 +125,10 @@ contains
 		where(temporary >1) temporary=1
 		where(temporary <0.0001) temporary=0.0001
 		
-		cloudfrac=(rh**0.25) * (1-exp((-2000*(qc-qcmin)) / temporary))
+		cloudfrac=qc-qcmin
+		where(cloudfrac<0) cloudfrac=0
+		
+		cloudfrac=(rh**0.25) * (1-exp((-2000*(cloudfrac)) / temporary))
 		where(cloudfrac<0) cloudfrac=0
 		where(cloudfrac>1) cloudfrac=1
 		
@@ -150,9 +153,11 @@ contains
 		
 		! fast approximation see : http://en.wikipedia.org/wiki/Position_of_the_Sun
 		declination = (-0.4091) * cos(2*pi/365*(day_of_year+10))
-		
-		calc_solar_elevation = acos(sin_lat_m(:,j) * sin(declination) + & 
-									cos_lat_m(:,j) * cos(declination * cos(hour_angle)))
+! 		print*, sin_lat_m(nx/2,j), hour_angle(nx/2)
+! 		print*, day_of_year(nx/2), day_frac(nx/2), declination(nx/2)
+		calc_solar_elevation = sin_lat_m(:,j) * sin(declination) + & 
+							   cos_lat_m(:,j) * cos(declination * cos(hour_angle))
+		calc_solar_elevation = acos(calc_solar_elevation)
 		
 	end function calc_solar_elevation
 	

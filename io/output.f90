@@ -52,8 +52,8 @@ contains
 		! create the file (clobbering any existing files!)
 		call check( nf90_create(filename, NF90_CLOBBER, ncid) )
 		
-		call check( nf90_put_att(ncid,NF90_GLOBAL,"Conventions","CF-1.0"))
-		call check( nf90_put_att(ncid,NF90_GLOBAL,"title","Intermediate Complexity Atmospheric Model output"))
+		call check( nf90_put_att(ncid,NF90_GLOBAL,"Conventions","CF-1.6"))
+		call check( nf90_put_att(ncid,NF90_GLOBAL,"title","Intermediate Complexity Atmospheric Research Model output"))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"institution","National Center for Atmospheric Research"))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"source","Intermediate Complexity Atmospheric Model version:"//trim(options%version)))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"history","Created:"//todays_date_time//UTCoffset))
@@ -150,20 +150,23 @@ contains
 		varid(3)=temp_id
 		
 		call check( nf90_def_var(ncid, "qr", NF90_REAL, dimids, temp_id) )
-		call check( nf90_put_att(ncid,temp_id,"standard_name","mixing_ratio_of_rain_with_air"))
+		call check( nf90_put_att(ncid,temp_id,"standard_name","mass_fraction_of_rain_with_air"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Rain water content"))
+		call check( nf90_put_att(ncid,temp_id,"WARNING","Could be mixing ratio, not mass fraction w/thompson scheme"))
 		call check( nf90_put_att(ncid,temp_id,"units","kg/kg"))
 		varid(4)=temp_id
 		
 		call check( nf90_def_var(ncid, "qs", NF90_REAL, dimids, temp_id) )
-		call check( nf90_put_att(ncid,temp_id,"standard_name","mixing_ratio_of_snow_with_air"))
+		call check( nf90_put_att(ncid,temp_id,"standard_name","mass_fraction_of_snow_with_air"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Snow ice content"))
+		call check( nf90_put_att(ncid,temp_id,"WARNING","Could be mixing ratio, not mass fraction w/thompson scheme"))
 		call check( nf90_put_att(ncid,temp_id,"units","kg/kg"))
 		varid(5)=temp_id
 		
 		call check( nf90_def_var(ncid, "qg", NF90_REAL, dimids, temp_id) )
-		call check( nf90_put_att(ncid,temp_id,"standard_name","mixing_ratio_of_graupel_with_air"))
+		call check( nf90_put_att(ncid,temp_id,"standard_name","mass_fraction_of_graupel_in_air"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Graupel ice content"))
+		call check( nf90_put_att(ncid,temp_id,"WARNING","Could be mixing ratio, not mass fraction w/thompson scheme"))
 		call check( nf90_put_att(ncid,temp_id,"units","kg/kg"))
 		varid(6)=temp_id
 		
@@ -239,19 +242,30 @@ contains
 		call check( nf90_put_att(ncid,temp_id,"units","kg/m^2"))
 		varid(17)=temp_id
 		
+		! surface fluxes
+		call check( nf90_def_var(ncid, "rsds", NF90_REAL, dimids(1:3:2), temp_id) )
+		call check( nf90_put_att(ncid,temp_id,"standard_name","surface_downwelling_shortwave_flux_in_air"))
+		call check( nf90_put_att(ncid,temp_id,"long_name","Shortwave downward radiation energy flux at the surface"))
+		call check( nf90_put_att(ncid,temp_id,"units","W/m^2"))
+		varid(18)=temp_id
+
+		call check( nf90_def_var(ncid, "rlds", NF90_REAL, dimids(1:3:2), temp_id) )
+		call check( nf90_put_att(ncid,temp_id,"standard_name","surface_downwelling_longwave_flux_in_air"))
+		call check( nf90_put_att(ncid,temp_id,"long_name","Longwave downward radiation energy flux at the surface"))
+		call check( nf90_put_att(ncid,temp_id,"units","W/m^2"))
+		varid(19)=temp_id
+
 		call check( nf90_def_var(ncid, "z",  NF90_REAL, dimids, temp_id) )
 		call check( nf90_put_att(ncid,temp_id,"standard_name","height"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Model level height (AGL)"))
 		call check( nf90_put_att(ncid,temp_id,"units","m"))
-		varid(18)=temp_id
+		varid(20)=temp_id
 		
 		call check( nf90_def_var(ncid, "rho", NF90_REAL, dimids, temp_id) )
 		call check( nf90_put_att(ncid,temp_id,"standard_name","air_density"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Density of dry air"))
 		call check( nf90_put_att(ncid,temp_id,"units","kg/m^3"))
-		varid(19)=temp_id
-! 		call check( nf90_def_var(ncid, "wr",  NF90_REAL, dimids, temp_id) )
-! 		varid(20)=temp_id
+		varid(21)=temp_id
 
 		
 		! End define mode. This tells netCDF we are done defining metadata.
@@ -277,9 +291,10 @@ contains
 		call check( nf90_put_var(ncid, varid(15), domain%snow) )
 		call check( nf90_put_var(ncid, varid(16), domain%graupel) )
 		call check( nf90_put_var(ncid, varid(17), domain%crain) )
-		call check( nf90_put_var(ncid, varid(18), domain%z) )
-		call check( nf90_put_var(ncid, varid(19), domain%rho) )
-! 		call check( nf90_put_var(ncid, varid(20), domain%wr) )
+		call check( nf90_put_var(ncid, varid(18), domain%swdown) )
+		call check( nf90_put_var(ncid, varid(19), domain%lwdown) )
+		call check( nf90_put_var(ncid, varid(20), domain%z) )
+		call check( nf90_put_var(ncid, varid(21), domain%rho) )
 	
 		
 		! Close the file, freeing all resources.

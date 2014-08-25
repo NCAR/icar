@@ -140,7 +140,7 @@ contains
 			call advect(domain,options,dt)
 			call mp(domain,options,dt)
 			call convect(domain,options,dt)
-			call rad(domain,options,model_time, dt)
+			call rad(domain,options,model_time/86400.0+50000, dt)
 
 ! 			apply/update boundary conditions including internal wind and pressure changes. 
 			if (.not.options%ideal) then

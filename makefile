@@ -297,7 +297,8 @@ fftshift_test: tests/test_fftshift.o $(BUILD)fftshift.o
 ###################################################################
 
 $(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)advection_driver.o $(BUILD)data_structures.o $(BUILD)init.o \
-					$(BUILD)output.o $(BUILD)wind.o $(BUILD)boundary.o $(BUILD)time.o $(BUILD)string.o
+					$(BUILD)output.o $(BUILD)wind.o $(BUILD)boundary.o $(BUILD)time.o $(BUILD)string.o \
+					$(BUILD)time_step.o
 	${F90} ${FFLAGS} $(MAIN)driver.f90 -o $(BUILD)driver.o
 
 
