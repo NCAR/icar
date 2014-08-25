@@ -1,5 +1,5 @@
 &model_version
-version="0.8"
+version="0.8.1"
 /
 
 &var_list
@@ -34,6 +34,7 @@ hgt_hi="HGT_M"
 /
 
 &parameters
+date='2000/01/01 00:00:00'
 nfiles=2,
 ntimesteps=2920,
 inputinterval=10800,
