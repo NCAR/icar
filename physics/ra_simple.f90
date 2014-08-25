@@ -176,11 +176,12 @@ contains
 		double precision, intent(in) :: date
 		type(options_type),intent(in)    :: options
 		real, intent(in) :: dt
+		real :: coolingrate
 		integer :: nx,ny,j,k,nz
 		real, allocatable, dimension(:) :: rh,T_air,solar_elevation, hydrometeors,day_frac
 		
 		
-		!$omp parallel private(nx,ny,nz,j,rh,T_air,solar_elevation,hydrometeors,day_frac) &
+		!$omp parallel private(nx,ny,nz,j,rh,T_air,solar_elevation,hydrometeors,day_frac,coolingrate) &
 		!$omp shared(theta,pii,qv,p,qc,qs,qr,date,lon,cloud_cover,swdown,lwdown)
 		nx=size(lat,1)
 		ny=size(lat,2)
@@ -191,6 +192,9 @@ contains
 		allocate(solar_elevation(nx))
 		allocate(hydrometeors(nx))
 		allocate(day_frac(nx))
+		
+		coolingrate=1.5*(dt/86400.0) *stefan_boltzmann / 300.0 !1.5K/day radiative cooling rate (300 = W/m^2 at 270K)
+		
 		
 		!$omp do
 		do j=2,ny-1
@@ -208,6 +212,9 @@ contains
 			cloud_cover(:,j) = cloudfrac(rh,hydrometeors,nx)
 			swdown(:,j) = shortwave(day_frac,cloud_cover(:,j),solar_elevation,nx)
 			lwdown(:,j) = longwave(T_air,cloud_cover(:,j),nx)
+			! apply a simple radiative cooling to the atmosphere
+			theta(2:nx-1,:,j)=theta(2:nx-1,:,j) - (((theta(2:nx-1,:,j)*pii(2:nx-1,:,j))**4) * coolingrate)
+			
 ! 			if (j==10) then
 ! 				print*, "Cloud=",cloud_cover(10,10)
 ! 				print*, "SW = ", swdown(10,10)
