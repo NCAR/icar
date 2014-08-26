@@ -113,7 +113,7 @@ GIT_VERSION := $(shell git describe --long --dirty --all --always | sed -e's/hea
 ########################################################################################
 # 
 # Once machine specific information is entered and compiler is specified, 
-# now we can set up compiler specific flags (may be overwritten later if DEBUG is set)
+# now we can set up compiler specific flags (may be overwritten later if MODE is set)
 # 
 ########################################################################################
 # Consider adding vectorization "encouragement" to the compile lines
@@ -144,8 +144,8 @@ ifeq ($(F90), pgf90)
 endif
 
 
-# Various debuging options.  Set the DEBUG variable with "make DEBUG=debugslow" etc.
-ifeq ($(DEBUG), debugslow)
+# Various compiling options.  Set the MODE variable with "make MODE=debugslow" etc.
+ifeq ($(MODE), debugslow)
 	ifeq ($(F90), ifort)
 		COMP= -debug -debug-parameters all -traceback -ftrapuv -g -fpe0 -c -u -check all -check noarg_temp_created -CB
 		LINK=  
@@ -155,7 +155,7 @@ ifeq ($(DEBUG), debugslow)
 		LINK=  
 	endif
 endif
-ifeq ($(DEBUG), debug)
+ifeq ($(MODE), debug)
 	ifeq ($(F90), ifort)
 		COMP= -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0 -fast-transcendentals -xhost
 		LINK=  
@@ -165,7 +165,7 @@ ifeq ($(DEBUG), debug)
 		LINK=  
 	endif
 endif
-ifeq ($(DEBUG), debugompslow)
+ifeq ($(MODE), debugompslow)
 	ifeq ($(F90), ifort)
 		COMP= -openmp -liomp5 -debug -debug-parameters all -traceback -ftrapuv -g -fpe0 -c -u -check all -check noarg_temp_created -CB
 		COMP= -openmp -liomp5 -debug -c -u  -fpe0 -traceback -check all -check noarg_temp_created
@@ -176,7 +176,7 @@ ifeq ($(DEBUG), debugompslow)
 		LINK= -fopenmp -lgomp  
 	endif
 endif
-ifeq ($(DEBUG), debugomp)
+ifeq ($(MODE), debugomp)
 	ifeq ($(F90), ifort)
 		COMP= -openmp -liomp5 -debug -c -fast -u -traceback -fpe0 -fast-transcendentals -xhost
 		LINK= -openmp -liomp5
@@ -188,7 +188,7 @@ ifeq ($(DEBUG), debugomp)
 endif
 
 PROF= 
-ifeq ($(DEBUG), profile)
+ifeq ($(MODE), profile)
 	ifeq ($(F90), ifort)
 		PROF=-g -debug inline-debug-info -shared-intel
 		COMP=-c -u -openmp -liomp5 -ipo -O3 -no-prec-div -xHost -ftz #because -fast includes -static # not available in ifort <13 -align array64byte
@@ -197,7 +197,7 @@ ifeq ($(DEBUG), profile)
 		PROF=-g
 	endif
 endif
-ifeq ($(DEBUG), fast) # because -ipo takes forever for very little gain
+ifeq ($(MODE), fast) # because -ipo takes forever for very little gain
 	ifeq ($(F90), ifort)
 		COMP=-c -u -openmp -liomp5 -O3 -no-prec-div -xHost -ftz
 	endif
@@ -237,7 +237,9 @@ OBJS=	$(BUILD)driver.o \
 		$(BUILD)cu_tiedtke.o \
 		$(BUILD)ra_driver.o \
 		$(BUILD)ra_simple.o \
-		$(BUILD)lsm.o \
+		$(BUILD)lsm_driver.o \
+		$(BUILD)lsm_simple.o \
+		$(BUILD)lsm_basic.o \
 		$(BUILD)pbl_driver.o \
 		$(BUILD)pbl_simple.o \
 		$(BUILD)advection_driver.o \
@@ -274,7 +276,7 @@ allclean:cleanall
 cleanall: clean
 	rm tests/*.o tests/*.mod icar fftshift_test #geo_test wind_test # test_init
 
-tests: fftshift_tests #geo_test wind_test #test_init
+test: fftshift_tests #geo_test wind_test #test_init
 
 icar:${OBJS}
 	${F90} ${LFLAGS} ${OBJS} -o icar  -lm -lfftw3
@@ -296,9 +298,8 @@ fftshift_test: tests/test_fftshift.o $(BUILD)fftshift.o
 #   driver code for 
 ###################################################################
 
-$(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)advection_driver.o $(BUILD)data_structures.o $(BUILD)init.o \
-					$(BUILD)output.o $(BUILD)wind.o $(BUILD)boundary.o $(BUILD)time.o $(BUILD)string.o \
-					$(BUILD)time_step.o
+$(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)data_structures.o $(BUILD)init.o $(BUILD)time_step.o \
+					$(BUILD)output.o $(BUILD)boundary.o $(BUILD)time.o $(BUILD)string.o
 	${F90} ${FFLAGS} $(MAIN)driver.f90 -o $(BUILD)driver.o
 
 
@@ -308,15 +309,16 @@ $(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)advection_driver.o $(BUILD)data_struc
 
 $(BUILD)init.o:$(MAIN)init.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)geo_reader.o $(BUILD)vinterp.o \
 					$(BUILD)model_tracking.o $(BUILD)mp_driver.o $(BUILD)cu_driver.o $(BUILD)pbl_driver.o $(BUILD)wind.o \
-					$(BUILD)time.o $(BUILD)ra_driver.o
+					$(BUILD)time.o $(BUILD)ra_driver.o $(BUILD)lsm_driver.o
 	${F90} ${FFLAGS} $(MAIN)init.f90 -o $(BUILD)init.o
 
 $(BUILD)boundary.o:$(MAIN)boundary.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)wind.o $(BUILD)geo_reader.o \
 					$(BUILD)vinterp.o $(BUILD)output.o $(BUILD)linear_winds.o
 	${F90} ${FFLAGS} $(MAIN)boundary.f90 -o $(BUILD)boundary.o
 
-$(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)mp_driver.o $(BUILD)wind.o $(BUILD)output.o \
-					$(BUILD)advection_driver.o $(BUILD)ra_driver.o $(BUILD)lsm.o $(BUILD)cu_driver.o $(BUILD)pbl_driver.o
+$(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.o $(BUILD)output.o \
+					$(BUILD)advection_driver.o $(BUILD)ra_driver.o $(BUILD)lsm_driver.o $(BUILD)cu_driver.o \
+					$(BUILD)pbl_driver.o $(BUILD)mp_driver.o
 	${F90} ${FFLAGS} $(MAIN)time_step.f90 -o $(BUILD)time_step.o
 
 $(BUILD)time.o:$(UTIL)time.f90
@@ -371,13 +373,19 @@ $(BUILD)cu_tiedtke.o:$(PHYS)cu_tiedtke.f90
 $(BUILD)ra_driver.o:$(PHYS)ra_driver.f90 $(BUILD)ra_simple.o $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)ra_driver.f90 -o $(BUILD)ra_driver.o
 
-$(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o
+$(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o $(BUILD)time.o
 	${F90} ${FFLAGS} $(PHYS)ra_simple.f90 -o $(BUILD)ra_simple.o
 ###################################################################
 #   Land Surface code
 ###################################################################
-$(BUILD)lsm.o: $(PHYS)lsm.f90 $(BUILD)data_structures.o
-	${F90} ${FFLAGS} $(PHYS)lsm.f90 -o $(BUILD)lsm.o
+$(BUILD)lsm_driver.o: $(PHYS)lsm_driver.f90 $(BUILD)data_structures.o $(BUILD)lsm_simple.o $(BUILD)lsm_basic.o
+	${F90} ${FFLAGS} $(PHYS)lsm_driver.f90 -o $(BUILD)lsm_driver.o
+
+$(BUILD)lsm_simple.o: $(PHYS)lsm_simple.f90 $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(PHYS)lsm_simple.f90 -o $(BUILD)lsm_simple.o
+
+$(BUILD)lsm_basic.o: $(PHYS)lsm_basic.f90 $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(PHYS)lsm_basic.f90 -o $(BUILD)lsm_basic.o
 
 ###################################################################
 #   Planetary Boundary Layer code
@@ -431,8 +439,8 @@ $(BUILD)model_tracking.o:$(MAIN)model_tracking.f90
 #   Unit tests (may only work at their git tags?)
 ###################################################################
 # 
-# NOTE: too many changes in data structures/init have definitely broken these tests, could be fixed if necessary, 
-#       but not worth the time right now. 
+# NOTE: too many changes in data structures/init have broken most of these tests, 
+#       not worth fixing right now. 
 #
 tests/test_$(BUILD)fftshift.o:$(BUILD)fftshift.o tests/test_fftshift.f90
 	${F90} ${FFLAGS} tests/test_fftshift.f90 -o tests/test_fftshift.o

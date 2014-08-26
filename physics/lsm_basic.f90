@@ -1,4 +1,4 @@
-module lsm
+module module_lsm_basic
 	use data_structures
 
     implicit none
@@ -138,7 +138,7 @@ module lsm
 		
 	end subroutine calc_pbl_index
 	
-	subroutine lsm_driver(domain,options,dt)
+	subroutine lsm_basic(domain,options,dt)
 		implicit none
 		type(domain_type),intent(inout)::domain
 		type(options_type),intent(in)::options
@@ -159,5 +159,5 @@ module lsm
 											1,nx,1,nz,1,ny,options)
 		endif
 		
-	end subroutine lsm_driver
-end module lsm
+	end subroutine lsm_basic
+end module module_lsm_basic

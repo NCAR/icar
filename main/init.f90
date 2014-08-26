@@ -582,6 +582,19 @@ contains
 		allocate(domain%pbl_height(nx,ny))
 		domain%pbl_height=0
 		
+		allocate(domain%skin_t(nx,ny))
+		domain%skin_t=0
+		allocate(domain%soil_t(nx,ny))
+		domain%soil_t=0
+		allocate(domain%soil_vwc(nx,ny))
+		domain%soil_vwc=0
+		allocate(domain%snow_swe(nx,ny))
+		domain%snow_swe=0
+		allocate(domain%current_rain(nx,ny))
+		domain%current_rain=0
+		allocate(domain%current_snow(nx,ny))
+		domain%current_snow=0
+		
 	end subroutine domain_allocation
 	
 	subroutine copy_z(input,output,interpolate_dim)
