@@ -118,9 +118,10 @@ module data_structures
 		real, allocatable, dimension(:,:,:) :: p,th,w,pii,ur,vr,wr
 		real, allocatable, dimension(:,:,:) :: qv,cloud,ice,nice,qrain,nrain,qsnow,qgrau
 		real, allocatable, dimension(:,:,:) :: qv_adv_tendency,qv_pbl_tendency
-		real, allocatable, dimension(:,:) :: rain,crain,snow,graupel,sensible_heat,latent_heat,pbl_height,landmask
+		real, allocatable, dimension(:,:) :: rain,crain,snow,graupel,pbl_height,landmask
 		real, allocatable, dimension(:,:) :: swdown, lwdown,cloudfrac
 		real, allocatable,dimension(:,:) :: sintheta,costheta
+		real, allocatable, dimension(:,:) :: sensible_heat,latent_heat,ground_heat
 		real, allocatable, dimension(:,:) :: soil_t, skin_t, soil_vwc, snow_swe, current_rain, current_snow
 		real::dt
 	end type domain_type

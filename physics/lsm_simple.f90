@@ -58,7 +58,7 @@ module module_lsm_simple
 contains
 	subroutine lsm_simple_init(domain,options)
 		implicit none
-		type(domain_type), intent(inout) :: domain
+		type(domain_type), intent(in) :: domain
 		type(options_type),intent(in)    :: options
 		integer :: nx,ny
 		
@@ -96,7 +96,7 @@ contains
 		soil_hydro_dz=1.0     ! m
 		emissivity=0.95
 		
-		domain%soil_vwc=0.25
+! 		domain%soil_vwc=0.25
 	end subroutine lsm_simple_init
 	
 	subroutine calc_ground_heat(tsoil,tskin,ground_heat,dt)

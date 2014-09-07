@@ -579,15 +579,17 @@ contains
 		domain%sensible_heat=0
 		allocate(domain%latent_heat(nx,ny))
 		domain%latent_heat=0
+		allocate(domain%ground_heat(nx,ny))
+		domain%ground_heat=0
 		allocate(domain%pbl_height(nx,ny))
 		domain%pbl_height=0
 		
 		allocate(domain%skin_t(nx,ny))
-		domain%skin_t=0
+		domain%skin_t=280
 		allocate(domain%soil_t(nx,ny))
-		domain%soil_t=0
+		domain%soil_t=280
 		allocate(domain%soil_vwc(nx,ny))
-		domain%soil_vwc=0
+		domain%soil_vwc=0.25
 		allocate(domain%snow_swe(nx,ny))
 		domain%snow_swe=0
 		allocate(domain%current_rain(nx,ny))

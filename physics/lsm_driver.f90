@@ -31,7 +31,7 @@ contains
 		else if (options%physics%landsurface==2) then
 			call lsm_simple(domain%th,domain%pii,domain%qv,domain%current_rain, domain%current_snow,domain%p, &
 							domain%swdown,domain%lwdown, sqrt(domain%u(:,1,:)**2+domain%v(:,1,:)**2), &
-							domain%sensible_heat, domain%latent_heat, &
+							domain%sensible_heat, domain%latent_heat, domain%ground_heat, &
 							domain%skin_t, domain%soil_t, domain%soil_vwc, domain%snow_swe, &
 							options,dt)
 		endif
