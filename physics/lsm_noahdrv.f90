@@ -26,7 +26,7 @@ CONTAINS
 !----------------------------------------------------------------
 ! Urban related variable are added to arguments - urban
 !----------------------------------------------------------------
-   SUBROUTINE lsm(DZ8W,QV3D,P8W3D,T3D,TSK,                      &
+   SUBROUTINE lsm_noah(DZ8W,QV3D,P8W3D,T3D,TSK,                      &
                   HFX,QFX,LH,GRDFLX, QGH,GSW,SWDOWN,GLW,SMSTAV,SMSTOT, &
                   SFCRUNOFF, UDRUNOFF,IVGTYP,ISLTYP,ISURBAN,ISICE,VEGFRA,    &
                   ALBEDO,ALBBCK,ZNT,Z0,TMN,XLAND,XICE,EMISS,EMBCK,   &
@@ -886,20 +886,20 @@ CONTAINS
           SMC(NS) = 1.0
           SMAV(NS) = 1.0
        ENDDO
-       CALL SFLX_GLACIAL(I,J,ISICE,FFROZP,DT,ZLVL,NSOIL,SLDPTH,   &    !C
-            &    LWDN,SOLNET,SFCPRS,PRCP,SFCTMP,Q2K,              &    !F
-            &    TH2,Q2SAT,DQSDT2,                                &    !I
-            &    ALBBRD, SNOALB1,TBOT, Z0BRD, Z0K, EMISSI, EMBRD, &    !S
-            &    T1,STC(1:NSOIL),SNOWHK,SNEQV,ALBEDOK,CHK,        &    !H
-            &    ETA,SHEAT,ETA_KINEMATIC,FDOWN,                   &    !O
-            &    ESNOW,DEW,                                       &    !O
-            &    ETP,SSOIL,                                       &    !O
-            &    FLX1,FLX2,FLX3,                                  &    !O
-            &    SNOMLT,SNCOVR,                                   &    !O
-            &    RUNOFF1,                                         &    !O
-            &    Q1,                                              &    !D
-            &    SNOTIME1,                                        &
-            &    RIBB)
+!        CALL SFLX_GLACIAL(I,J,ISICE,FFROZP,DT,ZLVL,NSOIL,SLDPTH,   &    !C
+!             &    LWDN,SOLNET,SFCPRS,PRCP,SFCTMP,Q2K,              &    !F
+!             &    TH2,Q2SAT,DQSDT2,                                &    !I
+!             &    ALBBRD, SNOALB1,TBOT, Z0BRD, Z0K, EMISSI, EMBRD, &    !S
+!             &    T1,STC(1:NSOIL),SNOWHK,SNEQV,ALBEDOK,CHK,        &    !H
+!             &    ETA,SHEAT,ETA_KINEMATIC,FDOWN,                   &    !O
+!             &    ESNOW,DEW,                                       &    !O
+!             &    ETP,SSOIL,                                       &    !O
+!             &    FLX1,FLX2,FLX3,                                  &    !O
+!             &    SNOMLT,SNCOVR,                                   &    !O
+!             &    RUNOFF1,                                         &    !O
+!             &    Q1,                                              &    !D
+!             &    SNOTIME1,                                        &
+!             &    RIBB)
 
     ENDIF
 
@@ -1003,10 +1003,10 @@ CONTAINS
 
 
 !------------------------------------------------------
-   END SUBROUTINE lsm
+   END SUBROUTINE lsm_noah
 !------------------------------------------------------
 
-  SUBROUTINE LSMINIT(VEGFRA,SNOW,SNOWC,SNOWH,CANWAT,SMSTAV,    &
+  SUBROUTINE LSM_NOAH_INIT(VEGFRA,SNOW,SNOWC,SNOWH,CANWAT,SMSTAV,    &
                      SMSTOT, SFCRUNOFF,UDRUNOFF,ACSNOW,        &
                      ACSNOM,IVGTYP,ISLTYP,TSLB,SMOIS,SH2O,ZS,DZS, &
                      MMINLU,                                   &
