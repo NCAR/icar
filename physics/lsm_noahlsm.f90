@@ -478,9 +478,9 @@ CONTAINS
             SNCOND = 1.0
          ELSE
             SNDENS = SNEQV / SNOWH
-            IF(SNDENS > 1.0) THEN
-             CALL wrf_error_fatal ( 'Physical snow depth is less than snow water equiv.' )
-            ENDIF
+!             IF(SNDENS > 1.0) THEN
+!              CALL wrf_error_fatal ( 'Physical snow depth is less than snow water equiv.' )
+!             ENDIF
             CALL CSNOW (SNCOND,SNDENS)
          END IF
 ! ----------------------------------------------------------------------
@@ -2256,15 +2256,15 @@ CONTAINS
 !      SAVE
 ! ----------------------------------------------------------------------
 !
-               IF (SOILTYP .gt. SLCATS) THEN
-                        CALL wrf_error_fatal ( 'Warning: too many input soil types' )
-               END IF
-               IF (VEGTYP .gt. LUCATS) THEN
-                     CALL wrf_error_fatal ( 'Warning: too many input landuse types' )
-               END IF
-               IF (SLOPETYP .gt. SLPCATS) THEN
-                     CALL wrf_error_fatal ( 'Warning: too many input slope types' )
-               END IF
+!                IF (SOILTYP .gt. SLCATS) THEN
+!                         CALL wrf_error_fatal ( 'Warning: too many input soil types' )
+!                END IF
+!                IF (VEGTYP .gt. LUCATS) THEN
+!                      CALL wrf_error_fatal ( 'Warning: too many input landuse types' )
+!                END IF
+!                IF (SLOPETYP .gt. SLPCATS) THEN
+!                      CALL wrf_error_fatal ( 'Warning: too many input slope types' )
+!                END IF
 
 ! ----------------------------------------------------------------------
 !  SET-UP SOIL PARAMETERS
@@ -2327,15 +2327,15 @@ CONTAINS
       ZBOTV     = ZBOTVTBL     (VEGTYP)
 
                IF (VEGTYP .eq. BARE) SHDFAC = 0.0
-               IF (NROOT .gt. NSOIL) THEN
-                  WRITE (err_message,*) 'Error: too many root layers ',  &
-                                                 NSOIL,NROOT
-                  CALL wrf_error_fatal ( err_message )
+!                IF (NROOT .gt. NSOIL) THEN
+!                   WRITE (err_message,*) 'Error: too many root layers ',  &
+!                                                  NSOIL,NROOT
+!                   CALL wrf_error_fatal ( err_message )
 ! ----------------------------------------------------------------------
 ! CALCULATE ROOT DISTRIBUTION.  PRESENT VERSION ASSUMES UNIFORM
 ! DISTRIBUTION BASED ON SOIL LAYER DEPTHS.
 ! ----------------------------------------------------------------------
-               END IF
+!                END IF
                DO I = 1,NROOT
                   RTDIS (I) = - SLDPTH (I)/ ZSOIL (NROOT)
 ! ----------------------------------------------------------------------

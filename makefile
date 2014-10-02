@@ -9,6 +9,8 @@
 # 			real: makes the primary model
 #		 	ideal: makes an idealized version of the model (does not not always work)
 # 
+#	MODE = fast, debug, debugomp, debugslow, debugompslow
+#
 ###################################################################
 # Variables that need to be set by the user: 
 # 
@@ -240,6 +242,8 @@ OBJS=	$(BUILD)driver.o \
 		$(BUILD)lsm_driver.o \
 		$(BUILD)lsm_simple.o \
 		$(BUILD)lsm_basic.o \
+		$(BUILD)lsm_noahdrv.o \
+		$(BUILD)lsm_noahlsm.o \
 		$(BUILD)pbl_driver.o \
 		$(BUILD)pbl_simple.o \
 		$(BUILD)advection_driver.o \
@@ -378,7 +382,8 @@ $(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o $(BUILD)time.
 ###################################################################
 #   Land Surface code
 ###################################################################
-$(BUILD)lsm_driver.o: $(PHYS)lsm_driver.f90 $(BUILD)data_structures.o $(BUILD)lsm_simple.o $(BUILD)lsm_basic.o
+$(BUILD)lsm_driver.o: $(PHYS)lsm_driver.f90 $(BUILD)data_structures.o $(BUILD)lsm_simple.o \
+						$(BUILD)lsm_basic.o $(BUILD)lsm_noahdrv.o $(BUILD)lsm_noahlsm.o
 	${F90} ${FFLAGS} $(PHYS)lsm_driver.f90 -o $(BUILD)lsm_driver.o
 
 $(BUILD)lsm_simple.o: $(PHYS)lsm_simple.f90 $(BUILD)data_structures.o
@@ -386,6 +391,13 @@ $(BUILD)lsm_simple.o: $(PHYS)lsm_simple.f90 $(BUILD)data_structures.o
 
 $(BUILD)lsm_basic.o: $(PHYS)lsm_basic.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)lsm_basic.f90 -o $(BUILD)lsm_basic.o
+
+$(BUILD)lsm_noahdrv.o: $(PHYS)lsm_noahdrv.f90 $(BUILD)lsm_noahlsm.o
+	${F90} ${FFLAGS} $(PHYS)lsm_noahdrv.f90 -o $(BUILD)lsm_noahdrv.o
+	
+$(BUILD)lsm_noahlsm.o: $(PHYS)lsm_noahlsm.f90
+	${F90} ${FFLAGS} $(PHYS)lsm_noahlsm.f90 -o $(BUILD)lsm_noahlsm.o
+
 
 ###################################################################
 #   Planetary Boundary Layer code

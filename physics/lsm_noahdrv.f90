@@ -51,9 +51,9 @@ CONTAINS
                   ua_phys,flx4_2d,fvb_2d,fbur_2d,fgsn_2d,       &
                   ids,ide, jds,jde, kds,kde,                    &
                   ims,ime, jms,jme, kms,kme,                    &
-                  its,ite, jts,jte, kts,kte,                    &
-                  sf_urban_physics,                             &
-                  CMR_SFCDIF,CHR_SFCDIF,CMC_SFCDIF,CHC_SFCDIF)!,  &
+                  its,ite, jts,jte, kts,kte)!,                    &
+!                   sf_urban_physics,                             &
+!                   CMR_SFCDIF,CHR_SFCDIF,CMC_SFCDIF,CHC_SFCDIF,  &
 !Optional Urban
 !                   TR_URB2D,TB_URB2D,TG_URB2D,TC_URB2D,QC_URB2D, & !H urban
 !                   UC_URB2D,                                     & !H urban
@@ -227,7 +227,7 @@ CONTAINS
                                     ims,ime, jms,jme, kms,kme,  &
                                     its,ite, jts,jte, kts,kte
 
-   INTEGER,  INTENT(IN   )   ::  sf_urban_physics               !urban
+!    INTEGER,  INTENT(IN   )   ::  sf_urban_physics               !urban
    INTEGER,  INTENT(IN   )   ::  isurban
    INTEGER,  INTENT(IN   )   ::  isice
 
@@ -328,10 +328,10 @@ CONTAINS
    REAL,    DIMENSION( ims:ime, jms:jme ), INTENT(INOUT) :: LAI
    REAL,DIMENSION(IMS:IME,JMS:JME),INTENT(IN) ::        QZ0
 
-   REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT) :: CMR_SFCDIF
-   REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT) :: CHR_SFCDIF
-   REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT) :: CMC_SFCDIF
-   REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT) :: CHC_SFCDIF
+!    REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT) :: CMR_SFCDIF
+!    REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT) :: CHR_SFCDIF
+!    REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT) :: CMC_SFCDIF
+!    REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT) :: CHC_SFCDIF
 ! Local variables (moved here from driver to make routine thread safe, 20031007 jm)
 
       REAL, DIMENSION(1:num_soil_layers) ::  ET
@@ -1017,6 +1017,8 @@ CONTAINS
                      ims,ime, jms,jme, kms,kme,                &
                      its,ite, jts,jte, kts,kte                 )
 
+	implicit none !edg
+
    INTEGER,  INTENT(IN   )   ::     ids,ide, jds,jde, kds,kde,  &
                                     ims,ime, jms,jme, kms,kme,  &
                                     its,ite, jts,jte, kts,kte
@@ -1063,6 +1065,8 @@ CONTAINS
    INTEGER                   :: errflag
    CHARACTER(LEN=80)         :: err_message
 
+   integer :: i,j,itf,jtf,NS !edg
+   real :: FK !edg
    character*256 :: MMINSL
         MMINSL='STAS'
 !
@@ -1174,7 +1178,7 @@ CONTAINS
 
    ENDIF
 !------------------------------------------------------------------------------
-  END SUBROUTINE lsminit
+  END SUBROUTINE LSM_NOAH_INIT
 !------------------------------------------------------------------------------
 
 

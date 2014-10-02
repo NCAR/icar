@@ -9,11 +9,22 @@ module land_surface
 	integer :: ids,ide,jds,jde,kds,kde ! Domain dimensions
 	integer :: ims,ime,jms,jme,kms,kme ! Local Memory dimensions
 	integer :: its,ite,jts,jte,kts,kte ! Processing Tile dimensions
-	real,allocatable, dimension(:,:)    :: VEGFRA, CANWAT, SMSTAV, SMSTOT,SFCRUNOFF,UDRUNOFF, &
-										   SNOW,SNOWC,SNOWH, ACSNOM, SNOALB
+	
+	! LOTS of variables required by Noah, placed here temporarily to get it to compile, this may be where they stay...
+	real,allocatable, dimension(:,:)    :: VEGFRA, CANWAT, SMSTAV, SMSTOT,SFCRUNOFF,UDRUNOFF,   &
+										   SNOW,SNOWC,SNOWH, ACSNOW, ACSNOM, SNOALB,TSK, QFX,   &
+										   QGH, GSW, ALBEDO, ALBBCK, ZNT, Z0, TMN, XICE, EMISS, &
+										   EMBCK, QSFC, RAINBL, CHS, CHS2, CQS2, CPM, SR,       &
+										   CHKLOWQ, LAI, QZ0, SHDMIN,SHDMAX,SNOTIME,SNOPCX,     &
+										   POTEVP,SMCREL,RIB, NOAHRES,FLX4_2D,FVB_2D,FBUR_2D,   &
+										   FGSN_2D
+										   
+	logical :: MYJ, FRPCPN,ua_phys,RDLAI2D,USEMONALB
 	real,allocatable, dimension(:,:,:)  :: TSLB,SMOIS,SH2O
 	real,allocatable, dimension(:)      :: Zs,DZs
+	real :: ROVCP,XICE_THRESHOLD
 	integer,allocatable, dimension(:,:) :: IVGTYP,ISLTYP
+	integer :: ITIMESTEP
 	
 	character(len=MAXVARLENGTH) :: MMINLU
 	logical :: FNDSOILW,FNDSNOWH,RDMAXALB
@@ -25,8 +36,10 @@ contains
 		integer, intent(in) :: ime,jme,kme,num_soil_layers
 		integer :: i
 		
+		ITIMESTEP=1
+		
 		allocate(VEGFRA(ime,jme))
-		VEGFRAC=0.5
+		VEGFRA=0.5
 		allocate(CANWAT(ime,jme))
 		CANWAT=0
 		allocate(SMSTAV(ime,jme))
@@ -43,10 +56,91 @@ contains
 		SNOWC=0
 		allocate(SNOWH(ime,jme))
 		SNOWH=0
+		allocate(ACSNOW(ime,jme))
+		ACSNOW=0
 		allocate(ACSNOM(ime,jme))
 		ACSNOM=0
-		allocate(SNOWALB(ime,jme))
-		SNOWALB=0.8
+		allocate(SNOALB(ime,jme))
+		SNOALB=0.8
+		allocate(TSK(ime,jme))
+		TSK=280.0
+
+		allocate(QFX(ime,jme))
+		QFX=0
+		allocate(QGH(ime,jme))
+		QGH=0
+		allocate(GSW(ime,jme))
+		GSW=0
+
+		allocate(ALBEDO(ime,jme))
+		ALBEDO=0.17
+		allocate(ALBBCK(ime,jme))
+		ALBBCK=0.17 !?
+		allocate(ZNT(ime,jme))
+		ZNT=0.01 !?
+		allocate(Z0(ime,jme))
+		Z0=0.01 !?
+		allocate(TMN(ime,jme))
+		TMN=0 !?
+		allocate(XICE(ime,jme))
+		XICE=0 !?
+		allocate(EMISS(ime,jme))
+		EMISS=0.95
+		allocate(EMBCK(ime,jme))
+		EMBCK=0.95
+		allocate(QSFC(ime,jme))
+		QSFC=0
+		allocate(RAINBL(ime,jme))
+		RAINBL=0
+		allocate(CHS(ime,jme))
+		CHS=0.1
+		allocate(CHS2(ime,jme))
+		CHS2=0.1
+		allocate(CQS2(ime,jme))
+		CQS2=0.1
+		allocate(CPM(ime,jme))
+		CPM=0
+		allocate(SR(ime,jme))
+		SR=0
+		allocate(CHKLOWQ(ime,jme))
+		CHKLOWQ=0
+		allocate(LAI(ime,jme))
+		LAI=3
+		allocate(QZ0(ime,jme))
+		QZ0=0
+		
+		allocate(FLX4_2D(ime,jme))
+		allocate(FVB_2D(ime,jme))
+		allocate(FBUR_2D(ime,jme))
+		allocate(FGSN_2D(ime,jme))
+		
+		allocate(SHDMIN(ime,jme))
+		SHDMIN=0
+		allocate(SHDMAX(ime,jme))
+		SHDMAX=0
+		allocate(SNOTIME(ime,jme))
+		SNOTIME=0
+		allocate(SNOPCX(ime,jme))
+		SNOPCX=0
+		allocate(POTEVP(ime,jme))
+		POTEVP=0
+		allocate(SMCREL(ime,jme))
+		SMCREL=0
+		allocate(RIB(ime,jme))
+		RIB=0
+		allocate(NOAHRES(ime,jme))
+		NOAHRES=0
+		
+		
+		
+		ROVCP=0.01
+		XICE_THRESHOLD=0
+		RDLAI2D=.false.
+		USEMONALB=.false.
+		MYJ=.false.
+		FRPCPN=.false.
+		ua_phys=.false.
+		
 
 		MMINLU="USGS"
 		allocate(IVGTYP(ime,jme))
@@ -56,7 +150,7 @@ contains
 
 		
 		allocate(TSLB(ime,num_soil_layers,jde))
-		TSLB=280
+		TSLB=280.0
 		allocate(SMOIS(ime,num_soil_layers,jde))
 		SMOIS=0.2
 		allocate(SH2O(ime,num_soil_layers,jde))
@@ -99,14 +193,14 @@ contains
 			call allocate_noah_data(ime,jme,kme,num_soil_layers)
 
 		    call LSM_NOAH_INIT(VEGFRA,SNOW,SNOWC,SNOWH,CANWAT,SMSTAV,    &
-							SMSTOT, SFCRUNOFF,UDRUNOFF,ACSNOW,        &
+							SMSTOT, SFCRUNOFF,UDRUNOFF,ACSNOW,           &
 							ACSNOM,IVGTYP,ISLTYP,TSLB,SMOIS,SH2O,ZS,DZS, &
-							MMINLU,                                   &
-							SNOALB, FNDSOILW, FNDSNOWH, RDMAXALB,     &
-							num_soil_layers, options%restart,         &
-							.True ,                                   & ! allowed_to_read (e.g. soilparm.tbl)
-							ids,ide, jds,jde, kds,kde,                &
-							ims,ime, jms,jme, kms,kme,                &
+							MMINLU,                                      &
+							SNOALB, FNDSOILW, FNDSNOWH, RDMAXALB,        &
+							num_soil_layers, options%restart,            &
+							.True. ,                                     & ! allowed_to_read (e.g. soilparm.tbl)
+							ids,ide, jds,jde, kds,kde,                   &
+							ims,ime, jms,jme, kms,kme,                   &
 							its,ite, jts,jte, kts,kte  )
 		endif
 		if (options%physics%landsurface==2) then
@@ -143,7 +237,7 @@ contains
                   ALBEDO,ALBBCK,ZNT,Z0,TMN,domain%landmask,XICE,EMISS,EMBCK,     &
                   SNOWC,QSFC,RAINBL,MMINLU,                     &
                   num_soil_layers,dt,DZS,ITIMESTEP,             &
-                  SMOIS,TSLB,domain%swe,CANWAT,                 &
+                  SMOIS,TSLB,domain%snow_swe,CANWAT,            &
                   CHS,CHS2,CQS2,CPM,ROVCP,SR,chklowq,lai,qz0,   & !H
                   myj,frpcpn,                                   &
                   SH2O,SNOWH,                                   & !H
@@ -161,10 +255,7 @@ contains
                   ua_phys,flx4_2d,fvb_2d,fbur_2d,fgsn_2d,       & ! Noah UA changes
                   ids,ide, jds,jde, kds,kde,                    &
                   ims,ime, jms,jme, kms,kme,                    &
-                  its,ite, jts,jte, kts,kte,                    &
-                  sf_urban_physics,                             &
-                  CMR_SFCDIF,CHR_SFCDIF,CMC_SFCDIF,CHC_SFCDIF)
-
+                  its,ite, jts,jte, kts,kte)
 		endif
 		
 	end subroutine lsm
