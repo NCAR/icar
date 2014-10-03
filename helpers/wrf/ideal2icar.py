@@ -19,7 +19,7 @@ def adjust_p(p,hin,hout):
 
 
 def main(inputfile):
-    filename="swm_"+inputfile
+    filename="icar_"+inputfile
     print(filename)
     yaxis=2
     yaxis2d=1
