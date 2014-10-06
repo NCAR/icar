@@ -763,8 +763,9 @@ contains
 		ny=size(zbase,2)
 		nz=size(zbase,3)
 		allocate(boundary%lowres_z(nx,nz,ny))
-		write(*,*) "WARNING: HACK in init.f90 boundary init : z=z*9.8"
-		boundary%lowres_z=reshape(zbase*9.8,[nx,nz,ny],order=[1,3,2])
+! 		write(*,*) "WARNING: HACK in init.f90 boundary init : z=z*9.8"
+! 		boundary%lowres_z=reshape(zbase*9.8,[nx,nz,ny],order=[1,3,2])
+		boundary%lowres_z=reshape(zbase,[nx,nz,ny],order=[1,3,2])
 		deallocate(zbase)
 		if (options%zvar=="PH") then
 			call io_read3d(options%boundary_files(1),"PHB",zbase)

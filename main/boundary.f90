@@ -439,8 +439,10 @@ contains
 			enddo
 		endif
 ! 		smoothing_window = min(max(int((bc%dx/domain%dx) * smooth_n_coarse),1),size(domain%lat,1)/10)
-		smoothing_window = min(max(int(options%smooth_wind_distance/domain%dx),1),size(domain%lat,1)/5)
-		write(*,*) "Smoothing winds over ",smoothing_window," grid cells"
+		if (.not.options%ideal) then
+			smoothing_window = min(max(int(options%smooth_wind_distance/domain%dx),1),size(domain%lat,1)/5)
+			write(*,*) "Smoothing winds over ",smoothing_window," grid cells"
+		endif
 ! 		load the restart file
 		if (options%restart) then
 			call load_restart_file(domain,options%restart_file)

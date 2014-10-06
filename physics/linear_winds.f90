@@ -149,11 +149,9 @@ contains
 ! 		then perform ffts etc in parallel
 ! 		finally destroy plans serially
 		m=1
-! 		print*,shape(domain%u)
-! 		print*,realnx,nz,realny
         do z=1,nz
-            U=U_layers(i)
-            V=V_layers(i)
+            U=U_layers(z)
+            V=V_layers(z)
 !             U=domain%u(88,z,82)
 !             V=domain%v(88,z,82)
 			if ((abs(U)+abs(V))>0.5) then
@@ -219,7 +217,7 @@ contains
 					! if we are using density in the advection calculations, modify the linear perturbation
 					! to get the vertical velocities closer to what they would be without density (boussinesq)
 					if (useDensity) then
-						print*, "Using a density correction in linear winds"
+						write(*,*), "Using a density correction in linear winds"
 						u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer) = &
 							2*real(u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer))! / domain%rho(1:realnx,z,1:realny)
 						v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer) = &
@@ -242,13 +240,13 @@ contains
 			
 				if (present(debug).and.(z==1))then
 					if (debug) then
-! 						print*, (realnx-1)-(1)+1, (nx-buffer-1)-(1+buffer)+1, size(domain%u,3),(ny-buffer)-(1+buffer)+1
-! 						print*, (realnx-1)-(1)+1, (nx-buffer)-(2+buffer)+1, size(domain%u,3),(ny-buffer)-(1+buffer)+1
-						print*, "Ndsq = ", Ndsq
-						print*, "U=",U, "    V=",V
-						print*, "realnx=",realnx, "; nx=",nx, "; buffer=",buffer
-						print*, "realny=",realny, "; ny=",ny!, buffer
-						print*, "Writing internal linear wind data"
+! 						write(*,*) (realnx-1)-(1)+1, (nx-buffer-1)-(1+buffer)+1, size(domain%u,3),(ny-buffer)-(1+buffer)+1
+! 						write(*,*) (realnx-1)-(1)+1, (nx-buffer)-(2+buffer)+1, size(domain%u,3),(ny-buffer)-(1+buffer)+1
+						write(*,*) "Ndsq = ", Ndsq
+						write(*,*) "U=",U, "    V=",V
+						write(*,*) "realnx=",realnx, "; nx=",nx, "; buffer=",buffer
+						write(*,*) "realny=",realny, "; ny=",ny!, buffer
+						write(*,*) "Writing internal linear wind data"
 						call io_write2d("u_hat_sub2.nc","data",real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer))) )
 						call io_write2d("v_hat_sub2.nc","data",real(real(v_hat(1+buffer:nx-buffer,1+buffer:realny+buffer-1))) )
 					endif
