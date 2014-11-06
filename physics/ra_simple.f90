@@ -104,7 +104,8 @@ contains
 		sin_solar_elev = sin(solar_elevation)
 		shortwave=So * (1+0.035*cos(day_frac * 2*pi)) * sin_solar_elev * (0.48+0.29*sin_solar_elev)
 		
-		shortwave=shortwave * (1 - 0.75 * cloud_cover**3.4)
+		! note it is cloud_cover**3.4 in Reiff, but this makes almost no difference and integer powers are fast
+		shortwave=shortwave * (1 - 0.75 * cloud_cover**3) 
 		
 	end function shortwave
 	
