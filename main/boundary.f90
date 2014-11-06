@@ -56,9 +56,9 @@ contains
 		inputwind=wind !make a copy so we always use the unsmoothed data when computing the smoothed data
 		
 		!parallelize over the slowest dimension
-		!$no omp parallel firstprivate(windowsize,nx,ny,nz,ydim), &
-		!$no omp private(i,j,k,startx,endx,starty,endy),shared(wind,inputwind)
-		!$no omp do schedule(static)
+		!$omp parallel firstprivate(windowsize,nx,ny,nz,ydim), &
+		!$omp private(i,j,k,startx,endx,starty,endy),shared(wind,inputwind)
+		!$omp do schedule(static)
 		do k=1,nz
 			do j=1,ny
 				do i=1,nx
@@ -85,8 +85,8 @@ contains
 				enddo
 			enddo
 		enddo
-		!$no omp end do
-		!$no omp end parallel
+		!$omp end do
+		!$omp end parallel
 		
 		deallocate(inputwind)
 	end subroutine smooth_wind
