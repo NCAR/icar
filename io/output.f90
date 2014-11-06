@@ -267,6 +267,12 @@ contains
 		call check( nf90_put_att(ncid,temp_id,"units","kg/m^3"))
 		varid(21)=temp_id
 
+		call check( nf90_def_var(ncid, "clt", NF90_REAL, dimids(1:3:2), temp_id) )
+		call check( nf90_put_att(ncid,temp_id,"standard_name","cloud_area_fraction"))
+		call check( nf90_put_att(ncid,temp_id,"long_name","Fractional cloud cover"))
+		call check( nf90_put_att(ncid,temp_id,"units","[0-1]"))
+		varid(22)=temp_id
+
 		
 		! End define mode. This tells netCDF we are done defining metadata.
 		call check( nf90_enddef(ncid) )
@@ -295,6 +301,7 @@ contains
 		call check( nf90_put_var(ncid, varid(19), domain%lwdown) )
 		call check( nf90_put_var(ncid, varid(20), domain%z) )
 		call check( nf90_put_var(ncid, varid(21), domain%rho) )
+		call check( nf90_put_var(ncid, varid(22), domain%cloudfrac) )
 	
 		
 		! Close the file, freeing all resources.
