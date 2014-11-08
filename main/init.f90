@@ -29,6 +29,7 @@ module init
 	use convection, only				: init_convection
 	use planetary_boundary_layer, only	: pbl_init
 	use radiation, only					: radiation_init
+	use land_surface, only				: lsm_init
 	use model_tracking, only			: print_model_diffs
 	use wind, only						: init_winds
 	use time, only						: date_to_mjd, parse_date, time_init
@@ -88,7 +89,7 @@ contains
 	subroutine init_physics(options,domain)
 		implicit none
 		type(options_type), intent(in) :: options
-		type(domain_type), intent(in) :: domain
+		type(domain_type), intent(inout) :: domain
 
 		! initialize microphysics code (e.g. compute look up tables in Thompson et al)
 		call mp_init(options) !this could easily be moved to init_model...
@@ -98,6 +99,8 @@ contains
 		call pbl_init(domain,options)
 		
 		call radiation_init(domain,options)
+		
+		call lsm_init(domain,options)
 		
 	end subroutine init_physics
 	

@@ -135,7 +135,7 @@ contains
 		write(*,*) "    dt=",dt, "nsteps=",ntimesteps
 ! 		now just loop over internal timesteps computing all physics in order (operator splitting...)
 		do i=1,ntimesteps
-			call lsm(domain,options,dt)
+			call lsm(domain,options,dt,model_time)
 			call pbl(domain,options,dt)
 			call advect(domain,options,dt)
 			call mp(domain,options,dt)

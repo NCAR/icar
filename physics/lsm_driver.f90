@@ -16,11 +16,11 @@ module land_surface
 										   QGH, GSW, ALBEDO, ALBBCK, ZNT, Z0, TMN, XICE, EMISS, &
 										   EMBCK, QSFC, RAINBL, CHS, CHS2, CQS2, CPM, SR,       &
 										   CHKLOWQ, LAI, QZ0, SHDMIN,SHDMAX,SNOTIME,SNOPCX,     &
-										   POTEVP,SMCREL,RIB, NOAHRES,FLX4_2D,FVB_2D,FBUR_2D,   &
+										   POTEVP,RIB, NOAHRES,FLX4_2D,FVB_2D,FBUR_2D,   &
 										   FGSN_2D
 										   
 	logical :: MYJ, FRPCPN,ua_phys,RDLAI2D,USEMONALB
-	real,allocatable, dimension(:,:,:)  :: TSLB,SMOIS,SH2O
+	real,allocatable, dimension(:,:,:)  :: TSLB,SMOIS,SH2O,SMCREL
 	real,allocatable, dimension(:)      :: Zs,DZs
 	real :: ROVCP,XICE_THRESHOLD
 	integer,allocatable, dimension(:,:) :: IVGTYP,ISLTYP
@@ -28,7 +28,8 @@ module land_surface
 	
 	character(len=MAXVARLENGTH) :: MMINLU
 	logical :: FNDSOILW,FNDSNOWH,RDMAXALB
-	integer :: num_soil_layers,ISURBAN,ISICE
+	integer :: num_soil_layers,ISURBAN,ISICE,counter,steps_per_lsm_step
+	real*8  :: last_model_time
 	
 contains
 	subroutine allocate_noah_data(ime,jme,kme,num_soil_layers)
@@ -68,7 +69,7 @@ contains
 		allocate(QFX(ime,jme))
 		QFX=0
 		allocate(QGH(ime,jme))
-		QGH=0
+		QGH=0.02 ! saturated mixing ratio at ~20C
 		allocate(GSW(ime,jme))
 		GSW=0
 
@@ -83,7 +84,7 @@ contains
 		allocate(TMN(ime,jme))
 		TMN=0 !?
 		allocate(XICE(ime,jme))
-		XICE=0 !?
+		XICE=0
 		allocate(EMISS(ime,jme))
 		EMISS=0.95
 		allocate(EMBCK(ime,jme))
@@ -124,7 +125,7 @@ contains
 		SNOPCX=0
 		allocate(POTEVP(ime,jme))
 		POTEVP=0
-		allocate(SMCREL(ime,jme))
+		allocate(SMCREL(ime,kme,jme))
 		SMCREL=0
 		allocate(RIB(ime,jme))
 		RIB=0
@@ -134,7 +135,7 @@ contains
 		
 		
 		ROVCP=0.01
-		XICE_THRESHOLD=0
+		XICE_THRESHOLD=1
 		RDLAI2D=.false.
 		USEMONALB=.false.
 		MYJ=.false.
@@ -149,11 +150,11 @@ contains
 		ISLTYP=6 ! Loam
 
 		
-		allocate(TSLB(ime,num_soil_layers,jde))
+		allocate(TSLB(ime,num_soil_layers,jme))
 		TSLB=280.0
-		allocate(SMOIS(ime,num_soil_layers,jde))
+		allocate(SMOIS(ime,num_soil_layers,jme))
 		SMOIS=0.2
-		allocate(SH2O(ime,num_soil_layers,jde))
+		allocate(SH2O(ime,num_soil_layers,jme))
 		SH2O=SMOIS
 		
 		allocate(Zs(num_soil_layers))
@@ -168,7 +169,7 @@ contains
 	
 	subroutine lsm_init(domain,options)
 		implicit none
-		type(domain_type), intent(in) :: domain
+		type(domain_type), intent(inout) :: domain
 		type(options_type),intent(in)    :: options
 		
 		
@@ -192,12 +193,12 @@ contains
 			ISICE=0
 			call allocate_noah_data(ime,jme,kme,num_soil_layers)
 
-		    call LSM_NOAH_INIT(VEGFRA,SNOW,SNOWC,SNOWH,CANWAT,SMSTAV,    &
-							SMSTOT, SFCRUNOFF,UDRUNOFF,ACSNOW,           &
+		    call LSM_NOAH_INIT(VEGFRA,SNOW,SNOWC,SNOWH,CANWAT,domain%soil_t,    &
+							domain%soil_vwc, SFCRUNOFF,UDRUNOFF,ACSNOW,           &
 							ACSNOM,IVGTYP,ISLTYP,TSLB,SMOIS,SH2O,ZS,DZS, &
 							MMINLU,                                      &
 							SNOALB, FNDSOILW, FNDSNOWH, RDMAXALB,        &
-							num_soil_layers, options%restart,            &
+							num_soil_layers, .False.,           		 & ! nlayers, is_restart (can't yet)
 							.True. ,                                     & ! allowed_to_read (e.g. soilparm.tbl)
 							ids,ide, jds,jde, kds,kde,                   &
 							ims,ime, jms,jme, kms,kme,                   &
@@ -206,56 +207,75 @@ contains
 		if (options%physics%landsurface==2) then
 			call lsm_simple_init(domain,options)
 		endif
+		counter=0
+		steps_per_lsm_step=10
+		last_model_time=-999
 		
 	end subroutine lsm_init
 	
-	subroutine lsm(domain,options,dt)
+	subroutine lsm(domain,options,dt,model_time)
 		implicit none
 		
 		type(domain_type), intent(inout) :: domain
 		type(options_type),intent(in)    :: options
 		real, intent(in) :: dt
-
-		if (options%physics%landsurface==1) then
-			call lsm_basic(domain,options,dt)
-		else if (options%physics%landsurface==2) then
-			call lsm_simple(domain%th,domain%pii,domain%qv,domain%current_rain, domain%current_snow,domain%p, &
-							domain%swdown,domain%lwdown, sqrt(domain%u(:,1,:)**2+domain%v(:,1,:)**2), &
-							domain%sensible_heat, domain%latent_heat, domain%ground_heat, &
-							domain%skin_t, domain%soil_t, domain%soil_vwc, domain%snow_swe, &
-							options,dt)
-		else if (options%physics%landsurface==3) then
-! Variables I still haven't set (and may not know what they are)
-! QGH,GSW,ALBEDO,ALBBCK,ZNT,Z0,TMN, XICE,EMISS,EMBCK, QSFC,RAINBL
-! ITIMESTEP, CHS,CHS2,CQS2,CPM,ROVCP,SR,chklowq,lai,qz0,
-! myj,frpcpn, SNOALB,SHDMIN,SHDMAX, SNOTIME
-
-			call lsm_noah(domain%dz,domain%qv,domain%p,domain%th,TSK,  &
-                  domain%sensible_heat,QFX,domain%latent_heat,domain%ground_heat, &
-				  QGH,GSW,domain%swdown,domain%lwdown,SMSTAV,SMSTOT, &
-                  SFCRUNOFF, UDRUNOFF,IVGTYP,ISLTYP,ISURBAN,ISICE,VEGFRA, &
-                  ALBEDO,ALBBCK,ZNT,Z0,TMN,domain%landmask,XICE,EMISS,EMBCK,     &
-                  SNOWC,QSFC,RAINBL,MMINLU,                     &
-                  num_soil_layers,dt,DZS,ITIMESTEP,             &
-                  SMOIS,TSLB,domain%snow_swe,CANWAT,            &
-                  CHS,CHS2,CQS2,CPM,ROVCP,SR,chklowq,lai,qz0,   & !H
-                  myj,frpcpn,                                   &
-                  SH2O,SNOWH,                                   & !H
-                  domain%u, domain%v,                           & !I
-                  SNOALB,SHDMIN,SHDMAX,                         & !I
-                  SNOTIME,                                      & !?
-                  ACSNOM,ACSNOW,                                & !O
-                  SNOPCX,                                       & !O
-                  POTEVP,                                       & !O
-                  SMCREL,                                       & !O
-                  XICE_THRESHOLD,                               &
-                  RDLAI2D,USEMONALB,                            &
-                  RIB,                                          & !?
-                  NOAHRES,                                      &
-                  ua_phys,flx4_2d,fvb_2d,fbur_2d,fgsn_2d,       & ! Noah UA changes
-                  ids,ide, jds,jde, kds,kde,                    &
-                  ims,ime, jms,jme, kms,kme,                    &
-                  its,ite, jts,jte, kts,kte)
+		real ::lsm_dt
+		real*8, intent(in) :: model_time
+		integer :: nx,ny
+		if (last_model_time==-999) then
+			last_model_time=model_time-dt
+		endif
+		nx=size(domain%qv,3)
+		ny=size(domain%qv,1)
+		counter=counter+1
+		if (counter>steps_per_lsm_step) then
+			counter=0
+			lsm_dt=model_time-last_model_time
+			last_model_time=model_time
+			
+			if (options%physics%landsurface==1) then
+				call lsm_basic(domain,options,lsm_dt)
+			else if (options%physics%landsurface==2) then
+				call lsm_simple(domain%th,domain%pii,domain%qv,domain%current_rain, domain%current_snow,domain%p, &
+								domain%swdown,domain%lwdown, sqrt(domain%u(1:ny,1,1:nx)**2+domain%v(1:ny,1,1:nx)**2), &
+								domain%sensible_heat, domain%latent_heat, domain%ground_heat, &
+								domain%skin_t, domain%soil_t, domain%soil_vwc, domain%snow_swe, &
+								options,lsm_dt)
+			else if (options%physics%landsurface==3) then
+	! Variables I still haven't set (and may not know what they are)
+	! QGH,GSW,ALBEDO,ALBBCK,ZNT,Z0,TMN, XICE,EMISS,EMBCK, QSFC,RAINBL
+	! ITIMESTEP, CHS,CHS2,CQS2,CPM,ROVCP,SR,chklowq,lai,qz0,
+	! myj,frpcpn, SNOALB,SHDMIN,SHDMAX, SNOTIME
+				QGH=domain%qv(:,1,:)*1.1 ! for now set saturated as slightly more than real mixing ratio
+	! 			GSW=domain%swdown   ! This does not actually get used in Noah
+				call lsm_noah(domain%dz,domain%qv,domain%p,domain%th*domain%pii,domain%skin_t,  &
+	                  domain%sensible_heat,QFX,domain%latent_heat,domain%ground_heat, &
+					  QGH,GSW,domain%swdown,domain%lwdown,domain%soil_t,domain%soil_vwc, &
+	                  SFCRUNOFF, UDRUNOFF,IVGTYP,ISLTYP,ISURBAN,ISICE,VEGFRA, &
+	                  ALBEDO,ALBBCK,ZNT,Z0,TMN,domain%landmask,XICE,EMISS,EMBCK,     &
+	                  SNOWC,QSFC,RAINBL,MMINLU,                     &
+	                  num_soil_layers,lsm_dt,DZS,ITIMESTEP,         &
+	                  SMOIS,TSLB,domain%snow_swe,CANWAT,            &
+	                  CHS,CHS2,CQS2,CPM,ROVCP,SR,chklowq,lai,qz0,   & !H
+	                  myj,frpcpn,                                   &
+	                  SH2O,SNOWH,                                   & !H
+	                  domain%u, domain%v,                           & !I
+	                  SNOALB,SHDMIN,SHDMAX,                         & !I
+	                  SNOTIME,                                      & !?
+	                  ACSNOM,ACSNOW,                                & !O
+	                  SNOPCX,                                       & !O
+	                  POTEVP,                                       & !O
+	                  SMCREL,                                       & !O
+	                  XICE_THRESHOLD,                               &
+	                  RDLAI2D,USEMONALB,                            &
+	                  RIB,                                          & !?
+	                  NOAHRES,                                      &
+	                  ua_phys,flx4_2d,fvb_2d,fbur_2d,fgsn_2d,       & ! Noah UA changes
+	                  ids,ide, jds,jde, kds,kde,                    &
+	                  ims,ime, jms,jme, kms,kme,                    &
+	                  its,ite, jts,jte, kts,kte)
+				  
+			endif
 		endif
 		
 	end subroutine lsm
