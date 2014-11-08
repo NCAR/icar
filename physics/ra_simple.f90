@@ -91,7 +91,7 @@ contains
 		where(relative_humidity<MINIMUM_RH) relative_humidity=MINIMUM_RH
 	end function relative_humidity
 	
-	function shortwave(cloud_cover, day_frac, solar_elevation,nx)
+	function shortwave(day_frac, cloud_cover, solar_elevation,nx)
 ! 		compute shortwave down at the surface based on solar elevation, fractional day of the year, and cloud fraction
 ! 		based on Reiff et al. (1984)
 		implicit none
@@ -105,7 +105,7 @@ contains
 		shortwave=So * (1+0.035*cos(day_frac * 2*pi)) * sin_solar_elev * (0.48+0.29*sin_solar_elev)
 		
 		! note it is cloud_cover**3.4 in Reiff, but this makes almost no difference and integer powers are fast
-		shortwave=shortwave * (1 - 0.75 * cloud_cover**3) 
+		shortwave=shortwave * (1 - (0.75 * (cloud_cover**3)) )
 		
 	end function shortwave
 	
@@ -199,7 +199,8 @@ contains
 		allocate(hydrometeors(nx))
 		allocate(day_frac(nx))
 		
-		coolingrate=1.5*(dt/86400.0) *stefan_boltzmann / 300.0 !1.5K/day radiative cooling rate (300 = W/m^2 at 270K)
+		! 1.5K/day radiative cooling rate (300 = W/m^2 at 270K)
+		coolingrate=1.5*(dt/86400.0) *stefan_boltzmann / 300.0 
 		
 		
 		!$omp do
@@ -221,11 +222,6 @@ contains
 			! apply a simple radiative cooling to the atmosphere
 			theta(2:nx-1,:,j)=theta(2:nx-1,:,j) - (((theta(2:nx-1,:,j)*pii(2:nx-1,:,j))**4) * coolingrate)
 			
-! 			if (j==10) then
-! 				print*, "Cloud=",cloud_cover(10,10)
-! 				print*, "SW = ", swdown(10,10)
-! 				print*, "LW = ", lwdown(10,10)
-! 			endif
 		end do
 		!$omp end do
 		
