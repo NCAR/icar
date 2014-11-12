@@ -6,7 +6,7 @@ import numpy as np
 
 from bunch import Bunch
 import mygis
-
+import units
 
 g=9.81
 
@@ -18,7 +18,7 @@ def adjust_p(p,hin,hout):
     p[:]=slp*(1 - 2.25577E-5*hout)**5.25588
 
 
-def main(inputfile):
+def main(inputfile,sounding_file=None):
     filename="icar_"+inputfile
     print(filename)
     yaxis=2
@@ -48,6 +48,7 @@ def main(inputfile):
     # ph/phb are defined between model levels, we want z in the middle of each model level
     # e.g. z[0]=0, but wrfz[0]=dz[0]/2 where dz[0]=z[1]-z[0]
     wrfz=(z[:,:-1,:,:]+z[:,1:,:,:])/2
+    p=units.z2p(wrfz,100000)
     # wrfz=np.zeros(dz.shape)
     # wrfz[:,0,...]=dz[:,0,...]/2+hgt
     # for i in range(1,nz):
@@ -89,9 +90,9 @@ def main(inputfile):
     
     # adjust_p(p,wrfz,z)
     
-    ncfile=mygis.Dataset(inputfile)
-    dx=ncfile.getncattr("DX")
-    ncfile.close()
+    dx=mygis.read_attr(inputfile,"DX")
+    if type(dx)==np.ndarray:
+        dx=dx[0]
     dlon=dx/111.1
     dlat=dx/111.1
     lonmin=-110.0; lonmax=lonmin+nx*dlon
@@ -161,5 +162,10 @@ if __name__ == '__main__':
         filename=sys.argv[1]
     else:
         filename="wrfinput_d01"
-    main(filename)
+    if len(sys.argv)>2:
+        sounding_file=sys.argv[2]
+    else:
+        sounding_file=None
+        
+    main(filename,sounding_file)
 
