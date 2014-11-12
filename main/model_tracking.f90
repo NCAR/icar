@@ -7,12 +7,12 @@ contains
 	
 	subroutine init_model_diffs()
 		implicit none
-		integer::n=9
+		integer::n=10
 		
 		allocate(versionlist(n))
 		allocate(deltas(n))
 		versionlist=[character(len=1024) :: &
-					 "0.5.1","0.5.2","0.6","0.7","0.7.1","0.7.2","0.7.3","0.8","0.8.1"]
+					 "0.5.1","0.5.2","0.6","0.7","0.7.1","0.7.2","0.7.3","0.8","0.8.1","0.8.2"]
 		deltas=[ character(len=1024) :: & 
 		"Earliest version in record. ", &
 		"Added dxlow and variable name definitions pvar,tvar,qvvar,qcvar,qivar,     "// &
@@ -28,7 +28,8 @@ contains
 		"Vertical interpolation requires zvar (can be PH / geopotential height)     "// &
 		"      Also added smooth_wind_distance. ", &
 		"Added proper date tracking, requires date='yyyy/mm/dd hh:mm:ss' option     "// &
-		"      in namelist." &
+		"      in namelist.", &
+		"Added preliminary support for running the Noah LSM. " &
 		]
 		
 	end subroutine init_model_diffs

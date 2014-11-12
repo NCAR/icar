@@ -11,12 +11,13 @@ contains
 ! 	u/v are destaggered first
 ! 	We could accumulated multiple time periods per file at some point, but this routine would
 !   still serve as a good restart file
-	subroutine write_domain(domain,options,timestep)
+	subroutine write_domain(domain,options,timestep,inputfilename)
 		implicit none
 	    ! This is the name of the data file and variable we will read. 
 		type(domain_type),intent(in)::domain
 		type(options_type),intent(in)::options
 		integer,intent(in)::timestep
+		character(len=*),intent(in),optional :: inputfilename
 		real,allocatable,dimension(:,:,:)::pii,rho
 		character(len=255) :: filename
 		character(len=19) :: todays_date_time
@@ -36,10 +37,14 @@ contains
 		
 		! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
 		! the file.
-		if (timestep.eq.(-1)) then
-			write(filename,"(A,A)") trim(options%output_file),".restart"
+		if (present(inputfilename)) then
+			filename=inputfilename
 		else
-			write(filename,"(A,I5.5)") trim(options%output_file),timestep
+			if (timestep.eq.(-1)) then
+				write(filename,"(A,A)") trim(options%output_file),".restart"
+			else
+				write(filename,"(A,I5.5)") trim(options%output_file),timestep
+			endif
 		endif
 		if (options%debug) then
 			write(*,*) trim(filename)

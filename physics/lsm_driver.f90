@@ -3,6 +3,7 @@ module land_surface
     use module_lsm_basic,  only : lsm_basic
     use module_lsm_simple, only : lsm_simple, lsm_simple_init
     use io_routines,       only : io_write3d, io_write2d
+	use output, 		   only : write_domain
     use data_structures
     
     implicit none
@@ -22,6 +23,7 @@ module land_surface
                                            
     logical :: MYJ, FRPCPN,ua_phys,RDLAI2D,USEMONALB
     real,allocatable, dimension(:,:,:)  :: TSLB,SMOIS,SH2O,SMCREL
+	real,allocatable, dimension(:,:)    :: dTemp,lhdQV
     real,allocatable, dimension(:)      :: Zs,DZs
     real :: ROVCP,XICE_THRESHOLD
     integer,allocatable, dimension(:,:) :: IVGTYP,ISLTYP
@@ -86,6 +88,27 @@ contains
     end subroutine calc_exchange_coefficient
     
     
+	subroutine apply_fluxes(domain,dt)
+		type(domain_type), intent(inout) :: domain
+		real, intent(in) :: dt
+		integer :: nx,ny
+		nx=ime
+		ny=jme
+		! convert sensible heat flux to a temperature delta term
+        ! J/s/m^2 * s / J/(kg*K) => kg*K/m^2 ... /((kg/m^3) * m) => K
+        dTemp=(domain%sensible_heat(2:nx-1,2:ny-1)*dt/cp)  &
+			 /(domain%rho(2:nx-1,1,2:ny-1)*domain%dz(2:nx-1,1,2:ny-1))
+		! add temperature delta and convert back to potential temperature
+        domain%th(2:nx-1,1,2:ny-1)=domain%th(2:nx-1,1,2:ny-1)+dTemp/domain%pii(2:nx-1,1,2:ny-1)
+		
+		! convert latent heat flux to a mixing ratio tendancy term
+        ! J/s/m^2 * s / J/kg => kg/m^2 ... / (kg/m^3 * m) => kg/kg
+		lhdQV=(domain%latent_heat(2:nx-1,2:ny-1)/LH_vaporization*dt) / (domain%rho(2:nx-1,1,2:ny-1)*domain%dz(2:nx-1,1,2:ny-1))
+		domain%qv(2:nx-1,1,2:ny-1)=domain%qv(2:nx-1,1,2:ny-1)+lhdQV
+		where(domain%qv<SMALL_PRESSURE) domain%qv=SMALL_PRESSURE
+		
+	end subroutine apply_fluxes
+	
     subroutine allocate_noah_data(ime,jme,kme,num_soil_layers)
         implicit none
         integer, intent(in) :: ime,jme,kme,num_soil_layers
@@ -199,7 +222,7 @@ contains
         
         
         
-        ROVCP=0.01
+        ROVCP=R/cp
         XICE_THRESHOLD=1
         RDLAI2D=.false.
         USEMONALB=.false.
@@ -240,6 +263,12 @@ contains
         
         write(*,*) "Initializing land surface model"
         
+		ime=size(domain%th,1)
+		jme=size(domain%th,3)
+		allocate(dTemp(ime-2,jme-2))
+		dTemp=0
+		allocate(lhdQV(ime-2,jme-2))
+		lhdQV=0
         ! Noah Land Surface Model
         if (options%physics%landsurface==3) then
             
@@ -290,6 +319,7 @@ contains
         
     end subroutine lsm_init
     
+	
     subroutine lsm(domain,options,dt,model_time)
         implicit none
         
@@ -366,6 +396,7 @@ contains
                 
                 domain%soil_t=TSLB(:,1,:)
                 RAINBL=domain%rain
+				call apply_fluxes(domain,lsm_dt)
             endif
         endif
         
