@@ -2,7 +2,7 @@ module time_step
 	use data_structures     ! *_type  types
 	use microphysics,                only : mp
 	use convection,                  only : convect
-	use lsm,                         only : lsm_driver
+	use land_surface,                only : lsm
 	use wind,                        only : balance_uvw
 	use advection,                   only : advect
 	use output,                      only : write_domain
@@ -135,7 +135,7 @@ contains
 		write(*,*) "    dt=",dt, "nsteps=",ntimesteps
 ! 		now just loop over internal timesteps computing all physics in order (operator splitting...)
 		do i=1,ntimesteps
-			call lsm_driver(domain,options,dt)
+			call lsm(domain,options,dt,model_time)
 			call pbl(domain,options,dt)
 			call advect(domain,options,dt)
 			call mp(domain,options,dt)

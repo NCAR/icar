@@ -186,13 +186,13 @@ module module_mp_simple
         if ((t>350).or.(qc>0.01).or.(qvsat>1)) then
 			deltat=excess*vapor2temp
 			print*, "mp_simple: data out of bounds"
-			print*, iteration
-			print*, pre_qc,pre_qv,pre_t,p
-			print*, qc, qv,t, qvsat
-			print*, sat_mr(pre_t,p),sat_mr(t,p), sat_mr(pre_t,p)-sat_mr(t,p)
+			print*, "iter=",iteration
+			print*, "preqc=",pre_qc,"preqv=",pre_qv,"pret=",pre_t,"p=",p
+			print*, "qc=",qc, "qv=",qv,"t=",t, "qvsat=",qvsat
+			print*, "mrs_pret=",sat_mr(pre_t,p),"mrs_t=",sat_mr(t,p), "mrs_delta=",sat_mr(pre_t,p)-sat_mr(t,p)
 
-			print*, qv, qvsat, qc, pre_qc, t, excess, vapor2temp
-			print*, t-deltat, p, sat_mr(t-deltat,p)
+			print*, "qv=",qv, "qvs=",qvsat, "qc=",qc, "preqc=",pre_qc, "t=",t, "excess=",excess, "vapor2temp=",vapor2temp
+			print*, "t-deltat",t-deltat, "p=",p, "mrs_t-dT=",sat_mr(t-deltat,p)
 		endif
         
     end subroutine

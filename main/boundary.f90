@@ -56,9 +56,9 @@ contains
 		inputwind=wind !make a copy so we always use the unsmoothed data when computing the smoothed data
 		
 		!parallelize over the slowest dimension
-		!$no omp parallel firstprivate(windowsize,nx,ny,nz,ydim), &
-		!$no omp private(i,j,k,startx,endx,starty,endy),shared(wind,inputwind)
-		!$no omp do schedule(static)
+		!$omp parallel firstprivate(windowsize,nx,ny,nz,ydim), &
+		!$omp private(i,j,k,startx,endx,starty,endy),shared(wind,inputwind)
+		!$omp do schedule(static)
 		do k=1,nz
 			do j=1,ny
 				do i=1,nx
@@ -85,8 +85,8 @@ contains
 				enddo
 			enddo
 		enddo
-		!$no omp end do
-		!$no omp end parallel
+		!$omp end do
+		!$omp end parallel
 		
 		deallocate(inputwind)
 	end subroutine smooth_wind
@@ -347,14 +347,29 @@ contains
 				
 	end subroutine mean_winds
 	
+	subroutine check_shapes_3d(data1,data2)
+		implicit none
+		real,dimension(:,:,:),intent(in)::data1,data2
+		integer :: i
+		do i=1,3
+			if (size(data1,i).ne.size(data2,i)) then
+				write(*,*) "Restart file 3D dimensions don't match domain"
+				stop
+			endif
+		enddo
+	end subroutine check_shapes_3d
+	
 ! 	if we are restarting from a given point, initialize the domain from the given restart file
 	subroutine load_restart_file(domain,restart_file)
 		implicit none
 		type(domain_type), intent(inout) :: domain
 		character(len=*),intent(in)::restart_file
 		real,allocatable,dimension(:,:,:)::inputdata
+		real,allocatable,dimension(:,:)::inputdata_2d
 		
+		write(*,*) "Reading atmospheric restart data"
 		call io_read3d(restart_file,"u",inputdata)
+		call check_shapes_3d(inputdata,domain%u)
 		domain%u=inputdata
 		deallocate(inputdata)
 		call io_read3d(restart_file,"v",inputdata)
@@ -390,6 +405,29 @@ contains
 		call io_read3d(restart_file,"th",inputdata)
 		domain%th=inputdata
 		deallocate(inputdata)
+		call io_read3d(restart_file,"rho",inputdata)
+		domain%rho=inputdata
+		deallocate(inputdata)
+		
+		write(*,*) "Reading land surface restart data"
+		call io_read3d(restart_file,"soil_t",inputdata)
+		call check_shapes_3d(inputdata,domain%soil_t)
+		domain%soil_t=inputdata
+		deallocate(inputdata)
+		call io_read3d(restart_file,"soil_w",inputdata)
+		domain%soil_vwc=inputdata
+		deallocate(inputdata)
+		
+		call io_read2d(restart_file,"ts",inputdata_2d)
+		domain%skin_t=inputdata_2d
+		deallocate(inputdata_2d)
+		call io_read2d(restart_file,"hfgs",inputdata_2d)
+		domain%ground_heat=inputdata_2d
+		deallocate(inputdata_2d)
+		call io_read2d(restart_file,"snw",inputdata_2d)
+		domain%snow_swe=inputdata_2d
+		deallocate(inputdata_2d)
+		
 	end subroutine load_restart_file
 	
 ! 	initialize the boundary conditions (read inital conditions, etc.)
@@ -439,8 +477,10 @@ contains
 			enddo
 		endif
 ! 		smoothing_window = min(max(int((bc%dx/domain%dx) * smooth_n_coarse),1),size(domain%lat,1)/10)
-		smoothing_window = min(max(int(options%smooth_wind_distance/domain%dx),1),size(domain%lat,1)/5)
-		write(*,*) "Smoothing winds over ",smoothing_window," grid cells"
+		if (.not.options%ideal) then
+			smoothing_window = min(max(int(options%smooth_wind_distance/domain%dx),1),size(domain%lat,1)/5)
+			write(*,*) "Smoothing winds over ",smoothing_window," grid cells"
+		endif
 ! 		load the restart file
 		if (options%restart) then
 			call load_restart_file(domain,options%restart_file)

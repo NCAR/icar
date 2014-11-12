@@ -3,21 +3,32 @@
 Compiling the model: 
 --------------------------------------------------------------------------------------------------------
 	
-	You may need to edit the makefile to set the path to your compiled NetCDF and FFTW libraries
+	Edit the makefile to set the path to your compiled NetCDF and FFTW libraries
+	
 	Also to set the compiler for your machine if necessary
 		defaults to gfortran I think...
 	
 	make clean
 	
 	make
+		default (high) optimization compile will take ~3m on a single processor
+	
+	make install
+		compile if necessary, then install in the install directory [~/bin]
 	
 	options: 
-		DEBUG=fast			fast compile and moderately strong optimization
-		DEBUG=debug			debug compile with optimizations
-		DEBUG=debugslow		debug compile w/o optimizations
-		DEBUG=debugomp		debug compile with optimizations and OpenMP parallelization
-		DEBUG=debugompslow	debug compile w/o optimizations but with OpenMP parallelization
-		
+		MODE=fast			fast compile and moderately strong optimization
+			compiles in ~17s on 4+ processors (set -j4)
+		MODE=profile		set profiling options for gnu compiler in particular
+		MODE=debug			debug compile with optimizations
+		MODE=debugslow		debug compile w/o optimizations
+		MODE=debugomp		debug compile with optimizations and OpenMP parallelization
+		MODE=debugompslow	debug compile w/o optimizations but with OpenMP parallelization
+
+	make test
+		compiles various test programs (at the moment, only test_fftshift)
+	
+	add -jn to parallelize the compile over n processors (e.g. -j4 uses 4 processors if available)
 
 --------------------------------------------------------------------------------------------------------
 Running the model: 
@@ -25,14 +36,14 @@ Running the model:
 
 Required Input files/variables
 
-	icar_options.nml
+	icar_options.nml [other filename can be specified on the commandline e.g. icar your_options_file]
 		This file specifies all other files and options.  
 	
 	Necessary netcdf files: 
 		Boundary/Initial conditions in e.g. wrf output files
 			must [optionally] contain QVAPOR, [QCLOUD], [QICE], T, P, [PB], U, V, HGT, Z, LAT, LONG
 		Hi resolution DEM in e.g. high-res wrf input or output file
-			must contain HGT, LAT, LONG
+			must contain HGT, LAT, LONG, and be in a nearly constant dx projection (e.g. Lambert Conformal Conic)
 			
 	NOTE namelist file in git repo is not always in sync with code!
 

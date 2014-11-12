@@ -19,7 +19,7 @@ def adjust_p(p,hin,hout):
 
 
 def main(inputfile):
-    filename="swm_"+inputfile
+    filename="icar_"+inputfile
     print(filename)
     yaxis=2
     yaxis2d=1
@@ -47,10 +47,11 @@ def main(inputfile):
     # dz shape = (time,nz-1,ny,nx)
     # ph/phb are defined between model levels, we want z in the middle of each model level
     # e.g. z[0]=0, but wrfz[0]=dz[0]/2 where dz[0]=z[1]-z[0]
-    wrfz=np.zeros(dz.shape)
-    wrfz[:,0,...]=dz[:,0,...]/2+hgt
-    for i in range(1,nz):
-        wrfz[:,i,:,:]=(dz[:,i,:,:]+dz[:,i-1,:,:])/2+wrfz[:,i-1,:,:]
+    wrfz=(z[:,:-1,:,:]+z[:,1:,:,:])/2
+    # wrfz=np.zeros(dz.shape)
+    # wrfz[:,0,...]=dz[:,0,...]/2+hgt
+    # for i in range(1,nz):
+        # wrfz[:,i,:,:]=(dz[:,i,:,:]+dz[:,i-1,:,:])/2+wrfz[:,i-1,:,:]
     
     mean_dz=dz[0,...].mean(axis=1).mean(axis=1)
     print("MEAN LEVELS:")
@@ -79,13 +80,14 @@ def main(inputfile):
         print("]")
     
     
-    dz=np.zeros(dz.shape)+mean_dz[np.newaxis,:,np.newaxis,np.newaxis]
+    # dz=np.zeros(dz.shape)+mean_dz[np.newaxis,:,np.newaxis,np.newaxis]
+    dz=np.zeros(dz.shape)+dz[:,:,:,np.newaxis,0]
     z=np.zeros(dz.shape)
     z[:,0,...]=dz[:,0,...]/2+hgt
     for i in range(1,nz):
         z[:,i,:,:]=(dz[:,i,:,:]+dz[:,i-1,:,:])/2+z[:,i-1,:,:]
     
-    adjust_p(p,wrfz,z)
+    # adjust_p(p,wrfz,z)
     
     ncfile=mygis.Dataset(inputfile)
     dx=ncfile.getncattr("DX")

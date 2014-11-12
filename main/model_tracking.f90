@@ -1,5 +1,5 @@
 module model_tracking
-! 	Module to track each version of the model developement
+! 	Module to track each major version of the model developement
 !   Particularly the changes to the namelist required at each step
 	implicit none
 	character(len=1024),allocatable,dimension(:)::versionlist,deltas
@@ -7,30 +7,29 @@ contains
 	
 	subroutine init_model_diffs()
 		implicit none
-		integer::n=9
+		integer::n=10
 		
 		allocate(versionlist(n))
 		allocate(deltas(n))
-		versionlist=["0.5.1","0.5.2","0.6  ","0.7  ","0.7.1","0.7.2","0.7.3","0.8  ","0.8.1"]
-		deltas=[ & 
-		"Earliest version in record                                                 "// & 
-		"                                       ", &
+		versionlist=[character(len=1024) :: &
+					 "0.5.1","0.5.2","0.6","0.7","0.7.1","0.7.2","0.7.3","0.8","0.8.1","0.8.2"]
+		deltas=[ character(len=1024) :: & 
+		"Earliest version in record. ", &
 		"Added dxlow and variable name definitions pvar,tvar,qvvar,qcvar,qivar,     "// &
-		"      U/V:lat/lon:high/low res         ", &
+		"      U/V:lat/lon:high/low res. ", &
 		"Added variable name definitions for sensible(shvar)/latent(lhvar) heat     "// &
-		"      fluxes and PBL height(pblhvar)   ", &
+		"      fluxes and PBL height(pblhvar). ", &
 		"Added input interval vs output interval timestepping, ?? also removed dz   "// &
-		"      and decrease_dz                  ", &
+		"      and decrease_dz. ", &
 		"Added variable name definitions for zvar and landmask (landvar), added     "// &
-		"      readz:boolean,x/y:min/max:integer", &
-		"Removed x/y:min/max, Added dz_levels and z_info namelist                   "// &
-		"                                       ", &
-		"Added advect_density: boolean use                                          "// &
-		"                                       ", &
+		"      readz:boolean,x/y:min/max:integer. ", &
+		"Removed x/y:min/max, Added dz_levels and z_info namelist. ", &
+		"Added advect_density: boolean use. ", &
 		"Vertical interpolation requires zvar (can be PH / geopotential height)     "// &
-		"      Also added smooth_wind_distance  ", &
+		"      Also added smooth_wind_distance. ", &
 		"Added proper date tracking, requires date='yyyy/mm/dd hh:mm:ss' option     "// &
-		"      in namelist.                     " &
+		"      in namelist.", &
+		"Added preliminary support for running the Noah LSM. " &
 		]
 		
 	end subroutine init_model_diffs

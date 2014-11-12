@@ -29,6 +29,7 @@ module init
 	use convection, only				: init_convection
 	use planetary_boundary_layer, only	: pbl_init
 	use radiation, only					: radiation_init
+	use land_surface, only				: lsm_init
 	use model_tracking, only			: print_model_diffs
 	use wind, only						: init_winds
 	use time, only						: date_to_mjd, parse_date, time_init
@@ -88,7 +89,7 @@ contains
 	subroutine init_physics(options,domain)
 		implicit none
 		type(options_type), intent(in) :: options
-		type(domain_type), intent(in) :: domain
+		type(domain_type), intent(inout) :: domain
 
 		! initialize microphysics code (e.g. compute look up tables in Thompson et al)
 		call mp_init(options) !this could easily be moved to init_model...
@@ -98,6 +99,8 @@ contains
 		call pbl_init(domain,options)
 		
 		call radiation_init(domain,options)
+		
+		call lsm_init(domain,options)
 		
 	end subroutine init_physics
 	
@@ -114,10 +117,10 @@ contains
 		namelist /physics/ pbl,lsm,mp,rad,conv,adv,wind
 		
 ! 		default values for physics options (advection+linear winds+simple_microphysics)
-		pbl=0   ! 0 = no PBL, 1 = STUPID PBL (in LSM module), 2 = local PBL diffusion
-		lsm=0   ! 0 = no LSM, 1 = Fluxes from GCM
-		mp=2	! 0 = no MP,  1 = Thompson et al (2008), 2 = Linear microphysics
-		rad=0   ! 0 = no RAD, 1 = radiative cooling 1K/day (in LSM)
+		pbl=2   ! 0 = no PBL, 1 = STUPID PBL (in LSM module), 2 = local PBL diffusion
+		lsm=3   ! 0 = no LSM, 1 = Fluxes from GCM, 2 = simple LSM, 3 = Noah LSM
+		mp=2	! 0 = no MP,  1 = Thompson et al (2008), 2 = "Linear" microphysics
+		rad=2   ! 0 = no RAD, 1 = radiative cooling 1K/day (in LSM), 2 = cloud fraction based radiation
 		conv=0  ! 0 = no CONV,1 = Tiedke scheme
 		adv=1   ! 0 = no ADV, 1 = upwind advection scheme
 		wind=1  ! 0 = no LT,  1 = linear theory wind perturbations
@@ -145,11 +148,15 @@ contains
 		integer :: name_unit
 		character(len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,&
 										hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,     &
-										pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar
-		
+										pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
+										soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
+		                                vegtype_var,vegfrac_var
+										
 		namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
 							landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar, &
-							hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi 
+							hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi, &
+							soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
+		                    vegtype_var,vegfrac_var
 		
 		hgtvar="HGT"
 		latvar="XLAT"
@@ -178,7 +185,12 @@ contains
 		ulon_hi="XLONG_U"
 		vlat_hi="XLAT_V"
 		vlon_hi="XLONG_V"
-		
+		soiltype_var="" !"SOILTYPE"
+		soil_t_var="" !"TSOIL"
+		soil_vwc_var="" !"SOILSMC"
+		soil_deept_var="" !"DEEPT"
+		vegtype_var="" !"VEGTYPE"
+		vegfrac_var="" !"VEGFRAC"
 		
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=var_list)
@@ -219,6 +231,14 @@ contains
 		options%ulon_hi=ulon_hi
 		options%vlat_hi=vlat_hi
 		options%vlon_hi=vlon_hi
+		
+! 		soil and vegetation parameters
+		options%soiltype_var=soiltype_var
+		options%soil_t_var=soil_t_var
+		options%soil_vwc_var=soil_vwc_var
+		options%soil_deept_var=soil_deept_var
+		options%vegtype_var=vegtype_var
+		options%vegfrac_var=vegfrac_var
 	end subroutine var_namelist
 	
 	subroutine parameters_namelist(filename,options)
@@ -231,7 +251,7 @@ contains
 		integer :: ntimesteps,nfiles,xmin,xmax,ymin,ymax,vert_smooth
 		integer :: nz,n_ext_winds,buffer
 		logical :: ideal, readz,readdz,debug,external_winds,remove_lowres_linear,&
-		           mean_winds,mean_fields,restart,add_low_topo,advect_density
+		           mean_winds,mean_fields,restart,add_low_topo,advect_density, high_res_soil_state
 		character(len=MAXFILELENGTH) :: date, calendar
 		integer :: year, month, day, hour, minute, second
 		
@@ -239,7 +259,8 @@ contains
 		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,smooth_wind_distance, &
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
-							  date, calendar
+							  date, calendar, high_res_soil_state
+
 
 		
 ! 		default parameters
@@ -264,6 +285,7 @@ contains
 		smooth_wind_distance=-9999
 		vert_smooth=2
 		calendar="gregorian"
+		high_res_soil_state=.True.
 		
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=parameters)
@@ -331,6 +353,9 @@ contains
 		options%xmax=xmax
 		options%ymin=ymin
 		options%ymax=ymax
+		
+		options%high_res_soil_state=high_res_soil_state
+		
 		
 	end subroutine parameters_namelist
 	
@@ -517,71 +542,109 @@ contains
 	end subroutine remove_edges
 	
 ! 	allocate all arrays in domain
-	subroutine domain_allocation(domain,nx,nz,ny)
+	subroutine domain_allocation(domain,nx,nz,ny,nsoil)
 		implicit none
 		type(domain_type), intent(inout) :: domain
 		integer,intent(in)::nx,nz,ny
-		allocate(domain%p(nx,nz,ny))
-		domain%p=0
-		allocate(domain%u(nx+1,nz,ny))
+		integer,intent(in),optional :: nsoil
+		integer :: ns
+		
+		ns=4
+		if (present(nsoil)) then
+			ns=nsoil
+		endif
+		
+		! atmosphere allocation
+		allocate(domain%p(nx,nz,ny))		! air pressure [Pa]
+		domain%p=100000
+		allocate(domain%u(nx+1,nz,ny))		! eastward wind [m/s]
 		domain%u=0
-		allocate(domain%v(nx,nz,ny+1))
+		allocate(domain%v(nx,nz,ny+1))		! northward wind [m/s]
 		domain%v=0
-		allocate(domain%w(nx,nz,ny))
+		allocate(domain%w(nx,nz,ny))		! vertical wind [grid/s]
 		domain%w=0
-		allocate(domain%ur(nx+1,nz,ny))
+		allocate(domain%ur(nx+1,nz,ny))		! eastward wind * density [m/s kg/m^3]
 		domain%ur=0
-		allocate(domain%vr(nx,nz,ny+1))
+		allocate(domain%vr(nx,nz,ny+1))		! northward wind * density[m/s kg/m^3]
 		domain%vr=0
-		allocate(domain%wr(nx,nz,ny))
+		allocate(domain%wr(nx,nz,ny))		! vertical wind * density [grid/s kg/m^3]
 		domain%wr=0
-		allocate(domain%th(nx,nz,ny))
-		domain%th=0
-		allocate(domain%qv(nx,nz,ny))
-		domain%qv=0
-		allocate(domain%cloud(nx,nz,ny))
+		allocate(domain%th(nx,nz,ny))		! potential temperature [K]
+		domain%th=280
+		allocate(domain%qv(nx,nz,ny))		! water vapor [kg/kg]
+		domain%qv=0.0002
+		allocate(domain%cloud(nx,nz,ny))	! liquid cloud water content mixing ratio [kg/kg]
 		domain%cloud=0
-		allocate(domain%ice(nx,nz,ny))
+		allocate(domain%ice(nx,nz,ny))		! frozen cloud water content mixing ratio [kg/kg]
 		domain%ice=0
-		allocate(domain%nice(nx,nz,ny))
+		allocate(domain%nice(nx,nz,ny))		! cloud ice number concentration [cm-3]
 		domain%nice=0
-		allocate(domain%qrain(nx,nz,ny))
+		allocate(domain%qrain(nx,nz,ny))	! rain mixing ratio [kg/kg]
 		domain%qrain=0
-		allocate(domain%nrain(nx,nz,ny))
+		allocate(domain%nrain(nx,nz,ny))	! rain drop number concentration [cm-3]
 		domain%nrain=0
-		allocate(domain%qsnow(nx,nz,ny))
+		allocate(domain%qsnow(nx,nz,ny))	! snow  mixing ratio [kg/kg]
 		domain%qsnow=0
-		allocate(domain%qgrau(nx,nz,ny))
+		allocate(domain%qgrau(nx,nz,ny))	! graupel mixing ratio [kg/kg]
 		domain%qgrau=0
-		allocate(domain%pii(nx,nz,ny))
-		domain%pii=0
-		allocate(domain%qv_adv_tendency(nx,nz,ny))
+		allocate(domain%pii(nx,nz,ny))		! exner function
+		domain%pii=1
+		allocate(domain%qv_adv_tendency(nx,nz,ny)) ! advective qv tendency [qv/s]
 		domain%qv_adv_tendency=0
-		allocate(domain%qv_pbl_tendency(nx,nz,ny))
+		allocate(domain%qv_pbl_tendency(nx,nz,ny)) ! qv tendency from PBL scheme [qv/s]
 		domain%qv_pbl_tendency=0
-		allocate(domain%rho(nx,nz,ny))
-		domain%rho=0
-		allocate(domain%rain(nx,ny))
-		domain%rain=0
-		allocate(domain%crain(nx,ny))
-		domain%crain=0
-		allocate(domain%snow(nx,ny))
-		domain%snow=0
-		allocate(domain%graupel(nx,ny))
-		domain%graupel=0
-		allocate(domain%swdown(nx,ny))
-		domain%swdown=0
-		allocate(domain%lwdown(nx,ny))
-		domain%lwdown=0
-		allocate(domain%cloudfrac(nx,ny))
+		allocate(domain%rho(nx,nz,ny))		! air density [kg/m^3]
+		domain%rho=1
+		allocate(domain%cloudfrac(nx,ny))	! cloud fraction
 		domain%cloudfrac=0
-		allocate(domain%sensible_heat(nx,ny))
+		
+		! land-atm flux allocation
+		allocate(domain%rain(nx,ny))		! accumulated total rainfall [kg/m^2]
+		domain%rain=0
+		allocate(domain%crain(nx,ny))		! accumulated convective rainfall
+		domain%crain=0
+		allocate(domain%snow(nx,ny))		! accumulated snow fall
+		domain%snow=0
+		allocate(domain%graupel(nx,ny))		! accumulated graupel fall
+		domain%graupel=0
+		allocate(domain%current_rain(nx,ny))! rain fall in current time step
+		domain%current_rain=0
+		allocate(domain%current_snow(nx,ny))! snow fall in current time step
+		domain%current_snow=0
+		allocate(domain%swdown(nx,ny))		! shortwave down at surface
+		domain%swdown=0
+		allocate(domain%lwdown(nx,ny))		! longwave down at surface
+		domain%lwdown=0
+		allocate(domain%sensible_heat(nx,ny)) ! sensible heat flux from surface
 		domain%sensible_heat=0
-		allocate(domain%latent_heat(nx,ny))
+		allocate(domain%latent_heat(nx,ny))	! latent heat flux from surface
 		domain%latent_heat=0
-		allocate(domain%pbl_height(nx,ny))
+		allocate(domain%ground_heat(nx,ny))	! ground heat flux into ground
+		domain%ground_heat=0
+		allocate(domain%pbl_height(nx,ny))	! planetary boundary layer height (not always used)
 		domain%pbl_height=0
 		
+		! land surface allocation
+		allocate(domain%soil_t(nx,ns,ny))	! 3D soil temperature
+		domain%soil_t=280
+		allocate(domain%soil_vwc(nx,ns,ny))	! 3D soil volumetric water content
+		domain%soil_vwc=0.25
+		
+		allocate(domain%soil_tdeep(nx,ny))		! deep soil temperature
+		domain%soil_tdeep=280
+		allocate(domain%soil_totalmoisture(nx,ny))	! soil column total moisture content
+		domain%soil_totalmoisture=500 ! =2000mm * 0.25 (vwc)
+		allocate(domain%skin_t(nx,ny))			! skin temperature
+		domain%skin_t=280
+		allocate(domain%snow_swe(nx,ny))		! snow water equivalent
+		domain%snow_swe=0
+		allocate(domain%vegfrac(nx,ny))			! vegetation cover fraction (%)
+		domain%vegfrac=50 !% veg cover
+		allocate(domain%soil_type(nx,ny))		! USGS soil type
+		domain%soil_type=6 ! Loam
+		allocate(domain%veg_type(nx,ny))		! Vegetation type
+		domain%veg_type=7  ! grassland
+
 	end subroutine domain_allocation
 	
 	subroutine copy_z(input,output,interpolate_dim)
@@ -748,8 +811,9 @@ contains
 		ny=size(zbase,2)
 		nz=size(zbase,3)
 		allocate(boundary%lowres_z(nx,nz,ny))
-		write(*,*) "WARNING: HACK in init.f90 boundary init : z=z*9.8"
-		boundary%lowres_z=reshape(zbase*9.8,[nx,nz,ny],order=[1,3,2])
+! 		write(*,*) "WARNING: HACK in init.f90 boundary init : z=z*9.8"
+! 		boundary%lowres_z=reshape(zbase*9.8,[nx,nz,ny],order=[1,3,2])
+		boundary%lowres_z=reshape(zbase,[nx,nz,ny],order=[1,3,2])
 		deallocate(zbase)
 		if (options%zvar=="PH") then
 			call io_read3d(options%boundary_files(1),"PHB",zbase)

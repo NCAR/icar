@@ -46,6 +46,7 @@ module module_ra_simple
 	real, allocatable, dimension(:,:) :: cos_lat_m,sin_lat_m
 	real, parameter :: So=1367.0 ! Solar "constant" W/m^2
 	real, parameter :: qcmin=1e-5 ! arbitrarily selected minimum "cloud" water content to affect radiation
+	real, parameter :: MINIMUM_RH=1e-10 ! bounds on relative humidity = [min_rh to 1-min_rh]
 contains
 	subroutine ra_simple_init(domain,options)
 		implicit none
@@ -84,9 +85,15 @@ contains
 		es=611.2*exp(17.67*(t-273.15)/(t-29.65))
 		! finally return relative humidity
 		relative_humidity= e/es
+		! because it is an approximation things could go awry and rh outside or reasonable bounds could break something else.
+		! alternatively air could be supersaturated (esp. on boundary cells) but cloud fraction calculations will break.
+		where(relative_humidity>1-MINIMUM_RH) relative_humidity=1-MINIMUM_RH
+		where(relative_humidity<MINIMUM_RH) relative_humidity=MINIMUM_RH
 	end function relative_humidity
 	
-	function shortwave(cloud_cover, day_frac, solar_elevation,nx)
+	function shortwave(day_frac, cloud_cover, solar_elevation,nx)
+! 		compute shortwave down at the surface based on solar elevation, fractional day of the year, and cloud fraction
+! 		based on Reiff et al. (1984)
 		implicit none
 		real, dimension(nx) :: shortwave
 		real, intent(in), dimension(nx) :: day_frac, cloud_cover, solar_elevation
@@ -97,11 +104,14 @@ contains
 		sin_solar_elev = sin(solar_elevation)
 		shortwave=So * (1+0.035*cos(day_frac * 2*pi)) * sin_solar_elev * (0.48+0.29*sin_solar_elev)
 		
-		shortwave=shortwave * (1 - 0.75 * cloud_cover**3.4)
+		! note it is cloud_cover**3.4 in Reiff, but this makes almost no difference and integer powers are fast
+		shortwave=shortwave * (1 - (0.75 * (cloud_cover**3)) )
 		
 	end function shortwave
 	
 	function longwave(T_air, cloud_cover,nx)
+! 		compute longwave down at the surface based on air temperature and cloud fraction
+! 		based on Idso and Jackson (1969)
 		implicit none
 		real, dimension(nx) :: longwave
 		real, intent(in), dimension(nx) :: T_air,cloud_cover
@@ -115,6 +125,8 @@ contains
 	end function longwave
 	
 	function cloudfrac(rh,qc,nx)
+! 		Calculate the cloud fraction based on cloud water content (qc) and relative humidity
+! 		based on equations from Xu and Randal (1996)
 		implicit none
 		real,dimension(nx)::cloudfrac
 		real,intent(in),dimension(nx)::rh,qc
@@ -156,14 +168,8 @@ contains
 		calc_solar_elevation = sin_lat_m(:,j) * sin(declination) + & 
 							   cos_lat_m(:,j) * cos(declination) * cos(hour_angle)
 		calc_solar_elevation = asin(calc_solar_elevation)
-		
-! 		if (j==10) then
-! 			print*, " "
-! 			print*, "hr  = ",hour_angle(10)/2/pi *24 !, (hour_angle(10)/2/pi - lon(10,j)/360.0) *24
-! 			print*, "dec = ",declination(10)/2/pi*360, sin(calc_solar_elevation(10))
-! 			print*, "elev= ",calc_solar_elevation(10)/2.0/pi * 360.0 !, calc_solar_elevation(10)
-! 			print*, sin_lat_m(10,j), sin(declination(10)), cos_lat_m(10,j), cos(declination(10)), cos(hour_angle(10))
-! 		endif
+
+		! if the sun is below the horizon just set elevation to 0
 		where(calc_solar_elevation<0) calc_solar_elevation=0
 	end function calc_solar_elevation
 	
@@ -193,7 +199,8 @@ contains
 		allocate(hydrometeors(nx))
 		allocate(day_frac(nx))
 		
-		coolingrate=1.5*(dt/86400.0) *stefan_boltzmann / 300.0 !1.5K/day radiative cooling rate (300 = W/m^2 at 270K)
+		! 1.5K/day radiative cooling rate (300 = W/m^2 at 270K)
+		coolingrate=1.5*(dt/86400.0) *stefan_boltzmann / 300.0 
 		
 		
 		!$omp do
@@ -215,11 +222,6 @@ contains
 			! apply a simple radiative cooling to the atmosphere
 			theta(2:nx-1,:,j)=theta(2:nx-1,:,j) - (((theta(2:nx-1,:,j)*pii(2:nx-1,:,j))**4) * coolingrate)
 			
-! 			if (j==10) then
-! 				print*, "Cloud=",cloud_cover(10,10)
-! 				print*, "SW = ", swdown(10,10)
-! 				print*, "LW = ", lwdown(10,10)
-! 			endif
 		end do
 		!$omp end do
 		
