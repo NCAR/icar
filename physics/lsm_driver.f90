@@ -12,17 +12,17 @@ module land_surface
     integer :: ims,ime,jms,jme,kms,kme ! Local Memory dimensions
     integer :: its,ite,jts,jte,kts,kte ! Processing Tile dimensions
     
-    ! LOTS of variables required by Noah, placed here temporarily to get it to compile, this may be where they stay...
-    real,allocatable, dimension(:,:)    :: VEGFRA, CANWAT, SMSTAV, SMSTOT,SFCRUNOFF,UDRUNOFF,   &
-                                           SNOW,SNOWC,SNOWH, ACSNOW, ACSNOM, SNOALB,TSK, QFX,   &
-                                           QGH, GSW, ALBEDO, ALBBCK, ZNT, Z0, TMN, XICE, EMISS, &
+    ! LOTS of variables required by Noah, placed here temporarily to get it to compile, this may be where some stay.
+    real,allocatable, dimension(:,:)    :: CANWAT, SMSTAV,SFCRUNOFF,UDRUNOFF,   &
+                                           SNOW,SNOWC,SNOWH, ACSNOW, ACSNOM, SNOALB, QFX,   &
+                                           QGH, GSW, ALBEDO, ALBBCK, ZNT, Z0, XICE, EMISS, &
                                            EMBCK, QSFC, RAINBL, CHS, CHS2, CQS2, CPM, SR,       &
                                            CHKLOWQ, LAI, QZ0, SHDMIN,SHDMAX,SNOTIME,SNOPCX,     &
                                            POTEVP,RIB, NOAHRES,FLX4_2D,FVB_2D,FBUR_2D,   &
                                            FGSN_2D, z_atm,lnz_atm_term,Ri,base_exchange_term, T2m
                                            
     logical :: MYJ, FRPCPN,ua_phys,RDLAI2D,USEMONALB
-    real,allocatable, dimension(:,:,:)  :: TSLB,SMOIS,SH2O,SMCREL
+    real,allocatable, dimension(:,:,:)  :: SH2O,SMCREL
 	real,allocatable, dimension(:,:)    :: dTemp,lhdQV
     real,allocatable, dimension(:)      :: Zs,DZs
     real :: ROVCP,XICE_THRESHOLD
@@ -32,7 +32,7 @@ module land_surface
     real, parameter :: kappa=0.4
     real, parameter :: freezing_threshold=273.15
     real, parameter :: SMALL_PRESSURE=1e-10
-    real, parameter :: MAX_EXCHANGE_C = 0.1
+    real, parameter :: MAX_EXCHANGE_C = 0.5
     
     character(len=MAXVARLENGTH) :: MMINLU
     logical :: FNDSOILW,FNDSNOWH,RDMAXALB
@@ -89,6 +89,7 @@ contains
     
     
 	subroutine apply_fluxes(domain,dt)
+		implicit none
 		type(domain_type), intent(inout) :: domain
 		real, intent(in) :: dt
 		integer :: nx,ny
@@ -127,14 +128,10 @@ contains
         allocate(base_exchange_term(ime,jme))
         base_exchange_term=0.01
         
-        allocate(VEGFRA(ime,jme))
-        VEGFRA=50.0
         allocate(CANWAT(ime,jme))
         CANWAT=0
         allocate(SMSTAV(ime,jme))
         SMSTAV=0.5 !average soil moisture available for transp (between SMCWLT and SMCMAX)
-        allocate(SMSTOT(ime,jme))
-        SMSTOT=0
         allocate(SFCRUNOFF(ime,jme))
         SFCRUNOFF=0
         allocate(UDRUNOFF(ime,jme))
@@ -151,8 +148,6 @@ contains
         ACSNOM=0
         allocate(SNOALB(ime,jme))
         SNOALB=0.8
-        allocate(TSK(ime,jme))
-        TSK=280.0
 
         allocate(QFX(ime,jme))
         QFX=0
@@ -169,8 +164,6 @@ contains
         ZNT=0.01 !?
         allocate(Z0(ime,jme))
         Z0=0.01 !?
-        allocate(TMN(ime,jme))
-        TMN=270 ! bottom boundary soil temperature, should be mean annual air temperature
         allocate(XICE(ime,jme))
         XICE=0
         allocate(EMISS(ime,jme))
@@ -180,7 +173,7 @@ contains
         allocate(QSFC(ime,jme))
         QSFC=0
         allocate(RAINBL(ime,jme))
-        RAINBL=0 !used to store last time step accumulated precip so that it can be subtracted from the current step
+        RAINBL=0 ! used to store last time step accumulated precip so that it can be subtracted from the current step
         allocate(CHS(ime,jme))
         CHS=0.01
         allocate(CHS2(ime,jme))
@@ -232,18 +225,9 @@ contains
         
 
         MMINLU="USGS"
-        allocate(IVGTYP(ime,jme))
-        IVGTYP=7 ! Grassland
-        allocate(ISLTYP(ime,jme))
-        ISLTYP=6 ! Loam
-
-        
-        allocate(TSLB(ime,num_soil_layers,jme))
-        TSLB=280.0
-        allocate(SMOIS(ime,num_soil_layers,jme))
-        SMOIS=0.25
+		
         allocate(SH2O(ime,num_soil_layers,jme))
-        SH2O=SMOIS
+        SH2O=0.25
         
         allocate(Zs(num_soil_layers))
         allocate(DZs(num_soil_layers))
@@ -288,22 +272,19 @@ contains
             ISICE=0
             call allocate_noah_data(ime,jme,kme,num_soil_layers)
             
-            call LSM_NOAH_INIT(VEGFRA,SNOW,SNOWC,SNOWH,CANWAT,domain%soil_t,    &
-                            domain%soil_vwc, SFCRUNOFF,UDRUNOFF,ACSNOW,           &
-                            ACSNOM,IVGTYP,ISLTYP,TSLB,SMOIS,SH2O,ZS,DZS, &
-                            MMINLU,                                      &
-                            SNOALB, FNDSOILW, FNDSNOWH, RDMAXALB,        &
-                            num_soil_layers, .False.,                    & ! nlayers, is_restart (can't yet)
-                            .True. ,                                     & ! allowed_to_read (e.g. soilparm.tbl)
-                            ids,ide, jds,jde, kds,kde,                   &
-                            ims,ime, jms,jme, kms,kme,                   &
-                            its,ite, jts,jte, kts,kte  )
-            
-            domain%soil_vwc=0
-            do i=1,num_soil_layers
-                domain%soil_vwc=domain%soil_vwc+DZS(i)*SMOIS(:,i,:)
-            enddo
-            
+            call LSM_NOAH_INIT(domain%vegfrac,SNOW,SNOWC,SNOWH,CANWAT,domain%soil_t,    &
+	                            domain%soil_vwc, SFCRUNOFF,UDRUNOFF,ACSNOW,  &
+	                            ACSNOM,domain%veg_type,domain%soil_type,	 &
+								domain%soil_t, 								 &
+								domain%soil_vwc,SH2O,ZS,DZS, 				 &
+	                            MMINLU,                                      &
+	                            SNOALB, FNDSOILW, FNDSNOWH, RDMAXALB,        &
+	                            num_soil_layers, .False.,                    & ! nlayers, is_restart (can't yet)
+	                            .True. ,                                     & ! allowed_to_read (e.g. soilparm.tbl)
+	                            ids,ide, jds,jde, kds,kde,                   &
+	                            ims,ime, jms,jme, kms,kme,                   &
+	                            its,ite, jts,jte, kts,kte  )
+							
             z_atm=domain%z(:,1,:)
             lnz_atm_term = log((z_atm+Z0)/Z0)
             base_exchange_term=(75*kappa**2 * sqrt((z_atm+Z0)/Z0)) / (lnz_atm_term**2)
@@ -353,6 +334,7 @@ contains
             else if (options%physics%landsurface==3) then
                 ! Call the Noah Land Surface Model
                 
+				! it would be better to call the MYJ SFC scheme here...
                 T2m=domain%th(:,1,:)*domain%pii(:,1,:)
                 ! 2m saturated mixing ratio
                 do j=1,ny
@@ -367,14 +349,18 @@ contains
                 call calc_exchange_coefficient(sqrt(domain%u(1:nx,1,1:ny)**2+domain%v(1:nx,1,1:ny)**2),domain%skin_t,T2m,CHS)
                 CHS2=CHS
                 CQS2=CHS
+				
                 call lsm_noah(domain%dz,domain%qv,domain%p,domain%th*domain%pii,domain%skin_t,  &
                       domain%sensible_heat,QFX,domain%latent_heat,domain%ground_heat, &
-                      QGH,GSW,domain%swdown,domain%lwdown,SMSTAV,domain%soil_vwc, &
-                      SFCRUNOFF, UDRUNOFF,IVGTYP,ISLTYP,ISURBAN,ISICE,VEGFRA, &
-                      ALBEDO,ALBBCK,ZNT,Z0,TMN,domain%landmask,XICE,EMISS,EMBCK,     &
+                      QGH,GSW,domain%swdown,domain%lwdown,SMSTAV,domain%soil_totalmoisture, &
+                      SFCRUNOFF, UDRUNOFF, &
+					  domain%veg_type,domain%soil_type, &
+					  ISURBAN,ISICE, &
+					  domain%vegfrac, &
+                      ALBEDO,ALBBCK,ZNT,Z0,domain%soil_tdeep,domain%landmask,XICE,EMISS,EMBCK,     &
                       SNOWC,QSFC,domain%rain-RAINBL,MMINLU,         &
                       num_soil_layers,lsm_dt,DZS,ITIMESTEP,         &
-                      SMOIS,TSLB,domain%snow_swe,CANWAT,            &
+                      domain%soil_vwc,domain%soil_t,domain%snow_swe,CANWAT,            &
                       CHS,CHS2,CQS2,CPM,ROVCP,SR,chklowq,lai,qz0,   & !H
                       myj,frpcpn,                                   &
                       SH2O,SNOWH,                                   & !H
@@ -394,7 +380,7 @@ contains
                       ims,ime, jms,jme, kms,kme,                    &
                       its,ite, jts,jte, kts,kte)
                 
-                domain%soil_t=TSLB(:,1,:)
+                
                 RAINBL=domain%rain
 				call apply_fluxes(domain,lsm_dt)
             endif

@@ -390,6 +390,16 @@ contains
 		call io_read3d(restart_file,"th",inputdata)
 		domain%th=inputdata
 		deallocate(inputdata)
+		call io_read3d(restart_file,"rho",inputdata)
+		domain%rho=inputdata
+		deallocate(inputdata)
+		call io_read3d(restart_file,"soil_t",inputdata)
+		domain%soil_t=inputdata
+		deallocate(inputdata)
+		call io_read3d(restart_file,"soil_w",inputdata)
+		domain%soil_vwc=inputdata
+		deallocate(inputdata)
+		
 	end subroutine load_restart_file
 	
 ! 	initialize the boundary conditions (read inital conditions, etc.)

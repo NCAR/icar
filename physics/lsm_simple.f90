@@ -101,12 +101,15 @@ contains
 	
 	subroutine calc_ground_heat(tsoil,tskin,ground_heat,dt)
 		implicit none
-		real,dimension(:,:),intent(inout):: tsoil,tskin
+		real,dimension(:,:,:),intent(inout):: tsoil
+		real,dimension(:,:),intent(in):: tskin
 		real,dimension(:,:),intent(out)  :: ground_heat
 		real,intent(in)::dt
 		
-		ground_heat = soil_thermal_conductivity * (tskin-tsoil) / soil_dz
-		tsoil=tsoil+ground_heat * dt * soil_dz*soil_density*soil_specific_heat + (Tdeep-tsoil)/damping_time
+		ground_heat = soil_thermal_conductivity * (tskin-tsoil(:,1,:)) / soil_dz
+		
+		tsoil(:,1,:)=tsoil(:,1,:) + ground_heat * dt * soil_dz*soil_density*soil_specific_heat &
+					+ (Tdeep-tsoil(:,1,:))/damping_time
 	end subroutine calc_ground_heat
 		
 	subroutine calc_exchange_coefficient(wind,tskin,airt)
@@ -130,9 +133,10 @@ contains
 
 	subroutine calc_latent_heat(vwc,tskin,qv,wind,latent_heat)
 		implicit none
-		real,dimension(:,:),intent(in)  :: vwc,tskin,wind
-		real,dimension(:,:,:),intent(in):: qv
-		real,dimension(:,:),intent(out) :: latent_heat
+		real,dimension(:,:,:),intent(in) :: vwc 
+		real,dimension(:,:),  intent(in) :: tskin,wind
+		real,dimension(:,:,:),intent(in) :: qv
+		real,dimension(:,:),  intent(out):: latent_heat
 		
 ! 		latent_heat = (vwc-vwc_min)/(vwc_max-vwc_min) * exchange_C * wind * (saturated(tskin) - qv(:,1,:))
 		where(latent_heat<0) latent_heat=0
@@ -141,14 +145,14 @@ contains
 
 	subroutine add_rain(vwc,rain,dt)
 		implicit none
-		real,dimension(:,:),intent(inout):: vwc
-		real,dimension(:,:),intent(in)   :: rain
+		real,dimension(:,:,:),intent(inout):: vwc
+		real,dimension(:,:),  intent(in)   :: rain
 		real,intent(in)::dt
 		
 		where((rain/1000.0/dt)>=soil_hydro_conductivity) &
-			vwc=vwc+soil_hydro_conductivity*dt/soil_hydro_dz
+			vwc(:,1,:)=vwc(:,1,:)+soil_hydro_conductivity*dt/soil_hydro_dz
 		where((rain/1000.0/dt)<soil_hydro_conductivity) &
-			vwc=vwc+rain/1000.0/dt/soil_hydro_dz
+			vwc(:,1,:)=vwc(:,1,:)+rain/1000.0/dt/soil_hydro_dz
 		where(vwc>vwc_max) vwc=vwc_max
 	end subroutine add_rain
 	
@@ -156,11 +160,11 @@ contains
 						  sensible_heat, latent_heat, ground_heat,      &
 						  tskin, tsoil, vwc, swe, options,dt)
 		implicit none
-		real,dimension(:,:,:), intent(inout) :: theta, qv
+		real,dimension(:,:,:), intent(inout) :: theta, qv, tsoil, vwc
 		real,dimension(:,:,:), intent(in) :: pii,p
 		real,dimension(:,:), intent(in) :: rain,snow,swdown,lwdown,wind
 		real,dimension(:,:), intent(inout) :: sensible_heat, latent_heat, ground_heat, &
-											  tskin, tsoil, vwc, swe
+											  tskin, swe
 		type(options_type),intent(in)    :: options
 		real, intent(in) :: dt
 		integer :: nx,ny,j,k,nz
@@ -177,7 +181,7 @@ contains
 				 /stefan_boltzmann/emissivity)**0.25
 		
 ! 		call apply_fluxes(vwc,tsoil,qv,airt_m,latent_heat,sensible_heat,dt)
-		theta(:,1,:)=airt_m/pii(:,1,:)
+! 		theta(:,1,:)=airt_m/pii(:,1,:)
 		
 		call add_rain(vwc,rain,dt)
 		
