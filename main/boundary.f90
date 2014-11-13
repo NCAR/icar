@@ -427,6 +427,10 @@ contains
 		call io_read2d(restart_file,"snw",inputdata_2d)
 		domain%snow_swe=inputdata_2d
 		deallocate(inputdata_2d)
+		call io_read2d(restart_file,"canwat",inputdata_2d)
+		domain%canopy_water=inputdata_2d
+		deallocate(inputdata_2d)
+		
 		
 	end subroutine load_restart_file
 	

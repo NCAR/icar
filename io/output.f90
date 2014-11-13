@@ -323,11 +323,24 @@ contains
 		call check( nf90_put_att(ncid,temp_id,"units","K"))
 		varid(28)=temp_id
 		
+		call check( nf90_def_var(ncid, "rlus", NF90_REAL, dimids(1:3:2), temp_id) )
+		call check( nf90_put_att(ncid,temp_id,"standard_name","surface_upwelling_longwave_flux_in_air"))
+		call check( nf90_put_att(ncid,temp_id,"long_name","Longwave upward radiative energy flux from the surface"))
+		call check( nf90_put_att(ncid,temp_id,"positive","up"))
+		call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
+		varid(29)=temp_id
+		
 		call check( nf90_def_var(ncid, "snw", NF90_REAL, dimids(1:3:2), temp_id) )
 		call check( nf90_put_att(ncid,temp_id,"standard_name","surface_snow_amount"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Snow water equivalent"))
 		call check( nf90_put_att(ncid,temp_id,"units","kg m-2"))
-		varid(29)=temp_id
+		varid(30)=temp_id
+
+		call check( nf90_def_var(ncid, "canwat", NF90_REAL, dimids(1:3:2), temp_id) )
+		call check( nf90_put_att(ncid,temp_id,"standard_name","canopy_water_amount"))
+		call check( nf90_put_att(ncid,temp_id,"long_name","Canopy water content"))
+		call check( nf90_put_att(ncid,temp_id,"units","kg m-2"))
+		varid(31)=temp_id
 
 		
 		! End define mode. This tells netCDF we are done defining metadata.
@@ -364,7 +377,9 @@ contains
 		call check( nf90_put_var(ncid, varid(26), domain%soil_vwc) )
 		call check( nf90_put_var(ncid, varid(27), domain%soil_t) )
 		call check( nf90_put_var(ncid, varid(28), domain%skin_t) )
-		call check( nf90_put_var(ncid, varid(29), domain%snow_swe) )
+		call check( nf90_put_var(ncid, varid(29), domain%lwup) )
+		call check( nf90_put_var(ncid, varid(30), domain%snow_swe) )
+		call check( nf90_put_var(ncid, varid(31), domain%canopy_water) )
 	
 		! Close the file, freeing all resources.
 		call check( nf90_close(ncid) )

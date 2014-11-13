@@ -13,7 +13,7 @@ module land_surface
     integer :: its,ite,jts,jte,kts,kte ! Processing Tile dimensions
     
     ! LOTS of variables required by Noah, placed here temporarily to get it to compile, this may be where some stay.
-    real,allocatable, dimension(:,:)    :: CANWAT, SMSTAV,SFCRUNOFF,UDRUNOFF,   &
+    real,allocatable, dimension(:,:)    :: SMSTAV,SFCRUNOFF,UDRUNOFF,   &
                                            SNOW,SNOWC,SNOWH, ACSNOW, ACSNOM, SNOALB, QFX,   &
                                            QGH, GSW, ALBEDO, ALBBCK, ZNT, Z0, XICE, EMISS, &
                                            EMBCK, QSFC, RAINBL, CHS, CHS2, CQS2, CPM, SR,       &
@@ -128,8 +128,6 @@ contains
         allocate(base_exchange_term(ime,jme))
         base_exchange_term=0.01
         
-        allocate(CANWAT(ime,jme))
-        CANWAT=0
         allocate(SMSTAV(ime,jme))
         SMSTAV=0.5 !average soil moisture available for transp (between SMCWLT and SMCMAX)
         allocate(SFCRUNOFF(ime,jme))
@@ -272,7 +270,7 @@ contains
             ISICE=0
             call allocate_noah_data(ime,jme,kme,num_soil_layers)
             
-            call LSM_NOAH_INIT(domain%vegfrac,SNOW,SNOWC,SNOWH,CANWAT,domain%soil_t,    &
+            call LSM_NOAH_INIT(domain%vegfrac,SNOW,SNOWC,SNOWH,domain%canopy_water,domain%soil_t,    &
 	                            domain%soil_vwc, SFCRUNOFF,UDRUNOFF,ACSNOW,  &
 	                            ACSNOM,domain%veg_type,domain%soil_type,	 &
 								domain%soil_t, 								 &
@@ -351,36 +349,38 @@ contains
                 CQS2=CHS
 				
                 call lsm_noah(domain%dz,domain%qv,domain%p,domain%th*domain%pii,domain%skin_t,  &
-                      domain%sensible_heat,QFX,domain%latent_heat,domain%ground_heat, &
-                      QGH,GSW,domain%swdown,domain%lwdown,SMSTAV,domain%soil_totalmoisture, &
-                      SFCRUNOFF, UDRUNOFF, &
-					  domain%veg_type,domain%soil_type, &
-					  ISURBAN,ISICE, &
-					  domain%vegfrac, &
-                      ALBEDO,ALBBCK,ZNT,Z0,domain%soil_tdeep,domain%landmask,XICE,EMISS,EMBCK,     &
-                      SNOWC,QSFC,domain%rain-RAINBL,MMINLU,         &
-                      num_soil_layers,lsm_dt,DZS,ITIMESTEP,         &
-                      domain%soil_vwc,domain%soil_t,domain%snow_swe,CANWAT,            &
-                      CHS,CHS2,CQS2,CPM,ROVCP,SR,chklowq,lai,qz0,   & !H
-                      myj,frpcpn,                                   &
-                      SH2O,SNOWH,                                   & !H
-                      domain%u(1:nx,:,1:ny), domain%v(1:nx,:,1:ny), & !I
-                      SNOALB,SHDMIN,SHDMAX,                         & !I
-                      SNOTIME,                                      & !?
-                      ACSNOM,ACSNOW,                                & !O
-                      SNOPCX,                                       & !O
-                      POTEVP,                                       & !O
-                      SMCREL,                                       & !O
-                      XICE_THRESHOLD,                               &
-                      RDLAI2D,USEMONALB,                            &
-                      RIB,                                          & !?
-                      NOAHRES,                                      &
-                      ua_phys,flx4_2d,fvb_2d,fbur_2d,fgsn_2d,       & ! Noah UA changes
-                      ids,ide, jds,jde, kds,kde,                    &
-                      ims,ime, jms,jme, kms,kme,                    &
-                      its,ite, jts,jte, kts,kte)
+							domain%sensible_heat,QFX,domain%latent_heat,domain%ground_heat, &
+							QGH,GSW,domain%swdown,domain%lwdown,SMSTAV,domain%soil_totalmoisture, &
+							SFCRUNOFF, UDRUNOFF, &
+							domain%veg_type,domain%soil_type, &
+							ISURBAN,ISICE, &
+							domain%vegfrac, &
+							ALBEDO,ALBBCK,ZNT,Z0,domain%soil_tdeep,domain%landmask,XICE,EMISS,EMBCK,     &
+							SNOWC,QSFC,domain%rain-RAINBL,MMINLU,         &
+							num_soil_layers,lsm_dt,DZS,ITIMESTEP,         &
+							domain%soil_vwc,domain%soil_t,domain%snow_swe,&
+							domain%canopy_water,            &
+							CHS,CHS2,CQS2,CPM,ROVCP,SR,chklowq,lai,qz0,   & !H
+							myj,frpcpn,                                   &
+							SH2O,SNOWH,                                   & !H
+							domain%u(1:nx,:,1:ny), domain%v(1:nx,:,1:ny), & !I
+							SNOALB,SHDMIN,SHDMAX,                         & !I
+							SNOTIME,                                      & !?
+							ACSNOM,ACSNOW,                                & !O
+							SNOPCX,                                       & !O
+							POTEVP,                                       & !O
+							SMCREL,                                       & !O
+							XICE_THRESHOLD,                               &
+							RDLAI2D,USEMONALB,                            &
+							RIB,                                          & !?
+							NOAHRES,                                      &
+							ua_phys,flx4_2d,fvb_2d,fbur_2d,fgsn_2d,       & ! Noah UA changes
+							ids,ide, jds,jde, kds,kde,                    &
+							ims,ime, jms,jme, kms,kme,                    &
+							its,ite, jts,jte, kts,kte)
                 
-                
+				! note this is more or less just diagnostic and could be removed
+				domain%lwup=stefan_boltzmann*EMISS*domain%skin_t**4
                 RAINBL=domain%rain
 				call apply_fluxes(domain,lsm_dt)
             endif

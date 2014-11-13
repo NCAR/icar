@@ -144,7 +144,7 @@ module data_structures
 		real, allocatable, dimension(:,:)   :: sintheta, costheta !rotations about the E-W, N-S grid
 		real, allocatable, dimension(:,:)   :: sensible_heat,latent_heat,ground_heat
 		real, allocatable, dimension(:,:)   :: soil_tdeep, skin_t, soil_totalmoisture, snow_swe
-		real, allocatable, dimension(:,:)   :: vegfrac
+		real, allocatable, dimension(:,:)   :: vegfrac,canopy_water
 		integer, allocatable, dimension(:,:):: soil_type,veg_type
 		real::dt
 	end type domain_type

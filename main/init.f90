@@ -615,6 +615,9 @@ contains
 		domain%swdown=0
 		allocate(domain%lwdown(nx,ny))		! longwave down at surface
 		domain%lwdown=0
+		allocate(domain%lwup(nx,ny))		! longwave up from surface
+		domain%lwup=0
+
 		allocate(domain%sensible_heat(nx,ny)) ! sensible heat flux from surface
 		domain%sensible_heat=0
 		allocate(domain%latent_heat(nx,ny))	! latent heat flux from surface
@@ -640,6 +643,8 @@ contains
 		domain%snow_swe=0
 		allocate(domain%vegfrac(nx,ny))			! vegetation cover fraction (%)
 		domain%vegfrac=50 !% veg cover
+		allocate(domain%canopy_water(nx,ny))	! canopy water content
+		domain%canopy_water=0
 		allocate(domain%soil_type(nx,ny))		! USGS soil type
 		domain%soil_type=6 ! Loam
 		allocate(domain%veg_type(nx,ny))		! Vegetation type
