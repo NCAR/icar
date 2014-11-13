@@ -45,7 +45,12 @@ contains
 														! It can be 2, or 3 (but not 1)
 		real,allocatable,dimension(:,:,:)::inputwind    ! temporary array to store the input data in
 		integer::i,j,k,nx,ny,nz,startx,endx,starty,endy ! various array indices/bounds
+		! intermediate sums to speed up the computation
+		real,dimension(windowsize*2+1) :: rowsums
+		real :: cursum
+		integer :: cur_n,curcol,ncols
 		
+		ncols=windowsize*2+1
 		nx=size(wind,1)
 		ny=size(wind,2) !note, this could be the Y or Z dimension depending on ydim
 		nz=size(wind,3) !note, this could be the Y or Z dimension depending on ydim
@@ -56,23 +61,55 @@ contains
 		inputwind=wind !make a copy so we always use the unsmoothed data when computing the smoothed data
 		
 		!parallelize over the slowest dimension
-		!$omp parallel firstprivate(windowsize,nx,ny,nz,ydim), &
-		!$omp private(i,j,k,startx,endx,starty,endy),shared(wind,inputwind)
+		!$omp parallel firstprivate(windowsize,nx,ny,nz,ydim,ncols), &
+		!$omp private(i,j,k,startx,endx,starty,endy, rowsums,cursum,cur_n,curcol), &
+		!$omp shared(wind,inputwind)
 		!$omp do schedule(static)
 		do k=1,nz
 			do j=1,ny
+				! ydim=3 for the main model grid which is large and takes a long time
+				! so we pre-compute the sum over rows for each column in the current window
+				if (ydim==3) then
+					rowsums=0
+					starty=max(1, k-windowsize)
+					endy  =min(nz,k+windowsize)
+					do i=1,windowsize+1
+						rowsums(i)=sum(inputwind(i,j,starty:endy))/(endy-starty+1)
+					enddo
+					cursum=sum(rowsums(1:windowsize+1))
+					cur_n=windowsize+1
+					curcol=windowsize
+				endif
+				
 				do i=1,nx
-					!note, this could be made a lot faster by adding the new head of the window and subtracting the old tail
 					if (ydim==3) then
-						! bounds and dimension are different if z is in the middle dimension
+						! find the current window bounds
 						startx=max(1, i-windowsize)
 						endx  =min(nx,i+windowsize)
-						starty=max(1, k-windowsize)
-						endy  =min(nz,k+windowsize)
+						curcol=mod(curcol+1,ncols)
+						if (curcol==0) curcol=ncols
+						
+						cursum=cursum-rowsums(curcol)
+						! if the window is now pinned to the right edge, we are just removing columns
+						! so subtract one from cur_n and set the rowsums for the old/current column to be 0
+						if ((i+windowsize)>nx) then
+							rowsums(curcol)=0
+							cur_n=cur_n-1
+						else
+							! this is an internal window set the "old" column to its new value
+							rowsums(curcol)=sum(inputwind(endx,j,starty:endy))/(endy-starty+1)
+						endif
+						! if the window is still pinned to the left edge, we are adding columns, so add one to cur_n
+						cur_n=endx-startx+1
+						
 						! then compute the mean within that window (sum/n)
-						wind(i,j,k)=sum(inputwind(startx:endx,j,starty:endy)) &
-									/ ((endx-startx+1)*(endy-starty+1))
+						cursum=cursum+rowsums(curcol)
+						wind(i,j,k)=cursum/cur_n
+						! old SLOW way
+						! wind(i,j,k)=sum(inputwind(startx:endx,j,starty:endy)) &
+						! 			/ ((endx-startx+1)*(endy-starty+1))
 					else ! ydim==2
+						! ydim=2 for the input data which is a small grid, thus cheap so we still use the slow method
 						!first find the current window bounds
 						startx=max(1, i-windowsize)
 						endx  =min(nx,i+windowsize)
