@@ -123,6 +123,53 @@ contains
 		
 	end subroutine io_read2d
 
+! Same as io_read2d for integer data
+! also allows selecting an index from any extra dimensions (i.e. a single time slice)
+	subroutine io_read2di(filename,varname,data_in,extradim)
+		implicit none
+	    ! This is the name of the data_in file and variable we will read.
+		character(len=*), intent(in) :: filename, varname
+		integer,intent(out),allocatable :: data_in(:,:)
+		integer, intent(in),optional :: extradim
+		integer, dimension(io_maxDims)  :: diminfo ! will hold dimension lengths
+		integer, dimension(io_maxDims)  :: dimstart
+		! This will be the netCDF ID for the file and data_in variable.
+		integer :: ncid, varid,i
+
+		if (present(extradim)) then
+			dimstart=extradim
+			dimstart(1:2)=1
+		else
+			dimstart=1
+		endif
+
+! 		Read the dimension lengths
+		call io_getdims(filename,varname,diminfo)
+		allocate(data_in(diminfo(2),diminfo(3)))
+		! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
+		! the file.
+		call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
+		! Get the varid of the data_in variable, based on its name.
+		call check(nf90_inq_varid(ncid, varname, varid),varname)
+
+		! Read the data_in. skip the slowest varying indices if there are more than 3 dimensions (typically this will be time)
+		if (diminfo(1)>2) then
+			diminfo(4:diminfo(1)+1)=1 ! set count for extra dims to 1
+			call check(nf90_get_var(ncid, varid, data_in,&
+									dimstart(1:diminfo(1)), &				! start  = 1 or extradim
+									[ (diminfo(i+1), i=1,diminfo(1)) ],&	! count=n or 1 created through an implied do loop
+									[ (1,            i=1,diminfo(1)) ] ), &	! for all dims, stride = 1		" implied do loop
+									varname) !pass varname to check so it can give us more info
+		else
+			call check(nf90_get_var(ncid, varid, data_in),varname)
+		endif
+
+		! Close the file, freeing all resources.
+		call check( nf90_close(ncid),filename)
+
+	end subroutine io_read2di
+
+
 ! 	write a data array to a file with a given variable name
 	subroutine io_write3d(filename,varname,data_out)
 		implicit none

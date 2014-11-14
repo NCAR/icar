@@ -22,7 +22,7 @@ module init
 !		For now there are no plans to near term plans to substantially modify this. 
 ! ----------------------------------------------------------------------------
 	use data_structures
-	use io_routines, only				: io_read2d, io_read3d, io_newunit,io_write3d,io_write3di
+	use io_routines, only				: io_read2d, io_read2di, io_read3d, io_newunit, io_write3d,io_write3di
 	use geo, only						: geo_LUT, geo_interp, geo_interp2d
 	use vertical_interpolation, only	: vLUT
 	use microphysics, only				: mp_init
@@ -683,7 +683,70 @@ contains
 		endif
 		
 	end subroutine copy_z
-	
+
+	subroutine init_domain_land(domain,options)
+		implicit none
+		type(options_type), intent(in) :: options
+		type(domain_type), intent(inout):: domain
+		integer,dimension(:,:),allocatable :: temp_idata
+		real,dimension(:,:,:),allocatable :: temp_rdata
+		real,dimension(:,:),allocatable :: temp_rdata_2d
+		integer:: buffer,nx,ny,nz
+		buffer=options%buffer
+		nx=size(domain%veg_type,1)+buffer*2
+		ny=size(domain%veg_type,2)+buffer*2
+		nz=size(domain%soil_t,2)
+		
+		
+		! Veg cover fraction = 2D real
+		if (options%vegfrac_var.ne."") then
+			call io_read2d(options%init_conditions_file,options%vegfrac_var,temp_rdata_2d,1)
+			domain%vegfrac=temp_rdata_2d(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
+			deallocate(temp_rdata_2d)
+		endif
+
+		! Veg TYPE = 2D integer
+		if (options%vegtype_var.ne."") then
+			call io_read2di(options%init_conditions_file,options%vegtype_var,temp_idata,1)
+			domain%veg_type=temp_idata(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
+			deallocate(temp_idata)
+		endif
+		
+		! Soil TYPE = 2D integer
+		if (options%soiltype_var.ne."") then
+			call io_read2di(options%init_conditions_file,options%soiltype_var,temp_idata,1)
+			domain%soil_type=temp_idata(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
+			deallocate(temp_idata)
+		endif
+		
+		! Soil Volumetric Water Content = 3D real
+		if (options%soil_vwc_var.ne."") then
+			call io_read3d(options%init_conditions_file,options%soil_vwc_var,temp_rdata,1)  
+			print*, shape(temp_rdata),nz,nx,ny
+			domain%soil_vwc=reshape(temp_rdata(1+buffer:nx-buffer,1+buffer:ny-buffer,1:nz) &	! subset the data by buffer grid cells
+									,[nx-buffer*2,nz,ny-buffer*2],order=[1,3,2])				! and reshape to move the z axis to the middle
+			deallocate(temp_rdata)
+		endif
+		
+		! Soil Temperature = 3D real
+		if (options%soil_t_var.ne."") then
+			call io_read3d(options%init_conditions_file,options%soil_t_var,temp_rdata,1)
+			domain%soil_t=reshape(temp_rdata(1+buffer:nx-buffer,1+buffer:ny-buffer,1:nz) &  ! subset the data by buffer grid cells
+									,[nx-buffer*2,nz,ny-buffer*2],order=[1,3,2])			! and reshape to move the z axis to the middle
+			deallocate(temp_rdata)
+		endif
+		
+		! Deep Soil Temperature = 2D real
+		if (options%soil_deept_var.ne."") then
+			call io_read2d(options%init_conditions_file,options%soil_deept_var,temp_rdata_2d,1)
+			domain%soil_tdeep=temp_rdata_2d(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
+			deallocate(temp_rdata_2d)
+		endif
+		
+		
+	end subroutine init_domain_land
+		
+
 ! 	initialize the domain e.g. lat,lon,terrain, 3D z coordinate
 	subroutine init_domain(options, domain)
 		implicit none
@@ -754,6 +817,9 @@ contains
 		
 ! 		all other variables should be allocated and initialized to 0
 		call domain_allocation(domain,nx,nz,ny)
+		
+! 		initializing land
+		call init_domain_land(domain,options)
 		
 ! 		store dx in domain as well as options, read as an option, but it is more appropriate in domain
 		domain%dx=options%dx
