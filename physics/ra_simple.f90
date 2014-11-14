@@ -87,7 +87,7 @@ contains
 		relative_humidity= e/es
 		! because it is an approximation things could go awry and rh outside or reasonable bounds could break something else.
 		! alternatively air could be supersaturated (esp. on boundary cells) but cloud fraction calculations will break.
-		where(relative_humidity>1-MINIMUM_RH) relative_humidity=1-MINIMUM_RH
+		where(relative_humidity>(1-MINIMUM_RH)) relative_humidity=1-MINIMUM_RH
 		where(relative_humidity<MINIMUM_RH) relative_humidity=MINIMUM_RH
 	end function relative_humidity
 	

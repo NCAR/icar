@@ -383,6 +383,10 @@ module module_mp_simple
                 th(i,:,j)=t/pii(i,:,j)
                 
             enddo
+			where(qs(:,:,j)<0) qs(:,:,j)=0
+			where(qr(:,:,j)<0) qr(:,:,j)=0
+			where(qc(:,:,j)<0) qc(:,:,j)=0
+			where(qv(:,:,j)<0) qv(:,:,j)=0
         enddo
         !$omp end do
         deallocate(t)
