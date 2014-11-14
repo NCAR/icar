@@ -412,6 +412,7 @@ contains
 		call var_namelist(options_filename,options)
 		call parameters_namelist(options_filename,options)
 		
+		! read the z_info namelist if requested
 		if (options%readdz) then
 			allocate(dz_levels(options%nz),options%dz_levels(options%nz))
 			
@@ -422,7 +423,8 @@ contains
 			options%dz_levels=dz_levels
 			deallocate(dz_levels)
 		else
-! 			default mean layer thicknesses from a 36km WRF run over the "CO-headwaters" domain
+		! if we are not reading dz from the namelist, use default values from a WRF run
+		! default mean layer thicknesses from a 36km WRF run over the "CO-headwaters" domain
 			fulldz=[36.,   51.,   58.,   73.,   74.,  111.,  113.,  152.,  155.,  157.,  160.,  245., &
 				   251.,  258.,  265.,  365.,  379.,  395.,  413.,  432.,  453.,  476.,  503.,  533., &
 				   422.,  443.,  467.,  326.,  339.,  353.,  369.,  386.,  405.,  426.,  450.,  477., &

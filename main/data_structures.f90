@@ -1,10 +1,15 @@
 module data_structures
-	use, intrinsic :: iso_c_binding
+	use, intrinsic :: iso_c_binding ! needed for fftw compatible complex types
 	implicit none
 
-	integer,parameter::MAXFILELENGTH=100
-	integer,parameter::MAXVARLENGTH=100
-
+	!------------------------------------------------
+	! Model constants (string lengths)
+	integer,parameter::MAXFILELENGTH=100 ! maximum file name length
+	integer,parameter::MAXVARLENGTH=100  ! maximum variable name length
+	
+	!------------------------------------------------
+	! Physical Constants
+	!------------------------------------------------
 	real, parameter :: LH_vaporization=2260000.0 ! J/kg
 	! should be calculated as 2.5E6 + (2106.0 - 4218.0)*temp_degC ?
     real, parameter :: R  = 287.058 ! J/(kg K) specific gas constant for air
@@ -13,7 +18,9 @@ module data_structures
 	real, parameter :: pi = 3.1415927 ! pi
 	real, parameter :: stefan_boltzmann = 5.67e-8 ! the Stefan-Boltzmann constant
 	
+!------------------------------------------------
 ! 	various data structures for use in geographic interpolation routines
+!------------------------------------------------
 ! 	contains the location of a specific grid point
 	type position
 		integer::x,y
@@ -40,46 +47,38 @@ module data_structures
 		real,allocatable,dimension(:,:,:,:)::w
 	end type vert_look_up_table
 	
-!   generic interpolable type so geo interpolation routines will work on winds, domain, or boundary conditions. 
-	type interpolable_type
-		real, allocatable, dimension(:,:) :: lat,lon
-		real, allocatable, dimension(:,:,:) :: z
-		type(vert_look_up_table)::vert_lut
-		type(geo_look_up_table)::geolut
-	end type interpolable_type
-
 !------------------------------------------------
 ! 
 ! General Field Definitions
 !
-! ---- 3D fields ----
-! u     = wind in east direction        [m/s]
-! v     = wind in north direction       [m/s]
-! w     = wind in vertical direction    [m/s] (possibly scaled by dx/dz)
+! ---- 3D fields ---- NX x NZ x NY
+! u     = wind in east direction        					[m/s]
+! v     = wind in north direction       					[m/s]
+! w     = wind in vertical direction    					[m/s] (possibly scaled by dx/dz)
 ! 
-! p     = pressure                      [pa]
-! th    = potential temperature         [K]
+! p     = pressure                      					[pa]
+! th    = potential temperature         					[K]
 !
-! qv    = water vapor (mixing ratio)    [kg/kg]
-! cloud = cloud water                   [kg/kg]
-! ice   = cloud ice                     [kg/kg]
-! qrain = rain mixing ratio             [kg/kg]
-! qsnow = snow mixing ratio             [kg/kg]
-! qgrau = graupel mixing ratio          [kg/kg]
-! nice  = ice number concentration      [1/cm^3]
-! nrain = rain number concentration     [1/cm^3]
+! qv    = water vapor (mixing ratio)    					[kg/kg]
+! cloud = cloud water                   					[kg/kg]
+! ice   = cloud ice                     					[kg/kg]
+! qrain = rain mixing ratio             					[kg/kg]
+! qsnow = snow mixing ratio             					[kg/kg]
+! qgrau = graupel mixing ratio          					[kg/kg]
+! nice  = ice number concentration      					[1/cm^3]
+! nrain = rain number concentration     					[1/cm^3]
 !
-! ---- 2D fields ----
+! ---- 2D fields ---- NX x NY
 ! 		---- moisture fluxes ----
-! rain  = rain+crain+snow+graupel       [mm]
-! crain = convective rain at surface    [mm]
-! snow  = snow at surface               [mm]
-! graupel = graupel at surface          [mm]
+! rain  = rain+crain+snow+graupel       					[mm]
+! crain = convective rain at surface    					[mm]
+! snow  = snow at surface               					[mm]
+! graupel = graupel at surface          					[mm]
 !
 ! 		---- energy fluxes ----
-! sensible_heat = Sensible heat flux from surface          [W/m^2]
-! latent_heat   = Latent heat flux from surface            [W/m^2]
-! pbl_height    = Height of the planetary boundary layer   [m]
+! sensible_heat = Sensible heat flux from surface			[W/m^2]
+! latent_heat   = Latent heat flux from surface				[W/m^2]
+! pbl_height    = Height of the planetary boundary layer	[m]
 !
 ! 		---- Radiation variables ----
 ! cloudfrac		= Cloud fraction 							[0-1]
@@ -87,16 +86,19 @@ module data_structures
 ! lwdown		= Longwave down at land surface				[W/m^2]
 ! lwup			= Lonwave up from the land surface			[W/m^2]
 !
-! ---- Land Surface variables ----
+! ---- Land Surface variables ---- 
+! 	3D fields ---- NX x NZ x NY
 ! soil_t 		= 3D Soil temperature						[K]
 ! soil_vwc		= 3D Soil volumetric water content			[m^3/m^3]
+!
+!   2D fields ---- NX x NY
 ! skin_t 		= Land surface skin temperature				[K]
 ! soil_tdeep	= Temperature at the soil column bottom		[K]
 ! vegfrac		= vegetation cover fraction 				[%]
 ! snow_swe 		= Snow water equivalent on the land surface	[mm]
 ! soil_totalmoisture = Soil column total water content 		[mm]
-! soil_type 	= Soil type (index for USGS classification in SOILPARM.TBL)
-! veg_type 		= Vegetation type (index for VEGPARM.TBL)
+! soil_type 	= Soil type (index for USGS classification in SOILPARM.TBL)	[1-19]
+! veg_type 		= Vegetation type (index for VEGPARM.TBL)					[1-27]
 ! landmask      = Map of Land vs Water grid cells			[0,1,2]
 !
 ! ---- NOTE ----
@@ -112,6 +114,15 @@ module data_structures
 ! costheta = cosine of the angle between grid and geographic coords []
 ! fzs      = buffered FFT(terrain) for linear wind calculations   
 !------------------------------------------------
+
+!   generic interpolable type so geo interpolation routines will work on winds, domain, or boundary conditions. 
+	type interpolable_type
+		real, allocatable, dimension(:,:) :: lat,lon
+		real, allocatable, dimension(:,:,:) :: z
+		type(vert_look_up_table)::vert_lut
+		type(geo_look_up_table)::geolut
+	end type interpolable_type
+
 
 ! 	type to contain external wind fields, only real addition is nfiles... maybe this could be folded in elsewhere?
 	type, extends(interpolable_type) :: wind_type
@@ -134,18 +145,29 @@ module data_structures
 	
 ! 	All fields needed in the domain defined in detail above
 	type, extends(linearizable_type) :: domain_type
+		! 3D atmospheric fields
 		real, allocatable, dimension(:,:,:) :: p,th,w,pii,ur,vr,wr
 		real, allocatable, dimension(:,:,:) :: qv,cloud,ice,nice,qrain,nrain,qsnow,qgrau
+		! 3D atmospheric field tendencies
 		real, allocatable, dimension(:,:,:) :: qv_adv_tendency,qv_pbl_tendency
+		! 3D soil field
 		real, allocatable, dimension(:,:,:) :: soil_t, soil_vwc
-		real, allocatable, dimension(:,:)   :: rain,crain,snow,graupel,pbl_height,landmask
+		! 2D fields, primarily fluxes to/from the land surface
+		! precip fluxes
+		real, allocatable, dimension(:,:)   :: rain,crain,snow,graupel
 		real, allocatable, dimension(:,:)   :: current_rain, current_snow
+		! radiative fluxes (and cloud fraction)
 		real, allocatable, dimension(:,:)   :: swdown, lwdown, cloudfrac, lwup
-		real, allocatable, dimension(:,:)   :: sintheta, costheta !rotations about the E-W, N-S grid
+		! turbulent fluxes (and ground heat flux)
 		real, allocatable, dimension(:,:)   :: sensible_heat,latent_heat,ground_heat
+		! domain parameters (and PBL height)
+		real, allocatable, dimension(:,:)   :: pbl_height,landmask ! store PBL height (if available) and the land-sea mask
+		real, allocatable, dimension(:,:)   :: sintheta, costheta !rotations about the E-W, N-S grid
+		! land surface state and parameters
 		real, allocatable, dimension(:,:)   :: soil_tdeep, skin_t, soil_totalmoisture, snow_swe
 		real, allocatable, dimension(:,:)   :: vegfrac,canopy_water
 		integer, allocatable, dimension(:,:):: soil_type,veg_type
+		! current model time step length (should this be somewhere else?)
 		real::dt
 	end type domain_type
 
@@ -156,18 +178,20 @@ module data_structures
 ! 		dX_dt variables are the change in variable X between two forcing time steps
 ! 		wind and pressure dX_dt fields applied to full 3d grid, others applied only to boundaries
 		real, allocatable, dimension(:,:,:) :: du_dt,dv_dt,dw_dt,dp_dt,drho_dt,dth_dt,dqv_dt,dqc_dt
-! 		sh, lh, and pblh fields are only 2d
+! 		sh, lh, and pblh fields are only 2d. These are only used with LSM option 1 and are derived from forcing file
 		real, allocatable, dimension(:,:) :: dsh_dt,dlh_dt,dpblh_dt
+! 		store the low resolution versionf of terrain and atmospheric elevations
 		real,allocatable,dimension(:,:)::lowres_terrain
 		real,allocatable,dimension(:,:,:)::lowres_z
 ! 		store the full high-res 3D grid for the next time step to compute dXdt fields
+! 		includes high res versions of low res terrain and z
 		type(domain_type)::next_domain
-! 		if we are using external winds, store them here temporarily... 
-!       does this need to be separate from next_domain other than nfiles?
+! 		if we are using an external wind field, store them here temporarily... 
+!       does this need to be separate from next_domain other than the nfiles attribute?
 		type(wind_type)::ext_winds
 	end type bc_type
 
-! 	type to store integer options for each physics package (not all used at present)
+! 	type to store integer options for each physics package
 	type physics_type
 		integer::microphysics
 		integer::advection
