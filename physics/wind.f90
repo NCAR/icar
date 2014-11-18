@@ -121,19 +121,32 @@ contains
 
 ! 	rotate winds from real space back to terrain following grid (approximately)
 !   assumes a simple slope transform in u and v independantly
-	subroutine rotate_wind_field(domain)
+	subroutine rotate_wind_field(domain,options)
         implicit none
         class(linearizable_type),intent(inout)::domain
+		type(options_type),intent(in)::options
 		integer :: nx,ny,nz,i,j
+		real,dimension(:),allocatable :: rotation_factor
 	
 		nx=size(domain%u,1)
 		nz=size(domain%u,2)
 		ny=size(domain%u,3)
+		
+		allocate(rotation_factor(nz))
+		do j=1,nz
+			rotation_factor(j)=(domain%z(1,j,1)-domain%terrain(1,1))/options%rotation_scale_height
+		end do
+		if(rotation_factor(1)<0) then
+			rotation_factor(1)=0 ! implies z(1)<terrain height...
+			print*, "WARNING model level below terrain!"
+		endif
+		where(rotation_factor>1) rotation_factor=1
+		
 		do j=1,ny
 			do i=1,nz
-				domain%u(1:nx-2,i,j)=domain%u(1:nx-2,i,j)*domain%dzdx(:,j)
+				domain%u(1:nx-2,i,j)=domain%u(1:nx-2,i,j)*((domain%dzdx(:,j)-1)*rotation_factor(i)+1)
 				if (j<ny) then
-					domain%v(:,i,j)=domain%v(:,i,j)*domain%dzdy(:,j)
+					domain%v(:,i,j)=domain%v(:,i,j)*domain%dzdy(:,j)*((domain%dzdx(:,j)-1)*rotation_factor(i)+1)
 				endif
 			end do
 		end do
@@ -142,6 +155,7 @@ contains
 
 	! apply wind field physics and adjustments
 	! this will call the linear wind module if necessary, otherwise it just updates for 
+	! this should ONLY be called once for each forcing step, otherwise effects will be additive. 
 	subroutine update_winds(domain,options)
 		implicit none
 		type(domain_type),intent(inout)::domain
@@ -161,7 +175,7 @@ contains
 		! else assumes even flow over the mountains
 
 		! rotate winds into the terrain following coordinate system
-		call rotate_wind_field(domain)
+		call rotate_wind_field(domain,options)
 		! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
 		call balance_uvw(domain,options)
 		

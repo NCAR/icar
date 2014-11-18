@@ -247,9 +247,9 @@ contains
 		type(options_type), intent(inout) :: options
 		integer :: name_unit
 		
-		real :: dx,dxlow,outputinterval,inputinterval,t_offset,smooth_wind_distance
+		real :: dx,dxlow,outputinterval,inputinterval,t_offset,smooth_wind_distance,rotation_scale_height
 		integer :: ntimesteps,nfiles,xmin,xmax,ymin,ymax,vert_smooth
-		integer :: nz,n_ext_winds,buffer
+		integer :: nz,n_ext_winds,buffer,warning_level
 		logical :: ideal, readz,readdz,debug,external_winds,remove_lowres_linear,&
 		           mean_winds,mean_fields,restart,add_low_topo,advect_density, high_res_soil_state
 		character(len=MAXFILELENGTH) :: date, calendar
@@ -259,7 +259,7 @@ contains
 		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,smooth_wind_distance, &
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
-							  date, calendar, high_res_soil_state
+							  date, calendar, high_res_soil_state,rotation_scale_height,warning_level
 
 
 		
@@ -276,6 +276,7 @@ contains
 		restart=.False.
 		ideal=.False.
 		debug=.False.
+		warning_level=-9999
 		readz=.False.
 		readdz=.True.
 		xmin=   1
@@ -286,10 +287,20 @@ contains
 		vert_smooth=2
 		calendar="gregorian"
 		high_res_soil_state=.True.
+		rotation_scale_height=2000.0
 		
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=parameters)
 		close(name_unit)
+		
+		if (warning_level==-9999) then
+			if (debug) then
+				warning_level=2
+			else
+				warning_level=5
+			endif
+		endif
+			
 		
 		if (t_offset.eq.(-9999)) then
 			write(*,*), "WARNING, WARNING, WARNING"
@@ -343,6 +354,8 @@ contains
 		options%mean_fields=mean_fields
 		options%advect_density=advect_density
 		options%debug=debug
+		options%warning_level=warning_level
+		options%rotation_scale_height=rotation_scale_height
 		
 		options%external_winds=external_winds
 		options%ext_winds_nfiles=n_ext_winds
@@ -386,6 +399,37 @@ contains
 		options%comment=comment
 		write(*,*) "Model version: ",trim(version)
 	end subroutine version_check
+	
+	subroutine options_check(options)
+		! Minimal error checking on option settings
+		implicit none
+		type(options_type), intent(in)::options
+		
+		! convection can modify wind field, and ideal doesn't rebalance winds every timestep
+		if ((options%physics%convection.ne.0).and.(options%ideal)) then
+			if (options%warning_level>1) then
+				write(*,*) "WARNING WARNING WARNING"
+				write(*,*) "WARNING, running convection in ideal mode may be bad..."
+				write(*,*) "WARNING WARNING WARNING"
+			endif
+			if (options%warning_level==10) then
+				stop
+			endif
+		endif
+		if ((options%physics%landsurface>0).and.(options%physics%boundarylayer==0)) then
+			if (options%warning_level>0) then
+				write(*,*) "WARNING WARNING WARNING"
+				write(*,*) "WARNING, Running LSM without PBL may overheat the surface and CRASH the model. "
+				write(*,*) "WARNING WARNING WARNING"
+			endif
+			if (options%warning_level>=5) then
+				write(*,*) "Set warning_level<5 to continue"
+				stop
+			endif
+		endif
+		
+		
+	end subroutine options_check
 	
 	subroutine init_options(options_filename,options)
 ! 		reads a series of options from a namelist file and stores them in the 
@@ -465,6 +509,9 @@ contains
 			options%ext_wind_files=ext_wind_files
 			deallocate(ext_wind_files)
 		endif
+		
+		! check for any inconsistencies in the options requested
+		call options_check(options)
 	end subroutine init_options
 	
 ! 	Allow running over a sub-domain, by removing the outer N grid cells from all sides of the domain (lat,lon,terrain)
@@ -878,7 +925,7 @@ contains
 		call io_read2d(options%boundary_files(1),options%vlon,boundary%v_geo%lon)
 		call io_read2d(options%boundary_files(1),options%hgtvar,boundary%terrain)
 		
-		
+! 		read in the vertical coordinate
 		call io_read3d(options%boundary_files(1),options%zvar,zbase)
 		nx=size(zbase,1)
 		ny=size(zbase,2)

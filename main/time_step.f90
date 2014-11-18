@@ -135,16 +135,19 @@ contains
 		write(*,*) "    dt=",dt, "nsteps=",ntimesteps
 ! 		now just loop over internal timesteps computing all physics in order (operator splitting...)
 		do i=1,ntimesteps
-			call lsm(domain,options,dt,model_time)
-			call pbl(domain,options,dt)
 			call advect(domain,options,dt)
 			call mp(domain,options,dt)
-			call convect(domain,options,dt)
 			call rad(domain,options,model_time/86400.0+50000, dt)
+			call lsm(domain,options,dt,model_time)
+			call pbl(domain,options,dt)
+			call convect(domain,options,dt)
 
 ! 			apply/update boundary conditions including internal wind and pressure changes. 
 			if (.not.options%ideal) then
 				call forcing_update(domain,bc,options)
+			elseif (options%physics%convection>0) then
+				! the convective scheme can modify U and V, so winds have to be rebalanced even if it is an ideal run
+				call balance_uvw(domain,options)
 			endif
 			
 ! 			step model time forward

@@ -257,8 +257,18 @@ module data_structures
 
 		real :: t_offset				! offset to temperature because WRF outputs potential temperature-300
 		real,allocatable,dimension(:)::dz_levels ! model layer thicknesses to be read from namelist
-
+		real :: rotation_scale_height   ! height to minimize wind rotation into the terrain following grid below [m]
 ! 		defines which physics package to be used. 
 		type(physics_type)::physics
+		
+		integer :: warning_level        ! level of warnings to issue when checking options settings 0-10.  
+										! 0  = Don't print anything
+										! 1  = print serious warnings
+		! (DEFAULT if debug=True)		! 2  = print all warnings
+										! 3-4 ... nothing specified
+		! (DEFAULT if debug=False)		! 5  = Stop for options that are likely to break the model (print all warnings) 
+										! 6-8... nothing specified
+										! 9  = stop on serious warnings 
+										! 10 = stop on all warnings
 	end type options_type
 end module data_structures	

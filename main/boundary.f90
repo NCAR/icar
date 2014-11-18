@@ -160,7 +160,7 @@ contains
 		if (((varname==options%vvar).or.(varname==options%uvar)).and.(.not.options%ideal)) then
 			call smooth_wind(inputdata,1,2)
 			
-		! For Temperature, we may need to add an offset (maybe this should be supplied as a subroutine parameter)
+		! For Temperature, we may need to add an offset
 		else if ((varname==options%tvar).and.(options%t_offset.ne.0)) then
 			inputdata=inputdata+options%t_offset
 		
@@ -178,27 +178,34 @@ contains
 		! 	deallocate(extra_data)
 		endif
 		
-		! interpolate data onto the high resolution grid after re-arranging the dimensions. 
-		allocate(extra_data(nx,nz,ny))
-		extra_data=reshape(inputdata,[nx,nz,ny],order=[1,3,2])
-		
-		! first interpolate to a high res grid (temporarily stored in inputdata)
-		deallocate(inputdata)
-		allocate(inputdata(size(highres,1),nz,size(highres,3)))
-		call geo_interp(inputdata, &
-						extra_data, &
-						geolut,boundary_only)
-		
-		! Then apply vertical interpolation on that grid
-		if (varname==options%pvar) then
-			highres=inputdata(:,:size(highres,2),:)
-			call update_pressure(highres,z_lo,z_hi)
+		! just read the low res version with out interpolating
+		if ( (nx==size(highres,1)).and.(ny==size(highres,3)).and.(nz==size(highres,2)) ) then
+			highres=reshape(inputdata,[nx,nz,ny],order=[1,3,2])
+			deallocate(inputdata)
 		else
-			call vinterp(highres, inputdata, &
-						 vlut,boundary_only)
+			! interpolate data onto the high resolution grid after re-arranging the dimensions. 
+			allocate(extra_data(nx,nz,ny))
+			extra_data=reshape(inputdata,[nx,nz,ny],order=[1,3,2])
+		
+			! first interpolate to a high res grid (temporarily stored in inputdata)
+			deallocate(inputdata)
+			allocate(inputdata(size(highres,1),nz,size(highres,3)))
+			call geo_interp(inputdata, &
+							extra_data, &
+							geolut,boundary_only)
+		
+			! Then apply vertical interpolation on that grid
+			if (varname==options%pvar) then
+				highres=inputdata(:,:size(highres,2),:)
+! 				call update_pressure(highres,z_lo,z_hi,filename,options,geolut)
+				call update_pressure(highres,z_lo,z_hi)
+			else
+				call vinterp(highres, inputdata, &
+							 vlut,boundary_only)
+			endif
+			deallocate(extra_data)
+			deallocate(inputdata)
 		endif
-		deallocate(extra_data)
-		deallocate(inputdata)
 						
 	end subroutine read_var
 
@@ -217,7 +224,7 @@ contains
 	
 ! 		Read the data in
 		call io_read2d(filename,varname,inputdata,curstep)
-! 		interpolate data onto the high resolution grid after re-arranging the dimensions. 
+! 		interpolate data onto the high resolution grid
 		call geo_interp2d(highres,inputdata,geolut)
 		deallocate(inputdata)
 					
@@ -225,7 +232,7 @@ contains
 
 	
 ! 	rotate winds from real space back to terrain following grid (approximately)
-!   assumes a simple slope transform in u and v independantly
+!   assumes a simple slope transform in u and v independantly constant w/height
 	subroutine rotate_ext_wind_field(domain,ext_winds)
         implicit none
         type(domain_type),intent(inout)::domain
@@ -569,9 +576,9 @@ contains
 				domain%latent_heat=0
 				domain%pbl_height=0
 			endif
-		
+			
 ! 			call update_pressure(domain%p,bc%lowres_z,domain%z)
-							 
+			
 	 		nz=size(domain%th,2)
 			domainsize=size(domain%th,1)*size(domain%th,3)
 	 		if (options%mean_fields) then
