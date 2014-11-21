@@ -136,7 +136,7 @@ module data_structures
 ! 	generic linearizable type so we can add linear wind field to domain or remove it from low-res (BC) U/V
 	type, extends(interpolable_type) :: linearizable_type
 ! 		linear theory computes u,v at z.  Trying rho to mitigate boussinesq approx... 
-		real, allocatable, dimension(:,:,:)	:: u,v,dz,rho
+		real, allocatable, dimension(:,:,:)	:: u,v,dz,rho,th
 		type(interpolable_type)				:: u_geo,v_geo
 		real, allocatable, dimension(:,:)	:: terrain,dzdx,dzdy
 		complex(C_DOUBLE_COMPLEX), allocatable, dimension(:,:) :: fzs !FFT(terrain)
@@ -146,7 +146,7 @@ module data_structures
 ! 	All fields needed in the domain defined in detail above
 	type, extends(linearizable_type) :: domain_type
 		! 3D atmospheric fields
-		real, allocatable, dimension(:,:,:) :: p,th,w,pii,ur,vr,wr
+		real, allocatable, dimension(:,:,:) :: p,w,pii,ur,vr,wr
 		real, allocatable, dimension(:,:,:) :: qv,cloud,ice,nice,qrain,nrain,qsnow,qgrau
 		! 3D atmospheric field tendencies
 		real, allocatable, dimension(:,:,:) :: qv_adv_tendency,qv_pbl_tendency
@@ -174,7 +174,7 @@ module data_structures
 ! 	boundary conditions type, must be linearizable so we can remove low res linear wind field
 	type, extends(linearizable_type) :: bc_type
 ! 		not sure these are used anymore...
-		real, allocatable, dimension(:,:,:) :: p,th,qv
+		real, allocatable, dimension(:,:,:) :: p,qv
 ! 		dX_dt variables are the change in variable X between two forcing time steps
 ! 		wind and pressure dX_dt fields applied to full 3d grid, others applied only to boundaries
 		real, allocatable, dimension(:,:,:) :: du_dt,dv_dt,dw_dt,dp_dt,drho_dt,dth_dt,dqv_dt,dqc_dt
@@ -233,6 +233,7 @@ module data_structures
 		logical :: advect_density 		! properly incorporate density into the advection calculations. 
 										! Doesn't play nice with linear winds
 		logical :: high_res_soil_state  ! read the soil state from the high res input file not the low res file
+		logical :: variable_N			! Compute the Brunt Vaisala Frequency (N^2) every time step
 
 		integer :: buffer				! buffer to remove from all sides of the high res grid supplied
 		integer :: ymin,ymax,xmin,xmax 	! never implemented : would permit buffers of different distances on all sides
@@ -251,6 +252,8 @@ module data_structures
 		real :: outputinterval 			! time steps per output
 		real :: inputinterval  			! time steps per input
 		real :: smooth_wind_distance 	! distance over which to smooth the forcing wind field (m)
+		real :: N_squared				! static Brunt Vaisala Frequency (N^2) to use
+		
 ! 		date/time parameters
 		double precision :: initial_mjd ! Modified Julian Day of the first model time step [days]
 		double precision :: time_zero   ! Starting model initial time step (mjd-50000)*3600 [s]

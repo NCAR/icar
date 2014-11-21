@@ -146,7 +146,7 @@ contains
 			do i=1,nz
 				domain%u(1:nx-2,i,j)=domain%u(1:nx-2,i,j)*((domain%dzdx(:,j)-1)*rotation_factor(i)+1)
 				if (j<ny) then
-					domain%v(:,i,j)=domain%v(:,i,j)*domain%dzdy(:,j)*((domain%dzdx(:,j)-1)*rotation_factor(i)+1)
+					domain%v(:,i,j)=domain%v(:,i,j)*((domain%dzdy(:,j)-1)*rotation_factor(i)+1)
 				endif
 			end do
 		end do
@@ -170,7 +170,7 @@ contains
 		
 		! linear winds
 		if (options%physics%windtype==1) then
-			call linear_perturb(domain,options%vert_smooth,.False.,options%advect_density)
+			call linear_perturb(domain,options,options%vert_smooth,.False.,options%advect_density)
 		endif
 		! else assumes even flow over the mountains
 

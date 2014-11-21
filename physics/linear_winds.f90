@@ -2,24 +2,61 @@ module linear_theory_winds
     use fft
 	use fftshifter
     use data_structures
-	use io_routines, only : io_write2d
-	use output, only : write_domain
+	use io_routines, 		only : io_write2d
+	use output, 			only : write_domain
     implicit none
 	private
 	public::linear_perturb
 	
+	logical :: variable_N
+	real :: N_squared
     real,allocatable,dimension(:,:)::k,l,kl,sig
     complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::denom,uhat,u_hat,vhat,v_hat,m,ineta,msq,mimag
 	integer,parameter::buffer=50
+	integer,parameter::stability_window_size=2
+	
+	real, parameter :: max_stability= 5e-4 ! limits on the calculated Brunt Vaisala Frequency
+	real, parameter :: min_stability= 5e-7 ! these may need to be a little narrower. 
 	
 contains
 	
-    real function calc_stability(domain)
+    pure function calc_stability(domain) result(BV_freq)
         implicit none
         class(linearizable_type),intent(in)::domain
+		real :: BV_freq
+		real, allocatable, dimension(:) :: vertical_N
+		integer :: i, nx,nz,ny, top_layer,bottom_layer
+		real :: dz,dtheta,t_mean
+		
+		nx=size(domain%th,1)
+		nz=size(domain%th,2)
+		ny=size(domain%th,3)
+		allocate(vertical_N(nz))
+		
 ! 		for now just return a default value to simplify things a bit...
-        calc_stability=6.37e-5
-! 		below are better calculations for Nd... 
+		if (variable_N) then
+			do i=1,nz
+				top_layer    = max(i+stability_window_size, nz)
+				bottom_layer = min(i-stability_window_size,  i)
+				
+				dz     = sum(domain%z (:,top_layer,:)-domain%z (:,bottom_layer,:))/(nx*ny) ! distance between top layer and bottom layer
+				dtheta = sum(domain%th(:,top_layer,:)-domain%th(:,bottom_layer,:))/(nx*ny) ! average temperature change between layers
+				t_mean = sum(domain%th(:,i,:))/(nx*ny) ! mean temperature in the current layer
+				
+				! BV frequency = g/theta * dtheta/dz
+				vertical_N(i)=g/t_mean * dtheta/dz
+			end do
+			! calculate the mean stability over the entire profile
+			BV_freq=sum(vertical_N)/nz
+			! impose limits so the linear solution doesn't go crazy in really stable or unstable air
+			BV_freq=max(min(BV_freq, min_stability), max_stability)
+		else
+			! or just use the supplied BV frequency
+			BV_freq=N_squared
+		endif
+		
+		deallocate(vertical_N)
+! 		below are other possible calculations for Nd using the "dry" environmental lapse rate
 !         real, parameter :: R  = 287.0
 !         real, parameter :: Rv = 461.0
 !         real, parameter :: cp = 1004.0
@@ -297,13 +334,18 @@ contains
 	
 ! 	called from linear_perturb the first time perturb is called
 ! 	compute FFT(terrain), and dzdx,dzdy components
-    subroutine setup_linwinds(domain)
+    subroutine setup_linwinds(domain,options)
         implicit none
         class(linearizable_type),intent(inout)::domain
+		type(options_type),intent(in) :: options
 		complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::complex_terrain
         type(C_PTR) :: plan
         integer::nx,ny
         
+		! store module level variables so we don't have to pass options through everytime
+		N_squared=options%N_squared
+		variable_N=options%variable_N
+		
 		call add_buffer_topo(domain%terrain,complex_terrain)
         nx=size(complex_terrain,1)
         ny=size(complex_terrain,2)
@@ -326,9 +368,10 @@ contains
 	
 ! 	Primary entry point!
 !   Called from the simple weather model to update the U,V,W wind fields based on linear theory
-    subroutine linear_perturb(domain,vsmooth,reverse,useDensity)
+    subroutine linear_perturb(domain,options,vsmooth,reverse,useDensity)
         implicit none
         class(linearizable_type),intent(inout)::domain
+		type(options_type), intent(in) :: options
 		integer, intent(in) :: vsmooth
 		logical, intent(in), optional :: reverse,useDensity
 		logical, save :: debug=.True.
@@ -336,7 +379,7 @@ contains
         
 ! 		if linear_perturb hasn't been called before we need to perform some setup actions. 
         if (.not.allocated(domain%fzs)) then
-            call setup_linwinds(domain)
+            call setup_linwinds(domain,options)
         endif
 		
 ! 		Ndsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability

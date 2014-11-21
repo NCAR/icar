@@ -26,6 +26,7 @@ contains
 		type(options_type),intent(in)::options
 		real,intent(in)::dt_in
 		integer ::ids,ide,jds,jde,kds,kde,itimestep=1
+		integer ::its,ite,jts,jte,kts,kte
 		
 		ids=1
 		ide=size(domain%qv,1)
@@ -40,8 +41,16 @@ contains
 			SR=0
 		endif
 		if (options%physics%microphysics==1) then
-	! 		used to convert potential temperature to sensible temperature
-			
+			kts=kds;kte=kde
+			if (options%ideal) then
+				! for ideal runs process the boundaries as well to be consistent with WRF
+				its=ids;ite=ide
+				jts=jds;jte=jde
+			else
+				its=ids+1;ite=ide-1
+				jts=jds+1;jte=jde-1
+			endif
+				
 			call mp_gt_driver(domain%qv, domain%cloud, domain%qrain, domain%ice, &
 			                domain%qsnow, domain%qgrau, domain%nice, domain%nrain, &
 							domain%th, domain%pii, domain%p, domain%dz, dt_in, itimestep, &
@@ -51,7 +60,7 @@ contains
 							SR, &
 							ids,ide, jds,jde, kds,kde, &    ! domain dims
 							ids,ide, jds,jde, kds,kde, &    ! memory dims
-							ids+1,ide-1, jds+1,jde-1, kds,kde)      ! tile dims
+							its,ite, jts,jte, kts,kte)      ! tile dims
 		elseif (options%physics%microphysics==2) then
 			call mp_simple_driver(domain%p,domain%th,domain%pii,domain%rho,domain%qv,domain%cloud, &
 							domain%qrain,domain%qsnow,domain%rain,domain%snow,&

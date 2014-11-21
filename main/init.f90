@@ -22,17 +22,17 @@ module init
 !		For now there are no plans to near term plans to substantially modify this. 
 ! ----------------------------------------------------------------------------
 	use data_structures
-	use io_routines, only				: io_read2d, io_read2di, io_read3d, io_newunit, io_write3d,io_write3di
-	use geo, only						: geo_LUT, geo_interp, geo_interp2d
-	use vertical_interpolation, only	: vLUT
-	use microphysics, only				: mp_init
-	use convection, only				: init_convection
-	use planetary_boundary_layer, only	: pbl_init
-	use radiation, only					: radiation_init
-	use land_surface, only				: lsm_init
-	use model_tracking, only			: print_model_diffs
-	use wind, only						: init_winds
-	use time, only						: date_to_mjd, parse_date, time_init
+	use io_routines,				only : io_read2d, io_read2di, io_read3d, io_newunit, io_write3d,io_write3di
+	use geo,						only : geo_LUT, geo_interp, geo_interp2d
+	use vertical_interpolation,     only : vLUT
+	use microphysics,				only : mp_init
+	use convection,				    only : init_convection
+	use planetary_boundary_layer,   only : pbl_init
+	use radiation,					only : radiation_init
+	use land_surface,				only : lsm_init
+	use model_tracking,			    only : print_model_diffs
+	use wind,						only : init_winds
+	use time,						only : date_to_mjd, parse_date, time_init
 	
 	implicit none
 	private
@@ -247,11 +247,11 @@ contains
 		type(options_type), intent(inout) :: options
 		integer :: name_unit
 		
-		real :: dx,dxlow,outputinterval,inputinterval,t_offset,smooth_wind_distance,rotation_scale_height
-		integer :: ntimesteps,nfiles,xmin,xmax,ymin,ymax,vert_smooth
-		integer :: nz,n_ext_winds,buffer,warning_level
-		logical :: ideal, readz,readdz,debug,external_winds,remove_lowres_linear,&
-		           mean_winds,mean_fields,restart,add_low_topo,advect_density, high_res_soil_state
+		real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance, rotation_scale_height, N_squared
+		integer :: ntimesteps, nfiles, xmin, xmax, ymin, ymax, vert_smooth
+		integer :: nz, n_ext_winds,buffer, warning_level
+		logical :: ideal, readz, readdz, debug, external_winds, remove_lowres_linear, variable_N, &
+		           mean_winds, mean_fields, restart, add_low_topo, advect_density, high_res_soil_state
 		character(len=MAXFILELENGTH) :: date, calendar
 		integer :: year, month, day, hour, minute, second
 		
@@ -259,9 +259,7 @@ contains
 		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,smooth_wind_distance, &
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
-							  date, calendar, high_res_soil_state,rotation_scale_height,warning_level
-
-
+							  date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, N_squared
 		
 ! 		default parameters
 		mean_fields=.False.
@@ -288,6 +286,8 @@ contains
 		calendar="gregorian"
 		high_res_soil_state=.True.
 		rotation_scale_height=2000.0
+		N_squared=6.37e-5
+		variable_N=.False.
 		
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=parameters)
@@ -367,6 +367,9 @@ contains
 		options%ymin=ymin
 		options%ymax=ymax
 		
+		options%N_squared=N_squared
+		options%variable_N=variable_N
+
 		options%high_res_soil_state=high_res_soil_state
 		
 		
