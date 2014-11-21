@@ -48,7 +48,7 @@ def main(inputfile,sounding_file=None):
     # ph/phb are defined between model levels, we want z in the middle of each model level
     # e.g. z[0]=0, but wrfz[0]=dz[0]/2 where dz[0]=z[1]-z[0]
     wrfz=(z[:,:-1,:,:]+z[:,1:,:,:])/2
-    p=units.z2p(wrfz,100000)
+    # p=units.z2p(wrfz,100000)
     # wrfz=np.zeros(dz.shape)
     # wrfz[:,0,...]=dz[:,0,...]/2+hgt
     # for i in range(1,nz):

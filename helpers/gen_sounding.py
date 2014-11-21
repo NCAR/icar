@@ -3,7 +3,9 @@ import sys
 from math import exp
 import numpy as np
 import argparse,traceback,os
+import units
 
+global U, RH
 outputfile="sounding.txt"
 following_moist_adiabat=False
 z0=0
@@ -193,9 +195,14 @@ def main(t_surf=270.0,lapse_rate=5.0):
         print("Following a constant lapse rate {} dT/dz (K/km)".format(lapse_rate))
     with open(outputfile,"wu") as f:
         f.write("{0} {1} {2}\n".format(p_surf,t_surf,mr_surf*1000))
-        th_e_lcl = theta_e(p_surf*100,t_surf,mr_surf,t_surf)
+        # th_e_lcl = theta_e(p_surf*100,t_surf,mr_surf,t_surf)
+        lastz=z0
+        lastp=p_surf
         for z in range(z0,ztop,dz):
-            p=calc_p(z,z0,p_surf)
+            # p=calc_p(z,z0,p_surf)
+            p=units.zt2p(z-lastz,p0=lastp,t0=t,dtdz= (lapse_rate-9.8)/1000.0)
+            lastz=z
+            lastp=p
             if following_moist_adiabat:
                 t=compT_fr_The(th_e_lcl,p*100)
                 theta=exner(t,p)
@@ -209,15 +216,21 @@ def main(t_surf=270.0,lapse_rate=5.0):
     
 
 if __name__ == '__main__':
+    # global U,RH
     try:
         parser= argparse.ArgumentParser(description='Generate a moist sounding for WRF\'s ideal.exe')
-        parser.add_argument('t_surf',nargs="?",action='store',help="Surface temperature [K] (not potential)",default=270)
-        parser.add_argument('lapse_rate',nargs="?",action='store',help="Environmental lapse rate [K/km] (in potential T)",default=3)
+        parser.add_argument('t_surf',nargs="?",action='store',help="Surface temperature [K] (not potential) <270>",default=270)
+        parser.add_argument('lapse_rate',nargs="?",action='store',help="Environmental lapse rate [K/km] (in potential T) <3> ",default=3)
+        parser.add_argument('U',nargs="?",action='store',help="Wind Speed [m/s] <10>",default=10)
+        parser.add_argument('RH',nargs="?",action='store',help="Relative Humidity [0-1] <0.95>",default=0.95)
         # parser.add_argument('p_surf',nargs="?",action='store',help="Surface pressure [mb]",default=1000)
         
         parser.add_argument('-v', '--version',action='version',
                 version='gen_sounding.py 1.0')
         args = parser.parse_args()
+        
+        U=float(args.U)
+        RH=float(args.RH)
 
         T_surface=float(args.t_surf)
         lapse_rate=float(args.lapse_rate)

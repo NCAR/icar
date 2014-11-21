@@ -170,6 +170,7 @@ def main():
 
 
 if __name__ == '__main__':
+    global wind_speed, case_study
     for case in range(3):
         for ws in [5,10,15,25]:
             wind_speed=float(ws)
