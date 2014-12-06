@@ -69,7 +69,7 @@ ifeq ($(NODENAME), Nomad.local)
 	F90=gfortran
 	LIBFFT=/Users/gutmann/usr/local/lib
 	INCFFT=/Users/gutmann/usr/local/include
-	NCDF_PATH = /usr/local/
+	NCDF_PATH = /Users/gutmann/usr/local/
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
 endif
@@ -125,7 +125,7 @@ GIT_VERSION := $(shell git describe --long --dirty --all --always | sed -e's/hea
 
 # GNU fortran
 ifeq ($(F90), gfortran)
-	COMP=-fopenmp -lgomp -Ofast -c -ftree-vectorize -fimplicit-none -ffree-line-length-none -ffast-math -funroll-loops -fno-protect-parens -flto # -march=native
+	COMP=-fopenmp -lgomp -Ofast -c -ftree-vectorize -fimplicit-none -ffree-line-length-none -ffast-math -funroll-loops -fno-protect-parens #-flto # -march=native
 	LINK=-fopenmp -lgomp
 	PREPROC=-cpp
 	MODOUTPUT=-J $(BUILD)
