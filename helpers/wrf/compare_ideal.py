@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import sys
 import glob
 from bunch import Bunch
 import numpy as np
@@ -73,36 +74,49 @@ def plot_panel(panel,d1,d0,title=""):
             plt.imshow(delta.repeat(5,axis=0),cmap=plt.cm.seismic)
             plt.clim(-vrange,vrange)
             plt.colorbar()
-            plt.title(title+k)
+            if k==d1.keys()[0]:
+                plt.title(title+k)
+            else:
+                plt.title(k)
         else:
             plt.plot(d1[k])
             plt.plot(d0[k])
-            plt.title(title+"Precip")
+            plt.title("Precip")
         currow+=1
     
 
-def make_plots(wrf,icar,w0,i0):
-    plot_panel(1,wrf,w0,title="WRF change : ")
-    plot_panel(2,icar,i0,title="ICAR change : ")
+def make_plots(wrf,icar,w0,i0,title=""):
+    plot_panel(1,wrf,w0,title=title+" WRF : ")
+    plot_panel(2,icar,i0,title="ICAR : ")
     plot_panel(3,wrf,icar,title="WRF - ICAR : ")
+    plt.tight_layout()
         
 
 def main(wrffile,icarfiles):
     """docstring for main"""
+    if len(sys.argv)>1:
+        icar_dir=sys.argv[1]+"/"
+        if len(sys.argv)>2:
+            title=sys.argv[2]
+        else:
+            title=""
+    else:
+        icar_dir="output/"
+    
     print("Loading WRF data")
     wrf_data,dates=load_wrf(wrffile)
     print("Loading ICAR data")
-    icar_data=load_icar(icarfiles)
+    icar_data=load_icar(icar_dir+icarfiles)
+    dt=11
     
-    print(len(icar_data),len(wrf_data),len(dates))
-    plt.figure(figsize=(13,13))
-    for d,w,i in zip(dates[:24],wrf_data[:24],icar_data[:24]):
+    plt.figure(figsize=(16,13))
+    for d,w,i in zip(dates[:24:dt],wrf_data[:24:dt],icar_data[:24:dt]):
         print("Ploting : "+d)
-        make_plots(w,i,w0=wrf_data[0],i0=icar_data[0])
-        plt.savefig(d+".png")
+        make_plots(w,i,w0=wrf_data[0],i0=icar_data[0],title="")
+        plt.savefig(icar_dir+title+d+".png")
         plt.clf()
         
 
 
 if __name__ == '__main__':
-    main("wrfout_d01_0001-01-01_00:00:00","output/icar*")
+    main("wrfout_d01_0001-01-01_00:00:00","icar*")
