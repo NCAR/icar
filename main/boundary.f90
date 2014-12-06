@@ -274,27 +274,26 @@ contains
 			ext_winds_steps_in_file=dims(dims(1)+1) !dims(1) = ndims
 		endif
 		
-! 		ext_winds_curstep=ext_winds_curstep+1
-		if (.not.options%ideal) then
-			do while (ext_winds_curstep>ext_winds_steps_in_file)
-				ext_winds_curfile=ext_winds_curfile+1
-				if (ext_winds_curfile>ext_winds_nfiles) then
-					stop "Ran out of files to process!"
-				endif
-				ext_winds_curstep=ext_winds_curstep-ext_winds_steps_in_file 
-				!instead of setting=1, this way we can set an arbitrary starting point multiple files in
-				call io_getdims(ext_winds_file_list(ext_winds_curfile),options%uvar, dims)
-				if (dims(1)==3) then
-					ext_winds_steps_in_file=1
-				else
-					ext_winds_steps_in_file=dims(dims(1)+1) !dims(1) = ndims; dims(ndims+1)=ntimesteps
-				endif
-			enddo
-		endif
-		write(*,*) "Initial ext wind file:step=",ext_winds_curfile," : ",ext_winds_curstep
-		call read_var(domain%u,    ext_winds_file_list(ext_winds_curfile),options%uvar,  &
-		      bc%ext_winds%u_geo%geolut,bc%u_geo%vert_lut,ext_winds_curstep,.FALSE.,options)
-		call read_var(domain%v,    ext_winds_file_list(ext_winds_curfile),options%vvar,  &
+		do while (ext_winds_curstep>ext_winds_steps_in_file)
+			ext_winds_curfile=ext_winds_curfile+1
+			if (ext_winds_curfile>ext_winds_nfiles) then
+				stop "Ran out of files to process!"
+			endif
+			ext_winds_curstep=ext_winds_curstep-ext_winds_steps_in_file 
+			!instead of setting=1, this way we can set an arbitrary starting point multiple files in
+			call io_getdims(ext_winds_file_list(ext_winds_curfile),options%uvar, dims)
+			if (dims(1)==3) then
+				ext_winds_steps_in_file=1
+			else
+				ext_winds_steps_in_file=dims(dims(1)+1) !dims(1) = ndims; dims(ndims+1)=ntimesteps
+			endif
+		enddo
+		
+		write(*,*) "Initial external wind file= ",ext_winds_curfile," : step= ",ext_winds_curstep
+		call read_var(domain%u, ext_winds_file_list(ext_winds_curfile), options%uvar,  &
+		      bc%ext_winds%u_geo%geolut, bc%u_geo%vert_lut, ext_winds_curstep, .FALSE., options)
+			  
+		call read_var(domain%v,    ext_winds_file_list(ext_winds_curfile),	options%vvar,  &
 		      bc%ext_winds%v_geo%geolut,bc%v_geo%vert_lut,ext_winds_curstep,.FALSE.,options)
 		call rotate_ext_wind_field(domain,bc%ext_winds)
 	end subroutine ext_winds_init
@@ -307,18 +306,10 @@ contains
 		type(options_type),intent(in) :: options
 		character(len=*),intent(in) :: filename
 		integer,intent(in)::curstep
-		integer,dimension(io_maxDims)::dims !note, io_maxDims is included from io_routines.
 		real,allocatable,dimension(:,:,:)::inputdata,extra_data
 		logical :: reverse_winds=.TRUE.
 		integer :: nx,ny,nz
 		character(len=255) :: outputfilename
-		
-! 		call io_getdims(filename,options%uvar, dims)
-		! note dims(1)=ndims
-! 		nx=dims(2)
-! 		ny=dims(3)
-! 		print*, trim(filename), trim(options%uvar), " dimensions:"
-! 		print*, dims(1:4)
 		
 		! first read in the low-res U and V data directly
 		! load low-res U data
@@ -330,11 +321,6 @@ contains
 		bc%u=reshape(extra_data,[nx,nz,ny],order=[1,3,2])
 		deallocate(extra_data)
 		
-! 		call io_getdims(filename,options%vvar, dims)
-! 		print*, trim(filename), trim(options%vvar), " dimensions:"
-! 		print*, dims(1:4)
-! 		nx=dims(2)
-! 		ny=dims(3)
 		! load low-res V data
 		call io_read3d(filename,options%vvar,extra_data,curstep)
 		nx=size(extra_data,1)
@@ -374,7 +360,6 @@ contains
 		type(options_type):: options
 		
 		real,allocatable,dimension(:,:,:)::extra_data
-		integer,dimension(io_maxDims)::dims
 		integer::nx,ny,nz
 		
 		nz=size(domain%u,2)
@@ -675,21 +660,20 @@ contains
 		integer,dimension(io_maxDims)::dims	!note, io_maxDims is included from io_routines.
 		logical :: use_boundary,use_interior
 		! MODULE variables : ext_winds_ curstep, curfile, nfiles, steps_in_file, file_list
-		if (.not.options%ideal) then
-			ext_winds_curstep=ext_winds_curstep+1
-			if (ext_winds_curstep>ext_winds_steps_in_file) then
-				ext_winds_curfile=ext_winds_curfile+1
-				ext_winds_curstep=1
-				call io_getdims(ext_winds_file_list(ext_winds_curfile),options%uvar, dims)
-				if (dims(1)==3) then
-					ext_winds_steps_in_file=1
-				else
-					ext_winds_steps_in_file=dims(dims(1)+1) !dims(1) = ndims
-				endif
+		
+		ext_winds_curstep=ext_winds_curstep+1
+		if (ext_winds_curstep>ext_winds_steps_in_file) then
+			ext_winds_curfile=ext_winds_curfile+1
+			ext_winds_curstep=1
+			call io_getdims(ext_winds_file_list(ext_winds_curfile),options%uvar, dims)
+			if (dims(1)==3) then
+				ext_winds_steps_in_file=1
+			else
+				ext_winds_steps_in_file=dims(dims(1)+1) !dims(1) = ndims
 			endif
-			if (ext_winds_curfile>ext_winds_nfiles) then
-				stop "Ran out of files to process!"
-			endif
+		endif
+		if (ext_winds_curfile>ext_winds_nfiles) then
+			stop "Ran out of files to process!"
 		endif
 		
 		use_interior=.False.
@@ -731,6 +715,7 @@ contains
 		endif
 		use_interior=.False.
 		use_boundary=.True.
+		
 		if (options%external_winds) then
 			call update_ext_winds(bc,options)
 ! 			call smooth_wind(bc%next_domain%u,1,3)

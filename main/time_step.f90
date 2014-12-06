@@ -54,10 +54,11 @@ contains
 		do j=1,ny
 			domain%u(:,:,j)=domain%u(:,:,j)+bc%du_dt(:,:,j)
 			domain%v(:,:,j)=domain%v(:,:,j)+bc%dv_dt(:,:,j)
-	! 		domain%w(:,:,j)=domain%w(:,:,j)+bc%dw_dt(:,:,j) ! this is now recalculated every time step (as are ur,vr,wr)
-			domain%p(:,:,j)=domain%p(:,:,j)+bc%dp_dt(:,:,j)
-			domain%pii(:,:,j)=(domain%p(:,:,j)/100000.0)**(R/cp)
-	        domain%rho(:,:,j)=domain%p(:,:,j)/(R*domain%th(:,:,j)*domain%pii(:,:,j)) ! kg/m^3
+			if (.not.options%ideal) then
+				domain%p(:,:,j)=domain%p(:,:,j)+bc%dp_dt(:,:,j)
+				domain%pii(:,:,j)=(domain%p(:,:,j)/100000.0)**(R/cp)
+		        domain%rho(:,:,j)=domain%p(:,:,j)/(R*domain%th(:,:,j)*domain%pii(:,:,j)) ! kg/m^3
+			endif
 		enddo
         !$omp end do
         !$omp end parallel
@@ -65,9 +66,11 @@ contains
 		ny=ny+1
 		domain%v(:,:,ny)=domain%v(:,:,ny)+bc%dv_dt(:,:,ny)
 		! dXdt for qv,qc,th are only applied to the boundarys
-		call boundary_update(domain%th,bc%dth_dt)
-		call boundary_update(domain%qv,bc%dqv_dt)
-		call boundary_update(domain%cloud,bc%dqc_dt)
+		if (.not.options%ideal) then
+			call boundary_update(domain%th,bc%dth_dt)
+			call boundary_update(domain%qv,bc%dqv_dt)
+			call boundary_update(domain%cloud,bc%dqc_dt)
+		endif
 		
 		! because density changes with each time step, u/v/w have to be rebalanced as well. 
 		! could avoid this by assuming density doesn't change... but would need to keep an "old" density around
@@ -125,7 +128,7 @@ contains
 		endif
 		
 ! 		make dt an integer fraction of the full timestep
-		dt=options%out_dt/ceiling(options%out_dt/dt)
+		dt=options%in_dt/ceiling(options%in_dt/dt)
 ! 		calculate the number of timesteps
 		ntimesteps=nint(options%in_dt/dt)
 		end_time=model_time+options%in_dt
@@ -143,12 +146,7 @@ contains
 			call convect(domain,options,dt)
 
 ! 			apply/update boundary conditions including internal wind and pressure changes. 
-			if (.not.options%ideal) then
-				call forcing_update(domain,bc,options)
-			elseif (options%physics%convection>0) then
-				! the convective scheme can modify U and V, so winds have to be rebalanced even if it is an ideal run
-				call balance_uvw(domain,options)
-			endif
+			call forcing_update(domain,bc,options)
 			
 ! 			step model time forward
 			model_time=model_time+dt

@@ -774,7 +774,6 @@ contains
 		! Soil Volumetric Water Content = 3D real
 		if (options%soil_vwc_var.ne."") then
 			call io_read3d(options%init_conditions_file,options%soil_vwc_var,temp_rdata,1)  
-			print*, shape(temp_rdata),nz,nx,ny
 			domain%soil_vwc=reshape(temp_rdata(1+buffer:nx-buffer,1+buffer:ny-buffer,1:nz) &	! subset the data by buffer grid cells
 									,[nx-buffer*2,nz,ny-buffer*2],order=[1,3,2])				! and reshape to move the z axis to the middle
 			deallocate(temp_rdata)
@@ -1007,6 +1006,7 @@ contains
 			
 		real, allocatable, dimension(:,:,:) :: u,v
 		real, allocatable, dimension(:,:) :: lat,lon
+		real, allocatable, dimension(:,:) :: temporary_terrain
 		
 		call io_read2d(options%ext_wind_files(1),options%hgt_hi,bc%ext_winds%terrain,1)
 		call io_read2d(options%ext_wind_files(1),options%latvar,bc%ext_winds%lat)
@@ -1016,8 +1016,21 @@ contains
 		call io_read2d(options%ext_wind_files(1),options%vlat_hi,bc%ext_winds%v_geo%lat)
 		call io_read2d(options%ext_wind_files(1),options%vlon_hi,bc%ext_winds%v_geo%lon)
 		write(*,*) "Setting up ext wind geoLUTs"
-		call geo_LUT(bc%next_domain, bc%ext_winds%u_geo)
-		call geo_LUT(bc%next_domain, bc%ext_winds%v_geo)
+		call geo_LUT(bc%next_domain%u_geo, bc%ext_winds%u_geo)
+		call geo_LUT(bc%next_domain%v_geo, bc%ext_winds%v_geo)
+		
+		! if the external wind file has a different shape in either dimension, compute the GEOLUT and interpolate terrain
+		! this was particularly problematic for ideal WRF simluation comparisons
+		if ((size(bc%ext_winds%terrain,1)/=size(bc%next_domain%terrain,1)).or. &
+		    (size(bc%ext_winds%terrain,2)/=size(bc%next_domain%terrain,2))) then
+			call geo_LUT(bc%next_domain, bc%ext_winds)
+			allocate(temporary_terrain(size(bc%ext_winds%terrain,1),size(bc%ext_winds%terrain,2)))
+			temporary_terrain=bc%ext_winds%terrain
+			deallocate(bc%ext_winds%terrain)
+			allocate(bc%ext_winds%terrain(size(bc%next_domain%terrain,1),size(bc%next_domain%terrain,2)))
+			call geo_interp2d(bc%ext_winds%terrain,temporary_terrain,bc%ext_winds%geolut)
+			deallocate(temporary_terrain)
+		endif
 		
 ! 		force all weight to be on the first x,y pair...
 ! 		this assumes the "external winds" file is on the exact same grid as the high res model grid

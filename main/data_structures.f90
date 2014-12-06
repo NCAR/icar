@@ -121,6 +121,8 @@ module data_structures
 		real, allocatable, dimension(:,:,:) :: z
 		type(vert_look_up_table)::vert_lut
 		type(geo_look_up_table)::geolut
+		logical :: dx_errors_printed=.False.
+		logical :: dy_errors_printed=.False.
 	end type interpolable_type
 
 

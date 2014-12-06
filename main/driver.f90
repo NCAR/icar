@@ -71,10 +71,9 @@ program real
 		call calendar_date(model_time/86400.0+50000,year, month, day, hour, minute, second)
 		write(*,'(A,i4,"/",i2.2"/"i2.2" "i2.2":"i2.2":"i2.2)') "  Date = ",year,month,day,hour,minute,second
 		
-		if (.not.options%ideal) then
-	! 		update boundary conditions (dXdt variables)
-			call bc_update(domain,boundary,options)
-		endif
+! 		update boundary conditions (dXdt variables)
+		call bc_update(domain,boundary,options)
+		
 ! 		this is the meat of the model physics, run all the physics for the current time step looping over internal timesteps
 		call step(domain,options,boundary,model_time,next_output)
 

@@ -104,7 +104,7 @@ contains
 !   Could add a 2.5) downhill search algorithm...
 
 		implicit none
-		class(interpolable_type),intent(in)::lo
+		class(interpolable_type),intent(inout)::lo
 		real,intent(in)::lat,lon
 		type(position),intent(in)::lastpos
 		real::mindist, curdist,dx,dy,xsign,ysign,x,y
@@ -115,6 +115,27 @@ contains
 ! 		calcualte dx/dy at the middle of the grid
 		dx=lo%lon(2,1)-lo%lon(1,1)
 		dy=lo%lat(1,2)-lo%lat(1,1)
+		
+		if (dx==0) then
+			if (.not.lo%dx_errors_printed) then
+				print*, "ERROR : geo_find_location : DX = 0 !  Check your inputfile Longitude data"
+				print*, "  Attempting to continue by assuming the grids are the same or can wrap arround"
+				lo%dx_errors_printed=.True.
+			endif
+			find_location%x=-1
+			find_location%y=-1
+			return
+		endif
+		if (dy==0) then
+			if (.not.lo%dy_errors_printed) then
+				print*, "ERROR : geo_find_location : DY = 0 !  Check your inputfile Latitude data"
+				print*, "  Attempting to continue by assuming the grids are the same or can wrap arround"
+				lo%dy_errors_printed=.True.
+			endif
+			find_location%x=-1
+			find_location%y=-1
+			return
+		endif
 ! 		current/starting position = the middle of the grid
 ! 		xc=nx/2
 ! 		yc=ny/2
@@ -324,17 +345,32 @@ contains
 		do j=1,ny
 			curpos%x=1
 			lastpos=find_location(lo,hi%lat(1,j),hi%lon(1,j),curpos)
+			if (lastpos%x<1) then
+				! something broke, try assuming that the grids are the same
+				lastpos%x=1
+				lastpos%y=j
+			endif
+				
 			do i=1,nx
 ! 				curpos=next_pos(lo,hi,i,j,lastpos,windowsize)
 				curpos=find_location(lo,hi%lat(i,j),hi%lon(i,j),lastpos)
-				xy=find_surrounding(lo,hi%lat(i,j),hi%lon(i,j),curpos,lo_nx,lo_ny)
-				lo%geolut%x(:,i,j)=xy%x
-				lo%geolut%y(:,i,j)=xy%y
-				do k=1,4
-					lat(k)=lo%lat(xy%x(k),xy%y(k))
-					lon(k)=lo%lon(xy%x(k),xy%y(k))
-				enddo
-				lo%geolut%w(:,i,j)=bilin_weights(hi%lat(i,j),lat,hi%lon(i,j),lon)
+				if (curpos%x<1) then
+					! something broke, try assuming that the grids are the same possibly wrapping (for ideal)
+					curpos%x=mod(i-1,lo_nx)+1
+					curpos%y=mod(j-1,lo_ny)+1
+					lo%geolut%x(:,i,j)=curpos%x
+					lo%geolut%y(:,i,j)=curpos%y
+					lo%geolut%w(:,i,j)=0.25
+				else
+					xy=find_surrounding(lo,hi%lat(i,j),hi%lon(i,j),curpos,lo_nx,lo_ny)
+					lo%geolut%x(:,i,j)=xy%x
+					lo%geolut%y(:,i,j)=xy%y
+					do k=1,4
+						lat(k)=lo%lat(xy%x(k),xy%y(k))
+						lon(k)=lo%lon(xy%x(k),xy%y(k))
+					enddo
+					lo%geolut%w(:,i,j)=bilin_weights(hi%lat(i,j),lat,hi%lon(i,j),lon)
+				endif
 			enddo
 		enddo
 		
