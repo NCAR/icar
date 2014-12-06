@@ -287,7 +287,7 @@ contains
             lnz_atm_term = log((z_atm+Z0)/Z0)
             base_exchange_term=(75*kappa**2 * sqrt((z_atm+Z0)/Z0)) / (lnz_atm_term**2)
             lnz_atm_term=(kappa/lnz_atm_term)**2
-            
+			where(domain%veg_type==16) domain%landmask=2 ! ensure VEGTYPE (land cover) and land-sea mask are consistent
         endif
         if (options%physics%landsurface==2) then
             call lsm_simple_init(domain,options)
