@@ -103,8 +103,9 @@ contains
 		type(bc_type),intent(inout)::bc
 		type(options_type),intent(in)::options
 		real*8,intent(inout)::model_time,next_output
+		real*8::end_time
 		integer::i,ntimesteps,tenp
-		real::dt,dtnext,end_time
+		real::dt,dtnext
 		
 ! 		compute internal timestep dt to maintain stability
 ! 		courant condition for 3D advection. Note that w is normalized by dx/dz
@@ -138,25 +139,27 @@ contains
 		write(*,*) "    dt=",dt, "nsteps=",ntimesteps
 ! 		now just loop over internal timesteps computing all physics in order (operator splitting...)
 		do i=1,ntimesteps
-			call advect(domain,options,dt)
-			call mp(domain,options,dt)
-			call rad(domain,options,model_time/86400.0+50000, dt)
-			call lsm(domain,options,dt,model_time)
-			call pbl(domain,options,dt)
-			call convect(domain,options,dt)
+			if (dt>1e-5) then
+				call advect(domain,options,dt)
+				call mp(domain,options,dt)
+				call rad(domain,options,model_time/86400.0+50000, dt)
+				call lsm(domain,options,dt,model_time)
+				call pbl(domain,options,dt)
+				call convect(domain,options,dt)
 
-! 			apply/update boundary conditions including internal wind and pressure changes. 
-			call forcing_update(domain,bc,options)
+	! 			apply/update boundary conditions including internal wind and pressure changes. 
+				call forcing_update(domain,bc,options)
 			
-! 			step model time forward
-			model_time=model_time+dt
-			if ((abs(model_time-next_output)<1e-1).or.(model_time>next_output)) then
-				call write_domain(domain,options,nint((model_time-options%time_zero)/options%out_dt))
-				next_output=next_output+options%out_dt
-			endif
-! 			in case out_dt and in_dt arent even multiples of each other.  Make sure we don't over step
-			if ((model_time+dt)>end_time) then
-				dt=end_time-model_time
+	! 			step model time forward
+				model_time=model_time+dt
+				if ((abs(model_time-next_output)<1e-1).or.(model_time>next_output)) then
+					call write_domain(domain,options,nint((model_time-options%time_zero)/options%out_dt))
+					next_output=next_output+options%out_dt
+				endif
+	! 			in case out_dt and in_dt arent even multiples of each other.  Make sure we don't over step
+				if ((model_time+dt)>end_time) then
+					dt=end_time-model_time
+				endif
 			endif
 		enddo
 		

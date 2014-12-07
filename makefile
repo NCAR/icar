@@ -159,7 +159,7 @@ ifeq ($(MODE), debugslow)
 endif
 ifeq ($(MODE), debug)
 	ifeq ($(F90), ifort)
-		COMP= -debug -c -fast -u -check all -check noarg_temp_created -traceback -fpe0 -fast-transcendentals -xhost
+		COMP= -debug -c -O3 -u -check all -check noarg_temp_created -traceback -fpe0 -fast-transcendentals -xhost
 		LINK=  
 	endif
 	ifeq ($(F90), gfortran)
@@ -180,7 +180,7 @@ ifeq ($(MODE), debugompslow)
 endif
 ifeq ($(MODE), debugomp)
 	ifeq ($(F90), ifort)
-		COMP= -openmp -liomp5 -debug -c -fast -u -traceback -fpe0 -fast-transcendentals -xhost
+		COMP= -openmp -liomp5 -debug -c -O3 -u -traceback -check all -check noarg_temp_created -fpe0 -fast-transcendentals -xhost
 		LINK= -openmp -liomp5
 	endif
 	ifeq ($(F90), gfortran)

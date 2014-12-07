@@ -6,6 +6,7 @@ def write_file(date,info,cmip):
     """writes cmip input data to a netcdf file"""
     
     filename=info.output_file+str(date).replace(" ","_")
+    print("Outputting: "+filename)
     dims=("time","level","lat","lon")
     dims_3d=("time","lat","lon")
     dims_2d=("lat","lon")
@@ -58,9 +59,6 @@ def write_file(date,info,cmip):
     atts=Bunch(long_name="xland",units="")
     extra_vars.append(Bunch(name="xland",data=cmip["land"],dims=dims_2d,dtype="f",attributes=atts))
 
-
-    for k in cmip.keys():
-        print(k,cmip[k].shape)
 
     qvatts=Bunch(long_name="Specific Humidity",units="kg kg**-1")
     
