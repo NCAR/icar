@@ -4,7 +4,7 @@ import argparse
 import numpy as np
 
 from bunch import Bunch
-import swim_io
+import mygis
 
 import io_routines as io
 
@@ -21,8 +21,8 @@ def set_bounds(info):
         pass
         
     ncfile=io.grib2nc(erai_file,varlist,output_dir)
-    lat=swim_io.read_nc(ncfile,varlist[0]).data
-    lon=swim_io.read_nc(ncfile,varlist[1]).data-360
+    lat=mygis.read_nc(ncfile,varlist[0]).data
+    lon=mygis.read_nc(ncfile,varlist[1]).data-360
     
     info.xmin=np.where(lon>=info.lon[0])[0][0]
     info.xmax=np.where(lon<=info.lon[1])[0][-1]+1
@@ -46,7 +46,7 @@ def update_info(info):
     
 
 def parse():
-    parser= argparse.ArgumentParser(description='Convert ERAi files to SWM input forcing files')
+    parser= argparse.ArgumentParser(description='Convert ERAi files to ICAR input forcing files')
     parser.add_argument('start_date',nargs="?",action='store',help="Specify starting date (yyyy-mm-dd)",default="2000-10-01")
     parser.add_argument('end_date',nargs="?",action='store',help="Specify end date (yyyy-mm-dd)",default="2000-10-02")
     parser.add_argument('lat_n',nargs="?",action='store',help="northern latitude boundary",default="60")
@@ -62,7 +62,7 @@ def parse():
     parser.add_argument('temp_nc_dir',nargs="?",action='store',help="temporary directory to store netCDF files in",default="temp_nc_dir")
     
     parser.add_argument('-v', '--version',action='version',
-            version='ERAi2SWM v'+version)
+            version='ERAi2ICAR v'+version)
     parser.add_argument ('--verbose', action='store_true',
             default=False, help='verbose output', dest='verbose')
     args = parser.parse_args()

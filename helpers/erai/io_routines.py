@@ -1,17 +1,17 @@
 import subprocess,os
 import numpy as np
-import swim_io
+import mygis
 from bunch import Bunch
 
 
 sfcvarlist=["SSHF_GDS4_SFC","SLHF_GDS4_SFC","Z_GDS4_SFC","BLH_GDS4_SFC"]
-swm_sfc_var=["sensible_heat","latent_heat","hgt_98","PBL_height"]
+icar_sfc_var=["sensible_heat","latent_heat","hgt_98","PBL_height"]
 
 atmvarlist=["Z_GDS4_HYBL","T_GDS4_HYBL","Q_GDS4_HYBL","LNSP_GDS4_HYBL","CLWC_GDS4_HYBL","CIWC_GDS4_HYBL","lv_HYBL2_a","lv_HYBL2_b","P0"]
-swm_atm_var=["gph","t","qv","ln_p_sfc","cloud","ice","sigma_a","sigma_b","P0"]
+icar_atm_var=["gph","t","qv","ln_p_sfc","cloud","ice","sigma_a","sigma_b","P0"]
 
 atmuvlist=["U_GDS4_HYBL","V_GDS4_HYBL"]
-swm_uv_var=["u","v"]
+icar_uv_var=["u","v"]
 
 converted_sfc_files=[]
 sfc_ncfiles=dict()
@@ -62,8 +62,8 @@ def load_sfc(time,info):
         sfc_ncfiles[inputfile]=nc_file
     
     outputdata=Bunch()
-    for s,v in zip(swm_sfc_var,sfcvarlist):
-        nc_data=swim_io.read_nc(nc_file,v,returnNCvar=True)
+    for s,v in zip(icar_sfc_var,sfcvarlist):
+        nc_data=mygis.read_nc(nc_file,v,returnNCvar=True)
         input_data=nc_data.data[:,info.ymin:info.ymax,info.xmin:info.xmax]
         if ((s=="latent_heat") or (s=="sensible_heat")):
             if offset>0:
@@ -80,16 +80,16 @@ def load_atm(time,info):
     scnc_file=grib2nc(scfile,atmvarlist,info.nc_file_dir)
     
     outputdata=Bunch()
-    for s,v in zip(swm_uv_var,atmuvlist):
-        nc_data=swim_io.read_nc(uvnc_file,v,returnNCvar=True)
+    for s,v in zip(icar_uv_var,atmuvlist):
+        nc_data=mygis.read_nc(uvnc_file,v,returnNCvar=True)
         if len(nc_data.data.shape)==3:
             outputdata[s]=nc_data.data[:,info.ymin:info.ymax,info.xmin:info.xmax]
         else:
             outputdata[s]=nc_data.data[info.ymin:info.ymax,info.xmin:info.xmax]
         nc_data.ncfile.close()
 
-    for s,v in zip(swm_atm_var,atmvarlist):
-        nc_data=swim_io.read_nc(scnc_file,v,returnNCvar=True)
+    for s,v in zip(icar_atm_var,atmvarlist):
+        nc_data=mygis.read_nc(scnc_file,v,returnNCvar=True)
         if len(nc_data.data.shape)==3:
             outputdata[s]=nc_data.data[:,info.ymin:info.ymax,info.xmin:info.xmax]
         elif len(nc_data.data.shape)==2:

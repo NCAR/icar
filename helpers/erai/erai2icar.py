@@ -9,7 +9,7 @@ def main(info):
     
     for i in range(info.ntimes):
         raw_data=io_routines.load_data(info.times[i],info)
-        processed_data=convert.era2swm(raw_data)
+        processed_data=convert.era2icar(raw_data)
         output.write_file(info.times[i],info,processed_data)
 
 

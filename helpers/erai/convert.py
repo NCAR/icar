@@ -5,7 +5,7 @@ R=8.3144621 # J/mol/K
 cp=29.19 # J/mol/K   =1.012 J/g/K
 g=9.81 # m/s^2
 
-# swm_atm_var=["u","v","gph","t","qv","ln_p_sfc","cloud","ice","sigma"]
+# icar_atm_var=["u","v","gph","t","qv","ln_p_sfc","cloud","ice","sigma"]
 def convert_atm(data):
     output_data=Bunch()
     output_data.u=data.u[::-1,::-1,:]                        # m/s
@@ -34,7 +34,7 @@ def convert_atm(data):
     
     return output_data
 
-# swm_sfc_var=["sensible_heat","latent_heat","hgt_98","PBL_height"]
+# icar_sfc_var=["sensible_heat","latent_heat","hgt_98","PBL_height"]
 def convert_sfc(data):
     dt= -3.*60.*60.
     output_data=Bunch()
@@ -44,7 +44,7 @@ def convert_sfc(data):
     output_data.PBL_height=data.PBL_height[::-1,:]           # m
     return output_data
 
-def era2swm(data):
+def era2icar(data):
     output_data=Bunch()
     atm=convert_atm(data.atm)
     sfc=convert_sfc(data.sfc)

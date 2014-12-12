@@ -1,5 +1,5 @@
 import numpy as np
-import swim_io
+import mygis
 from bunch import Bunch
 
 def write_file(date,info,erai):
@@ -60,5 +60,5 @@ def write_file(date,info,erai):
     qvatts=Bunch(long_name="Specific Humidity",units="kg kg**-1")
     
     # write to output file
-    swim_io.write(filename=filename,varname="qv",data=erai.qv,attributes=qvatts,dtype="f",
-                  extravars=extra_vars,history=" Produced by erai2swm v."+info.version)
+    mygis.write(filename=filename,varname="qv",data=erai.qv,attributes=qvatts,dtype="f",
+                  extravars=extra_vars,history=" Produced by erai2icar v."+info.version)
