@@ -55,7 +55,9 @@ def find_atm_file(time,varname,info):
     atm_file = file_base.replace("_ENS_",info.ensemble)
     
     print(atm_file)
-    return glob.glob(atm_file)
+    filelist = glob.glob(atm_file)
+    filelist.sort()
+    return filelist
 
 def find_sst_file(time,info):
     file_base= info.atmdir+info.atmfile
@@ -67,7 +69,9 @@ def find_sst_file(time,info):
     sst_file = file_base.replace("_ENS_",info.ensemble)
     
     print(sst_file)
-    return glob.glob(sst_file)
+    filelist=glob.glob(sst_file)
+    filelist.sort()
+    return filelist
 
 
 def load_atm(time,info):
