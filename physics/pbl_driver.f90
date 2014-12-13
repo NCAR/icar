@@ -1,3 +1,27 @@
+!>----------------------------------------------------------
+!!
+!! This module provides a wrapper to call various PBL models
+!! It sets up variables specific to the physics package to be used including both
+!!
+!! The main entry point to the code is pbl(domain,options,dt)
+!!
+!! Call tree graph :
+!!	pbl_init->[ external initialization routines]
+!!	pbl->[	external PBL routines]
+!!  pbl_finalize
+!! 
+!! High level routine descriptions / purpose
+!!   pbl_init    		- initializes physics package
+!!   pbl           		- sets up and calls main physics package
+!!   pbl_finalize		- permits physics package cleanup (close files, deallocate memory)
+!! 
+!! Inputs: domain, options, dt
+!! 		domain,options	= as defined in data_structures
+!! 		dt 				= time step (seconds)
+!!
+!! Author : Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!----------------------------------------------------------
 module planetary_boundary_layer
 	use data_structures
 	use pbl_simple,    only : simple_pbl, finalize_simple_pbl, init_simple_pbl

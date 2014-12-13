@@ -1,3 +1,11 @@
+!> ----------------------------------------------------------------------------
+!!
+!!  The MPDATA advection scheme
+!!  Not fully implemented / translated from python yet
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!! ----------------------------------------------------------------------------
 module adv_mpdata
 	use data_structures
     

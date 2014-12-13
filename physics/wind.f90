@@ -1,3 +1,8 @@
+!>------------------------------------------------------------
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!------------------------------------------------------------
 module wind
 	use linear_theory_winds, only : linear_perturb
 	use data_structures

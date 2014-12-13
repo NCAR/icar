@@ -1,3 +1,14 @@
+!>------------------------------------------------------------
+!!
+!!	Module to provide vertical interpolation
+!!  includes setting up a vertical Look Up Table (vLUT)
+!!  and performing vertical interpolation (vinterp)
+!!
+!!  Similar in concept to the geo module  
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!------------------------------------------------------------
 module vertical_interpolation
 	use data_structures
 	implicit none
@@ -18,12 +29,12 @@ contains
 		weights(2)=1-weights(1)
 	end function weights
 	
+	! Find the two points that border the input z in a column of z values
+	! 	if zin < z(1) find_match(1)=-1
+	! 	if zin > z(n) then find_match(1)=9999
+	! 	else zin>=z(find_match(1)) and zin<z(find_match(2))
+	! guess is an optional value that allows one to start searching z for zin in a good location
 	function find_match(zin,z,guess)
-		! Find the two points that border the input z in a column of z values
-		! 	if zin < z(1) find_match(1)=-1
-		! 	if zin > z(n) then find_match(1)=9999
-		! 	else zin>=z(find_match(1)) and zin<z(find_match(2))
-		! guess is an optional value that allows one to start searching z for zin in a good location
 		
 		implicit none
 		real, intent(in) :: zin
@@ -69,14 +80,14 @@ contains
 		
 	end function find_match
 	
+	! Compute the vertical interpolation look up table from a LOw-resolution forcing grid 
+	! to a HIgh-resolution model grid
+	! NOTE that the low-resolution grid has already been interpolated horizontally to the hi grid
+	! and the low-resolution grid may actually have more vertical resolution than the hi grid
+	!
+	! The output vlut is stored in the "lo-res" forcing data structure (as with geolut)
+	!
 	subroutine vLUT(hi,lo)
-		! Compute the vertical interpolation look up table from a LOw-resolution forcing grid 
-		! to a HIgh-resolution model grid
-		! NOTE that the low-resolution grid has already been interpolated horizontally to the hi grid
-		! and the low-resolution grid may actually have more vertical resolution than the hi grid
-		!
-		! The output vlut is stored in the "lo-res" forcing data structure (as with geolut)
-		!
 		implicit none
 		class(interpolable_type), intent(in)    :: hi
 		class(interpolable_type), intent(inout) :: lo
@@ -122,15 +133,6 @@ contains
 					endif
 					lo%vert_lut%z(:,i,k,j)=curpos
 					lo%vert_lut%w(:,i,k,j)=curweights
-! 					if ((k==1).and.(curpos(1)>20)) then
-! 						print*, "i=",i
-! 						print*, "j=",j
-! 						print*, "pos=",curpos
-! 						print*, "weights=",curweights
-! 						print*, "z to match = ",hi%z(i,k,j)
-! 						print*, "from Z-column:"
-! 						print*, lo%z(i,16:25,j)
-! 					endif
 					guess=curpos(2)
 				enddo !k=1,z
 			enddo !i=1,x

@@ -1,3 +1,28 @@
+!>----------------------------------------------------------
+!!
+!! This module provides a wrapper to call various microphysics models
+!! It sets up variables specific to the physics package to be used including 
+!! history variables not currently stored in the domain level data structure
+!!
+!! The main entry point to the code is mp(domain,options,dt)
+!!
+!! Call tree graph :
+!!	mp_init->[ external initialization routines]
+!!	mp->[	external microphysics routines]
+!!  mp_finish
+!! 
+!! High level routine descriptions / purpose
+!!   mp_init    		- allocates module data and initializes physics package
+!!   mp           		- sets up and calls main physics package
+!!   mp_finish			- deallocates module memory, place to do the same for physics
+!! 
+!! Inputs: domain, options, dt
+!! 		domain,options	= as defined in data_structures
+!! 		dt 				= time step (seconds)
+!!
+!! Author : Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!----------------------------------------------------------
 module microphysics
 	use data_structures
 	use module_mp_thompson, only: mp_gt_driver,thompson_init

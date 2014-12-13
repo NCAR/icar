@@ -1,5 +1,35 @@
+!>----------------------------------------------------------
+!!
+!! This module provides the linear wind theory calculations
+!! 
+!! The main entry point to the code is:
+!! 	 	linear_perturb(domain, options, vsmooth, reverse, useDensity)
+!!
+!! Call tree graph :
+!!	linear_perturb->[ setup_linwinds -> add_buffer_topo,
+!! 					  calc_stability,
+!!					  linear_winds -> various fft routines]
+!! 
+!! High level routine descriptions / purpose
+!!   calc_stability		- calculates a mean Brunt Vaisala frequency over the domain
+!!   linear_winds		- primary routine that calculates the linear wind perturbation
+!!	 add_buffer_topo	- generates a topo grid that with a surrounding buffer for the fft
+!! 	 setup_linwinds		- sets up module level variables and calls add_buffer_topo
+!! 	 linear_perturb		- main entry point, calls setup on first entry for a given domain
+!! 
+!! Inputs: domain, options, vsmooth, reverse, useDensity
+!! 		domain,options	= as defined in data_structures
+!! 		vsmooth			= number of vertical levels to smooth winds over
+!! 		reverse 		= remove linear perturbation instead of adding it
+!!		useDensity		= create a linear field that attempts to mitigate the 
+!! 							boussinesq approx that is embedded in the linear theory
+!!							so it advection can properly incorporate density.
+!!
+!! Author : Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!----------------------------------------------------------
 module linear_theory_winds
-    use fft
+    use fft ! note fft module is defined in fftshift.f90
 	use fftshifter
     use data_structures
 	use io_routines, 		only : io_write2d
@@ -10,9 +40,11 @@ module linear_theory_winds
 	
 	logical :: variable_N
 	real :: N_squared
+	!! unfortunately these have to be allocated every call because we could be calling on both the high-res
+	!! domain and the low res domain (to "remove" the linear winds)
     real,allocatable,dimension(:,:)::k,l,kl,sig
     complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::denom,uhat,u_hat,vhat,v_hat,m,ineta,msq,mimag
-	integer,parameter::buffer=50
+	integer,parameter::buffer=50 ! number of grid cells to buffer around the domain
 	integer,parameter::stability_window_size=2
 	
 	real, parameter :: max_stability= 5e-4 ! limits on the calculated Brunt Vaisala Frequency
@@ -33,7 +65,6 @@ contains
 		ny=size(domain%th,3)
 		allocate(vertical_N(nz))
 		
-! 		for now just return a default value to simplify things a bit...
 		if (variable_N) then
 			do i=1,nz
 				top_layer    = max(i+stability_window_size, nz)
@@ -43,8 +74,8 @@ contains
 				dtheta = sum(domain%th(:,top_layer,:)-domain%th(:,bottom_layer,:))/(nx*ny) ! average temperature change between layers
 				t_mean = sum(domain%th(:,i,:))/(nx*ny) ! mean temperature in the current layer
 				
-				! BV frequency = g/theta * dtheta/dz
-				vertical_N(i)=g/t_mean * dtheta/dz
+				! BV frequency = gravity/theta * dtheta/dz
+				vertical_N(i)=gravity/t_mean * dtheta/dz
 			end do
 			! calculate the mean stability over the entire profile
 			BV_freq=sum(vertical_N)/nz
@@ -56,41 +87,43 @@ contains
 		endif
 		
 		deallocate(vertical_N)
-! 		below are other possible calculations for Nd using the "dry" environmental lapse rate
-!         real, parameter :: R  = 287.0
-!         real, parameter :: Rv = 461.0
-!         real, parameter :: cp = 1004.0
-!         real, parameter :: L   = 2.5e6
-!         real, parameter :: g  = 9.81
-!         real, parameter :: ratio = 18.015/28.964
-!         real, parameter :: t0 = 273.15
-! 
-!         p0=domain%.p(:,1,:)
-!         pii=1.0/((100000.0/domain%p)**(R/cp))
-!         T2m=domain%th(:,1,:)*pii(:,1,:)
-!     
-!         es = 611.21*exp(17.502*(T2m-t0)/(T2m-32.19))
-!         qs0 = ratio * es/(p0-es)
-! 
-!         cap_gamma = -(g * (1.+(L*qs0)/(R*T2m)) / (cp + (L**2 * qs0*ratio) / (R*T2m**2)))
-!! STILL NEEDS TO BE CONVERTED FROM PYTHON
-!!         env_gamma = np.mean(np.diff(weather.th*pii,axis=0)/np.diff(base.hgt3d,axis=0),axis=0)
-!     
-!         dry_gamma=sum(env_gamma-cap_gamma)/size(env_gamma)
-!         ndsq=(g/(sum(T2m)/size(T2m)))*(dry_gamma)
-!         ndsq=max(min(1e-4,ndsq),1e-8)
-!         calc_stability=ndsq
+		! below are other possible calculations for Nd using the "dry" environmental lapse rate
+		! real, parameter :: R  = 287.0
+		! real, parameter :: Rv = 461.0
+		! real, parameter :: cp = 1004.0
+		! real, parameter :: L   = 2.5e6
+		! real, parameter :: g  = 9.81
+		! real, parameter :: ratio = 18.015/28.964
+		! real, parameter :: t0 = 273.15
+		! 
+		! p0=domain%.p(:,1,:)
+		! pii=1.0/((100000.0/domain%p)**(R/cp))
+		! T2m=domain%th(:,1,:)*pii(:,1,:)
+		!     
+		!  es = 611.21*exp(17.502*(T2m-t0)/(T2m-32.19))
+		!  qs0 = ratio * es/(p0-es)
+		! 
+		! cap_gamma = -(g * (1.+(L*qs0)/(R*T2m)) / (cp + (L**2 * qs0*ratio) / (R*T2m**2)))
+		!! STILL NEEDS TO BE CONVERTED FROM PYTHON
+		!! env_gamma = np.mean(np.diff(weather.th*pii,axis=0)/np.diff(base.hgt3d,axis=0),axis=0)
+		! 
+		! dry_gamma=sum(env_gamma-cap_gamma)/size(env_gamma)
+		! ndsq=(g/(sum(T2m)/size(T2m)))*(dry_gamma)
+		! ndsq=max(min(1e-4,ndsq),1e-8)
+		! calc_stability=ndsq
     end function calc_stability
-    
+
+	! Compute linear wind perturbations to U and V and add them back to the domain
+	!
+	! see Appendix A of Barstad and Gronas (2006) Tellus,58A,2-18
+	! -------------------------------------------------------------------------------
+	! Ndsq  = 0.003**2      # dry BV freq sq. was 0.01**2 initially, Idar suggested 0.005**2
+	! 1E-8 keeps it relatively stable, no wild oscillations in u,v
+	! but 1E-8 doesn't damp vertical winds with height very fast
+	! could/should be calculated from the real atm profile with limits
+	! f  = 9.37e-5           # rad/s Coriolis frequency for 40deg north
+	! ---------------------------------------------------------------------------------
     subroutine linear_winds(domain,Ndsq,vsmooth,reverse_flag,useDensity,debug)
-!         # see Appendix A of Barstad and Gronas (2006) Tellus,58A,2-18
-!         # -------------------------------------------------------------------------------
-!         # Ndsq  = 0.003**2      # dry BV freq sq. was 0.01**2 initially, Idar suggested 0.005**2
-!         # 1E-8 keeps it relatively stable, no wild oscillations in u,v
-!         # but 1E-8 doesn't damp vertical winds with height very fast
-!         # could/should be calculated from the real atm profile with limits
-!         f  = 9.37e-5           # rad/s Coriolis frequency for 40deg north
-!         # ---------------------------------------------------------------------------------
 		use, intrinsic :: iso_c_binding
         implicit none
         class(linearizable_type),intent(inout)::domain
@@ -141,9 +174,9 @@ contains
 		enddo
 		
         
-! 		these should be stored in a separate data structure... and allocated/deallocated in a subroutine
-! 		for now these are reallocated/deallocated everytime so we can use it for different sized domains (e.g. coarse and fine)
-! 		maybe linear winds need to be embedded in an object instead of a module to avoid this problem...
+		! these should be stored in a separate data structure... and allocated/deallocated in a subroutine
+		! for now these are reallocated/deallocated everytime so we can use it for different sized domains (e.g. coarse and fine)
+		! maybe linear winds need to be embedded in an object instead of a module to avoid this problem...
 		if (.not.allocated(k)) then
 	        allocate(k(nx,ny))
 	        allocate(l(nx,ny))
@@ -159,7 +192,7 @@ contains
 	        allocate(mimag(nx,ny))
 	        allocate(ineta(nx,ny))
         
-	!         # % Compute 2D k and l wavenumber fields (could be stored in options or domain or something)
+			! Compute 2D k and l wavenumber fields (could be stored in options or domain or something)
 	        offset=pi/domain%dx
 	        gain=2*offset/(nx-1)
 			k(:,1) = (/((i*gain-offset),i=0,nx-1)/)
@@ -173,33 +206,32 @@ contains
 				l(i,:)=l(1,:)
 			enddo
 			
-	! 		finally compute the kl combination array
+			! finally compute the kl combination array
 	        kl = k**2+l**2
 	        WHERE (kl==0.0) kl=1e-15
 		endif
 
 		
-! 		process each array independantly
-! 		note fftw_plan_... may not be threadsafe so this can't be OMP parallelized without pulling that outside of the loop. 
-! 		to parallelize, compute uhat,vhat in parallel
-! 		then compute the plans serially
-! 		then perform ffts etc in parallel
-! 		finally destroy plans serially
+		! process each array independantly
+		! note fftw_plan_... may not be threadsafe so this can't be OMP parallelized without pulling that outside of the loop. 
+		! to parallelize, compute uhat,vhat in parallel
+		! then compute the plans serially
+		! then perform ffts etc in parallel
+		! finally destroy plans serially
 		m=1
         do z=1,nz
             U=U_layers(z)
             V=V_layers(z)
-!             U=domain%u(88,z,82)
-!             V=domain%v(88,z,82)
 			if ((abs(U)+abs(V))>0.5) then
 	            sig  = U*k+V*l
 	            where(sig==0.0) sig=1e-15
 	            denom = sig**2!-f**2
 			
 				! 	where(denom.eq.0) denom=1e-20
-				! # mimag=np.zeros((Ny,Nx)).astype('complex')
 				! # two possible non-hydrostatic versions
-				! # msq = (Ndsq/denom * kl).astype('complex')          # % vertical wave number, hydrostatic
+				! not yet converted from python...
+				! # mimag=np.zeros((Ny,Nx)).astype('complex')
+				! # msq = (Ndsq/denom * kl).astype('complex')          			# % vertical wave number, hydrostatic
 				! # msq = ((Ndsq-sig**2)/denom * kl).astype('complex')          # % vertical wave number, hydrostatic
 				! # mimag.imag=(np.sqrt(-msq)).real
 				! # m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
@@ -277,8 +309,6 @@ contains
 			
 				if (present(debug).and.(z==1))then
 					if (debug) then
-! 						write(*,*) (realnx-1)-(1)+1, (nx-buffer-1)-(1+buffer)+1, size(domain%u,3),(ny-buffer)-(1+buffer)+1
-! 						write(*,*) (realnx-1)-(1)+1, (nx-buffer)-(2+buffer)+1, size(domain%u,3),(ny-buffer)-(1+buffer)+1
 						write(*,*) "Ndsq = ", Ndsq
 						write(*,*) "U=",U, "    V=",V
 						write(*,*) "realnx=",realnx, "; nx=",nx, "; buffer=",buffer
@@ -292,15 +322,15 @@ contains
 		end do ! z-loop
 		
 		
-! 		finally deallocate all temporary arrays that were created... should be a datastructure and a subroutine...
+		! finally deallocate all temporary arrays that were created... chould be a datastructure and a subroutine...
 		deallocate(k,l,kl,sig,denom,uhat,u_hat,vhat,v_hat,m,ineta,msq,mimag)
 		deallocate(U_layers,V_layers,preU_layers,preV_layers)
     end subroutine linear_winds
     
     
 	subroutine add_buffer_topo(terrain,buffer_topo)
-!		add a smoothed buffer around the edge of the terrain to prevent crazy wrap around effects
-! 		in the FFT due to discontinuities between the left and right (top and bottom) edges of the domain
+		! add a smoothed buffer around the edge of the terrain to prevent crazy wrap around effects
+		! in the FFT due to discontinuities between the left and right (top and bottom) edges of the domain
         implicit none
 		real, dimension(:,:), intent(in) :: terrain
 		complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:), intent(out):: buffer_topo
@@ -332,8 +362,8 @@ contains
 		
 	end subroutine add_buffer_topo
 	
-! 	called from linear_perturb the first time perturb is called
-! 	compute FFT(terrain), and dzdx,dzdy components
+	! called from linear_perturb the first time perturb is called
+	! compute FFT(terrain), and dzdx,dzdy components
     subroutine setup_linwinds(domain,options)
         implicit none
         class(linearizable_type),intent(inout)::domain
@@ -353,21 +383,21 @@ contains
         write(*,*) "Initializing linear winds : ",nx,ny
         allocate(domain%fzs(nx,ny))
 		
-! 		calculate the fourier transform of the terrain for use in linear winds
+		! calculate the fourier transform of the terrain for use in linear winds
         plan = fftw_plan_dft_2d(ny,nx, complex_terrain,domain%fzs, FFTW_FORWARD,FFTW_ESTIMATE)
         call fftw_execute_dft(plan, complex_terrain,domain%fzs)
         call fftw_destroy_plan(plan)
-! 		normalize FFT by N - grid cells
+		! normalize FFT by N - grid cells
 		domain%fzs=domain%fzs/(nx*ny)
 		call fftshift(domain%fzs)
 		
-! 		cleanup temporary array
+		! cleanup temporary array
 		deallocate(complex_terrain)
         
     end subroutine
 	
-! 	Primary entry point!
-!   Called from the simple weather model to update the U,V,W wind fields based on linear theory
+	! Primary entry point!
+	! Called from ICAR to update the U,V,W wind fields based on linear theory
     subroutine linear_perturb(domain,options,vsmooth,reverse,useDensity)
         implicit none
         class(linearizable_type),intent(inout)::domain
@@ -377,12 +407,12 @@ contains
 		logical, save :: debug=.True.
 		real::stability
         
-! 		if linear_perturb hasn't been called before we need to perform some setup actions. 
+		! if linear_perturb hasn't been called before we need to perform some setup actions. 
         if (.not.allocated(domain%fzs)) then
             call setup_linwinds(domain,options)
         endif
 		
-! 		Ndsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability
+		! Ndsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability
         stability=calc_stability(domain)
 		
 		call linear_winds(domain,stability,vsmooth,reverse,useDensity,debug)

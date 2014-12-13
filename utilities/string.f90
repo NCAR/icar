@@ -1,3 +1,11 @@
+!>------------------------------------------------------------
+!!
+!!	Various functions to convert a number to a string and a string
+!!  to a number
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!------------------------------------------------------------
 module string
 
 	implicit none

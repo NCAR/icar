@@ -1,3 +1,10 @@
+!> ----------------------------------------------------------------------------
+!!
+!!  A tool to track model versions and print useful changes between model versions
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!! ----------------------------------------------------------------------------
 module model_tracking
 ! 	Module to track each major version of the model developement
 !   Particularly the changes to the namelist required at each step

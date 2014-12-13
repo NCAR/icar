@@ -1,3 +1,12 @@
+!> ----------------------------------------------------------------------------
+!!
+!!  Main time stepping module. 
+!!  Calculates a stable time step (dt) and loops over physics calls
+!!  Also updates boundaries every time step. 
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!! ----------------------------------------------------------------------------
 module time_step
 	use data_structures     ! *_type  types
 	use microphysics,                only : mp

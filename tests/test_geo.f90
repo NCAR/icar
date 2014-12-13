@@ -1,3 +1,14 @@
+!>------------------------------------------------------------
+!!
+!! Test to confirm the geographic interpolation routines work
+!! Hasn't been updated in a while but should still work
+!! Requires two input files with XLAT,XLONG 2D variables
+!! 
+!! Writes 5 output files
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!------------------------------------------------------------
 module load_data
 	use io_routines
 	use data_structures

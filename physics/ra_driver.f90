@@ -1,3 +1,25 @@
+!>----------------------------------------------------------
+!!
+!! This module provides a wrapper to call various radiation models
+!! It sets up variables specific to the physics package to be used
+!!
+!! The main entry point to the code is rad(domain,options,dt)
+!!
+!! Call tree graph :
+!!	radiation_init->[ external initialization routines]
+!!	rad->[	external radiation routines]
+!! 
+!! High level routine descriptions / purpose
+!!   radiation_init    	- initializes physics package
+!!   rad           		- sets up and calls main physics package
+!! 
+!! Inputs: domain, options, dt
+!! 		domain,options	= as defined in data_structures
+!! 		dt 				= time step (seconds)
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!----------------------------------------------------------
 module radiation
 	use module_ra_simple, only: ra_simple, ra_simple_init
 	use data_structures

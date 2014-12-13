@@ -1,3 +1,10 @@
+!> ----------------------------------------------------------------------------
+!!
+!!  Driver to call different advection schemes
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!! ----------------------------------------------------------------------------
 module advection
 	use data_structures
 	use adv_upwind, only : upwind

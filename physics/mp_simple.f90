@@ -1,51 +1,54 @@
-!----------------------------------------------------------
-!
-! Very simple microphysics code modeled after the microphysics
-! used in Smith and Barstad '04 (the linear model). 
-! 
-! Clouds (solid and liquid) form and evaporate instantly
-! Clouds convert to rain (or snow) with a time constant tau [s]
-!   typically rain_tau ~500s snow_tau ~2000s
-! Fall speeds in SB04 assume 10m/s (rain) and 1.5m/s (snow). 
-! In SB04 this is treated by means of a time constant (=height/speed). 
-! Here it is modeled explicitly with these fall speeds
-!
-! The entry point to the code is mp_simple_driver. 
-!
-! Call tree graph :
-! mp_simple_driver->mp_simple->
-!   [mp_conversions->
-!       [cloud_conversion->sat_mr,
-!        cloud2hydrometeor,
-!        phase_change],
-!   sediment]
-! 
-! High level routine descriptions / purpose
-!   mp_simple_driver    - loops over X,Y grid cells, calls mp_simple on columns
-!   mp_simple           - calls mp_conversions for all z, then calls sediment
-!   mp_conversions      - handles all microphysics conversions (e.g. vapor->cloud->rain[->snow->vapor],...)
-!   cloud_conversion    - uses sat_mr to calculate sub or supersaturation and changes vapor and cloud water to balance (adjusts T for Latent Heating)
-!   cloud2hydrometeor   - converts cloud water to rain or snow (T dependant)
-!   phase_change        - handles rain and snow evaporation (can take a time constant)
-!   sediment            - advects falling rain and snow due to gravity (not wind)
-! 
-! Driver inputs: p,th,pii,rho,qv,qc,qr,qs,rain,snow,dt,dz,nx,ny,nz
-!   p   = pressure                      - 3D - input  - Pa		- (nx,nz,ny)
-!   th  = potential temperature         - 3D - in/out - K		- (nx,nz,ny)
-!   pii = inverse exner function        - 3D - input  - []		- (nx,nz,ny)
-!   rho = air density                   - 3D - input  - kg/m^3	- (nx,nz,ny)
-!   qv  = specific humidity             - 3D - in/out - kg/kg	- (nx,nz,ny)
-!   qc  = cloud water content           - 3D - in/out - kg/kg	- (nx,nz,ny)
-!   qr  = rain water content            - 3D - in/out - kg/kg	- (nx,nz,ny)
-!   qs  = snow water content            - 3D - in/out - kg/kg	- (nx,nz,ny)
-!   rain = accumulated rain             - 2D - output - mm		- (nx,ny)
-!   snow = accumulated snow             - 2D - output - mm		- (nx,ny)
-!   dt = time step                      - 0D - input  - seconds	- scalar
-!   nx = number of ew grid cells        - 0D - input  - n		- scalar
-!   ny = number of ns grid cells        - 0D - input  - n		- scalar
-!   nz = number of vertical grid cells  - 0D - input  - n		- scalar
-!
-!----------------------------------------------------------
+!>----------------------------------------------------------
+!!
+!! Very simple microphysics code modeled after the microphysics
+!! used in Smith and Barstad '04 (the linear model). 
+!! 
+!! Clouds (solid and liquid) form and evaporate instantly
+!! Clouds convert to rain (or snow) with a time constant tau [s]
+!!   typically rain_tau ~500s snow_tau ~2000s
+!! Fall speeds in SB04 assume 10m/s (rain) and 1.5m/s (snow). 
+!! In SB04 this is treated by means of a time constant (=height/speed). 
+!! Here it is modeled explicitly with these fall speeds
+!!
+!! The entry point to the code is mp_simple_driver. 
+!!
+!! Call tree graph :
+!! mp_simple_driver->mp_simple->
+!!   [mp_conversions->
+!!       [cloud_conversion->sat_mr,
+!!        cloud2hydrometeor,
+!!        phase_change],
+!!   sediment]
+!! 
+!! High level routine descriptions / purpose
+!!   mp_simple_driver    - loops over X,Y grid cells, calls mp_simple on columns
+!!   mp_simple           - calls mp_conversions for all z, then calls sediment
+!!   mp_conversions      - handles all microphysics conversions (e.g. vapor->cloud->rain[->snow->vapor],...)
+!!   cloud_conversion    - uses sat_mr to calculate sub or supersaturation and changes vapor and cloud water to balance 
+!!							(adjusts T for Latent Heating)
+!!   cloud2hydrometeor   - converts cloud water to rain or snow (T dependant)
+!!   phase_change        - handles rain and snow evaporation (can take a time constant)
+!!   sediment            - advects falling rain and snow due to gravity (not wind)
+!! 
+!! Driver inputs: p,th,pii,rho,qv,qc,qr,qs,rain,snow,dt,dz,nx,ny,nz
+!!   p   = pressure                      - 3D - input  - Pa		- (nx,nz,ny)
+!!   th  = potential temperature         - 3D - in/out - K		- (nx,nz,ny)
+!!   pii = inverse exner function        - 3D - input  - []		- (nx,nz,ny)
+!!   rho = air density                   - 3D - input  - kg/m^3	- (nx,nz,ny)
+!!   qv  = specific humidity             - 3D - in/out - kg/kg	- (nx,nz,ny)
+!!   qc  = cloud water content           - 3D - in/out - kg/kg	- (nx,nz,ny)
+!!   qr  = rain water content            - 3D - in/out - kg/kg	- (nx,nz,ny)
+!!   qs  = snow water content            - 3D - in/out - kg/kg	- (nx,nz,ny)
+!!   rain = accumulated rain             - 2D - output - mm		- (nx,ny)
+!!   snow = accumulated snow             - 2D - output - mm		- (nx,ny)
+!!   dt = time step                      - 0D - input  - seconds	- scalar
+!!   nx = number of ew grid cells        - 0D - input  - n		- scalar
+!!   ny = number of ns grid cells        - 0D - input  - n		- scalar
+!!   nz = number of vertical grid cells  - 0D - input  - n		- scalar
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!----------------------------------------------------------
 module module_mp_simple
     implicit none
     private

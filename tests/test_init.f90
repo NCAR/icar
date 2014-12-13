@@ -1,3 +1,10 @@
+!>------------------------------------------------------------
+!!
+!!  Test running initialization code.  Doesn't do much. 
+!! 
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!------------------------------------------------------------
 program test_init
 	use init
 	use data_structures
@@ -6,7 +13,7 @@ program test_init
 	
 	type(options_type) :: options
 	type(domain_type)  :: domain
-	call init_options("ideal_options.namelist",options)
+	call init_options("icar_options.nml",options)
 	call init_domain(options,domain)
 	
 	write(*,*) options%init_conditions_file,options%output_file

@@ -1,15 +1,21 @@
-! simple PBL diffusion package for the Simple Weather Model
-!  Local-K diffusion type PBL as in Louis (1979) as documented in Hong and Pan (1996) = HP96
-!  Hong and Pan used this for their free atmosphere diffusion, but noted differences
-!  used in the "current operational model" notably the asymptotic length scale lambda 
-!
-! HP96 = Hong,S.-Y. and H.-L. Pan (1996) Monthly Weather Review v127 p2322
-! 		 Nonlocal Boundary Layer Vertical Diffusion in a Medium Range Forecast Model
-! 
-! Implemented with K,shear,stability... on half levels
-! 	rho on half levels for f=k*rho*dq/dz*dt
-! 	rho on full levels for q=q+f/rho
-!   q,U,V on full levels
+!>----------------------------------------------------------
+!!
+!! simple PBL diffusion package for ICAR
+!!  Local-K diffusion type PBL as in Louis (1979) as documented in Hong and Pan (1996) = HP96
+!!  Hong and Pan used this for their free atmosphere diffusion, but noted differences
+!!  used in the "current operational model" notably the asymptotic length scale lambda 
+!!
+!! HP96 = Hong,S.-Y. and H.-L. Pan (1996) Monthly Weather Review v127 p2322
+!! 		 Nonlocal Boundary Layer Vertical Diffusion in a Medium Range Forecast Model
+!! 
+!! Implemented with K,shear,stability... on half levels
+!! 	rho on half levels for f=k*rho*dq/dz*dt
+!! 	rho on full levels for q=q+f/rho
+!!   q,U,V on full levels
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!----------------------------------------------------------
 module pbl_simple
 	use data_structures
 	private
@@ -213,7 +219,7 @@ contains
 		temperature=domain%th(2:nx+1,:,j+1)*domain%pii(2:nx+1,:,j+1)
 ! 		might be slightly better to interpolate theta to half levels, then recalc p and pii at half levels
 		temperature(:,:nz)= (temperature(:,:nz)+temperature(:,2:))*0.5
-		rig_m(:,:,j) =  g/temperature(:,:nz)  & 
+		rig_m(:,:,j) =  gravity/temperature(:,:nz)  & 
 					   * virt_pot_temp_zgradient_m(:,:nz,j) * 1/(shear_m(:,:,j)**2)
 		where(rig_m(:,:,j)<-2.9) rig_m(:,:,j)=-2.9
 		

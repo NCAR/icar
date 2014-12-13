@@ -1,3 +1,11 @@
+!>------------------------------------------------------------
+!!
+!!	date / time module
+!!  
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!------------------------------------------------------------
 module time
 	implicit none
 	integer, parameter :: GREGORIAN=0, NOLEAP=1, THREESIXTY=2
@@ -11,19 +19,35 @@ contains
 	subroutine time_init(calendar_name)
 		implicit none
 		character(len=*), intent(in) :: calendar_name
+		integer :: i
 		
 		month_start=[0,31,59,90,120,151,181,212,243,273,304,334,366]
 		
 		if (trim(calendar_name)=="gregorian") then
 			calendar=GREGORIAN
+		else if (trim(calendar_name)=="standard") then
+			calendar=GREGORIAN
+		else if (trim(calendar_name)=="365-day") then
+			calendar=NOLEAP
 		else if (trim(calendar_name)=="noleap") then
 			calendar=NOLEAP
 		else if (trim(calendar_name)=="360-day") then
 			calendar=THREESIXTY
 		else
-			print*, "Unknown Calendar", calendar_name
+			write(*,*) "Unknown Calendar: ", trim(calendar_name)
+			write(*,*) "Acceptable names = "
+			write(*,*) "  gregorian, standard, 365-day, noleap, 360-day"
+			write(*,*) " "
 			stop
 		endif
+		
+		if (calendar==THREESIXTY) then
+			do i=0,12
+				month_start(i+1)=i*30
+			end do
+		endif
+			
+			
 	end subroutine time_init
 	
 	!   algorithms from Wikipedia: http://en.wikipedia.org/wiki/Julian_day
@@ -55,6 +79,9 @@ contains
 
 	end function date_to_mjd
 
+	! compute the year, month, day, hour, minute, second corresponding
+	! to the input modified julian day (mjd)
+	! note mjd for NOLEAP and 360day calendars is not a true MJD
 	subroutine calendar_date(mjd, year, month, day, hour, minute, second)
 		implicit none
 		double precision, intent(in) :: mjd
@@ -99,6 +126,8 @@ contains
 		
 	end subroutine
 
+	! calculate the day of the year from a "modified julian day"
+	! note mjd for NOLEAP and 360day calendars is not a true MJD
 	function calc_day_of_year(mjd)
 		implicit none
 		real :: calc_day_of_year
@@ -116,6 +145,8 @@ contains
 		endif
 	end function calc_day_of_year
 
+	! convert an input date string in the form YYYY/MM/DD or YYYY/MM/DD hh:mm:ss
+	! into integer variables
 	subroutine parse_date(date, year, month, day, hour, min, sec)
 	  implicit none
 	  character (len=*), intent(in) :: date

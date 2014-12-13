@@ -1,8 +1,15 @@
+!> ----------------------------------------------------------------------------
+!!
+!!  Driver to call different convection schemes
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!! ----------------------------------------------------------------------------
 module convection
 	use data_structures
 	use module_cu_tiedtke
 	implicit none
-	real,allocatable,dimension(:,:,:)::p8,U3D,V3D,T3D, & !zed1,zed2,rho,pii,                 &
+	real,allocatable,dimension(:,:,:)::p8,U3D,V3D,T3D, & 
 									   RTHCUTEN,RQVCUTEN,RQCCUTEN,RQICUTEN,    &
 					                   RUCUTEN,RVCUTEN
 	logical,allocatable,dimension(:,:)::CU_ACT_FLAG
@@ -121,14 +128,12 @@ subroutine convect(domain,options,dt_in)
 		PRATEC=0
 	endif
 	if (options%physics%convection==1) then
-! 		used to convert potential temperature to sensible temperature
 
 		!$omp parallel private(i) &
 		!$omp firstprivate(ids,ide,jds,jde,kds,kde) &
 		!$omp default(shared)
 		!$omp do schedule(static)
 		do i=ids,ide
-! 			pii(i,:,:)=1.0/((100000.0/domain%p(i,:,:))**(R/cp))
 			RAINCV(i,:)=0
 			p8(i,:kde-1,:)=(domain%p(i,:kde-1,:)+domain%p(i,kds+1:,:))/2
 			p8(i,kde,:)=p8(i,kde-1,:)+(p8(i,kde-1,:)-p8(i,kde-2,:))
@@ -142,11 +147,6 @@ subroutine convect(domain,options,dt_in)
 		!$omp end do
 		!$omp end parallel	
 
-! 		write(*,*) "Entering Tiedtke"
-! 		write(*,*) "Advection tendency"
-! 		write(*,*) MAXVAL(domain%qv_adv_tendency(2:ide-1,:,2:jde-1)), MINVAL(domain%qv_adv_tendency(2:ide-1,:,2:jde-1))
-! 		write(*,*) "PBL tendency"
-! 		write(*,*) MAXVAL(domain%qv_pbl_tendency(2:ide-1,:,2:jde-1)), MINVAL(domain%qv_pbl_tendency(2:ide-1,:,2:jde-1))
 		call CU_TIEDTKE(                                          &
                  dt_in,itimestep,STEPCU                           &
                 ,RAINCV,PRATEC,domain%latent_heat/LH_vaporization,domain%sensible_heat,ZNU(kds:kde) &

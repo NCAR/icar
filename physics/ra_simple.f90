@@ -1,44 +1,46 @@
-!----------------------------------------------------------
-!
-! Very simple radiation code modeled after the description
-! in Finch and Best(2004?) of Reiff et al. 1984 shortwave and Idso and Jackson (1969) longwave. 
-! 
-! Clearsky Shortwave radiation is calculated as a function of day of year and time of day. 
-! Cloudy Shortwave is calculated as clearsky SW * f(cloud cover) [0.25-1]
-! 
-! Cloud cover is calculated as in Xu and Randal (1996) as f(surface_RH, qc+qs+qr)
-! 
-! Clearsky Longwave radiation is calculated as f(Tair)
-! Cloudy longwave is scaled up by a f(cloud cover) [1-1.2]
-!
-! The entry point to the code is ra_simple. 
-!
-! Call tree graph :
-! ra_simple->
-! 	[cloudfrac->],
-! 	[shortwave->],
-! 	[longwave->]
-! 
-! High level routine descriptions / purpose
-!   ra_simple    		- loops over X,Y grid cells, calls cloudfrac, shortwave,longwave on columns
-!   cloudfrac           - calculates the cloud fraction following Xu and Randall (1996)
-!   shortwave           - calculates shortwave at the surface following Reiff et al (1984)
-!   longwave           	- calculates longwave at the surface following Idso and Jackson (1969)
-! 
-! Driver inputs: p,th,pii,rho,qv,qc,qr,qs,rain,snow,dt,dz,nx,ny,nz
-!   p   = pressure                      - 3D - input  - Pa		- (nx,nz,ny)
-!   th  = potential temperature         - 3D - in/out - K		- (nx,nz,ny)
-!   pii = inverse exner function        - 3D - input  - []		- (nx,nz,ny)
-!   rho = air density                   - 3D - input  - kg/m^3	- (nx,nz,ny)
-!   qv  = specific humidity             - 3D - input  - kg/kg	- (nx,nz,ny)
-!   qc  = cloud water content           - 3D - input  - kg/kg	- (nx,nz,ny)
-!   qr  = rain water content            - 3D - input  - kg/kg	- (nx,nz,ny)
-!   qs  = snow water content            - 3D - input  - kg/kg	- (nx,nz,ny)
-!   swdown = shortwave down at surface	- 2D - output - W/m^2	- (nx,ny)
-!   lwdown = longwave down at surface	- 2D - output - W/m^2	- (nx,ny)
-!   dt = time step                      - 0D - input  - seconds	- scalar
-!
-!----------------------------------------------------------
+!>----------------------------------------------------------
+!!
+!! Very simple radiation code modeled after the description
+!! in Finch and Best(2004?) of Reiff et al. 1984 shortwave and Idso and Jackson (1969) longwave. 
+!! 
+!! Clearsky Shortwave radiation is calculated as a function of day of year and time of day. 
+!! Cloudy Shortwave is calculated as clearsky SW * f(cloud cover) [0.25-1]
+!! 
+!! Cloud cover is calculated as in Xu and Randal (1996) as f(surface_RH, qc+qs+qr)
+!! 
+!! Clearsky Longwave radiation is calculated as f(Tair)
+!! Cloudy longwave is scaled up by a f(cloud cover) [1-1.2]
+!!
+!! The entry point to the code is ra_simple. 
+!!
+!! Call tree graph :
+!! ra_simple->
+!! 	[cloudfrac->],
+!! 	[shortwave->],
+!! 	[longwave->]
+!! 
+!! High level routine descriptions / purpose
+!!   ra_simple    		- loops over X,Y grid cells, calls cloudfrac, shortwave,longwave on columns
+!!   cloudfrac           - calculates the cloud fraction following Xu and Randall (1996)
+!!   shortwave           - calculates shortwave at the surface following Reiff et al (1984)
+!!   longwave           	- calculates longwave at the surface following Idso and Jackson (1969)
+!! 
+!! Driver inputs: p,th,pii,rho,qv,qc,qr,qs,rain,snow,dt,dz,nx,ny,nz
+!!   p   = pressure                      - 3D - input  - Pa		- (nx,nz,ny)
+!!   th  = potential temperature         - 3D - in/out - K		- (nx,nz,ny)
+!!   pii = inverse exner function        - 3D - input  - []		- (nx,nz,ny)
+!!   rho = air density                   - 3D - input  - kg/m^3	- (nx,nz,ny)
+!!   qv  = specific humidity             - 3D - input  - kg/kg	- (nx,nz,ny)
+!!   qc  = cloud water content           - 3D - input  - kg/kg	- (nx,nz,ny)
+!!   qr  = rain water content            - 3D - input  - kg/kg	- (nx,nz,ny)
+!!   qs  = snow water content            - 3D - input  - kg/kg	- (nx,nz,ny)
+!!   swdown = shortwave down at surface	- 2D - output - W/m^2	- (nx,ny)
+!!   lwdown = longwave down at surface	- 2D - output - W/m^2	- (nx,ny)
+!!   dt = time step                      - 0D - input  - seconds	- scalar
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!----------------------------------------------------------
 module module_ra_simple
 	use data_structures
 	use time

@@ -1,4 +1,12 @@
-program test_init
+!>------------------------------------------------------------
+!!
+!!  Test running ideal wind calculation.  Doesn't do much
+!!  Hasn't been updated in a while, not sure it will work. 
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!------------------------------------------------------------
+program test_winds
 	use init
 	use data_structures
 	use wind
@@ -8,7 +16,7 @@ program test_init
 	type(domain_type)  :: domain
 	integer ::i,nz,j,ny
 	
-	call init_options("ideal_options.namelist",options)
+	call init_options("icar_options.nml",options)
 	call init_domain(options,domain)
 	
 	write(*,*) options%init_conditions_file,options%output_file

@@ -1,4 +1,19 @@
-! various functions used for spatial interpolation from low-res forcing grid to high-res model grid
+!>------------------------------------------------------------
+!!
+!! Module provides geographic interpolation procedures
+!! Various functions used for spatial interpolation from low-res
+!! forcing grid to high-res model grid. 
+!!
+!!	Entry points: 
+!! 		geo_LUT 	: creates a geographic look uptable to convert one
+!!                	  grid to another
+!!		geo_interp	: interpolates from one grid to another and
+!! 					  loops over the third dimension
+!!      geo_interp2d: interpolates from one grid to another
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!------------------------------------------------------------
 module geo
 	use data_structures
 	implicit none
@@ -10,9 +25,9 @@ module geo
 	
 contains
 	
+	! calculate the weights to use for bilinear interpolation between surrounding points x, y
+	!	to position xi,yi
 	function bilin_weights(yi,y,xi,x)
-! calculate the weights to use for bilinear interpolation between surrounding points x, y
-!	to position xi,yi
 		implicit none
 		real,intent(in)::yi,y(0:3),xi,x(0:3)
 		real::x0,x1,x2,x3,y5,y6,f1,f2
@@ -85,24 +100,23 @@ contains
 		endif
 	end function minyw
 	
+	! Find a location lat,lon in lo%lat,lon grids
+	!  Assumes that the lat/lon grids are semi-regular (dx/dy aren't constant but they are nearly so)
+	!  Calculates dx/dy at the middle of the lat/lon grids, then calculates the location of lat,lon
+	!  input point using those coordinates.  
+	!  Next proceeds to calculate a new position based on the dx/dy at that position until the new
+	!  position is within 1 gridcell of the current position
+	!  Once that "within 1" position is found, search all cells in a 3x3 grid for the minimum distance
+	!  return a position datatype that includes the found x/y location
+	! 
+	! currently tries up to three methods to find the location 
+	! 	1) assume relatively even dxdy and compute location (iterate a <20times)
+	!   2) use a log(n) search (divide and conquer) also iterate <20times)
+	!   a) if 1 or 2 are approximately successful: 
+	! 		search a small region around the "best" point to find the real best point
+	!   3) in the diabolical case where 1 and 2 fail (rare) just search every single location (n^2)
+	!   Could add a 2.5) downhill search algorithm...
 	type(position) function find_location(lo,lat,lon,lastpos)
-! Find a location lat,lon in lo%lat,lon grids
-!  Assumes that the lat/lon grids are semi-regular (dx/dy aren't constant but they are nearly so)
-!  Calculates dx/dy at the middle of the lat/lon grids, then calculates the location of lat,lon
-!  input point using those coordinates.  
-!  Next proceeds to calculate a new position based on the dx/dy at that position until the new
-!  position is within 1 gridcell of the current position
-!  Once that "within 1" position is found, search all cells in a 3x3 grid for the minimum distance
-!  return a position datatype that includes the found x/y location
-! 
-! currently tries up to three methods to find the location 
-! 	1) assume relatively even dxdy and compute location (iterate a <20times)
-!   2) use a log(n) search (divide and conquer) also iterate <20times)
-!   a) if 1 or 2 are approximately successful: 
-! 		search a small region around the "best" point to find the real best point
-!   3) in the diabolical case where 1 and 2 fail (rare) just search every single location (n^2)
-!   Could add a 2.5) downhill search algorithm...
-
 		implicit none
 		class(interpolable_type),intent(inout)::lo
 		real,intent(in)::lat,lon
@@ -112,10 +126,11 @@ contains
 		
 		nx=size(lo%lat,1)
 		ny=size(lo%lat,2)
-! 		calcualte dx/dy at the middle of the grid
+		! calcualte dx/dy at the middle of the grid
 		dx=lo%lon(2,1)-lo%lon(1,1)
 		dy=lo%lat(1,2)-lo%lat(1,1)
 		
+		! Handle weird edge case for WRF ideal simulations
 		if (dx==0) then
 			if (.not.lo%dx_errors_printed) then
 				print*, "ERROR : geo_find_location : DX = 0 !  Check your inputfile Longitude data"
@@ -136,32 +151,32 @@ contains
 			find_location%y=-1
 			return
 		endif
-! 		current/starting position = the middle of the grid
+		! current/starting position = the middle of the grid
 ! 		xc=nx/2
 ! 		yc=ny/2
 		xc=lastpos%x
 		yc=lastpos%y
 		x=lo%lon(xc,yc)
 		y=lo%lat(xc,yc)
-! 		steps to take = the difference the between the current point and the input point / dx
+		! steps to take = the difference the between the current point and the input point / dx
 		xstep=(lon-x)/dx
 		ystep=(lat-y)/dy
 		
-!	CASE 1 assume a quasi regular dx/dy and caluate new location
-! 		while we need to step by more than one grid cell, iterate
-! 		if the grid is highly regular, we will only iterate 1-2x, highly irregular might require more iterations
-! 		in the diabolical case, this could fail? 
-! 		in most cases this succeeds with a few iterations. 
+		! CASE 1 assume a quasi regular dx/dy and caluate new location
+		!  while we need to step by more than one grid cell, iterate
+		!  if the grid is highly regular, we will only iterate 1-2x, highly irregular might require more iterations
+		!  in the diabolical case, this could fail? 
+		!  in most cases this succeeds with a few iterations. 
 		iterations=0
 		do while (((abs(xstep)>1).or.(abs(ystep)>1)).and.iterations<20)
 			iterations=iterations+1
-! 			update the current x/y locations
-! 			force it to be <nx-1 so we can calculate dx from (xc+1)-xc
+			! update the current x/y locations
+			! force it to be <nx-1 so we can calculate dx from (xc+1)-xc
 			xc=max(1,min(nx-1,xc+xstep))
 			yc=max(1,min(ny-1,yc+ystep))
 			x=lo%lon(xc,yc)
 			y=lo%lat(xc,yc)
-! 			calculate a new dx/dy and x/y step
+			! calculate a new dx/dy and x/y step
 			if (xc<nx) then
 				dx=lo%lon(xc+1,yc)-lo%lon(xc,yc)
 			else
@@ -175,14 +190,14 @@ contains
 			xstep=NINT((lon-x)/dx)
 			ystep=NINT((lat-y)/dy)
 		enddo
-! 		because one or both steps could actually be 1... 
-!       this is deliberate so we can find the edge of the array if necessary
+		! because one or both steps could actually be 1... 
+		! this is deliberate so we can find the edge of the array if necessary
 		xc=max(1,min(nx,xc+xstep))
 		yc=max(1,min(ny,yc+ystep))
 		
-!	CASE 2 use a log(n search)
-! 		in case we hit some pathologically varying dx case 
-! 		use a "straightforward" log(n) search
+		! CASE 2 use a log(n search)
+		! in case we hit some pathologically varying dx case 
+		! use a "straightforward" log(n) search
 		if (iterations>=20) then
 ! 			write(*,*) "   Using log(n) search for :",lat,lon
 			nx=size(lo%lat,1)
@@ -192,18 +207,18 @@ contains
 			yc=ny/2
 			xw=xc
 			yw=yc
-	!		use xsign and ysign in case lat/lon don't increase in a positive index direction
+			! use xsign and ysign in case lat/lon don't increase in a positive index direction
 			ysign=sign(1.0,lo%lat(1,2)-lo%lat(1,1))
 			xsign=sign(1.0,lo%lon(2,1)-lo%lon(1,1))
 		
-	! 		use a O(log(n)) search instead of O(nxm)
-	! 		start at the halfway point and find the best direction to take in both directions
+			! use a O(log(n)) search instead of O(nxm)
+			! start at the halfway point and find the best direction to take in both directions
 			iterations=0
 			do while (((xw>2).or.(yw>2)).and.iterations<20)
 				iterations=iterations+1
 				xc=min(max(xc,1),nx)
 				yc=min(max(yc,1),ny)
-! 				figure out which direction to step, then step half of the last step distance
+				! figure out which direction to step, then step half of the last step distance
 				if (lo%lat(xc,yc)>lat) then
 					if (yw==2) then
 						yw=1
@@ -222,7 +237,7 @@ contains
 					yc=yc+ysign*yw
 				endif
 				yc=min(max(yc,1),ny)
-! 				in case lat is exactly equal to lat(xc,yc)
+				! in case lat is exactly equal to lat(xc,yc)
 				if (lo%lat(xc,yc)==lat) then
 					yw=0
 				endif
@@ -244,7 +259,7 @@ contains
 					xc=xc+xsign*xw
 				endif
 				xc=min(max(xc,1),nx)
-! 				in case lon is exactly equal to lon(xc,yc)
+				! in case lon is exactly equal to lon(xc,yc)
 				if (lo%lon(xc,yc)==lon) then
 					xw=0
 				endif
@@ -253,7 +268,7 @@ contains
 			enddo
 		endif
 
-! 		once we have a "good" location we need to find the actual minimum (we could be above or below it by 1 or 2)
+		! once we have a "good" location we need to find the actual minimum (we could be above or below it by 1 or 2)
 		if (iterations<20) then
 			mindist=9999.9
 			do xw=max(1,xc-15),min(nx,xc+15)
@@ -267,12 +282,12 @@ contains
 				enddo
 			enddo
 		else
-!	CASE 3 search every possible grid cell!
+			! CASE 3 search every possible grid cell!
+			! naive search
 ! 			write(*,*) "using n^2 search..."
 ! 			note which point this is for debugging purposes, we really shouldn't get here (often)
 ! 			write(*,*) lat,lon,lo%lat(xc,yc),lo%lon(xc,yc)
 ! 			write(*,*) xc,yc,nx,ny
-! 			naive search
 			mindist=9999.9
 			do xw=1,nx
 				do yw=1,ny
@@ -292,9 +307,8 @@ contains
 	end function find_location
 		
 		
+	! given a closest position, return the 4 points surrounding the lat/lon position in lo%lat/lon
 	type(fourpos) function find_surrounding(lo,lat,lon,pos,nx,ny)
-! 		given a closest position, return the 4 points surrounding the lat/lon position in lo%lat/lon
-! 		assumes pos is not an edge point in the lat/lon grid...
 		implicit none
 		class(interpolable_type),intent(in)::lo
 		real,intent(in)::lat,lon
@@ -320,7 +334,7 @@ contains
 		
 	end function find_surrounding			
 	
-! 	compute the geographic look up table from LOw resolution grid to HIgh resolution grid
+	! compute the geographic look up table from LOw resolution grid to HIgh resolution grid
 	subroutine geo_LUT(hi, lo)
 		implicit none
 		class(interpolable_type),intent(in)::hi
@@ -376,8 +390,8 @@ contains
 		
 	end subroutine geo_LUT
 	
+	! interpolate boundaries of fieldout to fieldin using geolut
 	subroutine boundary_interpolate(fieldout, fieldin, geolut)
-! interpolate boundaries of fieldout to fieldin using geolut
 		implicit none
 		real,intent(inout)::fieldout(:,:,:)
 		real,intent(in)::fieldin(:,:,:)
@@ -389,9 +403,9 @@ contains
 		nx=size(fieldout,1)
 		nz=size(fieldout,2)
 		ny=size(fieldout,3)
-! 		use the geographic lookup table generated earlier to
-! 		compute a bilinear interpolation from lo to hi
-! 		first loop over all x elements on the y ends
+		! use the geographic lookup table generated earlier to
+		! compute a bilinear interpolation from lo to hi
+		! first loop over all x elements on the y ends
 		do k=1,ny,ny-1
 			do j=1,nz
 				do i=1,nx
@@ -405,7 +419,7 @@ contains
 				enddo
 			enddo
 		enddo
-! 		then loop over all y elements on the x ends
+		! then loop over all y elements on the x ends
 		do k=1,ny
 			do j=1,nz
 				do i=1,nx,nx-1
@@ -422,10 +436,10 @@ contains
 
 	end subroutine boundary_interpolate
 	
+	! interpolate fieldout to fieldin using geolut.  
+	! if boundary_only is true, call boundary_interpolate instead
+	! loops over y,z,x but geolut is only defined over x,y (for now)
 	subroutine geo_interp(fieldout,fieldin,geolut,boundary_only)
-! interpolate fieldout to fieldin using geolut.  
-! if boundary_only is true, call boundary_interpolate instead
-! loops over y,z,x but geolut is only defined over x,y (for now)
 		implicit none
 		real,intent(inout)::fieldout(:,:,:)
 		real,intent(in)::fieldin(:,:,:)
@@ -439,14 +453,14 @@ contains
 		nz=size(fieldout,2)
 		ny=size(fieldout,3)
 		
-! 		if we are only processing the boundary, then make x and y increments be the size of the array
-! 		so we only hit the edges of the array
+		! if we are only processing the boundary, then make x and y increments be the size of the array
+		! so we only hit the edges of the array
 		if (boundary_only) then
 			call boundary_interpolate(fieldout, fieldin, geolut)
 		else
-! 		use the geographic lookup table generated earlier to
-! 		compute a bilinear interpolation from lo to hi
-! 		if we are doing the interior too, just iterate over all x and y
+		! use the geographic lookup table generated earlier to
+		! compute a bilinear interpolation from lo to hi
+		! if we are doing the interior too, just iterate over all x and y
 			do k=1,ny
 				do j=1,nz
 					do i=1,nx
@@ -463,7 +477,7 @@ contains
 		endif
 	end subroutine geo_interp
 	
-	
+	! interpolate fieldout to fieldin using geolut.  
 	subroutine geo_interp2d(fieldout, fieldin, geolut)
 		implicit none
 		real, dimension(:,:),intent(inout) :: fieldout

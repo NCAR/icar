@@ -1,38 +1,39 @@
-!----------------------------------------------------------
-!
-! Very simple land surface model code
-! 
-! Rain is partitioned into infiltration and runoff
-! Snow is accumulated on the surface, then melts, runsoff, or sublimates
-! Soil moisture is permitted to be lost to ET or subsurface flow
-! 
-! ET, Sensible Heat Flux, and Longwave are partitioned using Penman Monteith.
-!
-! The entry point to the code is lsm_simple. 
-!
-! Call tree graph :
-! lsm_simple->
-! 	[->],
-! 	[->],
-! 	[->]
-! 
-! High level routine descriptions / purpose
-!   lsm_simple    		- loops over X,Y grid cells, calls a, b, c
-! 
-! Driver inputs: p,th,pii,rho,qv,rain,snow,dt,dz
-!   p   = pressure                      - 3D - input  - Pa		- (nx,nz,ny)
-!   th  = potential temperature         - 3D - in/out - K		- (nx,nz,ny)
-!   pii = inverse exner function        - 3D - input  - []		- (nx,nz,ny)
-!   rho = air density                   - 3D - input  - kg/m^3	- (nx,nz,ny)
-!   qv  = specific humidity             - 3D - in/out - kg/kg	- (nx,nz,ny)
-!   rain= rainfall                      - 2D - input  - mm  	- (nx,ny)
-!   snow= snowfall                      - 2D - input  - mm	    - (nx,ny)
-!   wind= wind speed                    - 2D - input  - m/s  	- (nx,ny)
-!   swdown = shortwave down at surface	- 2D - input  - W/m^2	- (nx,ny)
-!   lwdown = longwave down at surface	- 2D - input  - W/m^2	- (nx,ny)
-!   dt = time step                      - 0D - input  - seconds	- scalar
-!
-!----------------------------------------------------------
+!>----------------------------------------------------------
+!! NOTE: CODE IS INCOMPLETE AND WILL NOT WORK
+!!
+!! Very simple land surface model code
+!! 
+!! Rain is partitioned into infiltration and runoff
+!! Snow is accumulated on the surface, then melts, runsoff, or sublimates
+!! Soil moisture is permitted to be lost to ET or subsurface flow
+!! 
+!! ET, Sensible Heat Flux, and Longwave are partitioned using Penman Monteith.
+!!
+!! The entry point to the code is lsm_simple. 
+!!
+!! Call tree graph :
+!! lsm_simple->
+!! 	[->],
+!! 	[->],
+!! 	[->]
+!! 
+!! High level routine descriptions / purpose
+!!   lsm_simple    		- loops over X,Y grid cells, calls a, b, c
+!! 
+!! Driver inputs: p,th,pii,rho,qv,rain,snow,dt,dz
+!!   p   = pressure                      - 3D - input  - Pa		- (nx,nz,ny)
+!!   th  = potential temperature         - 3D - in/out - K		- (nx,nz,ny)
+!!   pii = inverse exner function        - 3D - input  - []		- (nx,nz,ny)
+!!   rho = air density                   - 3D - input  - kg/m^3	- (nx,nz,ny)
+!!   qv  = specific humidity             - 3D - in/out - kg/kg	- (nx,nz,ny)
+!!   rain= rainfall                      - 2D - input  - mm  	- (nx,ny)
+!!   snow= snowfall                      - 2D - input  - mm	    - (nx,ny)
+!!   wind= wind speed                    - 2D - input  - m/s  	- (nx,ny)
+!!   swdown = shortwave down at surface	- 2D - input  - W/m^2	- (nx,ny)
+!!   lwdown = longwave down at surface	- 2D - input  - W/m^2	- (nx,ny)
+!!   dt = time step                      - 0D - input  - seconds	- scalar
+!!
+!!----------------------------------------------------------
 module module_lsm_simple
 	use data_structures
 	implicit none
@@ -116,7 +117,7 @@ contains
 		implicit none
 		real, dimension(:,:),intent(in) :: wind,tskin,airt
 		
-		Ri = g/airt * (airt-tskin)*z_atm/wind**2
+		Ri = gravity/airt * (airt-tskin)*z_atm/wind**2
 		
 		where(Ri<0)  exchange_C=lnz_atm_term * (1.0-(15.0*Ri)/(1.0+(base_exchange_term * sqrt((-1.0)*Ri))))
 		where(Ri>=0) exchange_C=lnz_atm_term * 1.0/((1.0+15.0*Ri)*sqrt(1.0+5.0*Ri))

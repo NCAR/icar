@@ -1,3 +1,28 @@
+!>----------------------------------------------------------
+!!
+!! Not really a land surface model, this code was used in very early versions
+!! of ICAR and is maintained for now just in case it becomes of interest again. 
+!! Takes sensible and latent heat fluxes supplied by coarse model and adds them in
+!! this code is generally deprecated. 
+!!
+!! Also provides simple PBL mixing, and radiative cooling 
+!!  (which shouldn't be here.) 
+!! 
+!! The entry point to the code is lsm_basic(domain,options,dt)
+!!
+!! Call tree graph :
+!! lsm_basic->
+!! 	[->],
+!! 	[->],
+!! 	[->]
+!! 
+!! High level routine descriptions / purpose
+!! 
+!! Driver inputs: domain,options,dt
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!----------------------------------------------------------
 module module_lsm_basic
 	use data_structures
 

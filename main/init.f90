@@ -1,26 +1,29 @@
+!> ----------------------------------------------------------------------------
+!! 	Model Initialization includes allocating memory for boundary and domain 
+!! 		data structures.  It reads all of the options from the namelist
+!! 		file (or files).  It also reads in Lat/Lon and Terrain data.  This module
+!!		also sets up geographic (and vertical) look uptables for the forcing data
+!! 		Finally, there is a driver routine to initialize all model physics packages
+!! 
+!! 	This module was initially written to read WRF output files as input.
+!! 		This should serve as a basis for any additional file types, and can be 
+!! 		readily modified.  At some point this could be modified to check the 
+!! 		type if input file being specified, and call an appropriate routine. 
+!! 		e.g. if options%inputtype=="WRF" then call wrf_init/update()
+!! 
+!!   The module has been updated to allow arbitrary named variables
+!!       this allows the use of e.g. ERAi, but still is not as flexible as it could be
+!!       e.g. if a forcing doesn't contain one or more variable types it will not work. 
+!!       Need to let varname=""
+!!
+!!   The use of various python wrapper scripts in helpers/ makes it easy to add new
+!!       datasets, and make them conform to the expectations of the current system. 
+!!		For now there are no plans to near term plans to substantially modify this. 
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!! ----------------------------------------------------------------------------
 module init
-! ----------------------------------------------------------------------------
-! 	Model Initialization includes allocating memory for boundary and domain 
-! 		data structures.  It reads all of the options from the namelist
-! 		file (or files).  It also reads in Lat/Lon and Terrain data.  This module
-!		also sets up geographic (and vertical) look uptables for the forcing data
-! 		Finally, there is a driver routine to initialize all model physics packages
-! 
-! 	This module was initially written to read WRF output files as input.
-! 		This should serve as a basis for any additional file types, and can be 
-! 		readily modified.  At some point this could be modified to check the 
-! 		type if input file being specified, and call an appropriate routine. 
-! 		e.g. if options%inputtype=="WRF" then call wrf_init/update()
-! 
-!   The module has been updated to allow arbitrary named variables
-!       this allows the use of e.g. ERAi, but still is not as flexible as it could be
-!       e.g. if a forcing doesn't contain one or more variable types it will not work. 
-!       Need to let varname=""
-!
-!   The use of various python wrapper scripts in helpers/ makes it easy to add new
-!       datasets, and make them conform to the expectations of the current system. 
-!		For now there are no plans to near term plans to substantially modify this. 
-! ----------------------------------------------------------------------------
 	use data_structures
 	use io_routines,				only : io_read2d, io_read2di, io_read3d, io_newunit, io_write3d,io_write3di
 	use geo,						only : geo_LUT, geo_interp, geo_interp2d
@@ -940,7 +943,7 @@ contains
 		if (options%zvar=="PH") then
 			call io_read3d(options%boundary_files(1),"PHB",zbase)
 			
-			boundary%lowres_z=(boundary%lowres_z+reshape(zbase,[nx,nz,ny],order=[1,3,2])) / g
+			boundary%lowres_z=(boundary%lowres_z+reshape(zbase,[nx,nz,ny],order=[1,3,2])) / gravity
 			deallocate(zbase)
 		endif
 		

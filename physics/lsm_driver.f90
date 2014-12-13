@@ -1,3 +1,35 @@
+!>----------------------------------------------------------
+!!
+!! This module provides a wrapper to call various land surface models
+!! It sets up variables specific to the LSM to be used including both
+!! history variables not currently stored in the domain level data 
+!! structure, and runtime parameters
+!!
+!! The main entry point to the code is lsm(domain,options,dt,model_time)
+!!
+!! Call tree graph :
+!!	lsm_init->[ allocate_noah_data,
+!! 				external initialization routines]
+!!	lsm->[	sat_mr,
+!! 			calc_exchange_coefficient,
+!! 			external LSM routines]
+!! 
+!! High level routine descriptions / purpose
+!!   lsm_init    		- allocates module data and initializes physics package
+!!   lsm           		- sets up and calls main physics package
+!! 	calc_exchange_coefficient - calculates surface exchange coefficient (for Noah)
+!! 	allocate_noah_data  - allocate module level data for Noah LSM
+!! 	apply_fluxes		- apply LSM fluxes (e.g. sensible and latent heat fluxes) to atmosphere
+!! 	sat_mr				- calculate saturated mixing ratio (should be moved to )
+!! 
+!! Inputs: domain, options, dt, model_time
+!! 		domain,options	= as defined in data_structures
+!! 		dt 				= time step (seconds)
+!! 		model_time 		= time since beginning date (seconds)
+!!
+!! Author : Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!----------------------------------------------------------
 module land_surface
     use module_sf_noahdrv, only : lsm_noah, lsm_noah_init
     use module_lsm_basic,  only : lsm_basic
@@ -12,7 +44,9 @@ module land_surface
     integer :: ims,ime,jms,jme,kms,kme ! Local Memory dimensions
     integer :: its,ite,jts,jte,kts,kte ! Processing Tile dimensions
     
-    ! LOTS of variables required by Noah, placed here temporarily to get it to compile, this may be where some stay.
+    ! LOTS of variables required by Noah, placed here "temporarily", this may be where some stay.
+	! Keeping them at the module level prevents having to allocate/deallocate every call
+	! also avoids adding LOTS of LSM variables to the main domain datastrucurt
     real,allocatable, dimension(:,:)    :: SMSTAV,SFCRUNOFF,UDRUNOFF,   &
                                            SNOW,SNOWC,SNOWH, ACSNOW, ACSNOM, SNOALB, QFX,   &
                                            QGH, GSW, ALBEDO, ALBBCK, ZNT, Z0, XICE, EMISS, &
@@ -40,19 +74,20 @@ module land_surface
     real*8  :: last_model_time
     
 contains
+	
     real function sat_mr(t,p)
     ! Calculate the saturated mixing ratio at a temperature (K), pressure (Pa)
         implicit none
         real,intent(in) :: t,p
         real :: e_s,mr_s,a,b
 
-!       from http://www.dtic.mil/dtic/tr/fulltext/u2/778316.pdf
-!           Lowe, P.R. and J.M. Ficke., 1974: THE COMPUTATION OF SATURATION VAPOR PRESSURE 
-!               Environmental Prediction Research Facility, Technical Paper No. 4-74
-!       which references:
-!           Murray, F. W., 1967: On the computation of saturation vapor pressure. 
-!               Journal of Applied Meteorology, Vol. 6, pp. 203-204.
-!       Also notes a 6th order polynomial and look up table as viable options. 
+		! from http://www.dtic.mil/dtic/tr/fulltext/u2/778316.pdf
+		!     Lowe, P.R. and J.M. Ficke., 1974: THE COMPUTATION OF SATURATION VAPOR PRESSURE 
+		!         Environmental Prediction Research Facility, Technical Paper No. 4-74
+		! which references:
+		!     Murray, F. W., 1967: On the computation of saturation vapor pressure. 
+		!         Journal of Applied Meteorology, Vol. 6, pp. 203-204.
+		! Also notes a 6th order polynomial and look up table as viable options. 
         if (t<freezing_threshold) then
             a=21.8745584
             b=7.66
@@ -62,14 +97,14 @@ contains
         endif
         e_s = 610.78* exp(a*(t-273.16)/(t-b)) !(Pa)
 
-!       alternate formulations
-!       Polynomial:
-!       e_s = ao + t*(a1+t*(a2+t*(a3+t*(a4+t*(a5+a6*t))))) a0-6 defined separately for water and ice
-!       e_s = 611.2*exp(17.67*(t-273.15)/(t-29.65)) ! (Pa)
-        !from : http://www.srh.noaa.gov/images/epz/wxcalc/vaporPressure.pdf
-!       e_s = 611.0*10.0**(7.5*(t-273.15)/(t-35.45))
+		! alternate formulations
+		! Polynomial:
+		! e_s = ao + t*(a1+t*(a2+t*(a3+t*(a4+t*(a5+a6*t))))) a0-6 defined separately for water and ice
+		! e_s = 611.2*exp(17.67*(t-273.15)/(t-29.65)) ! (Pa)
+        ! from : http://www.srh.noaa.gov/images/epz/wxcalc/vaporPressure.pdf
+		! e_s = 611.0*10.0**(7.5*(t-273.15)/(t-35.45))
         
-        
+		! enforce e_s < air pressure incase we are out on one edge of a polynomial
         e_s=min(e_s,p-SMALL_PRESSURE)
         !from : http://www.srh.noaa.gov/images/epz/wxcalc/mixingRatio.pdf
         sat_mr=0.6219907*e_s/(p-e_s) !(kg/kg)
@@ -80,7 +115,8 @@ contains
         real, dimension(:,:),intent(in) :: wind,tskin,airt
         real,dimension(:,:),intent(inout) :: exchange_C
         
-        Ri = g/airt * (airt-tskin)*z_atm/wind**2
+		! Richardson number 
+        Ri = gravity/airt * (airt-tskin)*z_atm/wind**2
         
         where(Ri<0)  exchange_C=lnz_atm_term * (1.0-(15.0*Ri)/(1.0+(base_exchange_term * sqrt((-1.0)*Ri))))
         where(Ri>=0) exchange_C=lnz_atm_term * 1.0/((1.0+15.0*Ri)*sqrt(1.0+5.0*Ri))
@@ -89,6 +125,7 @@ contains
     
     
 	subroutine apply_fluxes(domain,dt)
+		! add sensible and latent heat fluxes to the first atm level
 		implicit none
 		type(domain_type), intent(inout) :: domain
 		real, intent(in) :: dt
@@ -98,14 +135,17 @@ contains
 		! convert sensible heat flux to a temperature delta term
         ! J/s/m^2 * s / J/(kg*K) => kg*K/m^2 ... /((kg/m^3) * m) => K
         dTemp=(domain%sensible_heat(2:nx-1,2:ny-1)*dt/cp)  &
-			 /(domain%rho(2:nx-1,1,2:ny-1)*domain%dz(2:nx-1,1,2:ny-1))
+			 / (domain%rho(2:nx-1,1,2:ny-1)*domain%dz(2:nx-1,1,2:ny-1))
 		! add temperature delta and convert back to potential temperature
         domain%th(2:nx-1,1,2:ny-1)=domain%th(2:nx-1,1,2:ny-1)+dTemp/domain%pii(2:nx-1,1,2:ny-1)
 		
 		! convert latent heat flux to a mixing ratio tendancy term
         ! J/s/m^2 * s / J/kg => kg/m^2 ... / (kg/m^3 * m) => kg/kg
-		lhdQV=(domain%latent_heat(2:nx-1,2:ny-1)/LH_vaporization*dt) / (domain%rho(2:nx-1,1,2:ny-1)*domain%dz(2:nx-1,1,2:ny-1))
+		lhdQV=(domain%latent_heat(2:nx-1,2:ny-1)/LH_vaporization*dt) &
+			 / (domain%rho(2:nx-1,1,2:ny-1)*domain%dz(2:nx-1,1,2:ny-1))
+		! add water vapor in kg/kg
 		domain%qv(2:nx-1,1,2:ny-1)=domain%qv(2:nx-1,1,2:ny-1)+lhdQV
+		! enforce some minimum water vapor content. 
 		where(domain%qv<SMALL_PRESSURE) domain%qv=SMALL_PRESSURE
 		
 	end subroutine apply_fluxes
@@ -282,7 +322,8 @@ contains
 	                            ids,ide, jds,jde, kds,kde,                   &
 	                            ims,ime, jms,jme, kms,kme,                   &
 	                            its,ite, jts,jte, kts,kte  )
-							
+			
+			! defines the height of the middle of the first model level
             z_atm=domain%z(:,1,:)
             lnz_atm_term = log((z_atm+Z0)/Z0)
             base_exchange_term=(75*kappa**2 * sqrt((z_atm+Z0)/Z0)) / (lnz_atm_term**2)

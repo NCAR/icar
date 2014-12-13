@@ -1,3 +1,13 @@
+!>------------------------------------------------------------
+!!
+!! Supplies 1D and 2D FFT shift procedures ala matlab fftshift
+!! uses a generic interfacse so that procedures can be called with
+!! any variation of complex, real, 1D or 2D arrays
+!! 2D can also be called with C_DOUBLE_COMPLEX variables
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!------------------------------------------------------------
 module fft
     use, intrinsic :: iso_c_binding
     include 'fftw3.f03'

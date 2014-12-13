@@ -1,3 +1,27 @@
+!>------------------------------------------------------------
+!!
+!!	Handles reading boundary conditions from the forcing file(s)
+!!  Provides necessary interpolation on to the grid. 
+!!
+!!	Primary entry points 
+!! 		bc_init      - first call only
+!! 		bc_update    - all successive calls
+!!
+!!  Contains options to use the 
+!!		mean wind field
+!!		mean boundary forcing
+!!		wind field smoothing
+!!		removal of low resolution model linear wind field
+!!
+!!  bc_init loads the restart file as necessary. 
+!!
+!!  Both init and update compute the exner function and density fields
+!!  for the forcing step and update the wind field with linear perturbations
+!!  as necessary
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!------------------------------------------------------------
 module boundary_conditions
 ! ----------------------------------------------------------------------------
 ! 	NOTE: This module was initially written to read WRF output files as input.

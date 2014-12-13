@@ -1,3 +1,17 @@
+!>------------------------------------------------------------
+!!
+!!	Basic file input/output routines
+!!  
+!!  Primary use is io_read2d/3d
+!!  io_write* routines are more used for debugging
+!!  model output is performed in the output module
+!!
+!!  Should probably add a generic io_read and io_write
+!!  but this keeps the code a little more obvious (at least 2D vs 3D)
+!!
+!!	Author: Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!------------------------------------------------------------
 module io_routines
 	use netcdf
 	implicit none
@@ -5,8 +19,8 @@ module io_routines
 ! 	All routines are public
 contains
 
-! read the dimensions of a variable in a given netcdf file
-! 	return a rank 1 array N=ndims+1, dims[1]=ndims, dims[i+1]=length of dimension i for a given variable
+	! Read the dimensions of a variable in a given netcdf file
+	! return a rank 1 array N=ndims+1, dims[1]=ndims, dims[i+1]=length of dimension i for a given variable
 	subroutine io_getdims(filename,varname,dims)
 		implicit none
 		character(len=*), intent(in) :: filename,varname
@@ -31,9 +45,9 @@ contains
 		
 	end subroutine io_getdims
 	
-!	Reads in a variable from a netcdf file, allocating memory in data_in for it.  
-!   if extradim is provided specifies this index for any extra dimensions (dims>3)
-!   	e.g. we may only want one time slice from a 3d variable
+	! Reads in a variable from a netcdf file, allocating memory in data_in for it.  
+	! if extradim is provided specifies this index for any extra dimensions (dims>3)
+	!  	e.g. we may only want one time slice from a 3d variable
 	subroutine io_read3d(filename,varname,data_in,extradim)
 		implicit none
 	    ! This is the name of the data_in file and variable we will read. 
@@ -52,7 +66,7 @@ contains
 			dimstart=1
 		endif
 		
-! 		Read the dimension lengths
+		! Read the dimension lengths
 		call io_getdims(filename,varname,diminfo)
 		allocate(data_in(diminfo(2),diminfo(3),diminfo(4)))
 		! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
@@ -77,8 +91,8 @@ contains
 		
 	end subroutine io_read3d
 
-! Same as io_read3d but assumes we only want a 2d output array
-! also allows selecting an index from any extra dimensions (i.e. a single time slice)
+	! Same as io_read3d but assumes we only want a 2d output array
+	! also allows selecting an index from any extra dimensions (i.e. a single time slice)
 	subroutine io_read2d(filename,varname,data_in,extradim)
 		implicit none
 	    ! This is the name of the data_in file and variable we will read. 
@@ -97,7 +111,7 @@ contains
 			dimstart=1
 		endif
 		
-! 		Read the dimension lengths
+		! Read the dimension lengths
 		call io_getdims(filename,varname,diminfo)
 		allocate(data_in(diminfo(2),diminfo(3)))
 		! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
@@ -123,8 +137,8 @@ contains
 		
 	end subroutine io_read2d
 
-! Same as io_read2d for integer data
-! also allows selecting an index from any extra dimensions (i.e. a single time slice)
+	! Same as io_read2d for integer data
+	! also allows selecting an index from any extra dimensions (i.e. a single time slice)
 	subroutine io_read2di(filename,varname,data_in,extradim)
 		implicit none
 	    ! This is the name of the data_in file and variable we will read.
@@ -143,7 +157,7 @@ contains
 			dimstart=1
 		endif
 
-! 		Read the dimension lengths
+		! Read the dimension lengths
 		call io_getdims(filename,varname,diminfo)
 		allocate(data_in(diminfo(2),diminfo(3)))
 		! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
@@ -170,7 +184,7 @@ contains
 	end subroutine io_read2di
 
 
-! 	write a data array to a file with a given variable name
+	! write a data array to a file with a given variable name
 	subroutine io_write3d(filename,varname,data_out)
 		implicit none
 	    ! This is the name of the file and variable we will write. 
@@ -190,7 +204,7 @@ contains
 		! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
 		! the file.
 		call check( nf90_create(filename, NF90_CLOBBER, ncid), filename)
-! 		define the dimensions
+		! define the dimensions
 		call check( nf90_def_dim(ncid, "x", nx, temp_dimid) )
 		dimids(1)=temp_dimid
 		call check( nf90_def_dim(ncid, "z", nz, temp_dimid) )
@@ -210,7 +224,7 @@ contains
 		call check( nf90_close(ncid), filename)
 	end subroutine io_write3d
 
-! 	same as for io_write3d but for integer arrays
+	! same as for io_write3d but for integer arrays
 	subroutine io_write3di(filename,varname,data_out)
 		implicit none
 	    ! This is the name of the data file and variable we will read. 
@@ -230,7 +244,7 @@ contains
 		! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
 		! the file.
 		call check( nf90_create(filename, NF90_CLOBBER, ncid) )
-! 		define the dimensions
+		! define the dimensions
 		call check( nf90_def_dim(ncid, "x", nx, temp_dimid) )
 		dimids(1)=temp_dimid
 		call check( nf90_def_dim(ncid, "z", nz, temp_dimid) )
@@ -249,7 +263,7 @@ contains
 		call check( nf90_close(ncid) )
 	end subroutine io_write3di
 
-! 	same as for io_write3d but for 2d arrays
+	! same as for io_write3d but for 2d arrays
 	subroutine io_write2d(filename,varname,data_out)
 		implicit none
 	    ! This is the name of the data file and variable we will read. 
@@ -268,7 +282,7 @@ contains
 		! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
 		! the file.
 		call check( nf90_create(filename, NF90_CLOBBER, ncid) )
-! 		define the dimensions
+		! define the dimensions
 		call check( nf90_def_dim(ncid, "x", nx, temp_dimid) )
 		dimids(1)=temp_dimid
 		call check( nf90_def_dim(ncid, "y", ny, temp_dimid) )
@@ -285,7 +299,7 @@ contains
 		call check( nf90_close(ncid) )
 	end subroutine io_write2d
 	
-! 	simple error handling for common netcdf file errors
+	! simple error handling for common netcdf file errors
 	subroutine check(status,extra)
 		implicit none
 		integer, intent ( in) :: status
