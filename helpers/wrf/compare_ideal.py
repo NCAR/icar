@@ -110,7 +110,7 @@ def main(wrffile,icarfiles):
     dt=11
     
     plt.figure(figsize=(16,13))
-    for d,w,i in zip(dates[:24:dt],wrf_data[:24:dt],icar_data[:24:dt]):
+    for d,w,i,j in zip(dates[:24:dt],wrf_data[:24:dt],icar_data[:24:dt],range(0,24,dt)):
         print("Ploting : "+d)
         make_plots(w,i,w0=wrf_data[0],i0=icar_data[0],title="")
         plt.savefig(icar_dir+title+d+".png")

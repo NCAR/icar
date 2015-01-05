@@ -3,96 +3,152 @@ version="0.8.1"
 /
 
 &var_list
-pvar="P",
-tvar="T",
-qvvar="QVAPOR",
-qcvar="QCLOUD",
-qivar="QICE",
-latvar="XLAT",
-lonvar="XLONG",
-uvar="U",
-ulat="XLAT_U",
-ulon="XLONG_U",
-vvar="V",
-vlat="XLAT_V",
-vlon="XLONG_V",
-hgtvar="HGT",
-zvar="Z",
+! These are the names of the variables in the forcing data files
+! variables on the mass / center grid
+pvar="P", 				! pressure [Pa]
+tvar="T", 				! temperature [K] (with optional offset)
+qvvar="QVAPOR",			! water vapor specific humidity (or mixing ratio)
+qcvar="QCLOUD",			! cloud water mixing ratio
+qivar="QICE",			! cloud ice mixing ratio
+hgtvar="HGT",			! surface elevation
+zvar="Z",				! model level elevations
+latvar="XLAT",			! latitude
+lonvar="XLONG",			! longitude
 
-shvar="HFX",
-lhvar="LH",
-pblhvar="PBLH",
-landvar="LANDMASK",
+! variables on the ew staggered (U) grid
+uvar="U",				! East-West wind speed
+ulat="XLAT_U",			! latitude
+ulon="XLONG_U",			! longitude
+! variables on the NS staggered (V) grid
+vvar="V",				! North-South wind speed
+vlat="XLAT_V",			! latitude
+vlon="XLONG_V",			! longitude
 
-lat_hi="XLAT_M",
-lon_hi="XLONG_M",
-ulat_hi="XLAT_U",
-ulon_hi="XLONG_U",
-vlat_hi="XLAT_V",
-vlon_hi="XLONG_V",
-hgt_hi="HGT_M"
+! these are only used with lsm=1 (pbl should also be 1)
+shvar="HFX",			! surface sensible heat flux
+lhvar="LH",				! surface latent heat flux
+pblhvar="PBLH",			! Planetary boundary layer height
+
+landvar="LANDMASK",		! land-sea mask (including lakes) as in WRF 1=land, 0 or 2=water
+
+! NOTE, these variables should be in the "high-resolution" netcdf file
+lat_hi="XLAT_M",		! latitude (mass grid)
+lon_hi="XLONG_M",		! longitude (mass grid)
+ulat_hi="XLAT_U",		! latitude (ew-staggered grid)
+ulon_hi="XLONG_U",		! longitude (ew-staggered grid)
+vlat_hi="XLAT_V",		! latitude (ns-staggered grid)
+vlon_hi="XLONG_V",		! longitude (ns-staggered grid)
+hgt_hi="HGT_M"			! surface elevation
+
+! to use the Noah LSM the following fields must also be specified on the high-res grid
+! vegtype_var="IVGTYP",		! vegetation type index
+! vegfrac_var="VEGFRA",		! vegetation cover fraction
+! soiltype_var="ISLTYP",	! soil type index
+! soil_t_var="TSLB",		! soil temperature (4 levels)
+! soil_vwc_var="SMOIS"		! soil water content (4 levels)
 /
 
 &parameters
+! set this to the starting date in the low-resolution forcing file
 date='2000/01/01 00:00:00'
+! the number of forcing files to read in
 nfiles=2,
-ntimesteps=2920,
-inputinterval=10800,
+! the number of (forcing) time steps to run for
+ntimesteps=8760,
+! the length of an input forcing time step [s]
+inputinterval=3600,
+! the output interval [s]
 outputinterval=3600,
+! the grid spacing of the high-resolution data
 dx=12000.0,
+! the approximate grid spacing of the forcing data
 dxlow=20000.0,
-readdz=false,
-nz=30,
 
+! read dz from the namelist file (below)
+readdz=True,
+! the number of vertical levels to run (suggest ~10-30 levels with a model top around 4-8km)
+! must match the number of values supplied in dz_levels below
+nz=20,
+
+! if the forcing data come from WRF, the temperature data probably have an offset applied
+! t_offset will be added to the forcing temperature data
 t_offset=300,
+
+! distance to smooth winds over [m] ~100000 is reasonable
+! larger values result in less large scale convergence/divergence in the flow field
+! smaller value result in more and can destroy orographic precip and result in odd spatial coherence
+! 	depending on the forcing data
+! at a minimum, this should be >= dxlow 
 smooth_wind_distance=72000,
 
+! to run an ideal simulation in which the boundary conditions are held constant
 ideal=false,
+! to use an externally supplied high-resolution wind field (ignore)
 external_winds=false,
+! number of external wind files (ignore)
 n_ext_winds=1,
+! attempt to remove the low resolution orographic effect from the model (ignore)
 remove_lowres_linear=false,
-add_low_topo=false,
+! run with a horizontally averaged wind field
 mean_winds=false,
+! run with a horizontally averaged boundary conditions
 mean_fields=false,
+
+! use this to restart the model restart_info must be supplied below
 restart=false,
+
+! use density in the advection step (true violates linear theory assumptions)
 advect_density=false,
 
-buffer=100,
+! number of grid cells to remove from all sides of the high-resolution grid 
+! used primarily for faster test runs over a smaller domain
+buffer=0,
 
-debug=.TRUE.
+! doesn't do much yet, increases output print at runtime
+debug=true
+warning_level=10 ! 0-10 increases the level of errors it warns about and quits over
+
+! set this to modify the scale height for which the terrain affects the wind field
+! rotation_scale_height=4000,
+
+! set this to use a fixed brunt-vaisalla frequency in linear wind calculations
+! N_squared=1.0e-5
 /
 
 &restart_info
-restart_step=0,
-restart_file="oldoutput/icar_out00001"
+! step in the forcing data to restart for (typically restart file number +1 if input and output intervals are the same)
+restart_step=2,
+restart_file="output/icar_out00001"
 /
 
 &z_info
-!ERAi levels
-dz_levels= 24.8,  36.5,  51.8,  70.1,  90.8, 113.5, 137.9, 163.7, 190.5, 218.1   !  1-10
-         , 246.4, 275.1, 304.3, 333.6, 363.0, 392.4, 421.7, 450.8, 479.6, 508.0    ! 10-20
-		 , 535.9, 563.2, 589.8, 615.7, 640.9, 665.5, 689.8, 714.1, 739.4, 767.2    ! 20-30
-!        , 796.8, 826.6, 856.2, 885.1, 912.5, 937.9, 961.4, 979.4, 990.1, 976.6    ! 30-40
-! other levels
-! dz_levels= 50.,   75.,  125.,  200.,  300.,  400.,  500.,  500.,  500.,  500.,    !  1-10
-! 		  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.     ! 10-20
+! model levels
+dz_levels= 50.,   75.,  125.,  200.,  300.,  400.,  500.,  500.,  500.,  500.,    !  1-10
+ 		  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.     ! 10-20
 !		  453.,  476.,  503.,  533.,  422.,  443.,  467.,  326.,  339.,  353.     ! 20-30
 !		  369.,  386.,  405.,  426.,  450.,  477., 455.,  429.,  396.,  357.,     ! 30-40
 /
 
 &physics
-pbl=2,
-lsm=1,
+! standard precipitation downscaling run use pbl=0 lsm=0 mp=1 rad=0 conv=0 adv=1 wind=0
+! for ideal hill cases set wind=1
+! if surface air temperature is important use pbl=2 lsm=2 rad=2 this requires Noah LSM data
+pbl=0,
+lsm=0,
 mp=1,
 rad=1,
-conv=1,
+conv=0,
 adv=1,
 wind=0
 /
 
 &files_list
+! this is the high resolution input filename
 init_conditions_file="baseline/geo_12km_conus.nc",
+
+! this is the prefix for all output files (any directories must be created prior to running)
 output_file="output/icar_out",
 
+! this is a list of the boundary conditions files number of files must match nfiles variable above
 boundary_files= "forcing/wrfout_d01_2001-04-01_03:00:00_nsn", "forcing/wrfout_d01_2001-06-30_03:00:00_nsn"
 /
