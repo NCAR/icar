@@ -17,60 +17,34 @@ module output
 	implicit none
 	private
 	public :: write_domain
+	
+	integer, parameter :: ndims = 3
+	integer, parameter :: nvars=50
+	! This will be the netCDF ID for the file and data variable.
+	integer :: ncid, varid(nvars),temp_id,x_id,y_id,xu_id,yv_id,lat_id,lon_id,soil_id
+	integer :: dimids(ndims)
+
+	! We are writing 3D data, a (ny x nz x nx) grid or (ny x nsoil x nx) grid
+	integer :: nx,ny,nz,i,nsoil
+	
 contains
-! 	simple routine to write all domain data from this current time step to the output file. 
-!   note these are instantaneous fields, precip etc are accumulated fluxes. 
-! 	u/v are destaggered first
-! 	We could accumulated multiple time periods per file at some point, but this routine would
-!   still serve as a good restart file
-	subroutine write_domain(domain,options,timestep,inputfilename)
-		implicit none
-	    ! This is the name of the data file and variable we will read. 
-		type(domain_type),intent(in)::domain
-		type(options_type),intent(in)::options
-		integer,intent(in)::timestep
-		character(len=*),intent(in),optional :: inputfilename
-		real,allocatable,dimension(:,:,:)::pii,rho
-		character(len=255) :: filename
+	subroutine create_file(filename,options)
+		character(len=255), intent(in) :: filename
+		type(options_type), intent(in) :: options
+		
 		character(len=19) :: todays_date_time
 		integer,dimension(8) :: date_time
 		character(len=49) :: date_format
 		character(len=5) :: UTCoffset
-		! We are writing 3D data, a ny x nz x nx grid. 
-		integer :: nx,ny,nz,i,nsoil
-		integer, parameter :: ndims = 3
-		integer, parameter :: nvars=50
-		! This will be the netCDF ID for the file and data variable.
-		integer :: ncid, varid(nvars),temp_id,x_id,y_id,xu_id,yv_id,lat_id,lon_id,soil_id
-		integer :: dimids(ndims)
-
-		nx=size(domain%qv,1)
-		nz=size(domain%qv,2)
-		ny=size(domain%qv,3)
-		nsoil=size(domain%soil_t,2)
 		
-		! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
-		! the file.
-		if (present(inputfilename)) then
-			filename=inputfilename
-		else
-			if (timestep.eq.(-1)) then
-				write(filename,"(A,A)") trim(options%output_file),".restart"
-			else
-				write(filename,"(A,I5.5)") trim(options%output_file),timestep
-			endif
-		endif
-		if (options%debug) then
-			write(*,*) trim(filename)
-		endif
 		
 		call date_and_time(values=date_time,zone=UTCoffset)
 		date_format='(I4,"/",I2.2,"/",I2.2," ",I2.2,":",I2.2,":",I2.2)'
 		write(todays_date_time,date_format),date_time(1:3),date_time(5:7)
-		
+	
 		! create the file (clobbering any existing files!)
 		call check( nf90_create(filename, NF90_CLOBBER, ncid) )
-		
+	
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"Conventions","CF-1.6"))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"title","Intermediate Complexity Atmospheric Research Model output"))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"institution","National Center for Atmospheric Research"))
@@ -81,7 +55,7 @@ contains
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"comment",trim(options%comment)))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"contact","Ethan Gutmann : gutmann@ucar.edu"))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"git",VERSION))
-		
+	
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"dx",options%dx))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"wind_smoothing",options%smooth_wind_distance))
 		if (options%physics%windtype>0) then
@@ -95,7 +69,7 @@ contains
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"radiation",options%physics%radiation))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"convection",options%physics%convection))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"windtype",options%physics%windtype))
-		
+	
 		if (options%ideal) then
 			call check( nf90_put_att(ncid,NF90_GLOBAL,"ideal","True"))
 		endif
@@ -132,9 +106,9 @@ contains
 		if (options%variable_N) then
 			call check( nf90_put_att(ncid,NF90_GLOBAL,"variable_N","True"))
 		endif
-		
-		
-		
+	
+	
+	
 		! define the dimensions
 		call check( nf90_def_dim(ncid, "lon", nx, x_id) )
 		dimids(1)=x_id
@@ -145,50 +119,50 @@ contains
 		call check( nf90_def_dim(ncid, "lon_u", nx+1, xu_id) )
 		call check( nf90_def_dim(ncid, "lat_v", ny+1, yv_id) )
 		call check( nf90_def_dim(ncid, "depth", nsoil, soil_id) )
-		
+	
 		! Create the variable returns varid of the data variable
 		call check( nf90_def_var(ncid, "lat", NF90_REAL, dimids(1:3:2), lat_id) )
 		call check( nf90_put_att(ncid,lat_id,"standard_name","latitude"))
 		call check( nf90_put_att(ncid,lat_id,"long_name","latitude"))
 		call check( nf90_put_att(ncid,lat_id,"units","degree_north"))
-		
+	
 		call check( nf90_def_var(ncid, "lon", NF90_REAL, dimids(1:3:2), lon_id) )
 		call check( nf90_put_att(ncid,lon_id,"standard_name","longitude"))
 		call check( nf90_put_att(ncid,lon_id,"long_name","longitude"))
 		call check( nf90_put_att(ncid,lon_id,"units","degree_east"))
-		
+	
 		call check( nf90_def_var(ncid, "qv", NF90_REAL, dimids, temp_id) )
 		call check( nf90_put_att(ncid,temp_id,"standard_name","water_vapor_mixing_ratio"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Water Wapor Mixing Ratio"))
 		call check( nf90_put_att(ncid,temp_id,"units","kg kg-1"))
 		varid(1)=temp_id
-		
+	
 		call check( nf90_def_var(ncid, "qc", NF90_REAL, dimids, temp_id) )
 		call check( nf90_put_att(ncid,temp_id,"standard_name","cloud_liquid_water_mixing_ratio"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Cloud liquid water content"))
 		call check( nf90_put_att(ncid,temp_id,"units","kg kg-1"))
 		varid(2)=temp_id
-		
+	
 		call check( nf90_def_var(ncid, "qi", NF90_REAL, dimids, temp_id) )
 		call check( nf90_put_att(ncid,temp_id,"standard_name","cloud_ice_mixing_ratio"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Cloud ice content"))
 		call check( nf90_put_att(ncid,temp_id,"units","kg kg-1"))
 		varid(3)=temp_id
-		
+	
 		call check( nf90_def_var(ncid, "qr", NF90_REAL, dimids, temp_id) )
 		call check( nf90_put_att(ncid,temp_id,"standard_name","mass_fraction_of_rain_with_air"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Rain water content"))
 		call check( nf90_put_att(ncid,temp_id,"WARNING","Could be mixing ratio, not mass fraction w/thompson scheme"))
 		call check( nf90_put_att(ncid,temp_id,"units","kg kg-1"))
 		varid(4)=temp_id
-		
+	
 		call check( nf90_def_var(ncid, "qs", NF90_REAL, dimids, temp_id) )
 		call check( nf90_put_att(ncid,temp_id,"standard_name","mass_fraction_of_snow_with_air"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Snow ice content"))
 		call check( nf90_put_att(ncid,temp_id,"WARNING","Could be mixing ratio, not mass fraction w/thompson scheme"))
 		call check( nf90_put_att(ncid,temp_id,"units","kg kg-1"))
 		varid(5)=temp_id
-		
+	
 		! these should only be output for thompson microphysics
 		if (options%physics%microphysics==1) then
 			call check( nf90_def_var(ncid, "qg", NF90_REAL, dimids, temp_id) )
@@ -197,27 +171,27 @@ contains
 			call check( nf90_put_att(ncid,temp_id,"WARNING","Could be mixing ratio, not mass fraction w/thompson scheme"))
 			call check( nf90_put_att(ncid,temp_id,"units","kg kg-1"))
 			varid(6)=temp_id
-		
+	
 			call check( nf90_def_var(ncid, "nr", NF90_REAL, dimids, temp_id) )
 			call check( nf90_put_att(ncid,temp_id,"standard_name","number_concentration_of_rain_particles_in_air"))
 			call check( nf90_put_att(ncid,temp_id,"long_name","Rain number concentration"))
 			call check( nf90_put_att(ncid,temp_id,"units","cm-3"))
 			varid(7)=temp_id
-		
+	
 			call check( nf90_def_var(ncid, "ni", NF90_REAL, dimids, temp_id) )
 			call check( nf90_put_att(ncid,temp_id,"standard_name","number_concentration_of_ice_crystals_in_air"))
 			call check( nf90_put_att(ncid,temp_id,"long_name","Cloud ice number concentration"))
 			call check( nf90_put_att(ncid,temp_id,"units","cm-3"))
 			varid(8)=temp_id
 		endif
-		
+	
 		dimids(1)=xu_id
 		call check( nf90_def_var(ncid, "u",  NF90_REAL, dimids, temp_id) )
 		call check( nf90_put_att(ncid,temp_id,"standard_name","grid_eastward_wind"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Grid relative eastward wind"))
 		call check( nf90_put_att(ncid,temp_id,"units","m s-1"))
 		varid(9)=temp_id
-		
+	
 		dimids(1)=x_id
 		dimids(3)=yv_id
 		call check( nf90_def_var(ncid, "v",  NF90_REAL, dimids, temp_id) )
@@ -225,7 +199,7 @@ contains
 		call check( nf90_put_att(ncid,temp_id,"long_name","Grid relative northward wind"))
 		call check( nf90_put_att(ncid,temp_id,"units","m s-1"))
 		varid(10)=temp_id
-		
+	
 		dimids(3)=y_id
 		call check( nf90_def_var(ncid, "w",  NF90_REAL, dimids, temp_id) )
 		call check( nf90_put_att(ncid,temp_id,"standard_name","upward_air_velocity"))
@@ -233,38 +207,38 @@ contains
 		call check( nf90_put_att(ncid,temp_id,"WARNING","Grid relative (i.e. add u*dz/dx) and scaled by dx/dz"))
 		call check( nf90_put_att(ncid,temp_id,"units","m s-1"))
 		varid(11)=temp_id
-		
+	
 		call check( nf90_def_var(ncid, "p",  NF90_REAL, dimids, temp_id) )
 		call check( nf90_put_att(ncid,temp_id,"standard_name","air_pressure"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Pressure"))
 		call check( nf90_put_att(ncid,temp_id,"units","Pa"))
 		varid(12)=temp_id
-		
+	
 		call check( nf90_def_var(ncid, "th", NF90_REAL, dimids, temp_id) )
 		call check( nf90_put_att(ncid,temp_id,"standard_name","air_potential_temperature"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Potential temperature"))
 		call check( nf90_put_att(ncid,temp_id,"units","K"))
 		varid(13)=temp_id
-		
+	
 		! surface precip fluxes
 		call check( nf90_def_var(ncid, "rain", NF90_REAL, dimids(1:3:2), temp_id) )
 		call check( nf90_put_att(ncid,temp_id,"standard_name","precipitation_amount"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Combined large scale and convective rain, snow and graupel (accumulated)"))
 		call check( nf90_put_att(ncid,temp_id,"units","kg m-2"))
 		varid(14)=temp_id
-		
+	
 		call check( nf90_def_var(ncid, "snow", NF90_REAL, dimids(1:3:2), temp_id) )
 		call check( nf90_put_att(ncid,temp_id,"standard_name","snowfall_amount"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Combined large scale and convective snow (accumulated)"))
 		call check( nf90_put_att(ncid,temp_id,"units","kg m-2"))
 		varid(15)=temp_id
-		
+	
 		call check( nf90_def_var(ncid, "graupel", NF90_REAL, dimids(1:3:2), temp_id) )
 		call check( nf90_put_att(ncid,temp_id,"standard_name","graupel_amount"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Combined large scale and convective graupel (accumulated)"))
 		call check( nf90_put_att(ncid,temp_id,"units","kg m-2"))
 		varid(16)=temp_id
-		
+	
 		if (options%physics%convection>0) then
 			call check( nf90_def_var(ncid, "crain", NF90_REAL, dimids(1:3:2), temp_id) )
 			call check( nf90_put_att(ncid,temp_id,"standard_name","convective_rainfall_amount"))
@@ -272,22 +246,28 @@ contains
 			call check( nf90_put_att(ncid,temp_id,"units","kg m-2"))
 			varid(17)=temp_id
 		endif
-		
+	
 		call check( nf90_def_var(ncid, "z",  NF90_REAL, dimids, temp_id) )
 		call check( nf90_put_att(ncid,temp_id,"standard_name","height"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Model level height (AGL)"))
 		call check( nf90_put_att(ncid,temp_id,"units","m"))
 		varid(20)=temp_id
-		
+	
 		call check( nf90_def_var(ncid, "rho", NF90_REAL, dimids, temp_id) )
 		call check( nf90_put_att(ncid,temp_id,"standard_name","air_density"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Density of dry air"))
 		call check( nf90_put_att(ncid,temp_id,"units","kg m-3"))
 		varid(21)=temp_id
-		
+	
 		! surface fluxes
 		! these should only be output for radiation packages that compute them
 		if (options%physics%radiation>=2) then
+			call check( nf90_def_var(ncid, "clt", NF90_REAL, dimids(1:3:2), temp_id) )
+			call check( nf90_put_att(ncid,temp_id,"standard_name","cloud_area_fraction"))
+			call check( nf90_put_att(ncid,temp_id,"long_name","Fractional cloud cover"))
+			call check( nf90_put_att(ncid,temp_id,"units","[0-1]"))
+			varid(22)=temp_id
+	
 			call check( nf90_def_var(ncid, "rsds", NF90_REAL, dimids(1:3:2), temp_id) )
 			call check( nf90_put_att(ncid,temp_id,"standard_name","surface_downwelling_shortwave_flux_in_air"))
 			call check( nf90_put_att(ncid,temp_id,"long_name","Shortwave downward radiation energy flux at the surface"))
@@ -301,62 +281,56 @@ contains
 			call check( nf90_put_att(ncid,temp_id,"positive","down"))
 			call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
 			varid(19)=temp_id
-		
-			call check( nf90_def_var(ncid, "clt", NF90_REAL, dimids(1:3:2), temp_id) )
-			call check( nf90_put_att(ncid,temp_id,"standard_name","cloud_area_fraction"))
-			call check( nf90_put_att(ncid,temp_id,"long_name","Fractional cloud cover"))
-			call check( nf90_put_att(ncid,temp_id,"units","[0-1]"))
-			varid(22)=temp_id
 		endif
 		! these should only be output for lsm packages that compute them
 		if (options%physics%landsurface>=2) then
-			call check( nf90_def_var(ncid, "shs", NF90_REAL, dimids(1:3:2), temp_id) )
-			call check( nf90_put_att(ncid,temp_id,"standard_name","sensible_heat_flux"))
-			call check( nf90_put_att(ncid,temp_id,"long_name","Sensible heat flux"))
-			call check( nf90_put_att(ncid,temp_id,"positive","up"))
-			call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
-			varid(23)=temp_id
-		
-			call check( nf90_def_var(ncid, "hfls", NF90_REAL, dimids(1:3:2), temp_id) )
-			call check( nf90_put_att(ncid,temp_id,"standard_name","surface_upward_latent_heat_flux"))
-			call check( nf90_put_att(ncid,temp_id,"long_name","Latent Heat Flux"))
-			call check( nf90_put_att(ncid,temp_id,"positive","up"))
-			call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
-			varid(24)=temp_id
-		
-			call check( nf90_def_var(ncid, "hfgs", NF90_REAL, dimids(1:3:2), temp_id) )
-			call check( nf90_put_att(ncid,temp_id,"standard_name","upward_heat_flux_at_ground_level_in_soil"))
-			call check( nf90_put_att(ncid,temp_id,"long_name","Ground Heat Flux"))
-			call check( nf90_put_att(ncid,temp_id,"positive","up"))
-			call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
-			varid(25)=temp_id
-		
-			dimids(2)=soil_id
-			call check( nf90_def_var(ncid, "soil_w", NF90_REAL, dimids, temp_id) )
-			call check( nf90_put_att(ncid,temp_id,"standard_name","soil_moisture_content"))
-			call check( nf90_put_att(ncid,temp_id,"long_name","Column Soil Moisture"))
-			call check( nf90_put_att(ncid,temp_id,"units","kg m-2"))
-			varid(26)=temp_id
-		
-			call check( nf90_def_var(ncid, "soil_t", NF90_REAL, dimids, temp_id) )
-			call check( nf90_put_att(ncid,temp_id,"standard_name","soil_temperature"))
-			call check( nf90_put_att(ncid,temp_id,"long_name","Column Soil Temperature"))
-			call check( nf90_put_att(ncid,temp_id,"units","K"))
-			varid(27)=temp_id
-		
-			call check( nf90_def_var(ncid, "ts", NF90_REAL, dimids(1:3:2), temp_id) )
-			call check( nf90_put_att(ncid,temp_id,"standard_name","surface_temperature"))
-			call check( nf90_put_att(ncid,temp_id,"long_name","Land surface skin temperature"))
-			call check( nf90_put_att(ncid,temp_id,"units","K"))
-			varid(28)=temp_id
-		
 			call check( nf90_def_var(ncid, "rlus", NF90_REAL, dimids(1:3:2), temp_id) )
 			call check( nf90_put_att(ncid,temp_id,"standard_name","surface_upwelling_longwave_flux_in_air"))
 			call check( nf90_put_att(ncid,temp_id,"long_name","Longwave upward radiative energy flux from the surface"))
 			call check( nf90_put_att(ncid,temp_id,"positive","up"))
 			call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
 			varid(29)=temp_id
-		
+	
+			call check( nf90_def_var(ncid, "shs", NF90_REAL, dimids(1:3:2), temp_id) )
+			call check( nf90_put_att(ncid,temp_id,"standard_name","sensible_heat_flux"))
+			call check( nf90_put_att(ncid,temp_id,"long_name","Sensible heat flux"))
+			call check( nf90_put_att(ncid,temp_id,"positive","up"))
+			call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
+			varid(23)=temp_id
+	
+			call check( nf90_def_var(ncid, "hfls", NF90_REAL, dimids(1:3:2), temp_id) )
+			call check( nf90_put_att(ncid,temp_id,"standard_name","surface_upward_latent_heat_flux"))
+			call check( nf90_put_att(ncid,temp_id,"long_name","Latent Heat Flux"))
+			call check( nf90_put_att(ncid,temp_id,"positive","up"))
+			call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
+			varid(24)=temp_id
+	
+			call check( nf90_def_var(ncid, "hfgs", NF90_REAL, dimids(1:3:2), temp_id) )
+			call check( nf90_put_att(ncid,temp_id,"standard_name","upward_heat_flux_at_ground_level_in_soil"))
+			call check( nf90_put_att(ncid,temp_id,"long_name","Ground Heat Flux"))
+			call check( nf90_put_att(ncid,temp_id,"positive","up"))
+			call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
+			varid(25)=temp_id
+	
+			dimids(2)=soil_id
+			call check( nf90_def_var(ncid, "soil_w", NF90_REAL, dimids, temp_id) )
+			call check( nf90_put_att(ncid,temp_id,"standard_name","soil_moisture_content"))
+			call check( nf90_put_att(ncid,temp_id,"long_name","Column Soil Moisture"))
+			call check( nf90_put_att(ncid,temp_id,"units","kg m-2"))
+			varid(26)=temp_id
+	
+			call check( nf90_def_var(ncid, "soil_t", NF90_REAL, dimids, temp_id) )
+			call check( nf90_put_att(ncid,temp_id,"standard_name","soil_temperature"))
+			call check( nf90_put_att(ncid,temp_id,"long_name","Column Soil Temperature"))
+			call check( nf90_put_att(ncid,temp_id,"units","K"))
+			varid(27)=temp_id
+	
+			call check( nf90_def_var(ncid, "ts", NF90_REAL, dimids(1:3:2), temp_id) )
+			call check( nf90_put_att(ncid,temp_id,"standard_name","surface_temperature"))
+			call check( nf90_put_att(ncid,temp_id,"long_name","Land surface skin temperature"))
+			call check( nf90_put_att(ncid,temp_id,"units","K"))
+			varid(28)=temp_id
+	
 			call check( nf90_def_var(ncid, "snw", NF90_REAL, dimids(1:3:2), temp_id) )
 			call check( nf90_put_att(ncid,temp_id,"standard_name","surface_snow_amount"))
 			call check( nf90_put_att(ncid,temp_id,"long_name","Snow water equivalent"))
@@ -370,9 +344,53 @@ contains
 			varid(31)=temp_id
 		endif
 
-		
+	
 		! End define mode. This tells netCDF we are done defining metadata.
 		call check( nf90_enddef(ncid) )
+
+		
+	end subroutine create_file
+	
+! 	simple routine to write all domain data from this current time step to the output file. 
+!   note these are instantaneous fields, precip etc are accumulated fluxes. 
+! 	u/v are destaggered first
+! 	We could accumulated multiple time periods per file at some point, but this routine would
+!   still serve as a good restart file
+	subroutine write_domain(domain,options,timestep,inputfilename)
+		implicit none
+	    ! This is the name of the data file and variable we will read. 
+		type(domain_type),intent(in)::domain
+		type(options_type),intent(in)::options
+		integer,intent(in)::timestep
+		character(len=*),intent(in),optional :: inputfilename
+		character(len=255) :: filename
+
+		! these are module level variables
+		nx=size(domain%qv,1)
+		nz=size(domain%qv,2)
+		ny=size(domain%qv,3)
+		nsoil=size(domain%soil_t,2)
+		
+		! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
+		! the file.
+		if (present(inputfilename)) then
+			filename=inputfilename
+		else
+			if (timestep.eq.(-1)) then
+				write(filename,"(A,A)") trim(options%output_file),".restart"
+			else
+				write(filename,"(A,I5.5)") trim(options%output_file),timestep
+			endif
+		endif
+		if (options%debug) then
+			write(*,*) trim(filename)
+		endif
+		
+		if (file_exists(filename)) then
+			call check( nf90_open(filename,NF90_WRITE,ncid))
+		else
+			call create_file(filename,options)
+		endif
 		
 		! write the actual data
 		call check( nf90_put_var(ncid, lat_id,    domain%lat) )
