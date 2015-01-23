@@ -113,6 +113,11 @@ warning_level=10 ! 0-10 increases the level of errors it warns about and quits o
 
 ! set this to use a fixed brunt-vaisalla frequency in linear wind calculations
 ! N_squared=1.0e-5
+! set this to true to calculate a time-varying brunt-vaisalla frequency
+! variable_N = False
+
+! set this to the fraction of the linear perturbation you wish to use (1.0 = full/standard linear field)
+! linear_contribution=1.0
 /
 
 &restart_info
@@ -130,7 +135,7 @@ dz_levels= 50.,   75.,  125.,  200.,  300.,  400.,  500.,  500.,  500.,  500.,  
 /
 
 &physics
-! standard precipitation downscaling run use pbl=0 lsm=0 mp=1 rad=0 conv=0 adv=1 wind=0
+! common precipitation downscaling run use pbl=0 lsm=0 mp=1 rad=0 conv=0 adv=1 wind=0
 ! for ideal hill cases set wind=1
 ! if surface air temperature is important use pbl=2 lsm=2 rad=2 this requires Noah LSM data
 pbl=0,

@@ -49,6 +49,7 @@ module linear_theory_winds
 	
 	real, parameter :: max_stability= 5e-4 ! limits on the calculated Brunt Vaisala Frequency
 	real, parameter :: min_stability= 5e-7 ! these may need to be a little narrower. 
+	real :: linear_contribution = 1.0 ! multiplier on uhat,vhat before adding to u,v
 	
 contains
 	
@@ -241,7 +242,7 @@ contains
 				! m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
 
 				msq = Ndsq/denom * kl
-				mimag=0 ! be sure to reset real and imaginary components
+				mimag=0+0*j ! be sure to reset real and imaginary components
 			    mimag=mimag+(real(sqrt(-msq))*j)
 				! m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
 	            m = sqrt(msq)         ! # % vertical wave number, hydrostatic
@@ -297,14 +298,14 @@ contains
 				! real(real()) extracts real component of complex, then converts to a real data type (may not be necessary except for IO?)
 				if (reverse) then
 		            domain%u(1:realnx-1,z,:)=domain%u(1:realnx-1,z,:) - &
-						real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer  ) ))
+						real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer  ) ))*linear_contribution
 		            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) - &
-						real(real(v_hat(1+buffer:nx-buffer,  1+buffer:realny+buffer-1) ))
+						real(real(v_hat(1+buffer:nx-buffer,  1+buffer:realny+buffer-1) ))*linear_contribution
 				else
 		            domain%u(1:realnx-1,z,:)=domain%u(1:realnx-1,z,:) + &
-						real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer  ) ))
+						real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer  ) ))*linear_contribution
 		            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) + &
-						real(real(v_hat(1+buffer:nx-buffer,  1+buffer:realny+buffer-1) ))
+						real(real(v_hat(1+buffer:nx-buffer,  1+buffer:realny+buffer-1) ))*linear_contribution
 				endif
 			
 				if (present(debug).and.(z==1))then
@@ -393,6 +394,11 @@ contains
 		
 		! cleanup temporary array
 		deallocate(complex_terrain)
+		
+		linear_contribution=options%linear_contribution
+		if (options%linear_contribution/=1) then
+			write(*,*) "Using a fraction of the linear perturbation:",options%linear_contribution
+		endif
         
     end subroutine
 	

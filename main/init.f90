@@ -250,7 +250,8 @@ contains
 		type(options_type), intent(inout) :: options
 		integer :: name_unit
 		
-		real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance, rotation_scale_height, N_squared
+		real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance
+		real    :: rotation_scale_height, N_squared,linear_contribution
 		integer :: ntimesteps, nfiles, xmin, xmax, ymin, ymax, vert_smooth
 		integer :: nz, n_ext_winds,buffer, warning_level
 		logical :: ideal, readz, readdz, debug, external_winds, remove_lowres_linear, variable_N, &
@@ -262,7 +263,7 @@ contains
 		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,smooth_wind_distance, &
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
-							  date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, N_squared
+							  date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, N_squared,linear_contribution
 		
 ! 		default parameters
 		mean_fields=.False.
@@ -291,6 +292,7 @@ contains
 		rotation_scale_height=2000.0
 		N_squared=6.37e-5
 		variable_N=.False.
+		linear_contribution=1.0
 		
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=parameters)
@@ -372,6 +374,7 @@ contains
 		
 		options%N_squared=N_squared
 		options%variable_N=variable_N
+		options%linear_contribution=linear_contribution
 
 		options%high_res_soil_state=high_res_soil_state
 		
