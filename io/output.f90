@@ -84,7 +84,10 @@ contains
 		
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"dx",options%dx))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"wind_smoothing",options%smooth_wind_distance))
-		call check( nf90_put_att(ncid,NF90_GLOBAL,"vert_smooth",options%vert_smooth))
+		if (options%physics%windtype>0) then
+			call check( nf90_put_att(ncid,NF90_GLOBAL,"vert_smooth",options%vert_smooth))
+			call check( nf90_put_att(ncid,NF90_GLOBAL,"linear_contribution",options%linear_contribution))
+		endif
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"microphysics",options%physics%microphysics))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"advection",options%physics%advection))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"boundarylayer",options%physics%boundarylayer))
@@ -125,6 +128,9 @@ contains
 		endif
 		if (options%advect_density) then
 			call check( nf90_put_att(ncid,NF90_GLOBAL,"advect_density","True"))
+		endif
+		if (options%variable_N) then
+			call check( nf90_put_att(ncid,NF90_GLOBAL,"variable_N","True"))
 		endif
 		
 		
