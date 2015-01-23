@@ -7,7 +7,7 @@ version="0.8.1"
 ! variables on the mass / center grid
 pvar="P", 				! pressure [Pa]
 tvar="T", 				! temperature [K] (with optional offset)
-qvvar="QVAPOR",			! water vapor specific humidity (or mixing ratio)
+qvvar="QVAPOR",			! water vapor mixing ratio
 qcvar="QCLOUD",			! cloud water mixing ratio
 qivar="QICE",			! cloud ice mixing ratio
 hgtvar="HGT",			! surface elevation
