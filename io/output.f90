@@ -152,8 +152,8 @@ contains
 		call check( nf90_put_att(ncid,lon_id,"units","degree_east"))
 		
 		call check( nf90_def_var(ncid, "qv", NF90_REAL, dimids, temp_id) )
-		call check( nf90_put_att(ncid,temp_id,"standard_name","specific_humidity"))
-		call check( nf90_put_att(ncid,temp_id,"long_name","Specific humidity"))
+		call check( nf90_put_att(ncid,temp_id,"standard_name","water_vapor_mixing_ratio"))
+		call check( nf90_put_att(ncid,temp_id,"long_name","Water Wapor Mixing Ratio"))
 		call check( nf90_put_att(ncid,temp_id,"units","kg kg-1"))
 		varid(1)=temp_id
 		
