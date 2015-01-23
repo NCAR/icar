@@ -69,14 +69,17 @@ module module_mp_simple
 ! arbitrary calibratable timescales default values as used in the linear model
 ! these should be pulled out to a parameter file for calibration purposes 
 ! but this is approximately how they are implemented in SB04
-    real,parameter :: snow_const=1/2000.0 ! [1/s]
-    real,parameter :: rain_const=1/500.0  ! [1/s]
-    real,parameter :: freezing_threshold=273.15 ! [K]
-	real,parameter :: snow_fall_rate=1.5  ! [m/s]
-	real,parameter :: rain_fall_rate=10.0 ! [m/s]
+    real,parameter :: snow_formation_time_const=1/2000.0 ! [1/s]
+    real,parameter :: rain_formation_time_const=1/500.0  ! [1/s]
+    real,parameter :: freezing_threshold=273.15          ! [K]
+	real,parameter :: snow_fall_rate=1.5                 ! [m/s]   for a water vapor scale height of 3750m corresponds to tau_f = 2500
+	real,parameter :: rain_fall_rate=10.0                ! [m/s]   for a water vapor scale height of 3750m corresponds to tau_f = 375
+    real,parameter :: snow_cloud_init=0.00001            ! [kg/kg] cloud ice content before snow will start to form
+    real,parameter :: rain_cloud_init=0.00001            ! [kg/kg] cloud water content before rain will start to form
+	
     
 !   these are recalculated every call because they are a function of dt
-!   conversion "time" = exp(-const * dt)
+!   conversion "time" = exp( -1 * time_constant * dt)
     real :: rain_evap=0.999
     real :: snow_evap=0.999
     real :: snow_melt=0.999
@@ -201,14 +204,18 @@ module module_mp_simple
     end subroutine
 
 
-
-    subroutine cloud2hydrometeor(qc,q,conversion)
+    subroutine cloud2hydrometeor(qc,q,conversion,qcmin)
         implicit none
         real,intent(inout) :: qc,q
-        real,intent(in) :: conversion
+        real,intent(in) :: conversion, qcmin
         real::delta
         
-        delta=qc-(qc*conversion)
+		if (qc > qcmin) then
+	        delta=qc-(qc*conversion)
+		else
+			delta=0
+		endif
+		
         if (delta<qc) then
             qc=qc-delta
             q=q+delta
@@ -260,7 +267,7 @@ module module_mp_simple
             if (qc>SMALL_VALUE) then
                 if (t>freezing_threshold) then
                     ! convert cloud water to rain drops
-                    call cloud2hydrometeor(qc,qr,cloud2rain)
+                    call cloud2hydrometeor(qc,qr,cloud2rain,rain_cloud_init)
 !                   if (qs>SMALL_VALUE) then
 !                       ! it is above freezing, so start melting any snow if present
 !                       call phase_change(p,t,qs,100.,qr,L_melt,dt/snow_melt_time)
@@ -268,7 +275,7 @@ module module_mp_simple
 !                   endif
                 else
                     ! convert cloud water to snow flakes
-                    call cloud2hydrometeor(qc,qs,cloud2snow)
+                    call cloud2hydrometeor(qc,qs,cloud2snow,snow_cloud_init)
                     
                 endif
             endif
@@ -324,7 +331,7 @@ module module_mp_simple
         if ((debug).and.(dt<1)) print*, "internal dt=",dt
         do i=1,nz
 			! convert specific humidity to mixing ratio
-			qv(i)=qv(i)/(1-qv(i))
+! 			qv(i)=qv(i)/(1-qv(i))
             call mp_conversions(p(i),t(i),qv(i),qc(i),qr(i),qs(i),dt)
         enddo
 
@@ -351,10 +358,10 @@ module module_mp_simple
                 rain=rain+snowfall
             enddo
         endif
-        do i=1,nz
-			! convert mixing ratio back to specific humidity
-			qv(i)=qv(i)/(qv(i)+1)
-		enddo
+!         do i=1,nz
+! 			! convert mixing ratio back to specific humidity
+! 			qv(i)=qv(i)/(qv(i)+1)
+! 		enddo
     end subroutine mp_simple
 
 
@@ -368,9 +375,10 @@ module module_mp_simple
         integer::i,j
         
 !       calculate these once for every call because they are only a function of dt
-        cloud2snow=exp(-1.0*snow_const*dt)
-        cloud2rain=exp(-1.0*rain_const*dt)
-        !$omp parallel private(i,j,t),copyin(cloud2rain,cloud2snow,snow_melt,snow_evap,rain_evap),&
+        cloud2snow=exp(-1.0*snow_formation_time_const*dt)
+        cloud2rain=exp(-1.0*rain_formation_time_const*dt)
+        !$omp parallel private(i,j,t), &
+		!$omp copyin(cloud2rain,cloud2snow,snow_melt,snow_evap,rain_evap),&
         !$omp shared(p,th,pii,qv,qc,qs,qr,rain,snow,dz),&
         !$omp firstprivate(dt,nx,ny,nz)
         allocate(t(nz))
@@ -397,7 +405,7 @@ module module_mp_simple
     end subroutine mp_simple_driver
 end module
 
-!!!! OLD Test Code
+!!!! Old Test Code
 ! program main
 !   use module_mp_simple
 !   real,dimension(5) ::p,t,qv,qc,qr,qs,dz
@@ -415,8 +423,8 @@ end module
 !   dt=20.0
 !   rain=0
 !   snow=0
-!	cloud2snow=exp(-1.0*snow_const*dt)
-!	cloud2rain=exp(-1.0*rain_const*dt)
+!	cloud2snow=exp(-1.0*snow_formation_time_const*dt)
+!	cloud2rain=exp(-1.0*rain_formation_time_const*dt)
 !   
 !   do i=1,10
 !       call mp_simple(p,t,qv,qc,qr,qs,rain,snow,dt,dx2,dz,nz,.True.)
