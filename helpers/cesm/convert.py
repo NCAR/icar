@@ -10,7 +10,7 @@ def convert_atm(data):
     output_data.u=data.u[:,::-1,:,:]                        # m/s
     output_data.v=data.v[:,::-1,:,:]                        # m/s
     output_data.p=data.p[:,::-1,:,:]                        # Pa
-    output_data.z=data.z[:,::-1,:,:]/g                      # m converted from geopotential height (m^2/s^2)
+    output_data.z=data.z[:,::-1,:,:]                        # m
 
     output_data.dz=np.zeros(output_data.z.shape[1])
     

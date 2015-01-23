@@ -56,7 +56,7 @@ def find_atm_file(time,varname,info):
     return glob.glob(atm_file)[0]
 
 
-def load_atm(time,info):
+def load_atm(time,info,starttime,endtime):
     """Load atmospheric variable from a netcdf file"""
     
     outputdata=Bunch()
@@ -65,14 +65,14 @@ def load_atm(time,info):
         atmfile=find_atm_file(time,v,info)
         print(atmfile)
         sys.stdout.flush()
-        nc_data=read_nc(atmfile,v)#,returnNCvar=True)
-        outputdata[s]=nc_data.data[:,:,info.ymin:info.ymax,info.xmin:info.xmax]
-        # nc_data.ncfile.close()
+        nc_data=read_nc(atmfile,v,returnNCvar=True)
+        outputdata[s]=nc_data.data[starttime:endtime,:,info.ymin:info.ymax,info.xmin:info.xmax]
+        nc_data.ncfile.close()
 
     atmfile=find_atm_file(time,"PS",info)
-    nc_data=read_nc(atmfile,"PS")#,returnNCvar=True)
-    outputdata.ps=nc_data.data[:,info.ymin:info.ymax,info.xmin:info.xmax]
-    # nc_data.ncfile.close()
+    nc_data=read_nc(atmfile,"PS",returnNCvar=True)
+    outputdata.ps=nc_data.data[starttime:endtime,info.ymin:info.ymax,info.xmin:info.xmax]
+    nc_data.ncfile.close()
     del nc_data
     print(gc.collect())
     sys.stdout.flush()
@@ -98,10 +98,10 @@ def load_sfc(info):
     outputdata.land[landfrac>=0.5]=1
     return outputdata
 
-def load_data(time,info):
+def load_data(time,info,starttime,endtime):
     """docstring for load_data"""
-    print(time)
-    atm=load_atm(time,info)
+    print(time,starttime,endtime)
+    atm=load_atm(time,info,starttime,endtime)
     sfc=load_sfc(info)
     return Bunch(sfc=sfc,atm=atm)
 

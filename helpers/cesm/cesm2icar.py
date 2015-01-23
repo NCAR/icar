@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import os,traceback,sys
+import datetime
+
 import config
 import io_routines
 import output
@@ -14,12 +16,20 @@ def main(info):
     print(info.times[0],info.times[-1])
 
     curtime=info.times[0]
-    curpos=0
-    # while curtime<=info.end_date:
+    firsttime=curtime
     
-    raw_data=io_routines.load_data(curtime,info)
-    processed_data=convert.cesm2icar(raw_data)
-    output.write_file(curtime,info,processed_data)
+    timesteps_per_year=365*4 # no leap calendar, 4 steps per day
+    starttime=0
+    endtime=timesteps_per_year
+    for i in range(info.nyears):
+        print(curtime)
+        raw_data=io_routines.load_data(firsttime,info,starttime,endtime)
+        processed_data=convert.cesm2icar(raw_data)
+        output.write_file(curtime,info,processed_data)
+        
+        curtime=datetime.datetime(curtime.year+1,curtime.month,curtime.day)
+        starttime=endtime
+        endtime=endtime+timesteps_per_year
         
         # curpos+=raw_data.atm.ntimes
         # curtime=info.times[curpos]

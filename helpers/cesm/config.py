@@ -50,6 +50,7 @@ def parse():
     parser.add_argument('output',    nargs="?",action='store',help="output file prefix",                 default="cesm_")
     parser.add_argument('dir',       nargs="?",action='store',help="cesm file location",                 default="3D_6hrly_raw/")
     parser.add_argument('atmfile',   nargs="?",action='store',help="cesm atmospheric files",             default="b.e11.B_EXP_C5CNBDRD.f09_g16._ENS_.cam.h2._VAR_._Y_*.nc")
+    parser.add_argument('nyears',    nargs="?",action='store',help="number of years to process",         default="10")
 
     parser.add_argument('-v', '--version',action='version',
             version='cesm2icar v'+version)
@@ -57,14 +58,16 @@ def parse():
             default=False, help='verbose output', dest='verbose')
     args = parser.parse_args()
     
+    nyears=int(args.nyears)
     start_year=int(args.start_year)
     start_date=datetime.datetime(start_year,1,1,0,0,0)
-    end_date=datetime.datetime(start_year+10,1,1,0,0,0)
+    end_date=datetime.datetime(start_year+nyears,1,1,0,0,0)
     
     info=Bunch(lat=[float(args.lat_s),float(args.lat_n)],
                lon=[float(args.lon_w),float(args.lon_e)],
                start_date=start_date,  end_date=end_date,
-               start_year=int(args.start_year),experiment=args.experiment,
+               start_year=int(args.start_year), nyears=nyears,
+               experiment=args.experiment,
                ensemble=args.ensemble,
                atmdir=args.dir,
                atmfile=args.atmfile,
