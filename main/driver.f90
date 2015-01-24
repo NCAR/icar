@@ -52,6 +52,7 @@ program real
 	endif
 	!note, startpoint at the beginning is 1, but we want model time at this point to be 0, thus start_point-1
 	model_time=(start_point-1)*options%in_dt + options%time_zero
+	domain%model_time=model_time
 	next_output=model_time+options%out_dt
 	call bc_update(domain,boundary,options)
 	

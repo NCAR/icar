@@ -19,6 +19,11 @@ module io_routines
 ! 	All routines are public
 contains
 
+	logical function file_exists(filename)
+		character(len=*), intent(in) :: filename
+		inquire(file=filename,exist=file_exists)
+	end function file_exists
+
 	! Read the dimensions of a variable in a given netcdf file
 	! return a rank 1 array N=ndims+1, dims[1]=ndims, dims[i+1]=length of dimension i for a given variable
 	subroutine io_getdims(filename,varname,dims)

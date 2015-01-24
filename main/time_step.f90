@@ -161,6 +161,7 @@ contains
 			
 	! 			step model time forward
 				model_time=model_time+dt
+				domain%model_time=model_time
 				if ((abs(model_time-next_output)<1e-1).or.(model_time>next_output)) then
 					call write_domain(domain,options,nint((model_time-options%time_zero)/options%out_dt))
 					next_output=next_output+options%out_dt

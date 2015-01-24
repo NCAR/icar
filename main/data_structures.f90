@@ -187,6 +187,8 @@ module data_structures
 		integer, allocatable, dimension(:,:):: soil_type,veg_type
 		! current model time step length (should this be somewhere else?)
 		real::dt
+		! current model time (seconds from options%time_zero)
+		real*8 :: model_time
 	end type domain_type
 
 	!------------------------------------------------

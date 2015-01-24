@@ -82,15 +82,15 @@ contains
 	! compute the year, month, day, hour, minute, second corresponding
 	! to the input modified julian day (mjd)
 	! note mjd for NOLEAP and 360day calendars is not a true MJD
-	subroutine calendar_date(mjd, year, month, day, hour, minute, second)
+	subroutine calendar_date(inputmjd, year, month, day, hour, minute, second)
 		implicit none
-		double precision, intent(in) :: mjd
+		double precision, intent(in) :: inputmjd
 		integer, intent(out) :: year, month, day, hour, minute, second
 		integer :: y=4716,j=1401,m=2,n=12,r=4,p=1461
 		integer :: v=3,u=5,s=153,w=2,B=274277,C=-38
 		integer ::f,e,g,h, jday
-		double precision :: day_fraction
-		
+		double precision :: day_fraction,mjd
+		mjd = inputmjd+1e-5 ! add less than one second
 		if (calendar==GREGORIAN) then
 			jday=nint(mjd+2400000.5)
 			f=jday+j+(((4*jday+B)/146097)*3)/4+C
@@ -116,13 +116,13 @@ contains
 		end if
 		
 		day_fraction=mod(mjd,1.0)
-		hour=floor(day_fraction*24+1e-5)
+		hour=floor(day_fraction*24)
 		
 		day_fraction=day_fraction*24-hour
-		minute=floor(day_fraction*60+1e-2)
+		minute=floor(day_fraction*60)
 		
 		day_fraction=day_fraction*60-minute
-		second=nint(day_fraction*60)
+		second=nint((day_fraction-1e-5)*60)
 		
 	end subroutine
 
