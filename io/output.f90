@@ -19,10 +19,19 @@ module output
 	public :: write_domain
 	
 	integer, parameter :: ndims = 3
-	integer, parameter :: nvars=50
+	integer, parameter :: nvars=100
 	! This will be the netCDF ID for the file and data variable.
-	integer :: ncid, varid(nvars),temp_id,x_id,y_id,xu_id,yv_id,lat_id,lon_id,soil_id
+	integer :: ncid, temp_id
+	! dimension IDs
+	integer :: t_id, x_id, y_id, xu_id, yv_id, soil_id
 	integer :: dimids(ndims)
+	! variable IDs
+	integer :: lat_id,lon_id,time_id
+	integer :: varid(nvars)
+	
+	! the number of time steps to save in each file
+	integer :: time_steps_per_file = 24
+	integer :: current_step = 1
 
 	! We are writing 3D data, a (ny x nz x nx) grid or (ny x nsoil x nx) grid
 	integer :: nx,ny,nz,i,nsoil
@@ -110,6 +119,7 @@ contains
 	
 	
 		! define the dimensions
+		call check( nf90_def_dim(ncid, "time", NF90_UNLIMITED, t_id) )
 		call check( nf90_def_dim(ncid, "lon", nx, x_id) )
 		dimids(1)=x_id
 		call check( nf90_def_dim(ncid, "lev", nz, temp_id) )
@@ -131,6 +141,11 @@ contains
 		call check( nf90_put_att(ncid,lon_id,"long_name","longitude"))
 		call check( nf90_put_att(ncid,lon_id,"units","degree_east"))
 	
+		call check( nf90_def_var(ncid, "time", NF90_DOUBLE, t_id, time_id) )
+		call check( nf90_put_att(ncid,time_id,"standard_name","time"))
+		call check( nf90_put_att(ncid,time_id,"long_name","modified Julian Day"))
+		call check( nf90_put_att(ncid,time_id,"units","days since 1858-11-17 00:00:00"))
+
 		call check( nf90_def_var(ncid, "qv", NF90_REAL, dimids, temp_id) )
 		call check( nf90_put_att(ncid,temp_id,"standard_name","water_vapor_mixing_ratio"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Water Wapor Mixing Ratio"))
@@ -347,7 +362,6 @@ contains
 	
 		! End define mode. This tells netCDF we are done defining metadata.
 		call check( nf90_enddef(ncid) )
-
 		
 	end subroutine create_file
 	
@@ -390,11 +404,15 @@ contains
 			call check( nf90_open(filename,NF90_WRITE,ncid))
 		else
 			call create_file(filename,options)
+			! and write constant (in time) variables
+			call check( nf90_put_var(ncid, lat_id,    domain%lat) )
+			call check( nf90_put_var(ncid, lon_id,    domain%lon) )
+			call check( nf90_put_var(ncid, varid(20), domain%z) )
 		endif
 		
 		! write the actual data
-		call check( nf90_put_var(ncid, lat_id,    domain%lat) )
-		call check( nf90_put_var(ncid, lon_id,    domain%lon) )
+		call check( nf90_put_var(ncid, time_id,   domain%model_time/86400.0+50000 ) )
+		
 		call check( nf90_put_var(ncid, varid(1),  domain%qv) )
 		call check( nf90_put_var(ncid, varid(2),  domain%cloud) )
 		call check( nf90_put_var(ncid, varid(3),  domain%ice) )
@@ -417,7 +435,6 @@ contains
 		if (options%physics%convection>0) then
 			call check( nf90_put_var(ncid, varid(17), domain%crain) )
 		endif
-		call check( nf90_put_var(ncid, varid(20), domain%z) )
 		call check( nf90_put_var(ncid, varid(21), domain%rho) )
 		! these should only be output for radiation packages that compute them
 		if (options%physics%radiation>=2) then
