@@ -31,7 +31,7 @@ module boundary_conditions
 ! 		e.g. if options%inputtype=="WRF" then call wrf_init/update()
 ! ----------------------------------------------------------------------------
 	use data_structures
-	use io_routines,            only : io_getdims, io_read3d, io_maxDims, io_read2d
+	use io_routines,            only : io_getdims, io_read3d, io_maxDims, io_read2d, io_variable_is_present
 	use wind,                   only : update_winds,balance_uvw
 	use linear_theory_winds,    only : linear_perturb
 	use geo,                    only : geo_interp2d, geo_interp
@@ -413,77 +413,92 @@ contains
 	end subroutine check_shapes_3d
 	
 ! 	if we are restarting from a given point, initialize the domain from the given restart file
-	subroutine load_restart_file(domain,restart_file)
+	subroutine load_restart_file(domain,restart_file,time_step)
 		implicit none
 		type(domain_type), intent(inout) :: domain
 		character(len=*),intent(in)::restart_file
+		integer,optional,intent(in) :: time_step
 		real,allocatable,dimension(:,:,:)::inputdata
 		real,allocatable,dimension(:,:)::inputdata_2d
+		integer :: timeslice
+		
+		if (present(time_step)) then
+			timeslice=time_step
+		else
+			timeslice=1
+		endif
 		
 		write(*,*) "Reading atmospheric restart data"
-		call io_read3d(restart_file,"u",inputdata)
+		call io_read3d(restart_file,"u",inputdata,timeslice)
 		call check_shapes_3d(inputdata,domain%u)
 		domain%u=inputdata
 		deallocate(inputdata)
-		call io_read3d(restart_file,"v",inputdata)
+		call io_read3d(restart_file,"v",inputdata,timeslice)
 		domain%v=inputdata
 		deallocate(inputdata)
-		call io_read3d(restart_file,"qv",inputdata)
+		call io_read3d(restart_file,"qv",inputdata,timeslice)
 		domain%qv=inputdata
 		deallocate(inputdata)
-		call io_read3d(restart_file,"qc",inputdata)
+		call io_read3d(restart_file,"qc",inputdata,timeslice)
 		domain%cloud=inputdata
 		deallocate(inputdata)
-		call io_read3d(restart_file,"qr",inputdata)
+		call io_read3d(restart_file,"qr",inputdata,timeslice)
 		domain%qrain=inputdata
 		deallocate(inputdata)
-		call io_read3d(restart_file,"qi",inputdata)
+		call io_read3d(restart_file,"qi",inputdata,timeslice)
 		domain%ice=inputdata
 		deallocate(inputdata)
-		call io_read3d(restart_file,"qs",inputdata)
+		call io_read3d(restart_file,"qs",inputdata,timeslice)
 		domain%qsnow=inputdata
 		deallocate(inputdata)
-		call io_read3d(restart_file,"qg",inputdata)
-		domain%qgrau=inputdata
-		deallocate(inputdata)
-		call io_read3d(restart_file,"nr",inputdata)
-		domain%nrain=inputdata
-		deallocate(inputdata)
-		call io_read3d(restart_file,"ni",inputdata)
-		domain%nice=inputdata
-		deallocate(inputdata)
-		call io_read3d(restart_file,"p",inputdata)
+		if (io_variable_is_present(restart_file,"qg")) then
+			call io_read3d(restart_file,"qg",inputdata,timeslice)
+			domain%qgrau=inputdata
+			deallocate(inputdata)
+		endif
+		if (io_variable_is_present(restart_file,"nr")) then
+			call io_read3d(restart_file,"nr",inputdata,timeslice)
+			domain%nrain=inputdata
+			deallocate(inputdata)
+		endif
+		if (io_variable_is_present(restart_file,"ni")) then
+			call io_read3d(restart_file,"ni",inputdata,timeslice)
+			domain%nice=inputdata
+			deallocate(inputdata)
+		endif
+		call io_read3d(restart_file,"p",inputdata,timeslice)
 		domain%p=inputdata
 		deallocate(inputdata)
-		call io_read3d(restart_file,"th",inputdata)
+		call io_read3d(restart_file,"th",inputdata,timeslice)
 		domain%th=inputdata
 		deallocate(inputdata)
-		call io_read3d(restart_file,"rho",inputdata)
+		call io_read3d(restart_file,"rho",inputdata,timeslice)
 		domain%rho=inputdata
 		deallocate(inputdata)
 		
-		write(*,*) "Reading land surface restart data"
-		call io_read3d(restart_file,"soil_t",inputdata)
-		call check_shapes_3d(inputdata,domain%soil_t)
-		domain%soil_t=inputdata
-		deallocate(inputdata)
-		call io_read3d(restart_file,"soil_w",inputdata)
-		domain%soil_vwc=inputdata
-		deallocate(inputdata)
+		if (io_variable_is_present(restart_file,"soil_t")) then
+			write(*,*) "Reading land surface restart data"
+			call io_read3d(restart_file,"soil_t",inputdata,timeslice)
+			call check_shapes_3d(inputdata,domain%soil_t)
+			domain%soil_t=inputdata
+			deallocate(inputdata)
+			call io_read3d(restart_file,"soil_w",inputdata,timeslice)
+			domain%soil_vwc=inputdata
+			deallocate(inputdata)
 		
-		call io_read2d(restart_file,"ts",inputdata_2d)
-		domain%skin_t=inputdata_2d
-		deallocate(inputdata_2d)
-		call io_read2d(restart_file,"hfgs",inputdata_2d)
-		domain%ground_heat=inputdata_2d
-		deallocate(inputdata_2d)
-		call io_read2d(restart_file,"snw",inputdata_2d)
-		domain%snow_swe=inputdata_2d
-		deallocate(inputdata_2d)
-		call io_read2d(restart_file,"canwat",inputdata_2d)
-		domain%canopy_water=inputdata_2d
-		deallocate(inputdata_2d)
-		
+			call io_read2d(restart_file,"ts",inputdata_2d,timeslice)
+			domain%skin_t=inputdata_2d
+			deallocate(inputdata_2d)
+			call io_read2d(restart_file,"hfgs",inputdata_2d,timeslice)
+			domain%ground_heat=inputdata_2d
+			deallocate(inputdata_2d)
+			call io_read2d(restart_file,"snw",inputdata_2d,timeslice)
+			domain%snow_swe=inputdata_2d
+			deallocate(inputdata_2d)
+			call io_read2d(restart_file,"canwat",inputdata_2d,timeslice)
+			domain%canopy_water=inputdata_2d
+			deallocate(inputdata_2d)
+		endif		
 		
 	end subroutine load_restart_file
 	
@@ -540,7 +555,7 @@ contains
 		endif
 ! 		load the restart file
 		if (options%restart) then
-			call load_restart_file(domain,options%restart_file)
+			call load_restart_file(domain,options%restart_file,options%restart_step_in_file)
 			if (options%external_winds) then
 				call ext_winds_init(domain,bc,options)
 			endif

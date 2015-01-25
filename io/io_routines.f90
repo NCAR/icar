@@ -19,10 +19,54 @@ module io_routines
 ! 	All routines are public
 contains
 
+	! tests to see if a file exists
+	! returns true if it does, false if it doesn't
 	logical function file_exists(filename)
 		character(len=*), intent(in) :: filename
 		inquire(file=filename,exist=file_exists)
 	end function file_exists
+
+	! tests to see if a variable is present in a netcdf file
+	! returns true of it is, false if it isn't
+	logical function io_variable_is_present(filename,variable_name)
+		character(len=*), intent(in) :: filename
+		character(len=*), intent(in) :: variable_name
+		integer :: ncid,err,varid
+		
+		call check(nf90_open(filename, NF90_NOWRITE, ncid))
+		err = nf90_inq_varid(ncid, variable_name, varid)
+		call check( nf90_close(ncid),filename )
+		
+		io_variable_is_present = (err==NF90_NOERR)
+	end function io_variable_is_present
+
+	integer function io_nearest_time_step(filename, mjd)
+		character(len=*),intent(in) :: filename
+		real*8, intent(in) :: mjd
+		real*8, allocatable, dimension(:) :: time_data
+		integer :: ncid,varid,dims(1),ntimes,i
+		
+		call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
+		! Get the varid of the data_in variable, based on its name.
+		call check(nf90_inq_varid(ncid, "time", varid),trim(filename)//" : time")
+! 		call check(nf90_inquire_variable(ncid, varid, ndims = numDims),"time dims")
+		call check(nf90_inquire_variable(ncid, varid, dimids = dims),"time dims")
+		call check(nf90_inquire_dimension(ncid, dims(1), len = ntimes))
+		
+		allocate(time_data(ntimes))
+		call check(nf90_get_var(ncid, varid, time_data),trim(filename)//"reading time")
+		! Close the file, freeing all resources.
+		call check( nf90_close(ncid),filename)
+		
+		io_nearest_time_step=1
+		do i=1,ntimes
+			if ((mjd - time_data(i)) > 1e-4) then
+				io_nearest_time_step=i
+			endif
+		end do
+		deallocate(time_data)
+	end function io_nearest_time_step
+		
 
 	! Read the dimensions of a variable in a given netcdf file
 	! return a rank 1 array N=ndims+1, dims[1]=ndims, dims[i+1]=length of dimension i for a given variable
@@ -78,7 +122,7 @@ contains
 		! the file.
 		call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
 		! Get the varid of the data_in variable, based on its name.
-		call check(nf90_inq_varid(ncid, varname, varid),varname)
+		call check(nf90_inq_varid(ncid, varname, varid),trim(filename)//":"//trim(varname))
 		
 		! Read the data_in. skip the slowest varying indices if there are more than 3 dimensions (typically this will be time)
 		if (diminfo(1)>3) then
@@ -87,9 +131,9 @@ contains
 									dimstart(1:diminfo(1)), &				! start  = 1 or extradim
 									[ (diminfo(i+1), i=1,diminfo(1)) ],&	! count=n or 1 created through an implied do loop
 									[ (1,            i=1,diminfo(1)) ]),&	! for all dims, stride = 1     "  implied do loop
-									varname) !pass varname to check so it can give us more info
+									trim(filename)//":"//trim(varname)) !pass file:var to check so it can give us more info
 		else		
-			call check(nf90_get_var(ncid, varid, data_in),varname)
+			call check(nf90_get_var(ncid, varid, data_in),trim(filename)//":"//trim(varname))
 		endif
 		! Close the file, freeing all resources.
 		call check( nf90_close(ncid),filename)
@@ -123,7 +167,7 @@ contains
 		! the file.
 		call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
 		! Get the varid of the data_in variable, based on its name.
-		call check(nf90_inq_varid(ncid, varname, varid),varname)
+		call check(nf90_inq_varid(ncid, varname, varid),trim(filename)//":"//trim(varname))
 		
 		! Read the data_in. skip the slowest varying indices if there are more than 3 dimensions (typically this will be time)
 		if (diminfo(1)>2) then
@@ -132,9 +176,9 @@ contains
 									dimstart(1:diminfo(1)), &				! start  = 1 or extradim
 									[ (diminfo(i+1), i=1,diminfo(1)) ],&	! count=n or 1 created through an implied do loop
 									[ (1,            i=1,diminfo(1)) ] ), &	! for all dims, stride = 1		" implied do loop
-									varname) !pass varname to check so it can give us more info
+									trim(filename)//":"//trim(varname)) !pass varname to check so it can give us more info
 		else		
-			call check(nf90_get_var(ncid, varid, data_in),varname)
+			call check(nf90_get_var(ncid, varid, data_in),trim(filename)//":"//trim(varname))
 		endif
 	
 		! Close the file, freeing all resources.
@@ -169,7 +213,7 @@ contains
 		! the file.
 		call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
 		! Get the varid of the data_in variable, based on its name.
-		call check(nf90_inq_varid(ncid, varname, varid),varname)
+		call check(nf90_inq_varid(ncid, varname, varid),trim(filename)//":"//trim(varname))
 
 		! Read the data_in. skip the slowest varying indices if there are more than 3 dimensions (typically this will be time)
 		if (diminfo(1)>2) then
@@ -178,7 +222,7 @@ contains
 									dimstart(1:diminfo(1)), &				! start  = 1 or extradim
 									[ (diminfo(i+1), i=1,diminfo(1)) ],&	! count=n or 1 created through an implied do loop
 									[ (1,            i=1,diminfo(1)) ] ), &	! for all dims, stride = 1		" implied do loop
-									varname) !pass varname to check so it can give us more info
+									trim(filename)//":"//trim(varname)) !pass varname to check so it can give us more info
 		else
 			call check(nf90_get_var(ncid, varid, data_in),varname)
 		endif
@@ -218,12 +262,12 @@ contains
 		dimids(3)=temp_dimid
 		
 		! Create the variable returns varid of the data variable
-		call check( nf90_def_var(ncid, varname, NF90_REAL, dimids, varid), varname)
+		call check( nf90_def_var(ncid, varname, NF90_REAL, dimids, varid), trim(filename)//":"//trim(varname))
 		! End define mode. This tells netCDF we are done defining metadata.
 		call check( nf90_enddef(ncid) )
 		
 		!write the actual data to the file
-		call check( nf90_put_var(ncid, varid, data_out), varname)
+		call check( nf90_put_var(ncid, varid, data_out), trim(filename)//":"//trim(varname))
 	
 		! Close the file, freeing all resources.
 		call check( nf90_close(ncid), filename)
@@ -258,11 +302,11 @@ contains
 		dimids(3)=temp_dimid
 		
 		! Create the variable returns varid of the data variable
-		call check( nf90_def_var(ncid, varname, NF90_INT, dimids, varid) )
+		call check( nf90_def_var(ncid, varname, NF90_INT, dimids, varid), trim(filename)//":"//trim(varname) )
 		! End define mode. This tells netCDF we are done defining metadata.
 		call check( nf90_enddef(ncid) )
 		
-		call check( nf90_put_var(ncid, varid, data_out) )
+		call check( nf90_put_var(ncid, varid, data_out),trim(filename)//":"//trim(varname) )
 	
 		! Close the file, freeing all resources.
 		call check( nf90_close(ncid) )
@@ -294,11 +338,11 @@ contains
 		dimids(2)=temp_dimid
 		
 		! Create the variable returns varid of the data variable
-		call check( nf90_def_var(ncid, varname, NF90_REAL, dimids, varid) )
+		call check( nf90_def_var(ncid, varname, NF90_REAL, dimids, varid), trim(filename)//":"//trim(varname))
 		! End define mode. This tells netCDF we are done defining metadata.
 		call check( nf90_enddef(ncid) )
 		
-		call check( nf90_put_var(ncid, varid, data_out) )
+		call check( nf90_put_var(ncid, varid, data_out), trim(filename)//":"//trim(varname))
 	
 		! Close the file, freeing all resources.
 		call check( nf90_close(ncid) )

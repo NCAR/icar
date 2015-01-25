@@ -270,6 +270,9 @@ module data_structures
 		integer :: nfiles 				! number of forcing files to read from namelist
 		integer :: ext_winds_nfiles 	! number of extrenal wind filenames to read from namelist
 		integer :: restart_step 		! step in forcing data to begin running
+		integer :: restart_date(6) 		! date to initialize from (y,m,d, h,m,s)
+		integer :: restart_step_in_file ! step in restart file to initialize from
+
 		! various real parameters/options
 		real :: dx 						! grid cell width [m]
 		real :: dxlow 					! forcing model grid cell width [m]
