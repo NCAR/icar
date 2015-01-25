@@ -25,7 +25,8 @@
 !! ----------------------------------------------------------------------------
 module init
 	use data_structures
-	use io_routines,				only : io_read2d, io_read2di, io_read3d, io_newunit, io_write3d,io_write3di
+	use io_routines,				only : io_read2d, io_read2di, io_read3d, io_newunit, &
+		 								   io_write3d,io_write3di, io_nearest_time_step
 	use geo,						only : geo_LUT, geo_interp, geo_interp2d
 	use vertical_interpolation,     only : vLUT
 	use microphysics,				only : mp_init
@@ -263,7 +264,8 @@ contains
 		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,smooth_wind_distance, &
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
-							  date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, N_squared,linear_contribution
+							  date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, &
+							  N_squared,linear_contribution
 		
 ! 		default parameters
 		mean_fields=.False.
@@ -440,6 +442,51 @@ contains
 		
 	end subroutine options_check
 	
+	subroutine init_restart(options_filename, options)
+		character(len=*), intent(in) :: options_filename
+		type(options_type),intent(inout) :: options
+		
+		character(len=MAXFILELENGTH) :: init_conditions_file, output_file,restart_file
+		integer :: restart_step, restart_date(6), name_unit
+		real*8 :: restart_mjd
+		
+		namelist /restart_info/ restart_step, restart_file, restart_date
+		
+		restart_date=[-999,-999,-999,-999,-999,-999]
+		restart_step=-999
+		
+		open(io_newunit(name_unit), file=options_filename)
+		read(name_unit,nml=restart_info)
+		close(name_unit)
+		
+		options%restart_step=restart_step
+		options%restart_file=restart_file
+		options%restart_date=restart_date
+		
+		
+		restart_mjd = date_to_mjd(restart_date(1), restart_date(2), restart_date(3), &
+								  restart_date(4), restart_date(5), restart_date(6))
+		write(*,*) "mjd",restart_mjd
+		write(*,*) "date",restart_date
+		write(*,*) "file",trim(restart_file)
+		write(*,*) "forcing step",restart_step
+		
+		if (restart_step==-999) then
+            restart_step=FLOOR((restart_mjd - options%initial_mjd + 1e-6) / (options%in_dt/86400.0)) + 1
+			options%restart_step=restart_step
+			write(*,*) "updated forcing step",restart_step
+		endif
+		! in case the supplied restart date doesn't line up with an input forcing step, recalculate
+		! the restart date (mjd) based off the nearest input step
+        restart_mjd = options%initial_mjd + (restart_step-1)*(options%in_dt/86400.0)
+		write(*,*) "updated mjd",restart_mjd
+		
+		! now find the closest previous output step to the current restart date
+		options%restart_step_in_file=io_nearest_time_step(restart_file, restart_mjd)
+		write(*,*) "step in restart file",options%restart_step_in_file
+		
+	end subroutine init_restart
+	
 	subroutine init_options(options_filename,options)
 ! 		reads a series of options from a namelist file and stores them in the 
 ! 		options data structure
@@ -447,17 +494,15 @@ contains
 		character(len=*), intent(in) :: options_filename
 		type(options_type), intent(inout) :: options
 		
-		character(len=MAXFILELENGTH) :: init_conditions_file, output_file,restart_file
+		character(len=MAXFILELENGTH) :: init_conditions_file, output_file
 		character(len=MAXFILELENGTH),allocatable:: boundary_files(:),ext_wind_files(:)
 		real, allocatable, dimension(:) :: dz_levels
    		real,dimension(45)::fulldz
-		integer :: restart_step
 		integer :: name_unit
 		
 ! 		set up namelist structures
 		namelist /z_info/ dz_levels
 		namelist /files_list/ init_conditions_file,output_file,boundary_files
-		namelist /restart_info/ restart_step,restart_file
 		namelist /ext_winds_info/ ext_wind_files
 		
 		call version_check(options_filename,options)
@@ -487,12 +532,7 @@ contains
 		endif
 		
 		if (options%restart) then
-			open(io_newunit(name_unit), file=options_filename)
-			read(name_unit,nml=restart_info)
-			close(name_unit)
-			
-			options%restart_step=restart_step
-			options%restart_file=restart_file
+			call init_restart(options_filename,options)
 		endif
 
 		
@@ -502,9 +542,11 @@ contains
 		close(name_unit)
 		
 		options%init_conditions_file=init_conditions_file
+		
 		allocate(options%boundary_files(options%nfiles))
 		options%boundary_files=boundary_files
 		deallocate(boundary_files)
+		
 		options%output_file=output_file
 		
 		if (options%external_winds) then

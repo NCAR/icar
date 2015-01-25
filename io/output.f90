@@ -438,20 +438,20 @@ contains
 		else
 			call create_file(filename,options)
 			! and write constant (in time) variables
-			call check( nf90_put_var(ncid, lat_id,    domain%lat), "Putting Latitude" )
-			call check( nf90_put_var(ncid, lon_id,    domain%lon), "Putting Longitude" )
-			call check( nf90_put_var(ncid, varid(20), domain%z) , "Putting Z")
+			call check( nf90_put_var(ncid, lat_id,    domain%lat), trim(filename)//":Latitude" )
+			call check( nf90_put_var(ncid, lon_id,    domain%lon), trim(filename)//":Longitude" )
+			call check( nf90_put_var(ncid, varid(20), domain%z) , trim(filename)//":Z")
 		endif
 		
 		
 		! write the actual data
-		call check( nf90_put_var(ncid, time_id,   domain%model_time/86400.0+50000, start_scalar ), "Putting Time" )
+		call check( nf90_put_var(ncid, time_id,   domain%model_time/86400.0+50000, start_scalar ), trim(filename)//":Time" )
 		
-		call check( nf90_put_var(ncid, varid(1),  domain%qv, start_three_D), "Putting qv" )
-		call check( nf90_put_var(ncid, varid(2),  domain%cloud, start_three_D), "Putting cloud" )
-		call check( nf90_put_var(ncid, varid(3),  domain%ice, start_three_D), "Putting ice" )
-		call check( nf90_put_var(ncid, varid(4),  domain%qrain, start_three_D), "Putting qrain" )
-		call check( nf90_put_var(ncid, varid(5),  domain%qsnow, start_three_D), "Putting qsnow" )
+		call check( nf90_put_var(ncid, varid(1),  domain%qv, start_three_D), trim(filename)//":qv" )
+		call check( nf90_put_var(ncid, varid(2),  domain%cloud, start_three_D), trim(filename)//":cloud" )
+		call check( nf90_put_var(ncid, varid(3),  domain%ice, start_three_D), trim(filename)//":ice" )
+		call check( nf90_put_var(ncid, varid(4),  domain%qrain, start_three_D), trim(filename)//":qrain" )
+		call check( nf90_put_var(ncid, varid(5),  domain%qsnow, start_three_D), trim(filename)//":qsnow" )
 		! these should only be output for thompson microphysics
 		if (options%physics%microphysics==1) then
 			call check( nf90_put_var(ncid, varid(6),  domain%qgrau, start_three_D) )
