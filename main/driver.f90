@@ -16,7 +16,7 @@
 !!	Author: Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!-----------------------------------------
-program real
+program icar
 	use time				! calendar_date, date_to_mjd           Convert between date and modified Julian Day
 	use init                ! init_model, init_physics             Initialize model (not initial conditions)
 	use boundary_conditions ! bc_init,bc_update                    Boundary and initial conditions
@@ -84,5 +84,5 @@ program real
 !
 !-----------------------------------------
 	
-end program real
+end program icar
 

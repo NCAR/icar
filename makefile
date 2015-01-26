@@ -278,9 +278,9 @@ clean:
 allclean:cleanall
 
 cleanall: clean
-	rm tests/*.o tests/*.mod icar fftshift_test #geo_test wind_test # test_init
+	rm icar fftshift_test calendar_test #geo_test wind_test #test_init
 
-test: fftshift_tests #geo_test wind_test #test_init
+test: fftshift_test calendar_test #geo_test wind_test #test_init
 
 icar:${OBJS}
 	${F90} ${LFLAGS} ${OBJS} -o icar  -lm -lfftw3
@@ -294,8 +294,11 @@ icar:${OBJS}
 # wind_test:${WINDOBJS}
 # 	${F90} ${LFLAGS} ${WINDOBJS} -o wind_test -lfftw3 -lm
 #
-fftshift_test: tests/test_fftshift.o $(BUILD)fftshift.o
-	${F90} ${LFLAGS} tests/test_fftshift.o $(BUILD)fftshift.o -o fftshift_test
+fftshift_test: $(BUILD)test_fftshift.o $(BUILD)fftshift.o
+	${F90} ${LFLAGS} $(BUILD)test_fftshift.o $(BUILD)fftshift.o -o fftshift_test
+
+calendar_test: $(BUILD)test_calendar.o $(BUILD)time.o
+	${F90} ${LFLAGS} $(BUILD)test_calendar.o $(BUILD)time.o -o calendar_test
 
 
 ###################################################################
@@ -454,8 +457,11 @@ $(BUILD)model_tracking.o:$(MAIN)model_tracking.f90
 # NOTE: too many changes in data structures/init have broken most of these tests, 
 #       not worth fixing right now. 
 #
-tests/test_$(BUILD)fftshift.o:$(BUILD)fftshift.o tests/test_fftshift.f90
-	${F90} ${FFLAGS} tests/test_fftshift.f90 -o tests/test_fftshift.o
+$(BUILD)test_fftshift.o:$(BUILD)fftshift.o tests/test_fftshift.f90
+	${F90} ${FFLAGS} tests/test_fftshift.f90 -o $(BUILD)test_fftshift.o
+
+$(BUILD)test_calendar.o:$(BUILD)time.o tests/test_calendar.f90
+	${F90} ${FFLAGS} tests/test_calendar.f90 -o $(BUILD)test_calendar.o
 	
 # tests/test_$(BUILD)wind.o:tests/test_$(PHYS)wind.f90 $(BUILD)wind.o $(BUILD)linear_winds.o
 # 	${F90} ${FFLAGS} tests/test_$(PHYS)wind.f90 -o tests/test_$(BUILD)wind.o
