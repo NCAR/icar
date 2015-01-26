@@ -21,7 +21,8 @@ contains
 		character(len=*), intent(in) :: calendar_name
 		integer :: i
 		
-		month_start=[0,31,59,90,120,151,181,212,243,273,304,334,366]
+		! zero based month_starts (will have 1 added below)
+		month_start=[0,31,59,90,120,151,181,212,243,273,304,334,365]
 		
 		if (trim(calendar_name)=="gregorian") then
 			calendar=GREGORIAN
@@ -46,6 +47,9 @@ contains
 				month_start(i+1)=i*30
 			end do
 		endif
+		do i=0,12
+			month_start(i+1)=month_start(i+1)+1
+		end do
 			
 			
 	end subroutine time_init
@@ -72,9 +76,9 @@ contains
 			! b = day + floor(153*m+2/5) + 365*y + floor(y/4) - 32083
 			date_to_mjd = b + (((second/60d+0)+minute)/60d+0 + hour-12)/24.0 - 2400000.5
 		else if (calendar==NOLEAP) then
-			date_to_mjd = year*365 + month_start(month) + day + (hour + (minute+second/60d+0)/60d+0)/24d+0
+			date_to_mjd = year*365 + month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0
 		else if (calendar==THREESIXTY) then
-			date_to_mjd = year*360 + month*30 + day + (hour + (minute+second/60d+0)/60d+0)/24d+0
+			date_to_mjd = year*360 + month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0
 		end if
 
 	end function date_to_mjd
@@ -82,6 +86,7 @@ contains
 	! compute the year, month, day, hour, minute, second corresponding
 	! to the input modified julian day (mjd)
 	! note mjd for NOLEAP and 360day calendars is not a true MJD
+	! arguably, seconds should be a real number, not an integer...
 	subroutine calendar_date(inputmjd, year, month, day, hour, minute, second)
 		implicit none
 		double precision, intent(in) :: inputmjd
@@ -90,7 +95,7 @@ contains
 		integer :: v=3,u=5,s=153,w=2,B=274277,C=-38
 		integer ::f,e,g,h, jday
 		double precision :: day_fraction,mjd
-		mjd = inputmjd+1e-5 ! add less than one second
+		mjd = inputmjd+1d-5 ! add less than one second
 		if (calendar==GREGORIAN) then
 			jday=nint(mjd+2400000.5)
 			f=jday+j+(((4*jday+B)/146097)*3)/4+C
@@ -102,17 +107,22 @@ contains
 			year=e/p-y+(n+m-month)/n
 		else if (calendar==NOLEAP) then
 			year=floor(mjd/365)
-			day_fraction=mjd - year*365
+			day_fraction=mjd - year*365+1
 			do f=1,12
-				if (day_fraction<month_start(f+1)) then
+				if (day_fraction>month_start(f)) then
 					month=f
 				endif
 			end do
-			day = floor(day_fraction - month_start(month))
+			day = floor(day_fraction - month_start(month))+1
 		else if (calendar==THREESIXTY) then
 			year=floor(mjd/360)
-			month=floor(mod(mjd,360.0)/12)
-			day=floor(mod(mjd,30.0))
+			day_fraction=mjd - year*360+1
+			do f=1,12
+				if (day_fraction>month_start(f)) then
+					month=f
+				endif
+			end do
+			day = floor(day_fraction - month_start(month))+1
 		end if
 		
 		day_fraction=mod(mjd,1.0)
@@ -122,7 +132,7 @@ contains
 		minute=floor(day_fraction*60)
 		
 		day_fraction=day_fraction*60-minute
-		second=nint((day_fraction-1e-5)*60)
+		second = nint((day_fraction-(24d0*60*1d-5))*60)
 		
 	end subroutine
 
