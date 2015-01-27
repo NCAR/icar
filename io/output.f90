@@ -34,14 +34,18 @@ module output
 	
 	! the number of time steps to save in each file
 	integer, parameter :: time_steps_per_file = 24
-	integer :: current_step = time_steps_per_file
+	integer, parameter :: EVERY_STEP = 0
+	integer, parameter :: MONTHLY_FREQUENCY = 2
+	integer, parameter :: DAILY_FREQUENCY = 1
+	integer :: output_frequency = DAILY_FREQUENCY
+	integer :: current_step
 	character(len=255) :: filename = "default_output.nc"
 
 	integer :: start_three_D(4) = [1,1,1,1]
 	integer :: start_two_D(3)  = [1,1,1]
 	integer :: start_scalar(1) = [1]
 
-
+	real, allocatable, dimension(:,:) :: last_rain
 
 	! We are writing 3D data, a (ny x nz x nx) grid or (ny x nsoil x nx) grid
 	integer :: nx,ny,nz,i,nsoil
@@ -381,6 +385,113 @@ contains
 		
 	end subroutine create_file
 	
+	subroutine output_init(options)
+		type(options_type), intent(in) :: options
+			
+		if (trim(options%output_file_frequency)=="monthly") then
+			write(*,*) "Outputing a file per month"
+			output_frequency=MONTHLY_FREQUENCY
+		else if (trim(options%output_file_frequency)=="daily") then
+			write(*,*) "Outputing a file per day"
+			output_frequency=DAILY_FREQUENCY
+		else
+			write(*,*) "Outputing a file per time step"
+			output_frequency=EVERY_STEP
+		endif
+		
+	end subroutine output_init
+	
+	subroutine setup_varids(ncid,options)
+		integer, intent(in) :: ncid
+		type(options_type),intent(in)::options
+		integer :: temp_id
+		
+		call check( nf90_inq_varid(ncid, "lat", lat_id) )
+		call check( nf90_inq_varid(ncid, "lon", lon_id) )
+		call check( nf90_inq_varid(ncid, "time", time_id) )
+		call check( nf90_inq_varid(ncid, "qv", temp_id) )
+		varid(1)=temp_id
+		call check( nf90_inq_varid(ncid, "qc", temp_id) )
+		varid(2)=temp_id
+		call check( nf90_inq_varid(ncid, "qi", temp_id) )
+		varid(3)=temp_id
+		call check( nf90_inq_varid(ncid, "qr", temp_id) )
+		varid(4)=temp_id
+		call check( nf90_inq_varid(ncid, "qs", temp_id) )
+		varid(5)=temp_id
+		! these should only be output for thompson microphysics
+		if (options%physics%microphysics==1) then
+			call check( nf90_inq_varid(ncid, "qg", temp_id) )
+			varid(6)=temp_id
+			call check( nf90_inq_varid(ncid, "nr", temp_id) )
+			varid(7)=temp_id
+			call check( nf90_inq_varid(ncid, "ni", temp_id) )
+			varid(8)=temp_id
+		endif
+		call check( nf90_inq_varid(ncid, "u",  temp_id) )
+		varid(9)=temp_id
+		call check( nf90_inq_varid(ncid, "v",  temp_id) )
+		varid(10)=temp_id
+		call check( nf90_inq_varid(ncid, "w",  temp_id) )
+		varid(11)=temp_id
+		call check( nf90_inq_varid(ncid, "p",  temp_id) )
+		varid(12)=temp_id
+		call check( nf90_inq_varid(ncid, "th", temp_id) )
+		varid(13)=temp_id
+		! surface precip fluxes
+		call check( nf90_inq_varid(ncid, "rain",temp_id) )
+		varid(14)=temp_id
+		call check( nf90_inq_varid(ncid, "snow",temp_id) )
+		varid(15)=temp_id
+		call check( nf90_inq_varid(ncid, "graupel", temp_id) )
+		varid(16)=temp_id
+		if (options%physics%convection>0) then
+			call check( nf90_inq_varid(ncid, "crain", temp_id) )
+			varid(17)=temp_id
+		endif
+	
+		call check( nf90_inq_varid(ncid, "z",  temp_id) )
+		varid(20)=temp_id
+		call check( nf90_inq_varid(ncid, "rho", temp_id) )
+		varid(21)=temp_id
+		! surface fluxes
+		! these should only be output for radiation packages that compute them
+		if (options%physics%radiation>=2) then
+			call check( nf90_inq_varid(ncid, "clt", temp_id) )
+			varid(22)=temp_id
+			call check( nf90_inq_varid(ncid, "rsds", temp_id) )
+			varid(18)=temp_id
+			call check( nf90_inq_varid(ncid, "rlds", temp_id) )
+			varid(19)=temp_id
+		endif
+		! these should only be output for lsm packages that compute them
+		if (options%physics%landsurface>=2) then
+			call check( nf90_inq_varid(ncid, "rlus",  temp_id) )
+			varid(29)=temp_id
+			call check( nf90_inq_varid(ncid, "shs",   temp_id) )
+			varid(23)=temp_id
+			call check( nf90_inq_varid(ncid, "hfls",  temp_id) )
+			varid(24)=temp_id
+			call check( nf90_inq_varid(ncid, "hfgs",  temp_id) )
+			varid(25)=temp_id
+			dimids(2)=soil_id
+			call check( nf90_inq_varid(ncid, "soil_w", temp_id) )
+			varid(26)=temp_id
+			call check( nf90_inq_varid(ncid, "soil_t", temp_id) )
+			varid(27)=temp_id
+			call check( nf90_inq_varid(ncid, "ts",     temp_id) )
+			varid(28)=temp_id
+			call check( nf90_inq_varid(ncid, "snw",    temp_id) )
+			varid(30)=temp_id
+			call check( nf90_inq_varid(ncid, "canwat", temp_id) )
+			varid(31)=temp_id
+		endif
+
+		
+		
+		
+	end subroutine setup_varids
+	
 ! 	simple routine to write all domain data from this current time step to the output file. 
 !   note these are instantaneous fields, precip etc are accumulated fluxes. 
 ! 	u/v are destaggered first
@@ -399,33 +510,37 @@ contains
 		nx=size(domain%qv,1)
 		nz=size(domain%qv,2)
 		ny=size(domain%qv,3)
+		if (.not.allocated(last_rain)) then
+			allocate(last_rain(nx,ny))
+		endif
 		nsoil=size(domain%soil_t,2)
 		
-		! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
-		! the file.
+		current_step=1
 		if (present(inputfilename)) then
 			filename=inputfilename
-			start_three_D(4) = 1
-			start_two_D(3)   = 1
-			start_scalar(1)  = 1
 		else
 			if (timestep.eq.(-1)) then
 				write(filename,"(A,A)") trim(options%output_file),"restart.nc"
-				start_three_D(4) = 1
-				start_two_D(3)   = 1
-				start_scalar(1)  = 1
 			else
-				current_step=current_step+1
-				if (current_step > time_steps_per_file) then
-					call calendar_date(domain%model_time/86400.0+50000,year, month, day, hour, minute, second)
+				call calendar_date(domain%model_time/86400.0+50000,year, month, day, hour, minute, second)
+				if (output_frequency==DAILY_FREQUENCY) then
+					write(filename,'(A,i4,"_",i2.2"_"i2.2"_"i2.2"-"i2.2".nc")') trim(options%output_file),year,month,day,0,0
+					current_step=nint(((hour*60.0+minute)*60.0+second)/options%out_dt) + 1
+				elseif (output_frequency==MONTHLY_FREQUENCY) then
+					write(filename,'(A,i4,"_",i2.2"_"i2.2"_"i2.2"-"i2.2".nc")') trim(options%output_file),year,month,1,0,0
+					current_step=nint((((day*24 + hour)*60.0 + minute)*60.0 + second)/options%out_dt) + 1
+				else
 					write(filename,'(A,i4,"_",i2.2"_"i2.2"_"i2.2"-"i2.2".nc")') trim(options%output_file),year,month,day,hour,minute
 					current_step=1
 				endif
-				start_three_D(4) = current_step
-				start_two_D(3)   = current_step
-				start_scalar(1)  = current_step
+				
 			endif
 		endif
+		! this is the time position to write to in the file
+		start_three_D(4) = current_step
+		start_two_D(3)   = current_step
+		start_scalar(1)  = current_step
+		
 		
 		if (options%debug) then
 			call calendar_date(domain%model_time/86400.0+50000,year, month, day, hour, minute, second)
@@ -434,8 +549,12 @@ contains
 		endif
 		
 		if (file_exists(filename)) then
+			! Open the file. NF90_WRITE tells netCDF we want write/append access to
+			! the file.
 			call check( nf90_open(filename,NF90_WRITE,ncid))
+			call setup_varids(ncid,options)
 		else
+			! otherwise, create a new file
 			call create_file(filename,options)
 			! and write constant (in time) variables
 			call check( nf90_put_var(ncid, lat_id,    domain%lat), trim(filename)//":Latitude" )

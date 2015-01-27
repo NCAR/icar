@@ -342,6 +342,16 @@ contains
 		options%ntimesteps=ntimesteps
 		options%in_dt=inputinterval
 		options%out_dt=outputinterval
+		! if outputing at half-day or longer intervals, create monthly files
+		if (outputinterval>=43200) then
+			options%output_file_frequency="monthly"
+		! if outputing at half-hour or longer intervals, create daily files
+		else if (outputinterval>=1800) then
+			options%output_file_frequency="daily"
+		! otherwise create a new output file every timestep
+		else
+			options%output_file_frequency="every step"
+		endif
 		call parse_date(date, year, month, day, hour, minute, second)
 		call time_init(calendar)
 		options%initial_mjd=date_to_mjd(year, month, day, hour, minute, second)

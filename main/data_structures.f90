@@ -235,7 +235,7 @@ module data_structures
 		! file names
 		character (len=MAXFILELENGTH) :: init_conditions_file
 		character (len=MAXFILELENGTH), dimension(:), allocatable::boundary_files,ext_wind_files
-		character (len=MAXFILELENGTH) :: output_file,restart_file
+		character (len=MAXFILELENGTH) :: output_file,restart_file,output_file_frequency
 
 		! variable names from init/BC/wind/... files
 		character (len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
