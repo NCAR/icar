@@ -65,7 +65,8 @@ module land_surface
     
     real, parameter :: kappa=0.4
     real, parameter :: freezing_threshold=273.15
-    real, parameter :: SMALL_PRESSURE=1e-10
+    real, parameter :: SMALL_PRESSURE=0.1 !note: 0.1Pa is very small 1e-10 wouldn't affect a single-precision float
+    real, parameter :: SMALL_QV=1e-10
     real, parameter :: MAX_EXCHANGE_C = 0.5
     
     character(len=MAXVARLENGTH) :: MMINLU
@@ -105,7 +106,10 @@ contains
 		! e_s = 611.0*10.0**(7.5*(t-273.15)/(t-35.45))
         
 		! enforce e_s < air pressure incase we are out on one edge of a polynomial
-        e_s=min(e_s,p-SMALL_PRESSURE)
+		if ((p-e_s)<=0) then
+			e_s=p*0.99999
+		endif
+        ! e_s=min(e_s,p-SMALL_PRESSURE) ! this is harder to cover a reasonable range of pressure in single precision
         !from : http://www.srh.noaa.gov/images/epz/wxcalc/mixingRatio.pdf
         sat_mr=0.6219907*e_s/(p-e_s) !(kg/kg)
     end function sat_mr
@@ -146,7 +150,7 @@ contains
 		! add water vapor in kg/kg
 		domain%qv(2:nx-1,1,2:ny-1)=domain%qv(2:nx-1,1,2:ny-1)+lhdQV
 		! enforce some minimum water vapor content. 
-		where(domain%qv<SMALL_PRESSURE) domain%qv=SMALL_PRESSURE
+		where(domain%qv<SMALL_QV) domain%qv=SMALL_QV
 		
 	end subroutine apply_fluxes
 	
