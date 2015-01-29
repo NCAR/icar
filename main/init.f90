@@ -257,7 +257,7 @@ contains
 		integer :: nz, n_ext_winds,buffer, warning_level
 		logical :: ideal, readz, readdz, debug, external_winds, remove_lowres_linear, variable_N, &
 		           mean_winds, mean_fields, restart, add_low_topo, advect_density, high_res_soil_state, &
-				   use_agl_height
+				   use_agl_height, spatial_linear_fields
 		character(len=MAXFILELENGTH) :: date, calendar
 		integer :: year, month, day, hour, minute, second
 		
@@ -266,7 +266,7 @@ contains
 							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,smooth_wind_distance, &
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
 							  date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, &
-							  N_squared,linear_contribution,use_agl_height
+							  N_squared,linear_contribution,use_agl_height, spatial_linear_fields
 		
 ! 		default parameters
 		mean_fields=.False.
@@ -297,6 +297,7 @@ contains
 		variable_N=.False.
 		linear_contribution=1.0
 		use_agl_height=.True.
+		spatial_linear_fields=.False.
 		
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=parameters)
@@ -376,6 +377,7 @@ contains
 		options%warning_level=warning_level
 		options%rotation_scale_height=rotation_scale_height
 		options%use_agl_height=use_agl_height
+		options%spatial_linear_fields=spatial_linear_fields
 		
 		options%external_winds=external_winds
 		options%ext_winds_nfiles=n_ext_winds
