@@ -80,11 +80,13 @@ contains
 		nx=size(wind,1)
 		ny=size(wind,2) !note, this is Z for the high-res domain (ydim=3)
 		nz=size(wind,3) !note, this could be the Y or Z dimension depending on ydim
-		
 		! this is ~20MB that has to be allocated deallocated every call...
 		allocate(inputwind(nx,ny,nz)) ! Can't be module level because nx,ny,nz could change between calls, 
 									  ! could be part of a "smoothable" object to avoid allocate-deallocating constantly
-		
+! 		nx=nx-1
+! 		if (ydim==3) then
+! 			nz=nz-1
+! 		endif
 		inputwind=wind !make a copy so we always use the unsmoothed data when computing the smoothed data
 		if (((windowsize*2+1)>nx).and.(ydim==3)) then
 			write(*,*) "WARNING can not operate if windowsize*2+1 is larger than nx"
@@ -100,16 +102,17 @@ contains
 		!$omp shared(wind,inputwind)
 		allocate(rowsums(nx)) !this is only used when ydim=3, so nz is really ny
 		allocate(rowmeans(nx)) !this is only used when ydim=3, so nz is really ny
+		nrows=windowsize*2+1
+		ncols=windowsize*2+1
 		!$omp do schedule(static)
 		do j=1,ny
 			
 			! so we pre-compute the sum over rows for each column in the current window
 			if (ydim==3) then
-				rowsums=0
+				rowsums=inputwind(1:nx,j,1)*(windowsize+1)
 				do i=1,windowsize
-					rowsums=rowsums+inputwind(:,j,i)
+					rowsums=rowsums+inputwind(1:nx,j,i)
 				enddo
-				nrows=windowsize
 			endif
 			! don't parallelize over this loop because it is much more efficient to be able to assume
 			! that you ran the previous row in serial for the slow (ydim=3) case
@@ -120,28 +123,20 @@ contains
 					if ((k-windowsize)<=1) then
 						starty=1
 						endy  =k+windowsize
-						nrows =nrows+1
-						rowsums=rowsums+inputwind(:,j,endy)
+						rowsums=rowsums-inputwind(1:nx,j,starty)+inputwind(1:nx,j,endy)
 					! if we are pinned to the bottom edge
 					else if ((k+windowsize)>nz) then
 						starty=k-windowsize
 						endy  =nz
-						nrows=nrows-1
-						rowsums=rowsums-inputwind(:,j,starty-1)
+						rowsums=rowsums-inputwind(1:nx,j,starty-1)+inputwind(1:nx,j,endy)
 					! if we are in the middle (this is the most common)
 					else
 						starty=k-windowsize
 						endy  =k+windowsize
-						rowsums=rowsums-inputwind(:,j,starty-1)+inputwind(:,j,endy)
-					endif
-					if ((endy-starty+1)/=nrows) then
-						print*, "Y windowing error"
-						print*,endy,starty,nrows
-						print*,i,j,k
+						rowsums=rowsums-inputwind(1:nx,j,starty-1)+inputwind(:,j,endy)
 					endif
 					rowmeans=rowsums/nrows
-					cursum=sum(rowmeans(1:windowsize))
-					ncols=windowsize
+					cursum=sum(rowmeans(1:windowsize))+rowmeans(1)*(windowsize+1)
 				endif
 				
 				do i=1,nx
@@ -150,31 +145,28 @@ contains
 						if ((i-windowsize)<=1) then
 							startx=1
 							endx  =i+windowsize
-							ncols =ncols+1
-							cursum=cursum+rowmeans(endx)
+							cursum=cursum-rowmeans(startx)+rowmeans(endx)
 						! if we are pinned to the right edge
 						else if ((i+windowsize)>nx) then
 							startx=i-windowsize
 							endx  =nx
-							ncols =ncols-1
-							cursum=cursum-rowmeans(startx-1)
+							cursum=cursum-rowmeans(startx-1)+rowmeans(endx)
 						! if we are in the middle (this is the most common)
 						else
 							startx=i-windowsize
 							endx  =i+windowsize
 							cursum=cursum-rowmeans(startx-1)+rowmeans(endx)
 						endif
-						
-						if ((endx-startx+1)/=ncols) then
-							print*, "X windowing error"
-							print*,endx,startx,ncols
-							print*,i,j,k
-						endif
+
 						wind(i,j,k)=cursum/ncols
-						
-						! old SLOW way
-						! wind(i,j,k)=sum(inputwind(startx:endx,j,starty:endy)) &
-						! 			/ ((endx-startx+1)*(endy-starty+1))
+
+						! old slower way, also creates artifacts windowsize distance from the borders
+! 						startx=max(1, i-windowsize)
+! 						endx  =min(nx,i+windowsize)
+! 						starty=max(1, k-windowsize)
+! 						endy  =min(nz,k+windowsize)
+! 						wind(i,j,k)=sum(inputwind(startx:endx,j,starty:endy)) &
+! 									/ ((endx-startx+1)*(endy-starty+1))
 					else ! ydim==2
 						! ydim=2 for the input data which is a small grid, thus cheap so we still use the slow method
 						!first find the current window bounds
@@ -183,6 +175,9 @@ contains
 						starty=max(1, j-windowsize)
 						endy  =min(ny,j+windowsize)
 						! then compute the mean within that window (sum/n)
+						! note, artifacts near the borders (mentioned in ydim==3) don't affect this
+						! because the borders *should* be well away from the domain
+						! if the forcing data are not much larger than the model domain this *could* create issues
 						wind(i,j,k)=sum(inputwind(startx:endx,starty:endy,k)) &
 									/ ((endx-startx+1)*(endy-starty+1))
 					endif
@@ -610,8 +605,8 @@ contains
 		else
 ! 			else load data from the first Boundary conditions file
 			boundary_value=.False.
-			nx=size(domain%u,1)
-			ny=size(domain%u,3)
+			nx=size(domain%p,1)
+			ny=size(domain%p,3)
 			if (options%external_winds) then
 				call ext_winds_init(domain,bc,options)
 ! 				call smooth_wind(domain%u,1,3)
