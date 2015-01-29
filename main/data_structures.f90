@@ -291,6 +291,7 @@ module data_structures
 		real :: t_offset				! offset to temperature because WRF outputs potential temperature-300
 		real, allocatable, dimension(:)::dz_levels ! model layer thicknesses to be read from namelist
 		real :: rotation_scale_height   ! height to minimize wind rotation into the terrain following grid below [m]
+		logical :: use_agl_height       ! interpolate from forcing to model layers using Z above ground level, not sea level
 		
 		! defines which physics package to be used. 
 		type(physics_type)::physics

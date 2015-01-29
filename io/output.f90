@@ -129,6 +129,9 @@ contains
 		if (options%variable_N) then
 			call check( nf90_put_att(ncid,NF90_GLOBAL,"variable_N","True"))
 		endif
+		if (options%use_agl_height) then
+			call check( nf90_put_att(ncid,NF90_GLOBAL,"use_agl_height","True"))
+		endif
 	
 	
 	
@@ -164,6 +167,7 @@ contains
 		call check( nf90_def_var(ncid, "time", NF90_DOUBLE, t_id, time_id) )
 		call check( nf90_put_att(ncid,time_id,"standard_name","time"))
 		call check( nf90_put_att(ncid,time_id,"long_name","modified Julian Day"))
+		call check( nf90_put_att(ncid,time_id,"UTCoffset","0"))
 		call check( nf90_put_att(ncid,time_id,"units","days since 1858-11-17 00:00:00"))
 
 		call check( nf90_def_var(ncid, "qv", NF90_REAL, dimids, temp_id) )
@@ -542,11 +546,8 @@ contains
 		start_scalar(1)  = current_step
 		
 		
-		if (options%debug) then
-			call calendar_date(domain%model_time/86400.0+50000,year, month, day, hour, minute, second)
-			write(*,'(A,i4,"/",i2.2"/"i2.2" "i2.2":"i2.2":"i2.2)') "Output Date:",year,month,day,hour,minute, second
-			write(*,*) trim(filename)
-		endif
+		call calendar_date(domain%model_time/86400.0+50000,year, month, day, hour, minute, second)
+		write(*,'(A,i4,"/",i2.2"/"i2.2" "i2.2":"i2.2)') "Output Date:",year,month,day,hour,minute
 		
 		if (file_exists(filename)) then
 			! Open the file. NF90_WRITE tells netCDF we want write/append access to
