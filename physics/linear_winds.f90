@@ -14,6 +14,7 @@
 !!   calc_stability		- calculates a mean Brunt Vaisala frequency over the domain
 !!   linear_winds		- primary routine that calculates the linear wind perturbation
 !!	 add_buffer_topo	- generates a topo grid that with a surrounding buffer for the fft
+!!   initialize_spatial_winds - generated the look up tables to use spatially varying linear winds
 !! 	 setup_linwinds		- sets up module level variables and calls add_buffer_topo
 !! 	 linear_perturb		- main entry point, calls setup on first entry for a given domain
 !! 
@@ -50,6 +51,17 @@ module linear_theory_winds
 	real, parameter :: max_stability= 5e-4 ! limits on the calculated Brunt Vaisala Frequency
 	real, parameter :: min_stability= 5e-7 ! these may need to be a little narrower. 
 	real :: linear_contribution = 1.0 ! multiplier on uhat,vhat before adding to u,v
+	
+	real, allocatable, dimension(:) :: u_values, v_values
+	real, allocatable, dimension(:,:,:,:,:) :: u_LUT, v_LUT
+	
+	real, parameter :: umax=20
+	real, parameter :: umin=-20
+	real, parameter :: vmax=20
+	real, parameter :: vmin=-20
+	
+	integer, parameter :: n_U_values=20
+	integer, parameter :: n_V_values=20
 	
 contains
 	
@@ -124,13 +136,14 @@ contains
 	! could/should be calculated from the real atm profile with limits
 	! f  = 9.37e-5           # rad/s Coriolis frequency for 40deg north
 	! ---------------------------------------------------------------------------------
-    subroutine linear_winds(domain,Ndsq,vsmooth,reverse_flag,useDensity,debug)
+    subroutine linear_winds(domain,Ndsq,vsmooth,reverse_flag,useDensity,debug,fixedU,fixedV)
 		use, intrinsic :: iso_c_binding
         implicit none
         class(linearizable_type),intent(inout)::domain
         real, intent(in)::Ndsq
 		integer, intent(in)::vsmooth ! number of layers to smooth winds over in the vertical
 		logical, intent(in), optional :: reverse_flag,useDensity,debug
+		real, intent(in), optional :: fixedU, fixedV !instead of computing U and V from domain, just use these
 		logical::reverse
         complex,parameter :: j= (0,1)
         real::gain,offset !used in setting up k and l arrays
@@ -157,22 +170,31 @@ contains
 		realnx=size(domain%z,1)
 		realny=size(domain%z,3)
 		
-		do i=1,nz
-			preU_layers(i)=sum(domain%u(:(realnx-1),i,:))/((realnx-1)*realny)
-			preV_layers(i)=sum(domain%v(:,i,:(realny-1)))/(realnx*(realny-1))
-		enddo
-		do i=1,nz
-			bottom=i-vsmooth
-			top=i+vsmooth
-			if (bottom<1) then
-				bottom=1
+		if (present(fixedV)) then
+			if (.not.present(fixedU)) then
+				write(*,*) "Fixed U and V fields must both be supplied"
+				stop
 			endif
-			if (top>nz) then
-				top=nz
-			endif
-			U_layers(i)=sum(preU_layers(bottom:top))/(top-bottom+1)
-			V_layers(i)=sum(preV_layers(bottom:top))/(top-bottom+1)
-		enddo
+			V_layers=fixedV
+			U_layers=fixedV
+		else
+			do i=1,nz
+				preU_layers(i)=sum(domain%u(:(realnx-1),i,:))/((realnx-1)*realny)
+				preV_layers(i)=sum(domain%v(:,i,:(realny-1)))/(realnx*(realny-1))
+			enddo
+			do i=1,nz
+				bottom=i-vsmooth
+				top=i+vsmooth
+				if (bottom<1) then
+					bottom=1
+				endif
+				if (top>nz) then
+					top=nz
+				endif
+				U_layers(i)=sum(preU_layers(bottom:top))/(top-bottom+1)
+				V_layers(i)=sum(preV_layers(bottom:top))/(top-bottom+1)
+			enddo
+		endif
 		
         
 		! these should be stored in a separate data structure... and allocated/deallocated in a subroutine
@@ -363,6 +385,87 @@ contains
 		
 	end subroutine add_buffer_topo
 	
+	subroutine initialize_spatial_winds(domain)
+		type(linearizable_type), intent(inout) :: domain
+		real, allocatable, dimension(:,:,:) :: savedU, savedV
+		real :: u,v
+		integer :: nx,ny,nz,i,j
+		
+		nx=size(domain%u,1)-1
+		nz=size(domain%u,2)
+		ny=size(domain%u,3)
+		
+		allocate(savedU(nx+1,nz,ny))
+		allocate(savedV(nx,nz,ny+1))
+		savedU=domain%u
+		savedV=domain%v
+		
+		allocate(u_values(n_U_values))
+		allocate(v_values(n_V_values))
+		
+		do i=1,n_U_values
+			u_values(i)=i/real(n_U_values) * (umax-umin) + umin
+		enddo
+		do i=1,n_V_values
+			v_values(i)=i/real(n_V_values) * (vmax-vmin) + vmin
+		enddo
+		
+		allocate(u_LUT(n_U_values,n_V_values,nx+1,nz,ny))
+		allocate(v_LUT(n_U_values,n_V_values,nx,nz,ny+1))
+		
+		do i=1,n_U_values
+			print*, i/real(n_U_values)*100
+			do j=1,n_V_values
+				domain%u=u_values(i)
+				domain%v=v_values(j)
+				
+				call linear_winds(domain,6e-5, 0, reverse_flag=.False.,useDensity=.False.,debug=.False.,fixedU=u_values(i),fixedV=v_values(j))
+				u_LUT(i,j,:,:,:)=domain%u-u_values(i)
+				v_LUT(i,j,:,:,:)=domain%v-v_values(i)
+			end do
+		end do
+		domain%u=savedU
+		domain%v=savedV
+		
+		deallocate(savedU,savedV)
+		
+	end subroutine initialize_spatial_winds
+	
+	subroutine spatial_winds(domain)
+		type(linearizable_type), intent(inout) :: domain
+		real :: u,v
+		integer :: nx,ny,nz,i,j,k
+		integer :: step, upos, vpos
+	
+		nx=size(domain%u,1)-1
+		nz=size(domain%u,2)
+		ny=size(domain%u,3)
+		
+		do k=1,ny
+			do j=1,nz
+				do i=1,nx
+					upos=1
+					do step=1,n_U_values
+						if (domain%u(i,j,k)<u_values(step)) then
+							upos=step
+						endif
+					end do
+					vpos=1
+					do step=1,n_V_values
+						if (domain%v(i,j,k)<v_values(step)) then
+							vpos=step
+						endif
+					end do
+					
+					! should do some linear interpolation between this step and the next one at some point but for now...
+					domain%u(i,j,k)=domain%u(i,j,k)+u_LUT(upos,vpos,i,j,k)
+					domain%v(i,j,k)=domain%v(i,j,k)+v_LUT(upos,vpos,i,j,k)
+				end do
+			end do
+		end do
+		
+	end subroutine spatial_winds
+	
 	! called from linear_perturb the first time perturb is called
 	! compute FFT(terrain), and dzdx,dzdy components
     subroutine setup_linwinds(domain,options)
@@ -399,6 +502,16 @@ contains
 		if (options%linear_contribution/=1) then
 			write(*,*) "Using a fraction of the linear perturbation:",options%linear_contribution
 		endif
+		
+		if (options%spatial_linear_fields) then
+			write(*,*) "Generating a spatially variable linear perturbation look up table"
+			if (options%remove_lowres_linear) then
+				write(*,*) "WARNING: Can not use a spatially variable linear perturbation"
+				write(*,*) "WARNING:    when removing the low resolution linear fields"
+				stop
+			endif
+			call initialize_spatial_winds(domain)
+		endif
         
     end subroutine
 	
@@ -418,10 +531,14 @@ contains
             call setup_linwinds(domain,options)
         endif
 		
-		! Ndsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability
-        stability=calc_stability(domain)
+		if (options%spatial_linear_fields) then
+			call spatial_winds(domain)
+		else
+			! Ndsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability
+	        stability=calc_stability(domain)
 		
-		call linear_winds(domain,stability,vsmooth,reverse,useDensity,debug)
+			call linear_winds(domain,stability,vsmooth,reverse,useDensity,debug)
+		endif
 		debug=.False.
         
     end subroutine linear_perturb

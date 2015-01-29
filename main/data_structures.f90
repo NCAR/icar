@@ -283,6 +283,7 @@ module data_structures
 		real :: smooth_wind_distance 	! distance over which to smooth the forcing wind field (m)
 		real :: N_squared				! static Brunt Vaisala Frequency (N^2) to use
 		real :: linear_contribution     ! fractional contribution of linear perturbation to wind field (e.g. u_hat multiplied by this)
+		logical :: spatial_linear_fields! use a spatially varying linear wind perturbation
 		
 		! date/time parameters
 		double precision :: initial_mjd ! Modified Julian Day of the first model time step [days]
