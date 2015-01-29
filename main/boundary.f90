@@ -97,11 +97,15 @@ contains
 					rowsums=0
 					starty=max(1, k-windowsize)
 					endy  =min(nz,k+windowsize)
-					do i=1,windowsize+1
-						rowsums(i)=sum(inputwind(i,j,starty:endy))/(endy-starty+1)
+! 					do i=1,windowsize+1
+! 						rowsums(i)=sum(inputwind(i,j,starty:endy))/(endy-starty+1)
+! 					enddo
+					do i=starty,endy
+						rowsums(1:windowsize+1)=rowsums(1:windowsize+1)+inputwind(1:windowsize+1,j,i)
 					enddo
-					cursum=sum(rowsums(1:windowsize+1))
-					cur_n=windowsize+1
+					rowsums=rowsums/(endy-starty+1)
+					cursum=sum(rowsums(1:windowsize))
+					cur_n=windowsize
 					curcol=windowsize
 				endif
 				
@@ -114,20 +118,19 @@ contains
 						if (curcol==0) curcol=ncols
 						
 						cursum=cursum-rowsums(curcol)
-						! if the window is now pinned to the right edge, we are just removing columns
-						! so subtract one from cur_n and set the rowsums for the old/current column to be 0
-						if ((i+windowsize)>nx) then
-							rowsums(curcol)=0
-							cur_n=cur_n-1
-						else
+						
+						! general window size
+						cur_n=endx-startx+1
+						! if the window is not pinned to the right edge, add the new column
+						if ((i+windowsize)<=nx) then
 							! this is an internal window set the "old" column to its new value
 							rowsums(curcol)=sum(inputwind(endx,j,starty:endy))/(endy-starty+1)
+							! then compute the mean within that window (sum/n)
+							cursum=cursum+rowsums(curcol)
+						else
+							rowsums(curcol)=0 ! this shouldn't be necessary as we shouldn't get back to it
 						endif
-						! if the window is still pinned to the left edge, we are adding columns, so add one to cur_n
-						cur_n=endx-startx+1
 						
-						! then compute the mean within that window (sum/n)
-						cursum=cursum+rowsums(curcol)
 						wind(i,j,k)=cursum/cur_n
 						! old SLOW way
 						! wind(i,j,k)=sum(inputwind(startx:endx,j,starty:endy)) &

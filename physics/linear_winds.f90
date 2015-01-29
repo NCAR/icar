@@ -55,13 +55,13 @@ module linear_theory_winds
 	real, allocatable, dimension(:) :: u_values, v_values
 	real, allocatable, dimension(:,:,:,:,:) :: u_LUT, v_LUT
 	
-	real, parameter :: umax=20
+	real, parameter :: umax=30
 	real, parameter :: umin=-20
 	real, parameter :: vmax=20
 	real, parameter :: vmin=-20
 	
-	integer, parameter :: n_U_values=20
-	integer, parameter :: n_V_values=20
+	integer, parameter :: n_U_values=30
+	integer, parameter :: n_V_values=30
 	
 contains
 	
@@ -410,6 +410,9 @@ contains
 			v_values(i)=i/real(n_V_values) * (vmax-vmin) + vmin
 		enddo
 		
+		print*, u_values
+		print*, v_values
+		
 		allocate(u_LUT(n_U_values,n_V_values,nx+1,nz,ny))
 		allocate(v_LUT(n_U_values,n_V_values,nx,nz,ny+1))
 		
@@ -440,6 +443,7 @@ contains
 		nx=size(domain%u,1)-1
 		nz=size(domain%u,2)
 		ny=size(domain%u,3)
+		
 		
 		do k=1,ny
 			do j=1,nz
