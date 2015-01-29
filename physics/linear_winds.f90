@@ -60,8 +60,8 @@ module linear_theory_winds
 	real, parameter :: vmax=20
 	real, parameter :: vmin=-20
 	
-	integer, parameter :: n_U_values=30
-	integer, parameter :: n_V_values=30
+	integer, parameter :: n_U_values=10
+	integer, parameter :: n_V_values=10
 	
 contains
 	
@@ -386,6 +386,7 @@ contains
 	end subroutine add_buffer_topo
 	
 	subroutine initialize_spatial_winds(domain)
+		implicit none
 		type(linearizable_type), intent(inout) :: domain
 		real, allocatable, dimension(:,:,:) :: savedU, savedV
 		real :: u,v
@@ -404,20 +405,18 @@ contains
 		allocate(v_values(n_V_values))
 		
 		do i=1,n_U_values
-			u_values(i)=i/real(n_U_values) * (umax-umin) + umin
+			u_values(i)=(i-1)/real(n_U_values-1) * (umax-umin) + umin
 		enddo
 		do i=1,n_V_values
-			v_values(i)=i/real(n_V_values) * (vmax-vmin) + vmin
+			v_values(i)=(i-1)/real(n_V_values-1) * (vmax-vmin) + vmin
 		enddo
-		
-		print*, u_values
-		print*, v_values
 		
 		allocate(u_LUT(n_U_values,n_V_values,nx+1,nz,ny))
 		allocate(v_LUT(n_U_values,n_V_values,nx,nz,ny+1))
 		
+		write(*,*) "Percent Completed:"
 		do i=1,n_U_values
-			print*, i/real(n_U_values)*100
+			write(*,*) i/real(n_U_values)*100," %"
 			do j=1,n_V_values
 				domain%u=u_values(i)
 				domain%v=v_values(j)
@@ -434,36 +433,78 @@ contains
 		
 	end subroutine initialize_spatial_winds
 	
+	function calc_weight(indata, bestpos, nextpos, match) result(weight)
+		! simply calculate the weights between the positions bestpos and nextpos
+		! based on the distance between match and indata(nextpos) (normatlized by nextpos - bestpos)
+		! assumes indata is monotonically increasing, 
+		! bestpos must be set prior to entry
+		! nextpos is calculated internally (either bestpos+1 or n)
+		implicit none
+		real :: weight
+		real, dimension(:), intent(in) :: indata
+		integer, intent(in) :: bestpos
+		integer, intent(inout) :: nextpos
+		real, intent(in) :: match
+		
+		integer :: n
+		
+		n=size(indata)
+		
+		if (match<indata(1)) then
+			nextpos=1
+			weight=1
+		else
+			if (match>indata(n)) then
+				nextpos=n
+				weight=1
+			else
+				nextpos=bestpos+1
+				weight=(indata(nextpos)-match) / (indata(nextpos) - indata(bestpos))
+			endif
+		endif
+	
+	end function
+	
 	subroutine spatial_winds(domain)
+		! compute a spatially variable linear wind perturbation
+		! based off of look uptables computed in via setup
+		! for each grid point, find the closest LUT data in U and V space
+		! then bilinearly interpolate the nearest LUT values for that points linear wind field
+		implicit none
 		type(linearizable_type), intent(inout) :: domain
 		real :: u,v
 		integer :: nx,ny,nz,i,j,k
-		integer :: step, upos, vpos
+		integer :: step, upos, vpos, nextu, nextv
+		real :: uweight, vweight
 	
 		nx=size(domain%u,1)-1
 		nz=size(domain%u,2)
 		ny=size(domain%u,3)
-		
 		
 		do k=1,ny
 			do j=1,nz
 				do i=1,nx
 					upos=1
 					do step=1,n_U_values
-						if (domain%u(i,j,k)<u_values(step)) then
+						if (domain%u(i,j,k)>u_values(step)) then
 							upos=step
 						endif
 					end do
 					vpos=1
 					do step=1,n_V_values
-						if (domain%v(i,j,k)<v_values(step)) then
+						if (domain%v(i,j,k)>v_values(step)) then
 							vpos=step
 						endif
 					end do
-					
+					uweight=calc_weight(u_values, upos,nextu,domain%u(i,j,k))
+					vweight=calc_weight(v_values, vpos,nextv,domain%v(i,j,k))
 					! should do some linear interpolation between this step and the next one at some point but for now...
-					domain%u(i,j,k)=domain%u(i,j,k)+u_LUT(upos,vpos,i,j,k)
-					domain%v(i,j,k)=domain%v(i,j,k)+v_LUT(upos,vpos,i,j,k)
+					domain%u(i,j,k)=domain%u(i,j,k) &
+									+    vweight  * (uweight * u_LUT(upos,vpos,i,j,k)  + (1-uweight) * u_LUT(nextu,vpos,i,j,k)) &
+									+ (1-vweight) * (uweight * u_LUT(upos,nextv,i,j,k) + (1-uweight) * u_LUT(nextu,nextv,i,j,k))
+					domain%v(i,j,k)=domain%v(i,j,k) &
+									+    vweight  * (uweight * v_LUT(upos,vpos,i,j,k)  + (1-uweight) * v_LUT(nextu,vpos,i,j,k)) &
+									+ (1-vweight) * (uweight * v_LUT(upos,nextv,i,j,k) + (1-uweight) * v_LUT(nextu,nextv,i,j,k))
 				end do
 			end do
 		end do
