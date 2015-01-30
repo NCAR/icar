@@ -256,7 +256,8 @@ contains
 		integer :: ntimesteps, nfiles, xmin, xmax, ymin, ymax, vert_smooth
 		integer :: nz, n_ext_winds,buffer, warning_level
 		logical :: ideal, readz, readdz, debug, external_winds, remove_lowres_linear, variable_N, &
-		           mean_winds, mean_fields, restart, add_low_topo, advect_density, high_res_soil_state
+		           mean_winds, mean_fields, restart, add_low_topo, advect_density, high_res_soil_state, &
+				   use_agl_height, spatial_linear_fields
 		character(len=MAXFILELENGTH) :: date, calendar
 		integer :: year, month, day, hour, minute, second
 		
@@ -265,7 +266,7 @@ contains
 							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,smooth_wind_distance, &
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
 							  date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, &
-							  N_squared,linear_contribution
+							  N_squared,linear_contribution,use_agl_height, spatial_linear_fields
 		
 ! 		default parameters
 		mean_fields=.False.
@@ -295,6 +296,8 @@ contains
 		N_squared=6.37e-5
 		variable_N=.False.
 		linear_contribution=1.0
+		use_agl_height=.True.
+		spatial_linear_fields=.False.
 		
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=parameters)
@@ -373,6 +376,8 @@ contains
 		options%debug=debug
 		options%warning_level=warning_level
 		options%rotation_scale_height=rotation_scale_height
+		options%use_agl_height=use_agl_height
+		options%spatial_linear_fields=spatial_linear_fields
 		
 		options%external_winds=external_winds
 		options%ext_winds_nfiles=n_ext_winds
@@ -778,7 +783,10 @@ contains
 		nxo=size(output%lat,1)
 		nzo=nzi
 		nyo=size(output%lat,2)
-		
+
+		if (allocated(output%z)) then
+			deallocate(output%z)
+		endif
 		allocate(output%z(nxo,nzo,nyo))
 		if (interpolate_dim==1) then
 			output%z(2:nxo-1,:,:)=(input%z(1:nxi-1,:,:) + input%z(2:nxi,:,:))/2
@@ -884,17 +892,17 @@ contains
 		if(options%buffer>0) then
 			call remove_edges(domain,options%buffer)
 		endif
-! 		use the lat variable to define the x and y dimensions for all other variables
+		! use the lat variable to define the x and y dimensions for all other variables
 		nx=size(domain%lat,1)
 		ny=size(domain%lat,2)
-! 		assumes nz is defined in the options
+		! assumes nz is defined in the options
 		nz=options%nz
 		
-! 		if a 3d grid was also specified, then read those data in
+		! if a 3d grid was also specified, then read those data in
 		if ((options%readz).and.(options%ideal).and.(options%zvar.ne."")) then
 			
 			call io_read3d(options%init_conditions_file,options%zvar, domain%z)
-! 			dz also has to be calculated from the 3d z file
+			! dz also has to be calculated from the 3d z file
 			buf=options%buffer
 			allocate(domain%dz(nx,nz,ny))
 			allocate(temporary_z(nx,nz,ny))
@@ -909,8 +917,8 @@ contains
 			domain%z=temporary_z
 			deallocate(temporary_z)
 		else
-! 			otherwise, set up the z grid to be evenly spaced in z using the terrain +dz/2 for the base
-! 			and z[1]+i*dz for the res
+			! otherwise, set up the z grid to be evenly spaced in z using the terrain +dz/2 for the base
+			! and z[1]+i*dz for the res
 			allocate(domain%z(nx,nz,ny))
 			allocate(domain%dz(nx,nz,ny))
 			domain%dz(:,1,:)=options%dz_levels(1)
@@ -924,13 +932,13 @@ contains
 		call copy_z(domain,domain%u_geo,interpolate_dim=1)
 		call copy_z(domain,domain%v_geo,interpolate_dim=3)
 		
-! 		all other variables should be allocated and initialized to 0
+		! all other variables should be allocated and initialized to 0
 		call domain_allocation(domain,nx,nz,ny)
 		
-! 		initializing land
+		! initializing land
 		call init_domain_land(domain,options)
 		
-! 		store dx in domain as well as options, read as an option, but it is more appropriate in domain
+		! store dx in domain as well as options, read as an option, but it is more appropriate in domain
 		domain%dx=options%dx
 		
 		call init_winds(domain,options)
@@ -966,7 +974,7 @@ contains
 		boundary%dpblh_dt=0
 	end subroutine boundary_allocate
 	
-! 	initialize the boundary condition data structure e.g. lat,lon,terrain,3D Z coord
+! initialize the boundary condition data structure e.g. lat,lon,terrain,3D Z coord
 	subroutine init_bc_data(options,boundary,domain)
 		implicit none
 		type(options_type), intent(in) :: options
@@ -976,7 +984,7 @@ contains
 		real,dimension(:,:,:),allocatable::zbase
 		integer::nx,ny,nz,i
 		
-! 		these variables are required for any boundary/forcing file type
+		! these variables are required for any boundary/forcing file type
 		call io_read2d(options%boundary_files(1),options%latvar,boundary%lat)
 		call io_read2d(options%boundary_files(1),options%lonvar,boundary%lon)
 		call io_read2d(options%boundary_files(1),options%ulat,boundary%u_geo%lat)
@@ -985,38 +993,25 @@ contains
 		call io_read2d(options%boundary_files(1),options%vlon,boundary%v_geo%lon)
 		call io_read2d(options%boundary_files(1),options%hgtvar,boundary%terrain)
 		
-! 		read in the vertical coordinate
+		! read in the vertical coordinate
 		call io_read3d(options%boundary_files(1),options%zvar,zbase)
 		nx=size(zbase,1)
 		ny=size(zbase,2)
 		nz=size(zbase,3)
 		allocate(boundary%lowres_z(nx,nz,ny))
-! 		write(*,*) "WARNING: HACK in init.f90 boundary init : z=z*9.8"
-! 		boundary%lowres_z=reshape(zbase*9.8,[nx,nz,ny],order=[1,3,2])
 		boundary%lowres_z=reshape(zbase,[nx,nz,ny],order=[1,3,2])
 		deallocate(zbase)
 		if (options%zvar=="PH") then
+	 		write(*,*) ""
+	 		write(*,*) "WARNING: assumeing height variable is in geopotential units"
+	 		write(*,*) "    adding PHB (base state) and dividing by gravity..."
+	 		write(*,*) ""
 			call io_read3d(options%boundary_files(1),"PHB",zbase)
 			
 			boundary%lowres_z=(boundary%lowres_z+reshape(zbase,[nx,nz,ny],order=[1,3,2])) / gravity
 			deallocate(zbase)
 		endif
 		
-! 		nx=size(boundary%lat,1)
-! 		nz=options%nz
-! 		ny=size(boundary%lat,2)
-! 		allocate(boundary%z(nx,nz,ny))
-! 		allocate(boundary%dz(nx,nz,ny))
-! 		! assumes that vertical level thicknesses are identical in the forcing and model domain!
-! 		fulldz(:nz)=domain%dz(1,:nz,1)
-! 		! set up the bc_data dz and z variables (vertical levels)
-! 		boundary%dz(:,1,:)=fulldz(1)
-! 		! z is calculated from dz, dz is thickness of layers.
-! 		boundary%z(:,1,:)=boundary%terrain+fulldz(1)/2
-! 		do i=2,nz
-! 			boundary%z(:,i,:)=boundary%z(:,i-1,:)+(fulldz(i)+fulldz(i-1))/2
-! 			boundary%dz(:,i,:)=fulldz(i)
-! 		enddo
 		
 		! all other structures must be allocated and initialized, but will be set on a high-res grid
 		! u/v are seperate so we can read them on the low res grid and adjust/rm-linearwinds before interpolating
@@ -1090,8 +1085,8 @@ contains
 			deallocate(temporary_terrain)
 		endif
 		
-! 		force all weight to be on the first x,y pair...
-! 		this assumes the "external winds" file is on the exact same grid as the high res model grid
+		! force all weight to be on the first x,y pair...
+		! this assumes the "external winds" file is on the exact same grid as the high res model grid
 		bc%ext_winds%u_geo%geolut%w(2:,:,:)=0
 		bc%ext_winds%u_geo%geolut%w(1,:,:)=1
 		bc%ext_winds%v_geo%geolut%w(2:,:,:)=0
@@ -1166,11 +1161,11 @@ contains
 		integer::i,nx,ny,nz
 			
 		boundary%dx=options%dxlow
-! 		set up base data
+		! set up base data
 		call init_bc_data(options,boundary,domain)
 		call init_domain(options,boundary%next_domain) !set up a domain to hold the forcing for the next time step
 		
-! 		create the geographic look up table used to calculate boundary forcing data
+		! create the geographic look up table used to calculate boundary forcing data
 		write(*,*) "Setting up domain geographic Look Up Tables"
 		! set up a look up table from low-res grid center to high-res u-offset coordinates
 		call geo_LUT(domain%u_geo,boundary)
@@ -1186,6 +1181,35 @@ contains
 			call init_ext_winds(options,boundary)
 		endif
 		
+		nz=size(boundary%lowres_z,2)
+		if (maxval(boundary%terrain)>maxval(boundary%lowres_z(:,1,:))) then
+			write(*,*) "WARNING Assuming forcing Z levels are AGL, not ASL : adding ground surface height"
+			do i=1,nz
+				boundary%lowres_z(:,i,:)=boundary%lowres_z(:,i,:)+boundary%terrain
+			enddo
+		endif
+		if (options%zvar=="PH") then
+			write(*,*) "WARNING interpolating forcing z levels to half / mass levels"
+			write(*,*) "  Assuming PH variable is geopotential between mass levels (as in WRF)"
+			boundary%lowres_z(:,1:nz-1,:) = (boundary%lowres_z(:,1:nz-1,:) + boundary%lowres_z(:,2:nz,:)) / 2
+		endif
+		! if we want vertical interpolations between forcing and model grid to be done from 
+		! height above ground level (and we should, esp. for wind!), then we need to remove the 
+		! topography from both grids first
+		if (options%use_agl_height) then
+			nz=size(boundary%lowres_z,2)
+			do i=1,nz
+				boundary%lowres_z(:,i,:)=boundary%lowres_z(:,i,:)-boundary%terrain
+			enddo
+			nz=size(domain%z,2)
+			do i=1,nz
+				domain%z(:,i,:)=domain%z(:,i,:)-domain%terrain
+			enddo
+			
+			call copy_z(domain,domain%u_geo,interpolate_dim=1)
+			call copy_z(domain,domain%v_geo,interpolate_dim=3)
+			
+		endif
 		! interpolate the low-res terrain to the high-res grid for pressure adjustments. 
 		! the correct way would probably be to adjust all low-res pressures to Sea level before interpolating
 		! then pressure adjustments all occur from SLP. 
@@ -1212,19 +1236,40 @@ contains
 		
 		call destroy_lut(v_temp_geo)
 		call destroy_lut(u_temp_geo)
-		
-		if (options%add_low_topo) then
-			domain%terrain=domain%terrain+(boundary%lowres_terrain-sum(boundary%lowres_terrain) &
-											 /size(boundary%lowres_terrain))/2.0
-			do i=1,size(domain%z,2)
-				domain%z(:,i,:)=domain%z(:,i,:)+(boundary%lowres_terrain-sum(boundary%lowres_terrain) &
-												 /size(boundary%lowres_terrain))/2.0
-			enddo
-		endif
+
+! 		call io_write3d("bc_lowresz-hgt.nc","data",boundary%lowres_z)
+! 		call io_write3d("u_hiresz-hgt.nc","data",domain%u_geo%z)
+! 		call io_write3d("v_hiresz-hgt.nc","data",domain%v_geo%z)
+!! WARNING, to do this with the use_agl_height options requires more though, don't just uncomment
+!! since this option has been deprecated previously, it is now simply removed.  
+! 		if (options%add_low_topo) then
+! 			domain%terrain=domain%terrain+(boundary%lowres_terrain-sum(boundary%lowres_terrain) &
+! 											 /size(boundary%lowres_terrain))/2.0
+! 			do i=1,size(domain%z,2)
+! 				domain%z(:,i,:)=domain%z(:,i,:)+(boundary%lowres_terrain-sum(boundary%lowres_terrain) &
+! 												 /size(boundary%lowres_terrain))/2.0
+! 			enddo
+! 		endif
 		write(*,*) "Setting up vertical interpolation Look Up Tables"
+		
 		call vLUT(domain,boundary)
 		call vLUT(domain%u_geo,boundary%u_geo)
 		call vLUT(domain%v_geo,boundary%v_geo)
+		
+		if (options%use_agl_height) then
+			nz=size(boundary%z,2)
+! 			call io_write3d("bc_hiresz-hgt.nc","data",boundary%z)
+			do i=1,nz
+				boundary%z(:,i,:)=boundary%z(:,i,:)+boundary%lowres_terrain
+				boundary%lowres_z(:,i,:)=boundary%lowres_z(:,i,:)+boundary%terrain
+			enddo
+			nz=size(domain%z,2)
+! 			call io_write3d("domain_z-hgt.nc","data",domain%z)
+			do i=1,nz
+				domain%z(:,i,:)=domain%z(:,i,:)+domain%terrain
+			enddo
+		endif
+		
 ! 		call io_write3di("vlutz1.nc","z",boundary%vert_lut%z(1,:,:,:))
 ! 		call io_write3di("vlutz2.nc","z",boundary%vert_lut%z(2,:,:,:))
 ! 		call io_write3d("vlutw1.nc","w",boundary%vert_lut%w(1,:,:,:))
@@ -1243,6 +1288,8 @@ contains
 ! 		call io_write3d("bc_hiresz.nc","data",boundary%z)
 ! 		call io_write3d("domain_z.nc","data",domain%z)
 
+		! these are not longer needed and (without adjustments) are potentially unreliable (AGL vs ASL)
+		deallocate(boundary%v_geo%z,boundary%u_geo%z)
 		call swap_z(boundary)
 		
 	end subroutine init_bc

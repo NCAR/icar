@@ -122,7 +122,10 @@ module module_mp_simple
 ! 			print*, "e_s more than p!"
 ! 			print*, p,e_s,t,p-e_s
 ! 		endif
-		e_s=min(e_s,p-SMALL_PRESSURE)
+! 		e_s=min(e_s,p-SMALL_PRESSURE)
+		if ((p-e_s)<=0) then
+			e_s=p*0.99999
+		endif
         !from : http://www.srh.noaa.gov/images/epz/wxcalc/mixingRatio.pdf
         sat_mr=0.6219907*e_s/(p-e_s) !(kg/kg)
     end function sat_mr
