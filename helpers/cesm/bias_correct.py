@@ -112,10 +112,13 @@ def vinterp_q(file_name=None):
     print("Writing data")
     write_interpolated_6hrly(qout,mean_z,file_name)
 
-def compute_mean_q():
+def compute_mean_q(wind_option):
 
     print("Computing Monthly Mean fields")
     qvarlist=["qv","theta","p","u","v","rh"]
+    if (wind_option == "nowind"):
+        qvarlist=["qv","theta","p","rh"]
+        
     full_data=[]
     for varname in qvarlist:
         print(varname)
@@ -142,10 +145,13 @@ def compute_mean_q():
                 print(nyears)
                 mygis.write(qoutputfile.format(month+1,varname),meanq,varname=varname)
 
-def load_erai_means():
+def load_erai_means(wind_option):
     """docstring for load_erai_means"""
     eraid="erai/"
     varlist=["p","rh","ta","ua","va","z"]
+    if (wind_option=="nowind"):
+        varlist=["p","rh","ta","z"]
+        
     outputdata=[]
     month_mid_point_doy=(start_day_per_month[1:]+np.array(start_day_per_month[:-1]))*0.5
     
@@ -166,10 +172,13 @@ def load_erai_means():
         outputdata.append(curoutput)
     return outputdata
 
-def load_cesm_means():
+def load_cesm_means(wind_option):
     """docstring for load_cesm_means"""
     cesmd="means/"
     varlist=["p","rh","theta","u","v"]
+    if wind_option=="nowind":
+        varlist=["p","rh","theta"]
+        
     outputdata=[]
     month_mid_point_doy=(start_day_per_month[1:]+np.array(start_day_per_month[:-1]))*0.5
     
@@ -198,7 +207,7 @@ def load_cesm_means():
 def interp_era_to_cesm(erai,cesm):
     """docstring for interp_era_to_cesm"""
     print("Monthly vertical interpolation")
-    varlist=["p","rh","theta","ua","va"]
+    varlist=erai[0].keys() #["p","rh","theta","ua","va"]
     mean_z=cesm[0].z
     inputp=np.zeros(erai[0].p.shape)
     for i in range(len(erai)):
@@ -206,9 +215,9 @@ def interp_era_to_cesm(erai,cesm):
         inputp[:]=erai[i].p[:]
         temperature=erai[i].theta * units.exner(inputp)
         for v in varlist:
-            print(v)
-            erai[i][v]=vertical_interp.interp(erai[i][v], erai[i]["z"], mean_z,
-                                              vartype=v,  inputt=temperature, inputp=inputp)
+            if (v!="doy") and (v!="z"):
+                erai[i][v]=vertical_interp.interp(erai[i][v], erai[i]["z"], mean_z,
+                                                  vartype=v,  inputt=temperature, inputp=inputp)
         erai[i]["z"]=mean_z
     
     return erai
@@ -269,31 +278,36 @@ def interpolate_monthly_to_daily(biases):
     return daily
     
 
-def load_biases():
+def load_biases(wind_option):
     """docstring for load_biases"""
-    erai_data=load_erai_means()
-    cesm_data=load_cesm_means()
+    erai_data=load_erai_means(wind_option)
+    cesm_data=load_cesm_means(wind_option)
     erai_data=interp_era_to_cesm(erai_data,cesm_data)
     monthly_biases=compute_biases(erai_data,cesm_data)
     daily_biases=interpolate_monthly_to_daily(monthly_biases)
     
     return daily_biases
 
-def apply_bias_correction():
+def apply_bias_correction(wind_option):
     """docstring for  apply_bias_correction"""
     varlist=["theta","p","u","v","rh"]
-    biases=load_biases()
+    if wind_option=="nowind": print("Skipping U and V bias correction.")
+    biases=load_biases(wind_option)
     current_files=glob.glob("cesm_*.nc")
     current_files.sort()
     for f in current_files:
+        print("Bias Correcting : "+f)
         output_data=mygis.Dataset(f,mode="a")
         for v in varlist:
+            print("  Variable : "+v)
             try:
                 d=mygis.read_nc("vinterpolated/"+v+"_"+f,v).data
             except:
                 d=mygis.read_nc(v+"_"+f,v).data
-            for i in range(d.shape[0]):
-                d[i,...]-=biases[int(np.round(i/float(times_per_day)))][v]
+            
+            if (wind_option!="nowind") or ((v!="u") and (v!="v")):
+                for i in range(d.shape[0]):
+                    d[i,...]-=biases[int(np.round(i/float(times_per_day)))][v]
             
             if v=="rh":
                 d[d<1e-10]=1e-10
@@ -332,7 +346,7 @@ def mean_q_available():
         return True
     return False
 
-def main():
+def main(wind_option):
     """docstring for main"""
     if not mean_z_available():
         compute_mean_z()
@@ -342,9 +356,9 @@ def main():
         process_pool=Pool(min(MAX_NUMBER_PROCESSES,len(files)))
         process_pool.map(vinterp_q,files)
     if not mean_q_available():
-        compute_mean_q()
+        compute_mean_q(wind_option)
     
-    apply_bias_correction()
+    apply_bias_correction(wind_option)
 
 if __name__ == '__main__':
     print(sys.argv)
@@ -356,17 +370,22 @@ if __name__ == '__main__':
         option=sys.argv[1]
     else:
         option=""   
+    if len(sys.argv)>2:
+        wind_option = sys.argv[2]
+    else:
+        wind_option = ""
+    
     if option == "z":
         compute_mean_z()
     elif option == "iq":
         vinterp_q(cesm_file)
     elif option == "q":
-        compute_mean_q()
+        compute_mean_q(wind_option)
     elif option == "bc":
-        apply_bias_correction()
+        apply_bias_correction(wind_option)
     elif option == "dryrun":
-        print(mean_z_available())
-        print(interp_q_available())
-        print(mean_q_available())
+        print("Will create mean z:" + str(not mean_z_available()) )
+        print("Will interpolate q:" + str(not interp_q_available()) )
+        print("Will create mean q:" + str(not mean_q_available()) )
     else:
-        main()
+        main(wind_option)
