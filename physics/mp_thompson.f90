@@ -48,8 +48,8 @@
 
 !..Densities of rain, snow, graupel, and cloud ice.
       REAL, PARAMETER, PRIVATE:: rho_w = 1000.0
-      REAL, PARAMETER, PRIVATE:: rho_s = 100.0
-      REAL, PARAMETER, PRIVATE:: rho_g = 500.0
+      REAL, PARAMETER, PRIVATE:: rho_s = 100.0  
+ !     REAL, PARAMETER, PRIVATE:: rho_g = 500.0   ! trude commented out for changing from parameter to input variable
       REAL, PARAMETER, PRIVATE:: rho_i = 890.0
 
 !..Prescribed number of cloud droplets.  Set according to known data or
@@ -89,9 +89,9 @@
 !.. Snow from Field et al. (2005), others assume spherical form.
       REAL, PARAMETER, PRIVATE:: am_r = PI*rho_w/6.0
       REAL, PARAMETER, PRIVATE:: bm_r = 3.0
-      REAL, PARAMETER, PRIVATE:: am_s = 0.069
+!      REAL, PARAMETER, PRIVATE:: am_s = 0.069  ! trude commented out for changing from parameter to input variable
       REAL, PARAMETER, PRIVATE:: bm_s = 2.0
-      REAL, PARAMETER, PRIVATE:: am_g = PI*rho_g/6.0
+!      REAL, PARAMETER, PRIVATE:: am_g = PI*rho_g/6.0  trude commented out. am_g need to be calculated later since rho_g is an imput variable
       REAL, PARAMETER, PRIVATE:: bm_g = 3.0
       REAL, PARAMETER, PRIVATE:: am_i = PI*rho_i/6.0
       REAL, PARAMETER, PRIVATE:: bm_i = 3.0
@@ -132,7 +132,7 @@
       REAL, PARAMETER, PRIVATE:: eps = 1.E-15
 
 !..Constants in Cooper curve relation for cloud ice number.
-      REAL, PARAMETER, PRIVATE:: TNO = 5.0
+!     REAL, PARAMETER, PRIVATE:: TNO = 5.0  ! trude comment this out for use as input variable instead
       REAL, PARAMETER, PRIVATE:: ATO = 0.304
 
 !..Rho_not used in fallspeed relations (rho_not/rho)**.5 adjustment.
@@ -323,12 +323,13 @@
 
       CONTAINS
 
-      SUBROUTINE thompson_init(Nt_c)
+      SUBROUTINE thompson_init(Nt_c, am_s,rho_g)
 
       IMPLICIT NONE
 
 ! ++ trude
-      REAL, INTENT(IN) :: Nt_c
+      REAL, INTENT(IN) :: Nt_c, am_s, rho_g
+      REAL:: am_g
 ! -- trude
       INTEGER:: i, j, k, m, n
       LOGICAL:: micro_init
@@ -376,7 +377,9 @@
       if (.NOT. ALLOCATED(tnr_rev)) ALLOCATE(tnr_rev(nbr, ntb_r1, ntb_r))
 
       if (micro_init) then
-
+      !++ trude
+      am_g = PI*rho_g/6.0         
+      !--trude
 !..From Martin et al. (1994), assign gamma shape parameter mu for cloud
 !.. drops according to general dispersion characteristics (disp=~0.25
 !.. for Maritime and 0.45 for Continental).
@@ -683,7 +686,7 @@
 !..Collision efficiency between rain/snow and cloud water.
 !       CALL wrf_debug(200, '  creating qc collision eff tables')
       call table_Efrw
-      call table_Efsw
+      call table_Efsw(am_s)
 
 !..Drop evaporation.
 !     CALL wrf_debug(200, '  creating rain evap table')
@@ -706,12 +709,12 @@
 !..Rain collecting graupel & graupel collecting rain.
       ! CALL wrf_debug(200, '  creating rain collecting graupel table')
 	  write(*,*) "qr_qcr_qg"
-      call qr_acr_qg
+      call qr_acr_qg(am_g)
 
 !..Rain collecting snow & snow collecting rain.
       ! CALL wrf_debug(200, '  creating rain collecting snow table')
 	  write(*,*) "qr_acr_qs"
-      call qr_acr_qs
+      call qr_acr_qs(am_s)
 
 !..Cloud water and rain freezing (Bigg, 1953).
       ! CALL wrf_debug(200, '  creating freezing of water drops table')
@@ -738,7 +741,7 @@
                               RAINNC, RAINNCV, &
                               SNOWNC, SNOWNCV, &
                               GRAUPELNC, GRAUPELNCV, SR, &
-                              Nt_c, & ! trude added
+                              Nt_c, TNO, rho_g,& ! trude added
                               ids,ide, jds,jde, kds,kde, &             ! domain dims
                               ims,ime, jms,jme, kms,kme, &             ! memory dims
                               its,ite, jts,jte, kts,kte)               ! tile dims
@@ -761,8 +764,8 @@
 !                         refl_10cm
       REAL, INTENT(IN):: dt_in
 ! ++ trude added
-      REAL, INTENT(IN):: Nt_c
-      REAL:: Nt_c2
+      REAL, INTENT(IN):: Nt_c, TNO, rho_g
+      REAL:: Nt_c2, TNO2, rho_g2
 !..Local variables
       INTEGER, INTENT(IN):: itimestep
       REAL, DIMENSION(kts:kte):: &
@@ -780,7 +783,7 @@
 !+---+
 
 
-!$OMP PARALLEL DEFAULT(PRIVATE) FIRSTPRIVATE(ids,ide,jds,jde,kds,kde,ims,ime,jms,jme,nt_c,&
+!$OMP PARALLEL DEFAULT(PRIVATE) FIRSTPRIVATE(ids,ide,jds,jde,kds,kde,ims,ime,jms,jme,nt_c,TNO,rho_g,&
 !$OMP kms,kme,its,ite,jts,jte,kts,kte,itimestep) &
 !$OMP SHARED(RAINNCV,RAINNC,SNOWNCV,SNOWNC,GRAUPELNCV,GRAUPELNC,SR,th,pii,p,dz,qv,qc,&
 !$OMP qi,qr,qs,qg,ni,nr,dt_in)
@@ -788,6 +791,8 @@
       
       Nt_c2 = Nt_c ! trude added. This is because mp_thompson crashes when Nt_c is directly sent to mp_thompson.
                              ! trude. If a write statement is of Nt_c is included, the code does not crash. 
+      TNO2  = TNO ! trude added
+      rho_g2 = rho_g ! trude added
       i_start = its
       j_start = jts
       i_end   = MIN(ite, ide-1)
@@ -870,7 +875,7 @@
          call mp_thompson(qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d, &
                       nr1d, t1d, p1d, dz1d, &
                       pptrain, pptsnow, pptgraul, pptice, &
-                      Nt_c2, & ! trude added
+                      Nt_c2, TNO2, rho_g2,& ! trude added
                       kts, kte, dt, i, j)
 
 !          pcp_ra(i,j) = pptrain
@@ -1028,7 +1033,7 @@
       subroutine mp_thompson (qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d, &
                           nr1d, t1d, p1d, dzq, &
                           pptrain, pptsnow, pptgraul, pptice, &
-                          Nt_c, &   ! trude added 
+                          Nt_c, TNO, rho_g,&   ! trude added 
                          kts, kte, dt, ii, jj)
 
       implicit none
@@ -1042,7 +1047,8 @@
       REAL, INTENT(INOUT):: pptrain, pptsnow, pptgraul, pptice
       REAL, INTENT(IN):: dt
 ! ++ trude added
-      REAL, INTENT(IN):: Nt_c
+      REAL, INTENT(IN):: Nt_c, TNO, rho_g
+      REAL :: am_g
 ! -- trude added
 
 !..Local variables
@@ -1120,6 +1126,10 @@
       LOGICAL, DIMENSION(kts:kte):: L_qc, L_qi, L_qr, L_qs, L_qg
       LOGICAL:: debug_flag
 
+
+! ++ trude
+       am_g = PI*rho_g/6.0
+! -- trude
 !+---+
       debug_flag = .false.
 !     if (ii.eq.315 .and. jj.eq.2) debug_flag = .true.
@@ -2815,7 +2825,7 @@
 !..Rain collecting graupel (and inverse).  Explicit CE integration.
 !+---+-----------------------------------------------------------------+
 
-      subroutine qr_acr_qg
+      subroutine qr_acr_qg(am_g)
 
       implicit none
 
@@ -2826,9 +2836,10 @@
       DOUBLE PRECISION, DIMENSION(nbr):: vr, N_r
       DOUBLE PRECISION:: N0_r, N0_g, lam_exp, lamg, lamr
       DOUBLE PRECISION:: massg, massr, dvg, dvr, t1, t2, z1, z2, y1, y2
-
+! ++ trude
+      REAL,INTENT(IN):: am_g
 !+---+
-
+      write(*,*) "am_g in qr_acr_qg ", am_g
       do n2 = 1, nbr
 !        vr(n2) = av_r*Dr(n2)**bv_r * DEXP(-fv_r*Dr(n2))
          vr(n2) = -0.1021 + 4.932E3*Dr(n2) - 0.9551E6*Dr(n2)*Dr(n2)     &
@@ -2936,10 +2947,10 @@
 !..Rain collecting snow (and inverse).  Explicit CE integration.
 !+---+-----------------------------------------------------------------+
 
-      subroutine qr_acr_qs
+      subroutine qr_acr_qs(am_s)
 
       implicit none
-
+      REAL, INTENT(IN):: am_s  ! trude added
 !..Local variables
       INTEGER:: i, j, k, m, n, n2
       INTEGER:: km, km_s, km_e
@@ -2952,8 +2963,7 @@
       DOUBLE PRECISION:: y1, y2, y3, y4
 
 !+---+
-
-      do n2 = 1, nbr
+       do n2 = 1, nbr
 !        vr(n2) = av_r*Dr(n2)**bv_r * DEXP(-fv_r*Dr(n2))
          vr(n2) = -0.1021 + 4.932E3*Dr(n2) - 0.9551E6*Dr(n2)*Dr(n2)     &
               + 0.07934E9*Dr(n2)*Dr(n2)*Dr(n2)                          &
@@ -3155,7 +3165,6 @@
                          lam_exp, lamr, N0_r, lamc, N0_c, y
      
 !+---+
-
       orho_w = 1./rho_w
 
       do n2 = 1, nbr
@@ -3346,10 +3355,10 @@
 !.. their "effective collision cross-section."
 !+---+-----------------------------------------------------------------+
 
-      subroutine table_Efsw
+      subroutine table_Efsw(am_s)
 
       implicit none
-
+      REAL, INTENT(IN)::am_s  ! trude added
 !..Local variables
       DOUBLE PRECISION:: Ds_m, vts, vtc, stokes, reynolds, Ef_sw
       DOUBLE PRECISION:: p, yc0, F, G, H, z, K0

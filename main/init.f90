@@ -262,13 +262,14 @@ contains
 		integer :: year, month, day, hour, minute, second
 
                 !!++ trude
-                real :: Nt_c
+                real :: Nt_c, TNO, am_s, rho_g
 		!! -- trude
 		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,smooth_wind_distance, &
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
 							  date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, &
-							  N_squared,linear_contribution,use_agl_height, spatial_linear_fields, Nt_c       ! trude added Nt_c
+							  N_squared,linear_contribution,use_agl_height, spatial_linear_fields, &
+                                                          Nt_c,TNO, am_s, rho_g      ! trude added Nt_c, TNO
 		
 ! 		default parameters
 		mean_fields=.False.
@@ -302,7 +303,10 @@ contains
 		spatial_linear_fields=.False.
 		
                 ! ++ trude
-                nt_c = 10.e7
+                nt_c = 100.e6
+                TNO = 5.0
+                am_s = 0.069
+                rho_g = 500.0
                 ! -- trude
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=parameters)
@@ -402,6 +406,10 @@ contains
 		
 		!++ trude
                 options%mp_options%Nt_c = Nt_c
+                options%mp_options%TNO = TNO
+                options%mp_options%am_s = am_s
+                options%mp_options%rho_g = rho_g
+                !-- trude
 	end subroutine parameters_namelist
 	
 	! check the version number in the namelist file and compare to the current model version

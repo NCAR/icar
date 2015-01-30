@@ -230,7 +230,9 @@ module data_structures
         type mp_options_type
                  real :: Nt_c
                  real :: TNO
-        end type mp_options_type
+                 real :: am_s
+                 real :: rho_g
+       end type mp_options_type
         !! -- trude
 	!------------------------------------------------
 	! store all model options
