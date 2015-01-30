@@ -57,8 +57,9 @@
 !.. 300 per cc (300.E6 m^-3) for Continental.  Gamma shape parameter,
 !.. mu_c, calculated based on Nt_c is important in autoconversion
 !.. scheme.
-      REAL, PARAMETER, PRIVATE:: Nt_c = 100.E6
-
+! ++ trude comment out
+!      REAL, PARAMETER, PRIVATE:: Nt_c = 100.E6
+! -- trude comment out
 !..Generalized gamma distributions for rain, graupel and cloud ice.
 !.. N(D) = N_0 * D**mu * exp(-lamda*D);  mu=0 is exponential.
       REAL, PARAMETER, PRIVATE:: mu_r = 0.0
@@ -322,16 +323,17 @@
 
       CONTAINS
 
-      SUBROUTINE thompson_init
+      SUBROUTINE thompson_init(Nt_c)
 
       IMPLICIT NONE
 
+! ++ trude
+      REAL, INTENT(IN) :: Nt_c
+! -- trude
       INTEGER:: i, j, k, m, n
       LOGICAL:: micro_init
-
 !..Allocate space for lookup tables (J. Michalakes 2009Jun08).
       micro_init = .FALSE.
-
       if (.NOT. ALLOCATED(tcg_racg) ) then
          ALLOCATE(tcg_racg(ntb_g1,ntb_g,ntb_r1,ntb_r))
          micro_init = .TRUE.
@@ -713,7 +715,7 @@
 
 !..Cloud water and rain freezing (Bigg, 1953).
       ! CALL wrf_debug(200, '  creating freezing of water drops table')
-      call freezeH2O
+      call freezeH2O(Nt_c)  ! trude added Nt_c
 
 !..Conversion of some ice mass into snow category.
       ! CALL wrf_debug(200, '  creating ice converting to snow table')
@@ -736,6 +738,7 @@
                               RAINNC, RAINNCV, &
                               SNOWNC, SNOWNCV, &
                               GRAUPELNC, GRAUPELNCV, SR, &
+                              Nt_c, & ! trude added
                               ids,ide, jds,jde, kds,kde, &             ! domain dims
                               ims,ime, jms,jme, kms,kme, &             ! memory dims
                               its,ite, jts,jte, kts,kte)               ! tile dims
@@ -757,9 +760,11 @@
 !     REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(INOUT)::       &
 !                         refl_10cm
       REAL, INTENT(IN):: dt_in
-      INTEGER, INTENT(IN):: itimestep
-
+! ++ trude added
+      REAL, INTENT(IN):: Nt_c
+      REAL:: Nt_c2
 !..Local variables
+      INTEGER, INTENT(IN):: itimestep
       REAL, DIMENSION(kts:kte):: &
                           qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d, &
                           nr1d, t1d, p1d, dz1d, dBZ
@@ -775,17 +780,19 @@
 !+---+
 
 
-!$OMP PARALLEL DEFAULT(PRIVATE) FIRSTPRIVATE(ids,ide,jds,jde,kds,kde,ims,ime,jms,jme,&
+!$OMP PARALLEL DEFAULT(PRIVATE) FIRSTPRIVATE(ids,ide,jds,jde,kds,kde,ims,ime,jms,jme,nt_c,&
 !$OMP kms,kme,its,ite,jts,jte,kts,kte,itimestep) &
 !$OMP SHARED(RAINNCV,RAINNC,SNOWNCV,SNOWNC,GRAUPELNCV,GRAUPELNC,SR,th,pii,p,dz,qv,qc,&
 !$OMP qi,qr,qs,qg,ni,nr,dt_in)
 ! old w/pcp_xx vars !!$OMP qi,qr,qs,qg,ni,nr,pcp_ra,pcp_sn,pcp_gr,pcp_ic,dt_in)
       
-
+      Nt_c2 = Nt_c ! trude added. This is because mp_thompson crashes when Nt_c is directly sent to mp_thompson.
+                             ! trude. If a write statement is of Nt_c is included, the code does not crash. 
       i_start = its
       j_start = jts
       i_end   = MIN(ite, ide-1)
       j_end   = MIN(jte, jde-1)
+
 
 !..For idealized testing by developer.
 !     if ( (ide-ids+1).gt.4 .and. (jde-jds+1).lt.4 .and.                &
@@ -863,6 +870,7 @@
          call mp_thompson(qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d, &
                       nr1d, t1d, p1d, dz1d, &
                       pptrain, pptsnow, pptgraul, pptice, &
+                      Nt_c2, & ! trude added
                       kts, kte, dt, i, j)
 
 !          pcp_ra(i,j) = pptrain
@@ -1020,7 +1028,8 @@
       subroutine mp_thompson (qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d, &
                           nr1d, t1d, p1d, dzq, &
                           pptrain, pptsnow, pptgraul, pptice, &
-                          kts, kte, dt, ii, jj)
+                          Nt_c, &   ! trude added 
+                         kts, kte, dt, ii, jj)
 
       implicit none
 
@@ -1032,6 +1041,9 @@
       REAL, DIMENSION(kts:kte), INTENT(IN):: dzq
       REAL, INTENT(INOUT):: pptrain, pptsnow, pptgraul, pptice
       REAL, INTENT(IN):: dt
+! ++ trude added
+      REAL, INTENT(IN):: Nt_c
+! -- trude added
 
 !..Local variables
       REAL, DIMENSION(kts:kte):: tten, qvten, qcten, qiten, &
@@ -1109,7 +1121,6 @@
       LOGICAL:: debug_flag
 
 !+---+
-
       debug_flag = .false.
 !     if (ii.eq.315 .and. jj.eq.2) debug_flag = .true.
 
@@ -3129,10 +3140,12 @@
 !..the proportion of drops summing their masses.
 !+---+-----------------------------------------------------------------+
 
-      subroutine freezeH2O
+      subroutine freezeH2O(Nt_c)  ! trude added Nt_c
 
       implicit none
-
+! ++ trude
+      REAL, INTENT(IN) :: Nt_c
+! -- trude
 !..Local variables
       INTEGER:: i, j, k, n, n2
       DOUBLE PRECISION, DIMENSION(nbr):: N_r, massr
@@ -3140,7 +3153,7 @@
       DOUBLE PRECISION:: sum1, sum2, sumn1, sumn2, &
                          prob, vol, Texp, orho_w, &
                          lam_exp, lamr, N0_r, lamc, N0_c, y
-
+     
 !+---+
 
       orho_w = 1./rho_w

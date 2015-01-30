@@ -229,6 +229,7 @@ module data_structures
         !! ++ trude
         type mp_options_type
                  real :: Nt_c
+                 real :: TNO
         end type mp_options_type
         !! -- trude
 	!------------------------------------------------

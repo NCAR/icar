@@ -40,8 +40,12 @@ contains
 	subroutine mp_init(options)
 		implicit none
 		type(options_type), intent(in)::options
+                real:: Nt_c  ! ++ trude
 		if (options%physics%microphysics==1) then
-			call thompson_init()
+                ! ++ trude
+                        Nt_c = options%mp_options%Nt_c
+			call thompson_init(Nt_c)
+                ! -- trude
 		endif
 	end subroutine mp_init
 	
@@ -50,6 +54,7 @@ contains
 		type(domain_type),intent(inout)::domain
 		type(options_type),intent(in)::options
 		real,intent(in)::dt_in
+                real:: Nt_c  ! ++ trude
 		integer ::ids,ide,jds,jde,kds,kde,itimestep=1
 		integer ::its,ite,jts,jte,kts,kte
 		
@@ -66,6 +71,7 @@ contains
 			SR=0
 		endif
 		if (options%physics%microphysics==1) then
+                        Nt_c = options%mp_options%Nt_c     ! trude added
 			kts=kds;kte=kde
 			if (options%ideal) then
 				! for ideal runs process the boundaries as well to be consistent with WRF
@@ -75,7 +81,7 @@ contains
 				its=ids+1;ite=ide-1
 				jts=jds+1;jte=jde-1
 			endif
-				
+
 			call mp_gt_driver(domain%qv, domain%cloud, domain%qrain, domain%ice, &
 			                domain%qsnow, domain%qgrau, domain%nice, domain%nrain, &
 							domain%th, domain%pii, domain%p, domain%dz, dt_in, itimestep, &
@@ -83,6 +89,7 @@ contains
 							domain%snow, domain%snow, &
 							domain%graupel, domain%graupel, &
 							SR, &
+                                                        Nt_c, &  ! trude added
 							ids,ide, jds,jde, kds,kde, &    ! domain dims
 							ids,ide, jds,jde, kds,kde, &    ! memory dims
 							its,ite, jts,jte, kts,kte)      ! tile dims
