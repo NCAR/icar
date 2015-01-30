@@ -225,12 +225,17 @@ module data_structures
 		integer::convection
 		integer::windtype
 	end type physics_type
-	
+
+        !! ++ trude
+        type mp_options_type
+                 real :: Nt_c
+        end type mp_options_type
+        !! -- trude
 	!------------------------------------------------
 	! store all model options
 	!------------------------------------------------
 	type options_type
-		character (len=MAXVARLENGTH) :: version,comment
+                character (len=MAXVARLENGTH) :: version,comment
 
 		! file names
 		character (len=MAXFILELENGTH) :: init_conditions_file
@@ -296,7 +301,10 @@ module data_structures
 		
 		! defines which physics package to be used. 
 		type(physics_type)::physics
-		
+!! ++ trude
+		! parameterization options
+                type(mp_options_type)::mp_options
+!! -- trude
 		integer :: warning_level        ! level of warnings to issue when checking options settings 0-10.  
 										! 0  = Don't print anything
 										! 1  = print serious warnings
