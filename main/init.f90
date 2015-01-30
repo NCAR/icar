@@ -783,7 +783,10 @@ contains
 		nxo=size(output%lat,1)
 		nzo=nzi
 		nyo=size(output%lat,2)
-		
+
+		if (allocated(output%z)) then
+			deallocate(output%z)
+		endif
 		allocate(output%z(nxo,nzo,nyo))
 		if (interpolate_dim==1) then
 			output%z(2:nxo-1,:,:)=(input%z(1:nxi-1,:,:) + input%z(2:nxi,:,:))/2
@@ -1178,14 +1181,18 @@ contains
 			call init_ext_winds(options,boundary)
 		endif
 		
+		nz=size(boundary%lowres_z,2)
 		if (maxval(boundary%terrain)>maxval(boundary%lowres_z(:,1,:))) then
-			write(*,*) "Assuming forcing Z levels are AGL, not ASL : adding ground surface height"
-			nz=size(boundary%lowres_z,2)
+			write(*,*) "WARNING Assuming forcing Z levels are AGL, not ASL : adding ground surface height"
 			do i=1,nz
 				boundary%lowres_z(:,i,:)=boundary%lowres_z(:,i,:)+boundary%terrain
 			enddo
 		endif
-		
+		if (options%zvar=="PH") then
+			write(*,*) "WARNING interpolating forcing z levels to half / mass levels"
+			write(*,*) "  Assuming PH variable is geopotential between mass levels (as in WRF)"
+			boundary%lowres_z(:,1:nz-1,:) = (boundary%lowres_z(:,1:nz-1,:) + boundary%lowres_z(:,2:nz,:)) / 2
+		endif
 		! if we want vertical interpolations between forcing and model grid to be done from 
 		! height above ground level (and we should, esp. for wind!), then we need to remove the 
 		! topography from both grids first
@@ -1198,6 +1205,10 @@ contains
 			do i=1,nz
 				domain%z(:,i,:)=domain%z(:,i,:)-domain%terrain
 			enddo
+			
+			call copy_z(domain,domain%u_geo,interpolate_dim=1)
+			call copy_z(domain,domain%v_geo,interpolate_dim=3)
+			
 		endif
 		! interpolate the low-res terrain to the high-res grid for pressure adjustments. 
 		! the correct way would probably be to adjust all low-res pressures to Sea level before interpolating
@@ -1226,7 +1237,10 @@ contains
 		call destroy_lut(v_temp_geo)
 		call destroy_lut(u_temp_geo)
 
-!! WARNING, to do this with the use_agl_height options requires more additions and subtractions, don't just uncomment
+! 		call io_write3d("bc_lowresz-hgt.nc","data",boundary%lowres_z)
+! 		call io_write3d("u_hiresz-hgt.nc","data",domain%u_geo%z)
+! 		call io_write3d("v_hiresz-hgt.nc","data",domain%v_geo%z)
+!! WARNING, to do this with the use_agl_height options requires more though, don't just uncomment
 !! since this option has been deprecated previously, it is now simply removed.  
 ! 		if (options%add_low_topo) then
 ! 			domain%terrain=domain%terrain+(boundary%lowres_terrain-sum(boundary%lowres_terrain) &
@@ -1242,15 +1256,15 @@ contains
 		call vLUT(domain%u_geo,boundary%u_geo)
 		call vLUT(domain%v_geo,boundary%v_geo)
 		
-		! these are not longer needed and (without adjustments) are potentially unreliable (AGL vs ASL)
-		deallocate(boundary%v_geo%z,boundary%u_geo%z)
 		if (options%use_agl_height) then
 			nz=size(boundary%z,2)
+! 			call io_write3d("bc_hiresz-hgt.nc","data",boundary%z)
 			do i=1,nz
 				boundary%z(:,i,:)=boundary%z(:,i,:)+boundary%lowres_terrain
 				boundary%lowres_z(:,i,:)=boundary%lowres_z(:,i,:)+boundary%terrain
 			enddo
 			nz=size(domain%z,2)
+! 			call io_write3d("domain_z-hgt.nc","data",domain%z)
 			do i=1,nz
 				domain%z(:,i,:)=domain%z(:,i,:)+domain%terrain
 			enddo
@@ -1274,6 +1288,8 @@ contains
 ! 		call io_write3d("bc_hiresz.nc","data",boundary%z)
 ! 		call io_write3d("domain_z.nc","data",domain%z)
 
+		! these are not longer needed and (without adjustments) are potentially unreliable (AGL vs ASL)
+		deallocate(boundary%v_geo%z,boundary%u_geo%z)
 		call swap_z(boundary)
 		
 	end subroutine init_bc

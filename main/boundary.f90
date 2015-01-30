@@ -241,7 +241,7 @@ contains
 		! 	deallocate(extra_data)
 		endif
 		
-		! just read the low res version with out interpolating
+		! just read the low res version with out interpolating for e.g. external wind data
 		if ( (nx==size(highres,1)).and.(ny==size(highres,3)).and.(nz==size(highres,2)) ) then
 			highres=reshape(inputdata,[nx,nz,ny],order=[1,3,2])
 			deallocate(inputdata)

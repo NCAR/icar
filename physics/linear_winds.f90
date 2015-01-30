@@ -380,7 +380,7 @@ contains
 		enddo
 		allocate(real_terrain(nx,ny))
 		real_terrain=buffer_topo
-		call io_write2d("complex_terrain.nc","data",real_terrain)
+		! call io_write2d("complex_terrain.nc","data",real_terrain)
 		deallocate(real_terrain)
 		
 	end subroutine add_buffer_topo
