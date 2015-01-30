@@ -549,13 +549,10 @@ contains
 		endif
 		
 		if (options%spatial_linear_fields) then
-			write(*,*) "Generating a spatially variable linear perturbation look up table"
-			if (options%remove_lowres_linear) then
-				write(*,*) "WARNING: Can not use a spatially variable linear perturbation"
-				write(*,*) "WARNING:    when removing the low resolution linear fields"
-				stop
+			if (.not.allocated(u_LUT)) then
+				write(*,*) "Generating a spatially variable linear perturbation look up table"
+				call initialize_spatial_winds(domain)
 			endif
-			call initialize_spatial_winds(domain)
 		endif
         
     end subroutine
@@ -576,8 +573,17 @@ contains
             call setup_linwinds(domain,options)
         endif
 		
+		! add the spatially variable linear field
+		! if we are reverseing the effects, that means we are in the low-res domain
+		! that domain does not have a spatial LUT calculated, so it can not be performed
 		if (options%spatial_linear_fields) then
-			call spatial_winds(domain)
+			if (reverse) then
+				if (debug) then
+					write(*,*) "Warning, spatially variable field not used when removing the linear field"
+				end if
+			else
+				call spatial_winds(domain)
+			endif
 		else
 			! Ndsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability
 	        stability=calc_stability(domain)
