@@ -262,14 +262,14 @@ contains
 		integer :: year, month, day, hour, minute, second
 
                 !!++ trude
-                real :: Nt_c, TNO, am_s, rho_g
+                real :: Nt_c, TNO, am_s,rho_g,av_s,bv_s,fv_s,av_g,bv_g,Ef_si,Ef_rs,Ef_rg,Ef_ri
 		!! -- trude
 		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,smooth_wind_distance, &
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
 							  date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, &
 							  N_squared,linear_contribution,use_agl_height, spatial_linear_fields, &
-                                                          Nt_c,TNO, am_s, rho_g      ! trude added Nt_c, TNO
+                                                          Nt_c,TNO, am_s, rho_g, av_s,bv_s,fv_s,av_g,bv_g,Ef_si,Ef_rs,Ef_rg,Ef_ri     ! trude added Nt_c, TNO
 		
 ! 		default parameters
 		mean_fields=.False.
@@ -303,10 +303,19 @@ contains
 		spatial_linear_fields=.False.
 		
                 ! ++ trude
-                nt_c = 100.e6
+                Nt_c = 100.e6
                 TNO = 5.0
                 am_s = 0.069
                 rho_g = 500.0
+                av_s   = 40.0
+                bv_s = 0.55
+                fv_s = 100.0
+                av_g = 442.0
+                bv_g = 0.89
+                Ef_si = 0.05
+                Ef_rs = 0.95
+                Ef_rg = 0.75
+                Ef_ri = 0.95                
                 ! -- trude
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=parameters)
@@ -409,7 +418,16 @@ contains
                 options%mp_options%TNO = TNO
                 options%mp_options%am_s = am_s
                 options%mp_options%rho_g = rho_g
-                !-- trude
+                options%mp_options%av_s = av_s
+                options%mp_options%bv_s = bv_s
+                options%mp_options%fv_s = fv_s
+                options%mp_options%av_g = av_g
+                options%mp_options%bv_g = bv_g
+                options%mp_options%Ef_si = Ef_si
+                options%mp_options%Ef_rs = Ef_rs
+                options%mp_options%Ef_rg = Ef_rg
+                options%mp_options%Ef_ri = Ef_ri
+               !-- trude
 	end subroutine parameters_namelist
 	
 	! check the version number in the namelist file and compare to the current model version

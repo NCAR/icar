@@ -91,7 +91,7 @@
       REAL, PARAMETER, PRIVATE:: bm_r = 3.0
 !      REAL, PARAMETER, PRIVATE:: am_s = 0.069  ! trude commented out for changing from parameter to input variable
       REAL, PARAMETER, PRIVATE:: bm_s = 2.0
-!      REAL, PARAMETER, PRIVATE:: am_g = PI*rho_g/6.0  trude commented out. am_g need to be calculated later since rho_g is an imput variable
+!      REAL, PARAMETER, PRIVATE:: am_g = PI*rho_g/6.0  ! trude commented out. am_g need to be calculated later since rho_g is an imput variable
       REAL, PARAMETER, PRIVATE:: bm_g = 3.0
       REAL, PARAMETER, PRIVATE:: am_i = PI*rho_i/6.0
       REAL, PARAMETER, PRIVATE:: bm_i = 3.0
@@ -102,11 +102,11 @@
       REAL, PARAMETER, PRIVATE:: av_r = 4854.0
       REAL, PARAMETER, PRIVATE:: bv_r = 1.0
       REAL, PARAMETER, PRIVATE:: fv_r = 195.0
-      REAL, PARAMETER, PRIVATE:: av_s = 40.0
-      REAL, PARAMETER, PRIVATE:: bv_s = 0.55
-      REAL, PARAMETER, PRIVATE:: fv_s = 100.0
-      REAL, PARAMETER, PRIVATE:: av_g = 442.0
-      REAL, PARAMETER, PRIVATE:: bv_g = 0.89
+!      REAL, PARAMETER, PRIVATE:: av_s = 40.0 ! trude commented out.  Will be used as input vaiable. 
+!      REAL, PARAMETER, PRIVATE:: bv_s = 0.55 ! trude commented out.  Will be used as input vaiable. 
+!      REAL, PARAMETER, PRIVATE:: fv_s = 100.0 ! trude commented out.  Will be used as input vaiable. 
+!      REAL, PARAMETER, PRIVATE:: av_g = 442.0 ! trude commented out.  Will be used as input vaiable. 
+!      REAL, PARAMETER, PRIVATE:: bv_g = 0.89 ! trude commented out.  Will be used as input vaiable. 
       REAL, PARAMETER, PRIVATE:: av_i = 1847.5
       REAL, PARAMETER, PRIVATE:: bv_i = 1.0
 
@@ -118,10 +118,10 @@
 !.. droplets use variables (Ef_rw, Ef_sw, Ef_gw respectively) and
 !.. get computed elsewhere because they are dependent on stokes
 !.. number.
-      REAL, PARAMETER, PRIVATE:: Ef_si = 0.05
-      REAL, PARAMETER, PRIVATE:: Ef_rs = 0.95
-      REAL, PARAMETER, PRIVATE:: Ef_rg = 0.75
-      REAL, PARAMETER, PRIVATE:: Ef_ri = 0.95
+!      REAL, PARAMETER, PRIVATE:: Ef_si = 0.05
+!      REAL, PARAMETER, PRIVATE:: Ef_rs = 0.95
+!      REAL, PARAMETER, PRIVATE:: Ef_rg = 0.75
+!      REAL, PARAMETER, PRIVATE:: Ef_ri = 0.95
 
 !..Minimum microphys values
 !.. R1 value, 1.E-12, cannot be set lower because of numerical
@@ -314,6 +314,9 @@
 
       CHARACTER*256:: mp_debug
 
+! TRUDE
+!      REAL, PRIVATE:: Nt_c, am_s, rho_g,av_s,bv_s,fv_s,av_g,bv_g,Ef_rs,Ef_rg
+
 !+---+
 !+---+-----------------------------------------------------------------+
 !..END DECLARATIONS
@@ -323,12 +326,14 @@
 
       CONTAINS
 
-      SUBROUTINE thompson_init(Nt_c, am_s,rho_g)
+      SUBROUTINE thompson_init(Nt_c, am_s,rho_g,av_s,bv_s,fv_s,av_g,bv_g,Ef_rs,Ef_rg)
+!      SUBROUTINE thompson_init(mp_options)
 
       IMPLICIT NONE
 
 ! ++ trude
-      REAL, INTENT(IN) :: Nt_c, am_s, rho_g
+!      type(mp_options_type), intent(in) :: options
+      REAL, INTENT(IN) :: Nt_c, am_s, rho_g,av_s,bv_s,fv_s,av_g,bv_g,Ef_rs,Ef_rg
       REAL:: am_g
 ! -- trude
       INTEGER:: i, j, k, m, n
@@ -686,7 +691,7 @@
 !..Collision efficiency between rain/snow and cloud water.
 !       CALL wrf_debug(200, '  creating qc collision eff tables')
       call table_Efrw
-      call table_Efsw(am_s)
+      call table_Efsw(am_s,av_s,bv_s,fv_s)
 
 !..Drop evaporation.
 !     CALL wrf_debug(200, '  creating rain evap table')
@@ -709,12 +714,12 @@
 !..Rain collecting graupel & graupel collecting rain.
       ! CALL wrf_debug(200, '  creating rain collecting graupel table')
 	  write(*,*) "qr_qcr_qg"
-      call qr_acr_qg(am_g)
+      call qr_acr_qg(am_g,av_g,bv_g,Ef_rg)
 
 !..Rain collecting snow & snow collecting rain.
       ! CALL wrf_debug(200, '  creating rain collecting snow table')
 	  write(*,*) "qr_acr_qs"
-      call qr_acr_qs(am_s)
+      call qr_acr_qs(am_s,av_s,bv_s,fv_s,Ef_rs)
 
 !..Cloud water and rain freezing (Bigg, 1953).
       ! CALL wrf_debug(200, '  creating freezing of water drops table')
@@ -741,7 +746,7 @@
                               RAINNC, RAINNCV, &
                               SNOWNC, SNOWNCV, &
                               GRAUPELNC, GRAUPELNCV, SR, &
-                              Nt_c, TNO, rho_g,& ! trude added
+                              Nt_c, TNO, rho_g,av_s,bv_s,fv_s,av_g,bv_g,Ef_si,Ef_ri,& ! trude added
                               ids,ide, jds,jde, kds,kde, &             ! domain dims
                               ims,ime, jms,jme, kms,kme, &             ! memory dims
                               its,ite, jts,jte, kts,kte)               ! tile dims
@@ -764,8 +769,8 @@
 !                         refl_10cm
       REAL, INTENT(IN):: dt_in
 ! ++ trude added
-      REAL, INTENT(IN):: Nt_c, TNO, rho_g
-      REAL:: Nt_c2, TNO2, rho_g2
+      REAL, INTENT(IN):: Nt_c, TNO, rho_g,av_s,bv_s,fv_s,av_g,bv_g,Ef_si,Ef_ri
+      REAL:: Nt_c2, TNO2, rho_g2,av_s2,bv_s2,fv_s2,av_g2,bv_g2,Ef_si2,Ef_ri2
 !..Local variables
       INTEGER, INTENT(IN):: itimestep
       REAL, DIMENSION(kts:kte):: &
@@ -781,18 +786,27 @@
       INTEGER:: i_start, j_start, i_end, j_end
 
 !+---+
+!      write(*,*) Nt_c
 
-
-!$OMP PARALLEL DEFAULT(PRIVATE) FIRSTPRIVATE(ids,ide,jds,jde,kds,kde,ims,ime,jms,jme,nt_c,TNO,rho_g,&
+!$OMP PARALLEL DEFAULT(PRIVATE) FIRSTPRIVATE(ids,ide,jds,jde,kds,kde,ims,ime,jms,jme,&
 !$OMP kms,kme,its,ite,jts,jte,kts,kte,itimestep) &
 !$OMP SHARED(RAINNCV,RAINNC,SNOWNCV,SNOWNC,GRAUPELNCV,GRAUPELNC,SR,th,pii,p,dz,qv,qc,&
-!$OMP qi,qr,qs,qg,ni,nr,dt_in)
+!$OMP qi,qr,qs,qg,ni,nr,dt_in,Nt_c,TNO,rho_g,av_s,bv_s,fv_s,av_g,bv_g,EF_si,Ef_ri)
 ! old w/pcp_xx vars !!$OMP qi,qr,qs,qg,ni,nr,pcp_ra,pcp_sn,pcp_gr,pcp_ic,dt_in)
-      
-      Nt_c2 = Nt_c ! trude added. This is because mp_thompson crashes when Nt_c is directly sent to mp_thompson.
+
+! ++ trude      
+!      Nt_c2 = Nt_c ! trude added. This is because mp_thompson crashes when Nt_c is directly sent to mp_thompson.
                              ! trude. If a write statement is of Nt_c is included, the code does not crash. 
-      TNO2  = TNO ! trude added
-      rho_g2 = rho_g ! trude added
+!      TNO2  = TNO ! trude added
+!      rho_g2 = rho_g ! trude added
+!      av_s2 = av_s
+!      bv_s2 = bv_s
+!      fv_s2 = fv_s
+!      av_g2 = av_g
+!      bv_g2 = bv_g
+!      Ef_si2 = Ef_si
+!      Ef_ri2 = Ef_ri
+! -- trude
       i_start = its
       j_start = jts
       i_end   = MIN(ite, ide-1)
@@ -875,7 +889,7 @@
          call mp_thompson(qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d, &
                       nr1d, t1d, p1d, dz1d, &
                       pptrain, pptsnow, pptgraul, pptice, &
-                      Nt_c2, TNO2, rho_g2,& ! trude added
+                      Nt_c, TNO, rho_g,av_s,bv_s,fv_s,av_g,bv_g,Ef_si,Ef_ri,& ! trude added
                       kts, kte, dt, i, j)
 
 !          pcp_ra(i,j) = pptrain
@@ -1033,7 +1047,7 @@
       subroutine mp_thompson (qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d, &
                           nr1d, t1d, p1d, dzq, &
                           pptrain, pptsnow, pptgraul, pptice, &
-                          Nt_c, TNO, rho_g,&   ! trude added 
+                          Nt_c, TNO, rho_g,av_s,bv_s,fv_s,av_g,bv_g,Ef_si,Ef_ri,&   ! trude added 
                          kts, kte, dt, ii, jj)
 
       implicit none
@@ -1048,7 +1062,7 @@
       REAL, INTENT(IN):: dt
 ! ++ trude added
       REAL, INTENT(IN):: Nt_c, TNO, rho_g
-      REAL :: am_g
+      REAL :: am_g,av_s,bv_s,fv_s,av_g,bv_g,Ef_si,Ef_ri
 ! -- trude added
 
 !..Local variables
@@ -1129,6 +1143,8 @@
 
 ! ++ trude
        am_g = PI*rho_g/6.0
+!       write(*,*) "nt_c in thompson ", nt_c
+!       write(*,*) "av_s,bv_s,fv_s,av_g,bv_g ", av_s,bv_s,fv_s,av_g,bv_g
 ! -- trude
 !+---+
       debug_flag = .false.
@@ -2825,7 +2841,7 @@
 !..Rain collecting graupel (and inverse).  Explicit CE integration.
 !+---+-----------------------------------------------------------------+
 
-      subroutine qr_acr_qg(am_g)
+      subroutine qr_acr_qg(am_g,av_g,bv_g,Ef_rg)
 
       implicit none
 
@@ -2837,9 +2853,10 @@
       DOUBLE PRECISION:: N0_r, N0_g, lam_exp, lamg, lamr
       DOUBLE PRECISION:: massg, massr, dvg, dvr, t1, t2, z1, z2, y1, y2
 ! ++ trude
-      REAL,INTENT(IN):: am_g
+      REAL,INTENT(IN):: am_g,av_g,bv_g,Ef_rg
 !+---+
       write(*,*) "am_g in qr_acr_qg ", am_g
+      write(*,*) "av_g,bv_g ", av_g,bv_g
       do n2 = 1, nbr
 !        vr(n2) = av_r*Dr(n2)**bv_r * DEXP(-fv_r*Dr(n2))
          vr(n2) = -0.1021 + 4.932E3*Dr(n2) - 0.9551E6*Dr(n2)*Dr(n2)     &
@@ -2947,10 +2964,10 @@
 !..Rain collecting snow (and inverse).  Explicit CE integration.
 !+---+-----------------------------------------------------------------+
 
-      subroutine qr_acr_qs(am_s)
+      subroutine qr_acr_qs(am_s,av_s,bv_s,fv_s,Ef_rs)
 
       implicit none
-      REAL, INTENT(IN):: am_s  ! trude added
+      REAL, INTENT(IN):: am_s,av_s,bv_s,fv_s,Ef_rs  ! trude added
 !..Local variables
       INTEGER:: i, j, k, m, n, n2
       INTEGER:: km, km_s, km_e
@@ -3355,14 +3372,15 @@
 !.. their "effective collision cross-section."
 !+---+-----------------------------------------------------------------+
 
-      subroutine table_Efsw(am_s)
+      subroutine table_Efsw(am_s,av_s,bv_s,fv_s)
 
       implicit none
-      REAL, INTENT(IN)::am_s  ! trude added
+      REAL, INTENT(IN)::am_s,av_s,bv_s,fv_s  ! trude added
 !..Local variables
       DOUBLE PRECISION:: Ds_m, vts, vtc, stokes, reynolds, Ef_sw
       DOUBLE PRECISION:: p, yc0, F, G, H, z, K0
       INTEGER:: i, j
+
 
       do j = 1, nbc
       vtc = 1.19D4 * (1.0D4*Dc(j)*Dc(j)*0.25D0)

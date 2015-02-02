@@ -232,6 +232,9 @@ module data_structures
                  real :: TNO
                  real :: am_s
                  real :: rho_g
+                 real :: av_s, bv_s, fv_s
+                 real :: av_g, bv_g
+                 real :: Ef_si, Ef_rs, Ef_rg, Ef_ri
        end type mp_options_type
         !! -- trude
 	!------------------------------------------------
