@@ -80,7 +80,7 @@ module data_structures
 !------------------------------------------------
 	integer,parameter::MAXFILELENGTH=100 ! maximum file name length
 	integer,parameter::MAXVARLENGTH=100  ! maximum variable name length
-	
+	integer,parameter::MAXLEVELS=500 ! maximum number of vertical layers (should typically be ~10-20)
 !------------------------------------------------
 ! Physical Constants
 !------------------------------------------------

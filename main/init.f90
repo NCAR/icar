@@ -288,6 +288,7 @@ contains
 		ymin=   1
 		xmax= (-1)
 		ymax= (-1)
+		nz  = MAXLEVELS
 		smooth_wind_distance=-9999
 		vert_smooth=2
 		calendar="gregorian"
@@ -313,16 +314,6 @@ contains
 		endif
 			
 		
-		if (t_offset.eq.(-9999)) then
-			write(*,*), "WARNING, WARNING, WARNING"
-			write(*,*), "WARNING, WARNING, WARNING"
-			write(*,*), ""
-			write(*,*), "	Using default t_offset=300"
-			write(*,*), ""
-			write(*,*), "WARNING, WARNING, WARNING"
-			write(*,*), "WARNING, WARNING, WARNING"
-			t_offset=300
-		endif
 		if (smooth_wind_distance.eq.(-9999)) then
 			smooth_wind_distance=dxlow*3
 			write(*,*), "Default smoothing distance = lowdx*3 = ", smooth_wind_distance
@@ -439,11 +430,20 @@ contains
 		implicit none
 		type(options_type), intent(in)::options
 		
+		if (options%t_offset.eq.(-9999)) then
+			if (options%warning_level>0) then
+				write(*,*), "WARNING, WARNING, WARNING"
+				write(*,*), "WARNING, Using default t_offset=300"
+				write(*,*), "WARNING, WARNING, WARNING"
+			endif
+			options%t_offset=300
+		endif
+	
 		! convection can modify wind field, and ideal doesn't rebalance winds every timestep
 		if ((options%physics%convection.ne.0).and.(options%ideal)) then
 			if (options%warning_level>1) then
 				write(*,*) "WARNING WARNING WARNING"
-				write(*,*) "WARNING, running convection in ideal mode may be bad..."
+				write(*,*) "WARNING, Running convection in ideal mode may be bad..."
 				write(*,*) "WARNING WARNING WARNING"
 			endif
 			if (options%warning_level==10) then
@@ -522,12 +522,14 @@ contains
 		real, allocatable, dimension(:) :: dz_levels
    		real,dimension(45)::fulldz
 		integer :: name_unit
+		integer :: this_level
 		
 ! 		set up namelist structures
 		namelist /z_info/ dz_levels
 		namelist /files_list/ init_conditions_file,output_file,boundary_files
 		namelist /ext_winds_info/ ext_wind_files
 		
+		this_level=1
 		call version_check(options_filename,options)
 		call physics_namelist(options_filename,options)
 		call var_namelist(options_filename,options)
@@ -535,13 +537,27 @@ contains
 		
 		! read the z_info namelist if requested
 		if (options%readdz) then
-			allocate(dz_levels(options%nz),options%dz_levels(options%nz))
+			allocate(dz_levels(options%nz))
+			dz_levels=-999
 			
 			open(io_newunit(name_unit), file=options_filename)
 			read(name_unit,nml=z_info)
 			close(name_unit)
 			
-			options%dz_levels=dz_levels
+			! if nz wasn't specified in the namelist, we assume a HUGE number of levels
+			! so now we have to figure out what the actual number of levels read was
+			if (options%nz==MAXLEVELS) then
+				do this_level=1,MAXLEVELS-1
+					if (dz_levels(this_level+1)<=0) then
+						options%nz=this_level
+						exit
+					endif
+				end do
+			endif
+			options%nz=this_level
+			allocate(options%dz_levels(options%nz))
+					
+			options%dz_levels(1:options%nz)=dz_levels(1:options%nz)
 			deallocate(dz_levels)
 		else
 		! if we are not reading dz from the namelist, use default values from a WRF run
@@ -550,6 +566,9 @@ contains
 				   251.,  258.,  265.,  365.,  379.,  395.,  413.,  432.,  453.,  476.,  503.,  533., &
 				   422.,  443.,  467.,  326.,  339.,  353.,  369.,  386.,  405.,  426.,  450.,  477., &
 				   455.,  429.,  396.,  357.,  311.,  325.,  340.,  356.,  356.]
+		   if (options%nz>45) then
+			   options%nz=45
+		   endif
  			allocate(options%dz_levels(options%nz))
 			options%dz_levels=fulldz(1:options%nz)
 		endif
