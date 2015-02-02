@@ -428,7 +428,7 @@ contains
 	subroutine options_check(options)
 		! Minimal error checking on option settings
 		implicit none
-		type(options_type), intent(in)::options
+		type(options_type), intent(inout)::options
 		
 		if (options%t_offset.eq.(-9999)) then
 			if (options%warning_level>0) then

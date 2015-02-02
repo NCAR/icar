@@ -60,8 +60,8 @@ module linear_theory_winds
 	real, parameter :: vmax=20
 	real, parameter :: vmin=-20
 	
-	integer, parameter :: n_U_values=10
-	integer, parameter :: n_V_values=10
+	integer, parameter :: n_U_values=30
+	integer, parameter :: n_V_values=30
 	
 contains
 	
