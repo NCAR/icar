@@ -258,7 +258,7 @@ contains
 		logical :: ideal, readz, readdz, debug, external_winds, remove_lowres_linear, variable_N, &
 		           mean_winds, mean_fields, restart, add_low_topo, advect_density, high_res_soil_state, &
 				   use_agl_height, spatial_linear_fields
-		character(len=MAXFILELENGTH) :: date, calendar
+		character(len=MAXFILELENGTH) :: date, calendar, start_date
 		integer :: year, month, day, hour, minute, second
 		
 		
@@ -266,7 +266,7 @@ contains
 							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,smooth_wind_distance, &
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
 							  date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, &
-							  N_squared,linear_contribution,use_agl_height, spatial_linear_fields
+							  N_squared,linear_contribution,use_agl_height, spatial_linear_fields,start_date
 		
 ! 		default parameters
 		mean_fields=.False.
@@ -298,6 +298,7 @@ contains
 		linear_contribution=1.0
 		use_agl_height=.True.
 		spatial_linear_fields=.False.
+		start_date=""
 		
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=parameters)
@@ -358,6 +359,13 @@ contains
 		call parse_date(date, year, month, day, hour, minute, second)
 		call time_init(calendar)
 		options%initial_mjd=date_to_mjd(year, month, day, hour, minute, second)
+		if (start_date=="") then
+			options%start_mjd=options%initial_mjd
+		else
+			call parse_date(start_date, year, month, day, hour, minute, second)
+			options%start_mjd=date_to_mjd(year, month, day, hour, minute, second)
+		endif
+			
 		options%time_zero=((options%initial_mjd-50000) * 86400.0)
 		options%dx=dx
 		options%dxlow=dxlow

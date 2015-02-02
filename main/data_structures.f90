@@ -286,7 +286,8 @@ module data_structures
 		logical :: spatial_linear_fields! use a spatially varying linear wind perturbation
 		
 		! date/time parameters
-		double precision :: initial_mjd ! Modified Julian Day of the first model time step [days]
+		double precision :: initial_mjd ! Modified Julian Day of the first forcing time step [days]
+		double precision :: start_mjd   ! Modified Julian Day of the date to start running the model [days]
 		double precision :: time_zero   ! Starting model initial time step (mjd-50000)*3600 [s]
 
 		real :: t_offset				! offset to temperature because WRF outputs potential temperature-300
