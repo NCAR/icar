@@ -385,25 +385,29 @@ contains
 		
 	end subroutine add_buffer_topo
 	
-	subroutine initialize_spatial_winds(domain)
+	subroutine initialize_spatial_winds(domain,options)
+		! compute look up tables for all combinations of  N different U speeds and N different V speeds
 		implicit none
 		type(linearizable_type), intent(inout) :: domain
+		type(options_type), intent(in) :: options
 		real, allocatable, dimension(:,:,:) :: savedU, savedV
 		real :: u,v
 		integer :: nx,ny,nz,i,j
 		
+		! the domain to work over
 		nx=size(domain%u,1)-1
 		nz=size(domain%u,2)
 		ny=size(domain%u,3)
 		
+		! save the old U and V values so we can restore them
 		allocate(savedU(nx+1,nz,ny))
 		allocate(savedV(nx,nz,ny+1))
 		savedU=domain%u
 		savedV=domain%v
 		
+		! create the array of U and V values to create LUTs for
 		allocate(u_values(n_U_values))
 		allocate(v_values(n_V_values))
-		
 		do i=1,n_U_values
 			u_values(i)=(i-1)/real(n_U_values-1) * (umax-umin) + umin
 		enddo
@@ -411,19 +415,24 @@ contains
 			v_values(i)=(i-1)/real(n_V_values-1) * (vmax-vmin) + vmin
 		enddo
 		
+		! allocate the (LARGE) look up tables for both U and V
 		allocate(u_LUT(n_U_values,n_V_values,nx+1,nz,ny))
 		allocate(v_LUT(n_U_values,n_V_values,nx,nz,ny+1))
 		
+		! loop over combinations of U and V values
 		write(*,*) "Percent Completed:"
 		do i=1,n_U_values
 			write(*,*) i/real(n_U_values)*100," %"
 			do j=1,n_V_values
+				
+				! set the domain wide U and V values to the current u and v values
 				domain%u=u_values(i)
 				domain%v=v_values(j)
 				
-				call linear_winds(domain,6e-5, 0, reverse_flag=.False.,useDensity=.False.,debug=.False.,fixedU=u_values(i),fixedV=v_values(j))
+				! calculate the linear wind field for the current u and v values
+				call linear_winds(domain,options%N_squared, 0, reverse_flag=.False.,useDensity=.False.,debug=.False.)!,fixedU=u_values(i),fixedV=v_values(j))
 				u_LUT(i,j,:,:,:)=domain%u-u_values(i)
-				v_LUT(i,j,:,:,:)=domain%v-v_values(i)
+				v_LUT(i,j,:,:,:)=domain%v-v_values(j)
 			end do
 		end do
 		domain%u=savedU
@@ -498,7 +507,7 @@ contains
 					end do
 					uweight=calc_weight(u_values, upos,nextu,domain%u(i,j,k))
 					vweight=calc_weight(v_values, vpos,nextv,domain%v(i,j,k))
-					! should do some linear interpolation between this step and the next one at some point but for now...
+					! perform linear interpolation between LUT values
 					domain%u(i,j,k)=domain%u(i,j,k) &
 									+    vweight  * (uweight * u_LUT(upos,vpos,i,j,k)  + (1-uweight) * u_LUT(nextu,vpos,i,j,k)) &
 									+ (1-vweight) * (uweight * u_LUT(upos,nextv,i,j,k) + (1-uweight) * u_LUT(nextu,nextv,i,j,k))
@@ -551,7 +560,7 @@ contains
 		if (options%spatial_linear_fields) then
 			if (.not.allocated(u_LUT)) then
 				write(*,*) "Generating a spatially variable linear perturbation look up table"
-				call initialize_spatial_winds(domain)
+				call initialize_spatial_winds(domain,options)
 			endif
 		endif
         
