@@ -12,7 +12,8 @@
 !!------------------------------------------------------------
 module output
 	use netcdf		  ! nc_* routines
-	use time          ! calendar_date
+	use time          ! calendar_date, calendar, YEAR_ZERO, GREGORIAN, NOLEAP, THREESIXTY
+	use string		  ! str
 	use io_routines   ! io_* routines, file_exists, check
 	use data_structures
 	implicit none
@@ -166,10 +167,21 @@ contains
 	
 		call check( nf90_def_var(ncid, "time", NF90_DOUBLE, t_id, time_id) )
 		call check( nf90_put_att(ncid,time_id,"standard_name","time"))
-		call check( nf90_put_att(ncid,time_id,"long_name","modified Julian Day"))
 		call check( nf90_put_att(ncid,time_id,"UTCoffset","0"))
-		call check( nf90_put_att(ncid,time_id,"units","days since 1858-11-17 00:00:00"))
-
+		if (calendar==GREGORIAN) then
+			call check( nf90_put_att(ncid,time_id,"long_name","modified Julian Day"))
+			call check( nf90_put_att(ncid,time_id,"units","days since 1858-11-17 00:00:00"))
+			call check( nf90_put_att(ncid,time_id,"calendar","gregorian"))
+		elseif (calendar==NOLEAP) then
+			call check( nf90_put_att(ncid,time_id,"long_name","Time"))
+			call check( nf90_put_att(ncid,time_id,"units","days since "//trim(str(YEAR_ZERO))//"-01-01 00:00:00"))
+			call check( nf90_put_att(ncid,time_id,"calendar","noleap"))
+		elseif (calendar==THREESIXTY) then
+			call check( nf90_put_att(ncid,time_id,"long_name","Time"))
+			call check( nf90_put_att(ncid,time_id,"units","days since "//trim(str(YEAR_ZERO))//"-01-01 00:00:00"))
+			call check( nf90_put_att(ncid,time_id,"calendar","360-day"))
+		endif
+				
 		call check( nf90_def_var(ncid, "qv", NF90_REAL, dimids, temp_id) )
 		call check( nf90_put_att(ncid,temp_id,"standard_name","water_vapor_mixing_ratio"))
 		call check( nf90_put_att(ncid,temp_id,"long_name","Water Wapor Mixing Ratio"))
