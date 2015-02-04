@@ -15,7 +15,8 @@ import mygis
 
 MAX_NUMBER_PROCESSES=16
 # file_search="cesm_*_*_1990*.nc"
-file_search="cesm_*_*_*.nc"
+# file_search="cesm_*_*_*.nc"
+file_search="cesm_002_20TR_*.nc"
 
 days_per_month=[31,28,31,30,31,30,31,31,30,31,30,31]
 start_day_per_month=[0]
@@ -305,9 +306,17 @@ def apply_bias_correction(wind_option):
             except:
                 d=mygis.read_nc(v+"_"+f,v).data
             
-            if (wind_option!="nowind") or ((v!="u") and (v!="v")):
+            if (wind_option=="nowind") and ((v=="u") or (v=="v")):
+                pass
+            if (wind_option=="meanwind") and ((v=="u") or (v=="v")):
+                for i in range(d.shape[0]):
+                    windbias=biases[int(np.round(i/float(times_per_day)))][v]
+                    for j in range(d.shape[1]):
+                        d[i,j,...]-=np.mean(windbias[j,...])
+            else:
                 for i in range(d.shape[0]):
                     d[i,...]-=biases[int(np.round(i/float(times_per_day)))][v]
+                
             
             if v=="rh":
                 d[d<1e-10]=1e-10
