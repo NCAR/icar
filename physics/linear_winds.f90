@@ -481,7 +481,7 @@ contains
 		! then bilinearly interpolate the nearest LUT values for that points linear wind field
 		implicit none
 		type(linearizable_type), intent(inout) :: domain
-		real :: u,v
+! 		real :: u,v
 		integer :: nx,ny,nz,i,j,k
 		integer :: step, upos, vpos, nextu, nextv
 		real :: uweight, vweight
@@ -490,6 +490,10 @@ contains
 		nz=size(domain%u,2)
 		ny=size(domain%u,3)
 		
+		!$omp parallel firstprivate(nx,ny,nz), &
+		!$omp private(i,j,k,step, upos, vpos, nextu, nextv, uweight, vweight), &
+		!$omp shared(domain, u_values, v_values, u_LUT, v_LUT)
+		!$omp do
 		do k=1,ny
 			do j=1,nz
 				do i=1,nx
@@ -517,6 +521,8 @@ contains
 				end do
 			end do
 		end do
+		!$omp end do
+		!$omp end parallel
 		
 	end subroutine spatial_winds
 	
@@ -561,6 +567,8 @@ contains
 			if (.not.allocated(u_LUT)) then
 				write(*,*) "Generating a spatially variable linear perturbation look up table"
 				call initialize_spatial_winds(domain,options)
+			else
+				write(*,*) "Skipping spatial wind field for low-res domain"
 			endif
 		endif
         
@@ -585,7 +593,7 @@ contains
 		! add the spatially variable linear field
 		! if we are reverseing the effects, that means we are in the low-res domain
 		! that domain does not have a spatial LUT calculated, so it can not be performed
-		if (options%spatial_linear_fields) then
+		if ((options%spatial_linear_fields).and.(.not.reverse) )then
 			if (reverse) then
 				if (debug) then
 					write(*,*) "Warning, spatially variable field not used when removing the linear field"

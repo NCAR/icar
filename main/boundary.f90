@@ -611,8 +611,10 @@ contains
 				call ext_winds_init(domain,bc,options)
 ! 				call smooth_wind(domain%u,1,3)
 ! 				call smooth_wind(domain%v,1,3)
-			elseif (options%remove_lowres_linear) then
-				call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
+! 			elseif (options%remove_lowres_linear) then
+! ! do not remove the low-res field on the first model step because it won't allow spatial winds to set up properly
+!  need to fix this at some point.  
+! 				call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
 			elseif (options%mean_winds) then
 				call mean_winds(domain,file_list(curfile),curstep,options)
 			else
