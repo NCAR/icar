@@ -53,7 +53,8 @@ module linear_theory_winds
 	real :: linear_contribution = 1.0 ! multiplier on uhat,vhat before adding to u,v
 	
 	real, allocatable, dimension(:) :: u_values, v_values
-	real, allocatable, dimension(:,:,:,:,:) :: u_LUT, v_LUT
+	real, allocatable, target, dimension(:,:,:,:,:) :: hi_u_LUT, hi_v_LUT, rev_u_LUT, rev_v_LUT
+	real, pointer, dimension(:,:,:,:,:) :: u_LUT, v_LUT
 	
 	real, parameter :: umax=30
 	real, parameter :: umin=-20
@@ -136,15 +137,15 @@ contains
 	! could/should be calculated from the real atm profile with limits
 	! f  = 9.37e-5           # rad/s Coriolis frequency for 40deg north
 	! ---------------------------------------------------------------------------------
-    subroutine linear_winds(domain,Ndsq,vsmooth,reverse_flag,useDensity,debug,fixedU,fixedV)
+    subroutine linear_winds(domain,Ndsq,vsmooth,reverse,useDensity,debug,fixedU,fixedV)
 		use, intrinsic :: iso_c_binding
         implicit none
         class(linearizable_type),intent(inout)::domain
         real, intent(in)::Ndsq
 		integer, intent(in)::vsmooth ! number of layers to smooth winds over in the vertical
-		logical, intent(in), optional :: reverse_flag,useDensity,debug
+		logical, intent(in) :: reverse,useDensity
+		logical, intent(in), optional ::debug
 		real, intent(in), optional :: fixedU, fixedV !instead of computing U and V from domain, just use these
-		logical::reverse
         complex,parameter :: j= (0,1)
         real::gain,offset !used in setting up k and l arrays
         integer::nx,ny,nz,i,midpoint,z,realnx,realny,x,y,bottom,top
@@ -153,12 +154,6 @@ contains
 		real,parameter::pi=3.1415927
         type(C_PTR) :: plan
         
-		if (.not.present(reverse_flag)) then
-			reverse=.False.
-		else
-			reverse=reverse_flag
-		endif
-		
 		nx=size(domain%fzs,1)
 		nz=size(domain%u,2)
 		ny=size(domain%fzs,2)
@@ -305,16 +300,14 @@ contains
 					u_hat(1+buffer:nx-buffer-1,i+buffer) = (u_hat(1+buffer:nx-buffer-1,i+buffer)+u_hat(2+buffer:nx-buffer,i+buffer))/2
 					v_hat(1+buffer:nx-buffer,i+buffer)   = (v_hat(1+buffer:nx-buffer,i+buffer)+v_hat(1+buffer:nx-buffer,i+buffer+1))/2
 				enddo
-				if (present(useDensity)) then
+				if (useDensity) then
 					! if we are using density in the advection calculations, modify the linear perturbation
 					! to get the vertical velocities closer to what they would be without density (boussinesq)
-					if (useDensity) then
-						write(*,*), "Using a density correction in linear winds"
-						u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer) = &
-							2*real(u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer))! / domain%rho(1:realnx,z,1:realny)
-						v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer) = &
-							2*real(v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer))! / domain%rho(1:realnx,z,1:realny)
-					endif
+					write(*,*), "Using a density correction in linear winds"
+					u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer) = &
+						2*real(u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer))! / domain%rho(1:realnx,z,1:realny)
+					v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer) = &
+						2*real(v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer))! / domain%rho(1:realnx,z,1:realny)
 				endif
 				! if we are removing linear winds from a low res field, subtract u_hat v_hat instead
 				! real(real()) extracts real component of complex, then converts to a real data type (may not be necessary except for IO?)
@@ -385,11 +378,12 @@ contains
 		
 	end subroutine add_buffer_topo
 	
-	subroutine initialize_spatial_winds(domain,options)
+	subroutine initialize_spatial_winds(domain,options,reverse,useDensity)
 		! compute look up tables for all combinations of  N different U speeds and N different V speeds
 		implicit none
 		type(linearizable_type), intent(inout) :: domain
 		type(options_type), intent(in) :: options
+		logical, intent(in) :: reverse,useDensity
 		real, allocatable, dimension(:,:,:) :: savedU, savedV
 		real :: u,v
 		integer :: nx,ny,nz,i,j
@@ -406,8 +400,10 @@ contains
 		savedV=domain%v
 		
 		! create the array of U and V values to create LUTs for
-		allocate(u_values(n_U_values))
-		allocate(v_values(n_V_values))
+		if (.not.allocated(u_values)) then
+			allocate(u_values(n_U_values))
+			allocate(v_values(n_V_values))
+		endif
 		do i=1,n_U_values
 			u_values(i)=(i-1)/real(n_U_values-1) * (umax-umin) + umin
 		enddo
@@ -416,8 +412,17 @@ contains
 		enddo
 		
 		! allocate the (LARGE) look up tables for both U and V
-		allocate(u_LUT(n_U_values,n_V_values,nx+1,nz,ny))
-		allocate(v_LUT(n_U_values,n_V_values,nx,nz,ny+1))
+		if (reverse) then
+			allocate(rev_u_LUT(n_U_values,n_V_values,nx+1,nz,ny))
+			allocate(rev_v_LUT(n_U_values,n_V_values,nx,nz,ny+1))
+			u_LUT=>rev_u_LUT
+			v_LUT=>rev_v_LUT
+		else
+			allocate(hi_u_LUT(n_U_values,n_V_values,nx+1,nz,ny))
+			allocate(hi_v_LUT(n_U_values,n_V_values,nx,nz,ny+1))
+			u_LUT=>hi_u_LUT
+			v_LUT=>hi_v_LUT
+		endif
 		
 		! loop over combinations of U and V values
 		write(*,*) "Percent Completed:"
@@ -430,7 +435,7 @@ contains
 				domain%v=v_values(j)
 				
 				! calculate the linear wind field for the current u and v values
-				call linear_winds(domain,options%N_squared, 0, reverse_flag=.False.,useDensity=.False.,debug=.False.)!,fixedU=u_values(i),fixedV=v_values(j))
+				call linear_winds(domain,N_squared, 0, reverse,useDensity,debug=.False.)!,fixedU=u_values(i),fixedV=v_values(j))
 				u_LUT(i,j,:,:,:)=domain%u-u_values(i)
 				v_LUT(i,j,:,:,:)=domain%v-v_values(j)
 			end do
@@ -474,14 +479,14 @@ contains
 	
 	end function
 	
-	subroutine spatial_winds(domain)
+	subroutine spatial_winds(domain,reverse)
 		! compute a spatially variable linear wind perturbation
 		! based off of look uptables computed in via setup
 		! for each grid point, find the closest LUT data in U and V space
 		! then bilinearly interpolate the nearest LUT values for that points linear wind field
 		implicit none
 		type(linearizable_type), intent(inout) :: domain
-! 		real :: u,v
+		logical, intent(in) :: reverse
 		integer :: nx,ny,nz,i,j,k
 		integer :: step, upos, vpos, nextu, nextv
 		real :: uweight, vweight
@@ -489,6 +494,15 @@ contains
 		nx=size(domain%u,1)-1
 		nz=size(domain%u,2)
 		ny=size(domain%u,3)
+		
+		if (reverse) then
+			u_LUT=>rev_u_LUT
+			v_LUT=>rev_v_LUT
+		else
+			u_LUT=>hi_u_LUT
+			v_LUT=>hi_v_LUT
+		endif
+		
 		
 		!$omp parallel firstprivate(nx,ny,nz), &
 		!$omp private(i,j,k,step, upos, vpos, nextu, nextv, uweight, vweight), &
@@ -528,16 +542,16 @@ contains
 	
 	! called from linear_perturb the first time perturb is called
 	! compute FFT(terrain), and dzdx,dzdy components
-    subroutine setup_linwinds(domain,options)
+    subroutine setup_linwinds(domain,options,reverse,useDensity)
         implicit none
         class(linearizable_type),intent(inout)::domain
 		type(options_type),intent(in) :: options
+		logical, intent(in) :: reverse,useDensity
 		complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::complex_terrain
         type(C_PTR) :: plan
         integer::nx,ny
-        
+		
 		! store module level variables so we don't have to pass options through everytime
-		N_squared=options%N_squared
 		variable_N=options%variable_N
 		
 		call add_buffer_topo(domain%terrain,complex_terrain)
@@ -558,17 +572,16 @@ contains
 		! cleanup temporary array
 		deallocate(complex_terrain)
 		
-		linear_contribution=options%linear_contribution
-		if (options%linear_contribution/=1) then
-			write(*,*) "Using a fraction of the linear perturbation:",options%linear_contribution
+		if (linear_contribution/=1) then
+			write(*,*) "Using a fraction of the linear perturbation:",linear_contribution
 		endif
 		
 		if (options%spatial_linear_fields) then
-			if (.not.allocated(u_LUT)) then
+			if ((.not.allocated(hi_u_LUT) .and. (.not.reverse)) .or. ((.not.allocated(rev_u_LUT)) .and. reverse)) then
 				write(*,*) "Generating a spatially variable linear perturbation look up table"
-				call initialize_spatial_winds(domain,options)
+				call initialize_spatial_winds(domain,options,reverse,useDensity)
 			else
-				write(*,*) "Skipping spatial wind field for low-res domain"
+				write(*,*) "Skipping spatial wind field for presumed domain repeat"
 			endif
 		endif
         
@@ -582,29 +595,42 @@ contains
 		type(options_type), intent(in) :: options
 		integer, intent(in) :: vsmooth
 		logical, intent(in), optional :: reverse,useDensity
+		logical :: rev, useD
 		logical, save :: debug=.True.
 		real::stability
+
+		if (present(reverse)) then
+			rev=reverse
+		else
+			rev=.False.
+		endif
+		if (present(useDensity)) then
+			useD=useDensity
+		else
+			useD=.False.
+		endif
+
+		if (rev) then
+			linear_contribution=options%rm_linear_contribution
+			N_squared=options%rm_N_squared
+		else
+			linear_contribution=options%linear_contribution
+			N_squared=options%N_squared
+		endif
         
 		! if linear_perturb hasn't been called before we need to perform some setup actions. 
         if (.not.allocated(domain%fzs)) then
-            call setup_linwinds(domain,options)
+            call setup_linwinds(domain,options,rev,useD)
         endif
 		
 		! add the spatially variable linear field
 		! if we are reverseing the effects, that means we are in the low-res domain
 		! that domain does not have a spatial LUT calculated, so it can not be performed
-		if ((options%spatial_linear_fields).and.(.not.reverse) )then
-			if (reverse) then
-				if (debug) then
-					write(*,*) "Warning, spatially variable field not used when removing the linear field"
-				end if
-			else
-				call spatial_winds(domain)
-			endif
+		if (options%spatial_linear_fields)then
+			call spatial_winds(domain,rev)
 		else
 			! Ndsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability
 	        stability=calc_stability(domain)
-		
 			call linear_winds(domain,stability,vsmooth,reverse,useDensity,debug)
 		endif
 		debug=.False.

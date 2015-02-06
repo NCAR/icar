@@ -252,7 +252,7 @@ contains
 		integer :: name_unit
 		
 		real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance
-		real    :: rotation_scale_height, N_squared,linear_contribution
+		real    :: rotation_scale_height, N_squared, rm_N_squared,linear_contribution, rm_linear_contribution
 		integer :: ntimesteps, nfiles, xmin, xmax, ymin, ymax, vert_smooth
 		integer :: nz, n_ext_winds,buffer, warning_level
 		logical :: ideal, readz, readdz, debug, external_winds, remove_lowres_linear, variable_N, &
@@ -266,7 +266,8 @@ contains
 							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,smooth_wind_distance, &
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
 							  date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, &
-							  N_squared,linear_contribution,use_agl_height, spatial_linear_fields,start_date
+							  N_squared,rm_N_squared,linear_contribution,rm_linear_contribution, use_agl_height,  &
+							  spatial_linear_fields, start_date
 		
 ! 		default parameters
 		mean_fields=.False.
@@ -294,9 +295,11 @@ contains
 		calendar="gregorian"
 		high_res_soil_state=.True.
 		rotation_scale_height=2000.0
-		N_squared=6.37e-5
+		N_squared=6.e-5
+		rm_N_squared=6.e-5
 		variable_N=.False.
 		linear_contribution=1.0
+		rm_linear_contribution=1.0
 		use_agl_height=.True.
 		spatial_linear_fields=.False.
 		start_date=""
@@ -389,8 +392,10 @@ contains
 		options%ymax=ymax
 		
 		options%N_squared=N_squared
+		options%rm_N_squared=rm_N_squared
 		options%variable_N=variable_N
 		options%linear_contribution=linear_contribution
+		options%rm_linear_contribution=rm_linear_contribution
 
 		options%high_res_soil_state=high_res_soil_state
 		

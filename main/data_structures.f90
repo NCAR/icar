@@ -282,7 +282,9 @@ module data_structures
 		real :: inputinterval  			! time steps per input
 		real :: smooth_wind_distance 	! distance over which to smooth the forcing wind field (m)
 		real :: N_squared				! static Brunt Vaisala Frequency (N^2) to use
+		real :: rm_N_squared			! static Brunt Vaisala Frequency (N^2) to use in removing linear wind field
 		real :: linear_contribution     ! fractional contribution of linear perturbation to wind field (e.g. u_hat multiplied by this)
+		real :: rm_linear_contribution  ! fractional contribution of linear perturbation to wind field to remove from the low-res field
 		logical :: spatial_linear_fields! use a spatially varying linear wind perturbation
 		
 		! date/time parameters
