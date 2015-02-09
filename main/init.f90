@@ -262,15 +262,17 @@ contains
 		integer :: year, month, day, hour, minute, second
 
                 !!++ trude
-                real :: Nt_c, TNO, am_s,rho_g,av_s,bv_s,fv_s,av_g,bv_g,Ef_si,Ef_rs,Ef_rg,Ef_ri
+                real :: Nt_c, TNO, am_s,rho_g,av_s,bv_s,fv_s,av_g,bv_g,av_i,Ef_si,Ef_rs,Ef_rg,Ef_ri
+                real :: C_cube, C_sqrd, mu_r
+                logical :: Ef_rw_l, EF_sw_l
 		!! -- trude
 		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,smooth_wind_distance, &
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
 							  date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, &
 							  N_squared,linear_contribution,use_agl_height, spatial_linear_fields, &
-                                                          Nt_c,TNO, am_s, rho_g, av_s,bv_s,fv_s,av_g,bv_g,Ef_si,Ef_rs,Ef_rg,Ef_ri     ! trude added Nt_c, TNO
-		
+                                                          Nt_c,TNO, am_s, rho_g, av_s,bv_s,fv_s,av_g,bv_g,av_i,Ef_si,Ef_rs,Ef_rg,Ef_ri,&     ! trude added Nt_c, TNO
+                                                          C_cube,C_sqrd, mu_r, Ef_rw_l, Ef_sw_l
 ! 		default parameters
 		mean_fields=.False.
 		mean_winds=.False.
@@ -312,10 +314,17 @@ contains
                 fv_s = 100.0
                 av_g = 442.0
                 bv_g = 0.89
+                av_i = 1847.5
                 Ef_si = 0.05
                 Ef_rs = 0.95
                 Ef_rg = 0.75
                 Ef_ri = 0.95                
+                C_cube = 0.5
+                C_sqrd  = 0.3
+                mu_r = 0
+                Ef_rw_l = .True.
+                Ef_sw_l = .True.
+                write(*,*) 'Ef_rw_l in init ', Ef_rw_l, Ef_sw_l
                 ! -- trude
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=parameters)
@@ -423,10 +432,15 @@ contains
                 options%mp_options%fv_s = fv_s
                 options%mp_options%av_g = av_g
                 options%mp_options%bv_g = bv_g
+                options%mp_options%av_i = av_i
                 options%mp_options%Ef_si = Ef_si
                 options%mp_options%Ef_rs = Ef_rs
                 options%mp_options%Ef_rg = Ef_rg
                 options%mp_options%Ef_ri = Ef_ri
+                options%mp_options%C_cube = C_cube
+                options%mp_options%C_sqrd = C_sqrd
+                options%mp_options%Ef_rw_l = Ef_rw_l
+                options%mp_options%Ef_sw_l = Ef_sw_l
                !-- trude
 	end subroutine parameters_namelist
 	

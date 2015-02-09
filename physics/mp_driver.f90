@@ -40,23 +40,8 @@ contains
 	subroutine mp_init(options)
 		implicit none
 		type(options_type), intent(in)::options
-                real:: Nt_c,am_s,rho_g,av_s,bv_s,fv_s,av_g,bv_g,Ef_rs,Ef_rg  ! ++ trude
 		if (options%physics%microphysics==1) then
-                ! ++ trude
-                        Nt_c = options%mp_options%Nt_c
-                        am_s = options%mp_options%am_s
-                        rho_g = options%mp_options%rho_g
-                        av_s = options%mp_options%av_s
-                        bv_s = options%mp_options%bv_s
-                        fv_s = options%mp_options%fv_s
-                        av_g = options%mp_options%av_g
-                        bv_g = options%mp_options%bv_g
-                        Ef_rs = options%mp_options%Ef_rs
-                        Ef_rg = options%mp_options%Ef_rg
- 			call thompson_init(Nt_c, am_s,rho_g,av_s,bv_s,fv_s,av_g,bv_g,Ef_rs,Ef_rg)
-!foo 			call thompson_init(options%mp_options)
-  
-               ! -- trude
+ 			call thompson_init(options%mp_options)
 		endif
 	end subroutine mp_init
 	
@@ -65,7 +50,6 @@ contains
 		type(domain_type),intent(inout)::domain
 		type(options_type),intent(in)::options
 		real,intent(in)::dt_in
-                real:: Nt_c, TNO, rho_g,av_s,bv_s,fv_s,av_g,bv_g,Ef_si,Ef_ri  ! ++ trude
 		integer ::ids,ide,jds,jde,kds,kde,itimestep=1
 		integer ::its,ite,jts,jte,kts,kte
 		
@@ -82,18 +66,6 @@ contains
 			SR=0
 		endif
 		if (options%physics%microphysics==1) then
-! ++ trude
-                        Nt_c = options%mp_options%Nt_c  
-                        TNO = options%mp_options%TNO
-                        rho_g = options%mp_options%rho_g
-                        av_s = options%mp_options%av_s
-                        bv_s = options%mp_options%bv_s
-                        fv_s = options%mp_options%fv_s
-                        av_g = options%mp_options%av_g
-                        bv_g = options%mp_options%bv_g
-                        Ef_si = options%mp_options%Ef_si
-                        Ef_ri = options%mp_options%Ef_ri
-! --  trude
  			kts=kds;kte=kde
 			if (options%ideal) then
 				! for ideal runs process the boundaries as well to be consistent with WRF
@@ -111,7 +83,6 @@ contains
 							domain%snow, domain%snow, &
 							domain%graupel, domain%graupel, &
 							SR, &
-                                                        Nt_c, TNO, rho_g,av_s,bv_s,fv_s,av_g,bv_g, Ef_si,Ef_ri,&  ! trude added
 							ids,ide, jds,jde, kds,kde, &    ! domain dims
 							ids,ide, jds,jde, kds,kde, &    ! memory dims
 							its,ite, jts,jte, kts,kte)      ! tile dims

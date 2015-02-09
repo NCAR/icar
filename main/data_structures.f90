@@ -232,9 +232,12 @@ module data_structures
                  real :: TNO
                  real :: am_s
                  real :: rho_g
-                 real :: av_s, bv_s, fv_s
+                 real :: av_s, bv_s, fv_s, av_i
                  real :: av_g, bv_g
                  real :: Ef_si, Ef_rs, Ef_rg, Ef_ri
+                 real :: C_cube, C_sqrd
+                 real :: mu_r
+                 logical :: Ef_rw_l, EF_sw_l
        end type mp_options_type
         !! -- trude
 	!------------------------------------------------
