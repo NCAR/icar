@@ -45,7 +45,7 @@ module linear_theory_winds
 	!! domain and the low res domain (to "remove" the linear winds)
     real,allocatable,dimension(:,:)::k,l,kl,sig
     complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::denom,uhat,u_hat,vhat,v_hat,m,ineta,msq,mimag
-	integer,parameter::buffer=50 ! number of grid cells to buffer around the domain
+	integer,parameter::buffer=50 ! number of grid cells to buffer around the domain MUST be >=1
 	integer,parameter::stability_window_size=2
 	
 	real, parameter :: max_stability= 5e-4 ! limits on the calculated Brunt Vaisala Frequency
@@ -148,7 +148,8 @@ contains
 		real, intent(in), optional :: fixedU, fixedV !instead of computing U and V from domain, just use these
         complex,parameter :: j= (0,1)
         real::gain,offset !used in setting up k and l arrays
-        integer::nx,ny,nz,i,midpoint,z,realnx,realny,x,y,bottom,top
+        integer::nx,ny,nz,i,midpoint,z,realnx,realny,realnx_u,realny_v,x,y,bottom,top
+		logical :: staggered
         real::U,V
 		real,dimension(:),allocatable::U_layers,V_layers,preU_layers,preV_layers
 		real,parameter::pi=3.1415927
@@ -163,7 +164,10 @@ contains
 		allocate(preV_layers(nz))
 		
 		realnx=size(domain%z,1)
+		realnx_u=size(domain%u,1)
 		realny=size(domain%z,3)
+		realny_v=size(domain%v,3)
+		staggered = (realnx/=realnx_u).and.(realny/=realny_v)
 		
 		if (present(fixedV)) then
 			if (.not.present(fixedU)) then
@@ -174,8 +178,8 @@ contains
 			U_layers=fixedV
 		else
 			do i=1,nz
-				preU_layers(i)=sum(domain%u(:(realnx-1),i,:))/((realnx-1)*realny)
-				preV_layers(i)=sum(domain%v(:,i,:(realny-1)))/(realnx*(realny-1))
+				preU_layers(i)=sum(domain%u(:(realnx_u-1),i,:))/((realnx_u-1)*realny)
+				preV_layers(i)=sum(domain%v(:,i,:(realny_v-1)))/(realnx*(realny_v-1))
 			enddo
 			do i=1,nz
 				bottom=i-vsmooth
@@ -294,29 +298,48 @@ contains
 	            call fftw_execute_dft(plan, vhat,v_hat)
 	            call fftw_destroy_plan(plan)
 			
-				! u/vhat are first staggered to apply to u/v appropriately...
+				! u/vhat are first staggered to apply to u/v appropriately if on a staggered grid (real_nx/=real_nx_u)
+				! when removing linear winds from forcing data, it may NOT be on a staggered grid
 				! NOTE: we should be able to do this without the loop, but ifort -O was giving the wrong answer... possible compiler bug version 12.1.x?
-				do i=1,realny
-					u_hat(1+buffer:nx-buffer-1,i+buffer) = (u_hat(1+buffer:nx-buffer-1,i+buffer)+u_hat(2+buffer:nx-buffer,i+buffer))/2
-					v_hat(1+buffer:nx-buffer,i+buffer)   = (v_hat(1+buffer:nx-buffer,i+buffer)+v_hat(1+buffer:nx-buffer,i+buffer+1))/2
-				enddo
+				if (staggered) then
+					! note, buffer must be AT LEAST 1
+					do i=0,realny_v
+						u_hat(buffer:realnx_u+buffer,i+buffer)   = (u_hat(buffer:realnx_u+buffer,  i+buffer) + u_hat(1+buffer:realnx_u+buffer+1,i+buffer))/2
+						v_hat(1+buffer:realnx+buffer,i+buffer) = (v_hat(1+buffer:realnx+buffer,i+buffer) + v_hat(1+buffer:realnx+buffer,i+buffer+1))/2
+					enddo
+				endif
 				if (useDensity) then
 					! if we are using density in the advection calculations, modify the linear perturbation
 					! to get the vertical velocities closer to what they would be without density (boussinesq)
-					write(*,*), "Using a density correction in linear winds"
-					u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer) = &
-						2*real(u_hat(1+buffer:nx-buffer,1+buffer:ny-buffer))! / domain%rho(1:realnx,z,1:realny)
-					v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer) = &
-						2*real(v_hat(1+buffer:nx-buffer,1+buffer:ny-buffer))! / domain%rho(1:realnx,z,1:realny)
+					! need to check if this makes the most sense when close to the surface
+					if (debug) then
+						write(*,*), "Using a density correction in linear winds"
+					endif
+					u_hat(buffer:realnx_u+buffer,buffer:realny+buffer) = &
+						2*real(u_hat(buffer:realnx_u+buffer,buffer:realny+buffer))! / domain%rho(1:realnx,z,1:realny)
+					v_hat(buffer:realnx+buffer,buffer:realny_v+buffer) = &
+						2*real(v_hat(buffer:realnx+buffer,buffer:realny_v+buffer))! / domain%rho(1:realnx,z,1:realny)
 				endif
 				! if we are removing linear winds from a low res field, subtract u_hat v_hat instead
 				! real(real()) extracts real component of complex, then converts to a real data type (may not be necessary except for IO?)
 				if (reverse) then
-		            domain%u(1:realnx-1,z,:)=domain%u(1:realnx-1,z,:) - &
-						real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer  ) ))*linear_contribution
-		            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) - &
-						real(real(v_hat(1+buffer:nx-buffer,  1+buffer:realny+buffer-1) ))*linear_contribution
+					if (staggered) then
+						! Forcing data need to go back to the correct position in the grid (e.g. 2:nx-1 not 1:nx-2)
+			            domain%u(:,z,:)=domain%u(:,z,:) - &
+							real(real( u_hat(  buffer:realnx+buffer,   1+buffer:realny+buffer  ) ))*linear_contribution
+							
+			            domain%v(:,z,:)=domain%v(:,z,:) - &
+							real(real( v_hat(1+buffer:realnx+buffer,   1+buffer:realny+buffer) ))*linear_contribution
+					else
+						! if we are not on a staggered grid, just get winds from inside the buffered area
+			            domain%u(:,z,:)=domain%u(:,z,:) - &
+							real(real( u_hat(1+buffer:realnx_u+buffer, 1+buffer:realny+buffer  ) ))*linear_contribution
+							
+			            domain%v(:,z,:)=domain%v(:,z,:) - &
+							real(real( v_hat(1+buffer:realnx+buffer,   1+buffer:realny_v+buffer) ))*linear_contribution
+					endif
 				else
+					! the internal domain is staggered by definition
 		            domain%u(1:realnx-1,z,:)=domain%u(1:realnx-1,z,:) + &
 						real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer  ) ))*linear_contribution
 		            domain%v(:,z,1:realny-1)=domain%v(:,z,1:realny-1) + &
@@ -346,7 +369,7 @@ contains
     
 	subroutine add_buffer_topo(terrain,buffer_topo)
 		! add a smoothed buffer around the edge of the terrain to prevent crazy wrap around effects
-		! in the FFT due to discontinuities between the left and right (top and bottom) edges of the domain
+		! in the FFT due to discontinuities between the left and right (or top and bottom) edges of the domain
         implicit none
 		real, dimension(:,:), intent(in) :: terrain
 		complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:), intent(out):: buffer_topo
@@ -631,6 +654,7 @@ contains
 		else
 			! Ndsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability
 	        stability=calc_stability(domain)
+			! This should probably be called twice, once for dry, and once or moist regions
 			call linear_winds(domain,stability,vsmooth,reverse,useDensity,debug)
 		endif
 		debug=.False.

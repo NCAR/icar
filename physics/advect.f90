@@ -128,12 +128,12 @@ contains
 		lastqv_m=domain%qv
 ! 		calculate U,V,W normalized for dt/dx (dx**2 for density advection so we can skip a /dx in the actual advection code)
 		if (options%advect_density) then
-			U_m=domain%ur(1:nx-1,:,:)*(dt/dx**2)
-			V_m=domain%vr(:,:,1:ny-1)*(dt/dx**2)
+			U_m=domain%ur(2:nx,:,:)*(dt/dx**2)
+			V_m=domain%vr(:,:,2:ny)*(dt/dx**2)
 			W_m=domain%wr*(dt/dx**2)
 		else
-			U_m=domain%u(1:nx-1,:,:)*(dt/dx)
-			V_m=domain%v(:,:,1:ny-1)*(dt/dx)
+			U_m=domain%u(2:nx,:,:)*(dt/dx)
+			V_m=domain%v(:,:,2:ny)*(dt/dx)
 	! 		note, even though dz!=dx, W is computed from the divergence in U/V so it is scaled by dx/dz already
 			W_m=domain%w*(dt/dx)
 		endif

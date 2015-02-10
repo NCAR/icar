@@ -27,6 +27,7 @@ contains
 		ny=size(domain%w,3)
 		
 		! these could be module level to prevent lots of allocation/deallocation/reallocations
+		! but these are relatively small, and this only gets called once for each forcing input
 		if (options%advect_density) then
 			allocate(rhou(nx-1,ny-2))
 			allocate(rhov(nx-2,ny-1))
@@ -39,7 +40,7 @@ contains
 ! If this becomes a bottle neck in the code it could be parallelized over y  
 ! 		loop over domain levels
 		do i=1,nz
-			! if we are incorporating density into the advection equation (as we should be default now)
+			! if we are incorporating density into the advection equation (as we should?)
 			if (options%advect_density) then
 				! first calculate density on the u and v grid points
 				rhou=(domain%rho(1:nx-1,i,2:ny-1) + domain%rho(2:nx,i,2:ny-1))/2
@@ -52,11 +53,11 @@ contains
 					rhow=2*domain%rho(2:nx-1,i,2:ny-1)-domain%rho(2:nx-1,i-1,2:ny-1)
 				endif
 				! calculate horizontal divergence based on the wind * density field
-				domain%vr(2:nx-1,i,1:ny-1)=rhov*domain%v(2:nx-1,i,1:ny-1) * domain%dz(1,i,1)*domain%dx
-				dv=domain%vr(2:nx-1,i,2:ny-1) - domain%vr(2:nx-1,i,1:ny-2)
+				domain%vr(2:nx-1,i,2:ny)=rhov*domain%v(2:nx-1,i,2:ny) * domain%dz(1,i,1)*domain%dx
+				dv=domain%vr(2:nx-1,i,3:ny) - domain%vr(2:nx-1,i,2:ny-1)
 				
-				domain%ur(1:nx-1,i,2:ny-1)=rhou*domain%u(1:nx-1,i,2:ny-1) * domain%dz(1,i,1)*domain%dx
-				du=domain%ur(2:nx-1,i,2:ny-1) - domain%ur(1:nx-2,i,2:ny-1)
+				domain%ur(2:nx,i,2:ny-1)=rhou*domain%u(2:nx,i,2:ny-1) * domain%dz(1,i,1)*domain%dx
+				du=domain%ur(3:nx,i,2:ny-1) - domain%ur(2:nx-1,i,2:ny-1)
 				
 				divergence=du+dv
 				if (i==1) then
@@ -70,8 +71,8 @@ contains
 				endif
 			else
 				! calculate horizontal divergence
-				dv=domain%v(2:nx-1,i,2:ny-1) - domain%v(2:nx-1,i,1:ny-2)
-				du=domain%u(2:nx-1,i,2:ny-1) - domain%u(1:nx-2,i,2:ny-1)
+				dv=domain%v(2:nx-1,i,3:ny) - domain%v(2:nx-1,i,2:ny-1)
+				du=domain%u(3:nx,i,2:ny-1) - domain%u(2:nx-1,i,2:ny-1)
 				divergence=du+dv
 				if (i==1) then
 					! if this is the first model level start from 0 at the ground
@@ -107,11 +108,13 @@ contains
 		
 		allocate(u(nx))
 		allocate(v(nx))
-		!assumes u and v come in on a staggered grid with one additional grid point in x/y for u/v respectively
+		!assumes u and v come in on a staggered Arakawa C-grid with one additional grid point in x/y for u/v respectively
+		! destagger to a centered grid (the mass grid)
 		domain%u(:nx,:,:) = (domain%u(:nx,:,:)+domain%u(2:,:,:))/2
 		domain%v(:,:,:ny) = (domain%v(:,:,:ny)+domain%v(:,:,2:))/2
 		do j=1,ny
 			do k=1,nz
+				! rotate wind field to the real grid
 				u=domain%u(:nx,k,j)*domain%costheta(:nx,j) + domain%v(:nx,k,j)*domain%sintheta(:nx,j)
 				v=domain%v(:nx,k,j)*domain%costheta(:nx,j) + domain%u(:nx,k,j)*domain%sintheta(:nx,j)
 				domain%u(:nx,k,j)=u
@@ -119,13 +122,18 @@ contains
 			enddo
 		enddo
 		deallocate(u,v)
-		domain%u(1:nx-1,:,:) = (domain%u(:nx-1,:,:)+domain%u(2:nx,:,:))/2
-		domain%v(:,:,1:ny-1) = (domain%v(:,:,:ny-1)+domain%v(:,:,2:ny))/2
+		! put the fields back onto a staggered grid, having effectively lost two grid cells in the staggered directions
+		domain%u(2:nx,:,:) = (domain%u(1:nx-1,:,:)+domain%u(2:nx,:,:))/2
+		domain%v(:,:,2:ny) = (domain%v(:,:,1:ny-1)+domain%v(:,:,2:ny))/2
 		
 	end subroutine make_winds_grid_relative
 
-! 	rotate winds from real space back to terrain following grid (approximately)
+! 	"Rotate" winds from real space back to terrain following grid (approximately)
+!   really just stretches U/V according to the extra distance it has to travel across a sloped grid cell
 !   assumes a simple slope transform in u and v independantly
+!   not clear this is relevant, or correct, could be used as a hack if linear winds are not used
+!   real wind speed should have this applied, but grid-relative winds should not. 
+!   It has a pretty small impact regardless. 
 	subroutine rotate_wind_field(domain,options)
         implicit none
         class(linearizable_type),intent(inout)::domain
@@ -143,19 +151,20 @@ contains
 		end do
 		if(rotation_factor(1)<0) then
 			rotation_factor(1)=0 ! implies z(1)<terrain height...
-			print*, "WARNING model level below terrain!"
+			print*, "WARNING wind.f90:rotate_wind_field"
+			print*, "WARNING Model level below terrain!"
 		endif
+		! above the scale height "rotate" completely
 		where(rotation_factor>1) rotation_factor=1
 		
 		do j=1,ny
 			do i=1,nz
-				domain%u(1:nx-2,i,j)=domain%u(1:nx-2,i,j)*((domain%dzdx(:,j)-1)*rotation_factor(i)+1)
-				if (j<ny) then
-					domain%v(:,i,j)=domain%v(:,i,j)*((domain%dzdy(:,j)-1)*rotation_factor(i)+1)
-				endif
+				domain%u(2:nx,i,j)= domain%u(2:nx,i,j) * ((domain%dzdx(:,j)-1) * rotation_factor(i)+1)
+				domain%v(:,i,j+1) = domain%v(:,i,j+1)  * ((domain%dzdy(:,j)-1) * rotation_factor(i)+1)
 			end do
 		end do
 	
+		deallocate(rotation_factor)
 	end subroutine rotate_wind_field
 
 	! apply wind field physics and adjustments
@@ -179,7 +188,7 @@ contains
 		endif
 		! else assumes even flow over the mountains
 
-		! rotate winds into the terrain following coordinate system
+		! rotate winds into the terrain following coordinate system 
 		call rotate_wind_field(domain,options)
 		! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
 		call balance_uvw(domain,options)
