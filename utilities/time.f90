@@ -80,7 +80,7 @@ contains
 		else if (calendar==NOLEAP) then
 			date_to_mjd = (year-YEAR_ZERO)*365 + month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0
 		else if (calendar==THREESIXTY) then
-			date_to_mjd = (year*360-YEAR_ZERO) + month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0
+			date_to_mjd = (year-YEAR_ZERO)*360 + month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0
 		end if
 
 	end function date_to_mjd
