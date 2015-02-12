@@ -157,10 +157,10 @@ contains
 		! above the scale height "rotate" completely
 		where(rotation_factor>1) rotation_factor=1
 		
-		do j=1,ny
+		do j=2,ny
 			do i=1,nz
-				domain%u(2:nx,i,j)= domain%u(2:nx,i,j) * ((domain%dzdx(:,j)-1) * rotation_factor(i)+1)
-				domain%v(:,i,j+1) = domain%v(:,i,j+1)  * ((domain%dzdy(:,j)-1) * rotation_factor(i)+1)
+				domain%u(2:nx-1,i,j)= domain%u(2:nx-1,i,j) * ((domain%dzdx(:,j)-1) * rotation_factor(i)+1)
+				domain%v(:,i,j) = domain%v(:,i,j+1)  * ((domain%dzdy(:,j-1)-1) * rotation_factor(i)+1)
 			end do
 		end do
 	

@@ -514,9 +514,9 @@ contains
 		integer :: step, upos, vpos, nextu, nextv
 		real :: uweight, vweight
 	
-		nx=size(domain%u,1)-1
+		nx=size(domain%lat,1)
+		ny=size(domain%lat,2)
 		nz=size(domain%u,2)
-		ny=size(domain%u,3)
 		
 		if (reverse) then
 			u_LUT=>rev_u_LUT

@@ -614,6 +614,10 @@ contains
 			elseif (options%remove_lowres_linear) then
 				! remove the low-res linear wind perturbation field 
 				call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
+				if (.not.options%ideal)then
+					call smooth_wind(domain%u,smoothing_window,3)
+					call smooth_wind(domain%v,smoothing_window,3)
+				endif
 			elseif (options%mean_winds) then
 				call mean_winds(domain,file_list(curfile),curstep,options)
 			else
@@ -801,6 +805,10 @@ contains
 ! 			call smooth_wind(bc%next_domain%v,1,3)
 		elseif (options%remove_lowres_linear) then
 			call remove_linear_winds(bc%next_domain,bc,options,file_list(curfile),curstep)
+			if (.not.options%ideal)then
+				call smooth_wind(bc%next_domain%u,smoothing_window,3)
+				call smooth_wind(bc%next_domain%v,smoothing_window,3)
+			endif
 		elseif (options%mean_winds) then
 			call mean_winds(bc%next_domain,file_list(curfile),curstep,options)
 		else
