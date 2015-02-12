@@ -1,4 +1,5 @@
 &model_version
+comment="Add your comment here", ! This will be stored in output files
 version="0.8.1"
 /
 
@@ -24,7 +25,7 @@ vvar="V",				! North-South wind speed
 vlat="XLAT_V",			! latitude
 vlon="XLONG_V",			! longitude
 
-! these are only used with lsm=1 (pbl should also be 1)
+! these are only used with lsm=1 (pbl should also be >0)
 shvar="HFX",			! surface sensible heat flux
 lhvar="LH",				! surface latent heat flux
 pblhvar="PBLH",			! Planetary boundary layer height
@@ -40,7 +41,7 @@ vlat_hi="XLAT_V",		! latitude (ns-staggered grid)
 vlon_hi="XLONG_V",		! longitude (ns-staggered grid)
 hgt_hi="HGT_M"			! surface elevation
 
-! to use the Noah LSM the following fields must also be specified on the high-res grid
+! to use the Noah LSM the following fields should also be specified on the high-res grid
 ! vegtype_var="IVGTYP",		! vegetation type index
 ! vegfrac_var="VEGFRA",		! vegetation cover fraction
 ! soiltype_var="ISLTYP",	! soil type index
@@ -51,6 +52,10 @@ hgt_hi="HGT_M"			! surface elevation
 &parameters
 ! set this to the starting date in the low-resolution forcing file
 date='2000/01/01 00:00:00'
+! set this to the date to start running the model (defaults to the above date)
+start_date="1990-10-01_00:00:00"
+! calendar used by the forcing data "gregorian", "standard", "noleap", "365-day", "360-day"
+calendar="standard",
 ! the number of forcing files to read in
 nfiles=2,
 ! the number of (forcing) time steps to run for
@@ -68,6 +73,7 @@ dxlow=20000.0,
 readdz=True,
 ! the number of vertical levels to run (suggest ~10-30 levels with a model top around 4-8km)
 ! must match the number of values supplied in dz_levels below
+! this is now optional, if not supplied, ICAR will determine it from the number of levels specified
 nz=20,
 
 ! if the forcing data come from WRF, the temperature data probably have an offset applied
@@ -105,25 +111,32 @@ advect_density=false,
 buffer=0,
 
 ! doesn't do much yet, increases output print at runtime
-debug=true
-warning_level=10 ! 0-10 increases the level of errors it warns about and quits over
+debug=true,
+warning_level=10, ! 0-10 increases the level of errors it warns about and quits over
 
 ! set this to modify the scale height for which the terrain affects the wind field
 ! rotation_scale_height=4000,
 
 ! set this to use a fixed brunt-vaisalla frequency in linear wind calculations
 ! N_squared=1.0e-5
+! set this to use a different brunt-vaisalla frequency in removing lowres linear winds
+rm_N_squared=9e-5,
 ! set this to true to calculate a time-varying brunt-vaisalla frequency
-! variable_N = False
+! variable_N = False,
 
 ! set this to the fraction of the linear perturbation you wish to use (1.0 = full/standard linear field)
-! linear_contribution=1.0
+! linear_contribution=1.0,
+! fraction of linear perturbation to remove from the low-res wind field (if rm_lowres_linear==true)
+rm_linear_contribution=0.4
 /
 
 &restart_info
+! file to read for initial conditions (an ICAR output file will work)
+restart_file="restart/icar_1990_09_30_01-01.nc",
+! date to start from, used to calculate position in both restart file and forcing file
+restart_date= 1990, 9, 30, 23, 0, 0
 ! step in the forcing data to restart for (typically restart file number +1 if input and output intervals are the same)
 restart_step=2,
-restart_file="output/icar_out00001"
 /
 
 &z_info
@@ -135,8 +148,8 @@ dz_levels= 50.,   75.,  125.,  200.,  300.,  400.,  500.,  500.,  500.,  500.,  
 /
 
 &physics
-! common precipitation downscaling run use pbl=0 lsm=0 mp=1 rad=0 conv=0 adv=1 wind=0
-! for ideal hill cases set wind=1
+! common precipitation downscaling run use pbl=0 lsm=0 mp=1 rad=0 conv=0 adv=1 wind=1
+! for FASTER run (simpler physics), set mp=2
 ! if surface air temperature is important use pbl=2 lsm=2 rad=2 this requires Noah LSM data
 pbl=0,
 lsm=0,
