@@ -601,6 +601,8 @@ contains
 			domain%pii=(domain%p/100000.0)**(R/cp)
 	        domain%rho=domain%p/(R*domain%th*domain%pii) ! kg/m^3
 			call balance_uvw(domain,options)
+			
+			domain%model_time=(options%restart_step-1)*options%in_dt + options%time_zero
 			call write_domain(domain,options,-1)
 		else
 ! 			else load data from the first Boundary conditions file
