@@ -214,16 +214,27 @@ def main(wrf_file,icar_file,output_file,makeplot=True,getPrecip=True,Ndsq=None,t
             # plt.legend(loc=3,ncol=2,fontsize=10)
             plt.plot([0,100],[0,0],color="black",linestyle="--")
         
-        plt.plot([50,50],[-1.5,1],color="black",linestyle=":")
-        plt.plot(linear_data.precip[150:250]-1.5,color="red",label="Linear")
-        plt.plot(wrfdata.precip[150:250]-1.5,color="blue",label="WRF")
-        plt.plot(icardata.precip[150:250]-1.5,color="green",label="ICAR")
-        if add_dir:
-            plt.plot(icar2.precip[150:250]-1.5,color="lightgreen",label=add_dir.split("_")[0])
         if getPrecip:
-            plt.legend()
+            offset=0
+        else:
+            offset=-1.5
+        precip_width=3
+        precip_max=3.5
+        plt.plot([50,50],[offset,precip_max+offset],color="black",linestyle=":",linewidth=precip_width)
+        plt.plot(linear_data.precip[150:250]+offset,color="red",label="Linear",linewidth=precip_width)
+        plt.plot(wrfdata.precip[150:250]+offset,color="black",label="WRF",linewidth=precip_width)
+        plt.plot(icardata.precip[150:250]+offset,color="green",label="ICAR-l",linewidth=precip_width)
+        if add_dir:
+            label=add_dir.split("_")[0]
+            label="ICAR-t"
+            plt.plot(icar2.precip[150:250]+offset,color="blue",label=label,linewidth=precip_width)
+        if getPrecip:
+            case=wrf_file.split("/")[0].split("_")[1:]
+            plt.text(10, 2.0+offset, " U   ={0[0]}m/s\n RH={0[1]}\n T   ={0[2]}".format(case),fontsize=28)
+            if (case[1]=="0.75") and (case[2]=="260"):
+                plt.legend(fontsize=28)
 
-        plt.ylim(-1.5,1)
+        plt.ylim(offset,precip_max+offset)
     
         # plt.subplot(313)
         # plt.imshow(wrfdata.w)
