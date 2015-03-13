@@ -37,7 +37,7 @@ def load_last_date(filename):
     return "{0}, {1}, {2}, {3}, 0, 0".format(year,month,day,hour),hour
     
     
-def main(options_file):
+def main(options_file, template_file):
     """docstring for main"""
     restart_file,backup_file=find_last_output(options_file)
     restart_date,hour=load_last_date(restart_file)
@@ -52,16 +52,40 @@ def main(options_file):
     restart_file=restart_file.replace("/","\/")
     os.system("sed -e 's/__RESTART_FILE__/"+restart_file   +"/g;"+
                       "s/__RESTART_DATE__/"+str(restart_date)   +"/g;"+
-                      "' template.nml >"+options_file)
+                      "' "+template_file+" >"+options_file)
     
+def usage():
+    """docstring for usage"""
+    help_string="""
+    USAGE: setup_next_run.py [-h] [namelist_file [template_file]]
         
-    
-    
+        -h : display this help message
+        
+        namelist_file = name of previously run namelist file
+                        this file will be overwritten by an updated file
+                        based off template.nml (which must also exist)
+                        DEFAULT = glob('icar_*opt.nml')[0]
+        
+        template_file = name of the file to use as a template
+                        can only be specified if namelist_file is
+                        DEFAULT = template.nml
+                        
+    """
+    print(help_string)
+    sys.exit()
 
 if __name__ == '__main__':
     if len(sys.argv)>1:
         options_file=sys.argv[1]
     else:
         options_file=glob.glob("icar_*opt.nml")[0]
-        
-    main(options_file)
+    
+    if len(sys.argv)>2:
+        template_file=sys.argv[2]
+    else:
+        template_file="template.nml"
+    
+    if (options_file[:2]=="-h"):
+        usage()
+    
+    main(options_file,template_file)

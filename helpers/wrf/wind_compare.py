@@ -224,10 +224,15 @@ def main(wrf_file,icar_file,output_file,makeplot=True,getPrecip=True,Ndsq=None,t
         plt.plot(linear_data.precip[150:250]+offset,color="red",label="Linear",linewidth=precip_width)
         plt.plot(wrfdata.precip[150:250]+offset,color="black",label="WRF",linewidth=precip_width)
         plt.plot(icardata.precip[150:250]+offset,color="green",label="ICAR-l",linewidth=precip_width)
+        print("case: "+" ".join(wrf_file.split("/")[0].split("_")[1:]))
+        print("ICAR-l",icardata.precip[150:250].mean())
+        print("WRF",wrfdata.precip[150:250].mean())
+        print("linear",linear_data.precip[150:250].mean())
         if add_dir:
             label=add_dir.split("_")[0]
             label="ICAR-t"
             plt.plot(icar2.precip[150:250]+offset,color="blue",label=label,linewidth=precip_width)
+            print("ICAR",icar2.precip[150:250].mean())
         if getPrecip:
             case=wrf_file.split("/")[0].split("_")[1:]
             plt.text(10, 2.0+offset, " U   ={0[0]}m/s\n RH={0[1]}\n T   ={0[2]}".format(case),fontsize=28)
