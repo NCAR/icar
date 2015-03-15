@@ -15,6 +15,7 @@ module vertical_interpolation
 	
 	private
 	public vLUT
+	public vLUT_forcing
 	public vinterp
 contains
 	
@@ -139,6 +140,67 @@ contains
 		enddo !j=1,y
 		
 	end subroutine vLUT
+
+	subroutine vLUT_forcing(hi,lo)
+		! identical to vLUT above, but for forcing data
+		! only change is that the vertical axis is the last axis
+		! instead of the middle axis
+		implicit none
+		class(interpolable_type), intent(in)    :: hi
+		class(interpolable_type), intent(inout) :: lo
+		integer::nx,ny,nz,i,j,k,guess,lo_nz
+		integer,dimension(2) :: curpos
+		real,dimension(2) :: curweights
+		
+		nx=size(hi%z,1)
+		ny=size(hi%z,2)  ! difference from vLUT
+		nz=size(hi%z,3)  ! difference from vLUT
+
+		lo_nz=size(lo%z,3)   ! difference from vLUT
+		
+		if (allocated(lo%vert_lut%z)) then
+			deallocate(lo%vert_lut%z, lo%vert_lut%w)
+		endif
+		allocate(lo%vert_lut%z(2,nx,ny,nz))   ! difference from vLUT
+		allocate(lo%vert_lut%w(2,nx,ny,nz))   ! difference from vLUT
+		do k=1,ny  ! difference from vLUT
+			do i=1,nx
+				guess=1
+				do j=1,nz  ! difference from vLUT
+					
+					curpos=find_match(hi%z(i,k,j),lo%z(i,k,:),guess=guess)  ! difference from vLUT
+					if (curpos(1)>0) then
+						! matched within the grid
+						curweights=weights(hi%z(i,k,j),lo%z(i,k,curpos(1)),lo%z(i,k,curpos(2)))  ! difference from vLUT
+					elseif (curpos(1)==-1) then
+						! matched below the grid
+						curpos(1)=1
+						curpos(2)=1
+						curweights=0.5
+					elseif (curpos(1)==-2) then
+						! matched above the grid
+						curpos(1)=lo_nz
+						curpos(2)=lo_nz
+						curweights=0.5
+					else
+						write(*,*) "find_match Failed to return appropriate position"
+						write(*,*) " at grid location:"
+						write(*,*) i,k,j
+						write(*,*) "z to match = ",hi%z(i,k,j)
+						write(*,*) "from Z-column="
+						write(*,*) lo%z(i,k,:)  ! difference from vLUT
+						stop
+					endif
+					lo%vert_lut%z(:,i,k,j)=curpos
+					lo%vert_lut%w(:,i,k,j)=curweights
+					guess=curpos(2)
+				enddo !j=1,z  ! difference from vLUT
+			enddo !i=1,x
+		enddo !k=1,y  ! difference from vLUT
+		
+	end subroutine vLUT_forcing
+
+
 	
 	subroutine vinterp_boundary(hi,lo,vlut)
 		implicit none
@@ -179,13 +241,14 @@ contains
 		
 	end subroutine vinterp_boundary
 	
-	subroutine vinterp(hi,lo,vlut,boundary_only)
+	subroutine vinterp(hi, lo, vlut, boundary_only, axis)
 		implicit none
-		real,dimension(:,:,:), intent(inout) :: hi
-		real,dimension(:,:,:), intent(in)    :: lo
-		class(vert_look_up_table),intent(in) :: vlut
-		logical,optional,intent(in)::boundary_only
-		integer :: i,j,k,nx,ny,nz
+		real,dimension(:,:,:),    intent(inout) :: hi
+		real,dimension(:,:,:),    intent(in)    :: lo
+		class(vert_look_up_table),intent(in)    :: vlut
+		logical, optional,        intent(in)    :: boundary_only
+		integer, optional,        intent(in)    :: axis
+		integer :: i,j,k, nx,ny,nz, zaxis
 		
 		if (present(boundary_only)) then
 			if (boundary_only) then
@@ -194,17 +257,42 @@ contains
 			endif
 		endif
 		
-		nx=size(hi,1)
-		nz=size(hi,2)
-		ny=size(hi,3)
+		if (present(axis)) then
+			zaxis=axis
+		else
+			zaxis=2
+		endif
 		
-		do j=1,ny
-			do k=1,nz
-				do i=1,nx
-					hi(i,k,j)=lo(i,vlut%z(1,i,k,j),j)*vlut%w(1,i,k,j) + lo(i,vlut%z(2,i,k,j),j)*vlut%w(2,i,k,j)
+		if (zaxis==2) then
+			nx=size(hi,1)
+			nz=size(hi,2)
+			ny=size(hi,3)
+		
+			do j=1,ny
+				do k=1,nz
+					do i=1,nx
+						hi(i,k,j)=lo(i,vlut%z(1,i,k,j),j)*vlut%w(1,i,k,j) + lo(i,vlut%z(2,i,k,j),j)*vlut%w(2,i,k,j)
+					enddo
 				enddo
 			enddo
-		enddo
+			
+		elseif (zaxis==3) then
+			nx=size(hi,1)
+			ny=size(hi,2)
+			nz=size(hi,3)
+		
+			do j=1,nz
+				do k=1,ny
+					do i=1,nx
+						hi(i,k,j)=lo(i,j,vlut%z(1,i,k,j))*vlut%w(1,i,k,j) + lo(i,j,vlut%z(2,i,k,j))*vlut%w(2,i,k,j)
+					enddo
+				enddo
+			enddo
+		else
+			write(*,*) "Vertical interpolation over the first axis not supported yet"
+			write(*,*) "  if needed, update vinterp.f90"
+			stop
+		endif
 		
 	end subroutine vinterp
 	

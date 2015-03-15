@@ -257,7 +257,7 @@ contains
 		integer :: nz, n_ext_winds,buffer, warning_level
 		logical :: ideal, readz, readdz, debug, external_winds, remove_lowres_linear, variable_N, &
 		           mean_winds, mean_fields, restart, add_low_topo, advect_density, high_res_soil_state, &
-				   use_agl_height, spatial_linear_fields
+				   use_agl_height, spatial_linear_fields, time_varying_z
 		character(len=MAXFILELENGTH) :: date, calendar, start_date
 		integer :: year, month, day, hour, minute, second
 		
@@ -267,7 +267,7 @@ contains
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
 							  date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, &
 							  N_squared,rm_N_squared,linear_contribution,rm_linear_contribution, use_agl_height,  &
-							  spatial_linear_fields, start_date
+							  spatial_linear_fields, start_date, time_varying_z
 		
 ! 		default parameters
 		mean_fields=.False.
@@ -303,6 +303,7 @@ contains
 		use_agl_height=.True.
 		spatial_linear_fields=.False.
 		start_date=""
+		time_varying_z=.False.
 		
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=parameters)
@@ -398,7 +399,7 @@ contains
 		options%rm_linear_contribution=rm_linear_contribution
 
 		options%high_res_soil_state=high_res_soil_state
-		
+		options%time_varying_z=time_varying_z
 		
 	end subroutine parameters_namelist
 	
@@ -1130,7 +1131,7 @@ contains
 	subroutine swap_z(bc)
 		type(bc_type), intent(inout) :: bc
 		real,allocatable,dimension(:,:,:) :: tempz
-		integer::nx,nz,ny
+		integer::nx,nz,ny, i
 		nx=size(bc%lowres_z,1)
 		nz=size(bc%lowres_z,2)
 		ny=size(bc%lowres_z,3)
@@ -1148,8 +1149,10 @@ contains
 		nz=size(tempz,2)
 		ny=size(tempz,3)
 		deallocate(bc%z)
-		allocate(bc%z(nx,nz,ny))
-		bc%z=tempz
+		allocate(bc%z(nx,ny,nz))
+		do i=1,nz
+			bc%z(:,:,i)=tempz(:,i,:)
+		end do
 		deallocate(tempz)
 		
 	end subroutine swap_z
@@ -1199,12 +1202,15 @@ contains
 		
 		! create the geographic look up table used to calculate boundary forcing data
 		write(*,*) "Setting up domain geographic Look Up Tables"
+		! NOTE: these first two geoLUTs are for translating from the mass grid to the U/V grids
+		! These are only used once to translate the terrain to those grids. 
 		! set up a look up table from low-res grid center to high-res u-offset coordinates
 		call geo_LUT(domain%u_geo,boundary)
 		call move_lut(boundary%geolut,u_temp_geo)
 		! set up a look up table from low-res grid center to high-res v-offset coordinates
 		call geo_LUT(domain%v_geo,boundary)
 		call move_lut(boundary%geolut,v_temp_geo)
+		! main geoLUTs
 		call geo_LUT(domain,boundary)
 		call geo_LUT(domain%u_geo,boundary%u_geo)
 		call geo_LUT(domain%v_geo,boundary%v_geo)
@@ -1269,10 +1275,7 @@ contains
 		call destroy_lut(v_temp_geo)
 		call destroy_lut(u_temp_geo)
 
-! 		call io_write3d("bc_lowresz-hgt.nc","data",boundary%lowres_z)
-! 		call io_write3d("u_hiresz-hgt.nc","data",domain%u_geo%z)
-! 		call io_write3d("v_hiresz-hgt.nc","data",domain%v_geo%z)
-!! WARNING, to do this with the use_agl_height options requires more though, don't just uncomment
+!! WARNING, to do this with the use_agl_height options requires more thought, don't just uncomment
 !! since this option has been deprecated previously, it is now simply removed.  
 ! 		if (options%add_low_topo) then
 ! 			domain%terrain=domain%terrain+(boundary%lowres_terrain-sum(boundary%lowres_terrain) &
@@ -1302,26 +1305,9 @@ contains
 			enddo
 		endif
 		
-! 		call io_write3di("vlutz1.nc","z",boundary%vert_lut%z(1,:,:,:))
-! 		call io_write3di("vlutz2.nc","z",boundary%vert_lut%z(2,:,:,:))
-! 		call io_write3d("vlutw1.nc","w",boundary%vert_lut%w(1,:,:,:))
-! 		call io_write3d("vlutw2.nc","w",boundary%vert_lut%w(2,:,:,:))
-!
-! 		call io_write3di("u_vlutz.nc","z",boundary%u_geo%vert_lut%z(1,:,:,:))
-! 		call io_write3d("u_vlutw.nc","w",boundary%u_geo%vert_lut%w(1,:,:,:))
-! 		call io_write3di("v_vlutz.nc","z",boundary%v_geo%vert_lut%z(1,:,:,:))
-! 		call io_write3d("v_vlutw.nc","w",boundary%v_geo%vert_lut%w(1,:,:,:))
-!
-! 		call io_write3d("bc_hires_z_u.nc","data",boundary%u_geo%z)
-! 		call io_write3d("bc_hires_z_v.nc","data",boundary%v_geo%z)
-! 		call io_write3d("domain_z_u.nc","data",domain%u_geo%z)
-! 		call io_write3d("domain_z_v.nc","data",domain%v_geo%z)
-! 		call io_write3d("bc_lowresz.nc","data",boundary%lowres_z)
-! 		call io_write3d("bc_hiresz.nc","data",boundary%z)
-! 		call io_write3d("domain_z.nc","data",domain%z)
-
 		! these are not longer needed and (without adjustments) are potentially unreliable (AGL vs ASL)
 		deallocate(boundary%v_geo%z,boundary%u_geo%z)
+		! swaps z and lowres_z (one of the cases where pointers would make life a lot easier)
 		call swap_z(boundary)
 		
 	end subroutine init_bc
