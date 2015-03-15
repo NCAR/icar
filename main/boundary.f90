@@ -844,9 +844,11 @@ contains
 			endif
 			! now simply generate a look up table to convert the current z coordinate to the original z coordinate
 			call vLUT_forcing(bc,newbc)
-			
+			nx=size(newbc%z,1)
+			ny=size(newbc%z,2)
+			nz=size(newbc%z,3)
 			! generate a new high-res z dataset as well (for pressure interpolations)
-			call geo_interp(bc%lowres_z, newbc%z, bc%geolut,.False.)
+			call geo_interp(bc%lowres_z, reshape(newbc%z,[nx,nz,ny],order=[1,3,2]), bc%geolut,.False.)
 		endif
 		
 		if (options%external_winds) then
