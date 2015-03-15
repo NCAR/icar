@@ -21,7 +21,7 @@ module output
 	public :: write_domain
 	
 	integer, parameter :: ndims = 4
-	integer, parameter :: nvars=100
+	integer, parameter :: nvars=100 ! current max = 32
 	! This will be the netCDF ID for the file and data variable.
 	integer :: ncid, temp_id
 	! dimension IDs
@@ -82,10 +82,30 @@ contains
 	
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"dx",options%dx))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"wind_smoothing",options%smooth_wind_distance))
+		
 		if (options%physics%windtype>0) then
 			call check( nf90_put_att(ncid,NF90_GLOBAL,"vert_smooth",options%vert_smooth))
 			call check( nf90_put_att(ncid,NF90_GLOBAL,"linear_contribution",options%linear_contribution))
+			if (options%variable_N.and.(.not.options%spatial_linear_fields)) then
+				call check( nf90_put_att(ncid,NF90_GLOBAL,"variable_N","time varying N"))
+			else
+				call check( nf90_put_att(ncid,NF90_GLOBAL,"fixed_N",options%N_squared))
+			endif
+			if (options%remove_lowres_linear) then
+				if (.not.options%variable_N) then
+					call check( nf90_put_att(ncid,NF90_GLOBAL,"rm_lin_frac_fixed_N",options%rm_N_squared))
+				endif
+				call check( nf90_put_att(ncid,NF90_GLOBAL,"remove_lin_fraction",options%rm_linear_contribution))
+			endif
+			if (options%spatial_linear_fields) then
+				call check( nf90_put_att(ncid,NF90_GLOBAL,"variable_N","spatially varying N"))
+			endif
 		endif
+! 		if (options%use_agl_height) then
+! 			call check( nf90_put_att(ncid,NF90_GLOBAL,"vertical_interp","Above Ground Level"))
+! 		else
+! 			call check( nf90_put_att(ncid,NF90_GLOBAL,"vertical_interp","Above Sea Level"))
+! 		endif
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"microphysics",options%physics%microphysics))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"advection",options%physics%advection))
 		call check( nf90_put_att(ncid,NF90_GLOBAL,"boundarylayer",options%physics%boundarylayer))
@@ -277,6 +297,12 @@ contains
 		call check( nf90_put_att(ncid,temp_id,"long_name","Combined large scale and convective rain, snow and graupel (accumulated)"))
 		call check( nf90_put_att(ncid,temp_id,"units","kg m-2"))
 		varid(14)=temp_id
+
+		call check( nf90_def_var(ncid, "rain_rate", NF90_REAL, dimtwo_time, temp_id) )
+		call check( nf90_put_att(ncid,temp_id,"standard_name","precipitation_amount"))
+		call check( nf90_put_att(ncid,temp_id,"long_name","Combined large scale and convective rain, snow and graupel"))
+		call check( nf90_put_att(ncid,temp_id,"units","kg m-2"))
+		varid(32)=temp_id
 	
 		call check( nf90_def_var(ncid, "snow", NF90_REAL, dimtwo_time, temp_id) )
 		call check( nf90_put_att(ncid,temp_id,"standard_name","snowfall_amount"))
@@ -457,6 +483,8 @@ contains
 		! surface precip fluxes
 		call check( nf90_inq_varid(ncid, "rain",temp_id) )
 		varid(14)=temp_id
+		call check( nf90_inq_varid(ncid, "rain_rate",temp_id) )
+		varid(32)=temp_id
 		call check( nf90_inq_varid(ncid, "snow",temp_id) )
 		varid(15)=temp_id
 		call check( nf90_inq_varid(ncid, "graupel", temp_id) )
@@ -528,6 +556,7 @@ contains
 		ny=size(domain%qv,3)
 		if (.not.allocated(last_rain)) then
 			allocate(last_rain(nx,ny))
+			last_rain=0
 		endif
 		nsoil=size(domain%soil_t,2)
 		
@@ -560,7 +589,6 @@ contains
 		
 		call calendar_date(domain%model_time/86400.0+50000,year, month, day, hour, minute, second)
 		write(*,'(A,i4,"/",i2.2"/"i2.2" "i2.2":"i2.2)') "Output Date:",year,month,day,hour,minute
-		
 		if (file_exists(filename)) then
 			! Open the file. NF90_WRITE tells netCDF we want write/append access to
 			! the file.
@@ -575,7 +603,6 @@ contains
 			call check( nf90_put_var(ncid, varid(20), domain%z) , trim(filename)//":Z")
 		endif
 		
-		
 		! write the actual data
 		call check( nf90_put_var(ncid, time_id,   domain%model_time/86400.0+50000, start_scalar ), trim(filename)//":Time" )
 		
@@ -586,42 +613,44 @@ contains
 		call check( nf90_put_var(ncid, varid(5),  domain%qsnow, start_three_D), trim(filename)//":qsnow" )
 		! these should only be output for thompson microphysics
 		if (options%physics%microphysics==1) then
-			call check( nf90_put_var(ncid, varid(6),  domain%qgrau, start_three_D) )
-			call check( nf90_put_var(ncid, varid(7),  domain%nrain, start_three_D) )
-			call check( nf90_put_var(ncid, varid(8),  domain%nice, start_three_D) )
+			call check( nf90_put_var(ncid, varid(6),  domain%qgrau, start_three_D), trim(filename)//":qgraupel" )
+			call check( nf90_put_var(ncid, varid(7),  domain%nrain, start_three_D), trim(filename)//":nrain" )
+			call check( nf90_put_var(ncid, varid(8),  domain%nice, start_three_D), trim(filename)//":nice" )
 		endif
-		call check( nf90_put_var(ncid, varid(9),  domain%u, start_three_D) )
-		call check( nf90_put_var(ncid, varid(10), domain%v, start_three_D) )
-		call check( nf90_put_var(ncid, varid(11), domain%w, start_three_D) )
-		call check( nf90_put_var(ncid, varid(12), domain%p, start_three_D) )
-		call check( nf90_put_var(ncid, varid(13), domain%th, start_three_D) )
-		call check( nf90_put_var(ncid, varid(14), domain%rain, start_two_D) )
-		call check( nf90_put_var(ncid, varid(15), domain%snow, start_two_D) )
-		call check( nf90_put_var(ncid, varid(16), domain%graupel, start_two_D) )
+		call check( nf90_put_var(ncid, varid(9),  domain%u, start_three_D), trim(filename)//":u" )
+		call check( nf90_put_var(ncid, varid(10), domain%v, start_three_D), trim(filename)//":v" )
+		call check( nf90_put_var(ncid, varid(11), domain%w, start_three_D), trim(filename)//":w" )
+		call check( nf90_put_var(ncid, varid(12), domain%p, start_three_D), trim(filename)//":p" )
+		call check( nf90_put_var(ncid, varid(13), domain%th, start_three_D), trim(filename)//":th" )
+		call check( nf90_put_var(ncid, varid(14), domain%rain, start_two_D), trim(filename)//":rain" )
+		call check( nf90_put_var(ncid, varid(32), domain%rain-last_rain, start_two_D), trim(filename)//":rainrate" )
+		call check( nf90_put_var(ncid, varid(15), domain%snow, start_two_D), trim(filename)//":snow" )
+		call check( nf90_put_var(ncid, varid(16), domain%graupel, start_two_D), trim(filename)//":graupel" )
 		if (options%physics%convection>0) then
-			call check( nf90_put_var(ncid, varid(17), domain%crain, start_two_D) )
+			call check( nf90_put_var(ncid, varid(17), domain%crain, start_two_D), trim(filename)//":crain" )
 		endif
-		call check( nf90_put_var(ncid, varid(21), domain%rho, start_three_D) )
+		call check( nf90_put_var(ncid, varid(21), domain%rho, start_three_D), trim(filename)//":rho" )
 		! these should only be output for radiation packages that compute them
 		if (options%physics%radiation>=2) then
-			call check( nf90_put_var(ncid, varid(18), domain%swdown, start_two_D ) )
-			call check( nf90_put_var(ncid, varid(19), domain%lwdown, start_two_D ) )
-			call check( nf90_put_var(ncid, varid(22), domain%cloudfrac, start_two_D ) )
+			call check( nf90_put_var(ncid, varid(18), domain%swdown, start_two_D ), trim(filename)//":swdown" )
+			call check( nf90_put_var(ncid, varid(19), domain%lwdown, start_two_D ), trim(filename)//":lwdown" )
+			call check( nf90_put_var(ncid, varid(22), domain%cloudfrac, start_two_D ), trim(filename)//":cloudfrac" )
 		endif
 		! these should only be output for lsm packages that compute them
 		if (options%physics%landsurface>=2) then
-			call check( nf90_put_var(ncid, varid(23), domain%sensible_heat, start_two_D) )
-			call check( nf90_put_var(ncid, varid(24), domain%latent_heat, start_two_D) )
-			call check( nf90_put_var(ncid, varid(25), domain%ground_heat, start_two_D) )
-			call check( nf90_put_var(ncid, varid(26), domain%soil_vwc, start_three_D) )
-			call check( nf90_put_var(ncid, varid(27), domain%soil_t, start_three_D) )
-			call check( nf90_put_var(ncid, varid(28), domain%skin_t, start_two_D) )
-			call check( nf90_put_var(ncid, varid(29), domain%lwup, start_two_D) )
-			call check( nf90_put_var(ncid, varid(30), domain%snow_swe, start_two_D) )
-			call check( nf90_put_var(ncid, varid(31), domain%canopy_water, start_two_D) )
+			call check( nf90_put_var(ncid, varid(23), domain%sensible_heat, start_two_D), trim(filename)//":sensible_heat" )
+			call check( nf90_put_var(ncid, varid(24), domain%latent_heat, start_two_D), trim(filename)//":latent_heat" )
+			call check( nf90_put_var(ncid, varid(25), domain%ground_heat, start_two_D), trim(filename)//":ground_heat" )
+			call check( nf90_put_var(ncid, varid(26), domain%soil_vwc, start_three_D), trim(filename)//":soil_vwc" )
+			call check( nf90_put_var(ncid, varid(27), domain%soil_t, start_three_D), trim(filename)//":soil_t" )
+			call check( nf90_put_var(ncid, varid(28), domain%skin_t, start_two_D), trim(filename)//":skin_t" )
+			call check( nf90_put_var(ncid, varid(29), domain%lwup, start_two_D), trim(filename)//":lwup" )
+			call check( nf90_put_var(ncid, varid(30), domain%snow_swe, start_two_D), trim(filename)//":snow_swe" )
+			call check( nf90_put_var(ncid, varid(31), domain%canopy_water, start_two_D), trim(filename)//":canopy_water" )
 		endif
-	
+		
+		last_rain=domain%rain
 		! Close the file, freeing all resources.
-		call check( nf90_close(ncid) )
+		call check( nf90_close(ncid), trim(filename) )
 	end subroutine write_domain
 end module output

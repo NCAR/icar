@@ -515,6 +515,10 @@ contains
 		domain%rho=inputdata
 		deallocate(inputdata)
 		
+		call io_read2d(restart_file,"rain",inputdata_2d,timeslice)
+		domain%rain=inputdata_2d
+		deallocate(inputdata_2d)
+		
 		if (io_variable_is_present(restart_file,"soil_t")) then
 			write(*,*) "Reading land surface restart data"
 			call io_read3d(restart_file,"soil_t",inputdata,timeslice)
