@@ -162,6 +162,14 @@ subroutine convect(domain,options,dt_in)
 				)
 ! 		write(*,*) "QV range"
 ! 		write(*,*) MAXVAL(RQVCUTEN(2:ide-1,:,2:jde-1)), MINVAL(RQVCUTEN(2:ide-1,:,2:jde-1))
+! 		write(*,*) "qc range"
+! 		write(*,*) MAXVAL(RQCCUTEN(2:ide-1,:,2:jde-1)), MINVAL(RQCCUTEN(2:ide-1,:,2:jde-1))
+! 		write(*,*) "th range"
+! 		write(*,*) MAXVAL(RTHCUTEN(2:ide-1,:,2:jde-1)), MINVAL(RTHCUTEN(2:ide-1,:,2:jde-1))
+! 		write(*,*) "qi range"
+! 		write(*,*) MAXVAL(RQICUTEN(2:ide-1,:,2:jde-1)), MINVAL(RQICUTEN(2:ide-1,:,2:jde-1))
+! 		write(*,*) "rain range"
+! 		write(*,*) MAXVAL(RAINCV(2:ide-1,2:jde-1)), MINVAL(RAINCV(2:ide-1,2:jde-1))
 		domain%qv=domain%qv+RQVCUTEN*dt_in
 		domain%cloud=domain%cloud+RQCCUTEN*dt_in
 		domain%th=domain%th+RTHCUTEN*dt_in

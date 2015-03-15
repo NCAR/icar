@@ -127,7 +127,9 @@ rm_N_squared=9e-5,
 ! set this to the fraction of the linear perturbation you wish to use (1.0 = full/standard linear field)
 ! linear_contribution=1.0,
 ! fraction of linear perturbation to remove from the low-res wind field (if rm_lowres_linear==true)
-rm_linear_contribution=0.4
+rm_linear_contribution=0.4,
+! use a spatially variable wind field when calculating the linear wind field (doesn't permit variable_N)
+spatial_linear_fields=false,
 /
 
 &restart_info

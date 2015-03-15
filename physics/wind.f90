@@ -232,7 +232,7 @@ contains
 			enddo
 		enddo
 		if (options%debug) then
-			print*, "Domain Geometetry"
+			print*, "Domain Geometry"
 			print*, "MAX / MIN SIN(theta) (ideally 0)"
 			print*, "   ", maxval(domain%sintheta), minval(domain%sintheta)
 			print*, "MAX / MIN COS(theta) (ideally 1)"
