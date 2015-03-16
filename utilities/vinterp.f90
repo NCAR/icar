@@ -277,14 +277,16 @@ contains
 			enddo
 			
 		elseif (zaxis==3) then
-			nx=size(hi,1)
-			ny=size(hi,2)
-			nz=size(hi,3)
-		
+			! Wind arrays often have different x and y dimensions from the mass grid
+			! so use the lesser of the two (not a perfect interpolation for wind, but should capture most of it)
+			! axis=3 means we are doing a time_varying z interpolation
+			nx=min(size(hi,1), size(vlut%z,2))
+			ny=min(size(hi,2), size(vlut%z,3))
+			nz=min(size(hi,3), size(vlut%z,4))
 			do j=1,nz
 				do k=1,ny
 					do i=1,nx
-						hi(i,k,j)=lo(i,j,vlut%z(1,i,k,j))*vlut%w(1,i,k,j) + lo(i,j,vlut%z(2,i,k,j))*vlut%w(2,i,k,j)
+						hi(i,k,j)=lo(i,k,vlut%z(1,i,k,j))*vlut%w(1,i,k,j) + lo(i,k,vlut%z(2,i,k,j))*vlut%w(2,i,k,j)
 					enddo
 				enddo
 			enddo

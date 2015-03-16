@@ -31,7 +31,8 @@ module boundary_conditions
 ! 		e.g. if options%inputtype=="WRF" then call wrf_init/update()
 ! ----------------------------------------------------------------------------
 	use data_structures
-	use io_routines,            only : io_getdims, io_read3d, io_maxDims, io_read2d, io_variable_is_present
+	use io_routines,            only : io_getdims, io_read3d, io_maxDims, io_read2d, io_variable_is_present, &
+									   io_write3di, io_write3d
 	use wind,                   only : update_winds,balance_uvw
 	use linear_theory_winds,    only : linear_perturb
 	use geo,                    only : geo_interp2d, geo_interp
@@ -800,6 +801,7 @@ contains
 		type(options_type),intent(in)::options
 		integer,dimension(io_maxDims)::dims	!note, io_maxDims is included from io_routines.
 		type(bc_type) :: newbc ! just used for updating z coordinate
+		real, allocatable, dimension(:,:,:) :: zbase ! may be needed to temporarily store PHB data
 		logical :: use_boundary,use_interior
 		integer::i,nz,nx,ny
 		! MODULE variables : curstep, curfile, nfiles, steps_in_file, file_list
@@ -829,26 +831,32 @@ contains
 				deallocate(newbc%z)
 			endif
 			call io_read3d(file_list(curfile), options%zvar, newbc%z, curstep)
-			if (options%zvar=="PH") then
-		 		write(*,*) ""
-		 		write(*,*) "WARNING: assuming height variable is in geopotential units"
-		 		write(*,*) "    adding PHB (base state) and dividing by gravity..."
-		 		write(*,*) ""
-				! call io_read3d(file_list(curfile),"PHB", zbase, curstep)
-				! newbc%z=(newbc%z+zbase) / gravity
-				write(*,*) "ERROR: Not Implemented yet"
-				write(*,*) "PH data must be interpolated to mass levels"
-				! see init module's copy_z function
-				stop
-! 				deallocate(zbase)
-			endif
-			! now simply generate a look up table to convert the current z coordinate to the original z coordinate
-			call vLUT_forcing(bc,newbc)
 			nx=size(newbc%z,1)
 			ny=size(newbc%z,2)
 			nz=size(newbc%z,3)
+			if (options%zvar=="PH") then
+				call io_read3d(file_list(curfile),"PHB", zbase, curstep)
+				newbc%z=(newbc%z+zbase) / gravity
+				zbase(:,:,1:nz-1)=(newbc%z(:,:,1:nz-1) + newbc%z(:,:,2:nz))/2
+				newbc%z=zbase
+! 				deallocate(newbc%z)
+! 				allocate(newbc%z(nx,ny,nz-1))
+! 				newbc%z=zbase(:,:,:nz-1)
+				deallocate(zbase)
+			endif
+			! now simply generate a look up table to convert the current z coordinate to the original z coordinate
+			call vLUT_forcing(bc,newbc)
+			! set a maximum on z so we don't try to interpolate data above mass grid
+			where(newbc%vert_lut%z==nz) newbc%vert_lut%z=nz-1
+			nz=size(newbc%z,3)
 			! generate a new high-res z dataset as well (for pressure interpolations)
 			call geo_interp(bc%lowres_z, reshape(newbc%z,[nx,nz,ny],order=[1,3,2]), bc%geolut,.False.)
+			
+! 			call io_write3di("vLUT_tv_z1","z",newbc%vert_lut%z(1,:,:,:))
+! 			call io_write3di("vLUT_tv_z2","z",newbc%vert_lut%z(2,:,:,:))
+! 			call io_write3d("vLUT_tv_w1","w",newbc%vert_lut%w(1,:,:,:))
+! 			call io_write3d("vLUT_tv_w2","w",newbc%vert_lut%w(2,:,:,:))
+			
 		endif
 		
 		if (options%external_winds) then
