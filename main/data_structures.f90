@@ -286,6 +286,7 @@ module data_structures
 		real :: linear_contribution     ! fractional contribution of linear perturbation to wind field (e.g. u_hat multiplied by this)
 		real :: rm_linear_contribution  ! fractional contribution of linear perturbation to wind field to remove from the low-res field
 		logical :: spatial_linear_fields! use a spatially varying linear wind perturbation
+		logical :: time_varying_z       ! read in a new z coordinate every time step and interpolate accordingly
 		
 		! date/time parameters
 		double precision :: initial_mjd ! Modified Julian Day of the first forcing time step [days]

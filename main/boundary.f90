@@ -31,11 +31,12 @@ module boundary_conditions
 ! 		e.g. if options%inputtype=="WRF" then call wrf_init/update()
 ! ----------------------------------------------------------------------------
 	use data_structures
-	use io_routines,            only : io_getdims, io_read3d, io_maxDims, io_read2d, io_variable_is_present
+	use io_routines,            only : io_getdims, io_read3d, io_maxDims, io_read2d, io_variable_is_present, &
+									   io_write3di, io_write3d
 	use wind,                   only : update_winds,balance_uvw
 	use linear_theory_winds,    only : linear_perturb
 	use geo,                    only : geo_interp2d, geo_interp
-	use vertical_interpolation, only : vinterp
+	use vertical_interpolation, only : vinterp, vLUT_forcing
 	use output,                 only : write_domain
 	
 	implicit none
@@ -194,29 +195,29 @@ contains
 ! 	generic routine to read a low res variable (varname) from a netcdf file (filename) at the current time step (curstep)
 !   then interpolate it to the high res grid either in 3D or at the boundaries only (boundary_only)
 ! 	applies modifications specificaly for U,V,T, and P variables
-	subroutine read_var(highres,filename,varname,geolut,vlut,curstep,boundary_only,options, z_lo, z_hi)
+	subroutine read_var(highres, filename, varname, geolut, vlut, curstep, boundary_only, options, &
+		                z_lo, z_hi, time_varying_zlut)
 		implicit none
-		real,dimension(:,:,:),intent(inout)::highres
-		character(len=*),intent(in) :: filename,varname
-		type(geo_look_up_table),intent(in) :: geolut
-		type(vert_look_up_table),intent(in) :: vlut
-		integer,intent(in)::curstep
-		logical, intent(in) :: boundary_only
-		type(options_type),intent(in)::options
-		real,dimension(:,:,:),intent(in), optional ::z_lo, z_hi
+		real,dimension(:,:,:),   intent(inout):: highres
+		character(len=*),        intent(in)   :: filename,varname
+		type(geo_look_up_table), intent(in)   :: geolut
+		type(vert_look_up_table),intent(in)   :: vlut
+		integer,                 intent(in)   :: curstep
+		logical,                 intent(in)   :: boundary_only
+		type(options_type),      intent(in)   :: options
+		real,dimension(:,:,:),   intent(in), optional :: z_lo, z_hi
+		type(vert_look_up_table),intent(in), optional :: time_varying_zlut
 		
+		! local variables
 		real,dimension(:,:,:),allocatable :: inputdata,extra_data
-		integer,dimension(io_maxDims)::dims
 		integer::nx,ny,nz,i
 		
 		! Read the data in, should be relatively fast because we are reading a low resolution forcing file
-		call io_getdims(filename,varname, dims)
 		call io_read3d(filename,varname,inputdata,curstep)
 		
-		! note dims(1)=ndims
-		nx=dims(2)
-		ny=dims(3)
-		nz=dims(4)
+		nx=size(inputdata,1)
+		ny=size(inputdata,2)
+		nz=size(inputdata,3)
 		
 		! Variable specific options
 		! For wind variables run a first pass of smoothing over the low res data
@@ -232,14 +233,17 @@ contains
 			call io_read3d(filename,options%pbvar,extra_data,curstep)
 			inputdata=inputdata+extra_data
 			deallocate(extra_data)
-		! Same for geopotential height
-		! else if (varname=="PH") then
-		! 	call io_read3d(filename,"PHB",extra_data,curstep)
-		! 	inputdata=(inputdata+extra_data)/9.8
-		! 	nz=nz-1
-		! 	inputdata(:,:,1:nz)=(inputdata(:,:,1:nz)+inputdata(:,:,2:nz+1))/2
-		! 	deallocate(extra_data)
 		endif
+		
+		! if the z-axis of the input data varies over time, we need to first interpolate
+		! to the "standard" z-axis so that the hi-res vlut doesn't need to change
+		if ((options%time_varying_z).and.present(time_varying_zlut)) then
+			allocate(extra_data(nx,ny,nz))
+			extra_data=inputdata
+			call vinterp(inputdata, extra_data, time_varying_zlut, axis=3)
+			deallocate(extra_data)
+		endif
+			
 		
 		! just read the low res version with out interpolating for e.g. external wind data
 		if ( (nx==size(highres,1)).and.(ny==size(highres,3)).and.(nz==size(highres,2)) ) then
@@ -627,18 +631,32 @@ contains
 			elseif (options%mean_winds) then
 				call mean_winds(domain,file_list(curfile),curstep,options)
 			else
-				call read_var(domain%u, file_list(curfile),options%uvar,     bc%u_geo%geolut,bc%u_geo%vert_lut,curstep,boundary_value,options)
-				call read_var(domain%v, file_list(curfile),options%vvar,     bc%v_geo%geolut,bc%v_geo%vert_lut,curstep,boundary_value,options)
+				call read_var(domain%u, file_list(curfile),options%uvar,  &
+								bc%u_geo%geolut,bc%u_geo%vert_lut,curstep,boundary_value, &
+								options)
+				call read_var(domain%v, file_list(curfile),options%vvar,  &
+								bc%v_geo%geolut,bc%v_geo%vert_lut,curstep,boundary_value, &
+								options)
 				if (.not.options%ideal)then
 					call smooth_wind(domain%u,smoothing_window,3)
 					call smooth_wind(domain%v,smoothing_window,3)
 				endif
 			endif
-			call read_var(domain%p,    file_list(curfile),options%pvar,      bc%geolut,bc%vert_lut,curstep,boundary_value,options,bc%lowres_z,domain%z)
-			call read_var(domain%th,   file_list(curfile),options%tvar,      bc%geolut,bc%vert_lut,curstep,boundary_value,options)
-			call read_var(domain%qv,   file_list(curfile),options%qvvar,     bc%geolut,bc%vert_lut,curstep,boundary_value,options)
-			call read_var(domain%cloud,file_list(curfile),options%qcvar,     bc%geolut,bc%vert_lut,curstep,boundary_value,options)
-			call read_var(domain%ice,  file_list(curfile),options%qivar,     bc%geolut,bc%vert_lut,curstep,boundary_value,options)
+			call read_var(domain%p,    file_list(curfile),   options%pvar,   &
+							bc%geolut, bc%vert_lut, curstep, boundary_value, &
+							options,   bc%lowres_z,domain%z)
+			call read_var(domain%th,   file_list(curfile),   options%tvar,   &
+							bc%geolut, bc%vert_lut, curstep, boundary_value, &
+							options)
+			call read_var(domain%qv,   file_list(curfile),   options%qvvar,  &
+							bc%geolut, bc%vert_lut, curstep, boundary_value, &
+							options)
+			call read_var(domain%cloud,file_list(curfile),   options%qcvar,  &
+							bc%geolut, bc%vert_lut, curstep, boundary_value, &
+							options)
+			call read_var(domain%ice,  file_list(curfile),   options%qivar,  &
+							bc%geolut, bc%vert_lut, curstep, boundary_value, &
+							options)
 
 			if (options%physics%landsurface==1) then
 				call read_2dvar(domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep,options)
@@ -782,6 +800,8 @@ contains
 		type(bc_type),intent(inout)::bc
 		type(options_type),intent(in)::options
 		integer,dimension(io_maxDims)::dims	!note, io_maxDims is included from io_routines.
+		type(bc_type) :: newbc ! just used for updating z coordinate
+		real, allocatable, dimension(:,:,:) :: zbase ! may be needed to temporarily store PHB data
 		logical :: use_boundary,use_interior
 		integer::i,nz,nx,ny
 		! MODULE variables : curstep, curfile, nfiles, steps_in_file, file_list
@@ -805,6 +825,40 @@ contains
 		use_interior=.False.
 		use_boundary=.True.
 		
+		if (options%time_varying_z) then
+			! read in the updated vertical coordinate
+			if (allocated(newbc%z)) then
+				deallocate(newbc%z)
+			endif
+			call io_read3d(file_list(curfile), options%zvar, newbc%z, curstep)
+			nx=size(newbc%z,1)
+			ny=size(newbc%z,2)
+			nz=size(newbc%z,3)
+			if (options%zvar=="PH") then
+				call io_read3d(file_list(curfile),"PHB", zbase, curstep)
+				newbc%z=(newbc%z+zbase) / gravity
+				zbase(:,:,1:nz-1)=(newbc%z(:,:,1:nz-1) + newbc%z(:,:,2:nz))/2
+				newbc%z=zbase
+! 				deallocate(newbc%z)
+! 				allocate(newbc%z(nx,ny,nz-1))
+! 				newbc%z=zbase(:,:,:nz-1)
+				deallocate(zbase)
+			endif
+			! now simply generate a look up table to convert the current z coordinate to the original z coordinate
+			call vLUT_forcing(bc,newbc)
+			! set a maximum on z so we don't try to interpolate data above mass grid
+			where(newbc%vert_lut%z==nz) newbc%vert_lut%z=nz-1
+			nz=size(newbc%z,3)
+			! generate a new high-res z dataset as well (for pressure interpolations)
+			call geo_interp(bc%lowres_z, reshape(newbc%z,[nx,nz,ny],order=[1,3,2]), bc%geolut,.False.)
+			
+! 			call io_write3di("vLUT_tv_z1","z",newbc%vert_lut%z(1,:,:,:))
+! 			call io_write3di("vLUT_tv_z2","z",newbc%vert_lut%z(2,:,:,:))
+! 			call io_write3d("vLUT_tv_w1","w",newbc%vert_lut%w(1,:,:,:))
+! 			call io_write3d("vLUT_tv_w2","w",newbc%vert_lut%w(2,:,:,:))
+			
+		endif
+		
 		if (options%external_winds) then
 			call update_ext_winds(bc,options)
 ! 			call smooth_wind(bc%next_domain%u,1,3)
@@ -818,18 +872,36 @@ contains
 		elseif (options%mean_winds) then
 			call mean_winds(bc%next_domain,file_list(curfile),curstep,options)
 		else
-			call read_var(bc%next_domain%u,    file_list(curfile),options%uvar,     bc%u_geo%geolut,bc%u_geo%vert_lut,curstep,use_interior,options)
-			call read_var(bc%next_domain%v,    file_list(curfile),options%vvar,     bc%v_geo%geolut,bc%v_geo%vert_lut,curstep,use_interior,options)
+			call read_var(bc%next_domain%u,  file_list(curfile), options%uvar, &
+						  bc%u_geo%geolut,   bc%u_geo%vert_lut,  curstep,      &
+						  use_interior, options, time_varying_zlut=newbc%vert_lut)
+			call read_var(bc%next_domain%v,  file_list(curfile), options%vvar, &
+						  bc%v_geo%geolut,   bc%v_geo%vert_lut,  curstep,      &
+						  use_interior, options, time_varying_zlut=newbc%vert_lut)
 			if (.not.options%ideal)then
 				call smooth_wind(bc%next_domain%u,smoothing_window,3)
 				call smooth_wind(bc%next_domain%v,smoothing_window,3)
 			endif
 		endif
-		call read_var(bc%next_domain%p,    file_list(curfile),options%pvar,     bc%geolut,bc%vert_lut,curstep,use_interior,options,bc%lowres_z,domain%z)
-		call read_var(bc%next_domain%th,   file_list(curfile),options%tvar,     bc%geolut,bc%vert_lut,curstep,use_boundary,options)
-		call read_var(bc%next_domain%qv,   file_list(curfile),options%qvvar,    bc%geolut,bc%vert_lut,curstep,use_boundary,options)
-		call read_var(bc%next_domain%cloud,file_list(curfile),options%qcvar,    bc%geolut,bc%vert_lut,curstep,use_boundary,options)
-		call read_var(bc%next_domain%ice,  file_list(curfile),options%qivar,    bc%geolut,bc%vert_lut,curstep,use_boundary,options)
+		call read_var(bc%next_domain%p,       file_list(curfile), options%pvar,   &
+					  bc%geolut, bc%vert_lut, curstep, use_interior, 			  &
+					  options,   bc%lowres_z, domain%z, time_varying_zlut=newbc%vert_lut)
+					  
+		call read_var(bc%next_domain%th,      file_list(curfile), options%tvar,   &
+					  bc%geolut, bc%vert_lut, curstep, use_boundary, 			  &
+					  options, time_varying_zlut=newbc%vert_lut)
+					  
+		call read_var(bc%next_domain%qv,      file_list(curfile), options%qvvar,  &
+					  bc%geolut, bc%vert_lut, curstep, use_boundary, 			  &
+					  options, time_varying_zlut=newbc%vert_lut)
+					  
+		call read_var(bc%next_domain%cloud,   file_list(curfile), options%qcvar,  &
+					  bc%geolut, bc%vert_lut, curstep, use_boundary, 			  &
+					  options, time_varying_zlut=newbc%vert_lut)
+					  
+		call read_var(bc%next_domain%ice,     file_list(curfile), options%qivar,  &
+					  bc%geolut, bc%vert_lut, curstep, use_boundary, 			  &
+					  options, time_varying_zlut=newbc%vert_lut)
 
 		if (options%physics%landsurface==1) then
 			call read_2dvar(bc%next_domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep,options)
@@ -843,32 +915,30 @@ contains
 			bc%next_domain%pbl_height=0
 		endif
 	
-! 		call update_pressure(bc%next_domain%p,bc%lowres_z,domain%z)
-		
 		nx=size(bc%next_domain%th,1)
 		nz=size(bc%next_domain%th,2)
 		ny=size(bc%next_domain%th,3)
 		if (options%mean_fields) then
 			do i=1,nz
-				bc%next_domain%th(1,i,:)=sum(bc%next_domain%th(1,i,:))/ny
-				bc%next_domain%th(nx,i,:)=sum(bc%next_domain%th(nx,i,:))/ny
-				bc%next_domain%th(:,i,1)=sum(bc%next_domain%th(:,i,1))/nx
-				bc%next_domain%th(:,i,ny)=sum(bc%next_domain%th(:,i,ny))/nx
+				bc%next_domain%th(1,i,:)  = sum(bc%next_domain%th(1,i,:))  / ny
+				bc%next_domain%th(nx,i,:) = sum(bc%next_domain%th(nx,i,:)) / ny
+				bc%next_domain%th(:,i,1)  = sum(bc%next_domain%th(:,i,1))  / nx
+				bc%next_domain%th(:,i,ny) = sum(bc%next_domain%th(:,i,ny)) / nx
 				
-				bc%next_domain%qv(1,i,:)=sum(bc%next_domain%qv(1,i,:))/ny
-				bc%next_domain%qv(nx,i,:)=sum(bc%next_domain%qv(nx,i,:))/ny
-				bc%next_domain%qv(:,i,1)=sum(bc%next_domain%qv(:,i,1))/nx
-				bc%next_domain%qv(:,i,ny)=sum(bc%next_domain%qv(:,i,ny))/nx
+				bc%next_domain%qv(1,i,:)  = sum(bc%next_domain%qv(1,i,:))  / ny
+				bc%next_domain%qv(nx,i,:) = sum(bc%next_domain%qv(nx,i,:)) / ny
+				bc%next_domain%qv(:,i,1)  = sum(bc%next_domain%qv(:,i,1))  / nx
+				bc%next_domain%qv(:,i,ny) = sum(bc%next_domain%qv(:,i,ny)) / nx
 
-				bc%next_domain%cloud(1,i,:)=sum(bc%next_domain%cloud(1,i,:))/ny
-				bc%next_domain%cloud(nx,i,:)=sum(bc%next_domain%cloud(nx,i,:))/ny
-				bc%next_domain%cloud(:,i,1)=sum(bc%next_domain%cloud(:,i,1))/nx
-				bc%next_domain%cloud(:,i,ny)=sum(bc%next_domain%cloud(:,i,ny))/nx
+				bc%next_domain%cloud(1,i,:)  = sum(bc%next_domain%cloud(1,i,:))  / ny
+				bc%next_domain%cloud(nx,i,:) = sum(bc%next_domain%cloud(nx,i,:)) / ny
+				bc%next_domain%cloud(:,i,1)  = sum(bc%next_domain%cloud(:,i,1))  / nx
+				bc%next_domain%cloud(:,i,ny) = sum(bc%next_domain%cloud(:,i,ny)) / nx
 
-				bc%next_domain%ice(1,i,:)=sum(bc%next_domain%ice(1,i,:))/ny
-				bc%next_domain%ice(nx,i,:)=sum(bc%next_domain%ice(nx,i,:))/ny
-				bc%next_domain%ice(:,i,1)=sum(bc%next_domain%ice(:,i,1))/nx
-				bc%next_domain%ice(:,i,ny)=sum(bc%next_domain%ice(:,i,ny))/nx
+				bc%next_domain%ice(1,i,:)  = sum(bc%next_domain%ice(1,i,:))  / ny
+				bc%next_domain%ice(nx,i,:) = sum(bc%next_domain%ice(nx,i,:)) / ny
+				bc%next_domain%ice(:,i,1)  = sum(bc%next_domain%ice(:,i,1))  / nx
+				bc%next_domain%ice(:,i,ny) = sum(bc%next_domain%ice(:,i,ny)) / nx
 			enddo
 		endif
 		bc%next_domain%pii=(bc%next_domain%p/100000.0)**(R/cp)
