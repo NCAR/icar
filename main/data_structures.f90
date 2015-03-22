@@ -234,7 +234,7 @@ module data_structures
 		character (len=MAXVARLENGTH) :: version,comment
 
 		! file names
-		character (len=MAXFILELENGTH) :: init_conditions_file
+		character (len=MAXFILELENGTH) :: init_conditions_file, linear_mask_file
 		character (len=MAXFILELENGTH), dimension(:), allocatable::boundary_files,ext_wind_files
 		character (len=MAXFILELENGTH) :: output_file,restart_file,output_file_frequency
 
@@ -244,7 +244,7 @@ module data_structures
 										pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar,hgtvar, &
 										shvar,lhvar,pblhvar,zvar, &
 										soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
-										vegtype_var,vegfrac_var
+										vegtype_var,vegfrac_var, linear_mask_var
 		! various boolean options
 		logical :: ideal 				! this is an ideal simulation, forcing will be held constant
 		logical :: readz 				! read atmospheric grid elevations from file

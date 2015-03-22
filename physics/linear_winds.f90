@@ -540,7 +540,7 @@ contains
 			nextpos=1
 			weight=1
 		else
-			if (match>indata(n)) then
+			if (bestpos==n) then
 				nextpos=n
 				weight=1
 			else
@@ -687,12 +687,11 @@ contains
 				allocate(linear_mask(nx,ny))
 				linear_mask=1.0
 				if (.not.reverse) then
-		! 			if (options%linear_mask) then
-					if (.True.) then
-						! temporary hack to read in a mask from a hard coded filename
-						! THIS MUST CHANGE
-						print*, "WARNING READING HARD CODED linmask.nc FILE"
-						call io_read2d("linmask.nc","data",domain%linear_mask)
+					if (options%linear_mask) then
+						print*, "Reading Linear Mask"
+						print*, "  from file: "//trim(options%linear_mask_file)
+						print*, "  varname: "//trim(options%linear_mask_var)
+						call io_read2d(options%linear_mask_file,options%linear_mask_var,domain%linear_mask)
 						linear_mask(:nx-1,:ny-1)=1-(1-domain%linear_mask)*0.8
 						linear_mask(nx,:ny-1)=linear_mask(nx-1,:ny-1)
 						linear_mask(:nx-1,ny)=linear_mask(:nx-1,ny-1)
