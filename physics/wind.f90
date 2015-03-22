@@ -123,8 +123,14 @@ contains
 		enddo
 		deallocate(u,v)
 		! put the fields back onto a staggered grid, having effectively lost two grid cells in the staggered directions
+		! estimate the "lost" grid cells by extrapolating beyond the remaining
 		domain%u(2:nx,:,:) = (domain%u(1:nx-1,:,:)+domain%u(2:nx,:,:))/2
+		domain%u(1,:,:)    = 2*domain%u(1,:,:)  - domain%u(2,:,:)
+		domain%u(nx+1,:,:) = 2*domain%u(nx,:,:) - domain%u(nx-1,:,:)
+		
 		domain%v(:,:,2:ny) = (domain%v(:,:,1:ny-1)+domain%v(:,:,2:ny))/2
+		domain%v(:,:,1)    = 2*domain%v(:,:,1)  - domain%v(:,:,2)
+		domain%v(:,:,ny+1) = 2*domain%v(:,:,ny) - domain%v(:,:,ny-1)
 		
 	end subroutine make_winds_grid_relative
 
@@ -141,9 +147,9 @@ contains
 		integer :: nx,ny,nz,i,j
 		real,dimension(:),allocatable :: rotation_factor
 	
-		nx=size(domain%u,1)
-		nz=size(domain%u,2)
-		ny=size(domain%u,3)
+		nx=size(domain%z,1)
+		nz=size(domain%z,2)
+		ny=size(domain%z,3)
 		
 		allocate(rotation_factor(nz))
 		do j=1,nz
@@ -159,7 +165,7 @@ contains
 		
 		do j=2,ny
 			do i=1,nz
-				domain%u(2:nx-1,i,j)= domain%u(2:nx-1,i,j) * ((domain%dzdx(:,j)-1) * rotation_factor(i)+1)
+				domain%u(2:nx,i,j)= domain%u(2:nx,i,j) * ((domain%dzdx(:,j)-1) * rotation_factor(i)+1)
 				domain%v(:,i,j) = domain%v(:,i,j+1)  * ((domain%dzdy(:,j-1)-1) * rotation_factor(i)+1)
 			end do
 		end do
@@ -189,7 +195,10 @@ contains
 		! else assumes even flow over the mountains
 
 		! rotate winds into the terrain following coordinate system 
-		call rotate_wind_field(domain,options)
+		! NOTE, this is probably not the right way to do it, and it is not clear this should be done...
+		! the linear theory should take care of this. 
+		! also, this code seems to shift the v data down one row, so be careful...
+! 		call rotate_wind_field(domain,options)
 		! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
 		call balance_uvw(domain,options)
 		

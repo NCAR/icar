@@ -155,6 +155,7 @@ module data_structures
 		real, allocatable, dimension(:,:,:)	:: u,v,dz,rho,th
 		type(interpolable_type)				:: u_geo,v_geo
 		real, allocatable, dimension(:,:)	:: terrain,dzdx,dzdy
+		real, allocatable, dimension(:,:)	:: linear_mask
 		complex(C_DOUBLE_COMPLEX), allocatable, dimension(:,:) :: fzs !FFT(terrain)
 		real::dx
 	end type linearizable_type
@@ -287,6 +288,7 @@ module data_structures
 		real :: rm_linear_contribution  ! fractional contribution of linear perturbation to wind field to remove from the low-res field
 		logical :: spatial_linear_fields! use a spatially varying linear wind perturbation
 		logical :: time_varying_z       ! read in a new z coordinate every time step and interpolate accordingly
+		logical :: linear_mask 			! use a spatial mask for the linear wind field
 		
 		! date/time parameters
 		double precision :: initial_mjd ! Modified Julian Day of the first forcing time step [days]
