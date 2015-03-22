@@ -86,7 +86,7 @@ subroutine convect(domain,options,dt_in)
 	type(domain_type), intent(inout) :: domain
 	type(options_type), intent(in)   :: options
 	real, intent(in) ::dt_in
-	integer ::ids,ide,jds,jde,kds,kde,i,itimestep,STEPCU
+	integer ::ids,ide,jds,jde,kds,kde,j,itimestep,STEPCU
 	
 	itimestep=1
 	STEPCU=1
@@ -129,20 +129,20 @@ subroutine convect(domain,options,dt_in)
 	endif
 	if (options%physics%convection==1) then
 
-		!$omp parallel private(i) &
+		!$omp parallel private(j) &
 		!$omp firstprivate(ids,ide,jds,jde,kds,kde) &
 		!$omp default(shared)
 		!$omp do schedule(static)
-		do i=ids,ide
-			RAINCV(i,:)=0
-			p8(i,:kde-1,:)=(domain%p(i,:kde-1,:)+domain%p(i,kds+1:,:))/2
-			p8(i,kde,:)=p8(i,kde-1,:)+(p8(i,kde-1,:)-p8(i,kde-2,:))
-			if (i>ids) then
-				U3D(i,:,:)=(domain%u(i-1,:,:)+domain%u(i,:,:))/2
+		do j=jds,jde
+			RAINCV(:,j)=0
+			p8(:,:kde-1,j)=(domain%p(:,kds:kde-1,j)+domain%p(:,kds+1:kde,j))/2
+			p8(:,kde,j)=p8(:,kde-1,j)+(p8(:,kde-1,j)-p8(:,kde-2,j))
+			if (j>jds) then
+				V3D(:,:,j)=(domain%v(:,:,j-1)+domain%v(:,:,j))/2
 			endif
-			V3D(i,:,:)=(domain%v(i,:,jds:jde)+domain%v(i,:,jds+1:jde+1))/2
-			T3D(i,:,:)=domain%th(i,:,:)*domain%pii(i,:,:)
-! 			rho(i,:,:)=domain%p(i,:,:)/(R*T3D(i,:,:))
+			U3D(:,:,j)=(domain%u(ids:ide,:,j)+domain%u(ids+1:ide+1,:,j))/2
+			T3D(:,:,j)=domain%th(:,:,j)*domain%pii(:,:,j)
+! 			rho(:,:,j)=domain%p(:,:,j)/(R*T3D(:,:,j))
 		enddo
 		!$omp end do
 		!$omp end parallel	
