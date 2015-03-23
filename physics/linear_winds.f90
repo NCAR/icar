@@ -45,7 +45,12 @@ module linear_theory_winds
 	!! unfortunately these have to be allocated every call because we could be calling on both the high-res
 	!! domain and the low res domain (to "remove" the linear winds)
     real,allocatable,dimension(:,:)::k,l,kl,sig
-    complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::denom,uhat,u_hat,vhat,v_hat,m,ineta,msq,mimag
+    complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::denom,m,ineta,msq,mimag
+    complex(C_DOUBLE_COMPLEX),pointer,dimension(:,:,:)::uhat,u_hat,vhat,v_hat
+	logical :: data_allocated=.False. ! need a boolean because you cant test if a cptr is allocated?
+	type(C_PTR) :: uh_aligned_data, u_h_aligned_data, vh_aligned_data, v_h_aligned_data
+    type(C_PTR), allocatable :: uplans(:), vplans(:)
+	
 	integer::buffer=25 ! number of grid cells to buffer around the domain MUST be >=1
 	integer,parameter::stability_window_size=2
 	
@@ -63,8 +68,11 @@ module linear_theory_winds
 	real, parameter :: vmax=20
 	real, parameter :: vmin=-20
 	
-	integer, parameter :: n_U_values=30
-	integer, parameter :: n_V_values=30
+	integer, parameter :: n_U_values=10
+	integer, parameter :: n_V_values=10
+	
+	! real,parameter::pi=3.1415927
+    complex,parameter :: j= (0,1)
 	
 contains
 	
@@ -139,23 +147,26 @@ contains
 	! could/should be calculated from the real atm profile with limits
 	! f  = 9.37e-5           # rad/s Coriolis frequency for 40deg north
 	! ---------------------------------------------------------------------------------
-    subroutine linear_winds(domain,Ndsq,vsmooth,reverse,useDensity,debug,fixedU,fixedV)
+    subroutine linear_winds(domain,Ndsq,vsmooth,reverse,useDensity,debug,savedata)
 		use, intrinsic :: iso_c_binding
         implicit none
         class(linearizable_type),intent(inout)::domain
         real, intent(in)::Ndsq
 		integer, intent(in)::vsmooth ! number of layers to smooth winds over in the vertical
 		logical, intent(in) :: reverse,useDensity
-		logical, intent(in), optional ::debug
-		real, intent(in), optional :: fixedU, fixedV !instead of computing U and V from domain, just use these
-        complex,parameter :: j= (0,1)
+		logical, intent(in), optional ::debug, savedata
         real::gain,offset !used in setting up k and l arrays
-        integer::nx,ny,nz,i,midpoint,z,realnx,realny,realnx_u,realny_v,x,y,bottom,top
-		logical :: staggered, zaxis_is_third
+        integer::nx,ny,nz,i,z,realnx,realny,realnx_u,realny_v,bottom,top
+		logical :: staggered, zaxis_is_third, save_intermediate
         real::U,V
 		real,dimension(:),allocatable::U_layers,V_layers,preU_layers,preV_layers
-		real,parameter::pi=3.1415927
-        type(C_PTR) :: plan
+		integer(C_SIZE_T) :: n_elements
+		
+		if (present(savedata)) then
+			save_intermediate=savedata
+		else
+			save_intermediate=.False.
+		endif
         
 		nx=size(domain%fzs,1)
 		nz=size(domain%u,2)
@@ -164,6 +175,7 @@ contains
 		allocate(V_layers(nz))
 		allocate(preU_layers(nz))
 		allocate(preV_layers(nz))
+		
 		realnx=size(domain%z,1)
 		realnx_u=size(domain%u,1)
 		realny=size(domain%z,3)
@@ -178,6 +190,7 @@ contains
 				if (debug) then
 					write(*,*) "Warning: z axis in a domain is not determined:"
 					write(*,*) "Z shape = ", shape(domain%z)
+					write(*,*) "U shape = ", shape(domain%u)
 					if (zaxis_is_third) then 
 						write(*,*) "Assuming zaxis is the third axis"
 					else
@@ -189,33 +202,53 @@ contains
 		
 		staggered = (realnx/=realnx_u).and.(realny/=realny_v)
 		
-		if (present(fixedV)) then
-			if (.not.present(fixedU)) then
-				write(*,*) "Fixed U and V fields must both be supplied"
-				stop
+		do i=1,nz
+			preU_layers(i)=sum(domain%u(:realnx_u,i,:))/(realnx_u * realny)
+			preV_layers(i)=sum(domain%v(:,i,:realny_v))/(realnx * realny_v)
+		enddo
+		do i=1,nz
+			bottom=i-vsmooth
+			top=i+vsmooth
+			if (bottom<1) then
+				bottom=1
 			endif
-			V_layers=fixedV
-			U_layers=fixedV
-		else
+			if (top>nz) then
+				top=nz
+			endif
+			U_layers(i)=sum(preU_layers(bottom:top))/(top-bottom+1)
+			V_layers(i)=sum(preV_layers(bottom:top))/(top-bottom+1)
+		enddo
+		
+        if (.not.data_allocated) then
+			print*, "Allocating Linear Wind Data and FFTW plans"
+			! should try to use fft_malloc routines to ensure better allignment
+			n_elements=nx*ny*nz
+			uh_aligned_data=fftw_alloc_complex(n_elements)
+			call c_f_pointer(uh_aligned_data, uhat, [nx,ny,nz])
+			u_h_aligned_data=fftw_alloc_complex(n_elements)
+			call c_f_pointer(u_h_aligned_data, u_hat, [nx,ny,nz])
+			vh_aligned_data=fftw_alloc_complex(n_elements)
+			call c_f_pointer(vh_aligned_data, vhat, [nx,ny,nz])
+			v_h_aligned_data=fftw_alloc_complex(n_elements)
+			call c_f_pointer(v_h_aligned_data, v_hat, [nx,ny,nz])
+			data_allocated=.True.
+			
+			allocate(uplans(nz))
+			allocate(vplans(nz))
 			do i=1,nz
-				preU_layers(i)=sum(domain%u(:realnx_u,i,:))/(realnx_u * realny)
-				preV_layers(i)=sum(domain%v(:,i,:realny_v))/(realnx * realny_v)
-			enddo
-			do i=1,nz
-				bottom=i-vsmooth
-				top=i+vsmooth
-				if (bottom<1) then
-					bottom=1
-				endif
-				if (top>nz) then
-					top=nz
-				endif
-				U_layers(i)=sum(preU_layers(bottom:top))/(top-bottom+1)
-				V_layers(i)=sum(preV_layers(bottom:top))/(top-bottom+1)
+				uplans(i) = fftw_plan_dft_2d(ny,nx, uhat(:,:,i),u_hat(:,:,i), FFTW_BACKWARD,FFTW_MEASURE)!PATIENT)!FFTW_ESTIMATE)
+				vplans(i) = fftw_plan_dft_2d(ny,nx, vhat(:,:,i),v_hat(:,:,i), FFTW_BACKWARD,FFTW_MEASURE)!PATIENT)!FFTW_ESTIMATE)
 			enddo
 		endif
+		if (reverse) then
+			write(*,*) "ERROR: reversing linear winds not set up for parallel fftw computation yet"
+			stop
+		endif
+
+		!$omp parallel default(shared), private(k,l,kl,sig,denom,m,msq,mimag,ineta,z,gain,offset,i,U,V) &
+		!$omp firstprivate(nx,ny,nz, zaxis_is_third, Ndsq, realnx,realny, realnx_u, realny_v) &
+		!$omp firstprivate(useDensity, debug, staggered, reverse, buffer)
 		
-        
 		! these should be stored in a separate data structure... and allocated/deallocated in a subroutine
 		! for now these are reallocated/deallocated everytime so we can use it for different sized domains (e.g. coarse and fine)
 		! maybe linear winds need to be embedded in an object instead of a module to avoid this problem...
@@ -225,10 +258,6 @@ contains
 	        allocate(kl(nx,ny))
 	        allocate(sig(nx,ny))
 	        allocate(denom(nx,ny))
-	        allocate(uhat(nx,ny))
-	        allocate(u_hat(nx,ny))
-	        allocate(vhat(nx,ny))
-	        allocate(v_hat(nx,ny))
 	        allocate(m(nx,ny))
 	        allocate(msq(nx,ny))
 	        allocate(mimag(nx,ny))
@@ -260,6 +289,8 @@ contains
 		! then perform ffts etc in parallel
 		! finally destroy plans serially
 		m=1
+		
+		!$omp do
         do z=1,nz
             U=U_layers(z)
             V=V_layers(z)
@@ -304,33 +335,33 @@ contains
 				!vhat = (0-m)*(sig*l+j*k*f)*ineta/kl
 				!# removed coriolis term
 	            ineta=ineta/(kl/((0-m)*sig))
-	            uhat=k*ineta
-	            vhat=l*ineta
+	            uhat(:,:,z)=k*ineta
+	            vhat(:,:,z)=l*ineta
 
 				! pull it back out of fourier space. 
 				! NOTE, the fftw transform inherently scales by N so the Fzs/Nx/Ny provides the only normalization necessary (I think)
 
 				! it should be possible to store the plan and execute it everytime rather than recreating it everytime, doesn't matter too much 
-				call ifftshift(uhat)
-				call ifftshift(vhat)
+				call ifftshift(uhat, fixed_axis=z)
+				call ifftshift(vhat, fixed_axis=z)
 			
-	            plan = fftw_plan_dft_2d(ny,nx, uhat,u_hat, FFTW_BACKWARD,FFTW_ESTIMATE)
-	            call fftw_execute_dft(plan, uhat,u_hat)
-	            call fftw_destroy_plan(plan)
+! 	            plan = fftw_plan_dft_2d(ny,nx, uhat,u_hat, FFTW_BACKWARD,FFTW_ESTIMATE)
+	            call fftw_execute_dft(uplans(z), uhat(:,:,z),u_hat(:,:,z))
+! 	            call fftw_destroy_plan(plan)
 				
-	            plan = fftw_plan_dft_2d(ny,nx, vhat,v_hat, FFTW_BACKWARD,FFTW_ESTIMATE)
-	            call fftw_execute_dft(plan, vhat,v_hat)
-	            call fftw_destroy_plan(plan)
+! 	            plan = fftw_plan_dft_2d(ny,nx, vhat,v_hat, FFTW_BACKWARD,FFTW_ESTIMATE)
+	            call fftw_execute_dft(vplans(z), vhat(:,:,z),v_hat(:,:,z))
+! 	            call fftw_destroy_plan(plan)
 				
 				! the linear_mask field only applies to the high res grid (for now at least)
 				! NOTE: we should be able to do this without the loop, but ifort -O was giving the wrong answer... 
 				! possible compiler bug version 12.1.x?
 				if (.not.reverse) then
 					do i=1,realny
-						u_hat(buffer+1:buffer+realnx,buffer+i) = &
-							u_hat(buffer+1:buffer+realnx,buffer+i) * linear_mask(:,i)
-						v_hat(buffer+1:buffer+realnx,buffer+i) = &
-							v_hat(buffer+1:buffer+realnx,buffer+i) * linear_mask(:,i)
+						u_hat(buffer+1:buffer+realnx,buffer+i,z) = &
+							u_hat(buffer+1:buffer+realnx,buffer+i,z) * linear_mask(:,i)
+						v_hat(buffer+1:buffer+realnx,buffer+i,z) = &
+							v_hat(buffer+1:buffer+realnx,buffer+i,z) * linear_mask(:,i)
 					enddo
 				endif
 				
@@ -340,11 +371,11 @@ contains
 				! possible compiler bug version 12.1.x?
 				if (staggered) then
 					do i=1,ny-1
-						u_hat(1:nx-1,i) = (u_hat(1:nx-1,i) + u_hat(2:nx,i)) /2
-						v_hat(:,i)      = (v_hat(:,i)      + v_hat(:,i+1))  /2
+						u_hat(1:nx-1,i,z) = (u_hat(1:nx-1,i,z) + u_hat(2:nx,i,z)) /2
+						v_hat(:,i,z)      = (v_hat(:,i,z)      + v_hat(:,i+1,z))  /2
 					enddo
 					i=ny
-					u_hat(1:nx-1,i) = (u_hat(1:nx-1,i) + u_hat(2:nx,i)) /2
+					u_hat(1:nx-1,i,z) = (u_hat(1:nx-1,i,z) + u_hat(2:nx,i,z)) /2
 				endif
 				if (useDensity) then
 					! if we are using density in the advection calculations, modify the linear perturbation
@@ -353,25 +384,25 @@ contains
 					if (debug) then
 						write(*,*), "Using a density correction in linear winds"
 					endif
-					u_hat(buffer:realnx_u+buffer,buffer:realny+buffer) = &
-						2*real(u_hat(buffer:realnx_u+buffer,buffer:realny+buffer))! / domain%rho(1:realnx,z,1:realny)
-					v_hat(buffer:realnx+buffer,buffer:realny_v+buffer) = &
-						2*real(v_hat(buffer:realnx+buffer,buffer:realny_v+buffer))! / domain%rho(1:realnx,z,1:realny)
+					u_hat(buffer:realnx_u+buffer,buffer:realny+buffer,z) = &
+						2*real(u_hat(buffer:realnx_u+buffer,buffer:realny+buffer,z))! / domain%rho(1:realnx,z,1:realny)
+					v_hat(buffer:realnx+buffer,buffer:realny_v+buffer,z) = &
+						2*real(v_hat(buffer:realnx+buffer,buffer:realny_v+buffer,z))! / domain%rho(1:realnx,z,1:realny)
 				endif
 				! if we are removing linear winds from a low res field, subtract u_hat v_hat instead
 				! real(real()) extracts real component of complex, then converts to a real data type (may not be necessary except for IO?)
 				if (reverse) then
 		            domain%u(:,z,:)=domain%u(:,z,:) - &
-						real(real( u_hat(1+buffer:realnx_u+buffer, 1+buffer:realny+buffer  ) ))*linear_contribution
+						real(real( u_hat(1+buffer:realnx_u+buffer, 1+buffer:realny+buffer  ,z) ))*linear_contribution
 						
 		            domain%v(:,z,:)=domain%v(:,z,:) - &
-						real(real( v_hat(1+buffer:realnx+buffer,   1+buffer:realny_v+buffer) ))*linear_contribution
+						real(real( v_hat(1+buffer:realnx+buffer,   1+buffer:realny_v+buffer,z) ))*linear_contribution
 				else
 					! note, linear_contribution component comes from the linear mask applied above on the mass grid
 		            domain%u(:,z,:)=domain%u(:,z,:) + &
-						real(real(u_hat(1+buffer:realnx_u+buffer,1+buffer:realny+buffer  ) ))
+						real(real(u_hat(1+buffer:realnx_u+buffer,1+buffer:realny+buffer  ,z) ))
 		            domain%v(:,z,:)=domain%v(:,z,:) + &
-						real(real(v_hat(1+buffer:realnx+buffer,  1+buffer:realny_v+buffer) ))
+						real(real(v_hat(1+buffer:realnx+buffer,  1+buffer:realny_v+buffer,z) ))
 				endif
 			
 				if (present(debug).and.(z==1))then
@@ -381,18 +412,25 @@ contains
 						write(*,*) "realnx=",realnx, "; nx=",nx, "; buffer=",buffer
 						write(*,*) "realny=",realny, "; ny=",ny!, buffer
 						write(*,*) "Writing internal linear wind data"
-						call io_write2d("u_hat_sub2.nc","data",real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer))) )
-						call io_write2d("v_hat_sub2.nc","data",real(real(v_hat(1+buffer:nx-buffer,1+buffer:realny+buffer-1))) )
-						call io_write2d("u_hat_full.nc","data",real(real(u_hat)) )
-						call io_write2d("v_hat_full.nc","data",real(real(v_hat)) )
+						call io_write2d("u_hat_sub2.nc","data", real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer,z))) )
+						call io_write2d("v_hat_sub2.nc","data", real(real(v_hat(1+buffer:nx-buffer,1+buffer:realny+buffer-1,z))) )
+						call io_write2d("u_hat_full.nc","data", real(real(u_hat(:,:,z))) )
+						call io_write2d("v_hat_full.nc","data", real(real(v_hat(:,:,z))) )
 					endif
 				endif
 			endif
 		end do ! z-loop
+		!$omp end do
 		
 		
 		! finally deallocate all temporary arrays that were created... chould be a datastructure and a subroutine...
-		deallocate(k,l,kl,sig,denom,uhat,u_hat,vhat,v_hat,m,ineta,msq,mimag)
+! 		if (.not.save_intermediate) then
+		deallocate(k,l,kl,sig,denom,m,ineta,msq,mimag)
+		
+		!$omp end parallel
+		
+! 		endif
+		! these are subroutine scoped not module, they should be deallocated automatically anyway
 		deallocate(U_layers,V_layers,preU_layers,preV_layers)
     end subroutine linear_winds
     
@@ -474,7 +512,7 @@ contains
 		logical, intent(in) :: reverse,useDensity
 		real, allocatable, dimension(:,:,:) :: savedU, savedV
 		real :: u,v
-		integer :: nx,ny,nz,i,j,k
+		integer :: nx,ny,nz,i,j,ii
 		logical :: debug
 		
 		! the domain to work over
@@ -526,16 +564,18 @@ contains
 				domain%v=v_values(j)
 				
 				! calculate the linear wind field for the current u and v values
-				call linear_winds(domain,N_squared, 0, reverse,useDensity,debug=debug)!,fixedU=u_values(i),fixedV=v_values(j))
+				call linear_winds(domain,N_squared, 0, reverse,useDensity,debug=debug)
 				debug=.False.
-				do k=1,nz
-					u_LUT(i,j,:,k,:)=(domain%u(:,k,:)-u_values(i))
-					v_LUT(i,j,:,k,:)=(domain%v(:,k,:)-v_values(j))
+				do ii=1,nz
+					u_LUT(i,j,:,ii,:)=(domain%u(:,ii,:)-u_values(i))
+					v_LUT(i,j,:,ii,:)=(domain%v(:,ii,:)-v_values(j))
 				end do
 			end do
 		end do
 		domain%u=savedU
 		domain%v=savedV
+		
+! 		deallocate(k,l,kl,sig,denom,m,ineta,msq,mimag)
 		
 		deallocate(savedU,savedV)
 		
@@ -731,7 +771,7 @@ contains
     end subroutine setup_linwinds
 	
 	! Primary entry point!
-	! Called from ICAR to update the U,V,W wind fields based on linear theory
+	! Called from ICAR to update the U and V wind fields based on linear theory (W is calculated to balance U/V)
     subroutine linear_perturb(domain,options,vsmooth,reverse,useDensity)
         implicit none
         class(linearizable_type),intent(inout)::domain
