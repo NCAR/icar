@@ -49,13 +49,22 @@ contains
 		type(domain_type), intent(inout):: domain
 		type(bc_type), intent(inout):: boundary
 		character(len=MAXFILELENGTH) :: options_filename
-		
+!++ trude
+		character(len=MAXFILELENGTH) :: mp_options_filename
+		mp_options_filename=get_mp_options_file()
+		mp_options_filename="mp_options.nml"
+! -- trude                
+
 		options_filename=get_options_file()
 ! 		read in options file
 		write(*,*) "Initializing Options"
 		call init_options(options_filename,options)
+! ++ trude
+		write(*,*) "Initializing mp_Options"
+		call init_mp_options(mp_options_filename,options)
+! -- trude
 ! 		allocate and initialize the domain
-		write(*,*) "Initializing Domain"
+ 		write(*,*) "Initializing Domain"
 		call init_domain(options,domain)
 ! 		allocate and initialize the boundary conditions structure (includes 3D grids too...)
 !		this might be more apropriately though of as a forcing data structure (for low res model)
@@ -89,7 +98,32 @@ contains
 			stop("Options file does not exist. ")
 		endif
 	end function
+! ++ trude
+	function get_mp_options_file()
+		implicit none
+		character(len=MAXFILELENGTH) ::get_mp_options_file
+		integer :: error
+		logical :: file_exists
 	
+		if (command_argument_count()>0) then
+			call get_command_argument(1,get_mp_options_file, status=error)
+			if (error>0) then
+				get_mp_options_file="mp_options.nml"
+			elseif (error==-1) then
+				write(*,*) "MP Options filename = ", trim(get_mp_options_file), " ...<cutoff>"
+				write(*,*) "Maximum filename length = ", MAXFILELENGTH
+				stop("ERROR: mp options filename too long")
+			endif
+		else
+                         get_mp_options_file="mp_options.nml"
+		endif
+		write(*,*) "2 MP Options filename = ",  trim(get_mp_options_file)
+		INQUIRE(file=trim(get_mp_options_file), exist=file_exists)
+		if (.not.file_exists) then
+			stop("MP Options file does not exist. ")
+		endif
+	end function
+! -- trude	
 	subroutine init_physics(options,domain)
 		implicit none
 		type(options_type), intent(in) :: options
@@ -261,18 +295,12 @@ contains
 		character(len=MAXFILELENGTH) :: date, calendar
 		integer :: year, month, day, hour, minute, second
 
-                !!++ trude
-                real :: Nt_c, TNO, am_s,rho_g,av_s,bv_s,fv_s,av_g,bv_g,av_i,Ef_si,Ef_rs,Ef_rg,Ef_ri
-                real :: C_cube, C_sqrd, mu_r
-                logical :: Ef_rw_l, EF_sw_l
-		!! -- trude
 		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,smooth_wind_distance, &
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
 							  date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, &
-							  N_squared,linear_contribution,use_agl_height, spatial_linear_fields, &
-                                                          Nt_c,TNO, am_s, rho_g, av_s,bv_s,fv_s,av_g,bv_g,av_i,Ef_si,Ef_rs,Ef_rg,Ef_ri,&     ! trude added Nt_c, TNO
-                                                          C_cube,C_sqrd, mu_r, Ef_rw_l, Ef_sw_l
+							  N_squared,linear_contribution,use_agl_height, spatial_linear_fields 
+
 ! 		default parameters
 		mean_fields=.False.
 		mean_winds=.False.
@@ -304,28 +332,6 @@ contains
 		use_agl_height=.True.
 		spatial_linear_fields=.False.
 		
-                ! ++ trude
-                Nt_c = 100.e6
-                TNO = 5.0
-                am_s = 0.069
-                rho_g = 500.0
-                av_s   = 40.0
-                bv_s = 0.55
-                fv_s = 100.0
-                av_g = 442.0
-                bv_g = 0.89
-                av_i = 1847.5
-                Ef_si = 0.05
-                Ef_rs = 0.95
-                Ef_rg = 0.75
-                Ef_ri = 0.95                
-                C_cube = 0.5
-                C_sqrd  = 0.3
-                mu_r = 0
-                Ef_rw_l = .True.
-                Ef_sw_l = .True.
-                write(*,*) 'Ef_rw_l in init ', Ef_rw_l, Ef_sw_l
-                ! -- trude
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=parameters)
 		close(name_unit)
@@ -422,6 +428,46 @@ contains
 
 		options%high_res_soil_state=high_res_soil_state
 		
+	end subroutine parameters_namelist
+
+! ++ trude
+	subroutine parameters_mp_namelist(mp_filename,options)
+		implicit none
+		character(len=*),intent(in) :: mp_filename
+		type(options_type), intent(inout) :: options
+		integer :: name_unit
+
+                real :: Nt_c, TNO, am_s,rho_g,av_s,bv_s,fv_s,av_g,bv_g,av_i,Ef_si,Ef_rs,Ef_rg,Ef_ri
+                real :: C_cube, C_sqrd, mu_r, t_adjust
+                logical :: Ef_rw_l, EF_sw_l
+
+		namelist /parameters/ Nt_c,TNO, am_s, rho_g, av_s,bv_s,fv_s,av_g,bv_g,av_i,Ef_si,Ef_rs,Ef_rg,Ef_ri,&     ! trude added Nt_c, TNO
+                                                          C_cube,C_sqrd, mu_r, Ef_rw_l, Ef_sw_l, t_adjust
+! 		default parameters
+                Nt_c = 100.e6           !  50, 100,500,1000
+                TNO = 5.0                 !  0.5, 5, 50 
+                am_s = 0.069            ! 0.052 (Heymsfield), 0.02 (Mitchell), 0.01. Note that these values are converted to mks units. Was given as cgs units in Morrison p3 code  
+                rho_g = 500.0           ! 800, 500, 200
+                av_s   = 40.0             ! 11.72 (Locatelli and Hobbs)
+                bv_s = 0.55               ! 0.41
+                fv_s = 100.0              ! 0
+                av_g = 442.0             ! 19.3   from "Cloud-Resolving Modelling of Convective Processes, by Gao and Li, 
+                bv_g = 0.89               ! 0.37
+                av_i = 1847.5            ! 700 (Ikawa and Saito)
+                Ef_si = 0.05              
+                Ef_rs = 0.95               ! 1
+                Ef_rg = 0.75               ! 1
+                Ef_ri = 0.95                ! 1 
+                C_cube = 0.5            !0.25 Based on Thesis paper "Validation and Improvements of Simulated Cloud Microphysics and Orographic Precipitation over the Pacific Northwest"
+                C_sqrd  = 0.3
+                mu_r = 0.                   ! 1, 2, 5
+                t_adjust = 0.0           ! -5, 10, 15
+                Ef_rw_l = .False.        ! True sets ef_rw = 1, insted of max 0.95
+                Ef_sw_l = .False.       ! True sets ef_rw = 1, insted of max 0.95 
+		open(io_newunit(name_unit), file=mp_filename)
+		read(name_unit,nml=parameters)
+		close(name_unit)
+		
 		!++ trude
                 options%mp_options%Nt_c = Nt_c
                 options%mp_options%TNO = TNO
@@ -437,12 +483,15 @@ contains
                 options%mp_options%Ef_rs = Ef_rs
                 options%mp_options%Ef_rg = Ef_rg
                 options%mp_options%Ef_ri = Ef_ri
+                options%mp_options%mu_r = mu_r
+                options%mp_options%t_adjust = t_adjust
                 options%mp_options%C_cube = C_cube
                 options%mp_options%C_sqrd = C_sqrd
                 options%mp_options%Ef_rw_l = Ef_rw_l
                 options%mp_options%Ef_sw_l = Ef_sw_l
                !-- trude
-	end subroutine parameters_namelist
+	end subroutine parameters_mp_namelist
+! -- trude
 	
 	! check the version number in the namelist file and compare to the current model version
 	! if the namelist version doesn't match, print the differences between that version and this
@@ -625,7 +674,26 @@ contains
 		! check for any inconsistencies in the options requested
 		call options_check(options)
 	end subroutine init_options
-	
+
+! ++ trude	
+	subroutine init_mp_options(mp_options_filename,options)
+! 		reads a series of options from a namelist file and stores them in the 
+! 		options data structure
+		implicit none
+		character(len=*), intent(in) :: mp_options_filename
+		type(options_type), intent(inout) :: options
+				
+! 		set up namelist structures
+		write(*,*) mp_options_filename
+		call version_check(mp_options_filename,options)
+		call parameters_mp_namelist(mp_options_filename,options)
+! NBNBNB trude, check if I can comment these 3 lines out		
+!		if (options%restart) then
+!			call init_restart(options_filename,options)
+!		endif
+	end subroutine init_mp_options
+!-- trude
+
 ! 	Allow running over a sub-domain, by removing the outer N grid cells from all sides of the domain (lat,lon,terrain)
 	subroutine remove_edges(domain,edgesize)
 		implicit none

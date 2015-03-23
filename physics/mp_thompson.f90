@@ -320,7 +320,7 @@
 
 ! TRUDE
       REAL, PRIVATE :: Nt_c, TNO, am_s,rho_g,av_s,bv_s,fv_s,av_g,bv_g,av_i,Ef_si,Ef_rs,Ef_rg,Ef_ri
-      REAL, PRIVATE :: C_cube,C_sqrd, mu_r
+      REAL, PRIVATE :: C_cube,C_sqrd, mu_r, t_adjust
       LOGICAL, PRIVATE :: Ef_rw_l, Ef_sw_l
       REAL, PRIVATE :: am_g
 
@@ -407,6 +407,7 @@
          C_cube = mp_options%C_cube
          C_sqrd = mp_options%C_sqrd
          mu_r = mp_options%mu_r
+         t_adjust = mp_options%t_adjust
          Ef_rw_l = mp_options%Ef_rw_l
          Ef_sw_l = mp_options%Ef_sw_l
          am_g = PI2*rho_g/6.0           ! trude, nb, this should can be defined in the modular section
@@ -3168,7 +3169,6 @@
       DOUBLE PRECISION:: sum1, sum2, sumn1, sumn2, &
                          prob, vol, Texp, orho_w, &
                          lam_exp, lamr, N0_r, lamc, N0_c, y
-     
 !+---+
       orho_w = 1./rho_w
 
@@ -3182,7 +3182,10 @@
 !..Freeze water (smallest drops become cloud ice, otherwise graupel).
       do k = 1, 45
 !         print*, ' Freezing water for temp = ', -k
-         Texp = DEXP( DFLOAT(k) ) - 1.0D0
+! ++ trude, add tadjust, so to chane temperature for where Bigg freezing starts. Follow approach in WRFV3.6 with IN
+         Texp = DEXP( DFLOAT(k) -t_adjust*1.0D0) - 1.0D0  ! NB Trude. Check for when texp is negative.....
+!         Texp = DEXP( DFLOAT(k) ) - 1.0D0
+! -- trude
          do j = 1, ntb_r1
             do i = 1, ntb_r
                lam_exp = (N0r_exp(j)*am_r*crg(1)/r_r(i))**ore1
@@ -3196,6 +3199,9 @@
                   N_r(n2) = N0_r*Dr(n2)**mu_r*DEXP(-lamr*Dr(n2))*dtr(n2)
                   vol = massr(n2)*orho_w
                   prob = 1.0D0 - DEXP(-120.0D0*vol*5.2D-4 * Texp)
+!++ trude
+                  prob = MAX(prob, 0.0d0 )
+! -- trude
                   if (massr(n2) .lt. xm0g) then
                      sumn1 = sumn1 + prob*N_r(n2)
                      sum1 = sum1 + prob*N_r(n2)*massr(n2)
@@ -3210,7 +3216,7 @@
                tpg_qrfz(i,j,k) = sum2
                tnr_qrfz(i,j,k) = sumn2
             enddo
-         enddo
+       enddo
          do i = 1, ntb_c
             lamc = 1.0D-6 * (Nt_c*am_r* ccg(2) * ocg1 / r_c(i))**obmr
             N0_c = 1.0D-18 * Nt_c*ocg1 * lamc**cce(1)
@@ -3220,6 +3226,9 @@
                y = Dc(n)*1.0D6
                vol = massc(n)*orho_w
                prob = 1.0D0 - DEXP(-120.0D0*vol*5.2D-4 * Texp)
+!++ trude
+               prob = MAX(prob, 0.0d0 )
+! -- trude
                N_c(n) = N0_c* y**mu_c * EXP(-lamc*y)*dtc(n)
                N_c(n) = 1.0D24 * N_c(n)
                sumn2 = sumn2 + prob*N_c(n)
@@ -3353,7 +3362,6 @@
                 t_Efrw(i,j) = 1.0
           endif
        endif
-         write(*,*) t_Efrw(i,j)
 ! -- trude
       enddo
       enddo

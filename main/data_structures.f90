@@ -237,6 +237,7 @@ module data_structures
                  real :: Ef_si, Ef_rs, Ef_rg, Ef_ri
                  real :: C_cube, C_sqrd
                  real :: mu_r
+                 real :: t_adjust
                  logical :: Ef_rw_l, EF_sw_l
        end type mp_options_type
         !! -- trude
