@@ -151,7 +151,7 @@ contains
         complex,parameter :: j= (0,1)
         real::gain,offset !used in setting up k and l arrays
         integer::nx,ny,nz,i,midpoint,z,realnx,realny,realnx_u,realny_v,x,y,bottom,top
-		logical :: staggered
+		logical :: staggered, zaxis_is_third
         real::U,V
 		real,dimension(:),allocatable::U_layers,V_layers,preU_layers,preV_layers
 		real,parameter::pi=3.1415927
@@ -164,11 +164,29 @@ contains
 		allocate(V_layers(nz))
 		allocate(preU_layers(nz))
 		allocate(preV_layers(nz))
-		
 		realnx=size(domain%z,1)
 		realnx_u=size(domain%u,1)
 		realny=size(domain%z,3)
 		realny_v=size(domain%v,3)
+		! this isn't perfect because if the number of vertical levels happen to equal forcing levels...
+		zaxis_is_third = (size(domain%z,3)==nz)
+		if (zaxis_is_third) then
+			if (size(domain%z,2)==nz) then
+				! zaxis is not determined, test more rigorously
+				zaxis_is_third = (minval(domain%z(:,:,2) - domain%z(:,:,1)) >  0) .and. &
+					 			 (minval(domain%z(:,2,:) - domain%z(:,1,:)) <= 0)
+				if (debug) then
+					write(*,*) "Warning: z axis in a domain is not determined:"
+					write(*,*) "Z shape = ", shape(domain%z)
+					if (zaxis_is_third) then 
+						write(*,*) "Assuming zaxis is the third axis"
+					else
+						write(*,*) "Assuming zaxis is the second axis"
+					endif
+				endif
+			endif
+		endif
+		
 		staggered = (realnx/=realnx_u).and.(realny/=realny_v)
 		
 		if (present(fixedV)) then
@@ -180,8 +198,8 @@ contains
 			U_layers=fixedV
 		else
 			do i=1,nz
-				preU_layers(i)=sum(domain%u(:(realnx_u-1),i,:))/((realnx_u-1)*realny)
-				preV_layers(i)=sum(domain%v(:,i,:(realny_v-1)))/(realnx*(realny_v-1))
+				preU_layers(i)=sum(domain%u(:realnx_u,i,:))/(realnx_u * realny)
+				preV_layers(i)=sum(domain%v(:,i,:realny_v))/(realnx * realny_v)
 			enddo
 			do i=1,nz
 				bottom=i-vsmooth
@@ -234,7 +252,6 @@ contains
 	        kl = k**2+l**2
 	        WHERE (kl==0.0) kl=1e-15
 		endif
-
 		
 		! process each array independantly
 		! note fftw_plan_... may not be threadsafe so this can't be OMP parallelized without pulling that outside of the loop. 
@@ -249,7 +266,8 @@ contains
 			if ((abs(U)+abs(V))>0.5) then
 	            sig  = U*k+V*l
 	            where(sig==0.0) sig=1e-15
-	            denom = sig**2!-f**2
+! 				print*, U, V, maxval(sig), reverse, zaxis_is_third
+	            denom = sig**2 ! -f**2
 			
 				! 	where(denom.eq.0) denom=1e-20
 				! # two possible non-hydrostatic versions
@@ -271,10 +289,14 @@ contains
 	            m = sqrt(msq)         ! # % vertical wave number, hydrostatic
 				where(sig<0) m=m*(-1)   ! equivilant to m=m*sign(sig)
 	    		where(real(msq)<0) m=mimag
-			
-	            ineta=j*domain%fzs*exp(j*m* &
-						sum(domain%z(:,z,:)-domain%z(:,1,:)) &
-						/(realnx*realny))
+				
+				if (zaxis_is_third) then
+		            ineta=j*domain%fzs*exp(j*m* &
+							sum(domain%z(:,:,z)-domain%z(:,:,1)) / (realnx*realny))
+				else
+		            ineta=j*domain%fzs*exp(j*m* &
+							sum(domain%z(:,z,:)-domain%z(:,1,:)) / (realnx*realny))
+				endif
 				!  what=sig*ineta
 
 				!# with coriolis : [+/-]j*[l/k]*f
@@ -295,22 +317,34 @@ contains
 	            plan = fftw_plan_dft_2d(ny,nx, uhat,u_hat, FFTW_BACKWARD,FFTW_ESTIMATE)
 	            call fftw_execute_dft(plan, uhat,u_hat)
 	            call fftw_destroy_plan(plan)
-			
+				
 	            plan = fftw_plan_dft_2d(ny,nx, vhat,v_hat, FFTW_BACKWARD,FFTW_ESTIMATE)
 	            call fftw_execute_dft(plan, vhat,v_hat)
 	            call fftw_destroy_plan(plan)
-			
-				! u/vhat are first staggered to apply to u/v appropriately if on a staggered grid (real_nx/=real_nx_u)
-				! when removing linear winds from forcing data, it may NOT be on a staggered grid
-				! NOTE: we should be able to do this without the loop, but ifort -O was giving the wrong answer... possible compiler bug version 12.1.x?
-				if (staggered) then
-					! note, buffer must be AT LEAST 1
-					do i=0,realny_v
-						u_hat(buffer:realnx_u+buffer,i+buffer) = &
-							(u_hat(buffer:realnx_u+buffer,i+buffer) + u_hat(1+buffer:realnx_u+buffer+1,i+buffer))/2
-						v_hat(1+buffer:realnx+buffer,i+buffer) = &
-							(v_hat(1+buffer:realnx+buffer,i+buffer) + v_hat(1+buffer:realnx+buffer,i+buffer+1))/2
+				
+				! the linear_mask field only applies to the high res grid (for now at least)
+				! NOTE: we should be able to do this without the loop, but ifort -O was giving the wrong answer... 
+				! possible compiler bug version 12.1.x?
+				if (.not.reverse) then
+					do i=1,realny
+						u_hat(buffer+1:buffer+realnx,buffer+i) = &
+							u_hat(buffer+1:buffer+realnx,buffer+i) * linear_mask(:,i)
+						v_hat(buffer+1:buffer+realnx,buffer+i) = &
+							v_hat(buffer+1:buffer+realnx,buffer+i) * linear_mask(:,i)
 					enddo
+				endif
+				
+				! u/vhat are first staggered to apply to u/v appropriately if on a staggered grid (realnx/=real_nx_u)
+				! when removing linear winds from forcing data, it may NOT be on a staggered grid
+				! NOTE: we should be able to do this without the loop, but ifort -O was giving the wrong answer... 
+				! possible compiler bug version 12.1.x?
+				if (staggered) then
+					do i=1,ny-1
+						u_hat(1:nx-1,i) = (u_hat(1:nx-1,i) + u_hat(2:nx,i)) /2
+						v_hat(:,i)      = (v_hat(:,i)      + v_hat(:,i+1))  /2
+					enddo
+					i=ny
+					u_hat(1:nx-1,i) = (u_hat(1:nx-1,i) + u_hat(2:nx,i)) /2
 				endif
 				if (useDensity) then
 					! if we are using density in the advection calculations, modify the linear perturbation
@@ -327,27 +361,17 @@ contains
 				! if we are removing linear winds from a low res field, subtract u_hat v_hat instead
 				! real(real()) extracts real component of complex, then converts to a real data type (may not be necessary except for IO?)
 				if (reverse) then
-					if (staggered) then
-						! Forcing data need to go back to the correct position in the grid (e.g. 2:nx-1 not 1:nx-2)
-			            domain%u(:,z,:)=domain%u(:,z,:) - &
-							real(real( u_hat(1+buffer:realnx+buffer+1, 1+buffer:realny+buffer  ) ))*linear_contribution
-							
-			            domain%v(:,z,:)=domain%v(:,z,:) - &
-							real(real( v_hat(1+buffer:realnx+buffer,   1+buffer:realny+buffer+1) ))*linear_contribution
-					else
-						! if we are not on a staggered grid, just get winds from inside the buffered area
-			            domain%u(:,z,:)=domain%u(:,z,:) - &
-							real(real( u_hat(1+buffer:realnx_u+buffer, 1+buffer:realny+buffer  ) ))*linear_contribution
-							
-			            domain%v(:,z,:)=domain%v(:,z,:) - &
-							real(real( v_hat(1+buffer:realnx+buffer,   1+buffer:realny_v+buffer) ))*linear_contribution
-					endif
+		            domain%u(:,z,:)=domain%u(:,z,:) - &
+						real(real( u_hat(1+buffer:realnx_u+buffer, 1+buffer:realny+buffer  ) ))*linear_contribution
+						
+		            domain%v(:,z,:)=domain%v(:,z,:) - &
+						real(real( v_hat(1+buffer:realnx+buffer,   1+buffer:realny_v+buffer) ))*linear_contribution
 				else
-					! the internal domain is staggered by definition
+					! note, linear_contribution component comes from the linear mask applied above on the mass grid
 		            domain%u(:,z,:)=domain%u(:,z,:) + &
-						real(real(u_hat(1+buffer:realnx_u+buffer,1+buffer:realny+buffer  ) ))*linear_contribution
+						real(real(u_hat(1+buffer:realnx_u+buffer,1+buffer:realny+buffer  ) ))
 		            domain%v(:,z,:)=domain%v(:,z,:) + &
-						real(real(v_hat(1+buffer:realnx+buffer,  1+buffer:realny_v+buffer) ))*linear_contribution
+						real(real(v_hat(1+buffer:realnx+buffer,  1+buffer:realny_v+buffer) ))
 				endif
 			
 				if (present(debug).and.(z==1))then
@@ -505,11 +529,9 @@ contains
 				call linear_winds(domain,N_squared, 0, reverse,useDensity,debug=debug)!,fixedU=u_values(i),fixedV=v_values(j))
 				debug=.False.
 				do k=1,nz
-					u_LUT(i,j,:,k,:)=(domain%u(:,k,:)-u_values(i)) * linear_mask(:,:ny)
-					v_LUT(i,j,:,k,:)=(domain%v(:,k,:)-v_values(j)) * linear_mask(:nx,:)
+					u_LUT(i,j,:,k,:)=(domain%u(:,k,:)-u_values(i))
+					v_LUT(i,j,:,k,:)=(domain%v(:,k,:)-v_values(j))
 				end do
-! 				call io_write3d("v_lut"//trim(str(i))//"_"//trim(str(j))//".nc","data",domain%v)
-! 				call io_write3d("u_lut"//trim(str(i))//"_"//trim(str(j))//".nc","data",domain%u)
 			end do
 		end do
 		domain%u=savedU
@@ -678,30 +700,28 @@ contains
 		if (linear_contribution/=1) then
 			write(*,*) "Using a fraction of the linear perturbation:",linear_contribution
 		endif
+
+		! set up linear_mask variable
+		nx=size(domain%terrain,1)
+		ny=size(domain%terrain,2)
+		if ( (.not.reverse) .and. (.not.allocated(linear_mask)) ) then
+			allocate(linear_mask(nx,ny))
+			linear_mask=linear_contribution
+	
+			if (options%linear_mask) then
+				print*, "Reading Linear Mask"
+				print*, "  from file: "//trim(options%linear_mask_file)
+				print*, "  varname: "//trim(options%linear_mask_var)
+				call io_read2d(options%linear_mask_file,options%linear_mask_var,domain%linear_mask)
+				linear_mask=(1-(1-domain%linear_mask)*0.8) * linear_contribution
+			endif
+		endif
 		
 		if (options%spatial_linear_fields) then
 			if ((.not.allocated(hi_u_LUT) .and. (.not.reverse)) .or. ((.not.allocated(rev_u_LUT)) .and. reverse)) then
 				
-				nx=size(domain%terrain,1)+1
-				ny=size(domain%terrain,2)+1
-				allocate(linear_mask(nx,ny))
-				linear_mask=1.0
-				if (.not.reverse) then
-					if (options%linear_mask) then
-						print*, "Reading Linear Mask"
-						print*, "  from file: "//trim(options%linear_mask_file)
-						print*, "  varname: "//trim(options%linear_mask_var)
-						call io_read2d(options%linear_mask_file,options%linear_mask_var,domain%linear_mask)
-						linear_mask(:nx-1,:ny-1)=1-(1-domain%linear_mask)*0.8
-						linear_mask(nx,:ny-1)=linear_mask(nx-1,:ny-1)
-						linear_mask(:nx-1,ny)=linear_mask(:nx-1,ny-1)
-						linear_mask(nx,ny)=linear_mask(nx-1,ny-1)
-					endif
-				endif
-			
 				write(*,*) "Generating a spatially variable linear perturbation look up table"
 				call initialize_spatial_winds(domain,options,reverse,useDensity)
-				deallocate(linear_mask)
 			else
 				write(*,*) "Skipping spatial wind field for presumed domain repeat"
 			endif
