@@ -9,11 +9,13 @@
 module time
 	implicit none
 	integer, parameter :: GREGORIAN=0, NOLEAP=1, THREESIXTY=2
+	integer, parameter :: YEAR_ZERO=1800  ! starting year for noleap and 360day calendars
 	integer :: calendar
 	integer, dimension(13) :: month_start
 	private
 	public :: time_init, date_to_mjd, calendar_date, calc_day_of_year, parse_date
-	public :: GREGORIAN, NOLEAP, THREESIXTY
+	public :: calendar
+	public :: GREGORIAN, NOLEAP, THREESIXTY, YEAR_ZERO
 contains
 
 	subroutine time_init(calendar_name)
@@ -76,9 +78,9 @@ contains
 			! b = day + floor(153*m+2/5) + 365*y + floor(y/4) - 32083
 			date_to_mjd = b + (((second/60d+0)+minute)/60d+0 + hour-12)/24.0 - 2400000.5
 		else if (calendar==NOLEAP) then
-			date_to_mjd = year*365 + month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0
+			date_to_mjd = (year-YEAR_ZERO)*365 + month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0
 		else if (calendar==THREESIXTY) then
-			date_to_mjd = year*360 + month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0
+			date_to_mjd = (year-YEAR_ZERO)*360 + month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0
 		end if
 
 	end function date_to_mjd
@@ -114,6 +116,7 @@ contains
 				endif
 			end do
 			day = floor(day_fraction - month_start(month))+1
+			year=year+YEAR_ZERO
 		else if (calendar==THREESIXTY) then
 			year=floor(mjd/360)
 			day_fraction=mjd - year*360+1
@@ -123,6 +126,7 @@ contains
 				endif
 			end do
 			day = floor(day_fraction - month_start(month))+1
+			year=year+YEAR_ZERO
 		end if
 		
 		day_fraction=mod(mjd,1.0)

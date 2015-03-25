@@ -80,7 +80,7 @@ module data_structures
 !------------------------------------------------
 	integer,parameter::MAXFILELENGTH=100 ! maximum file name length
 	integer,parameter::MAXVARLENGTH=100  ! maximum variable name length
-	
+	integer,parameter::MAXLEVELS=500 ! maximum number of vertical layers (should typically be ~10-20)
 !------------------------------------------------
 ! Physical Constants
 !------------------------------------------------
@@ -155,6 +155,7 @@ module data_structures
 		real, allocatable, dimension(:,:,:)	:: u,v,dz,rho,th
 		type(interpolable_type)				:: u_geo,v_geo
 		real, allocatable, dimension(:,:)	:: terrain,dzdx,dzdy
+		real, allocatable, dimension(:,:)	:: linear_mask
 		complex(C_DOUBLE_COMPLEX), allocatable, dimension(:,:) :: fzs !FFT(terrain)
 		real::dx
 	end type linearizable_type
@@ -233,7 +234,7 @@ module data_structures
 		character (len=MAXVARLENGTH) :: version,comment
 
 		! file names
-		character (len=MAXFILELENGTH) :: init_conditions_file
+		character (len=MAXFILELENGTH) :: init_conditions_file, linear_mask_file
 		character (len=MAXFILELENGTH), dimension(:), allocatable::boundary_files,ext_wind_files
 		character (len=MAXFILELENGTH) :: output_file,restart_file,output_file_frequency
 
@@ -243,7 +244,7 @@ module data_structures
 										pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar,hgtvar, &
 										shvar,lhvar,pblhvar,zvar, &
 										soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
-										vegtype_var,vegfrac_var
+										vegtype_var,vegfrac_var, linear_mask_var
 		! various boolean options
 		logical :: ideal 				! this is an ideal simulation, forcing will be held constant
 		logical :: readz 				! read atmospheric grid elevations from file
@@ -282,11 +283,16 @@ module data_structures
 		real :: inputinterval  			! time steps per input
 		real :: smooth_wind_distance 	! distance over which to smooth the forcing wind field (m)
 		real :: N_squared				! static Brunt Vaisala Frequency (N^2) to use
+		real :: rm_N_squared			! static Brunt Vaisala Frequency (N^2) to use in removing linear wind field
 		real :: linear_contribution     ! fractional contribution of linear perturbation to wind field (e.g. u_hat multiplied by this)
+		real :: rm_linear_contribution  ! fractional contribution of linear perturbation to wind field to remove from the low-res field
 		logical :: spatial_linear_fields! use a spatially varying linear wind perturbation
+		logical :: time_varying_z       ! read in a new z coordinate every time step and interpolate accordingly
+		logical :: linear_mask 			! use a spatial mask for the linear wind field
 		
 		! date/time parameters
-		double precision :: initial_mjd ! Modified Julian Day of the first model time step [days]
+		double precision :: initial_mjd ! Modified Julian Day of the first forcing time step [days]
+		double precision :: start_mjd   ! Modified Julian Day of the date to start running the model [days]
 		double precision :: time_zero   ! Starting model initial time step (mjd-50000)*3600 [s]
 
 		real :: t_offset				! offset to temperature because WRF outputs potential temperature-300

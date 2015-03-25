@@ -24,6 +24,7 @@ contains
 			call calendar_date(mjd_input, year, month, day, hour, minute, second)
 			mjd_output=date_to_mjd(year, month, day, hour, minute, second)
 			
+			! test that month and day values are at least realistic (rare to fail)
 			if ((day<1).or.(day>31)) then
 				calendar_test=.False.
 				write(error,'(6I6, " Error:",f10.6)') year, month, day, hour, minute, second, (mjd_output-mjd_input)
@@ -54,7 +55,8 @@ contains
 				print*, " "
 				EXIT MJDLOOP
 			endif
-				
+			
+			! this is the main test it is likely to fail
 			if (abs(mjd_output-mjd_input)>MAX_ERROR) then
 				calendar_test=.False.
 				write(error,'(6I6, " Error:",f10.6)') year, month, day, hour, minute, second, (mjd_output-mjd_input)
@@ -112,14 +114,17 @@ end module calendar_test_module
 program test_calendar
 	use calendar_test_module
 	integer, parameter :: NCALENDARS=5
-	character(len=STRING_LENGTH),dimension(NCALENDARS) :: calendars_to_test=["gregorian","standard","365-day","noleap","360-day"]
+	character(len=STRING_LENGTH),dimension(NCALENDARS) :: calendars_to_test
 	character(len=STRING_LENGTH) :: calendar_error
 	character(len=STRING_LENGTH) :: options
 	
 	integer :: current_calendar
 	integer :: error
 	logical :: file_exists
+	
+	calendars_to_test=[character(len=STRING_LENGTH) :: "gregorian","standard","365-day","noleap","360-day"]
 	options=""
+	
 	if (command_argument_count()>0) then
 		call get_command_argument(1,options, status=error)
 	endif
@@ -128,6 +133,7 @@ program test_calendar
 		print*, "calendar_test [detailed] [help]"
 		print*, "	detailed: print an entire year of dates for visual inspection"
 		print*, "	help: print this message"
+		stop
 	endif
 	
 	do current_calendar=1,NCALENDARS

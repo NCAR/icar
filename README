@@ -26,7 +26,7 @@ Compiling the model:
 		MODE=debugompslow	debug compile w/o optimizations but with OpenMP parallelization
 
 	make test
-		compiles various test programs (at the moment, only test_fftshift)
+		compiles various test programs (at the moment, only fftshift_test and calendar_test)
 	
 	add -jn to parallelize the compile over n processors (e.g. -j4 uses 4 processors if available)
 

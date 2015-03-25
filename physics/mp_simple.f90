@@ -230,6 +230,12 @@ module module_mp_simple
     end subroutine
     
     subroutine phase_change(p,t,q1,qmax,q2,Lheat,change_rate)
+		! convert from q1 (e.g. rain) to q2 (e.g. vapor)
+		! qmax = the maximum value for q2 (e.g. qv_sat)
+		! p = pressure (not used)
+		! t = temperature
+		! Lheat = latent heat associated with the phase change
+		! change_rate = fraction of q1 that can change in a timestep
         implicit none
         real, intent(inout)::t,q1,q2
         real,intent(in) :: p,qmax,change_rate,Lheat
@@ -286,11 +292,11 @@ module module_mp_simple
             if (qv<qvsat) then
                 if (qr>SMALL_VALUE) then
                     ! evaporate rain
-                    call phase_change(p,t,qr,qvsat,qv,L_evap,cloud2rain)
+                    call phase_change(p,t,qr,qvsat,qv,L_evap,1.0) !cloud2rain)
                 endif
                 if (qs>SMALL_VALUE) then
                     ! sublimate snow
-                    call phase_change(p,t,qs,qvsat,qv,L_subl,cloud2snow)
+                    call phase_change(p,t,qs,qvsat,qv,L_subl,1.0) !cloud2snow)
                 endif
             endif
         endif

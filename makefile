@@ -73,6 +73,14 @@ ifeq ($(NODENAME), Nomad.local)
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
 endif
+ifeq ($(NODENAME), dablam.rap.ucar.edu)
+	F90=gfortran
+	LIBFFT=/usr/local/fftw-3.3.4/lib
+	INCFFT=/usr/local/fftw-3.3.4/include
+	NCDF_PATH = /usr/local/netcdf
+	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
+	INCNETCDF = -I$(NCDF_PATH)/include
+endif
 # hydro-c1 cluster
 ifeq ($(NODENAME),hydro-c1)
 	F90=ifort
@@ -278,7 +286,8 @@ clean:
 allclean:cleanall
 
 cleanall: clean
-	rm icar fftshift_test calendar_test #geo_test wind_test #test_init
+	rm icar fftshift_test calendar_test
+	# geo_test wind_test #test_init
 
 test: fftshift_test calendar_test #geo_test wind_test #test_init
 
@@ -338,7 +347,7 @@ $(BUILD)string.o:$(UTIL)string.f90
 #   I/O routines
 ###################################################################
 
-$(BUILD)output.o:$(IO)output.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)time.o
+$(BUILD)output.o:$(IO)output.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)time.o $(BUILD)string.o
 	${F90} ${FFLAGS} -DVERSION=\"$(GIT_VERSION)\" $(PREPROC) $(IO)output.f90 -o $(BUILD)output.o
 
 $(BUILD)io_routines.o:$(IO)io_routines.f90 $(BUILD)data_structures.o

@@ -154,13 +154,13 @@ contains
 										hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,     &
 										pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
 										soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
-		                                vegtype_var,vegfrac_var
+		                                vegtype_var,vegfrac_var, linear_mask_var
 										
 		namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
 							landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar, &
 							hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi, &
 							soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
-		                    vegtype_var,vegfrac_var
+		                    vegtype_var,vegfrac_var, linear_mask_var
 		
 		hgtvar="HGT"
 		latvar="XLAT"
@@ -195,6 +195,7 @@ contains
 		soil_deept_var="" !"DEEPT"
 		vegtype_var="" !"VEGTYPE"
 		vegfrac_var="" !"VEGFRAC"
+		linear_mask_var="data"
 		
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=var_list)
@@ -243,6 +244,8 @@ contains
 		options%soil_deept_var=soil_deept_var
 		options%vegtype_var=vegtype_var
 		options%vegfrac_var=vegfrac_var
+		
+		options%linear_mask_var=linear_mask_var
 	end subroutine var_namelist
 	
 	subroutine parameters_namelist(filename,options)
@@ -252,13 +255,13 @@ contains
 		integer :: name_unit
 		
 		real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance
-		real    :: rotation_scale_height, N_squared,linear_contribution
+		real    :: rotation_scale_height, N_squared, rm_N_squared,linear_contribution, rm_linear_contribution
 		integer :: ntimesteps, nfiles, xmin, xmax, ymin, ymax, vert_smooth
 		integer :: nz, n_ext_winds,buffer, warning_level
 		logical :: ideal, readz, readdz, debug, external_winds, remove_lowres_linear, variable_N, &
 		           mean_winds, mean_fields, restart, add_low_topo, advect_density, high_res_soil_state, &
-				   use_agl_height, spatial_linear_fields
-		character(len=MAXFILELENGTH) :: date, calendar
+				   use_agl_height, spatial_linear_fields, time_varying_z, linear_mask
+		character(len=MAXFILELENGTH) :: date, calendar, start_date
 		integer :: year, month, day, hour, minute, second
 		
 		
@@ -266,7 +269,8 @@ contains
 							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,smooth_wind_distance, &
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
 							  date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, &
-							  N_squared,linear_contribution,use_agl_height, spatial_linear_fields
+							  N_squared,rm_N_squared,linear_contribution,rm_linear_contribution, use_agl_height,  &
+							  spatial_linear_fields, start_date, time_varying_z, linear_mask
 		
 ! 		default parameters
 		mean_fields=.False.
@@ -288,16 +292,22 @@ contains
 		ymin=   1
 		xmax= (-1)
 		ymax= (-1)
+		nz  = MAXLEVELS
 		smooth_wind_distance=-9999
 		vert_smooth=2
 		calendar="gregorian"
 		high_res_soil_state=.True.
 		rotation_scale_height=2000.0
-		N_squared=6.37e-5
+		N_squared=6.e-5
+		rm_N_squared=6.e-5
 		variable_N=.False.
 		linear_contribution=1.0
+		rm_linear_contribution=1.0
 		use_agl_height=.True.
 		spatial_linear_fields=.False.
+		start_date=""
+		time_varying_z=.False.
+		linear_mask=.False.
 		
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=parameters)
@@ -312,16 +322,6 @@ contains
 		endif
 			
 		
-		if (t_offset.eq.(-9999)) then
-			write(*,*), "WARNING, WARNING, WARNING"
-			write(*,*), "WARNING, WARNING, WARNING"
-			write(*,*), ""
-			write(*,*), "	Using default t_offset=300"
-			write(*,*), ""
-			write(*,*), "WARNING, WARNING, WARNING"
-			write(*,*), "WARNING, WARNING, WARNING"
-			t_offset=300
-		endif
 		if (smooth_wind_distance.eq.(-9999)) then
 			smooth_wind_distance=dxlow*3
 			write(*,*), "Default smoothing distance = lowdx*3 = ", smooth_wind_distance
@@ -358,6 +358,13 @@ contains
 		call parse_date(date, year, month, day, hour, minute, second)
 		call time_init(calendar)
 		options%initial_mjd=date_to_mjd(year, month, day, hour, minute, second)
+		if (start_date=="") then
+			options%start_mjd=options%initial_mjd
+		else
+			call parse_date(start_date, year, month, day, hour, minute, second)
+			options%start_mjd=date_to_mjd(year, month, day, hour, minute, second)
+		endif
+			
 		options%time_zero=((options%initial_mjd-50000) * 86400.0)
 		options%dx=dx
 		options%dxlow=dxlow
@@ -390,11 +397,14 @@ contains
 		options%ymax=ymax
 		
 		options%N_squared=N_squared
+		options%rm_N_squared=rm_N_squared
 		options%variable_N=variable_N
 		options%linear_contribution=linear_contribution
+		options%rm_linear_contribution=rm_linear_contribution
+		options%linear_mask = linear_mask
 
 		options%high_res_soil_state=high_res_soil_state
-		
+		options%time_varying_z=time_varying_z
 		
 	end subroutine parameters_namelist
 	
@@ -429,13 +439,22 @@ contains
 	subroutine options_check(options)
 		! Minimal error checking on option settings
 		implicit none
-		type(options_type), intent(in)::options
+		type(options_type), intent(inout)::options
 		
+		if (options%t_offset.eq.(-9999)) then
+			if (options%warning_level>0) then
+				write(*,*), "WARNING, WARNING, WARNING"
+				write(*,*), "WARNING, Using default t_offset=300"
+				write(*,*), "WARNING, WARNING, WARNING"
+			endif
+			options%t_offset=300
+		endif
+	
 		! convection can modify wind field, and ideal doesn't rebalance winds every timestep
 		if ((options%physics%convection.ne.0).and.(options%ideal)) then
 			if (options%warning_level>1) then
 				write(*,*) "WARNING WARNING WARNING"
-				write(*,*) "WARNING, running convection in ideal mode may be bad..."
+				write(*,*) "WARNING, Running convection in ideal mode may be bad..."
 				write(*,*) "WARNING WARNING WARNING"
 			endif
 			if (options%warning_level==10) then
@@ -457,8 +476,8 @@ contains
 		
 	end subroutine options_check
 	
-	subroutine init_restart(options_filename, options)
-		character(len=*), intent(in) :: options_filename
+	subroutine init_restart(filename, options)
+		character(len=*), intent(in) :: filename
 		type(options_type),intent(inout) :: options
 		
 		character(len=MAXFILELENGTH) :: init_conditions_file, output_file,restart_file
@@ -470,7 +489,7 @@ contains
 		restart_date=[-999,-999,-999,-999,-999,-999]
 		restart_step=-999
 		
-		open(io_newunit(name_unit), file=options_filename)
+		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=restart_info)
 		close(name_unit)
 		
@@ -502,38 +521,42 @@ contains
 		
 	end subroutine init_restart
 	
-	subroutine init_options(options_filename,options)
-! 		reads a series of options from a namelist file and stores them in the 
-! 		options data structure
+	! set up model levels, either read from a namelist, or from a default set of values
+	subroutine model_levels_namelist(filename,options)
 		implicit none
-		character(len=*), intent(in) :: options_filename
+		character(len=*), intent(in) :: filename
 		type(options_type), intent(inout) :: options
 		
-		character(len=MAXFILELENGTH) :: init_conditions_file, output_file
-		character(len=MAXFILELENGTH),allocatable:: boundary_files(:),ext_wind_files(:)
+		integer :: name_unit, this_level
 		real, allocatable, dimension(:) :: dz_levels
-   		real,dimension(45)::fulldz
-		integer :: name_unit
+		real, dimension(45) :: fulldz
 		
-! 		set up namelist structures
 		namelist /z_info/ dz_levels
-		namelist /files_list/ init_conditions_file,output_file,boundary_files
-		namelist /ext_winds_info/ ext_wind_files
-		
-		call version_check(options_filename,options)
-		call physics_namelist(options_filename,options)
-		call var_namelist(options_filename,options)
-		call parameters_namelist(options_filename,options)
+		this_level=1
 		
 		! read the z_info namelist if requested
 		if (options%readdz) then
-			allocate(dz_levels(options%nz),options%dz_levels(options%nz))
+			allocate(dz_levels(options%nz))
+			dz_levels=-999
 			
-			open(io_newunit(name_unit), file=options_filename)
+			open(io_newunit(name_unit), file=filename)
 			read(name_unit,nml=z_info)
 			close(name_unit)
 			
-			options%dz_levels=dz_levels
+			! if nz wasn't specified in the namelist, we assume a HUGE number of levels
+			! so now we have to figure out what the actual number of levels read was
+			if (options%nz==MAXLEVELS) then
+				do this_level=1,MAXLEVELS-1
+					if (dz_levels(this_level+1)<=0) then
+						options%nz=this_level
+						exit
+					endif
+				end do
+			endif
+			options%nz=this_level
+			allocate(options%dz_levels(options%nz))
+					
+			options%dz_levels(1:options%nz)=dz_levels(1:options%nz)
 			deallocate(dz_levels)
 		else
 		! if we are not reading dz from the namelist, use default values from a WRF run
@@ -542,17 +565,38 @@ contains
 				   251.,  258.,  265.,  365.,  379.,  395.,  413.,  432.,  453.,  476.,  503.,  533., &
 				   422.,  443.,  467.,  326.,  339.,  353.,  369.,  386.,  405.,  426.,  450.,  477., &
 				   455.,  429.,  396.,  357.,  311.,  325.,  340.,  356.,  356.]
+		   if (options%nz>45) then
+			   options%nz=45
+		   endif
  			allocate(options%dz_levels(options%nz))
 			options%dz_levels=fulldz(1:options%nz)
 		endif
 		
-		if (options%restart) then
-			call init_restart(options_filename,options)
-		endif
+	end subroutine model_levels_namelist
+	
+	
+	subroutine filename_namelist(filename, options)
+		! read in filenames from up to two namelists
+		! init_conditions_file = high res grid data
+		! boundary_files       = list of files for boundary conditions (low-res)
+		! ext_wind_files       = list of files to read wind data on the high-res grid (optional)
+		! linear_mask_file     = file to read a high-res fractional mask for the linear perturbation
+		implicit none
+		character(len=*), intent(in) :: filename
+		type(options_type), intent(inout) :: options
 
+		character(len=MAXFILELENGTH) :: init_conditions_file, output_file, linear_mask_file
+		character(len=MAXFILELENGTH), allocatable :: boundary_files(:), ext_wind_files(:)
+		integer :: name_unit
 		
+		! set up namelist structures
+		namelist /files_list/ init_conditions_file, output_file, boundary_files, linear_mask_file
+		namelist /ext_winds_info/ ext_wind_files
+		
+		linear_mask_file="MISSING"
 		allocate(boundary_files(options%nfiles))
-		open(io_newunit(name_unit), file=options_filename)
+		
+		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=files_list)
 		close(name_unit)
 		
@@ -563,11 +607,15 @@ contains
 		deallocate(boundary_files)
 		
 		options%output_file=output_file
+		if (trim(linear_mask_file)=="MISSING") then
+			linear_mask_file = options%init_conditions_file
+		endif
+		options%linear_mask_file=linear_mask_file
 		
 		if (options%external_winds) then
 			allocate(ext_wind_files(options%ext_winds_nfiles))
 			
-			open(io_newunit(name_unit), file=options_filename)
+			open(io_newunit(name_unit), file=filename)
 			read(name_unit,nml=ext_winds_info)
 			close(name_unit)
 			
@@ -576,6 +624,26 @@ contains
 			deallocate(ext_wind_files)
 		endif
 		
+	end subroutine filename_namelist
+	
+	subroutine init_options(options_filename,options)
+! 		reads a series of options from a namelist file and stores them in the 
+! 		options data structure
+		implicit none
+		character(len=*), intent(in) :: options_filename
+		type(options_type), intent(inout) :: options
+		
+		call version_check(options_filename,options)
+		call physics_namelist(options_filename,options)
+		call var_namelist(options_filename,options)
+		call parameters_namelist(options_filename,options)
+		call model_levels_namelist(options_filename, options)
+		
+		if (options%restart) then
+			call init_restart(options_filename,options)
+		endif
+
+		call filename_namelist(options_filename, options)
 		! check for any inconsistencies in the options requested
 		call options_check(options)
 	end subroutine init_options
@@ -1098,7 +1166,7 @@ contains
 	subroutine swap_z(bc)
 		type(bc_type), intent(inout) :: bc
 		real,allocatable,dimension(:,:,:) :: tempz
-		integer::nx,nz,ny
+		integer::nx,nz,ny, i
 		nx=size(bc%lowres_z,1)
 		nz=size(bc%lowres_z,2)
 		ny=size(bc%lowres_z,3)
@@ -1116,8 +1184,10 @@ contains
 		nz=size(tempz,2)
 		ny=size(tempz,3)
 		deallocate(bc%z)
-		allocate(bc%z(nx,nz,ny))
-		bc%z=tempz
+		allocate(bc%z(nx,ny,nz))
+		do i=1,nz
+			bc%z(:,:,i)=tempz(:,i,:)
+		end do
 		deallocate(tempz)
 		
 	end subroutine swap_z
@@ -1167,12 +1237,15 @@ contains
 		
 		! create the geographic look up table used to calculate boundary forcing data
 		write(*,*) "Setting up domain geographic Look Up Tables"
+		! NOTE: these first two geoLUTs are for translating from the mass grid to the U/V grids
+		! These are only used once to translate the terrain to those grids. 
 		! set up a look up table from low-res grid center to high-res u-offset coordinates
 		call geo_LUT(domain%u_geo,boundary)
 		call move_lut(boundary%geolut,u_temp_geo)
 		! set up a look up table from low-res grid center to high-res v-offset coordinates
 		call geo_LUT(domain%v_geo,boundary)
 		call move_lut(boundary%geolut,v_temp_geo)
+		! main geoLUTs
 		call geo_LUT(domain,boundary)
 		call geo_LUT(domain%u_geo,boundary%u_geo)
 		call geo_LUT(domain%v_geo,boundary%v_geo)
@@ -1237,10 +1310,7 @@ contains
 		call destroy_lut(v_temp_geo)
 		call destroy_lut(u_temp_geo)
 
-! 		call io_write3d("bc_lowresz-hgt.nc","data",boundary%lowres_z)
-! 		call io_write3d("u_hiresz-hgt.nc","data",domain%u_geo%z)
-! 		call io_write3d("v_hiresz-hgt.nc","data",domain%v_geo%z)
-!! WARNING, to do this with the use_agl_height options requires more though, don't just uncomment
+!! WARNING, to do this with the use_agl_height options requires more thought, don't just uncomment
 !! since this option has been deprecated previously, it is now simply removed.  
 ! 		if (options%add_low_topo) then
 ! 			domain%terrain=domain%terrain+(boundary%lowres_terrain-sum(boundary%lowres_terrain) &
@@ -1270,26 +1340,9 @@ contains
 			enddo
 		endif
 		
-! 		call io_write3di("vlutz1.nc","z",boundary%vert_lut%z(1,:,:,:))
-! 		call io_write3di("vlutz2.nc","z",boundary%vert_lut%z(2,:,:,:))
-! 		call io_write3d("vlutw1.nc","w",boundary%vert_lut%w(1,:,:,:))
-! 		call io_write3d("vlutw2.nc","w",boundary%vert_lut%w(2,:,:,:))
-!
-! 		call io_write3di("u_vlutz.nc","z",boundary%u_geo%vert_lut%z(1,:,:,:))
-! 		call io_write3d("u_vlutw.nc","w",boundary%u_geo%vert_lut%w(1,:,:,:))
-! 		call io_write3di("v_vlutz.nc","z",boundary%v_geo%vert_lut%z(1,:,:,:))
-! 		call io_write3d("v_vlutw.nc","w",boundary%v_geo%vert_lut%w(1,:,:,:))
-!
-! 		call io_write3d("bc_hires_z_u.nc","data",boundary%u_geo%z)
-! 		call io_write3d("bc_hires_z_v.nc","data",boundary%v_geo%z)
-! 		call io_write3d("domain_z_u.nc","data",domain%u_geo%z)
-! 		call io_write3d("domain_z_v.nc","data",domain%v_geo%z)
-! 		call io_write3d("bc_lowresz.nc","data",boundary%lowres_z)
-! 		call io_write3d("bc_hiresz.nc","data",boundary%z)
-! 		call io_write3d("domain_z.nc","data",domain%z)
-
 		! these are not longer needed and (without adjustments) are potentially unreliable (AGL vs ASL)
 		deallocate(boundary%v_geo%z,boundary%u_geo%z)
+		! swaps z and lowres_z (one of the cases where pointers would make life a lot easier)
 		call swap_z(boundary)
 		
 	end subroutine init_bc
