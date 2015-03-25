@@ -154,13 +154,13 @@ contains
 										hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,     &
 										pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
 										soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
-		                                vegtype_var,vegfrac_var
+		                                vegtype_var,vegfrac_var, linear_mask_var
 										
 		namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
 							landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar, &
 							hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi, &
 							soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
-		                    vegtype_var,vegfrac_var
+		                    vegtype_var,vegfrac_var, linear_mask_var
 		
 		hgtvar="HGT"
 		latvar="XLAT"
@@ -195,6 +195,7 @@ contains
 		soil_deept_var="" !"DEEPT"
 		vegtype_var="" !"VEGTYPE"
 		vegfrac_var="" !"VEGFRAC"
+		linear_mask_var="data"
 		
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=var_list)
@@ -243,6 +244,8 @@ contains
 		options%soil_deept_var=soil_deept_var
 		options%vegtype_var=vegtype_var
 		options%vegfrac_var=vegfrac_var
+		
+		options%linear_mask_var=linear_mask_var
 	end subroutine var_namelist
 	
 	subroutine parameters_namelist(filename,options)
@@ -257,7 +260,7 @@ contains
 		integer :: nz, n_ext_winds,buffer, warning_level
 		logical :: ideal, readz, readdz, debug, external_winds, remove_lowres_linear, variable_N, &
 		           mean_winds, mean_fields, restart, add_low_topo, advect_density, high_res_soil_state, &
-				   use_agl_height, spatial_linear_fields, time_varying_z
+				   use_agl_height, spatial_linear_fields, time_varying_z, linear_mask
 		character(len=MAXFILELENGTH) :: date, calendar, start_date
 		integer :: year, month, day, hour, minute, second
 		
@@ -267,7 +270,7 @@ contains
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
 							  date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, &
 							  N_squared,rm_N_squared,linear_contribution,rm_linear_contribution, use_agl_height,  &
-							  spatial_linear_fields, start_date, time_varying_z
+							  spatial_linear_fields, start_date, time_varying_z, linear_mask
 		
 ! 		default parameters
 		mean_fields=.False.
@@ -304,6 +307,7 @@ contains
 		spatial_linear_fields=.False.
 		start_date=""
 		time_varying_z=.False.
+		linear_mask=.False.
 		
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=parameters)
@@ -397,6 +401,7 @@ contains
 		options%variable_N=variable_N
 		options%linear_contribution=linear_contribution
 		options%rm_linear_contribution=rm_linear_contribution
+		options%linear_mask = linear_mask
 
 		options%high_res_soil_state=high_res_soil_state
 		options%time_varying_z=time_varying_z
@@ -471,8 +476,8 @@ contains
 		
 	end subroutine options_check
 	
-	subroutine init_restart(options_filename, options)
-		character(len=*), intent(in) :: options_filename
+	subroutine init_restart(filename, options)
+		character(len=*), intent(in) :: filename
 		type(options_type),intent(inout) :: options
 		
 		character(len=MAXFILELENGTH) :: init_conditions_file, output_file,restart_file
@@ -484,7 +489,7 @@ contains
 		restart_date=[-999,-999,-999,-999,-999,-999]
 		restart_step=-999
 		
-		open(io_newunit(name_unit), file=options_filename)
+		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=restart_info)
 		close(name_unit)
 		
@@ -516,37 +521,25 @@ contains
 		
 	end subroutine init_restart
 	
-	subroutine init_options(options_filename,options)
-! 		reads a series of options from a namelist file and stores them in the 
-! 		options data structure
+	! set up model levels, either read from a namelist, or from a default set of values
+	subroutine model_levels_namelist(filename,options)
 		implicit none
-		character(len=*), intent(in) :: options_filename
+		character(len=*), intent(in) :: filename
 		type(options_type), intent(inout) :: options
 		
-		character(len=MAXFILELENGTH) :: init_conditions_file, output_file
-		character(len=MAXFILELENGTH),allocatable:: boundary_files(:),ext_wind_files(:)
+		integer :: name_unit, this_level
 		real, allocatable, dimension(:) :: dz_levels
-   		real,dimension(45)::fulldz
-		integer :: name_unit
-		integer :: this_level
+		real, dimension(45) :: fulldz
 		
-! 		set up namelist structures
 		namelist /z_info/ dz_levels
-		namelist /files_list/ init_conditions_file,output_file,boundary_files
-		namelist /ext_winds_info/ ext_wind_files
-		
 		this_level=1
-		call version_check(options_filename,options)
-		call physics_namelist(options_filename,options)
-		call var_namelist(options_filename,options)
-		call parameters_namelist(options_filename,options)
 		
 		! read the z_info namelist if requested
 		if (options%readdz) then
 			allocate(dz_levels(options%nz))
 			dz_levels=-999
 			
-			open(io_newunit(name_unit), file=options_filename)
+			open(io_newunit(name_unit), file=filename)
 			read(name_unit,nml=z_info)
 			close(name_unit)
 			
@@ -579,13 +572,31 @@ contains
 			options%dz_levels=fulldz(1:options%nz)
 		endif
 		
-		if (options%restart) then
-			call init_restart(options_filename,options)
-		endif
+	end subroutine model_levels_namelist
+	
+	
+	subroutine filename_namelist(filename, options)
+		! read in filenames from up to two namelists
+		! init_conditions_file = high res grid data
+		! boundary_files       = list of files for boundary conditions (low-res)
+		! ext_wind_files       = list of files to read wind data on the high-res grid (optional)
+		! linear_mask_file     = file to read a high-res fractional mask for the linear perturbation
+		implicit none
+		character(len=*), intent(in) :: filename
+		type(options_type), intent(inout) :: options
 
+		character(len=MAXFILELENGTH) :: init_conditions_file, output_file, linear_mask_file
+		character(len=MAXFILELENGTH), allocatable :: boundary_files(:), ext_wind_files(:)
+		integer :: name_unit
 		
+		! set up namelist structures
+		namelist /files_list/ init_conditions_file, output_file, boundary_files, linear_mask_file
+		namelist /ext_winds_info/ ext_wind_files
+		
+		linear_mask_file="MISSING"
 		allocate(boundary_files(options%nfiles))
-		open(io_newunit(name_unit), file=options_filename)
+		
+		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=files_list)
 		close(name_unit)
 		
@@ -596,11 +607,15 @@ contains
 		deallocate(boundary_files)
 		
 		options%output_file=output_file
+		if (trim(linear_mask_file)=="MISSING") then
+			linear_mask_file = options%init_conditions_file
+		endif
+		options%linear_mask_file=linear_mask_file
 		
 		if (options%external_winds) then
 			allocate(ext_wind_files(options%ext_winds_nfiles))
 			
-			open(io_newunit(name_unit), file=options_filename)
+			open(io_newunit(name_unit), file=filename)
 			read(name_unit,nml=ext_winds_info)
 			close(name_unit)
 			
@@ -609,6 +624,26 @@ contains
 			deallocate(ext_wind_files)
 		endif
 		
+	end subroutine filename_namelist
+	
+	subroutine init_options(options_filename,options)
+! 		reads a series of options from a namelist file and stores them in the 
+! 		options data structure
+		implicit none
+		character(len=*), intent(in) :: options_filename
+		type(options_type), intent(inout) :: options
+		
+		call version_check(options_filename,options)
+		call physics_namelist(options_filename,options)
+		call var_namelist(options_filename,options)
+		call parameters_namelist(options_filename,options)
+		call model_levels_namelist(options_filename, options)
+		
+		if (options%restart) then
+			call init_restart(options_filename,options)
+		endif
+
+		call filename_namelist(options_filename, options)
 		! check for any inconsistencies in the options requested
 		call options_check(options)
 	end subroutine init_options

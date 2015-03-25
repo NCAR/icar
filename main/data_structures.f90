@@ -155,6 +155,7 @@ module data_structures
 		real, allocatable, dimension(:,:,:)	:: u,v,dz,rho,th
 		type(interpolable_type)				:: u_geo,v_geo
 		real, allocatable, dimension(:,:)	:: terrain,dzdx,dzdy
+		real, allocatable, dimension(:,:)	:: linear_mask
 		complex(C_DOUBLE_COMPLEX), allocatable, dimension(:,:) :: fzs !FFT(terrain)
 		real::dx
 	end type linearizable_type
@@ -233,7 +234,7 @@ module data_structures
 		character (len=MAXVARLENGTH) :: version,comment
 
 		! file names
-		character (len=MAXFILELENGTH) :: init_conditions_file
+		character (len=MAXFILELENGTH) :: init_conditions_file, linear_mask_file
 		character (len=MAXFILELENGTH), dimension(:), allocatable::boundary_files,ext_wind_files
 		character (len=MAXFILELENGTH) :: output_file,restart_file,output_file_frequency
 
@@ -243,7 +244,7 @@ module data_structures
 										pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar,hgtvar, &
 										shvar,lhvar,pblhvar,zvar, &
 										soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
-										vegtype_var,vegfrac_var
+										vegtype_var,vegfrac_var, linear_mask_var
 		! various boolean options
 		logical :: ideal 				! this is an ideal simulation, forcing will be held constant
 		logical :: readz 				! read atmospheric grid elevations from file
@@ -287,6 +288,7 @@ module data_structures
 		real :: rm_linear_contribution  ! fractional contribution of linear perturbation to wind field to remove from the low-res field
 		logical :: spatial_linear_fields! use a spatially varying linear wind perturbation
 		logical :: time_varying_z       ! read in a new z coordinate every time step and interpolate accordingly
+		logical :: linear_mask 			! use a spatial mask for the linear wind field
 		
 		! date/time parameters
 		double precision :: initial_mjd ! Modified Julian Day of the first forcing time step [days]
