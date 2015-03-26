@@ -113,7 +113,7 @@
       REAL, PARAMETER, PRIVATE:: bv_i = 1.0
 
 !..Capacitance of sphere and plates/aggregates: D**3, D**2
-!      REAL, PARAMETER, PRIVATE:: C_cube = 0.5
+      REAL, PARAMETER, PRIVATE:: C_cube = 0.5
 !      REAL, PARAMETER, PRIVATE:: C_sqrd = 0.3
 
 !..Collection efficiencies.  Rain/snow/graupel collection of cloud
@@ -320,7 +320,7 @@
 
 ! TRUDE
       REAL, PRIVATE :: Nt_c, TNO, am_s,rho_g,av_s,bv_s,fv_s,av_g,bv_g,av_i,Ef_si,Ef_rs,Ef_rg,Ef_ri
-      REAL, PRIVATE :: C_cube,C_sqrd, mu_r, t_adjust
+      REAL, PRIVATE :: C_cubes,C_sqrd, mu_r, t_adjust
       LOGICAL, PRIVATE :: Ef_rw_l, Ef_sw_l
       REAL, PRIVATE :: am_g
 
@@ -340,7 +340,6 @@
 
 ! ++ trude
       type(mp_options_type), intent(in) :: mp_options
-!      REAL:: am_g
 ! -- trude
       INTEGER:: i, j, k, m, n
       LOGICAL:: micro_init
@@ -404,7 +403,7 @@
          Ef_rg = mp_options%Ef_rg
          Ef_si = mp_options%Ef_si
          Ef_ri = mp_options%Ef_ri
-         C_cube = mp_options%C_cube
+         C_cubes = mp_options%C_cubes
          C_sqrd = mp_options%C_sqrd
          mu_r = mp_options%mu_r
          t_adjust = mp_options%t_adjust
@@ -545,10 +544,8 @@
       t1_qs_qi = PI2*.25*av_s
 
 !..Evaporation of rain; ignore depositional growth of rain.
-      ! ++ trude
       t1_qr_ev = 0.78 * crg(10)
       t2_qr_ev = 0.308*Sc3*SQRT(av_r) * crg(11)
-! -- trude
 !..Sublimation/depositional growth of snow
       t1_qs_sd = 0.86
       t2_qs_sd = 0.28*Sc3*SQRT(av_s)
@@ -1862,8 +1859,12 @@
 !..Deposition/sublimation of snow/graupel follows Srivastava & Coen
 !.. (1992).
           if (L_qs(k)) then
-           C_snow = C_sqrd + (tempc+15.)*(C_cube-C_sqrd)/(-30.+15.)
-           C_snow = MAX(C_sqrd, MIN(C_snow, C_cube))
+!++ trude, use different c_cube for snow: c_cubes
+!           C_snow = C_sqrd + (tempc+15.)*(C_cube-C_sqrd)/(-30.+15.)
+!           C_snow = MAX(C_sqrd, MIN(C_snow, C_cube))
+           C_snow = C_sqrd + (tempc+15.)*(C_cubes-C_sqrd)/(-30.+15.)
+           C_snow = MAX(C_sqrd, MIN(C_snow, C_cubes))
+!! -- trude
            prs_sde(k) = C_snow*t1_subl*diffu(k)*ssati(k)*rvs &
                         * (t1_qs_sd*smo1(k) &
                          + t2_qs_sd*rhof2(k)*vsc2(k)*smof(k))
@@ -1956,9 +1957,14 @@
            if (tempc.gt.3.5 .or. rs(k).lt.0.005E-3) pnr_sml(k)=0.0
 
            if (ssati(k).lt. 0.) then
-            prs_sde(k) = C_cube*t1_subl*diffu(k)*ssati(k)*rvs &
+!++ trude, use different c_cube for snow: c_cubes
+!           C_snow = C_sqrd + (tempc+15.)*(C_cube-C_sqrd)/(-30.+15.)
+!           C_snow = MAX(C_sqrd, MIN(C_snow, C_cube))
+!            prs_sde(k) = C_cube*t1_subl*diffu(k)*ssati(k)*rvs &
+            prs_sde(k) = C_cubes*t1_subl*diffu(k)*ssati(k)*rvs &
                          * (t1_qs_sd*smo1(k) &
                           + t2_qs_sd*rhof2(k)*vsc2(k)*smof(k))
+! -- trude
             prs_sde(k) = MAX(DBLE(-rs(k)*odts), prs_sde(k))
            endif
           endif

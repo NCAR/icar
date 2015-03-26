@@ -51,15 +51,16 @@ contains
 		character(len=MAXFILELENGTH) :: options_filename
 !++ trude
 		character(len=MAXFILELENGTH) :: mp_options_filename
-		mp_options_filename=get_mp_options_file()
-		mp_options_filename="mp_options.nml"
 ! -- trude                
 
 		options_filename=get_options_file()
 ! 		read in options file
 		write(*,*) "Initializing Options"
 		call init_options(options_filename,options)
+
 ! ++ trude
+!               read in mp_options file
+                mp_options_filename  = options%mp_options_filename
 		write(*,*) "Initializing mp_Options"
 		call init_mp_options(mp_options_filename,options)
 ! -- trude
@@ -98,32 +99,7 @@ contains
 			stop("Options file does not exist. ")
 		endif
 	end function
-! ++ trude
-	function get_mp_options_file()
-		implicit none
-		character(len=MAXFILELENGTH) ::get_mp_options_file
-		integer :: error
-		logical :: file_exists
-	
-		if (command_argument_count()>0) then
-			call get_command_argument(1,get_mp_options_file, status=error)
-			if (error>0) then
-				get_mp_options_file="mp_options.nml"
-			elseif (error==-1) then
-				write(*,*) "MP Options filename = ", trim(get_mp_options_file), " ...<cutoff>"
-				write(*,*) "Maximum filename length = ", MAXFILELENGTH
-				stop("ERROR: mp options filename too long")
-			endif
-		else
-                         get_mp_options_file="mp_options.nml"
-		endif
-		write(*,*) "2 MP Options filename = ",  trim(get_mp_options_file)
-		INQUIRE(file=trim(get_mp_options_file), exist=file_exists)
-		if (.not.file_exists) then
-			stop("MP Options file does not exist. ")
-		endif
-	end function
-! -- trude	
+
 	subroutine init_physics(options,domain)
 		implicit none
 		type(options_type), intent(in) :: options
@@ -294,12 +270,16 @@ contains
 				   use_agl_height, spatial_linear_fields
 		character(len=MAXFILELENGTH) :: date, calendar
 		integer :: year, month, day, hour, minute, second
+! ++ trude
+		character(len=MAXFILELENGTH) :: mp_options_filename
+! -- trude
 
 		namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug,nfiles, &
 							  external_winds,buffer,n_ext_winds,add_low_topo,advect_density,smooth_wind_distance, &
 							  remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
 							  date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, &
-							  N_squared,linear_contribution,use_agl_height, spatial_linear_fields 
+							  N_squared,linear_contribution,use_agl_height, spatial_linear_fields,&
+                                                          mp_options_filename    ! trude added
 
 ! 		default parameters
 		mean_fields=.False.
@@ -331,6 +311,8 @@ contains
 		linear_contribution=1.0
 		use_agl_height=.True.
 		spatial_linear_fields=.False.
+
+                mp_options_filename = 'mp_options.nml'    ! trude added
 		
 		open(io_newunit(name_unit), file=filename)
 		read(name_unit,nml=parameters)
@@ -428,6 +410,8 @@ contains
 
 		options%high_res_soil_state=high_res_soil_state
 		
+                options%mp_options_filename  = mp_options_filename   ! trude added
+
 	end subroutine parameters_namelist
 
 ! ++ trude
@@ -438,11 +422,11 @@ contains
 		integer :: name_unit
 
                 real :: Nt_c, TNO, am_s,rho_g,av_s,bv_s,fv_s,av_g,bv_g,av_i,Ef_si,Ef_rs,Ef_rg,Ef_ri
-                real :: C_cube, C_sqrd, mu_r, t_adjust
+                real :: C_cubes, C_sqrd, mu_r, t_adjust
                 logical :: Ef_rw_l, EF_sw_l
 
 		namelist /parameters/ Nt_c,TNO, am_s, rho_g, av_s,bv_s,fv_s,av_g,bv_g,av_i,Ef_si,Ef_rs,Ef_rg,Ef_ri,&     ! trude added Nt_c, TNO
-                                                          C_cube,C_sqrd, mu_r, Ef_rw_l, Ef_sw_l, t_adjust
+                                                          C_cubes,C_sqrd, mu_r, Ef_rw_l, Ef_sw_l, t_adjust
 ! 		default parameters
                 Nt_c = 100.e6           !  50, 100,500,1000
                 TNO = 5.0                 !  0.5, 5, 50 
@@ -458,7 +442,7 @@ contains
                 Ef_rs = 0.95               ! 1
                 Ef_rg = 0.75               ! 1
                 Ef_ri = 0.95                ! 1 
-                C_cube = 0.5            !0.25 Based on Thesis paper "Validation and Improvements of Simulated Cloud Microphysics and Orographic Precipitation over the Pacific Northwest"
+                C_cubes = 0.5            !0.25 Based on Thesis paper "Validation and Improvements of Simulated Cloud Microphysics and Orographic Precipitation over the Pacific Northwest"
                 C_sqrd  = 0.3
                 mu_r = 0.                   ! 1, 2, 5
                 t_adjust = 0.0           ! -5, 10, 15
@@ -485,7 +469,7 @@ contains
                 options%mp_options%Ef_ri = Ef_ri
                 options%mp_options%mu_r = mu_r
                 options%mp_options%t_adjust = t_adjust
-                options%mp_options%C_cube = C_cube
+                options%mp_options%C_cubes = C_cubes
                 options%mp_options%C_sqrd = C_sqrd
                 options%mp_options%Ef_rw_l = Ef_rw_l
                 options%mp_options%Ef_sw_l = Ef_sw_l
@@ -619,7 +603,7 @@ contains
 		call physics_namelist(options_filename,options)
 		call var_namelist(options_filename,options)
 		call parameters_namelist(options_filename,options)
-		
+
 		! read the z_info namelist if requested
 		if (options%readdz) then
 			allocate(dz_levels(options%nz),options%dz_levels(options%nz))
@@ -684,7 +668,7 @@ contains
 		type(options_type), intent(inout) :: options
 				
 ! 		set up namelist structures
-		write(*,*) mp_options_filename
+
 		call version_check(mp_options_filename,options)
 		call parameters_mp_namelist(mp_options_filename,options)
 ! NBNBNB trude, check if I can comment these 3 lines out		

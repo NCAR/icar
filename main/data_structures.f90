@@ -235,7 +235,7 @@ module data_structures
                  real :: av_s, bv_s, fv_s, av_i
                  real :: av_g, bv_g
                  real :: Ef_si, Ef_rs, Ef_rg, Ef_ri
-                 real :: C_cube, C_sqrd
+                 real :: C_cubes, C_sqrd
                  real :: mu_r
                  real :: t_adjust
                  logical :: Ef_rw_l, EF_sw_l
@@ -259,6 +259,10 @@ module data_structures
 										shvar,lhvar,pblhvar,zvar, &
 										soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
 										vegtype_var,vegfrac_var
+!! ++ trude
+ 		character(len=MAXFILELENGTH) :: mp_options_filename
+!! -- trude
+
 		! various boolean options
 		logical :: ideal 				! this is an ideal simulation, forcing will be held constant
 		logical :: readz 				! read atmospheric grid elevations from file
