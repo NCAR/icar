@@ -242,21 +242,26 @@ module module_mp_simple
         real :: mass2temp,delta
         mass2temp=Lheat/heat_capacity!*(p/(R*t)*dV))
         
-        delta=q1-(q1*change_rate)
+        delta=(qmax-q2)*change_rate
+		if (delta>q1) delta=q1
         ! hopefully we don't over shoot saturation (use a 10% buffer)
-        if (delta>((qmax-q2)*0.90)) then
-            delta=(qmax-q2)*0.90
+        if (delta>((qmax-q2)*0.99)) then
+            delta=(qmax-q2)*0.99
         endif
         
         q1=q1-delta
 		if (q1<0) then 
-			print*, "phase_change"
-			print*, q1,q2,delta,qmax,change_rate
-			stop
+			if ((q1+SMALL_VALUE)<0) then
+				q1=0
+			else
+				print*, "phase_change"
+				print*, q1,q2,delta,qmax,change_rate
+				stop
+			endif
 		endif
         q2=q2+delta
         t=t+delta*mass2temp
-    
+		
     end subroutine
     
     subroutine mp_conversions(p,t,qv,qc,qr,qs,dt)
@@ -334,8 +339,12 @@ module module_mp_simple
         logical,intent(in)::debug
         
         real,dimension(nz)::fall_rate
-        real::cfl,snowfall
-        integer::i
+        real::cfl,snowfall, qvsat
+        integer::i,cfl_step
+        real :: L_evap,L_subl,L_melt
+        
+        qvsat=1
+        L_melt=-1*LH_liquid  ! J/kg (should change with temperature)
         
         if ((debug).and.(dt<1)) print*, "internal dt=",dt
         do i=1,nz
@@ -350,8 +359,19 @@ module module_mp_simple
             cfl=ceiling(maxval(dt/dz*fall_rate))
             fall_rate=dt*fall_rate/cfl
             ! substepping to satisfy CFL criteria
-            do i=1,nint(cfl)
+            do cfl_step=1,nint(cfl)
                 rain=rain+sediment(qr,fall_rate,rho,dz,nz)
+				! allow any rain that reached a unsaturated layer to evaporate
+				do i=1,nz
+			        L_evap=-1*(LH_vapor+(373.15-t(i))*dLHvdt)   ! J/kg
+					qvsat=sat_mr(t(i),p(i))
+		            if (qv(i)<qvsat) then
+		                if (qr(i)>SMALL_VALUE) then
+		                    ! evaporate rain
+		                    call phase_change(p(i),t(i),qr(i),qvsat,qv(i),L_evap,1.0) !cloud2rain)
+		                endif
+					endif
+				enddo
             enddo
         endif
         
@@ -361,10 +381,22 @@ module module_mp_simple
             cfl=ceiling(maxval(dt/dz*fall_rate))
             fall_rate=dt*fall_rate/cfl
             ! substepping to satisfy CFL criteria
-            do i=1,nint(cfl)
+            do cfl_step=1,nint(cfl)
                 snowfall=sediment(qs,fall_rate,rho,dz,nz)
                 snow=snow+snowfall
                 rain=rain+snowfall
+				! allow any snow that reached a unsaturated layer to sublimate
+				do i=1,nz
+			        L_evap=-1*(LH_vapor+(373.15-t(i))*dLHvdt)   ! J/kg
+			        L_subl=L_melt+L_evap ! J/kg
+					qvsat=sat_mr(t(i),p(i))
+		            if (qv(i)<qvsat) then
+		                if (qs(i)>SMALL_VALUE) then
+		                    ! sublimate snow
+		                    call phase_change(p(i),t(i),qs(i),qvsat,qv(i),L_subl,1.0) !cloud2snow)
+		                endif
+					endif
+				enddo
             enddo
         endif
 !         do i=1,nz
