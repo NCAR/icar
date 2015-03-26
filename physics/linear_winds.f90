@@ -51,7 +51,7 @@ module linear_theory_winds
 	type(C_PTR) :: uh_aligned_data, u_h_aligned_data, vh_aligned_data, v_h_aligned_data
     type(C_PTR), allocatable :: uplans(:), vplans(:)
 	
-	integer::buffer, original_buffer=25 ! number of grid cells to buffer around the domain MUST be >=1
+	integer::buffer, original_buffer=50 ! number of grid cells to buffer around the domain MUST be >=1
 	integer,parameter::stability_window_size=2
 	
 	real, parameter :: max_stability= 5e-4 ! limits on the calculated Brunt Vaisala Frequency
