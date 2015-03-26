@@ -22,8 +22,8 @@ def load_wrf(filename, preciponly=False):
     """docstring for load_wrf"""
     time=15
     precip=mygis.read_nc(filename,"RAINNC").data
-    precip=precip[time+15,1,:] - precip[time-5,1,:]
-    precip/=10.0 # 20 outputsteps = 10 hours
+    precip=precip[time+25,1,:] - precip[time-5,1,:]
+    precip/=15.0 # 30 outputsteps = 15 hours
     if preciponly:
         return Bunch(precip=precip,hgt=None)
     
@@ -44,13 +44,14 @@ def load_wrf(filename, preciponly=False):
 
 def load_icar(filename,h,preciponly=False):
     """docstring for load_wrf"""
-    run_num=filename.split("out")[-1]
-    last_file=filename.replace(run_num,("{0:0"+str(len(run_num))+"}").format(int(run_num)-1))
-    precip=mygis.read_nc(filename,"rain").data[1,...] - mygis.read_nc(last_file,"rain").data[1,...]
+    # run_num=filename.split("out")[-1]
+    # last_file=filename.replace(run_num,("{0:0"+str(len(run_num))+"}").format(int(run_num)-1))
+    precip=mygis.read_nc(filename,"rain").data
+    precip=precip[11,1]-precip[10,1]
     if preciponly:
         return Bunch(precip=precip)
         
-    u=mygis.read_nc(filename,"u").data[1,...]
+    u=mygis.read_nc(filename,"u").data[0,1,...]
     # dudx=-np.diff(u,axis=1)
     dudx=u[:,:-1]-u[:,1:]
     
@@ -65,13 +66,13 @@ def load_icar(filename,h,preciponly=False):
     dz=np.diff(h)
     # w1=u[:,1:-1]*np.sin(np.arctan(dz[np.newaxis,:]/dx))
     # w1=u[:,1:-1]*dz[np.newaxis,:]/np.sqrt(dz[np.newaxis,:]**2 + dx**2)
-    w1=u[:,:-2]*dz[np.newaxis,:]/dx
+    w1=u[:,1:-1]*dz[np.newaxis,:]/dx
     w1=(w1[:,1:]+w1[:,:-1])/2.0 # * dz_levels[:,np.newaxis]/dx # *10.0
     
     w2=dudx*dz_levels[:,np.newaxis]/dx
     for i in range(1,nz):
         w2[i,:]+=w2[i-1,:]
-    w2=w2[:,:-2]
+    w2=w2[:,1:-1]
     
     w=z*0
     w[:,1:-1]=w1+w2
@@ -151,7 +152,7 @@ def vinterp(d1,d2):
     
     return newdata
 
-def main(wrf_file,icar_file,output_file,makeplot=True,getPrecip=True,Ndsq=None,t=None,add_dir=None):
+def main(wrf_file,icar_file,output_file,makeplot=True,getPrecip=True,Ndsq=None,t=None,add_file=None):
     """docstring for main"""
     if Ndsq==None:
         Ndsq=icar_file.split("_ns")[1][:3]
@@ -163,8 +164,8 @@ def main(wrf_file,icar_file,output_file,makeplot=True,getPrecip=True,Ndsq=None,t
     
     wrfdata=load_wrf(wrf_file,preciponly=False)
     icardata=load_icar(icar_file,wrfdata.hgt,preciponly=False)
-    if add_dir:
-        icar2=load_icar(add_dir+icar_file,wrfdata.hgt,preciponly=False)
+    if add_file:
+        icar2=load_icar(add_file,wrfdata.hgt,preciponly=False)
     linear_data=load_linear(wrfdata.hgt,T2m=t,u=icardata.u,v=0,levels=icardata.z[:,0],Ndsq=Ndsq,dthdz=3.0)
     
     if not getPrecip:
@@ -228,8 +229,8 @@ def main(wrf_file,icar_file,output_file,makeplot=True,getPrecip=True,Ndsq=None,t
         print("ICAR-l",icardata.precip[150:250].mean())
         print("WRF",wrfdata.precip[150:250].mean())
         print("linear",linear_data.precip[150:250].mean())
-        if add_dir:
-            label=add_dir.split("_")[0]
+        if add_file:
+            label=add_file.split("_")[0]
             label="ICAR-t"
             plt.plot(icar2.precip[150:250]+offset,color="blue",label=label,linewidth=precip_width)
             print("ICAR",icar2.precip[150:250].mean())
@@ -248,6 +249,7 @@ def main(wrf_file,icar_file,output_file,makeplot=True,getPrecip=True,Ndsq=None,t
         # plt.xlim(150,250)
     
         case=wrf_file.split("/")[0]
+        print("OUTPUT = wfiles/"+case+"_"+output_file+"_w.png")
         plt.savefig("wfiles/"+case+"_"+output_file+"_w.png")
     
     return iwrf,icardata,linear_data
@@ -280,5 +282,7 @@ if __name__ == '__main__':
     if len(sys.argv)==4:
         main(sys.argv[1],sys.argv[2],sys.argv[3])
     if len(sys.argv)==5:
-        main(sys.argv[1],sys.argv[2],sys.argv[3],add_dir=sys.argv[4])
-        
+        main(sys.argv[1],sys.argv[2],sys.argv[3],makeplot=True, getPrecip=False, Ndsq=6e-5,add_file=sys.argv[4])
+        # main(sys.argv[1],sys.argv[2],sys.argv[3],makeplot=True, getPrecip=False, Ndsq=6e-5,add_file=sys.argv[4])
+    #main(wrf_file,icar_file,output_file,makeplot=True,getPrecip=True,Ndsq=None,t=None,add_file=None)
+    

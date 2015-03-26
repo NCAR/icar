@@ -552,8 +552,8 @@ contains
 						exit
 					endif
 				end do
+				options%nz=this_level
 			endif
-			options%nz=this_level
 			allocate(options%dz_levels(options%nz))
 					
 			options%dz_levels(1:options%nz)=dz_levels(1:options%nz)

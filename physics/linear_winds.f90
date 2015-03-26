@@ -51,7 +51,7 @@ module linear_theory_winds
 	type(C_PTR) :: uh_aligned_data, u_h_aligned_data, vh_aligned_data, v_h_aligned_data
     type(C_PTR), allocatable :: uplans(:), vplans(:)
 	
-	integer::buffer=25 ! number of grid cells to buffer around the domain MUST be >=1
+	integer::buffer, original_buffer=25 ! number of grid cells to buffer around the domain MUST be >=1
 	integer,parameter::stability_window_size=2
 	
 	real, parameter :: max_stability= 5e-4 ! limits on the calculated Brunt Vaisala Frequency
@@ -345,13 +345,8 @@ contains
 				call ifftshift(uhat, fixed_axis=z)
 				call ifftshift(vhat, fixed_axis=z)
 			
-! 	            plan = fftw_plan_dft_2d(ny,nx, uhat,u_hat, FFTW_BACKWARD,FFTW_ESTIMATE)
 	            call fftw_execute_dft(uplans(z), uhat(:,:,z),u_hat(:,:,z))
-! 	            call fftw_destroy_plan(plan)
-				
-! 	            plan = fftw_plan_dft_2d(ny,nx, vhat,v_hat, FFTW_BACKWARD,FFTW_ESTIMATE)
 	            call fftw_execute_dft(vplans(z), vhat(:,:,z),v_hat(:,:,z))
-! 	            call fftw_destroy_plan(plan)
 				
 				! the linear_mask field only applies to the high res grid (for now at least)
 				! NOTE: we should be able to do this without the loop, but ifort -O was giving the wrong answer... 
@@ -450,7 +445,6 @@ contains
 		allocate(buffer_topo(nx,ny))
 		buffer_topo=minval(terrain)
 		
-		print*, buffer, nx, ny
 		buffer_topo(1+buffer:nx-buffer,1+buffer:ny-buffer)=terrain
 		do i=1,buffer
 			weight=i/(real(buffer)*2)
@@ -497,10 +491,10 @@ contains
 				end do
 			end do
 		endif
-		allocate(real_terrain(nx,ny))
-		real_terrain=buffer_topo
-		call io_write2d("complex_terrain.nc","data",real_terrain)
-		deallocate(real_terrain)
+! 		allocate(real_terrain(nx,ny))
+! 		real_terrain=buffer_topo
+! 		call io_write2d("complex_terrain.nc","data",real_terrain)
+! 		deallocate(real_terrain)
 		
 	end subroutine add_buffer_topo
 	
@@ -512,17 +506,20 @@ contains
 		logical, intent(in) :: reverse,useDensity
 		real, allocatable, dimension(:,:,:) :: savedU, savedV
 		real :: u,v
-		integer :: nx,ny,nz,i,j,ii
+		integer :: nx,ny,nz,i,j,ii, nxu,nyv
 		logical :: debug
 		
 		! the domain to work over
-		nx=size(domain%u,1)-1
+		nx=size(domain%lat,1)
 		nz=size(domain%u,2)
-		ny=size(domain%u,3)
+		ny=size(domain%lat,2)
+
+		nxu=size(domain%u,1)
+		nyv=size(domain%v,3)
 		
 		! save the old U and V values so we can restore them
-		allocate(savedU(nx+1,nz,ny))
-		allocate(savedV(nx,nz,ny+1))
+		allocate(savedU(nxu,nz,ny))
+		allocate(savedV(nx,nz,nyv))
 		savedU=domain%u
 		savedV=domain%v
 		
@@ -540,13 +537,13 @@ contains
 		
 		! allocate the (LARGE) look up tables for both U and V
 		if (reverse) then
-			allocate(rev_u_LUT(n_U_values,n_V_values,nx+1,nz,ny))
-			allocate(rev_v_LUT(n_U_values,n_V_values,nx,nz,ny+1))
+			allocate(rev_u_LUT(n_U_values,n_V_values,nxu,nz,ny))
+			allocate(rev_v_LUT(n_U_values,n_V_values,nx,nz,nyv))
 			u_LUT=>rev_u_LUT
 			v_LUT=>rev_v_LUT
 		else
-			allocate(hi_u_LUT(n_U_values,n_V_values,nx+1,nz,ny))
-			allocate(hi_v_LUT(n_U_values,n_V_values,nx,nz,ny+1))
+			allocate(hi_u_LUT(n_U_values,n_V_values,nxu,nz,ny))
+			allocate(hi_v_LUT(n_U_values,n_V_values,nx,nz,nyv))
 			u_LUT=>hi_u_LUT
 			v_LUT=>hi_v_LUT
 		endif
@@ -709,13 +706,16 @@ contains
 		
 		! store module level variables so we don't have to pass options through everytime
 		variable_N=options%variable_N
+		buffer = original_buffer
+		if (.not.options%ideal) then
+			call add_buffer_topo(domain%terrain,complex_terrain_firstpass,5)
+			buffer=2
+			call add_buffer_topo(real(real(complex_terrain_firstpass)),complex_terrain,0)
+			buffer=buffer+original_buffer
+		else
+			call add_buffer_topo(domain%terrain,complex_terrain,0)
+		endif
 		
-! 		call add_buffer_topo(domain%terrain,complex_terrain,5)
-		call add_buffer_topo(domain%terrain,complex_terrain_firstpass,5)
-		save_buffer=buffer
-		buffer=2
-		call add_buffer_topo(real(real(complex_terrain_firstpass)),complex_terrain,0)
-		buffer=buffer+save_buffer
 		
         nx=size(complex_terrain,1)
         ny=size(complex_terrain,2)
