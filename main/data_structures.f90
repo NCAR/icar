@@ -326,8 +326,9 @@ module data_structures
 		
 		! defines which physics package to be used. 
 		type(physics_type)::physics
-!! ++ trude
 		! parameterization options
+		logical :: use_mp_options
+!! ++ trude
         type(mp_options_type)::mp_options
 !! -- trude
 		integer :: warning_level        ! level of warnings to issue when checking options settings 0-10.  
