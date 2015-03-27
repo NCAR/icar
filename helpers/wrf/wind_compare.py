@@ -84,8 +84,8 @@ def load_linear(zs,T2m=260,u=10.0,v=0,levels=np.array([250,750]),Ndsq=6e-5,dthdz
     
     mean_wind=np.round(np.mean(u))
     U = mean_wind # dont ask... need to figure this out though
-    print(U)
-    print(T2m)
+    # print(U)
+    # print(T2m)
     V = 0
     z=0.0
     dx,dy=2000.0,2000.0
@@ -96,7 +96,7 @@ def load_linear(zs,T2m=260,u=10.0,v=0,levels=np.array([250,750]),Ndsq=6e-5,dthdz
     
     (Fzs,params) = ideal_linear.get_params(T2m,U,Ndsq,zs,env_gamma)
     # params.tauf*=2
-    print(params)
+    # print(params)
     (Pt,w,U3d,z3d)=ideal_linear.solve(Fzs,U,dx,params,zlevels=levels)
     
     return Bunch(w=w,z=levels,z3d=z3d,hgt=zs,u=U3d,precip=Pt*3600)
@@ -160,8 +160,8 @@ def main(wrf_file,icar_file,output_file,makeplot=True,getPrecip=True,Ndsq=None,t
     if t==None:
         case=wrf_file.split("/")[0]
         t=float(case.split("_")[3])
-    print(Ndsq,t)
-    
+    # print(Ndsq,t)
+    dx=2.0 # km
     wrfdata=load_wrf(wrf_file,preciponly=False)
     icardata=load_icar(icar_file,wrfdata.hgt,preciponly=False)
     if add_file:
@@ -177,8 +177,8 @@ def main(wrf_file,icar_file,output_file,makeplot=True,getPrecip=True,Ndsq=None,t
     # lim=10
     if makeplot:
         lim=2
-        plt.figure(figsize=(13,7))
         if not getPrecip:
+            fig=plt.figure(figsize=(13,7))
             plt.subplot(221)
             # plt.imshow(icardata.u-icardata.u.mean(),cmap=plt.cm.seismic)
             plt.imshow(icardata.w,cmap=plt.cm.seismic)
@@ -216,24 +216,29 @@ def main(wrf_file,icar_file,output_file,makeplot=True,getPrecip=True,Ndsq=None,t
             plt.plot([0,100],[0,0],color="black",linestyle="--")
         
         if getPrecip:
+            fig=plt.figure(figsize=(10,7))
             offset=0
         else:
             offset=-1.5
         precip_width=3
         precip_max=3.5
-        plt.plot([50,50],[offset,precip_max+offset],color="black",linestyle=":",linewidth=precip_width)
+        x=np.arange(100)*dx
+        plot = fig.add_subplot(111)
+        plot.tick_params(axis='both', which='major', labelsize=16)
+        
         plt.plot(linear_data.precip[150:250]+offset,color="red",label="Linear",linewidth=precip_width)
         plt.plot(wrfdata.precip[150:250]+offset,color="black",label="WRF",linewidth=precip_width)
-        plt.plot(icardata.precip[150:250]+offset,color="green",label="ICAR-l",linewidth=precip_width)
+        plt.plot(icardata.precip[150:250]+offset,color="green",label="ICAR-t",linewidth=precip_width)
+        plt.plot([50*dx,50*dx],[offset,precip_max+offset],color="black",linestyle=":",linewidth=precip_width)
         print("case: "+" ".join(wrf_file.split("/")[0].split("_")[1:]))
-        print("ICAR-l",icardata.precip[150:250].mean())
-        print("WRF",wrfdata.precip[150:250].mean())
-        print("linear",linear_data.precip[150:250].mean())
+        print("ICAR-t "+str(icardata.precip[150:250].mean()))
+        print("WRF "+str(wrfdata.precip[150:250].mean()))
+        print("linear "+str(linear_data.precip[150:250].mean()))
         if add_file:
             label=add_file.split("_")[0]
-            label="ICAR-t"
+            label="ICAR-l"
             plt.plot(icar2.precip[150:250]+offset,color="blue",label=label,linewidth=precip_width)
-            print("ICAR",icar2.precip[150:250].mean())
+            print("ICAR-l "+str(icar2.precip[150:250].mean()))
         if getPrecip:
             case=wrf_file.split("/")[0].split("_")[1:]
             plt.text(10, 2.0+offset, " U   ={0[0]}m/s\n RH={0[1]}\n T   ={0[2]}".format(case),fontsize=28)
@@ -249,10 +254,12 @@ def main(wrf_file,icar_file,output_file,makeplot=True,getPrecip=True,Ndsq=None,t
         # plt.xlim(150,250)
     
         case=wrf_file.split("/")[0]
-        print("OUTPUT = wfiles/"+case+"_"+output_file+"_w.png")
+        # print("OUTPUT = wfiles/"+case+"_"+output_file+"_w.png")
         plt.savefig("wfiles/"+case+"_"+output_file+"_w.png")
+        plt.close()
+        
     
-    return iwrf,icardata,linear_data
+    return iwrf,icardata, icar2,linear_data
 
 bad_cases=[
     "wind_10_0.99_280_3",
@@ -269,7 +276,7 @@ def mean_precip(Nsquared="1e4"):
         if not (case in bad_cases):
             wrf_file=glob.glob(case+"/wrfout_*")[0]
             icar_file=glob.glob(case+"/output_ns"+Nsquared+"/icar_out00010")[0]
-            wrf,icar,linear=main(wrf_file,icar_file,Nsquared,makeplot=False,getPrecip=True,Ndsq=float(Nsquared.replace("e","e-")))
+            wrf,icar,icar2,linear=main(wrf_file,icar_file,Nsquared,makeplot=False,getPrecip=True,Ndsq=float(Nsquared.replace("e","e-")))
             
             output.append([wrf.precip[150:250].mean(),icar.precip[150:250].mean(),linear.precip[150:250].mean()])
             full_data.append([wrf.precip[150:250],icar.precip[150:250]])
