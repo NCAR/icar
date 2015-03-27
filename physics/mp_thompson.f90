@@ -33,6 +33,7 @@
 !+---+-----------------------------------------------------------------+
 !
       MODULE module_mp_thompson
+	use data_structures    ! trude added
 
 !       USE module_wrf_error
 ! 		USE module_mp_radar
@@ -44,12 +45,13 @@
       LOGICAL, PARAMETER, PRIVATE:: iiwarm = .false.
       INTEGER, PARAMETER, PRIVATE:: IFDRY = 0
       REAL, PARAMETER, PRIVATE:: T_0 = 273.15
-      REAL, PARAMETER, PRIVATE:: PI = 3.1415926536
+!      REAL, PARAMETER, PRIVATE:: PI = 3.1415926536  !trude added. Note, pi is defined in data_structures, and conflict with definition here. Need to determine what to to about it. 
+      REAL, PARAMETER, PRIVATE:: PI2 = 3.1415926536  !trude added. Note, pi is defined in data_structures, and conflict with definition here. Need to determine what to to about it. 
 
 !..Densities of rain, snow, graupel, and cloud ice.
       REAL, PARAMETER, PRIVATE:: rho_w = 1000.0
-      REAL, PARAMETER, PRIVATE:: rho_s = 100.0
-      REAL, PARAMETER, PRIVATE:: rho_g = 500.0
+      REAL, PARAMETER, PRIVATE:: rho_s = 100.0  
+ !     REAL, PARAMETER, PRIVATE:: rho_g = 500.0   ! trude commented out for changing from parameter to input variable
       REAL, PARAMETER, PRIVATE:: rho_i = 890.0
 
 !..Prescribed number of cloud droplets.  Set according to known data or
@@ -57,11 +59,12 @@
 !.. 300 per cc (300.E6 m^-3) for Continental.  Gamma shape parameter,
 !.. mu_c, calculated based on Nt_c is important in autoconversion
 !.. scheme.
-      REAL, PARAMETER, PRIVATE:: Nt_c = 100.E6
-
+! ++ trude comment out
+!      REAL, PARAMETER, PRIVATE:: Nt_c = 100.E6
+! -- trude comment out
 !..Generalized gamma distributions for rain, graupel and cloud ice.
 !.. N(D) = N_0 * D**mu * exp(-lamda*D);  mu=0 is exponential.
-      REAL, PARAMETER, PRIVATE:: mu_r = 0.0
+!      REAL, PARAMETER, PRIVATE:: mu_r = 0.0
       REAL, PARAMETER, PRIVATE:: mu_g = 0.0
       REAL, PARAMETER, PRIVATE:: mu_i = 0.0
       REAL, PRIVATE:: mu_c
@@ -86,13 +89,13 @@
 
 !..Mass power law relations:  mass = am*D**bm
 !.. Snow from Field et al. (2005), others assume spherical form.
-      REAL, PARAMETER, PRIVATE:: am_r = PI*rho_w/6.0
+      REAL, PARAMETER, PRIVATE:: am_r = PI2*rho_w/6.0
       REAL, PARAMETER, PRIVATE:: bm_r = 3.0
-      REAL, PARAMETER, PRIVATE:: am_s = 0.069
+!      REAL, PARAMETER, PRIVATE:: am_s = 0.069  ! trude commented out for changing from parameter to input variable
       REAL, PARAMETER, PRIVATE:: bm_s = 2.0
-      REAL, PARAMETER, PRIVATE:: am_g = PI*rho_g/6.0
+!      REAL, PARAMETER, PRIVATE:: am_g = PI2*rho_g/6.0  ! trude commented out. am_g need to be calculated later since rho_g is an imput variable
       REAL, PARAMETER, PRIVATE:: bm_g = 3.0
-      REAL, PARAMETER, PRIVATE:: am_i = PI*rho_i/6.0
+      REAL, PARAMETER, PRIVATE:: am_i = PI2*rho_i/6.0
       REAL, PARAMETER, PRIVATE:: bm_i = 3.0
 
 !..Fallspeed power laws relations:  v = (av*D**bv)*exp(-fv*D)
@@ -101,26 +104,26 @@
       REAL, PARAMETER, PRIVATE:: av_r = 4854.0
       REAL, PARAMETER, PRIVATE:: bv_r = 1.0
       REAL, PARAMETER, PRIVATE:: fv_r = 195.0
-      REAL, PARAMETER, PRIVATE:: av_s = 40.0
-      REAL, PARAMETER, PRIVATE:: bv_s = 0.55
-      REAL, PARAMETER, PRIVATE:: fv_s = 100.0
-      REAL, PARAMETER, PRIVATE:: av_g = 442.0
-      REAL, PARAMETER, PRIVATE:: bv_g = 0.89
-      REAL, PARAMETER, PRIVATE:: av_i = 1847.5
+!      REAL, PARAMETER, PRIVATE:: av_s = 40.0 ! trude commented out.  Will be used as input vaiable. 
+!      REAL, PARAMETER, PRIVATE:: bv_s = 0.55 ! trude commented out.  Will be used as input vaiable. 
+!      REAL, PARAMETER, PRIVATE:: fv_s = 100.0 ! trude commented out.  Will be used as input vaiable. 
+!      REAL, PARAMETER, PRIVATE:: av_g = 442.0 ! trude commented out.  Will be used as input vaiable. 
+!      REAL, PARAMETER, PRIVATE:: bv_g = 0.89 ! trude commented out.  Will be used as input vaiable. 
+!      REAL, PARAMETER, PRIVATE:: av_i = 1847.5
       REAL, PARAMETER, PRIVATE:: bv_i = 1.0
 
 !..Capacitance of sphere and plates/aggregates: D**3, D**2
       REAL, PARAMETER, PRIVATE:: C_cube = 0.5
-      REAL, PARAMETER, PRIVATE:: C_sqrd = 0.3
+!      REAL, PARAMETER, PRIVATE:: C_sqrd = 0.3
 
 !..Collection efficiencies.  Rain/snow/graupel collection of cloud
 !.. droplets use variables (Ef_rw, Ef_sw, Ef_gw respectively) and
 !.. get computed elsewhere because they are dependent on stokes
 !.. number.
-      REAL, PARAMETER, PRIVATE:: Ef_si = 0.05
-      REAL, PARAMETER, PRIVATE:: Ef_rs = 0.95
-      REAL, PARAMETER, PRIVATE:: Ef_rg = 0.75
-      REAL, PARAMETER, PRIVATE:: Ef_ri = 0.95
+!      REAL, PARAMETER, PRIVATE:: Ef_si = 0.05
+!      REAL, PARAMETER, PRIVATE:: Ef_rs = 0.95
+!      REAL, PARAMETER, PRIVATE:: Ef_rg = 0.75
+!      REAL, PARAMETER, PRIVATE:: Ef_ri = 0.95
 
 !..Minimum microphys values
 !.. R1 value, 1.E-12, cannot be set lower because of numerical
@@ -131,7 +134,7 @@
       REAL, PARAMETER, PRIVATE:: eps = 1.E-15
 
 !..Constants in Cooper curve relation for cloud ice number.
-      REAL, PARAMETER, PRIVATE:: TNO = 5.0
+!     REAL, PARAMETER, PRIVATE:: TNO = 5.0  ! trude comment this out for use as input variable instead
       REAL, PARAMETER, PRIVATE:: ATO = 0.304
 
 !..Rho_not used in fallspeed relations (rho_not/rho)**.5 adjustment.
@@ -147,8 +150,10 @@
 !..Water vapor and air gas constants at constant pressure
       REAL, PARAMETER, PRIVATE:: Rv = 461.5
       REAL, PARAMETER, PRIVATE:: oRv = 1./Rv
-      REAL, PARAMETER, PRIVATE:: R = 287.04
-      REAL, PARAMETER, PRIVATE:: Cp = 1004.0
+!      REAL, PARAMETER, PRIVATE:: R = 287.04 !trude added. Note, R = 287.058 is defined in data_structures, and conflict with definition here. Need to determine what to to about it. 
+      REAL, PARAMETER, PRIVATE:: RR2 = 287.04 !trude added. Note, R = 287.058 is defined in data_structures, and conflict with definition here. Need to determine what to to about it. 
+!      REAL, PARAMETER, PRIVATE:: Cp = 1004.0 !trude added. Note, Cp = 1012.0 is defined in data_structures, and conflict with definition here. Need to determine what to to about it. 
+      REAL, PARAMETER, PRIVATE:: Cp2 = 1004.0 !trude added. Note, Cp = 1012.0 is defined in data_structures, and conflict with definition here. Need to determine what to to about it. 
 
 !..Enthalpy of sublimation, vaporization, and fusion at 0C.
       REAL, PARAMETER, PRIVATE:: lsub = 2.834E6
@@ -313,6 +318,13 @@
 
       CHARACTER*256:: mp_debug
 
+! TRUDE
+      REAL, PRIVATE :: Nt_c, TNO, am_s,rho_g,av_s,bv_s,fv_s,av_g,bv_g,av_i,Ef_si,Ef_rs,Ef_rg,Ef_ri
+      REAL, PRIVATE :: C_cubes,C_sqrd, mu_r, t_adjust
+      LOGICAL, PRIVATE :: Ef_rw_l, Ef_sw_l
+      REAL, PRIVATE :: am_g
+
+
 !+---+
 !+---+-----------------------------------------------------------------+
 !..END DECLARATIONS
@@ -322,16 +334,17 @@
 
       CONTAINS
 
-      SUBROUTINE thompson_init
+      SUBROUTINE thompson_init(mp_options)
 
       IMPLICIT NONE
 
+! ++ trude
+      type(mp_options_type), intent(in) :: mp_options
+! -- trude
       INTEGER:: i, j, k, m, n
       LOGICAL:: micro_init
-
 !..Allocate space for lookup tables (J. Michalakes 2009Jun08).
       micro_init = .FALSE.
-
       if (.NOT. ALLOCATED(tcg_racg) ) then
          ALLOCATE(tcg_racg(ntb_g1,ntb_g,ntb_r1,ntb_r))
          micro_init = .TRUE.
@@ -375,6 +388,29 @@
 
       if (micro_init) then
 
+      !++ trude
+         Nt_c = mp_options%Nt_c
+         TNO = mp_options%TNO
+         am_s = mp_options%am_s
+         rho_g = mp_options%rho_g
+         av_s = mp_options%av_s
+         bv_s = mp_options%bv_s
+         fv_s = mp_options%fv_s
+         av_g = mp_options%av_g
+         bv_g = mp_options%bv_g
+         av_i = mp_options%av_i
+         Ef_rs = mp_options%Ef_rs
+         Ef_rg = mp_options%Ef_rg
+         Ef_si = mp_options%Ef_si
+         Ef_ri = mp_options%Ef_ri
+         C_cubes = mp_options%C_cubes
+         C_sqrd = mp_options%C_sqrd
+         mu_r = mp_options%mu_r
+         t_adjust = mp_options%t_adjust
+         Ef_rw_l = mp_options%Ef_rw_l
+         Ef_sw_l = mp_options%Ef_sw_l
+         am_g = PI2*rho_g/6.0           ! trude, nb, this should can be defined in the modular section
+      !--trude
 !..From Martin et al. (1994), assign gamma shape parameter mu for cloud
 !.. drops according to general dispersion characteristics (disp=~0.25
 !.. for Maritime and 0.45 for Continental).
@@ -494,38 +530,37 @@
 !+---+-----------------------------------------------------------------+
 
 !..Rain collecting cloud water and cloud ice
-      t1_qr_qc = PI*.25*av_r * crg(9)
-      t1_qr_qi = PI*.25*av_r * crg(9)
-      t2_qr_qi = PI*.25*am_r*av_r * crg(8)
+      t1_qr_qc = PI2*.25*av_r * crg(9)
+      t1_qr_qi = PI2*.25*av_r * crg(9)
+      t2_qr_qi = PI2*.25*am_r*av_r * crg(8)
 
 !..Graupel collecting cloud water
-      t1_qg_qc = PI*.25*av_g * cgg(9)
+      t1_qg_qc = PI2*.25*av_g * cgg(9)
 
 !..Snow collecting cloud water
-      t1_qs_qc = PI*.25*av_s
+      t1_qs_qc = PI2*.25*av_s
 
 !..Snow collecting cloud ice
-      t1_qs_qi = PI*.25*av_s
+      t1_qs_qi = PI2*.25*av_s
 
 !..Evaporation of rain; ignore depositional growth of rain.
       t1_qr_ev = 0.78 * crg(10)
       t2_qr_ev = 0.308*Sc3*SQRT(av_r) * crg(11)
-
 !..Sublimation/depositional growth of snow
       t1_qs_sd = 0.86
       t2_qs_sd = 0.28*Sc3*SQRT(av_s)
 
 !..Melting of snow
-      t1_qs_me = PI*4.*C_sqrd*olfus * 0.86
-      t2_qs_me = PI*4.*C_sqrd*olfus * 0.28*Sc3*SQRT(av_s)
+      t1_qs_me = PI2*4.*C_sqrd*olfus * 0.86
+      t2_qs_me = PI2*4.*C_sqrd*olfus * 0.28*Sc3*SQRT(av_s)
 
 !..Sublimation/depositional growth of graupel
       t1_qg_sd = 0.86 * cgg(10)
       t2_qg_sd = 0.28*Sc3*SQRT(av_g) * cgg(11)
 
 !..Melting of graupel
-      t1_qg_me = PI*4.*C_cube*olfus * 0.86 * cgg(10)
-      t2_qg_me = PI*4.*C_cube*olfus * 0.28*Sc3*SQRT(av_g) * cgg(11)
+      t1_qg_me = PI2*4.*C_cube*olfus * 0.86 * cgg(10)
+      t2_qg_me = PI2*4.*C_cube*olfus * 0.28*Sc3*SQRT(av_g) * cgg(11)
 
 !..Constants for helping find lookup table indexes.
       nic2 = NINT(ALOG10(r_c(1)))
@@ -713,7 +748,7 @@
 
 !..Cloud water and rain freezing (Bigg, 1953).
       ! CALL wrf_debug(200, '  creating freezing of water drops table')
-      call freezeH2O
+      call freezeH2O  
 
 !..Conversion of some ice mass into snow category.
       ! CALL wrf_debug(200, '  creating ice converting to snow table')
@@ -757,9 +792,8 @@
 !     REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(INOUT)::       &
 !                         refl_10cm
       REAL, INTENT(IN):: dt_in
-      INTEGER, INTENT(IN):: itimestep
-
 !..Local variables
+      INTEGER, INTENT(IN):: itimestep
       REAL, DIMENSION(kts:kte):: &
                           qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d, &
                           nr1d, t1d, p1d, dz1d, dBZ
@@ -772,20 +806,18 @@
       INTEGER:: kmax_qc,kmax_qr,kmax_qi,kmax_qs,kmax_qg,kmax_ni,kmax_nr
       INTEGER:: i_start, j_start, i_end, j_end
 
-!+---+
-
 
 !$OMP PARALLEL DEFAULT(PRIVATE) FIRSTPRIVATE(ids,ide,jds,jde,kds,kde,ims,ime,jms,jme,&
 !$OMP kms,kme,its,ite,jts,jte,kts,kte,itimestep) &
 !$OMP SHARED(RAINNCV,RAINNC,SNOWNCV,SNOWNC,GRAUPELNCV,GRAUPELNC,SR,th,pii,p,dz,qv,qc,&
-!$OMP qi,qr,qs,qg,ni,nr,dt_in)
+!$OMP qi,qr,qs,qg,ni,nr,dt_in,Nt_c,TNO,rho_g,av_s,bv_s,fv_s,av_g,bv_g,EF_si,Ef_ri)
 ! old w/pcp_xx vars !!$OMP qi,qr,qs,qg,ni,nr,pcp_ra,pcp_sn,pcp_gr,pcp_ic,dt_in)
-      
 
       i_start = its
       j_start = jts
       i_end   = MIN(ite, ide-1)
       j_end   = MIN(jte, jde-1)
+
 
 !..For idealized testing by developer.
 !     if ( (ide-ids+1).gt.4 .and. (jde-jds+1).lt.4 .and.                &
@@ -1020,7 +1052,7 @@
       subroutine mp_thompson (qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d, &
                           nr1d, t1d, p1d, dzq, &
                           pptrain, pptsnow, pptgraul, pptice, &
-                          kts, kte, dt, ii, jj)
+                         kts, kte, dt, ii, jj)
 
       implicit none
 
@@ -1109,7 +1141,6 @@
       LOGICAL:: debug_flag
 
 !+---+
-
       debug_flag = .false.
 !     if (ii.eq.315 .and. jj.eq.2) debug_flag = .true.
 
@@ -1205,7 +1236,7 @@
          temp(k) = t1d(k)
          qv(k) = MAX(1.E-10, qv1d(k))
          pres(k) = p1d(k)
-         rho(k) = 0.622*pres(k)/(R*temp(k)*(qv(k)+0.622))
+         rho(k) = 0.622*pres(k)/(RR2*temp(k)*(qv(k)+0.622))
          if (qc1d(k) .gt. R1) then
             no_micro = .false.
             rc(k) = qc1d(k)*rho(k)
@@ -1312,7 +1343,7 @@
          else
             visco(k) = (1.718+0.0049*tempc-1.2E-5*tempc*tempc)*1.0E-5
          endif
-         ocp(k) = 1./(Cp*(1.+0.887*qv(k)))
+         ocp(k) = 1./(Cp2*(1.+0.887*qv(k)))
          vsc2(k) = SQRT(rho(k)/visco(k))
          lvap(k) = lvap0 + (2106.0 - 4218.0)*tempc
          tcond(k) = (5.69 + 0.0168*tempc)*1.0E-5 * 418.936
@@ -1652,7 +1683,7 @@
          alphsc = MAX(1.E-9, alphsc)
          xsat = ssati(k)
          if (abs(xsat).lt. 1.E-9) xsat=0.
-         t1_subl = 4.*PI*( 1.0 - alphsc*xsat &
+         t1_subl = 4.*PI2*( 1.0 - alphsc*xsat &
                 + 2.*alphsc*alphsc*xsat*xsat &
                 - 5.*alphsc*alphsc*alphsc*xsat*xsat*xsat ) &
                 / (1.+gamsc)
@@ -1828,8 +1859,12 @@
 !..Deposition/sublimation of snow/graupel follows Srivastava & Coen
 !.. (1992).
           if (L_qs(k)) then
-           C_snow = C_sqrd + (tempc+15.)*(C_cube-C_sqrd)/(-30.+15.)
-           C_snow = MAX(C_sqrd, MIN(C_snow, C_cube))
+!++ trude, use different c_cube for snow: c_cubes
+!           C_snow = C_sqrd + (tempc+15.)*(C_cube-C_sqrd)/(-30.+15.)
+!           C_snow = MAX(C_sqrd, MIN(C_snow, C_cube))
+           C_snow = C_sqrd + (tempc+15.)*(C_cubes-C_sqrd)/(-30.+15.)
+           C_snow = MAX(C_sqrd, MIN(C_snow, C_cubes))
+!! -- trude
            prs_sde(k) = C_snow*t1_subl*diffu(k)*ssati(k)*rvs &
                         * (t1_qs_sd*smo1(k) &
                          + t2_qs_sd*rhof2(k)*vsc2(k)*smof(k))
@@ -1922,9 +1957,14 @@
            if (tempc.gt.3.5 .or. rs(k).lt.0.005E-3) pnr_sml(k)=0.0
 
            if (ssati(k).lt. 0.) then
-            prs_sde(k) = C_cube*t1_subl*diffu(k)*ssati(k)*rvs &
+!++ trude, use different c_cube for snow: c_cubes
+!           C_snow = C_sqrd + (tempc+15.)*(C_cube-C_sqrd)/(-30.+15.)
+!           C_snow = MAX(C_sqrd, MIN(C_snow, C_cube))
+!            prs_sde(k) = C_cube*t1_subl*diffu(k)*ssati(k)*rvs &
+            prs_sde(k) = C_cubes*t1_subl*diffu(k)*ssati(k)*rvs &
                          * (t1_qs_sd*smo1(k) &
                           + t2_qs_sd*rhof2(k)*vsc2(k)*smof(k))
+! -- trude
             prs_sde(k) = MAX(DBLE(-rs(k)*odts), prs_sde(k))
            endif
           endif
@@ -2197,7 +2237,7 @@
          otemp = 1./temp(k)
          tempc = temp(k) - 273.15
          qv(k) = MAX(1.E-10, qv1d(k) + DT*qvten(k))
-         rho(k) = 0.622*pres(k)/(R*temp(k)*(qv(k)+0.622))
+         rho(k) = 0.622*pres(k)/(RR2*temp(k)*(qv(k)+0.622))
          rhof(k) = SQRT(RHO_NOT/rho(k))
          rhof2(k) = SQRT(rhof(k))
          qvs(k) = rslf(pres(k), temp(k))
@@ -2212,7 +2252,7 @@
          vsc2(k) = SQRT(rho(k)/visco(k))
          lvap(k) = lvap0 + (2106.0 - 4218.0)*tempc
          tcond(k) = (5.69 + 0.0168*tempc)*1.0E-5 * 418.936
-         ocp(k) = 1./(Cp*(1.+0.887*qv(k)))
+         ocp(k) = 1./(Cp2*(1.+0.887*qv(k)))
          lvt2(k)=lvap(k)*lvap(k)*ocp(k)*oRv*otemp*otemp
 
          if ((qc1d(k) + qcten(k)*DT) .gt. R1) then
@@ -2387,7 +2427,7 @@
           rc(k) = MAX(R1, (qc1d(k) + DT*qcten(k))*rho(k))
           qv(k) = MAX(1.E-10, qv1d(k) + DT*qvten(k))
           temp(k) = t1d(k) + DT*tten(k)
-          rho(k) = 0.622*pres(k)/(R*temp(k)*(qv(k)+0.622))
+          rho(k) = 0.622*pres(k)/(RR2*temp(k)*(qv(k)+0.622))
           qvs(k) = rslf(pres(k), temp(k))
           ssatw(k) = qv(k)/qvs(k) - 1.
          endif
@@ -2413,7 +2453,7 @@
           vsc2(k) = SQRT(rho(k)/visco(k))
           lvap(k) = lvap0 + (2106.0 - 4218.0)*tempc
           tcond(k) = (5.69 + 0.0168*tempc)*1.0E-5 * 418.936
-          ocp(k) = 1./(Cp*(1.+0.887*qv(k)))
+          ocp(k) = 1./(Cp2*(1.+0.887*qv(k)))
 
           rvs = rho(k)*qvs(k)
           rvs_p = rvs*otemp*(lvap(k)*otemp*oRv - 1.)
@@ -2426,7 +2466,7 @@
                      * rvs_pp/rvs_p * rvs/rvs_p
           alphsc = MAX(1.E-9, alphsc)
           xsat   = MIN(-1.E-9, ssatw(k))
-          t1_evap = 2.*PI*( 1.0 - alphsc*xsat  &
+          t1_evap = 2.*PI2*( 1.0 - alphsc*xsat  &
                  + 2.*alphsc*alphsc*xsat*xsat  &
                  - 5.*alphsc*alphsc*alphsc*xsat*xsat*xsat ) &
                  / (1.+gamsc)
@@ -2454,7 +2494,7 @@
           qv(k) = MAX(1.E-10, qv1d(k) + DT*qvten(k))
           nr(k) = MAX(R2, (nr1d(k) + DT*nrten(k))*rho(k))
           temp(k) = t1d(k) + DT*tten(k)
-          rho(k) = 0.622*pres(k)/(R*temp(k)*(qv(k)+0.622))
+          rho(k) = 0.622*pres(k)/(RR2*temp(k)*(qv(k)+0.622))
          endif
       enddo
 
@@ -2816,8 +2856,6 @@
       DOUBLE PRECISION:: N0_r, N0_g, lam_exp, lamg, lamr
       DOUBLE PRECISION:: massg, massr, dvg, dvr, t1, t2, z1, z2, y1, y2
 
-!+---+
-
       do n2 = 1, nbr
 !        vr(n2) = av_r*Dr(n2)**bv_r * DEXP(-fv_r*Dr(n2))
          vr(n2) = -0.1021 + 4.932E3*Dr(n2) - 0.9551E6*Dr(n2)*Dr(n2)     &
@@ -2878,18 +2916,18 @@
                   dvg = 0.5d0*((vr(n2) - vg(n)) + DABS(vr(n2)-vg(n)))
                   dvr = 0.5d0*((vg(n) - vr(n2)) + DABS(vg(n)-vr(n2)))
 
-                  t1 = t1+ PI*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
+                  t1 = t1+ PI2*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
                       *dvg*massg * N_g(n)* N_r(n2)
-                  z1 = z1+ PI*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
+                  z1 = z1+ PI2*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
                       *dvg*massr * N_g(n)* N_r(n2)
-                  y1 = y1+ PI*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
+                  y1 = y1+ PI2*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
                       *dvg       * N_g(n)* N_r(n2)
 
-                  t2 = t2+ PI*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
+                  t2 = t2+ PI2*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
                       *dvr*massr * N_g(n)* N_r(n2)
-                  y2 = y2+ PI*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
+                  y2 = y2+ PI2*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
                       *dvr       * N_g(n)* N_r(n2)
-                  z2 = z2+ PI*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
+                  z2 = z2+ PI2*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
                       *dvr*massg * N_g(n)* N_r(n2)
                enddo
  97            continue
@@ -2928,7 +2966,6 @@
       subroutine qr_acr_qs
 
       implicit none
-
 !..Local variables
       INTEGER:: i, j, k, m, n, n2
       INTEGER:: km, km_s, km_e
@@ -2941,8 +2978,7 @@
       DOUBLE PRECISION:: y1, y2, y3, y4
 
 !+---+
-
-      do n2 = 1, nbr
+       do n2 = 1, nbr
 !        vr(n2) = av_r*Dr(n2)**bv_r * DEXP(-fv_r*Dr(n2))
          vr(n2) = -0.1021 + 4.932E3*Dr(n2) - 0.9551E6*Dr(n2)*Dr(n2)     &
               + 0.07934E9*Dr(n2)*Dr(n2)*Dr(n2)                          &
@@ -3051,34 +3087,34 @@
                      dvr = 0.5d0*((vs(n) - vr(n2)) + DABS(vs(n)-vr(n2)))
 
                      if (massr .gt. 1.5*masss) then
-                     t1 = t1+ PI*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                     t1 = t1+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
                          *dvs*masss * N_s(n)* N_r(n2)
-                     z1 = z1+ PI*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                     z1 = z1+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
                          *dvs*massr * N_s(n)* N_r(n2)
-                     y1 = y1+ PI*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                     y1 = y1+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
                          *dvs       * N_s(n)* N_r(n2)
                      else
-                     t3 = t3+ PI*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                     t3 = t3+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
                          *dvs*masss * N_s(n)* N_r(n2)
-                     z3 = z3+ PI*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                     z3 = z3+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
                          *dvs*massr * N_s(n)* N_r(n2)
-                     y3 = y3+ PI*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                     y3 = y3+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
                          *dvs       * N_s(n)* N_r(n2)
                      endif
 
                      if (massr .gt. 1.5*masss) then
-                     t2 = t2+ PI*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                     t2 = t2+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
                          *dvr*massr * N_s(n)* N_r(n2)
-                     y2 = y2+ PI*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                     y2 = y2+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
                          *dvr       * N_s(n)* N_r(n2)
-                     z2 = z2+ PI*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                     z2 = z2+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
                          *dvr*masss * N_s(n)* N_r(n2)
                      else
-                     t4 = t4+ PI*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                     t4 = t4+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
                          *dvr*massr * N_s(n)* N_r(n2)
-                     y4 = y4+ PI*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                     y4 = y4+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
                          *dvr       * N_s(n)* N_r(n2)
-                     z4 = z4+ PI*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                     z4 = z4+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
                          *dvr*masss * N_s(n)* N_r(n2)
                      endif
 
@@ -3129,10 +3165,9 @@
 !..the proportion of drops summing their masses.
 !+---+-----------------------------------------------------------------+
 
-      subroutine freezeH2O
+      subroutine freezeH2O 
 
       implicit none
-
 !..Local variables
       INTEGER:: i, j, k, n, n2
       DOUBLE PRECISION, DIMENSION(nbr):: N_r, massr
@@ -3140,9 +3175,7 @@
       DOUBLE PRECISION:: sum1, sum2, sumn1, sumn2, &
                          prob, vol, Texp, orho_w, &
                          lam_exp, lamr, N0_r, lamc, N0_c, y
-
 !+---+
-
       orho_w = 1./rho_w
 
       do n2 = 1, nbr
@@ -3155,7 +3188,10 @@
 !..Freeze water (smallest drops become cloud ice, otherwise graupel).
       do k = 1, 45
 !         print*, ' Freezing water for temp = ', -k
-         Texp = DEXP( DFLOAT(k) ) - 1.0D0
+! ++ trude, add tadjust, so to chane temperature for where Bigg freezing starts. Follow approach in WRFV3.6 with IN
+         Texp = DEXP( DFLOAT(k) -t_adjust*1.0D0) - 1.0D0  ! NB Trude. Check for when texp is negative.....
+!         Texp = DEXP( DFLOAT(k) ) - 1.0D0
+! -- trude
          do j = 1, ntb_r1
             do i = 1, ntb_r
                lam_exp = (N0r_exp(j)*am_r*crg(1)/r_r(i))**ore1
@@ -3169,6 +3205,9 @@
                   N_r(n2) = N0_r*Dr(n2)**mu_r*DEXP(-lamr*Dr(n2))*dtr(n2)
                   vol = massr(n2)*orho_w
                   prob = 1.0D0 - DEXP(-120.0D0*vol*5.2D-4 * Texp)
+!++ trude
+                  prob = MAX(prob, 0.0d0 )
+! -- trude
                   if (massr(n2) .lt. xm0g) then
                      sumn1 = sumn1 + prob*N_r(n2)
                      sum1 = sum1 + prob*N_r(n2)*massr(n2)
@@ -3183,7 +3222,7 @@
                tpg_qrfz(i,j,k) = sum2
                tnr_qrfz(i,j,k) = sumn2
             enddo
-         enddo
+       enddo
          do i = 1, ntb_c
             lamc = 1.0D-6 * (Nt_c*am_r* ccg(2) * ocg1 / r_c(i))**obmr
             N0_c = 1.0D-18 * Nt_c*ocg1 * lamc**cce(1)
@@ -3193,6 +3232,9 @@
                y = Dc(n)*1.0D6
                vol = massc(n)*orho_w
                prob = 1.0D0 - DEXP(-120.0D0*vol*5.2D-4 * Texp)
+!++ trude
+               prob = MAX(prob, 0.0d0 )
+! -- trude
                N_c(n) = N0_c* y**mu_c * EXP(-lamc*y)*dtc(n)
                N_c(n) = 1.0D24 * N_c(n)
                sumn2 = sumn2 + prob*N_c(n)
@@ -3284,7 +3326,7 @@
          p = Dc(j)/Dr(i)
          if (Dr(i).lt.50.E-6 .or. Dc(j).lt.3.E-6) then
           t_Efrw(i,j) = 0.0
-         elseif (p.gt.0.25) then
+          elseif (p.gt.0.25) then
           X = Dc(j)*1.D6
           if (Dr(i) .lt. 75.e-6) then
              Ef_rw = 0.026794*X - 0.20604
@@ -3315,13 +3357,18 @@
           K0 = DEXP(G)
           z = DLOG(stokes/(K0+1.D-15))
           H = 0.1465D0 + 1.302D0*z - 0.607D0*z*z + 0.293D0*z*z*z
-          yc0 = 2.0D0/PI * ATAN(H)
+          yc0 = 2.0D0/PI2 * ATAN(H)
           Ef_rw = (yc0+p)*(yc0+p) / ((1.+p)*(1.+p))
-
          endif
 
          t_Efrw(i,j) = MAX(0.0, MIN(SNGL(Ef_rw), 0.95))
-
+! ++ trude
+          if (Ef_rw_l) then 
+             if (Ef_rw.ne.0.0) then  
+                t_Efrw(i,j) = 1.0
+          endif
+       endif
+! -- trude
       enddo
       enddo
 
@@ -3336,11 +3383,11 @@
       subroutine table_Efsw
 
       implicit none
-
 !..Local variables
       DOUBLE PRECISION:: Ds_m, vts, vtc, stokes, reynolds, Ef_sw
       DOUBLE PRECISION:: p, yc0, F, G, H, z, K0
       INTEGER:: i, j
+
 
       do j = 1, nbc
       vtc = 1.19D4 * (1.0D4*Dc(j)*Dc(j)*0.25D0)
@@ -3360,10 +3407,19 @@
           K0 = DEXP(G)
           z = DLOG(stokes/(K0+1.D-15))
           H = 0.1465D0 + 1.302D0*z - 0.607D0*z*z + 0.293D0*z*z*z
-          yc0 = 2.0D0/PI * ATAN(H)
+          yc0 = 2.0D0/PI2 * ATAN(H)
           Ef_sw = (yc0+p)*(yc0+p) / ((1.+p)*(1.+p))
 
           t_Efsw(i,j) = MAX(0.0, MIN(SNGL(Ef_sw), 0.95))
+
+! ++ trude
+          if (Ef_sw_l) then 
+             if (Ef_sw.ne.0.0) then  
+                t_Efsw(i,j) = 1.0
+          endif
+       endif
+! -- trude
+
          endif
 
       enddo

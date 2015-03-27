@@ -226,6 +226,26 @@ module data_structures
 		integer::convection
 		integer::windtype
 	end type physics_type
+
+
+	!------------------------------------------------
+	! store Microphysics sensitivity options
+	!------------------------------------------------
+!! ++ trude
+	type mp_options_type
+		real :: Nt_c
+		real :: TNO
+		real :: am_s
+		real :: rho_g
+		real :: av_s, bv_s, fv_s, av_i
+		real :: av_g, bv_g
+		real :: Ef_si, Ef_rs, Ef_rg, Ef_ri
+		real :: C_cubes, C_sqrd
+		real :: mu_r
+		real :: t_adjust
+		logical :: Ef_rw_l, EF_sw_l
+	end type mp_options_type
+!! -- trude
 	
 	!------------------------------------------------
 	! store all model options
@@ -245,6 +265,10 @@ module data_structures
 										shvar,lhvar,pblhvar,zvar, &
 										soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
 										vegtype_var,vegfrac_var, linear_mask_var
+!! ++ trude
+ 		character(len=MAXFILELENGTH) :: mp_options_filename
+!! -- trude
+
 		! various boolean options
 		logical :: ideal 				! this is an ideal simulation, forcing will be held constant
 		logical :: readz 				! read atmospheric grid elevations from file
@@ -302,7 +326,10 @@ module data_structures
 		
 		! defines which physics package to be used. 
 		type(physics_type)::physics
-		
+!! ++ trude
+		! parameterization options
+        type(mp_options_type)::mp_options
+!! -- trude
 		integer :: warning_level        ! level of warnings to issue when checking options settings 0-10.  
 										! 0  = Don't print anything
 										! 1  = print serious warnings
