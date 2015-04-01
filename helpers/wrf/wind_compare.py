@@ -31,15 +31,10 @@ def load_wrf(filename, preciponly=False):
     u=mygis.read_nc(filename,"U").data[time,:,1,:]
     z=mygis.read_nc(filename,"PH").data[time,:,1,:]
     z+=mygis.read_nc(filename,"PHB").data[time,:,1,:]
-    z/=9.8
+    z/=9.81
     
-    
-    # in case W needs to be converted from Pa/s to m/s
-    # if (mygis.read_attr(filename,"units",varname="W") != "m s-1"):
-    # p=mygis.read_nc(filename,"P").data[time,:,1,:]
-    # p+=mygis.read_nc(filename,"PB").data[time,:,1,:]
-    # dpdz=(p[1:,...]-p[:-1,...])/(z[1:,...]-z[:-1,...])
     hgt=mygis.read_nc(filename,"HGT").data[time,1,:]
+    
     return Bunch(w=w,z=z,hgt=hgt,u=u,precip=precip)
 
 def load_icar(filename,h,preciponly=False):
@@ -152,7 +147,7 @@ def vinterp(d1,d2):
     
     return newdata
 
-def main(wrf_file,icar_file,output_file,makeplot=True,getPrecip=True,Ndsq=None,t=None,add_file=None):
+def main(wrf_file,icar_file,output_file,makeplot=True,getPrecip=True,Ndsq=None,t=None,add_file=None,master=False):
     """docstring for main"""
     if Ndsq==None:
         Ndsq=icar_file.split("_ns")[1][:3]
@@ -200,35 +195,35 @@ def main(wrf_file,icar_file,output_file,makeplot=True,getPrecip=True,Ndsq=None,t
             # plt.imshow(iwrf.w,cmap=plt.cm.seismic)
             plt.imshow(linear_data.w,cmap=plt.cm.seismic)
             # plt.colorbar()
-            plt.title("Linear Thoery")
+            plt.title("Linear Theory")
             plt.clim(-lim,lim)
             plt.xlim(150,250)
 
             plt.subplot(224)
-            plt.plot(iwrf.w[0:5,150:250].mean(axis=0),label="WRF",linewidth=2,color="blue")
+            plt.plot(iwrf.w[0:5,150:250].mean(axis=0),label="WRF",linewidth=2,color="black")
             plt.plot(linear_data.w[0:5,150:250].mean(axis=0),label="Linear",linewidth=2,color="red")
-            plt.plot(icardata.w[0:5,150:250].mean(axis=0),label="ICAR",linewidth=2,color="green")
+            plt.plot(icardata.w[0:5,150:250].mean(axis=0),label="ICAR",linewidth=2,color="blue")
             plt.legend(loc=3,fontsize=10)
-            plt.plot(iwrf.w[0,150:250],label="WRF0",color="blue")
+            plt.plot(iwrf.w[0,150:250],label="WRF0",color="black")
             plt.plot(linear_data.w[0,150:250],label="Linear0",color="red")
-            plt.plot(icardata.w[0,150:250],label="ICAR0",color="green")
+            plt.plot(icardata.w[0,150:250],label="ICAR0",color="blue")
             # plt.legend(loc=3,ncol=2,fontsize=10)
             plt.plot([0,100],[0,0],color="black",linestyle="--")
         
         if getPrecip:
-            fig=plt.figure(figsize=(10,7))
+            if not master:
+                fig=plt.figure(figsize=(6,4.5))
             offset=0
         else:
             offset=-1.5
-        precip_width=3
-        precip_max=3.5
+        precip_width=2
+        # precip_max=3.5
+        precip_max=2.0
         x=np.arange(100)*dx
-        plot = fig.add_subplot(111)
-        plot.tick_params(axis='both', which='major', labelsize=16)
         
-        plt.plot(linear_data.precip[150:250]+offset,color="red",label="Linear",linewidth=precip_width)
-        plt.plot(wrfdata.precip[150:250]+offset,color="black",label="WRF",linewidth=precip_width)
-        plt.plot(icardata.precip[150:250]+offset,color="green",label="ICAR-t",linewidth=precip_width)
+        plt.plot(x, linear_data.precip[150:250]+offset,color="red",label="Linear",linewidth=precip_width)
+        plt.plot(x, wrfdata.precip[150:250]+offset,color="black",label="WRF",linewidth=precip_width)
+        plt.plot(x, icardata.precip[150:250]+offset,color="green",label="ICAR-t",linewidth=precip_width)
         plt.plot([50*dx,50*dx],[offset,precip_max+offset],color="black",linestyle=":",linewidth=precip_width)
         print("case: "+" ".join(wrf_file.split("/")[0].split("_")[1:]))
         print("ICAR-t "+str(icardata.precip[150:250].mean()))
@@ -237,16 +232,33 @@ def main(wrf_file,icar_file,output_file,makeplot=True,getPrecip=True,Ndsq=None,t
         if add_file:
             label=add_file.split("_")[0]
             label="ICAR-l"
-            plt.plot(icar2.precip[150:250]+offset,color="blue",label=label,linewidth=precip_width)
+            plt.plot(x, icar2.precip[150:250]+offset,color="blue",label=label,linewidth=precip_width)
             print("ICAR-l "+str(icar2.precip[150:250].mean()))
         if getPrecip:
+            if master:
+                plot=master
+            else:
+                plot = fig.add_subplot(111)
+                
             case=wrf_file.split("/")[0].split("_")[1:]
-            plt.text(10, 2.0+offset, " U   ={0[0]}m/s\n RH={0[1]}\n T   ={0[2]}".format(case),fontsize=28)
-            if (case[1]=="0.75") and (case[2]=="260"):
-                plt.legend(fontsize=28)
-
+            plt.text(10, (precip_max+offset)*0.75, " U   ={0[0]}m/s\n RH={0[1]}\n T   ={0[2]}K".format(case),fontsize=8)
+            if (case[1]=="0.75") and (case[2]=="260") and (case[0]=="5"):
+                plt.legend(fontsize=8)
+                
+            # plot.tick_params(axis='both', which='major', labelsize=0)
+            if case[0]=="20":
+                plot.tick_params(axis='x', which='major', labelsize=8)
+                plt.xlabel("Distance (km)")
+            else:
+                plot.set_xticklabels("")
+            if case[1]=="0.75" and case[2]=="260":
+                plot.tick_params(axis='y', which='major', labelsize=8)
+            else:
+                plot.set_yticklabels("")
+                # plt.ylabel("Precipitation Rate (mm/hr)")
+                
         plt.ylim(offset,precip_max+offset)
-    
+        
         # plt.subplot(313)
         # plt.imshow(wrfdata.w)
         # plt.colorbar()
@@ -255,18 +267,23 @@ def main(wrf_file,icar_file,output_file,makeplot=True,getPrecip=True,Ndsq=None,t
     
         case=wrf_file.split("/")[0]
         # print("OUTPUT = wfiles/"+case+"_"+output_file+"_w.png")
-        plt.savefig("wfiles/"+case+"_"+output_file+"_w.png")
-        plt.close()
+        if not master:
+            plt.savefig("wfiles/"+case+"_"+output_file+"_w.png",dpi=300)
+            plt.close()
         
-    
-    return iwrf,icardata, icar2,linear_data
+    if add_file:
+        return iwrf,icardata, icar2,linear_data
+    else:
+        return iwrf,icardata,linear_data
+        
 
 bad_cases=[
-    "wind_10_0.99_280_3",
     "wind_15_0.99_280_3",
-    "wind_5_0.95_280_3",
-    "wind_5_0.99_280_3"]
-    
+    "wind_10_0.99_280_3",
+    "wind_5_0.99_280_3",
+    "wind_10_0.9_280_3",
+    "wind_5_0.9_280_3"]
+# bad_cases=[]
 def mean_precip(Nsquared="1e4"):
     """docstring for mean_precip"""
     cases=glob.glob("wind_*_*_*_3")
@@ -275,8 +292,8 @@ def mean_precip(Nsquared="1e4"):
     for case in cases:
         if not (case in bad_cases):
             wrf_file=glob.glob(case+"/wrfout_*")[0]
-            icar_file=glob.glob(case+"/output_ns"+Nsquared+"/icar_out00010")[0]
-            wrf,icar,icar2,linear=main(wrf_file,icar_file,Nsquared,makeplot=False,getPrecip=True,Ndsq=float(Nsquared.replace("e","e-")))
+            icar_file=glob.glob(case+"/thompson_output_2/icar_out2000_01_01*")[0]
+            wrf,icar,linear=main(wrf_file,icar_file,Nsquared,makeplot=False,getPrecip=True,Ndsq=float(Nsquared.replace("e","e-")))
             
             output.append([wrf.precip[150:250].mean(),icar.precip[150:250].mean(),linear.precip[150:250].mean()])
             full_data.append([wrf.precip[150:250],icar.precip[150:250]])
