@@ -1,13 +1,13 @@
 ###################################################################
 # Makefile rules:
-# <default>	all: makes real
-# 			install: makes and installs real in INSTALLDIR
-# 			clean: removes objects and module files
-#		 	allclean: makes clean and removes executables
-#		 	cleanall: alias for allclean
-#		 	tests: makes various unit tests (does not always work)
-# 			real: makes the primary model
-#		 	ideal: makes an idealized version of the model (does not not always work)
+# <default> all: makes real
+#			install: makes and installs real in INSTALLDIR
+#			clean: removes objects and module files
+#			allclean: makes clean and removes executables
+#			cleanall: alias for allclean
+#			tests: makes various unit tests (does not always work)
+#			real: makes the primary model
+#			ideal: makes an idealized version of the model (does not not always work)
 # 
 #	MODE = fast, debug, debugomp, debugslow, debugompslow
 #
@@ -15,17 +15,17 @@
 # Variables that need to be set by the user: 
 # 
 # INSTALLDIR : default = ~/bin/ 
-# LIBFFT     : location of fftw libraries 		default = /usr/local/lib
-# INCFFT     : location of fftw headers 		default = /usr/local/include
-# LIBNETCDF  : location of netdcdf libraries 	default = compiler/machine dependant /usr/local/lib
-# INCNETCDF  : location of netcdf headers 		default = compiler/machine dependant /usr/local/include
+# LIBFFT	 : location of fftw libraries		default = /usr/local/lib
+# INCFFT	 : location of fftw headers			default = /usr/local/include
+# LIBNETCDF	 : location of netdcdf libraries	default = compiler/machine dependant /usr/local/lib
+# INCNETCDF	 : location of netcdf headers		default = compiler/machine dependant /usr/local/include
 # 
 # Dependencies: fftw, netcdf
 #	FFTW is available here: http://www.fftw.org/
-# 		FFTW is a C library with fortran headers
+#		FFTW is a C library with fortran headers
 #	netcdf is available here: http://www.unidata.ucar.edu/software/netcdf/
-# 		netcdf is a fortran library and must be compiled with the same fortran
-# 		compiler you are using to be compatible
+#		netcdf is a fortran library and must be compiled with the same fortran
+#		compiler you are using to be compatible
 
 ###################################################################
 #  Specify where you want the resulting executable installed
@@ -33,7 +33,7 @@
 INSTALLDIR=~/bin/
 
 ###################################################################
-#   Various compiler specific flags, may need to edit
+#	Various compiler specific flags, may need to edit
 ###################################################################
 # on hydro-c1:
 # note on hydro-c1 /usr/local is not available on compute nodes so 
@@ -113,7 +113,7 @@ ifeq ($(LMOD_FAMILY_COMPILER),pgi)
 	LIBFFT=/glade/u/home/gutmann/usr/local/lib
 	INCFFT=/glade/u/home/gutmann/usr/local/include
 	LIBNETCDF = -lnetcdff -lnetcdf
-	INCNETCDF =  # netcdf includes are setup by the yellowstone module system
+	INCNETCDF =	 # netcdf includes are setup by the yellowstone module system
 endif	
 
 # get GIT version info
@@ -178,7 +178,7 @@ endif
 ifeq ($(MODE), debugompslow)
 	ifeq ($(F90), ifort)
 		COMP= -openmp -liomp5 -debug -debug-parameters all -traceback -ftrapuv -g -fpe0 -c -u -check all -check noarg_temp_created -CB
-		COMP= -openmp -liomp5 -debug -c -u  -fpe0 -traceback -check all -check noarg_temp_created
+		COMP= -openmp -liomp5 -debug -c -u	-fpe0 -traceback -check all -check noarg_temp_created
 		LINK= -openmp -liomp5
 	endif
 	ifeq ($(F90), gfortran)
@@ -272,7 +272,7 @@ OBJS=	$(BUILD)driver.o \
 # GEOOBJS=io_routines.o $(BUILD)data_structures.o tests/test_geo.o $(BUILD)geo_reader.o
 
 ###################################################################
-#   User facing rules
+#	User facing rules
 ###################################################################
 
 all:icar
@@ -295,13 +295,13 @@ icar:${OBJS}
 	${F90} ${LFLAGS} ${OBJS} -o icar  -lm -lfftw3
 
 ###################################################################
-#   test cases
+#	test cases
 ###################################################################
 # geo_test:${GEOOBJS}
-# 	${F90} ${LFLAGS} ${GEOOBJS} -o geo_test
+#	${F90} ${LFLAGS} ${GEOOBJS} -o geo_test
 # 
 # wind_test:${WINDOBJS}
-# 	${F90} ${LFLAGS} ${WINDOBJS} -o wind_test -lfftw3 -lm
+#	${F90} ${LFLAGS} ${WINDOBJS} -o wind_test -lfftw3 -lm
 #
 fftshift_test: $(BUILD)test_fftshift.o $(BUILD)fftshift.o
 	${F90} ${LFLAGS} $(BUILD)test_fftshift.o $(BUILD)fftshift.o -o fftshift_test
@@ -311,7 +311,7 @@ calendar_test: $(BUILD)test_calendar.o $(BUILD)time.o
 
 
 ###################################################################
-#   driver code for 
+#	driver code for 
 ###################################################################
 
 $(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)data_structures.o $(BUILD)init.o $(BUILD)time_step.o \
@@ -320,7 +320,7 @@ $(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)data_structures.o $(BUILD)init.o $(BU
 
 
 ###################################################################
-#   Core initial and boundary condition and time steping
+#	Core initial and boundary condition and time steping
 ###################################################################
 
 $(BUILD)init.o:$(MAIN)init.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)geo_reader.o $(BUILD)vinterp.o \
@@ -344,7 +344,7 @@ $(BUILD)string.o:$(UTIL)string.f90
 	${F90} ${FFLAGS} $(UTIL)string.f90 -o $(BUILD)string.o
 
 ###################################################################
-#   I/O routines
+#	I/O routines
 ###################################################################
 
 $(BUILD)output.o:$(IO)output.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)time.o $(BUILD)string.o
@@ -361,7 +361,7 @@ $(BUILD)vinterp.o: $(UTIL)vinterp.f90 $(BUILD)data_structures.o
 	
 
 ###################################################################
-#   Microphysics code
+#	Microphysics code
 ###################################################################
 
 $(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_thompson.o $(BUILD)mp_simple.o $(BUILD)data_structures.o
@@ -374,7 +374,7 @@ $(BUILD)mp_simple.o:$(PHYS)mp_simple.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)mp_simple.f90 -o $(BUILD)mp_simple.o
 	
 ###################################################################
-#   Convection code
+#	Convection code
 ###################################################################
 $(BUILD)cu_driver.o:$(PHYS)cu_driver.f90 $(BUILD)cu_tiedtke.o $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)cu_driver.f90 -o $(BUILD)cu_driver.o
@@ -383,7 +383,7 @@ $(BUILD)cu_tiedtke.o:$(PHYS)cu_tiedtke.f90
 	${F90} ${FFLAGS} $(PHYS)cu_tiedtke.f90 -o $(BUILD)cu_tiedtke.o
 
 ###################################################################
-#   Radiation code
+#	Radiation code
 ###################################################################
 
 $(BUILD)ra_driver.o:$(PHYS)ra_driver.f90 $(BUILD)ra_simple.o $(BUILD)data_structures.o
@@ -392,7 +392,7 @@ $(BUILD)ra_driver.o:$(PHYS)ra_driver.f90 $(BUILD)ra_simple.o $(BUILD)data_struct
 $(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o $(BUILD)time.o
 	${F90} ${FFLAGS} $(PHYS)ra_simple.f90 -o $(BUILD)ra_simple.o
 ###################################################################
-#   Land Surface code
+#	Land Surface code
 ###################################################################
 $(BUILD)lsm_driver.o: $(PHYS)lsm_driver.f90 $(BUILD)data_structures.o $(BUILD)lsm_simple.o \
 						$(BUILD)lsm_basic.o $(BUILD)lsm_noahdrv.o $(BUILD)lsm_noahlsm.o
@@ -412,7 +412,7 @@ $(BUILD)lsm_noahlsm.o: $(PHYS)lsm_noahlsm.f90
 
 
 ###################################################################
-#   Planetary Boundary Layer code
+#	Planetary Boundary Layer code
 ###################################################################
 $(BUILD)pbl_driver.o: $(PHYS)pbl_driver.f90 $(BUILD)pbl_simple.o $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)pbl_driver.f90 -o $(BUILD)pbl_driver.o
@@ -422,7 +422,7 @@ $(BUILD)pbl_simple.o: $(PHYS)pbl_simple.f90 $(BUILD)data_structures.o
 
 
 ###################################################################
-#   Advection related code
+#	Advection related code
 ###################################################################
 $(BUILD)advection_driver.o:$(PHYS)advection_driver.f90 $(BUILD)data_structures.o $(BUILD)advect.o $(BUILD)adv_mpdata.o
 	${F90} ${FFLAGS} $(PHYS)advection_driver.f90 -o $(BUILD)advection_driver.o
@@ -435,7 +435,7 @@ $(BUILD)adv_mpdata.o:$(PHYS)adv_mpdata.f90 $(BUILD)data_structures.o
 
 
 ###################################################################
-#   Wind related code
+#	Wind related code
 ###################################################################
 $(BUILD)wind.o:$(PHYS)wind.f90 $(BUILD)linear_winds.o $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)wind.f90 -o $(BUILD)wind.o
@@ -448,23 +448,23 @@ $(BUILD)fftshift.o:$(UTIL)fftshift.f90
 
 
 ###################################################################
-#   Generic data structures, used by almost everything
+#	Generic data structures, used by almost everything
 ###################################################################
 $(BUILD)data_structures.o:$(MAIN)data_structures.f90
 	${F90} ${FFLAGS} $(MAIN)data_structures.f90 -o $(BUILD)data_structures.o
 
 ###################################################################
-#   Keep track of model versions for user information
+#	Keep track of model versions for user information
 ###################################################################
 $(BUILD)model_tracking.o:$(MAIN)model_tracking.f90
 	${F90} ${FFLAGS} $(MAIN)model_tracking.f90 -o $(BUILD)model_tracking.o
 
 ###################################################################
-#   Unit tests (may only work at their git tags?)
+#	Unit tests (may only work at their git tags?)
 ###################################################################
 # 
 # NOTE: too many changes in data structures/init have broken most of these tests, 
-#       not worth fixing right now. 
+#		not worth fixing right now. 
 #
 $(BUILD)test_fftshift.o:$(BUILD)fftshift.o tests/test_fftshift.f90
 	${F90} ${FFLAGS} tests/test_fftshift.f90 -o $(BUILD)test_fftshift.o
@@ -473,11 +473,11 @@ $(BUILD)test_calendar.o:$(BUILD)time.o tests/test_calendar.f90
 	${F90} ${FFLAGS} tests/test_calendar.f90 -o $(BUILD)test_calendar.o
 	
 # tests/test_$(BUILD)wind.o:tests/test_$(PHYS)wind.f90 $(BUILD)wind.o $(BUILD)linear_winds.o
-# 	${F90} ${FFLAGS} tests/test_$(PHYS)wind.f90 -o tests/test_$(BUILD)wind.o
+#	${F90} ${FFLAGS} tests/test_$(PHYS)wind.f90 -o tests/test_$(BUILD)wind.o
 # 
 # tests/test_geo.o:tests/test_geo.f90 $(BUILD)geo_reader.o $(BUILD)data_structures.o
-# 	${F90} ${FFLAGS} tests/test_geo.f90 -o tests/test_geo.o
+#	${F90} ${FFLAGS} tests/test_geo.f90 -o tests/test_geo.o
 # 
 # test_init:tests/test_$(MAIN)init.f90 $(BUILD)init.o
-# 	${F90} ${FFLAGS} tests/test_$(MAIN)init.f90 $(IO)io_routines.f90 $(MAIN)data_structures.f90 $(MAIN)init.f90 -o test_init
+#	${F90} ${FFLAGS} tests/test_$(MAIN)init.f90 $(IO)io_routines.f90 $(MAIN)data_structures.f90 $(MAIN)init.f90 -o test_init
 
