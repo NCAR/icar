@@ -235,6 +235,7 @@ UTIL=utilities/
 
 OBJS=	$(BUILD)driver.o \
 		$(BUILD)init.o \
+		$(BUILD)init_options.o \
 		$(BUILD)model_tracking.o \
 		$(BUILD)boundary.o \
 		$(BUILD)time_step.o \
@@ -324,8 +325,8 @@ $(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)data_structures.o $(BUILD)init.o $(BU
 ###################################################################
 
 $(BUILD)init.o:$(MAIN)init.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)geo_reader.o $(BUILD)vinterp.o \
-					$(BUILD)model_tracking.o $(BUILD)mp_driver.o $(BUILD)cu_driver.o $(BUILD)pbl_driver.o $(BUILD)wind.o \
-					$(BUILD)time.o $(BUILD)ra_driver.o $(BUILD)lsm_driver.o
+					$(BUILD)mp_driver.o $(BUILD)cu_driver.o $(BUILD)pbl_driver.o $(BUILD)wind.o \
+					$(BUILD)ra_driver.o $(BUILD)lsm_driver.o $(BUILD)init_options.o
 	${F90} ${FFLAGS} $(MAIN)init.f90 -o $(BUILD)init.o
 
 $(BUILD)boundary.o:$(MAIN)boundary.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)wind.o $(BUILD)geo_reader.o \
@@ -336,6 +337,10 @@ $(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.
 					$(BUILD)advection_driver.o $(BUILD)ra_driver.o $(BUILD)lsm_driver.o $(BUILD)cu_driver.o \
 					$(BUILD)pbl_driver.o $(BUILD)mp_driver.o
 	${F90} ${FFLAGS} $(MAIN)time_step.f90 -o $(BUILD)time_step.o
+
+$(BUILD)init_options.o:$(MAIN)init_options.f90 $(BUILD)data_structures.o  $(BUILD)io_routines.o \
+					$(BUILD)model_tracking.o $(BUILD)time.o 
+	${F90} ${FFLAGS} $(MAIN)init_options.f90 -o $(BUILD)init_options.o
 
 $(BUILD)time.o:$(UTIL)time.f90
 	${F90} ${FFLAGS} $(UTIL)time.f90 -o $(BUILD)time.o
