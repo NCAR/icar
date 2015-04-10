@@ -24,11 +24,8 @@
 !!------------------------------------------------------------
 module boundary_conditions
 ! ----------------------------------------------------------------------------
-!   NOTE: This module was initially written to read WRF output files as input.
-!       This should serve as a basis for any additional file types, and can be 
-!       readily modified.  At some point this could be modified to check the 
-!       type if input file being specified, and call an appropriate routine. 
-!       e.g. if options%inputtype=="WRF" then call wrf_init/update()
+!   NOTE: This module attempts to be sufficiently general to work with a variety
+!       of possible input files; however it may be necessary to modify it.
 ! ----------------------------------------------------------------------------
     use data_structures
     use io_routines,            only : io_getdims, io_read3d, io_maxDims, io_read2d, io_variable_is_present, &
@@ -51,8 +48,7 @@ module boundary_conditions
     integer::ext_winds_curfile,ext_winds_curstep
     integer::ext_winds_steps_in_file,ext_winds_nfiles
 
-    integer::smoothing_window=14 !(bc%dx/domain%dx) * smooth_n_coarse
-    integer::smooth_n_coarse=5
+    integer::smoothing_window=1 ! this will get updated in bc_init if it isn't an ideal run
     
     public::bc_init
     public::bc_update
@@ -594,9 +590,7 @@ contains
                     steps_in_file=dims(dims(1)+1) !dims(1) = ndims; dims(ndims+1)=ntimesteps
                 endif
             enddo
-        endif
-!       smoothing_window = min(max(int((bc%dx/domain%dx) * smooth_n_coarse),1),size(domain%lat,1)/10)
-        if (.not.options%ideal) then
+            
             smoothing_window = min(max(int(options%smooth_wind_distance/domain%dx),1),size(domain%lat,1)/5)
             write(*,*) "Smoothing winds over ",smoothing_window," grid cells"
         endif
@@ -624,10 +618,8 @@ contains
             elseif (options%remove_lowres_linear) then
                 ! remove the low-res linear wind perturbation field 
                 call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
-                if (.not.options%ideal)then
-                    call smooth_wind(domain%u,smoothing_window,3)
-                    call smooth_wind(domain%v,smoothing_window,3)
-                endif
+                call smooth_wind(domain%u,smoothing_window,3)
+                call smooth_wind(domain%v,smoothing_window,3)
             elseif (options%mean_winds) then
                 call mean_winds(domain,file_list(curfile),curstep,options)
             else
@@ -637,10 +629,8 @@ contains
                 call read_var(domain%v, file_list(curfile),options%vvar,  &
                                 bc%v_geo%geolut,bc%v_geo%vert_lut,curstep,boundary_value, &
                                 options)
-                if (.not.options%ideal)then
-                    call smooth_wind(domain%u,smoothing_window,3)
-                    call smooth_wind(domain%v,smoothing_window,3)
-                endif
+                call smooth_wind(domain%u,smoothing_window,3)
+                call smooth_wind(domain%v,smoothing_window,3)
             endif
             call read_var(domain%p,    file_list(curfile),   options%pvar,   &
                             bc%geolut, bc%vert_lut, curstep, boundary_value, &
@@ -690,9 +680,9 @@ contains
     end subroutine bc_init
 
 
+!   same as update_dxdt but only for the edges of the domains for 
+!   fields that are calculated internally (e.g. temperature and moisture)
     subroutine update_edges(dx_dt,d1,d2)
-!       same as update_dxdt but only for the edges of the domains for 
-!       fields that are calculated internally (e.g. temperature and moisture)
         implicit none
         real,dimension(:,:,:), intent(inout) :: dx_dt
         real,dimension(:,:,:), intent(in) :: d1,d2
@@ -712,9 +702,9 @@ contains
     end subroutine update_edges
     
     
+!   calculate changes between the current boundary conditions and the time step boundary conditions
+!   these are used to linearly shift all fields between the two times. 
     subroutine update_dxdt(bc,domain)
-!       calculate changes between the current boundary conditions and the time step boundary conditions
-!       these are used to linearly shift all fields between the two times. 
         implicit none
         type(bc_type), intent(inout) :: bc
         type(domain_type), intent(in) :: domain
@@ -734,9 +724,9 @@ contains
         call update_edges(bc%dqc_dt,bc%next_domain%cloud,domain%cloud)
     end subroutine update_dxdt
     
+!   adjust the pressure field for the vertical shift between the low resolution domain
+!   and the high resolution domain. Ideally this should include temperature
     subroutine update_pressure(pressure,z_lo,z_hi)
-        !adjust the pressure field for the vertical shift between the low resolution domain
-        ! and the high resolution domain. 
         implicit none
         real,dimension(:,:,:), intent(inout) :: pressure
         real,dimension(:,:,:), intent(in) :: z_lo,z_hi
@@ -760,6 +750,8 @@ contains
         deallocate(slp)
     end subroutine update_pressure
     
+!   Update the external wind field
+!     Read U and V and rotate into the domain 3D grid
     subroutine update_ext_winds(bc,options)
         implicit none
         type(bc_type),intent(inout)::bc
@@ -793,7 +785,8 @@ contains
     
     end subroutine update_ext_winds
     
-    
+!   Read in the next timestep of input data and apply to
+!   the dXdt grids as appropriate. 
     subroutine bc_update(domain,bc,options)
         implicit none
         type(domain_type),intent(inout)::domain
@@ -865,10 +858,8 @@ contains
 !           call smooth_wind(bc%next_domain%v,1,3)
         elseif (options%remove_lowres_linear) then
             call remove_linear_winds(bc%next_domain,bc,options,file_list(curfile),curstep)
-            if (.not.options%ideal)then
-                call smooth_wind(bc%next_domain%u,smoothing_window,3)
-                call smooth_wind(bc%next_domain%v,smoothing_window,3)
-            endif
+            call smooth_wind(bc%next_domain%u,smoothing_window,3)
+            call smooth_wind(bc%next_domain%v,smoothing_window,3)
         elseif (options%mean_winds) then
             call mean_winds(bc%next_domain,file_list(curfile),curstep,options)
         else
@@ -878,10 +869,8 @@ contains
             call read_var(bc%next_domain%v,  file_list(curfile), options%vvar, &
                           bc%v_geo%geolut,   bc%v_geo%vert_lut,  curstep,      &
                           use_interior, options, time_varying_zlut=newbc%vert_lut)
-            if (.not.options%ideal)then
-                call smooth_wind(bc%next_domain%u,smoothing_window,3)
-                call smooth_wind(bc%next_domain%v,smoothing_window,3)
-            endif
+            call smooth_wind(bc%next_domain%u,smoothing_window,3)
+            call smooth_wind(bc%next_domain%v,smoothing_window,3)
         endif
         call read_var(bc%next_domain%p,       file_list(curfile), options%pvar,   &
                       bc%geolut, bc%vert_lut, curstep, use_interior,              &
