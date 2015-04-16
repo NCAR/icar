@@ -5,16 +5,8 @@
 !!      also sets up geographic (and vertical) look uptables for the forcing data
 !!      Finally, there is a driver routine to initialize all model physics packages
 !! 
-!!  This module was initially written to read WRF output files as input.
-!!      This should serve as a basis for any additional file types, and can be 
-!!      readily modified.  At some point this could be modified to check the 
-!!      type if input file being specified, and call an appropriate routine. 
-!!      e.g. if options%inputtype=="WRF" then call wrf_init/update()
-!! 
 !!   The module has been updated to allow arbitrary named variables
 !!       this allows the use of e.g. ERAi, but still is not as flexible as it could be
-!!       e.g. if a forcing doesn't contain one or more variable types it will not work. 
-!!       Need to let varname=""
 !!
 !!   The use of various python wrapper scripts in helpers/ makes it easy to add new
 !!       datasets, and make them conform to the expectations of the current system. 
