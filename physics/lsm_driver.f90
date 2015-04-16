@@ -8,24 +8,24 @@
 !! The main entry point to the code is lsm(domain,options,dt,model_time)
 !!
 !! Call tree graph :
-!!	lsm_init->[ allocate_noah_data,
-!! 				external initialization routines]
-!!	lsm->[	sat_mr,
-!! 			calc_exchange_coefficient,
-!! 			external LSM routines]
+!!  lsm_init->[ allocate_noah_data,
+!!              external initialization routines]
+!!  lsm->[  sat_mr,
+!!          calc_exchange_coefficient,
+!!          external LSM routines]
 !! 
 !! High level routine descriptions / purpose
-!!   lsm_init    		- allocates module data and initializes physics package
-!!   lsm           		- sets up and calls main physics package
-!! 	calc_exchange_coefficient - calculates surface exchange coefficient (for Noah)
-!! 	allocate_noah_data  - allocate module level data for Noah LSM
-!! 	apply_fluxes		- apply LSM fluxes (e.g. sensible and latent heat fluxes) to atmosphere
-!! 	sat_mr				- calculate saturated mixing ratio (should be moved to )
+!!   lsm_init           - allocates module data and initializes physics package
+!!   lsm                - sets up and calls main physics package
+!!  calc_exchange_coefficient - calculates surface exchange coefficient (for Noah)
+!!  allocate_noah_data  - allocate module level data for Noah LSM
+!!  apply_fluxes        - apply LSM fluxes (e.g. sensible and latent heat fluxes) to atmosphere
+!!  sat_mr              - calculate saturated mixing ratio (should be moved to )
 !! 
 !! Inputs: domain, options, dt, model_time
-!! 		domain,options	= as defined in data_structures
-!! 		dt 				= time step (seconds)
-!! 		model_time 		= time since beginning date (seconds)
+!!      domain,options  = as defined in data_structures
+!!      dt              = time step (seconds)
+!!      model_time      = time since beginning date (seconds)
 !!
 !! Author : Ethan Gutmann (gutmann@ucar.edu)
 !!
@@ -35,7 +35,7 @@ module land_surface
     use module_lsm_basic,  only : lsm_basic
     use module_lsm_simple, only : lsm_simple, lsm_simple_init
     use io_routines,       only : io_write3d, io_write2d
-	use output, 		   only : write_domain
+    use output,            only : write_domain
     use data_structures
     
     implicit none
@@ -45,8 +45,8 @@ module land_surface
     integer :: its,ite,jts,jte,kts,kte ! Processing Tile dimensions
     
     ! LOTS of variables required by Noah, placed here "temporarily", this may be where some stay.
-	! Keeping them at the module level prevents having to allocate/deallocate every call
-	! also avoids adding LOTS of LSM variables to the main domain datastrucurt
+    ! Keeping them at the module level prevents having to allocate/deallocate every call
+    ! also avoids adding LOTS of LSM variables to the main domain datastrucurt
     real,allocatable, dimension(:,:)    :: SMSTAV,SFCRUNOFF,UDRUNOFF,   &
                                            SNOW,SNOWC,SNOWH, ACSNOW, ACSNOM, SNOALB, QFX,   &
                                            QGH, GSW, ALBEDO, ALBBCK, ZNT, Z0, XICE, EMISS, &
@@ -57,7 +57,7 @@ module land_surface
                                            
     logical :: MYJ, FRPCPN,ua_phys,RDLAI2D,USEMONALB
     real,allocatable, dimension(:,:,:)  :: SH2O,SMCREL
-	real,allocatable, dimension(:,:)    :: dTemp,lhdQV
+    real,allocatable, dimension(:,:)    :: dTemp,lhdQV
     real,allocatable, dimension(:)      :: Zs,DZs
     real :: ROVCP,XICE_THRESHOLD
     integer,allocatable, dimension(:,:) :: IVGTYP,ISLTYP
@@ -75,20 +75,20 @@ module land_surface
     real*8  :: last_model_time
     
 contains
-	
+    
     real function sat_mr(t,p)
     ! Calculate the saturated mixing ratio at a temperature (K), pressure (Pa)
         implicit none
         real,intent(in) :: t,p
         real :: e_s,mr_s,a,b
 
-		! from http://www.dtic.mil/dtic/tr/fulltext/u2/778316.pdf
-		!     Lowe, P.R. and J.M. Ficke., 1974: THE COMPUTATION OF SATURATION VAPOR PRESSURE 
-		!         Environmental Prediction Research Facility, Technical Paper No. 4-74
-		! which references:
-		!     Murray, F. W., 1967: On the computation of saturation vapor pressure. 
-		!         Journal of Applied Meteorology, Vol. 6, pp. 203-204.
-		! Also notes a 6th order polynomial and look up table as viable options. 
+        ! from http://www.dtic.mil/dtic/tr/fulltext/u2/778316.pdf
+        !     Lowe, P.R. and J.M. Ficke., 1974: THE COMPUTATION OF SATURATION VAPOR PRESSURE 
+        !         Environmental Prediction Research Facility, Technical Paper No. 4-74
+        ! which references:
+        !     Murray, F. W., 1967: On the computation of saturation vapor pressure. 
+        !         Journal of Applied Meteorology, Vol. 6, pp. 203-204.
+        ! Also notes a 6th order polynomial and look up table as viable options. 
         if (t<freezing_threshold) then
             a=21.8745584
             b=7.66
@@ -98,17 +98,17 @@ contains
         endif
         e_s = 610.78* exp(a*(t-273.16)/(t-b)) !(Pa)
 
-		! alternate formulations
-		! Polynomial:
-		! e_s = ao + t*(a1+t*(a2+t*(a3+t*(a4+t*(a5+a6*t))))) a0-6 defined separately for water and ice
-		! e_s = 611.2*exp(17.67*(t-273.15)/(t-29.65)) ! (Pa)
+        ! alternate formulations
+        ! Polynomial:
+        ! e_s = ao + t*(a1+t*(a2+t*(a3+t*(a4+t*(a5+a6*t))))) a0-6 defined separately for water and ice
+        ! e_s = 611.2*exp(17.67*(t-273.15)/(t-29.65)) ! (Pa)
         ! from : http://www.srh.noaa.gov/images/epz/wxcalc/vaporPressure.pdf
-		! e_s = 611.0*10.0**(7.5*(t-273.15)/(t-35.45))
+        ! e_s = 611.0*10.0**(7.5*(t-273.15)/(t-35.45))
         
-		! enforce e_s < air pressure incase we are out on one edge of a polynomial
-		if ((p-e_s)<=0) then
-			e_s=p*0.99999
-		endif
+        ! enforce e_s < air pressure incase we are out on one edge of a polynomial
+        if ((p-e_s)<=0) then
+            e_s=p*0.99999
+        endif
         ! e_s=min(e_s,p-SMALL_PRESSURE) ! this is harder to cover a reasonable range of pressure in single precision
         !from : http://www.srh.noaa.gov/images/epz/wxcalc/mixingRatio.pdf
         sat_mr=0.6219907*e_s/(p-e_s) !(kg/kg)
@@ -119,7 +119,7 @@ contains
         real, dimension(:,:),intent(in) :: wind,tskin,airt
         real,dimension(:,:),intent(inout) :: exchange_C
         
-		! Richardson number 
+        ! Richardson number 
         Ri = gravity/airt * (airt-tskin)*z_atm/wind**2
         
         where(Ri<0)  exchange_C=lnz_atm_term * (1.0-(15.0*Ri)/(1.0+(base_exchange_term * sqrt((-1.0)*Ri))))
@@ -128,32 +128,32 @@ contains
     end subroutine calc_exchange_coefficient
     
     
-	subroutine apply_fluxes(domain,dt)
-		! add sensible and latent heat fluxes to the first atm level
-		implicit none
-		type(domain_type), intent(inout) :: domain
-		real, intent(in) :: dt
-		integer :: nx,ny
-		nx=ime
-		ny=jme
-		! convert sensible heat flux to a temperature delta term
+    subroutine apply_fluxes(domain,dt)
+        ! add sensible and latent heat fluxes to the first atm level
+        implicit none
+        type(domain_type), intent(inout) :: domain
+        real, intent(in) :: dt
+        integer :: nx,ny
+        nx=ime
+        ny=jme
+        ! convert sensible heat flux to a temperature delta term
         ! J/s/m^2 * s / J/(kg*K) => kg*K/m^2 ... /((kg/m^3) * m) => K
         dTemp=(domain%sensible_heat(2:nx-1,2:ny-1)*dt/cp)  &
-			 / (domain%rho(2:nx-1,1,2:ny-1)*domain%dz(2:nx-1,1,2:ny-1))
-		! add temperature delta and convert back to potential temperature
+             / (domain%rho(2:nx-1,1,2:ny-1)*domain%dz(2:nx-1,1,2:ny-1))
+        ! add temperature delta and convert back to potential temperature
         domain%th(2:nx-1,1,2:ny-1)=domain%th(2:nx-1,1,2:ny-1)+dTemp/domain%pii(2:nx-1,1,2:ny-1)
-		
-		! convert latent heat flux to a mixing ratio tendancy term
+        
+        ! convert latent heat flux to a mixing ratio tendancy term
         ! J/s/m^2 * s / J/kg => kg/m^2 ... / (kg/m^3 * m) => kg/kg
-		lhdQV=(domain%latent_heat(2:nx-1,2:ny-1)/LH_vaporization*dt) &
-			 / (domain%rho(2:nx-1,1,2:ny-1)*domain%dz(2:nx-1,1,2:ny-1))
-		! add water vapor in kg/kg
-		domain%qv(2:nx-1,1,2:ny-1)=domain%qv(2:nx-1,1,2:ny-1)+lhdQV
-		! enforce some minimum water vapor content. 
-		where(domain%qv<SMALL_QV) domain%qv=SMALL_QV
-		
-	end subroutine apply_fluxes
-	
+        lhdQV=(domain%latent_heat(2:nx-1,2:ny-1)/LH_vaporization*dt) &
+             / (domain%rho(2:nx-1,1,2:ny-1)*domain%dz(2:nx-1,1,2:ny-1))
+        ! add water vapor in kg/kg
+        domain%qv(2:nx-1,1,2:ny-1)=domain%qv(2:nx-1,1,2:ny-1)+lhdQV
+        ! enforce some minimum water vapor content. 
+        where(domain%qv<SMALL_QV) domain%qv=SMALL_QV
+        
+    end subroutine apply_fluxes
+    
     subroutine allocate_noah_data(ime,jme,kme,num_soil_layers)
         implicit none
         integer, intent(in) :: ime,jme,kme,num_soil_layers
@@ -267,7 +267,7 @@ contains
         
 
         MMINLU="USGS"
-		
+        
         allocate(SH2O(ime,num_soil_layers,jme))
         SH2O=0.25
         
@@ -289,12 +289,12 @@ contains
         
         write(*,*) "Initializing land surface model"
         
-		ime=size(domain%th,1)
-		jme=size(domain%th,3)
-		allocate(dTemp(ime-2,jme-2))
-		dTemp=0
-		allocate(lhdQV(ime-2,jme-2))
-		lhdQV=0
+        ime=size(domain%th,1)
+        jme=size(domain%th,3)
+        allocate(dTemp(ime-2,jme-2))
+        dTemp=0
+        allocate(lhdQV(ime-2,jme-2))
+        lhdQV=0
         ! Noah Land Surface Model
         if (options%physics%landsurface==3) then
             
@@ -315,24 +315,24 @@ contains
             call allocate_noah_data(ime,jme,kme,num_soil_layers)
             
             call LSM_NOAH_INIT(domain%vegfrac,SNOW,SNOWC,SNOWH,domain%canopy_water,domain%soil_t,    &
-	                            domain%soil_vwc, SFCRUNOFF,UDRUNOFF,ACSNOW,  &
-	                            ACSNOM,domain%veg_type,domain%soil_type,	 &
-								domain%soil_t, 								 &
-								domain%soil_vwc,SH2O,ZS,DZS, 				 &
-	                            MMINLU,                                      &
-	                            SNOALB, FNDSOILW, FNDSNOWH, RDMAXALB,        &
-	                            num_soil_layers, .False.,                    & ! nlayers, is_restart (can't yet)
-	                            .True. ,                                     & ! allowed_to_read (e.g. soilparm.tbl)
-	                            ids,ide, jds,jde, kds,kde,                   &
-	                            ims,ime, jms,jme, kms,kme,                   &
-	                            its,ite, jts,jte, kts,kte  )
-			
-			! defines the height of the middle of the first model level
+                                domain%soil_vwc, SFCRUNOFF,UDRUNOFF,ACSNOW,  &
+                                ACSNOM,domain%veg_type,domain%soil_type,     &
+                                domain%soil_t,                               &
+                                domain%soil_vwc,SH2O,ZS,DZS,                 &
+                                MMINLU,                                      &
+                                SNOALB, FNDSOILW, FNDSNOWH, RDMAXALB,        &
+                                num_soil_layers, .False.,                    & ! nlayers, is_restart (can't yet)
+                                .True. ,                                     & ! allowed_to_read (e.g. soilparm.tbl)
+                                ids,ide, jds,jde, kds,kde,                   &
+                                ims,ime, jms,jme, kms,kme,                   &
+                                its,ite, jts,jte, kts,kte  )
+            
+            ! defines the height of the middle of the first model level
             z_atm=domain%z(:,1,:)
             lnz_atm_term = log((z_atm+Z0)/Z0)
             base_exchange_term=(75*kappa**2 * sqrt((z_atm+Z0)/Z0)) / (lnz_atm_term**2)
             lnz_atm_term=(kappa/lnz_atm_term)**2
-			where(domain%veg_type==16) domain%landmask=2 ! ensure VEGTYPE (land cover) and land-sea mask are consistent
+            where(domain%veg_type==16) domain%landmask=2 ! ensure VEGTYPE (land cover) and land-sea mask are consistent
         endif
         if (options%physics%landsurface==2) then
             call lsm_simple_init(domain,options)
@@ -343,7 +343,7 @@ contains
         
     end subroutine lsm_init
     
-	
+    
     subroutine lsm(domain,options,dt,model_time)
         implicit none
         
@@ -377,7 +377,7 @@ contains
             else if (options%physics%landsurface==3) then
                 ! Call the Noah Land Surface Model
                 
-				! it would be better to call the MYJ SFC scheme here...
+                ! it would be better to call the MYJ SFC scheme here...
                 T2m=domain%th(:,1,:)*domain%pii(:,1,:)
                 ! 2m saturated mixing ratio
                 do j=1,ny
@@ -388,46 +388,46 @@ contains
                 ! shortwave down
                 ! GSW=domain%swdown   ! This does not actually get used in Noah
                 
-				! exchange coefficients
+                ! exchange coefficients
                 call calc_exchange_coefficient(sqrt(domain%u(1:nx,1,1:ny)**2+domain%v(1:nx,1,1:ny)**2),domain%skin_t,T2m,CHS)
                 CHS2=CHS
                 CQS2=CHS
-				
-                call lsm_noah(domain%dz,domain%qv,domain%p,domain%th*domain%pii,domain%skin_t,  &
-							domain%sensible_heat,QFX,domain%latent_heat,domain%ground_heat, &
-							QGH,GSW,domain%swdown,domain%lwdown,SMSTAV,domain%soil_totalmoisture, &
-							SFCRUNOFF, UDRUNOFF, &
-							domain%veg_type,domain%soil_type, &
-							ISURBAN,ISICE, &
-							domain%vegfrac, &
-							ALBEDO,ALBBCK,ZNT,Z0,domain%soil_tdeep,domain%landmask,XICE,EMISS,EMBCK,     &
-							SNOWC,QSFC,domain%rain-RAINBL,MMINLU,         &
-							num_soil_layers,lsm_dt,DZS,ITIMESTEP,         &
-							domain%soil_vwc,domain%soil_t,domain%snow_swe,&
-							domain%canopy_water,            &
-							CHS,CHS2,CQS2,CPM,ROVCP,SR,chklowq,lai,qz0,   & !H
-							myj,frpcpn,                                   &
-							SH2O,SNOWH,                                   & !H
-							domain%u(1:nx,:,1:ny), domain%v(1:nx,:,1:ny), & !I
-							SNOALB,SHDMIN,SHDMAX,                         & !I
-							SNOTIME,                                      & !?
-							ACSNOM,ACSNOW,                                & !O
-							SNOPCX,                                       & !O
-							POTEVP,                                       & !O
-							SMCREL,                                       & !O
-							XICE_THRESHOLD,                               &
-							RDLAI2D,USEMONALB,                            &
-							RIB,                                          & !?
-							NOAHRES,                                      &
-							ua_phys,flx4_2d,fvb_2d,fbur_2d,fgsn_2d,       & ! Noah UA changes
-							ids,ide, jds,jde, kds,kde,                    &
-							ims,ime, jms,jme, kms,kme,                    &
-							its,ite, jts,jte, kts,kte)
                 
-				! note this is more or less just diagnostic and could be removed
-				domain%lwup=stefan_boltzmann*EMISS*domain%skin_t**4
+                call lsm_noah(domain%dz,domain%qv,domain%p,domain%th*domain%pii,domain%skin_t,  &
+                            domain%sensible_heat,QFX,domain%latent_heat,domain%ground_heat, &
+                            QGH,GSW,domain%swdown,domain%lwdown,SMSTAV,domain%soil_totalmoisture, &
+                            SFCRUNOFF, UDRUNOFF, &
+                            domain%veg_type,domain%soil_type, &
+                            ISURBAN,ISICE, &
+                            domain%vegfrac, &
+                            ALBEDO,ALBBCK,ZNT,Z0,domain%soil_tdeep,domain%landmask,XICE,EMISS,EMBCK,     &
+                            SNOWC,QSFC,domain%rain-RAINBL,MMINLU,         &
+                            num_soil_layers,lsm_dt,DZS,ITIMESTEP,         &
+                            domain%soil_vwc,domain%soil_t,domain%snow_swe,&
+                            domain%canopy_water,            &
+                            CHS,CHS2,CQS2,CPM,ROVCP,SR,chklowq,lai,qz0,   & !H
+                            myj,frpcpn,                                   &
+                            SH2O,SNOWH,                                   & !H
+                            domain%u(1:nx,:,1:ny), domain%v(1:nx,:,1:ny), & !I
+                            SNOALB,SHDMIN,SHDMAX,                         & !I
+                            SNOTIME,                                      & !?
+                            ACSNOM,ACSNOW,                                & !O
+                            SNOPCX,                                       & !O
+                            POTEVP,                                       & !O
+                            SMCREL,                                       & !O
+                            XICE_THRESHOLD,                               &
+                            RDLAI2D,USEMONALB,                            &
+                            RIB,                                          & !?
+                            NOAHRES,                                      &
+                            ua_phys,flx4_2d,fvb_2d,fbur_2d,fgsn_2d,       & ! Noah UA changes
+                            ids,ide, jds,jde, kds,kde,                    &
+                            ims,ime, jms,jme, kms,kme,                    &
+                            its,ite, jts,jte, kts,kte)
+                
+                ! note this is more or less just diagnostic and could be removed
+                domain%lwup=stefan_boltzmann*EMISS*domain%skin_t**4
                 RAINBL=domain%rain
-				call apply_fluxes(domain,lsm_dt)
+                call apply_fluxes(domain,lsm_dt)
             endif
         endif
         
