@@ -81,7 +81,7 @@ module module_lsm_basic
 !           compute the real temperature from the potential temperature
             temperature=th(ids+1:ide-1,1,i)*pii(ids+1:ide-1,1,i) ! K
 !           compute air density
-            rho(ids+1:ide-1,:)=p(ids+1:ide-1,:,i)/(R*th(ids+1:ide-1,:,i)*pii(ids+1:ide-1,:,i)) ! kg/m^3
+            rho(ids+1:ide-1,:)=p(ids+1:ide-1,:,i)/(Rd*th(ids+1:ide-1,:,i)*pii(ids+1:ide-1,:,i)) ! kg/m^3
 !           convert sensible heat flux to a temperature delta term
             ! J/s/m^2 * s / J/(kg*K) => kg*K/m^2 ... /((kg/m^3) * m) => K
             dTemp=(sensible_heat(ids+1:ide-1,i)*dt/cp) / (rho(ids+1:ide-1,1)*dz(ids+1:ide-1,1,i)) / factor! K

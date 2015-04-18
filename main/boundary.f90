@@ -600,8 +600,8 @@ contains
             if (options%external_winds) then
                 call ext_winds_init(domain,bc,options)
             endif
-            domain%pii=(domain%p/100000.0)**(R/cp)
-            domain%rho=domain%p/(R*domain%th*domain%pii) ! kg/m^3
+            domain%pii=(domain%p/100000.0)**(Rd/cp)
+            domain%rho=domain%p/(Rd*domain%th*domain%pii) ! kg/m^3
             call balance_uvw(domain,options)
             
             domain%model_time=(options%restart_step-1)*options%in_dt + options%time_zero
@@ -672,8 +672,8 @@ contains
                 enddo
             endif
 
-            domain%pii=(domain%p/100000.0)**(R/cp)
-            domain%rho=domain%p/(R*domain%th*domain%pii) ! kg/m^3
+            domain%pii=(domain%p/100000.0)**(Rd/cp)
+            domain%rho=domain%p/(Rd*domain%th*domain%pii) ! kg/m^3
             call update_winds(domain,options)
         endif
 
@@ -930,8 +930,8 @@ contains
                 bc%next_domain%ice(:,i,ny) = sum(bc%next_domain%ice(:,i,ny)) / nx
             enddo
         endif
-        bc%next_domain%pii=(bc%next_domain%p/100000.0)**(R/cp)
-        bc%next_domain%rho=bc%next_domain%p/(R*domain%th*bc%next_domain%pii) ! kg/m^3
+        bc%next_domain%pii=(bc%next_domain%p/100000.0)**(Rd/cp)
+        bc%next_domain%rho=bc%next_domain%p/(Rd*domain%th*bc%next_domain%pii) ! kg/m^3
         
         call update_winds(bc%next_domain,options)
         
