@@ -189,7 +189,7 @@ module data_structures
         ! current model time step length (should this be somewhere else?)
         real::dt
         ! current model time (seconds from options%time_zero)
-        real*8 :: model_time
+        double precision :: model_time
     end type domain_type
 
     !------------------------------------------------
@@ -310,6 +310,7 @@ module data_structures
         real :: rm_N_squared            ! static Brunt Vaisala Frequency (N^2) to use in removing linear wind field
         real :: linear_contribution     ! fractional contribution of linear perturbation to wind field (e.g. u_hat multiplied by this)
         real :: rm_linear_contribution  ! fractional contribution of linear perturbation to wind field to remove from the low-res field
+        real :: linear_update_fraction  ! fraction of linear perturbation to add each time step
         logical :: spatial_linear_fields! use a spatially varying linear wind perturbation
         logical :: time_varying_z       ! read in a new z coordinate every time step and interpolate accordingly
         logical :: linear_mask          ! use a spatial mask for the linear wind field

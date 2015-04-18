@@ -55,13 +55,20 @@ module linear_theory_winds
     integer,parameter::stability_window_size=2
     
     real, parameter :: max_stability= 5e-4 ! limits on the calculated Brunt Vaisala Frequency
-    real, parameter :: min_stability= 5e-7 ! these may need to be a little narrower. 
+    real, parameter :: min_stability= 5e-8 ! these may need to be a little narrower. 
     real :: linear_contribution = 1.0 ! multiplier on uhat,vhat before adding to u,v
     
     real, allocatable, dimension(:) :: u_values, v_values
     real, allocatable, target, dimension(:,:,:,:,:) :: hi_u_LUT, hi_v_LUT, rev_u_LUT, rev_v_LUT
     real, pointer, dimension(:,:,:,:,:) :: u_LUT, v_LUT
     real, allocatable, dimension(:,:) :: linear_mask
+    
+    ! store the linear perturbation so we can update it slightly each time step
+    ! this permits the linear field to build up over time. 
+    real, allocatable, dimension(:,:,:) :: u_perturbation, v_perturbation
+    ! controls the rate at which the linearfield updates (should be calculated as f(in_dt))
+    ! new/current perturbation is multiplited by linear_update and added to (1-linear_update) * the previous combined perturbation
+    real :: linear_update_fraction = 0.2 ! 
     
     real, parameter :: umax=30
     real, parameter :: umin=-20
@@ -557,6 +564,7 @@ contains
             do j=1,n_V_values
                 
                 ! set the domain wide U and V values to the current u and v values
+                ! this could use u/v_perturbation, but those would need to be put in a linearizable structure...
                 domain%u=u_values(i)
                 domain%v=v_values(j)
                 
@@ -638,7 +646,7 @@ contains
         
         !$omp parallel firstprivate(nx,ny,nz), &
         !$omp private(i,j,k,step, upos, vpos, nextu, nextv, uweight, vweight), &
-        !$omp shared(domain, u_values, v_values, u_LUT, v_LUT)
+        !$omp shared(domain, u_values, v_values, u_LUT, v_LUT, u_perturbation, v_perturbation)
         !$omp do
         do k=1,ny+1
             do j=1,nz
@@ -674,14 +682,18 @@ contains
                     
                     if (k<=ny) then
                     ! perform linear interpolation between LUT values
-                        domain%u(i,j,k)=domain%u(i,j,k) &
-                                    + (   vweight  * (uweight * u_LUT(upos,vpos,i,j,k)  + (1-uweight) * u_LUT(nextu,vpos,i,j,k))  &
+                        u_perturbation(i,j,k)=u_perturbation(i,j,k) * (1-linear_update_fraction) &
+                                    + linear_update_fraction * &
+                                      (   vweight  * (uweight * u_LUT(upos,vpos,i,j,k)  + (1-uweight) * u_LUT(nextu,vpos,i,j,k))  &
                                     +  (1-vweight) * (uweight * u_LUT(upos,nextv,i,j,k) + (1-uweight) * u_LUT(nextu,nextv,i,j,k)) )
+                        domain%u(i,j,k) = domain%u(i,j,k) + u_perturbation(i,j,k)
                     endif
                     if (i<=nx) then
-                        domain%v(i,j,k)=domain%v(i,j,k) &
-                                    + (   vweight  * (uweight * v_LUT(upos,vpos,i,j,k)  + (1-uweight) * v_LUT(nextu,vpos,i,j,k))  &
+                        v_perturbation(i,j,k)=v_perturbation(i,j,k) * (1-linear_update_fraction) &
+                                    + linear_update_fraction * &
+                                      (   vweight  * (uweight * v_LUT(upos,vpos,i,j,k)  + (1-uweight) * v_LUT(nextu,vpos,i,j,k))  &
                                     +  (1-vweight) * (uweight * v_LUT(upos,nextv,i,j,k) + (1-uweight) * v_LUT(nextu,nextv,i,j,k)) )
+                        domain%v(i,j,k) = domain%v(i,j,k) + v_perturbation(i,j,k)
                     endif
                     
                 end do
@@ -702,9 +714,13 @@ contains
         complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::complex_terrain_firstpass
         complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::complex_terrain
         type(C_PTR) :: plan
-        integer::nx,ny, save_buffer
+        integer::nx,ny,nz, save_buffer
         
         ! store module level variables so we don't have to pass options through everytime
+        ! lots of these things probably need to be moved to the linearizable class so they
+        ! can be separated for the domain and bc fields
+        ! this is a little tricky, because we don't want to have to calculate the LUTs 
+        ! twice, once for domain and once for bc%next_domain
         variable_N=options%variable_N
         buffer = original_buffer
         if (.not.options%ideal) then
@@ -715,7 +731,6 @@ contains
         else
             call add_buffer_topo(domain%terrain,complex_terrain,0)
         endif
-        
         
         nx=size(complex_terrain,1)
         ny=size(complex_terrain,2)
@@ -741,9 +756,11 @@ contains
             write(*,*) "Using a fraction of the linear perturbation:",linear_contribution
         endif
 
-        ! set up linear_mask variable
         nx=size(domain%terrain,1)
+        nz=size(domain%u,2)
         ny=size(domain%terrain,2)
+        
+        ! set up linear_mask variable
         if ( (.not.reverse) .and. (.not.allocated(linear_mask)) ) then
             allocate(linear_mask(nx,ny))
             linear_mask=linear_contribution
@@ -756,6 +773,17 @@ contains
                 linear_mask=(1-(1-domain%linear_mask)*0.8) * linear_contribution
             endif
         endif
+        
+        ! allocate the fields that will hold the perturbation only so we can update it
+        ! slowly and add the total to the domain%u,v
+        linear_update_fraction = options%linear_update_fraction
+        if (.not.allocated(u_perturbation)) then
+            allocate(u_perturbation(nx+1,nz,ny))
+            u_perturbation=0
+            allocate(v_perturbation(nx,nz,ny+1))
+            v_perturbation=0
+        endif
+        
         
         if (options%spatial_linear_fields) then
             if ((.not.allocated(hi_u_LUT) .and. (.not.reverse)) .or. ((.not.allocated(rev_u_LUT)) .and. reverse)) then
