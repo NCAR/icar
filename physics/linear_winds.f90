@@ -51,14 +51,15 @@ module linear_theory_winds
     type(C_PTR) :: uh_aligned_data, u_h_aligned_data, vh_aligned_data, v_h_aligned_data
     type(C_PTR), allocatable :: uplans(:), vplans(:)
     
-    integer::buffer, original_buffer=50 ! number of grid cells to buffer around the domain MUST be >=1
-    integer,parameter::stability_window_size=2
+    integer :: buffer, original_buffer=50 ! number of grid cells to buffer around the domain MUST be >=1
+    integer,parameter :: stability_window_size=2
     
     real, parameter :: max_stability= 5e-4 ! limits on the calculated Brunt Vaisala Frequency
     real, parameter :: min_stability= 5e-8 ! these may need to be a little narrower. 
     real :: linear_contribution = 1.0 ! multiplier on uhat,vhat before adding to u,v
     
     real, allocatable, dimension(:) :: u_values, v_values
+    ! Look Up Tables for linear perturbation are n_u_values x n_v_values x nx x nz x ny
     real, allocatable, target, dimension(:,:,:,:,:) :: hi_u_LUT, hi_v_LUT, rev_u_LUT, rev_v_LUT
     real, pointer, dimension(:,:,:,:,:) :: u_LUT, v_LUT
     real, allocatable, dimension(:,:) :: linear_mask
@@ -68,7 +69,7 @@ module linear_theory_winds
     real, allocatable, dimension(:,:,:) :: u_perturbation, v_perturbation
     ! controls the rate at which the linearfield updates (should be calculated as f(in_dt))
     ! new/current perturbation is multiplited by linear_update and added to (1-linear_update) * the previous combined perturbation
-    real :: linear_update_fraction = 0.2 ! 
+    real :: linear_update_fraction = 0.2
     
     real, parameter :: umax=30
     real, parameter :: umin=-20
