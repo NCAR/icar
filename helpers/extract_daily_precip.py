@@ -86,18 +86,17 @@ def main (filesearch, outputfile):
 
 if __name__ == '__main__':
     try:
-        parser= argparse.ArgumentParser(description='This is a template file for Python scripts. ',
+        parser= argparse.ArgumentParser(description='Create a daily precipitation file from ICAR output files. ',
                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-        parser.add_argument('filesearch',nargs="?", action='store', default="icar_*.nc",
+        parser.add_argument('filesearch',nargs="?",         action='store',     default="icar_*.nc",
                             help="glob pattern to search for icar output files")
-        parser.add_argument('-o',      dest="outputfile", action='store', default="daily_precip.nc",
+        parser.add_argument('-o',        dest="outputfile", action='store',     default="daily_precip.nc",
                             help="name of outputfile")
-        parser.add_argument('-v', '--version',action='version',
-                version='extract_daily_precip 1.0')
-        parser.add_argument ('--verbose', action='store_true',
-                default=False, help='verbose output', dest='verbose')
+        parser.add_argument('-v','--version',               action='version',   version='extract_daily_precip 1.0')
+        parser.add_argument ('--verbose', dest='verbose',   action='store_true',default=False, help='verbose output')
         args = parser.parse_args()
 
+        # note: verbose is defined above as global
         verbose=args.verbose
         exit_code = main(args.filesearch, args.outputfile)
         if exit_code is None:
