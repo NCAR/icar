@@ -660,7 +660,7 @@ contains
         debug=.True.
 !       call io_write2d("internal_linear_mask.nc","data",linear_mask)
         do i=1,n_dir_values
-            write(*,*) i/real(n_dir_values)*100," %"
+            write(*,"(A,f5.1,A$)") char(13), i/real(n_dir_values)*100," %"
             ! set the domain wide U and V values to the current u and v values
             ! this could use u/v_perturbation, but those would need to be put in a linearizable structure...
             do k=1,n_spd_values
@@ -675,6 +675,7 @@ contains
                 end do
             end do
         end do
+        write(*,*) char(10),"--------  Linear wind look up table generation complete ---------"
         domain%u=savedU
         domain%v=savedV
         
