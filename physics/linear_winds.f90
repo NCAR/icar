@@ -78,9 +78,9 @@ module linear_theory_winds
     real, parameter :: nsqmax=log(6e-4)
     real, parameter :: nsqmin=log(1e-7)
     
-    integer, parameter :: n_dir_values=4 !72
-    integer, parameter :: n_nsq_values=4 !15
-    integer, parameter :: n_spd_values=4
+    integer, parameter :: n_dir_values=25
+    integer, parameter :: n_nsq_values=6
+    integer, parameter :: n_spd_values=6
     
     ! real,parameter::pi=3.1415927
     complex,parameter :: j= (0,1)
@@ -339,6 +339,7 @@ contains
         endif
         if (reverse) then
             write(*,*) "ERROR: reversing linear winds not set up for parallel fftw computation yet"
+            write(*,*) "also not set up for the new spatial wind LUTs"
             stop
         endif
 
@@ -602,7 +603,7 @@ contains
         logical, intent(in) :: reverse,useDensity
         real, allocatable, dimension(:,:,:) :: savedU, savedV
         real :: u,v
-        integer :: nx,ny,nz,i,j,k,ii, nxu,nyv
+        integer :: nx,ny,nz,i,j,k, nxu,nyv
         logical :: debug
         
         ! the domain to work over
@@ -616,6 +617,7 @@ contains
         ! save the old U and V values so we can restore them
         allocate(savedU(nxu,nz,ny))
         allocate(savedV(nx,nz,nyv))
+        
         savedU=domain%u
         savedV=domain%v
         
@@ -648,6 +650,11 @@ contains
             v_LUT=>hi_v_LUT
         endif
         
+        write(*,*) "Calculating linear wind LUTs for all combinations of :"
+        write(*,*) "Wind Speed:",spd_values
+        write(*,*) " Direction:",360*dir_values/(2*pi)
+        write(*,*) " Stability:",exp(nsq_values)
+        
         ! loop over combinations of U and V values
         write(*,*) "Percent Completed:"
         debug=.True.
@@ -657,16 +664,21 @@ contains
             ! set the domain wide U and V values to the current u and v values
             ! this could use u/v_perturbation, but those would need to be put in a linearizable structure...
             do k=1,n_spd_values
-                domain%u=calc_u(dir_values(i),spd_values(k))
-                domain%v=calc_v(dir_values(i),spd_values(k))
                 do j=1,n_nsq_values
+                    domain%u=calc_u(dir_values(i),spd_values(k))
+                    domain%v=calc_v(dir_values(i),spd_values(k))
                     ! calculate the linear wind field for the current u and v values
                     call linear_winds(domain,exp(nsq_values(j)), 0, reverse,useDensity,debug=debug)
                     debug=.False.
-                    do ii=1,nz
-                        u_LUT(k,i,j,:,ii,:)=(domain%u(:,ii,:)-calc_u(dir_values(i),spd_values(k)))
-                        v_LUT(k,i,j,:,ii,:)=(domain%v(:,ii,:)-calc_v(dir_values(i),spd_values(k)))
-                    end do
+                    u_LUT(k,i,j,:,:,:)=(domain%u-calc_u(dir_values(i),spd_values(k)))
+                    v_LUT(k,i,j,:,:,:)=(domain%v-calc_v(dir_values(i),spd_values(k)))
+                    print*, i,j,k
+                    print*, "dir=",dir_values(i),"  nsq=",exp(nsq_values(j)),"  spd=",spd_values(k)
+                    print*, "u=",calc_u(dir_values(i),spd_values(k)), "  v=",calc_v(dir_values(i),spd_values(k))
+                    print*, "ulut=",u_LUT(k,i,j,100,1,100), "  vlut=",v_LUT(k,i,j,100,1,100)
+                    call io_write3d("u_LUT_dir"//trim(str(i))//"_spd"//trim(str(k))//"_nsq"//trim(str(j))//".nc","data", u_LUT(k,i,j,:,:,:) )
+                    call io_write3d("v_LUT_dir"//trim(str(i))//"_spd"//trim(str(k))//"_nsq"//trim(str(j))//".nc","data", v_LUT(k,i,j,:,:,:) )
+                    print*, "---------------------------------------------"
                 end do
             end do
         end do
