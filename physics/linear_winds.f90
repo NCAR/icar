@@ -651,9 +651,9 @@ contains
         endif
         
         write(*,*) "Calculating linear wind LUTs for all combinations of :"
-        write(*,*) "Wind Speed:",spd_values
-        write(*,*) " Direction:",360*dir_values/(2*pi)
-        write(*,*) " Stability:",exp(nsq_values)
+        write(*,*) "Wind Speeds:",spd_values
+        write(*,*) " Directions:",360*dir_values/(2*pi)
+        write(*,*) "Stabilities:",exp(nsq_values)
         
         ! loop over combinations of U and V values
         write(*,*) "Percent Completed:"
@@ -672,13 +672,6 @@ contains
                     debug=.False.
                     u_LUT(k,i,j,:,:,:)=(domain%u-calc_u(dir_values(i),spd_values(k)))
                     v_LUT(k,i,j,:,:,:)=(domain%v-calc_v(dir_values(i),spd_values(k)))
-                    print*, i,j,k
-                    print*, "dir=",dir_values(i),"  nsq=",exp(nsq_values(j)),"  spd=",spd_values(k)
-                    print*, "u=",calc_u(dir_values(i),spd_values(k)), "  v=",calc_v(dir_values(i),spd_values(k))
-                    print*, "ulut=",u_LUT(k,i,j,100,1,100), "  vlut=",v_LUT(k,i,j,100,1,100)
-                    call io_write3d("u_LUT_dir"//trim(str(i))//"_spd"//trim(str(k))//"_nsq"//trim(str(j))//".nc","data", u_LUT(k,i,j,:,:,:) )
-                    call io_write3d("v_LUT_dir"//trim(str(i))//"_spd"//trim(str(k))//"_nsq"//trim(str(j))//".nc","data", v_LUT(k,i,j,:,:,:) )
-                    print*, "---------------------------------------------"
                 end do
             end do
         end do
