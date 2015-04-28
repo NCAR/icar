@@ -58,10 +58,10 @@ module linear_theory_winds
     real, parameter :: min_stability= 5e-8 ! these may need to be a little narrower. 
     real :: linear_contribution = 1.0 ! multiplier on uhat,vhat before adding to u,v
     
-    real, allocatable, dimension(:) :: dir_values, nsq_values
-    ! Look Up Tables for linear perturbation are n_dir_values x n_nsq_values x nx x nz x ny
-    real, allocatable, target, dimension(:,:,:,:,:) :: hi_u_LUT, hi_v_LUT, rev_u_LUT, rev_v_LUT
-    real, pointer, dimension(:,:,:,:,:) :: u_LUT, v_LUT
+    real, allocatable, dimension(:) :: dir_values, nsq_values, spd_values
+    ! Look Up Tables for linear perturbation are nspd x n_dir_values x n_nsq_values x nx x nz x ny
+    real, allocatable, target, dimension(:,:,:,:,:,:) :: hi_u_LUT, hi_v_LUT, rev_u_LUT, rev_v_LUT
+    real, pointer, dimension(:,:,:,:,:,:) :: u_LUT, v_LUT
     real, allocatable, dimension(:,:) :: linear_mask
     
     ! store the linear perturbation so we can update it slightly each time step
@@ -73,11 +73,14 @@ module linear_theory_winds
     
     real, parameter :: dirmax=2*pi
     real, parameter :: dirmin=0
+    real, parameter :: spdmax=30
+    real, parameter :: spdmin=0
     real, parameter :: nsqmax=log(6e-4)
     real, parameter :: nsqmin=log(1e-7)
     
-    integer, parameter :: n_dir_values=72
-    integer, parameter :: n_nsq_values=15
+    integer, parameter :: n_dir_values=4 !72
+    integer, parameter :: n_nsq_values=4 !15
+    integer, parameter :: n_spd_values=4
     
     ! real,parameter::pi=3.1415927
     complex,parameter :: j= (0,1)
@@ -182,7 +185,7 @@ contains
         real, intent(in) :: th_top, th_bot, pii_top, pii_bot, z_top, z_bot, qv_top, qv_bot, qc
         real :: BV_freq
         
-        if (qc==0) then
+        if (qc<1e-7) then
             BV_freq=calc_dry_stability(th_top, th_bot, z_top, z_bot)
         else
             BV_freq=calc_moist_stability(th_top*pii_top, th_bot*pii_bot, z_top, z_bot, qv_top, qv_bot, qc)
@@ -391,7 +394,6 @@ contains
             if ((abs(U)+abs(V))>0.5) then
                 sig  = U*k+V*l
                 where(sig==0.0) sig=1e-15
-!               print*, U, V, maxval(sig), reverse, zaxis_is_third
                 denom = sig**2 ! -f**2
             
                 !   where(denom.eq.0) denom=1e-20
@@ -600,7 +602,7 @@ contains
         logical, intent(in) :: reverse,useDensity
         real, allocatable, dimension(:,:,:) :: savedU, savedV
         real :: u,v
-        integer :: nx,ny,nz,i,j,ii, nxu,nyv
+        integer :: nx,ny,nz,i,j,k,ii, nxu,nyv
         logical :: debug
         
         ! the domain to work over
@@ -621,9 +623,13 @@ contains
         if (.not.allocated(dir_values)) then
             allocate(dir_values(n_dir_values))
             allocate(nsq_values(n_nsq_values))
+            allocate(spd_values(n_spd_values))
         endif
         do i=1,n_dir_values
             dir_values(i)=(i-1)/real(n_dir_values-1) * (dirmax-dirmin) + dirmin
+        enddo
+        do i=1,n_spd_values
+            spd_values(i)=(i-1)/real(n_spd_values-1) * (spdmax-spdmin) + spdmin
         enddo
         do i=1,n_nsq_values
             nsq_values(i)=(i-1)/real(n_nsq_values-1) * (nsqmax-nsqmin) + nsqmin
@@ -631,13 +637,13 @@ contains
         
         ! allocate the (LARGE) look up tables for both U and V
         if (reverse) then
-            allocate(rev_u_LUT(n_dir_values,n_nsq_values,nxu,nz,ny))
-            allocate(rev_v_LUT(n_dir_values,n_nsq_values,nx,nz,nyv))
+            allocate(rev_u_LUT(n_spd_values,n_dir_values,n_nsq_values,nxu,nz,ny))
+            allocate(rev_v_LUT(n_spd_values,n_dir_values,n_nsq_values,nx,nz,nyv))
             u_LUT=>rev_u_LUT
             v_LUT=>rev_v_LUT
         else
-            allocate(hi_u_LUT(n_dir_values,n_nsq_values,nxu,nz,ny))
-            allocate(hi_v_LUT(n_dir_values,n_nsq_values,nx,nz,nyv))
+            allocate(hi_u_LUT(n_spd_values,n_dir_values,n_nsq_values,nxu,nz,ny))
+            allocate(hi_v_LUT(n_spd_values,n_dir_values,n_nsq_values,nx,nz,nyv))
             u_LUT=>hi_u_LUT
             v_LUT=>hi_v_LUT
         endif
@@ -650,16 +656,17 @@ contains
             write(*,*) i/real(n_dir_values)*100," %"
             ! set the domain wide U and V values to the current u and v values
             ! this could use u/v_perturbation, but those would need to be put in a linearizable structure...
-            domain%u=calc_u(dir_values(i),1.0)
-            domain%v=calc_v(dir_values(i),1.0)
-            do j=1,n_nsq_values
-                
-                ! calculate the linear wind field for the current u and v values
-                call linear_winds(domain,exp(nsq_values(j)), 0, reverse,useDensity,debug=debug)
-                debug=.False.
-                do ii=1,nz
-                    u_LUT(i,j,:,ii,:)=(domain%u(:,ii,:)-calc_u(dir_values(i),1.0))
-                    v_LUT(i,j,:,ii,:)=(domain%v(:,ii,:)-calc_v(dir_values(i),1.0))
+            do k=1,n_spd_values
+                domain%u=calc_u(dir_values(i),spd_values(k))
+                domain%v=calc_v(dir_values(i),spd_values(k))
+                do j=1,n_nsq_values
+                    ! calculate the linear wind field for the current u and v values
+                    call linear_winds(domain,exp(nsq_values(j)), 0, reverse,useDensity,debug=debug)
+                    debug=.False.
+                    do ii=1,nz
+                        u_LUT(k,i,j,:,ii,:)=(domain%u(:,ii,:)-calc_u(dir_values(i),spd_values(k)))
+                        v_LUT(k,i,j,:,ii,:)=(domain%v(:,ii,:)-calc_v(dir_values(i),spd_values(k)))
+                    end do
                 end do
             end do
         end do
@@ -712,8 +719,8 @@ contains
         logical, intent(in) :: reverse
         integer :: nx,ny,nz,i,j,k
         integer :: uk, vi !store a separate value of i for v and of k for u to we can handle nx+1, ny+1
-        integer :: step, dpos, npos, nextd, nextn, top
-        real :: dweight, nweight, curdir, curnsq, speed
+        integer :: step, dpos, npos, spos, nexts, nextd, nextn, top, bottom
+        real :: dweight, nweight, sweight, curspd, curdir, curnsq, wind_first, wind_second
     
         nx=size(domain%lat,1)
         ny=size(domain%lat,2)
@@ -727,10 +734,13 @@ contains
             v_LUT=>hi_v_LUT
         endif
         
-        
+		print*, "max before u_pert, v_pert"
+		print*, maxval(u_perturbation), maxval(v_perturbation)
+		print*, maxval(u_perturbation(2:nx-1,:,2:ny-1)), maxval(v_perturbation(2:nx-1,:,2:ny-1))
         !$omp parallel firstprivate(nx,ny,nz), default(none), &
-        !$omp private(i,j,k,step, uk, vi, top, dpos, npos, nextd, nextn, curdir, curnsq, dweight, nweight, speed), &
-        !$omp shared(domain, dir_values, nsq_values, u_LUT, v_LUT, u_perturbation, v_perturbation)
+        !$omp private(i,j,k,step, uk, vi, top, bottom, spos, dpos, npos, nexts,nextd, nextn), &
+        !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
+        !$omp shared(domain, spd_values, dir_values, nsq_values, u_LUT, v_LUT, u_perturbation, v_perturbation, linear_update_fraction)
         !$omp do
         do k=1,ny+1
             do j=1,nz
@@ -738,6 +748,11 @@ contains
                     uk=min(k,ny)
                     vi=min(i,nx)
                     top=min(j+1,nz)
+					if (top==j) then
+						bottom=j-1
+					else
+						bottom=j
+					endif
                     
                     dpos=1
                     curdir=calc_direction(domain%u(i,j,uk), domain%v(vi,j,k))
@@ -746,12 +761,21 @@ contains
                             dpos=step
                         endif
                     end do
+                    
+                    spos=1
+                    curspd=calc_speed(domain%u(i,j,uk), domain%v(vi,j,k))
+                    do step=1,n_spd_values
+                        if (curspd>spd_values(step)) then
+                            spos=step
+                        endif
+                    end do
+                    
                     npos=1
-                    curnsq = calc_stability(domain%th(i,j,k), domain%th(i,top,k),  &
-                                            domain%pii(i,j,k),domain%pii(i,top,k), &
-                                            domain%z(i,j,k),  domain%z(i,top,k),   &
-                                            domain%qv(i,j,k), domain%qv(i,top,k),  &
-                                            domain%cloud(i,j,k)+domain%ice(i,j,k)+domain%qrain(i,j,k)+domain%qsnow(i,j,k))
+                    curnsq = calc_stability(domain%th(vi,bottom,uk), domain%th(vi,top,uk),  &
+                                            domain%pii(vi,bottom,uk),domain%pii(vi,top,uk), &
+                                            domain%z(vi,bottom,uk),  domain%z(vi,top,uk),   &
+                                            domain%qv(vi,bottom,uk), domain%qv(vi,top,uk),  &
+                                            domain%cloud(vi,j,uk)+domain%ice(vi,j,uk)+domain%qrain(vi,j,uk)+domain%qsnow(vi,j,uk))
                     curnsq = log(curnsq)
                     do step=1,n_nsq_values
                         if (curnsq>nsq_values(step)) then
@@ -762,21 +786,32 @@ contains
                     ! calculate the weights and the "next" u/v position
                     ! "next" usually = pos+1 but for edge cases next = 1 or n
                     dweight=calc_weight(dir_values, dpos,nextd,curdir)
+                    sweight=calc_weight(spd_values, spos,nexts,curspd)
                     nweight=calc_weight(nsq_values, npos,nextn,curnsq)
-                    speed = calc_speed(domain%u(i,j,uk),domain%v(vi,j,k))
+!                     if ((i==50).and.(k==50)) then
+!                         print*, i,j,k, exp(curnsq)
+!                         print*, domain%th(vi,bottom,uk),domain%p(vi,bottom,uk),domain%z(vi,bottom,uk),domain%qv(vi,bottom,uk)
+!                         print*, u_LUT(spos,dpos,npos,i,j,k), v_LUT(spos,dpos,npos,i,j,k)
+!                     endif
                     if (k<=ny) then
-                    ! perform linear interpolation between LUT values
+                        ! perform linear interpolation between LUT values
+                        wind_first =      nweight  * (dweight * u_LUT(spos,dpos,npos,i,j,k)  + (1-dweight) * u_LUT(spos,nextd,npos,i,j,k))    &
+                                    +  (1-nweight) * (dweight * u_LUT(spos,dpos,nextn,i,j,k) + (1-dweight) * u_LUT(spos,nextd,nextn,i,j,k))
+                        wind_second=      nweight  * (dweight * u_LUT(nexts,dpos,npos,i,j,k) + (1-dweight) * u_LUT(nexts,nextd,npos,i,j,k))    &
+                                    +  (1-nweight) * (dweight * u_LUT(nexts,dpos,nextn,i,j,k)+ (1-dweight) * u_LUT(nexts,nextd,nextn,i,j,k))
                         u_perturbation(i,j,k)=u_perturbation(i,j,k) * (1-linear_update_fraction) &
-                                    + linear_update_fraction * speed * &
-                                      (   nweight  * (dweight * u_LUT(dpos,npos,i,j,k)  + (1-dweight) * u_LUT(nextd,npos,i,j,k))  &
-                                    +  (1-nweight) * (dweight * u_LUT(dpos,nextn,i,j,k) + (1-dweight) * u_LUT(nextd,nextn,i,j,k)) )
+                                    + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
+                                    
                         domain%u(i,j,k) = domain%u(i,j,k) + u_perturbation(i,j,k)
                     endif
                     if (i<=nx) then
+                        wind_first =      nweight  * (dweight * v_LUT(spos,dpos,npos,i,j,k)  + (1-dweight) * v_LUT(spos,nextd,npos,i,j,k))    &
+                                    +  (1-nweight) * (dweight * v_LUT(spos,dpos,nextn,i,j,k) + (1-dweight) * v_LUT(spos,nextd,nextn,i,j,k))
+                        wind_second=      nweight  * (dweight * v_LUT(nexts,dpos,npos,i,j,k) + (1-dweight) * v_LUT(nexts,nextd,npos,i,j,k))    &
+                                    +  (1-nweight) * (dweight * v_LUT(nexts,dpos,nextn,i,j,k)+ (1-dweight) * v_LUT(nexts,nextd,nextn,i,j,k))
                         v_perturbation(i,j,k)=v_perturbation(i,j,k) * (1-linear_update_fraction) &
-                                    + linear_update_fraction * speed * &
-                                      (   nweight  * (dweight * v_LUT(dpos,npos,i,j,k)  + (1-dweight) * v_LUT(nextd,npos,i,j,k))  &
-                                    +  (1-nweight) * (dweight * v_LUT(dpos,nextn,i,j,k) + (1-dweight) * v_LUT(nextd,nextn,i,j,k)) )
+                                    + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
+                                    
                         domain%v(i,j,k) = domain%v(i,j,k) + v_perturbation(i,j,k)
                     endif
                     
@@ -868,7 +903,7 @@ contains
             v_perturbation=0
         endif
         
-        
+        print*, maxval(u_perturbation), maxval(v_perturbation)
         if (options%spatial_linear_fields) then
             if ((.not.allocated(hi_u_LUT) .and. (.not.reverse)) .or. ((.not.allocated(rev_u_LUT)) .and. reverse)) then
                 
@@ -917,7 +952,7 @@ contains
         if (.not.allocated(domain%fzs)) then
             call setup_linwinds(domain,options,rev,useD)
         endif
-        
+		
         ! add the spatially variable linear field
         ! if we are reverseing the effects, that means we are in the low-res domain
         ! that domain does not have a spatial LUT calculated, so it can not be performed
