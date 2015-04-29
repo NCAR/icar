@@ -709,8 +709,8 @@ contains
         type(bc_type), intent(inout) :: bc
         type(domain_type), intent(in) :: domain
         
-        bc%du_dt=bc%next_domain%u-domain%u
-        bc%dv_dt=bc%next_domain%v-domain%v
+!         bc%du_dt=bc%next_domain%u-domain%u
+!         bc%dv_dt=bc%next_domain%v-domain%v
 !       bc%dw_dt=bc%next_domain%w-domain%w
         bc%dp_dt=bc%next_domain%p-domain%p
 !       bc%drho_dt=bc%next_domain%rho-domain%rho
@@ -723,6 +723,15 @@ contains
         call update_edges(bc%dqv_dt,bc%next_domain%qv,domain%qv)
         call update_edges(bc%dqc_dt,bc%next_domain%cloud,domain%cloud)
     end subroutine update_dxdt
+
+    subroutine update_dwinddt(bc,domain)
+        implicit none
+        type(bc_type), intent(inout) :: bc
+        type(domain_type), intent(in) :: domain
+        
+        bc%du_dt=bc%next_domain%u-domain%u
+        bc%dv_dt=bc%next_domain%v-domain%v
+    end subroutine update_dwinddt
     
 !   adjust the pressure field for the vertical shift between the low resolution domain
 !   and the high resolution domain. Ideally this should include temperature
@@ -933,9 +942,19 @@ contains
         bc%next_domain%pii=(bc%next_domain%p/100000.0)**(Rd/cp)
         bc%next_domain%rho=bc%next_domain%p/(Rd*domain%th*bc%next_domain%pii) ! kg/m^3
         
-        call update_winds(bc%next_domain,options)
         
-        
+        ! update scalar dXdt tendency fields first so we can then overwrite them with 
+        ! the current model state
         call update_dxdt(bc,domain)
+        
+        ! we need the internal values of these fields to in sync with the model
+        ! for the linear wind calculations...
+        bc%next_domain%qv=domain%qv
+        bc%next_domain%th=domain%th
+        bc%next_domain%cloud=domain%cloud + domain%ice + domain%qrain + domain%qsnow
+        
+        call update_winds(bc%next_domain,options)
+        ! then updated with wind dXdt fields after updating them
+        call update_dwinddt(bc,domain)
     end subroutine bc_update
 end module boundary_conditions
