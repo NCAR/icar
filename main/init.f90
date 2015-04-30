@@ -748,16 +748,6 @@ contains
         call destroy_lut(v_temp_geo)
         call destroy_lut(u_temp_geo)
 
-!! WARNING, to do this with the use_agl_height options requires more thought, don't just uncomment
-!! since this option has been deprecated previously, it is now simply removed.  
-!       if (options%add_low_topo) then
-!           domain%terrain=domain%terrain+(boundary%lowres_terrain-sum(boundary%lowres_terrain) &
-!                                            /size(boundary%lowres_terrain))/2.0
-!           do i=1,size(domain%z,2)
-!               domain%z(:,i,:)=domain%z(:,i,:)+(boundary%lowres_terrain-sum(boundary%lowres_terrain) &
-!                                                /size(boundary%lowres_terrain))/2.0
-!           enddo
-!       endif
         write(*,*) "Setting up vertical interpolation Look Up Tables"
         
         call vLUT(domain,boundary)

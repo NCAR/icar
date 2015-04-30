@@ -141,9 +141,6 @@ contains
         if (options%restart) then
             call check( nf90_put_att(ncid,NF90_GLOBAL,"restart","True"))
         endif
-        if (options%add_low_topo) then
-            call check( nf90_put_att(ncid,NF90_GLOBAL,"add_low_topo","True"))
-        endif
         if (options%advect_density) then
             call check( nf90_put_att(ncid,NF90_GLOBAL,"advect_density","True"))
         endif

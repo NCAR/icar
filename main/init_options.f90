@@ -352,7 +352,7 @@ contains
         integer :: ntimesteps, nfiles, xmin, xmax, ymin, ymax, vert_smooth
         integer :: nz, n_ext_winds,buffer, warning_level
         logical :: ideal, readz, readdz, debug, external_winds, remove_lowres_linear, variable_N, &
-                   mean_winds, mean_fields, restart, add_low_topo, advect_density, high_res_soil_state, &
+                   mean_winds, mean_fields, restart, advect_density, high_res_soil_state, &
                    use_agl_height, spatial_linear_fields, time_varying_z, linear_mask, use_mp_options
         character(len=MAXFILELENGTH) :: date, calendar, start_date
         integer :: year, month, day, hour, minute, second
@@ -361,7 +361,7 @@ contains
 ! -- trude
 
         namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug,nfiles, &
-                              external_winds,buffer,n_ext_winds,add_low_topo,advect_density,smooth_wind_distance, &
+                              external_winds,buffer,n_ext_winds,advect_density,smooth_wind_distance, &
                               remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
                               date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, &
                               N_squared,rm_N_squared,linear_contribution,rm_linear_contribution, use_agl_height,  &
@@ -376,7 +376,6 @@ contains
         t_offset=(-9999)
         buffer=0
         remove_lowres_linear=.False.
-        add_low_topo=.False.
         advect_density=.True.
         restart=.False.
         ideal=.False.
@@ -476,7 +475,6 @@ contains
         options%readdz=readdz
         options%buffer=buffer
         options%remove_lowres_linear=remove_lowres_linear
-        options%add_low_topo=add_low_topo
         options%mean_winds=mean_winds
         options%mean_fields=mean_fields
         options%advect_density=advect_density

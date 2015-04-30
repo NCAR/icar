@@ -281,8 +281,6 @@ module data_structures
         logical :: mean_winds           ! use only a mean wind field across the entire model domain
         logical :: mean_fields          ! use only a mean forcing field across the model boundaries 
         logical :: restart              ! this is a restart run, read model conditions from a restart file
-        logical :: add_low_topo         ! option to add low resolution topography back to the high res model to 
-                                        ! mitigate low-res wind field downdrafts over mountains (don't use)
         logical :: advect_density       ! properly incorporate density into the advection calculations. 
                                         ! Doesn't play nice with linear winds
         logical :: high_res_soil_state  ! read the soil state from the high res input file not the low res file
