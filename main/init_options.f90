@@ -348,7 +348,7 @@ contains
         integer :: name_unit
         
         real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance
-        real    :: rotation_scale_height, N_squared, rm_N_squared,linear_contribution, rm_linear_contribution
+        real    :: rotation_scale_height, N_squared, rm_N_squared,linear_contribution, rm_linear_contribution, linear_update_fraction
         integer :: ntimesteps, nfiles, xmin, xmax, ymin, ymax, vert_smooth
         integer :: nz, n_ext_winds,buffer, warning_level
         logical :: ideal, readz, readdz, debug, external_winds, remove_lowres_linear, variable_N, &
@@ -365,7 +365,7 @@ contains
                               remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
                               date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, &
                               N_squared,rm_N_squared,linear_contribution,rm_linear_contribution, use_agl_height,  &
-                              spatial_linear_fields, start_date, time_varying_z, linear_mask, &
+                              spatial_linear_fields, linear_update_fraction, start_date, time_varying_z, linear_mask, &
                               mp_options_filename, use_mp_options    ! trude added
         
 !       default parameters
@@ -399,6 +399,7 @@ contains
         variable_N=.False.
         linear_contribution=1.0
         rm_linear_contribution=1.0
+        linear_update_fraction=0.25
         use_agl_height=.True.
         spatial_linear_fields=.False.
         start_date=""
@@ -501,6 +502,7 @@ contains
         options%linear_contribution=linear_contribution
         options%rm_linear_contribution=rm_linear_contribution
         options%linear_mask = linear_mask
+        options%linear_update_fraction = linear_update_fraction
 
         options%high_res_soil_state=high_res_soil_state
         options%time_varying_z=time_varying_z

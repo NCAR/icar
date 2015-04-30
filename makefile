@@ -171,7 +171,7 @@ ifeq ($(MODE), debug)
 		LINK=  
 	endif
 	ifeq ($(F90), gfortran)
-		COMP= -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
+		COMP= -c -Og -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK=  
 	endif
 endif
@@ -192,7 +192,7 @@ ifeq ($(MODE), debugomp)
 		LINK= -openmp -liomp5
 	endif
 	ifeq ($(F90), gfortran)
-		COMP= -fopenmp -lgomp -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
+		COMP= -fopenmp -lgomp -c -Og -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK= -fopenmp -lgomp  
 	endif
 endif

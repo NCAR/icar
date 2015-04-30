@@ -257,7 +257,7 @@ contains
         
         
         
-        ROVCP=R/cp
+        ROVCP=Rd/cp
         XICE_THRESHOLD=1
         RDLAI2D=.false.
         USEMONALB=.false.

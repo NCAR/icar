@@ -65,8 +65,8 @@ contains
             domain%v(:,:,j)=domain%v(:,:,j)+bc%dv_dt(:,:,j)
             if (.not.options%ideal) then
                 domain%p(:,:,j)=domain%p(:,:,j)+bc%dp_dt(:,:,j)
-                domain%pii(:,:,j)=(domain%p(:,:,j)/100000.0)**(R/cp)
-                domain%rho(:,:,j)=domain%p(:,:,j)/(R*domain%th(:,:,j)*domain%pii(:,:,j)) ! kg/m^3
+                domain%pii(:,:,j)=(domain%p(:,:,j)/100000.0)**(Rd/cp)
+                domain%rho(:,:,j)=domain%p(:,:,j)/(Rd*domain%th(:,:,j)*domain%pii(:,:,j)) ! kg/m^3
             endif
         enddo
         !$omp end do

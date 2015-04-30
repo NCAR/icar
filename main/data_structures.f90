@@ -86,7 +86,8 @@ module data_structures
 !------------------------------------------------
     real, parameter :: LH_vaporization=2260000.0 ! J/kg
     ! should be calculated as 2.5E6 + (2106.0 - 4218.0)*temp_degC ?
-    real, parameter :: R   = 287.058 ! J/(kg K) specific gas constant for air
+    real, parameter :: Rd  = 287.058 ! J/(kg K) specific gas constant for dry air
+    real, parameter :: Rw  = 461.5   ! J/(kg K) specific gas constant for moist air
     real, parameter :: cp  = 1012.0  ! J/kg/K   specific heat capacity of moist STP air? 
     real, parameter :: gravity= 9.81    ! m/s^2    gravity
     real, parameter :: pi  = 3.1415927 ! pi
@@ -152,7 +153,10 @@ module data_structures
     !------------------------------------------------
     type, extends(interpolable_type) :: linearizable_type
         ! linear theory computes u,v at z.  Trying rho to mitigate boussinesq approx... 
-        real, allocatable, dimension(:,:,:) :: u,v,dz,rho,th
+        real, allocatable, dimension(:,:,:) :: u,v,dz,rho
+        ! these are needed to compute Brunt Vaisalla Frequency... (cloud, ice snow, rain to check for moist vs dry)
+        real, allocatable, dimension(:,:,:) :: th,p,pii,qv,cloud,ice,qsnow,qrain
+        real, allocatable, dimension(:,:,:) :: nsquared ! BV frequency
         type(interpolable_type)             :: u_geo,v_geo
         real, allocatable, dimension(:,:)   :: terrain,dzdx,dzdy
         real, allocatable, dimension(:,:)   :: linear_mask
@@ -165,8 +169,8 @@ module data_structures
     !------------------------------------------------
     type, extends(linearizable_type) :: domain_type
         ! 3D atmospheric fields
-        real, allocatable, dimension(:,:,:) :: p,w,pii,ur,vr,wr
-        real, allocatable, dimension(:,:,:) :: qv,cloud,ice,nice,qrain,nrain,qsnow,qgrau
+        real, allocatable, dimension(:,:,:) :: w,ur,vr,wr
+        real, allocatable, dimension(:,:,:) :: nice,nrain,qgrau
         ! 3D atmospheric field tendencies
         real, allocatable, dimension(:,:,:) :: qv_adv_tendency,qv_pbl_tendency
         ! 3D soil field
@@ -189,15 +193,13 @@ module data_structures
         ! current model time step length (should this be somewhere else?)
         real::dt
         ! current model time (seconds from options%time_zero)
-        real*8 :: model_time
+        double precision :: model_time
     end type domain_type
 
     !------------------------------------------------
     ! boundary conditions type, must be linearizable so we can remove low res linear wind field
     !------------------------------------------------
     type, extends(linearizable_type) :: bc_type
-        ! not sure these are used anymore...
-        real, allocatable, dimension(:,:,:) :: p,qv
         ! dX_dt variables are the change in variable X between two forcing time steps
         ! wind and pressure dX_dt fields applied to full 3d grid, others applied only to boundaries
         real, allocatable, dimension(:,:,:) :: du_dt,dv_dt,dw_dt,dp_dt,drho_dt,dth_dt,dqv_dt,dqc_dt
@@ -310,6 +312,7 @@ module data_structures
         real :: rm_N_squared            ! static Brunt Vaisala Frequency (N^2) to use in removing linear wind field
         real :: linear_contribution     ! fractional contribution of linear perturbation to wind field (e.g. u_hat multiplied by this)
         real :: rm_linear_contribution  ! fractional contribution of linear perturbation to wind field to remove from the low-res field
+        real :: linear_update_fraction  ! fraction of linear perturbation to add each time step
         logical :: spatial_linear_fields! use a spatially varying linear wind perturbation
         logical :: time_varying_z       ! read in a new z coordinate every time step and interpolate accordingly
         logical :: linear_mask          ! use a spatial mask for the linear wind field
