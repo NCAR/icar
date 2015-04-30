@@ -21,7 +21,7 @@ module output
     public :: write_domain
     
     integer, parameter :: ndims = 4
-    integer, parameter :: nvars=100 ! current max = 32
+    integer, parameter :: nvars=33 ! current max = 33
     ! This will be the netCDF ID for the file and data variable.
     integer :: ncid, temp_id
     ! dimension IDs
@@ -315,7 +315,7 @@ contains
         call check( nf90_put_att(ncid,temp_id,"long_name","Combined large scale and convective graupel (accumulated)"))
         call check( nf90_put_att(ncid,temp_id,"units","kg m-2"))
         varid(16)=temp_id
-    
+        
         if (options%physics%convection>0) then
             call check( nf90_def_var(ncid, "crain", NF90_REAL, dimtwo_time, temp_id) )
             call check( nf90_put_att(ncid,temp_id,"standard_name","convective_rainfall_amount"))
@@ -329,13 +329,22 @@ contains
         call check( nf90_put_att(ncid,temp_id,"long_name","Model level height (AGL)"))
         call check( nf90_put_att(ncid,temp_id,"units","m"))
         varid(20)=temp_id
-    
+        
         call check( nf90_def_var(ncid, "rho", NF90_REAL, dimids, temp_id) )
         call check( nf90_put_att(ncid,temp_id,"standard_name","air_density"))
         call check( nf90_put_att(ncid,temp_id,"long_name","Density of dry air"))
         call check( nf90_put_att(ncid,temp_id,"units","kg m-3"))
         varid(21)=temp_id
-    
+        
+        if (options%physics%windtype==1) then
+            call check( nf90_def_var(ncid, "nsq", NF90_REAL, dimids, temp_id) )
+            call check( nf90_put_att(ncid,temp_id,"standard_name","square_of_brunt_vaisala_frequency_in_air"))
+            call check( nf90_put_att(ncid,temp_id,"long_name","Brunt Vaisala Frequency (squared)"))
+            call check( nf90_put_att(ncid,temp_id,"description", "Frequency is the number of oscillations of a wave per unit time."))
+            call check( nf90_put_att(ncid,temp_id,"units","s-2"))
+            varid(33)=temp_id
+        endif
+        
         ! surface fluxes
         ! these should only be output for radiation packages that compute them
         if (options%physics%radiation>=2) then
@@ -359,6 +368,7 @@ contains
             call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
             varid(19)=temp_id
         endif
+        
         ! these should only be output for lsm packages that compute them
         if (options%physics%landsurface>=2) then
             call check( nf90_def_var(ncid, "rlus", NF90_REAL, dimtwo_time, temp_id) )
@@ -530,6 +540,10 @@ contains
             call check( nf90_inq_varid(ncid, "canwat", temp_id) )
             varid(31)=temp_id
         endif
+        if (options%physics%windtype==1) then
+            call check( nf90_inq_varid(ncid, "nsq", temp_id) )
+            varid(33)=temp_id
+        endif
 
         
         
@@ -648,6 +662,9 @@ contains
             call check( nf90_put_var(ncid, varid(30), domain%snow_swe, start_two_D), trim(filename)//":snow_swe" )
             call check( nf90_put_var(ncid, varid(31), domain%canopy_water, start_two_D), trim(filename)//":canopy_water" )
         endif
+        if (options%physics%windtype==1) then
+            call check( nf90_put_var(ncid, varid(33), domain%nsquared, start_three_D), trim(filename)//":nsquared" )
+        endif            
         
         last_rain=domain%rain
         ! Close the file, freeing all resources.

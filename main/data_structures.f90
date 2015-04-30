@@ -153,7 +153,10 @@ module data_structures
     !------------------------------------------------
     type, extends(interpolable_type) :: linearizable_type
         ! linear theory computes u,v at z.  Trying rho to mitigate boussinesq approx... 
-        real, allocatable, dimension(:,:,:) :: u,v,dz,rho,th,p,pii,qv,cloud,ice,qsnow,qrain
+        real, allocatable, dimension(:,:,:) :: u,v,dz,rho
+        ! these are needed to compute Brunt Vaisalla Frequency... (cloud, ice snow, rain to check for moist vs dry)
+        real, allocatable, dimension(:,:,:) :: th,p,pii,qv,cloud,ice,qsnow,qrain
+        real, allocatable, dimension(:,:,:) :: nsquared ! BV frequency
         type(interpolable_type)             :: u_geo,v_geo
         real, allocatable, dimension(:,:)   :: terrain,dzdx,dzdy
         real, allocatable, dimension(:,:)   :: linear_mask

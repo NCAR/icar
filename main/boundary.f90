@@ -57,8 +57,13 @@ contains
 ! Smooth an array (written for wind but will work for anything)
 ! only smooths over the first (x) and second or third (y) dimension
 ! ydim can be specified to allow working with (x,y,z) data or (x,z,y) data
-! WARNING: this is a moderately complex setup to be efficient for the ydim=3 (SLOW) case
-! be careful when editting
+! WARNING: this is a moderately complex setup to be efficient for the ydim=3 (typically large arrays, SLOW) case
+! be careful when editing.  
+! For the complex case it pre-computes the sum of all columns for a given row, 
+! then to move from one column to the next it just has add the next column from the sums and subtracts the last one
+! similarly, moving to the next row just means adding the next row to the sums, and subtracting the last one. 
+! Each point also has to be divided by N, but this decreases the compution from O(windowsize^2) to O(constant) 
+! Where O(constant) = 2 additions, 2 subtractions, and 1 divide regardless of windowsize. 
     subroutine smooth_wind(wind,windowsize,ydim)
         implicit none
         real, intent(inout), dimension(:,:,:):: wind    ! 3 dimensional wind field to be smoothed
@@ -269,7 +274,8 @@ contains
             deallocate(extra_data)
             deallocate(inputdata)
         endif
-                        
+        
+        ! highres is the useful output of the subroutine
     end subroutine read_var
 
 !   generic routine to read a low res variable (varname) from a netcdf file (filename) at the current time step (curstep)
@@ -414,6 +420,23 @@ contains
         deallocate(extra_data)
     end subroutine remove_linear_winds
     
+    subroutine mean_boundaries(inputdata)
+        implicit none
+        real, dimension(:,:,:), intent(inout) :: inputdata
+        integer:: nx, ny, nz, i
+
+        nx=size(inputdata,1)
+        nz=size(inputdata,2)
+        ny=size(inputdata,3)
+        do i=1,nz
+            inputdata(1,i,:)  = sum(inputdata(1,i,:))  / ny
+            inputdata(nx,i,:) = sum(inputdata(nx,i,:)) / ny
+            inputdata(:,i,1)  = sum(inputdata(:,i,1))  / nx
+            inputdata(:,i,ny) = sum(inputdata(:,i,ny)) / nx
+        end do
+        
+    end subroutine mean_boundaries
+
 ! for test cases compute the mean winds and make them constant everywhere...
     subroutine mean_winds(domain,filename,curstep,options)
         implicit none
@@ -651,12 +674,10 @@ contains
             if (options%physics%landsurface==1) then
                 call read_2dvar(domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep,options)
                 call read_2dvar(domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep,options)
-                call read_2dvar(domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep,options)
+                if (options%physics%boundarylayer==1) then
+                    call read_2dvar(domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep,options)
+                endif
                 where(domain%latent_heat<0) domain%latent_heat=0
-            else
-                domain%sensible_heat=0
-                domain%latent_heat=0
-                domain%pbl_height=0
             endif
             
 !           call update_pressure(domain%p,bc%lowres_z,domain%z)
@@ -697,8 +718,8 @@ contains
             dx_dt(i,:nx,3)=d1(:,i,1) -d2(:,i,1)
             dx_dt(i,:nx,4)=d1(:,i,ny)-d2(:,i,ny)
         enddo
-        dx_dt(:,1,3:4)=0
-        dx_dt(:,nx,3:4)=0
+!         dx_dt(:,1,3:4)=0
+!         dx_dt(:,nx,3:4)=0
     end subroutine update_edges
     
     
@@ -709,14 +730,12 @@ contains
         type(bc_type), intent(inout) :: bc
         type(domain_type), intent(in) :: domain
         
-!         bc%du_dt=bc%next_domain%u-domain%u
-!         bc%dv_dt=bc%next_domain%v-domain%v
-!       bc%dw_dt=bc%next_domain%w-domain%w
         bc%dp_dt=bc%next_domain%p-domain%p
-!       bc%drho_dt=bc%next_domain%rho-domain%rho
         
+        ! NOTE these are only used if lsm option = 1, a bunch of wasted zeros otherwise
         bc%dsh_dt  =bc%next_domain%sensible_heat-domain%sensible_heat
         bc%dlh_dt  =bc%next_domain%latent_heat-domain%latent_heat
+        ! only if lsm=1 and PBL option = 1
         bc%dpblh_dt=bc%next_domain%pbl_height-domain%pbl_height
 
         call update_edges(bc%dth_dt,bc%next_domain%th,domain%th)
@@ -733,8 +752,9 @@ contains
         bc%dv_dt=bc%next_domain%v-domain%v
     end subroutine update_dwinddt
     
-!   adjust the pressure field for the vertical shift between the low resolution domain
-!   and the high resolution domain. Ideally this should include temperature
+    ! Adjust the pressure field for the vertical shift between the low resolution domain
+    ! and the high resolution domain. Ideally this should include temperature... but it isn't entirely clear
+    ! what it would mean to do that, what temperature do you use? 
     subroutine update_pressure(pressure,z_lo,z_hi)
         implicit none
         real,dimension(:,:,:), intent(inout) :: pressure
@@ -841,9 +861,6 @@ contains
                 newbc%z=(newbc%z+zbase) / gravity
                 zbase(:,:,1:nz-1)=(newbc%z(:,:,1:nz-1) + newbc%z(:,:,2:nz))/2
                 newbc%z=zbase
-!               deallocate(newbc%z)
-!               allocate(newbc%z(nx,ny,nz-1))
-!               newbc%z=zbase(:,:,:nz-1)
                 deallocate(zbase)
             endif
             ! now simply generate a look up table to convert the current z coordinate to the original z coordinate
@@ -852,15 +869,11 @@ contains
             where(newbc%vert_lut%z==nz) newbc%vert_lut%z=nz-1
             nz=size(newbc%z,3)
             ! generate a new high-res z dataset as well (for pressure interpolations)
-            call geo_interp(bc%lowres_z, reshape(newbc%z,[nx,nz,ny],order=[1,3,2]), bc%geolut,.False.)
-            
-!           call io_write3di("vLUT_tv_z1","z",newbc%vert_lut%z(1,:,:,:))
-!           call io_write3di("vLUT_tv_z2","z",newbc%vert_lut%z(2,:,:,:))
-!           call io_write3d("vLUT_tv_w1","w",newbc%vert_lut%w(1,:,:,:))
-!           call io_write3d("vLUT_tv_w2","w",newbc%vert_lut%w(2,:,:,:))
+            call geo_interp(bc%lowres_z, reshape(newbc%z,[nx,nz,ny],order=[1,3,2]), bc%geolut,use_interior)
             
         endif
         
+        ! first read in and handle winds
         if (options%external_winds) then
             call update_ext_winds(bc,options)
 !           call smooth_wind(bc%next_domain%u,1,3)
@@ -872,6 +885,7 @@ contains
         elseif (options%mean_winds) then
             call mean_winds(bc%next_domain,file_list(curfile),curstep,options)
         else
+            ! general case, just read in u and v data
             call read_var(bc%next_domain%u,  file_list(curfile), options%uvar, &
                           bc%u_geo%geolut,   bc%u_geo%vert_lut,  curstep,      &
                           use_interior, options, time_varying_zlut=newbc%vert_lut)
@@ -881,6 +895,8 @@ contains
             call smooth_wind(bc%next_domain%u,smoothing_window,3)
             call smooth_wind(bc%next_domain%v,smoothing_window,3)
         endif
+        
+        ! now read in remaining variables
         call read_var(bc%next_domain%p,       file_list(curfile), options%pvar,   &
                       bc%geolut, bc%vert_lut, curstep, use_interior,              &
                       options,   bc%lowres_z, domain%z, time_varying_zlut=newbc%vert_lut)
@@ -901,59 +917,46 @@ contains
                       bc%geolut, bc%vert_lut, curstep, use_boundary,              &
                       options, time_varying_zlut=newbc%vert_lut)
 
+        ! finally, if we need to read in land surface forcing read in those 2d variables as well. 
         if (options%physics%landsurface==1) then
             call read_2dvar(bc%next_domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep,options)
             call read_2dvar(bc%next_domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep,options)
-            call read_2dvar(bc%next_domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep,options)
-!           NOTE, this is a kludge to prevent the model from sucking more moisture out of the lower model layer than exists
+            ! note this is nested in the landsurface=1 condition, because that is the only time it makes sense. 
+            if (options%physics%boundarylayer==1) then
+                call read_2dvar(bc%next_domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep,options)
+            endif
+            ! NOTE, this is a kludge to prevent the model from sucking more moisture out of the lower model layer than exists
             where(domain%latent_heat<0) domain%latent_heat=0
-        else
-            bc%next_domain%sensible_heat=0
-            bc%next_domain%latent_heat=0
-            bc%next_domain%pbl_height=0
         endif
-    
-        nx=size(bc%next_domain%th,1)
-        nz=size(bc%next_domain%th,2)
-        ny=size(bc%next_domain%th,3)
+        
+        ! if we want to supply mean forcing fields on the boundaries, compute those here. 
         if (options%mean_fields) then
-            do i=1,nz
-                bc%next_domain%th(1,i,:)  = sum(bc%next_domain%th(1,i,:))  / ny
-                bc%next_domain%th(nx,i,:) = sum(bc%next_domain%th(nx,i,:)) / ny
-                bc%next_domain%th(:,i,1)  = sum(bc%next_domain%th(:,i,1))  / nx
-                bc%next_domain%th(:,i,ny) = sum(bc%next_domain%th(:,i,ny)) / nx
-                
-                bc%next_domain%qv(1,i,:)  = sum(bc%next_domain%qv(1,i,:))  / ny
-                bc%next_domain%qv(nx,i,:) = sum(bc%next_domain%qv(nx,i,:)) / ny
-                bc%next_domain%qv(:,i,1)  = sum(bc%next_domain%qv(:,i,1))  / nx
-                bc%next_domain%qv(:,i,ny) = sum(bc%next_domain%qv(:,i,ny)) / nx
-
-                bc%next_domain%cloud(1,i,:)  = sum(bc%next_domain%cloud(1,i,:))  / ny
-                bc%next_domain%cloud(nx,i,:) = sum(bc%next_domain%cloud(nx,i,:)) / ny
-                bc%next_domain%cloud(:,i,1)  = sum(bc%next_domain%cloud(:,i,1))  / nx
-                bc%next_domain%cloud(:,i,ny) = sum(bc%next_domain%cloud(:,i,ny)) / nx
-
-                bc%next_domain%ice(1,i,:)  = sum(bc%next_domain%ice(1,i,:))  / ny
-                bc%next_domain%ice(nx,i,:) = sum(bc%next_domain%ice(nx,i,:)) / ny
-                bc%next_domain%ice(:,i,1)  = sum(bc%next_domain%ice(:,i,1))  / nx
-                bc%next_domain%ice(:,i,ny) = sum(bc%next_domain%ice(:,i,ny)) / nx
-            enddo
+            call mean_boundaries(bc%next_domain%th)
+            call mean_boundaries(bc%next_domain%qv)
+            call mean_boundaries(bc%next_domain%cloud)
+            call mean_boundaries(bc%next_domain%ice)
         endif
-        bc%next_domain%pii=(bc%next_domain%p/100000.0)**(Rd/cp)
-        bc%next_domain%rho=bc%next_domain%p/(Rd*domain%th*bc%next_domain%pii) ! kg/m^3
         
         
         ! update scalar dXdt tendency fields first so we can then overwrite them with 
         ! the current model state
         call update_dxdt(bc,domain)
         
-        ! we need the internal values of these fields to in sync with the model
-        ! for the linear wind calculations...
+        ! we need the internal values of these fields to be in sync with the high res model
+        ! for the linear wind calculations... albeit these are for time t, and winds are for time t+1
         bc%next_domain%qv=domain%qv
         bc%next_domain%th=domain%th
         bc%next_domain%cloud=domain%cloud + domain%ice + domain%qrain + domain%qsnow
         
+        ! these are required by update_winds for most options
+        bc%next_domain%pii=(bc%next_domain%p/100000.0)**(Rd/cp)
+        bc%next_domain%rho=bc%next_domain%p/(Rd*domain%th*bc%next_domain%pii) ! kg/m^3
+        
+        
         call update_winds(bc%next_domain,options)
+        ! copy it to the primary domain for output purposes (could also be used for convection or blocking parameterizations?)
+        domain%nsquared=bc%next_domain%nsquared
+        
         ! then updated with wind dXdt fields after updating them
         call update_dwinddt(bc,domain)
     end subroutine bc_update

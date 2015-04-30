@@ -69,18 +69,20 @@ module linear_theory_winds
     real, allocatable, dimension(:,:,:) :: u_perturbation, v_perturbation
     ! controls the rate at which the linearfield updates (should be calculated as f(in_dt))
     ! new/current perturbation is multiplited by linear_update and added to (1-linear_update) * the previous combined perturbation
-    real :: linear_update_fraction = 0.2
+    real :: linear_update_fraction = 0.5
     
     real, parameter :: dirmax=2*pi
     real, parameter :: dirmin=0
     real, parameter :: spdmax=30
     real, parameter :: spdmin=0
-    real, parameter :: nsqmax=log(6e-4)
-    real, parameter :: nsqmin=log(1e-7)
+!     real, parameter :: nsqmax=log(6e-4)
+!     real, parameter :: nsqmin=log(1e-7)
+    real, parameter :: nsqmax=log(1e-4)
+    real, parameter :: nsqmin=log(3e-5)
     
-    integer, parameter :: n_dir_values=5
-    integer, parameter :: n_nsq_values=6
-    integer, parameter :: n_spd_values=6
+    integer, parameter :: n_dir_values=4 !36
+    integer, parameter :: n_nsq_values=2 !10
+    integer, parameter :: n_spd_values=2 !10
     
     ! real,parameter::pi=3.1415927
     complex,parameter :: j= (0,1)
@@ -148,8 +150,8 @@ contains
         real :: sat_lapse
         
         L=LH_vaporization ! short cut for imported parameter
-    	sat_lapse = gravity*((1 + (L*mr) / (Rd*T))          &
-    			    / (cp + (L*L*mr*(Rd/Rw)) / (Rd*T*T) ))
+        sat_lapse = gravity*((1 + (L*mr) / (Rd*T))          &
+                    / (cp + (L*L*mr*(Rd/Rw)) / (Rd*T*T) ))
     end function calc_sat_lapse_rate
 
     ! calculate the moist brunt vaisala frequency (Nm^2)
@@ -186,9 +188,17 @@ contains
         real :: BV_freq
         
         if (qc<1e-7) then
-            BV_freq=calc_dry_stability(th_top, th_bot, z_top, z_bot)
+            if (variable_N) then
+                BV_freq=calc_dry_stability(th_top, th_bot, z_top, z_bot)
+            else
+                BV_freq=N_squared
+            endif
         else
-            BV_freq=calc_moist_stability(th_top*pii_top, th_bot*pii_bot, z_top, z_bot, qv_top, qv_bot, qc)
+            if (variable_N) then
+                BV_freq=calc_moist_stability(th_top*pii_top, th_bot*pii_bot, z_top, z_bot, qv_top, qv_bot, qc)
+            else
+                BV_freq=N_squared/10.0 ! might be better as max(1e-7,N_squared-(1e-4))
+            endif
         endif
         
         BV_freq = min(max(BV_freq,min_stability),max_stability)
@@ -658,7 +668,8 @@ contains
         ! loop over combinations of U and V values
         write(*,*) "Percent Completed:"
         debug=.True.
-!       call io_write2d("internal_linear_mask.nc","data",linear_mask)
+        ! this could be parallelized to speed it up a little, but the linear_wind calculation is already parallelized
+        ! over the vertical domain, so it wouldn't add much (unless a lot more than cores are available than levels)
         do i=1,n_dir_values
             write(*,"(A,f5.1,A$)") char(13), i/real(n_dir_values)*100," %"
             ! set the domain wide U and V values to the current u and v values
@@ -667,9 +678,11 @@ contains
                 do j=1,n_nsq_values
                     domain%u=calc_u(dir_values(i),spd_values(k))
                     domain%v=calc_v(dir_values(i),spd_values(k))
+                    
                     ! calculate the linear wind field for the current u and v values
                     call linear_winds(domain,exp(nsq_values(j)), 0, reverse,useDensity,debug=debug)
-                    debug=.False.
+                    
+                    debug=.False. ! after the first time through set debug to false
                     u_LUT(k,i,j,:,:,:)=(domain%u-calc_u(dir_values(i),spd_values(k)))
                     v_LUT(k,i,j,:,:,:)=(domain%v-calc_v(dir_values(i),spd_values(k)))
                 end do
@@ -682,13 +695,27 @@ contains
         deallocate(savedU,savedV)
         
     end subroutine initialize_spatial_winds
+
+! Code to test that the direction calculation works.     
+!     if ((k==n_spd_values).and.(j==1)) then
+!         print*, "Direction:", &
+!             dir_values(i), "Calc=", calc_direction(domain%u(1,1,1), domain%v(1,1,1)), &
+!             "  U=",domain%u(1,1,1), "  V=",domain%v(1,1,1)
+!         if (abs(dir_values(i) - calc_direction(domain%u(1,1,1), domain%v(1,1,1)))>1e-5) then
+!             print*, "ERROR ERROR ERROR ERROR ERROR ERROR ERROR ERROR ERROR ERROR ERROR "
+!             print*, "Error with direction:", &
+!                 dir_values(i), "Calc=", calc_direction(domain%u(1,1,1), domain%v(1,1,1)), &
+!                 "  U=",domain%u(1,1,1), "  V=",domain%v(1,1,1)
+!         endif
+!     endif
+    
     
     function calc_weight(indata, bestpos, nextpos, match) result(weight)
         ! simply calculate the weights between the positions bestpos and nextpos
-        ! based on the distance between match and indata(nextpos) (normatlized by nextpos - bestpos)
+        ! based on the distance between match and indata(nextpos) (normalized by nextpos - bestpos)
         ! assumes indata is monotonically increasing, 
         ! bestpos must be set prior to entry
-        ! nextpos is calculated internally (either bestpos+1 or n)
+        ! nextpos is calculated internally (either 1, bestpos+1, or n)
         implicit none
         real :: weight
         real, dimension(:), intent(in) :: indata
@@ -725,9 +752,9 @@ contains
         logical, intent(in) :: reverse
         integer :: nx,ny,nz,i,j,k
         integer :: uk, vi !store a separate value of i for v and of k for u to we can handle nx+1, ny+1
-        integer :: step, dpos, npos, spos, nexts, nextd, nextn, top, bottom, winsz, n
+        integer :: step, dpos, npos, spos, nexts, nextd, nextn
+        integer :: north, south, east, west, top, bottom, winsz, n
         real :: dweight, nweight, sweight, curspd, curdir, curnsq, wind_first, wind_second
-        real, allocatable, dimension(:,:,:) :: domainnsq
     
         nx=size(domain%lat,1)
         ny=size(domain%lat,2)
@@ -740,11 +767,11 @@ contains
             u_LUT=>hi_u_LUT
             v_LUT=>hi_v_LUT
         endif
-        allocate(domainnsq(nx,nz,ny))
         !$omp parallel firstprivate(nx,ny,nz), default(none), &
-        !$omp private(i,j,k,step, uk, vi, top, bottom, spos, dpos, npos, nexts,nextd, nextn,n, winsz), &
+        !$omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom), &
+        !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, winsz), &
         !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
-        !$omp shared(domain, domainnsq, spd_values, dir_values, nsq_values, u_LUT, v_LUT), &
+        !$omp shared(domain, spd_values, dir_values, nsq_values, u_LUT, v_LUT), &
         !$omp shared(u_perturbation, v_perturbation, linear_update_fraction)
         winsz=1
         !$omp do
@@ -752,13 +779,13 @@ contains
             do j=1,nz
                 do i=1,nx
                     top=min(j+1,nz)
-					if (top==j) then
-						bottom=j-1
-					else
-						bottom=j
-					endif
+                    if (top==j) then
+                        bottom=j-1
+                    else
+                        bottom=j
+                    endif
                     
-                    domainnsq(i,j,k) = calc_stability(domain%th(i,bottom,k), domain%th(i,top,k),  &
+                    domain%nsquared(i,j,k) = calc_stability(domain%th(i,bottom,k), domain%th(i,top,k),  &
                                             domain%pii(i,bottom,k),domain%pii(i,top,k), &
                                             domain%z(i,bottom,k),  domain%z(i,top,k),   &
                                             domain%qv(i,bottom,k), domain%qv(i,top,k),  &
@@ -774,12 +801,6 @@ contains
                 do i=1,nx+1
                     uk=min(k,ny)
                     vi=min(i,nx)
-                    top=min(j+1,nz)
-					if (top==j) then
-						bottom=j-1
-					else
-						bottom=j
-					endif
                     
                     dpos=1
                     curdir=calc_direction(domain%u(i,j,uk), domain%v(vi,j,k))
@@ -797,96 +818,66 @@ contains
                         endif
                     end do
                     
-                    npos=1
-                    curnsq = sum(log(domainnsq( &
-                                   max(i-winsz,1):min(i+winsz,nx), &
-                                   max(j-winsz,1):min(j+winsz,nz), &
-                                   max(k-winsz,1):min(k+winsz,ny))))
-                             
-                    n = (((min(i+winsz,nx)-max(i-winsz,1))+1) * &
-                         ((min(j+winsz,nz)-max(j-winsz,1))+1) *  &
-                         ((min(k+winsz,ny)-max(k-winsz,1))+1))
+                    east  = max(i-winsz,1)
+                    west  = min(i+winsz,nx)
+                    bottom= max(j-winsz,1)
+                    top   = min(j+winsz,nz)
+                    south = max(k-winsz,1)
+                    north = min(k+winsz,ny)
+                    
+                    curnsq = sum(log(domain%nsquared(east:west, bottom:top,south:north)))
+                    n = (((west-east)+1) * ((top-bottom)+1) * ((north-south)+1))
                     curnsq = curnsq / n
 
+                    npos=1
                     do step=1,n_nsq_values
                         if (curnsq>nsq_values(step)) then
                             npos=step
                         endif
                     end do
                     
+                    top=min(j+1,nz)
+                    if (top==j) then
+                        bottom=j-1
+                    else
+                        bottom=j
+                    endif
+                    
                     ! calculate the weights and the "next" u/v position
                     ! "next" usually = pos+1 but for edge cases next = 1 or n
                     dweight=calc_weight(dir_values, dpos,nextd,curdir)
                     sweight=calc_weight(spd_values, spos,nexts,curspd)
                     nweight=calc_weight(nsq_values, npos,nextn,curnsq)
+                    ! perform linear interpolation between LUT values
                     if (k<=ny) then
-                        ! perform linear interpolation between LUT values
                         wind_first =      nweight  * (dweight * u_LUT(spos,dpos,npos,i,j,k)  + (1-dweight) * u_LUT(spos,nextd,npos,i,j,k))    &
                                     +  (1-nweight) * (dweight * u_LUT(spos,dpos,nextn,i,j,k) + (1-dweight) * u_LUT(spos,nextd,nextn,i,j,k))
+                                    
                         wind_second=      nweight  * (dweight * u_LUT(nexts,dpos,npos,i,j,k) + (1-dweight) * u_LUT(nexts,nextd,npos,i,j,k))    &
                                     +  (1-nweight) * (dweight * u_LUT(nexts,dpos,nextn,i,j,k)+ (1-dweight) * u_LUT(nexts,nextd,nextn,i,j,k))
+                                    
                         u_perturbation(i,j,k)=u_perturbation(i,j,k) * (1-linear_update_fraction) &
                                     + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
                                     
                         domain%u(i,j,k) = domain%u(i,j,k) + u_perturbation(i,j,k)
                     endif
-!                     if ((i==150).and.(k<=2).and.(j==2)) then
-!                         print*,"=============================="
-!                         print*, k, wind_first, wind_second
-!                         print*, spos,dpos,npos
-!                         print*, "curnsq=",exp(curnsq)
-!                         print*, "th=",domain%th(vi,bottom,uk), domain%th(vi,top,uk), 0-(domain%th(vi,bottom,uk)-domain%th(vi,top,uk))
-!                         print*, "t=",domain%th(vi,bottom,uk)*domain%pii(vi,bottom,uk),domain%th(vi,top,uk)*domain%pii(vi,top,uk), &
-!                                     0-(domain%th(vi,bottom,uk)*domain%pii(vi,bottom,uk)-domain%th(vi,top,uk)*domain%pii(vi,top,uk))
-!                         print*, "z=",domain%z(vi,bottom,uk),  domain%z(vi,top,uk), 0-(domain%z(vi,bottom,uk)-domain%z(vi,top,uk))
-!                         print*, "qv=",domain%qv(vi,bottom,uk), domain%qv(vi,top,uk), 0-(domain%qv(vi,bottom,uk)-domain%qv(vi,top,uk))
-!                         print*, "hydrometeors=",domain%cloud(vi,j,uk)+domain%ice(vi,j,uk)+domain%qrain(vi,j,uk)+domain%qsnow(vi,j,uk)
-!                         print*,"=============================="
-!
-!                     endif
                     if (i<=nx) then
                         wind_first =      nweight  * (dweight * v_LUT(spos,dpos,npos,i,j,k)  + (1-dweight) * v_LUT(spos,nextd,npos,i,j,k))    &
                                     +  (1-nweight) * (dweight * v_LUT(spos,dpos,nextn,i,j,k) + (1-dweight) * v_LUT(spos,nextd,nextn,i,j,k))
+                                    
                         wind_second=      nweight  * (dweight * v_LUT(nexts,dpos,npos,i,j,k) + (1-dweight) * v_LUT(nexts,nextd,npos,i,j,k))    &
                                     +  (1-nweight) * (dweight * v_LUT(nexts,dpos,nextn,i,j,k)+ (1-dweight) * v_LUT(nexts,nextd,nextn,i,j,k))
+                                    
                         v_perturbation(i,j,k)=v_perturbation(i,j,k) * (1-linear_update_fraction) &
                                     + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
                                     
                         domain%v(i,j,k) = domain%v(i,j,k) + v_perturbation(i,j,k)
                     endif
-!                     if ((i==1).and.(k==200).and.(j==2)) then
-!                         print*, "-------------------------"
-!                         print*, "s=",nexts-spos, " d=",nextd-dpos, " n=",nextn-npos
-!                         print*, "perturbations"
-!                         print*, u_perturbation(i:2,j,k), v_perturbation(i:2,j,k)
-!                         print*, "domain"
-!                         print*, domain%u(i:2,j,k), domain%v(i:2,j,k)
-!                         print*, "ulut"
-!                         print*, u_LUT(spos:nexts,dpos:nextd,npos:nextn,1,j,k)
-!                         print*, u_LUT(spos:nexts,dpos:nextd,npos:nextn,2,j,k)
-!                         print*, "vlut"
-!                         print*, v_LUT(spos:nexts,dpos:nextd,npos:nextn,1,j,k)
-!                         print*, v_LUT(spos:nexts,dpos:nextd,npos:nextn,2,j,k)
-!                         print*, "-------------------------"
-!                     endif
                 end do
             end do
         end do
         !$omp end do
         !$omp end parallel
-!         print*, "Current Linear perturbation"
-!         write(*,*), "u=",u_perturbation(150,2,200), "  v=",v_perturbation(150,2,200)
-!         write(*,*), "u=",domain%u(150,2,200), "  v=",domain%v(150,2,200)
-!         write(*,*), "Edge cases"
-!         write(*,*), "east west"
-!         write(*,fmt="(A,3F6.2,A,3F6.2)"), "u=",u_perturbation(1:3,2,200), "  v=",v_perturbation(1:3,2,200)
-!         write(*,fmt="(A,3F6.2,A,3F6.2)"), "u=",domain%u(1:3,2,200), "  v=",domain%v(1:3,2,200)
-!         write(*,*), "North south"
-!         write(*,fmt="(A,3F6.2,A,3F6.2)"), "u=",u_perturbation(150,2,1:3), "  v=",v_perturbation(150,2,1:3)
-!         write(*,fmt="(A,3F6.2,A,3F6.2)"), "u=",domain%u(150,2,1:3), "  v=",domain%v(150,2,1:3)
-!         print*, "-------------------------"
-!         print*, "-------------------------"
-        deallocate(domainnsq)
         
     end subroutine spatial_winds
     
@@ -945,6 +936,10 @@ contains
         nx=size(domain%terrain,1)
         nz=size(domain%u,2)
         ny=size(domain%terrain,2)
+        
+        if (.not.allocated(domain%nsquared)) then
+            allocate(domain%nsquared(nx,nz,ny))
+        endif
         
         ! set up linear_mask variable
         if ( (.not.reverse) .and. (.not.allocated(linear_mask)) ) then
@@ -1019,7 +1014,7 @@ contains
         if (.not.allocated(domain%fzs)) then
             call setup_linwinds(domain,options,rev,useD)
         endif
-		
+        
         ! add the spatially variable linear field
         ! if we are reverseing the effects, that means we are in the low-res domain
         ! that domain does not have a spatial LUT calculated, so it can not be performed
