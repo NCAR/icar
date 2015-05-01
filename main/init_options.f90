@@ -104,9 +104,9 @@ contains
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=model_version)
         close(name_unit)
-        if (version.ne."0.8.1") then
+        if (version.ne."0.9") then
             write(*,*) "Model version does not match namelist version"
-            write(*,*) "  Model version: 0.8.1"
+            write(*,*) "  Model version: 0.9"
             write(*,*) "  Namelist version: ",trim(version)
             call print_model_diffs(version)
             stop
@@ -247,13 +247,13 @@ contains
                                         hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,     &
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
-                                        vegtype_var,vegfrac_var, linear_mask_var
+                                        vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var
                                         
         namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
                             landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar, &
                             hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi, &
                             soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
-                            vegtype_var,vegfrac_var, linear_mask_var
+                            vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var
         
         hgtvar="HGT"
         latvar="XLAT"
@@ -289,6 +289,7 @@ contains
         vegtype_var="" !"VEGTYPE"
         vegfrac_var="" !"VEGFRAC"
         linear_mask_var="data"
+        nsq_calibration_var="data"
         
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=var_list)
@@ -339,6 +340,7 @@ contains
         options%vegfrac_var=vegfrac_var
         
         options%linear_mask_var=linear_mask_var
+        options%nsq_calibration_var=nsq_calibration_var
     end subroutine var_namelist
     
     subroutine parameters_namelist(filename,options)
@@ -353,7 +355,7 @@ contains
         integer :: nz, n_ext_winds,buffer, warning_level
         logical :: ideal, readz, readdz, debug, external_winds, remove_lowres_linear, variable_N, &
                    mean_winds, mean_fields, restart, advect_density, high_res_soil_state, &
-                   use_agl_height, spatial_linear_fields, time_varying_z, linear_mask, use_mp_options
+                   use_agl_height, spatial_linear_fields, time_varying_z, linear_mask, nsq_calibration, use_mp_options
         character(len=MAXFILELENGTH) :: date, calendar, start_date
         integer :: year, month, day, hour, minute, second
 ! ++ trude
@@ -365,7 +367,7 @@ contains
                               remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
                               date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, &
                               N_squared,rm_N_squared,linear_contribution,rm_linear_contribution, use_agl_height,  &
-                              spatial_linear_fields, linear_update_fraction, start_date, time_varying_z, linear_mask, &
+                              spatial_linear_fields, linear_update_fraction, start_date, time_varying_z, linear_mask, nsq_calibration, &
                               mp_options_filename, use_mp_options    ! trude added
         
 !       default parameters
@@ -404,6 +406,7 @@ contains
         start_date=""
         time_varying_z=.False.
         linear_mask=.False.
+        nsq_calibration=.False.
         use_mp_options=.False.
 
         mp_options_filename = 'mp_options.nml'    ! trude added
@@ -501,6 +504,7 @@ contains
         options%rm_linear_contribution=rm_linear_contribution
         options%linear_mask = linear_mask
         options%linear_update_fraction = linear_update_fraction
+        options%nsq_calibration = nsq_calibration
 
         options%high_res_soil_state=high_res_soil_state
         options%time_varying_z=time_varying_z
@@ -639,15 +643,16 @@ contains
         character(len=*), intent(in) :: filename
         type(options_type), intent(inout) :: options
 
-        character(len=MAXFILELENGTH) :: init_conditions_file, output_file, linear_mask_file
+        character(len=MAXFILELENGTH) :: init_conditions_file, output_file, linear_mask_file, nsq_calibration_file
         character(len=MAXFILELENGTH), allocatable :: boundary_files(:), ext_wind_files(:)
         integer :: name_unit
         
         ! set up namelist structures
-        namelist /files_list/ init_conditions_file, output_file, boundary_files, linear_mask_file
+        namelist /files_list/ init_conditions_file, output_file, boundary_files, linear_mask_file, nsq_calibration_file
         namelist /ext_winds_info/ ext_wind_files
         
         linear_mask_file="MISSING"
+        nsq_calibration_file="MISSING"
         allocate(boundary_files(options%nfiles))
         
         open(io_newunit(name_unit), file=filename)
@@ -665,6 +670,10 @@ contains
             linear_mask_file = options%init_conditions_file
         endif
         options%linear_mask_file=linear_mask_file
+        if (trim(nsq_calibration_file)=="MISSING") then
+            nsq_calibration_file = options%init_conditions_file
+        endif
+        options%nsq_calibration_file=nsq_calibration_file
         
         if (options%external_winds) then
             allocate(ext_wind_files(options%ext_winds_nfiles))

@@ -101,11 +101,6 @@ contains
                 call check( nf90_put_att(ncid,NF90_GLOBAL,"variable_N","spatially varying N"))
             endif
         endif
-!       if (options%use_agl_height) then
-!           call check( nf90_put_att(ncid,NF90_GLOBAL,"vertical_interp","Above Ground Level"))
-!       else
-!           call check( nf90_put_att(ncid,NF90_GLOBAL,"vertical_interp","Above Sea Level"))
-!       endif
         call check( nf90_put_att(ncid,NF90_GLOBAL,"microphysics",options%physics%microphysics))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"advection",options%physics%advection))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"boundarylayer",options%physics%boundarylayer))

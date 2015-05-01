@@ -33,7 +33,7 @@
 !! Driver inputs: p,th,pii,rho,qv,qc,qr,qs,rain,snow,dt,dz,nx,ny,nz
 !!   p   = pressure                      - 3D - input  - Pa     - (nx,nz,ny)
 !!   th  = potential temperature         - 3D - in/out - K      - (nx,nz,ny)
-!!   pii = inverse exner function        - 3D - input  - []     - (nx,nz,ny)
+!!   pii = exner function                - 3D - input  - []     - (nx,nz,ny)
 !!   rho = air density                   - 3D - input  - kg/m^3 - (nx,nz,ny)
 !!   qv  = specific humidity             - 3D - in/out - kg/kg  - (nx,nz,ny)
 !!   qc  = cloud water content           - 3D - in/out - kg/kg  - (nx,nz,ny)
@@ -244,7 +244,7 @@ module module_mp_simple
         
         delta=(qmax-q2)*change_rate
         if (delta>q1) delta=q1
-        ! hopefully we don't over shoot saturation (use a 10% buffer)
+        ! hopefully we don't over shoot saturation (use a 1% buffer)
         if (delta>((qmax-q2)*0.99)) then
             delta=(qmax-q2)*0.99
         endif

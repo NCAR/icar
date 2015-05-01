@@ -197,7 +197,7 @@ contains
 !   then interpolate it to the high res grid either in 3D or at the boundaries only (boundary_only)
 !   applies modifications specificaly for U,V,T, and P variables
     subroutine read_var(highres, filename, varname, geolut, vlut, curstep, boundary_only, options, &
-                        z_lo, z_hi, time_varying_zlut)
+                        z_lo, z_hi, time_varying_zlut, interp_vertical)
         implicit none
         real,dimension(:,:,:),   intent(inout):: highres
         character(len=*),        intent(in)   :: filename,varname
@@ -208,10 +208,20 @@ contains
         type(options_type),      intent(in)   :: options
         real,dimension(:,:,:),   intent(in), optional :: z_lo, z_hi
         type(vert_look_up_table),intent(in), optional :: time_varying_zlut
+        logical,                 intent(in), optional :: interp_vertical
         
         ! local variables
         real,dimension(:,:,:),allocatable :: inputdata,extra_data
-        integer::nx,ny,nz,i
+        integer :: nx,ny,nz,i
+        logical :: apply_vertical_interpolation
+        
+        ! the special case is to skip vertical interpolation (pressure and one pass of temperature)
+        if (present(interp_vertical)) then
+            apply_vertical_interpolation=interp_vertical
+        else
+            ! so default to applying interpolation
+            apply_vertical_interpolation=.True.
+        endif
         
         ! Read the data in, should be relatively fast because we are reading a low resolution forcing file
         call io_read3d(filename,varname,inputdata,curstep)
@@ -261,15 +271,14 @@ contains
             call geo_interp(inputdata, &
                             extra_data, &
                             geolut,boundary_only)
-        
+            
             ! Then apply vertical interpolation on that grid
-            if (varname==options%pvar) then
-                highres=inputdata(:,:size(highres,2),:)
-!               call update_pressure(highres,z_lo,z_hi,filename,options,geolut)
-                call update_pressure(highres,z_lo,z_hi)
-            else
+            if (apply_vertical_interpolation) then
                 call vinterp(highres, inputdata, &
                              vlut,boundary_only)
+            else
+                ! if we aren't interpolating, just copy over the output
+                highres=inputdata(:,:size(highres,2),:)
             endif
             deallocate(extra_data)
             deallocate(inputdata)
@@ -680,7 +689,7 @@ contains
                 where(domain%latent_heat<0) domain%latent_heat=0
             endif
             
-!           call update_pressure(domain%p,bc%lowres_z,domain%z)
+          call update_pressure(domain%p,bc%lowres_z,domain%z)
             
             nz=size(domain%th,2)
             domainsize=size(domain%th,1)*size(domain%th,3)
@@ -755,28 +764,75 @@ contains
     ! Adjust the pressure field for the vertical shift between the low resolution domain
     ! and the high resolution domain. Ideally this should include temperature... but it isn't entirely clear
     ! what it would mean to do that, what temperature do you use? 
-    subroutine update_pressure(pressure,z_lo,z_hi)
+    ! equations based off : http://www.wmo.int/pages/prog/www/IMOP/meetings/SI/ET-Stand-1/Doc-10_Pressure-red.pdf
+    ! excerpt from CIMO Guide, Part I, Chapter 3 (Edition 2008, Updated in 2010) equation 3.2
+    ! http://www.meteormetrics.com/correctiontosealevel.htm
+    subroutine update_pressure(pressure,z_lo,z_hi, lowresT, hiresT)
         implicit none
         real,dimension(:,:,:), intent(inout) :: pressure
         real,dimension(:,:,:), intent(in) :: z_lo,z_hi
-        real,dimension(:,:,:),allocatable::slp !sea level pressure [Pa]
+        real,dimension(:,:,:), intent(in), optional :: lowresT, hiresT
+        ! local variables
+        real,dimension(:),allocatable::slp !sea level pressure [Pa]
+        ! vapor pressure, change in height, change in temperature with height and mean temperature
+        real,dimension(:),allocatable:: e, dz, dTdz, tmean 
         integer :: nx,ny,nz,i,j
         nx=size(pressure,1)
         nz=size(pressure,2)
         ny=size(pressure,3)
-        allocate(slp(nx,nz,ny))
-        !$omp parallel shared(slp,pressure, z_lo,z_hi) &
-        !$omp private(i,j) firstprivate(nx,ny,nz)
-        !$omp do 
-        do j=1,ny
-            do i=1,nz
-                slp(:,i,j) = pressure(:,i,j) / (1 - 2.25577E-5 * z_lo(:,i,j))**5.25588
-                pressure(:,i,j) = slp(:,i,j) * (1 - 2.25577e-5 * z_hi(:,i,j))**5.25588
+        
+        if (present(lowresT)) then
+            !$omp parallel shared(pressure, z_lo,z_hi, lowresT, hiresT) &
+            !$omp private(i,j, e, dz, dTdz, tmean) firstprivate(nx,ny,nz)
+            allocate(e(nx))
+            allocate(dz(nx))
+            ! allocate(dTdz(nx))
+            allocate(tmean(nx))
+            !$omp do 
+            do j=1,ny
+                ! is an additional loop over z more cache friendly? 
+                do i=1,nz
+                    ! vapor pressure
+!                     e = qv(:,:,j) * pressure(:,:,j) / (0.62197+qv(:,:,j))
+                    ! change in elevation (note reverse direction from "expected" because the formula is an SLP reduction)
+                    dz   = (z_lo(:,i,j) - z_hi(:,i,j))
+                    ! lapse rate (not sure if this should be positive or negative)
+                    ! dTdz = (loresT(:,:,j) - hiresT(:,:,j)) / dz
+                    ! mean temperature between levels
+                    tmean= (hiresT(:,i,j) + lowresT(:,i,j)) / 2
+                
+                    ! slp= ps*np.exp(((g/R)*Hp) / (ts - a*Hp/2.0 + e*Ch))
+                    pressure(:,i,j) = pressure(:,i,j) * exp( ((gravity/Rd) * dz) / tmean )   !&
+!                                         (tmean + (e * 0.12) ) )
+                    ! alternative formulation M=0.029, R=8.314?
+                    ! p= p0*(t0/(t0+dtdz*z))**((g*M)/(R*dtdz))
+                    ! do i=1,nz
+                    !     pressure(:,i,j) = pressure(:,i,j)*(t0/(tmean(:,i)+dTdz(:,i)*z))**((g*M)/(R*dtdz))
+                    ! enddo
+                enddo
             enddo
-        enddo
-        !$omp end do
-        !$omp end parallel
-        deallocate(slp)
+            !$omp end do
+            deallocate(e, dz, tmean)
+            ! deallocate(dTdz)
+            !$omp end parallel
+        else
+            ! this is pretty foolish to convert to sea level pressure and back... should be done in one step
+            ! just need to test that the relationship can work that way h=(zhi-zlo)
+            ! this doesn't get used much though (only from bc_init) so it doesnt seem worth the time...
+            !$omp parallel shared(pressure, z_lo,z_hi) &
+            !$omp private(slp,i,j) firstprivate(nx,ny,nz)
+            allocate(slp(nx))
+            !$omp do 
+            do j=1,ny
+                do i=1,nz
+                    slp = pressure(:,i,j) / (1 - 2.25577E-5 * z_lo(:,i,j))**5.25588
+                    pressure(:,i,j) = slp * (1 - 2.25577e-5 * z_hi(:,i,j))**5.25588
+                enddo
+            enddo
+            !$omp end do
+            deallocate(slp)
+            !$omp end parallel
+        endif
     end subroutine update_pressure
     
 !   Update the external wind field
@@ -897,9 +953,22 @@ contains
         endif
         
         ! now read in remaining variables
+        ! for pressure do not apply vertical interpolation on IO, we will adjust it more accurately
         call read_var(bc%next_domain%p,       file_list(curfile), options%pvar,   &
                       bc%geolut, bc%vert_lut, curstep, use_interior,              &
-                      options,   bc%lowres_z, domain%z, time_varying_zlut=newbc%vert_lut)
+                      options, time_varying_zlut=newbc%vert_lut, interp_vertical=.False.)
+        ! for pressure adjustment, we need temperature on the original model grid, 
+        ! so read it without vertical interpolation (and for interior points too)
+        call read_var(bc%next_domain%th,      file_list(curfile), options%tvar,   &
+                      bc%geolut, bc%vert_lut, curstep, use_interior,              &
+                      options, time_varying_zlut=newbc%vert_lut, interp_vertical=.False. )
+        ! for pressure update we need real temperature, not potential t to compute an exner function
+        bc%next_domain%pii=(bc%next_domain%p/100000.0)**(Rd/cp)
+        ! now update pressure using the high res T field
+        call update_pressure(bc%next_domain%p,bc%lowres_z,domain%z,  & 
+                             lowresT = bc%next_domain%th * bc%next_domain%pii, &
+                             hiresT  = domain%th * domain%pii)
+        
                       
         call read_var(bc%next_domain%th,      file_list(curfile), options%tvar,   &
                       bc%geolut, bc%vert_lut, curstep, use_boundary,              &

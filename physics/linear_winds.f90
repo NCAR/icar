@@ -62,7 +62,7 @@ module linear_theory_winds
     ! Look Up Tables for linear perturbation are nspd x n_dir_values x n_nsq_values x nx x nz x ny
     real, allocatable, target, dimension(:,:,:,:,:,:) :: hi_u_LUT, hi_v_LUT, rev_u_LUT, rev_v_LUT
     real, pointer, dimension(:,:,:,:,:,:) :: u_LUT, v_LUT
-    real, allocatable, dimension(:,:) :: linear_mask
+    real, allocatable, dimension(:,:) :: linear_mask, nsq_calibration
     
     ! store the linear perturbation so we can update it slightly each time step
     ! this permits the linear field to build up over time. 
@@ -75,14 +75,14 @@ module linear_theory_winds
     real, parameter :: dirmin=0
     real, parameter :: spdmax=30
     real, parameter :: spdmin=0
-!     real, parameter :: nsqmax=log(6e-4)
-!     real, parameter :: nsqmin=log(1e-7)
-    real, parameter :: nsqmax=log(1e-4)
-    real, parameter :: nsqmin=log(3e-5)
+    real, parameter :: nsqmax=log(6e-4)
+    real, parameter :: nsqmin=log(1e-7)
+!     real, parameter :: nsqmax=log(1e-4)
+!     real, parameter :: nsqmin=log(3e-5)
     
-    integer, parameter :: n_dir_values=4 !36
-    integer, parameter :: n_nsq_values=2 !10
-    integer, parameter :: n_spd_values=2 !10
+    integer, parameter :: n_dir_values=36
+    integer, parameter :: n_nsq_values=10
+    integer, parameter :: n_spd_values=10
     
     ! real,parameter::pi=3.1415927
     complex,parameter :: j= (0,1)
@@ -772,7 +772,7 @@ contains
         !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, winsz), &
         !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
         !$omp shared(domain, spd_values, dir_values, nsq_values, u_LUT, v_LUT), &
-        !$omp shared(u_perturbation, v_perturbation, linear_update_fraction)
+        !$omp shared(u_perturbation, v_perturbation, linear_update_fraction, nsq_calibration)
         winsz=1
         !$omp do
         do k=1,ny
@@ -790,6 +790,7 @@ contains
                                             domain%z(i,bottom,k),  domain%z(i,top,k),   &
                                             domain%qv(i,bottom,k), domain%qv(i,top,k),  &
                                             domain%cloud(i,j,k)+domain%ice(i,j,k)+domain%qrain(i,j,k)+domain%qsnow(i,j,k))
+                    domain%nsquared(i,j,k) = domain%nsquared(i,j,k) * nsq_calibration(i,k)
                 end do
             end do
         end do
@@ -952,6 +953,20 @@ contains
                 print*, "  varname: "//trim(options%linear_mask_var)
                 call io_read2d(options%linear_mask_file,options%linear_mask_var,domain%linear_mask)
                 linear_mask=(1-(1-domain%linear_mask)*0.8) * linear_contribution
+            endif
+        endif
+        
+        ! set up nsq_calibration variable
+        if ( (.not.reverse) .and. (.not.allocated(nsq_calibration)) ) then
+            allocate(nsq_calibration(nx,ny))
+            nsq_calibration=1
+    
+            if (options%nsq_calibration) then
+                print*, "Reading Linear Mask"
+                print*, "  from file: "//trim(options%nsq_calibration_file)
+                print*, "  varname: "//trim(options%nsq_calibration_var)
+                call io_read2d(options%nsq_calibration_file,options%nsq_calibration_var,domain%nsq_calibration)
+                nsq_calibration=domain%nsq_calibration
             endif
         endif
         

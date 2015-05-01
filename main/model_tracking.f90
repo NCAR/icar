@@ -14,29 +14,30 @@ contains
     
     subroutine init_model_diffs()
         implicit none
-        integer::n=10
+        integer::n=11
         
         allocate(versionlist(n))
         allocate(deltas(n))
         versionlist=[character(len=1024) :: &
-                     "0.5.1","0.5.2","0.6","0.7","0.7.1","0.7.2","0.7.3","0.8","0.8.1","0.8.2"]
+                     "0.5.1","0.5.2","0.6","0.7","0.7.1","0.7.2","0.7.3","0.8","0.8.1","0.8.2","0.9"]
         deltas=[ character(len=1024) :: & 
         "Earliest version in record. ", &
-        "Added dxlow and variable name definitions pvar,tvar,qvvar,qcvar,qivar,     "// &
+        "Added dxlow and variable name definitions pvar,tvar,qvvar,qcvar,qivar,"// &
         "      U/V:lat/lon:high/low res. ", &
-        "Added variable name definitions for sensible(shvar)/latent(lhvar) heat     "// &
+        "Added variable name definitions for sensible(shvar)/latent(lhvar) heat"// &
         "      fluxes and PBL height(pblhvar). ", &
-        "Added input interval vs output interval timestepping, ?? also removed dz   "// &
+        "Added input interval vs output interval timestepping, ?? also removed dz"// &
         "      and decrease_dz. ", &
-        "Added variable name definitions for zvar and landmask (landvar), added     "// &
+        "Added variable name definitions for zvar and landmask (landvar), added"// &
         "      readz:boolean,x/y:min/max:integer. ", &
         "Removed x/y:min/max, Added dz_levels and z_info namelist. ", &
         "Added advect_density: boolean use. ", &
-        "Vertical interpolation requires zvar (can be PH / geopotential height)     "// &
+        "Vertical interpolation requires zvar (can be PH / geopotential height)"// &
         "      Also added smooth_wind_distance. ", &
-        "Added proper date tracking, requires date='yyyy/mm/dd hh:mm:ss' option     "// &
+        "Added proper date tracking, requires date='yyyy/mm/dd hh:mm:ss' option"// &
         "      in namelist.", &
-        "Added preliminary support for running the Noah LSM. " &
+        "Added preliminary support for running the Noah LSM. ", &
+        "Removed add_low_topo from options... MAJOR changes elsewhere, lots of new options" &
         ]
         
     end subroutine init_model_diffs
