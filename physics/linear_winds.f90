@@ -51,13 +51,6 @@ module linear_theory_winds
     type(C_PTR) :: uh_aligned_data, u_h_aligned_data, vh_aligned_data, v_h_aligned_data
     type(C_PTR), allocatable :: uplans(:), vplans(:)
     
-    integer :: buffer, original_buffer=50 ! number of grid cells to buffer around the domain MUST be >=1
-    integer,parameter :: stability_window_size=2
-    
-    real, parameter :: max_stability= 5e-4 ! limits on the calculated Brunt Vaisala Frequency
-    real, parameter :: min_stability= 5e-8 ! these may need to be a little narrower. 
-    real :: linear_contribution = 1.0 ! multiplier on uhat,vhat before adding to u,v
-    
     real, allocatable, dimension(:) :: dir_values, nsq_values, spd_values
     ! Look Up Tables for linear perturbation are nspd x n_dir_values x n_nsq_values x nx x nz x ny
     real, allocatable, target, dimension(:,:,:,:,:,:) :: hi_u_LUT, hi_v_LUT, rev_u_LUT, rev_v_LUT
@@ -67,16 +60,23 @@ module linear_theory_winds
     ! store the linear perturbation so we can update it slightly each time step
     ! this permits the linear field to build up over time. 
     real, allocatable, dimension(:,:,:) :: u_perturbation, v_perturbation
+    
+    integer :: buffer, original_buffer=50 ! number of grid cells to buffer around the domain MUST be >=1
+    integer,parameter :: stability_window_size=2
+    
+    real, parameter :: max_stability= 6e-4 ! limits on the calculated Brunt Vaisala Frequency
+    real, parameter :: min_stability= 1e-7 ! these may need to be a little narrower. 
+    real :: linear_contribution = 1.0 ! multiplier on uhat,vhat before adding to u,v
     ! controls the rate at which the linearfield updates (should be calculated as f(in_dt))
     ! new/current perturbation is multiplited by linear_update and added to (1-linear_update) * the previous combined perturbation
-    real :: linear_update_fraction = 0.5
+    real :: linear_update_fraction = 1.0
     
     real, parameter :: dirmax=2*pi
     real, parameter :: dirmin=0
     real, parameter :: spdmax=30
     real, parameter :: spdmin=0
-    real, parameter :: nsqmax=log(6e-4)
-    real, parameter :: nsqmin=log(1e-7)
+    real, parameter :: nsqmax=log(max_stability)
+    real, parameter :: nsqmin=log(min_stability)
 !     real, parameter :: nsqmax=log(1e-4)
 !     real, parameter :: nsqmin=log(3e-5)
     
@@ -790,7 +790,7 @@ contains
                                             domain%z(i,bottom,k),  domain%z(i,top,k),   &
                                             domain%qv(i,bottom,k), domain%qv(i,top,k),  &
                                             domain%cloud(i,j,k)+domain%ice(i,j,k)+domain%qrain(i,j,k)+domain%qsnow(i,j,k))
-                    domain%nsquared(i,j,k) = domain%nsquared(i,j,k) * nsq_calibration(i,k)
+                    domain%nsquared(i,j,k) = max(min(domain%nsquared(i,j,k) * nsq_calibration(i,k), max_stability), min_stability)
                 end do
             end do
         end do
@@ -825,9 +825,9 @@ contains
                     top   = min(j+winsz,nz)
                     south = max(k-winsz,1)
                     north = min(k+winsz,ny)
+                    n = (((west-east)+1) * ((top-bottom)+1) * ((north-south)+1))
                     
                     curnsq = sum(log(domain%nsquared(east:west, bottom:top,south:north)))
-                    n = (((west-east)+1) * ((top-bottom)+1) * ((north-south)+1))
                     curnsq = curnsq / n
 
                     npos=1
@@ -967,6 +967,9 @@ contains
                 print*, "  varname: "//trim(options%nsq_calibration_var)
                 call io_read2d(options%nsq_calibration_file,options%nsq_calibration_var,domain%nsq_calibration)
                 nsq_calibration=domain%nsq_calibration
+                
+                where(nsq_calibration<1) nsq_calibration = 1+1/((1-1/nsq_calibration)/100)
+                where(nsq_calibration>1) nsq_calibration = 1+(nsq_calibration-1)/100
             endif
         endif
         
