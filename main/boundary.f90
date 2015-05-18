@@ -647,7 +647,7 @@ contains
                 call ext_winds_init(domain,bc,options)
 !               call smooth_wind(domain%u,1,3)
 !               call smooth_wind(domain%v,1,3)
-            elseif (options%remove_lowres_linear) then
+            elseif (options%lt_options%remove_lowres_linear) then
                 ! remove the low-res linear wind perturbation field 
                 call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
                 call smooth_wind(domain%u,smoothing_window,3)
@@ -934,7 +934,7 @@ contains
             call update_ext_winds(bc,options)
 !           call smooth_wind(bc%next_domain%u,1,3)
 !           call smooth_wind(bc%next_domain%v,1,3)
-        elseif (options%remove_lowres_linear) then
+        elseif (options%lt_options%remove_lowres_linear) then
             call remove_linear_winds(bc%next_domain,bc,options,file_list(curfile),curstep)
             call smooth_wind(bc%next_domain%u,smoothing_window,3)
             call smooth_wind(bc%next_domain%v,smoothing_window,3)

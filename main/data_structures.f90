@@ -248,6 +248,34 @@ module data_structures
         logical :: Ef_rw_l, EF_sw_l
     end type mp_options_type
 !! -- trude
+
+    !------------------------------------------------
+    ! store Linear Theory options
+    !------------------------------------------------
+    type lt_options_type
+        integer :: buffer                   ! number of grid cells to buffer around the domain MUST be >=1
+        integer :: stability_window_size    ! window to average nsq over
+        real :: max_stability               ! limits on the calculated Brunt Vaisala Frequency
+        real :: min_stability               ! these may need to be a little narrower. 
+        logical :: variable_N           ! Compute the Brunt Vaisala Frequency (N^2) every time step
+        
+        real :: N_squared                   ! static Brunt Vaisala Frequency (N^2) to use
+        real :: linear_contribution         ! fractional contribution of linear perturbation to wind field (e.g. u_hat multiplied by this)
+        logical :: remove_lowres_linear     ! attempt to remove the linear mountain wave from the forcing low res model
+        real :: rm_N_squared                ! static Brunt Vaisala Frequency (N^2) to use in removing linear wind field
+        real :: rm_linear_contribution      ! fractional contribution of linear perturbation to wind field to remove from the low-res field
+        
+        real :: linear_update_fraction      ! fraction of linear perturbation to add each time step
+        logical :: spatial_linear_fields    ! use a spatially varying linear wind perturbation
+        logical :: linear_mask              ! use a spatial mask for the linear wind field
+        logical :: nsq_calibration          ! use a spatial mask to calibrate the nsquared (brunt vaisala frequency) field
+        
+        ! Look up table generation parameters
+        real :: dirmax, dirmin
+        real :: spdmax, spdmin
+        real :: nsqmax, nsqmin
+        integer :: n_dir_values, n_nsq_values, n_spd_values
+    end type lt_options_type
     
     !------------------------------------------------
     ! store all model options
@@ -277,14 +305,12 @@ module data_structures
         logical :: readdz               ! read atm model layer thicknesses from namelist
         logical :: debug                ! outputs a little more information at runtime (not much at present)
         logical :: external_winds       ! read a high res 3d wind field from an external file (e.g. a high res WRF run)
-        logical :: remove_lowres_linear ! attempt to remove the linear mountain wave from the forcing low res model
         logical :: mean_winds           ! use only a mean wind field across the entire model domain
         logical :: mean_fields          ! use only a mean forcing field across the model boundaries 
         logical :: restart              ! this is a restart run, read model conditions from a restart file
         logical :: advect_density       ! properly incorporate density into the advection calculations. 
                                         ! Doesn't play nice with linear winds
         logical :: high_res_soil_state  ! read the soil state from the high res input file not the low res file
-        logical :: variable_N           ! Compute the Brunt Vaisala Frequency (N^2) every time step
 
         integer :: buffer               ! buffer to remove from all sides of the high res grid supplied
         integer :: ymin,ymax,xmin,xmax  ! never implemented : would permit buffers of different distances on all sides
@@ -306,15 +332,7 @@ module data_structures
         real :: outputinterval          ! time steps per output
         real :: inputinterval           ! time steps per input
         real :: smooth_wind_distance    ! distance over which to smooth the forcing wind field (m)
-        real :: N_squared               ! static Brunt Vaisala Frequency (N^2) to use
-        real :: rm_N_squared            ! static Brunt Vaisala Frequency (N^2) to use in removing linear wind field
-        real :: linear_contribution     ! fractional contribution of linear perturbation to wind field (e.g. u_hat multiplied by this)
-        real :: rm_linear_contribution  ! fractional contribution of linear perturbation to wind field to remove from the low-res field
-        real :: linear_update_fraction  ! fraction of linear perturbation to add each time step
-        logical :: spatial_linear_fields! use a spatially varying linear wind perturbation
         logical :: time_varying_z       ! read in a new z coordinate every time step and interpolate accordingly
-        logical :: linear_mask          ! use a spatial mask for the linear wind field
-        logical :: nsq_calibration      ! use a spatial mask to calibrate the nsquared (brunt vaisala frequency) field
         
         ! date/time parameters
         double precision :: initial_mjd ! Modified Julian Day of the first forcing time step [days]
@@ -330,17 +348,18 @@ module data_structures
         type(physics_type)::physics
         ! parameterization options
         logical :: use_mp_options
-!! ++ trude
+        !! ++ trude
         type(mp_options_type)::mp_options
-!! -- trude
+        !! -- trude
+        type(lt_options_type) :: lt_options
         integer :: warning_level        ! level of warnings to issue when checking options settings 0-10.  
                                         ! 0  = Don't print anything
                                         ! 1  = print serious warnings
         ! (DEFAULT if debug=True)       ! 2  = print all warnings
-                                        ! 3-4 ... nothing specified
+                                        ! 3-4 ... nothing specified equivalent to 2
         ! (DEFAULT if debug=False)      ! 5  = Stop for options that are likely to break the model (print all warnings) 
-                                        ! 6-8... nothing specified
-                                        ! 9  = stop on serious warnings 
+                                        ! 6-8... nothing specified equivalent to 5
+                                        ! 9  = stop on serious warnings only
                                         ! 10 = stop on all warnings
     end type options_type
 end module data_structures  

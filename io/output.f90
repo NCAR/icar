@@ -85,19 +85,19 @@ contains
         
         if (options%physics%windtype>0) then
             call check( nf90_put_att(ncid,NF90_GLOBAL,"vert_smooth",options%vert_smooth))
-            call check( nf90_put_att(ncid,NF90_GLOBAL,"linear_contribution",options%linear_contribution))
-            if (options%variable_N.and.(.not.options%spatial_linear_fields)) then
+            call check( nf90_put_att(ncid,NF90_GLOBAL,"linear_contribution",options%lt_options%linear_contribution))
+            if (options%lt_options%variable_N) then
                 call check( nf90_put_att(ncid,NF90_GLOBAL,"variable_N","time varying N"))
             else
-                call check( nf90_put_att(ncid,NF90_GLOBAL,"fixed_N",options%N_squared))
+                call check( nf90_put_att(ncid,NF90_GLOBAL,"fixed_N",options%lt_options%N_squared))
             endif
-            if (options%remove_lowres_linear) then
-                if (.not.options%variable_N) then
-                    call check( nf90_put_att(ncid,NF90_GLOBAL,"rm_lin_frac_fixed_N",options%rm_N_squared))
+            if (options%lt_options%remove_lowres_linear) then
+                if (.not.options%lt_options%variable_N) then
+                    call check( nf90_put_att(ncid,NF90_GLOBAL,"rm_lin_frac_fixed_N",options%lt_options%rm_N_squared))
                 endif
-                call check( nf90_put_att(ncid,NF90_GLOBAL,"remove_lin_fraction",options%rm_linear_contribution))
+                call check( nf90_put_att(ncid,NF90_GLOBAL,"remove_lin_fraction",options%lt_options%rm_linear_contribution))
             endif
-            if (options%spatial_linear_fields) then
+            if (options%lt_options%spatial_linear_fields) then
                 call check( nf90_put_att(ncid,NF90_GLOBAL,"variable_N","spatially varying N"))
             endif
         endif
@@ -124,7 +124,7 @@ contains
         if (options%external_winds) then
             call check( nf90_put_att(ncid,NF90_GLOBAL,"external_winds","True"))
         endif
-        if (options%remove_lowres_linear) then
+        if (options%lt_options%remove_lowres_linear) then
             call check( nf90_put_att(ncid,NF90_GLOBAL,"remove_lowres_linear","True"))
         endif
         if (options%mean_winds) then
@@ -139,7 +139,7 @@ contains
         if (options%advect_density) then
             call check( nf90_put_att(ncid,NF90_GLOBAL,"advect_density","True"))
         endif
-        if (options%variable_N) then
+        if (options%lt_options%variable_N) then
             call check( nf90_put_att(ncid,NF90_GLOBAL,"variable_N","True"))
         endif
         if (options%use_agl_height) then

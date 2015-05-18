@@ -25,13 +25,14 @@ contains
         call var_namelist(options_filename,options)
         call parameters_namelist(options_filename,options)
         call model_levels_namelist(options_filename, options)
+        call lt_parameters_namelist(options_filename, options%lt_options)        
         
         ! ++ trude
         !       read in mp_options file
         write(*,*) "Initializing mp_Options"
-        call init_mp_options(options%mp_options_filename,options)
+        call mp_parameters_namelist(options%mp_options_filename,options)
         ! -- trude
-        
+
         if (options%restart) then
             call init_restart_options(options_filename,options)
         endif
@@ -76,14 +77,8 @@ contains
         character(len=*), intent(in) :: mp_options_filename
         type(options_type), intent(inout) :: options
         
-        if (options%use_mp_options) then
-            call version_check(mp_options_filename,options)
-        endif
-        call parameters_mp_namelist(mp_options_filename,options)
-! NBNBNB trude, check if I can comment these 3 lines out        
-!       if (options%restart) then
-!           call init_restart(options_filename,options)
-!       endif
+        call mp_parameters_namelist(mp_options_filename,options)
+        
     end subroutine init_mp_options
 ! -- trude
 
@@ -350,12 +345,12 @@ contains
         integer :: name_unit
         
         real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance
-        real    :: rotation_scale_height, N_squared, rm_N_squared,linear_contribution, rm_linear_contribution, linear_update_fraction
+        real    :: rotation_scale_height
         integer :: ntimesteps, nfiles, xmin, xmax, ymin, ymax, vert_smooth
         integer :: nz, n_ext_winds,buffer, warning_level
-        logical :: ideal, readz, readdz, debug, external_winds, remove_lowres_linear, variable_N, &
-                   mean_winds, mean_fields, restart, advect_density, high_res_soil_state, &
-                   use_agl_height, spatial_linear_fields, time_varying_z, linear_mask, nsq_calibration, use_mp_options
+        logical :: ideal, readz, readdz, debug, external_winds, &
+                   mean_winds, mean_fields, restart, advect_density, &
+                   high_res_soil_state, use_agl_height, time_varying_z, use_mp_options
         character(len=MAXFILELENGTH) :: date, calendar, start_date
         integer :: year, month, day, hour, minute, second
 ! ++ trude
@@ -364,10 +359,9 @@ contains
 
         namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug,nfiles, &
                               external_winds,buffer,n_ext_winds,advect_density,smooth_wind_distance, &
-                              remove_lowres_linear,mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
-                              date, calendar, high_res_soil_state,rotation_scale_height,warning_level, variable_N, &
-                              N_squared,rm_N_squared,linear_contribution,rm_linear_contribution, use_agl_height,  &
-                              spatial_linear_fields, linear_update_fraction, start_date, time_varying_z, linear_mask, nsq_calibration, &
+                              mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
+                              date, calendar, high_res_soil_state,rotation_scale_height,warning_level, &
+                              use_agl_height, start_date, time_varying_z, &
                               mp_options_filename, use_mp_options    ! trude added
         
 !       default parameters
@@ -377,7 +371,6 @@ contains
         n_ext_winds=1
         t_offset=(-9999)
         buffer=0
-        remove_lowres_linear=.False.
         advect_density=.True.
         restart=.False.
         ideal=.False.
@@ -395,18 +388,9 @@ contains
         calendar="gregorian"
         high_res_soil_state=.True.
         rotation_scale_height=2000.0
-        N_squared=6.e-5
-        rm_N_squared=6.e-5
-        variable_N=.False.
-        linear_contribution=1.0
-        rm_linear_contribution=1.0
-        linear_update_fraction=0.25
         use_agl_height=.True.
-        spatial_linear_fields=.False.
         start_date=""
         time_varying_z=.False.
-        linear_mask=.False.
-        nsq_calibration=.False.
         use_mp_options=.False.
 
         mp_options_filename = 'mp_options.nml'    ! trude added
@@ -477,7 +461,6 @@ contains
         options%readz=readz
         options%readdz=readdz
         options%buffer=buffer
-        options%remove_lowres_linear=remove_lowres_linear
         options%mean_winds=mean_winds
         options%mean_fields=mean_fields
         options%advect_density=advect_density
@@ -485,7 +468,6 @@ contains
         options%warning_level=warning_level
         options%rotation_scale_height=rotation_scale_height
         options%use_agl_height=use_agl_height
-        options%spatial_linear_fields=spatial_linear_fields
         
         options%external_winds=external_winds
         options%ext_winds_nfiles=n_ext_winds
@@ -497,15 +479,6 @@ contains
         options%ymin=ymin
         options%ymax=ymax
         
-        options%N_squared=N_squared
-        options%rm_N_squared=rm_N_squared
-        options%variable_N=variable_N
-        options%linear_contribution=linear_contribution
-        options%rm_linear_contribution=rm_linear_contribution
-        options%linear_mask = linear_mask
-        options%linear_update_fraction = linear_update_fraction
-        options%nsq_calibration = nsq_calibration
-
         options%high_res_soil_state=high_res_soil_state
         options%time_varying_z=time_varying_z
         
@@ -514,8 +487,8 @@ contains
 
     end subroutine parameters_namelist
 
-! ++ trude
-    subroutine parameters_mp_namelist(mp_filename,options)
+    ! ++ trude
+    subroutine mp_parameters_namelist(mp_filename,options)
         implicit none
         character(len=*),intent(in) :: mp_filename
         type(options_type), intent(inout) :: options
@@ -527,7 +500,13 @@ contains
 
         namelist /parameters/ Nt_c,TNO, am_s, rho_g, av_s,bv_s,fv_s,av_g,bv_g,av_i,Ef_si,Ef_rs,Ef_rg,Ef_ri,&     ! trude added Nt_c, TNO
                               C_cubes,C_sqrd, mu_r, Ef_rw_l, Ef_sw_l, t_adjust
-!       default parameters
+        
+        ! because mp_options could be in a separate file (shoudl probably set all namelists up to have this option)
+        if (options%use_mp_options) then
+            call version_check(mp_filename,options)
+        endif
+        
+        ! set default parameters
         Nt_c  = 100.e6      !  50, 100,500,1000
         TNO   = 5.0         !  0.5, 5, 50 
         am_s  = 0.069       ! 0.052 (Heymsfield), 0.02 (Mitchell), 0.01. 
@@ -551,11 +530,14 @@ contains
         Ef_rw_l = .False.   ! True sets ef_rw = 1, insted of max 0.95
         Ef_sw_l = .False.   ! True sets ef_rw = 1, insted of max 0.95
         
+        ! read in the namelist
         if (options%use_mp_options) then
             open(io_newunit(name_unit), file=mp_filename)
             read(name_unit,nml=parameters)
             close(name_unit)
         endif
+        
+        ! store the data back into the mp_options datastructure
         options%mp_options%Nt_c = Nt_c
         options%mp_options%TNO = TNO
         options%mp_options%am_s = am_s
@@ -576,8 +558,107 @@ contains
         options%mp_options%C_sqrd = C_sqrd
         options%mp_options%Ef_rw_l = Ef_rw_l
         options%mp_options%Ef_sw_l = Ef_sw_l
-    end subroutine parameters_mp_namelist
-! -- trude
+    end subroutine mp_parameters_namelist
+    ! -- trude
+    
+    subroutine lt_parameters_namelist(filename, lt_options)
+        implicit none
+        character(len=*), intent(in) :: filename
+        type(lt_options_type), intent(inout)::lt_options
+        
+        integer :: name_unit
+
+        logical :: variable_N           ! Compute the Brunt Vaisala Frequency (N^2) every time step
+        integer :: buffer                   ! number of grid cells to buffer around the domain MUST be >=1
+        integer :: stability_window_size    ! window to average nsq over
+        real :: max_stability               ! limits on the calculated Brunt Vaisala Frequency
+        real :: min_stability               ! these may need to be a little narrower. 
+        real :: linear_contribution         ! multiplier on uhat,vhat before adding to u,v
+        real :: linear_update_fraction      ! controls the rate at which the linearfield updates (should be calculated as f(in_dt))
+    
+        real :: N_squared                   ! static Brunt Vaisala Frequency (N^2) to use
+        logical :: remove_lowres_linear     ! attempt to remove the linear mountain wave from the forcing low res model
+        real :: rm_N_squared                ! static Brunt Vaisala Frequency (N^2) to use in removing linear wind field
+        real :: rm_linear_contribution      ! fractional contribution of linear perturbation to wind field to remove from the low-res field
+    
+        logical :: spatial_linear_fields    ! use a spatially varying linear wind perturbation
+        logical :: linear_mask              ! use a spatial mask for the linear wind field
+        logical :: nsq_calibration          ! use a spatial mask to calibrate the nsquared (brunt vaisala frequency) field
+    
+        ! Look up table generation parameters
+        real :: dirmax, dirmin
+        real :: spdmax, spdmin
+        real :: nsqmax, nsqmin
+        integer :: n_dir_values, n_nsq_values, n_spd_values
+        
+        ! define the namelist
+        namelist /lt_parameters/ variable_N, buffer, stability_window_size, max_stability, min_stability, &
+                                 linear_contribution, linear_update_fraction, N_squared, &
+                                 remove_lowres_linear, rm_N_squared, rm_linear_contribution, &
+                                 spatial_linear_fields, linear_mask, nsq_calibration, &
+                                 dirmax, dirmin, spdmax, spdmin, nsqmax, nsqmin, n_dir_values, n_nsq_values, n_spd_values
+        
+        ! set default values
+        variable_N = .True.
+        buffer = 50                    ! number of grid cells to buffer around the domain MUST be >=1
+        stability_window_size = 2      ! window to average nsq over
+        max_stability = 6e-4           ! limits on the calculated Brunt Vaisala Frequency
+        min_stability = 1e-7           ! these may need to be a little narrower. 
+        linear_update_fraction  = 1    ! controls the rate at which the linearfield updates (should be calculated as f(in_dt))
+    
+        N_squared = 3e-5               ! static Brunt Vaisala Frequency (N^2) to use
+        linear_contribution = 1        ! fractional contribution of linear perturbation to wind field (e.g. u_hat multiplied by this)
+        remove_lowres_linear = .False. ! attempt to remove the linear mountain wave from the forcing low res model
+        rm_N_squared = 3e-5            ! static Brunt Vaisala Frequency (N^2) to use in removing linear wind field
+        rm_linear_contribution = 1     ! fractional contribution of linear perturbation to wind field to remove from the low-res field
+    
+        linear_update_fraction = 1     ! fraction of linear perturbation to add each time step
+        spatial_linear_fields = .True. ! use a spatially varying linear wind perturbation
+        linear_mask = .False.          ! use a spatial mask for the linear wind field
+        nsq_calibration = .False.      ! use a spatial mask to calibrate the nsquared (brunt vaisala frequency) field
+    
+        ! look up table generation parameters
+        dirmax = 2*pi
+        dirmin = 0
+        spdmax = 30
+        spdmin = -30
+        nsqmax = log(max_stability)
+        nsqmin = log(min_stability)
+        n_dir_values = 36
+        n_nsq_values = 10
+        n_spd_values = 10
+        
+        ! read the namelist options
+        open(io_newunit(name_unit), file=filename)
+        read(name_unit,nml=lt_parameters)
+        close(name_unit)
+        
+        
+        ! store everything in the lt_options structure
+        lt_options%buffer = buffer
+        lt_options%stability_window_size = stability_window_size
+        lt_options%max_stability = max_stability
+        lt_options%min_stability = min_stability
+        lt_options%variable_N = variable_N
+        lt_options%N_squared = N_squared
+        lt_options%linear_contribution = linear_contribution
+        lt_options%remove_lowres_linear = remove_lowres_linear
+        lt_options%rm_N_squared = rm_N_squared
+        lt_options%rm_linear_contribution = rm_linear_contribution
+        lt_options%linear_update_fraction = linear_update_fraction
+        lt_options%spatial_linear_fields = spatial_linear_fields
+        lt_options%linear_mask = linear_mask
+        lt_options%nsq_calibration = nsq_calibration
+        lt_options%dirmax = dirmax
+        lt_options%dirmin = dirmin
+        lt_options%spdmax = spdmax
+        lt_options%spdmin = spdmin
+        lt_options%nsqmax = nsqmax
+        lt_options%nsqmin = nsqmin
+        lt_options%n_dir_values = n_dir_values
+        lt_options%n_nsq_values = n_nsq_values
+        lt_options%n_spd_values = n_spd_values        
+    end subroutine lt_parameters_namelist
     
     ! set up model levels, either read from a namelist, or from a default set of values
     subroutine model_levels_namelist(filename,options)

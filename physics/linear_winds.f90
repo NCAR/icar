@@ -60,31 +60,32 @@ module linear_theory_winds
     ! store the linear perturbation so we can update it slightly each time step
     ! this permits the linear field to build up over time. 
     real, allocatable, dimension(:,:,:) :: u_perturbation, v_perturbation
+
+    logical :: spatial_linear_fields
+    logical :: use_linear_mask     ! use a spatial mask for the linear wind field
+    logical :: use_nsq_calibration ! use a spatial mask to calibrate the nsquared (brunt vaisala frequency) field
+
+    integer :: buffer, original_buffer ! number of grid cells to buffer around the domain MUST be >=1
+    integer :: stability_window_size
     
-    integer :: buffer, original_buffer=50 ! number of grid cells to buffer around the domain MUST be >=1
-    integer,parameter :: stability_window_size=2
-    
-    real, parameter :: max_stability= 6e-4 ! limits on the calculated Brunt Vaisala Frequency
-    real, parameter :: min_stability= 1e-7 ! these may need to be a little narrower. 
+    real :: max_stability ! limits on the calculated Brunt Vaisala Frequency
+    real :: min_stability ! these may need to be a little narrower. 
     real :: linear_contribution = 1.0 ! multiplier on uhat,vhat before adding to u,v
     ! controls the rate at which the linearfield updates (should be calculated as f(in_dt))
     ! new/current perturbation is multiplited by linear_update and added to (1-linear_update) * the previous combined perturbation
     real :: linear_update_fraction = 1.0
     
-    real, parameter :: dirmax=2*pi
-    real, parameter :: dirmin=0
-    real, parameter :: spdmax=30
-    real, parameter :: spdmin=0
-    real, parameter :: nsqmax=log(max_stability)
-    real, parameter :: nsqmin=log(min_stability)
-!     real, parameter :: nsqmax=log(1e-4)
-!     real, parameter :: nsqmin=log(3e-5)
+    real :: dirmax ! =2*pi
+    real :: dirmin ! =0
+    real :: spdmax ! =30
+    real :: spdmin ! =0
+    real :: nsqmax ! =log(max_stability)
+    real :: nsqmin ! =log(min_stability)
     
-    integer, parameter :: n_dir_values=36
-    integer, parameter :: n_nsq_values=10
-    integer, parameter :: n_spd_values=10
+    integer :: n_dir_values=36
+    integer :: n_nsq_values=10
+    integer :: n_spd_values=10
     
-    ! real,parameter::pi=3.1415927
     complex,parameter :: j= (0,1)
     
 contains
@@ -772,7 +773,8 @@ contains
         !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, winsz), &
         !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
         !$omp shared(domain, spd_values, dir_values, nsq_values, u_LUT, v_LUT), &
-        !$omp shared(u_perturbation, v_perturbation, linear_update_fraction, nsq_calibration)
+        !$omp shared(u_perturbation, v_perturbation, linear_update_fraction, nsq_calibration), &
+        !$omp shared(min_stability, max_stability, n_dir_values, n_spd_values, n_nsq_values)
         winsz=1
         !$omp do
         do k=1,ny
@@ -882,6 +884,44 @@ contains
         
     end subroutine spatial_winds
     
+    subroutine set_module_options(options)
+        implicit none
+        type(options_type), intent(in) :: options
+        
+        original_buffer = options%lt_options%buffer
+        variable_N = options%lt_options%variable_N
+        linear_contribution = options%lt_options%linear_contribution
+        
+        stability_window_size = options%lt_options%stability_window_size   ! window to average nsq over
+        max_stability = options%lt_options%max_stability                   ! limits on the calculated Brunt Vaisala Frequency
+        min_stability = options%lt_options%min_stability                   ! these may need to be a little narrower. 
+        linear_contribution = options%lt_options%linear_contribution       ! multiplier on uhat,vhat before adding to u,v
+        linear_update_fraction = options%lt_options%linear_update_fraction ! controls the rate at which the linearfield updates
+        linear_contribution = options%lt_options%linear_contribution       ! fractional contribution of linear perturbation to wind field
+        ! these are defined per call to permit different values for low res and high res domains
+        ! N_squared = options%lt_options%N_squared                           ! static Brunt Vaisala Frequency (N^2) to use
+        ! rm_N_squared = options%lt_options%rm_N_squared                     ! static BV Frequency (N^2) to use in removing linear wind field
+        ! rm_linear_contribution = options%lt_options%rm_linear_contribution ! fractional contribution of linear perturbation to remove wind field
+        ! remove_lowres_linear = options%lt_options%remove_lowres_linear     ! remove the linear mountain wave from low res forcing model
+        
+        linear_update_fraction= options%lt_options%linear_update_fraction  ! fraction of linear perturbation to add each time step
+        spatial_linear_fields = options%lt_options%spatial_linear_fields   ! use a spatially varying linear wind perturbation
+        linear_mask           = options%lt_options%linear_mask             ! use a spatial mask for the linear wind field
+        nsq_calibration       = options%lt_options%nsq_calibration         ! use a spatial mask to calibrate the nsquared (brunt vaisala frequency) field
+    
+        ! Look up table generation parameters, range for each parameter, and number of steps to cover that range
+        dirmax = options%lt_options%dirmax
+        dirmin = options%lt_options%dirmin
+        spdmax = options%lt_options%spdmax
+        spdmin = options%lt_options%spdmin
+        nsqmax = options%lt_options%nsqmax
+        nsqmin = options%lt_options%nsqmin
+        n_dir_values = options%lt_options%n_dir_values
+        n_nsq_values = options%lt_options%n_nsq_values
+        n_spd_values = options%lt_options%n_spd_values
+        
+    end subroutine set_module_options
+    
     ! called from linear_perturb the first time perturb is called
     ! compute FFT(terrain), and dzdx,dzdy components
     subroutine setup_linwinds(domain,options,reverse,useDensity)
@@ -899,8 +939,8 @@ contains
         ! can be separated for the domain and bc fields
         ! this is a little tricky, because we don't want to have to calculate the LUTs 
         ! twice, once for domain and once for bc%next_domain
-        variable_N=options%variable_N
-        buffer = original_buffer
+        call set_module_options(options)
+        
         if (.not.options%ideal) then
             call add_buffer_topo(domain%terrain,complex_terrain_firstpass,5)
             buffer=2
@@ -947,7 +987,7 @@ contains
             allocate(linear_mask(nx,ny))
             linear_mask=linear_contribution
     
-            if (options%linear_mask) then
+            if (use_linear_mask) then
                 print*, "Reading Linear Mask"
                 print*, "  from file: "//trim(options%linear_mask_file)
                 print*, "  varname: "//trim(options%linear_mask_var)
@@ -961,7 +1001,7 @@ contains
             allocate(nsq_calibration(nx,ny))
             nsq_calibration=1
     
-            if (options%nsq_calibration) then
+            if (use_nsq_calibration) then
                 print*, "Reading Linear Mask"
                 print*, "  from file: "//trim(options%nsq_calibration_file)
                 print*, "  varname: "//trim(options%nsq_calibration_var)
@@ -975,7 +1015,6 @@ contains
         
         ! allocate the fields that will hold the perturbation only so we can update it
         ! slowly and add the total to the domain%u,v
-        linear_update_fraction = options%linear_update_fraction
         if (.not.allocated(u_perturbation)) then
             allocate(u_perturbation(nx+1,nz,ny))
             u_perturbation=0
@@ -984,7 +1023,7 @@ contains
         endif
         
         print*, maxval(u_perturbation), maxval(v_perturbation)
-        if (options%spatial_linear_fields) then
+        if (spatial_linear_fields) then
             if ((.not.allocated(hi_u_LUT) .and. (.not.reverse)) .or. ((.not.allocated(rev_u_LUT)) .and. reverse)) then
                 
                 write(*,*) "Generating a spatially variable linear perturbation look up table"
@@ -1014,18 +1053,19 @@ contains
         else
             rev=.False.
         endif
+        ! these probably need to get moved to options...
         if (present(useDensity)) then
             useD=useDensity
         else
             useD=.False.
         endif
-
+        ! this is a little trickier, because it does have to be domain dependant... could at least be stored in the domain though...
         if (rev) then
-            linear_contribution=options%rm_linear_contribution
-            N_squared=options%rm_N_squared
+            linear_contribution=options%lt_options%rm_linear_contribution
+            N_squared=options%lt_options%rm_N_squared
         else
-            linear_contribution=options%linear_contribution
-            N_squared=options%N_squared
+            linear_contribution=options%lt_options%linear_contribution
+            N_squared=options%lt_options%N_squared
         endif
         
         ! if linear_perturb hasn't been called before we need to perform some setup actions. 
@@ -1036,7 +1076,7 @@ contains
         ! add the spatially variable linear field
         ! if we are reverseing the effects, that means we are in the low-res domain
         ! that domain does not have a spatial LUT calculated, so it can not be performed
-        if (options%spatial_linear_fields)then
+        if (spatial_linear_fields)then
             call spatial_winds(domain,rev)
         else
             ! Nsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability
