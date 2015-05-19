@@ -61,7 +61,7 @@ module linear_theory_winds
     ! this permits the linear field to build up over time. 
     real, allocatable, dimension(:,:,:) :: u_perturbation, v_perturbation
 
-    logical :: spatial_linear_fields
+    logical :: use_spatial_linear_fields
     logical :: use_linear_mask     ! use a spatial mask for the linear wind field
     logical :: use_nsq_calibration ! use a spatial mask to calibrate the nsquared (brunt vaisala frequency) field
 
@@ -328,8 +328,10 @@ contains
         enddo
         
         if (.not.data_allocated) then
-            print*, "Allocating Linear Wind Data and FFTW plans"
-            ! should try to use fft_malloc routines to ensure better allignment
+            if (debug) then
+                write(*,*) "Allocating Linear Wind Data and FFTW plans"
+            endif
+            ! using fftw_alloc routines to ensure better allignment for vectorization
             n_elements=nx*ny*nz
             uh_aligned_data=fftw_alloc_complex(n_elements)
             call c_f_pointer(uh_aligned_data, uhat, [nx,ny,nz])
@@ -347,6 +349,9 @@ contains
                 uplans(i) = fftw_plan_dft_2d(ny,nx, uhat(:,:,i),u_hat(:,:,i), FFTW_BACKWARD,FFTW_MEASURE)!PATIENT)!FFTW_ESTIMATE)
                 vplans(i) = fftw_plan_dft_2d(ny,nx, vhat(:,:,i),v_hat(:,:,i), FFTW_BACKWARD,FFTW_MEASURE)!PATIENT)!FFTW_ESTIMATE)
             enddo
+            if (debug) then
+                write(*,*) "Allocation Complete:",trim(str(nx))," ",trim(str(ny))," ",trim(str(nz))
+            endif
         endif
         if (reverse) then
             write(*,*) "ERROR: reversing linear winds not set up for parallel fftw computation yet"
@@ -452,7 +457,7 @@ contains
                 ! it should be possible to store the plan and execute it everytime rather than recreating it everytime, doesn't matter too much 
                 call ifftshift(uhat, fixed_axis=z)
                 call ifftshift(vhat, fixed_axis=z)
-            
+                
                 call fftw_execute_dft(uplans(z), uhat(:,:,z),u_hat(:,:,z))
                 call fftw_execute_dft(vplans(z), vhat(:,:,z),v_hat(:,:,z))
                 
@@ -514,11 +519,11 @@ contains
                         write(*,*) "U=",U, "    V=",V
                         write(*,*) "realnx=",realnx, "; nx=",nx, "; buffer=",buffer
                         write(*,*) "realny=",realny, "; ny=",ny!, buffer
-                        write(*,*) "Writing internal linear wind data"
-                        call io_write2d("u_hat_sub2.nc","data", real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer,z))) )
-                        call io_write2d("v_hat_sub2.nc","data", real(real(v_hat(1+buffer:nx-buffer,1+buffer:realny+buffer-1,z))) )
-                        call io_write2d("u_hat_full.nc","data", real(real(u_hat(:,:,z))) )
-                        call io_write2d("v_hat_full.nc","data", real(real(v_hat(:,:,z))) )
+!                         write(*,*) "Writing internal linear wind data"
+!                         call io_write2d("u_hat_sub2.nc","data", real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer,z))) )
+!                         call io_write2d("v_hat_sub2.nc","data", real(real(v_hat(1+buffer:nx-buffer,1+buffer:realny+buffer-1,z))) )
+!                         call io_write2d("u_hat_full.nc","data", real(real(u_hat(:,:,z))) )
+!                         call io_write2d("v_hat_full.nc","data", real(real(v_hat(:,:,z))) )
                     endif
                 endif
             endif
@@ -668,7 +673,7 @@ contains
         
         ! loop over combinations of U and V values
         write(*,*) "Percent Completed:"
-        debug=.True.
+        debug=options%debug
         ! this could be parallelized to speed it up a little, but the linear_wind calculation is already parallelized
         ! over the vertical domain, so it wouldn't add much (unless a lot more than cores are available than levels)
         do i=1,n_dir_values
@@ -904,10 +909,10 @@ contains
         ! rm_linear_contribution = options%lt_options%rm_linear_contribution ! fractional contribution of linear perturbation to remove wind field
         ! remove_lowres_linear = options%lt_options%remove_lowres_linear     ! remove the linear mountain wave from low res forcing model
         
-        linear_update_fraction= options%lt_options%linear_update_fraction  ! fraction of linear perturbation to add each time step
-        spatial_linear_fields = options%lt_options%spatial_linear_fields   ! use a spatially varying linear wind perturbation
-        linear_mask           = options%lt_options%linear_mask             ! use a spatial mask for the linear wind field
-        nsq_calibration       = options%lt_options%nsq_calibration         ! use a spatial mask to calibrate the nsquared (brunt vaisala frequency) field
+        linear_update_fraction    = options%lt_options%linear_update_fraction  ! fraction of linear perturbation to add each time step
+        use_spatial_linear_fields = options%lt_options%spatial_linear_fields   ! use a spatially varying linear wind perturbation
+        use_linear_mask           = options%lt_options%linear_mask             ! use a spatial mask for the linear wind field
+        use_nsq_calibration       = options%lt_options%nsq_calibration         ! use a spatial mask to calibrate the nsquared (brunt vaisala frequency) field
     
         ! Look up table generation parameters, range for each parameter, and number of steps to cover that range
         dirmax = options%lt_options%dirmax
@@ -942,6 +947,7 @@ contains
         call set_module_options(options)
         
         if (.not.options%ideal) then
+            buffer=original_buffer
             call add_buffer_topo(domain%terrain,complex_terrain_firstpass,5)
             buffer=2
             call add_buffer_topo(real(real(complex_terrain_firstpass)),complex_terrain,0)
@@ -1023,7 +1029,7 @@ contains
         endif
         
         print*, maxval(u_perturbation), maxval(v_perturbation)
-        if (spatial_linear_fields) then
+        if (use_spatial_linear_fields) then
             if ((.not.allocated(hi_u_LUT) .and. (.not.reverse)) .or. ((.not.allocated(rev_u_LUT)) .and. reverse)) then
                 
                 write(*,*) "Generating a spatially variable linear perturbation look up table"
@@ -1076,7 +1082,7 @@ contains
         ! add the spatially variable linear field
         ! if we are reverseing the effects, that means we are in the low-res domain
         ! that domain does not have a spatial LUT calculated, so it can not be performed
-        if (spatial_linear_fields)then
+        if (use_spatial_linear_fields)then
             call spatial_winds(domain,rev)
         else
             ! Nsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability

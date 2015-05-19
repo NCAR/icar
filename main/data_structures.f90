@@ -296,7 +296,7 @@ module data_structures
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var
 !! ++ trude
-        character(len=MAXFILELENGTH) :: mp_options_filename
+        character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename
 !! -- trude
 
         ! various boolean options
@@ -313,7 +313,6 @@ module data_structures
         logical :: high_res_soil_state  ! read the soil state from the high res input file not the low res file
 
         integer :: buffer               ! buffer to remove from all sides of the high res grid supplied
-        integer :: ymin,ymax,xmin,xmax  ! never implemented : would permit buffers of different distances on all sides
         integer :: vert_smooth          ! number of model levels to smooth winds over in the vertical
         ! various integer parameters/options
         integer :: ntimesteps           ! total number of time steps to be simulated
@@ -351,6 +350,7 @@ module data_structures
         !! ++ trude
         type(mp_options_type)::mp_options
         !! -- trude
+        logical :: use_lt_options
         type(lt_options_type) :: lt_options
         integer :: warning_level        ! level of warnings to issue when checking options settings 0-10.  
                                         ! 0  = Don't print anything

@@ -19,17 +19,16 @@ contains
         character(len=MAXFILELENGTH) :: options_filename
 
         options_filename=get_options_file()
+        write(*,*) "Using options file = ", trim(options_filename)
         
         call version_check(options_filename,options)
         call physics_namelist(options_filename,options)
         call var_namelist(options_filename,options)
         call parameters_namelist(options_filename,options)
         call model_levels_namelist(options_filename, options)
-        call lt_parameters_namelist(options_filename, options%lt_options)        
         
+        call lt_parameters_namelist(options%lt_options_filename, options)
         ! ++ trude
-        !       read in mp_options file
-        write(*,*) "Initializing mp_Options"
         call mp_parameters_namelist(options%mp_options_filename,options)
         ! -- trude
 
@@ -43,44 +42,31 @@ contains
     end subroutine init_options
 
 
-    function get_options_file()
+    function get_options_file() result(options_file)
         implicit none
-        character(len=MAXFILELENGTH) ::get_options_file
+        character(len=MAXFILELENGTH) ::options_file
         integer :: error
         logical :: file_exists
     
         if (command_argument_count()>0) then
-            call get_command_argument(1,get_options_file, status=error)
+            call get_command_argument(1,options_file, status=error)
             if (error>0) then
-                get_options_file="icar_options.nml"
+                options_file="icar_options.nml"
             elseif (error==-1) then
-                write(*,*) "Options filename = ", trim(get_options_file), " ...<cutoff>"
+                write(*,*) "Options filename = ", trim(options_file), " ...<cutoff>"
                 write(*,*) "Maximum filename length = ", MAXFILELENGTH
                 stop("ERROR: options filename too long")
             endif
         else
-            get_options_file="icar_options.nml"
+            options_file="icar_options.nml"
         endif
-        write(*,*) "Options filename = ", trim(get_options_file)
-        INQUIRE(file=trim(get_options_file), exist=file_exists)
+        INQUIRE(file=trim(options_file), exist=file_exists)
         if (.not.file_exists) then
+            write(*,*) "Using options file = ", trim(options_file)
             stop("Options file does not exist. ")
         endif
     end function
 
-
-! ++ trude  
-    subroutine init_mp_options(mp_options_filename,options)
-!       reads a series of options from a namelist file and stores them in the 
-!       options data structure
-        implicit none
-        character(len=*), intent(in) :: mp_options_filename
-        type(options_type), intent(inout) :: options
-        
-        call mp_parameters_namelist(mp_options_filename,options)
-        
-    end subroutine init_mp_options
-! -- trude
 
 
 ! check the version number in the namelist file and compare to the current model version
@@ -346,23 +332,24 @@ contains
         
         real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance
         real    :: rotation_scale_height
-        integer :: ntimesteps, nfiles, xmin, xmax, ymin, ymax, vert_smooth
+        integer :: ntimesteps, nfiles, vert_smooth
         integer :: nz, n_ext_winds,buffer, warning_level
         logical :: ideal, readz, readdz, debug, external_winds, &
                    mean_winds, mean_fields, restart, advect_density, &
-                   high_res_soil_state, use_agl_height, time_varying_z, use_mp_options
+                   high_res_soil_state, use_agl_height, time_varying_z, use_mp_options, use_lt_options
         character(len=MAXFILELENGTH) :: date, calendar, start_date
         integer :: year, month, day, hour, minute, second
 ! ++ trude
-        character(len=MAXFILELENGTH) :: mp_options_filename
+        character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename
 ! -- trude
 
         namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug,nfiles, &
                               external_winds,buffer,n_ext_winds,advect_density,smooth_wind_distance, &
-                              mean_winds,mean_fields,restart,xmin,xmax,ymin,ymax,vert_smooth, &
+                              mean_winds,mean_fields,restart,vert_smooth, &
                               date, calendar, high_res_soil_state,rotation_scale_height,warning_level, &
                               use_agl_height, start_date, time_varying_z, &
-                              mp_options_filename, use_mp_options    ! trude added
+                              mp_options_filename, use_mp_options, &    ! trude added
+                              lt_options_filename, use_lt_options
         
 !       default parameters
         mean_fields=.False.
@@ -378,10 +365,6 @@ contains
         warning_level=-9999
         readz=.False.
         readdz=.True.
-        xmin=   1
-        ymin=   1
-        xmax= (-1)
-        ymax= (-1)
         nz  = MAXLEVELS
         smooth_wind_distance=-9999
         vert_smooth=2
@@ -391,9 +374,13 @@ contains
         use_agl_height=.True.
         start_date=""
         time_varying_z=.False.
+        
         use_mp_options=.False.
-
         mp_options_filename = 'mp_options.nml'    ! trude added
+        
+        use_lt_options=.False.
+        lt_options_filename = filename
+
         
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=parameters)
@@ -474,16 +461,15 @@ contains
         options%restart=restart
         
         options%nz=nz
-        options%xmin=xmin
-        options%xmax=xmax
-        options%ymin=ymin
-        options%ymax=ymax
         
         options%high_res_soil_state=high_res_soil_state
         options%time_varying_z=time_varying_z
         
         options%use_mp_options = use_mp_options
         options%mp_options_filename  = mp_options_filename   ! trude added
+
+        options%use_lt_options = use_lt_options
+        options%lt_options_filename  = lt_options_filename
 
     end subroutine parameters_namelist
 
@@ -561,10 +547,11 @@ contains
     end subroutine mp_parameters_namelist
     ! -- trude
     
-    subroutine lt_parameters_namelist(filename, lt_options)
+    subroutine lt_parameters_namelist(filename, options)
         implicit none
         character(len=*), intent(in) :: filename
-        type(lt_options_type), intent(inout)::lt_options
+        type(options_type), intent(inout)::options
+        type(lt_options_type)::lt_options
         
         integer :: name_unit
 
@@ -598,6 +585,14 @@ contains
                                  spatial_linear_fields, linear_mask, nsq_calibration, &
                                  dirmax, dirmin, spdmax, spdmin, nsqmax, nsqmin, n_dir_values, n_nsq_values, n_spd_values
         
+         ! because lt_options could be in a separate file
+         if (options%use_lt_options) then
+             if (trim(filename)/=trim(get_options_file())) then
+                 call version_check(filename,options)
+             endif
+         endif
+        
+        
         ! set default values
         variable_N = .True.
         buffer = 50                    ! number of grid cells to buffer around the domain MUST be >=1
@@ -629,10 +624,11 @@ contains
         n_spd_values = 10
         
         ! read the namelist options
-        open(io_newunit(name_unit), file=filename)
-        read(name_unit,nml=lt_parameters)
-        close(name_unit)
-        
+        if (options%use_lt_options) then
+            open(io_newunit(name_unit), file=filename)
+            read(name_unit,nml=lt_parameters)
+            close(name_unit)
+        endif
         
         ! store everything in the lt_options structure
         lt_options%buffer = buffer
@@ -657,7 +653,10 @@ contains
         lt_options%nsqmin = nsqmin
         lt_options%n_dir_values = n_dir_values
         lt_options%n_nsq_values = n_nsq_values
-        lt_options%n_spd_values = n_spd_values        
+        lt_options%n_spd_values = n_spd_values
+        
+        ! copy the data back into the global options data structure
+        options%lt_options = lt_options        
     end subroutine lt_parameters_namelist
     
     ! set up model levels, either read from a namelist, or from a default set of values
