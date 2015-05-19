@@ -40,7 +40,6 @@ program icar
 !   read initial conditions from the boundary file
     write(*,*) "Initializing Boundary conditions"
     call bc_init(domain,boundary,options)
-    write(*,*) maxval(domain%u),minval(domain%u)
     
     write(*,*) "Initializing Physics packages"
     call init_physics(options,domain)

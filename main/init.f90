@@ -51,7 +51,9 @@ contains
 !       this might be more apropriately though of as a forcing data structure (for low res model)
         write(*,*) "Initializing Boundaries"
         call init_bc(options,domain,boundary)
-        write(*,*) "Finished basic initialization"
+!         write(*,*) ""
+        write(*,'(/ A)') "Finished basic initialization"
+        write(*,'(A /)') "---------------------------------------"
         
     end subroutine init_model
     

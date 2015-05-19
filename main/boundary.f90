@@ -35,6 +35,7 @@ module boundary_conditions
     use geo,                    only : geo_interp2d, geo_interp
     use vertical_interpolation, only : vinterp, vLUT_forcing
     use output,                 only : write_domain
+    use string,                 only : str
     
     implicit none
     private
@@ -624,7 +625,7 @@ contains
             enddo
             
             smoothing_window = min(max(int(options%smooth_wind_distance/domain%dx),1),size(domain%lat,1)/5)
-            write(*,*) "Smoothing winds over ",smoothing_window," grid cells"
+            write(*,*) "Smoothing winds over ",trim(str(smoothing_window))," grid cells"
         endif
 !       load the restart file
         if (options%restart) then
@@ -706,7 +707,6 @@ contains
             domain%rho=domain%p/(Rd*domain%th*domain%pii) ! kg/m^3
             call update_winds(domain,options)
         endif
-
     end subroutine bc_init
 
 
