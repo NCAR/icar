@@ -1,6 +1,6 @@
 &model_version
 comment="Add your comment here", ! This will be stored in output files
-version="0.8.1"
+version="0.9"
 /
 
 &var_list
@@ -47,11 +47,15 @@ hgt_hi="HGT_M"			! surface elevation
 ! soiltype_var="ISLTYP",	! soil type index
 ! soil_t_var="TSLB",		! soil temperature (4 levels)
 ! soil_vwc_var="SMOIS"		! soil water content (4 levels)
+
+! variables to read from calibration files, both default to "data"
+! nsq_calibration_var="data",
+! linear_mask_var="data"
 /
 
 &parameters
 ! set this to the starting date in the low-resolution forcing file
-date='2000/01/01 00:00:00'
+date='2000-01-01 00:00:00'
 ! set this to the date to start running the model (defaults to the above date)
 start_date="1990-10-01_00:00:00"
 ! calendar used by the forcing data "gregorian", "standard", "noleap", "365-day", "360-day"
@@ -64,17 +68,23 @@ ntimesteps=8760,
 inputinterval=3600,
 ! the output interval [s]
 outputinterval=3600,
+
 ! the grid spacing of the high-resolution data
-dx=12000.0,
+dx=4000.0,
 ! the approximate grid spacing of the forcing data
-dxlow=20000.0,
+! only used in rm_linear_winds?
+! dxlow=20000.0,
 
 ! read dz from the namelist file (below)
 readdz=True,
 ! the number of vertical levels to run (suggest ~10-30 levels with a model top around 4-8km)
 ! must match the number of values supplied in dz_levels below
 ! this is now optional, if not supplied, ICAR will determine it from the number of levels specified
-nz=20,
+! if it is supplied it must be less than or equal to the number of levels specified below
+! but it can be used to subset the number of levels used. 
+! nz=20,
+! specify that the height of the forcing data will change through the simulation (common for atmospheric data)
+time_varying_z=true,
 
 ! if the forcing data come from WRF, the temperature data probably have an offset applied
 ! t_offset will be added to the forcing temperature data
@@ -93,8 +103,6 @@ ideal=false,
 external_winds=false,
 ! number of external wind files (ignore)
 n_ext_winds=1,
-! attempt to remove the low resolution orographic effect from the model (ignore)
-remove_lowres_linear=false,
 ! run with a horizontally averaged wind field
 mean_winds=false,
 ! run with a horizontally averaged boundary conditions
@@ -114,24 +122,74 @@ buffer=0,
 debug=true,
 warning_level=10, ! 0-10 increases the level of errors it warns about and quits over
 
-! set this to modify the scale height for which the terrain affects the wind field
-! rotation_scale_height=4000,
-
-! set this to use a fixed brunt-vaisalla frequency in linear wind calculations
-! N_squared=1.0e-5
-! set this to use a different brunt-vaisalla frequency in removing lowres linear winds
-rm_N_squared=9e-5,
-! set this to true to calculate a time-varying brunt-vaisalla frequency
-! variable_N = False,
-
-! set this to the fraction of the linear perturbation you wish to use (1.0 = full/standard linear field)
-! linear_contribution=1.0,
-! fraction of linear perturbation to remove from the low-res wind field (if rm_lowres_linear==true)
-rm_linear_contribution=0.4,
-! use a spatially variable wind field when calculating the linear wind field (doesn't permit variable_N)
-spatial_linear_fields=false,
+! read parameters for linear theory
+use_lt_options = true,
+! read parameters for microphysics (thompson only at this point)
+use_mp_options = false
 /
 
+!---------------------------------------------------------
+!   Optionally specified Linear Theory parameters
+!---------------------------------------------------------
+&lt_parameters
+!set this to the number of grid cells of buffer to use around the topography for the fft calculations
+buffer=50
+! set this to the number of grid cells in all directions to average Nsq over for variable_N
+stability_window_size=2
+! set this to the maximum Brunt-Vaisalla frequency to allow
+max_stability=6e-4
+! set this to the minimum Brunt-Vaisalla frequency to allow
+min_stability=1e-7
+
+! set this to use a fixed brunt-vaisalla frequency in linear wind calculations
+! NOTE this will be used for the dry BV,  moist will be dry/10
+! N_squared=3.0e-5
+! set this to use a different brunt-vaisalla frequency in removing lowres linear winds
+! rm_N_squared=9e-5,
+! set this to true to calculate a time-varying brunt-vaisalla frequency
+! variable_N = False,
+! set this to the fraction of the linear perturbation you wish to use (1.0 = full/standard linear field)
+! linear_contribution=1.0,
+! use a spatially variable wind field when calculating the linear wind field (doesn't permit variable_N)
+spatial_linear_fields=true,
+
+! attempt to "remove" the low resolution linear winds from the forcing data
+! NOTE THIS DOES NOT WORK RIGHT NOW
+! remove_lowres_linear=false,
+! fraction of linear perturbation to remove from the low-res wind field (if rm_lowres_linear==true)
+! rm_linear_contribution=0.4,
+
+! use a time varying Nsq (e.g. calculate it from the data don't use the above fixed value)
+variable_N=true,
+! set this to the fraction of the current linear calculation to add to to a time-varying perturbation
+! setting to 1 means that waves form instantly, setting it to 0 means they will never form
+! anything in between is the contribution from the current time step
+linear_update_fraction = 1.0
+
+! used to test possible model calibration... not sure what these will do longer term
+nsq_calibration=false,
+linear_mask=True
+
+! linear theory look up table generation parameters
+! direction ranges and number of bins
+dirmax = 6.283185307 ! 2*pi
+dirmin = 0
+n_dir_values = 36
+! wind speed ranges and number of bins
+spdmax = 30
+spdmin = -30
+n_spd_values = 10
+! BV frequency ranges (in log space) and number of bins
+nsqmax = -7.42  ! ln(6e-4) defaults to ln(max_stability)
+nsqmin = -16.12 ! ln(1e-7) defaults to ln(min_stability)
+n_nsq_values = 10
+/
+
+
+
+!---------------------------------------------------------
+!   Optionally specified Restart information
+!---------------------------------------------------------
 &restart_info
 ! file to read for initial conditions (an ICAR output file will work)
 restart_file="restart/icar_1990_09_30_01-01.nc",
@@ -141,25 +199,31 @@ restart_date= 1990, 9, 30, 23, 0, 0
 restart_step=2,
 /
 
+!---------------------------------------------------------
+!   Model levels specification (may be optional, but should be specified)
+!---------------------------------------------------------
 &z_info
-! model levels
+! sample model levels
 dz_levels= 50.,   75.,  125.,  200.,  300.,  400.,  500.,  500.,  500.,  500.,    !  1-10
  		  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.     ! 10-20
 !		  453.,  476.,  503.,  533.,  422.,  443.,  467.,  326.,  339.,  353.     ! 20-30
 !		  369.,  386.,  405.,  426.,  450.,  477., 455.,  429.,  396.,  357.,     ! 30-40
 /
 
+!---------------------------------------------------------
+!   Specify physics options to use for the model run
+!---------------------------------------------------------
 &physics
 ! common precipitation downscaling run use pbl=0 lsm=0 mp=1 rad=0 conv=0 adv=1 wind=1
 ! for FASTER run (simpler physics), set mp=2
 ! if surface air temperature is important use pbl=2 lsm=2 rad=2 this requires Noah LSM data
-pbl=0,
-lsm=0,
-mp=1,
-rad=1,
-conv=0,
-adv=1,
-wind=0
+pbl=0,    ! 1=legacy (deprecated)      2=fairly simple
+lsm=0,    ! 1=use forcing fluxes       2=Noah LSM                             3=Simple LSM (not implemented fully)
+mp=1,     ! 1=Thompson et al           2=Simple (ala Smith and Barstad 2004)
+rad=1,    ! 1=legacy (depracted)       2=Simple Scheme
+conv=0,   ! 1=Tiedke Scheme            2=Simple Scheme (not implemented yet)
+adv=1,    ! 1=Upwind                   2=MPDATA (not implemented fully)
+wind=0    ! 1=Linear Theory
 /
 
 &files_list
@@ -171,4 +235,9 @@ output_file="output/icar_out",
 
 ! this is a list of the boundary conditions files number of files must match nfiles variable above
 boundary_files= "forcing/wrfout_d01_2001-04-01_03:00:00_nsn", "forcing/wrfout_d01_2001-06-30_03:00:00_nsn"
+
+! files to read "calibration" data from 
+nsq_calibration_file="nsq_calibration.nc",
+linear_mask_file="linear_weights.nc"
+
 /
