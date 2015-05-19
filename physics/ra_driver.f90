@@ -34,6 +34,7 @@ contains
         write(*,*) "Initializing radiation"
         
         if (options%physics%radiation==2) then
+            write(*,*) "    Simple Radiation"
             call ra_simple_init(domain,options)
         endif
         

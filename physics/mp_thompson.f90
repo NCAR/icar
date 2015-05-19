@@ -738,12 +738,10 @@
 
 !..Rain collecting graupel & graupel collecting rain.
       ! CALL wrf_debug(200, '  creating rain collecting graupel table')
-	  write(*,*) "qr_qcr_qg"
       call qr_acr_qg
 
 !..Rain collecting snow & snow collecting rain.
       ! CALL wrf_debug(200, '  creating rain collecting snow table')
-	  write(*,*) "qr_acr_qs"
       call qr_acr_qs
 
 !..Cloud water and rain freezing (Bigg, 1953).

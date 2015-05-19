@@ -56,7 +56,6 @@ contains
         type(options_type),intent(in)    :: options
         integer :: nx,ny
         
-        write(*,*) "Initializing simple radiation"
         nx=size(domain%lat,1)
         ny=size(domain%lat,2)
         allocate(cos_lat_m(nx,ny))

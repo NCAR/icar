@@ -40,7 +40,10 @@ contains
         implicit none
         type(domain_type),intent(in)::domain
         type(options_type),intent(in)::options
+        
+        write(*,*) "Initializing PBL Scheme"
         if (options%physics%boundarylayer==2) then
+            write(*,*) "    Simple PBL"
             call init_simple_pbl(domain,options)
         endif
     end subroutine pbl_init

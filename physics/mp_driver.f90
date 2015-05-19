@@ -40,7 +40,10 @@ contains
     subroutine mp_init(options)
         implicit none
         type(options_type), intent(in)::options
+        
+        write(*,*) "Initializing Microphysics"
         if (options%physics%microphysics==1) then
+            write(*,*) "    Thompson Microphysics"
             call thompson_init(options%mp_options)
         endif
     end subroutine mp_init

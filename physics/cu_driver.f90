@@ -46,7 +46,8 @@ contains
         type(domain_type), intent(in) :: domain
         type(options_type), intent(in) :: options
         integer::ids,ide,jds,jde,kds,kde
-
+        
+        write(*,*) "Initializing Cumulus Scheme"
         ids=1
         ide=size(domain%qv,1)
         kds=1
@@ -57,7 +58,7 @@ contains
         call znu_init(domain)
         
         if (options%physics%convection==1) then
-            write(*,*) "Initializing Tiedtke scheme"
+            write(*,*) "    Tiedtke Cumulus scheme"
             allocate(RTHCUTEN(ids:ide,kds:kde,jds:jde))
             RTHCUTEN=0
             allocate(RQVCUTEN(ids:ide,kds:kde,jds:jde))
@@ -160,16 +161,16 @@ subroutine convect(domain,options,dt_in)
                 ,RUCUTEN, RVCUTEN                                 &
                 ,.True.,.True.,.True.,.True.,.True.               &
                 )
-!       write(*,*) "QV range"
-!       write(*,*) MAXVAL(RQVCUTEN(2:ide-1,:,2:jde-1)), MINVAL(RQVCUTEN(2:ide-1,:,2:jde-1))
-!       write(*,*) "qc range"
-!       write(*,*) MAXVAL(RQCCUTEN(2:ide-1,:,2:jde-1)), MINVAL(RQCCUTEN(2:ide-1,:,2:jde-1))
-!       write(*,*) "th range"
-!       write(*,*) MAXVAL(RTHCUTEN(2:ide-1,:,2:jde-1)), MINVAL(RTHCUTEN(2:ide-1,:,2:jde-1))
-!       write(*,*) "qi range"
-!       write(*,*) MAXVAL(RQICUTEN(2:ide-1,:,2:jde-1)), MINVAL(RQICUTEN(2:ide-1,:,2:jde-1))
-!       write(*,*) "rain range"
-!       write(*,*) MAXVAL(RAINCV(2:ide-1,2:jde-1)), MINVAL(RAINCV(2:ide-1,2:jde-1))
+!         write(*,*) "QV range"
+!         write(*,*) MAXVAL(RQVCUTEN(2:ide-1,:,2:jde-1)), MINVAL(RQVCUTEN(2:ide-1,:,2:jde-1))
+!         write(*,*) "qc range"
+!         write(*,*) MAXVAL(RQCCUTEN(2:ide-1,:,2:jde-1)), MINVAL(RQCCUTEN(2:ide-1,:,2:jde-1))
+!         write(*,*) "th range"
+!         write(*,*) MAXVAL(RTHCUTEN(2:ide-1,:,2:jde-1)), MINVAL(RTHCUTEN(2:ide-1,:,2:jde-1))
+!         write(*,*) "qi range"
+!         write(*,*) MAXVAL(RQICUTEN(2:ide-1,:,2:jde-1)), MINVAL(RQICUTEN(2:ide-1,:,2:jde-1))
+!         write(*,*) "rain range"
+!         write(*,*) MAXVAL(RAINCV(2:ide-1,2:jde-1)), MINVAL(RAINCV(2:ide-1,2:jde-1))
         domain%qv=domain%qv+RQVCUTEN*dt_in
         domain%cloud=domain%cloud+RQCCUTEN*dt_in
         domain%th=domain%th+RTHCUTEN*dt_in

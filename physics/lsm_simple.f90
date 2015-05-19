@@ -63,8 +63,6 @@ contains
         type(options_type),intent(in)    :: options
         integer :: nx,ny
         
-        write(*,*) "Initializing simple land surface model"
-        
         nx=size(domain%terrain,1)
         ny=size(domain%terrain,2)
         

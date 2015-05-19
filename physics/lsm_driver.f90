@@ -287,7 +287,7 @@ contains
         type(options_type),intent(in)    :: options
         integer :: i
         
-        write(*,*) "Initializing land surface model"
+        write(*,*) "Initializing LSM"
         
         ime=size(domain%th,1)
         jme=size(domain%th,3)
@@ -295,9 +295,13 @@ contains
         dTemp=0
         allocate(lhdQV(ime-2,jme-2))
         lhdQV=0
+        if (options%physics%landsurface==2) then
+            write(*,*) "    Simple LSM (may not work?)"
+            call lsm_simple_init(domain,options)
+        endif
         ! Noah Land Surface Model
         if (options%physics%landsurface==3) then
-            
+            write(*,*) "    Noah LSM"
             ids=1;jds=1;kds=1
             ims=1;jms=1;kms=1
             its=2;jts=2;kts=1
@@ -333,9 +337,6 @@ contains
             base_exchange_term=(75*kappa**2 * sqrt((z_atm+Z0)/Z0)) / (lnz_atm_term**2)
             lnz_atm_term=(kappa/lnz_atm_term)**2
             where(domain%veg_type==16) domain%landmask=2 ! ensure VEGTYPE (land cover) and land-sea mask are consistent
-        endif
-        if (options%physics%landsurface==2) then
-            call lsm_simple_init(domain,options)
         endif
         counter=0
         steps_per_lsm_step=10
