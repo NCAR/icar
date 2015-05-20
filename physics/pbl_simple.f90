@@ -49,10 +49,11 @@ module pbl_simple
     real, parameter :: pr_upper_limit = 4.0 !Prandtl number for stability
     real, parameter :: pr_lower_limit = 0.25 !Prandtl number for stability
     real, parameter :: asymp_length_scale = 1/250.0 !m from Hong and Pan (1996)
-    real, parameter :: kappa =0.4 !von Karman constant
-    real, parameter :: N_substeps=10. ! number of substeps to allow (puts a cap on K to match CFL)
     ! note, they actually use 30m because they only use this for free-atmosphere mixing
     ! but they note that 250m is used in the operational model for the full PBL mixing
+    real, parameter :: kappa =0.4 !von Karman constant
+    real, parameter :: N_substeps=10. ! number of substeps to allow (puts a cap on K to match CFL)
+    real, parameter :: diffusion_reduction=2.0 ! used to reduce diffusion rates
     
     
 contains
@@ -92,6 +93,8 @@ contains
                     endif
                 enddo
             enddo
+            ! arbitrarily rescale diffusion to cut down on what seems to be excessive mixing
+            Kq_m(:,:,j) = Kq_m(:,:,j)/diffusion_reduction
             Kq_m(:,:,j)= Kq_m(:,:,j)* dt/((domain%dz(2:nx+1,2:,j+1)+domain%dz(2:nx+1,:nz-1,j+1))/2)
             call pbl_diffusion(domain,j)
             domain%qv_pbl_tendency(:,:,j+1)=(domain%qv(:,:,j+1)-lastqv_m(:,:,j+1))/dt
