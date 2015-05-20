@@ -195,13 +195,32 @@ contains
         namelist /physics/ pbl,lsm,mp,rad,conv,adv,wind
         
 !       default values for physics options (advection+linear winds+simple_microphysics)
-        pbl=2   ! 0 = no PBL, 1 = STUPID PBL (in LSM module), 2 = local PBL diffusion
-        lsm=3   ! 0 = no LSM, 1 = Fluxes from GCM, 2 = simple LSM, 3 = Noah LSM
-        mp=2    ! 0 = no MP,  1 = Thompson et al (2008), 2 = "Linear" microphysics
-        rad=2   ! 0 = no RAD, 1 = radiative cooling 1K/day (in LSM), 2 = cloud fraction based radiation
-        conv=0  ! 0 = no CONV,1 = Tiedke scheme
-        adv=1   ! 0 = no ADV, 1 = upwind advection scheme
-        wind=1  ! 0 = no LT,  1 = linear theory wind perturbations
+        pbl = 0 ! 0 = no PBL, 
+                ! 1 = STUPID PBL (only in LSM=1 module),
+                ! 2 = local PBL diffusion
+                
+        lsm = 0 ! 0 = no LSM, 
+                ! 1 = Fluxes from GCM, 
+                ! 2 = simple LSM, (not complete)
+                ! 3 = Noah LSM
+                
+        mp  = 1 ! 0 = no MP,  
+                ! 1 = Thompson et al (2008), 
+                ! 2 = "Linear" microphysics
+        
+        rad = 0 ! 0 = no RAD, 
+                ! 1 = radiative cooling 1K/day (only in LSM=1 module), 
+                ! 2 = cloud fraction based radiation + radiative cooling
+        
+        conv= 0 ! 0 = no CONV,
+                ! 1 = Tiedke scheme
+        
+        adv = 1 ! 0 = no ADV, 
+                ! 1 = upwind advection scheme
+                ! 2 = MPDATA (not complete)
+        
+        wind= 1 ! 0 = no LT,  
+                ! 1 = linear theory wind perturbations
         
 !       read the namelist
         open(io_newunit(name_unit), file=filename)
@@ -427,7 +446,9 @@ contains
         else
             options%output_file_frequency="every step"
         endif
+        
         call parse_date(date, year, month, day, hour, minute, second)
+        options%calendar=calendar
         call time_init(calendar)
         options%initial_mjd=date_to_mjd(year, month, day, hour, minute, second)
         if (start_date=="") then
