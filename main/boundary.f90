@@ -53,7 +53,17 @@ module boundary_conditions
     
     public::bc_init
     public::bc_update
+    public::bc_find_step
 contains
+
+    function bc_find_step(options) result(step)
+        implicit none
+        type(options_type), intent(in) :: options
+        integer :: step
+        
+        step = (options%start_mjd-options%initial_mjd)/(options%in_dt / 86400.0d+0)
+        
+    end function bc_find_step
     
 ! Smooth an array (written for wind but will work for anything)
 ! only smooths over the first (x) and second or third (y) dimension
@@ -597,7 +607,7 @@ contains
         if (options%restart) then
             curstep=options%restart_step
         else
-            curstep=1
+            curstep=bc_find_step(options)+1
         endif
         nfiles=size(options%boundary_files)
         allocate(file_list(nfiles))
