@@ -215,10 +215,10 @@ dz_levels= 50.,   75.,  125.,  200.,  300.,  400.,  500.,  500.,  500.,  500.,  
 ! common precipitation downscaling run use pbl=0 lsm=0 mp=1 rad=0 conv=0 adv=1 wind=1
 ! for FASTER run (simpler physics), set mp=2
 ! if surface air temperature is important use pbl=2 lsm=2 rad=2 this requires Noah LSM data
-pbl=0,    ! 1=legacy (deprecated)      2=fairly simple
-lsm=0,    ! 1=use forcing fluxes       2=Noah LSM                             3=Simple LSM (not implemented fully)
+pbl=0,    ! 1=legacy (deprecated)      2=Simple Local-scheme
+lsm=0,    ! 1=use forcing fluxes       2=Simple LSM (not implemented fully)   3=Noah LSM
 mp=1,     ! 1=Thompson et al           2=Simple (ala Smith and Barstad 2004)
-rad=1,    ! 1=legacy (depracted)       2=Simple Scheme
+rad=1,    ! 1=legacy (depracted)       2=Simple (related to humidity)
 conv=0,   ! 1=Tiedke Scheme            2=Simple Scheme (not implemented yet)
 adv=1,    ! 1=Upwind                   2=MPDATA (not implemented fully)
 wind=0    ! 1=Linear Theory
