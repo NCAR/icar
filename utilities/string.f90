@@ -18,18 +18,21 @@ module string
     integer,parameter::MAXSTRINGLENGTH=100
 contains
     function get_double(str_in)
+        implicit none
         character(len=*), intent(in) :: str_in
         double precision :: get_double
         read(str_in,*) get_double
     end function get_double
     
     function get_real(str_in)
+        implicit none
         character(len=*), intent(in) :: str_in
         real :: get_real
         read(str_in,*) get_real
     end function get_real
 
     function get_integer(str_in)
+        implicit none
         character(len=*), intent(in) :: str_in
         integer :: get_integer
         read(str_in,*) get_integer
@@ -37,25 +40,44 @@ contains
     
     
     
-    function str_d(value)
+    function str_d(value,fmt) result(output_string)
+        implicit none
         double precision :: value
-        character(len=MAXSTRINGLENGTH) :: str_d
-        write(str_d,*) value
-        str_d=adjustl(str_d)
+        character(len=*), optional :: fmt
+        character(len=MAXSTRINGLENGTH) :: output_string
+        if (present(fmt)) then
+            write(output_string,fmt) value
+        else
+            write(output_string,*) value
+        endif
+        output_string=adjustl(output_string)
     end function str_d
 
-    function str_r(value)
+    function str_r(value,fmt) result(output_string)
+        implicit none
         real :: value
-        character(len=MAXSTRINGLENGTH) :: str_r
-        write(str_r,*) value
-        str_r=adjustl(str_r)
+        character(len=*), optional :: fmt
+        character(len=MAXSTRINGLENGTH) :: output_string
+        if (present(fmt)) then
+            write(output_string,fmt) value
+        else
+            write(output_string,*) value
+        endif
+        output_string=adjustl(output_string)
     end function str_r
-    
-    function str_i(value)
+
+    function str_i(value,fmt) result(output_string)
+        implicit none
         integer :: value
-        character(len=MAXSTRINGLENGTH) :: str_i
-        write(str_i,*) value
-        str_i=adjustl(str_i)
+        character(len=*), optional :: fmt
+        character(len=MAXSTRINGLENGTH) :: output_string
+        if (present(fmt)) then
+            write(output_string,fmt) value
+        else
+            write(output_string,*) value
+        endif
+        output_string=adjustl(output_string)
     end function str_i
+
 
 end module string
