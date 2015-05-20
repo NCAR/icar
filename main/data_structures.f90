@@ -296,9 +296,9 @@ module data_structures
                                         shvar,lhvar,pblhvar,zvar, &
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var
-!! ++ trude
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename
-!! -- trude
+        character(len=MAXFILELENGTH) :: calendar
+        
 
         ! various boolean options
         logical :: ideal                ! this is an ideal simulation, forcing will be held constant
