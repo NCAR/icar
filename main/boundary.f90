@@ -599,7 +599,7 @@ contains
         else
             curstep=1
         endif
-        nfiles=options%nfiles
+        nfiles=size(options%boundary_files)
         allocate(file_list(nfiles))
         file_list=options%boundary_files
         call io_getdims(file_list(curfile),options%pvar, dims)

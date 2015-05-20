@@ -78,9 +78,10 @@ module data_structures
 !------------------------------------------------
 ! Model constants (string lengths)
 !------------------------------------------------
-    integer,parameter::MAXFILELENGTH=100 ! maximum file name length
-    integer,parameter::MAXVARLENGTH=100  ! maximum variable name length
-    integer,parameter::MAXLEVELS=500 ! maximum number of vertical layers (should typically be ~10-20)
+    integer,parameter::MAXFILELENGTH=100      ! maximum file name length
+    integer,parameter::MAXVARLENGTH=100       ! maximum variable name length
+    integer,parameter::MAXLEVELS=500          ! maximum number of vertical layers (should typically be ~10-20)
+    integer,parameter::MAX_NUMBER_FILES=50000 ! maximum number of permitted input files (probably a bit extreme)
 !------------------------------------------------
 ! Physical Constants
 !------------------------------------------------
@@ -317,7 +318,6 @@ module data_structures
         ! various integer parameters/options
         integer :: ntimesteps           ! total number of time steps to be simulated
         integer :: nz                   ! number of model vertical levels
-        integer :: nfiles               ! number of forcing files to read from namelist
         integer :: ext_winds_nfiles     ! number of extrenal wind filenames to read from namelist
         integer :: restart_step         ! step in forcing data to begin running
         integer :: restart_date(6)      ! date to initialize from (y,m,d, h,m,s)

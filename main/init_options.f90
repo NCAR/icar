@@ -332,7 +332,7 @@ contains
         
         real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance
         real    :: rotation_scale_height
-        integer :: ntimesteps, nfiles, vert_smooth
+        integer :: ntimesteps, vert_smooth
         integer :: nz, n_ext_winds,buffer, warning_level
         logical :: ideal, readz, readdz, debug, external_winds, &
                    mean_winds, mean_fields, restart, advect_density, &
@@ -343,7 +343,7 @@ contains
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename
 ! -- trude
 
-        namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug,nfiles, &
+        namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug, &
                               external_winds,buffer,n_ext_winds,advect_density,smooth_wind_distance, &
                               mean_winds,mean_fields,restart,vert_smooth, &
                               date, calendar, high_res_soil_state,rotation_scale_height,warning_level, &
@@ -414,7 +414,6 @@ contains
         endif
         options%vert_smooth=vert_smooth
         
-        options%nfiles=nfiles
         options%ntimesteps=ntimesteps
         options%in_dt=inputinterval
         options%out_dt=outputinterval
@@ -725,7 +724,7 @@ contains
 
         character(len=MAXFILELENGTH) :: init_conditions_file, output_file, linear_mask_file, nsq_calibration_file
         character(len=MAXFILELENGTH), allocatable :: boundary_files(:), ext_wind_files(:)
-        integer :: name_unit
+        integer :: name_unit, nfiles, i
         
         ! set up namelist structures
         namelist /files_list/ init_conditions_file, output_file, boundary_files, linear_mask_file, nsq_calibration_file
@@ -733,7 +732,8 @@ contains
         
         linear_mask_file="MISSING"
         nsq_calibration_file="MISSING"
-        allocate(boundary_files(options%nfiles))
+        allocate(boundary_files(MAX_NUMBER_FILES))
+        boundary_files="MISSING"
         
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=files_list)
@@ -741,8 +741,14 @@ contains
         
         options%init_conditions_file=init_conditions_file
         
-        allocate(options%boundary_files(options%nfiles))
-        options%boundary_files=boundary_files
+        i=1
+        do while (trim(boundary_files(i))/=trim("MISSING"))
+            i=i+1
+        end do
+        nfiles=i-1
+        
+        allocate(options%boundary_files(nfiles))
+        options%boundary_files=boundary_files(1:nfiles)
         deallocate(boundary_files)
         
         options%output_file=output_file
