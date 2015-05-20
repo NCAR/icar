@@ -118,11 +118,14 @@ contains
         
 !       compute internal timestep dt to maintain stability
 !       courant condition for 3D advection. Note that w is normalized by dx/dz
-        dt=(domain%dx/max(max(maxval(abs(domain%u)),maxval(abs(domain%v))),maxval(abs(domain%w)))/(3.0))
+        dt = domain%dx/(maxval(abs(domain%u)) &
+                      + maxval(abs(domain%v)) &
+                      + maxval(abs(domain%w)))
 !       pick the minimum dt from the begining or the end of the current timestep
-        dtnext=(domain%dx/max(max(maxval(abs(bc%next_domain%u)), &
-                                  maxval(abs(bc%next_domain%v))), &
-                                  maxval(abs(bc%next_domain%w)))/(3.0))
+        dtnext = domain%dx/(maxval(abs(bc%next_domain%u)) &
+                          + maxval(abs(bc%next_domain%v)) &
+                          + maxval(abs(bc%next_domain%w)))
+        
         dt=min(dt,dtnext)
 !       set an upper bound on dt to keep microphysics and convection stable (?) not sure what time is required here. 
         dt=min(dt,120.0) !better min=180?

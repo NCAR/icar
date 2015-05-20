@@ -78,7 +78,7 @@ contains
                 its=ids+1;ite=ide-1
                 jts=jds+1;jte=jde-1
             endif
-
+            
             call mp_gt_driver(domain%qv, domain%cloud, domain%qrain, domain%ice, &
                             domain%qsnow, domain%qgrau, domain%nice, domain%nrain, &
                             domain%th, domain%pii, domain%p, domain%dz, dt_in, itimestep, &
