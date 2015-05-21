@@ -140,7 +140,9 @@ ifeq ($(F90), gfortran)
 endif
 # Intel fortran
 ifeq ($(F90), ifort)
-	COMP= -openmp -liomp5 -u -c -fast -ftz #-fast-transcendentals # not available in ifort <13: -align array64byte
+	# COMP= -openmp -liomp5 -u -c -fast -ftz #-fast-transcendentals # not available in ifort <13: -align array64byte
+	# switched away from fast because (a) code breaks? (b) ipo takes a LONG time
+	COMP=-c -u -openmp -liomp5 -O3 -no-prec-div -xHost -ftz
 	LINK= -openmp -liomp5
 	PREPROC=-fpp
 	MODOUTPUT=-module $(BUILD)
