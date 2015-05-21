@@ -1,3 +1,14 @@
+!> ----------------------------------------------------------------------------
+!!  Read model options from namelist structures
+!!  Also checks commandline arguments to an options filename
+!!
+!!  Entry point is init_options, everything else follows
+!!  
+!!
+!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!    Trude Eidhammer added the ability to read microphysics parameters
+!!
+!! ----------------------------------------------------------------------------
 module initialize_options
     use data_structures
     use io_routines,                only : io_nearest_time_step, io_newunit
@@ -28,9 +39,7 @@ contains
         call model_levels_namelist(options_filename, options)
         
         call lt_parameters_namelist(options%lt_options_filename, options)
-        ! ++ trude
         call mp_parameters_namelist(options%mp_options_filename,options)
-        ! -- trude
 
         if (options%restart) then
             call init_restart_options(options_filename,options)
@@ -395,7 +404,7 @@ contains
         time_varying_z=.False.
         
         use_mp_options=.False.
-        mp_options_filename = 'mp_options.nml'    ! trude added
+        mp_options_filename = filename
         
         use_lt_options=.False.
         lt_options_filename = filename
@@ -493,7 +502,6 @@ contains
 
     end subroutine parameters_namelist
 
-    ! ++ trude
     subroutine mp_parameters_namelist(mp_filename,options)
         implicit none
         character(len=*),intent(in) :: mp_filename
@@ -503,13 +511,16 @@ contains
         real :: Nt_c, TNO, am_s,rho_g,av_s,bv_s,fv_s,av_g,bv_g,av_i,Ef_si,Ef_rs,Ef_rg,Ef_ri
         real :: C_cubes, C_sqrd, mu_r, t_adjust
         logical :: Ef_rw_l, EF_sw_l
+        integer :: top_mp_level
 
-        namelist /parameters/ Nt_c,TNO, am_s, rho_g, av_s,bv_s,fv_s,av_g,bv_g,av_i,Ef_si,Ef_rs,Ef_rg,Ef_ri,&     ! trude added Nt_c, TNO
-                              C_cubes,C_sqrd, mu_r, Ef_rw_l, Ef_sw_l, t_adjust
+        namelist /mp_parameters/ Nt_c,TNO, am_s, rho_g, av_s,bv_s,fv_s,av_g,bv_g,av_i,Ef_si,Ef_rs,Ef_rg,Ef_ri,&     ! trude added Nt_c, TNO
+                              C_cubes,C_sqrd, mu_r, Ef_rw_l, Ef_sw_l, t_adjust, top_mp_level
         
         ! because mp_options could be in a separate file (shoudl probably set all namelists up to have this option)
         if (options%use_mp_options) then
-            call version_check(mp_filename,options)
+            if (trim(mp_filename)/=trim(get_options_file())) then
+                call version_check(mp_filename,options)
+            endif
         endif
         
         ! set default parameters
@@ -536,10 +547,12 @@ contains
         Ef_rw_l = .False.   ! True sets ef_rw = 1, insted of max 0.95
         Ef_sw_l = .False.   ! True sets ef_rw = 1, insted of max 0.95
         
+        top_mp_level = 0    ! if <=0 just use the actual model top
+        
         ! read in the namelist
         if (options%use_mp_options) then
             open(io_newunit(name_unit), file=mp_filename)
-            read(name_unit,nml=parameters)
+            read(name_unit,nml=mp_parameters)
             close(name_unit)
         endif
         
@@ -564,8 +577,10 @@ contains
         options%mp_options%C_sqrd = C_sqrd
         options%mp_options%Ef_rw_l = Ef_rw_l
         options%mp_options%Ef_sw_l = Ef_sw_l
+        
+        options%mp_options%top_mp_level = top_mp_level
+        
     end subroutine mp_parameters_namelist
-    ! -- trude
     
     subroutine lt_parameters_namelist(filename, options)
         implicit none

@@ -247,6 +247,8 @@ module data_structures
         real :: mu_r
         real :: t_adjust
         logical :: Ef_rw_l, EF_sw_l
+        
+        integer :: top_mp_level ! top model level to process in the microphysics
     end type mp_options_type
 !! -- trude
 
@@ -347,9 +349,7 @@ module data_structures
         type(physics_type)::physics
         ! parameterization options
         logical :: use_mp_options
-        !! ++ trude
         type(mp_options_type)::mp_options
-        !! -- trude
         logical :: use_lt_options
         type(lt_options_type) :: lt_options
         integer :: warning_level        ! level of warnings to issue when checking options settings 0-10.  

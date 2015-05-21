@@ -127,60 +127,78 @@ use_mp_options = false
 /
 
 !---------------------------------------------------------
+!   Optionally specified Thompson Microphysics parameters
+!---------------------------------------------------------
+&mp_parameters
+    Nt_c  = 100.e6      !  50, 100,500,1000
+    TNO   = 5.0         !  0.5, 5, 50 
+    am_s  = 0.069       ! 0.052 (Heymsfield), 0.02 (Mitchell), 0.01. 
+                        ! Note that these values are converted to mks units. Was given as cgs units in Morrison p3 code  
+    rho_g = 500.0       ! 800, 500, 200
+    av_s  = 40.0        ! 11.72 (Locatelli and Hobbs)
+    bv_s  = 0.55        ! 0.41
+    fv_s  = 100.0       ! 0
+    av_g  = 442.0       ! 19.3   from "Cloud-Resolving Modelling of Convective Processes, by Gao and Li, 
+    bv_g  = 0.89        ! 0.37
+    av_i  = 1847.5      ! 700 (Ikawa and Saito)
+    Ef_si = 0.05
+    Ef_rs = 0.95        ! 1
+    Ef_rg = 0.75        ! 1
+    Ef_ri = 0.95        ! 1 
+    C_cubes = 0.5       ! 0.25 Based on Thesis paper "Validation and Improvements of Simulated 
+                        !      Cloud Microphysics and Orographic Precipitation over the Pacific Northwest"
+    C_sqrd  = 0.3
+    mu_r    = 0.        ! 1, 2, 5
+    t_adjust= 0.0       ! -5, 10, 15
+    Ef_rw_l = .False.   ! True sets ef_rw = 1, insted of max 0.95
+    Ef_sw_l = .False.   ! True sets ef_rw = 1, insted of max 0.95
+
+    top_mp_level = 0    ! if <=0 just use the actual model top
+/
+
+
+!---------------------------------------------------------
 !   Optionally specified Linear Theory parameters
 !---------------------------------------------------------
 &lt_parameters
-!set this to the number of grid cells of buffer to use around the topography for the fft calculations
-buffer=50
-! set this to the number of grid cells in all directions to average Nsq over for variable_N
-stability_window_size=2
-! set this to the maximum Brunt-Vaisalla frequency to allow
-max_stability=6e-4
-! set this to the minimum Brunt-Vaisalla frequency to allow
-min_stability=1e-7
+    buffer=50               ! set this to the number of grid cells of buffer to use around the topography for the fft calculations
+    stability_window_size=2 ! set this to the number of grid cells in all directions to average Nsq over for variable_N
+    max_stability=6e-4      ! set this to the maximum Brunt-Vaisalla frequency to allow
+    min_stability=1e-7      ! set this to the minimum Brunt-Vaisalla frequency to allow
 
-! set this to use a fixed brunt-vaisalla frequency in linear wind calculations
-! NOTE this will be used for the dry BV,  moist will be dry/10
-! N_squared=3.0e-5
-! set this to use a different brunt-vaisalla frequency in removing lowres linear winds
-! rm_N_squared=9e-5,
-! set this to true to calculate a time-varying brunt-vaisalla frequency
-! variable_N = False,
-! set this to the fraction of the linear perturbation you wish to use (1.0 = full/standard linear field)
-! linear_contribution=1.0,
-! use a spatially variable wind field when calculating the linear wind field (doesn't permit variable_N)
-spatial_linear_fields=true,
+    ! NOTE this will be used for the dry BV,  moist will be dry/10
+    ! N_squared=3.0e-5      ! set this to use a fixed brunt-vaisalla frequency in linear wind calculations
+    ! rm_N_squared=9e-5,    ! set this to use a fixed brunt-vaisalla frequency in linear wind calculations
+    ! variable_N = False,   ! set this to true to calculate a time-varying brunt-vaisalla frequency
+    ! linear_contribution=1.0, ! set this to the fraction of the linear perturbation you wish to use (1.0 = full/standard linear field)
+    spatial_linear_fields=true,! use a spatially variable wind field when calculating the linear wind field (doesn't permit variable_N)
 
-! attempt to "remove" the low resolution linear winds from the forcing data
-! NOTE THIS DOES NOT WORK RIGHT NOW
-! remove_lowres_linear=false,
-! fraction of linear perturbation to remove from the low-res wind field (if rm_lowres_linear==true)
-! rm_linear_contribution=0.4,
+    ! NOTE THIS DOES NOT WORK RIGHT NOW
+    ! remove_lowres_linear=false,   ! attempt to "remove" the low resolution linear winds from the forcing data
+    ! rm_linear_contribution=0.4,   ! fraction of linear perturbation to remove from the low-res wind field (if rm_lowres_linear==true)
 
-! use a time varying Nsq (e.g. calculate it from the data don't use the above fixed value)
-variable_N=true,
-! set this to the fraction of the current linear calculation to add to to a time-varying perturbation
-! setting to 1 means that waves form instantly, setting it to 0 means they will never form
-! anything in between is the contribution from the current time step
-linear_update_fraction = 1.0
+    variable_N=true,    ! use a time varying Nsq (e.g. calculate it from the data don't use the above fixed value)
+    linear_update_fraction = 1.0 ! set this to the fraction of the current linear calculation to add to to a time-varying perturbation
+                        ! setting to 1 means that waves form instantly, setting it to 0 means they will never form
+                        ! anything in between is the contribution from the current time step
 
-! used to test possible model calibration... not sure what these will do longer term
-nsq_calibration=false,
-linear_mask=True
+    ! used to test possible model calibration... not sure what these will do longer term
+    nsq_calibration=false,
+    linear_mask=True
 
-! linear theory look up table generation parameters
-! direction ranges and number of bins
-dirmax = 6.283185307 ! 2*pi
-dirmin = 0
-n_dir_values = 36
-! wind speed ranges and number of bins
-spdmax = 30
-spdmin = -30
-n_spd_values = 10
-! BV frequency ranges (in log space) and number of bins
-nsqmax = -7.42  ! ln(6e-4) defaults to ln(max_stability)
-nsqmin = -16.12 ! ln(1e-7) defaults to ln(min_stability)
-n_nsq_values = 10
+    ! linear theory look up table generation parameters
+    ! direction ranges and number of bins
+    dirmax = 6.283185307 ! 2*pi
+    dirmin = 0
+    n_dir_values = 36
+    ! wind speed ranges and number of bins
+    spdmax = 30
+    spdmin = -30
+    n_spd_values = 10
+    ! BV frequency ranges (in log space) and number of bins
+    nsqmax = -7.42  ! ln(6e-4) defaults to ln(max_stability)
+    nsqmin = -16.12 ! ln(1e-7) defaults to ln(min_stability)
+    n_nsq_values = 10
 /
 
 
