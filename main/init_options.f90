@@ -709,7 +709,7 @@ contains
 
         ! read the z_info namelist if requested
         if (options%readdz) then
-            allocate(dz_levels(options%nz))
+            allocate(dz_levels(MAXLEVELS))
             dz_levels=-999
             
             open(io_newunit(name_unit), file=filename)
