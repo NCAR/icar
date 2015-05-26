@@ -6,6 +6,7 @@
 !!
 !! The main entry point to the code is mp(domain,options,dt)
 !!
+!! <pre>
 !! Call tree graph :
 !!  mp_init->[ external initialization routines]
 !!  mp->[   external microphysics routines]
@@ -19,6 +20,7 @@
 !! Inputs: domain, options, dt
 !!      domain,options  = as defined in data_structures
 !!      dt              = time step (seconds)
+!! </pre>
 !!
 !! Author : Ethan Gutmann (gutmann@ucar.edu)
 !!

@@ -3,6 +3,7 @@
 !!  Handles reading boundary conditions from the forcing file(s)
 !!  Provides necessary interpolation on to the grid. 
 !!
+!! <pre>
 !!  Primary entry points 
 !!      bc_init      - first call only
 !!      bc_update    - all successive calls
@@ -18,6 +19,7 @@
 !!  Both init and update compute the exner function and density fields
 !!  for the forcing step and update the wind field with linear perturbations
 !!  as necessary
+!! </pre>
 !!
 !!  Author: Ethan Gutmann (gutmann@ucar.edu)
 !!

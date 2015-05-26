@@ -12,9 +12,21 @@
 &z_info
     ! sample model levels
     dz_levels= 50.,   75.,  125.,  200.,  300.,  400.,  500.,  500.,  500.,  500.,    !  1-10
-     		  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.     ! 10-20
-    !		  453.,  476.,  503.,  533.,  422.,  443.,  467.,  326.,  339.,  353.     ! 20-30
-    !		  369.,  386.,  405.,  426.,  450.,  477., 455.,  429.,  396.,  357.,     ! 30-40
+     		  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,    ! 10-20
+     		  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,    ! 20-30
+     		  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.     ! 30-40
+
+    ! If you want to line up model level with common forcing data
+    ! ERAi levels
+    !dz_levels= 24.8,  36.5,  51.8,  70.1,  90.8, 113.5, 137.9, 163.7, 190.5, 218.1,  !  1-10
+    !          246.4, 275.1, 304.3, 333.6, 363.0, 392.4, 421.7, 450.8, 479.6, 508.0,  ! 10-20
+    !		  535.9, 563.2, 589.8, 615.7, 640.9, 665.5, 689.8, 714.1, 739.4, 767.2,   ! 20-30
+    !         796.8, 826.6, 856.2, 885.1, 912.5, 937.9, 961.4, 979.4, 990.1, 976.6    ! 30-40
+    ! WRF levels from Headwaters 36km runs
+    !dz_levels= 36.,   51.,   58.,   73.,   74.,  111.,  113.,  152.,  155.,  157.,   !  1-10
+    !		  160.,  245.,  251.,  258.,  265.,  365.,  379.,  395.,  413.,  432.,    ! 10-20
+    !		  453.,  476.,  503.,  533.,  422.,  443.,  467.,  326.,  339.,  353.,    ! 20-30
+    !		  369.,  386.,  405.,  426.,  450.,  477., 455.,  429.,  396.,  357.      ! 30-40
 /
 
 !---------------------------------------------------------
@@ -137,47 +149,47 @@
 &var_list
     ! These are the names of the variables in the forcing data files
     ! variables on the mass / center grid
-    pvar="P", 				! pressure [Pa]
-    tvar="T", 				! temperature [K] (with optional offset)
-    qvvar="QVAPOR",			! water vapor mixing ratio
-    qcvar="QCLOUD",			! cloud water mixing ratio
-    qivar="QICE",			! cloud ice mixing ratio
-    hgtvar="HGT",			! surface elevation
-    zvar="Z",				! model level elevations
-    latvar="XLAT",			! latitude
-    lonvar="XLONG",			! longitude
+    pvar="P", 				  ! pressure [Pa]
+    tvar="T", 				  ! temperature [K] (with optional offset)
+    qvvar="QVAPOR",			  ! water vapor mixing ratio
+    qcvar="QCLOUD",			  ! cloud water mixing ratio
+    qivar="QICE",			  ! cloud ice mixing ratio
+    hgtvar="HGT",			  ! surface elevation
+    zvar="Z",				  ! model level elevations
+    latvar="XLAT",			  ! latitude
+    lonvar="XLONG",			  ! longitude
 
     ! variables on the ew staggered (U) grid
-    uvar="U",				! East-West wind speed
-    ulat="XLAT_U",			! latitude
-    ulon="XLONG_U",			! longitude
+    uvar="U",				  ! East-West wind speed
+    ulat="XLAT_U",			  ! latitude
+    ulon="XLONG_U",			  ! longitude
     ! variables on the NS staggered (V) grid
-    vvar="V",				! North-South wind speed
-    vlat="XLAT_V",			! latitude
-    vlon="XLONG_V",			! longitude
+    vvar="V",				  ! North-South wind speed
+    vlat="XLAT_V",			  ! latitude
+    vlon="XLONG_V",			  ! longitude
 
     ! these are only used with lsm=1 (pbl should also be >0)
-    shvar="HFX",			! surface sensible heat flux
-    lhvar="LH",				! surface latent heat flux
-    pblhvar="PBLH",			! Planetary boundary layer height
+    shvar="HFX",			  ! surface sensible heat flux
+    lhvar="LH",				  ! surface latent heat flux
+    pblhvar="PBLH",			  ! Planetary boundary layer height
 
-    landvar="LANDMASK",		! land-sea mask (including lakes) as in WRF 1=land, 0 or 2=water
+    landvar="LANDMASK",		  ! land-sea mask (including lakes) as in WRF 1=land, 0 or 2=water
 
     ! NOTE, these variables should be in the high-resolution initial conditions netcdf file
-    lat_hi="XLAT_M",		! latitude (mass grid)
-    lon_hi="XLONG_M",		! longitude (mass grid)
-    ulat_hi="XLAT_U",		! latitude (ew-staggered grid)
-    ulon_hi="XLONG_U",		! longitude (ew-staggered grid)
-    vlat_hi="XLAT_V",		! latitude (ns-staggered grid)
-    vlon_hi="XLONG_V",		! longitude (ns-staggered grid)
-    hgt_hi="HGT_M"			! surface elevation
+    lat_hi="XLAT_M",		  ! latitude (mass grid)
+    lon_hi="XLONG_M",		  ! longitude (mass grid)
+    ulat_hi="XLAT_U",		  ! latitude (ew-staggered grid)
+    ulon_hi="XLONG_U",		  ! longitude (ew-staggered grid)
+    vlat_hi="XLAT_V",		  ! latitude (ns-staggered grid)
+    vlon_hi="XLONG_V",		  ! longitude (ns-staggered grid)
+    hgt_hi="HGT_M"			  ! surface elevation
 
     ! to use the Noah LSM the following fields should also be specified on the high-res grid
-    ! vegtype_var="IVGTYP",		! vegetation type index
-    ! vegfrac_var="VEGFRA",		! vegetation cover fraction
-    ! soiltype_var="ISLTYP",	! soil type index
-    ! soil_t_var="TSLB",		! soil temperature (4 levels)
-    ! soil_vwc_var="SMOIS"		! soil water content (4 levels)
+    ! vegtype_var="IVGTYP",	  ! vegetation type index (classification to match VEGPARM.TBL file)
+    ! vegfrac_var="VEGFRA",	  ! vegetation cover fraction
+    ! soiltype_var="ISLTYP",  ! soil type index (classification to match SOILPARM.TBL file)
+    ! soil_t_var="TSLB",      ! soil temperature (4 levels)
+    ! soil_vwc_var="SMOIS"	  ! soil water content (4 levels)
 
     ! variables to read from calibration files, both default to "data"
     ! nsq_calibration_var="data",

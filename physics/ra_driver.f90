@@ -5,6 +5,7 @@
 !!
 !! The main entry point to the code is rad(domain,options,dt)
 !!
+!! <pre>
 !! Call tree graph :
 !!  radiation_init->[ external initialization routines]
 !!  rad->[  external radiation routines]
@@ -16,6 +17,7 @@
 !! Inputs: domain, options, dt
 !!      domain,options  = as defined in data_structures
 !!      dt              = time step (seconds)
+!! </pre>
 !!
 !!  Author: Ethan Gutmann (gutmann@ucar.edu)
 !!

@@ -5,6 +5,7 @@
 !!
 !! The main entry point to the code is pbl(domain,options,dt)
 !!
+!! <pre>
 !! Call tree graph :
 !!  pbl_init->[ external initialization routines]
 !!  pbl->[  external PBL routines]
@@ -18,6 +19,7 @@
 !! Inputs: domain, options, dt
 !!      domain,options  = as defined in data_structures
 !!      dt              = time step (seconds)
+!! </pre>
 !!
 !! Author : Ethan Gutmann (gutmann@ucar.edu)
 !!

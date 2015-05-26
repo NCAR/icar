@@ -3,6 +3,7 @@
 !! Contains type definitions for a variety of model data strucutres
 !! Also defines model constants (e.g. gravity, and MAXFILELENGTH)
 !!
+!! <pre>
 !! General Field Definitions
 !!
 !! ---- 3D fields ---- NX x NZ x NY
@@ -67,6 +68,7 @@
 !! sintheta = sine of the angle between grid and geographic coords   []
 !! costheta = cosine of the angle between grid and geographic coords []
 !! fzs      = buffered FFT(terrain) for linear wind calculations   
+!! </pre>
 !!
 !!  Author: Ethan Gutmann (gutmann@ucar.edu)
 !!

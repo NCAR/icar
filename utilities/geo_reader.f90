@@ -4,12 +4,14 @@
 !! Various functions used for spatial interpolation from low-res
 !! forcing grid to high-res model grid. 
 !!
+!! <pre>
 !!  Entry points: 
 !!      geo_LUT     : creates a geographic look uptable to convert one
 !!                    grid to another
 !!      geo_interp  : interpolates from one grid to another and
 !!                    loops over the third dimension
 !!      geo_interp2d: interpolates from one grid to another
+!! </pre>
 !!
 !!  Author: Ethan Gutmann (gutmann@ucar.edu)
 !!

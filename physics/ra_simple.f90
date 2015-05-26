@@ -13,6 +13,7 @@
 !!
 !! The entry point to the code is ra_simple. 
 !!
+!! <pre>
 !! Call tree graph :
 !! ra_simple->
 !!  [cloudfrac->],
@@ -37,6 +38,7 @@
 !!   swdown = shortwave down at surface - 2D - output - W/m^2   - (nx,ny)
 !!   lwdown = longwave down at surface  - 2D - output - W/m^2   - (nx,ny)
 !!   dt = time step                      - 0D - input  - seconds    - scalar
+!! </pre>
 !!
 !!  Author: Ethan Gutmann (gutmann@ucar.edu)
 !!

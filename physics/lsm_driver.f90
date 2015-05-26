@@ -7,6 +7,7 @@
 !!
 !! The main entry point to the code is lsm(domain,options,dt,model_time)
 !!
+!! <pre>
 !! Call tree graph :
 !!  lsm_init->[ allocate_noah_data,
 !!              external initialization routines]
@@ -26,6 +27,7 @@
 !!      domain,options  = as defined in data_structures
 !!      dt              = time step (seconds)
 !!      model_time      = time since beginning date (seconds)
+!! </pre>
 !!
 !! Author : Ethan Gutmann (gutmann@ucar.edu)
 !!

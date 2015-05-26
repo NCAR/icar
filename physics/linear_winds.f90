@@ -5,6 +5,7 @@
 !! The main entry point to the code is:
 !!      linear_perturb(domain, options, vsmooth, reverse, useDensity)
 !!
+!! <pre>
 !! Call tree graph :
 !!  linear_perturb->[ setup_linwinds -> add_buffer_topo,
 !!                    calc_domain_stability,
@@ -25,6 +26,7 @@
 !!      useDensity      = create a linear field that attempts to mitigate the 
 !!                          boussinesq approx that is embedded in the linear theory
 !!                          so it advection can properly incorporate density.
+!! </pre>
 !!
 !! Author : Ethan Gutmann (gutmann@ucar.edu)
 !!
@@ -998,7 +1000,7 @@ contains
                 print*, "  from file: "//trim(options%linear_mask_file)
                 print*, "  varname: "//trim(options%linear_mask_var)
                 call io_read2d(options%linear_mask_file,options%linear_mask_var,domain%linear_mask)
-                linear_mask=(1-(1-domain%linear_mask)*0.8) * linear_contribution
+                linear_mask = domain%linear_mask * linear_contribution
             endif
         endif
         

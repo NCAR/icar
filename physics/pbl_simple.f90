@@ -5,6 +5,7 @@
 !!  Hong and Pan used this for their free atmosphere diffusion, but noted differences
 !!  used in the "current operational model" notably the asymptotic length scale lambda 
 !!
+!! <pre>
 !! HP96 = Hong,S.-Y. and H.-L. Pan (1996) Monthly Weather Review v127 p2322
 !!       Nonlocal Boundary Layer Vertical Diffusion in a Medium Range Forecast Model
 !! 
@@ -12,6 +13,7 @@
 !!  rho on half levels for f=k*rho*dq/dz*dt
 !!  rho on full levels for q=q+f/rho
 !!   q,U,V on full levels
+!! </pre>
 !!
 !!  Author: Ethan Gutmann (gutmann@ucar.edu)
 !!

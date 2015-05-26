@@ -11,6 +11,7 @@
 !!
 !! The entry point to the code is lsm_simple. 
 !!
+!! <pre>
 !! Call tree graph :
 !! lsm_simple->
 !!  [->],
@@ -32,6 +33,9 @@
 !!   swdown = shortwave down at surface - 2D - input  - W/m^2   - (nx,ny)
 !!   lwdown = longwave down at surface  - 2D - input  - W/m^2   - (nx,ny)
 !!   dt = time step                      - 0D - input  - seconds    - scalar
+!! </pre>
+!!
+!! Author : Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!----------------------------------------------------------
 module module_lsm_simple

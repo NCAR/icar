@@ -10,6 +10,7 @@
 !! 
 !! The entry point to the code is lsm_basic(domain,options,dt)
 !!
+!! <pre>
 !! Call tree graph :
 !! lsm_basic->
 !!  [->],
@@ -19,6 +20,7 @@
 !! High level routine descriptions / purpose
 !! 
 !! Driver inputs: domain,options,dt
+!! </pre>
 !!
 !!  Author: Ethan Gutmann (gutmann@ucar.edu)
 !!
