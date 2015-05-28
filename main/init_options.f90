@@ -362,7 +362,7 @@ contains
         real    :: rotation_scale_height
         integer :: ntimesteps, vert_smooth
         integer :: nz, n_ext_winds,buffer, warning_level
-        logical :: ideal, readz, readdz, debug, external_winds, &
+        logical :: ideal, readz, readdz, debug, external_winds, surface_io_only, &
                    mean_winds, mean_fields, restart, advect_density, &
                    high_res_soil_state, use_agl_height, time_varying_z, use_mp_options, use_lt_options
         character(len=MAXFILELENGTH) :: date, calendar, start_date
@@ -371,7 +371,8 @@ contains
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename
 ! -- trude
 
-        namelist /parameters/ ntimesteps,outputinterval,inputinterval,dx,dxlow,ideal,readz,readdz,nz,t_offset,debug, &
+        namelist /parameters/ ntimesteps,outputinterval,inputinterval, surface_io_only, &
+                              dx,dxlow,ideal,readz,readdz,nz,t_offset,debug, &
                               external_winds,buffer,n_ext_winds,advect_density,smooth_wind_distance, &
                               mean_winds,mean_fields,restart,vert_smooth, &
                               date, calendar, high_res_soil_state,rotation_scale_height,warning_level, &
@@ -380,6 +381,7 @@ contains
                               lt_options_filename, use_lt_options
         
 !       default parameters
+        surface_io_only=.False.
         mean_fields=.False.
         mean_winds=.False.
         external_winds=.False.
@@ -455,6 +457,7 @@ contains
         else
             options%output_file_frequency="every step"
         endif
+        options%surface_io_only = surface_io_only
         
         call parse_date(date, year, month, day, hour, minute, second)
         options%calendar=calendar

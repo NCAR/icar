@@ -54,15 +54,15 @@
     ! this is the high resolution input filename
     init_conditions_file="baseline/geo_4km_conus.nc",
 
+    ! files to read "calibration" data from 
+    nsq_calibration_file="nsq_calibration.nc",
+    linear_mask_file="linear_weights.nc"
+
     ! this is the prefix for all output files (any directories must be created prior to running)
     output_file="output/icar_out",
 
     ! this is a list of the boundary conditions files number of files must match nfiles variable above
     boundary_files= "forcing/wrfout_d01_2001-04-01_03:00:00_nsn", "forcing/wrfout_d01_2001-06-30_03:00:00_nsn"
-
-    ! files to read "calibration" data from 
-    nsq_calibration_file="nsq_calibration.nc",
-    linear_mask_file="linear_weights.nc"
 /
 
 !---------------------------------------------------------
@@ -81,6 +81,9 @@
     inputinterval=3600,
     ! the output interval [s]
     outputinterval=3600,
+    ! Limit output data to near surface variables
+    ! WARNING if true it is impossible to restart the run (for now)
+    ! surface_io_only=False,
 
     ! the grid spacing of the high-resolution data
     dx=4000.0,

@@ -316,7 +316,8 @@ module data_structures
         logical :: advect_density       ! properly incorporate density into the advection calculations. 
                                         ! Doesn't play nice with linear winds
         logical :: high_res_soil_state  ! read the soil state from the high res input file not the low res file
-
+        logical :: surface_io_only      ! just output surface variables to speed up run and thin output
+        
         integer :: buffer               ! buffer to remove from all sides of the high res grid supplied
         integer :: vert_smooth          ! number of model levels to smooth winds over in the vertical
         ! various integer parameters/options
