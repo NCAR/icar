@@ -221,9 +221,7 @@ endif
 # 
 ###################################################################
 ###################################################################
-# this seems like it should be a solution to the missing library problem, but it doesn't work
-# LFLAGS=$(LINK) ${LIBNETCDF} -L${LIBFFT} -openmp-link=static -static-intel -Bstatic
-# instead copy required libraries into a directory accessible on compute nodes and set LD_RUN_PATH e.g.
+# copy required libraries into a directory accessible on compute nodes and set LD_RUN_PATH e.g.
 # export LD_RUN_PATH=$LD_RUN_PATH:/path/to/libraries/lib:/home/gutmann/usr/local/lib
 LFLAGS=$(LINK) $(PROF) ${LIBNETCDF} -L${LIBFFT}
 FFLAGS=$(COMP) $(PROF) ${INCNETCDF} -I${INCFFT} ${MODOUTPUT}
