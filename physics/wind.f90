@@ -134,44 +134,6 @@ contains
         
     end subroutine make_winds_grid_relative
 
-!   "Rotate" winds from real space back to terrain following grid (approximately)
-!   really just stretches U/V according to the extra distance it has to travel across a sloped grid cell
-!   assumes a simple slope transform in u and v independantly
-!   not clear this is relevant, or correct, could be used as a hack if linear winds are not used
-!   real wind speed should have this applied, but grid-relative winds should not. 
-!   It has a pretty small impact regardless. 
-    subroutine rotate_wind_field(domain,options)
-        implicit none
-        class(linearizable_type),intent(inout)::domain
-        type(options_type),intent(in)::options
-        integer :: nx,ny,nz,i,j
-        real,dimension(:),allocatable :: rotation_factor
-    
-        nx=size(domain%z,1)
-        nz=size(domain%z,2)
-        ny=size(domain%z,3)
-        
-        allocate(rotation_factor(nz))
-        do j=1,nz
-            rotation_factor(j)=(domain%z(1,j,1)-domain%terrain(1,1))/options%rotation_scale_height
-        end do
-        if(rotation_factor(1)<0) then
-            rotation_factor(1)=0 ! implies z(1)<terrain height...
-            print*, "WARNING wind.f90:rotate_wind_field"
-            print*, "WARNING Model level below terrain!"
-        endif
-        ! above the scale height "rotate" completely
-        where(rotation_factor>1) rotation_factor=1
-        
-        do j=2,ny
-            do i=1,nz
-                domain%u(2:nx,i,j)= domain%u(2:nx,i,j) * ((domain%dzdx(:,j)-1) * rotation_factor(i)+1)
-                domain%v(:,i,j) = domain%v(:,i,j+1)  * ((domain%dzdy(:,j-1)-1) * rotation_factor(i)+1)
-            end do
-        end do
-    
-        deallocate(rotation_factor)
-    end subroutine rotate_wind_field
 
     ! apply wind field physics and adjustments
     ! this will call the linear wind module if necessary, otherwise it just updates for 
@@ -193,12 +155,7 @@ contains
             call linear_perturb(domain,options,options%vert_smooth,.False.,options%advect_density)
         endif
         ! else assumes even flow over the mountains
-
-        ! rotate winds into the terrain following coordinate system 
-        ! NOTE, this is probably not the right way to do it, and it is not clear this should be done...
-        ! the linear theory should take care of this. 
-        ! also, this code seems to shift the v data down one row, so be careful...
-!       call rotate_wind_field(domain,options)
+        
         ! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
         call balance_uvw(domain,options)
         
