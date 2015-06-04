@@ -14,27 +14,29 @@ module adv_upwind
     public::upwind
     
 contains
-    subroutine flux2(l,r,U,nx,nz,ny,f)
-    !     Calculate the donor cell flux function
-    !     l = left gridcell scalar 
-    !     r = right gridcell scalar
-    !     U = Courant number (u*dt/dx)
-    !     
-    !     If U is positive, return l*U if U is negative return r*U
-    !     By using the mathematical form instead of the logical form, 
-    !     we can run on the entire grid simultaneously, and avoid branches
-
-    !   arguments
-        implicit none
-        real, dimension(1:nx,1:nz,1:ny), intent(in) :: l,r,U
-        real, dimension(1:nx,1:nz,1:ny), intent(inout) :: f
-        integer,intent(in) :: ny,nz,nx
-        !   internal parameter
-        integer ::  err,i!,j,Ny,Nz,Nx
-        !   main code
-        f= ((U+ABS(U)) * l + (U-ABS(U)) * r)/2
-
-    end subroutine flux2
+!     Note this routine has been manually inlined because the compiler didn't seem to optimize it well and made the array copies
+!     the routine is left in for documentation. 
+!     subroutine flux2(l,r,U,nx,nz,ny,f)
+!     !     Calculate the donor cell flux function
+!     !     l = left gridcell scalar
+!     !     r = right gridcell scalar
+!     !     U = Courant number (u*dt/dx)
+!     !
+!     !     If U is positive, return l*U if U is negative return r*U
+!     !     By using the mathematical form instead of the logical form,
+!     !     we can run on the entire grid simultaneously, and avoid branches
+!
+!     !   arguments
+!         implicit none
+!         real, dimension(1:nx,1:nz,1:ny), intent(in) :: l,r,U
+!         real, dimension(1:nx,1:nz,1:ny), intent(inout) :: f
+!         integer,intent(in) :: ny,nz,nx
+!         !   internal parameter
+!         integer ::  err,i!,j,Ny,Nz,Nx
+!         !   main code
+!         f= ((U+ABS(U)) * l + (U-ABS(U)) * r)/2
+!
+!     end subroutine flux2
 
     subroutine advect3d(q,u,v,w,rho,dz,nx,nz,ny,debug,options)
         implicit none
@@ -62,12 +64,12 @@ contains
         !$omp do schedule(static)
         do i=2,ny-1
 !           by manually inlining the flux2 call we should remove extra array copies that the compiler doesn't remove. 
-!           equivalent flux2 calls are left in for reference (commented) to restore recall that fx arrays should be 3D : n x m x 1
+!           equivalent flux2 calls are left in for reference (commented) to restore recall that f1,f3,f4... arrays should be 3D : n x m x 1
 !           calculate fluxes between grid cells
-!            call flux2(qin(1:nx-1,:,i),     qin(2:nx,:,i),     u(1:nx-1,:,i),     nx-1,nz,  1,f1)  !Ux1
-!            call flux2(qin(2:nx-1,:,i),     qin(2:nx-1,:,i+1), v(2:nx-1,:,i),     nx-2,nz,  1,f3)  !Vy1
-!            call flux2(qin(2:nx-1,:,i-1),   qin(2:nx-1,:,i),   v(2:nx-1,:,i-1),   nx-2,nz,  1,f4)  !Vy0
-!            call flux2(qin(2:nx-1,1:nz-1,i),qin(2:nx-1,2:nz,i),w(2:nx-1,1:nz-1,i),nx-2,nz-1,1,f5)
+!            call flux2(qin(1:nx-1,:,i),     qin(2:nx,:,i),     u(1:nx-1,:,i),     nx-1,nz,  1,f1)  ! f1 = Ux0 and Ux1
+!            call flux2(qin(2:nx-1,:,i),     qin(2:nx-1,:,i+1), v(2:nx-1,:,i),     nx-2,nz,  1,f3)  ! f3 = Vy1
+!            call flux2(qin(2:nx-1,:,i-1),   qin(2:nx-1,:,i),   v(2:nx-1,:,i-1),   nx-2,nz,  1,f4)  ! f4 = Vy0
+!            call flux2(qin(2:nx-1,1:nz-1,i),qin(2:nx-1,2:nz,i),w(2:nx-1,1:nz-1,i),nx-2,nz-1,1,f5)  ! f5 = Wz0 and Wz1
            f1= ((u(1:nx-1,:,i)      + ABS(u(1:nx-1,:,i)))      * qin(1:nx-1,:,i) + &
                 (u(1:nx-1,:,i)      - ABS(u(1:nx-1,:,i)))      * qin(2:nx,:,i))/2
            f3= ((v(2:nx-1,:,i)      + ABS(v(2:nx-1,:,i)))      * qin(2:nx-1,:,i) + &
