@@ -1036,7 +1036,9 @@ contains
         
         call update_winds(bc%next_domain,options)
         ! copy it to the primary domain for output purposes (could also be used for convection or blocking parameterizations?)
-        domain%nsquared=bc%next_domain%nsquared
+        if (options%physics%windtype==1) then
+            domain%nsquared=bc%next_domain%nsquared
+        endif
         
         ! then updated with wind dXdt fields after updating them
         call update_dwinddt(bc,domain)
