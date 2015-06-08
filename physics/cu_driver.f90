@@ -7,8 +7,12 @@
 !! ----------------------------------------------------------------------------
 module convection
     use data_structures
-    use module_cu_tiedtke
+    use module_cu_tiedtke,  only: tiedtkeinit, CU_TIEDTKE
+    use string,             only: str
+    use io_routines,        only: io_write3d, io_write2d
+    
     implicit none
+    integer :: output_number
     real,allocatable,dimension(:,:,:)::p8,U3D,V3D,T3D, & 
                                        RTHCUTEN,RQVCUTEN,RQCCUTEN,RQICUTEN,    &
                                        RUCUTEN,RVCUTEN
@@ -38,7 +42,7 @@ contains
         do i=1,n_levels
             znu(i)=(domain%p(xpt,i,ypt)-ptop)/(psfc-ptop)
         enddo
-        
+        output_number=1
     end subroutine znu_init
 
     subroutine init_convection(domain,options)
@@ -137,13 +141,11 @@ subroutine convect(domain,options,dt_in)
         do j=jds,jde
             RAINCV(:,j)=0
             p8(:,:kde-1,j)=(domain%p(:,kds:kde-1,j)+domain%p(:,kds+1:kde,j))/2
-            p8(:,kde,j)=p8(:,kde-1,j)+(p8(:,kde-1,j)-p8(:,kde-2,j))
-            if (j>jds) then
-                V3D(:,:,j)=(domain%v(:,:,j-1)+domain%v(:,:,j))/2
-            endif
+            p8(:,kde,j)=p8(:,kde-1,j)+(p8(:,kde-1,j)-p8(:,kde-2,j))/2
+            
+            V3D(:,:,j)=(domain%v(:,:,j+1)+domain%v(:,:,j))/2
             U3D(:,:,j)=(domain%u(ids:ide,:,j)+domain%u(ids+1:ide+1,:,j))/2
             T3D(:,:,j)=domain%th(:,:,j)*domain%pii(:,:,j)
-!           rho(:,:,j)=domain%p(:,:,j)/(R*T3D(:,:,j))
         enddo
         !$omp end do
         !$omp end parallel  
@@ -151,7 +153,7 @@ subroutine convect(domain,options,dt_in)
         call CU_TIEDTKE(                                          &
                  dt_in,itimestep,STEPCU                           &
                 ,RAINCV,PRATEC,domain%latent_heat/LH_vaporization,domain%sensible_heat,ZNU(kds:kde) &
-                ,U3D,V3D,domain%w,T3D,domain%qv,domain%cloud,domain%ice,domain%pii,domain%rho &
+                ,U3D,V3D,domain%w*domain%dz/domain%dx,T3D,domain%qv,domain%cloud,domain%ice,domain%pii,domain%rho &
                 ,domain%qv_adv_tendency,domain%qv_pbl_tendency    &
                 ,domain%dz,p8,domain%p,XLAND,CU_ACT_FLAG          &
                 ,ids+1,ide-1, jds+1,jde-1, kds,kde-1              &
@@ -171,12 +173,26 @@ subroutine convect(domain,options,dt_in)
 !         write(*,*) MAXVAL(RQICUTEN(2:ide-1,:,2:jde-1)), MINVAL(RQICUTEN(2:ide-1,:,2:jde-1))
 !         write(*,*) "rain range"
 !         write(*,*) MAXVAL(RAINCV(2:ide-1,2:jde-1)), MINVAL(RAINCV(2:ide-1,2:jde-1))
-        domain%qv=domain%qv+RQVCUTEN*dt_in
-        domain%cloud=domain%cloud+RQCCUTEN*dt_in
-        domain%th=domain%th+RTHCUTEN*dt_in
-        domain%ice=domain%ice+RQICUTEN*dt_in
+
+! COMMENTED OUT BECAUSE IT WAS REMOVING MORE WATER THAN IT WAS FORMING PRECIPITATION
+!         domain%qv=domain%qv+RQVCUTEN*dt_in
+! COMMENTED OUT BECAUSE IT WAS ALWAYS 0 (AT LEAST IN A SHORT RUN)
+!         domain%cloud=domain%cloud+RQCCUTEN*dt_in
+! COMMENTED OUT TO BE CONSISTENT WITH REMOVING QVTEN
+!         domain%th=domain%th+RTHCUTEN*dt_in
+! COMMENTED OUT BECAUSE IT WAS ALWAYS 0 (AT LEAST IN A SHORT RUN)
+!         domain%ice=domain%ice+RQICUTEN*dt_in
         domain%rain=domain%rain+RAINCV
         domain%crain=domain%crain+RAINCV
+        
+!         call io_write3d("convtest/cu_rho_"//trim(str(output_number))//".nc","data",domain%rho)
+!         call io_write3d("convtest/cuten_qv_"//trim(str(output_number))//".nc","data",RQVCUTEN*dt_in)
+!         call io_write3d("convtest/cuten_qc_"//trim(str(output_number))//".nc","data",RQCCUTEN*dt_in)
+!         call io_write3d("convtest/cuten_th_"//trim(str(output_number))//".nc","data",RTHCUTEN*dt_in)
+!         call io_write3d("convtest/cuten_qi_"//trim(str(output_number))//".nc","data",RQICUTEN*dt_in)
+!         call io_write2d("convtest/cuten_cr_"//trim(str(output_number))//".nc","data",RAINCV)
+!         output_number=output_number+1
+        
 !       write(*,*) MAXVAL(domain%qv(2:ide-1,:,2:jde-1)), MINVAL(domain%qv(2:ide-1,:,2:jde-1))
     endif
     
