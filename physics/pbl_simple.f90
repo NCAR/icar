@@ -55,7 +55,7 @@ module pbl_simple
     ! but they note that 250m is used in the operational model for the full PBL mixing
     real, parameter :: kappa =0.4 !von Karman constant
     real, parameter :: N_substeps=10. ! number of substeps to allow (puts a cap on K to match CFL)
-    real, parameter :: diffusion_reduction=2.0 ! used to reduce diffusion rates
+    real, parameter :: diffusion_reduction=10.0 ! used to reduce diffusion rates
     
     
 contains
