@@ -8,28 +8,20 @@
 module convection
     use data_structures
     use module_cu_tiedtke,  only: tiedtkeinit, CU_TIEDTKE
-    use string,             only: str
-    use io_routines,        only: io_write3d, io_write2d
     
     implicit none
-    integer :: output_number
-    real,allocatable,dimension(:,:,:)::p8,U3D,V3D,T3D, & 
-                                       RTHCUTEN,RQVCUTEN,RQCCUTEN,RQICUTEN,    &
-                                       RUCUTEN,RVCUTEN
-    logical,allocatable,dimension(:,:)::CU_ACT_FLAG
-    real,allocatable,dimension(:,:) ::XLAND, RAINCV, PRATEC
-    real,allocatable,dimension(:) :: ZNU ! = (/0.9975, 0.9915, 0.984, 0.975, 0.965, 0.9525, 0.9375, &
-                                        !    0.92, 0.9, 0.88, 0.86, 0.835, 0.805, 0.775, 0.745,   &
-                                        !    0.71, 0.67, 0.63, 0.59, 0.55, 0.51, 0.47, 0.43, 0.39,&
-                                        !    0.355, 0.325, 0.295, 0.27, 0.25, 0.23, 0.21, 0.19,   &
-                                        !    0.17, 0.15, 0.13, 0.11, 0.09100001, 0.074, 0.059,    &
-                                        !    0.046, 0.035, 0.025, 0.015, 0.005/)
+    real,   allocatable, dimension(:,:,:) :: p8,U3D,V3D,T3D, & 
+                                             RTHCUTEN,RQVCUTEN,RQCCUTEN,RQICUTEN,    &
+                                             RUCUTEN,RVCUTEN
+    logical,allocatable, dimension(:,:) :: CU_ACT_FLAG
+    real,   allocatable, dimension(:,:) :: XLAND, RAINCV, PRATEC
+    real,   allocatable, dimension(:)   :: ZNU
                                         
 contains
     subroutine znu_init(domain)
         type(domain_type), intent(in) :: domain
-        integer::n_levels,i,xpt,ypt
-        real::ptop,psfc
+        integer :: n_levels,i,xpt,ypt
+        real    :: ptop,psfc
         
         n_levels=size(domain%p,2)
         
@@ -42,14 +34,13 @@ contains
         do i=1,n_levels
             znu(i)=(domain%p(xpt,i,ypt)-ptop)/(psfc-ptop)
         enddo
-        output_number=1
     end subroutine znu_init
 
     subroutine init_convection(domain,options)
         implicit none
-        type(domain_type), intent(in) :: domain
+        type(domain_type),  intent(in) :: domain
         type(options_type), intent(in) :: options
-        integer::ids,ide,jds,jde,kds,kde
+        integer :: ids,ide,jds,jde,kds,kde
         
         write(*,*) "Initializing Cumulus Scheme"
         ids=1
@@ -88,10 +79,11 @@ contains
     
 subroutine convect(domain,options,dt_in)
     implicit none
-    type(domain_type), intent(inout) :: domain
-    type(options_type), intent(in)   :: options
-    real, intent(in) ::dt_in
-    integer ::ids,ide,jds,jde,kds,kde,j,itimestep,STEPCU
+    type(domain_type),  intent(inout) :: domain
+    type(options_type), intent(in)    :: options
+    real, intent(in) :: dt_in
+    
+    integer :: ids,ide,jds,jde,kds,kde,j,itimestep,STEPCU
     
     itimestep=1
     STEPCU=1
@@ -103,14 +95,6 @@ subroutine convect(domain,options,dt_in)
     jde=size(domain%qv,3)
     
     if (.not.allocated(p8)) then
-!       allocate(pii(ids:ide,kds:kde,jds:jde))
-!       pii=1
-!       allocate(rho(ids:ide,kds:kde,jds:jde))
-!       rho=1
-!       allocate(zed1(ids:ide,kds:kde,jds:jde))
-!       zed1=0
-!       allocate(zed2(ids:ide,kds:kde,jds:jde))
-!       zed2=0
         allocate(p8(ids:ide,kds:kde,jds:jde))
         p8=0
         allocate(U3D(ids:ide,kds:kde,jds:jde))
@@ -139,9 +123,13 @@ subroutine convect(domain,options,dt_in)
         !$omp default(shared)
         !$omp do schedule(static)
         do j=jds,jde
-            RAINCV(:,j)=0
-            p8(:,:kde-1,j)=(domain%p(:,kds:kde-1,j)+domain%p(:,kds+1:kde,j))/2
-            p8(:,kde,j)=p8(:,kde-1,j)+(p8(:,kde-1,j)-p8(:,kde-2,j))/2
+            RAINCV(:,j)     = 0
+            RQVCUTEN(:,:,j) = 0
+            RTHCUTEN(:,:,j) = 0
+            RQCCUTEN(:,:,j) = 0
+            RQICUTEN(:,:,j) = 0
+            p8(:,:kde-1,j)  = (domain%p(:,kds:kde-1,j) + domain%p(:,kds+1:kde,j))/2
+            p8(:,kde,j)     =  domain%p(:,kde,j) + (domain%p(:,kde,j)-p8(:,kde-1,j))
             
             V3D(:,:,j)=(domain%v(:,:,j+1)+domain%v(:,:,j))/2
             U3D(:,:,j)=(domain%u(ids:ide,:,j)+domain%u(ids+1:ide+1,:,j))/2
@@ -152,8 +140,10 @@ subroutine convect(domain,options,dt_in)
 
         call CU_TIEDTKE(                                          &
                  dt_in,itimestep,STEPCU                           &
-                ,RAINCV,PRATEC,domain%latent_heat/LH_vaporization,domain%sensible_heat,ZNU(kds:kde) &
-                ,U3D,V3D,domain%w*domain%dz/domain%dx,T3D,domain%qv,domain%cloud,domain%ice,domain%pii,domain%rho &
+                ,RAINCV,PRATEC,domain%latent_heat/LH_vaporization &
+                ,domain%sensible_heat,ZNU(kds:kde),U3D,V3D        &
+                ,domain%w*domain%dz/domain%dx,T3D,domain%qv       &
+                ,domain%cloud,domain%ice,domain%pii,domain%rho    &
                 ,domain%qv_adv_tendency,domain%qv_pbl_tendency    &
                 ,domain%dz,p8,domain%p,XLAND,CU_ACT_FLAG          &
                 ,ids+1,ide-1, jds+1,jde-1, kds,kde-1              &
@@ -163,37 +153,23 @@ subroutine convect(domain,options,dt_in)
                 ,RUCUTEN, RVCUTEN                                 &
                 ,.True.,.True.,.True.,.True.,.True.               &
                 )
-!         write(*,*) "QV range"
-!         write(*,*) MAXVAL(RQVCUTEN(2:ide-1,:,2:jde-1)), MINVAL(RQVCUTEN(2:ide-1,:,2:jde-1))
-!         write(*,*) "qc range"
-!         write(*,*) MAXVAL(RQCCUTEN(2:ide-1,:,2:jde-1)), MINVAL(RQCCUTEN(2:ide-1,:,2:jde-1))
-!         write(*,*) "th range"
-!         write(*,*) MAXVAL(RTHCUTEN(2:ide-1,:,2:jde-1)), MINVAL(RTHCUTEN(2:ide-1,:,2:jde-1))
-!         write(*,*) "qi range"
-!         write(*,*) MAXVAL(RQICUTEN(2:ide-1,:,2:jde-1)), MINVAL(RQICUTEN(2:ide-1,:,2:jde-1))
-!         write(*,*) "rain range"
-!         write(*,*) MAXVAL(RAINCV(2:ide-1,2:jde-1)), MINVAL(RAINCV(2:ide-1,2:jde-1))
-
-! COMMENTED OUT BECAUSE IT WAS REMOVING MORE WATER THAN IT WAS FORMING PRECIPITATION
-!         domain%qv=domain%qv+RQVCUTEN*dt_in
-! COMMENTED OUT BECAUSE IT WAS ALWAYS 0 (AT LEAST IN A SHORT RUN)
-!         domain%cloud=domain%cloud+RQCCUTEN*dt_in
-! COMMENTED OUT TO BE CONSISTENT WITH REMOVING QVTEN
-!         domain%th=domain%th+RTHCUTEN*dt_in
-! COMMENTED OUT BECAUSE IT WAS ALWAYS 0 (AT LEAST IN A SHORT RUN)
-!         domain%ice=domain%ice+RQICUTEN*dt_in
-        domain%rain=domain%rain+RAINCV
-        domain%crain=domain%crain+RAINCV
+        ! add domain wide tendency terms
+        !$omp parallel private(j) &
+        !$omp firstprivate(jds,jde, dt_in) &
+        !$omp default(shared)
+        !$omp do schedule(static)
+        do j=jds,jde
+            domain%qv(:,:,j)   =domain%qv(:,:,j)   + RQVCUTEN(:,:,j)*dt_in
+            domain%cloud(:,:,j)=domain%cloud(:,:,j)+ RQCCUTEN(:,:,j)*dt_in
+            domain%th(:,:,j)   =domain%th(:,:,j)   + RTHCUTEN(:,:,j)*dt_in
+            domain%ice(:,:,j)  =domain%ice(:,:,j)  + RQICUTEN(:,:,j)*dt_in
+            
+            domain%rain(:,j)   =domain%rain(:,j)  + RAINCV(:,j)
+            domain%crain(:,j)  =domain%crain(:,j) + RAINCV(:,j)
+        enddo
+        !$omp end do
+        !$omp end parallel  
         
-!         call io_write3d("convtest/cu_rho_"//trim(str(output_number))//".nc","data",domain%rho)
-!         call io_write3d("convtest/cuten_qv_"//trim(str(output_number))//".nc","data",RQVCUTEN*dt_in)
-!         call io_write3d("convtest/cuten_qc_"//trim(str(output_number))//".nc","data",RQCCUTEN*dt_in)
-!         call io_write3d("convtest/cuten_th_"//trim(str(output_number))//".nc","data",RTHCUTEN*dt_in)
-!         call io_write3d("convtest/cuten_qi_"//trim(str(output_number))//".nc","data",RQICUTEN*dt_in)
-!         call io_write2d("convtest/cuten_cr_"//trim(str(output_number))//".nc","data",RAINCV)
-!         output_number=output_number+1
-        
-!       write(*,*) MAXVAL(domain%qv(2:ide-1,:,2:jde-1)), MINVAL(domain%qv(2:ide-1,:,2:jde-1))
     endif
     
     
