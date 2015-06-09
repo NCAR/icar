@@ -48,6 +48,7 @@ INSTALLDIR=~/bin/
 # They are overwritten with machine specific options below if known
 ########################################################################################
 F90=gfortran
+RM=/bin/rm
 LIBFFT=/usr/local/lib
 INCFFT=/usr/local/include
 NCDF_PATH = /usr/local
@@ -117,6 +118,7 @@ ifeq ($(LMOD_FAMILY_COMPILER),pgi)
 endif	
 
 # get GIT version info
+ERROR := $(shell if [[ -e icar ]]; then ${RM} icar; fi)
 GIT_VERSION := $(shell git describe --long --dirty --all --always | sed -e's/heads\///')
 
 
