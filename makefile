@@ -118,7 +118,6 @@ ifeq ($(LMOD_FAMILY_COMPILER),pgi)
 endif	
 
 # get GIT version info
-ERROR := $(shell if [[ -e icar ]]; then ${RM} icar; fi)
 GIT_VERSION := $(shell git describe --long --dirty --all --always | sed -e's/heads\///')
 
 
