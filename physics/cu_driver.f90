@@ -84,6 +84,7 @@ subroutine convect(domain,options,dt_in)
     real, intent(in) :: dt_in
     
     integer :: ids,ide,jds,jde,kds,kde,j,itimestep,STEPCU
+    real :: internal_dt
     
     itimestep=1
     STEPCU=1
@@ -154,18 +155,19 @@ subroutine convect(domain,options,dt_in)
                 ,.True.,.True.,.True.,.True.,.True.               &
                 )
         ! add domain wide tendency terms
+        internal_dt=dt_in
         !$omp parallel private(j) &
         !$omp firstprivate(jds,jde, dt_in) &
         !$omp default(shared)
         !$omp do schedule(static)
         do j=jds,jde
-            domain%qv(:,:,j)   =domain%qv(:,:,j)   + RQVCUTEN(:,:,j)*dt_in
-            domain%cloud(:,:,j)=domain%cloud(:,:,j)+ RQCCUTEN(:,:,j)*dt_in
-            domain%th(:,:,j)   =domain%th(:,:,j)   + RTHCUTEN(:,:,j)*dt_in
-            domain%ice(:,:,j)  =domain%ice(:,:,j)  + RQICUTEN(:,:,j)*dt_in
+            domain%qv(:,:,j)   =domain%qv(:,:,j)   + RQVCUTEN(:,:,j)*internal_dt
+            domain%cloud(:,:,j)=domain%cloud(:,:,j)+ RQCCUTEN(:,:,j)*internal_dt
+            domain%th(:,:,j)   =domain%th(:,:,j)   + RTHCUTEN(:,:,j)*internal_dt
+            domain%ice(:,:,j)  =domain%ice(:,:,j)  + RQICUTEN(:,:,j)*internal_dt
             
-            domain%rain(:,j)   =domain%rain(:,j)  + RAINCV(:,j)
-            domain%crain(:,j)  =domain%crain(:,j) + RAINCV(:,j)
+            domain%rain(:,j)   =domain%rain(:,j)  + RAINCV(:,j)/5
+            domain%crain(:,j)  =domain%crain(:,j) + RAINCV(:,j)/5
         enddo
         !$omp end do
         !$omp end parallel  
