@@ -164,6 +164,7 @@ subroutine convect(domain,options,dt_in)
         RQCCUTEN(:,:,j) = 0
         RQICUTEN(:,:,j) = 0
         RQSCUTEN(:,:,j) = 0
+        RQRCUTEN(:,:,j) = 0
         p8(:,:kde-1,j)  = (domain%p(:,kds:kde-1,j) + domain%p(:,kds+1:kde,j))/2
         p8(:,kde,j)     =  domain%p(:,kde,j) + (domain%p(:,kde,j)-p8(:,kde-1,j))
         
