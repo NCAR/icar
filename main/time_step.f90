@@ -83,6 +83,7 @@ contains
         
         ! because density changes with each time step, u/v/w have to be rebalanced as well. 
         ! could avoid this by assuming density doesn't change... but would need to keep an "old" density around
+        ! also, convection can modify u and v so it needs to rebalanced
         call balance_uvw(domain,options)
     end subroutine forcing_update       
 

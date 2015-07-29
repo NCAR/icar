@@ -157,7 +157,7 @@ subroutine convect(domain,options,dt_in)
         ! add domain wide tendency terms
         internal_dt=dt_in
         !$omp parallel private(j) &
-        !$omp firstprivate(jds,jde, dt_in) &
+        !$omp firstprivate(ids,ide, jds,jde, dt_in, internal_dt) &
         !$omp default(shared)
         !$omp do schedule(static)
         do j=jds,jde
@@ -166,8 +166,13 @@ subroutine convect(domain,options,dt_in)
             domain%th(:,:,j)   =domain%th(:,:,j)   + RTHCUTEN(:,:,j)*internal_dt
             domain%ice(:,:,j)  =domain%ice(:,:,j)  + RQICUTEN(:,:,j)*internal_dt
             
-            domain%rain(:,j)   =domain%rain(:,j)  + RAINCV(:,j)/5
-            domain%crain(:,j)  =domain%crain(:,j) + RAINCV(:,j)/5
+            domain%rain(:,j)   =domain%rain(:,j)  + RAINCV(:,j)
+            domain%crain(:,j)  =domain%crain(:,j) + RAINCV(:,j)
+            
+            domain%u(ids+1:ide,:,j) = domain%u(ids+1:ide,:,j) + (RUCUTEN(ids:ide-1,:,j)+RUCUTEN(ids+1:ide,:,j))/2 * internal_dt
+            if (j>jds) then
+                domain%v(:,:,j) = domain%v(:,:,j) + (RVCUTEN(:,:,j)+RVCUTEN(:,:,j-1))/2 * internal_dt
+            endif
         enddo
         !$omp end do
         !$omp end parallel  
