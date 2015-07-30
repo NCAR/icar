@@ -247,6 +247,7 @@ OBJS=	$(BUILD)driver.o \
 		$(BUILD)mp_simple.o \
 		$(BUILD)cu_driver.o \
 		$(BUILD)cu_tiedtke.o \
+		$(BUILD)cu_kf.o \
 		$(BUILD)ra_driver.o \
 		$(BUILD)ra_simple.o \
 		$(BUILD)lsm_driver.o \
@@ -382,11 +383,14 @@ $(BUILD)mp_simple.o:$(PHYS)mp_simple.f90 $(BUILD)data_structures.o
 ###################################################################
 #	Convection code
 ###################################################################
-$(BUILD)cu_driver.o:$(PHYS)cu_driver.f90 $(BUILD)cu_tiedtke.o $(BUILD)data_structures.o
+$(BUILD)cu_driver.o:$(PHYS)cu_driver.f90 $(BUILD)cu_tiedtke.o $(BUILD)cu_kf.o $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)cu_driver.f90 -o $(BUILD)cu_driver.o
 
 $(BUILD)cu_tiedtke.o:$(PHYS)cu_tiedtke.f90
 	${F90} ${FFLAGS} $(PHYS)cu_tiedtke.f90 -o $(BUILD)cu_tiedtke.o
+
+$(BUILD)cu_kf.o:$(PHYS)cu_kf.f90
+	${F90} ${FFLAGS} $(PHYS)cu_kf.f90 -o $(BUILD)cu_kf.o
 
 ###################################################################
 #	Radiation code
