@@ -47,3 +47,18 @@ Required Input files/variables
     NOTE namelist file in git repo is not always in sync with code!
         This really just means it may not include all current options, it will usually run. 
 
+
+--------------------------------------------------------------------------------------------------------
+Common errors:
+--------------------------------------------------------------------------------------------------------
+1) Segmentation fault:
+    Most likely due to your shell's stacksize limit (particularly with ifort). 
+    
+    To fix it run the following: 
+    in bash:
+        ulimit -s unlimited
+    in csh: 
+        unlimit stacksize
+        
+    NOTE: Some systems have a hard limit of 64MB (ulimit -s 65532), this is *probably* enough. 
+Reference: https://software.intel.com/en-us/articles/determining-root-cause-of-sigsegv-or-sigbus-errors
