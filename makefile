@@ -176,8 +176,8 @@ ifeq ($(MODE), debug)
 endif
 ifeq ($(MODE), debugompslow)
 	ifeq ($(F90), ifort)
-		COMP= -openmp -liomp5 -debug -debug-parameters all -traceback -ftrapuv -g -fpe0 -c -u -check all -check noarg_temp_created -CB
-		COMP= -openmp -liomp5 -debug -c -u	-fpe0 -traceback -check all -check noarg_temp_created
+		# COMP= -openmp -liomp5 -debug -debug-parameters all -traceback -ftrapuv -g -fpe0 -c -u -check all -check noarg_temp_created -CB
+		COMP= -openmp -liomp5 -debug -c -u	-fpe0 -traceback -check all -check noarg_temp_created -fp-stack-check
 		LINK= -openmp -liomp5
 	endif
 	ifeq ($(F90), gfortran)
