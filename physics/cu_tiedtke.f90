@@ -350,6 +350,11 @@ CONTAINS
 
 
 !-------------  J LOOP (OUTER) --------------------------------------------------
+!$omp parallel private(J,K,I,KM,ZI,ZL,DOT,SLIMSK,kp,zz,U1,V1,T1,Q1,Q2,Q3,KTYPE,RN,&
+!$omp Q1B,Q1BL,OMG,GHT,PRSL,PRSI,sig1,EVAP,heatflux,rho2d,F_QV,F_QC,F_QR,F_QI,F_QS) &
+!$omp firstprivate(its,ite,jts,jte,kts,kte,DELT,RDELT,KX,IM,CU_ACT_FLAG) &
+!$omp default(shared)
+!$omp do schedule(guided)
    DO J=jts,jte
 
 ! --------------- compute zi and zl -----------------------------------------
@@ -473,6 +478,8 @@ CONTAINS
 
 
    ENDDO
+  !$omp end do
+  !$omp end parallel
 
    END SUBROUTINE CU_TIEDTKE
 
