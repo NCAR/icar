@@ -153,11 +153,14 @@ subroutine convect(domain,options,dt_in)
     endif
     
     
+    ! use a separate dt to make it easier to apply on a different dt
+    internal_dt=dt_in
+    
     !$omp parallel private(j) &
-    !$omp firstprivate(ids,ide,jds,jde,kds,kde) &
+    !$omp firstprivate(ids,ide,jds,jde,kds,kde, internal_dt) &
     !$omp default(shared)
     !$omp do schedule(static)
-    do j=jds,jde
+    do j=jds+1,jde-1
         RAINCV(:,j)     = 0
         RQVCUTEN(:,:,j) = 0
         RTHCUTEN(:,:,j) = 0
@@ -165,67 +168,55 @@ subroutine convect(domain,options,dt_in)
         RQICUTEN(:,:,j) = 0
         RQSCUTEN(:,:,j) = 0
         RQRCUTEN(:,:,j) = 0
-        p8(:,:kde-1,j)  = (domain%p(:,kds:kde-1,j) + domain%p(:,kds+1:kde,j))/2
-        p8(:,kde,j)     =  domain%p(:,kde,j) + (domain%p(:,kde,j)-p8(:,kde-1,j))
+        p8(:,2:kde,j)  = (domain%p(:,kds:kde-1,j) + domain%p(:,kds+1:kde,j))/2
+        p8(:,1,j)     =  domain%p(:,1,j)+(domain%p(:,1,j)-domain%p(:,2,j))/2.0 !NOT CORRECT
         
         V3D(:,:,j)=(domain%v(:,:,j+1)+domain%v(:,:,j))/2
         U3D(:,:,j)=(domain%u(ids:ide,:,j)+domain%u(ids+1:ide+1,:,j))/2
         T3D(:,:,j)=domain%th(:,:,j)*domain%pii(:,:,j)
-    enddo
-    !$omp end do
-    !$omp end parallel
-    
-    
-    if (options%physics%convection==1) then
+        
+        if (options%physics%convection==1) then
 
 
-        call CU_TIEDTKE(                                          &
-                 dt_in,itimestep,STEPCU                           &
-                ,RAINCV,PRATEC,domain%latent_heat/LH_vaporization &
-                ,domain%sensible_heat,ZNU(kds:kde),U3D,V3D        &
-                ,domain%w*domain%dz/domain%dx,T3D,domain%qv       &
-                ,domain%cloud,domain%ice,domain%pii,domain%rho    &
-                ,domain%qv_adv_tendency,domain%qv_pbl_tendency    &
-                ,domain%dz,p8,domain%p,XLAND,CU_ACT_FLAG          &
-                ,ids+1,ide-1, jds+1,jde-1, kds,kde-1              & ! domain
-                ,ids,ide, jds,jde, kds,kde                        & ! memory
-                ,ids+1,ide-1, jds+1,jde-1, kds,kde-1              & ! tile
-                ,RTHCUTEN,RQVCUTEN,RQCCUTEN,RQICUTEN              &
-                ,RUCUTEN, RVCUTEN                                 &
-                ,.True.,.True.,.True.,.True.,.True.               &
-                )
+            call CU_TIEDTKE(                                          &
+                     dt_in,itimestep,STEPCU                           &
+                    ,RAINCV,PRATEC,domain%latent_heat/LH_vaporization &
+                    ,domain%sensible_heat,ZNU(kds:kde),U3D,V3D        &
+                    ,domain%w*domain%dz/domain%dx,T3D,domain%qv       &
+                    ,domain%cloud,domain%ice,domain%pii,domain%rho    &
+                    ,domain%qv_adv_tendency,domain%qv_pbl_tendency    &
+                    ,domain%dz,domain%p,p8,XLAND,CU_ACT_FLAG          &
+                    ,ids+1,ide-1, jds+1,jde-1, kds,kde-1              & ! domain
+                    ,ids,ide, jds,jde, kds,kde                        & ! memory
+                    ,ids+1,ide-1, j,j, kds,kde-1              & ! tile
+                    ,RTHCUTEN,RQVCUTEN,RQCCUTEN,RQICUTEN              &
+                    ,RUCUTEN, RVCUTEN                                 &
+                    ,.True.,.True.,.True.,.True.,.True.               &
+                    )
     
-    elseif (options%physics%convection==3) then
-        call KFCPS(                                         &
-               ids,ide, jds,jde, kds,kde                     & ! domain
-              ,ids,ide, jds,jde, kds,kde                     & ! memory
-              ,ids+1,ide-1, jds+1,jde-1, kds,kde             & ! tile
-              ,dt_in,itimestep,domain%dx,dt_in,.false.       & ! dt KTAU, dx, cu_dt, adapt_step
-              ,domain%rho                                    & ! rho
-              ,RAINCV,PRATEC,NCA                             & ! convective rain, convective rain rate, 
-              ,U3D,V3D,domain%th,T3D,domain%w*domain%dz/domain%dx      &
-              ,domain%qv,domain%dz,domain%p,domain%pii       &
-              ,W0AVG                                         & ! "average" vertical velocity (computed internally from w)
-              ,XLV0,XLV1,XLS0,XLS1,CP,Rd,gravity,EP1         & ! physical "constants"
-              ,EP2,SVP1,SVP2,SVP3,SVPT0                      & ! physical "constants"
-              ,STEPCU,CU_ACT_FLAG,.false.                    & ! number of steps between CU calls, boolean grid to act on , warm_rain_only
-            ! optional arguments
-            ! ,F_QV    ,F_QC    ,F_QR    ,F_QI    ,F_QS      &
-              ,.True., .True.,  .True.,  .True.,  .True.     &
-              ,RQVCUTEN,RQCCUTEN,RQRCUTEN,RQICUTEN,RQSCUTEN  &
-              ,RTHCUTEN                                      &
-              )
-    endif
-    
-    ! add domain wide tendency terms
-    ! use a separate dt to make it easier to apply on a different dt
-    internal_dt=dt_in
-    
-    !$omp parallel private(j) &
-    !$omp firstprivate(ids,ide, jds,jde, dt_in, internal_dt) &
-    !$omp default(shared)
-    !$omp do schedule(static)
-    do j=jds,jde
+        elseif (options%physics%convection==3) then
+            call KFCPS(                                         &
+                   ids,ide, jds,jde, kds,kde                     & ! full domain
+                  ,ids,ide, jds,jde, kds,kde                     & ! memory size
+                  ,ids+1,ide-1, j,j, kds,kde             & ! tile to process (parallelize over j)
+                  ,dt_in,itimestep,domain%dx,dt_in,.false.       & ! dt KTAU, dx, cu_dt, adapt_step
+                  ,domain%rho                                    & ! rho
+                  ,RAINCV,PRATEC,NCA                             & ! convective rain, convective rain rate, 
+                  ,U3D,V3D,domain%th,T3D,domain%w*domain%dz/domain%dx      &
+                  ,domain%qv,domain%dz,domain%p,domain%pii       &
+                  ,W0AVG                                         & ! "average" vertical velocity (computed internally from w)
+                  ,XLV0,XLV1,XLS0,XLS1,CP,Rd,gravity,EP1         & ! physical "constants"
+                  ,EP2,SVP1,SVP2,SVP3,SVPT0                      & ! physical "constants"
+                  ,STEPCU,CU_ACT_FLAG,.false.                    & ! number of steps between CU calls, boolean grid to act on , warm_rain_only
+                ! optional arguments
+                ! ,F_QV    ,F_QC    ,F_QR    ,F_QI    ,F_QS      &
+                  ,.True., .True.,  .True.,  .True.,  .True.     &
+                  ,RQVCUTEN,RQCCUTEN,RQRCUTEN,RQICUTEN,RQSCUTEN  &
+                  ,RTHCUTEN                                      &
+                  )
+        endif
+        
+        ! add domain wide tendency terms
         domain%qv(:,:,j)   =domain%qv(:,:,j)   + RQVCUTEN(:,:,j)*internal_dt
         domain%cloud(:,:,j)=domain%cloud(:,:,j)+ RQCCUTEN(:,:,j)*internal_dt
         domain%th(:,:,j)   =domain%th(:,:,j)   + RTHCUTEN(:,:,j)*internal_dt
@@ -240,13 +231,23 @@ subroutine convect(domain,options,dt_in)
         
         if (options%physics%convection==1) then
             domain%u(ids+1:ide,:,j) = domain%u(ids+1:ide,:,j) + (RUCUTEN(ids:ide-1,:,j)+RUCUTEN(ids+1:ide,:,j))/2 * internal_dt
-            if (j>jds) then
-                domain%v(:,:,j) = domain%v(:,:,j) + (RVCUTEN(:,:,j)+RVCUTEN(:,:,j-1))/2 * internal_dt
-            endif
         endif
     enddo
     !$omp end do
     !$omp end parallel  
+    if (options%physics%convection==1) then
+        ! I'm not sure parallelizing over such a small operation is worth it, but this can't be parallelized within the big loop
+        ! easily because it depends on RVCUTEN[j-1]
+        !$omp parallel private(j) &
+        !$omp firstprivate(jds,jde, internal_dt) &
+        !$omp default(shared)
+        !$omp do schedule(static)
+        do j=jds+1,jde
+            domain%v(:,:,j) = domain%v(:,:,j) + (RVCUTEN(:,:,j)+RVCUTEN(:,:,j-1))/2 * internal_dt
+        enddo
+        !$omp end do
+        !$omp end parallel  
+    endif
     
     
 end subroutine convect  
