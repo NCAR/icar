@@ -269,7 +269,10 @@ contains
 
     end subroutine domain_allocation
     
+! interpolate intput%z to output%z assuming that input has one less grid cell 
+! in the interpolate_dim dimension
     subroutine copy_z(input,output,interpolate_dim)
+        
         implicit none
         class(interpolable_type), intent(in) :: input
         class(interpolable_type), intent(inout) :: output
@@ -291,10 +294,16 @@ contains
         endif
         allocate(output%z(nxo,nzo,nyo))
         if (interpolate_dim==1) then
+            if ((nxo/=(nxi+1)).or.(nyo/=nyi).or.(nzo/=nzi)) then
+                stop("Error copying z levels from mass grid to U grid, dimensions don't match")
+            endif
             output%z(2:nxo-1,:,:)=(input%z(1:nxi-1,:,:) + input%z(2:nxi,:,:))/2
             output%z(1,:,:)=input%z(1,:,:)
             output%z(nxo,:,:)=input%z(nxi,:,:)
         else if (interpolate_dim==3) then
+            if ((nyo/=(nyi+1)).or.(nxo/=nxi).or.(nzo/=nzi)) then
+                stop("Error copying z levels from mass grid to V grid, dimensions don't match")
+            endif
             output%z(:,:,2:nyo-1)=(input%z(:,:,1:nyi-1) + input%z(:,:,2:nyi))/2
             output%z(:,:,1)=input%z(:,:,1)
             output%z(:,:,nyo)=input%z(:,:,nyi)
