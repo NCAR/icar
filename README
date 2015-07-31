@@ -11,16 +11,13 @@ Compiling the model:
     make clean
     
     make
-        default (high) optimization compile will take ~3m on a single processor
-        This option also may not work reliably, as it seems to set some "dangerous" ifort compiler flags
-        The default should be MODE=fast
+        default (relatively high) optimization compile 
     
     make install
         compile if necessary, then install in the install directory [~/bin]
     
     options: 
-        MODE=fast           fast compile and moderately strong optimization
-            compiles in ~17s on 4+ cores (set -j4)
+        MODE=fast           more optimization, slower compile, WARNING:not safe optimizations
         MODE=profile        set profiling options for gnu compiler in particular
         MODE=debug          debug compile with optimizations
         MODE=debugslow      debug compile w/o optimizations

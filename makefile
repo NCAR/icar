@@ -109,8 +109,6 @@ ifeq ($(LMOD_FAMILY_COMPILER),intel)
 endif 
 ifeq ($(LMOD_FAMILY_COMPILER),pgi)
 	F90=pgf90
-	COMP=-fast -mp -c
-	LINK=-mp
 	LIBFFT=/glade/u/home/gutmann/usr/local/lib
 	INCFFT=/glade/u/home/gutmann/usr/local/include
 	LIBNETCDF = -lnetcdff -lnetcdf
@@ -141,8 +139,6 @@ ifeq ($(F90), gfortran)
 endif
 # Intel fortran
 ifeq ($(F90), ifort)
-	# COMP= -openmp -liomp5 -u -c -fast -ftz #-fast-transcendentals # not available in ifort <13: -align array64byte
-	# switched away from fast because (a) code breaks? (b) ipo takes a LONG time
 	COMP=-c -u -openmp -liomp5 -O3 -no-prec-div -xHost -ftz
 	LINK= -openmp -liomp5
 	PREPROC=-fpp
@@ -153,7 +149,7 @@ ifeq ($(F90), pgf90)
 	COMP=-fast -mp -c
 	LINK=-mp
 	PREPROC=-Mpreprocess
-	MODOUTPUT=
+	MODOUTPUT=-module $(BUILD)
 endif
 
 
@@ -210,9 +206,9 @@ ifeq ($(MODE), profile)
 		PROF=-g
 	endif
 endif
-ifeq ($(MODE), fast) # because -ipo takes forever for very little gain
+ifeq ($(MODE), fast) # WARNING -ipo (included in -fast) takes forever for very little gain, and this may be unstable
 	ifeq ($(F90), ifort)
-		COMP=-c -u -openmp -liomp5 -O3 -no-prec-div -xHost -ftz
+		COMP=-c -u -openmp -liomp5 -fast -ftz #-fast-transcendentals # not available in ifort <13: -align array64byte
 	endif
 endif
 ###################################################################
