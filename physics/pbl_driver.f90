@@ -27,26 +27,73 @@
 module planetary_boundary_layer
     use data_structures
     use pbl_simple,    only : simple_pbl, finalize_simple_pbl, init_simple_pbl
+    use module_bl_ysu, only : ysuinit, ysu
     implicit none
     
     private
     public :: pbl_init, pbl, pbl_finalize
+    
+    real, allocatable, dimension(:,:,:) :: rublten,rvblten,rthblten,rqvblten, &
+                                           rqcblten,rqiblten
+    integer :: ids, ide, jds, jde, kds, kde,  &
+               ims, ime, jms, jme, kms, kme,  &
+               its, ite, jts, jte, kts, kte
+               
+    logical :: allowed_to_read, restart, flag_qi
 !   these are now defined in data_structures.f90
 !   real, parameter :: LH_vaporization=2260000.0 ! J/kg
 !   real, parameter :: R=287.058 ! J/(kg K) specific gas constant for air
-!   real, parameter :: cp = 1012.0 ! specific heat capacity of moist STP air? J/kg/K
-!   real, parameter :: g=9.81 ! gravity m/s^2
+!     real, parameter :: XLV0         = 3.15E6
+!     real, parameter :: XLV1         = 2370.
+!     real, parameter :: XLS0         = 2.905E6
+!     real, parameter :: XLS1         = 259.532
+!     real, parameter ::  SVP1=0.6112
+!     real, parameter ::  SVP2=17.67
+!     real, parameter ::  SVP3=29.65
+!     real, parameter ::  SVPT0=273.15
+!     real, parameter ::  EP1=Rw/Rd-1.
+!     real, parameter ::  EP2=Rd/Rw
 
 contains
     subroutine pbl_init(domain,options)
         implicit none
-        type(domain_type),intent(in)::domain
+        type(domain_type),intent(inout)::domain
         type(options_type),intent(in)::options
+        
+        ime=size(domain%p,1)
+        kme=size(domain%p,2)
+        jme=size(domain%p,3)
+        ims=1; jms=1; kms=1
+        ids=ims; its=ims; ide=ime; ite=ime
+        kds=kms; kts=kms; kde=kme; kte=kme
+        jds=jms; jts=jms; jde=jme; jte=jme
+        
+        allowed_to_read=.True.
+        restart=.False.
+        flag_qi=.true.
+        if (.not.allocated(domain%tend%qv_pbl)) allocate(domain%tend%qv_pbl(ims:ime,kms:kme,jms:jme))
+        domain%tend%qv_pbl=0
         
         write(*,*) "Initializing PBL Scheme"
         if (options%physics%boundarylayer==2) then
             write(*,*) "    Simple PBL"
             call init_simple_pbl(domain,options)
+        endif
+        if (options%physics%boundarylayer==3) then
+            write(*,*) "    YSU PBL"
+            if (.not.allocated(domain%tend%th))     allocate(domain%tend%th(ims:ime,kms:kme,jms:jme))
+            if (.not.allocated(domain%tend%qc))     allocate(domain%tend%qc(ims:ime,kms:kme,jms:jme))
+            if (.not.allocated(domain%tend%qr))     allocate(domain%tend%qr(ims:ime,kms:kme,jms:jme))
+            if (.not.allocated(domain%tend%qi))     allocate(domain%tend%qi(ims:ime,kms:kme,jms:jme))
+            if (.not.allocated(domain%tend%u))      allocate(domain%tend%u(ims:ime,kms:kme,jms:jme))
+            if (.not.allocated(domain%tend%v))      allocate(domain%tend%v(ims:ime,kms:kme,jms:jme))
+            call ysuinit(domain%tend%u,domain%tend%v,       &
+                         domain%tend%th,domain%tend%qv_pbl, &
+                         domain%tend%qc,domain%tend%qi,1,1, &
+                         restart, allowed_to_read,          &
+                         ids, ide, jds, jde, kds, kde,      &
+                         ims, ime, jms, jme, kms, kme,      &
+                         its, ite, jts, jte, kts, kte)
         endif
     end subroutine pbl_init
     
@@ -58,6 +105,28 @@ contains
         
         if (options%physics%boundarylayer==2) then
             call simple_pbl(domain,dt_in)
+        endif
+        
+        if (options%physics%boundarylayer==3) then
+            stop( "YSU PBL not implemented yet")
+!             call ysu(domain%Um, domain%Vm,   domain%th, domain%t,               &
+!                      domain%qv, domain%cloud,domain%ice,                        &
+!                      domain%p,domain%p_inter,domain%pii,                        &
+!                      domain%tend%u,domain%tend%v,domain%tend%th,                &
+!                      domain%tend%qv_pbl,domain%tend%qc,domain%tend%qi,flag_qi,  &
+!                      cp,gravity,rovcp,rd,rovg,                                  &
+!                      domain%dz_i, domain%z,    LH_vaporization,rv,domain%psfc,  &
+!                      domain%znu,  domain%znw,  domain%mut,domain%p_top,         &
+!                      domain%znt,  domain%ustar,zol, hol, hpbl, psim, psih,      &
+!                      domain%xland,domain%sensible_heat,domain%latent_heat,      &
+!                      domain%tskin,gz1oz0,      wspd, br,                        &
+!                      dt,dtmin,kpbl2d,                                           &
+!                      svp1,svp2,svp3,svpt0,ep1,ep2,karman,eomeg,stbolt,          &
+!                      exch_h,                                                    &
+!                      domain%u10,domain%v10,                                     &
+!                      ids,ide, jds,jde, kds,kde,                                 &
+!                      ims,ime, jms,jme, kms,kme,                                 &
+!                      its,ite, jts,jte, kts,kte)
         endif
                         
     end subroutine pbl

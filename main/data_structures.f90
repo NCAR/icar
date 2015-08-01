@@ -80,21 +80,43 @@ module data_structures
 !------------------------------------------------
 ! Model constants (string lengths)
 !------------------------------------------------
-    integer,parameter::MAXFILELENGTH=100      ! maximum file name length
-    integer,parameter::MAXVARLENGTH=100       ! maximum variable name length
-    integer,parameter::MAXLEVELS=500          ! maximum number of vertical layers (should typically be ~10-20)
-    integer,parameter::MAX_NUMBER_FILES=50000 ! maximum number of permitted input files (probably a bit extreme)
+    integer,parameter::MAXFILELENGTH    = 200   ! maximum file name length
+    integer,parameter::MAXVARLENGTH     = 200   ! maximum variable name length
+    integer,parameter::MAXLEVELS        = 500   ! maximum number of vertical layers (should typically be ~10-20)
+    integer,parameter::MAX_NUMBER_FILES = 50000 ! maximum number of permitted input files (probably a bit extreme)
 !------------------------------------------------
 ! Physical Constants
 !------------------------------------------------
     real, parameter :: LH_vaporization=2260000.0 ! J/kg
-    ! should be calculated as 2.5E6 + (2106.0 - 4218.0)*temp_degC ?
-    real, parameter :: Rd  = 287.058 ! J/(kg K) specific gas constant for dry air
-    real, parameter :: Rw  = 461.5   ! J/(kg K) specific gas constant for moist air
-    real, parameter :: cp  = 1012.0  ! J/kg/K   specific heat capacity of moist STP air? 
-    real, parameter :: gravity= 9.81    ! m/s^2    gravity
+    ! should be calculated as 2.5E6 + (-2112.0)*temp_degC ?
+    real, parameter :: Rd  = 287.058   ! J/(kg K) specific gas constant for dry air
+    real, parameter :: Rw  = 461.5     ! J/(kg K) specific gas constant for moist air
+    real, parameter :: cp  = 1012.0    ! J/kg/K   specific heat capacity of moist STP air? 
+    real, parameter :: gravity= 9.81   ! m/s^2    gravity
     real, parameter :: pi  = 3.1415927 ! pi
     real, parameter :: stefan_boltzmann = 5.67e-8 ! the Stefan-Boltzmann constant
+    real, parameter :: karman = 0.41   ! the von Karman constant
+    
+    ! convenience parameters for various physics packages
+    real, parameter :: rovcp = Rd/cp
+    real, parameter :: rovg  = Rd/gravity
+    
+    ! from wrf module_model_constants
+    ! parameters for calculating latent heat as a function of temperature for 
+    ! vaporization
+    real, parameter ::  XLV0 = 3.15E6 
+    real, parameter ::  XLV1 = 2370.
+    ! sublimation
+    real, parameter ::  XLS0 = 2.905E6
+    real, parameter ::  XLS1 = 259.532
+    ! saturated vapor pressure parameters (?)
+    real, parameter ::  SVP1 = 0.6112
+    real, parameter ::  SVP2 = 17.67
+    real, parameter ::  SVP3 = 29.65
+    real, parameter ::  SVPT0= 273.15
+    
+    real, parameter ::  EP1  = Rw/Rd-1.
+    real, parameter ::  EP2  = Rd/Rw
     
 !------------------------------------------------
 !   various data structures for use in geographic interpolation routines
@@ -168,35 +190,65 @@ module data_structures
     end type linearizable_type
     
     !------------------------------------------------
+    ! Tendency terms output by various physics subroutines
+    !------------------------------------------------
+    type tendencies_type
+        ! 3D atmospheric field tendencies
+        real,   allocatable, dimension(:,:,:) :: th,qv,qc,qi,u,v,qr,qs 
+                                                 
+        ! advection and pbl tendencies that need to be saved for the cumulus scheme
+        real, allocatable, dimension(:,:,:) :: qv_adv,qv_pbl
+    end type tendencies_type
+    
+    !------------------------------------------------
     ! All fields needed in the domain defined in detail above
     !------------------------------------------------
     type, extends(linearizable_type) :: domain_type
         ! 3D atmospheric fields
-        real, allocatable, dimension(:,:,:) :: w,ur,vr,wr
-        real, allocatable, dimension(:,:,:) :: nice,nrain,qgrau
-        ! 3D atmospheric field tendencies
-        real, allocatable, dimension(:,:,:) :: qv_adv_tendency,qv_pbl_tendency
+        real, allocatable, dimension(:,:,:) :: w,ur,vr,wr ! w, and u,v,w * density
+        real, allocatable, dimension(:,:,:) :: nice,nrain ! number concentration for ice and rain
+        real, allocatable, dimension(:,:,:) :: qgrau      ! graupel mass mixing ratio 
+        real, allocatable, dimension(:,:,:) :: p_inter    ! pressure on the vertical interfaces (p[:,1,:]=psfc)
+        real, allocatable, dimension(:,:,:) :: mut        ! mass in a given cell ? (pbot-ptop)
         ! 3D soil field
         real, allocatable, dimension(:,:,:) :: soil_t, soil_vwc
+        
         ! 2D fields, primarily fluxes to/from the land surface
+        ! surface pressure
+        real, allocatable, dimension(:,:)   :: psfc, p_top
         ! precip fluxes
         real, allocatable, dimension(:,:)   :: rain,crain,snow,graupel
         real, allocatable, dimension(:,:)   :: current_rain, current_snow
+        
         ! radiative fluxes (and cloud fraction)
         real, allocatable, dimension(:,:)   :: swdown, lwdown, cloudfrac, lwup
+        
         ! turbulent fluxes (and ground heat flux)
         real, allocatable, dimension(:,:)   :: sensible_heat,latent_heat,ground_heat
+        
         ! domain parameters (and PBL height)
-        real, allocatable, dimension(:,:)   :: pbl_height,landmask ! store PBL height (if available) and the land-sea mask
-        real, allocatable, dimension(:,:)   :: sintheta, costheta !rotations about the E-W, N-S grid
+        real, allocatable, dimension(:,:)   :: landmask ! store PBL height (if available) and the land-sea mask
+        real, allocatable, dimension(:,:)   :: sintheta, costheta  ! rotations about the E-W, N-S grid
+        real, allocatable, dimension(:)     :: ZNU, ZNW            ! = (p-p_top)/(psfc-ptop)
+        
         ! land surface state and parameters
         real, allocatable, dimension(:,:)   :: soil_tdeep, skin_t, soil_totalmoisture, snow_swe
         real, allocatable, dimension(:,:)   :: vegfrac,canopy_water
         integer, allocatable, dimension(:,:):: soil_type,veg_type
+        ! surface and PBL parameter
+        real, allocatable, dimension(:,:)   :: znt, ustar, pbl_height
+        real, allocatable, dimension(:,:)   :: u10, v10
+        
         ! current model time step length (should this be somewhere else?)
         real::dt
         ! current model time (seconds from options%time_zero)
         double precision :: model_time
+        
+        ! model specific fields
+        real, allocatable, dimension(:,:,:) :: Um, Vm ! U and V on mass coordinates
+        real, allocatable, dimension(:,:,:) :: T      ! real T (not potential)
+        
+        type(tendencies_type) :: tend
     end type domain_type
 
     !------------------------------------------------

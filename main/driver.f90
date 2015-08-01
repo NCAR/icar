@@ -17,13 +17,13 @@
 !!
 !!-----------------------------------------
 program icar
-    use time,               only : calendar_date, date_to_mjd       ! Convert between date and modified Julian Day
-    use init,               only : init_model, init_physics         ! Initialize model (not initial conditions)
-    use boundary_conditions,only : bc_init,bc_update,bc_find_step   ! Boundary and initial conditions
-    use data_structures          ! *_type datatypes                 ! Data-types and physical "constants"
-    use output,             only : write_domain                     ! Used to output initial model state
-    use time_step,          only : step                             ! Advance the model forward in time
-    use string,             only : str                              ! Convert real,integer,double to string
+    use time,               only : calendar_date, date_to_mjd         ! Convert between date and modified Julian Day
+    use init,               only : init_model, init_physics, init_znu ! Initialize model (not initial conditions)
+    use boundary_conditions,only : bc_init,bc_update,bc_find_step     ! Boundary and initial conditions
+    use data_structures          ! *_type datatypes                   ! Data-types and physical "constants"
+    use output,             only : write_domain                       ! Used to output initial model state
+    use time_step,          only : step                               ! Advance the model forward in time
+    use string,             only : str                                ! Convert real,integer,double to string
     
     implicit none
     type(options_type) :: options
@@ -53,9 +53,9 @@ program icar
     write(*,*) "Initializing Boundary conditions"
     call bc_init(domain, boundary, options)
     
+    call init_znu(domain)
     write(*,*) "Initializing Physics packages"
     call init_physics(options,domain)
-    
 !   update the boundary conditions for the next time step so we can integrate from one to the next
 !     call bc_update(domain,boundary,options)
     

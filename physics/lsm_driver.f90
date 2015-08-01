@@ -61,7 +61,7 @@ module land_surface
     real,allocatable, dimension(:,:,:)  :: SH2O,SMCREL
     real,allocatable, dimension(:,:)    :: dTemp,lhdQV
     real,allocatable, dimension(:)      :: Zs,DZs
-    real :: ROVCP,XICE_THRESHOLD
+    real :: XICE_THRESHOLD
     integer,allocatable, dimension(:,:) :: IVGTYP,ISLTYP
     integer :: ITIMESTEP
     
@@ -259,7 +259,6 @@ contains
         
         
         
-        ROVCP=Rd/cp
         XICE_THRESHOLD=1
         RDLAI2D=.false.
         USEMONALB=.false.

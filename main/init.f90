@@ -31,7 +31,7 @@ module init
     
     implicit none
     private
-    public::init_model,init_physics
+    public::init_model, init_physics, init_znu
     
 contains
     subroutine init_model(options,domain,boundary)
@@ -75,7 +75,7 @@ contains
         
     end subroutine init_physics
     
-!------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------
 !-==== Model Domain Section ====
 !
 ! Begining of section focused on allocating and initializeing the model domain data structures
@@ -206,14 +206,19 @@ contains
         domain%qgrau=0
         allocate(domain%pii(nx,nz,ny))      ! exner function
         domain%pii=1
-        allocate(domain%qv_adv_tendency(nx,nz,ny)) ! advective qv tendency [qv/s]
-        domain%qv_adv_tendency=0
-        allocate(domain%qv_pbl_tendency(nx,nz,ny)) ! qv tendency from PBL scheme [qv/s]
-        domain%qv_pbl_tendency=0
         allocate(domain%rho(nx,nz,ny))      ! air density [kg/m^3]
         domain%rho=1
         allocate(domain%cloudfrac(nx,ny))   ! cloud fraction
         domain%cloudfrac=0
+
+        allocate(domain%t(nx,nz,ny))        ! real air temperature [K]
+        domain%t=domain%th*domain%pii
+        allocate(domain%p_inter(nx,nz,ny))  ! air pressure on vertical interfaces [Pa]
+        domain%p_inter=100000
+        allocate(domain%Um(nx,nz,ny))       ! eastward wind on mass grid [m/s]
+        domain%Um=0
+        allocate(domain%Vm(nx,nz,ny))       ! northward wind on mass grid [m/s]
+        domain%Vm=0
         
         ! land-atm flux allocation
         allocate(domain%rain(nx,ny))        ! accumulated total rainfall [kg/m^2]
@@ -268,6 +273,31 @@ contains
         domain%veg_type=7  ! grassland
 
     end subroutine domain_allocation
+
+    subroutine init_znu(domain)
+        type(domain_type), intent(inout) :: domain
+        integer :: n_levels,i,xpt,ypt
+        real    :: ptop,psfc
+        
+        n_levels=size(domain%p,2)
+        
+        xpt=2
+        ypt=2
+        ptop=domain%p(xpt,n_levels,ypt)-(domain%p(xpt,n_levels-1,ypt)-domain%p(xpt,n_levels,ypt))/2.0 !NOT CORRECT
+        psfc=domain%p(xpt,1,ypt)+(domain%p(xpt,1,ypt)-domain%p(xpt,2,ypt))/2.0 !NOT CORRECT
+        ptop=max(ptop,1.0)
+        allocate(domain%znu(n_levels))
+        allocate(domain%znw(n_levels))
+        do i=1,n_levels
+            domain%znu(i)=(domain%p(xpt,i,ypt)-ptop)/(psfc-ptop)
+            if (i>1) then
+                domain%znw(i)=((domain%p(xpt,i,ypt)+domain%p(xpt,i-1,ypt))/2-ptop)/(psfc-ptop)
+            else
+                domain%znw(i)=1
+            endif
+        enddo
+    end subroutine init_znu
+
     
 ! interpolate intput%z to output%z assuming that input has one less grid cell 
 ! in the interpolate_dim dimension
@@ -455,7 +485,7 @@ contains
         call init_winds(domain,options)
     end subroutine init_domain
 
-!------------------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------------------
 !-==== Boundary Conditions Section ====
 !
 ! Begining of section focused on allocating and initializeing the boundary data structures

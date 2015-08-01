@@ -253,6 +253,7 @@ OBJS=	$(BUILD)driver.o \
 		$(BUILD)lsm_noahlsm.o \
 		$(BUILD)pbl_driver.o \
 		$(BUILD)pbl_simple.o \
+		$(BUILD)pbl_ysu.o \
 		$(BUILD)advection_driver.o \
 		$(BUILD)adv_mpdata.o \
 		$(BUILD)advect.o \
@@ -420,11 +421,14 @@ $(BUILD)lsm_noahlsm.o: $(PHYS)lsm_noahlsm.f90
 ###################################################################
 #	Planetary Boundary Layer code
 ###################################################################
-$(BUILD)pbl_driver.o: $(PHYS)pbl_driver.f90 $(BUILD)pbl_simple.o $(BUILD)data_structures.o
+$(BUILD)pbl_driver.o: $(PHYS)pbl_driver.f90 $(BUILD)pbl_simple.o $(BUILD)pbl_ysu.o $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)pbl_driver.f90 -o $(BUILD)pbl_driver.o
 
 $(BUILD)pbl_simple.o: $(PHYS)pbl_simple.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)pbl_simple.f90 -o $(BUILD)pbl_simple.o
+
+$(BUILD)pbl_ysu.o: $(PHYS)pbl_ysu.f90
+	${F90} ${FFLAGS} $(PHYS)pbl_ysu.f90 -o $(BUILD)pbl_ysu.o
 
 
 ###################################################################

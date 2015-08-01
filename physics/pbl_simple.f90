@@ -99,7 +99,7 @@ contains
             Kq_m(:,:,j) = Kq_m(:,:,j)/diffusion_reduction
             Kq_m(:,:,j)= Kq_m(:,:,j)* dt/((domain%dz(2:nx+1,2:,j+1)+domain%dz(2:nx+1,:nz-1,j+1))/2)
             call pbl_diffusion(domain,j)
-            domain%qv_pbl_tendency(:,:,j+1)=(domain%qv(:,:,j+1)-lastqv_m(:,:,j+1))/dt
+            domain%tend%qv_pbl(:,:,j+1)=(domain%qv(:,:,j+1)-lastqv_m(:,:,j+1))/dt
         enddo
         !$omp end do
         !$omp end parallel

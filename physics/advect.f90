@@ -152,7 +152,7 @@ contains
             call advect3d(domain%nrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
         endif
         
-        domain%qv_adv_tendency=(domain%qv-lastqv_m)/dt
+        domain%tend%qv_adv=(domain%qv-lastqv_m)/dt
     end subroutine upwind
     
 end module adv_upwind
