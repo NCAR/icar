@@ -75,11 +75,11 @@ contains
         domain%tend%qv_pbl=0
         
         write(*,*) "Initializing PBL Scheme"
-        if (options%physics%boundarylayer==2) then
+        if (options%physics%boundarylayer==PBL_SIMPLE) then
             write(*,*) "    Simple PBL"
             call init_simple_pbl(domain,options)
         endif
-        if (options%physics%boundarylayer==3) then
+        if (options%physics%boundarylayer==PBL_YSU) then
             write(*,*) "    YSU PBL"
             if (.not.allocated(domain%tend%th))     allocate(domain%tend%th(ims:ime,kms:kme,jms:jme))
             if (.not.allocated(domain%tend%qc))     allocate(domain%tend%qc(ims:ime,kms:kme,jms:jme))
@@ -103,11 +103,11 @@ contains
         type(options_type),intent(in)::options
         real,intent(in)::dt_in
         
-        if (options%physics%boundarylayer==2) then
+        if (options%physics%boundarylayer==PBL_SIMPLE) then
             call simple_pbl(domain,dt_in)
         endif
         
-        if (options%physics%boundarylayer==3) then
+        if (options%physics%boundarylayer==PBL_YSU) then
             stop( "YSU PBL not implemented yet")
 !             call ysu(domain%Um, domain%Vm,   domain%th, domain%t,               &
 !                      domain%qv, domain%cloud,domain%ice,                        &
@@ -134,7 +134,7 @@ contains
     subroutine pbl_finalize(options)
         implicit none
         type(options_type),intent(in)::options
-        if (options%physics%boundarylayer==2) then
+        if (options%physics%boundarylayer==PBL_SIMPLE) then
             call finalize_simple_pbl()
         endif
     end subroutine pbl_finalize

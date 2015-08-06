@@ -19,12 +19,11 @@ contains
         type(options_type),intent(in) :: options
         real,intent(in) :: dt
         
-        if (options%physics%advection==1) then
+        if (options%physics%advection==ADV_UPWIND) then
             call upwind(domain,options,dt)
-        elseif(options%physics%advection==2) then
+        elseif(options%physics%advection==ADV_MPDATA) then
             call mpdata(domain,options,dt)
         endif
-!       NOTE if advection==0 (e.g.) do nothing!
         
     end subroutine advect
 

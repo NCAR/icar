@@ -51,7 +51,7 @@ module land_surface
     ! also avoids adding LOTS of LSM variables to the main domain datastrucurt
     real,allocatable, dimension(:,:)    :: SMSTAV,SFCRUNOFF,UDRUNOFF,   &
                                            SNOW,SNOWC,SNOWH, ACSNOW, ACSNOM, SNOALB, QFX,   &
-                                           QGH, GSW, ALBEDO, ALBBCK, ZNT, Z0, XICE, EMISS, &
+                                           QGH, GSW, ALBEDO, ALBBCK, Z0, XICE, EMISS, &
                                            EMBCK, QSFC, RAINBL, CHS, CHS2, CQS2, CPM, SR,       &
                                            CHKLOWQ, LAI, QZ0, SHDMIN,SHDMAX,SNOTIME,SNOPCX,     &
                                            POTEVP,RIB, NOAHRES,FLX4_2D,FVB_2D,FBUR_2D,   &
@@ -78,7 +78,7 @@ module land_surface
     
 contains
     
-    real function sat_mr(t,p)
+    real function sat_mr(t,p) 
     ! Calculate the saturated mixing ratio at a temperature (K), pressure (Pa)
         implicit none
         real,intent(in) :: t,p
@@ -141,14 +141,14 @@ contains
         ! convert sensible heat flux to a temperature delta term
         ! J/s/m^2 * s / J/(kg*K) => kg*K/m^2 ... /((kg/m^3) * m) => K
         dTemp=(domain%sensible_heat(2:nx-1,2:ny-1)*dt/cp)  &
-             / (domain%rho(2:nx-1,1,2:ny-1)*domain%dz(2:nx-1,1,2:ny-1))
+             / (domain%rho(2:nx-1,1,2:ny-1)*domain%dz_inter(2:nx-1,1,2:ny-1))
         ! add temperature delta and convert back to potential temperature
         domain%th(2:nx-1,1,2:ny-1)=domain%th(2:nx-1,1,2:ny-1)+dTemp/domain%pii(2:nx-1,1,2:ny-1)
         
         ! convert latent heat flux to a mixing ratio tendancy term
         ! J/s/m^2 * s / J/kg => kg/m^2 ... / (kg/m^3 * m) => kg/kg
         lhdQV=(domain%latent_heat(2:nx-1,2:ny-1)/LH_vaporization*dt) &
-             / (domain%rho(2:nx-1,1,2:ny-1)*domain%dz(2:nx-1,1,2:ny-1))
+             / (domain%rho(2:nx-1,1,2:ny-1)*domain%dz_inter(2:nx-1,1,2:ny-1))
         ! add water vapor in kg/kg
         domain%qv(2:nx-1,1,2:ny-1)=domain%qv(2:nx-1,1,2:ny-1)+lhdQV
         ! enforce some minimum water vapor content. 
@@ -204,8 +204,6 @@ contains
         ALBEDO=0.17
         allocate(ALBBCK(ime,jme))
         ALBBCK=0.17 !?
-        allocate(ZNT(ime,jme))
-        ZNT=0.01 !?
         allocate(Z0(ime,jme))
         Z0=0.01 !?
         allocate(XICE(ime,jme))
@@ -296,12 +294,13 @@ contains
         dTemp=0
         allocate(lhdQV(ime-2,jme-2))
         lhdQV=0
-        if (options%physics%landsurface==2) then
+        if (options%physics%landsurface==LSM_SIMPLE) then
             write(*,*) "    Simple LSM (may not work?)"
+            stop("Simple LSM not settup, choose a different LSM options")
             call lsm_simple_init(domain,options)
         endif
         ! Noah Land Surface Model
-        if (options%physics%landsurface==3) then
+        if (options%physics%landsurface==LSM_NOAH) then
             write(*,*) "    Noah LSM"
             ids=1;jds=1;kds=1
             ims=1;jms=1;kms=1
@@ -367,16 +366,16 @@ contains
             lsm_dt=model_time-last_model_time
             last_model_time=model_time
             
-            if (options%physics%landsurface==1) then
+            if (options%physics%landsurface==LSM_BASIC) then
                 call lsm_basic(domain,options,lsm_dt)
-            else if (options%physics%landsurface==2) then
-                call lsm_simple(domain%th,domain%pii,domain%qv,domain%current_rain, domain%current_snow,domain%p, &
-                                domain%swdown,domain%lwdown, sqrt(domain%u(1:ny,1,1:nx)**2+domain%v(1:ny,1,1:nx)**2), &
+            else if (options%physics%landsurface==LSM_SIMPLE) then
+                call lsm_simple(domain%th,domain%pii,domain%qv,domain%current_rain, domain%current_snow,domain%p_inter, &
+                                domain%swdown,domain%lwdown, sqrt(domain%u10**2+domain%v10**2), &
                                 domain%sensible_heat, domain%latent_heat, domain%ground_heat, &
                                 domain%skin_t, domain%soil_t, domain%soil_vwc, domain%snow_swe, &
                                 options,lsm_dt)
                                 
-            else if (options%physics%landsurface==3) then
+            else if (options%physics%landsurface==LSM_NOAH) then
                 ! Call the Noah Land Surface Model
                 
                 ! it would be better to call the MYJ SFC scheme here...
@@ -384,25 +383,25 @@ contains
                 ! 2m saturated mixing ratio
                 do j=1,ny
                     do i=1,nx
-                        QGH(i,j)=sat_mr(T2m(i,j),domain%p(i,1,j))
+                        QGH(i,j)=sat_mr(T2m(i,j),domain%psfc)
                     enddo
                 enddo
                 ! shortwave down
                 ! GSW=domain%swdown   ! This does not actually get used in Noah
                 
                 ! exchange coefficients
-                call calc_exchange_coefficient(sqrt(domain%u(1:nx,1,1:ny)**2+domain%v(1:nx,1,1:ny)**2),domain%skin_t,T2m,CHS)
+                call calc_exchange_coefficient(sqrt(domain%u10**2+domain%v10**2),domain%skin_t,T2m,CHS)
                 CHS2=CHS
                 CQS2=CHS
                 
-                call lsm_noah(domain%dz,domain%qv,domain%p,domain%th*domain%pii,domain%skin_t,  &
+                call lsm_noah(domain%dz_inter,domain%qv,domain%p_inter,domain%th*domain%pii,domain%skin_t,  &
                             domain%sensible_heat,QFX,domain%latent_heat,domain%ground_heat, &
                             QGH,GSW,domain%swdown,domain%lwdown,SMSTAV,domain%soil_totalmoisture, &
                             SFCRUNOFF, UDRUNOFF, &
                             domain%veg_type,domain%soil_type, &
                             ISURBAN,ISICE, &
                             domain%vegfrac, &
-                            ALBEDO,ALBBCK,ZNT,Z0,domain%soil_tdeep,domain%landmask,XICE,EMISS,EMBCK,     &
+                            ALBEDO,ALBBCK,domain%znt,Z0,domain%soil_tdeep,domain%landmask,XICE,EMISS,EMBCK,     &
                             SNOWC,QSFC,domain%rain-RAINBL,MMINLU,         &
                             num_soil_layers,lsm_dt,DZS,ITIMESTEP,         &
                             domain%soil_vwc,domain%soil_t,domain%snow_swe,&
@@ -410,7 +409,7 @@ contains
                             CHS,CHS2,CQS2,CPM,ROVCP,SR,chklowq,lai,qz0,   & !H
                             myj,frpcpn,                                   &
                             SH2O,SNOWH,                                   & !H
-                            domain%u(1:nx,:,1:ny), domain%v(1:nx,:,1:ny), & !I
+                            domain%Um, domain%Vm,                         & !I
                             SNOALB,SHDMIN,SHDMAX,                         & !I
                             SNOTIME,                                      & !?
                             ACSNOM,ACSNOW,                                & !O

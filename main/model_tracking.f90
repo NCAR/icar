@@ -37,7 +37,8 @@ contains
         "Added proper date tracking, requires date='yyyy/mm/dd hh:mm:ss' option"// &
         "      in namelist.", &
         "Added preliminary support for running the Noah LSM. ", &
-        "Removed add_low_topo from options... MAJOR changes elsewhere, lots of new options" &
+        "Removed add_low_topo from options... MAJOR changes elsewhere, lots of "// &
+        "      new options (mp_options, lt_options)." &
         ]
         
     end subroutine init_model_diffs

@@ -51,7 +51,7 @@ contains
             PRATEC=0
         endif
         
-        if (options%physics%convection==1) then
+        if (options%physics%convection==CU_TIEDTKE) then
             write(*,*) "    Tiedtke Cumulus scheme"
             call tiedtkeinit(domain%tend%th,domain%tend%qv,   &
                              domain%tend%qc,domain%tend%qi,   &
@@ -61,7 +61,7 @@ contains
                              ids, ide, jds, jde, kds, kde-1,  &
                              ids, ide, jds, jde, kds, kde,    &
                              ids, ide, jds, jde, kds, kde-1)
-         elseif (options%physics%convection==3) then
+         elseif (options%physics%convection==CU_KAINFR) then
              write(*,*) "    Kain-Fritsch Cumulus scheme"
              allocate(W0AVG(ids:ide,kds:kde,jds:jde))
              allocate(NCA(ids:ide,jds:jde))
@@ -121,25 +121,19 @@ subroutine convect(domain,options,dt_in)
         domain%tend%Qr(:,:,j) = 0
         domain%tend%u(:,:,j)  = 0
         domain%tend%v(:,:,j)  = 0
-        domain%p_inter(:,:kde-1,j)  = (domain%p(:,kds:kde-1,j) + domain%p(:,kds+1:kde,j))/2
-        domain%p_inter(:,kde,j)     =  domain%p(:,kde,j) + (domain%p(:,kde,j)-domain%p_inter(:,kde-1,j))
-        
-        domain%Vm(:,:,j) = (domain%v(:,:,j+1)+domain%v(:,:,j))/2
-        domain%Um(:,:,j) = (domain%u(ids:ide,:,j)+domain%u(ids+1:ide+1,:,j))/2
-        domain%T(:,:,j)  = domain%th(:,:,j)*domain%pii(:,:,j)
     enddo
     !$omp end do
     !$omp end parallel
     
     
-    if (options%physics%convection==1) then
+    if (options%physics%convection==CU_TIEDTKE) then
 
 
         call CU_TIEDTKE(                                          &
                  dt_in,itimestep,STEPCU                           &
                 ,RAINCV,PRATEC,domain%latent_heat/LH_vaporization &
                 ,domain%sensible_heat,domain%ZNU                  &
-                ,domain%Um,domain%Vm,domain%w*domain%dz/domain%dx &
+                ,domain%Um,domain%Vm,domain%w_real                &
                 ,domain%T,domain%qv                               &
                 ,domain%cloud,domain%ice,domain%pii,domain%rho    &
                 ,domain%tend%qv_adv,domain%tend%qv_pbl            &
@@ -152,7 +146,7 @@ subroutine convect(domain,options,dt_in)
                 ,.True.,.True.,.True.,.True.,.True.               &
                 )
     
-    elseif (options%physics%convection==3) then
+    elseif (options%physics%convection==CU_KAINFR) then
         call KFCPS(                                          &
                ids,ide, jds,jde, kds,kde                     & ! domain
               ,ids,ide, jds,jde, kds,kde                     & ! memory
@@ -161,7 +155,7 @@ subroutine convect(domain,options,dt_in)
               ,domain%rho                                    & ! rho
               ,RAINCV,PRATEC,NCA                             & ! convective rain, convective rain rate, 
               ,domain%Um,domain%Vm,domain%th,domain%t        &
-              ,domain%w*domain%dz/domain%dx                  &
+              ,domain%w_real                                 &
               ,domain%qv,domain%dz,domain%p,domain%pii       &
               ,W0AVG                                         & ! "average" vertical velocity (computed internally from w)
               ,XLV0,XLV1,XLS0,XLS1,cp,Rd,gravity,EP1         & ! physical "constants"
@@ -188,7 +182,7 @@ subroutine convect(domain,options,dt_in)
         domain%cloud(:,:,j)=domain%cloud(:,:,j)+ domain%tend%Qc(:,:,j)*internal_dt
         domain%th(:,:,j)   =domain%th(:,:,j)   + domain%tend%TH(:,:,j)*internal_dt
         domain%ice(:,:,j)  =domain%ice(:,:,j)  + domain%tend%Qi(:,:,j)*internal_dt
-        if (options%physics%convection==3) then
+        if (options%physics%convection==CU_KAINFR) then
             domain%qsnow(:,:,j) =domain%qsnow(:,:,j) + domain%tend%Qs(:,:,j)*internal_dt
             domain%qrain(:,:,j) =domain%qrain(:,:,j) + domain%tend%Qr(:,:,j)*internal_dt
         endif
@@ -196,7 +190,7 @@ subroutine convect(domain,options,dt_in)
         domain%rain(:,j)   =domain%rain(:,j)  + RAINCV(:,j)
         domain%crain(:,j)  =domain%crain(:,j) + RAINCV(:,j)
         
-        if (options%physics%convection==1) then
+        if (options%physics%convection==CU_TIEDTKE) then
             domain%u(ids+1:ide,:,j) = domain%u(ids+1:ide,:,j) + (domain%tend%u(ids:ide-1,:,j)+domain%tend%u(ids+1:ide,:,j))/2 * internal_dt
             if (j>jds) then
                 domain%v(:,:,j) = domain%v(:,:,j) + (domain%tend%v(:,:,j)+domain%tend%v(:,:,j-1))/2 * internal_dt

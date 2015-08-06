@@ -151,7 +151,7 @@ contains
         endif
         
         ! linear winds
-        if (options%physics%windtype==1) then
+        if (options%physics%windtype==WIND_LINEAR) then
             call linear_perturb(domain,options,options%vert_smooth,.False.,options%advect_density)
         endif
         ! else assumes even flow over the mountains
@@ -197,19 +197,19 @@ contains
                 domain%costheta(i,j)=abs(dlon/dist)
             enddo
         enddo
-        if (options%debug) then
-            print*, "Domain Geometry"
-            print*, "MAX / MIN SIN(theta) (ideally 0)"
-            print*, "   ", maxval(domain%sintheta), minval(domain%sintheta)
-            print*, "MAX / MIN COS(theta) (ideally 1)"
-            print*, "   ", maxval(domain%costheta), minval(domain%costheta)
-            print*, " "
-        endif
-!       dzdx/y used in rotating windfield back to terrain following grid in a simple fashion
+!         if (options%debug) then
+!             print*, "Domain Geometry"
+!             print*, "MAX / MIN SIN(theta) (ideally 0)"
+!             print*, "   ", maxval(domain%sintheta), minval(domain%sintheta)
+!             print*, "MAX / MIN COS(theta) (ideally 1)"
+!             print*, "   ", maxval(domain%costheta), minval(domain%costheta)
+!             print*, " "
+!         endif
+!       dzdx/y used effect of terrain following grid on W component of wind field
         allocate(domain%dzdx(nx-1,ny))
         allocate(domain%dzdy(nx,ny-1))
-        domain%dzdx=sqrt((domain%terrain(2:nx,:)-domain%terrain(1:nx-1,:))**2+domain%dx**2)/domain%dx
-        domain%dzdy=sqrt((domain%terrain(:,2:ny)-domain%terrain(:,1:ny-1))**2+domain%dx**2)/domain%dx
+        domain%dzdx = (domain%terrain(2:nx,:)-domain%terrain(1:nx-1,:)) / domain%dx
+        domain%dzdy = (domain%terrain(:,2:ny)-domain%terrain(:,1:ny-1)) / domain%dx
         
     end subroutine init_winds
     

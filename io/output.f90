@@ -165,7 +165,7 @@ contains
         call check( nf90_def_dim(ncid, "lon_u", nx+1, xu_id) )
         call check( nf90_def_dim(ncid, "lat_v", ny+1, yv_id) )
         
-        if (options%physics%landsurface>=2) then
+        if (options%physics%landsurface==LSM_NOAH) then
             call check( nf90_def_dim(ncid, "depth", nsoil, soil_id) )
         endif
     
@@ -231,7 +231,7 @@ contains
             varid(5)=temp_id
     
             ! these should only be output for thompson microphysics
-            if (options%physics%microphysics==1) then
+            if (options%physics%microphysics==MP_THOMPSON) then
                 call check( nf90_def_var(ncid, "qg", NF90_REAL, dimids, temp_id) )
                 call check( nf90_put_att(ncid,temp_id,"standard_name","mass_fraction_of_graupel_in_air"))
                 call check( nf90_put_att(ncid,temp_id,"long_name","Graupel ice content"))
@@ -298,7 +298,7 @@ contains
             call check( nf90_put_att(ncid,temp_id,"units","kg m-3"))
             varid(21)=temp_id
         
-            if (options%physics%windtype==1) then
+            if (options%physics%windtype==WIND_LINEAR) then
                 call check( nf90_def_var(ncid, "nsq", NF90_REAL, dimids, temp_id) )
                 call check( nf90_put_att(ncid,temp_id,"standard_name","square_of_brunt_vaisala_frequency_in_air"))
                 call check( nf90_put_att(ncid,temp_id,"long_name","Brunt Vaisala Frequency (squared)"))
@@ -368,7 +368,7 @@ contains
         call check( nf90_put_att(ncid,temp_id,"units","kg m-2"))
         varid(15)=temp_id
         
-        if (options%physics%microphysics==1) then
+        if (options%physics%microphysics==MP_THOMPSON) then
             call check( nf90_def_var(ncid, "graupel", NF90_REAL, dimtwo_time, temp_id) )
             call check( nf90_put_att(ncid,temp_id,"standard_name","graupel_amount"))
             call check( nf90_put_att(ncid,temp_id,"long_name","Combined large scale and convective graupel (accumulated)"))
@@ -386,13 +386,14 @@ contains
         
         ! surface fluxes
         ! these should only be output for radiation packages that compute them
-        if (options%physics%radiation>=2) then
+        if (options%physics%radiation==RA_SIMPLE) then
             call check( nf90_def_var(ncid, "clt", NF90_REAL, dimtwo_time, temp_id) )
             call check( nf90_put_att(ncid,temp_id,"standard_name","cloud_area_fraction"))
             call check( nf90_put_att(ncid,temp_id,"long_name","Fractional cloud cover"))
             call check( nf90_put_att(ncid,temp_id,"units","[0-1]"))
             varid(22)=temp_id
-    
+        endif
+        if (options%physics%radiation>0) then
             call check( nf90_def_var(ncid, "rsds", NF90_REAL, dimtwo_time, temp_id) )
             call check( nf90_put_att(ncid,temp_id,"standard_name","surface_downwelling_shortwave_flux_in_air"))
             call check( nf90_put_att(ncid,temp_id,"long_name","Shortwave downward radiation energy flux at the surface"))
@@ -409,7 +410,7 @@ contains
         endif
         
         ! these should only be output for lsm packages that compute them
-        if (options%physics%landsurface>=2) then
+        if (options%physics%landsurface==LSM_NOAH) then
             call check( nf90_def_var(ncid, "rlus", NF90_REAL, dimtwo_time, temp_id) )
             call check( nf90_put_att(ncid,temp_id,"standard_name","surface_upwelling_longwave_flux_in_air"))
             call check( nf90_put_att(ncid,temp_id,"long_name","Longwave upward radiative energy flux from the surface"))
@@ -512,7 +513,7 @@ contains
             call check( nf90_inq_varid(ncid, "qs", temp_id) )
             varid(5)=temp_id
             ! these should only be output for thompson microphysics
-            if (options%physics%microphysics==1) then
+            if (options%physics%microphysics==MP_THOMPSON) then
                 call check( nf90_inq_varid(ncid, "qg", temp_id) )
                 varid(6)=temp_id
                 call check( nf90_inq_varid(ncid, "nr", temp_id) )
@@ -524,7 +525,7 @@ contains
             varid(11)=temp_id
             call check( nf90_inq_varid(ncid, "rho", temp_id) )
             varid(21)=temp_id
-            if (options%physics%windtype==1) then
+            if (options%physics%windtype==WIND_LINEAR) then
                 call check( nf90_inq_varid(ncid, "nsq", temp_id) )
                 varid(33)=temp_id
             endif
@@ -546,7 +547,7 @@ contains
         varid(32)=temp_id
         call check( nf90_inq_varid(ncid, "snow",temp_id) )
         varid(15)=temp_id
-        if (options%physics%microphysics==1) then
+        if (options%physics%microphysics==MP_THOMPSON) then
             call check( nf90_inq_varid(ncid, "graupel", temp_id) )
             varid(16)=temp_id
         endif
@@ -557,16 +558,18 @@ contains
     
         ! surface fluxes
         ! these should only be output for radiation packages that compute them
-        if (options%physics%radiation>=2) then
+        if (options%physics%radiation==RA_SIMPLE) then
             call check( nf90_inq_varid(ncid, "clt", temp_id) )
             varid(22)=temp_id
+        endif
+        if (options%physics%radiation>0) then
             call check( nf90_inq_varid(ncid, "rsds", temp_id) )
             varid(18)=temp_id
             call check( nf90_inq_varid(ncid, "rlds", temp_id) )
             varid(19)=temp_id
         endif
         ! these should only be output for lsm packages that compute them
-        if (options%physics%landsurface>=2) then
+        if (options%physics%landsurface==LSM_NOAH) then
             call check( nf90_inq_varid(ncid, "rlus",  temp_id) )
             varid(29)=temp_id
             call check( nf90_inq_varid(ncid, "shs",   temp_id) )
@@ -670,7 +673,7 @@ contains
             call check( nf90_put_var(ncid, varid(4),  domain%qrain, start_three_D),    trim(filename)//":qrain" )
             call check( nf90_put_var(ncid, varid(5),  domain%qsnow, start_three_D),    trim(filename)//":qsnow" )
             ! these should only be output for thompson microphysics
-            if (options%physics%microphysics==1) then
+            if (options%physics%microphysics==MP_THOMPSON) then
                 call check( nf90_put_var(ncid, varid(6),  domain%qgrau, start_three_D),trim(filename)//":qgraupel" )
                 call check( nf90_put_var(ncid, varid(7),  domain%nrain, start_three_D),trim(filename)//":nrain" )
                 call check( nf90_put_var(ncid, varid(8),  domain%nice,  start_three_D),trim(filename)//":nice" )
@@ -681,7 +684,7 @@ contains
             call check( nf90_put_var(ncid, varid(12), domain%p,     start_three_D),    trim(filename)//":p" )
             call check( nf90_put_var(ncid, varid(13), domain%th,    start_three_D),    trim(filename)//":th" )
             call check( nf90_put_var(ncid, varid(21), domain%rho,   start_three_D),    trim(filename)//":rho" )
-            if (options%physics%windtype==1) then
+            if (options%physics%windtype==WIND_LINEAR) then
                 call check( nf90_put_var(ncid, varid(33), domain%nsquared, start_three_D), trim(filename)//":nsquared" )
             endif
         else
@@ -694,7 +697,7 @@ contains
         call check( nf90_put_var(ncid, varid(14), domain%rain,           start_two_D), trim(filename)//":rain" )
         call check( nf90_put_var(ncid, varid(32), domain%rain-last_rain, start_two_D), trim(filename)//":rainrate" )
         call check( nf90_put_var(ncid, varid(15), domain%snow,           start_two_D), trim(filename)//":snow" )
-        if (options%physics%microphysics==1) then
+        if (options%physics%microphysics==MP_THOMPSON) then
             call check( nf90_put_var(ncid, varid(16), domain%graupel,    start_two_D), trim(filename)//":graupel" )
         endif
         if (options%physics%convection>0) then
@@ -702,13 +705,15 @@ contains
         endif
         
         ! these should only be output for radiation packages that compute them
-        if (options%physics%radiation>=2) then
+        if (options%physics%radiation>0) then
             call check( nf90_put_var(ncid, varid(18), domain%swdown,     start_two_D ), trim(filename)//":swdown" )
             call check( nf90_put_var(ncid, varid(19), domain%lwdown,     start_two_D ), trim(filename)//":lwdown" )
+        endif
+        if (options%physics%radiation==RA_SIMPLE) then
             call check( nf90_put_var(ncid, varid(22), domain%cloudfrac,  start_two_D ), trim(filename)//":cloudfrac" )
         endif
         ! these should only be output for lsm packages that compute them
-        if (options%physics%landsurface>=2) then
+        if (options%physics%landsurface==LSM_NOAH) then
             call check( nf90_put_var(ncid, varid(23), domain%sensible_heat,start_two_D),  trim(filename)//":sensible_heat" )
             call check( nf90_put_var(ncid, varid(24), domain%latent_heat,  start_two_D),  trim(filename)//":latent_heat" )
             call check( nf90_put_var(ncid, varid(25), domain%ground_heat,  start_two_D),  trim(filename)//":ground_heat" )

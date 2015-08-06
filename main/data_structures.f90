@@ -84,6 +84,35 @@ module data_structures
     integer,parameter::MAXVARLENGTH     = 200   ! maximum variable name length
     integer,parameter::MAXLEVELS        = 500   ! maximum number of vertical layers (should typically be ~10-20)
     integer,parameter::MAX_NUMBER_FILES = 50000 ! maximum number of permitted input files (probably a bit extreme)
+
+!------------------------------------------------
+! Physics scheme selection definitions
+!
+! NB: BASIC typically means "use the data from the low res model"
+!     SIMPLE typically means a relatively simple formulation written for ICAR
+!------------------------------------------------
+    integer, parameter :: kCU_TIEDTKE    = 1
+    integer, parameter :: kCU_SIMPLE     = 2
+    integer, parameter :: kCU_KAINFR     = 3
+
+    integer, parameter :: kMP_THOMPSON   = 1
+    integer, parameter :: kMP_SB04       = 2
+
+    integer, parameter :: kPBL_BASIC     = 1
+    integer, parameter :: kPBL_SIMPLE    = 2
+    integer, parameter :: kPBL_YSU       = 3
+
+    integer, parameter :: kLSM_BASIC     = 1
+    integer, parameter :: kLSM_SIMPLE    = 2
+    integer, parameter :: kLSM_NOAH      = 3
+
+    integer, parameter :: kRA_BASIC      = 1
+    integer, parameter :: kRA_SIMPLE     = 2
+
+    integer, parameter :: kADV_UPWIND    = 1
+    integer, parameter :: kADV_MPDATA    = 2
+    
+    integer, parameter :: kWIND_LINEAR   = 1
 !------------------------------------------------
 ! Physical Constants
 !------------------------------------------------
@@ -206,16 +235,18 @@ module data_structures
     type, extends(linearizable_type) :: domain_type
         ! 3D atmospheric fields
         real, allocatable, dimension(:,:,:) :: w,ur,vr,wr ! w, and u,v,w * density
+        real, allocatable, dimension(:,:,:) :: w_real     ! real space w on the mass grid (including U,V*dz/dx component)
         real, allocatable, dimension(:,:,:) :: nice,nrain ! number concentration for ice and rain
         real, allocatable, dimension(:,:,:) :: qgrau      ! graupel mass mixing ratio 
         real, allocatable, dimension(:,:,:) :: p_inter    ! pressure on the vertical interfaces (p[:,1,:]=psfc)
+        real, allocatable, dimension(:,:,:) :: dz_inter ! dz between interface levels
         real, allocatable, dimension(:,:,:) :: mut        ! mass in a given cell ? (pbot-ptop)
         ! 3D soil field
         real, allocatable, dimension(:,:,:) :: soil_t, soil_vwc
         
         ! 2D fields, primarily fluxes to/from the land surface
         ! surface pressure
-        real, allocatable, dimension(:,:)   :: psfc, p_top
+        real, allocatable, dimension(:,:)   :: psfc, ptop
         ! precip fluxes
         real, allocatable, dimension(:,:)   :: rain,crain,snow,graupel
         real, allocatable, dimension(:,:)   :: current_rain, current_snow
@@ -237,7 +268,7 @@ module data_structures
         integer, allocatable, dimension(:,:):: soil_type,veg_type
         ! surface and PBL parameter
         real, allocatable, dimension(:,:)   :: znt, ustar, pbl_height
-        real, allocatable, dimension(:,:)   :: u10, v10
+        real, allocatable, dimension(:,:)   :: u10, v10, t2m, q2m
         
         ! current model time step length (should this be somewhere else?)
         real::dt

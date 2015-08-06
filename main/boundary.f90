@@ -53,9 +53,10 @@ module boundary_conditions
 
     integer::smoothing_window=1 ! this will get updated in bc_init if it isn't an ideal run
     
-    public::bc_init
-    public::bc_update
-    public::bc_find_step
+    public :: bc_init
+    public :: bc_update
+    public :: bc_find_step
+    public :: update_pressure
 contains
 
     function bc_find_step(options) result(step)
@@ -590,6 +591,33 @@ contains
         
     end subroutine load_restart_file
     
+    subroutine init_znu(domain)
+        implicit none
+        type(domain_type), intent(inout) :: domain
+        integer :: n_levels,i,xpt,ypt
+        real    :: ptop,psfc
+        
+        n_levels=size(domain%p,2)
+        
+        ! one grid point into the domain gets a non-boundary point
+        xpt=2
+        ypt=2
+        ptop=domain%p(xpt,n_levels,ypt)-(domain%p(xpt,n_levels-1,ypt)-domain%p(xpt,n_levels,ypt))/2.0 !NOT CORRECT
+        psfc=domain%p(xpt,1,ypt)+(domain%p(xpt,1,ypt)-domain%p(xpt,2,ypt))/2.0 !NOT CORRECT
+        ptop=max(ptop,1.0)
+        allocate(domain%znu(n_levels))
+        allocate(domain%znw(n_levels))
+        do i=1,n_levels
+            domain%znu(i)=(domain%p(xpt,i,ypt)-ptop)/(psfc-ptop)
+            if (i>1) then
+                domain%znw(i)=((domain%p(xpt,i,ypt)+domain%p(xpt,i-1,ypt))/2-ptop)/(psfc-ptop)
+            else
+                domain%znw(i)=1
+            endif
+        enddo
+    end subroutine init_znu
+
+    
 !   initialize the boundary conditions (read inital conditions, etc.)
     subroutine bc_init(domain,bc,options)
         implicit none
@@ -693,10 +721,10 @@ contains
                             bc%geolut, bc%vert_lut, curstep, boundary_value, &
                             options)
 
-            if (options%physics%landsurface==1) then
+            if (options%physics%landsurface==LSM_BASIC) then
                 call read_2dvar(domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep,options)
                 call read_2dvar(domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep,options)
-                if (options%physics%boundarylayer==1) then
+                if (options%physics%boundarylayer==PBL_BASIC) then
                     call read_2dvar(domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep,options)
                 endif
                 where(domain%latent_heat<0) domain%latent_heat=0
@@ -719,6 +747,9 @@ contains
             domain%rho=domain%p/(Rd*domain%th*domain%pii) ! kg/m^3
             call update_winds(domain,options)
         endif
+        
+        ! calculate znu and znw from domain pressure variable now that we have it
+        call init_znu(domain)
     end subroutine bc_init
 
 
@@ -811,8 +842,11 @@ contains
                     ! lapse rate (not sure if this should be positive or negative)
                     ! dTdz = (loresT(:,:,j) - hiresT(:,:,j)) / dz
                     ! mean temperature between levels
-                    tmean= (hiresT(:,i,j) + lowresT(:,i,j)) / 2
-                
+                    if (present(hiresT)) then
+                        tmean= (hiresT(:,i,j) + lowresT(:,i,j)) / 2
+                    else
+                        tmean= lowresT(:,i,j)
+                    endif                
                     ! slp= ps*np.exp(((g/R)*Hp) / (ts - a*Hp/2.0 + e*Ch))
                     pressure(:,i,j) = pressure(:,i,j) * exp( ((gravity/Rd) * dz) / tmean )   !&
 !                                         (tmean + (e * 0.12) ) )
@@ -999,11 +1033,11 @@ contains
                       options, time_varying_zlut=newbc%vert_lut)
 
         ! finally, if we need to read in land surface forcing read in those 2d variables as well. 
-        if (options%physics%landsurface==1) then
+        if (options%physics%landsurface==LSM_BASIC) then
             call read_2dvar(bc%next_domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep,options)
             call read_2dvar(bc%next_domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep,options)
-            ! note this is nested in the landsurface=1 condition, because that is the only time it makes sense. 
-            if (options%physics%boundarylayer==1) then
+            ! note this is nested in the landsurface=LSM_BASIC condition, because that is the only time it makes sense. 
+            if (options%physics%boundarylayer==PBL_BASIC) then
                 call read_2dvar(bc%next_domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep,options)
             endif
             ! NOTE, this is a kludge to prevent the model from sucking more moisture out of the lower model layer than exists
@@ -1036,7 +1070,7 @@ contains
         
         call update_winds(bc%next_domain,options)
         ! copy it to the primary domain for output purposes (could also be used for convection or blocking parameterizations?)
-        if (options%physics%windtype==1) then
+        if (options%physics%windtype==WIND_LINEAR) then
             domain%nsquared=bc%next_domain%nsquared
         endif
         

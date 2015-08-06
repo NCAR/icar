@@ -9,18 +9,20 @@
 !! ----------------------------------------------------------------------------
 module time_step
     use data_structures     ! *_type  types
-    use microphysics,                only : mp
-    use convection,                  only : convect
-    use land_surface,                only : lsm
-    use wind,                        only : balance_uvw
-    use advection,                   only : advect
-    use output,                      only : write_domain
-    use planetary_boundary_layer,    only : pbl
-    use radiation,                   only : rad
+    use microphysics,               only : mp
+    use convection,                 only : convect
+    use land_surface,               only : lsm
+    use wind,                       only : balance_uvw
+    use advection,                  only : advect
+    use output,                     only : write_domain
+    use planetary_boundary_layer,   only : pbl
+    use radiation,                  only : rad
+    use boundary_conditions,        only : update_pressure
     implicit none
     private
     public :: step
-    
+
+    real, dimension(:,:), allocatable :: lastw, currw ! temporaries used to compute diagnostic w_real field
 contains
     
 !   update just the edges of curdata by adding dXdt
@@ -85,7 +87,58 @@ contains
         ! could avoid this by assuming density doesn't change... but would need to keep an "old" density around
         ! also, convection can modify u and v so it needs to rebalanced
         call balance_uvw(domain,options)
-    end subroutine forcing_update       
+        
+        call diagnostic_update(domain,options)
+    end subroutine forcing_update
+    
+    subroutine diagnostic_update(domain,options)
+        implicit none
+        type(domain_type), intent(inout) :: domain
+        type(options_type), intent(in) :: options
+        
+        integer :: nx,ny,nz, y, z
+        
+        nx=size(domain%p,1)
+        nz=size(domain%p,2)
+        ny=size(domain%p,3)
+        
+        ! update p_inter, psfc, ptop, Um, Vm, mut
+        domain%Um = 0.5*(domain%u(1:nx-1,:,:)+domain%u(2:nx,:,:))
+        domain%Vm = 0.5*(domain%v(:,:,1:ny-1)+domain%v(:,:,2:ny))
+        domain%t  = domain%th * domain%pii
+        
+        domain%p_inter=domain%p
+        call update_pressure(domain%p_inter, domain%z, domain%z_inter, domain%t)
+        domain%psfc = domain%p_inter(:,1,:)
+        ! technically this isn't correct, we should be using update_pressure or similar to solve this
+        domain%ptop = 2*domain%p(:,nz,:) - domain%p(:,nz-1,:)
+        
+        ! dry mass in the gridcell is equivalent to the difference in pressure from top to bottom
+        domain%mut(:,1:nz-1,:) = domain%p_inter(:,1:nz-1,:) - domain%p_inter(:,2:nz,:)
+        domain%mut(:,nz,:) = domain%p_inter(:,nz,:) - domain%ptop
+        
+        if (.not.allocated(lastw)) then
+            allocate(lastw(nx-2,ny-2))
+            allocate(currw(nx-2,ny-2))
+        endif
+        
+        lastw=0
+        do z=1,nz
+            ! compute the U * dz/dx component of vertical motion
+            uw    = domain%u(2:nx,  z,2:ny-1) * domain%dzdx(:,z,2:ny-1)
+            ! compute the V * dz/dy component of vertical motion
+            vw    = domain%v(2:nx-1,z,2:ny  ) * domain%dzdy(2:nx-1,z,:)
+            ! convert the W grid relative motion to m/s
+            currw = domain%w(2:nx-1,z,2:ny-1) * domain%dz_inter(2:nx-1,z,2:ny-1) / domain%dx
+            
+            ! compute the real vertical velocity of air by combining the different components onto the mass grid
+            domain%w_real(2:nx-1,:,2:ny-1) = (uw(1:nx-2,:) + uw(2:nx-1,:))*0.5 &
+                                            +(vw(:,1:ny-2) + uw(:,2:ny-1))*0.5 &
+                                            +(lastw + currw) * 0.5
+                                            
+            lastw=currw ! could avoid this memcopy cost using pointers...
+        end do
+    end subroutine diagnostic_update
 
 
 !   Divides dXdt variables by n timesteps so that after adding it N times we will be at the
@@ -105,6 +158,18 @@ contains
         bc%dqc_dt =bc%dqc_dt/nsteps
     end subroutine apply_dt
     
+    subroutine internal_consistency(domain)
+        implicit none
+        type(domain_type), intent(inout) :: domain
+        integer :: i,nz
+        nz=size(domain%p,2)
+        
+        do i=1,nz
+            
+        enddo
+        
+        
+    end subroutine internal_consistency
     
 !   Step forward one IO time step. 
     subroutine step(domain,options,bc,model_time,next_output)
@@ -150,6 +215,11 @@ contains
 !       adjust the boundary condition dXdt values for the number of time steps
         call apply_dt(bc,ntimesteps)
         write(*,*) "    dt=",dt, "nsteps=",ntimesteps
+        
+!       ensure internal model consistency (should only need to be called here when the model starts...)
+!       e.g. for potential temperature and temperature
+        call diagnostic_update(domain,options)
+        
 !       now just loop over internal timesteps computing all physics in order (operator splitting...)
         do i=1,ntimesteps
             if (dt>1e-5) then

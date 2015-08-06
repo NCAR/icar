@@ -44,7 +44,7 @@ contains
         type(options_type), intent(in)::options
         
         write(*,*) "Initializing Microphysics"
-        if (options%physics%microphysics==1) then
+        if (options%physics%microphysics==MP_THOMPSON) then
             write(*,*) "    Thompson Microphysics"
             call thompson_init(options%mp_options)
         endif
@@ -70,7 +70,7 @@ contains
     !       snow rain ratio
             SR=0
         endif
-        if (options%physics%microphysics==1) then
+        if (options%physics%microphysics==MP_THOMPSON) then
             kts=kds
             kte=kde
             if (options%mp_options%top_mp_level>0) then
@@ -86,7 +86,7 @@ contains
             endif
             call mp_gt_driver(domain%qv, domain%cloud, domain%qrain, domain%ice, &
                             domain%qsnow, domain%qgrau, domain%nice, domain%nrain, &
-                            domain%th, domain%pii, domain%p, domain%dz, dt_in, itimestep, &
+                            domain%th, domain%pii, domain%p, domain%dz_inter, dt_in, itimestep, &
                             domain%rain, domain%rain, &
                             domain%snow, domain%snow, &
                             domain%graupel, domain%graupel, &
@@ -94,7 +94,7 @@ contains
                             ids,ide, jds,jde, kds,kde, &    ! domain dims
                             ids,ide, jds,jde, kds,kde, &    ! memory dims
                             its,ite, jts,jte, kts,kte)      ! tile dims
-        elseif (options%physics%microphysics==2) then
+        elseif (options%physics%microphysics==MP_SB04) then
             call mp_simple_driver(domain%p,domain%th,domain%pii,domain%rho,domain%qv,domain%cloud, &
                             domain%qrain,domain%qsnow,domain%rain,domain%snow,&
                             dt_in,domain%dz,ide,jde,kde)

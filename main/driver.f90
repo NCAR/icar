@@ -18,7 +18,7 @@
 !!-----------------------------------------
 program icar
     use time,               only : calendar_date, date_to_mjd         ! Convert between date and modified Julian Day
-    use init,               only : init_model, init_physics, init_znu ! Initialize model (not initial conditions)
+    use init,               only : init_model, init_physics           ! Initialize model (not initial conditions)
     use boundary_conditions,only : bc_init,bc_update,bc_find_step     ! Boundary and initial conditions
     use data_structures          ! *_type datatypes                   ! Data-types and physical "constants"
     use output,             only : write_domain                       ! Used to output initial model state
@@ -53,7 +53,6 @@ program icar
     write(*,*) "Initializing Boundary conditions"
     call bc_init(domain, boundary, options)
     
-    call init_znu(domain)
     write(*,*) "Initializing Physics packages"
     call init_physics(options,domain)
 !   update the boundary conditions for the next time step so we can integrate from one to the next
@@ -74,7 +73,7 @@ program icar
         write(*,*) " ----------------------------------------------------------------------"
         write(*,*) "Timestep:", i, "  of ", options%ntimesteps
         write(*,*) "  Model time=", trim(str((model_time-options%time_zero)/3600.0,fmt="(F10.2)")) ,"hrs"
-        call calendar_date(model_time/86400.0D+0 + 50000,year, month, day, hour, minute, second)
+        call calendar_date(model_time/86400.0D+0 + 50000, year, month, day, hour, minute, second)
         write(*,'(A,i4,"/",i2.2"/"i2.2" "i2.2":"i2.2":"i2.2)') "  Date = ",year,month,day,hour,minute,second
         
 !       update boundary conditions (dXdt variables) so we can integrate to the next step

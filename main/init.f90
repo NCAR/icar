@@ -31,7 +31,7 @@ module init
     
     implicit none
     private
-    public::init_model, init_physics, init_znu
+    public::init_model, init_physics
     
 contains
     subroutine init_model(options,domain,boundary)
@@ -180,12 +180,16 @@ contains
         domain%v=0
         allocate(domain%w(nx,nz,ny))        ! vertical wind [grid/s]
         domain%w=0
-        allocate(domain%ur(nx+1,nz,ny))     ! eastward wind * density [m/s kg/m^3]
-        domain%ur=0
-        allocate(domain%vr(nx,nz,ny+1))     ! northward wind * density[m/s kg/m^3]
-        domain%vr=0
-        allocate(domain%wr(nx,nz,ny))       ! vertical wind * density [grid/s kg/m^3]
-        domain%wr=0
+        allocate(domain%w_real(nx,nz,ny))   ! real vertical wind [m/s] including the U,V * dz/dx component
+        domain%w_real=0
+        if (options%advect_density) then
+            allocate(domain%ur(nx+1,nz,ny))     ! eastward wind * density [m/s kg/m^3]
+            domain%ur=0
+            allocate(domain%vr(nx,nz,ny+1))     ! northward wind * density[m/s kg/m^3]
+            domain%vr=0
+            allocate(domain%wr(nx,nz,ny))       ! vertical wind * density [grid/s kg/m^3]
+            domain%wr=0
+        endif
         allocate(domain%th(nx,nz,ny))       ! potential temperature [K]
         domain%th=280
         allocate(domain%qv(nx,nz,ny))       ! water vapor [kg/kg]
@@ -219,6 +223,8 @@ contains
         domain%Um=0
         allocate(domain%Vm(nx,nz,ny))       ! northward wind on mass grid [m/s]
         domain%Vm=0
+        allocate(domain%mut(nx,nz,ny))      ! dry mass in each grid cell (p_inter[i] - p_inter[i+1])
+        domain%mut=0
         
         ! land-atm flux allocation
         allocate(domain%rain(nx,ny))        ! accumulated total rainfall [kg/m^2]
@@ -271,38 +277,31 @@ contains
         domain%soil_type=6 ! Loam
         allocate(domain%veg_type(nx,ny))        ! Vegetation type
         domain%veg_type=7  ! grassland
+        
+        allocate(domain%u10(nx,ny))         ! 10m height U wind
+        domain%u10=0
+        allocate(domain%v10(nx,ny))         ! 10m height V wind
+        domain%v10=0
+        allocate(domain%t2m(nx,ny))         ! 2m height air temperature
+        domain%t2m=domain%t(:,1,:)
+        allocate(domain%q2m(nx,ny))         ! 2m height air mixing ratio
+        domain%q2m=domain%qv(:,1,:)
+        
+        allocate(domain%znt(nx,ny))         ! surface roughness
+        domain%znt=0.2
+        allocate(domain%ustar(nx,ny))       ! surface shear stress (u*)
+        domain%ustar=0
+        allocate(domain%ptop(nx,ny))        ! model top pressure
+        domain%ptop=domain%p(:,nz,:)
+        allocate(domain%psfc(nx,ny))        ! model surface pressure
+        domain%psfc=domain%p_inter(:,1,:)
 
     end subroutine domain_allocation
-
-    subroutine init_znu(domain)
-        type(domain_type), intent(inout) :: domain
-        integer :: n_levels,i,xpt,ypt
-        real    :: ptop,psfc
-        
-        n_levels=size(domain%p,2)
-        
-        xpt=2
-        ypt=2
-        ptop=domain%p(xpt,n_levels,ypt)-(domain%p(xpt,n_levels-1,ypt)-domain%p(xpt,n_levels,ypt))/2.0 !NOT CORRECT
-        psfc=domain%p(xpt,1,ypt)+(domain%p(xpt,1,ypt)-domain%p(xpt,2,ypt))/2.0 !NOT CORRECT
-        ptop=max(ptop,1.0)
-        allocate(domain%znu(n_levels))
-        allocate(domain%znw(n_levels))
-        do i=1,n_levels
-            domain%znu(i)=(domain%p(xpt,i,ypt)-ptop)/(psfc-ptop)
-            if (i>1) then
-                domain%znw(i)=((domain%p(xpt,i,ypt)+domain%p(xpt,i-1,ypt))/2-ptop)/(psfc-ptop)
-            else
-                domain%znw(i)=1
-            endif
-        enddo
-    end subroutine init_znu
 
     
 ! interpolate intput%z to output%z assuming that input has one less grid cell 
 ! in the interpolate_dim dimension
     subroutine copy_z(input,output,interpolate_dim)
-        
         implicit none
         class(interpolable_type), intent(in) :: input
         class(interpolable_type), intent(inout) :: output
@@ -459,15 +458,28 @@ contains
             deallocate(temporary_z)
         else
             ! otherwise, set up the z grid to be evenly spaced in z using the terrain +dz/2 for the base
-            ! and z[1]+i*dz for the res
+            ! and z[i-1]+(dz[i-1]+dz[i])/2 for the rest
             allocate(domain%z(nx,nz,ny))
             allocate(domain%dz(nx,nz,ny))
-            domain%dz(:,1,:)=options%dz_levels(1)
+            allocate(domain%dz_inter(nx,nz,ny))
+            ! lowest model level is half of the lowest dz above the land surface
             domain%z(:,1,:)=domain%terrain+options%dz_levels(1)/2
+            ! dz between the mass grid points is half of each dz
+            domain%dz(:,1,:)=(options%dz_levels(1) + options%dz_levels(2))/2
+            ! dz between the interface points = dz = thickness of mass grid cells
+            domain%dz_inter(:,1,:)=options%dz_levels(1)
             do i=2,nz
                 domain%z(:,i,:)=domain%z(:,i-1,:)+(options%dz_levels(i)+options%dz_levels(i-1))/2
-                domain%dz(:,i,:)=options%dz_levels(i)
+                ! dz between the interface points = dz = thickness of mass grid cells
+                domain%dz_inter(:,i,:)=options%dz_levels(i)
+                ! dz between the mass grid points is half of each dz
+                if (i<nz) then
+                    domain%dz(:,i,:)=(options%dz_levels(i) + options%dz_levels(i+1))/2
+                endif
             enddo
+            domain%dz(:,nz,:)=options%dz_levels(nz)
+            
+            
             
         endif
         call copy_z(domain,domain%u_geo,interpolate_dim=1)
