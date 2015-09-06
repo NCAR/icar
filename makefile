@@ -85,12 +85,18 @@ endif
 # hydro-c1 cluster
 ifeq ($(NODENAME),hydro-c1)
 	F90=ifort
-	LIBFFT=/home/gutmann/usr/local/lib
-	INCFFT=/home/gutmann/usr/local/include
+	NCDF_PATH = /usr/local/netcdf-4.3.0+ifort-12.1
 	# NCDF_PATH = /usr/local/netcdf-4.1.3/ifort-12.0.5
-	NCDF_PATH = /home/gutmann/.usr/local
+	# NCDF_PATH = /home/gutmann/.usr/local/intel
+	
+	# F90=gfortran
+	# NCDF_PATH = /usr/local/netcdf-4.3.3.1+gcc-4.7.2
+	
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
+	
+	LIBFFT=/home/gutmann/.usr/local/lib
+	INCFFT=/home/gutmann/.usr/local/include
 endif
 # on yellowstone:
 ifeq ($(LMOD_FAMILY_COMPILER),gnu)
@@ -166,11 +172,11 @@ ifeq ($(MODE), debugslow)
 endif
 ifeq ($(MODE), debug)
 	ifeq ($(F90), ifort)
-		COMP= -debug -c -O3 -u -check all -check noarg_temp_created -traceback -fpe0 -fast-transcendentals -xhost
+		COMP= -debug -c -O1 -u -check all -check noarg_temp_created -traceback -fpe0 -fast-transcendentals -xhost
 		LINK=  
 	endif
 	ifeq ($(F90), gfortran)
-		COMP= -c -Og -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
+		COMP= -c -O1 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK=  
 	endif
 endif
@@ -187,11 +193,11 @@ ifeq ($(MODE), debugompslow)
 endif
 ifeq ($(MODE), debugomp)
 	ifeq ($(F90), ifort)
-		COMP= -openmp -liomp5 -debug -c -O3 -u -traceback -check all -check noarg_temp_created -fpe0 -fast-transcendentals -xhost
+		COMP= -openmp -liomp5 -debug -c -O1 -u -traceback -check all -check noarg_temp_created -fpe0 -fast-transcendentals -xhost
 		LINK= -openmp -liomp5
 	endif
 	ifeq ($(F90), gfortran)
-		COMP= -fopenmp -lgomp -c -Og -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
+		COMP= -fopenmp -lgomp -c -O1 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK= -fopenmp -lgomp  
 	endif
 endif
@@ -199,8 +205,8 @@ endif
 PROF= 
 ifeq ($(MODE), profile)
 	ifeq ($(F90), ifort)
-		PROF=-g -debug inline-debug-info -shared-intel
-		COMP=-c -u -openmp -liomp5 -ipo -O3 -no-prec-div -xHost -ftz #because -fast includes -static # not available in ifort <13 -align array64byte
+		PROF=-pg -debug inline-debug-info -shared-intel
+		COMP=-c -u -openmp -liomp5 -O3 -no-prec-div -xHost -ftz #because -fast includes -static # not available in ifort <13 -align array64byte
 	endif
 	ifeq ($(F90), gfortran)
 		PROF=-g
@@ -334,7 +340,7 @@ $(BUILD)boundary.o:$(MAIN)boundary.f90 $(BUILD)data_structures.o $(BUILD)io_rout
 
 $(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.o $(BUILD)output.o \
 					$(BUILD)advection_driver.o $(BUILD)ra_driver.o $(BUILD)lsm_driver.o $(BUILD)cu_driver.o \
-					$(BUILD)pbl_driver.o $(BUILD)mp_driver.o
+					$(BUILD)pbl_driver.o $(BUILD)mp_driver.o $(BUILD)boundary.o
 	${F90} ${FFLAGS} $(MAIN)time_step.f90 -o $(BUILD)time_step.o
 
 $(BUILD)init_options.o:$(MAIN)init_options.f90 $(BUILD)data_structures.o  $(BUILD)io_routines.o \
