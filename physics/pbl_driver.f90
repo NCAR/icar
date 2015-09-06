@@ -33,26 +33,11 @@ module planetary_boundary_layer
     private
     public :: pbl_init, pbl, pbl_finalize
     
-    real, allocatable, dimension(:,:,:) :: rublten,rvblten,rthblten,rqvblten, &
-                                           rqcblten,rqiblten
     integer :: ids, ide, jds, jde, kds, kde,  &
                ims, ime, jms, jme, kms, kme,  &
                its, ite, jts, jte, kts, kte
                
     logical :: allowed_to_read, restart, flag_qi
-!   these are now defined in data_structures.f90
-!   real, parameter :: LH_vaporization=2260000.0 ! J/kg
-!   real, parameter :: R=287.058 ! J/(kg K) specific gas constant for air
-!     real, parameter :: XLV0         = 3.15E6
-!     real, parameter :: XLV1         = 2370.
-!     real, parameter :: XLS0         = 2.905E6
-!     real, parameter :: XLS1         = 259.532
-!     real, parameter ::  SVP1=0.6112
-!     real, parameter ::  SVP2=17.67
-!     real, parameter ::  SVP3=29.65
-!     real, parameter ::  SVPT0=273.15
-!     real, parameter ::  EP1=Rw/Rd-1.
-!     real, parameter ::  EP2=Rd/Rw
 
 contains
     subroutine pbl_init(domain,options)
@@ -75,11 +60,11 @@ contains
         domain%tend%qv_pbl=0
         
         write(*,*) "Initializing PBL Scheme"
-        if (options%physics%boundarylayer==PBL_SIMPLE) then
+        if (options%physics%boundarylayer==kPBL_SIMPLE) then
             write(*,*) "    Simple PBL"
             call init_simple_pbl(domain,options)
         endif
-        if (options%physics%boundarylayer==PBL_YSU) then
+        if (options%physics%boundarylayer==kPBL_YSU) then
             write(*,*) "    YSU PBL"
             if (.not.allocated(domain%tend%th))     allocate(domain%tend%th(ims:ime,kms:kme,jms:jme))
             if (.not.allocated(domain%tend%qc))     allocate(domain%tend%qc(ims:ime,kms:kme,jms:jme))
@@ -103,11 +88,11 @@ contains
         type(options_type),intent(in)::options
         real,intent(in)::dt_in
         
-        if (options%physics%boundarylayer==PBL_SIMPLE) then
+        if (options%physics%boundarylayer==kPBL_SIMPLE) then
             call simple_pbl(domain,dt_in)
         endif
         
-        if (options%physics%boundarylayer==PBL_YSU) then
+        if (options%physics%boundarylayer==kPBL_YSU) then
             stop( "YSU PBL not implemented yet")
 !             call ysu(domain%Um, domain%Vm,   domain%th, domain%t,               &
 !                      domain%qv, domain%cloud,domain%ice,                        &
@@ -117,7 +102,7 @@ contains
 !                      cp,gravity,rovcp,rd,rovg,                                  &
 !                      domain%dz_i, domain%z,    LH_vaporization,rv,domain%psfc,  &
 !                      domain%znu,  domain%znw,  domain%mut,domain%p_top,         &
-!                      domain%znt,  domain%ustar,zol, hol, hpbl, psim, psih,      &
+!STARTHERE                      domain%znt,  domain%ustar,zol, hol, hpbl, psim, psih,      &
 !                      domain%xland,domain%sensible_heat,domain%latent_heat,      &
 !                      domain%tskin,gz1oz0,      wspd, br,                        &
 !                      dt,dtmin,kpbl2d,                                           &
@@ -134,7 +119,7 @@ contains
     subroutine pbl_finalize(options)
         implicit none
         type(options_type),intent(in)::options
-        if (options%physics%boundarylayer==PBL_SIMPLE) then
+        if (options%physics%boundarylayer==kPBL_SIMPLE) then
             call finalize_simple_pbl()
         endif
     end subroutine pbl_finalize

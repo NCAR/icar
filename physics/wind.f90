@@ -53,10 +53,10 @@ contains
                     rhow=2*domain%rho(2:nx-1,i,2:ny-1)-domain%rho(2:nx-1,i-1,2:ny-1)
                 endif
                 ! calculate horizontal divergence based on the wind * density field
-                domain%vr(2:nx-1,i,2:ny)=rhov*domain%v(2:nx-1,i,2:ny) * domain%dz(1,i,1)*domain%dx
+                domain%vr(2:nx-1,i,2:ny)=rhov*domain%v(2:nx-1,i,2:ny) * domain%dz_inter(1,i,1)*domain%dx
                 dv=domain%vr(2:nx-1,i,3:ny) - domain%vr(2:nx-1,i,2:ny-1)
                 
-                domain%ur(2:nx,i,2:ny-1)=rhou*domain%u(2:nx,i,2:ny-1) * domain%dz(1,i,1)*domain%dx
+                domain%ur(2:nx,i,2:ny-1)=rhou*domain%u(2:nx,i,2:ny-1) * domain%dz_inter(1,i,1)*domain%dx
                 du=domain%ur(3:nx,i,2:ny-1) - domain%ur(2:nx-1,i,2:ny-1)
                 
                 divergence=du+dv
@@ -83,11 +83,10 @@ contains
                 endif
             endif
         enddo
-        ! NOTE w is scaled by dx/dz because it is balancing divergence over dx with a flow through dz
+        ! NOTE w is scaled by dx/dz because it is balancing divergence through a dx*dz cell face with a flow through a dx*dx face
         ! could rescale below but for now this is left in the advection code (the only place it matters for now)
         ! this makes it easier to play with varying options for including varying dz and rho in advection. 
-        ! domain%w(:,:nz-1,:)=domain%w(:,:nz-1,:)/domain%dx * (domain%dz(:,1:nz-1,:)+domain%dz(:,2:nz,:))/2
-        ! domain%w(:,nz,:)=domain%w(:,nz,:)/domain%dx * domain%dz(:,nz,:)
+        ! domain%w=domain%w/domain%dx * domain%dz_inter
         
         deallocate(du,dv,divergence)
         if (options%advect_density) then
@@ -151,7 +150,7 @@ contains
         endif
         
         ! linear winds
-        if (options%physics%windtype==WIND_LINEAR) then
+        if (options%physics%windtype==kWIND_LINEAR) then
             call linear_perturb(domain,options,options%vert_smooth,.False.,options%advect_density)
         endif
         ! else assumes even flow over the mountains
@@ -186,7 +185,7 @@ contains
                     endi=i+1
                 endif
                 
-                ! change in latitute
+                ! change in latitude
                 dlat=domain%lat(endi,j)-domain%lat(starti,j)
                 ! change in longitude
                 dlon=(domain%lon(endi,j)-domain%lon(starti,j))*cos(deg2rad*domain%lat(i,j))
@@ -206,8 +205,6 @@ contains
 !             print*, " "
 !         endif
 !       dzdx/y used effect of terrain following grid on W component of wind field
-        allocate(domain%dzdx(nx-1,ny))
-        allocate(domain%dzdy(nx,ny-1))
         domain%dzdx = (domain%terrain(2:nx,:)-domain%terrain(1:nx-1,:)) / domain%dx
         domain%dzdy = (domain%terrain(:,2:ny)-domain%terrain(:,1:ny-1)) / domain%dx
         
@@ -227,6 +224,14 @@ contains
         if (.not.allocated(domain%costheta)) then
             allocate(domain%costheta(nx,ny))
         endif
+        
+        if (.not.allocated(domain%dzdx)) then
+            allocate(domain%dzdx(nx-1,ny))
+        endif
+        if (.not.allocated(domain%dzdy)) then
+            allocate(domain%dzdy(nx,ny-1))
+        endif
+        
     end subroutine allocate_winds
 
 ! deallocate memory

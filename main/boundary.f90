@@ -665,7 +665,7 @@ contains
             enddo
             
             smoothing_window = min(max(int(options%smooth_wind_distance/domain%dx),1),size(domain%lat,1)/5)
-            write(*,*) "Smoothing winds over ",trim(str(smoothing_window))," grid cells"
+            if (options%debug) write(*,*) "  Smoothing winds over ",trim(str(smoothing_window))," grid cells"
         endif
 !       load the restart file
         if (options%restart) then
@@ -721,10 +721,10 @@ contains
                             bc%geolut, bc%vert_lut, curstep, boundary_value, &
                             options)
 
-            if (options%physics%landsurface==LSM_BASIC) then
+            if (options%physics%landsurface==kLSM_BASIC) then
                 call read_2dvar(domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep,options)
                 call read_2dvar(domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep,options)
-                if (options%physics%boundarylayer==PBL_BASIC) then
+                if (options%physics%boundarylayer==kPBL_BASIC) then
                     call read_2dvar(domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep,options)
                 endif
                 where(domain%latent_heat<0) domain%latent_heat=0
@@ -1033,11 +1033,11 @@ contains
                       options, time_varying_zlut=newbc%vert_lut)
 
         ! finally, if we need to read in land surface forcing read in those 2d variables as well. 
-        if (options%physics%landsurface==LSM_BASIC) then
+        if (options%physics%landsurface==kLSM_BASIC) then
             call read_2dvar(bc%next_domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep,options)
             call read_2dvar(bc%next_domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep,options)
             ! note this is nested in the landsurface=LSM_BASIC condition, because that is the only time it makes sense. 
-            if (options%physics%boundarylayer==PBL_BASIC) then
+            if (options%physics%boundarylayer==kPBL_BASIC) then
                 call read_2dvar(bc%next_domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep,options)
             endif
             ! NOTE, this is a kludge to prevent the model from sucking more moisture out of the lower model layer than exists
@@ -1070,7 +1070,7 @@ contains
         
         call update_winds(bc%next_domain,options)
         ! copy it to the primary domain for output purposes (could also be used for convection or blocking parameterizations?)
-        if (options%physics%windtype==WIND_LINEAR) then
+        if (options%physics%windtype==kWIND_LINEAR) then
             domain%nsquared=bc%next_domain%nsquared
         endif
         

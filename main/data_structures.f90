@@ -138,6 +138,7 @@ module data_structures
     ! sublimation
     real, parameter ::  XLS0 = 2.905E6
     real, parameter ::  XLS1 = 259.532
+    
     ! saturated vapor pressure parameters (?)
     real, parameter ::  SVP1 = 0.6112
     real, parameter ::  SVP2 = 17.67
@@ -239,7 +240,8 @@ module data_structures
         real, allocatable, dimension(:,:,:) :: nice,nrain ! number concentration for ice and rain
         real, allocatable, dimension(:,:,:) :: qgrau      ! graupel mass mixing ratio 
         real, allocatable, dimension(:,:,:) :: p_inter    ! pressure on the vertical interfaces (p[:,1,:]=psfc)
-        real, allocatable, dimension(:,:,:) :: dz_inter ! dz between interface levels
+        real, allocatable, dimension(:,:,:) :: z_inter    ! z height on interface levels
+        real, allocatable, dimension(:,:,:) :: dz_inter   ! dz between interface levels
         real, allocatable, dimension(:,:,:) :: mut        ! mass in a given cell ? (pbot-ptop)
         ! 3D soil field
         real, allocatable, dimension(:,:,:) :: soil_t, soil_vwc
@@ -288,7 +290,7 @@ module data_structures
     type, extends(linearizable_type) :: bc_type
         ! dX_dt variables are the change in variable X between two forcing time steps
         ! wind and pressure dX_dt fields applied to full 3d grid, others applied only to boundaries
-        real, allocatable, dimension(:,:,:) :: du_dt,dv_dt,dw_dt,dp_dt,drho_dt,dth_dt,dqv_dt,dqc_dt
+        real, allocatable, dimension(:,:,:) :: du_dt,dv_dt,dp_dt,dth_dt,dqv_dt,dqc_dt
         ! sh, lh, and pblh fields are only 2d. These are only used with LSM option 1 and are derived from forcing file
         real, allocatable, dimension(:,:) :: dsh_dt,dlh_dt,dpblh_dt
         ! store the low resolution versionf of terrain and atmospheric elevations

@@ -159,11 +159,13 @@ contains
     end subroutine remove_edges
     
 !   allocate all arrays in domain
-    subroutine domain_allocation(domain,nx,nz,ny,nsoil)
+    subroutine domain_allocation(domain,options,nx,nz,ny,nsoil)
         implicit none
-        type(domain_type), intent(inout) :: domain
-        integer,intent(in)::nx,nz,ny
-        integer,intent(in),optional :: nsoil
+        type(domain_type),  intent(inout)   :: domain
+        type(options_type), intent(in)      :: options
+        integer,            intent(in)      :: nx,nz,ny
+        integer,            intent(in), optional   :: nsoil
+        
         integer :: ns
         
         ns=4
@@ -429,9 +431,12 @@ contains
             domain%landmask=1 !if we weren't supplied a landmask field, assume all is land (what we care about anyway)
         endif
         
+        ! remove n grid cells from all sides of the domain if requested
         if(options%buffer>0) then
+            write(*,*) "Removing ",options%buffer," gridcells from edges of domain"
             call remove_edges(domain,options%buffer)
         endif
+        
         ! use the lat variable to define the x and y dimensions for all other variables
         nx=size(domain%lat,1)
         ny=size(domain%lat,2)
@@ -440,6 +445,8 @@ contains
         
         ! if a 3d grid was also specified, then read those data in
         if ((options%readz).and.(options%ideal).and.(options%zvar.ne."")) then
+            
+            stop("Reading Z from an external file is not currently supported, use a fixed dz")
             
             call io_read3d(options%init_conditions_file,options%zvar, domain%z)
             ! dz also has to be calculated from the 3d z file
@@ -456,20 +463,25 @@ contains
             allocate(domain%z(nx,nz,ny))
             domain%z=temporary_z
             deallocate(temporary_z)
+            
         else
             ! otherwise, set up the z grid to be evenly spaced in z using the terrain +dz/2 for the base
             ! and z[i-1]+(dz[i-1]+dz[i])/2 for the rest
             allocate(domain%z(nx,nz,ny))
+            allocate(domain%z_inter(nx,nz,ny))
             allocate(domain%dz(nx,nz,ny))
             allocate(domain%dz_inter(nx,nz,ny))
             ! lowest model level is half of the lowest dz above the land surface
             domain%z(:,1,:)=domain%terrain+options%dz_levels(1)/2
+            domain%z_inter(:,1,:)=domain%terrain
             ! dz between the mass grid points is half of each dz
             domain%dz(:,1,:)=(options%dz_levels(1) + options%dz_levels(2))/2
             ! dz between the interface points = dz = thickness of mass grid cells
             domain%dz_inter(:,1,:)=options%dz_levels(1)
             do i=2,nz
-                domain%z(:,i,:)=domain%z(:,i-1,:)+(options%dz_levels(i)+options%dz_levels(i-1))/2
+                domain%z(:,i,:)       = domain%z(:,i-1,:)       + (options%dz_levels(i)+options%dz_levels(i-1))/2
+                domain%z_inter(:,i,:) = domain%z_inter(:,i-1,:) +  options%dz_levels(i)
+                
                 ! dz between the interface points = dz = thickness of mass grid cells
                 domain%dz_inter(:,i,:)=options%dz_levels(i)
                 ! dz between the mass grid points is half of each dz
@@ -479,14 +491,12 @@ contains
             enddo
             domain%dz(:,nz,:)=options%dz_levels(nz)
             
-            
-            
         endif
         call copy_z(domain,domain%u_geo,interpolate_dim=1)
         call copy_z(domain,domain%v_geo,interpolate_dim=3)
         
         ! all other variables should be allocated and initialized to 0
-        call domain_allocation(domain,nx,nz,ny)
+        call domain_allocation(domain,options,nx,nz,ny)
         
         ! initializing land
         call init_domain_land(domain,options)
@@ -513,12 +523,8 @@ contains
         boundary%du_dt=0
         allocate(boundary%dv_dt(nx,nz,ny+1))
         boundary%dv_dt=0
-        allocate(boundary%dw_dt(nx,nz,ny))
-        boundary%dw_dt=0
         allocate(boundary%dp_dt(nx,nz,ny))
         boundary%dp_dt=0
-        allocate(boundary%drho_dt(nx,nz,ny))
-        boundary%drho_dt=0
         allocate(boundary%dth_dt(nz,max(nx,ny),4))
         boundary%dth_dt=0
         allocate(boundary%dqv_dt(nz,max(nx,ny),4))
@@ -803,6 +809,8 @@ contains
 
         write(*,*) "Setting up vertical interpolation Look Up Tables"
         
+        if (options%debug) print*, "Domain z min=",minval(domain%z), "Domain z max=", maxval(domain%z)
+        if (options%debug) print*, "Forcing z min=",minval(boundary%z), "Forcing z max=", maxval(boundary%z)
         call vLUT(domain,boundary)
         call vLUT(domain%u_geo,boundary%u_geo)
         call vLUT(domain%v_geo,boundary%v_geo)

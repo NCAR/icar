@@ -100,7 +100,7 @@ module module_lsm_basic
 !           where(qv(ids+1:ide-1,1,i)<1e-10) qv(ids+1:ide-1,1,i)=1e-10 ! in case lhdQV in negative and abs(lh) > qv
 
 !           stupid diffusion within the PBL I should at least speed up/clean up the math at some point...
-            if (options%physics%boundarylayer==PBL_BASIC) then
+            if (options%physics%boundarylayer==kPBL_BASIC) then
                 do j=ids+1,ide-1
                     rhomean(kds:kde-1)=(rho(j,kds:kde-1)+rho(j,kds+1:kde))/2
                     rhomean(kde)=rho(j,kde)
@@ -126,7 +126,7 @@ module module_lsm_basic
                     th(j,kds+1:kde,i)=th(j,kds+1:kde,i)-f2(kds:kde-1)*rhomean(kds+1:kde)/rho(j,kds+1:kde)
                 enddo
             endif
-            if (options%physics%radiation==RA_BASIC) then
+            if (options%physics%radiation==kRA_BASIC) then
 !           stupid radiative cooling th=th-coolingrate*(T^4)
                 th(ids+1:ide-1,:,i)=th(ids+1:ide-1,:,i) &
                             -(((th(ids+1:ide-1,:,i)*pii(ids+1:ide-1,:,i))**4)*coolingrate)

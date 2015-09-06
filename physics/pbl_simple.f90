@@ -35,7 +35,7 @@ module pbl_simple
     real, allocatable, dimension(:,:,:) :: shear_m
 !   atmospheric stability
     real, allocatable, dimension(:,:,:) :: stability_m
-!   length scale that asymptotes from kappa*z to l0 (250m below)
+!   length scale that asymptotes from karman*z to l0 (250m below)
     real, allocatable, dimension(:,:,:) :: l_m
 !   diffusion term for momentum
     real, allocatable, dimension(:,:,:) :: K_m
@@ -53,7 +53,6 @@ module pbl_simple
     real, parameter :: asymp_length_scale = 1/250.0 !m from Hong and Pan (1996)
     ! note, they actually use 30m because they only use this for free-atmosphere mixing
     ! but they note that 250m is used in the operational model for the full PBL mixing
-    real, parameter :: kappa =0.4 !von Karman constant
     real, parameter :: N_substeps=10. ! number of substeps to allow (puts a cap on K to match CFL)
     real, parameter :: diffusion_reduction=10.0 ! used to reduce diffusion rates
     
@@ -77,7 +76,7 @@ contains
             
 !           from eqn 12 in HP96
             do k=1,nz
-                l_m(:,k,j) = 1 / (1/(kappa*(domain%z(2:nx+1,k,j+1)-domain%terrain(2:nx+1,j+1))) + asymp_length_scale)
+                l_m(:,k,j) = 1 / (1/(karman*(domain%z(2:nx+1,k,j+1)-domain%terrain(2:nx+1,j+1))) + asymp_length_scale)
             enddo
 !           diffusion for momentum... can I ignore this term and go directly to scalars (to save memory)? 
 !           from HP96 eqn 11

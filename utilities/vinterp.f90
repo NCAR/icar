@@ -108,7 +108,6 @@ contains
             do i=1,nx
                 guess=1
                 do k=1,nz
-                    
                     curpos=find_match(hi%z(i,k,j),lo%z(i,:,j),guess=guess)
                     if (curpos(1)>0) then
                         ! matched within the grid

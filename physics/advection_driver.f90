@@ -18,10 +18,21 @@ contains
         type(domain_type), intent(inout) :: domain
         type(options_type),intent(in) :: options
         real,intent(in) :: dt
+        integer :: nx, nz, ny
         
-        if (options%physics%advection==ADV_UPWIND) then
+        nx=size(domain%p,1)
+        nz=size(domain%p,2)
+        ny=size(domain%p,3)
+        
+        if (.not.allocated(domain%tend%qv_adv)) then
+            allocate(domain%tend%qv_adv(nx,nz,ny))
+            domain%tend%qv_adv=0
+        endif
+            
+        
+        if (options%physics%advection==kADV_UPWIND) then
             call upwind(domain,options,dt)
-        elseif(options%physics%advection==ADV_MPDATA) then
+        elseif(options%physics%advection==kADV_MPDATA) then
             call mpdata(domain,options,dt)
         endif
         

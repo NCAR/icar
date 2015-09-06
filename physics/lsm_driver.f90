@@ -41,6 +41,10 @@ module land_surface
     use data_structures
     
     implicit none
+    
+    private
+    public :: lsm_init, lsm
+    
     ! Noah LSM required variables.  Some of these should be stored in domain, but tested here for now
     integer :: ids,ide,jds,jde,kds,kde ! Domain dimensions
     integer :: ims,ime,jms,jme,kms,kme ! Local Memory dimensions
@@ -55,11 +59,11 @@ module land_surface
                                            EMBCK, QSFC, RAINBL, CHS, CHS2, CQS2, CPM, SR,       &
                                            CHKLOWQ, LAI, QZ0, SHDMIN,SHDMAX,SNOTIME,SNOPCX,     &
                                            POTEVP,RIB, NOAHRES,FLX4_2D,FVB_2D,FBUR_2D,   &
-                                           FGSN_2D, z_atm,lnz_atm_term,Ri,base_exchange_term, T2m
+                                           FGSN_2D, z_atm,lnz_atm_term,Ri,base_exchange_term
                                            
     logical :: MYJ, FRPCPN,ua_phys,RDLAI2D,USEMONALB
     real,allocatable, dimension(:,:,:)  :: SH2O,SMCREL
-    real,allocatable, dimension(:,:)    :: dTemp,lhdQV
+    real,allocatable, dimension(:,:)    :: dTemp,lhdQV, windspd
     real,allocatable, dimension(:)      :: Zs,DZs
     real :: XICE_THRESHOLD
     integer,allocatable, dimension(:,:) :: IVGTYP,ISLTYP
@@ -118,17 +122,49 @@ contains
     
     subroutine calc_exchange_coefficient(wind,tskin,airt,exchange_C)
         implicit none
-        real, dimension(:,:),intent(in) :: wind,tskin,airt
+        real, dimension(:,:),intent(inout) :: wind,tskin,airt
         real,dimension(:,:),intent(inout) :: exchange_C
         
         ! Richardson number 
-        Ri = gravity/airt * (airt-tskin)*z_atm/wind**2
+        where(wind==0) wind=1e-10
+        print*, minval(airt)
+        Ri = gravity/airt * (airt-tskin)*z_atm/(wind**2)
         
         where(Ri<0)  exchange_C=lnz_atm_term * (1.0-(15.0*Ri)/(1.0+(base_exchange_term * sqrt((-1.0)*Ri))))
         where(Ri>=0) exchange_C=lnz_atm_term * 1.0/((1.0+15.0*Ri)*sqrt(1.0+5.0*Ri))
-        where(exchange_C>MAX_EXCHANGE_C) exchange_C=MAX_EXCHANGE_C
+        
+        where(exchange_C > MAX_EXCHANGE_C) exchange_C=MAX_EXCHANGE_C
     end subroutine calc_exchange_coefficient
     
+    subroutine surface_diagnostics(HFX, QFX, TSK, QSFC, CHS2, CQS2,T2, Q2, PSFC)
+        ! taken almost directly / exactly from WRF's module_sf_sfcdiags.F
+        implicit none
+        REAL, DIMENSION( :,: ), INTENT(IN)    ::  HFX, QFX, TSK, QSFC
+        REAL, DIMENSION( :,: ), INTENT(INOUT) ::  Q2, T2
+        REAL, DIMENSION( :,: ), INTENT(IN)    ::  PSFC, CHS2, CQS2
+        integer :: i,j, nx,ny
+        real :: rho
+        
+        nx=size(HFX,1)
+        ny=size(HFX,2)
+        
+        do j=1,ny
+            do i=1,nx
+                RHO = PSFC(I,J)/(Rd * TSK(I,J))
+                if(CQS2(I,J).lt.1.E-5) then
+                   Q2(I,J) = QSFC(I,J)
+                else
+                   Q2(I,J) = QSFC(I,J) - QFX(I,J)/(RHO*CQS2(I,J))
+                endif
+                if(CHS2(I,J).lt.1.E-5) then
+                   T2(I,J) = TSK(I,J) 
+                else
+                   T2(I,J) = TSK(I,J) - HFX(I,J)/(RHO*CP*CHS2(I,J))
+                endif
+                ! TH2(I,J) = T2(I,J)*(1.E5/PSFC(I,J))**ROVCP
+            enddo
+        enddo
+    end subroutine surface_diagnostics
     
     subroutine apply_fluxes(domain,dt)
         ! add sensible and latent heat fluxes to the first atm level
@@ -163,8 +199,6 @@ contains
         
         ITIMESTEP=1
         
-        allocate(T2m(ime,jme))
-        T2m=270
         allocate(Ri(ime,jme))
         Ri=0
         allocate(z_atm(ime,jme))
@@ -294,13 +328,21 @@ contains
         dTemp=0
         allocate(lhdQV(ime-2,jme-2))
         lhdQV=0
-        if (options%physics%landsurface==LSM_SIMPLE) then
+        
+        allocate(windspd(ime,jme))
+        ! NOTE, these fields have probably not been initialized yet...
+        windspd=sqrt(domain%u10**2+domain%v10**2)
+        
+        domain%T2m = domain%th(:,1,:) * domain%pii(:,1,:)
+        domain%Q2m = domain%qv(:,1,:)
+        
+        if (options%physics%landsurface==kLSM_SIMPLE) then
             write(*,*) "    Simple LSM (may not work?)"
             stop("Simple LSM not settup, choose a different LSM options")
             call lsm_simple_init(domain,options)
         endif
         ! Noah Land Surface Model
-        if (options%physics%landsurface==LSM_NOAH) then
+        if (options%physics%landsurface==kLSM_NOAH) then
             write(*,*) "    Noah LSM"
             ids=1;jds=1;kds=1
             ims=1;jms=1;kms=1
@@ -337,6 +379,7 @@ contains
             base_exchange_term=(75*kappa**2 * sqrt((z_atm+Z0)/Z0)) / (lnz_atm_term**2)
             lnz_atm_term=(kappa/lnz_atm_term)**2
             where(domain%veg_type==16) domain%landmask=2 ! ensure VEGTYPE (land cover) and land-sea mask are consistent
+            
         endif
         counter=0
         steps_per_lsm_step=10
@@ -366,31 +409,31 @@ contains
             lsm_dt=model_time-last_model_time
             last_model_time=model_time
             
-            if (options%physics%landsurface==LSM_BASIC) then
+            if (options%physics%landsurface==kLSM_BASIC) then
                 call lsm_basic(domain,options,lsm_dt)
-            else if (options%physics%landsurface==LSM_SIMPLE) then
+                
+            else if (options%physics%landsurface==kLSM_SIMPLE) then
                 call lsm_simple(domain%th,domain%pii,domain%qv,domain%current_rain, domain%current_snow,domain%p_inter, &
                                 domain%swdown,domain%lwdown, sqrt(domain%u10**2+domain%v10**2), &
                                 domain%sensible_heat, domain%latent_heat, domain%ground_heat, &
                                 domain%skin_t, domain%soil_t, domain%soil_vwc, domain%snow_swe, &
                                 options,lsm_dt)
                                 
-            else if (options%physics%landsurface==LSM_NOAH) then
+            else if (options%physics%landsurface==kLSM_NOAH) then
                 ! Call the Noah Land Surface Model
                 
-                ! it would be better to call the MYJ SFC scheme here...
-                T2m=domain%th(:,1,:)*domain%pii(:,1,:)
                 ! 2m saturated mixing ratio
                 do j=1,ny
                     do i=1,nx
-                        QGH(i,j)=sat_mr(T2m(i,j),domain%psfc)
+                        QGH(i,j)=sat_mr(domain%T2m(i,j),domain%psfc(i,j))
                     enddo
                 enddo
                 ! shortwave down
                 ! GSW=domain%swdown   ! This does not actually get used in Noah
                 
                 ! exchange coefficients
-                call calc_exchange_coefficient(sqrt(domain%u10**2+domain%v10**2),domain%skin_t,T2m,CHS)
+                windspd=sqrt(domain%u10**2+domain%v10**2)
+                call calc_exchange_coefficient(windspd,domain%skin_t,domain%T2m,CHS)
                 CHS2=CHS
                 CQS2=CHS
                 
@@ -428,7 +471,12 @@ contains
                 ! note this is more or less just diagnostic and could be removed
                 domain%lwup=stefan_boltzmann*EMISS*domain%skin_t**4
                 RAINBL=domain%rain
+                
+                call surface_diagnostics(domain%sensible_heat, QFX, domain%skin_t, QSFC,  &
+                                         CHS2, CQS2,domain%T2m, domain%Q2m, domain%psfc)
+                
                 call apply_fluxes(domain,lsm_dt)
+                
             endif
         endif
         

@@ -22,7 +22,7 @@ module time_step
     private
     public :: step
 
-    real, dimension(:,:), allocatable :: lastw, currw ! temporaries used to compute diagnostic w_real field
+    real, dimension(:,:), allocatable :: lastw, currw, uw, vw ! temporaries used to compute diagnostic w_real field
 contains
     
 !   update just the edges of curdata by adding dXdt
@@ -120,24 +120,41 @@ contains
         if (.not.allocated(lastw)) then
             allocate(lastw(nx-2,ny-2))
             allocate(currw(nx-2,ny-2))
+            allocate(uw(nx-1,ny-2))
+            allocate(vw(nx-2,ny-1))
         endif
         
+        ! temporary constant
+        ! use log-law of the wall to convert from first model level to surface
+        currw = karman / log((domain%z(2:nx-1,1,2:ny-1)-domain%terrain(2:nx-1,2:ny-1)) / domain%znt(2:nx-1,2:ny-1))
+        ! use log-law of the wall to convert from surface to 10m height
+        lastw = log(10.0 / domain%znt(2:nx-1,2:ny-1)) / karman
+        domain%ustar(2:nx-1,2:ny-1) = domain%Um(2:nx-1,1,2:ny-1) * currw
+        domain%u10(2:nx-1,2:ny-1) = domain%ustar(2:nx-1,2:ny-1) * lastw
+        domain%ustar(2:nx-1,2:ny-1) = domain%Vm(2:nx-1,1,2:ny-1) * currw
+        domain%v10(2:nx-1,2:ny-1) = domain%ustar(2:nx-1,2:ny-1) * lastw
+        
+        ! now calculate master ustar based on U and V combined in quadrature
+        domain%ustar(2:nx-1,2:ny-1) = sqrt(domain%Um(2:nx-1,1,2:ny-1)**2 + domain%Vm(2:nx-1,1,2:ny-1)**2) * currw
+        
+        ! finally, calculate the real vertical motions (including U*dzdx + V*dzdy)
         lastw=0
         do z=1,nz
             ! compute the U * dz/dx component of vertical motion
-            uw    = domain%u(2:nx,  z,2:ny-1) * domain%dzdx(:,z,2:ny-1)
+            uw    = domain%u(2:nx,  z,2:ny-1) * domain%dzdx(:,2:ny-1)
             ! compute the V * dz/dy component of vertical motion
-            vw    = domain%v(2:nx-1,z,2:ny  ) * domain%dzdy(2:nx-1,z,:)
+            vw    = domain%v(2:nx-1,z,2:ny  ) * domain%dzdy(2:nx-1,:)
             ! convert the W grid relative motion to m/s
             currw = domain%w(2:nx-1,z,2:ny-1) * domain%dz_inter(2:nx-1,z,2:ny-1) / domain%dx
             
             ! compute the real vertical velocity of air by combining the different components onto the mass grid
-            domain%w_real(2:nx-1,:,2:ny-1) = (uw(1:nx-2,:) + uw(2:nx-1,:))*0.5 &
-                                            +(vw(:,1:ny-2) + uw(:,2:ny-1))*0.5 &
+            domain%w_real(2:nx-1,z,2:ny-1) = (uw(1:nx-2,:) + uw(2:nx-1,:))*0.5 &
+                                            +(vw(:,1:ny-2) + vw(:,2:ny-1))*0.5 &
                                             +(lastw + currw) * 0.5
                                             
-            lastw=currw ! could avoid this memcopy cost using pointers...
+            lastw=currw ! could avoid this memcopy cost using pointers or a single manual loop unroll
         end do
+        
     end subroutine diagnostic_update
 
 
@@ -150,26 +167,12 @@ contains
         
         bc%du_dt  =bc%du_dt/nsteps
         bc%dv_dt  =bc%dv_dt/nsteps
-!       bc%dw_dt  =bc%dw_dt/nsteps
         bc%dp_dt  =bc%dp_dt/nsteps
-!       bc%drho_dt=bc%drho_dt/nsteps
         bc%dth_dt =bc%dth_dt/nsteps
         bc%dqv_dt =bc%dqv_dt/nsteps
         bc%dqc_dt =bc%dqc_dt/nsteps
     end subroutine apply_dt
     
-    subroutine internal_consistency(domain)
-        implicit none
-        type(domain_type), intent(inout) :: domain
-        integer :: i,nz
-        nz=size(domain%p,2)
-        
-        do i=1,nz
-            
-        enddo
-        
-        
-    end subroutine internal_consistency
     
 !   Step forward one IO time step. 
     subroutine step(domain,options,bc,model_time,next_output)
