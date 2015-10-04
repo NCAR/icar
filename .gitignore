@@ -4,3 +4,4 @@ wind_test
 test_init
 calendar_test
 fftshift_test
+mpdata_test
