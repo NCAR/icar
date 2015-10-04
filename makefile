@@ -292,7 +292,7 @@ clean:
 allclean:cleanall
 
 cleanall: clean
-	rm icar fftshift_test calendar_test
+	rm icar fftshift_test calendar_test mpdata_test
 	# geo_test wind_test #test_init
 
 test: fftshift_test calendar_test mpdata_test #geo_test wind_test #test_init
