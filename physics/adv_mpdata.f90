@@ -12,8 +12,10 @@ module adv_mpdata
     implicit none
     private
     real,dimension(:,:,:),allocatable::U_m,V_m,W_m
-    public::mpdata
-    
+    integer :: order
+    public:: mpdata, mpdata_init
+    public:: advect_u, advect_w, advect_v ! for test_mpdata testing only!
+
 contains
     subroutine flux2(l,r,U,nx,nz,ny,f)
     !     Calculate the donor cell flux function
@@ -37,6 +39,26 @@ contains
 
     end subroutine flux2
 
+    subroutine flux1(l,r,U,f)
+    !     Calculate the donor cell flux function
+    !     l = left gridcell scalar 
+    !     r = right gridcell scalar
+    !     U = Courant number (u*dt/dx)
+    !     
+    !     If U is positive, return l*U if U is negative return r*U
+    !     By using the mathematical form instead of the logical form, 
+    !     we can run on the entire grid simultaneously, and avoid branches
+
+    !   arguments
+        implicit none
+        real, dimension(:), intent(in) :: l,r,U
+        real, dimension(:), intent(inout) :: f
+        
+        !   main code
+        f= ((U+ABS(U)) * l + (U-ABS(U)) * r)/2
+
+    end subroutine flux1
+
     subroutine advect2d(q,u,v,rho,dz,nx,nz,ny,options)
 !     horizontally advect a scalar q by wind field (u,v)
 !     q = input scalar field (e.g. cloud water [kg])
@@ -56,85 +78,157 @@ contains
 !     # 
 !     # # define A,B [l,r,u,b] (see MPDATA review reference)
 !     # # l,r,u,b = left, right, upper, bottom edges of the grid cells
-!     # Al=(q1[1:-1,:-2]-q1[1:-1,1:-1])/(q1[1:-1,:-2]+q1[1:-1,1:-1])
-!     # Ar=(q1[1:-1,2:]-q1[1:-1,1:-1])/(q1[1:-1,2:]+q1[1:-1,1:-1])
-!     # Au=(q1[:-2,1:-1]-q1[1:-1,1:-1])/(q1[:-2,1:-1]+q1[1:-1,1:-1])
-!     # Ab=(q1[2:,1:-1]-q1[1:-1,1:-1])/(q1[2:,1:-1]+q1[1:-1,1:-1])
+!     # Al=(q1(1:-1,:-2)-q1(1:-1,1:-1))/(q1(1:-1,:-2)+q1(1:-1,1:-1))
+!     # Ar=(q1(1:-1,2:)-q1(1:-1,1:-1))/(q1(1:-1,2:)+q1(1:-1,1:-1))
+!     # Au=(q1(:-2,1:-1)-q1(1:-1,1:-1))/(q1(:-2,1:-1)+q1(1:-1,1:-1))
+!     # Ab=(q1(2:,1:-1)-q1(1:-1,1:-1))/(q1(2:,1:-1)+q1(1:-1,1:-1))
 !     # 
-!     # q11=q1[2:,2:]+q1[2:,1:-1]
-!     # Br=0.5*((q11-q1[:-2,2:]-q1[:-2,1:-1])
-!     #     /(q11+q1[:-2,2:]+q1[:-2,1:-1]))
-!     # q11=q1[2:,:-2]+q1[2:,1:-1]
-!     # Bl=0.5*((q11-q1[:-2,:-2]-q1[:-2,1:-1])
-!     #     /(q11+q1[:-2,:-2]+q1[:-2,1:-1]))
-!     # q11=q1[:-2,2:]+q1[1:-1,2:]
-!     # Bu=0.5*((q11-q1[:-2,:-2]-q1[1:-1,:-2])
-!     #     /(q11+q1[:-2,:-2]+q1[1:-1,:-2]))
-!     # q11=q1[2:,2:]+q1[1:-1,2:]
-!     # Bb=0.5*((q11-q1[2:,:-2]-q1[1:-1,:-2])
-!     #     /(q11+q1[2:,:-2]+q1[1:-1,:-2]))
+!     # q11=q1(2:,2:)+q1(2:,1:-1)
+!     # Br=0.5*((q11-q1(:-2,2:)-q1(:-2,1:-1))
+!     #     /(q11+q1(:-2,2:)+q1(:-2,1:-1)))
+!     # q11=q1(2:,:-2)+q1(2:,1:-1)
+!     # Bl=0.5*((q11-q1(:-2,:-2)-q1(:-2,1:-1))
+!     #     /(q11+q1(:-2,:-2)+q1(:-2,1:-1)))
+!     # q11=q1(:-2,2:)+q1(1:-1,2:)
+!     # Bu=0.5*((q11-q1(:-2,:-2)-q1(1:-1,:-2))
+!     #     /(q11+q1(:-2,:-2)+q1(1:-1,:-2)))
+!     # q11=q1(2:,2:)+q1(1:-1,2:)
+!     # Bb=0.5*((q11-q1(2:,:-2)-q1(1:-1,:-2))
+!     #     /(q11+q1(2:,:-2)+q1(1:-1,:-2)))
 !     # 
 !     # # compute diffusion correction U/V terms (see MPDATA review reference)
 !     # Uabs=np.abs(U)
 !     # # first find U/V terms on the grid cell borders
-!     # curUabs=(Uabs[1:-1,:-2]+Uabs[1:-1,1:-1])/2
+!     # curUabs=(Uabs[1:-1,:-2)+Uabs[1:-1,1:-1))/2
 !     # curU=Ux0
-!     # curV=(V[1:-1,:-2]+V[1:-1,1:-1])/2
+!     # curV=(V[1:-1,:-2)+V[1:-1,1:-1))/2
 !     # # then compute Ul
 !     # Ul=curUabs*(1-curUabs)*Al - 2*f*curU*curV*Bl
 !     # # compute Ur using the same two steps
-!     # curUabs=(Uabs[1:-1,2:]+Uabs[1:-1,1:-1])/2
+!     # curUabs=(Uabs[1:-1,2:)+Uabs[1:-1,1:-1))/2
 !     # curU=Ux1
-!     # curV=(V[1:-1,2:]+V[1:-1,1:-1])/2
+!     # curV=(V[1:-1,2:)+V[1:-1,1:-1))/2
 !     # Ur=curUabs*(1-curUabs)*Ar - 2*f*curU*curV*Br
 !     # # compute Vu
 !     # Vabs=np.abs(V)
-!     # curVabs=(Vabs[:-2,1:-1]+Vabs[1:-1,1:-1])/2
+!     # curVabs=(Vabs[:-2,1:-1)+Vabs[1:-1,1:-1))/2
 !     # curV=Vy0
-!     # curU=(U[:-2,1:-1]+U[1:-1,1:-1])/2
+!     # curU=(U[:-2,1:-1)+U[1:-1,1:-1))/2
 !     # Vu=curVabs*(1-curVabs)*Bu - 2*f*curU*curV*Bu
 !     # # compute Vb
-!     # curVabs=(Vabs[2:,1:-1]+Vabs[1:-1,1:-1])/2
+!     # curVabs=(Vabs[2:,1:-1)+Vabs[1:-1,1:-1))/2
 !     # curV=Vy1
-!     # curU=(U[2:,1:-1]+U[1:-1,1:-1])/2
+!     # curU=(U[2:,1:-1)+U[1:-1,1:-1))/2
 !     # Vb=curVabs*(1-curVabs)*Bb - 2*f*curU*curV*Bb
 !     # 
-!     # q[1:-1,1:-1]=(q1[1:-1,1:-1]
-!     #     -(F(q1[1:-1,1:-1],q1[1:-1,2:],Ul)
-!     #     -F(q1[1:-1,:-2],q1[1:-1,1:-1],Ur))
-!     #     -(F(q1[1:-1,1:-1],q1[2:,1:-1],Vu)
-!     #     -F(q1[:-2,1:-1],q1[1:-1,1:-1],Vb)))
+!     # q[1:-1,1:-1)=(q1(1:-1,1:-1)
+!     #     -(F(q1(1:-1,1:-1),q1(1:-1,2:),Ul)
+!     #     -F(q1(1:-1,:-2),q1(1:-1,1:-1),Ur))
+!     #     -(F(q1(1:-1,1:-1),q1(2:,1:-1),Vu)
+!     #     -F(q1(:-2,1:-1),q1(1:-1,1:-1),Vb)))
     end subroutine advect2d
 
-
-    subroutine advect1d(q,u,rho,dz,nx,nz,ny,options)
-        real,dimension(:,:,:), intent(inout) :: q,u,rho,dz
-        integer,intent(in)::nx,nz,ny
-        type(options_type),intent(in) :: options
-        real,dimension(nx,nz,ny)::q1
-        real,dimension(nx,nz-1,ny)::U2,fluxes
-        integer::i
+    subroutine advect_w(q,u,nx,n,ny)
+        real,dimension(:,:,:), intent(inout) :: q
+        real,dimension(:,:,:), intent(in) :: u
+        integer,intent(in)::n,nx,ny
+        real,dimension(n)::q1
+        real,dimension(n-1)::f,l,r,U2
+        real,dimension(n-2)::fl,fr, l2,c2,r2, U3, denom, Vl, Vr
+        integer::y, x
         
-        q1=q
+        do y=2,ny-1
+            do x=2,nx-1
+                l  = q(x,1:n-1,y)
+                r  = q(x,2:n,y)
+                U2 = u(x,1:n-1,y)
+                
+                ! This is the core 1D implementation of mpdata
+                ! advect_w requires its own implementation to handle the top and bottom boundaries
+                call flux1(l,r,U2,f)
+                
+                ! for advect_w we need to add the fluxes to the top and bottom boundaries too. 
+                q1(1)=l(1)-f(1)
+                ! note inlined flux1 call for the top boundary condition
+                q1(n)=r(n-1)+f(n-1) - &
+                        ((u(x,n,y)+ABS(u(x,n,y))) * r(n-1) + (u(x,n,y)-ABS(u(x,n,y))) * r(n-1))/2
+                
+                q1(2:n-1) = l(2:n-1) + (f(:n-2) - f(2:n-1))
 
-!       This is the MPDATA diffusion correction term for 1D flow
-!       U2 is the diffusion correction pseudo-velocity
-        U2=abs(u(:,1:nz-1,:))-u(:,1:nz-1,:)**2
-!       note U2(nz)=0 because we assume q(nz+1)=q(nz), thus diffusion = 0
-        U2= U2 * (q1(:,2:nz,:)-q1(:,1:nz-1,:))/(q1(:,1:nz-1,:)+q1(:,2:nz,:))
-!       # Vl=(U2[:-2]+U2[1:-1])/2*(q1[:-2]-q1[1:-1])/(q1[:-2]+q1[1:-1])
-!       fluxout=vr,fluxin=vl
-!         - (F(q1[1:-1],q1[2:],Vr) - F(q1[1:-1],q1[:-2],Vl)))
+                ! This is the MPDATA diffusion correction term for 1D flow
+                ! l, c, and r are now len(n-2) defined with q from the first update
+                l2  = q1(1:n-2)
+                c2  = q1(2:n-1)
+                r2  = q1(3:n)
+                ! U is defined on the mass grid for the pseudo-velocities?
+                U3 = (U2(1:n-2) + U2(2:n-1)) / 2
+                U3 = abs(U3)-U3**2
+                ! left and right pseudo (diffusive) velocities
+                denom=(q1(1:n-2)+q1(2:n-1))
+                where(denom==0) denom=1e-10
+                Vl = U3 * (q1(1:n-2)-q1(2:n-1)) / denom
 
-!       # Vr=(U2[2:]+U2[1:-1])/2*(q1[2:]-q1[1:-1])/(q1[2:]+q1[1:-1])
+                denom=(q1(2:n-1)+q1(3:n))
+                where(denom==0) denom=1e-10
+                Vr = U3 * (q1(3:n)  -q1(2:n-1)) / denom
+
+                call flux1(l2,c2,Vl,fl)
+                call flux1(c2,r2,Vr,fr)
+                
+                q(x,2:n-1,y) = q1(2:n-1) + (fl - fr)
+                q(x,1,y) = q1(1) - fl(1)
+                q(x,n,y) = q1(n) + fr(n-2) - &
+                    ((Vr(n-2)+ABS(Vr(n-2))) * r2(n-2) + (Vr(n-2)-ABS(Vr(n-2))) * r2(n-2))/2
+                    
+            enddo
+        enddo
+    end subroutine advect_w
+
+    subroutine advect_v(q,u,nx,nz,n)
+        real,dimension(:,:,:), intent(inout) :: q
+        real,dimension(:,:,:), intent(in) :: u
+        integer,intent(in)::n,nz,nx
+        real,dimension(n)::q1
+        real,dimension(n-1)::f,l,r,U2
+        real,dimension(n-2)::fl,fr, l2,c2,r2, U3, denom, Vl, Vr
+        integer::x, z
         
-!       fluxes= ((U2+ABS(U2)) * q(:,1:nz-1,:)  +  (Ur-ABS(Ur)) * q(:,2:nz,:))/2
+        ! might be more cache friendly if we tile over x? 
+        ! though that won't work with including mpdata_core
+        do z=1,nz
+            do x=2,nx-1
+                l  = q(x,z,1:n-1)
+                r  = q(x,z,2:n)
+                U2 = u(x,z,1:n-1)
+                
+                include 'mpdata_core.f03'
+                
+                q(x,z,2:n-1) = q1(2:n-1) + (fl - fr)
+            enddo
+        enddo
+    end subroutine advect_v
 
-!       q(2:nx-1,2:nz-1,2:ny-1)=q1(2:nx-1,2:nz-1,2:ny-1) &
-!               - (fluxes(2:nx-1,2:nz-1,2:ny-1) - fluxes(2:nx-1,1:nz-2,2:ny-1))
-!       
-!       q(2:nx-1,1,2:ny-1)=q(2:nx-1,1,2:ny-1) - fluxes(2:nx-1,1,2:ny-1)
-    end subroutine advect1d
+    subroutine advect_u(q,u,n,nz,ny)
+        real,dimension(:,:,:), intent(inout) :: q
+        real,dimension(:,:,:), intent(in) :: u
+        integer,intent(in)::n,nz,ny
+        real,dimension(n)::q1
+        real,dimension(n-1)::f,l,r,U2
+        real,dimension(n-2)::fl,fr, l2,c2,r2, U3, denom, Vl, Vr
+        integer::y, z
+        
+        do y=2,ny-1
+            do z=1,nz
+                l  = q(1:n-1,z,y)
+                r  = q(2:n,z,y)
+                U2 = u(1:n-1,z,y)
+
+                include 'mpdata_core.f03'
+                
+                q(2:n-1,z,y) = q1(2:n-1) + (fl - fr)
+            enddo
+        enddo
+    end subroutine advect_u
 
 
     subroutine advect3d(q,u,v,w,rho,dz,nx,nz,ny,debug,options)
@@ -149,61 +243,65 @@ contains
         type(options_type), intent(in)::options
         ! interal parameters
         integer :: err,i
-        real,dimension(1:nx,1:nz,1:ny) :: qin
-        real, dimension(1:nx-1,1:nz) :: f1 ! there used to be an f2 to store f[x+1]
-        real, dimension(1:nx-2,1:nz) :: f3,f4
-        real, dimension(1:nx-2,1:nz-1) ::f5
-        !$omp parallel shared(qin,q,u,v,w,rho,dz) firstprivate(nx,ny,nz) private(i,f1,f3,f4,f5)
-        !$omp do schedule(static)
-        do i=1,ny
-            qin(:,:,i)=q(:,:,i)
-        enddo
-        !$omp end do
-        !$omp barrier
-        !$omp do schedule(static)
-        do i=2,ny-1
-!           by manually inlining the flux2 call we should remove extra array copies that the compiler didn't seem to be able to remove. 
-!           equivalent flux2 calls are left in for reference (commented) to restore recall that fx arrays should be 3D : n x m x 1
-!           calculate fluxes between grid cells
-           f1= ((u(1:nx-1,:,i)+ABS(u(1:nx-1,:,i))) * qin(1:nx-1,:,i) + &
-            (u(1:nx-1,:,i)-ABS(u(1:nx-1,:,i))) * qin(2:nx,:,i))/2
-!            call flux2(qin(1:nx-1,:,i),qin(2:nx,:,i),u(1:nx-1,:,i),nx-1,nz,1,f1)  !Ux1
-           f3= ((v(2:nx-1,:,i)+ABS(v(2:nx-1,:,i))) * qin(2:nx-1,:,i) + &
-            (v(2:nx-1,:,i)-ABS(v(2:nx-1,:,i))) * qin(2:nx-1,:,i+1))/2
-!          call flux2(qin(2:nx-1,:,i),qin(2:nx-1,:,i+1),v(2:nx-1,:,i),nx-2,nz,1,f3)  !Vy1
-           f4= ((v(2:nx-1,:,i-1)+ABS(v(2:nx-1,:,i-1))) * qin(2:nx-1,:,i-1) + &
-            (v(2:nx-1,:,i-1)-ABS(v(2:nx-1,:,i-1))) * qin(2:nx-1,:,i))/2
-!            call flux2(qin(2:nx-1,:,i-1),qin(2:nx-1,:,i),v(2:nx-1,:,i-1),nx-2,nz,1,f4)  !Vy0
-           f5= ((w(2:nx-1,1:nz-1,i)+ABS(w(2:nx-1,1:nz-1,i))) * qin(2:nx-1,1:nz-1,i) + &
-            (w(2:nx-1,1:nz-1,i)-ABS(w(2:nx-1,1:nz-1,i))) * qin(2:nx-1,2:nz,i))/2
-!            call flux2(qin(2:nx-1,1:nz-1,i),qin(2:nx-1,2:nz,i),w(2:nx-1,1:nz-1,i),nx-2,nz-1,1,f5)
-           
-           if (options%advect_density) then
-               ! perform horizontal advection
-               q(2:nx-1,:,i)=q(2:nx-1,:,i) - ((f1(2:nx-1,:)-f1(1:nx-2,:)) + (f3(:,:)-f4(:,:)))/rho(2:nx-1,:,i)/dz(2:nx-1,:,i)
-               ! then vertical (order doesn't matter because fluxes f1-6 are calculated before applying them)
-               ! add fluxes to middle layers
-               q(2:nx-1,2:nz-1,i)=q(2:nx-1,2:nz-1,i)-(f5(:,2:nz-1)-f5(:,1:nz-2))/rho(2:nx-1,2:nz-1,i)/dz(2:nx-1,2:nz-1,i)
-               ! add fluxes to bottom layer
-               q(2:nx-1,1,i)=q(2:nx-1,1,i)-f5(:,1)/rho(2:nx-1,1,i)/dz(2:nx-1,1,i)
-               ! add fluxes to top layer
-               q(2:nx-1,nz,i)=q(2:nx-1,nz,i)-(qin(2:nx-1,nz,i)*w(2:nx-1,nz,i)-f5(:,nz-1))/dz(2:nx-1,nz,i)/rho(2:nx-1,nz,i)
-           else
-               ! perform horizontal advection
-               q(2:nx-1,:,i)=q(2:nx-1,:,i) - ((f1(2:nx-1,:)-f1(1:nx-2,:)) + (f3(:,:)-f4(:,:)))
-               ! then vertical (order doesn't matter because fluxes f1-6 are calculated before applying them)
-               ! add fluxes to middle layers
-               q(2:nx-1,2:nz-1,i)=q(2:nx-1,2:nz-1,i)-(f5(:,2:nz-1)-f5(:,1:nz-2))
-               ! add fluxes to bottom layer
-               q(2:nx-1,1,i)=q(2:nx-1,1,i)-f5(:,1)
-               ! add fluxes to top layer
-               q(2:nx-1,nz,i)=q(2:nx-1,nz,i)-(qin(2:nx-1,nz,i)*w(2:nx-1,nz,i)-f5(:,nz-1))
-           endif
-        enddo
-        !$omp end do
-        !$omp end parallel
+        
+        if (order==0) then
+!             if (any(isnan(q))) then
+!                 print*, "pre"
+!                 write(*,*) maxval(q)
+!                 stop "MPDATA:NaN error"
+!             endif
+            
+            call advect_u(q,u,nx,nz,ny)
+!             if (any(isnan(q))) then
+!                 print*, "post-u pre-v"
+!                 write(*,*) maxval(q)
+!                 stop "MPDATA:NaN error"
+!             endif
+            call advect_v(q,v,nx,nz,ny)
+!             if (any(isnan(q))) then
+!                 print*, "post-v pre-w"
+!                 write(*,*) maxval(q)
+!                 stop "MPDATA:NaN error"
+!             endif
+            call advect_w(q,w,nx,nz,ny)
+!             if (any(isnan(q))) then
+!                 print*, "post-w"
+!                 write(*,*) maxval(q)
+!                 stop "MPDATA:NaN error"
+!             endif
+        elseif (order==1) then
+            call advect_v(q,v,nx,nz,ny)
+            call advect_w(q,w,nx,nz,ny)
+            call advect_u(q,u,nx,nz,ny)
+        elseif (order==2) then
+            call advect_w(q,w,nx,nz,ny)
+            call advect_u(q,u,nx,nz,ny)
+            call advect_v(q,v,nx,nz,ny)
+        endif
+        
+        if (options%debug) then
+            if (minval(q)<0) then
+                write(*,*) minval(q)
+                stop "MPDATA:minval error"
+            endif
+            if (maxval(q)>600) then
+                write(*,*) maxval(q)
+                stop "MPDATA:maxval error"
+            endif
+            if (any(isnan(q))) then
+                write(*,*) maxval(q)
+                stop "MPDATA:NaN error"
+            endif
+        endif
     end subroutine advect3d
-
+    
+    subroutine mpdata_init(domain,options)
+        type(domain_type), intent(inout) :: domain
+        type(options_type), intent(in) :: options
+        
+        order=0
+    end subroutine mpdata_init
+    
 !   primary entry point, advect all scalars in domain
     subroutine mpdata(domain,options,dt)
         implicit none
@@ -239,20 +337,27 @@ contains
             W_m=domain%w*(dt/dx)
         endif
 
+!         print*, "qv"
         call advect3d(domain%qv,   U_m,V_m,W_m, domain%rho,domain%dz,nx,nz,ny,0,options)
-        !MPDATA advection correction
-!       call advect2d(domain%qv,   U_m,V_m,     domain%rho,domain%dz,nx,nz,ny,options)
-!       call advect1d(domain%qv,   W_m,         domain%rho,domain%dz,nx,nz,ny,options)
-        
+!         print*, "qc"
         call advect3d(domain%cloud,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+!         print*, "qr"
         call advect3d(domain%qrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+!         print*, "qs"
         call advect3d(domain%qsnow,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+!         print*, "th"
         call advect3d(domain%th,   U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
         if (options%physics%microphysics==kMP_THOMPSON) then
+!             print*, "qi"
             call advect3d(domain%ice,  U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+!             print*, "qg"
             call advect3d(domain%qgrau,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+!             print*, "ni"
             call advect3d(domain%nice, U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+!             print*, "nr"
             call advect3d(domain%nrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
         endif
+!         print*, "CLOUD", minval(domain%cloud), maxval(domain%cloud)
+        order=mod(order+1,3)
     end subroutine mpdata
 end module adv_mpdata

@@ -8,13 +8,29 @@
 module advection
     use data_structures
     use adv_upwind, only : upwind
-    use adv_mpdata, only : mpdata
+    use adv_mpdata, only : mpdata, mpdata_init
+
 
     implicit none
     private
-    public::advect
+    public::advect,adv_init
 contains
+    
+    subroutine adv_init(domain,options)
+        implicit none
+        type(domain_type), intent(inout) :: domain
+        type(options_type),intent(in) :: options
+
+!         if (options%physics%advection==kADV_UPWIND) then
+!             call upwind(domain,options,dt)
+        if(options%physics%advection==kADV_MPDATA) then
+            call mpdata_init(domain,options)
+        endif
+        
+    end subroutine adv_init
+    
     subroutine advect(domain,options,dt)
+        implicit none
         type(domain_type), intent(inout) :: domain
         type(options_type),intent(in) :: options
         real,intent(in) :: dt

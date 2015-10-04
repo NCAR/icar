@@ -22,6 +22,7 @@ module init
     use geo,                        only : geo_LUT, geo_interp, geo_interp2d
     use vertical_interpolation,     only : vLUT
     use microphysics,               only : mp_init
+    use advection,                  only : adv_init
     use convection,                 only : init_convection
     use planetary_boundary_layer,   only : pbl_init
     use radiation,                  only : radiation_init
@@ -72,6 +73,8 @@ contains
         call radiation_init(domain,options)
         
         call lsm_init(domain,options)
+        
+        call adv_init(domain,options)
         
     end subroutine init_physics
     

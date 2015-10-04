@@ -70,8 +70,8 @@ ifeq ($(NODENAME), Nomad.local)
 	F90=gfortran
 	LIBFFT=/Users/gutmann/usr/local/lib
 	INCFFT=/Users/gutmann/usr/local/include
-	NCDF_PATH = /Users/gutmann/usr/local/
-	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
+	NCDF_PATH = /usr/local/
+	LIBNETCDF = -L/usr/local/gfortran/lib -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
 endif
 ifeq ($(NODENAME), dablam.rap.ucar.edu)
@@ -138,7 +138,7 @@ GIT_VERSION := $(shell git describe --long --dirty --all --always | sed -e's/hea
 
 # GNU fortran
 ifeq ($(F90), gfortran)
-	COMP=-fopenmp -lgomp -Ofast -c -ftree-vectorize -fimplicit-none -ffree-line-length-none -ffast-math -funroll-loops -fno-protect-parens #-flto # -march=native
+	COMP=-fopenmp -lgomp -O3 -c -ftree-vectorize -fimplicit-none -ffree-line-length-none -ffast-math -funroll-loops -fno-protect-parens #-flto # -march=native
 	LINK=-fopenmp -lgomp
 	PREPROC=-cpp
 	MODOUTPUT=-J $(BUILD)
@@ -295,7 +295,7 @@ cleanall: clean
 	rm icar fftshift_test calendar_test
 	# geo_test wind_test #test_init
 
-test: fftshift_test calendar_test #geo_test wind_test #test_init
+test: fftshift_test calendar_test mpdata_test #geo_test wind_test #test_init
 
 icar:${OBJS}
 	${F90} ${LFLAGS} ${OBJS} -o icar  -lm -lfftw3
@@ -314,6 +314,9 @@ fftshift_test: $(BUILD)test_fftshift.o $(BUILD)fftshift.o
 
 calendar_test: $(BUILD)test_calendar.o $(BUILD)time.o
 	${F90} ${LFLAGS} $(BUILD)test_calendar.o $(BUILD)time.o -o calendar_test
+
+mpdata_test: $(BUILD)test_mpdata.o $(BUILD)adv_mpdata.o
+	${F90} ${LFLAGS} $(BUILD)test_mpdata.o $(BUILD)adv_mpdata.o -o mpdata_test
 
 
 ###################################################################
@@ -487,6 +490,10 @@ $(BUILD)test_fftshift.o:$(BUILD)fftshift.o tests/test_fftshift.f90
 
 $(BUILD)test_calendar.o:$(BUILD)time.o tests/test_calendar.f90
 	${F90} ${FFLAGS} tests/test_calendar.f90 -o $(BUILD)test_calendar.o
+
+$(BUILD)test_mpdata.o:$(BUILD)adv_mpdata.o tests/test_mpdata.f90
+	${F90} ${FFLAGS} tests/test_mpdata.f90 -o $(BUILD)test_mpdata.o
+
 	
 # tests/test_$(BUILD)wind.o:tests/test_$(PHYS)wind.f90 $(BUILD)wind.o $(BUILD)linear_winds.o
 #	${F90} ${FFLAGS} tests/test_$(PHYS)wind.f90 -o tests/test_$(BUILD)wind.o
