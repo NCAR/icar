@@ -23,49 +23,36 @@ contains
     subroutine test_v()
         implicit none
         
-        integer, parameter :: nx=3, ny=20, nz=3
+        integer, parameter :: nx=3, ny=100, nz=3
+        real, parameter :: cfl=0.25
         real, allocatable, dimension(:,:,:) :: q
-        real, allocatable, dimension(:,:,:) :: v
-        integer :: i,j
+        real, allocatable, dimension(:,:,:) :: u
+        integer :: i, loop, nloops
         
         allocate(q(nx,nz,ny))
-        allocate(v(nx,nz,ny-1))
+        allocate(u(nx,nz,ny-1))
         
+        nloops=10
+        print*, "CFL=",cfl
+        
+        ! setup a sine curve for the initial conditions.  
         do i=1,ny
-            q(:,:,i)=abs(i-3)
+            q(:,:,i)=sin(i/real(ny-2) * 2*3.141592)+1
         end do
-        v=0.25
+        u=cfl
         
-        print*, "Testing individual steps CFL=",v(1,1,1)
-        print*, "Initial ",q(2,1,::2)
-        do i=1,10
-            call advect_v(q,v,nx,nz,ny)
-            print*, i, "  ",q(2,1,::2)
-        end do
-        print*, "Final Boundary ",q(1,1,::2)
-        print*, "Final Internal ",q(2,1,::2)
-
-        ! Reset domain
-        do i=1,ny
-            q(:,:,i)=abs(i-ny/2)
-        end do
-        ! Wrap around boundary conditions
-        q(:,:,1)=q(:,:,ny-1)
-        q(:,:,ny)=q(:,:,2)
-
-        print*, "Testing complete cycles over domain CFL=",v(1,1,1)
-        print*, "Initial ",q(2,1,::2)
-        
-        do j=1,10
-            do i=1, nint(1/v(1,1,1)) * ny
-                call advect_v(q,v,nx,nz,ny)
+        write(*, "(A,F6.4)") "Initial mean: ", sum(q(2,1,:))/ny
+        write(*, "(A,10F6.3)") "Initial       ", q(2,1,::ny/10)
+        do loop=1,nloops
+            do i=1,(ny-2)/cfl
+                call advect_v(q,u,nx,nz,ny)
                 ! Wrap around boundary conditions
                 q(:,:,1)=q(:,:,ny-1)
                 q(:,:,ny)=q(:,:,2)
             end do
-            print*, j, q(2,1,::2)
+            write(*, "(A,I2,10F6.3)") "After loop: ", loop, q(2,1,::ny/10)
         end do
-
+        write(*, "(A,F6.4)") "Final mean: ", sum(q(2,1,:))/ny
         
     end subroutine test_v
 
@@ -73,52 +60,82 @@ contains
     subroutine test_u()
         implicit none
         
-        integer, parameter :: nx=10, ny=3, nz=3
+        integer, parameter :: nx=100, ny=3, nz=3
+        real, parameter :: cfl=0.25
         real, allocatable, dimension(:,:,:) :: q
         real, allocatable, dimension(:,:,:) :: u
-        integer :: i
+        integer :: i, loop, nloops
         
         allocate(q(nx,nz,ny))
         allocate(u(nx-1,nz,ny))
         
-        do i=1,nx
-            q(i,:,:)=abs(i-3)
-        end do
-        u=0.25
+        nloops=10
+        print*, "CFL=",cfl
         
-        print*, "Initial ",q(:,1,2)
-        do i=1,10
-            call advect_u(q,u,nx,nz,ny)
-            print*, i, " ",q(:,1,2)
+        ! setup a sine curve for the initial conditions.  
+        do i=1,nx
+            q(i,:,:)=sin(i/real(nx-2) * 2*3.141592)+1
         end do
-        print*, "Final Boundary ",q(:,1,1)
-        print*, "Final Internal ",q(:,1,2)
+        u=cfl
+        
+        write(*, "(A,F6.4)") "Initial mean: ", sum(q(:,1,2))/nx
+        write(*, "(A,10F6.3)") "Initial       ", q(::nx/10,1,2)
+        do loop=1,nloops
+            do i=1,(nx-2)/cfl
+                call advect_u(q,u,nx,nz,ny)
+                ! Wrap around boundary conditions
+                q(1,:,:)=q(nx-1,:,:)
+                q(nx,:,:)=q(2,:,:)
+            end do
+            write(*, "(A,I2,10F6.3)") "After loop: ", loop, q(::nx/10,1,2)
+        end do
+        write(*, "(A,F6.4)") "Final mean: ", sum(q(:,1,2))/nx
         
     end subroutine test_u
     
     subroutine test_w()
         implicit none
         
-        integer, parameter :: nx=3, ny=3, nz=10
+        integer, parameter :: nx=3, ny=3, nz=106
+        real, parameter :: cfl=0.25
         real, allocatable, dimension(:,:,:) :: q
         real, allocatable, dimension(:,:,:) :: u
-        integer :: i
+        integer :: i, loop, nloops
         
         allocate(q(nx,nz,ny))
         allocate(u(nx,nz,ny))
         
-        do i=1,nz
-            q(:,i,:)=abs(i-3)
-        end do
-        u=0.25
+        nloops=10
+        print*, "CFL=",cfl
         
-        print*, "Initial ",q(2,:,2)
-        do i=1,10
-            call advect_w(q,u,nx,nz,ny)
-            print*, i, " ",q(2,:,2)
+        ! setup a sine curve for the initial conditions.  
+        ! offset in space to account for large buffered boundaries for w test
+        do i=1,nz
+            q(:,i,:)=sin((i-3)/real(nz-7) * 2*3.141592)+1
         end do
-        print*, "Final Boundary ",q(1,:,1)
-        print*, "Final Internal ",q(2,:,2)
+        u=cfl
+        
+        write(*, "(A,F6.4)") "Initial mean: ", sum(q(2,4:nz-3,2))/(nz-6)
+        write(*, "(A,11F6.3)") "Initial       ", q(2,4::nz/10,2)
+        write(*, "(10F6.3)") q(2,:10,2)
+        do loop=1,nloops
+            do i=1,(nz-7)/cfl
+                call advect_w(q,u,nx,nz,ny)
+                ! Wrap around boundary conditions
+                ! keep a large buffer because we have issues with boundaries in w
+                ! w has special boundary conditions, so we are only examining internal
+                ! advection with this test. 
+                q(:,1,:)=q(:,nz-6,:)
+                q(:,2,:)=q(:,nz-5,:)
+                q(:,3,:)=q(:,nz-4,:)
+                q(:,nz-3,:)=q(:,4,:)
+                q(:,nz-2,:)=q(:,5,:)
+                q(:,nz-1,:)=q(:,6,:)
+                q(:,nz,  :)=q(:,7,:)
+            end do
+            write(*, "(A,I2,12F6.3)") "After loop: ", loop, q(2,4::nz/10,2), sum(q(2,4:nz-3,2))/(nz-6)
+        end do
+        write(*, "(A,F6.4)") "Final mean: ", sum(q(2,4:nz-3,2))/(nz-6)
         
     end subroutine test_w
     

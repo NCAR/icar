@@ -133,8 +133,8 @@ contains
         real,dimension(:,:,:), intent(in) :: u
         integer,intent(in)::n,nx,ny
         real,dimension(n)::q1
-        real,dimension(n-1)::f,l,r,U2
-        real,dimension(n-2)::fl,fr, l2,c2,r2, U3, denom, Vl, Vr
+        real,dimension(n-1)::f,l,r,U2, denom
+!         real,dimension(n-2)::fl,fr, l2,c2,r2, U3, denom, Vl, Vr
         integer::y, x
         
         do y=2,ny-1
@@ -153,33 +153,35 @@ contains
                 q1(n)=r(n-1)+f(n-1) - &
                         ((u(x,n,y)+ABS(u(x,n,y))) * r(n-1) + (u(x,n,y)-ABS(u(x,n,y))) * r(n-1))/2
                 
-                q1(2:n-1) = l(2:n-1) + (f(:n-2) - f(2:n-1))
+                q1(2:n-1) = l(2:n-1) + (f(1:n-2) - f(2:n-1))
 
-                ! This is the MPDATA diffusion correction term for 1D flow
-                ! l, c, and r are now len(n-2) defined with q from the first update
-                l2  = q1(1:n-2)
-                c2  = q1(2:n-1)
-                r2  = q1(3:n)
-                ! U is defined on the mass grid for the pseudo-velocities?
-                U3 = (U2(1:n-2) + U2(2:n-1)) / 2
-                U3 = abs(U3)-U3**2
-                ! left and right pseudo (diffusive) velocities
-                denom=(q1(1:n-2)+q1(2:n-1))
-                where(denom==0) denom=1e-10
-                Vl = U3 * (q1(1:n-2)-q1(2:n-1)) / denom
-
-                denom=(q1(2:n-1)+q1(3:n))
-                where(denom==0) denom=1e-10
-                Vr = U3 * (q1(3:n)  -q1(2:n-1)) / denom
-
-                call flux1(l2,c2,Vl,fl)
-                call flux1(c2,r2,Vr,fr)
+                ! This is the core 1D implementation of MPDATA correction
                 
-                q(x,2:n-1,y) = q1(2:n-1) + (fl - fr)
-                q(x,1,y) = q1(1) - fl(1)
-                q(x,n,y) = q1(n) + fr(n-2) - &
-                    ((Vr(n-2)+ABS(Vr(n-2))) * r2(n-2) + (Vr(n-2)-ABS(Vr(n-2))) * r2(n-2))/2
-                    
+                ! This is the MPDATA diffusion correction term for 1D flow
+                ! U is defined on the mass grid for the pseudo-velocities?
+                ! left and right pseudo (diffusive) velocities
+    
+                ! we will copy the q1 data into r to potentially minimize aliasing problems 
+                ! for the compiler, and improve memory alignment for vectorization
+                r  = q1(2:n) 
+                ! l  = q1(1:n-1) ! no need to copy these data over again
+    
+                ! In MPDATA papers (r-l)/(r+l) is usually refered to as "A"
+                ! compute the denomenator first so we can check that it is not zero
+                denom=(r + q1(1:n-1))
+                where(denom==0) denom=1e-10
+                ! U2 is the diffusive pseudo-velocity
+                U2 = abs(U2) - U2**2
+                U2 = U2 * (r-q1(1:n-1)) / denom
+    
+                ! now calculate the MPDATA flux term
+                call flux1(q1(1:n-1),r,U2,f)
+                
+                q(x,2:n-1,y) = q1(2:n-1) + (f(1:n-2) - f(2:n-1))
+                q(x,1,y) = q1(1) - f(1)
+                q(x,n,y) = q1(n) + f(n-1) 
+                ! note we don't subtract diffusive fluxes out the top as the layer above it is presumed to be the same
+                ! as a result the diffusion pseudo-velocity term would be 0
             enddo
         enddo
     end subroutine advect_w
@@ -189,8 +191,7 @@ contains
         real,dimension(:,:,:), intent(in) :: u
         integer,intent(in)::n,nz,nx
         real,dimension(n)::q1
-        real,dimension(n-1)::f,l,r,U2
-        real,dimension(n-2)::fl,fr, l2,c2,r2, U3, denom, Vl, Vr
+        real,dimension(n-1)::f,l,r,U2, denom
         integer::x, z
         
         ! might be more cache friendly if we tile over x? 
@@ -201,9 +202,9 @@ contains
                 r  = q(x,z,2:n)
                 U2 = u(x,z,1:n-1)
                 
-                include 'mpdata_core.f03'
+                include 'adv_mpdata_core.f90'
                 
-                q(x,z,2:n-1) = q1(2:n-1) + (fl - fr)
+                q(x,z,2:n-1) = q1(2:n-1) + (f(:n-2) - f(2:n-1))
             enddo
         enddo
     end subroutine advect_v
@@ -213,19 +214,22 @@ contains
         real,dimension(:,:,:), intent(in) :: u
         integer,intent(in)::n,nz,ny
         real,dimension(n)::q1
-        real,dimension(n-1)::f,l,r,U2
-        real,dimension(n-2)::fl,fr, l2,c2,r2, U3, denom, Vl, Vr
+        real,dimension(n-1)::f,l,r,U2, denom
         integer::y, z
         
+        ! loop over internal y columns
         do y=2,ny-1
+            ! loop over all z layers
             do z=1,nz
+                
+                ! copy the data into local (cached) variables.  Makes the include mpdata_core possible
                 l  = q(1:n-1,z,y)
                 r  = q(2:n,z,y)
                 U2 = u(1:n-1,z,y)
 
-                include 'mpdata_core.f03'
+                include 'adv_mpdata_core.f90'
                 
-                q(2:n-1,z,y) = q1(2:n-1) + (fl - fr)
+                q(2:n-1,z,y) = q1(2:n-1) + (f(:n-2) - f(2:n-1))
             enddo
         enddo
     end subroutine advect_u
@@ -244,6 +248,8 @@ contains
         ! interal parameters
         integer :: err,i
         
+        ! perform an Alternating Direction Explicit MP-DATA time step
+        ! but swap the order of the alternating directions with every call
         if (order==0) then
 !             if (any(isnan(q))) then
 !                 print*, "pre"
