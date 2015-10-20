@@ -368,6 +368,13 @@ module data_structures
     end type lt_options_type
     
     !------------------------------------------------
+    ! store Advection options
+    !------------------------------------------------
+    type adv_options_type
+        logical :: boundary_buffer
+    end type adv_options_type
+    
+    !------------------------------------------------
     ! store all model options
     !------------------------------------------------
     type options_type
@@ -385,7 +392,7 @@ module data_structures
                                         shvar,lhvar,pblhvar,zvar, &
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var
-        character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename
+        character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, adv_options_filename
         character(len=MAXFILELENGTH) :: calendar
         
 
@@ -440,6 +447,9 @@ module data_structures
         type(mp_options_type)::mp_options
         logical :: use_lt_options
         type(lt_options_type) :: lt_options
+        logical :: use_adv_options
+        type(adv_options_type) :: adv_options
+        
         integer :: warning_level        ! level of warnings to issue when checking options settings 0-10.  
                                         ! 0  = Don't print anything
                                         ! 1  = print serious warnings

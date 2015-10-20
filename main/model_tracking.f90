@@ -14,12 +14,12 @@ contains
     
     subroutine init_model_diffs()
         implicit none
-        integer::n=11
+        integer::n=12
         
         allocate(versionlist(n))
         allocate(deltas(n))
         versionlist=[character(len=1024) :: &
-                     "0.5.1","0.5.2","0.6","0.7","0.7.1","0.7.2","0.7.3","0.8","0.8.1","0.8.2","0.9"]
+                     "0.5.1","0.5.2","0.6","0.7","0.7.1","0.7.2","0.7.3","0.8","0.8.1","0.8.2","0.9","0.9.1"]
         deltas=[ character(len=1024) :: & 
         "Earliest version in record. ", &
         "Added dxlow and variable name definitions pvar,tvar,qvvar,qcvar,qivar,"// &
@@ -38,7 +38,8 @@ contains
         "      in namelist.", &
         "Added preliminary support for running the Noah LSM. ", &
         "Removed add_low_topo from options... MAJOR changes elsewhere, lots of "// &
-        "      new options (mp_options, lt_options)." &
+        "      new options (mp_options, lt_options).", &
+        "Added MPDATA and adv_options" &
         ]
         
     end subroutine init_model_diffs

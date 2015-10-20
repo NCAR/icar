@@ -285,6 +285,18 @@ contains
             call advect_v(q,v,nx,nz,ny)
         endif
         
+        if (options%adv_options%boundary_buffer) then
+            ! smooth the very outer boundaries to try to minimize oscillatory behavior
+            ! that can occur with MPDATA if the domain and boundaries are not in very good agreement
+            q(2,:,:) = (q(1,:,:) + q(3,:,:))/2
+            q(nx-1,:,:) = (q(nx,:,:) + q(nx-2,:,:))/2
+
+            q(:,:,2) = (q(:,:,1) + q(:,:,3))/2
+            q(:,:,ny-1) = (q(:,:,ny) + q(:,:,ny-2))/2
+
+            ! for now top boundary is not processed because it is not read from data
+        endif
+        
         if (options%debug) then
             if (minval(q)<0) then
                 write(*,*) minval(q)

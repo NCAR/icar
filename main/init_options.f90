@@ -40,6 +40,7 @@ contains
         
         call lt_parameters_namelist(options%lt_options_filename, options)
         call mp_parameters_namelist(options%mp_options_filename,options)
+        call adv_parameters_namelist(options%adv_options_filename,options)
 
         if (options%restart) then
             call init_restart_options(options_filename,options)
@@ -94,9 +95,9 @@ contains
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=model_version)
         close(name_unit)
-        if (version.ne."0.9") then
+        if (version.ne."0.9.1") then
             write(*,*) "Model version does not match namelist version"
-            write(*,*) "  Model version: 0.9"
+            write(*,*) "  Model version: 0.9.1"
             write(*,*) "  Namelist version: ",trim(version)
             call print_model_diffs(version)
             stop
@@ -205,8 +206,9 @@ contains
         
 !       default values for physics options (advection+linear winds+simple_microphysics)
         pbl = 0 ! 0 = no PBL, 
-                ! 1 = STUPID PBL (only in LSM=1 module),
-                ! 2 = local PBL diffusion
+                ! 1 = Stupid PBL (only in LSM=1 module),
+                ! 2 = local PBL diffusion after Louis 1979
+                ! 3 = YSU PBL (not complete)
                 
         lsm = 0 ! 0 = no LSM, 
                 ! 1 = Fluxes from GCM, 
@@ -223,10 +225,11 @@ contains
         
         conv= 0 ! 0 = no CONV,
                 ! 1 = Tiedke scheme
+                ! 2 = Kain-Fritsch scheme
         
         adv = 1 ! 0 = no ADV, 
                 ! 1 = upwind advection scheme
-                ! 2 = MPDATA (not complete)
+                ! 2 = MPDATA
         
         wind= 1 ! 0 = no LT,  
                 ! 1 = linear theory wind perturbations
@@ -364,11 +367,11 @@ contains
         integer :: nz, n_ext_winds,buffer, warning_level
         logical :: ideal, readz, readdz, debug, external_winds, surface_io_only, &
                    mean_winds, mean_fields, restart, advect_density, &
-                   high_res_soil_state, use_agl_height, time_varying_z, use_mp_options, use_lt_options
+                   high_res_soil_state, use_agl_height, time_varying_z, use_mp_options, use_lt_options, use_adv_options
         character(len=MAXFILELENGTH) :: date, calendar, start_date
         integer :: year, month, day, hour, minute, second
 ! ++ trude
-        character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename
+        character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, adv_options_filename
 ! -- trude
 
         namelist /parameters/ ntimesteps,outputinterval,inputinterval, surface_io_only, &
@@ -378,7 +381,8 @@ contains
                               date, calendar, high_res_soil_state,rotation_scale_height,warning_level, &
                               use_agl_height, start_date, time_varying_z, &
                               mp_options_filename, use_mp_options, &    ! trude added
-                              lt_options_filename, use_lt_options
+                              lt_options_filename, use_lt_options, &
+                              adv_options_filename, use_adv_options
         
 !       default parameters
         surface_io_only=.False.
@@ -411,6 +415,8 @@ contains
         use_lt_options=.False.
         lt_options_filename = filename
 
+        use_adv_options=.False.
+        adv_options_filename = filename
         
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=parameters)
@@ -502,6 +508,9 @@ contains
 
         options%use_lt_options = use_lt_options
         options%lt_options_filename  = lt_options_filename
+
+        options%use_adv_options = use_adv_options
+        options%adv_options_filename  = adv_options_filename
 
     end subroutine parameters_namelist
 
@@ -696,7 +705,46 @@ contains
         ! copy the data back into the global options data structure
         options%lt_options = lt_options        
     end subroutine lt_parameters_namelist
-    
+
+
+    subroutine adv_parameters_namelist(filename, options)
+        implicit none
+        character(len=*), intent(in) :: filename
+        type(options_type), intent(inout)::options
+        type(adv_options_type)::adv_options
+        
+        integer :: name_unit
+
+        logical :: boundary_buffer          ! apply some smoothing to the x and y boundaries
+        
+        ! define the namelist
+        namelist /adv_parameters/ boundary_buffer
+        
+         ! because adv_options could be in a separate file
+         if (options%use_adv_options) then
+             if (trim(filename)/=trim(get_options_file())) then
+                 call version_check(filename,options)
+             endif
+         endif
+        
+        
+        ! set default values
+        boundary_buffer = .False.
+        
+        ! read the namelist options
+        if (options%use_adv_options) then
+            open(io_newunit(name_unit), file=filename)
+            read(name_unit,nml=adv_parameters)
+            close(name_unit)
+        endif
+        
+        ! store everything in the adv_options structure
+        adv_options%boundary_buffer = boundary_buffer
+        
+        ! copy the data back into the global options data structure
+        options%adv_options = adv_options
+    end subroutine adv_parameters_namelist
+
     ! set up model levels, either read from a namelist, or from a default set of values
     subroutine model_levels_namelist(filename,options)
         implicit none
