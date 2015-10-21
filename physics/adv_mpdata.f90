@@ -15,6 +15,7 @@ module adv_mpdata
     integer :: order
     public:: mpdata, mpdata_init
     public:: advect_u, advect_w, advect_v ! for test_mpdata testing only!
+    
 
 contains
     subroutine flux2(l,r,U,nx,nz,ny,f)
@@ -235,7 +236,7 @@ contains
     end subroutine advect_u
 
 
-    subroutine advect3d(q,u,v,w,rho,dz,nx,nz,ny,debug,options)
+    subroutine advect3d(q,u,v,w,rho,dz,nx,nz,ny,debug,options, err)
         implicit none
         real,dimension(1:nx,1:nz,1:ny), intent(inout) :: q
         real,dimension(1:nx,1:nz,1:ny), intent(in) :: w
@@ -245,36 +246,35 @@ contains
         real,dimension(1:nx,1:nz,1:ny), intent(in) :: dz
         integer, intent(in) :: ny,nz,nx,debug
         type(options_type), intent(in)::options
+        integer, intent(inout) :: err
         ! interal parameters
-        integer :: err,i
+        integer :: i
+        
+        if (options%debug) then
+            if (minval(q)<0) then
+                write(*,*) minval(q)
+                err=err-1
+                where(q<0) q=0
+            endif
+            if (maxval(q)>5000) then
+                write(*,*) maxval(q)
+                err=err-2
+                where((q>5000)) q=5000 ! not sure what a realistic high value for number concentration is. 
+            endif
+            if (any(isnan(q))) then
+                write(*,*) maxval(q)
+                err=err-4
+                where(isnan(q)) q=0
+            endif
+        endif
+        
         
         ! perform an Alternating Direction Explicit MP-DATA time step
         ! but swap the order of the alternating directions with every call
         if (order==0) then
-!             if (any(isnan(q))) then
-!                 print*, "pre"
-!                 write(*,*) maxval(q)
-!                 stop "MPDATA:NaN error"
-!             endif
-            
             call advect_u(q,u,nx,nz,ny)
-!             if (any(isnan(q))) then
-!                 print*, "post-u pre-v"
-!                 write(*,*) maxval(q)
-!                 stop "MPDATA:NaN error"
-!             endif
             call advect_v(q,v,nx,nz,ny)
-!             if (any(isnan(q))) then
-!                 print*, "post-v pre-w"
-!                 write(*,*) maxval(q)
-!                 stop "MPDATA:NaN error"
-!             endif
             call advect_w(q,w,nx,nz,ny)
-!             if (any(isnan(q))) then
-!                 print*, "post-w"
-!                 write(*,*) maxval(q)
-!                 stop "MPDATA:NaN error"
-!             endif
         elseif (order==1) then
             call advect_v(q,v,nx,nz,ny)
             call advect_w(q,w,nx,nz,ny)
@@ -293,22 +293,25 @@ contains
 
             q(:,:,2) = (q(:,:,1) + q(:,:,3))/2
             q(:,:,ny-1) = (q(:,:,ny) + q(:,:,ny-2))/2
-
             ! for now top boundary is not processed because it is not read from data
         endif
         
         if (options%debug) then
             if (minval(q)<0) then
                 write(*,*) minval(q)
-                stop "MPDATA:minval error"
+                if (minval(q)>(-1e-6)) then
+                    where(q<0) q=0
+                else
+                    err=err+1
+                endif
             endif
-            if (maxval(q)>600) then
+            if (maxval(q)>6000) then
                 write(*,*) maxval(q)
-                stop "MPDATA:maxval error"
+                err=err+2
             endif
             if (any(isnan(q))) then
                 write(*,*) maxval(q)
-                stop "MPDATA:NaN error"
+                err=err+4
             endif
         endif
     end subroutine advect3d
@@ -328,8 +331,8 @@ contains
         real,intent(in)::dt
         
         real::dx
-        integer::nx,nz,ny,i
-            
+        integer::nx,nz,ny,i, error
+        
         dx=domain%dx
         nx=size(domain%dz,1)
         nz=size(domain%dz,2)
@@ -354,28 +357,83 @@ contains
 !           note, even though dz!=dx, W is computed from the divergence in U/V so it is scaled by dx/dz already
             W_m=domain%w*(dt/dx)
         endif
-
+        
+        error=0
+        
 !         print*, "qv"
-        call advect3d(domain%qv,   U_m,V_m,W_m, domain%rho,domain%dz,nx,nz,ny,0,options)
+        call advect3d(domain%qv,   U_m,V_m,W_m, domain%rho,domain%dz,nx,nz,ny,0,options, error)
+        if (error/=0) then
+            print*, "qv", error
+            if (error>0) then
+                stop "MPDATA Error"
+            endif
+        endif
 !         print*, "qc"
-        call advect3d(domain%cloud,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+        call advect3d(domain%cloud,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options, error)
+        if (error/=0) then
+            print*, "qc", error
+            if (error>0) then
+                stop "MPDATA Error"
+            endif
+        endif
 !         print*, "qr"
-        call advect3d(domain%qrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+        call advect3d(domain%qrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options, error)
+        if (error/=0) then
+            print*, "qr", error
+            if (error>0) then
+                stop "MPDATA Error"
+            endif
+        endif
 !         print*, "qs"
-        call advect3d(domain%qsnow,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+        call advect3d(domain%qsnow,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options, error)
+        if (error/=0) then
+            print*, "qs", error
+            if (error>0) then
+                stop "MPDATA Error"
+            endif
+        endif
 !         print*, "th"
-        call advect3d(domain%th,   U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+        call advect3d(domain%th,   U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options, error)
+        if (error/=0) then
+            print*, "th", error
+            if (error>0) then
+                stop "MPDATA Error"
+            endif
+        endif
         if (options%physics%microphysics==kMP_THOMPSON) then
 !             print*, "qi"
-            call advect3d(domain%ice,  U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+            call advect3d(domain%ice,  U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options, error)
+            if (error/=0) then
+                print*, "qi", error
+                if (error>0) then
+                    stop "MPDATA Error"
+                endif
+            endif
 !             print*, "qg"
-            call advect3d(domain%qgrau,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+            call advect3d(domain%qgrau,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options, error)
+            if (error/=0) then
+                print*, "qg", error
+                if (error>0) then
+                    stop "MPDATA Error"
+                endif
+            endif
 !             print*, "ni"
-            call advect3d(domain%nice, U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+            call advect3d(domain%nice, U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options, error)
+            if (error/=0) then
+                print*, "ni", error
+                if (error>0) then
+                    stop "MPDATA Error"
+                endif
+            endif
 !             print*, "nr"
-            call advect3d(domain%nrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options)
+            call advect3d(domain%nrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,0,options, error)
+            if (error/=0) then
+                print*, "nr", error
+                if (error>0) then
+                    stop "MPDATA Error"
+                endif
+            endif
         endif
-!         print*, "CLOUD", minval(domain%cloud), maxval(domain%cloud)
         order=mod(order+1,3)
     end subroutine mpdata
 end module adv_mpdata
