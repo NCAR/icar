@@ -372,6 +372,7 @@ module data_structures
     !------------------------------------------------
     type adv_options_type
         logical :: boundary_buffer
+        logical :: flux_corrected_transport
     end type adv_options_type
     
     !------------------------------------------------

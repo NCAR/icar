@@ -129,10 +129,17 @@ contains
 !     #     -F(q1(:-2,1:-1),q1(1:-1,1:-1),Vb)))
     end subroutine advect2d
 
-    subroutine advect_w(q,u,nx,n,ny)
+    subroutine advect_w(q,u,nx,n,ny, FCT)
         real,dimension(:,:,:), intent(inout) :: q
         real,dimension(:,:,:), intent(in) :: u
         integer,intent(in)::n,nx,ny
+        logical, intent(in):: FCT ! use Flux Corrected Transport 
+        ! these are terms needed in the FCT scheme
+        real :: qmax, qmin
+        real :: beta_in_i, beta_out_i, beta_in_i2, beta_out_i2
+        real :: fin_i, fout_i, fin_i2, fout_i2
+        integer :: i
+        
         real,dimension(n)::q1
         real,dimension(n-1)::f,l,r,U2, denom
 !         real,dimension(n-2)::fl,fr, l2,c2,r2, U3, denom, Vl, Vr
@@ -178,6 +185,65 @@ contains
                 ! now calculate the MPDATA flux term
                 call flux1(q1(1:n-1),r,U2,f)
                 
+                if (FCT) then
+                    ! This is the Flux Corrected Transport option described in : 
+                    ! Smolarkiewicz and Grabowski (1990) J. of Comp. Phys. v86 p355-375
+
+                    ! for now at least this is one in a loop instead of vectorized.  I'm not sure how easy this would be to vectorize. 
+                    do i=1,n-1
+                        ! first find the min and max values allowable in the final field based on the initial (stored in l) and upwind (q1) fields
+                        ! min and max are taken from the grid cells on either side of the flux cell wall to be corrected
+                        if (i/=(n-1)) then
+                            ! l still equals q0
+                            qmax=max(q1(i),q1(i+1),l(i),l(i+1))
+                            qmin=min(q1(i),q1(i+1),l(i),l(i+1))
+                        else
+                            ! for the boundary, q1(i+1)==q0(i+1), l is only 1:n-1
+                            qmax=max(q1(i),q1(i+1),l(i))
+                            qmin=min(q1(i),q1(i+1),l(i))
+                        endif
+    
+                        ! next compute the total fluxes into and out of the upwind and downwind cells
+                        ! these are the fluxes into and out of the "left-hand" cell (which is just the previous "right-hand" cell)
+                        if (i/=1) then
+                            fin_i  = fin_i2
+                            fout_i = fout_i2
+                        else
+                            ! Need to apply flux limitations for bottom cell in advect_w (not in horizontal advection)
+                            fin_i  = 0 - min(0.,f(i))
+                            fout_i = max(0.,f(i))
+                        endif
+    
+                        ! these are the fluxes into and out of the "right-hand" cell
+                        if (i/=(n-1)) then
+                            fin_i2 = max(0.,f(i)) - min(0.,f(i+1))
+                            fout_i2 = max(0.,f(i+1)) - min(0.,f(i))
+                        else
+                            ! Need to apply flux limitations for top cell in advect_w (not in horizontal advection)
+                            fin_i2  = max(0.,f(i))
+                            fout_i2 = max(0.,f(i))
+                        endif
+    
+                        ! if wind is left to right we limit based on flow out of the left cell and into the right cell
+                        if (U2(i)>0) then
+                            beta_out_i = (q1(i)-qmin) / (fout_i+1e-15)
+                            beta_in_i2 = (qmax-q1(i+1)) / (fin_i2+1e-15)
+        
+                            U2(i) = min(1.,beta_in_i2, beta_out_i) * U2(i)
+        
+                        ! if wind is right to left we limit based on flow out of the right cell and into the left cell
+                        elseif (U2(i)<0) then
+                            beta_in_i = (qmax-q1(i)) / (fin_i+1e-15)
+                            beta_out_i2 = (q1(i+1)-qmin) / (fout_i2+1e-15)
+        
+                            U2(i) = min(1.,beta_in_i, beta_out_i2) * U2(i)
+                        endif
+                    end do
+                    ! now re-calculate the MPDATA flux term after applying the FCT to U2
+                    call flux1(q1(1:n-1),r,U2,f)
+                
+                endif
+                
                 q(x,2:n-1,y) = q1(2:n-1) + (f(1:n-2) - f(2:n-1))
                 q(x,1,y) = q1(1) - f(1)
                 q(x,n,y) = q1(n) + f(n-1) 
@@ -187,10 +253,18 @@ contains
         enddo
     end subroutine advect_w
 
-    subroutine advect_v(q,u,nx,nz,n)
+    subroutine advect_v(q,u,nx,nz,n, FCT)
         real,dimension(:,:,:), intent(inout) :: q
         real,dimension(:,:,:), intent(in) :: u
         integer,intent(in)::n,nz,nx
+        
+        logical, intent(in):: FCT ! use Flux Corrected Transport 
+        ! these are terms needed in the FCT scheme
+        real :: qmax, qmin
+        real :: beta_in_i, beta_out_i, beta_in_i2, beta_out_i2
+        real :: fin_i, fout_i, fin_i2, fout_i2
+        integer :: i
+        
         real,dimension(n)::q1
         real,dimension(n-1)::f,l,r,U2, denom
         integer::x, z
@@ -205,15 +279,26 @@ contains
                 
                 include 'adv_mpdata_core.f90'
                 
+                if (FCT) then
+                    include 'adv_mpdata_FCT_core.f90'
+                endif
+                
                 q(x,z,2:n-1) = q1(2:n-1) + (f(:n-2) - f(2:n-1))
             enddo
         enddo
     end subroutine advect_v
 
-    subroutine advect_u(q,u,n,nz,ny)
+    subroutine advect_u(q,u,n,nz,ny, FCT)
         real,dimension(:,:,:), intent(inout) :: q
         real,dimension(:,:,:), intent(in) :: u
         integer,intent(in)::n,nz,ny
+        logical, intent(in):: FCT ! use Flux Corrected Transport 
+        ! these are terms needed in the FCT scheme
+        real :: qmax, qmin
+        real :: beta_in_i, beta_out_i, beta_in_i2, beta_out_i2
+        real :: fin_i, fout_i, fin_i2, fout_i2
+        integer :: i
+        
         real,dimension(n)::q1
         real,dimension(n-1)::f,l,r,U2, denom
         integer::y, z
@@ -229,6 +314,11 @@ contains
                 U2 = u(1:n-1,z,y)
 
                 include 'adv_mpdata_core.f90'
+                
+                if (FCT) then
+                    include 'adv_mpdata_FCT_core.f90'
+                endif
+                    
                 
                 q(2:n-1,z,y) = q1(2:n-1) + (f(:n-2) - f(2:n-1))
             enddo
@@ -256,11 +346,11 @@ contains
                 err=err-1
                 where(q<0) q=0
             endif
-            if (maxval(q)>5000) then
-                write(*,*) maxval(q)
-                err=err-2
-                where((q>5000)) q=5000 ! not sure what a realistic high value for number concentration is. 
-            endif
+!             if (maxval(q)>50000) then
+!                 write(*,*) maxval(q)
+!                 err=err-2
+!                 where((q>50000)) q=50000 ! not sure what a realistic high value for number concentration is.
+!             endif
             if (any(isnan(q))) then
                 write(*,*) maxval(q)
                 err=err-4
@@ -272,17 +362,17 @@ contains
         ! perform an Alternating Direction Explicit MP-DATA time step
         ! but swap the order of the alternating directions with every call
         if (order==0) then
-            call advect_u(q,u,nx,nz,ny)
-            call advect_v(q,v,nx,nz,ny)
-            call advect_w(q,w,nx,nz,ny)
+            call advect_u(q,u,nx,nz,ny, options%adv_options%flux_corrected_transport)
+            call advect_v(q,v,nx,nz,ny, options%adv_options%flux_corrected_transport)
+            call advect_w(q,w,nx,nz,ny, options%adv_options%flux_corrected_transport)
         elseif (order==1) then
-            call advect_v(q,v,nx,nz,ny)
-            call advect_w(q,w,nx,nz,ny)
-            call advect_u(q,u,nx,nz,ny)
+            call advect_v(q,v,nx,nz,ny, options%adv_options%flux_corrected_transport)
+            call advect_w(q,w,nx,nz,ny, options%adv_options%flux_corrected_transport)
+            call advect_u(q,u,nx,nz,ny, options%adv_options%flux_corrected_transport)
         elseif (order==2) then
-            call advect_w(q,w,nx,nz,ny)
-            call advect_u(q,u,nx,nz,ny)
-            call advect_v(q,v,nx,nz,ny)
+            call advect_w(q,w,nx,nz,ny, options%adv_options%flux_corrected_transport)
+            call advect_u(q,u,nx,nz,ny, options%adv_options%flux_corrected_transport)
+            call advect_v(q,v,nx,nz,ny, options%adv_options%flux_corrected_transport)
         endif
         
         if (options%adv_options%boundary_buffer) then
