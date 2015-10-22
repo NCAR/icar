@@ -193,10 +193,14 @@ contains
                     do i=1,n-1
                         ! first find the min and max values allowable in the final field based on the initial (stored in l) and upwind (q1) fields
                         ! min and max are taken from the grid cells on either side of the flux cell wall to be corrected
-                        if (i/=(n-1)) then
+                        if (i==1) then
                             ! l still equals q0
                             qmax=max(q1(i),q1(i+1),l(i),l(i+1))
                             qmin=min(q1(i),q1(i+1),l(i),l(i+1))
+                        elseif (i/=(n-1)) then
+                            ! l still equals q0
+                            qmax=max(q1(i-1),q1(i),q1(i+1),l(i-1),l(i),l(i+1))
+                            qmin=min(q1(i-1),q1(i),q1(i+1),l(i-1),l(i),l(i+1))
                         else
                             ! for the boundary, q1(i+1)==q0(i+1), l is only 1:n-1
                             qmax=max(q1(i),q1(i+1),l(i))
@@ -263,7 +267,7 @@ contains
         real :: qmax, qmin
         real :: beta_in_i, beta_out_i, beta_in_i2, beta_out_i2
         real :: fin_i, fout_i, fin_i2, fout_i2
-        integer :: i
+        integer :: i,y
         
         real,dimension(n)::q1
         real,dimension(n-1)::f,l,r,U2, denom
@@ -297,12 +301,14 @@ contains
         real :: qmax, qmin
         real :: beta_in_i, beta_out_i, beta_in_i2, beta_out_i2
         real :: fin_i, fout_i, fin_i2, fout_i2
-        integer :: i
+        integer :: i,x
         
         real,dimension(n)::q1
         real,dimension(n-1)::f,l,r,U2, denom
         integer::y, z
         
+        ! this is just a flag for the FCT code
+        x=-1
         ! loop over internal y columns
         do y=2,ny-1
             ! loop over all z layers

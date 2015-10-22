@@ -36,18 +36,22 @@
 ! This is the Flux Corrected Transport option described in : 
 ! Smolarkiewicz and Grabowski (1990) J. of Comp. Phys. v86 p355-375
 
-! for now at least this is one in a loop instead of vectorized.  I'm not sure how easy this would be to vectorize. 
+! for now at least this is in a loop instead of vectorized.  I'm not sure how easy this would be to vectorize. 
     do i=1,n-1
         ! first find the min and max values allowable in the final field based on the initial (stored in l) and upwind (q1) fields
         ! min and max are taken from the grid cells on either side of the flux cell wall to be corrected
-        if (i/=(n-1)) then
+        if (i==1) then
             ! l still equals q0
             qmax=max(q1(i),q1(i+1),l(i),l(i+1))
             qmin=min(q1(i),q1(i+1),l(i),l(i+1))
+        elseif (i/=(n-1)) then
+            ! l still equals q0
+            qmax=max(q1(i-1),q1(i),q1(i+1),l(i-1),l(i),l(i+1))
+            qmin=min(q1(i-1),q1(i),q1(i+1),l(i-1),l(i),l(i+1))
         else
             ! for the boundary, q1(i+1)==q0(i+1), l is only 1:n-1
-            qmax=max(q1(i),q1(i+1),l(i))
-            qmin=min(q1(i),q1(i+1),l(i))
+            qmax=max(q1(i-1),q1(i),q1(i+1),l(i))
+            qmin=min(q1(i-1),q1(i),q1(i+1),l(i))
         endif
         
         ! next compute the total fluxes into and out of the upwind and downwind cells

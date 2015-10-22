@@ -7,8 +7,12 @@ program test_mpdata
     logical :: FCT
     integer :: initial_conditions
     
-    FCT=.TRUE.
+    FCT=.True.
+!     FCT=.False.
+    
+!     initial_conditions=kSINE_CURVE
     initial_conditions=kSTEP_FUNCTION
+    
     print*, "------------------------------"
     print*, "Testing U"
     print*, "------------------------------"
@@ -102,18 +106,16 @@ contains
                 q(i,:,:)=sin(i/real(nx-2) * 2*3.141592)+1
             end do
         elseif (initial_conditions==kSTEP_FUNCTION) then
-            q=1
+            q=0
             do i=1,nx
                 if (i>nx/2) then
-                    q(i,:,:)=2
+                    q(i,:,:)=1
                 endif
             end do
         endif
         
         u=cfl
         
-        q(1,:,:)=q(nx-1,:,:)
-        q(nx,:,:)=q(2,:,:)
         write(*, "(A,F6.4)") "Initial mean: ", sum(q(:,1,2))/nx
         write(*, "(A,12F6.3)") "Initial       ", q(::nx/10,1,2), maxval(q(:,1,2)), minval(q(:,1,2))
         do loop=1,nloops
