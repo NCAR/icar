@@ -449,7 +449,7 @@ $(BUILD)advection_driver.o:$(PHYS)advection_driver.f90 $(BUILD)data_structures.o
 $(BUILD)advect.o:$(PHYS)advect.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)advect.f90 -o $(BUILD)advect.o
 
-$(BUILD)adv_mpdata.o:$(PHYS)adv_mpdata.f90 $(PHYS)adv_mpdata_core.f90 $(PHYS)adv_mpdata_FCT_core.f90 $(BUILD)data_structures.o
+$(BUILD)adv_mpdata.o:$(PHYS)adv_mpdata.f90 $(PHYS)adv_mpdata_FCT_core.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)adv_mpdata.f90 -o $(BUILD)adv_mpdata.o
 
 
