@@ -8,14 +8,12 @@
 !! ----------------------------------------------------------------------------
 module adv_mpdata
     use data_structures
-    use string
-    use output
     
     implicit none
     private
     real,dimension(:,:,:),allocatable::U_m,V_m,W_m
     integer :: order
-    integer :: timestep
+    
     public:: mpdata, mpdata_init
     public:: advect3d ! for test_mpdata testing only!
     
@@ -344,7 +342,6 @@ contains
         type(options_type), intent(in) :: options
         
         order    = 0
-        timestep = 1 !just use for debugging
     end subroutine mpdata_init
     
 !   primary entry point, advect all scalars in domain
@@ -362,8 +359,6 @@ contains
         nz=size(domain%dz,2)
         ny=size(domain%dz,3)
         
-!         call write_domain(domain,options,timestep,"mpdata_test"//trim(str(timestep))//".nc")
-        timestep=timestep+1
 !       if this if the first time we are called, we need to allocate the module level arrays
         if (.not.allocated(U_m)) then
             allocate(U_m(nx-1,nz,ny))
@@ -477,7 +472,5 @@ contains
         endif
         order=mod(order+1,3)
         
-!         call write_domain(domain,options,timestep,"mpdata_test"//trim(str(timestep))//".nc")
-        timestep=timestep+1
     end subroutine mpdata
 end module adv_mpdata
