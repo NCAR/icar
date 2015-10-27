@@ -1,13 +1,13 @@
 ###################################################################
 # Makefile rules:
-# <default>	all: makes real
-# 			install: makes and installs real in INSTALLDIR
-# 			clean: removes objects and module files
-#		 	allclean: makes clean and removes executables
-#		 	cleanall: alias for allclean
-#		 	tests: makes various unit tests (does not always work)
-# 			real: makes the primary model
-#		 	ideal: makes an idealized version of the model (does not not always work)
+# <default> all: makes real
+#			install: makes and installs real in INSTALLDIR
+#			clean: removes objects and module files
+#			allclean: makes clean and removes executables
+#			cleanall: alias for allclean
+#			tests: makes various unit tests (does not always work)
+#			real: makes the primary model
+#			ideal: makes an idealized version of the model (does not not always work)
 # 
 #	MODE = fast, debug, debugomp, debugslow, debugompslow
 #
@@ -15,17 +15,17 @@
 # Variables that need to be set by the user: 
 # 
 # INSTALLDIR : default = ~/bin/ 
-# LIBFFT     : location of fftw libraries 		default = /usr/local/lib
-# INCFFT     : location of fftw headers 		default = /usr/local/include
-# LIBNETCDF  : location of netdcdf libraries 	default = compiler/machine dependant /usr/local/lib
-# INCNETCDF  : location of netcdf headers 		default = compiler/machine dependant /usr/local/include
+# LIBFFT	 : location of fftw libraries		default = /usr/local/lib
+# INCFFT	 : location of fftw headers			default = /usr/local/include
+# LIBNETCDF	 : location of netdcdf libraries	default = compiler/machine dependant /usr/local/lib
+# INCNETCDF	 : location of netcdf headers		default = compiler/machine dependant /usr/local/include
 # 
 # Dependencies: fftw, netcdf
 #	FFTW is available here: http://www.fftw.org/
-# 		FFTW is a C library with fortran headers
+#		FFTW is a C library with fortran headers
 #	netcdf is available here: http://www.unidata.ucar.edu/software/netcdf/
-# 		netcdf is a fortran library and must be compiled with the same fortran
-# 		compiler you are using to be compatible
+#		netcdf is a fortran library and must be compiled with the same fortran
+#		compiler you are using to be compatible
 
 ###################################################################
 #  Specify where you want the resulting executable installed
@@ -33,7 +33,7 @@
 INSTALLDIR=~/bin/
 
 ###################################################################
-#   Various compiler specific flags, may need to edit
+#	Various compiler specific flags, may need to edit
 ###################################################################
 # on hydro-c1:
 # note on hydro-c1 /usr/local is not available on compute nodes so 
@@ -48,6 +48,7 @@ INSTALLDIR=~/bin/
 # They are overwritten with machine specific options below if known
 ########################################################################################
 F90=gfortran
+RM=/bin/rm
 LIBFFT=/usr/local/lib
 INCFFT=/usr/local/include
 NCDF_PATH = /usr/local
@@ -69,8 +70,8 @@ ifeq ($(NODENAME), Nomad.local)
 	F90=gfortran
 	LIBFFT=/Users/gutmann/usr/local/lib
 	INCFFT=/Users/gutmann/usr/local/include
-	NCDF_PATH = /Users/gutmann/usr/local/
-	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
+	NCDF_PATH = /usr/local/
+	LIBNETCDF = -L/usr/local/gfortran/lib -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
 endif
 ifeq ($(NODENAME), dablam.rap.ucar.edu)
@@ -84,12 +85,18 @@ endif
 # hydro-c1 cluster
 ifeq ($(NODENAME),hydro-c1)
 	F90=ifort
-	LIBFFT=/home/gutmann/usr/local/lib
-	INCFFT=/home/gutmann/usr/local/include
+	NCDF_PATH = /usr/local/netcdf-4.3.0+ifort-12.1
 	# NCDF_PATH = /usr/local/netcdf-4.1.3/ifort-12.0.5
-	NCDF_PATH = /home/gutmann/.usr/local
+	# NCDF_PATH = /home/gutmann/.usr/local/intel
+	
+	# F90=gfortran
+	# NCDF_PATH = /usr/local/netcdf-4.3.3.1+gcc-4.7.2
+	
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
+	
+	LIBFFT=/home/gutmann/.usr/local/lib
+	INCFFT=/home/gutmann/.usr/local/include
 endif
 # on yellowstone:
 ifeq ($(LMOD_FAMILY_COMPILER),gnu)
@@ -108,12 +115,10 @@ ifeq ($(LMOD_FAMILY_COMPILER),intel)
 endif 
 ifeq ($(LMOD_FAMILY_COMPILER),pgi)
 	F90=pgf90
-	COMP=-fast -mp -c
-	LINK=-mp
 	LIBFFT=/glade/u/home/gutmann/usr/local/lib
 	INCFFT=/glade/u/home/gutmann/usr/local/include
 	LIBNETCDF = -lnetcdff -lnetcdf
-	INCNETCDF =  # netcdf includes are setup by the yellowstone module system
+	INCNETCDF =	 # netcdf includes are setup by the yellowstone module system
 endif	
 
 # get GIT version info
@@ -133,14 +138,14 @@ GIT_VERSION := $(shell git describe --long --dirty --all --always | sed -e's/hea
 
 # GNU fortran
 ifeq ($(F90), gfortran)
-	COMP=-fopenmp -lgomp -Ofast -c -ftree-vectorize -fimplicit-none -ffree-line-length-none -ffast-math -funroll-loops -fno-protect-parens #-flto # -march=native
+	COMP=-fopenmp -lgomp -O3 -c -ffree-line-length-none -ftree-vectorize -fimplicit-none -funroll-loops -march=native  -fno-protect-parens # -ffast-math #-flto #
 	LINK=-fopenmp -lgomp
 	PREPROC=-cpp
 	MODOUTPUT=-J $(BUILD)
 endif
 # Intel fortran
 ifeq ($(F90), ifort)
-	COMP= -openmp -liomp5 -u -c -fast -ftz #-fast-transcendentals # not available in ifort <13: -align array64byte
+	COMP=-c -u -openmp -liomp5 -O3 -no-prec-div -xHost -ftz
 	LINK= -openmp -liomp5
 	PREPROC=-fpp
 	MODOUTPUT=-module $(BUILD)
@@ -150,7 +155,7 @@ ifeq ($(F90), pgf90)
 	COMP=-fast -mp -c
 	LINK=-mp
 	PREPROC=-Mpreprocess
-	MODOUTPUT=
+	MODOUTPUT=-module $(BUILD)
 endif
 
 
@@ -167,18 +172,18 @@ ifeq ($(MODE), debugslow)
 endif
 ifeq ($(MODE), debug)
 	ifeq ($(F90), ifort)
-		COMP= -debug -c -O3 -u -check all -check noarg_temp_created -traceback -fpe0 -fast-transcendentals -xhost
+		COMP= -debug -c -O1 -u -check all -check noarg_temp_created -traceback -fpe0 -fast-transcendentals -xhost
 		LINK=  
 	endif
 	ifeq ($(F90), gfortran)
-		COMP= -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
+		COMP= -c -O1 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK=  
 	endif
 endif
 ifeq ($(MODE), debugompslow)
 	ifeq ($(F90), ifort)
-		COMP= -openmp -liomp5 -debug -debug-parameters all -traceback -ftrapuv -g -fpe0 -c -u -check all -check noarg_temp_created -CB
-		COMP= -openmp -liomp5 -debug -c -u  -fpe0 -traceback -check all -check noarg_temp_created
+		# COMP= -openmp -liomp5 -debug -debug-parameters all -traceback -ftrapuv -g -fpe0 -c -u -check all -check noarg_temp_created -CB
+		COMP= -openmp -liomp5 -debug -c -u	-fpe0 -traceback -check all -check noarg_temp_created -fp-stack-check
 		LINK= -openmp -liomp5
 	endif
 	ifeq ($(F90), gfortran)
@@ -188,11 +193,11 @@ ifeq ($(MODE), debugompslow)
 endif
 ifeq ($(MODE), debugomp)
 	ifeq ($(F90), ifort)
-		COMP= -openmp -liomp5 -debug -c -O3 -u -traceback -check all -check noarg_temp_created -fpe0 -fast-transcendentals -xhost
+		COMP= -openmp -liomp5 -debug -c -O1 -u -traceback -check all -check noarg_temp_created -fpe0 -fast-transcendentals -xhost
 		LINK= -openmp -liomp5
 	endif
 	ifeq ($(F90), gfortran)
-		COMP= -fopenmp -lgomp -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
+		COMP= -fopenmp -lgomp -c -O1 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK= -fopenmp -lgomp  
 	endif
 endif
@@ -200,16 +205,16 @@ endif
 PROF= 
 ifeq ($(MODE), profile)
 	ifeq ($(F90), ifort)
-		PROF=-g -debug inline-debug-info -shared-intel
-		COMP=-c -u -openmp -liomp5 -ipo -O3 -no-prec-div -xHost -ftz #because -fast includes -static # not available in ifort <13 -align array64byte
+		PROF=-pg -debug inline-debug-info -shared-intel
+		COMP=-c -u -openmp -liomp5 -O3 -no-prec-div -xHost -ftz #because -fast includes -static # not available in ifort <13 -align array64byte
 	endif
 	ifeq ($(F90), gfortran)
 		PROF=-g
 	endif
 endif
-ifeq ($(MODE), fast) # because -ipo takes forever for very little gain
+ifeq ($(MODE), fast) # WARNING -ipo (included in -fast) takes forever for very little gain, and this may be unstable
 	ifeq ($(F90), ifort)
-		COMP=-c -u -openmp -liomp5 -O3 -no-prec-div -xHost -ftz
+		COMP=-c -u -openmp -liomp5 -fast -ftz #-fast-transcendentals # not available in ifort <13: -align array64byte
 	endif
 endif
 ###################################################################
@@ -219,9 +224,7 @@ endif
 # 
 ###################################################################
 ###################################################################
-# this seems like it should be a solution to the missing library problem, but it doesn't work
-# LFLAGS=$(LINK) ${LIBNETCDF} -L${LIBFFT} -openmp-link=static -static-intel -Bstatic
-# instead copy required libraries into a directory accessible on compute nodes and set LD_RUN_PATH e.g.
+# copy required libraries into a directory accessible on compute nodes and set LD_RUN_PATH e.g.
 # export LD_RUN_PATH=$LD_RUN_PATH:/path/to/libraries/lib:/home/gutmann/usr/local/lib
 LFLAGS=$(LINK) $(PROF) ${LIBNETCDF} -L${LIBFFT}
 FFLAGS=$(COMP) $(PROF) ${INCNETCDF} -I${INCFFT} ${MODOUTPUT}
@@ -235,6 +238,7 @@ UTIL=utilities/
 
 OBJS=	$(BUILD)driver.o \
 		$(BUILD)init.o \
+		$(BUILD)init_options.o \
 		$(BUILD)model_tracking.o \
 		$(BUILD)boundary.o \
 		$(BUILD)time_step.o \
@@ -245,6 +249,7 @@ OBJS=	$(BUILD)driver.o \
 		$(BUILD)mp_simple.o \
 		$(BUILD)cu_driver.o \
 		$(BUILD)cu_tiedtke.o \
+		$(BUILD)cu_kf.o \
 		$(BUILD)ra_driver.o \
 		$(BUILD)ra_simple.o \
 		$(BUILD)lsm_driver.o \
@@ -254,6 +259,7 @@ OBJS=	$(BUILD)driver.o \
 		$(BUILD)lsm_noahlsm.o \
 		$(BUILD)pbl_driver.o \
 		$(BUILD)pbl_simple.o \
+		$(BUILD)pbl_ysu.o \
 		$(BUILD)advection_driver.o \
 		$(BUILD)adv_mpdata.o \
 		$(BUILD)advect.o \
@@ -272,7 +278,7 @@ OBJS=	$(BUILD)driver.o \
 # GEOOBJS=io_routines.o $(BUILD)data_structures.o tests/test_geo.o $(BUILD)geo_reader.o
 
 ###################################################################
-#   User facing rules
+#	User facing rules
 ###################################################################
 
 all:icar
@@ -286,22 +292,22 @@ clean:
 allclean:cleanall
 
 cleanall: clean
-	rm icar fftshift_test calendar_test
+	rm icar fftshift_test calendar_test mpdata_test
 	# geo_test wind_test #test_init
 
-test: fftshift_test calendar_test #geo_test wind_test #test_init
+test: fftshift_test calendar_test mpdata_test #geo_test wind_test #test_init
 
 icar:${OBJS}
 	${F90} ${LFLAGS} ${OBJS} -o icar  -lm -lfftw3
 
 ###################################################################
-#   test cases
+#	test cases
 ###################################################################
 # geo_test:${GEOOBJS}
-# 	${F90} ${LFLAGS} ${GEOOBJS} -o geo_test
+#	${F90} ${LFLAGS} ${GEOOBJS} -o geo_test
 # 
 # wind_test:${WINDOBJS}
-# 	${F90} ${LFLAGS} ${WINDOBJS} -o wind_test -lfftw3 -lm
+#	${F90} ${LFLAGS} ${WINDOBJS} -o wind_test -lfftw3 -lm
 #
 fftshift_test: $(BUILD)test_fftshift.o $(BUILD)fftshift.o
 	${F90} ${LFLAGS} $(BUILD)test_fftshift.o $(BUILD)fftshift.o -o fftshift_test
@@ -309,9 +315,12 @@ fftshift_test: $(BUILD)test_fftshift.o $(BUILD)fftshift.o
 calendar_test: $(BUILD)test_calendar.o $(BUILD)time.o
 	${F90} ${LFLAGS} $(BUILD)test_calendar.o $(BUILD)time.o -o calendar_test
 
+mpdata_test: $(BUILD)test_mpdata.o $(BUILD)adv_mpdata.o
+	${F90} ${LFLAGS} $(BUILD)test_mpdata.o $(BUILD)adv_mpdata.o -o mpdata_test
+
 
 ###################################################################
-#   driver code for 
+#	driver code for 
 ###################################################################
 
 $(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)data_structures.o $(BUILD)init.o $(BUILD)time_step.o \
@@ -320,12 +329,12 @@ $(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)data_structures.o $(BUILD)init.o $(BU
 
 
 ###################################################################
-#   Core initial and boundary condition and time steping
+#	Core initial and boundary condition and time steping
 ###################################################################
 
 $(BUILD)init.o:$(MAIN)init.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)geo_reader.o $(BUILD)vinterp.o \
-					$(BUILD)model_tracking.o $(BUILD)mp_driver.o $(BUILD)cu_driver.o $(BUILD)pbl_driver.o $(BUILD)wind.o \
-					$(BUILD)time.o $(BUILD)ra_driver.o $(BUILD)lsm_driver.o
+					$(BUILD)mp_driver.o $(BUILD)cu_driver.o $(BUILD)pbl_driver.o $(BUILD)wind.o \
+					$(BUILD)ra_driver.o $(BUILD)lsm_driver.o $(BUILD)init_options.o
 	${F90} ${FFLAGS} $(MAIN)init.f90 -o $(BUILD)init.o
 
 $(BUILD)boundary.o:$(MAIN)boundary.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)wind.o $(BUILD)geo_reader.o \
@@ -334,8 +343,12 @@ $(BUILD)boundary.o:$(MAIN)boundary.f90 $(BUILD)data_structures.o $(BUILD)io_rout
 
 $(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.o $(BUILD)output.o \
 					$(BUILD)advection_driver.o $(BUILD)ra_driver.o $(BUILD)lsm_driver.o $(BUILD)cu_driver.o \
-					$(BUILD)pbl_driver.o $(BUILD)mp_driver.o
+					$(BUILD)pbl_driver.o $(BUILD)mp_driver.o $(BUILD)boundary.o
 	${F90} ${FFLAGS} $(MAIN)time_step.f90 -o $(BUILD)time_step.o
+
+$(BUILD)init_options.o:$(MAIN)init_options.f90 $(BUILD)data_structures.o  $(BUILD)io_routines.o \
+					$(BUILD)model_tracking.o $(BUILD)time.o 
+	${F90} ${FFLAGS} $(MAIN)init_options.f90 -o $(BUILD)init_options.o
 
 $(BUILD)time.o:$(UTIL)time.f90
 	${F90} ${FFLAGS} $(UTIL)time.f90 -o $(BUILD)time.o
@@ -344,7 +357,7 @@ $(BUILD)string.o:$(UTIL)string.f90
 	${F90} ${FFLAGS} $(UTIL)string.f90 -o $(BUILD)string.o
 
 ###################################################################
-#   I/O routines
+#	I/O routines
 ###################################################################
 
 $(BUILD)output.o:$(IO)output.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)time.o $(BUILD)string.o
@@ -361,29 +374,32 @@ $(BUILD)vinterp.o: $(UTIL)vinterp.f90 $(BUILD)data_structures.o
 	
 
 ###################################################################
-#   Microphysics code
+#	Microphysics code
 ###################################################################
 
 $(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_thompson.o $(BUILD)mp_simple.o $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)mp_driver.f90 -o $(BUILD)mp_driver.o
 
-$(BUILD)mp_thompson.o:$(PHYS)mp_thompson.f90
+$(BUILD)mp_thompson.o:$(PHYS)mp_thompson.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)mp_thompson.f90 -o $(BUILD)mp_thompson.o
 
 $(BUILD)mp_simple.o:$(PHYS)mp_simple.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)mp_simple.f90 -o $(BUILD)mp_simple.o
 	
 ###################################################################
-#   Convection code
+#	Convection code
 ###################################################################
-$(BUILD)cu_driver.o:$(PHYS)cu_driver.f90 $(BUILD)cu_tiedtke.o $(BUILD)data_structures.o
+$(BUILD)cu_driver.o:$(PHYS)cu_driver.f90 $(BUILD)cu_tiedtke.o $(BUILD)cu_kf.o $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)cu_driver.f90 -o $(BUILD)cu_driver.o
 
 $(BUILD)cu_tiedtke.o:$(PHYS)cu_tiedtke.f90
 	${F90} ${FFLAGS} $(PHYS)cu_tiedtke.f90 -o $(BUILD)cu_tiedtke.o
 
+$(BUILD)cu_kf.o:$(PHYS)cu_kf.f90
+	${F90} ${FFLAGS} $(PHYS)cu_kf.f90 -o $(BUILD)cu_kf.o
+
 ###################################################################
-#   Radiation code
+#	Radiation code
 ###################################################################
 
 $(BUILD)ra_driver.o:$(PHYS)ra_driver.f90 $(BUILD)ra_simple.o $(BUILD)data_structures.o
@@ -392,7 +408,7 @@ $(BUILD)ra_driver.o:$(PHYS)ra_driver.f90 $(BUILD)ra_simple.o $(BUILD)data_struct
 $(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o $(BUILD)time.o
 	${F90} ${FFLAGS} $(PHYS)ra_simple.f90 -o $(BUILD)ra_simple.o
 ###################################################################
-#   Land Surface code
+#	Land Surface code
 ###################################################################
 $(BUILD)lsm_driver.o: $(PHYS)lsm_driver.f90 $(BUILD)data_structures.o $(BUILD)lsm_simple.o \
 						$(BUILD)lsm_basic.o $(BUILD)lsm_noahdrv.o $(BUILD)lsm_noahlsm.o
@@ -412,17 +428,20 @@ $(BUILD)lsm_noahlsm.o: $(PHYS)lsm_noahlsm.f90
 
 
 ###################################################################
-#   Planetary Boundary Layer code
+#	Planetary Boundary Layer code
 ###################################################################
-$(BUILD)pbl_driver.o: $(PHYS)pbl_driver.f90 $(BUILD)pbl_simple.o $(BUILD)data_structures.o
+$(BUILD)pbl_driver.o: $(PHYS)pbl_driver.f90 $(BUILD)pbl_simple.o $(BUILD)pbl_ysu.o $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)pbl_driver.f90 -o $(BUILD)pbl_driver.o
 
 $(BUILD)pbl_simple.o: $(PHYS)pbl_simple.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)pbl_simple.f90 -o $(BUILD)pbl_simple.o
 
+$(BUILD)pbl_ysu.o: $(PHYS)pbl_ysu.f90
+	${F90} ${FFLAGS} $(PHYS)pbl_ysu.f90 -o $(BUILD)pbl_ysu.o
+
 
 ###################################################################
-#   Advection related code
+#	Advection related code
 ###################################################################
 $(BUILD)advection_driver.o:$(PHYS)advection_driver.f90 $(BUILD)data_structures.o $(BUILD)advect.o $(BUILD)adv_mpdata.o
 	${F90} ${FFLAGS} $(PHYS)advection_driver.f90 -o $(BUILD)advection_driver.o
@@ -430,12 +449,12 @@ $(BUILD)advection_driver.o:$(PHYS)advection_driver.f90 $(BUILD)data_structures.o
 $(BUILD)advect.o:$(PHYS)advect.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)advect.f90 -o $(BUILD)advect.o
 
-$(BUILD)adv_mpdata.o:$(PHYS)adv_mpdata.f90 $(BUILD)data_structures.o
+$(BUILD)adv_mpdata.o:$(PHYS)adv_mpdata.f90 $(PHYS)adv_mpdata_FCT_core.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)adv_mpdata.f90 -o $(BUILD)adv_mpdata.o
 
 
 ###################################################################
-#   Wind related code
+#	Wind related code
 ###################################################################
 $(BUILD)wind.o:$(PHYS)wind.f90 $(BUILD)linear_winds.o $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)wind.f90 -o $(BUILD)wind.o
@@ -448,36 +467,40 @@ $(BUILD)fftshift.o:$(UTIL)fftshift.f90
 
 
 ###################################################################
-#   Generic data structures, used by almost everything
+#	Generic data structures, used by almost everything
 ###################################################################
 $(BUILD)data_structures.o:$(MAIN)data_structures.f90
 	${F90} ${FFLAGS} $(MAIN)data_structures.f90 -o $(BUILD)data_structures.o
 
 ###################################################################
-#   Keep track of model versions for user information
+#	Keep track of model versions for user information
 ###################################################################
 $(BUILD)model_tracking.o:$(MAIN)model_tracking.f90
 	${F90} ${FFLAGS} $(MAIN)model_tracking.f90 -o $(BUILD)model_tracking.o
 
 ###################################################################
-#   Unit tests (may only work at their git tags?)
+#	Unit tests (may only work at their git tags?)
 ###################################################################
 # 
 # NOTE: too many changes in data structures/init have broken most of these tests, 
-#       not worth fixing right now. 
+#		not worth fixing right now. 
 #
 $(BUILD)test_fftshift.o:$(BUILD)fftshift.o tests/test_fftshift.f90
 	${F90} ${FFLAGS} tests/test_fftshift.f90 -o $(BUILD)test_fftshift.o
 
 $(BUILD)test_calendar.o:$(BUILD)time.o tests/test_calendar.f90
 	${F90} ${FFLAGS} tests/test_calendar.f90 -o $(BUILD)test_calendar.o
+
+$(BUILD)test_mpdata.o:$(BUILD)adv_mpdata.o tests/test_mpdata.f90
+	${F90} ${FFLAGS} tests/test_mpdata.f90 -o $(BUILD)test_mpdata.o
+
 	
 # tests/test_$(BUILD)wind.o:tests/test_$(PHYS)wind.f90 $(BUILD)wind.o $(BUILD)linear_winds.o
-# 	${F90} ${FFLAGS} tests/test_$(PHYS)wind.f90 -o tests/test_$(BUILD)wind.o
+#	${F90} ${FFLAGS} tests/test_$(PHYS)wind.f90 -o tests/test_$(BUILD)wind.o
 # 
 # tests/test_geo.o:tests/test_geo.f90 $(BUILD)geo_reader.o $(BUILD)data_structures.o
-# 	${F90} ${FFLAGS} tests/test_geo.f90 -o tests/test_geo.o
+#	${F90} ${FFLAGS} tests/test_geo.f90 -o tests/test_geo.o
 # 
 # test_init:tests/test_$(MAIN)init.f90 $(BUILD)init.o
-# 	${F90} ${FFLAGS} tests/test_$(MAIN)init.f90 $(IO)io_routines.f90 $(MAIN)data_structures.f90 $(MAIN)init.f90 -o test_init
+#	${F90} ${FFLAGS} tests/test_$(MAIN)init.f90 $(IO)io_routines.f90 $(MAIN)data_structures.f90 $(MAIN)init.f90 -o test_init
 
