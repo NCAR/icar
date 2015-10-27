@@ -717,9 +717,10 @@ contains
 
         logical :: boundary_buffer          ! apply some smoothing to the x and y boundaries in MPDATA
         logical :: flux_corrected_transport ! use the flux corrected transport option in MPDATA
+        integer :: mpdata_order             ! MPDATA order of correction (e.g. 1st=upwind, 2nd=classic, 3rd=better)
         
         ! define the namelist
-        namelist /adv_parameters/ boundary_buffer, flux_corrected_transport
+        namelist /adv_parameters/ boundary_buffer, flux_corrected_transport, mpdata_order
         
          ! because adv_options could be in a separate file
          if (options%use_adv_options) then
@@ -732,6 +733,7 @@ contains
         ! set default values
         boundary_buffer = .False.
         flux_corrected_transport = .True. 
+        mpdata_order = 2
         
         ! read the namelist options
         if (options%use_adv_options) then
@@ -743,6 +745,7 @@ contains
         ! store everything in the adv_options structure
         adv_options%boundary_buffer = boundary_buffer
         adv_options%flux_corrected_transport = flux_corrected_transport
+        adv_options%mpdata_order = mpdata_order
         
         ! copy the data back into the global options data structure
         options%adv_options = adv_options

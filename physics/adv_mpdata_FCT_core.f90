@@ -42,16 +42,22 @@
         ! min and max are taken from the grid cells on either side of the flux cell wall to be corrected
         if (i==1) then
             ! l still equals q0
-            qmax=max(q1(i),q1(i+1),l(i),l(i+1))
-            qmin=min(q1(i),q1(i+1),l(i),l(i+1))
+            qmax_i=max(q1(i),q1(i+1),l(i),l(i+1))
+            qmin_i=min(q1(i),q1(i+1),l(i),l(i+1))
+            qmax_i2=max(q1(i),q1(i+1),q1(i+2),l(i),l(i+1),l(i+2))
+            qmin_i2=min(q1(i),q1(i+1),q1(i+2),l(i),l(i+1),l(i+2))
         elseif (i/=(n-1)) then
             ! l still equals q0
-            qmax=max(q1(i-1),q1(i),q1(i+1),l(i-1),l(i),l(i+1))
-            qmin=min(q1(i-1),q1(i),q1(i+1),l(i-1),l(i),l(i+1))
+            qmax_i=qmax_i2
+            qmin_i=qmin_i2
+            qmax_i2=max(q1(i),q1(i+1),q1(i+2),l(i),l(i+1),l(i+2))
+            qmin_i2=min(q1(i),q1(i+1),q1(i+2),l(i),l(i+1),l(i+2))
         else
             ! for the boundary, q1(i+1)==q0(i+1), l is only 1:n-1
-            qmax=max(q1(i-1),q1(i),q1(i+1),l(i))
-            qmin=min(q1(i-1),q1(i),q1(i+1),l(i))
+            qmax_i=qmax_i2
+            qmin_i=qmin_i2
+            qmax_i2=max(q1(i),q1(i+1),l(i))
+            qmin_i2=min(q1(i),q1(i+1),l(i))
         endif
         
         ! next compute the total fluxes into and out of the upwind and downwind cells
@@ -60,9 +66,15 @@
             fin_i  = fin_i2
             fout_i = fout_i2
         else
-            ! No flux limitations to the boundary cell
-            fin_i  = 0
-            fout_i = 0
+            if (flux_is_w) then
+                fin_i = 0. - min(0.,f(i))
+                fout_i = max(0.,f(i))
+            else
+                ! No flux limitations to the boundary cell
+                fin_i  = 0
+                fout_i = 0
+            endif
+                
         endif
         
         ! these are the fluxes into and out of the "right-hand" cell
@@ -70,26 +82,29 @@
             fin_i2 = max(0.,f(i)) - min(0.,f(i+1))
             fout_i2 = max(0.,f(i+1)) - min(0.,f(i))
         else
-            ! No flux limitations to the boundary cell
-            fin_i2  = 0
-            fout_i2 = 0
+            if (flux_is_w) then
+                fin_i2 = max(0.,f(i)) - min(0.,f(i))
+                fout_i2 = max(0.,f(i)) - min(0.,f(i))
+            else
+                ! No flux limitations to the boundary cell
+                fin_i2  = 0
+                fout_i2 = 0
+            endif
         endif
         
         ! if wind is left to right we limit based on flow out of the left cell and into the right cell
         if (U2(i)>0) then
-            beta_out_i = (q1(i)-qmin) / (fout_i+1e-15)
-            beta_in_i2 = (qmax-q1(i+1)) / (fin_i2+1e-15)
+            beta_out_i = (q1(i)-qmin_i) / (fout_i+1e-15)
+            beta_in_i2 = (qmax_i2-q1(i+1)) / (fin_i2+1e-15)
             
             U2(i) = min(1.,beta_in_i2, beta_out_i) * U2(i)
             
         ! if wind is right to left we limit based on flow out of the right cell and into the left cell
         elseif (U2(i)<0) then
-            beta_in_i = (qmax-q1(i)) / (fin_i+1e-15)
-            beta_out_i2 = (q1(i+1)-qmin) / (fout_i2+1e-15)
+            beta_in_i = (qmax_i-q1(i)) / (fin_i+1e-15)
+            beta_out_i2 = (q1(i+1)-qmin_i2) / (fout_i2+1e-15)
             
             U2(i) = min(1.,beta_in_i, beta_out_i2) * U2(i)
         endif
     end do
-    ! now re-calculate the MPDATA flux term after applying the FCT to U2
-    call flux1(q1(1:n-1),r,U2,f)
     

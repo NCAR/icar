@@ -2,7 +2,7 @@
 !   Model and run meta-data
 !---------------------------------------------------------
 &model_version
-    version="0.9",                  ! This must match the version of the compiled code
+    version="0.9.1",                ! This must match the version of the compiled code
     comment="Add your comment here" ! This will be stored in output files
 /
 
@@ -38,13 +38,13 @@
     ! if surface air temperature is important use pbl=2 lsm=3 rad=2 this requires Noah LSM data
     ! N/A = Not Available or Not fully implemented
     ! wishlist = No Code Present yet
-    pbl = 0,  ! 1=legacy (deprecated)      2=Simple (Local HP96)        3=YSU
-    lsm = 0,  ! 1=use forcing fluxes       2=Simple LSM (N/A)           3=Noah LSM
+    pbl = 0,  ! 1=legacy (deprecated)      2=Simple (Local HP96)        3=YSU             (N/A)
+    lsm = 0,  ! 1=use perscribed fluxes    2=Simple LSM (N/A)           3=Noah LSM
     mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison        (wishlist)
     rad = 0,  ! 1=legacy (deprecated)      2=Simple (empirical)         3=RRTMG           (wishlist)
     conv= 0,  ! 1=Tiedke Scheme            2=Simple Scheme (wishlist)   3=Kain-Fritsch
-    adv = 1,  ! 1=Upwind                   2=MPDATA (N/A)               3=Adams-Bashforth (wishlist)
-    wind= 1   ! 1=Linear Theory            2=INFORM style (wishlist)    3=Dynamical       (wishlist)
+    adv = 1,  ! 1=Upwind                   2=MPDATA                     3=Adams-Bashforth (wishlist)
+    wind= 1   ! 1=Linear Theory            2=INFORM style (wishlist)    3=Dynamical?      (wishlist)
 /
 
 !---------------------------------------------------------
@@ -134,10 +134,12 @@
     ! used primarily for faster test runs over a smaller domain
     buffer=0,
 
-    ! doesn't do much yet, increases output print at runtime
+    ! doesn't do much at the moment, increases output print at runtime
     debug=true,
-    warning_level=10, ! 0-10 increases the level of errors it warns about and quits over
+    warning_level=4, ! 0-10 increases the level of errors it warns about and quits over
 
+    ! read parameters for advection
+    use_adv_options = true,
     ! read parameters for linear theory
     use_lt_options = true,
     ! read parameters for microphysics (thompson only at this point)
@@ -230,6 +232,18 @@
     top_mp_level = 0    ! if <=0 just use the actual model top
 /
 
+!---------------------------------------------------------
+!   Optionally specified advection parameters (only used by MPDATA right now)
+!---------------------------------------------------------
+&adv_parameters
+    flux_corrected_transport=true   ! Use a flux correction in the transport calculations to prevent ringing and overshoots
+                                    ! this should keep MPDATA stable enough for use with the linear winds
+    mpdata_order=2                  ! Closure order to use (IORD in MPDATA papers)
+                                    ! order=1 equivalent to simple upwind
+                                    ! order=2 is standard MPDATA
+                                    ! order>2 is a higher order correction that will be very expensive with relatively little gain
+/
+
 
 !---------------------------------------------------------
 !   Optionally specified Linear Theory parameters
@@ -252,7 +266,7 @@
     ! rm_linear_contribution=0.4,   ! fraction of linear perturbation to remove from the low-res wind field (if rm_lowres_linear==true)
 
     variable_N=true,    ! use a time varying Nsq (e.g. calculate it from the data don't use the above fixed value)
-    linear_update_fraction = 1.0 ! set this to the fraction of the current linear calculation to add to to a time-varying perturbation
+    linear_update_fraction = 0.5 ! set this to the fraction of the current linear calculation to add to to a time-varying perturbation
                         ! setting to 1 means that waves form instantly, setting it to 0 means they will never form
                         ! anything in between is the contribution from the current time step
 
@@ -267,12 +281,17 @@
     n_dir_values = 36
     ! wind speed ranges and number of bins
     spdmax = 30
-    spdmin = -30
+    spdmin = 0
     n_spd_values = 10
     ! BV frequency ranges (in log space) and number of bins
     nsqmax = -7.42  ! ln(6e-4) defaults to ln(max_stability)
     nsqmin = -16.12 ! ln(1e-7) defaults to ln(min_stability)
     n_nsq_values = 10
+    ! NOTE: this requires a LOT of RAM.  (and you still need some for the rest of the model)
+    !   Calculate bytes of RAM required as nx * ny * nz * 2 * n_dir * n_spd * n_nsq * 4
+    !   e.g. 320 * 250 * 14 * 2 * 36 * 10 * 10 * 4 = 30GB!
+    !   (* 2 is for have to store U and V)
+    !   (* 4 is for the number of bytes per float)
 /
 
 

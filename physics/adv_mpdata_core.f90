@@ -4,8 +4,8 @@
 
     ! First Calculate the standard upwind advection
     call flux1(l,r,U2,f)
-    
-    ! q1 is a temporary array to store the data while working with it here. 
+
+    ! q1 is a temporary array to store the data while working with it here.
     q1(1)=l(1)
     q1(n)=r(n-1)
     q1(2:n-1) = l(2:n-1) + (f(:n-2) - f(2:n-1))
