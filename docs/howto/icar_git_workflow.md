@@ -53,6 +53,10 @@ Run the following code on your local machine:
 
     git clone https://github.com/<username>/icar.git
 
+or (depending on your setup)
+
+    git clone ssh://git@github.com/<username>/icar.git
+
 where `<username>` is your GitHub username.
 This clones your fork of the repository into the current directory. The clone will live in a directory called "icar".
 
@@ -84,7 +88,11 @@ then you are not in a Git repository (note that the top level directory in a Git
 
 Assign the truth repo to a remote tracking branch called `upstream`, which will allow you easily pull in changes that are made in the truth repo and keep your clone in-sync with that version. Once you get more familiar with Git, you will be able to control which updates to include:
 
-    git remote add --tracking upstream https://github.com/NCAR/icar.git
+    git remote add upstream https://github.com/NCAR/icar.git
+
+or (depending on your setup):
+
+    git remote add upstream ssh://git@github.com/NCAR/icar.git
 
 #### Step 4. Sync your clone with the truth repo
 
