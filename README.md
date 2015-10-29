@@ -1,7 +1,7 @@
 #The Intermediate Complexity Atmospheric Research Model (ICAR)
 
 ####Reference
-Gutmann, E. D., J. R. Arnold, I. Barstad, M. P. Clark, and R. M. Rasmussen (2015), *The Intermediate Complexity Atmospheric Research Model*, J. Hydrometeor, in revision.
+Gutmann, E. D., I. Barstad, M. P. Clark, J. R. Arnold, and R. M. Rasmussen (2015), *The Intermediate Complexity Atmospheric Research Model*, J. Hydrometeor, in revision.
 
 ICAR is a simplified atmospheric model designed primarily for climate downscaling, atmospheric sensitivity tests, and hopefully educational uses. 
 
