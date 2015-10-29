@@ -1,5 +1,5 @@
 import numpy as np
-import swim_io
+import mygis
 from bunch import Bunch
 
 def write_file(date,info,cesm):
@@ -74,5 +74,5 @@ def write_file(date,info,cesm):
     qvatts=Bunch(long_name="Specific Humidity",units="kg kg**-1")
     
     # write to output file
-    swim_io.write(filename=filename,varname="qv",data=cesm.qv,dims=dims, attributes=qvatts,dtype="f",
+    mygis.write(filename=filename,varname="qv",data=cesm.qv,dims=dims, attributes=qvatts,dtype="f",
                   extravars=extra_vars)#,history=" Produced by cesm2icar v."+info.version)

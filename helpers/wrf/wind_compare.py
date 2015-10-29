@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from lt_winds import linear_winds
-from swm import ideal_linear
+import ideal_linear
 
 import mygis
 from bunch import Bunch

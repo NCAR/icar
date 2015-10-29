@@ -9,7 +9,7 @@ g=9.8
 atmvarlist=["ta","hus","ua","va"]
 icar_atm_var=["t","qv","u","v"]
 
-# from swim_io, modified to work with netCDF4
+# from mygis, modified to work with netCDF4
 def read_nc(filename,var="data",proj=None,returnNCvar=False):
     '''read a netCDF file and return the specified variable
 

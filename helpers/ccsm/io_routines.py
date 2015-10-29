@@ -14,7 +14,7 @@ icar_atm_var=["t","qv","u","v"]
 converted_sfc_files=[]
 sfc_ncfiles=dict()
 
-# from swim_io, modified to work with netCDF4
+# from mygis, modified to work with netCDF4
 def read_nc(filename,var="data",proj=None,returnNCvar=False):
     '''read a netCDF file and return the specified variable
 
