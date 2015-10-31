@@ -262,8 +262,8 @@ contains
         class(linearizable_type),intent(inout)::domain
         real, intent(in)::Nsq
         integer, intent(in)::vsmooth ! number of layers to smooth winds over in the vertical
-        logical, intent(in) :: reverse,useDensity
-        logical, intent(in), optional ::debug, savedata
+        logical, intent(in) :: reverse, useDensity, debug
+        logical, intent(in), optional :: savedata
         real::gain,offset !used in setting up k and l arrays
         integer::nx,ny,nz,i,z,realnx,realny,realnx_u,realny_v,bottom,top
         logical :: staggered, zaxis_is_third, save_intermediate
@@ -509,14 +509,21 @@ contains
                         real(real( v_hat(1+buffer:realnx+buffer,   1+buffer:realny_v+buffer,z) ))*linear_contribution
                 else
                     ! note, linear_contribution component comes from the linear mask applied above on the mass grid
-                    domain%u(:,z,:)=domain%u(:,z,:) + &
-                        real(real(u_hat(1+buffer:realnx_u+buffer,1+buffer:realny+buffer  ,z) ))
-                    domain%v(:,z,:)=domain%v(:,z,:) + &
-                        real(real(v_hat(1+buffer:realnx+buffer,  1+buffer:realny_v+buffer,z) ))
+                    if (staggered) then
+                        domain%u(2:realnx,z,:)=domain%u(2:realnx,z,:) + &
+                            real(real(u_hat(1+buffer:realnx-1+buffer,1+buffer:realny+buffer  ,z) ))
+                        domain%v(:,z,2:realny)=domain%v(:,z,2:realny) + &
+                            real(real(v_hat(1+buffer:realnx+buffer,  1+buffer:realny-1+buffer,z) ))
+                    else
+                        domain%u(:,z,:)=domain%u(:,z,:) + &
+                            real(real(u_hat(1+buffer:realnx_u+buffer,1+buffer:realny+buffer  ,z) ))
+                        domain%v(:,z,:)=domain%v(:,z,:) + &
+                            real(real(v_hat(1+buffer:realnx+buffer,  1+buffer:realny_v+buffer,z) ))
+                    endif
                 endif
-            
-                if (present(debug).and.(z==1))then
-                    if (debug) then
+                
+                if (debug) then
+                    if (z==1)then
                         write(*,*) "Nsq = ", Nsq
                         write(*,*) "U=",U, "    V=",V
                         write(*,*) "realnx=",realnx, "; nx=",nx, "; buffer=",buffer
@@ -532,14 +539,12 @@ contains
         end do ! z-loop
         !$omp end do
         
-        
         ! finally deallocate all temporary arrays that were created... chould be a datastructure and a subroutine...
 !       if (.not.save_intermediate) then
         deallocate(k,l,kl,sig,denom,m,ineta,msq,mimag)
         
         !$omp end parallel
         
-!       endif
         ! these are subroutine scoped not module, they should be deallocated automatically anyway
         deallocate(U_layers,V_layers,preU_layers,preV_layers)
     end subroutine linear_winds
@@ -948,8 +953,9 @@ contains
         ! twice, once for domain and once for bc%next_domain
         call set_module_options(options)
         
+        ! note, the buffer actually really seems to help ideal simulations too
+        buffer=original_buffer
         if (.not.options%ideal) then
-            buffer=original_buffer
             call add_buffer_topo(domain%terrain,complex_terrain_firstpass,5)
             buffer=2
             call add_buffer_topo(real(real(complex_terrain_firstpass)),complex_terrain,0)

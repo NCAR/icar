@@ -103,22 +103,25 @@ ifeq ($(LMOD_FAMILY_COMPILER),gnu)
 	F90=gfortran
 	LIBFFT=/glade/u/home/gutmann/usr/local/lib
 	INCFFT=/glade/u/home/gutmann/usr/local/include
-	LIBNETCDF = -L/glade/apps/opt/netcdf/4.3.0/gnu/4.8.2/lib -lnetcdff -lnetcdf
-	INCNETCDF = -I/glade/apps/opt/netcdf/4.3.0/gnu/4.8.2/include # netcdf includes are setup by the yellowstone module system
+	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/gnu/default
+	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
+	INCNETCDF = -I$(NCDF_PATH)/include # netcdf includes are setup by the yellowstone module system
 endif 
 ifeq ($(LMOD_FAMILY_COMPILER),intel)
 	F90=ifort
 	LIBFFT=/glade/u/home/gutmann/usr/local/lib
 	INCFFT=/glade/u/home/gutmann/usr/local/include
-	LIBNETCDF = -L/glade/apps/opt/netcdf/4.3.0/intel/12.1.5/lib -lnetcdff -lnetcdf
-	INCNETCDF = -I/glade/apps/opt/netcdf/4.3.0/intel/12.1.5/include # netcdf includes are setup by the yellowstone module system
+	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/intel/default
+	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
+	INCNETCDF = -I$(NCDF_PATH)/include # netcdf includes are setup by the yellowstone module system
 endif 
 ifeq ($(LMOD_FAMILY_COMPILER),pgi)
 	F90=pgf90
 	LIBFFT=/glade/u/home/gutmann/usr/local/lib
 	INCFFT=/glade/u/home/gutmann/usr/local/include
-	LIBNETCDF = -lnetcdff -lnetcdf
-	INCNETCDF =	 # netcdf includes are setup by the yellowstone module system
+	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/pgi/default
+	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
+	INCNETCDF = -I$(NCDF_PATH)/include # netcdf includes are setup by the yellowstone module system
 endif	
 
 # get GIT version info
@@ -152,7 +155,7 @@ ifeq ($(F90), ifort)
 endif
 # PGI fortran
 ifeq ($(F90), pgf90)
-	COMP=-fast -mp -c
+	COMP=-fast -O3 -mp -c -Mdclchk
 	LINK=-mp
 	PREPROC=-Mpreprocess
 	MODOUTPUT=-module $(BUILD)
@@ -169,6 +172,10 @@ ifeq ($(MODE), debugslow)
 		COMP= -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK=  
 	endif
+	ifeq ($(F90), pgf90)
+		COMP= -c -g -Mbounds -Mlist -Minfo  -Mdclchk
+		LINK=  
+	endif
 endif
 ifeq ($(MODE), debug)
 	ifeq ($(F90), ifort)
@@ -177,6 +184,10 @@ ifeq ($(MODE), debug)
 	endif
 	ifeq ($(F90), gfortran)
 		COMP= -c -O1 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
+		LINK=  
+	endif
+	ifeq ($(F90), pgf90)
+		COMP= -c -gopt -O1 -Mbounds -Mlist -Minfo  -Mdclchk
 		LINK=  
 	endif
 endif
@@ -189,6 +200,10 @@ ifeq ($(MODE), debugompslow)
 	ifeq ($(F90), gfortran)
 		COMP= -fopenmp -lgomp -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK= -fopenmp -lgomp  
+	endif
+	ifeq ($(F90), pgf90)
+		COMP= -c -g -Mbounds -Mlist -Minfo -mp -Mdclchk
+		LINK= -mp
 	endif
 endif
 ifeq ($(MODE), debugomp)
@@ -287,7 +302,7 @@ install:icar
 	cp icar ${INSTALLDIR}
 
 clean:
-	rm $(BUILD)*.o $(BUILD)*.mod
+	rm $(BUILD)*.o $(BUILD)*.mod *.lst
 
 allclean:cleanall
 
@@ -334,7 +349,7 @@ $(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)data_structures.o $(BUILD)init.o $(BU
 
 $(BUILD)init.o:$(MAIN)init.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)geo_reader.o $(BUILD)vinterp.o \
 					$(BUILD)mp_driver.o $(BUILD)cu_driver.o $(BUILD)pbl_driver.o $(BUILD)wind.o \
-					$(BUILD)ra_driver.o $(BUILD)lsm_driver.o $(BUILD)init_options.o
+					$(BUILD)ra_driver.o $(BUILD)lsm_driver.o $(BUILD)init_options.o $(BUILD)advection_driver.o
 	${F90} ${FFLAGS} $(MAIN)init.f90 -o $(BUILD)init.o
 
 $(BUILD)boundary.o:$(MAIN)boundary.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)wind.o $(BUILD)geo_reader.o \
@@ -479,12 +494,8 @@ $(BUILD)model_tracking.o:$(MAIN)model_tracking.f90
 	${F90} ${FFLAGS} $(MAIN)model_tracking.f90 -o $(BUILD)model_tracking.o
 
 ###################################################################
-#	Unit tests (may only work at their git tags?)
+#	Unit tests
 ###################################################################
-# 
-# NOTE: too many changes in data structures/init have broken most of these tests, 
-#		not worth fixing right now. 
-#
 $(BUILD)test_fftshift.o:$(BUILD)fftshift.o tests/test_fftshift.f90
 	${F90} ${FFLAGS} tests/test_fftshift.f90 -o $(BUILD)test_fftshift.o
 
@@ -494,7 +505,11 @@ $(BUILD)test_calendar.o:$(BUILD)time.o tests/test_calendar.f90
 $(BUILD)test_mpdata.o:$(BUILD)adv_mpdata.o tests/test_mpdata.f90
 	${F90} ${FFLAGS} tests/test_mpdata.f90 -o $(BUILD)test_mpdata.o
 
-	
+
+# 
+# NOTE: too many changes in data structures/init have broken most of these tests, 
+#		not worth fixing right now. 
+#
 # tests/test_$(BUILD)wind.o:tests/test_$(PHYS)wind.f90 $(BUILD)wind.o $(BUILD)linear_winds.o
 #	${F90} ${FFLAGS} tests/test_$(PHYS)wind.f90 -o tests/test_$(BUILD)wind.o
 # 
