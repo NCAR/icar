@@ -331,7 +331,7 @@ contains
         
         if (.not.data_allocated) then
             if (debug) then
-                write(*,*) "Allocating Linear Wind Data and FFTW plans"
+                write(*,"(A,A)") char(13),"Allocating Linear Wind Data and FFTW plans"
             endif
             ! using fftw_alloc routines to ensure better allignment for vectorization
             n_elements=nx*ny*nz
@@ -550,13 +550,14 @@ contains
     end subroutine linear_winds
     
     
-    subroutine add_buffer_topo(terrain,buffer_topo,smooth_window)
+    subroutine add_buffer_topo(terrain,buffer_topo,smooth_window, debug)
         ! add a smoothed buffer around the edge of the terrain to prevent crazy wrap around effects
         ! in the FFT due to discontinuities between the left and right (or top and bottom) edges of the domain
         implicit none
         real, dimension(:,:), intent(in) :: terrain
         complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:), intent(inout) :: buffer_topo
         integer, intent(in) :: smooth_window
+        logical, intent(in), optional :: debug
         real, dimension(:,:),allocatable :: real_terrain
         integer::nx,ny,i,j,pos, xs,xe,ys,ye, window
         real::weight
@@ -579,9 +580,12 @@ contains
             buffer_topo(:,ny-pos) =buffer_topo(:,buffer+1)*(  weight) + buffer_topo(:,ny-buffer)*(1-weight)
         enddo
         
+        ! smooth the outer most grid cells in all directions to minimize artifacts at the borders of real terrain
+        ! smoothing effectively increases as it gets further from the real terrain border (window=min(j,smooth_window))
         if (smooth_window>0) then
             do j=1,buffer
                 window=min(j,smooth_window)
+                ! smooth the top and bottom borders
                 do i=1,nx
                     xs=max(1, i-window)
                     xe=min(nx,i+window)
@@ -596,6 +600,7 @@ contains
                 
                     buffer_topo(i,ny-(buffer-j))=sum(buffer_topo(xs:xe,ys:ye))/((xe-xs+1) * (ye-ys+1))
                 end do
+                ! smooth the left and right borders
                 do i=1,ny
                     xs=max(1, buffer-j+1-window)
                     xe=min(nx,buffer-j+1+window)
@@ -611,10 +616,15 @@ contains
                 end do
             end do
         endif
-!       allocate(real_terrain(nx,ny))
-!       real_terrain=buffer_topo
-!       call io_write2d("complex_terrain.nc","data",real_terrain)
-!       deallocate(real_terrain)
+        
+        if (present(debug)) then
+            if (debug) then
+                allocate(real_terrain(nx,ny))
+                real_terrain=buffer_topo
+                call io_write2d("buffered_terrain.nc","data",real_terrain)
+                deallocate(real_terrain)
+            endif
+        endif
         
     end subroutine add_buffer_topo
     
@@ -958,10 +968,10 @@ contains
         if (.not.options%ideal) then
             call add_buffer_topo(domain%terrain,complex_terrain_firstpass,5)
             buffer=2
-            call add_buffer_topo(real(real(complex_terrain_firstpass)),complex_terrain,0)
+            call add_buffer_topo(real(real(complex_terrain_firstpass)),complex_terrain,0, debug=options%debug)
             buffer=buffer+original_buffer
         else
-            call add_buffer_topo(domain%terrain,complex_terrain,0)
+            call add_buffer_topo(domain%terrain,complex_terrain,0, debug=options%debug)
         endif
         
         nx=size(complex_terrain,1)
