@@ -382,13 +382,21 @@ contains
             ! Compute 2D k and l wavenumber fields (could be stored in options or domain or something)
             offset=pi/domain%dx
             gain=2*offset/(nx-1)
-            k(:,1) = (/((i*gain-offset),i=0,nx-1)/)
+            ! don't use an implied do loop because PGF90 crashes with it and openmp...
+            ! k(:,1) = (/((i*gain-offset),i=0,nx-1)/)
+            do i=1,nx
+                k(i,1) = ((i-1)*gain-offset)
+            end do
             do i=2,ny
                 k(:,i)=k(:,1)
             enddo
             
             gain=2*offset/(ny-1)
-            l(1,:) = (/((i*gain-offset),i=0,ny-1)/)
+            ! don't use an implied do loop because PGF90 crashes with it and openmp...
+            ! l(1,:) = (/((i*gain-offset),i=0,ny-1)/)
+            do i=1,ny
+                l(1,i) = ((i-1)*gain-offset)
+            end do
             do i=2,nx
                 l(i,:)=l(1,:)
             enddo
@@ -1012,9 +1020,9 @@ contains
             linear_mask=linear_contribution
     
             if (use_linear_mask) then
-                print*, "Reading Linear Mask"
-                print*, "  from file: "//trim(options%linear_mask_file)
-                print*, "  varname: "//trim(options%linear_mask_var)
+                write(*,*) "Reading Linear Mask"
+                write(*,*) "  from file: "//trim(options%linear_mask_file)
+                write(*,*) "  varname: "//trim(options%linear_mask_var)
                 call io_read2d(options%linear_mask_file,options%linear_mask_var,domain%linear_mask)
                 linear_mask = domain%linear_mask * linear_contribution
             endif
@@ -1026,9 +1034,9 @@ contains
             nsq_calibration=1
     
             if (use_nsq_calibration) then
-                print*, "Reading Linear Mask"
-                print*, "  from file: "//trim(options%nsq_calibration_file)
-                print*, "  varname: "//trim(options%nsq_calibration_var)
+                write(*,*) "Reading Linear Mask"
+                write(*,*) "  from file: "//trim(options%nsq_calibration_file)
+                write(*,*) "  varname: "//trim(options%nsq_calibration_var)
                 call io_read2d(options%nsq_calibration_file,options%nsq_calibration_var,domain%nsq_calibration)
                 nsq_calibration=domain%nsq_calibration
                 
@@ -1046,7 +1054,7 @@ contains
             v_perturbation=0
         endif
         
-        print*, maxval(u_perturbation), maxval(v_perturbation)
+        write(*,*) "Max U perturb:",maxval(u_perturbation), "Max V perturb:",maxval(v_perturbation)
         if (use_spatial_linear_fields) then
             if ((.not.allocated(hi_u_LUT) .and. (.not.reverse)) .or. ((.not.allocated(rev_u_LUT)) .and. reverse)) then
                 
