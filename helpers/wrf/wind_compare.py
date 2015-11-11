@@ -41,6 +41,12 @@ def load_icar(filename,h,preciponly=False):
     """docstring for load_wrf"""
     # run_num=filename.split("out")[-1]
     # last_file=filename.replace(run_num,("{0:0"+str(len(run_num))+"}").format(int(run_num)-1))
+    if type(filename)==list:
+        output=[]
+        for f in filename:
+            output.append(load_icar(f,h,preciponly=preciponly))
+        return output
+        
     precip=mygis.read_nc(filename,"rain").data
     precip=precip[11,1]-precip[10,1]
     if preciponly:
@@ -147,7 +153,10 @@ def vinterp(d1,d2):
     
     return newdata
 
-def main(wrf_file,icar_file,output_file,makeplot=True,getPrecip=True,Ndsq=None,t=None,add_file=None,master=False):
+def main(wrf_file,icar_file,output_file,makeplot=True,plot_legend=False,
+         precip_max=2.0,getPrecip=True,Ndsq=None,t=None,add_file=None,master=False,
+         text_font_size=8, legend_font_size=8, label_font_size=8, 
+         draw_xlabels=True, draw_ylabels=True):
     """docstring for main"""
     if Ndsq==None:
         Ndsq=icar_file.split("_ns")[1][:3]
@@ -218,22 +227,31 @@ def main(wrf_file,icar_file,output_file,makeplot=True,getPrecip=True,Ndsq=None,t
             offset=-1.5
         precip_width=2
         # precip_max=3.5
-        precip_max=2.0
+        # precip_max=2.0
         x=np.arange(100)*dx
         
         plt.plot(x, linear_data.precip[150:250]+offset,color="red",label="Linear",linewidth=precip_width)
         plt.plot(x, wrfdata.precip[150:250]+offset,color="black",label="WRF",linewidth=precip_width)
-        plt.plot(x, icardata.precip[150:250]+offset,color="green",label="ICAR-t",linewidth=precip_width)
+        plt.plot(x, icardata.precip[150:250]+offset,color="green",label="ICAR$_t$",linewidth=precip_width)
         plt.plot([50*dx,50*dx],[offset,precip_max+offset],color="black",linestyle=":",linewidth=precip_width)
         print("case: "+" ".join(wrf_file.split("/")[0].split("_")[1:]))
         print("ICAR-t "+str(icardata.precip[150:250].mean()))
         print("WRF "+str(wrfdata.precip[150:250].mean()))
         print("linear "+str(linear_data.precip[150:250].mean()))
         if add_file:
-            label=add_file.split("_")[0]
-            label="ICAR-l"
-            plt.plot(x, icar2.precip[150:250]+offset,color="blue",label=label,linewidth=precip_width)
-            print("ICAR-l "+str(icar2.precip[150:250].mean()))
+            if type(add_file)==list:
+                for i in range(len(add_file)):
+                    # label=add_file[i].split("/")[-2].split("_")[0]
+                    label=["ICAR$_l$","ICAR$_s$"][i]
+                    color=["blue","orange"][i]
+                    plt.plot(x, icar2[i].precip[150:250]+offset,color=color,label=label,linewidth=precip_width)
+                    print(label+" "+str(icar2[i].precip[150:250].mean()))
+            else:
+                label=add_file.split("_")[0]
+                label="ICAR$_l$"
+                plt.plot(x, icar2.precip[150:250]+offset,color="blue",label=label,linewidth=precip_width)
+                print("ICAR-l "+str(icar2.precip[150:250].mean()))
+                
         if getPrecip:
             if master:
                 plot=master
@@ -241,21 +259,24 @@ def main(wrf_file,icar_file,output_file,makeplot=True,getPrecip=True,Ndsq=None,t
                 plot = fig.add_subplot(111)
                 
             case=wrf_file.split("/")[0].split("_")[1:]
-            plt.text(10, (precip_max+offset)*0.75, " U   ={0[0]}m/s\n RH={0[1]}\n T   ={0[2]}K".format(case),fontsize=8)
-            if (case[1]=="0.75") and (case[2]=="260") and (case[0]=="5"):
-                plt.legend(fontsize=8)
+            plt.text(10, (precip_max+offset)*0.75, " U   ={0[0]}m/s\n RH={0[1]}\n T   ={0[2]}K".format(case),fontsize=text_font_size)
+            # if (case[1]=="0.75") and (case[2]=="260") and (case[0]=="5"):
+            if plot_legend:
+                plt.legend(fontsize=legend_font_size)
                 
             # plot.tick_params(axis='both', which='major', labelsize=0)
-            if case[0]=="20":
-                plot.tick_params(axis='x', which='major', labelsize=8)
-                plt.xlabel("Distance (km)")
+            if draw_xlabels:
+                # if case[0]=="20":
+                plot.tick_params(axis='x', which='major', labelsize=label_font_size)
+                plt.xlabel("Distance (km)", fontsize=label_font_size)
             else:
                 plot.set_xticklabels("")
-            if case[1]=="0.75" and case[2]=="260":
-                plot.tick_params(axis='y', which='major', labelsize=8)
+            if draw_ylabels:
+                # if case[1]=="0.75" and case[2]=="260":
+                plot.tick_params(axis='y', which='major', labelsize=label_font_size)
+                plt.ylabel("Precipitation Rate (mm/hr)", fontsize=label_font_size)
             else:
                 plot.set_yticklabels("")
-                # plt.ylabel("Precipitation Rate (mm/hr)")
                 
         plt.ylim(offset,precip_max+offset)
         
