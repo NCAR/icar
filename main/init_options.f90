@@ -114,9 +114,9 @@ contains
     
         if (options%t_offset.eq.(-9999)) then
             if (options%warning_level>0) then
-                write(*,*), "WARNING, WARNING, WARNING"
-                write(*,*), "WARNING, Using default t_offset=300"
-                write(*,*), "WARNING, WARNING, WARNING"
+                write(*,*) "WARNING, WARNING, WARNING"
+                write(*,*) "WARNING, Using default t_offset=300"
+                write(*,*) "WARNING, WARNING, WARNING"
             endif
             options%t_offset=300
         endif
@@ -433,7 +433,7 @@ contains
         
         if (smooth_wind_distance.eq.(-9999)) then
             smooth_wind_distance=dxlow*3
-            write(*,*), "Default smoothing distance = lowdx*3 = ", smooth_wind_distance
+            write(*,*) "Default smoothing distance = lowdx*3 = ", smooth_wind_distance
         endif
         
         options%t_offset=t_offset

@@ -103,25 +103,27 @@ ifeq ($(LMOD_FAMILY_COMPILER),gnu)
 	F90=gfortran
 	LIBFFT=/glade/u/home/gutmann/usr/local/lib
 	INCFFT=/glade/u/home/gutmann/usr/local/include
-	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/gnu/default
-	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
-	INCNETCDF = -I$(NCDF_PATH)/include # netcdf includes are setup by the yellowstone module system
+	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/gnu/4.9.2
+	# LIBNETCDF = $(LIB_NCAR) # when netcdf includes are setup by the yellowstone module system
+	# INCNETCDF = $(INC_NCAR) 
+	LIBNETCDF = -Wl,-rpath,$(NCDF_PATH)/lib -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf # if using a compiler for which netcdf includes are 
+	INCNETCDF = -I$(NCDF_PATH)/include # NOT setup correctly by the yellowstone module system
 endif 
 ifeq ($(LMOD_FAMILY_COMPILER),intel)
 	F90=ifort
 	LIBFFT=/glade/u/home/gutmann/usr/local/lib
 	INCFFT=/glade/u/home/gutmann/usr/local/include
 	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/intel/default
-	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
-	INCNETCDF = -I$(NCDF_PATH)/include # netcdf includes are setup by the yellowstone module system
+	LIBNETCDF = $(LIB_NCAR) #-L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
+	INCNETCDF = $(INC_NCAR) #-I$(NCDF_PATH)/include # netcdf includes are setup by the yellowstone module system
 endif 
 ifeq ($(LMOD_FAMILY_COMPILER),pgi)
 	F90=pgf90
 	LIBFFT=/glade/u/home/gutmann/usr/local/lib
 	INCFFT=/glade/u/home/gutmann/usr/local/include
 	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/pgi/default
-	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
-	INCNETCDF = -I$(NCDF_PATH)/include # netcdf includes are setup by the yellowstone module system
+	LIBNETCDF = -rpath $(NCDF_PATH)/lib -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf # if using a compiler for which netcdf includes are 
+	INCNETCDF = -I$(NCDF_PATH)/include # NOT setup correctly by the yellowstone module system
 endif	
 
 # get GIT version info
@@ -155,10 +157,18 @@ ifeq ($(F90), ifort)
 endif
 # PGI fortran
 ifeq ($(F90), pgf90)
-	COMP=-fast -O3 -mp -c -Mdclchk
+	COMP=-O2 -mp -c -Mdclchk #-fast -O3 -mp -c -Mdclchk
 	LINK=-mp
 	PREPROC=-Mpreprocess
 	MODOUTPUT=-module $(BUILD)
+endif
+
+# Cray fortran
+ifeq ($(F90), ftn)
+	COMP=-O2 -c
+	LINK=
+	PREPROC=-e z
+	MODOUTPUT=-e m -J $(BUILD)
 endif
 
 
@@ -176,6 +186,12 @@ ifeq ($(MODE), debugslow)
 		COMP= -c -g -Mbounds -Mlist -Minfo  -Mdclchk
 		LINK=  
 	endif
+	ifeq ($(F90), ftn)
+		COMP=-h noomp -c -g -m 0 -R abcsp
+		LINK=-h noomp
+		PREPROC=-e z
+		MODOUTPUT=-e m -J $(BUILD)
+	endif
 endif
 ifeq ($(MODE), debug)
 	ifeq ($(F90), ifort)
@@ -189,6 +205,12 @@ ifeq ($(MODE), debug)
 	ifeq ($(F90), pgf90)
 		COMP= -c -gopt -O1 -Mbounds -Mlist -Minfo  -Mdclchk
 		LINK=  
+	endif
+	ifeq ($(F90), ftn)
+		COMP=-O1 -h noomp -c -g
+		LINK=-h noomp
+		PREPROC=-e z
+		MODOUTPUT=-e m -J $(BUILD)
 	endif
 endif
 ifeq ($(MODE), debugompslow)
@@ -205,6 +227,12 @@ ifeq ($(MODE), debugompslow)
 		COMP= -c -g -Mbounds -Mlist -Minfo -mp -Mdclchk
 		LINK= -mp
 	endif
+	ifeq ($(F90), ftn)
+		COMP=-c -g -m 0 -R abcsp
+		LINK=
+		PREPROC=-e z
+		MODOUTPUT=-e m -J $(BUILD)
+	endif
 endif
 ifeq ($(MODE), debugomp)
 	ifeq ($(F90), ifort)
@@ -214,6 +242,16 @@ ifeq ($(MODE), debugomp)
 	ifeq ($(F90), gfortran)
 		COMP= -fopenmp -lgomp -c -O1 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK= -fopenmp -lgomp  
+	endif
+	ifeq ($(F90), pgf90)
+		COMP= -c -g -O1 -Mbounds -Mlist -Minfo -mp -Mdclchk
+		LINK= -mp
+	endif
+	ifeq ($(F90), ftn)
+		COMP=-O1 -c -g
+		LINK=
+		PREPROC=-e z
+		MODOUTPUT=-e m -J $(BUILD)
 	endif
 endif
 

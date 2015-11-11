@@ -500,7 +500,7 @@ contains
                     ! to get the vertical velocities closer to what they would be without density (boussinesq)
                     ! need to check if this makes the most sense when close to the surface
                     if (debug) then
-                        write(*,*), "Using a density correction in linear winds"
+                        write(*,*) "Using a density correction in linear winds"
                     endif
                     u_hat(buffer:realnx_u+buffer,buffer:realny+buffer,z) = &
                         2*real(u_hat(buffer:realnx_u+buffer,buffer:realny+buffer,z))! / domain%rho(1:realnx,z,1:realny)
