@@ -65,7 +65,7 @@ contains
         
         call date_and_time(values=date_time,zone=UTCoffset)
         date_format='(I4,"/",I2.2,"/",I2.2," ",I2.2,":",I2.2,":",I2.2)'
-        write(todays_date_time,date_format),date_time(1:3),date_time(5:7)
+        write(todays_date_time,date_format) date_time(1:3),date_time(5:7)
     
         ! create the file (clobbering any existing files!)
         err="Creating:"//trim(filename)
