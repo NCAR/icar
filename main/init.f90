@@ -538,6 +538,10 @@ contains
         boundary%dlh_dt=0
         allocate(boundary%dsh_dt(nx,ny))
         boundary%dsh_dt=0
+        allocate(boundary%dlw_dt(nx,ny))
+        boundary%dlw_dt=0
+        allocate(boundary%dsw_dt(nx,ny))
+        boundary%dsw_dt=0
         allocate(boundary%dpblh_dt(nx,ny))
         boundary%dpblh_dt=0
     end subroutine boundary_allocate

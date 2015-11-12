@@ -127,7 +127,7 @@ contains
         
         ! Richardson number 
         where(wind==0) wind=1e-10
-        print*, minval(airt)
+        
         Ri = gravity/airt * (airt-tskin)*z_atm/(wind**2)
         
         where(Ri<0)  exchange_C=lnz_atm_term * (1.0-(15.0*Ri)/(1.0+(base_exchange_term * sqrt((-1.0)*Ri))))
@@ -382,7 +382,7 @@ contains
             
         endif
         counter=0
-        steps_per_lsm_step=10
+        steps_per_lsm_step=1
         last_model_time=-999
         
     end subroutine lsm_init
@@ -475,9 +475,11 @@ contains
                 call surface_diagnostics(domain%sensible_heat, QFX, domain%skin_t, QSFC,  &
                                          CHS2, CQS2,domain%T2m, domain%Q2m, domain%psfc)
                 
-                call apply_fluxes(domain,lsm_dt)
                 
             endif
+        endif
+        if (options%physics%landsurface>0) then
+            call apply_fluxes(domain,dt)
         endif
         
     end subroutine lsm

@@ -37,9 +37,6 @@ contains
         
         if (options%physics%radiation==kRA_BASIC) then
             write(*,*) "    Basic Radiation"
-            if (options%physics%landsurface/=kLSM_BASIC) then
-                stop("Basic radiations scheme only works with basic LSM")
-            endif
         endif
         if (options%physics%radiation==kRA_SIMPLE) then
             write(*,*) "    Simple Radiation"

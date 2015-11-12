@@ -292,7 +292,7 @@ module data_structures
         ! wind and pressure dX_dt fields applied to full 3d grid, others applied only to boundaries
         real, allocatable, dimension(:,:,:) :: du_dt,dv_dt,dp_dt,dth_dt,dqv_dt,dqc_dt
         ! sh, lh, and pblh fields are only 2d. These are only used with LSM option 1 and are derived from forcing file
-        real, allocatable, dimension(:,:) :: dsh_dt,dlh_dt,dpblh_dt
+        real, allocatable, dimension(:,:) :: dsh_dt,dlh_dt,dpblh_dt, dsw_dt, dlw_dt
         ! store the low resolution versionf of terrain and atmospheric elevations
         real,allocatable,dimension(:,:)::lowres_terrain
         real,allocatable,dimension(:,:,:)::lowres_z
@@ -393,7 +393,8 @@ module data_structures
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar,hgtvar, &
                                         shvar,lhvar,pblhvar,zvar, &
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
-                                        vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var
+                                        vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
+                                        swdown_var, lwdown_var
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, adv_options_filename
         character(len=MAXFILELENGTH) :: calendar
         

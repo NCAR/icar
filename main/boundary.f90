@@ -724,13 +724,26 @@ contains
             if (options%physics%landsurface==kLSM_BASIC) then
                 call read_2dvar(domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep,options)
                 call read_2dvar(domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep,options)
+                
                 if (options%physics%boundarylayer==kPBL_BASIC) then
-                    call read_2dvar(domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep,options)
+                    if (trim(options%pblhvar)/="") then
+                        call read_2dvar(domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep,options)
+                    endif
                 endif
+                ! NOTE, this is a kludge to prevent the model from sucking more moisture out of the lower model layer than exists
                 where(domain%latent_heat<0) domain%latent_heat=0
             endif
             
-          call update_pressure(domain%p,bc%lowres_z,domain%z)
+            if (options%physics%radiation==kRA_BASIC) then
+                if (trim(options%swdown_var)/="") then
+                    call read_2dvar(domain%swdown,  file_list(curfile),options%swdown_var,  bc%geolut,curstep,options)
+                endif
+                if (trim(options%lwdown_var)/="") then
+                    call read_2dvar(domain%lwdown,  file_list(curfile),options%lwdown_var,  bc%geolut,curstep,options)
+                endif
+            endif
+            
+            call update_pressure(domain%p,bc%lowres_z,domain%z)
             
             nz=size(domain%th,2)
             domainsize=size(domain%th,1)*size(domain%th,3)
@@ -750,6 +763,7 @@ contains
         
         ! calculate znu and znw from domain pressure variable now that we have it
         call init_znu(domain)
+        
     end subroutine bc_init
 
 
@@ -789,6 +803,9 @@ contains
         bc%dlh_dt  =bc%next_domain%latent_heat-domain%latent_heat
         ! only if lsm=1 and PBL option = 1
         bc%dpblh_dt=bc%next_domain%pbl_height-domain%pbl_height
+        
+        bc%dsw_dt  =bc%next_domain%swdown-domain%swdown
+        bc%dlw_dt  =bc%next_domain%lwdown-domain%lwdown
 
         call update_edges(bc%dth_dt,bc%next_domain%th,domain%th)
         call update_edges(bc%dqv_dt,bc%next_domain%qv,domain%qv)
@@ -1038,11 +1055,23 @@ contains
             call read_2dvar(bc%next_domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep,options)
             ! note this is nested in the landsurface=LSM_BASIC condition, because that is the only time it makes sense. 
             if (options%physics%boundarylayer==kPBL_BASIC) then
-                call read_2dvar(bc%next_domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep,options)
+                if (trim(options%pblhvar)/="") then
+                    call read_2dvar(bc%next_domain%pbl_height,   file_list(curfile),options%pblhvar,bc%geolut,curstep,options)
+                endif
             endif
             ! NOTE, this is a kludge to prevent the model from sucking more moisture out of the lower model layer than exists
             where(domain%latent_heat<0) domain%latent_heat=0
         endif
+        
+        if (options%physics%radiation==kRA_BASIC) then
+            if (trim(options%swdown_var)/="") then
+                call read_2dvar(bc%next_domain%swdown,  file_list(curfile),options%swdown_var,  bc%geolut,curstep,options)
+            endif
+            if (trim(options%lwdown_var)/="") then
+                call read_2dvar(bc%next_domain%lwdown,  file_list(curfile),options%lwdown_var,  bc%geolut,curstep,options)
+            endif
+        endif
+        
         
         ! if we want to supply mean forcing fields on the boundaries, compute those here. 
         if (options%mean_fields) then

@@ -37,10 +37,10 @@ contains
         ny=size(curdata,3)
 
         do i=1,nz
-            curdata(1,i,:) =curdata(1,i,:) +dXdt(i,1:ny,1)
-            curdata(nx,i,:)=curdata(nx,i,:)+dXdt(i,1:ny,2)
-            curdata(:,i,1) =curdata(:,i,1) +dXdt(i,1:nx,3)
-            curdata(:,i,ny)=curdata(:,i,ny)+dXdt(i,1:nx,4)
+            curdata(1,i,:)  = curdata(1,i,:)  + dXdt(i,1:ny,1)
+            curdata(nx,i,:) = curdata(nx,i,:) + dXdt(i,1:ny,2)
+            curdata(:,i,1)  = curdata(:,i,1)  + dXdt(i,1:nx,3)
+            curdata(:,i,ny) = curdata(:,i,ny) + dXdt(i,1:nx,4)
         enddo
         ! correct possible rounding errors, primarily an issue of clouds...
         where(curdata(1,:,:)<0) curdata(1,:,:)=0
@@ -69,6 +69,23 @@ contains
                 domain%p(:,:,j)=domain%p(:,:,j)+bc%dp_dt(:,:,j)
                 domain%pii(:,:,j)=(domain%p(:,:,j)/100000.0)**(Rd/cp)
                 domain%rho(:,:,j)=domain%p(:,:,j)/(Rd*domain%th(:,:,j)*domain%pii(:,:,j)) ! kg/m^3
+            endif
+            
+            ! these only get updated if we are using the fluxes derived from the forcing model
+            if (options%physics%landsurface==kLSM_BASIC) then
+                domain%sensible_heat(:,j)  = domain%sensible_heat(:,j)+ bc%dsh_dt(:,j)
+                domain%latent_heat(:,j)    = domain%latent_heat(:,j)  + bc%dlh_dt(:,j)
+            endif
+            
+            ! these only get updated if we are using the fluxes derived from the forcing model
+            if (options%physics%boundarylayer==kPBL_BASIC) then
+                domain%pbl_height(:,j) = domain%pbl_height(:,j)+ bc%dpblh_dt(:,j)
+            endif
+            
+            ! these only get updated if we are using the fluxes derived from the forcing model
+            if (options%physics%radiation==kRA_BASIC) then
+                domain%swdown(:,j)  = domain%swdown(:,j)  + bc%dsw_dt(:,j)
+                domain%lwdown(:,j)  = domain%lwdown(:,j)  + bc%dlw_dt(:,j)
             endif
         enddo
         !$omp end do
@@ -160,17 +177,75 @@ contains
 
 !   Divides dXdt variables by n timesteps so that after adding it N times we will be at the
 !   correct final value. 
-    subroutine apply_dt(bc,nsteps)
+    subroutine apply_dt(bc,nsteps, options)
         implicit none
         type(bc_type), intent(inout) :: bc
         integer,intent(in)::nsteps
+        type(options_type), intent(in) :: options
+        integer::j, ny, nx
+        ny=size(bc%du_dt,3)
+        nx=size(bc%du_dt,1)
+
+        bc%du_dt  = bc%du_dt  / nsteps
+        bc%dv_dt  = bc%dv_dt  / nsteps
+        bc%dp_dt  = bc%dp_dt  / nsteps
+        bc%dth_dt = bc%dth_dt / nsteps
+        bc%dqv_dt = bc%dqv_dt / nsteps
+        bc%dqc_dt = bc%dqc_dt / nsteps
+
+        ! these only get updated if we are using the fluxes derived from the forcing model
+        if (options%physics%landsurface==kLSM_BASIC) then
+            bc%dsh_dt   = bc%dsh_dt   / nsteps
+            bc%dlh_dt   = bc%dlh_dt   / nsteps
+        endif
+        ! these only get updated if we are using the fluxes derived from the forcing model
+        if (options%physics%boundarylayer==kPBL_BASIC) then
+            bc%dpblh_dt = bc%dpblh_dt / nsteps
+        endif
+        ! these only get updated if we are using the fluxes derived from the forcing model
+        if (options%physics%radiation==kRA_BASIC) then
+            bc%dsw_dt   = bc%dsw_dt   / nsteps
+            bc%dlw_dt   = bc%dlw_dt   / nsteps
+        endif
+
         
-        bc%du_dt  =bc%du_dt/nsteps
-        bc%dv_dt  =bc%dv_dt/nsteps
-        bc%dp_dt  =bc%dp_dt/nsteps
-        bc%dth_dt =bc%dth_dt/nsteps
-        bc%dqv_dt =bc%dqv_dt/nsteps
-        bc%dqc_dt =bc%dqc_dt/nsteps
+!         !$omp parallel firstprivate(ny,nsteps) &
+!         !$omp private(j) &
+!         !$omp shared(bc)
+!         !$omp do schedule(static)
+!         do j=1,ny
+!             bc%du_dt(:,:,j)  = bc%du_dt(:,:,j)  / nsteps
+!             bc%dv_dt(:,:,j)  = bc%dv_dt(:,:,j)  / nsteps
+!             bc%dp_dt(:,:,j)  = bc%dp_dt(:,:,j)  / nsteps
+!             bc%dth_dt(:,j,:) = bc%dth_dt(:,j,:) / nsteps
+!             bc%dqv_dt(:,j,:) = bc%dqv_dt(:,j,:) / nsteps
+!             bc%dqc_dt(:,j,:) = bc%dqc_dt(:,j,:) / nsteps
+!
+!             ! these only get updated if we are using the fluxes derived from the forcing model
+!             if (options%physics%landsurface==kLSM_BASIC) then
+!                 bc%dsh_dt(:,j)   = bc%dsh_dt(:,j)   / nsteps
+!                 bc%dlh_dt(:,j)   = bc%dlh_dt(:,j)   / nsteps
+!             endif
+!             ! these only get updated if we are using the fluxes derived from the forcing model
+!             if (options%physics%boundarylayer==kPBL_BASIC) then
+!                 bc%dpblh_dt(:,j) = bc%dpblh_dt(:,j) / nsteps
+!             endif
+!             ! these only get updated if we are using the fluxes derived from the forcing model
+!             if (options%physics%radiation==kRA_BASIC) then
+!                 bc%dsw_dt(:,j)   = bc%dsw_dt(:,j)   / nsteps
+!                 bc%dlw_dt(:,j)   = bc%dlw_dt(:,j)   / nsteps
+!             endif
+!         end do
+!         !$omp end do
+!         !$omp end parallel
+!         if (nx>ny) then
+!             do j=ny+1,nx
+!                 bc%dth_dt(:,j,:) = bc%dth_dt(:,j,:) / nsteps
+!                 bc%dqv_dt(:,j,:) = bc%dqv_dt(:,j,:) / nsteps
+!                 bc%dqc_dt(:,j,:) = bc%dqc_dt(:,j,:) / nsteps
+!             end do
+!         endif
+            
     end subroutine apply_dt
     
     
@@ -216,7 +291,7 @@ contains
         end_time=model_time+options%in_dt
         
 !       adjust the boundary condition dXdt values for the number of time steps
-        call apply_dt(bc,ntimesteps)
+        call apply_dt(bc,ntimesteps,options)
         write(*,*) "    dt=",dt, "nsteps=",ntimesteps
         
 !       ensure internal model consistency (should only need to be called here when the model starts...)
