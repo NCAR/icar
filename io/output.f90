@@ -423,8 +423,8 @@ contains
             call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
             varid(29)=temp_id
     
-            call check( nf90_def_var(ncid, "shs", NF90_REAL, dimtwo_time, temp_id), trim(err)//"shs" )
-            call check( nf90_put_att(ncid,temp_id,"standard_name","sensible_heat_flux"))
+            call check( nf90_def_var(ncid, "hfss", NF90_REAL, dimtwo_time, temp_id), trim(err)//"hfss" )
+            call check( nf90_put_att(ncid,temp_id,"standard_name","surface_upward_sensible_heat_flux"))
             call check( nf90_put_att(ncid,temp_id,"long_name","Sensible heat flux"))
             call check( nf90_put_att(ncid,temp_id,"positive","up"))
             call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
@@ -475,8 +475,34 @@ contains
             call check( nf90_put_att(ncid,temp_id,"units","kg m-2"))
             varid(31)=temp_id
         endif
+        
+        ! diagnosed surface fields (e.g. T2m, U10)
+        call check( nf90_def_var(ncid, "ta2m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"ta2m" )
+        call check( nf90_put_att(ncid,temp_id,"standard_name","air_temperature"))
+        call check( nf90_put_att(ncid,temp_id,"long_name","Bulk air temperature at 2m"))
+        call check( nf90_put_att(ncid,temp_id,"units","K"))
+        varid(34)=temp_id
 
-    
+        call check( nf90_def_var(ncid, "hus2m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"hus2m" )
+        call check( nf90_put_att(ncid,temp_id,"standard_name","specific_humidity"))
+        call check( nf90_put_att(ncid,temp_id,"long_name","Bulk air specific humidity at 2m"))
+        call check( nf90_put_att(ncid,temp_id,"units","kg kg-1"))
+        varid(35)=temp_id
+        
+        call check( nf90_def_var(ncid, "u10m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"u10m" )
+        call check( nf90_put_att(ncid,temp_id,"standard_name","eastward_10m_wind_speed"))
+        call check( nf90_put_att(ncid,temp_id,"long_name","Eastward wind speed at 2m"))
+        call check( nf90_put_att(ncid,temp_id,"units","m s-1"))
+        varid(36)=temp_id
+        
+        call check( nf90_def_var(ncid, "v10m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"v10m" )
+        call check( nf90_put_att(ncid,temp_id,"standard_name","northward_10m_wind_speed"))
+        call check( nf90_put_att(ncid,temp_id,"long_name","Northward wind speed at 2m"))
+        call check( nf90_put_att(ncid,temp_id,"units","m s-1"))
+        varid(37)=temp_id
+        
+        
+        
         ! End define mode. This tells netCDF we are done defining metadata.
         call check( nf90_enddef(ncid) )
         
@@ -579,7 +605,7 @@ contains
         if (options%physics%landsurface==kLSM_NOAH) then
             call check( nf90_inq_varid(ncid, "rlus",  temp_id), trim(err)//"rlus" )
             varid(29)=temp_id
-            call check( nf90_inq_varid(ncid, "shs",   temp_id), trim(err)//"shs" )
+            call check( nf90_inq_varid(ncid, "hfss",   temp_id), trim(err)//"hfss" )
             varid(23)=temp_id
             call check( nf90_inq_varid(ncid, "hfls",  temp_id), trim(err)//"hfls" )
             varid(24)=temp_id
@@ -597,6 +623,14 @@ contains
             call check( nf90_inq_varid(ncid, "canwat", temp_id), trim(err)//"canwat" )
             varid(31)=temp_id
         endif
+        call check( nf90_inq_varid(ncid, "ta2m", temp_id), trim(err)//"ta2m" )
+        varid(34)=temp_id
+        call check( nf90_inq_varid(ncid, "hus2m", temp_id), trim(err)//"hus2m" )
+        varid(35)=temp_id
+        call check( nf90_inq_varid(ncid, "u10m", temp_id), trim(err)//"u10m" )
+        varid(36)=temp_id
+        call check( nf90_inq_varid(ncid, "v10m", temp_id), trim(err)//"v10m" )
+        varid(37)=temp_id
         
     end subroutine setup_varids
     
@@ -731,6 +765,10 @@ contains
             call check( nf90_put_var(ncid, varid(30), domain%snow_swe,     start_two_D),  trim(filename)//":snow_swe" )
             call check( nf90_put_var(ncid, varid(31), domain%canopy_water, start_two_D),  trim(filename)//":canopy_water" )
         endif
+        call check( nf90_put_var(ncid, varid(34), domain%T2m, start_two_D),  trim(filename)//":t2m" )
+        call check( nf90_put_var(ncid, varid(35), domain%Q2m, start_two_D),  trim(filename)//":hus2m" )
+        call check( nf90_put_var(ncid, varid(36), domain%u10, start_two_D),  trim(filename)//":u10m" )
+        call check( nf90_put_var(ncid, varid(37), domain%v10, start_two_D),  trim(filename)//":v10m" )
         
         last_rain=domain%rain
         ! Close the file, freeing all resources.
