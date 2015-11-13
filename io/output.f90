@@ -275,7 +275,7 @@ contains
             call check( nf90_def_var(ncid, "w", NF90_REAL, dimids, temp_id), trim(err)//"w" )
             call check( nf90_put_att(ncid,temp_id,"standard_name","upward_air_velocity"))
             call check( nf90_put_att(ncid,temp_id,"long_name","Vertical wind"))
-            call check( nf90_put_att(ncid,temp_id,"WARNING","Grid relative (i.e. add u*dz/dx) and scaled by dx/dz"))
+!             call check( nf90_put_att(ncid,temp_id,"WARNING","Grid relative (i.e. add u*dz/dx) and scaled by dx/dz"))
             call check( nf90_put_att(ncid,temp_id,"units","m s-1"))
             varid(11)=temp_id
             
@@ -474,20 +474,20 @@ contains
             call check( nf90_put_att(ncid,temp_id,"long_name","Canopy water content"))
             call check( nf90_put_att(ncid,temp_id,"units","kg m-2"))
             varid(31)=temp_id
-        endif
-        
-        ! diagnosed surface fields (e.g. T2m, U10)
-        call check( nf90_def_var(ncid, "ta2m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"ta2m" )
-        call check( nf90_put_att(ncid,temp_id,"standard_name","air_temperature"))
-        call check( nf90_put_att(ncid,temp_id,"long_name","Bulk air temperature at 2m"))
-        call check( nf90_put_att(ncid,temp_id,"units","K"))
-        varid(34)=temp_id
+            
+            ! diagnosed surface fields (e.g. T2m, U10)
+            call check( nf90_def_var(ncid, "ta2m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"ta2m" )
+            call check( nf90_put_att(ncid,temp_id,"standard_name","air_temperature"))
+            call check( nf90_put_att(ncid,temp_id,"long_name","Bulk air temperature at 2m"))
+            call check( nf90_put_att(ncid,temp_id,"units","K"))
+            varid(34)=temp_id
 
-        call check( nf90_def_var(ncid, "hus2m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"hus2m" )
-        call check( nf90_put_att(ncid,temp_id,"standard_name","specific_humidity"))
-        call check( nf90_put_att(ncid,temp_id,"long_name","Bulk air specific humidity at 2m"))
-        call check( nf90_put_att(ncid,temp_id,"units","kg kg-1"))
-        varid(35)=temp_id
+            call check( nf90_def_var(ncid, "hus2m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"hus2m" )
+            call check( nf90_put_att(ncid,temp_id,"standard_name","specific_humidity"))
+            call check( nf90_put_att(ncid,temp_id,"long_name","Bulk air specific humidity at 2m"))
+            call check( nf90_put_att(ncid,temp_id,"units","kg kg-1"))
+            varid(35)=temp_id
+        endif
         
         call check( nf90_def_var(ncid, "u10m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"u10m" )
         call check( nf90_put_att(ncid,temp_id,"standard_name","eastward_10m_wind_speed"))
@@ -622,11 +622,11 @@ contains
             varid(30)=temp_id
             call check( nf90_inq_varid(ncid, "canwat", temp_id), trim(err)//"canwat" )
             varid(31)=temp_id
+            call check( nf90_inq_varid(ncid, "ta2m", temp_id), trim(err)//"ta2m" )
+            varid(34)=temp_id
+            call check( nf90_inq_varid(ncid, "hus2m", temp_id), trim(err)//"hus2m" )
+            varid(35)=temp_id
         endif
-        call check( nf90_inq_varid(ncid, "ta2m", temp_id), trim(err)//"ta2m" )
-        varid(34)=temp_id
-        call check( nf90_inq_varid(ncid, "hus2m", temp_id), trim(err)//"hus2m" )
-        varid(35)=temp_id
         call check( nf90_inq_varid(ncid, "u10m", temp_id), trim(err)//"u10m" )
         varid(36)=temp_id
         call check( nf90_inq_varid(ncid, "v10m", temp_id), trim(err)//"v10m" )
@@ -721,7 +721,7 @@ contains
             endif
             call check( nf90_put_var(ncid, varid(9),  domain%u,     start_three_D),    trim(filename)//":u" )
             call check( nf90_put_var(ncid, varid(10), domain%v,     start_three_D),    trim(filename)//":v" )
-            call check( nf90_put_var(ncid, varid(11), domain%w,     start_three_D),    trim(filename)//":w" )
+            call check( nf90_put_var(ncid, varid(11), domain%w_real,     start_three_D),    trim(filename)//":w" )
             call check( nf90_put_var(ncid, varid(12), domain%p,     start_three_D),    trim(filename)//":p" )
             call check( nf90_put_var(ncid, varid(13), domain%th,    start_three_D),    trim(filename)//":th" )
             call check( nf90_put_var(ncid, varid(21), domain%rho,   start_three_D),    trim(filename)//":rho" )
@@ -764,9 +764,9 @@ contains
             call check( nf90_put_var(ncid, varid(29), domain%lwup,         start_two_D),  trim(filename)//":lwup" )
             call check( nf90_put_var(ncid, varid(30), domain%snow_swe,     start_two_D),  trim(filename)//":snow_swe" )
             call check( nf90_put_var(ncid, varid(31), domain%canopy_water, start_two_D),  trim(filename)//":canopy_water" )
+            call check( nf90_put_var(ncid, varid(34), domain%T2m, start_two_D),  trim(filename)//":t2m" )
+            call check( nf90_put_var(ncid, varid(35), domain%Q2m, start_two_D),  trim(filename)//":hus2m" )
         endif
-        call check( nf90_put_var(ncid, varid(34), domain%T2m, start_two_D),  trim(filename)//":t2m" )
-        call check( nf90_put_var(ncid, varid(35), domain%Q2m, start_two_D),  trim(filename)//":hus2m" )
         call check( nf90_put_var(ncid, varid(36), domain%u10, start_two_D),  trim(filename)//":u10m" )
         call check( nf90_put_var(ncid, varid(37), domain%v10, start_two_D),  trim(filename)//":v10m" )
         
