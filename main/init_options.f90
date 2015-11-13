@@ -41,6 +41,7 @@ contains
         call lt_parameters_namelist(options%lt_options_filename, options)
         call mp_parameters_namelist(options%mp_options_filename,options)
         call adv_parameters_namelist(options%adv_options_filename,options)
+        call lsm_parameters_namelist(options%lsm_options_filename,options)
 
         if (options%restart) then
             call init_restart_options(options_filename,options)
@@ -374,12 +375,13 @@ contains
         integer :: nz, n_ext_winds,buffer, warning_level
         logical :: ideal, readz, readdz, debug, external_winds, surface_io_only, &
                    mean_winds, mean_fields, restart, advect_density, &
-                   high_res_soil_state, use_agl_height, time_varying_z, use_mp_options, use_lt_options, use_adv_options
+                   high_res_soil_state, use_agl_height, time_varying_z, &
+                   use_mp_options, use_lt_options, use_adv_options, use_lsm_options
+                   
         character(len=MAXFILELENGTH) :: date, calendar, start_date
         integer :: year, month, day, hour, minute, second
-! ++ trude
-        character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, adv_options_filename
-! -- trude
+        character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, &
+                                        adv_options_filename, lsm_options_filename
 
         namelist /parameters/ ntimesteps,outputinterval,inputinterval, surface_io_only, &
                               dx,dxlow,ideal,readz,readdz,nz,t_offset,debug, &
@@ -389,6 +391,7 @@ contains
                               use_agl_height, start_date, time_varying_z, &
                               mp_options_filename, use_mp_options, &    ! trude added
                               lt_options_filename, use_lt_options, &
+                              lsm_options_filename, use_lsm_options, &
                               adv_options_filename, use_adv_options
         
 !       default parameters
@@ -416,6 +419,7 @@ contains
         start_date=""
         time_varying_z=.False.
         
+        ! flag set to read specific parameterization options
         use_mp_options=.False.
         mp_options_filename = filename
         
@@ -424,6 +428,9 @@ contains
 
         use_adv_options=.False.
         adv_options_filename = filename
+
+        use_lsm_options=.False.
+        lsm_options_filename = filename
         
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=parameters)
@@ -518,6 +525,9 @@ contains
 
         options%use_adv_options = use_adv_options
         options%adv_options_filename  = adv_options_filename
+
+        options%use_lsm_options = use_lsm_options
+        options%lsm_options_filename  = lsm_options_filename
 
     end subroutine parameters_namelist
 
@@ -757,6 +767,104 @@ contains
         ! copy the data back into the global options data structure
         options%adv_options = adv_options
     end subroutine adv_parameters_namelist
+    
+    
+    subroutine set_default_LU_categories(urban_category, ice_category, water_category, LU_Categories)
+        ! if various LU categories were not defined in the namelist (i.e. they == -1) then attempt
+        ! to define default values for them based on the LU_Categories variable supplied. 
+        implicit none
+        integer, intent(inout) :: urban_category, ice_category, water_category
+        character(len=MAXVARLENGTH), intent(in) :: LU_Categories
+        
+        if (trim(LU_Categories)=="MODIFIED_IGBP_MODIS_NOAH") then
+            print*, "Setting MODIFIED_IGBP_MODIS_NOAH default categories"
+            if (urban_category==-1) urban_category = 13
+            if (ice_category==-1)   ice_category = 15
+            if (water_category==-1) water_category = 17
+        elseif (trim(LU_Categories)=="USGS") then
+            print*, "Setting USGS default categories"
+            if (urban_category==-1) urban_category = 1
+            if (ice_category==-1)   ice_category = -1
+            if (water_category==-1) water_category = 16
+        elseif (trim(LU_Categories)=="USGS-RUC") then
+            print*, "Setting USGS-RUC default categories"
+            if (urban_category==-1) urban_category = 1
+            if (ice_category==-1)   ice_category = 24
+            if (water_category==-1) water_category = 16
+            ! also note, lakes_category = 28
+            print*, "WARNING: not handling lake category (28)"
+        elseif (trim(LU_Categories)=="MODI-RUC") then
+            print*, "Setting MODI-RUC default categories"
+            if (urban_category==-1) urban_category = 13
+            if (ice_category==-1)   ice_category = 15
+            if (water_category==-1) water_category = 17
+            ! also note, lakes_category = 21
+            print*, "WARNING: not handling lake category (21)"
+        elseif (trim(LU_Categories)=="NLCD40") then
+            print*, "Setting NLCD40 default categories"
+            if (urban_category==-1) urban_category = 13
+            if (ice_category==-1)   ice_category = 15 ! and 22?
+            if (water_category==-1) water_category = 17 ! and 21
+            print*, "WARNING: not handling all varients of categories (e.g. permanent_snow=15 is, but permanent_snow_ice=22 is not)"
+        endif
+        
+    end subroutine set_default_LU_categories
+
+    
+    subroutine lsm_parameters_namelist(filename, options)
+        implicit none
+        character(len=*), intent(in) :: filename
+        type(options_type), intent(inout)::options
+        type(lsm_options_type)::lsm_options
+        
+        integer :: name_unit
+
+        character(len=MAXVARLENGTH) :: LU_Categories ! Category definitions (e.g. USGS, MODIFIED_IGBP_MODIS_NOAH)
+        integer :: update_interval                   ! minimum number of seconds between LSM updates
+        integer :: urban_category                    ! index that defines the urban category in LU_Categories
+        integer :: ice_category                      ! index that defines the ice category in LU_Categories
+        integer :: water_category                    ! index that defines the water category in LU_Categories
+        
+        ! define the namelist
+        namelist /lsm_parameters/ LU_Categories, update_interval, urban_category, ice_category, water_category
+        
+         ! because adv_options could be in a separate file
+         if (options%use_lsm_options) then
+             if (trim(filename)/=trim(get_options_file())) then
+                 call version_check(filename,options)
+             endif
+         endif
+        
+        
+        ! set default values
+        LU_Categories   = "MODIFIED_IGBP_MODIS_NOAH"
+        update_interval = 300 ! 5 minutes
+        
+        ! default values for these will be set after reading LU_Categories
+        urban_category  = -1
+        ice_category    = -1
+        water_category  = -1
+        
+        ! read the namelist options
+        if (options%use_lsm_options) then
+            open(io_newunit(name_unit), file=filename)
+            read(name_unit,nml=lsm_parameters)
+            close(name_unit)
+        endif
+        
+        call set_default_LU_categories(urban_category, ice_category, water_category, LU_Categories)
+        
+        ! store everything in the lsm_options structure
+        lsm_options%LU_Categories   = LU_Categories
+        lsm_options%update_interval = update_interval
+        lsm_options%urban_category  = urban_category
+        lsm_options%ice_category    = ice_category
+        lsm_options%water_category  = water_category
+        
+        ! copy the data back into the global options data structure
+        options%lsm_options = lsm_options
+    end subroutine lsm_parameters_namelist
+
 
     ! set up model levels, either read from a namelist, or from a default set of values
     subroutine model_levels_namelist(filename,options)

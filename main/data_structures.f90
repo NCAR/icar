@@ -375,7 +375,21 @@ module data_structures
         logical :: flux_corrected_transport
         integer :: mpdata_order
     end type adv_options_type
+
+
+    !------------------------------------------------
+    ! store Land Surface Model options
+    !------------------------------------------------
+    type lsm_options_type
+        character (len=MAXVARLENGTH) :: LU_Categories
+        integer :: update_interval
+        integer :: urban_category
+        integer :: ice_category
+        integer :: water_category
+    end type lsm_options_type
+
     
+type(lsm_options_type)::lsm_options
     !------------------------------------------------
     ! store all model options
     !------------------------------------------------
@@ -395,7 +409,10 @@ module data_structures
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
                                         swdown_var, lwdown_var
-        character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, adv_options_filename
+                                        
+        ! Filenames for files to read various physics options from
+        character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, adv_options_filename, &
+                                        lsm_options_filename
         character(len=MAXFILELENGTH) :: calendar
         
 
@@ -445,14 +462,20 @@ module data_structures
         
         ! defines which physics package to be used. 
         type(physics_type)::physics
-        ! parameterization options
+        
+        ! physics parameterization options
         logical :: use_mp_options
         type(mp_options_type)::mp_options
+        
         logical :: use_lt_options
         type(lt_options_type) :: lt_options
+        
         logical :: use_adv_options
         type(adv_options_type) :: adv_options
         
+        logical :: use_lsm_options
+        type(lsm_options_type) :: lsm_options
+                    
         integer :: warning_level        ! level of warnings to issue when checking options settings 0-10.  
                                         ! 0  = Don't print anything
                                         ! 1  = print serious warnings

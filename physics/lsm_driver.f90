@@ -67,7 +67,7 @@ module land_surface
     real,allocatable, dimension(:)      :: Zs,DZs
     real :: XICE_THRESHOLD
     integer,allocatable, dimension(:,:) :: IVGTYP,ISLTYP
-    integer :: ITIMESTEP
+    integer :: ITIMESTEP, update_interval
     
     real, parameter :: kappa=0.4
     real, parameter :: freezing_threshold=273.15
@@ -77,7 +77,7 @@ module land_surface
     
     character(len=MAXVARLENGTH) :: MMINLU
     logical :: FNDSOILW,FNDSNOWH,RDMAXALB
-    integer :: num_soil_layers,ISURBAN,ISICE,counter,steps_per_lsm_step
+    integer :: num_soil_layers,ISURBAN,ISICE,ISWATER
     real*8  :: last_model_time
     
 contains
@@ -298,9 +298,6 @@ contains
         FRPCPN=.false. ! set this to true and calculate snow ratio to use microphysics based snow/rain partitioning
         ua_phys=.false.
         
-
-        MMINLU="MODIFIED_IGBP_MODIS_NOAH"
-        
         allocate(SH2O(ime,num_soil_layers,jme))
         SH2O=0.25
         
@@ -356,8 +353,12 @@ contains
             FNDSNOWH=.False. ! calculate SNOWH from SNOW
             FNDSOILW=.False. ! calculate SOILW (this parameter is ignored in LSM_NOAH_INIT)
             RDMAXALB=.False.
-            ISURBAN=0
-            ISICE=0
+            
+            ISURBAN = options%lsm_options%urban_category
+            ISICE   = options%lsm_options%ice_category
+            ISWATER = options%lsm_options%water_category
+            MMINLU  = options%lsm_options%LU_Categories !"MODIFIED_IGBP_MODIS_NOAH"
+            
             call allocate_noah_data(ime,jme,kme,num_soil_layers)
             
             call LSM_NOAH_INIT(domain%vegfrac,SNOW,SNOWC,SNOWH,domain%canopy_water,domain%soil_t,    &
@@ -378,11 +379,10 @@ contains
             lnz_atm_term = log((z_atm+Z0)/Z0)
             base_exchange_term=(75*kappa**2 * sqrt((z_atm+Z0)/Z0)) / (lnz_atm_term**2)
             lnz_atm_term=(kappa/lnz_atm_term)**2
-            where(domain%veg_type==17) domain%landmask=2 ! ensure VEGTYPE (land cover) and land-sea mask are consistent
+            where(domain%veg_type==ISWATER) domain%landmask=2 ! ensure VEGTYPE (land cover) and land-sea mask are consistent
             
         endif
-        counter=0
-        steps_per_lsm_step=1
+        update_interval=options%lsm_options%update_interval
         last_model_time=-999
         
     end subroutine lsm_init
@@ -395,17 +395,16 @@ contains
         type(options_type),intent(in)    :: options
         real, intent(in) :: dt
         real ::lsm_dt
-        real*8, intent(in) :: model_time
+        double precision, intent(in) :: model_time
         integer :: nx,ny,i,j
         
         if (last_model_time==-999) then
-            last_model_time=model_time-dt
+            last_model_time=model_time-update_interval
         endif
         nx=size(domain%qv,1)
         ny=size(domain%qv,3)
-        counter=counter+1
-        if (counter>steps_per_lsm_step) then
-            counter=0
+        if ((model_time-last_model_time)>=update_interval) then
+            print*, "updating LSM fluxes: ", model_time-last_model_time
             lsm_dt=model_time-last_model_time
             last_model_time=model_time
             

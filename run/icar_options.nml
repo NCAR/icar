@@ -143,7 +143,9 @@
     ! read parameters for linear theory
     use_lt_options = true,
     ! read parameters for microphysics (thompson only at this point)
-    use_mp_options = false
+    use_mp_options = true
+    ! read parameters for land surface model
+    use_lsm_options = true,
 /
 
 
@@ -238,10 +240,33 @@
 &adv_parameters
     flux_corrected_transport=true   ! Use a flux correction in the transport calculations to prevent ringing and overshoots
                                     ! this should keep MPDATA stable enough for use with the linear winds
-    mpdata_order=2                  ! Closure order to use (IORD in MPDATA papers)
+
+    mpdata_order=2                  ! Int: Closure order to use (IORD in MPDATA papers)
                                     ! order=1 equivalent to simple upwind
                                     ! order=2 is standard MPDATA
                                     ! order>2 is a higher order correction that will be very expensive with relatively little gain
+                                    
+    boundary_buffer = False         ! smooth a one grid cell buffer around the boundary
+                                    ! to avoid ringing artifacts in non-flux-corrected advection
+                                    ! better just to use flux correction as it may crash without it. 
+/
+
+!---------------------------------------------------------
+!   Optionally specified land surface model parameters (mostly for Noah)
+!---------------------------------------------------------
+&lsm_parameters
+    update_interval=300             ! Int : Seconds to wait before updating land surface fluxes again (default=300)
+    
+    LU_Categories="MODIFIED_IGBP_MODIS_NOAH"   ! Land Use Category definitions
+                                    ! Note, this must match a category in VEGPARM.TBL and correspond to
+                                    ! the values stored in vegtype_var in the hi-res input var (default="MODIFIED_IGBP_MODIS_NOAH")
+                                    ! common values are USGS, USGS-RUC, MODI-RUC, and NLCD40
+                                    
+    
+    ! These all default to values defined in common LU_Categories
+!     urban_category = -1             ! Int: index that defines the urban category in LU_Categories
+!     ice_category   = -1             ! Int: index that defines the ice category in LU_Categories
+!     water_category = -1             ! Int: index that defines the water category in LU_Categories
 /
 
 
