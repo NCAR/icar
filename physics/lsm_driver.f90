@@ -299,7 +299,7 @@ contains
         ua_phys=.false.
         
 
-        MMINLU="USGS"
+        MMINLU="MODIFIED_IGBP_MODIS_NOAH"
         
         allocate(SH2O(ime,num_soil_layers,jme))
         SH2O=0.25
@@ -378,7 +378,7 @@ contains
             lnz_atm_term = log((z_atm+Z0)/Z0)
             base_exchange_term=(75*kappa**2 * sqrt((z_atm+Z0)/Z0)) / (lnz_atm_term**2)
             lnz_atm_term=(kappa/lnz_atm_term)**2
-            where(domain%veg_type==16) domain%landmask=2 ! ensure VEGTYPE (land cover) and land-sea mask are consistent
+            where(domain%veg_type==17) domain%landmask=2 ! ensure VEGTYPE (land cover) and land-sea mask are consistent
             
         endif
         counter=0
@@ -472,6 +472,8 @@ contains
                 domain%lwup=stefan_boltzmann*EMISS*domain%skin_t**4
                 RAINBL=domain%rain
                 
+                print*, "WARNING!! enforcing surface sensible heat flux greater than 0!!"
+                where(domain%sensible_heat<0) domain%sensible_heat=0
                 call surface_diagnostics(domain%sensible_heat, QFX, domain%skin_t, QSFC,  &
                                          CHS2, CQS2,domain%T2m, domain%Q2m, domain%psfc)
                 
