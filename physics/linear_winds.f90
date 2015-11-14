@@ -691,7 +691,7 @@ contains
             else
                 print*, "Reading LUT from file: ", options%lt_options%u_LUT_Filename
                 call io_read6d(options%lt_options%u_LUT_Filename, "uLUT",hi_u_LUT)
-                print*, "Reading LUT from file: ", options%lt_options%u_LUT_Filename
+                print*, "Reading LUT from file: ", options%lt_options%v_LUT_Filename
                 call io_read6d(options%lt_options%v_LUT_Filename, "vLUT",hi_v_LUT)
             endif
             u_LUT=>hi_u_LUT
@@ -740,7 +740,7 @@ contains
             else
                 print*, "Writing u-LUT from file: ", options%lt_options%u_LUT_Filename
                 call io_write6d(options%lt_options%u_LUT_Filename, "uLUT",hi_u_LUT)
-                print*, "Writing v-LUT from file: ", options%lt_options%u_LUT_Filename
+                print*, "Writing v-LUT from file: ", options%lt_options%v_LUT_Filename
                 call io_write6d(options%lt_options%v_LUT_Filename, "vLUT",hi_v_LUT)
             endif
         endif            
