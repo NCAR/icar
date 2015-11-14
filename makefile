@@ -144,7 +144,7 @@ GIT_VERSION := $(shell git describe --long --dirty --all --always | sed -e's/hea
 # GNU fortran
 ifeq ($(F90), gfortran)
 	COMP=-fopenmp -lgomp -O3 -c -ffree-line-length-none -ftree-vectorize -fimplicit-none -funroll-loops -march=native  -fno-protect-parens # -ffast-math #-flto #
-	LINK=-fopenmp -lgomp
+	LINK=-fopenmp -lgomp -Wl,-no_compact_unwind
 	PREPROC=-cpp
 	MODOUTPUT=-J $(BUILD)
 endif

@@ -21,7 +21,7 @@ module output
     public :: write_domain
     
     integer, parameter :: ndims = 4
-    integer, parameter :: nvars=33 ! current max = 33
+    integer, parameter :: nvars=37 ! current max = 37
     ! This will be the netCDF ID for the file and data variable.
     integer :: ncid, temp_id
     ! dimension IDs
