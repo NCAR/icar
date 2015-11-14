@@ -251,6 +251,9 @@ contains
         allocate(domain%lwup(nx,ny))        ! longwave up from surface
         domain%lwup=0
 
+        allocate(domain%sst(nx,ny))         ! sea surface temperature
+        domain%sst=280
+
         allocate(domain%sensible_heat(nx,ny)) ! sensible heat flux from surface
         domain%sensible_heat=0
         allocate(domain%latent_heat(nx,ny)) ! latent heat flux from surface
@@ -542,6 +545,8 @@ contains
         boundary%dlw_dt=0
         allocate(boundary%dsw_dt(nx,ny))
         boundary%dsw_dt=0
+        allocate(boundary%dsst_dt(nx,ny))
+        boundary%dsst_dt=0
         allocate(boundary%dpblh_dt(nx,ny))
         boundary%dpblh_dt=0
     end subroutine boundary_allocate

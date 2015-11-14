@@ -742,6 +742,9 @@ contains
                     call read_2dvar(domain%lwdown,  file_list(curfile),options%lwdown_var,  bc%geolut,curstep,options)
                 endif
             endif
+            if (trim(options%sst_var)/="") then
+                call read_2dvar(domain%sst,  file_list(curfile),options%sst_var,  bc%geolut,curstep,options)
+            endif
             
             call update_pressure(domain%p,bc%lowres_z,domain%z)
             
@@ -806,6 +809,8 @@ contains
         
         bc%dsw_dt  =bc%next_domain%swdown-domain%swdown
         bc%dlw_dt  =bc%next_domain%lwdown-domain%lwdown
+
+        bc%dsst_dt  =bc%next_domain%sst-domain%sst
 
         call update_edges(bc%dth_dt,bc%next_domain%th,domain%th)
         call update_edges(bc%dqv_dt,bc%next_domain%qv,domain%qv)
@@ -1072,6 +1077,9 @@ contains
             endif
         endif
         
+        if (trim(options%sst_var)/="") then
+            call read_2dvar(bc%next_domain%sst,  file_list(curfile),options%sst_var,  bc%geolut,curstep,options)
+        endif
         
         ! if we want to supply mean forcing fields on the boundaries, compute those here. 
         if (options%mean_fields) then

@@ -87,6 +87,7 @@ contains
                 domain%swdown(:,j)  = domain%swdown(:,j)  + bc%dsw_dt(:,j)
                 domain%lwdown(:,j)  = domain%lwdown(:,j)  + bc%dlw_dt(:,j)
             endif
+            domain%sst(:,j)  = domain%sst(:,j)  + bc%dsst_dt(:,j)
         enddo
         !$omp end do
         !$omp end parallel
@@ -207,6 +208,7 @@ contains
             bc%dsw_dt   = bc%dsw_dt   / nsteps
             bc%dlw_dt   = bc%dlw_dt   / nsteps
         endif
+        bc%dsst_dt   = bc%dsst_dt   / nsteps
 
         
 !         !$omp parallel firstprivate(ny,nsteps) &
@@ -235,6 +237,8 @@ contains
 !                 bc%dsw_dt(:,j)   = bc%dsw_dt(:,j)   / nsteps
 !                 bc%dlw_dt(:,j)   = bc%dlw_dt(:,j)   / nsteps
 !             endif
+!             bc%dsw_dt(:,j)   = bc%dsw_dt(:,j)       / nsteps
+!             
 !         end do
 !         !$omp end do
 !         !$omp end parallel
