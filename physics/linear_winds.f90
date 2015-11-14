@@ -35,7 +35,7 @@ module linear_theory_winds
     use fft ! note fft module is defined in fftshift.f90
     use fftshifter
     use data_structures
-    use io_routines,        only : io_write3d, io_write2d, io_read2d
+    use io_routines,        only : io_read6d, io_write6d, io_write3d, io_write2d, io_read2d
     use output,             only : write_domain
     use string,             only : str
     implicit none
@@ -685,8 +685,15 @@ contains
             u_LUT=>rev_u_LUT
             v_LUT=>rev_v_LUT
         else
-            allocate(hi_u_LUT(n_spd_values,n_dir_values,n_nsq_values,nxu,nz,ny))
-            allocate(hi_v_LUT(n_spd_values,n_dir_values,n_nsq_values,nx,nz,nyv))
+            if (.not.options%lt_options%read_LUT) then
+                allocate(hi_u_LUT(n_spd_values,n_dir_values,n_nsq_values,nxu,nz,ny))
+                allocate(hi_v_LUT(n_spd_values,n_dir_values,n_nsq_values,nx,nz,nyv))
+            else
+                print*, "Reading LUT from file: ", options%lt_options%u_LUT_Filename
+                call io_read6d(options%lt_options%u_LUT_Filename, "uLUT",hi_u_LUT)
+                print*, "Reading LUT from file: ", options%lt_options%u_LUT_Filename
+                call io_read6d(options%lt_options%v_LUT_Filename, "vLUT",hi_v_LUT)
+            endif
             u_LUT=>hi_u_LUT
             v_LUT=>hi_v_LUT
         endif
@@ -696,34 +703,47 @@ contains
         write(*,*) " Directions:",360*dir_values/(2*pi)
         write(*,*) "Stabilities:",exp(nsq_values)
         
-        ! loop over combinations of U and V values
-        write(*,*) "Percent Completed:"
-        debug=options%debug
-        ! this could be parallelized to speed it up a little, but the linear_wind calculation is already parallelized
-        ! over the vertical domain, so it wouldn't add much (unless a lot more than cores are available than levels)
-        do i=1,n_dir_values
-            write(*,"(A,f5.1,A$)") char(13), i/real(n_dir_values)*100," %"
-            ! set the domain wide U and V values to the current u and v values
-            ! this could use u/v_perturbation, but those would need to be put in a linearizable structure...
-            do k=1,n_spd_values
-                do j=1,n_nsq_values
-                    domain%u=calc_u(dir_values(i),spd_values(k))
-                    domain%v=calc_v(dir_values(i),spd_values(k))
+        if (.not.options%lt_options%read_LUT) then
+            ! loop over combinations of U and V values
+            write(*,*) "Percent Completed:"
+            debug=options%debug
+            ! this could be parallelized to speed it up a little, but the linear_wind calculation is already parallelized
+            ! over the vertical domain, so it wouldn't add much (unless a lot more than cores are available than levels)
+            do i=1,n_dir_values
+                write(*,"(A,f5.1,A$)") char(13), i/real(n_dir_values)*100," %"
+                ! set the domain wide U and V values to the current u and v values
+                ! this could use u/v_perturbation, but those would need to be put in a linearizable structure...
+                do k=1,n_spd_values
+                    do j=1,n_nsq_values
+                        domain%u=calc_u(dir_values(i),spd_values(k))
+                        domain%v=calc_v(dir_values(i),spd_values(k))
                     
-                    ! calculate the linear wind field for the current u and v values
-                    call linear_winds(domain,exp(nsq_values(j)), 0, reverse,useDensity,debug=debug)
+                        ! calculate the linear wind field for the current u and v values
+                        call linear_winds(domain,exp(nsq_values(j)), 0, reverse,useDensity,debug=debug)
                     
-                    debug=.False. ! after the first time through set debug to false
-                    u_LUT(k,i,j,:,:,:)=(domain%u-calc_u(dir_values(i),spd_values(k)))
-                    v_LUT(k,i,j,:,:,:)=(domain%v-calc_v(dir_values(i),spd_values(k)))
+                        debug=.False. ! after the first time through set debug to false
+                        u_LUT(k,i,j,:,:,:)=(domain%u-calc_u(dir_values(i),spd_values(k)))
+                        v_LUT(k,i,j,:,:,:)=(domain%v-calc_v(dir_values(i),spd_values(k)))
+                    end do
                 end do
             end do
-        end do
-        write(*,*) char(10),"--------  Linear wind look up table generation complete ---------"
-        domain%u=savedU
-        domain%v=savedV
+            write(*,*) char(10),"--------  Linear wind look up table generation complete ---------"
+            domain%u=savedU
+            domain%v=savedV
+        end if
         
         deallocate(savedU,savedV)
+        
+        if (options%lt_options%write_LUT) then
+            if (options%lt_options%read_LUT) then
+                print*, "Not writing Linear Theory LUT to file because LUT was read from file"
+            else
+                print*, "Writing u-LUT from file: ", options%lt_options%u_LUT_Filename
+                call io_write6d(options%lt_options%u_LUT_Filename, "uLUT",hi_u_LUT)
+                print*, "Writing v-LUT from file: ", options%lt_options%u_LUT_Filename
+                call io_write6d(options%lt_options%v_LUT_Filename, "vLUT",hi_v_LUT)
+            endif
+        endif            
         
     end subroutine initialize_spatial_winds
 

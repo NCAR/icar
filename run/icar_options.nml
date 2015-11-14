@@ -317,6 +317,9 @@
     !   e.g. 320 * 250 * 14 * 2 * 36 * 10 * 10 * 4 = 30GB!
     !   (* 2 is for have to store U and V)
     !   (* 4 is for the number of bytes per float)
+    read_LUT = .False.  ! read the Look up table from a specified file
+    write_LUT = .False. ! write the look up table to the specified file
+    LUT_Filename = "Linear_Theory_LUT.nc"    
 /
 
 

@@ -641,13 +641,17 @@ contains
         real :: spdmax, spdmin
         real :: nsqmax, nsqmin
         integer :: n_dir_values, n_nsq_values, n_spd_values
+        ! parameters to control reading from or writing an LUT file
+        logical :: read_LUT, write_LUT
+        character(len=MAXFILELENGTH) :: u_LUT_Filename, v_LUT_Filename
         
         ! define the namelist
         namelist /lt_parameters/ variable_N, buffer, stability_window_size, max_stability, min_stability, &
                                  linear_contribution, linear_update_fraction, N_squared, &
                                  remove_lowres_linear, rm_N_squared, rm_linear_contribution, &
                                  spatial_linear_fields, linear_mask, nsq_calibration, &
-                                 dirmax, dirmin, spdmax, spdmin, nsqmax, nsqmin, n_dir_values, n_nsq_values, n_spd_values
+                                 dirmax, dirmin, spdmax, spdmin, nsqmax, nsqmin, n_dir_values, n_nsq_values, n_spd_values, &
+                                 read_LUT, write_LUT, u_LUT_Filename, v_LUT_Filename
         
          ! because lt_options could be in a separate file
          if (options%use_lt_options) then
@@ -687,6 +691,11 @@ contains
         n_nsq_values = 10
         n_spd_values = 10
         
+        read_LUT = .False.
+        write_LUT = .False.
+        u_LUT_Filename = "Linear_Theory_u_LUT.nc"
+        v_LUT_Filename = "Linear_Theory_v_LUT.nc"
+        
         ! read the namelist options
         if (options%use_lt_options) then
             open(io_newunit(name_unit), file=filename)
@@ -718,6 +727,10 @@ contains
         lt_options%n_dir_values = n_dir_values
         lt_options%n_nsq_values = n_nsq_values
         lt_options%n_spd_values = n_spd_values
+        lt_options%read_LUT = read_LUT
+        lt_options%write_LUT = write_LUT
+        lt_options%u_LUT_Filename = u_LUT_Filename
+        lt_options%v_LUT_Filename = v_LUT_Filename
         
         ! copy the data back into the global options data structure
         options%lt_options = lt_options        

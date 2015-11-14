@@ -365,6 +365,11 @@ module data_structures
         real :: spdmax, spdmin
         real :: nsqmax, nsqmin
         integer :: n_dir_values, n_nsq_values, n_spd_values
+        
+        logical :: read_LUT, write_LUT
+        character(len=MAXFILELENGTH) :: u_LUT_Filename
+        character(len=MAXFILELENGTH) :: v_LUT_Filename
+        
     end type lt_options_type
     
     !------------------------------------------------
