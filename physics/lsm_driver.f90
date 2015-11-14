@@ -33,11 +33,12 @@
 !!
 !!----------------------------------------------------------
 module land_surface
-    use module_sf_noahdrv, only : lsm_noah, lsm_noah_init
-    use module_lsm_basic,  only : lsm_basic
-    use module_lsm_simple, only : lsm_simple, lsm_simple_init
-    use io_routines,       only : io_write3d, io_write2d
-    use output,            only : write_domain
+    use module_sf_noahdrv,   only : lsm_noah, lsm_noah_init
+    use module_lsm_basic,    only : lsm_basic
+    use module_lsm_simple,   only : lsm_simple, lsm_simple_init
+    use module_water_simple, only : water_simple
+    use io_routines,         only : io_write3d, io_write2d
+    use output,              only : write_domain
     use data_structures
     
     implicit none
@@ -76,7 +77,7 @@ module land_surface
     real, parameter :: MAX_EXCHANGE_C = 0.5
     
     character(len=MAXVARLENGTH) :: MMINLU
-    logical :: FNDSOILW,FNDSNOWH,RDMAXALB
+    logical :: FNDSOILW,FNDSNOWH,RDMAXALB, first_lsm_call
     integer :: num_soil_layers,ISURBAN,ISICE,ISWATER
     real*8  :: last_model_time
     
@@ -199,15 +200,6 @@ contains
         
         ITIMESTEP=1
         
-        allocate(Ri(ime,jme))
-        Ri=0
-        allocate(z_atm(ime,jme))
-        z_atm=50
-        allocate(lnz_atm_term(ime,jme))
-        lnz_atm_term=0.1
-        allocate(base_exchange_term(ime,jme))
-        base_exchange_term=0.01
-        
         allocate(SMSTAV(ime,jme))
         SMSTAV=0.5 !average soil moisture available for transp (between SMCWLT and SMCMAX)
         allocate(SFCRUNOFF(ime,jme))
@@ -227,8 +219,6 @@ contains
         allocate(SNOALB(ime,jme))
         SNOALB=0.8
 
-        allocate(QFX(ime,jme))
-        QFX=0
         allocate(QGH(ime,jme))
         QGH=0.02 ! saturated mixing ratio at ~20C
         allocate(GSW(ime,jme))
@@ -238,16 +228,12 @@ contains
         ALBEDO=0.17
         allocate(ALBBCK(ime,jme))
         ALBBCK=0.17 !?
-        allocate(Z0(ime,jme))
-        Z0=0.01 !?
         allocate(XICE(ime,jme))
         XICE=0
         allocate(EMISS(ime,jme))
         EMISS=0.95
         allocate(EMBCK(ime,jme))
         EMBCK=0.95
-        allocate(QSFC(ime,jme))
-        QSFC=0
         allocate(RAINBL(ime,jme))
         RAINBL=0 ! used to store last time step accumulated precip so that it can be subtracted from the current step
         allocate(CHS(ime,jme))
@@ -318,20 +304,38 @@ contains
         integer :: i
         
         write(*,*) "Initializing LSM"
+        first_lsm_call=.True.
         
         ime=size(domain%th,1)
         jme=size(domain%th,3)
+        
         allocate(dTemp(ime-2,jme-2))
         dTemp=0
         allocate(lhdQV(ime-2,jme-2))
         lhdQV=0
-        
+        allocate(Z0(ime,jme))
+        Z0=0.01 !?
+        allocate(QSFC(ime,jme))
+        QSFC=0
+        allocate(Ri(ime,jme))
+        Ri=0
+        allocate(z_atm(ime,jme))
+        z_atm=50
+        allocate(lnz_atm_term(ime,jme))
+        lnz_atm_term=0.1
+        allocate(base_exchange_term(ime,jme))
+        base_exchange_term=0.01
+        allocate(QFX(ime,jme))
+        QFX=0
         allocate(windspd(ime,jme))
+        windspd=0
         ! NOTE, these fields have probably not been initialized yet...
-        windspd=sqrt(domain%u10**2+domain%v10**2)
+        ! windspd=sqrt(domain%u10**2+domain%v10**2)
         
         domain%T2m = domain%th(:,1,:) * domain%pii(:,1,:)
         domain%Q2m = domain%qv(:,1,:)
+        
+        
         
         if (options%physics%landsurface==kLSM_SIMPLE) then
             write(*,*) "    Simple LSM (may not work?)"
@@ -374,14 +378,14 @@ contains
                                 ims,ime, jms,jme, kms,kme,                   &
                                 its,ite, jts,jte, kts,kte  )
             
-            ! defines the height of the middle of the first model level
-            z_atm=domain%z(:,1,:)
-            lnz_atm_term = log((z_atm+Z0)/Z0)
-            base_exchange_term=(75*kappa**2 * sqrt((z_atm+Z0)/Z0)) / (lnz_atm_term**2)
-            lnz_atm_term=(kappa/lnz_atm_term)**2
-            where(domain%veg_type==ISWATER) domain%landmask=2 ! ensure VEGTYPE (land cover) and land-sea mask are consistent
-            
+            where(domain%veg_type==ISWATER) domain%landmask=kLC_WATER ! ensure VEGTYPE (land cover) and land-sea mask are consistent
         endif
+        ! defines the height of the middle of the first model level
+        z_atm=domain%z(:,1,:)
+        lnz_atm_term = log((z_atm+Z0)/Z0)
+        base_exchange_term=(75*kappa**2 * sqrt((z_atm+Z0)/Z0)) / (lnz_atm_term**2)
+        lnz_atm_term=(kappa/lnz_atm_term)**2
+        
         update_interval=options%lsm_options%update_interval
         last_model_time=-999
         
@@ -407,10 +411,51 @@ contains
             lsm_dt=model_time-last_model_time
             last_model_time=model_time
             
+            ! exchange coefficients
+            windspd=sqrt(domain%u10**2+domain%v10**2)
+            call calc_exchange_coefficient(windspd,domain%skin_t,domain%T2m,CHS)
+            CHS2=CHS
+            CQS2=CHS
+            
+            ! --------------------------------------------------
+            ! First handle the open water surface options
+            ! --------------------------------------------------
+            if (options%physics%watersurface==kWATER_BASIC) then
+                do j=1,ny
+                    do i=1,nx
+                        if (domain%landmask(i,j)==kLC_WATER) then
+                            QFX(i,j) = domain%latent_heat(i,j) / LH_vaporization
+                            QSFC(i,j)=sat_mr(domain%T2m(i,j),domain%psfc(i,j))
+                        endif
+                    enddo
+                enddo
+                
+            elseif (options%physics%watersurface==kWATER_SIMPLE) then
+                call water_simple(domain%sst, domain%psfc, windspd, domain%ustar,  &
+                                  domain%qv, domain%t,                             &
+                                  domain%sensible_heat, domain%latent_heat,        &
+                                  domain%z, Z0, domain%landmask, QSFC, QFX)
+            endif
+            
+            
+            ! --------------------------------------------------
+            ! Now handle the land surface options
+            ! --------------------------------------------------
             if (options%physics%landsurface==kLSM_BASIC) then
                 call lsm_basic(domain,options,lsm_dt)
+                do j=1,ny
+                    do i=1,nx
+                        if (domain%landmask(i,j)==kLC_LAND) then
+                            QFX(i,j) = domain%latent_heat(i,j) / LH_vaporization
+                            QSFC(i,j)=max(domain%qv(i,1,j),0.5*sat_mr(domain%T2m(i,j),domain%psfc(i,j)))
+                        endif
+                    enddo
+                enddo
+                
                 
             else if (options%physics%landsurface==kLSM_SIMPLE) then
+                write(*,*) "--------------------------"
+                stop "Simple LSM not implemented yet"
                 call lsm_simple(domain%th,domain%pii,domain%qv,domain%current_rain, domain%current_snow,domain%p_inter, &
                                 domain%swdown,domain%lwdown, sqrt(domain%u10**2+domain%v10**2), &
                                 domain%sensible_heat, domain%latent_heat, domain%ground_heat, &
@@ -423,17 +468,11 @@ contains
                 ! 2m saturated mixing ratio
                 do j=1,ny
                     do i=1,nx
-                        QGH(i,j)=sat_mr(domain%T2m(i,j),domain%psfc(i,j))
+                        if (domain%landmask(i,j)==kLC_LAND) then
+                            QGH(i,j)=sat_mr(domain%T2m(i,j),domain%psfc(i,j))
+                        endif
                     enddo
                 enddo
-                ! shortwave down
-                ! GSW=domain%swdown   ! This does not actually get used in Noah
-                
-                ! exchange coefficients
-                windspd=sqrt(domain%u10**2+domain%v10**2)
-                call calc_exchange_coefficient(windspd,domain%skin_t,domain%T2m,CHS)
-                CHS2=CHS
-                CQS2=CHS
                 
                 call lsm_noah(domain%dz_inter,domain%qv,domain%p_inter,domain%th*domain%pii,domain%skin_t,  &
                             domain%sensible_heat,QFX,domain%latent_heat,domain%ground_heat, &
@@ -466,17 +505,33 @@ contains
                             ims,ime, jms,jme, kms,kme,                    &
                             its,ite, jts,jte, kts,kte)
                 
+                if (first_lsm_call) then
+                    ! now that z0 has been read, we need to recalculate terms
+                    lnz_atm_term = log((z_atm+Z0)/Z0)
+                    base_exchange_term=(75*kappa**2 * sqrt((z_atm+Z0)/Z0)) / (lnz_atm_term**2)
+                    lnz_atm_term=(kappa/lnz_atm_term)**2
+                    
+                    ! this is no longer the first lsm_call so don't do this again... except for water points
+                    first_lsm_call=.False.
+                endif
+                
                 ! note this is more or less just diagnostic and could be removed
                 domain%lwup=stefan_boltzmann*EMISS*domain%skin_t**4
                 RAINBL=domain%rain
                 
                 print*, "WARNING!! enforcing surface sensible heat flux greater than 0!!"
                 where(domain%sensible_heat<0) domain%sensible_heat=0
-                call surface_diagnostics(domain%sensible_heat, QFX, domain%skin_t, QSFC,  &
-                                         CHS2, CQS2,domain%T2m, domain%Q2m, domain%psfc)
-                
+                do j=1,ny
+                    do i=1,nx
+                        if (domain%landmask(i,j)==kLC_LAND) then
+                            if (domain%sensible_heat(i,j)<0) domain%sensible_heat(i,j)=0
+                        endif
+                    end do
+                end do
                 
             endif
+            call surface_diagnostics(domain%sensible_heat, QFX, domain%skin_t, QSFC,  &
+                                     CHS2, CQS2,domain%T2m, domain%Q2m, domain%psfc)
         endif
         if (options%physics%landsurface>0) then
             call apply_fluxes(domain,dt)

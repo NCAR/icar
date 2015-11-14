@@ -101,7 +101,10 @@ module data_structures
     integer, parameter :: kPBL_BASIC     = 1
     integer, parameter :: kPBL_SIMPLE    = 2
     integer, parameter :: kPBL_YSU       = 3
-
+    
+    integer, parameter :: kWATER_BASIC   = 1
+    integer, parameter :: kWATER_SIMPLE  = 2
+    
     integer, parameter :: kLSM_BASIC     = 1
     integer, parameter :: kLSM_SIMPLE    = 2
     integer, parameter :: kLSM_NOAH      = 3
@@ -113,6 +116,9 @@ module data_structures
     integer, parameter :: kADV_MPDATA    = 2
     
     integer, parameter :: kWIND_LINEAR   = 1
+    
+    integer, parameter :: kLC_LAND       = 1
+    integer, parameter :: kLC_WATER      = 2
 !------------------------------------------------
 ! Physical Constants
 !------------------------------------------------
@@ -319,6 +325,7 @@ module data_structures
         integer::advection
         integer::boundarylayer
         integer::landsurface
+        integer::watersurface
         integer::radiation
         integer::convection
         integer::windtype

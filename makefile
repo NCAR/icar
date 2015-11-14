@@ -310,6 +310,7 @@ OBJS=	$(BUILD)driver.o \
 		$(BUILD)lsm_basic.o \
 		$(BUILD)lsm_noahdrv.o \
 		$(BUILD)lsm_noahlsm.o \
+		$(BUILD)water_simple.o \
 		$(BUILD)pbl_driver.o \
 		$(BUILD)pbl_simple.o \
 		$(BUILD)pbl_ysu.o \
@@ -464,8 +465,12 @@ $(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o $(BUILD)time.
 #	Land Surface code
 ###################################################################
 $(BUILD)lsm_driver.o: $(PHYS)lsm_driver.f90 $(BUILD)data_structures.o $(BUILD)lsm_simple.o \
-						$(BUILD)lsm_basic.o $(BUILD)lsm_noahdrv.o $(BUILD)lsm_noahlsm.o
+						$(BUILD)lsm_basic.o $(BUILD)lsm_noahdrv.o $(BUILD)lsm_noahlsm.o \
+						$(BUILD)water_simple.o
 	${F90} ${FFLAGS} $(PHYS)lsm_driver.f90 -o $(BUILD)lsm_driver.o
+
+$(BUILD)water_simple.o: $(PHYS)water_simple.f90 $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(PHYS)water_simple.f90 -o $(BUILD)water_simple.o
 
 $(BUILD)lsm_simple.o: $(PHYS)lsm_simple.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)lsm_simple.f90 -o $(BUILD)lsm_simple.o

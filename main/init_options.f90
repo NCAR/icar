@@ -201,9 +201,9 @@ contains
         integer :: name_unit
         
 !       variables to be used in the namelist
-        integer::pbl,lsm,mp,rad,conv,adv,wind
+        integer::pbl,lsm,water,mp,rad,conv,adv,wind
 !       define the namelist
-        namelist /physics/ pbl,lsm,mp,rad,conv,adv,wind
+        namelist /physics/ pbl,lsm,water,mp,rad,conv,adv,wind
         
 !       default values for physics options (advection+linear winds+simple_microphysics)
         pbl = 0 ! 0 = no PBL, 
@@ -215,6 +215,10 @@ contains
                 ! 1 = Fluxes from GCM, 
                 ! 2 = simple LSM, (not complete)
                 ! 3 = Noah LSM
+                
+        water = 0 ! 0 = no open water fluxes, 
+                ! 1 = Fluxes from GCM, (must set lsm=1?)
+                ! 2 = Simple fluxes, (not complete)
                 
         mp  = 1 ! 0 = no MP,  
                 ! 1 = Thompson et al (2008), 
@@ -245,6 +249,7 @@ contains
         options%physics%convection=conv
         options%physics%advection=adv
         options%physics%landsurface=lsm
+        options%physics%watersurface=water
         options%physics%microphysics=mp
         options%physics%radiation=rad
         options%physics%windtype=wind
