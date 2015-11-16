@@ -171,8 +171,8 @@ endif
 ifeq ($(F90), ftn)
 	COMP= -h omp vector2 -O2 -c -eI
 	LINK= -fopenmp
-	PREPROC= -e z
-	MODOUTPUT= -e m -J $(BUILD)
+	PREPROC=
+	MODOUTPUT= -J $(BUILD) -em
 endif
 
 
