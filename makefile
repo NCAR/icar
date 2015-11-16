@@ -47,11 +47,15 @@ INSTALLDIR=~/bin/
 # These are default parameters
 # They are overwritten with machine specific options below if known
 ########################################################################################
-F90=gfortran
+F90=ftn
 RM=/bin/rm
-LIBFFT=/usr/local/lib
-INCFFT=/usr/local/include
-NCDF_PATH = /usr/local
+FFTW_PATH = /home/gfi/pbo003/Libraries/FFTW/fftw-3.3.4
+LIBFFT = ${FFTW_PATH}/lib
+INCFFT = ${FFTW_PATH}/include
+#LIBFFT=/usr/local/lib
+#INCFFT=/usr/local/include
+#NCDF_PATH = /usr/local
+NCDF_PATH = /opt/cray/netcdf/default/cray/83
 LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 INCNETCDF = -I$(NCDF_PATH)/include
 
@@ -165,10 +169,10 @@ endif
 
 # Cray fortran
 ifeq ($(F90), ftn)
-	COMP=-O2 -c
-	LINK=
-	PREPROC=-e z
-	MODOUTPUT=-e m -J $(BUILD)
+	COMP= -h omp vector2 -O2 -c -eI
+	LINK= -fopenmp
+	PREPROC= -e z
+	MODOUTPUT= -e m -J $(BUILD)
 endif
 
 
