@@ -259,8 +259,8 @@ module data_structures
         ! turbulent fluxes (and ground heat flux)
         real, allocatable, dimension(:,:)   :: sensible_heat,latent_heat,ground_heat
         
-        ! domain parameters (and PBL height)
-        real, allocatable, dimension(:,:)   :: landmask ! store PBL height (if available) and the land-sea mask
+        ! domain parameters
+        real, allocatable, dimension(:,:)   :: landmask ! store the land-sea mask
         real, allocatable, dimension(:,:)   :: sintheta, costheta  ! rotations about the E-W, N-S grid
         real, allocatable, dimension(:)     :: ZNU, ZNW            ! = (p-p_top)/(psfc-ptop)
         
@@ -268,6 +268,8 @@ module data_structures
         real, allocatable, dimension(:,:)   :: soil_tdeep, skin_t, soil_totalmoisture, snow_swe
         real, allocatable, dimension(:,:)   :: vegfrac,canopy_water
         integer, allocatable, dimension(:,:):: soil_type,veg_type
+        ! ocean surface state
+        real, allocatable, dimension(:,:)   :: sst
         ! surface and PBL parameter
         real, allocatable, dimension(:,:)   :: znt, ustar, pbl_height
         real, allocatable, dimension(:,:)   :: u10, v10, t2m, q2m
@@ -291,8 +293,13 @@ module data_structures
         ! dX_dt variables are the change in variable X between two forcing time steps
         ! wind and pressure dX_dt fields applied to full 3d grid, others applied only to boundaries
         real, allocatable, dimension(:,:,:) :: du_dt,dv_dt,dp_dt,dth_dt,dqv_dt,dqc_dt
-        ! sh, lh, and pblh fields are only 2d. These are only used with LSM option 1 and are derived from forcing file
-        real, allocatable, dimension(:,:) :: dsh_dt,dlh_dt,dpblh_dt, dsw_dt, dlw_dt
+        ! sh, lh, and pblh fields are only 2d. 
+        ! These are only used with LSM option 1 and are derived from forcing file
+        real, allocatable, dimension(:,:) :: dsh_dt,dlh_dt,dpblh_dt
+        ! change in shortwave and longwave at surface if read from forcing
+        real, allocatable, dimension(:,:) :: dsw_dt, dlw_dt
+        ! change in sst if read from forcing file
+        real, allocatable, dimension(:,:) :: dsst_dt
         ! store the low resolution versionf of terrain and atmospheric elevations
         real,allocatable,dimension(:,:)::lowres_terrain
         real,allocatable,dimension(:,:,:)::lowres_z
@@ -394,7 +401,6 @@ module data_structures
     end type lsm_options_type
 
     
-type(lsm_options_type)::lsm_options
     !------------------------------------------------
     ! store all model options
     !------------------------------------------------
@@ -413,7 +419,8 @@ type(lsm_options_type)::lsm_options
                                         shvar,lhvar,pblhvar,zvar, &
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
-                                        swdown_var, lwdown_var
+                                        swdown_var, lwdown_var, &
+                                        sst_var
                                         
         ! Filenames for files to read various physics options from
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, adv_options_filename, &

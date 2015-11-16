@@ -313,13 +313,17 @@
     nsqmin = -16.12 ! ln(1e-7) defaults to ln(min_stability)
     n_nsq_values = 10
     ! NOTE: this requires a LOT of RAM.  (and you still need some for the rest of the model)
-    !   Calculate bytes of RAM required as nx * ny * nz * 2 * n_dir * n_spd * n_nsq * 4
-    !   e.g. 320 * 250 * 14 * 2 * 36 * 10 * 10 * 4 = 30GB!
-    !   (* 2 is for have to store U and V)
+    !   Calculate bytes of RAM required as nx * ny * nz * n_dir * n_spd * n_nsq * 2 * 4
+    !   e.g. 320 * 250 * 14 * 36 * 10 * 10 * 2 * 4 = 30GB!
+    !   (* 2 is for having to store U and V)
     !   (* 4 is for the number of bytes per float)
-    read_LUT = .False.  ! read the Look up table from a specified file
-    write_LUT = .False. ! write the look up table to the specified file
-    LUT_Filename = "Linear_Theory_LUT.nc"    
+    ! WARNING!  At present this is very fragile.  dir, spd, and n bins defined above
+    ! must match values used to generate these files if they are read in
+    ! no error checking is performed.  
+    read_LUT = .True.  ! read the Look up table from a specified file
+    write_LUT = .True. ! write the look up table to the specified file
+    u_LUT_Filename = "Linear_Theory_u_LUT.nc"
+    v_LUT_Filename = "Linear_Theory_v_LUT.nc"
 /
 
 

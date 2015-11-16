@@ -261,14 +261,16 @@ contains
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
-                                        swdown_var, lwdown_var
+                                        swdown_var, lwdown_var, &
+                                        sst_var
                                         
         namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
                             landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar, &
                             hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi, &
                             soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
                             vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
-                            swdown_var, lwdown_var
+                            swdown_var, lwdown_var, &
+                            sst_var
         
         hgtvar="HGT"
         latvar="XLAT"
@@ -290,6 +292,7 @@ contains
         lhvar=""
         swdown_var=""
         lwdown_var=""
+        sst_var=""
         pblhvar=""
         hgt_hi="HGT"
         landvar="XLAND"
@@ -340,6 +343,8 @@ contains
 !       Shortwave and longwave down at the surface
         options%swdown_var=swdown_var
         options%lwdown_var=lwdown_var
+        ! Sea surface temperature
+        options%sst_var = sst_var
         
 !       separate variable names for the high resolution domain
         options%hgt_hi=hgt_hi

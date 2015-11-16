@@ -404,7 +404,6 @@ contains
         nx=size(domain%qv,1)
         ny=size(domain%qv,3)
         if ((model_time-last_model_time)>=update_interval) then
-            print*, "updating LSM fluxes: ", model_time-last_model_time
             lsm_dt=model_time-last_model_time
             last_model_time=model_time
             
