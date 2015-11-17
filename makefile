@@ -171,7 +171,7 @@ endif
 ifeq ($(F90), ftn)
 	COMP= -h omp vector2 -O2 -c -eI
 	LINK= -fopenmp
-	PREPROC= -e Z
+	PREPROC= -eZ
 	MODOUTPUT= -J $(BUILD) -em
 endif
 
@@ -193,7 +193,7 @@ ifeq ($(MODE), debugslow)
 	ifeq ($(F90), ftn)
 		COMP=-h noomp -c -g -m 0 -R abcsp
 		LINK=-h noomp
-		PREPROC=-e z
+		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
 	endif
 endif
@@ -213,7 +213,7 @@ ifeq ($(MODE), debug)
 	ifeq ($(F90), ftn)
 		COMP=-O1 -h noomp -c -g
 		LINK=-h noomp
-		PREPROC=-e z
+		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
 	endif
 endif
@@ -234,7 +234,7 @@ ifeq ($(MODE), debugompslow)
 	ifeq ($(F90), ftn)
 		COMP=-c -g -m 0 -R abcsp
 		LINK=
-		PREPROC=-e z
+		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
 	endif
 endif
@@ -254,7 +254,7 @@ ifeq ($(MODE), debugomp)
 	ifeq ($(F90), ftn)
 		COMP=-O1 -c -g
 		LINK=
-		PREPROC=-e z
+		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
 	endif
 endif
@@ -418,7 +418,7 @@ $(BUILD)string.o:$(UTIL)string.f90
 ###################################################################
 
 $(BUILD)output.o:$(IO)output.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)time.o $(BUILD)string.o
-	${F90} ${FFLAGS} -DVERSION=\"$(GIT_VERSION)\" $(PREPROC) $(IO)output.f90 -o $(BUILD)output.o
+	${F90} ${FFLAGS} ${PREPROC} -DVERSION=\"$(GIT_VERSION)\" $(IO)output.f90 -o $(BUILD)output.o
 
 $(BUILD)io_routines.o:$(IO)io_routines.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(IO)io_routines.f90 -o $(BUILD)io_routines.o

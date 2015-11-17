@@ -81,7 +81,7 @@ contains
                     "Gutmann et al. 2015: The Intermediate Complexity Atmospheric Model. JHM (in prep)"), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"comment",trim(options%comment)), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"contact","Ethan Gutmann : gutmann@ucar.edu"), trim(err))
-        call check( nf90_put_att(ncid,NF90_GLOBAL,"git","static!"), trim(err))
+        call check( nf90_put_att(ncid,NF90_GLOBAL,"git",VERSION), trim(err))
     
         call check( nf90_put_att(ncid,NF90_GLOBAL,"dx",options%dx), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"wind_smoothing",options%smooth_wind_distance), trim(err))
