@@ -108,10 +108,10 @@ contains
     subroutine water_simple(sst, psfc, wind, ustar, qv, temperature,  &
                             sensible_heat, latent_heat, &
                             z_atm, Z0, landmask, &
-                            qv_surf, evap_flux)
+                            qv_surf, evap_flux, tskin)
         implicit none
         real, dimension(:,:,:),intent(in)    :: qv, temperature, z_atm
-        real, dimension(:,:),  intent(inout) :: sensible_heat, latent_heat, Z0, qv_surf, evap_flux
+        real, dimension(:,:),  intent(inout) :: sensible_heat, latent_heat, Z0, qv_surf, evap_flux, tskin
         real, dimension(:,:),  intent(in)    :: sst, psfc, wind, ustar, landmask
         
         integer :: nx, ny, i, j
@@ -120,8 +120,8 @@ contains
         nx=size(sst,1)
         ny=size(sst,2)
         
-        do j=1,ny
-            do i=1,nx
+        do j=2,ny-1
+            do i=2,nx-1
                 if (landmask(i,j)==kLC_WATER) then
                     qv_surf(i,j) = 0.98 * sat_mr(sst(i,j),psfc(i,j)) ! multiply by 0.98 to account for salinity
                     
@@ -133,10 +133,11 @@ contains
                     
                     call calc_exchange_coefficient(wind(i,j),sst(i,j),temperature(i,1,j),&
                                                    z,lnz_atm_term,base_exchange_term,exchange_C)
-                    
-                    sensible_heat(i,j) = exchange_C * (sst(i,j)-temperature(i,1,j))
-                    evap_flux(i,j)     = exchange_C * (qv_surf(i,j)-qv(i,1,j))
+                                        
+                    sensible_heat(i,j) = exchange_C * wind(i,j) * (sst(i,j)-temperature(i,1,j))
+                    evap_flux(i,j)     = exchange_C * wind(i,j) * (qv_surf(i,j)-qv(i,1,j))
                     latent_heat(i,j)   = evap_flux(i,j) * LH_vaporization
+                    tskin(i,j)   = sst(i,j)
                     
                 endif
             end do

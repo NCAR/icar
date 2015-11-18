@@ -236,12 +236,6 @@ contains
         EMBCK=0.95
         allocate(RAINBL(ime,jme))
         RAINBL=0 ! used to store last time step accumulated precip so that it can be subtracted from the current step
-        allocate(CHS(ime,jme))
-        CHS=0.01
-        allocate(CHS2(ime,jme))
-        CHS2=0.01
-        allocate(CQS2(ime,jme))
-        CQS2=0.01
         allocate(CPM(ime,jme))
         CPM=0
         allocate(SR(ime,jme))
@@ -331,6 +325,12 @@ contains
         windspd=0
         ! NOTE, these fields have probably not been initialized yet...
         ! windspd=sqrt(domain%u10**2+domain%v10**2)
+        allocate(CHS(ime,jme))
+        CHS=0.01
+        allocate(CHS2(ime,jme))
+        CHS2=0.01
+        allocate(CQS2(ime,jme))
+        CQS2=0.01
         
         domain%T2m = domain%th(:,1,:) * domain%pii(:,1,:)
         domain%Q2m = domain%qv(:,1,:)
@@ -380,6 +380,7 @@ contains
             
             where(domain%veg_type==ISWATER) domain%landmask=kLC_WATER ! ensure VEGTYPE (land cover) and land-sea mask are consistent
         endif
+        
         ! defines the height of the middle of the first model level
         z_atm=domain%z(:,1,:)
         lnz_atm_term = log((z_atm+Z0)/Z0)
@@ -434,7 +435,7 @@ contains
                 call water_simple(domain%sst, domain%psfc, windspd, domain%ustar,  &
                                   domain%qv, domain%t,                             &
                                   domain%sensible_heat, domain%latent_heat,        &
-                                  domain%z, Z0, domain%landmask, QSFC, QFX)
+                                  domain%z, Z0, domain%landmask, QSFC, QFX, domain%skin_t)
             endif
             
             
