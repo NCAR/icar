@@ -40,6 +40,7 @@
     ! wishlist = No Code Present yet
     pbl = 0,  ! 1=legacy (deprecated)      2=Simple (Local HP96)        3=YSU             (N/A)
     lsm = 0,  ! 1=use perscribed fluxes    2=Simple LSM (N/A)           3=Noah LSM
+    water=2,  ! 1=use perscribed fluxes(?) 2=Simple sea surface fluxes
     mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison        (wishlist)
     rad = 0,  ! 1=legacy (deprecated)      2=Simple (empirical)         3=RRTMG           (wishlist)
     conv= 0,  ! 1=Tiedke Scheme            2=Simple Scheme (wishlist)   3=Kain-Fritsch
@@ -165,7 +166,8 @@
     zvar="Z",				  ! model level elevations
     latvar="XLAT",			  ! latitude
     lonvar="XLONG",			  ! longitude
-
+    sst_var="TSK"             ! Sea surface temperatures (*and* inland lakes)
+    
     ! variables on the ew staggered (U) grid
     uvar="U",				  ! East-West wind speed
     ulat="XLAT_U",			  ! latitude
@@ -197,7 +199,7 @@
     ! soiltype_var="ISLTYP",  ! soil type index (classification to match SOILPARM.TBL file)
     ! soil_t_var="TSLB",      ! soil temperature (4 levels)
     ! soil_vwc_var="SMOIS"	  ! soil water content (4 levels)
-
+    
     ! variables to read from calibration files, both default to "data"
     ! nsq_calibration_var="data",
     ! linear_mask_var="data"
