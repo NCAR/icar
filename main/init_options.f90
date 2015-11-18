@@ -838,13 +838,15 @@ contains
         integer :: name_unit
 
         character(len=MAXVARLENGTH) :: LU_Categories ! Category definitions (e.g. USGS, MODIFIED_IGBP_MODIS_NOAH)
+        logical :: monthly_vegfrac                   ! read in 12 months of vegfrac data
         integer :: update_interval                   ! minimum number of seconds between LSM updates
         integer :: urban_category                    ! index that defines the urban category in LU_Categories
         integer :: ice_category                      ! index that defines the ice category in LU_Categories
         integer :: water_category                    ! index that defines the water category in LU_Categories
         
         ! define the namelist
-        namelist /lsm_parameters/ LU_Categories, update_interval, urban_category, ice_category, water_category
+        namelist /lsm_parameters/ LU_Categories, update_interval, monthly_vegfrac, &
+                                  urban_category, ice_category, water_category
         
          ! because adv_options could be in a separate file
          if (options%use_lsm_options) then
@@ -857,6 +859,7 @@ contains
         ! set default values
         LU_Categories   = "MODIFIED_IGBP_MODIS_NOAH"
         update_interval = 300 ! 5 minutes
+        monthly_vegfrac = .False.
         
         ! default values for these will be set after reading LU_Categories
         urban_category  = -1
@@ -874,6 +877,7 @@ contains
         
         ! store everything in the lsm_options structure
         lsm_options%LU_Categories   = LU_Categories
+        lsm_options%monthly_vegfrac = monthly_vegfrac
         lsm_options%update_interval = update_interval
         lsm_options%urban_category  = urban_category
         lsm_options%ice_category    = ice_category

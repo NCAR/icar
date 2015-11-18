@@ -42,14 +42,16 @@
 !! lwup         = Lonwave up from the land surface          [W/m^2]
 !!
 !! ---- Land Surface variables ---- 
-!!  3D fields ---- NX x NZ x NY
+!!   3D fields ---- NX x NZ x NY
 !! soil_t       = 3D Soil temperature                       [K]
 !! soil_vwc     = 3D Soil volumetric water content          [m^3/m^3]
+!! 
+!!   3D fields ---- NX x NY x N_Times (typically 1 or 12)
+!! vegfrac      = vegetation cover fraction                 [%]
 !!
 !!   2D fields ---- NX x NY
 !! skin_t       = Land surface skin temperature             [K]
 !! soil_tdeep   = Temperature at the soil column bottom     [K]
-!! vegfrac      = vegetation cover fraction                 [%]
 !! snow_swe         = Snow water equivalent on the land surface [mm]
 !! soil_totalmoisture = Soil column total water content         [mm]
 !! soil_type    = Soil type (index for USGS classification in SOILPARM.TBL) [1-19]
@@ -271,8 +273,8 @@ module data_structures
         real, allocatable, dimension(:)     :: ZNU, ZNW            ! = (p-p_top)/(psfc-ptop)
         
         ! land surface state and parameters
-        real, allocatable, dimension(:,:)   :: soil_tdeep, skin_t, soil_totalmoisture, snow_swe
-        real, allocatable, dimension(:,:)   :: vegfrac,canopy_water
+        real, allocatable, dimension(:,:)   :: soil_tdeep, skin_t, soil_totalmoisture, snow_swe,canopy_water
+        real, allocatable, dimension(:,:,:)   :: vegfrac
         integer, allocatable, dimension(:,:):: soil_type,veg_type
         ! ocean surface state
         real, allocatable, dimension(:,:)   :: sst
@@ -284,10 +286,12 @@ module data_structures
         real::dt
         ! current model time (seconds from options%time_zero)
         double precision :: model_time
+        integer :: current_month ! used to store the current month (should probably be fractional for interpolation...)
         
         ! model specific fields
         real, allocatable, dimension(:,:,:) :: Um, Vm ! U and V on mass coordinates
         real, allocatable, dimension(:,:,:) :: T      ! real T (not potential)
+        
         
         type(tendencies_type) :: tend
     end type domain_type
@@ -405,6 +409,7 @@ module data_structures
         integer :: urban_category
         integer :: ice_category
         integer :: water_category
+        logical :: monthly_vegfrac
     end type lsm_options_type
 
     

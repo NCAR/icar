@@ -54,12 +54,12 @@ module land_surface
     ! LOTS of variables required by Noah, placed here "temporarily", this may be where some stay.
     ! Keeping them at the module level prevents having to allocate/deallocate every call
     ! also avoids adding LOTS of LSM variables to the main domain datastrucurt
-    real,allocatable, dimension(:,:)    :: SMSTAV,SFCRUNOFF,UDRUNOFF,   &
-                                           SNOW,SNOWC,SNOWH, ACSNOW, ACSNOM, SNOALB, QFX,   &
-                                           QGH, GSW, ALBEDO, ALBBCK, Z0, XICE, EMISS, &
-                                           EMBCK, QSFC, RAINBL, CHS, CHS2, CQS2, CPM, SR,       &
-                                           CHKLOWQ, LAI, QZ0, SHDMIN,SHDMAX,SNOTIME,SNOPCX,     &
-                                           POTEVP,RIB, NOAHRES,FLX4_2D,FVB_2D,FBUR_2D,   &
+    real,allocatable, dimension(:,:)    :: SMSTAV,SFCRUNOFF,UDRUNOFF,                               &
+                                           SNOW,SNOWC,SNOWH, ACSNOW, ACSNOM, SNOALB, QFX,           &
+                                           QGH, GSW, ALBEDO, ALBBCK, Z0, XICE, EMISS,               &
+                                           EMBCK, QSFC, RAINBL, CHS, CHS2, CQS2, CPM, SR,           &
+                                           CHKLOWQ, LAI, QZ0, VEGFRAC, SHDMIN,SHDMAX,SNOTIME,SNOPCX,&
+                                           POTEVP,RIB, NOAHRES,FLX4_2D,FVB_2D,FBUR_2D,              &
                                            FGSN_2D, z_atm,lnz_atm_term,Ri,base_exchange_term
                                            
     logical :: MYJ, FRPCPN,ua_phys,RDLAI2D,USEMONALB
@@ -68,7 +68,7 @@ module land_surface
     real,allocatable, dimension(:)      :: Zs,DZs
     real :: XICE_THRESHOLD
     integer,allocatable, dimension(:,:) :: IVGTYP,ISLTYP
-    integer :: ITIMESTEP, update_interval
+    integer :: ITIMESTEP, update_interval, cur_vegmonth
     
     real, parameter :: kappa=0.4
     real, parameter :: freezing_threshold=273.15
@@ -258,7 +258,7 @@ contains
         allocate(SHDMIN(ime,jme))
         SHDMIN=0
         allocate(SHDMAX(ime,jme))
-        SHDMAX=0
+        SHDMAX=100
         allocate(SNOTIME(ime,jme))
         SNOTIME=0
         allocate(SNOPCX(ime,jme))
@@ -271,7 +271,8 @@ contains
         RIB=0
         allocate(NOAHRES(ime,jme))
         NOAHRES=0
-        
+        allocate(VEGFRAC(ime,jme))
+        VEGFRAC=50
         
         
         XICE_THRESHOLD=1
@@ -367,7 +368,14 @@ contains
             
             call allocate_noah_data(ime,jme,kme,num_soil_layers)
             
-            call LSM_NOAH_INIT(domain%vegfrac,SNOW,SNOWC,SNOWH,domain%canopy_water,domain%soil_t,    &
+            if (options%lsm_options%monthly_vegfrac) then
+                VEGFRAC=domain%vegfrac(:,:,domain%current_month)
+            else
+                VEGFRAC=domain%vegfrac(:,:,1)
+            endif
+            cur_vegmonth=domain%current_month
+            
+            call LSM_NOAH_INIT(VEGFRAC,SNOW,SNOWC,SNOWH,domain%canopy_water,domain%soil_t,    &
                                 domain%soil_vwc, SFCRUNOFF,UDRUNOFF,ACSNOW,  &
                                 ACSNOM,domain%veg_type,domain%soil_type,     &
                                 domain%soil_t,                               &
@@ -476,14 +484,19 @@ contains
                         endif
                     enddo
                 enddo
-                
+                if (options%lsm_options%monthly_vegfrac) then
+                    if (cur_vegmonth/=domain%current_month) then
+                        VEGFRAC=domain%vegfrac(:,:,domain%current_month)
+                        cur_vegmonth=domain%current_month
+                    endif
+                endif
                 call lsm_noah(domain%dz_inter,domain%qv,domain%p_inter,domain%th*domain%pii,domain%skin_t,  &
                             domain%sensible_heat,QFX,domain%latent_heat,domain%ground_heat, &
                             QGH,GSW,domain%swdown,domain%lwdown,SMSTAV,domain%soil_totalmoisture, &
                             SFCRUNOFF, UDRUNOFF, &
                             domain%veg_type,domain%soil_type, &
                             ISURBAN,ISICE, &
-                            domain%vegfrac, &
+                            VEGFRAC, &
                             ALBEDO,ALBBCK,domain%znt,Z0,domain%soil_tdeep,domain%landmask,XICE,EMISS,EMBCK,     &
                             SNOWC,QSFC,domain%rain-RAINBL,MMINLU,         &
                             num_soil_layers,lsm_dt,DZS,ITIMESTEP,         &
@@ -517,15 +530,15 @@ contains
                 domain%lwup=stefan_boltzmann*EMISS*domain%skin_t**4
                 RAINBL=domain%rain
                 
-                print*, "WARNING!! enforcing surface sensible heat flux greater than 0!!"
-                where(domain%sensible_heat<0) domain%sensible_heat=0
-                do j=1,ny
-                    do i=1,nx
-                        if (domain%landmask(i,j)==kLC_LAND) then
-                            if (domain%sensible_heat(i,j)<0) domain%sensible_heat(i,j)=0
-                        endif
-                    end do
-                end do
+!                 print*, "WARNING!! enforcing surface sensible heat flux greater than 0!!"
+!                 where(domain%sensible_heat<0) domain%sensible_heat=0
+!                 do j=1,ny
+!                     do i=1,nx
+!                         if (domain%landmask(i,j)==kLC_LAND) then
+!                             if (domain%sensible_heat(i,j)<0) domain%sensible_heat(i,j)=0
+!                         endif
+!                     end do
+!                 end do
                 
             endif
             call surface_diagnostics(domain%sensible_heat, QFX, domain%skin_t, QSFC,  &
