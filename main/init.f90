@@ -430,11 +430,12 @@ contains
         call io_read2d(options%init_conditions_file,options%vlon_hi,domain%v_geo%lon,1)
         if (options%landvar/="") then
             call io_read2d(options%init_conditions_file,options%landvar,domain%landmask,1)
+            where(domain%landmask==0) domain%landmask=kLC_WATER
         else
             nx=size(domain%lat,1)
             ny=size(domain%lat,2)
             allocate(domain%landmask(nx,ny))
-            domain%landmask=1 !if we weren't supplied a landmask field, assume all is land (what we care about anyway)
+            domain%landmask=kLC_LAND !if we weren't supplied a landmask field, assume all is land (what we care about anyway)
         endif
         
         ! remove n grid cells from all sides of the domain if requested
