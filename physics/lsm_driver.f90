@@ -77,7 +77,7 @@ module land_surface
     real, parameter :: MAX_EXCHANGE_C = 0.5
     
     character(len=MAXVARLENGTH) :: MMINLU
-    logical :: FNDSOILW,FNDSNOWH,RDMAXALB, first_lsm_call
+    logical :: FNDSOILW,FNDSNOWH,RDMAXALB
     integer :: num_soil_layers,ISURBAN,ISICE,ISWATER
     real*8  :: last_model_time
     
@@ -146,9 +146,10 @@ contains
         integer :: i,j, nx,ny
         real :: rho
         
+        !$omp parallel default(shared), private(nx,ny,i,j,rho)
         nx=size(HFX,1)
         ny=size(HFX,2)
-        
+        !$omp do
         do j=1,ny
             do i=1,nx
                 RHO = PSFC(I,J)/(Rd * TSK(I,J))
@@ -165,6 +166,8 @@ contains
                 ! TH2(I,J) = T2(I,J)*(1.E5/PSFC(I,J))**ROVCP
             enddo
         enddo
+        !$omp end do
+        !$omp end parallel
     end subroutine surface_diagnostics
     
     subroutine apply_fluxes(domain,dt)
@@ -223,7 +226,7 @@ contains
         QGH=0.02 ! saturated mixing ratio at ~20C
         allocate(GSW(ime,jme))
         GSW=0
-
+        
         allocate(ALBEDO(ime,jme))
         ALBEDO=0.17
         allocate(ALBBCK(ime,jme))
@@ -298,7 +301,6 @@ contains
         integer :: i
         
         write(*,*) "Initializing LSM"
-        first_lsm_call=.True.
         
         ime=size(domain%th,1)
         jme=size(domain%th,3)
@@ -506,16 +508,11 @@ contains
                             ims,ime, jms,jme, kms,kme,                    &
                             its,ite, jts,jte, kts,kte)
                 
-                if (first_lsm_call) then
-                    ! now that z0 has been read, we need to recalculate terms
-                    lnz_atm_term = log((z_atm+Z0)/Z0)
-                    base_exchange_term=(75*kappa**2 * sqrt((z_atm+Z0)/Z0)) / (lnz_atm_term**2)
-                    lnz_atm_term=(kappa/lnz_atm_term)**2
-                    
-                    ! this is no longer the first lsm_call so don't do this again... except for water points
-                    first_lsm_call=.False.
-                endif
-                
+                ! now that znt has been updated, we need to recalculate terms
+                lnz_atm_term = log((z_atm+domain%znt)/domain%znt)
+                base_exchange_term=(75*kappa**2 * sqrt((z_atm+domain%znt)/domain%znt)) / (lnz_atm_term**2)
+                lnz_atm_term=(kappa/lnz_atm_term)**2
+                                
                 ! note this is more or less just diagnostic and could be removed
                 domain%lwup=stefan_boltzmann*EMISS*domain%skin_t**4
                 RAINBL=domain%rain
