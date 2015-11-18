@@ -800,31 +800,26 @@ contains
         character(len=MAXVARLENGTH), intent(in) :: LU_Categories
         
         if (trim(LU_Categories)=="MODIFIED_IGBP_MODIS_NOAH") then
-            print*, "Setting MODIFIED_IGBP_MODIS_NOAH default categories"
             if (urban_category==-1) urban_category = 13
             if (ice_category==-1)   ice_category = 15
             if (water_category==-1) water_category = 17
         elseif (trim(LU_Categories)=="USGS") then
-            print*, "Setting USGS default categories"
             if (urban_category==-1) urban_category = 1
             if (ice_category==-1)   ice_category = -1
             if (water_category==-1) water_category = 16
         elseif (trim(LU_Categories)=="USGS-RUC") then
-            print*, "Setting USGS-RUC default categories"
             if (urban_category==-1) urban_category = 1
             if (ice_category==-1)   ice_category = 24
             if (water_category==-1) water_category = 16
             ! also note, lakes_category = 28
             print*, "WARNING: not handling lake category (28)"
         elseif (trim(LU_Categories)=="MODI-RUC") then
-            print*, "Setting MODI-RUC default categories"
             if (urban_category==-1) urban_category = 13
             if (ice_category==-1)   ice_category = 15
             if (water_category==-1) water_category = 17
             ! also note, lakes_category = 21
             print*, "WARNING: not handling lake category (21)"
         elseif (trim(LU_Categories)=="NLCD40") then
-            print*, "Setting NLCD40 default categories"
             if (urban_category==-1) urban_category = 13
             if (ice_category==-1)   ice_category = 15 ! and 22?
             if (water_category==-1) water_category = 17 ! and 21
