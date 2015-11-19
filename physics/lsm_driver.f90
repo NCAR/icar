@@ -530,15 +530,15 @@ contains
                 domain%lwup=stefan_boltzmann*EMISS*domain%skin_t**4
                 RAINBL=domain%rain
                 
-!                 print*, "WARNING!! enforcing surface sensible heat flux greater than 0!!"
-!                 where(domain%sensible_heat<0) domain%sensible_heat=0
-!                 do j=1,ny
-!                     do i=1,nx
-!                         if (domain%landmask(i,j)==kLC_LAND) then
-!                             if (domain%sensible_heat(i,j)<0) domain%sensible_heat(i,j)=0
-!                         endif
-!                     end do
-!                 end do
+                print*, "WARNING!! enforcing surface sensible heat flux greater than 0!!"
+                where(domain%sensible_heat<0) domain%sensible_heat=0
+                do j=1,ny
+                    do i=1,nx
+                        if (domain%landmask(i,j)==kLC_LAND) then
+                            if (domain%sensible_heat(i,j)<0) domain%sensible_heat(i,j)=0
+                        endif
+                    end do
+                end do
                 
             endif
             call surface_diagnostics(domain%sensible_heat, QFX, domain%skin_t, QSFC,  &
