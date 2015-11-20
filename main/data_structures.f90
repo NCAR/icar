@@ -121,6 +121,10 @@ module data_structures
     
     integer, parameter :: kLC_LAND       = 1
     integer, parameter :: kLC_WATER      = 2
+    
+    ! mm of accumulated precip before "tipping" into the bucket
+    ! only performed on output operations
+    integer, parameter :: kPRECIP_BUCKET_SIZE=100
 !------------------------------------------------
 ! Physical Constants
 !------------------------------------------------
@@ -260,6 +264,7 @@ module data_structures
         ! precip fluxes
         real, allocatable, dimension(:,:)   :: rain,crain,snow,graupel
         real, allocatable, dimension(:,:)   :: current_rain, current_snow
+        integer, allocatable, dimension(:,:):: rain_bucket,crain_bucket,snow_bucket,graupel_bucket
         
         ! radiative fluxes (and cloud fraction)
         real, allocatable, dimension(:,:)   :: swdown, lwdown, cloudfrac, lwup

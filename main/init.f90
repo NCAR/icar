@@ -240,6 +240,14 @@ contains
         domain%snow=0
         allocate(domain%graupel(nx,ny))     ! accumulated graupel fall
         domain%graupel=0
+        allocate(domain%rain_bucket(nx,ny))        ! accumulated total rainfall [kg/m^2]
+        domain%rain_bucket=0
+        allocate(domain%crain_bucket(nx,ny))       ! accumulated convective rainfall
+        domain%crain_bucket=0
+        allocate(domain%snow_bucket(nx,ny))        ! accumulated snow fall
+        domain%snow_bucket=0
+        allocate(domain%graupel_bucket(nx,ny))     ! accumulated graupel fall
+        domain%graupel_bucket=0
         allocate(domain%current_rain(nx,ny))! rain fall in current time step
         domain%current_rain=0
         allocate(domain%current_snow(nx,ny))! snow fall in current time step
@@ -427,6 +435,7 @@ contains
         if (options%soil_deept_var.ne."") then
             call io_read2d(options%init_conditions_file,options%soil_deept_var,temp_rdata_2d,1)
             domain%soil_tdeep=temp_rdata_2d(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
+            where(domain%soil_tdeep<200) domain%soil_tdeep=200 ! mitigates zeros that can cause problems
             if (options%soil_t_var=="") then
                 print*, "Missing explicit soil T, using deep soil T for all depths"
                 do i=1,nz

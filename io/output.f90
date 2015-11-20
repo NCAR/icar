@@ -52,6 +52,49 @@ module output
     integer :: nx,ny,nz,i,nsoil
     
 contains
+    
+    subroutine tip_precip_to_buckets(domain)
+        ! Check if precip variables have exceeded kPRECIP_BUCKET_SIZE and if so, "tip" into the bucket
+        ! i.e. add one to the bucket and subtract kPRECIP_BUCKET_SIZE from the precip variable
+        ! and repeat while precip variable > kPRECIP_BUCKET_SIZE
+        implicit none
+        type(domain_type), intent(inout) :: domain
+        
+        integer :: nx, ny, i, j
+        
+        nx=size(domain%rain,1)
+        ny=size(domain%rain,2)
+        do j=2,ny-2
+            do i=2,nx-1
+                if (domain%rain(i,j)>kPRECIP_BUCKET_SIZE) then
+                    do while (domain%rain(i,j)>kPRECIP_BUCKET_SIZE)
+                        domain%rain(i,j) = domain%rain(i,j)-kPRECIP_BUCKET_SIZE
+                        domain%rain_bucket(i,j) = domain%rain_bucket(i,j)+1
+                        last_rain(i,j)=last_rain(i,j)-kPRECIP_BUCKET_SIZE
+                    end do
+                endif
+                if (domain%crain(i,j)>kPRECIP_BUCKET_SIZE) then
+                    do while (domain%crain(i,j)>kPRECIP_BUCKET_SIZE)
+                        domain%crain(i,j) = domain%crain(i,j)-kPRECIP_BUCKET_SIZE
+                        domain%crain_bucket(i,j) = domain%crain_bucket(i,j)+1
+                    end do
+                endif
+                if (domain%snow(i,j)>kPRECIP_BUCKET_SIZE) then
+                    do while (domain%snow(i,j)>kPRECIP_BUCKET_SIZE)
+                        domain%snow(i,j) = domain%snow(i,j)-kPRECIP_BUCKET_SIZE
+                        domain%snow_bucket(i,j) = domain%snow_bucket(i,j)+1
+                    end do
+                endif
+                if (domain%graupel(i,j)>kPRECIP_BUCKET_SIZE) then
+                    do while (domain%graupel(i,j)>kPRECIP_BUCKET_SIZE)
+                        domain%graupel(i,j) = domain%graupel(i,j)-kPRECIP_BUCKET_SIZE
+                        domain%graupel_bucket(i,j) = domain%graupel_bucket(i,j)+1
+                    end do
+                endif
+            end do
+        end do
+    end subroutine tip_precip_to_buckets
+    
     subroutine create_file(filename,options)
         character(len=255), intent(in) :: filename
         type(options_type), intent(in) :: options
@@ -78,7 +121,7 @@ contains
         call check( nf90_put_att(ncid,NF90_GLOBAL,"source","Intermediate Complexity Atmospheric Model version:"//trim(options%version)), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"history","Created:"//todays_date_time//UTCoffset), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"references", &
-                    "Gutmann et al. 2015: The Intermediate Complexity Atmospheric Model. JHM (in prep)"), trim(err))
+                    "Gutmann et al. 2016: The Intermediate Complexity Atmospheric Model. JHM (in revision)"), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"comment",trim(options%comment)), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"contact","Ethan Gutmann : gutmann@ucar.edu"), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"git",VERSION), trim(err))
@@ -101,12 +144,13 @@ contains
                 call check( nf90_put_att(ncid,NF90_GLOBAL,"remove_lin_fraction",options%lt_options%rm_linear_contribution), trim(err))
             endif
             if (options%lt_options%spatial_linear_fields) then
-                call check( nf90_put_att(ncid,NF90_GLOBAL,"variable_N","spatially varying N"), trim(err))
+                call check( nf90_put_att(ncid,NF90_GLOBAL,"spatially_variable_N","spatially varying N"), trim(err))
             endif
         endif
         call check( nf90_put_att(ncid,NF90_GLOBAL,"microphysics",options%physics%microphysics), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"advection",options%physics%advection), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"boundarylayer",options%physics%boundarylayer), trim(err))
+        call check( nf90_put_att(ncid,NF90_GLOBAL,"watersurface",options%physics%watersurface), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"landsurface",options%physics%landsurface), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"radiation",options%physics%radiation), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"convection",options%physics%convection), trim(err))
@@ -644,7 +688,7 @@ contains
     subroutine write_domain(domain,options,timestep,inputfilename)
         implicit none
         ! This is the name of the data file and variable we will read. 
-        type(domain_type),intent(in)::domain
+        type(domain_type),intent(inout)::domain
         type(options_type),intent(in)::options
         integer,intent(in)::timestep
         character(len=*),intent(in),optional :: inputfilename
@@ -737,14 +781,29 @@ contains
             call check( nf90_put_var(ncid, varid(12), domain%p(:,1,:),  start_two_D),  trim(filename)//":p" )
             call check( nf90_put_var(ncid, varid(13), domain%th(:,1,:), start_two_D),  trim(filename)//":th" )
         endif
-        call check( nf90_put_var(ncid, varid(14), domain%rain,           start_two_D), trim(filename)//":rain" )
-        call check( nf90_put_var(ncid, varid(32), domain%rain-last_rain, start_two_D), trim(filename)//":rainrate" )
-        call check( nf90_put_var(ncid, varid(15), domain%snow,           start_two_D), trim(filename)//":snow" )
+        
+        
+        ! Write precip variables (rain, snow, graupel, crain) adjusting for the internal precip bucket
+        call tip_precip_to_buckets(domain)
+        call check( nf90_put_var(ncid, varid(14), &
+                                 domain%rain + domain%rain_bucket*kPRECIP_BUCKET_SIZE, &
+                                 start_two_D), trim(filename)//":rain" )
+        call check( nf90_put_var(ncid, varid(32), &
+                                 domain%rain-last_rain, &
+                                 start_two_D), trim(filename)//":rainrate" )
+        call check( nf90_put_var(ncid, varid(15), &
+                                 domain%snow + domain%snow_bucket*kPRECIP_BUCKET_SIZE, &
+                                 start_two_D), trim(filename)//":snow" )
+        
         if (options%physics%microphysics==kMP_THOMPSON) then
-            call check( nf90_put_var(ncid, varid(16), domain%graupel,    start_two_D), trim(filename)//":graupel" )
+            call check( nf90_put_var(ncid, varid(16), &
+                                     domain%graupel + domain%graupel_bucket*kPRECIP_BUCKET_SIZE, &
+                                     start_two_D), trim(filename)//":graupel" )
         endif
         if (options%physics%convection>0) then
-            call check( nf90_put_var(ncid, varid(17), domain%crain,      start_two_D), trim(filename)//":crain" )
+            call check( nf90_put_var(ncid, varid(17), &
+                                     domain%crain + domain%crain_bucket*kPRECIP_BUCKET_SIZE, &
+                                     start_two_D), trim(filename)//":crain" )
         endif
         
         ! these should only be output for radiation packages that compute them
