@@ -153,12 +153,12 @@ contains
         do j=1,ny
             do i=1,nx
                 RHO = PSFC(I,J)/(Rd * TSK(I,J))
-                if(CQS2(I,J).lt.1.E-5) then
+                if(CQS2(I,J).lt.1.E-3) then
                    Q2(I,J) = QSFC(I,J)
                 else
                    Q2(I,J) = QSFC(I,J) - QFX(I,J)/(RHO*CQS2(I,J))
                 endif
-                if(CHS2(I,J).lt.1.E-5) then
+                if(CHS2(I,J).lt.1.E-3) then
                    T2(I,J) = TSK(I,J) 
                 else
                    T2(I,J) = TSK(I,J) - HFX(I,J)/(RHO*CP*CHS2(I,J))
@@ -176,22 +176,24 @@ contains
         type(domain_type), intent(inout) :: domain
         real, intent(in) :: dt
         integer :: nx,ny
-        nx=ime
-        ny=jme
+        nx = size(domain%sensible_heat,1)
+        ny = size(domain%sensible_heat,2)
+        
         ! convert sensible heat flux to a temperature delta term
-        ! J/s/m^2 * s / J/(kg*K) => kg*K/m^2 ... /((kg/m^3) * m) => K
+        ! (J/(s*m^2) * s / (J/(kg*K)) => kg*K/m^2) ... /((kg/m^3) * m) => K
         dTemp=(domain%sensible_heat(2:nx-1,2:ny-1)*dt/cp)  &
              / (domain%rho(2:nx-1,1,2:ny-1)*domain%dz_inter(2:nx-1,1,2:ny-1))
         ! add temperature delta and convert back to potential temperature
-        domain%th(2:nx-1,1,2:ny-1)=domain%th(2:nx-1,1,2:ny-1)+dTemp/domain%pii(2:nx-1,1,2:ny-1)
+        domain%th(2:nx-1,1,2:ny-1)=domain%th(2:nx-1,1,2:ny-1) + (dTemp / domain%pii(2:nx-1,1,2:ny-1))
         
         ! convert latent heat flux to a mixing ratio tendancy term
-        ! J/s/m^2 * s / J/kg => kg/m^2 ... / (kg/m^3 * m) => kg/kg
-        lhdQV=(domain%latent_heat(2:nx-1,2:ny-1)/LH_vaporization*dt) &
-             / (domain%rho(2:nx-1,1,2:ny-1)*domain%dz_inter(2:nx-1,1,2:ny-1))
+        ! (J/(s*m^2) * s / (J/kg) => kg/m^2) ... / (kg/m^3 * m) => kg/kg
+        lhdQV=(domain%latent_heat(2:nx-1,2:ny-1) / LH_vaporization * dt) &
+             / (domain%rho(2:nx-1,1,2:ny-1) * domain%dz_inter(2:nx-1,1,2:ny-1))
         ! add water vapor in kg/kg
-        domain%qv(2:nx-1,1,2:ny-1)=domain%qv(2:nx-1,1,2:ny-1)+lhdQV
-        ! enforce some minimum water vapor content. 
+        domain%qv(2:nx-1,1,2:ny-1)=domain%qv(2:nx-1,1,2:ny-1) + lhdQV
+        
+        ! enforce some minimum water vapor content... just in case
         where(domain%qv<SMALL_QV) domain%qv=SMALL_QV
         
     end subroutine apply_fluxes
@@ -313,7 +315,7 @@ contains
         allocate(Z0(ime,jme))
         Z0=0.01 !?
         allocate(QSFC(ime,jme))
-        QSFC=0
+        QSFC=domain%qv(:,1,:)
         allocate(Ri(ime,jme))
         Ri=0
         allocate(z_atm(ime,jme))
@@ -375,6 +377,9 @@ contains
             endif
             cur_vegmonth=domain%current_month
             
+            ! prevents init from failing when processing water poitns that may have "soil_t"=0
+            where(domain%soil_t<200) domain%soil_t=200
+            where(domain%soil_vwc<0.001) domain%soil_vwc=0.001
             call LSM_NOAH_INIT(VEGFRAC,SNOW,SNOWC,SNOWH,domain%canopy_water,domain%soil_t,    &
                                 domain%soil_vwc, SFCRUNOFF,UDRUNOFF,ACSNOW,  &
                                 ACSNOM,domain%veg_type,domain%soil_type,     &
@@ -490,6 +495,11 @@ contains
                         cur_vegmonth=domain%current_month
                     endif
                 endif
+                
+                ! update T2m and Q2m prior to LSM call to make sure everything is in sync
+                call surface_diagnostics(domain%sensible_heat, QFX, domain%skin_t, QSFC,  &
+                                         CHS2, CQS2,domain%T2m, domain%Q2m, domain%psfc)
+                                         
                 call lsm_noah(domain%dz_inter,domain%qv,domain%p_inter,domain%th*domain%pii,domain%skin_t,  &
                             domain%sensible_heat,QFX,domain%latent_heat,domain%ground_heat, &
                             QGH,GSW,domain%swdown,domain%lwdown,SMSTAV,domain%soil_totalmoisture, &
@@ -530,15 +540,15 @@ contains
                 domain%lwup=stefan_boltzmann*EMISS*domain%skin_t**4
                 RAINBL=domain%rain
                 
-                print*, "WARNING!! enforcing surface sensible heat flux greater than 0!!"
-                where(domain%sensible_heat<0) domain%sensible_heat=0
-                do j=1,ny
-                    do i=1,nx
-                        if (domain%landmask(i,j)==kLC_LAND) then
-                            if (domain%sensible_heat(i,j)<0) domain%sensible_heat(i,j)=0
-                        endif
-                    end do
-                end do
+!                 print*, "WARNING!! enforcing surface sensible heat flux greater than 0!!"
+!                 where(domain%sensible_heat<0) domain%sensible_heat=0
+!                 do j=1,ny
+!                     do i=1,nx
+!                         if (domain%landmask(i,j)==kLC_LAND) then
+!                             if (domain%sensible_heat(i,j)<0) domain%sensible_heat(i,j)=0
+!                         endif
+!                     end do
+!                 end do
                 
             endif
             call surface_diagnostics(domain%sensible_heat, QFX, domain%skin_t, QSFC,  &
