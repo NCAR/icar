@@ -40,9 +40,9 @@
     ! wishlist = No Code Present yet
     pbl = 0,  ! 1=legacy (deprecated)      2=Simple (Local HP96)        3=YSU             (N/A)
     lsm = 0,  ! 1=use perscribed fluxes    2=Simple LSM (N/A)           3=Noah LSM
-    water=2,  ! 1=use perscribed fluxes(?) 2=Simple sea surface fluxes
+    water=2,  ! 1=use perscribed (w/lsm=1) 2=Simple sea surface fluxes
     mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison        (wishlist)
-    rad = 0,  ! 1=legacy (deprecated)      2=Simple (empirical)         3=RRTMG           (wishlist)
+    rad = 0,  ! 1=use perscribed fluxes    2=Simple (empirical)         3=RRTMG           (wishlist)
     conv= 0,  ! 1=Tiedke Scheme            2=Simple Scheme (wishlist)   3=Kain-Fritsch
     adv = 1,  ! 1=Upwind                   2=MPDATA                     3=Adams-Bashforth (wishlist)
     wind= 1   ! 1=Linear Theory            2=INFORM style (wishlist)    3=Dynamical?      (wishlist)
@@ -180,8 +180,15 @@
     ! these are only used with lsm=1 (pbl should also be >0)
     shvar="HFX",			  ! surface sensible heat flux
     lhvar="LH",				  ! surface latent heat flux
+    
+    ! for lsm=1,pbl=1
     pblhvar="PBLH",			  ! Planetary boundary layer height
+    
+    ! required with rad=1
+    swdown_var="SWDOWN",      ! Shortwave down at the surface for use with rad=1
+    lwdown_var="GLW",         ! Longwave down at the surface for use with rad=1
 
+    ! only required for some physics code (Noah LSM, Tiedke, KF(?))
     landvar="LANDMASK",		  ! land-sea mask (including lakes) as in WRF 1=land, 0 or 2=water
 
     ! NOTE, these variables should be in the high-resolution initial conditions netcdf file
@@ -197,6 +204,8 @@
     ! vegtype_var="IVGTYP",	  ! vegetation type index (classification to match VEGPARM.TBL file)
     ! vegfrac_var="VEGFRA",	  ! vegetation cover fraction
     ! soiltype_var="ISLTYP",  ! soil type index (classification to match SOILPARM.TBL file)
+    ! soil_deept_var="SOILTEMP", ! deep soil temperature, if soil_t_var is not specified this is used
+                                ! throughout the soil column, not just at the bottom.
     ! soil_t_var="TSLB",      ! soil temperature (4 levels)
     ! soil_vwc_var="SMOIS"	  ! soil water content (4 levels)
     
@@ -264,6 +273,7 @@
                                     ! the values stored in vegtype_var in the hi-res input var (default="MODIFIED_IGBP_MODIS_NOAH")
                                     ! common values are USGS, USGS-RUC, MODI-RUC, and NLCD40
                                     
+    monthly_vegfrac=true            ! read / use a 12 month phenology of vegetation fraction
     
     ! These all default to values defined in common LU_Categories
 !     urban_category = -1             ! Int: index that defines the urban category in LU_Categories
