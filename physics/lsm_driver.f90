@@ -70,7 +70,7 @@ module land_surface
     integer,allocatable, dimension(:,:) :: IVGTYP,ISLTYP
     integer :: ITIMESTEP, update_interval, cur_vegmonth
     
-    real, parameter :: kappa=0.4
+!     real, parameter :: kappa=0.4 ! this should be karman from data_structure
     real, parameter :: freezing_threshold=273.15
     real, parameter :: SMALL_PRESSURE=0.1 !note: 0.1Pa is very small 1e-10 wouldn't affect a single-precision float
     real, parameter :: SMALL_QV=1e-10
@@ -79,6 +79,7 @@ module land_surface
     character(len=MAXVARLENGTH) :: MMINLU
     logical :: FNDSOILW,FNDSNOWH,RDMAXALB
     integer :: num_soil_layers,ISURBAN,ISICE,ISWATER
+    integer :: exchange_term
     real*8  :: last_model_time
     
 contains
@@ -120,22 +121,59 @@ contains
         !from : http://www.srh.noaa.gov/images/epz/wxcalc/mixingRatio.pdf
         sat_mr=0.6219907*e_s/(p-e_s) !(kg/kg)
     end function sat_mr
+
     
     subroutine calc_exchange_coefficient(wind,tskin,airt,exchange_C)
         implicit none
-        real, dimension(:,:),intent(inout) :: wind,tskin,airt
+        real, dimension(:,:),intent(inout) :: wind,tskin
+        real, dimension(:,:,:),intent(inout) :: airt
         real,dimension(:,:),intent(inout) :: exchange_C
-        
-        ! Richardson number 
+
+        ! Richardson number
         where(wind==0) wind=1e-10
-        
-        Ri = gravity/airt * (airt-tskin)*z_atm/(wind**2)
-        
-        where(Ri<0)  exchange_C=lnz_atm_term * (1.0-(15.0*Ri)/(1.0+(base_exchange_term * sqrt((-1.0)*Ri))))
-        where(Ri>=0) exchange_C=lnz_atm_term * 1.0/((1.0+15.0*Ri)*sqrt(1.0+5.0*Ri))
-        
+
+        Ri = gravity/airt(:,1,:) * (airt(:,1,:)-tskin)*z_atm/(wind**2)
+
+!         print*,"--------------------------------------------------"
+!         print*, "Surface Richardson number"
+!         print*, Ri(128,103), airt(128,1,103), tskin(128,103), z_atm(128,103), wind(128,103)
+        where(Ri<0)  exchange_C = lnz_atm_term * (1.0-(15.0*Ri)/(1.0+(base_exchange_term * sqrt((-1.0)*Ri))))
+        where(Ri>=0) exchange_C = lnz_atm_term * 1.0/((1.0+15.0*Ri)*sqrt(1.0+5.0*Ri))
+!         print*, exchange_C(128,103), lnz_atm_term(128,103), base_exchange_term(128,103)
+
         where(exchange_C > MAX_EXCHANGE_C) exchange_C=MAX_EXCHANGE_C
     end subroutine calc_exchange_coefficient
+
+
+! eqn A11 in Appendix A.2 of Chen et al 1997 (see below for reference)
+    subroutine F2_formula(F2, z_atm, zo, Ri)
+        real, dimension(:,:), intent(inout) :: F2, z_atm, zo, Ri
+        
+        ! for the stable case from Mahrt (1987)
+        where(Ri>=0) F2=exp(-Ri)
+        ! for the unstable case from Holtslag and Beljaars (1989)
+        where(Ri<0)  F2=(1-(15*Ri)/(1+((70.5*karman**2 * sqrt(-Ri * z_atm/zo))/(lnz_atm_term**2))) )
+        
+    end subroutine F2_formula
+!From Appendix A.2 in Chen et al 1997 
+! Impact of Atmospheric Surface-layer Parameterizations in the new Land-surface Scheme of the Ncep Mesoscale ETA Model
+! Boundary-Layer Meteorology 85:391-421
+    subroutine calc_mahrt_holtslag_exchange_coefficient(wind,tskin,airt,znt, exchange_C)
+        implicit none
+        real, dimension(:,:),intent(inout) :: wind,tskin
+        real, dimension(:,:,:),intent(inout) :: airt
+        real,dimension(:,:),intent(inout) :: exchange_C, znt
+    
+        ! Richardson number 
+        where(wind==0) wind=1e-10
+        Ri = gravity/airt(:,1,:) * (airt(:,1,:)-tskin)*z_atm/(wind**2)
+        
+        call F2_formula(base_exchange_term, z_atm,znt,Ri)
+        
+        exchange_C = karman**2 * base_exchange_term / lnz_atm_term**2
+        
+        where(exchange_C > MAX_EXCHANGE_C) exchange_C=MAX_EXCHANGE_C
+    end subroutine calc_mahrt_holtslag_exchange_coefficient
     
     subroutine surface_diagnostics(HFX, QFX, TSK, QSFC, CHS2, CQS2,T2, Q2, PSFC)
         ! taken almost directly / exactly from WRF's module_sf_sfcdiags.F
@@ -305,6 +343,8 @@ contains
         
         write(*,*) "Initializing LSM"
         
+        exchange_term = 1
+        
         ime=size(domain%th,1)
         jme=size(domain%th,3)
         
@@ -397,10 +437,12 @@ contains
         endif
         
         ! defines the height of the middle of the first model level
-        z_atm=domain%z(:,1,:)
+        z_atm=domain%z(:,1,:)-domain%terrain
         lnz_atm_term = log((z_atm+Z0)/Z0)
-        base_exchange_term=(75*kappa**2 * sqrt((z_atm+Z0)/Z0)) / (lnz_atm_term**2)
-        lnz_atm_term=(kappa/lnz_atm_term)**2
+        if (exchange_term==1) then
+            base_exchange_term=(75*karman**2 * sqrt((z_atm+Z0)/Z0)) / (lnz_atm_term**2)
+            lnz_atm_term=(karman/lnz_atm_term)**2
+        endif
         
         update_interval=options%lsm_options%update_interval
         last_model_time=-999
@@ -429,7 +471,12 @@ contains
             
             ! exchange coefficients
             windspd=sqrt(domain%u10**2+domain%v10**2)
-            call calc_exchange_coefficient(windspd,domain%skin_t,domain%T2m,CHS)
+            if (exchange_term==1) then
+                call calc_exchange_coefficient(windspd,domain%skin_t,domain%T,CHS)
+            elseif (exchange_term==2) then
+                call calc_mahrt_holtslag_exchange_coefficient(windspd,domain%skin_t,domain%T,domain%znt,CHS)
+            endif
+!             print*, CHS(128,103)
             CHS2=CHS
             CQS2=CHS
             
@@ -497,8 +544,8 @@ contains
                 endif
                 
                 ! update T2m and Q2m prior to LSM call to make sure everything is in sync
-                call surface_diagnostics(domain%sensible_heat, QFX, domain%skin_t, QSFC,  &
-                                         CHS2, CQS2,domain%T2m, domain%Q2m, domain%psfc)
+!                 call surface_diagnostics(domain%sensible_heat, QFX, domain%skin_t, QSFC,  &
+!                                          CHS2, CQS2,domain%T2m, domain%Q2m, domain%psfc)
                                          
                 call lsm_noah(domain%dz_inter,domain%qv,domain%p_inter,domain%th*domain%pii,domain%skin_t,  &
                             domain%sensible_heat,QFX,domain%latent_heat,domain%ground_heat, &
@@ -533,13 +580,27 @@ contains
                 
                 ! now that znt has been updated, we need to recalculate terms
                 lnz_atm_term = log((z_atm+domain%znt)/domain%znt)
-                base_exchange_term=(75*kappa**2 * sqrt((z_atm+domain%znt)/domain%znt)) / (lnz_atm_term**2)
-                lnz_atm_term=(kappa/lnz_atm_term)**2
+                if (exchange_term==1) then
+                    base_exchange_term=(75*karman**2 * sqrt((z_atm+domain%znt)/domain%znt)) / (lnz_atm_term**2)
+                    lnz_atm_term=(karman/lnz_atm_term)**2
+                endif
                                 
                 ! note this is more or less just diagnostic and could be removed
                 domain%lwup=stefan_boltzmann*EMISS*domain%skin_t**4
                 RAINBL=domain%rain
                 
+!                 i=128
+!                 j=103
+!                 print*,"            ---------------------------"
+!                 print*, "   soil_t ", "       skin_t ", "         T2m"
+!                 print*, domain%soil_t(i,1,j), domain%skin_t(i,j), domain%T2m(i,j)
+!                 print*, "   Tair ", "        sensible ", "        CHS"
+!                 print*, domain%pii(i,1,j)*domain%th(i,1,j), domain%sensible_heat(i,j), CHS(i,j)
+!                 print*, "    SWD  ", "          LWD ", "         LWU "
+!                 print*, domain%swdown(i,j), domain%lwdown(i,j), domain%lwup(i,j)
+!                 print*, "ln z term,        base exchange term        wind"
+!                 print*, lnz_atm_term(i,j), base_exchange_term(i,j), windspd(i,j)
+
 !                 print*, "WARNING!! enforcing surface sensible heat flux greater than 0!!"
 !                 where(domain%sensible_heat<0) domain%sensible_heat=0
 !                 do j=1,ny
