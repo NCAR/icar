@@ -75,6 +75,7 @@ module land_surface
     real, parameter :: SMALL_PRESSURE=0.1 !note: 0.1Pa is very small 1e-10 wouldn't affect a single-precision float
     real, parameter :: SMALL_QV=1e-10
     real, parameter :: MAX_EXCHANGE_C = 0.5
+    real, parameter :: MIN_EXCHANGE_C = 0.001
     
     character(len=MAXVARLENGTH) :: MMINLU
     logical :: FNDSOILW,FNDSNOWH,RDMAXALB
@@ -136,12 +137,14 @@ contains
 
 !         print*,"--------------------------------------------------"
 !         print*, "Surface Richardson number"
-!         print*, Ri(128,103), airt(128,1,103), tskin(128,103), z_atm(128,103), wind(128,103)
+!         print*, Ri(139,69), airt(139,1,69), tskin(139,69), z_atm(139,69), wind(139,69)
         where(Ri<0)  exchange_C = lnz_atm_term * (1.0-(15.0*Ri)/(1.0+(base_exchange_term * sqrt((-1.0)*Ri))))
         where(Ri>=0) exchange_C = lnz_atm_term * 1.0/((1.0+15.0*Ri)*sqrt(1.0+5.0*Ri))
-!         print*, exchange_C(128,103), lnz_atm_term(128,103), base_exchange_term(128,103)
+!         print*, " Exchange         lnz_term,           base_term"
+!         print*, exchange_C(139,69), lnz_atm_term(139,69), base_exchange_term(139,69)
 
         where(exchange_C > MAX_EXCHANGE_C) exchange_C=MAX_EXCHANGE_C
+        where(exchange_C < MIN_EXCHANGE_C) exchange_C=MIN_EXCHANGE_C
     end subroutine calc_exchange_coefficient
 
 
@@ -589,15 +592,15 @@ contains
                 domain%lwup=stefan_boltzmann*EMISS*domain%skin_t**4
                 RAINBL=domain%rain
                 
-!                 i=128
-!                 j=103
+!                 i=139
+!                 j=69
 !                 print*,"            ---------------------------"
 !                 print*, "   soil_t ", "       skin_t ", "         T2m"
 !                 print*, domain%soil_t(i,1,j), domain%skin_t(i,j), domain%T2m(i,j)
 !                 print*, "   Tair ", "        sensible ", "        CHS"
-!                 print*, domain%pii(i,1,j)*domain%th(i,1,j), domain%sensible_heat(i,j), CHS(i,j)
+!                 print*, domain%T(i,1,j), domain%sensible_heat(i,j), CHS(i,j)
 !                 print*, "    SWD  ", "          LWD ", "         LWU "
-!                 print*, domain%swdown(i,j), domain%lwdown(i,j), domain%lwup(i,j)
+!                 print*, domain%swdown(i,j), domain%lwdown(i,j), domain%lwup(i,j), domain%ground_heat(i,j)
 !                 print*, "ln z term,        base exchange term        wind"
 !                 print*, lnz_atm_term(i,j), base_exchange_term(i,j), windspd(i,j)
 
