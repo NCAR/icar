@@ -871,15 +871,15 @@ contains
                         endif
                     end do
                     
-                    east  = max(i-winsz,1)
-                    west  = min(i+winsz,nx)
+                    west  = max(i-winsz,1)
+                    east  = min(i+winsz,nx)
                     bottom= max(j-winsz,1)
                     top   = min(j+winsz,nz)
                     south = max(k-winsz,1)
                     north = min(k+winsz,ny)
-                    n = (((west-east)+1) * ((top-bottom)+1) * ((north-south)+1))
+                    n = (((east-west)+1) * ((top-bottom)+1) * ((north-south)+1))
                     
-                    curnsq = sum(log(domain%nsquared(east:west, bottom:top,south:north)))
+                    curnsq = sum(log(domain%nsquared(west:east, bottom:top,south:north)))
                     curnsq = curnsq / n
 
                     npos=1
