@@ -197,5 +197,5 @@ The ICAR administrator and other developers will review your pull request and de
 
 ### Git workflow
 
-For us to leverage Git to its full potential, we have implemented a Git-oriented workflow. This requires developers to adhere to a few rules regarding branch names and merge requests. A full description of the workflow we use can be found [here](https://github.com/NCAR/icar/docs/howto/icar_git_workflow.md).
+For us to leverage Git to its full potential, we have implemented a Git-oriented workflow. This requires developers to adhere to a few rules regarding branch names and merge requests. A full description of the workflow we use can be found [here](https://github.com/NCAR/icar/blob/master/docs/howto/icar_git_workflow.md).
 
