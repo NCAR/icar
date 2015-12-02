@@ -113,6 +113,9 @@
     ! 	depending on the forcing data
     ! at a minimum, this should be >= dxlow 
     smooth_wind_distance=72000,
+    
+    ! THIS SHOULD BE MOVED TO LT_PARAMETERS
+    vert_smooth=2, ! number of vertical levels to look up and down when calculating brunt vaisalla frequency
 
     ! to run an ideal simulation in which the boundary conditions are held constant
     ideal=false,
@@ -297,6 +300,7 @@
     ! variable_N = False,   ! set this to true to calculate a time-varying brunt-vaisalla frequency
     ! linear_contribution=1.0, ! set this to the fraction of the linear perturbation you wish to use (1.0 = full/standard linear field)
     spatial_linear_fields=true,! use a spatially variable wind field when calculating the linear wind field (doesn't permit variable_N)
+    smooth_nsq=.False.      ! set to true to provide additional vertical smoothing of Nsq within spatial_linear_winds
 
     ! NOTE THIS DOES NOT WORK RIGHT NOW
     ! remove_lowres_linear=false,   ! attempt to "remove" the low resolution linear winds from the forcing data
