@@ -370,7 +370,8 @@ module data_structures
         integer :: stability_window_size    ! window to average nsq over
         real :: max_stability               ! limits on the calculated Brunt Vaisala Frequency
         real :: min_stability               ! these may need to be a little narrower. 
-        logical :: variable_N           ! Compute the Brunt Vaisala Frequency (N^2) every time step
+        logical :: variable_N               ! Compute the Brunt Vaisala Frequency (N^2) every time step
+        logical :: smooth_nsq               ! Smooth the Calculated N^2 over vert_smooth vertical levels
         
         real :: N_squared                   ! static Brunt Vaisala Frequency (N^2) to use
         real :: linear_contribution         ! fractional contribution of linear perturbation to wind field (e.g. u_hat multiplied by this)

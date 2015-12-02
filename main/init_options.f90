@@ -630,6 +630,7 @@ contains
         integer :: name_unit
 
         logical :: variable_N           ! Compute the Brunt Vaisala Frequency (N^2) every time step
+        logical :: smooth_nsq               ! Smooth the Calculated N^2 over vert_smooth vertical levels
         integer :: buffer                   ! number of grid cells to buffer around the domain MUST be >=1
         integer :: stability_window_size    ! window to average nsq over
         real :: max_stability               ! limits on the calculated Brunt Vaisala Frequency
@@ -656,7 +657,7 @@ contains
         character(len=MAXFILELENGTH) :: u_LUT_Filename, v_LUT_Filename
         
         ! define the namelist
-        namelist /lt_parameters/ variable_N, buffer, stability_window_size, max_stability, min_stability, &
+        namelist /lt_parameters/ variable_N, smooth_nsq, buffer, stability_window_size, max_stability, min_stability, &
                                  linear_contribution, linear_update_fraction, N_squared, &
                                  remove_lowres_linear, rm_N_squared, rm_linear_contribution, &
                                  spatial_linear_fields, linear_mask, nsq_calibration, &
@@ -673,6 +674,7 @@ contains
         
         ! set default values
         variable_N = .True.
+        smooth_nsq = .False.
         buffer = 50                    ! number of grid cells to buffer around the domain MUST be >=1
         stability_window_size = 2      ! window to average nsq over
         max_stability = 6e-4           ! limits on the calculated Brunt Vaisala Frequency
@@ -719,6 +721,7 @@ contains
         lt_options%max_stability = max_stability
         lt_options%min_stability = min_stability
         lt_options%variable_N = variable_N
+        lt_options%smooth_nsq = smooth_nsq
         lt_options%N_squared = N_squared
         lt_options%linear_contribution = linear_contribution
         lt_options%remove_lowres_linear = remove_lowres_linear
