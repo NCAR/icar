@@ -240,6 +240,14 @@ contains
         domain%snow=0
         allocate(domain%graupel(nx,ny))     ! accumulated graupel fall
         domain%graupel=0
+        allocate(domain%rain_bucket(nx,ny))        ! accumulated total rainfall [kg/m^2]
+        domain%rain_bucket=0
+        allocate(domain%crain_bucket(nx,ny))       ! accumulated convective rainfall
+        domain%crain_bucket=0
+        allocate(domain%snow_bucket(nx,ny))        ! accumulated snow fall
+        domain%snow_bucket=0
+        allocate(domain%graupel_bucket(nx,ny))     ! accumulated graupel fall
+        domain%graupel_bucket=0
         allocate(domain%current_rain(nx,ny))! rain fall in current time step
         domain%current_rain=0
         allocate(domain%current_snow(nx,ny))! snow fall in current time step
@@ -277,8 +285,14 @@ contains
         domain%skin_t=280
         allocate(domain%snow_swe(nx,ny))        ! snow water equivalent
         domain%snow_swe=0
-        allocate(domain%vegfrac(nx,ny))         ! vegetation cover fraction (%)
+        
+        if (options%lsm_options%monthly_vegfrac) then
+            allocate(domain%vegfrac(nx,ny,12))        ! vegetation cover fraction (%)
+        else
+            allocate(domain%vegfrac(nx,ny,1))         ! vegetation cover fraction (%)
+        endif
         domain%vegfrac=50 !% veg cover
+        
         allocate(domain%canopy_water(nx,ny))    ! canopy water content
         domain%canopy_water=0
         allocate(domain%soil_type(nx,ny))       ! USGS soil type
@@ -354,21 +368,37 @@ contains
         implicit none
         type(options_type), intent(in) :: options
         type(domain_type), intent(inout):: domain
+        ! these are temporary variables used for IO before storing data in the domain data structure
         integer,dimension(:,:),allocatable :: temp_idata
         real,dimension(:,:,:),allocatable :: temp_rdata
         real,dimension(:,:),allocatable :: temp_rdata_2d
-        integer:: buffer,nx,ny,nz
+        
+        integer:: buffer,nx,ny,nz, i
+        
         buffer=options%buffer
         nx=size(domain%veg_type,1)+buffer*2
         ny=size(domain%veg_type,2)+buffer*2
         nz=size(domain%soil_t,2)
         
         
-        ! Veg cover fraction = 2D real
+        ! Veg cover fraction = 2D/3D real
         if (options%vegfrac_var.ne."") then
-            call io_read2d(options%init_conditions_file,options%vegfrac_var,temp_rdata_2d,1)
-            domain%vegfrac=temp_rdata_2d(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
-            deallocate(temp_rdata_2d)
+            ! if we are supposed to read a veg fraction for each month then it will be a 3D variable
+            if (options%lsm_options%monthly_vegfrac) then
+                call io_read3d(options%init_conditions_file,options%vegfrac_var,temp_rdata,1)
+                domain%vegfrac=temp_rdata(1+buffer:nx-buffer,1+buffer:ny-buffer,:)  ! subset the data by buffer grid cells
+                deallocate(temp_rdata)
+            else
+                ! otherwise we just read a 2D variable and store it in the first time entry in the 3D vegfrac field
+                call io_read2d(options%init_conditions_file,options%vegfrac_var,temp_rdata_2d,1)
+                domain%vegfrac(:,:,1)=temp_rdata_2d(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
+                deallocate(temp_rdata_2d)
+            endif
+        endif
+        ! if the input vegetation fraction is a fraction (0-1) 
+        ! then convert it to a percent
+        if (maxval(domain%vegfrac)<=1) then
+            domain%vegfrac=domain%vegfrac*100
         endif
 
         ! Veg TYPE = 2D integer
@@ -405,6 +435,13 @@ contains
         if (options%soil_deept_var.ne."") then
             call io_read2d(options%init_conditions_file,options%soil_deept_var,temp_rdata_2d,1)
             domain%soil_tdeep=temp_rdata_2d(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
+            where(domain%soil_tdeep<200) domain%soil_tdeep=200 ! mitigates zeros that can cause problems
+            if (options%soil_t_var=="") then
+                print*, "Missing explicit soil T, using deep soil T for all depths"
+                do i=1,nz
+                    domain%soil_t(:,i,:)=domain%soil_tdeep
+                end do
+            endif
             deallocate(temp_rdata_2d)
         endif
         
@@ -430,11 +467,12 @@ contains
         call io_read2d(options%init_conditions_file,options%vlon_hi,domain%v_geo%lon,1)
         if (options%landvar/="") then
             call io_read2d(options%init_conditions_file,options%landvar,domain%landmask,1)
+            where(domain%landmask==0) domain%landmask=kLC_WATER
         else
             nx=size(domain%lat,1)
             ny=size(domain%lat,2)
             allocate(domain%landmask(nx,ny))
-            domain%landmask=1 !if we weren't supplied a landmask field, assume all is land (what we care about anyway)
+            domain%landmask=kLC_LAND !if we weren't supplied a landmask field, assume all is land (what we care about anyway)
         endif
         
         ! remove n grid cells from all sides of the domain if requested

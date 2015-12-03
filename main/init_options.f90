@@ -201,9 +201,9 @@ contains
         integer :: name_unit
         
 !       variables to be used in the namelist
-        integer::pbl,lsm,mp,rad,conv,adv,wind
+        integer::pbl,lsm,water,mp,rad,conv,adv,wind
 !       define the namelist
-        namelist /physics/ pbl,lsm,mp,rad,conv,adv,wind
+        namelist /physics/ pbl,lsm,water,mp,rad,conv,adv,wind
         
 !       default values for physics options (advection+linear winds+simple_microphysics)
         pbl = 0 ! 0 = no PBL, 
@@ -215,6 +215,10 @@ contains
                 ! 1 = Fluxes from GCM, 
                 ! 2 = simple LSM, (not complete)
                 ! 3 = Noah LSM
+                
+        water = 0 ! 0 = no open water fluxes, 
+                ! 1 = Fluxes from GCM, (must set lsm=1?)
+                ! 2 = Simple fluxes, (not complete)
                 
         mp  = 1 ! 0 = no MP,  
                 ! 1 = Thompson et al (2008), 
@@ -245,6 +249,7 @@ contains
         options%physics%convection=conv
         options%physics%advection=adv
         options%physics%landsurface=lsm
+        options%physics%watersurface=water
         options%physics%microphysics=mp
         options%physics%radiation=rad
         options%physics%windtype=wind
@@ -625,6 +630,7 @@ contains
         integer :: name_unit
 
         logical :: variable_N           ! Compute the Brunt Vaisala Frequency (N^2) every time step
+        logical :: smooth_nsq               ! Smooth the Calculated N^2 over vert_smooth vertical levels
         integer :: buffer                   ! number of grid cells to buffer around the domain MUST be >=1
         integer :: stability_window_size    ! window to average nsq over
         real :: max_stability               ! limits on the calculated Brunt Vaisala Frequency
@@ -651,7 +657,7 @@ contains
         character(len=MAXFILELENGTH) :: u_LUT_Filename, v_LUT_Filename
         
         ! define the namelist
-        namelist /lt_parameters/ variable_N, buffer, stability_window_size, max_stability, min_stability, &
+        namelist /lt_parameters/ variable_N, smooth_nsq, buffer, stability_window_size, max_stability, min_stability, &
                                  linear_contribution, linear_update_fraction, N_squared, &
                                  remove_lowres_linear, rm_N_squared, rm_linear_contribution, &
                                  spatial_linear_fields, linear_mask, nsq_calibration, &
@@ -668,6 +674,7 @@ contains
         
         ! set default values
         variable_N = .True.
+        smooth_nsq = .False.
         buffer = 50                    ! number of grid cells to buffer around the domain MUST be >=1
         stability_window_size = 2      ! window to average nsq over
         max_stability = 6e-4           ! limits on the calculated Brunt Vaisala Frequency
@@ -714,6 +721,7 @@ contains
         lt_options%max_stability = max_stability
         lt_options%min_stability = min_stability
         lt_options%variable_N = variable_N
+        lt_options%smooth_nsq = smooth_nsq
         lt_options%N_squared = N_squared
         lt_options%linear_contribution = linear_contribution
         lt_options%remove_lowres_linear = remove_lowres_linear
@@ -795,31 +803,26 @@ contains
         character(len=MAXVARLENGTH), intent(in) :: LU_Categories
         
         if (trim(LU_Categories)=="MODIFIED_IGBP_MODIS_NOAH") then
-            print*, "Setting MODIFIED_IGBP_MODIS_NOAH default categories"
             if (urban_category==-1) urban_category = 13
             if (ice_category==-1)   ice_category = 15
             if (water_category==-1) water_category = 17
         elseif (trim(LU_Categories)=="USGS") then
-            print*, "Setting USGS default categories"
             if (urban_category==-1) urban_category = 1
             if (ice_category==-1)   ice_category = -1
             if (water_category==-1) water_category = 16
         elseif (trim(LU_Categories)=="USGS-RUC") then
-            print*, "Setting USGS-RUC default categories"
             if (urban_category==-1) urban_category = 1
             if (ice_category==-1)   ice_category = 24
             if (water_category==-1) water_category = 16
             ! also note, lakes_category = 28
             print*, "WARNING: not handling lake category (28)"
         elseif (trim(LU_Categories)=="MODI-RUC") then
-            print*, "Setting MODI-RUC default categories"
             if (urban_category==-1) urban_category = 13
             if (ice_category==-1)   ice_category = 15
             if (water_category==-1) water_category = 17
             ! also note, lakes_category = 21
             print*, "WARNING: not handling lake category (21)"
         elseif (trim(LU_Categories)=="NLCD40") then
-            print*, "Setting NLCD40 default categories"
             if (urban_category==-1) urban_category = 13
             if (ice_category==-1)   ice_category = 15 ! and 22?
             if (water_category==-1) water_category = 17 ! and 21
@@ -838,13 +841,15 @@ contains
         integer :: name_unit
 
         character(len=MAXVARLENGTH) :: LU_Categories ! Category definitions (e.g. USGS, MODIFIED_IGBP_MODIS_NOAH)
+        logical :: monthly_vegfrac                   ! read in 12 months of vegfrac data
         integer :: update_interval                   ! minimum number of seconds between LSM updates
         integer :: urban_category                    ! index that defines the urban category in LU_Categories
         integer :: ice_category                      ! index that defines the ice category in LU_Categories
         integer :: water_category                    ! index that defines the water category in LU_Categories
         
         ! define the namelist
-        namelist /lsm_parameters/ LU_Categories, update_interval, urban_category, ice_category, water_category
+        namelist /lsm_parameters/ LU_Categories, update_interval, monthly_vegfrac, &
+                                  urban_category, ice_category, water_category
         
          ! because adv_options could be in a separate file
          if (options%use_lsm_options) then
@@ -857,6 +862,7 @@ contains
         ! set default values
         LU_Categories   = "MODIFIED_IGBP_MODIS_NOAH"
         update_interval = 300 ! 5 minutes
+        monthly_vegfrac = .False.
         
         ! default values for these will be set after reading LU_Categories
         urban_category  = -1
@@ -874,6 +880,7 @@ contains
         
         ! store everything in the lsm_options structure
         lsm_options%LU_Categories   = LU_Categories
+        lsm_options%monthly_vegfrac = monthly_vegfrac
         lsm_options%update_interval = update_interval
         lsm_options%urban_category  = urban_category
         lsm_options%ice_category    = ice_category

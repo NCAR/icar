@@ -52,6 +52,49 @@ module output
     integer :: nx,ny,nz,i,nsoil
     
 contains
+    
+    subroutine tip_precip_to_buckets(domain)
+        ! Check if precip variables have exceeded kPRECIP_BUCKET_SIZE and if so, "tip" into the bucket
+        ! i.e. add one to the bucket and subtract kPRECIP_BUCKET_SIZE from the precip variable
+        ! and repeat while precip variable > kPRECIP_BUCKET_SIZE
+        implicit none
+        type(domain_type), intent(inout) :: domain
+        
+        integer :: nx, ny, i, j
+        
+        nx=size(domain%rain,1)
+        ny=size(domain%rain,2)
+        do j=2,ny-2
+            do i=2,nx-1
+                if (domain%rain(i,j)>kPRECIP_BUCKET_SIZE) then
+                    do while (domain%rain(i,j)>kPRECIP_BUCKET_SIZE)
+                        domain%rain(i,j) = domain%rain(i,j)-kPRECIP_BUCKET_SIZE
+                        domain%rain_bucket(i,j) = domain%rain_bucket(i,j)+1
+                        last_rain(i,j)=last_rain(i,j)-kPRECIP_BUCKET_SIZE
+                    end do
+                endif
+                if (domain%crain(i,j)>kPRECIP_BUCKET_SIZE) then
+                    do while (domain%crain(i,j)>kPRECIP_BUCKET_SIZE)
+                        domain%crain(i,j) = domain%crain(i,j)-kPRECIP_BUCKET_SIZE
+                        domain%crain_bucket(i,j) = domain%crain_bucket(i,j)+1
+                    end do
+                endif
+                if (domain%snow(i,j)>kPRECIP_BUCKET_SIZE) then
+                    do while (domain%snow(i,j)>kPRECIP_BUCKET_SIZE)
+                        domain%snow(i,j) = domain%snow(i,j)-kPRECIP_BUCKET_SIZE
+                        domain%snow_bucket(i,j) = domain%snow_bucket(i,j)+1
+                    end do
+                endif
+                if (domain%graupel(i,j)>kPRECIP_BUCKET_SIZE) then
+                    do while (domain%graupel(i,j)>kPRECIP_BUCKET_SIZE)
+                        domain%graupel(i,j) = domain%graupel(i,j)-kPRECIP_BUCKET_SIZE
+                        domain%graupel_bucket(i,j) = domain%graupel_bucket(i,j)+1
+                    end do
+                endif
+            end do
+        end do
+    end subroutine tip_precip_to_buckets
+    
     subroutine create_file(filename,options)
         character(len=255), intent(in) :: filename
         type(options_type), intent(in) :: options
@@ -78,11 +121,12 @@ contains
         call check( nf90_put_att(ncid,NF90_GLOBAL,"source","Intermediate Complexity Atmospheric Model version:"//trim(options%version)), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"history","Created:"//todays_date_time//UTCoffset), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"references", &
-                    "Gutmann et al. 2015: The Intermediate Complexity Atmospheric Model. JHM (in prep)"), trim(err))
+                    "Gutmann et al. 2016: The Intermediate Complexity Atmospheric Model. JHM (in revision)"), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"comment",trim(options%comment)), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"contact","Ethan Gutmann : gutmann@ucar.edu"), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"git",VERSION), trim(err))
-    
+
+        call check( nf90_put_att(ncid,NF90_GLOBAL,"bucket_size",kPRECIP_BUCKET_SIZE), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"dx",options%dx), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"wind_smoothing",options%smooth_wind_distance), trim(err))
         
@@ -101,12 +145,13 @@ contains
                 call check( nf90_put_att(ncid,NF90_GLOBAL,"remove_lin_fraction",options%lt_options%rm_linear_contribution), trim(err))
             endif
             if (options%lt_options%spatial_linear_fields) then
-                call check( nf90_put_att(ncid,NF90_GLOBAL,"variable_N","spatially varying N"), trim(err))
+                call check( nf90_put_att(ncid,NF90_GLOBAL,"spatially_variable_N","spatially varying N"), trim(err))
             endif
         endif
         call check( nf90_put_att(ncid,NF90_GLOBAL,"microphysics",options%physics%microphysics), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"advection",options%physics%advection), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"boundarylayer",options%physics%boundarylayer), trim(err))
+        call check( nf90_put_att(ncid,NF90_GLOBAL,"watersurface",options%physics%watersurface), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"landsurface",options%physics%landsurface), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"radiation",options%physics%radiation), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"convection",options%physics%convection), trim(err))
@@ -413,6 +458,52 @@ contains
             call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
             varid(19)=temp_id
         endif
+
+        call check( nf90_def_var(ncid, "ts", NF90_REAL, dimtwo_time, temp_id), trim(err)//"ts" )
+        call check( nf90_put_att(ncid,temp_id,"standard_name","surface_temperature"))
+        call check( nf90_put_att(ncid,temp_id,"long_name","Land surface skin temperature"))
+        call check( nf90_put_att(ncid,temp_id,"units","K"))
+        varid(28)=temp_id
+
+        ! diagnosed surface fields (e.g. T2m, U10)
+        call check( nf90_def_var(ncid, "ta2m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"ta2m" )
+        call check( nf90_put_att(ncid,temp_id,"standard_name","air_temperature"))
+        call check( nf90_put_att(ncid,temp_id,"long_name","Bulk air temperature at 2m"))
+        call check( nf90_put_att(ncid,temp_id,"units","K"))
+        varid(34)=temp_id
+
+        call check( nf90_def_var(ncid, "hus2m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"hus2m" )
+        call check( nf90_put_att(ncid,temp_id,"standard_name","specific_humidity"))
+        call check( nf90_put_att(ncid,temp_id,"long_name","Bulk air specific humidity at 2m"))
+        call check( nf90_put_att(ncid,temp_id,"units","kg kg-1"))
+        varid(35)=temp_id
+        
+        call check( nf90_def_var(ncid, "u10m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"u10m" )
+        call check( nf90_put_att(ncid,temp_id,"standard_name","eastward_10m_wind_speed"))
+        call check( nf90_put_att(ncid,temp_id,"long_name","Eastward wind speed at 2m"))
+        call check( nf90_put_att(ncid,temp_id,"units","m s-1"))
+        varid(36)=temp_id
+        
+        call check( nf90_def_var(ncid, "v10m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"v10m" )
+        call check( nf90_put_att(ncid,temp_id,"standard_name","northward_10m_wind_speed"))
+        call check( nf90_put_att(ncid,temp_id,"long_name","Northward wind speed at 2m"))
+        call check( nf90_put_att(ncid,temp_id,"units","m s-1"))
+        varid(37)=temp_id
+        
+        call check( nf90_def_var(ncid, "hfss", NF90_REAL, dimtwo_time, temp_id), trim(err)//"hfss" )
+        call check( nf90_put_att(ncid,temp_id,"standard_name","surface_upward_sensible_heat_flux"))
+        call check( nf90_put_att(ncid,temp_id,"long_name","Sensible heat flux"))
+        call check( nf90_put_att(ncid,temp_id,"positive","up"))
+        call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
+        varid(23)=temp_id
+
+        call check( nf90_def_var(ncid, "hfls", NF90_REAL, dimtwo_time, temp_id), trim(err)//"hfls" )
+        call check( nf90_put_att(ncid,temp_id,"standard_name","surface_upward_latent_heat_flux"))
+        call check( nf90_put_att(ncid,temp_id,"long_name","Latent Heat Flux"))
+        call check( nf90_put_att(ncid,temp_id,"positive","up"))
+        call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
+        varid(24)=temp_id
+        
         
         ! these should only be output for lsm packages that compute them
         if (options%physics%landsurface==kLSM_NOAH) then
@@ -422,20 +513,6 @@ contains
             call check( nf90_put_att(ncid,temp_id,"positive","up"))
             call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
             varid(29)=temp_id
-    
-            call check( nf90_def_var(ncid, "hfss", NF90_REAL, dimtwo_time, temp_id), trim(err)//"hfss" )
-            call check( nf90_put_att(ncid,temp_id,"standard_name","surface_upward_sensible_heat_flux"))
-            call check( nf90_put_att(ncid,temp_id,"long_name","Sensible heat flux"))
-            call check( nf90_put_att(ncid,temp_id,"positive","up"))
-            call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
-            varid(23)=temp_id
-    
-            call check( nf90_def_var(ncid, "hfls", NF90_REAL, dimtwo_time, temp_id), trim(err)//"hfls" )
-            call check( nf90_put_att(ncid,temp_id,"standard_name","surface_upward_latent_heat_flux"))
-            call check( nf90_put_att(ncid,temp_id,"long_name","Latent Heat Flux"))
-            call check( nf90_put_att(ncid,temp_id,"positive","up"))
-            call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
-            varid(24)=temp_id
     
             call check( nf90_def_var(ncid, "hfgs", NF90_REAL, dimtwo_time, temp_id), trim(err)//"hfgs" )
             call check( nf90_put_att(ncid,temp_id,"standard_name","upward_heat_flux_at_ground_level_in_soil"))
@@ -457,12 +534,6 @@ contains
             call check( nf90_put_att(ncid,temp_id,"units","K"))
             varid(27)=temp_id
     
-            call check( nf90_def_var(ncid, "ts", NF90_REAL, dimtwo_time, temp_id), trim(err)//"ts" )
-            call check( nf90_put_att(ncid,temp_id,"standard_name","surface_temperature"))
-            call check( nf90_put_att(ncid,temp_id,"long_name","Land surface skin temperature"))
-            call check( nf90_put_att(ncid,temp_id,"units","K"))
-            varid(28)=temp_id
-    
             call check( nf90_def_var(ncid, "snw", NF90_REAL, dimtwo_time, temp_id), trim(err)//"snw" )
             call check( nf90_put_att(ncid,temp_id,"standard_name","surface_snow_amount"))
             call check( nf90_put_att(ncid,temp_id,"long_name","Snow water equivalent"))
@@ -475,33 +546,7 @@ contains
             call check( nf90_put_att(ncid,temp_id,"units","kg m-2"))
             varid(31)=temp_id
             
-            ! diagnosed surface fields (e.g. T2m, U10)
-            call check( nf90_def_var(ncid, "ta2m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"ta2m" )
-            call check( nf90_put_att(ncid,temp_id,"standard_name","air_temperature"))
-            call check( nf90_put_att(ncid,temp_id,"long_name","Bulk air temperature at 2m"))
-            call check( nf90_put_att(ncid,temp_id,"units","K"))
-            varid(34)=temp_id
-
-            call check( nf90_def_var(ncid, "hus2m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"hus2m" )
-            call check( nf90_put_att(ncid,temp_id,"standard_name","specific_humidity"))
-            call check( nf90_put_att(ncid,temp_id,"long_name","Bulk air specific humidity at 2m"))
-            call check( nf90_put_att(ncid,temp_id,"units","kg kg-1"))
-            varid(35)=temp_id
         endif
-        
-        call check( nf90_def_var(ncid, "u10m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"u10m" )
-        call check( nf90_put_att(ncid,temp_id,"standard_name","eastward_10m_wind_speed"))
-        call check( nf90_put_att(ncid,temp_id,"long_name","Eastward wind speed at 2m"))
-        call check( nf90_put_att(ncid,temp_id,"units","m s-1"))
-        varid(36)=temp_id
-        
-        call check( nf90_def_var(ncid, "v10m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"v10m" )
-        call check( nf90_put_att(ncid,temp_id,"standard_name","northward_10m_wind_speed"))
-        call check( nf90_put_att(ncid,temp_id,"long_name","Northward wind speed at 2m"))
-        call check( nf90_put_att(ncid,temp_id,"units","m s-1"))
-        varid(37)=temp_id
-        
-        
         
         ! End define mode. This tells netCDF we are done defining metadata.
         call check( nf90_enddef(ncid) )
@@ -601,14 +646,26 @@ contains
             call check( nf90_inq_varid(ncid, "rlds", temp_id), trim(err)//"rlds" )
             varid(19)=temp_id
         endif
+        
+        call check( nf90_inq_varid(ncid, "ts",     temp_id), trim(err)//"ts" )
+        varid(28)=temp_id
+        call check( nf90_inq_varid(ncid, "ta2m", temp_id), trim(err)//"ta2m" )
+        varid(34)=temp_id
+        call check( nf90_inq_varid(ncid, "hus2m", temp_id), trim(err)//"hus2m" )
+        varid(35)=temp_id
+        call check( nf90_inq_varid(ncid, "u10m", temp_id), trim(err)//"u10m" )
+        varid(36)=temp_id
+        call check( nf90_inq_varid(ncid, "v10m", temp_id), trim(err)//"v10m" )
+        varid(37)=temp_id
+        call check( nf90_inq_varid(ncid, "hfss",   temp_id), trim(err)//"hfss" )
+        varid(23)=temp_id
+        call check( nf90_inq_varid(ncid, "hfls",  temp_id), trim(err)//"hfls" )
+        varid(24)=temp_id
+        
         ! these should only be output for lsm packages that compute them
         if (options%physics%landsurface==kLSM_NOAH) then
             call check( nf90_inq_varid(ncid, "rlus",  temp_id), trim(err)//"rlus" )
             varid(29)=temp_id
-            call check( nf90_inq_varid(ncid, "hfss",   temp_id), trim(err)//"hfss" )
-            varid(23)=temp_id
-            call check( nf90_inq_varid(ncid, "hfls",  temp_id), trim(err)//"hfls" )
-            varid(24)=temp_id
             call check( nf90_inq_varid(ncid, "hfgs",  temp_id), trim(err)//"hfgs" )
             varid(25)=temp_id
             dimids(2)=soil_id
@@ -616,21 +673,11 @@ contains
             varid(26)=temp_id
             call check( nf90_inq_varid(ncid, "soil_t", temp_id), trim(err)//"soil_t" )
             varid(27)=temp_id
-            call check( nf90_inq_varid(ncid, "ts",     temp_id), trim(err)//"ts" )
-            varid(28)=temp_id
             call check( nf90_inq_varid(ncid, "snw",    temp_id), trim(err)//"snw" )
             varid(30)=temp_id
             call check( nf90_inq_varid(ncid, "canwat", temp_id), trim(err)//"canwat" )
             varid(31)=temp_id
-            call check( nf90_inq_varid(ncid, "ta2m", temp_id), trim(err)//"ta2m" )
-            varid(34)=temp_id
-            call check( nf90_inq_varid(ncid, "hus2m", temp_id), trim(err)//"hus2m" )
-            varid(35)=temp_id
         endif
-        call check( nf90_inq_varid(ncid, "u10m", temp_id), trim(err)//"u10m" )
-        varid(36)=temp_id
-        call check( nf90_inq_varid(ncid, "v10m", temp_id), trim(err)//"v10m" )
-        varid(37)=temp_id
         
     end subroutine setup_varids
     
@@ -642,7 +689,7 @@ contains
     subroutine write_domain(domain,options,timestep,inputfilename)
         implicit none
         ! This is the name of the data file and variable we will read. 
-        type(domain_type),intent(in)::domain
+        type(domain_type),intent(inout)::domain
         type(options_type),intent(in)::options
         integer,intent(in)::timestep
         character(len=*),intent(in),optional :: inputfilename
@@ -735,14 +782,29 @@ contains
             call check( nf90_put_var(ncid, varid(12), domain%p(:,1,:),  start_two_D),  trim(filename)//":p" )
             call check( nf90_put_var(ncid, varid(13), domain%th(:,1,:), start_two_D),  trim(filename)//":th" )
         endif
-        call check( nf90_put_var(ncid, varid(14), domain%rain,           start_two_D), trim(filename)//":rain" )
-        call check( nf90_put_var(ncid, varid(32), domain%rain-last_rain, start_two_D), trim(filename)//":rainrate" )
-        call check( nf90_put_var(ncid, varid(15), domain%snow,           start_two_D), trim(filename)//":snow" )
+        
+        
+        ! Write precip variables (rain, snow, graupel, crain) adjusting for the internal precip bucket
+        call tip_precip_to_buckets(domain)
+        call check( nf90_put_var(ncid, varid(14), &
+                                 domain%rain + domain%rain_bucket*kPRECIP_BUCKET_SIZE, &
+                                 start_two_D), trim(filename)//":rain" )
+        call check( nf90_put_var(ncid, varid(32), &
+                                 domain%rain-last_rain, &
+                                 start_two_D), trim(filename)//":rainrate" )
+        call check( nf90_put_var(ncid, varid(15), &
+                                 domain%snow + domain%snow_bucket*kPRECIP_BUCKET_SIZE, &
+                                 start_two_D), trim(filename)//":snow" )
+        
         if (options%physics%microphysics==kMP_THOMPSON) then
-            call check( nf90_put_var(ncid, varid(16), domain%graupel,    start_two_D), trim(filename)//":graupel" )
+            call check( nf90_put_var(ncid, varid(16), &
+                                     domain%graupel + domain%graupel_bucket*kPRECIP_BUCKET_SIZE, &
+                                     start_two_D), trim(filename)//":graupel" )
         endif
         if (options%physics%convection>0) then
-            call check( nf90_put_var(ncid, varid(17), domain%crain,      start_two_D), trim(filename)//":crain" )
+            call check( nf90_put_var(ncid, varid(17), &
+                                     domain%crain + domain%crain_bucket*kPRECIP_BUCKET_SIZE, &
+                                     start_two_D), trim(filename)//":crain" )
         endif
         
         ! these should only be output for radiation packages that compute them
@@ -753,22 +815,23 @@ contains
         if (options%physics%radiation==kRA_SIMPLE) then
             call check( nf90_put_var(ncid, varid(22), domain%cloudfrac,  start_two_D ), trim(filename)//":cloudfrac" )
         endif
+        
+        call check( nf90_put_var(ncid, varid(28), domain%skin_t,       start_two_D),  trim(filename)//":skin_t" )
+        call check( nf90_put_var(ncid, varid(34), domain%T2m, start_two_D),  trim(filename)//":t2m" )
+        call check( nf90_put_var(ncid, varid(35), domain%Q2m, start_two_D),  trim(filename)//":hus2m" )
+        call check( nf90_put_var(ncid, varid(36), domain%u10, start_two_D),  trim(filename)//":u10m" )
+        call check( nf90_put_var(ncid, varid(37), domain%v10, start_two_D),  trim(filename)//":v10m" )
+        call check( nf90_put_var(ncid, varid(23), domain%sensible_heat,start_two_D),  trim(filename)//":sensible_heat" )
+        call check( nf90_put_var(ncid, varid(24), domain%latent_heat,  start_two_D),  trim(filename)//":latent_heat" )
         ! these should only be output for lsm packages that compute them
         if (options%physics%landsurface==kLSM_NOAH) then
-            call check( nf90_put_var(ncid, varid(23), domain%sensible_heat,start_two_D),  trim(filename)//":sensible_heat" )
-            call check( nf90_put_var(ncid, varid(24), domain%latent_heat,  start_two_D),  trim(filename)//":latent_heat" )
             call check( nf90_put_var(ncid, varid(25), domain%ground_heat,  start_two_D),  trim(filename)//":ground_heat" )
             call check( nf90_put_var(ncid, varid(26), domain%soil_vwc,     start_three_D),trim(filename)//":soil_vwc" )
             call check( nf90_put_var(ncid, varid(27), domain%soil_t,       start_three_D),trim(filename)//":soil_t" )
-            call check( nf90_put_var(ncid, varid(28), domain%skin_t,       start_two_D),  trim(filename)//":skin_t" )
             call check( nf90_put_var(ncid, varid(29), domain%lwup,         start_two_D),  trim(filename)//":lwup" )
             call check( nf90_put_var(ncid, varid(30), domain%snow_swe,     start_two_D),  trim(filename)//":snow_swe" )
             call check( nf90_put_var(ncid, varid(31), domain%canopy_water, start_two_D),  trim(filename)//":canopy_water" )
-            call check( nf90_put_var(ncid, varid(34), domain%T2m, start_two_D),  trim(filename)//":t2m" )
-            call check( nf90_put_var(ncid, varid(35), domain%Q2m, start_two_D),  trim(filename)//":hus2m" )
         endif
-        call check( nf90_put_var(ncid, varid(36), domain%u10, start_two_D),  trim(filename)//":u10m" )
-        call check( nf90_put_var(ncid, varid(37), domain%v10, start_two_D),  trim(filename)//":v10m" )
         
         last_rain=domain%rain
         ! Close the file, freeing all resources.

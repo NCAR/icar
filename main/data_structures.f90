@@ -42,14 +42,16 @@
 !! lwup         = Lonwave up from the land surface          [W/m^2]
 !!
 !! ---- Land Surface variables ---- 
-!!  3D fields ---- NX x NZ x NY
+!!   3D fields ---- NX x NZ x NY
 !! soil_t       = 3D Soil temperature                       [K]
 !! soil_vwc     = 3D Soil volumetric water content          [m^3/m^3]
+!! 
+!!   3D fields ---- NX x NY x N_Times (typically 1 or 12)
+!! vegfrac      = vegetation cover fraction                 [%]
 !!
 !!   2D fields ---- NX x NY
 !! skin_t       = Land surface skin temperature             [K]
 !! soil_tdeep   = Temperature at the soil column bottom     [K]
-!! vegfrac      = vegetation cover fraction                 [%]
 !! snow_swe         = Snow water equivalent on the land surface [mm]
 !! soil_totalmoisture = Soil column total water content         [mm]
 !! soil_type    = Soil type (index for USGS classification in SOILPARM.TBL) [1-19]
@@ -101,7 +103,10 @@ module data_structures
     integer, parameter :: kPBL_BASIC     = 1
     integer, parameter :: kPBL_SIMPLE    = 2
     integer, parameter :: kPBL_YSU       = 3
-
+    
+    integer, parameter :: kWATER_BASIC   = 1
+    integer, parameter :: kWATER_SIMPLE  = 2
+    
     integer, parameter :: kLSM_BASIC     = 1
     integer, parameter :: kLSM_SIMPLE    = 2
     integer, parameter :: kLSM_NOAH      = 3
@@ -113,6 +118,13 @@ module data_structures
     integer, parameter :: kADV_MPDATA    = 2
     
     integer, parameter :: kWIND_LINEAR   = 1
+    
+    integer, parameter :: kLC_LAND       = 1
+    integer, parameter :: kLC_WATER      = 2
+    
+    ! mm of accumulated precip before "tipping" into the bucket
+    ! only performed on output operations
+    integer, parameter :: kPRECIP_BUCKET_SIZE=100
 !------------------------------------------------
 ! Physical Constants
 !------------------------------------------------
@@ -252,6 +264,7 @@ module data_structures
         ! precip fluxes
         real, allocatable, dimension(:,:)   :: rain,crain,snow,graupel
         real, allocatable, dimension(:,:)   :: current_rain, current_snow
+        integer, allocatable, dimension(:,:):: rain_bucket,crain_bucket,snow_bucket,graupel_bucket
         
         ! radiative fluxes (and cloud fraction)
         real, allocatable, dimension(:,:)   :: swdown, lwdown, cloudfrac, lwup
@@ -265,8 +278,8 @@ module data_structures
         real, allocatable, dimension(:)     :: ZNU, ZNW            ! = (p-p_top)/(psfc-ptop)
         
         ! land surface state and parameters
-        real, allocatable, dimension(:,:)   :: soil_tdeep, skin_t, soil_totalmoisture, snow_swe
-        real, allocatable, dimension(:,:)   :: vegfrac,canopy_water
+        real, allocatable, dimension(:,:)   :: soil_tdeep, skin_t, soil_totalmoisture, snow_swe,canopy_water
+        real, allocatable, dimension(:,:,:)   :: vegfrac
         integer, allocatable, dimension(:,:):: soil_type,veg_type
         ! ocean surface state
         real, allocatable, dimension(:,:)   :: sst
@@ -278,10 +291,12 @@ module data_structures
         real::dt
         ! current model time (seconds from options%time_zero)
         double precision :: model_time
+        integer :: current_month ! used to store the current month (should probably be fractional for interpolation...)
         
         ! model specific fields
         real, allocatable, dimension(:,:,:) :: Um, Vm ! U and V on mass coordinates
         real, allocatable, dimension(:,:,:) :: T      ! real T (not potential)
+        
         
         type(tendencies_type) :: tend
     end type domain_type
@@ -319,6 +334,7 @@ module data_structures
         integer::advection
         integer::boundarylayer
         integer::landsurface
+        integer::watersurface
         integer::radiation
         integer::convection
         integer::windtype
@@ -354,7 +370,8 @@ module data_structures
         integer :: stability_window_size    ! window to average nsq over
         real :: max_stability               ! limits on the calculated Brunt Vaisala Frequency
         real :: min_stability               ! these may need to be a little narrower. 
-        logical :: variable_N           ! Compute the Brunt Vaisala Frequency (N^2) every time step
+        logical :: variable_N               ! Compute the Brunt Vaisala Frequency (N^2) every time step
+        logical :: smooth_nsq               ! Smooth the Calculated N^2 over vert_smooth vertical levels
         
         real :: N_squared                   ! static Brunt Vaisala Frequency (N^2) to use
         real :: linear_contribution         ! fractional contribution of linear perturbation to wind field (e.g. u_hat multiplied by this)
@@ -398,6 +415,7 @@ module data_structures
         integer :: urban_category
         integer :: ice_category
         integer :: water_category
+        logical :: monthly_vegfrac
     end type lsm_options_type
 
     

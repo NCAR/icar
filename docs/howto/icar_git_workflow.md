@@ -1,203 +1,101 @@
-# ICAR and Git
+# Git workflow for ICAR
 
-> Note: This document has been conveniently adapted from the [SUMMA and Git workflow](https://github.com/NCAR/summa/blob/master/docs/howto/summa_git_workflow.md)
+> Note: This document has been conveniently adapted from the [Cookbook for working with Git and VIC](https://github.com/UW-Hydro/VIC/wiki/Git-Workflow)
 
-## Introduction
+The basic workflow described here follows a workflow originally outlined by [Vincent Driessen](http://nvie.com/posts/a-successful-git-branching-model/). The workflow is built around the Git version control system. A basic description of the branching strategy and release management used for ICAR is presented here. We use a central truth repository (https://github.com/NCAR/icar) that contains our main branches and the official release version of ICAR. All active development takes place on forks and clones of this repo.
 
-Git is a version control tool that we use to...
+## Main Branches
 
- * track changes over time in the ICAR source code,
- * facilitate parallel development between multiple model developers and research projects,
- * encourage peer code review and bug tracking, and
- * to distribute official and bleeding edge releases of the model source code.
+There are two main branches: **master** and **develop**. The first one is the official release, the second one is the one undergoing active development.
 
-## ICAR for model users (non developers)
-In general, if you plan to apply the model rather than work directly on the source code, you may just download the model from the [ICAR GitHub page](https://github.com/NCAR/icar). Additional archived tags and releases (including all previous ICAR versions) are available [here](https://github.com/NCAR/icar/tags). You can simply compile the code and start working. If you want to work with the code and contribute to ICAR development, read on.
+ 1. **master** -- The master branch represents the official release of the code. This branch is updated by new releases from the develop/release branches and by hotfixes. If you are not directly interested in model development, but want to use ICAR for your own modeling project, then this is typically the branch that you want to use.
 
-## ICAR for developers
-If you plan on contributing to model development or would like a systematic way to incorporate updates to the ICAR source code, we encourage you to use Git. The following sections are designed to get you started using Git and working with the ICAR source code repository.
+ 2. **develop** -– The develop branch represents the bleeding edge of the code. We recommend that all new development begins by branching from the develop branch.
 
-### Git resources
-If you are not familiar with Git yet, we encourage you to spend a few minutes getting acquainted with the system before you starting working with the ICAR source code and Git. It's not difficult to use and a few minutes of learning about Git will go along way in helping you manage your code development.
+ Both of the main branches are published on the Github page and are controlled by the ICAR admin group. The repository is organized into several branches for different purposes.
 
-There are a number of good Git learning resources that will provide a basic introduction to the version control system.
-* http://git-scm.com/about
-* https://help.github.com/
+## Feature Branches
 
-### Getting the code
-The basics steps to get the ICAR source code repository are as follows. This is basically a ICAR specific rendition of https://help.github.com/articles/fork-a-repo
+In general, any new feature branch should be based on the develop branch. Feature branches are used by developers to make self-contained changes to the ICAR source code. Keeping the changes self-contained makes it much easier to merge new features into the main source code. For example, if you want to include new features consisting of a different radiation scheme and a new advection scheme, you'd typically want to do that on two separate feature branches (or perhaps more). This will keep pull requests (to have your changes included in the main code) tractable. We merge completed feature branches into the develop branch for inclusion in the next release. A developer may have many feature branches, which may or may not be intended for inclusion in the main source code. Because context-switching is relatively easy with Git, the development of features using this strategy provides a clean and simple method for switching between features and the main branches during the development process.
 
-#### Step 0: A few definitions
+## Support Branches
 
-Using Git involves a few different copies of the archive (there is more than one way to use Git -- this is how we propose you use it):
+Sometimes ICAR development is driven by projects that require very specific modifications to the code that would not be appropriate for inclusion in a major release. The use of support branches allows for the continued development of the trunk while "supporting" project-specific versions of the ICAR code. Instead of completely removing these changes, which may be useful to others, we put the project-specific version of ICAR in a support branch and continue developing. Support branches are essentially branches that are not expected to be merged back into the development branch.
 
-1. **Truth repo:** this is the master copy of the archive, maintained on the GitHub server at https://github.com/NCAR/icar. You will not be able to edit this or push code to it directly. We don't either, we work on our own copy of this repo and only integrate the changes into the truth repo when they have been tested and reviewed.
+## Admin Branches
 
-2. **Your fork of the truth repo:** this is your version of the archive, maintained on the GitHub server by you. This is generally **not** where you edit code; it is more of a transfer point between your clone (see below) and the truth repo. Git keeps track of the differences between your fork and the truth repo. To move code changes from your fork to the truth repo, you must make a "pull request" to the ICAR truth repo. If it's decided that your code has been sufficiently tested and reviewed and that it is a useful addition to ICAR, then the administrators of the truth repo will do the actual pull (don't worry if some of the terminology does not yet make sense at this point).
+Although anyone could create these branches, they are designed for the preparation of a release of the master branch or a hotfix that cannot wait to the next major release. These branches should therefore only be used by members of the admin group.
 
-3. **Your clone(s) of your fork of the truth repo:** a clone is a copy of your fork, stored on your local machine, where you can edit and test the code. You can have one or more clones. Each clone is a snapshot of a particular version of the code in your fork (e.g., you select which branches, and which versions of the code on those branches, to copy to your clone). You can change which version of the code each of your clones points to at any time. Your clone is where you edit files and commit changes. You can then push code changes from your clone back up to your fork.
+ 1. **release** -– The release branch supports the preparation of a new release. It includes any changes needed for the next public release or minor bug fixes.
 
-Note that you do not have to use GitHub to use Git. You can clone the Truth Repo directly and then store your clone on a Git server other than GitHub. This means that you can bypass the fork step if you know what you are doing. However, GitHub does offer some nice features (and it is free for open source projects), so in the following we'll assume you'll be using GitHub.
+ 2. **hotfix** -- The hotfix branch facilitates mid-release bug fixes of the master branch. The key point of the hotfix branch is that it does not incorporate any new features from the develop branch, rather it is a branch off the master that addresses a specific issue or set of issues. When the hotfix is applied, the development branch is updated to reflect the hotfix changes.
 
-One more note: In most of the following we are assuming that you will do much of your work at a Unix-like prompt (or the Mac OS X Terminal). If that is not the case, the general workflow is the same, but details may differ.
+## Naming Conventions
+ * Master branch – master
+ * Develop branch – develop
+ * Feature branch – feature/{feature_name}
+ * Hotfix branch – hotfix/{hotfix_name}
+ * Release branch – release/{release_name}
+ * Support branch – support/ICAR.{base_release_number}.{feature_branch_name}
+ * Release name – ICAR.{major.minor.patch}
+ * Support release name - ICAR.{base_release_number}.{feature_branch_name}.{##}
 
-#### Step 1: Fork the repo
+## User Permissions
+Using Github to host the central or truth repository of our models allows us to easily control contributor permissions. Currently we split permission levels into 3 levels, Owners, Model Admins, and Developers.
 
-If you do not have a github account, create one. It's free for public repos (like the ICAR one). Once you have an account, go to the [NCAR/icar](https://github.com/NCAR/icar) page and click "Fork" in the upper right hand corner.
+ 1. Owners have full access to all repositories and have admin rights to the organization.
 
-#### Step 2: Clone your fork
+ 2. Model Admins have full access to specific repositories. They may push, pull, or make administrative changes to those repositories associated with their model. However, they should generally not push to the truth repo directly. Instead, they should fork, clone, edit locally, update their fork and then issue a pull request. This pull request should preferably be reviewed by someone else before it is merged.
 
-You've successfully forked the ICAR repository, but so far it only exists on GitHub. From this point on, anything you do to this fork will not affect the Truth Repo, so you can even delete the fork or modify it without worrying that you will make affect the main ICAR repo. To be able to work on the project, you will need to clone it to your local machine.
+ 3. Developers have read-only access (pull, clone, fork) to any of the publically listed repositories under the NCAR name. If a developer would like a feature branch merged into the main repository, a pull request must be submitted and a Model Admin may merge it in.
 
-Run the following code on your local machine:
+## Workflow examples
 
-    git clone https://github.com/<username>/icar.git
+### New feature
 
-or (depending on your setup)
+You have developed a novel way to parameterize convection and would like to add this as a process alternative to ICAR. We'll assume that you already have an account on GitHub and that you have the requisite software (Fortran compiler) and libraries (NetCDF, FFTW) already installed.
 
-    git clone ssh://git@github.com/<username>/icar.git
+The process would be as follows:
 
-where `<username>` is your GitHub username.
-This clones your fork of the repository into the current directory. The clone will live in a directory called "icar".
+ * Navigate to the main [ICAR repo](https://github.com/NCAR/icar)
 
-#### Step 3: Configure remotes
+ * Fork the repo by clicking on the 'Fork' button in the upper right corner
 
-When a repository is cloned, it has a default remote called `origin` that points to **your** fork on GitHub, **not** the original repository it was forked from. To keep track of the original repository, you need to add another remote. You can name this anything you want, but the name `upstream` is descriptive and an informal convention.
+ * Navigate to your fork
 
-Change to the newly cloned "icar" directory:
+ * Clone the fork to your local machine
 
-    cd icar
+ * Add the main ICAR repo as the upstream remote, so you can easily merge changes that are made in the main ICAR repo into your own local repo
 
-If you type
+        git  remote add upstream ssh://git@github.com:NCAR/icar.git
 
-    git status
+ * Checkout the `develop` branch
 
-you should get some informational message, such as
+        git checkout develop
 
-    On branch master
-    Your branch is up-to-date with 'origin/master'.
+ * Create and checkout the `feature/crazy_convection` branch (or whatever the appropriate name would be). If you create this branch while you are on the `develop` branch, the new branch will be based on `develop` (you can also specify this explicitly to git).
 
-    nothing to commit, working directory clean
+        git checkout -b feature/crazy_convection
 
+ * Push this new branch to your remote on GitHub
 
-If instead, you get the message
+        git push
 
-    fatal: Not a git repository (or any of the parent directories): .git
+ * Now make as many changes as you need to, commit them to your local repo and push them to your remote on GitHub. This is just like any other work you would do using Git. Once everything is working and everything is sufficiently tested, you will be ready to share your code with others.
 
-then you are not in a Git repository (note that the top level directory in a Git repo will have a `.git` subdirectory). Make sure you are in the right place. If you are then proceed.
 
-Assign the truth repo to a remote tracking branch called `upstream`, which will allow you easily pull in changes that are made in the truth repo and keep your clone in-sync with that version. Once you get more familiar with Git, you will be able to control which updates to include:
+ * Before you do that, merge any changes that have been made in the develop branch in the main ICAR repo into the `feature/crazy_convection` branch of your local repo. Assuming you are already on the `feature/crazy_convection` branch:
 
-    git remote add upstream https://github.com/NCAR/icar.git
+        git fetch upstream
+        git merge upstream/develop
 
-or (depending on your setup):
+ * Resolve any merge conflicts
 
-    git remote add upstream ssh://git@github.com/NCAR/icar.git
+ * Push your latest version to your remote on GitHub
 
-#### Step 4. Sync your clone with the truth repo
+ * Issue a pull request. You do that on GitHub. Make sure that you make the pull request with respect to the correct branches. On your end this should be the `feature/crazy_convection` branch and on the other end the `develop` branch.
 
-##### 4.a. Fetch information from the truth repo
-
-Before starting to edit the code, pull in any new changes to the truth repo that have been made by other people since you first created the clone. You may want to do this periodically.
-
-    git fetch upstream
-
-If you have already made changes to the code, this command by itself will not overwrite your files. For updates from the truth repo to show up in your files, you must do a **merge**.
-
-##### 4.b. Merge changes
-
-Determine which branches you will need to work with. At the very least, this will include the master branch. If you are working on a hotfix or a feature branch that already exists, you will need this branch as well; the ICAR administrator has likely given you the name of the appropriate branch to use. Alternatively, you may want to create a new branch (e.g., if you are the first person to work on a new feature or bug fix). For more information about the branches in the ICAR archive, see the [Git workflow for ICAR](https://github.com/NCAR/icar/blob/master/docs/howto/icar_git_workflow.md).
-
-For each branch, merge any changes from the truth repo into your local version:
-
-    git checkout <branchname>
-
-    git merge upstream/<branchname>
-
-where `<branchname>` is the name of the branch you want to update. Note that merging can be intimidating at first, because you are likely to get some messages about merge conflicts. Don't despair, there are many good internet resources that will explain this in detail.
-
-### Working with the code
-
-#### Making changes
-
-##### 1. Select a branch
-
-Change your active branch to the desired branch:
-
-    git checkout <branchname>
-
-where `<branchname>` is the name of the branch. If you are creating a new branch, you can create and change to the branch in one step:
-
-    git checkout -b <new-branchname>
-
-where `<new-branchname>` is the name of your new branch.
-
-##### 2. Make changes
-
-You can edit the code using any editor or development environment you prefer. You can also create new files, and move, rename, or delete existing files. You will not be able to push these changes to your fork until you **commit** them. If you are moving or renaming file, it is best to use `git mv` (so Git can track the move). If you are permanently deleting a file, use `git rm`.
-
-It is a good idea to **compile and test** your changes on your local machine before you commit them. This avoids extra commits to fix typos, etc., and makes sure that you are not left with half-broken code when you come back to the project (or when you are collaborating with someone else).
-
-At any point during the process of changing the code, you can pull in any changes that other people have made via the fetch/merge procedure described above. At any point you can also discard the changes and revert to the previous version.
-
-#### Committing changes
-
-Before committing your changes, remove any extraneous files that have been created during compiling and testing (e.g., *.o files). An easy way to do this is to type `make clean` in icar's `code` subdirectory.
-
-##### 1. Register your changes for commit (staging)
-
-To register the changes to (or creation of) a specific file, there are two steps that need to be completed in Git. First, changes need to be moved to a staging area (staged) and then they all files in the changing area are committed. You cannot commit a change without staging first and staging alone does not commit your changes. To move the committed changes to a repo that is different from the clone you are working on (for example, your fork), you will need to do one more step and push the changes to the remote repo:
-
-    git add <filename(s)>
-
-where `<filename(s)>` are the names of the files with changes you want to commit. You can use wildcards, but be careful, because this often results in including files that you did not mean to include.
-
-To register moving or renaming any files:
-
-    git mv <old> <new>
-
-where `<old>` and `<new>` are the old and new filenames.
-
-To register the deletion of a file:
-
-    git rm <filename>
-
-After you have added (staged) all the files that you want to include in a commit, check that what you have is all you want:
-
-    git status
-
-This will tell you which files have changed, but have not been staged and also tells you how to unstage files. Note that you do not need to include all the changes you have made in one single commit. It is often most useful if you keep your commits small and very specific, because it makes it easier to undo things if you later decide that a previous code change was not nearly as useful as you once thought.
-
-##### 2. Commit the changes
-
-Now that you have added (or staged) the changes you want to include, you have to actually commit them to your local repo:
-
-    git commit
-
-This will bring up a commit log in your default editor. The list of files whose changes will be committed (i.e. were staged via `git add`) is shown in the header at the top of the file. If you disagree with this list, exit the editor and add and unstage files as necessary to correct the list. Then try "git commit" again. If satisfied with the list of changed files, add a description of the set of changes (including a brief description of the problem that motivated the changes). Save and exit.
-
-Note: writing good commit messages is essential for making sense of your code changes later. Or perhaps more importantly, for someone else to make sense of your code changes later. Generally, in Git it is recommended to describe the nature of the change in a brief one-liner, then leave a blank line, following by a more detailed description of the changes as necessary. The reason is that some of the tools that let you browse past changes (e.g. `git log`), use this one-liner to summarize code changes.
-
-##### Pushing commits to your fork
-
-After committing your changes, you should push them to your fork (which has the alias `origin`) stored on GitHub. If you don't remember what all your remotes are, simply type (`git remote -v`):
-
-    git push origin <branchname>
-
-where `<branchname>` is the name of the branch where you made the commits.
-
-
-##### Making a pull request
-
-To make your changes visible to other users/developers, your changes must be incorporated into the truth repo. To do this, you must create a pull request on the GitHub server.
-
-**NOTE:** We ask that you perform at least some basic tests on your code before you issue a pull request. Make sure the code compiles and runs for at least the test cases you have been working with. If it is a bug fix, make sure that it actually fixes the bug. If possible, try to make sure that it doesn't create a new bug. We are working on generating some standard tests that everyone can download and run for this purpose; until then, please test the code using your own input files.
-
-The ICAR administrator and other developers will review your pull request and decide if/how they want to incorporate your changes into the code. They are likely to suggest some changes (code style, content, etc.).
-
-### Git workflow
-
-For us to leverage Git to its full potential, we have implemented a Git-oriented workflow. This requires developers to adhere to a few rules regarding branch names and merge requests. A full description of the workflow we use can be found [here](https://github.com/NCAR/icar/docs/icar_git_workflow.md).
+ * You changes will be reviewed and merged or more likely there will be some back-and-forth with suggested changes and clarifications.
 
 
 

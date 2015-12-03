@@ -48,6 +48,8 @@ program icar
     model_time=start_point * DBLE(options%in_dt) + options%time_zero
     domain%model_time=model_time
     next_output=model_time+options%out_dt
+    call calendar_date(model_time/86400.0D+0 + 50000, year, month, day, hour, minute, second)
+    domain%current_month=month
     
 !   read initial conditions from the boundary file
     write(*,*) "Initializing Boundary conditions"
@@ -74,6 +76,7 @@ program icar
         write(*,*) "Timestep:", i, "  of ", options%ntimesteps
         write(*,*) "  Model time=", trim(str((model_time-options%time_zero)/3600.0,fmt="(F10.2)")) ,"hrs"
         call calendar_date(model_time/86400.0D+0 + 50000, year, month, day, hour, minute, second)
+        domain%current_month=month
         write(*,'(A,i4,"/",i2.2"/"i2.2" "i2.2":"i2.2":"i2.2)') "  Date = ",year,month,day,hour,minute,second
         
 !       update boundary conditions (dXdt variables) so we can integrate to the next step

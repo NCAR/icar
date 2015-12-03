@@ -43,6 +43,7 @@ module linear_theory_winds
     public::linear_perturb
     
     logical :: variable_N
+    logical :: smooth_nsq
     real :: N_squared
     !! unfortunately these have to be allocated every call because we could be calling on both the high-res
     !! domain and the low res domain (to "remove" the linear winds)
@@ -717,11 +718,12 @@ contains
                     do j=1,n_nsq_values
                         domain%u=calc_u(dir_values(i),spd_values(k))
                         domain%v=calc_v(dir_values(i),spd_values(k))
-                    
+                        
                         ! calculate the linear wind field for the current u and v values
                         call linear_winds(domain,exp(nsq_values(j)), 0, reverse,useDensity,debug=debug)
-                    
+                        
                         debug=.False. ! after the first time through set debug to false
+                        
                         u_LUT(k,i,j,:,:,:)=(domain%u-calc_u(dir_values(i),spd_values(k)))
                         v_LUT(k,i,j,:,:,:)=(domain%v-calc_v(dir_values(i),spd_values(k)))
                     end do
@@ -793,7 +795,7 @@ contains
     
     end function
     
-    subroutine spatial_winds(domain,reverse)
+    subroutine spatial_winds(domain,reverse, vsmooth)
         ! compute a spatially variable linear wind perturbation
         ! based off of look uptables computed in via setup
         ! for each grid point, find the closest LUT data in U and V space
@@ -801,7 +803,8 @@ contains
         implicit none
         type(linearizable_type), intent(inout) :: domain
         logical, intent(in) :: reverse
-        integer :: nx,ny,nz,i,j,k
+        integer, intent(in) :: vsmooth
+        integer :: nx,ny,nz,i,j,k, smoothz
         integer :: uk, vi !store a separate value of i for v and of k for u to we can handle nx+1, ny+1
         integer :: step, dpos, npos, spos, nexts, nextd, nextn
         integer :: north, south, east, west, top, bottom, winsz, n
@@ -818,21 +821,21 @@ contains
             u_LUT=>hi_u_LUT
             v_LUT=>hi_v_LUT
         endif
-        !$omp parallel firstprivate(nx,ny,nz), default(none), &
+        !$omp parallel firstprivate(nx,ny,nz, vsmooth), default(none), &
         !$omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom), &
-        !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, winsz), &
+        !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, winsz, smoothz), &
         !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
         !$omp shared(domain, spd_values, dir_values, nsq_values, u_LUT, v_LUT), &
         !$omp shared(u_perturbation, v_perturbation, linear_update_fraction, nsq_calibration), &
-        !$omp shared(min_stability, max_stability, n_dir_values, n_spd_values, n_nsq_values)
-        winsz=1
+        !$omp shared(min_stability, max_stability, n_dir_values, n_spd_values, n_nsq_values, smooth_nsq)
+        winsz=4
         !$omp do
         do k=1,ny
             do j=1,nz
                 do i=1,nx
-                    top=min(j+1,nz)
+                    top=min(j+vsmooth,nz)
                     if (top==j) then
-                        bottom=j-1
+                        bottom=j-vsmooth
                     else
                         bottom=j
                     endif
@@ -845,6 +848,25 @@ contains
                     domain%nsquared(i,j,k) = max(min(domain%nsquared(i,j,k) * nsq_calibration(i,k), max_stability), min_stability)
                 end do
             end do
+            
+            if (smooth_nsq) then
+                do j=1,nz
+                    top=min(j+vsmooth,nz)
+                    if (top==j) then
+                        bottom=j-vsmooth
+                    else
+                        bottom=j
+                    endif
+                    
+                    do smoothz=bottom, j-1
+                        domain%nsquared(:,j,k) = domain%nsquared(:,j,k) + domain%nsquared(:,smoothz,k)
+                    end do
+                    do smoothz=j+1,top
+                        domain%nsquared(:,j,k) = domain%nsquared(:,j,k) + domain%nsquared(:,smoothz,k)
+                    end do
+                    domain%nsquared(:,j,k)=domain%nsquared(:,j,k)/(top-bottom+1)
+                end do
+            endif
         end do
         !$omp end do
         !$omp barrier
@@ -871,15 +893,15 @@ contains
                         endif
                     end do
                     
-                    east  = max(i-winsz,1)
-                    west  = min(i+winsz,nx)
+                    west  = max(i-winsz,1)
+                    east  = min(i+winsz,nx)
                     bottom= max(j-winsz,1)
                     top   = min(j+winsz,nz)
                     south = max(k-winsz,1)
                     north = min(k+winsz,ny)
-                    n = (((west-east)+1) * ((top-bottom)+1) * ((north-south)+1))
+                    n = (((east-west)+1) * ((top-bottom)+1) * ((north-south)+1))
                     
-                    curnsq = sum(log(domain%nsquared(east:west, bottom:top,south:north)))
+                    curnsq = sum(log(domain%nsquared(west:east, bottom:top,south:north)))
                     curnsq = curnsq / n
 
                     npos=1
@@ -940,6 +962,7 @@ contains
         
         original_buffer = options%lt_options%buffer
         variable_N = options%lt_options%variable_N
+        smooth_nsq = options%lt_options%smooth_nsq
         linear_contribution = options%lt_options%linear_contribution
         
         stability_window_size = options%lt_options%stability_window_size   ! window to average nsq over
@@ -1129,7 +1152,7 @@ contains
         ! if we are reverseing the effects, that means we are in the low-res domain
         ! that domain does not have a spatial LUT calculated, so it can not be performed
         if (use_spatial_linear_fields)then
-            call spatial_winds(domain,rev)
+            call spatial_winds(domain,rev, vsmooth)
         else
             ! Nsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability
             stability=calc_domain_stability(domain)
