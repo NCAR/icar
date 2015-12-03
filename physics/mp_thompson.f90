@@ -2876,7 +2876,7 @@
 
 !$omp parallel  default(shared) & 
 !$omp private(km,i,j,k,m,n,n2,lam_exp,lamr,N0_r,N_r,lamg,N_g,N0_g,t1,t2,z1,z2,y1,y2,massr,massg,dvg,dvr) &
-!$omp shared(tcg_racg,tmr_racg,tcr_gacr,tmg_gacr,tnr_racg,tnr_gacr) & 
+!$omp shared(tcg_racg,tmr_racg,tcr_gacr,tmg_gacr,tnr_racg,tnr_gacr,mu_r,ef_rs,am_s) & 
 !$omp firstprivate(crg,cre,cge,cgg,ore1,oge1,org1,org2,ogg2,ogg1,obmg,obmr) &
 !$omp firstprivate(km_s,km_e,Dr,Dg,dtg,dtr,vr,vg)
 	  !$omp do
@@ -2999,7 +2999,7 @@
 
 !$omp parallel default(private) & 
 !$omp shared(tcs_racs1,tmr_racs1,tcs_racs2,tmr_racs2,tcr_sacr1,tms_sacr1)&
-!$omp shared(tcr_sacr2,tms_sacr2,tnr_racs1,tnr_racs2,tnr_sacr1,tnr_sacr2) & 
+!$omp shared(tcr_sacr2,tms_sacr2,tnr_racs1,tnr_racs2,tnr_sacr1,tnr_sacr2,mu_r,ef_rs,am_s) & 
 !$omp private(second,a_,b_,n2,km,M2,M3,oM3,Mrat,M0,slam1,slam2,i,j,k,m,n,lam_exp,lamr,N0_r,N_r,loga_) &
 !$omp private(t1,t2,t3,t4,z1,z2,z3,z4,y1,y2,y3,y4,N_s,massr,masss,dvs,dvr) &
 !$omp firstprivate(km_s,km_e,vr,vs) &
