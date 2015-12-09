@@ -47,11 +47,15 @@ INSTALLDIR=~/bin/
 # These are default parameters
 # They are overwritten with machine specific options below if known
 ########################################################################################
-F90=gfortran
+F90=ftn
 RM=/bin/rm
-LIBFFT=/usr/local/lib
-INCFFT=/usr/local/include
-NCDF_PATH = /usr/local
+FFTW_PATH = /home/gfi/pbo003/Libraries/FFTW/fftw-3.3.4
+LIBFFT = ${FFTW_PATH}/lib
+INCFFT = ${FFTW_PATH}/include
+#LIBFFT=/usr/local/lib
+#INCFFT=/usr/local/include
+#NCDF_PATH = /usr/local
+NCDF_PATH = /opt/cray/netcdf/default/cray/83
 LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 INCNETCDF = -I$(NCDF_PATH)/include
 
@@ -165,10 +169,10 @@ endif
 
 # Cray fortran
 ifeq ($(F90), ftn)
-	COMP=-O2 -c
-	LINK=
-	PREPROC=-e z
-	MODOUTPUT=-e m -J $(BUILD)
+	COMP= -h omp vector2 -O2 -c -eI
+	LINK= -fopenmp
+	PREPROC= -eZ
+	MODOUTPUT= -J $(BUILD) -em
 endif
 
 
@@ -189,7 +193,7 @@ ifeq ($(MODE), debugslow)
 	ifeq ($(F90), ftn)
 		COMP=-h noomp -c -g -m 0 -R abcsp
 		LINK=-h noomp
-		PREPROC=-e z
+		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
 	endif
 endif
@@ -209,7 +213,7 @@ ifeq ($(MODE), debug)
 	ifeq ($(F90), ftn)
 		COMP=-O1 -h noomp -c -g
 		LINK=-h noomp
-		PREPROC=-e z
+		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
 	endif
 endif
@@ -230,7 +234,7 @@ ifeq ($(MODE), debugompslow)
 	ifeq ($(F90), ftn)
 		COMP=-c -g -m 0 -R abcsp
 		LINK=
-		PREPROC=-e z
+		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
 	endif
 endif
@@ -250,7 +254,7 @@ ifeq ($(MODE), debugomp)
 	ifeq ($(F90), ftn)
 		COMP=-O1 -c -g
 		LINK=
-		PREPROC=-e z
+		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
 	endif
 endif
@@ -415,7 +419,7 @@ $(BUILD)string.o:$(UTIL)string.f90
 ###################################################################
 
 $(BUILD)output.o:$(IO)output.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)time.o $(BUILD)string.o
-	${F90} ${FFLAGS} -DVERSION=\"$(GIT_VERSION)\" $(PREPROC) $(IO)output.f90 -o $(BUILD)output.o
+	${F90} ${FFLAGS} ${PREPROC} -DVERSION=\"$(GIT_VERSION)\" $(IO)output.f90 -o $(BUILD)output.o
 
 $(BUILD)io_routines.o:$(IO)io_routines.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(IO)io_routines.f90 -o $(BUILD)io_routines.o
