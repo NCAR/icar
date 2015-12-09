@@ -87,7 +87,7 @@ def load_atm(time,info,starttime,endtime):
     
     return outputdata
 
-def load_sfc(info):
+def load_sfc(time, info,starttime,endtime):
     """docstring for load_sfc"""
     outputdata=Bunch()
     basefile="/glade/p/cesmdata/cseg/inputdata/atm/cam/topo/USGS-gtopo30_0.9x1.25_remap_c051027.nc"
@@ -96,13 +96,23 @@ def load_sfc(info):
     outputdata.land=np.zeros(outputdata.hgt.shape)
     landfrac=read_nc(basefile,"LANDFRAC").data[info.ymin:info.ymax,info.xmin:info.xmax]
     outputdata.land[landfrac>=0.5]=1
+    
+    tsfile=find_atm_file(time, "TS", info)
+    outputdata.ts=read_nc(tsfile,"TS").data[starttime:endtime,info.ymin:info.ymax,info.xmin:info.xmax]
+
+    swfile=find_atm_file(time, "FSDS", info)
+    outputdata.sw=read_nc(swfile,"FSDS").data[starttime:endtime,info.ymin:info.ymax,info.xmin:info.xmax]
+
+    lwfile=find_atm_file(time, "FLDS", info)
+    outputdata.lw=read_nc(lwfile,"FLDS").data[starttime:endtime,info.ymin:info.ymax,info.xmin:info.xmax]
+    
     return outputdata
 
 def load_data(time,info,starttime,endtime):
     """docstring for load_data"""
     print(time,starttime,endtime)
     atm=load_atm(time,info,starttime,endtime)
-    sfc=load_sfc(info)
+    sfc=load_sfc(time,info,starttime,endtime)
     return Bunch(sfc=sfc,atm=atm)
 
 

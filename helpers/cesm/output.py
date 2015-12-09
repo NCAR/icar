@@ -20,15 +20,15 @@ def write_file(date,info,cesm):
     # 2D variables (constant in time)
     # hgt, latitude, longitude
     
+    # used as primary variable in io.write
+    # atts=Bunch(long_name="Specific Humidity",units="kg kg**-1")
+    # extra_vars.append(Bunch(name="qv",data=cesm["qv"],dims=dims,dtype="f",attributes=atts))
+
     atts=Bunch(long_name="Cloud liquid water content",units="kg kg**-1")
     extra_vars.append(Bunch(name="cloud",data=cesm["cloud"],dims=dims,dtype="f",attributes=atts))
 
     atts=Bunch(long_name="Cloud ice water content",units="kg kg**-1")
     extra_vars.append(Bunch(name="ice",data=cesm["ice"],dims=dims,dtype="f",attributes=atts))
-
-    # used as primary variable in io.write
-    # atts=Bunch(long_name="Specific Humidity",units="kg kg**-1")
-    # extra_vars.append(Bunch(name="qv",data=cesm["qv"],dims=dims,dtype="f",attributes=atts))
 
     atts=Bunch(long_name="U (E/W) wind speed",units="m s**-1")
     extra_vars.append(Bunch(name="u",data=cesm["u"],dims=dims,dtype="f",attributes=atts))
@@ -52,11 +52,11 @@ def write_file(date,info,cesm):
     print(cesm["hgt"].shape,dims_2d,cesm.qv.shape)
     extra_vars.append(Bunch(name="hgt",data=cesm["hgt"],dims=dims_2d,dtype="f",attributes=atts))
 
-    atts=Bunch(long_name="Surface Latent Heat flux (positive up)",units="W m**-2")
-    extra_vars.append(Bunch(name="latent_heat",data=cesm["qv"][:,0,...]*0,dims=dims_3d,dtype="f",attributes=atts))
+    atts=Bunch(long_name="Surface Shortwave Radiation (positive down)",units="W m**-2")
+    extra_vars.append(Bunch(name="swdown",data=cesm["sw"],dims=dims_3d,dtype="f",attributes=atts))
 
-    atts=Bunch(long_name="Surface Sensible Heat flux (positive up)",units="W m**-2")
-    extra_vars.append(Bunch(name="sensible_heat",data=cesm["qv"][:,0,...]*0,dims=dims_3d,dtype="f",attributes=atts))
+    atts=Bunch(long_name="Surface Longwave Radiation (positive down)",units="W m**-2")
+    extra_vars.append(Bunch(name="lwdown",data=cesm["lw"],dims=dims_3d,dtype="f",attributes=atts))
 
     atts=Bunch(long_name="latitude",units="degrees")
     extra_vars.append(Bunch(name="lat",data=info.lat_data,dims=dims_2d,dtype="f",attributes=atts))

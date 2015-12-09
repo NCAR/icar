@@ -17,7 +17,7 @@ def set_bounds(info):
     varlist=["lat","lon"]
     
     lat=io.read_nc(cesm_file,varlist[0]).data
-    lon=io.read_nc(cesm_file,varlist[1]).data-360
+    lon=io.read_nc(cesm_file,varlist[1]).data#-360
     
     info.xmin=np.where(lon>=info.lon[0])[0][0]
     info.xmax=np.where(lon<=info.lon[1])[0][-1]+1
