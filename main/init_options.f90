@@ -148,12 +148,18 @@ contains
     end subroutine options_check
     
     subroutine init_restart_options(filename, options)
-        character(len=*), intent(in) :: filename
-        type(options_type),intent(inout) :: options
+        ! initialize the restart specifications
+        ! read in the namelist, and calculate the restart_step if appropriate
+        character(len=*),  intent(in)    :: filename    ! name of the file containing the restart namelist
+        type(options_type),intent(inout) :: options     ! options data structure to store output
         
-        character(len=MAXFILELENGTH) :: init_conditions_file, output_file,restart_file
-        integer :: restart_step, restart_date(6), name_unit
-        real*8 :: restart_mjd
+        ! Local variables
+        character(len=MAXFILELENGTH) :: restart_file    ! file name to read restart data from
+        integer :: restart_step                         ! time step relative to the start of the restart file
+        integer :: restart_date(6)                      ! date to restart
+        integer :: name_unit                            ! logical unit number for namelist
+        double precision :: restart_mjd                 ! restart date as a modified julian day
+        real :: input_steps_per_day                     ! number of input time steps per day (for calculating restart_mjd)
         
         namelist /restart_info/ restart_step, restart_file, restart_date
         
@@ -164,31 +170,48 @@ contains
         read(name_unit,nml=restart_info)
         close(name_unit)
         
+        if (minval(restart_date)<0) then
+            write(*,*) "------ Invalid restart_date ERROR ------"
+            stop "restart_date must be specified in the namelist"
+        endif
+        
+        ! calculate the modified julian day for th restart date given
+        restart_mjd = date_to_mjd(restart_date(1), restart_date(2), restart_date(3), &
+                                  restart_date(4), restart_date(5), restart_date(6))
+        
+        if (options%debug) then
+            write(*,*) " ------------------ "
+            write(*,*) "RESTART INFORMATION"
+            write(*,*) "mjd",         restart_mjd
+            write(*,*) "date",        restart_date
+            write(*,*) "file",   trim(restart_file)
+            write(*,*) "forcing step",restart_step
+        endif
+        
+        ! used in calculations below
+        input_steps_per_day = 86400.0/options%in_dt
+        
+        ! if the user did not specify the restart_step (and they really shouldn't)
+        if (restart_step==-999) then
+            ! +1e-4 prevents floating point rounding error from setting it back one day/hour/minute etc
+            ! +1 because Fortran arrays are 1 based, so if restart-initial = 0 then we want the 1st array element
+            restart_step=FLOOR((restart_mjd - options%initial_mjd + 1e-4) * input_steps_per_day) + 1
+            if (options%debug) write(*,*) "updated forcing step",restart_step
+        endif
+        
+        ! save the parameters in the master options structure
         options%restart_step=restart_step
         options%restart_file=restart_file
         options%restart_date=restart_date
         
-        
-        restart_mjd = date_to_mjd(restart_date(1), restart_date(2), restart_date(3), &
-                                  restart_date(4), restart_date(5), restart_date(6))
-        write(*,*) "mjd",restart_mjd
-        write(*,*) "date",restart_date
-        write(*,*) "file",trim(restart_file)
-        write(*,*) "forcing step",restart_step
-        
-        if (restart_step==-999) then
-            restart_step=FLOOR((restart_mjd - options%initial_mjd + 1e-6) / (options%in_dt/86400.0)) + 1
-            options%restart_step=restart_step
-            write(*,*) "updated forcing step",restart_step
-        endif
-        ! in case the supplied restart date doesn't line up with an input forcing step, recalculate
-        ! the restart date (mjd) based off the nearest input step
-        restart_mjd = options%initial_mjd + (restart_step-1)*(options%in_dt/86400.0)
-        write(*,*) "updated mjd",restart_mjd
+        ! In case the supplied restart date doesn't line up with an input forcing step, recalculate
+        ! The restart date (mjd) based off the nearest input step
+        restart_mjd = options%initial_mjd + ((restart_step-1)/input_steps_per_day)
+        if (options%debug) write(*,*) "updated mjd",restart_mjd
         
         ! now find the closest previous output step to the current restart date
-        options%restart_step_in_file=io_nearest_time_step(restart_file, restart_mjd)
-        write(*,*) "step in restart file",options%restart_step_in_file
+        options%restart_step_in_file = io_nearest_time_step(restart_file, restart_mjd)
+        if (options%debug) write(*,*) "step in restart file",options%restart_step_in_file
         
     end subroutine init_restart_options
     
@@ -217,15 +240,15 @@ contains
                 ! 3 = Noah LSM
                 
         water = 0 ! 0 = no open water fluxes, 
-                ! 1 = Fluxes from GCM, (must set lsm=1?)
-                ! 2 = Simple fluxes, (not complete)
+                ! 1 = Fluxes from GCM, (needs lsm=1)
+                ! 2 = Simple fluxes (needs SST in forcing data)
                 
         mp  = 1 ! 0 = no MP,  
                 ! 1 = Thompson et al (2008), 
                 ! 2 = "Linear" microphysics
         
         rad = 0 ! 0 = no RAD, 
-                ! 1 = radiative cooling 1K/day (only in LSM=1 module), 
+                ! 1 = Surface fluxes from GCM, (radiative cooling ~1K/day in LSM=1 module), 
                 ! 2 = cloud fraction based radiation + radiative cooling
         
         conv= 0 ! 0 = no CONV,

@@ -42,16 +42,15 @@ contains
 
     integer function io_nearest_time_step(filename, mjd)
         character(len=*),intent(in) :: filename
-        real*8, intent(in) :: mjd
-        real*8, allocatable, dimension(:) :: time_data
+        double precision, intent(in) :: mjd
+        double precision, allocatable, dimension(:) :: time_data
         integer :: ncid,varid,dims(1),ntimes,i
         
         call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
         ! Get the varid of the data_in variable, based on its name.
-        call check(nf90_inq_varid(ncid, "time", varid),trim(filename)//" : time")
-!       call check(nf90_inquire_variable(ncid, varid, ndims = numDims),"time dims")
-        call check(nf90_inquire_variable(ncid, varid, dimids = dims),"time dims")
-        call check(nf90_inquire_dimension(ncid, dims(1), len = ntimes))
+        call check(nf90_inq_varid(ncid, "time", varid),                 trim(filename)//" : time")
+        call check(nf90_inquire_variable(ncid, varid, dimids = dims),   trim(filename)//" : time dims")
+        call check(nf90_inquire_dimension(ncid, dims(1), len = ntimes), trim(filename)//" : inq time dim")
         
         allocate(time_data(ntimes))
         call check(nf90_get_var(ncid, varid, time_data),trim(filename)//"reading time")
@@ -60,7 +59,9 @@ contains
         
         io_nearest_time_step=1
         do i=1,ntimes
-            if ((mjd - time_data(i)) > 1e-4) then
+            ! keep track of every time that occurs before the mjd we are looking for
+            ! the last one will be the date we want to use. 
+            if ((mjd - time_data(i)) > -1e-4) then
                 io_nearest_time_step=i
             endif
         end do
@@ -124,7 +125,8 @@ contains
         ! Get the varid of the data_in variable, based on its name.
         call check(nf90_inq_varid(ncid, varname, varid),trim(filename)//":"//trim(varname))
         
-        ! Read the data_in. skip the slowest varying indices if there are more than 3 dimensions (typically this will be time)
+        ! Read the data_in. skip the slowest varying indices if there are more than 6 dimensions (typically this will be time)
+        ! and good luck if you have more than 6 dimensions...
         if (diminfo(1)>6) then
             diminfo(8:diminfo(1)+1)=1 ! set count for extra dims to 1
             call check(nf90_get_var(ncid, varid, data_in,&

@@ -41,13 +41,15 @@ program icar
     
 !   set up the timeing for the model
     if (options%restart) then
-        start_point=options%restart_step
+        start_point=options%restart_step-1
     else
         start_point=bc_find_step(options)
     endif
+    
     model_time=start_point * DBLE(options%in_dt) + options%time_zero
     domain%model_time=model_time
     next_output=model_time+options%out_dt
+    
     call calendar_date(model_time/86400.0D+0 + 50000, year, month, day, hour, minute, second)
     domain%current_month=month
     
