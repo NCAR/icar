@@ -284,7 +284,7 @@ contains
             write(*,*) "Vmax",maxval(abs(domain%v)),maxval(abs(bc%next_domain%v))
             write(*,*) "Wmax",maxval(abs(domain%w)),maxval(abs(bc%next_domain%w))
             call write_domain(domain,options,99998)
-            call write_domain(bc%next_domain,options,99999)
+            call write_domain(bc%next_domain,options,99999,'timestep_error_file.nc')
             stop "ERROR time step too small"
         endif
         
