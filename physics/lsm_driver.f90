@@ -546,10 +546,6 @@ contains
                     endif
                 endif
                 
-                ! update T2m and Q2m prior to LSM call to make sure everything is in sync
-!                 call surface_diagnostics(domain%sensible_heat, QFX, domain%skin_t, QSFC,  &
-!                                          CHS2, CQS2,domain%T2m, domain%Q2m, domain%psfc)
-                                         
                 call lsm_noah(domain%dz_inter,domain%qv,domain%p_inter,domain%th*domain%pii,domain%skin_t,  &
                             domain%sensible_heat,QFX,domain%latent_heat,domain%ground_heat, &
                             QGH,GSW,domain%swdown,domain%lwdown,SMSTAV,domain%soil_totalmoisture, &
