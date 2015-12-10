@@ -574,9 +574,10 @@ contains
         real :: C_cubes, C_sqrd, mu_r, t_adjust
         logical :: Ef_rw_l, EF_sw_l
         integer :: top_mp_level
+        real :: local_precip_fraction
 
         namelist /mp_parameters/ Nt_c,TNO, am_s, rho_g, av_s,bv_s,fv_s,av_g,bv_g,av_i,Ef_si,Ef_rs,Ef_rg,Ef_ri,&     ! trude added Nt_c, TNO
-                              C_cubes,C_sqrd, mu_r, Ef_rw_l, Ef_sw_l, t_adjust, top_mp_level
+                              C_cubes,C_sqrd, mu_r, Ef_rw_l, Ef_sw_l, t_adjust, top_mp_level, local_precip_fraction
         
         ! because mp_options could be in a separate file (shoudl probably set all namelists up to have this option)
         if (options%use_mp_options) then
@@ -610,7 +611,7 @@ contains
         Ef_sw_l = .False.   ! True sets ef_rw = 1, insted of max 0.95
         
         top_mp_level = 0    ! if <=0 just use the actual model top
-        
+        local_precip_fraction = 1 ! if <1: the remaining fraction (e.g. 1-x) of precip gets distributed to the surrounding grid cells        
         ! read in the namelist
         if (options%use_mp_options) then
             open(io_newunit(name_unit), file=mp_filename)
@@ -641,7 +642,7 @@ contains
         options%mp_options%Ef_sw_l = Ef_sw_l
         
         options%mp_options%top_mp_level = top_mp_level
-        
+        options%mp_options%local_precip_fraction = local_precip_fraction
     end subroutine mp_parameters_namelist
     
     subroutine lt_parameters_namelist(filename, options)

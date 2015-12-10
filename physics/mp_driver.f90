@@ -36,8 +36,11 @@ module microphysics
 !   real, parameter :: cp = 1012.0 ! specific heat capacity of moist STP air? J/kg/K
 !   real, parameter :: g=9.81 ! gravity m/s^2
 
-    real,allocatable,dimension(:,:,:)::SR
-
+    real,allocatable,dimension(:,:) :: SR, last_rain, last_snow, this_precip
+    integer, parameter :: npoints=8
+    real,    dimension(npoints) :: dist_fraction = [ 0.1,0.15,0.1, 0.15,0.15, 0.1,0.15,0.1]
+    integer, dimension(npoints) :: x_list = [ -1,0,1, -1,1, -1,0,1]
+    integer, dimension(npoints) :: y_list = [ 1,1,1, 0,0, -1,-1,-1]
 contains
     subroutine mp_init(options)
         implicit none
@@ -48,7 +51,41 @@ contains
             write(*,*) "    Thompson Microphysics"
             call thompson_init(options%mp_options)
         endif
+        
     end subroutine mp_init
+    
+    subroutine distribute_precip(current_precip, last_precip, local_fraction)
+        real, dimension(:,:), intent(inout) :: current_precip, last_precip
+        real, intent(in) :: local_fraction
+        ! relies on module variable this_precip as a temporary array
+        
+        integer :: i,j, nx,ny
+        integer :: x,y, point
+        
+        nx=size(current_precip,1)
+        ny=size(current_precip,2)
+        
+        do j=2,ny-1
+            do i=2,nx-1
+                this_precip(i,j) = current_precip(i,j)-last_precip(i,j)
+                current_precip(i,j) = last_precip(i,j)
+            end do
+        end do
+        do j=2,ny-1
+            do i=2,nx-1
+                current_precip(i,j) = current_precip(i,j)+this_precip(i,j)*local_fraction
+                do point=1,npoints
+                    x = i + x_list(point)
+                    y = j + y_list(point)
+                    current_precip(i,j) = current_precip(i,j) + this_precip(x,y) * (1-local_fraction) * dist_fraction(point)
+                    last_precip(i,j) = current_precip(i,j)
+                end do
+            end do
+        end do
+                
+        
+        
+    end subroutine distribute_precip
     
     subroutine mp(domain,options,dt_in)
         implicit none
@@ -56,20 +93,38 @@ contains
         type(options_type),intent(in)::options
         real,intent(in)::dt_in
         integer ::ids,ide,jds,jde,kds,kde,itimestep=1
-        integer ::its,ite,jts,jte,kts,kte
+        integer ::its,ite,jts,jte,kts,kte, nx,ny
         
         ids=1
         ide=size(domain%qv,1)
+        nx=ide
         kds=1
         kde=size(domain%qv,2)
         jds=1
         jde=size(domain%qv,3)
-
+        ny=jde
+        
+        ! snow rain ratio
         if (.not.allocated(SR)) then
-            allocate(SR(ids:ide,kds:kde,jds:jde))
-    !       snow rain ratio
+            allocate(SR(nx,ny))
             SR=0
         endif
+        ! last snow amount
+        if (.not.allocated(last_snow)) then
+            allocate(last_snow(nx,ny))
+            last_snow=0
+        endif
+        ! last rain amount
+        if (.not.allocated(last_rain)) then
+            allocate(last_rain(nx,ny))
+            last_rain=0
+        endif
+        ! temporary precip amount
+        if (.not.allocated(this_precip)) then
+            allocate(this_precip(nx,ny))
+            this_precip=0
+        endif
+        
         if (options%physics%microphysics==kMP_THOMPSON) then
             kts=kds
             kte=kde
@@ -98,6 +153,11 @@ contains
             call mp_simple_driver(domain%p,domain%th,domain%pii,domain%rho,domain%qv,domain%cloud, &
                             domain%qrain,domain%qsnow,domain%rain,domain%snow,&
                             dt_in,domain%dz,ide,jde,kde)
+        endif
+        
+        if (options%mp_options%local_precip_fraction<1) then
+            call distribute_precip(domain%rain, last_rain, options%mp_options%local_precip_fraction)
+            call distribute_precip(domain%snow, last_snow, options%mp_options%local_precip_fraction)
         endif
                         
     end subroutine mp

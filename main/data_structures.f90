@@ -74,25 +74,25 @@
 !!
 !!  Author: Ethan Gutmann (gutmann@ucar.edu)
 !!
-!!------------------------------------------------
+!>------------------------------------------------
 module data_structures
     use, intrinsic :: iso_c_binding ! needed for fftw compatible complex types
     implicit none
 
-!------------------------------------------------
+! ------------------------------------------------
 ! Model constants (string lengths)
-!------------------------------------------------
+! ------------------------------------------------
     integer,parameter::MAXFILELENGTH    = 200   ! maximum file name length
     integer,parameter::MAXVARLENGTH     = 200   ! maximum variable name length
     integer,parameter::MAXLEVELS        = 500   ! maximum number of vertical layers (should typically be ~10-20)
     integer,parameter::MAX_NUMBER_FILES = 50000 ! maximum number of permitted input files (probably a bit extreme)
 
-!------------------------------------------------
+! ------------------------------------------------
 ! Physics scheme selection definitions
 !
 ! NB: BASIC typically means "use the data from the low res model"
 !     SIMPLE typically means a relatively simple formulation written for ICAR
-!------------------------------------------------
+! ------------------------------------------------
     integer, parameter :: kCU_TIEDTKE    = 1
     integer, parameter :: kCU_SIMPLE     = 2
     integer, parameter :: kCU_KAINFR     = 3
@@ -125,9 +125,9 @@ module data_structures
     ! mm of accumulated precip before "tipping" into the bucket
     ! only performed on output operations
     integer, parameter :: kPRECIP_BUCKET_SIZE=100
-!------------------------------------------------
+! ------------------------------------------------
 ! Physical Constants
-!------------------------------------------------
+! ------------------------------------------------
     real, parameter :: LH_vaporization=2260000.0 ! J/kg
     ! should be calculated as 2.5E6 + (-2112.0)*temp_degC ?
     real, parameter :: Rd  = 287.058   ! J/(kg K) specific gas constant for dry air
@@ -160,9 +160,9 @@ module data_structures
     real, parameter ::  EP1  = Rw/Rd-1.
     real, parameter ::  EP2  = Rd/Rw
     
-!------------------------------------------------
+! ------------------------------------------------
 !   various data structures for use in geographic interpolation routines
-!------------------------------------------------
+! ------------------------------------------------
     ! contains the location of a specific grid point
     type position
         integer::x,y
@@ -181,9 +181,9 @@ module data_structures
         real,allocatable,dimension(:,:,:)::w
     end type geo_look_up_table
 
-    !------------------------------------------------
+    ! ------------------------------------------------
     ! A look up table for vertical interpolation. from z with weight w
-    !------------------------------------------------
+    ! ------------------------------------------------
     type vert_look_up_table
         ! z index positions for all x,y,z points (x 2 for above and below z levels)
         integer,allocatable,dimension(:,:,:,:)::z
@@ -191,9 +191,9 @@ module data_structures
         real,allocatable,dimension(:,:,:,:)::w
     end type vert_look_up_table
 
-    !------------------------------------------------
+    ! ------------------------------------------------
     ! generic interpolable type so geo interpolation routines will work on winds, domain, or boundary conditions. 
-    !------------------------------------------------
+    ! ------------------------------------------------
     type interpolable_type
         real, allocatable, dimension(:,:) :: lat,lon
         real, allocatable, dimension(:,:,:) :: z
@@ -204,9 +204,9 @@ module data_structures
     end type interpolable_type
 
 
-    !------------------------------------------------
+    ! ------------------------------------------------
     ! type to contain external wind fields, only real addition is nfiles... maybe this could be folded in elsewhere?
-    !------------------------------------------------
+    ! ------------------------------------------------
     type, extends(interpolable_type) :: wind_type
         real, allocatable, dimension(:,:,:) :: u,v
         type(interpolable_type)             :: u_geo,v_geo
@@ -215,9 +215,9 @@ module data_structures
         integer :: nfiles
     end type wind_type
 
-    !------------------------------------------------
+    ! ------------------------------------------------
     ! generic linearizable type so we can add linear wind field to domain or remove it from low-res (BC) U/V
-    !------------------------------------------------
+    ! ------------------------------------------------
     type, extends(interpolable_type) :: linearizable_type
         ! linear theory computes u,v at z.  Trying rho to mitigate boussinesq approx... 
         real, allocatable, dimension(:,:,:) :: u,v,dz,rho
@@ -231,9 +231,9 @@ module data_structures
         real::dx
     end type linearizable_type
     
-    !------------------------------------------------
+    ! ------------------------------------------------
     ! Tendency terms output by various physics subroutines
-    !------------------------------------------------
+    ! ------------------------------------------------
     type tendencies_type
         ! 3D atmospheric field tendencies
         real,   allocatable, dimension(:,:,:) :: th,qv,qc,qi,u,v,qr,qs 
@@ -242,9 +242,9 @@ module data_structures
         real, allocatable, dimension(:,:,:) :: qv_adv,qv_pbl
     end type tendencies_type
     
-    !------------------------------------------------
+    ! ------------------------------------------------
     ! All fields needed in the domain defined in detail above
-    !------------------------------------------------
+    ! ------------------------------------------------
     type, extends(linearizable_type) :: domain_type
         ! 3D atmospheric fields
         real, allocatable, dimension(:,:,:) :: w,ur,vr,wr ! w, and u,v,w * density
@@ -301,9 +301,9 @@ module data_structures
         type(tendencies_type) :: tend
     end type domain_type
 
-    !------------------------------------------------
+    ! ------------------------------------------------
     ! boundary conditions type, must be linearizable so we can remove low res linear wind field
-    !------------------------------------------------
+    ! ------------------------------------------------
     type, extends(linearizable_type) :: bc_type
         ! dX_dt variables are the change in variable X between two forcing time steps
         ! wind and pressure dX_dt fields applied to full 3d grid, others applied only to boundaries
@@ -326,9 +326,9 @@ module data_structures
         type(wind_type)::ext_winds
     end type bc_type
 
-    !------------------------------------------------
+    ! ------------------------------------------------
     ! type to store integer options for each physics package
-    !------------------------------------------------
+    ! ------------------------------------------------
     type physics_type
         integer::microphysics
         integer::advection
@@ -341,9 +341,9 @@ module data_structures
     end type physics_type
 
 
-    !------------------------------------------------
+    ! ------------------------------------------------
     ! store Microphysics sensitivity options
-    !------------------------------------------------
+    ! ------------------------------------------------
 !! ++ trude
     type mp_options_type
         real :: Nt_c
@@ -359,12 +359,13 @@ module data_structures
         logical :: Ef_rw_l, EF_sw_l
         
         integer :: top_mp_level ! top model level to process in the microphysics
+        real :: local_precip_fraction
     end type mp_options_type
 !! -- trude
 
-    !------------------------------------------------
+    ! ------------------------------------------------
     ! store Linear Theory options
-    !------------------------------------------------
+    ! ------------------------------------------------
     type lt_options_type
         integer :: buffer                   ! number of grid cells to buffer around the domain MUST be >=1
         integer :: stability_window_size    ! window to average nsq over
@@ -396,9 +397,9 @@ module data_structures
         
     end type lt_options_type
     
-    !------------------------------------------------
+    ! ------------------------------------------------
     ! store Advection options
-    !------------------------------------------------
+    ! ------------------------------------------------
     type adv_options_type
         logical :: boundary_buffer
         logical :: flux_corrected_transport
@@ -406,9 +407,9 @@ module data_structures
     end type adv_options_type
 
 
-    !------------------------------------------------
+    ! ------------------------------------------------
     ! store Land Surface Model options
-    !------------------------------------------------
+    ! ------------------------------------------------
     type lsm_options_type
         character (len=MAXVARLENGTH) :: LU_Categories
         integer :: update_interval
@@ -419,9 +420,9 @@ module data_structures
     end type lsm_options_type
 
     
-    !------------------------------------------------
+    ! ------------------------------------------------
     ! store all model options
-    !------------------------------------------------
+    ! ------------------------------------------------
     type options_type
         character (len=MAXVARLENGTH) :: version,comment
 
