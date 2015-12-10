@@ -47,15 +47,12 @@ INSTALLDIR=~/bin/
 # These are default parameters
 # They are overwritten with machine specific options below if known
 ########################################################################################
-F90=ftn
+F90=gfortran
 RM=/bin/rm
-FFTW_PATH = /home/gfi/pbo003/Libraries/FFTW/fftw-3.3.4
+FFTW_PATH = /usr/local
 LIBFFT = ${FFTW_PATH}/lib
 INCFFT = ${FFTW_PATH}/include
-#LIBFFT=/usr/local/lib
-#INCFFT=/usr/local/include
-#NCDF_PATH = /usr/local
-NCDF_PATH = /opt/cray/netcdf/default/cray/83
+NCDF_PATH = /usr/local
 LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 INCNETCDF = -I$(NCDF_PATH)/include
 
@@ -69,6 +66,22 @@ endif
 ifeq ($(patsubst vpn%.ucar.edu,vpn.ucar.edu,$(NODENAME)), vpn.ucar.edu)
 	NODENAME=Nomad.local
 endif
+ifeq ($(patsubst hexagon%,hexagon,$(NODENAME)), hexagon)
+	NODENAME=hexagon
+endif
+
+
+# on hexagon (uib computer)
+ifeq ($(NODENAME), hexagon)
+	F90=ftn
+	FFTW_PATH = /home/gfi/pbo003/Libraries/FFTW/fftw-3.3.4
+	LIBFFT = ${FFTW_PATH}/lib
+	INCFFT = ${FFTW_PATH}/include
+	NCDF_PATH = /opt/cray/netcdf/default/cray/83
+	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
+	INCNETCDF = -I$(NCDF_PATH)/include
+endif
+
 # traveling laptop / home computer
 ifeq ($(NODENAME), Nomad.local)
 	F90=gfortran
