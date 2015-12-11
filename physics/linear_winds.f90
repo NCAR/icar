@@ -965,22 +965,22 @@ contains
         smooth_nsq = options%lt_options%smooth_nsq
         linear_contribution = options%lt_options%linear_contribution
         
-        stability_window_size = options%lt_options%stability_window_size   ! window to average nsq over
-        max_stability = options%lt_options%max_stability                   ! limits on the calculated Brunt Vaisala Frequency
-        min_stability = options%lt_options%min_stability                   ! these may need to be a little narrower. 
-        linear_contribution = options%lt_options%linear_contribution       ! multiplier on uhat,vhat before adding to u,v
-        linear_update_fraction = options%lt_options%linear_update_fraction ! controls the rate at which the linearfield updates
-        linear_contribution = options%lt_options%linear_contribution       ! fractional contribution of linear perturbation to wind field
+        stability_window_size = options%lt_options%stability_window_size        ! window to average nsq over
+        max_stability = options%lt_options%max_stability                        ! limits on the calculated Brunt Vaisala Frequency
+        min_stability = options%lt_options%min_stability                        ! these may need to be a little narrower. 
+        linear_contribution = options%lt_options%linear_contribution            ! multiplier on uhat,vhat before adding to u,v
+                                                                                ! =fractional contribution of linear perturbation to wind field
         ! these are defined per call to permit different values for low res and high res domains
-        ! N_squared = options%lt_options%N_squared                           ! static Brunt Vaisala Frequency (N^2) to use
-        ! rm_N_squared = options%lt_options%rm_N_squared                     ! static BV Frequency (N^2) to use in removing linear wind field
-        ! rm_linear_contribution = options%lt_options%rm_linear_contribution ! fractional contribution of linear perturbation to remove wind field
-        ! remove_lowres_linear = options%lt_options%remove_lowres_linear     ! remove the linear mountain wave from low res forcing model
+        ! N_squared = options%lt_options%N_squared                              ! static Brunt Vaisala Frequency (N^2) to use
+        ! rm_N_squared = options%lt_options%rm_N_squared                        ! static BV Frequency (N^2) to use in removing linear wind field
+        ! rm_linear_contribution = options%lt_options%rm_linear_contribution    ! fractional contribution of linear perturbation to remove wind field
+        ! remove_lowres_linear = options%lt_options%remove_lowres_linear        ! remove the linear mountain wave from low res forcing model
         
-        linear_update_fraction    = options%lt_options%linear_update_fraction  ! fraction of linear perturbation to add each time step
-        use_spatial_linear_fields = options%lt_options%spatial_linear_fields   ! use a spatially varying linear wind perturbation
-        use_linear_mask           = options%lt_options%linear_mask             ! use a spatial mask for the linear wind field
-        use_nsq_calibration       = options%lt_options%nsq_calibration         ! use a spatial mask to calibrate the nsquared (brunt vaisala frequency) field
+        linear_update_fraction    = options%lt_options%linear_update_fraction   ! controls the rate at which the linearfield updates
+                                                                                ! =fraction of linear perturbation to add each time step
+        use_spatial_linear_fields = options%lt_options%spatial_linear_fields    ! use a spatially varying linear wind perturbation
+        use_linear_mask           = options%lt_options%linear_mask              ! use a spatial mask for the linear wind field
+        use_nsq_calibration       = options%lt_options%nsq_calibration          ! use a spatial mask to calibrate the nsquared (brunt vaisala frequency) field
     
         ! Look up table generation parameters, range for each parameter, and number of steps to cover that range
         dirmax = options%lt_options%dirmax
