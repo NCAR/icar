@@ -78,7 +78,6 @@ contains
                     x = i + x_list(point)
                     y = j + y_list(point)
                     current_precip(i,j) = current_precip(i,j) + this_precip(x,y) * (1-local_fraction) * dist_fraction(point)
-                    last_precip(i,j) = current_precip(i,j)
                 end do
             end do
         end do
@@ -139,6 +138,8 @@ contains
                 its=ids+1;ite=ide-1
                 jts=jds+1;jte=jde-1
             endif
+            last_rain=domain%rain
+            last_snow=domain%snow
             call mp_gt_driver(domain%qv, domain%cloud, domain%qrain, domain%ice, &
                             domain%qsnow, domain%qgrau, domain%nice, domain%nrain, &
                             domain%th, domain%pii, domain%p, domain%dz_inter, dt_in, itimestep, &
