@@ -76,8 +76,8 @@ module module_mp_simple
     real,parameter :: freezing_threshold=273.15          ! [K]
     real,parameter :: snow_fall_rate=1.5                 ! [m/s]   for a water vapor scale height of 3750m corresponds to tau_f = 2500
     real,parameter :: rain_fall_rate=10.0                ! [m/s]   for a water vapor scale height of 3750m corresponds to tau_f = 375
-    real,parameter :: snow_cloud_init=0.00001            ! [kg/kg] cloud ice content before snow will start to form
-    real,parameter :: rain_cloud_init=0.00001            ! [kg/kg] cloud water content before rain will start to form
+    real,parameter :: snow_cloud_init=0.0001            ! [kg/kg] cloud ice content before snow will start to form
+    real,parameter :: rain_cloud_init=0.0001            ! [kg/kg] cloud water content before rain will start to form
     
     
 !   these are recalculated every call because they are a function of dt
@@ -299,11 +299,11 @@ module module_mp_simple
             if (qv<qvsat) then
                 if (qr>SMALL_VALUE) then
                     ! evaporate rain
-                    call phase_change(p,t,qr,qvsat,qv,L_evap,1.0) !cloud2rain)
+                    call phase_change(p,t,qr,qvsat,qv,L_evap,cloud2rain)
                 endif
                 if (qs>SMALL_VALUE) then
                     ! sublimate snow
-                    call phase_change(p,t,qs,qvsat,qv,L_subl,1.0) !cloud2snow)
+                    call phase_change(p,t,qs,qvsat,qv,L_subl,cloud2snow)
                 endif
             endif
         endif
@@ -370,7 +370,7 @@ module module_mp_simple
                     if (qv(i)<qvsat) then
                         if (qr(i)>SMALL_VALUE) then
                             ! evaporate rain
-                            call phase_change(p(i),t(i),qr(i),qvsat,qv(i),L_evap,1.0) !cloud2rain)
+                            call phase_change(p(i),t(i),qr(i),qvsat,qv(i),L_evap,cloud2rain)
                         endif
                     endif
                 enddo
@@ -395,7 +395,7 @@ module module_mp_simple
                     if (qv(i)<qvsat) then
                         if (qs(i)>SMALL_VALUE) then
                             ! sublimate snow
-                            call phase_change(p(i),t(i),qs(i),qvsat,qv(i),L_subl,1.0) !cloud2snow)
+                            call phase_change(p(i),t(i),qs(i),qvsat,qv(i),L_subl,cloud2snow)
                         endif
                     endif
                 enddo
@@ -437,10 +437,10 @@ module module_mp_simple
                 th(i,:,j)=t/pii(i,:,j)
                 
             enddo
-            where(qs(:,:,j)<0) qs(:,:,j)=0
-            where(qr(:,:,j)<0) qr(:,:,j)=0
-            where(qc(:,:,j)<0) qc(:,:,j)=0
-            where(qv(:,:,j)<0) qv(:,:,j)=0
+!             where(qs(:,:,j)<0) qs(:,:,j)=0
+!             where(qr(:,:,j)<0) qr(:,:,j)=0
+!             where(qc(:,:,j)<0) qc(:,:,j)=0
+!             where(qv(:,:,j)<0) qv(:,:,j)=0
         enddo
         !$omp end do
         deallocate(t)
