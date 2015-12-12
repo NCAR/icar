@@ -821,11 +821,17 @@ contains
         
         nz=size(boundary%lowres_z,2)
         if (maxval(boundary%terrain)>maxval(boundary%lowres_z(:,1,:))) then
-            write(*,*) "WARNING Assuming forcing Z levels are AGL, not ASL : adding ground surface height"
+            write(*,*) "WARNING Are forcing Z levels AGL, not ASL ?"
             write(*,*) "Terrain Max=",maxval(boundary%terrain), "Lowest level Max=",maxval(boundary%lowres_z(:,1,:))
-            do i=1,nz
-                boundary%lowres_z(:,i,:)=boundary%lowres_z(:,i,:)+boundary%terrain
-            enddo
+            
+            write(*,*) "WARNING WARNING WARNING WARNING WARNING WARNING "
+            write(*,*) "WARNING         Is terrain height correct?"
+            write(*,*) "WARNING WARNING WARNING WARNING WARNING WARNING "
+            write(*,*) "      Calculating Terrain height from atm Z instead..."
+            boundary%terrain=boundary%lowres_z(:,1,:)-30
+!             do i=1,nz
+!                 boundary%lowres_z(:,i,:)=boundary%lowres_z(:,i,:)+boundary%terrain
+!             enddo
         endif
         if (options%zvar=="PH") then
             write(*,*) "WARNING interpolating forcing z levels to half / mass levels"
