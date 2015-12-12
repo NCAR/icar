@@ -10,10 +10,12 @@ import operator as op
 #           the result will be stored in variable "P" in the output file. 
 
 
+steps_per_day=24 # number of output steps per day in the WRF out file
+
 var_conversions={"PH":"Z", "P":"pressure", "T":"potential_temperature"}
 
 def rename_var(inputvar,dummy):
-    """docstring for rename_var"""
+    """simple function to use as an operator to rename variables"""
     inputvar.name=var_conversions[inputvar.name]
 
 wrfvars=["XLAT",   "XLONG",
