@@ -37,8 +37,8 @@ contains
         ny=size(curdata,3)
 
         do i=1,nz
-            curdata(1,i,:)  = curdata(1,i,:)  + dXdt(i,1:ny,1)
-            curdata(nx,i,:) = curdata(nx,i,:) + dXdt(i,1:ny,2)
+            curdata(1,i,2:ny-1)  = curdata(1,i,2:ny-1)  + dXdt(i,2:ny-1,1)
+            curdata(nx,i,2:ny-1) = curdata(nx,i,2:ny-1) + dXdt(i,2:ny-1,2)
             curdata(:,i,1)  = curdata(:,i,1)  + dXdt(i,1:nx,3)
             curdata(:,i,ny) = curdata(:,i,ny) + dXdt(i,1:nx,4)
         enddo
@@ -304,6 +304,7 @@ contains
         
 !       now just loop over internal timesteps computing all physics in order (operator splitting...)
         do i=1,ntimesteps
+            model_time=model_time+dt
             if (dt>1e-5) then
                 call advect(domain,options,dt)
                 call mp(domain,options,dt)
@@ -316,7 +317,6 @@ contains
                 call forcing_update(domain,bc,options)
             
     !           step model time forward
-                model_time=model_time+dt
                 domain%model_time=model_time
                 if ((abs(model_time-next_output)<1e-1).or.(model_time>next_output)) then
                     call write_domain(domain,options,nint((model_time-options%time_zero)/options%out_dt))
