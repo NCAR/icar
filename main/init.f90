@@ -85,6 +85,13 @@ contains
 !
 ! ------------------------------------------------------------------------------------------
 
+! convert longitudes that may be -180-180 into 0-360 range
+    subroutine convert_longitudes(long_data)
+        implicit none
+        real, dimension(:,:), intent(inout) :: long_data
+        where(long_data<0) long_data = 360+long_data
+    end subroutine convert_longitudes
+
 !   Allow running over a sub-domain, by removing the outer N grid cells from all sides of the domain (lat,lon,terrain)
     subroutine remove_edges(domain,edgesize)
         implicit none
@@ -461,10 +468,14 @@ contains
         call io_read2d(options%init_conditions_file,options%hgt_hi,domain%terrain,1)
         call io_read2d(options%init_conditions_file,options%lat_hi,domain%lat,1)
         call io_read2d(options%init_conditions_file,options%lon_hi,domain%lon,1)
+        call convert_longitudes(domain%lon)
         call io_read2d(options%init_conditions_file,options%ulat_hi,domain%u_geo%lat,1)
         call io_read2d(options%init_conditions_file,options%ulon_hi,domain%u_geo%lon,1)
+        call convert_longitudes(domain%u_geo%lon)
         call io_read2d(options%init_conditions_file,options%vlat_hi,domain%v_geo%lat,1)
         call io_read2d(options%init_conditions_file,options%vlon_hi,domain%v_geo%lon,1)
+        call convert_longitudes(domain%v_geo%lon)
+        
         if (options%landvar/="") then
             call io_read2d(options%init_conditions_file,options%landvar,domain%landmask,1)
             where(domain%landmask==0) domain%landmask=kLC_WATER
@@ -602,10 +613,13 @@ contains
         ! these variables are required for any boundary/forcing file type
         call io_read2d(options%boundary_files(1),options%latvar,boundary%lat)
         call io_read2d(options%boundary_files(1),options%lonvar,boundary%lon)
+        call convert_longitudes(boundary%lon)
         call io_read2d(options%boundary_files(1),options%ulat,boundary%u_geo%lat)
         call io_read2d(options%boundary_files(1),options%ulon,boundary%u_geo%lon)
+        call convert_longitudes(boundary%u_geo%lon)
         call io_read2d(options%boundary_files(1),options%vlat,boundary%v_geo%lat)
         call io_read2d(options%boundary_files(1),options%vlon,boundary%v_geo%lon)
+        call convert_longitudes(boundary%v_geo%lon)
         call io_read2d(options%boundary_files(1),options%hgtvar,boundary%terrain)
         
         ! read in the vertical coordinate
@@ -679,10 +693,14 @@ contains
         call io_read2d(options%ext_wind_files(1),options%hgt_hi,bc%ext_winds%terrain,1)
         call io_read2d(options%ext_wind_files(1),options%latvar,bc%ext_winds%lat)
         call io_read2d(options%ext_wind_files(1),options%lonvar,bc%ext_winds%lon)
+        call convert_longitudes(bc%ext_winds%lon)
         call io_read2d(options%ext_wind_files(1),options%ulat_hi,bc%ext_winds%u_geo%lat)
         call io_read2d(options%ext_wind_files(1),options%ulon_hi,bc%ext_winds%u_geo%lon)
+        call convert_longitudes(bc%ext_winds%u_geo%lon)
         call io_read2d(options%ext_wind_files(1),options%vlat_hi,bc%ext_winds%v_geo%lat)
         call io_read2d(options%ext_wind_files(1),options%vlon_hi,bc%ext_winds%v_geo%lon)
+        call convert_longitudes(bc%ext_winds%v_geo%lon)
+        
         write(*,*) "Setting up ext wind geoLUTs"
         call geo_LUT(bc%next_domain%u_geo, bc%ext_winds%u_geo)
         call geo_LUT(bc%next_domain%v_geo, bc%ext_winds%v_geo)
@@ -804,6 +822,7 @@ contains
         nz=size(boundary%lowres_z,2)
         if (maxval(boundary%terrain)>maxval(boundary%lowres_z(:,1,:))) then
             write(*,*) "WARNING Assuming forcing Z levels are AGL, not ASL : adding ground surface height"
+            write(*,*) "Terrain Max=",maxval(boundary%terrain), "Lowest level Max=",maxval(boundary%lowres_z(:,1,:))
             do i=1,nz
                 boundary%lowres_z(:,i,:)=boundary%lowres_z(:,i,:)+boundary%terrain
             enddo
