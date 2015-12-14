@@ -587,7 +587,18 @@ contains
             call io_read2d(restart_file,"canwat",inputdata_2d,timeslice)
             domain%canopy_water=inputdata_2d
             deallocate(inputdata_2d)
-        endif       
+        endif
+        
+        if (io_variable_is_present(restart_file,"rsds")) then
+            call io_read2d(restart_file,"rsds",inputdata_2d,timeslice)
+            domain%swdown=inputdata_2d
+            deallocate(inputdata_2d)
+            
+            call io_read2d(restart_file,"rlds",inputdata_2d,timeslice)
+            domain%lwdown=inputdata_2d
+            deallocate(inputdata_2d)
+        endif
+        
         
     end subroutine load_restart_file
     
