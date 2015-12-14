@@ -675,7 +675,13 @@ contains
             endif
             domain%pii=(domain%p/100000.0)**(Rd/cp)
             domain%rho=domain%p/(Rd*domain%th*domain%pii) ! kg/m^3
-            call balance_uvw(domain,options)
+            ! note, ideally update_winds needs an initializer instead of being called when we are doing a restart
+            ! alternatively we could pass an init_only=True into update_winds
+            ! so that the linear wind solution isn't calculated for a restart step
+            ! however, we ned to call update_winds to allow all variables to be initialized properly
+            call update_winds(domain,options)
+            ! we can't just call balance_uvw because the linear winds may need to be initialized
+            !call balance_uvw(domain,options)
             
             call write_domain(domain,options,-1)
         else
