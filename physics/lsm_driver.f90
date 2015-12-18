@@ -62,6 +62,8 @@ module land_surface
                                            POTEVP,RIB, NOAHRES,FLX4_2D,FVB_2D,FBUR_2D,              &
                                            FGSN_2D, z_atm,lnz_atm_term,Ri,base_exchange_term
                                            
+    integer,allocatable, dimension(:,:) :: rain_bucket ! used to start the previous time step rain bucket
+                                           
     logical :: MYJ, FRPCPN,ua_phys,RDLAI2D,USEMONALB
     real,allocatable, dimension(:,:,:)  :: SH2O,SMCREL
     real,allocatable, dimension(:,:)    :: dTemp,lhdQV, windspd
@@ -137,11 +139,8 @@ contains
 
 !         print*,"--------------------------------------------------"
 !         print*, "Surface Richardson number"
-!         print*, Ri(139,69), airt(139,1,69), tskin(139,69), z_atm(139,69), wind(139,69)
         where(Ri<0)  exchange_C = lnz_atm_term * (1.0-(15.0*Ri)/(1.0+(base_exchange_term * sqrt((-1.0)*Ri))))
         where(Ri>=0) exchange_C = lnz_atm_term * 1.0/((1.0+15.0*Ri)*sqrt(1.0+5.0*Ri))
-!         print*, " Exchange         lnz_term,           base_term"
-!         print*, exchange_C(139,69), lnz_atm_term(139,69), base_exchange_term(139,69)
 
         where(exchange_C > MAX_EXCHANGE_C) exchange_C=MAX_EXCHANGE_C
         where(exchange_C < MIN_EXCHANGE_C) exchange_C=MIN_EXCHANGE_C
@@ -280,8 +279,6 @@ contains
         EMISS=0.95
         allocate(EMBCK(ime,jme))
         EMBCK=0.95
-        allocate(RAINBL(ime,jme))
-        RAINBL=0 ! used to store last time step accumulated precip so that it can be subtracted from the current step
         allocate(CPM(ime,jme))
         CPM=0
         allocate(SR(ime,jme))
@@ -356,9 +353,9 @@ contains
         allocate(lhdQV(ime-2,jme-2))
         lhdQV=0
         allocate(Z0(ime,jme))
-        Z0=0.01 !?
+        Z0=0.01 ! this should get updated by the LSM
         allocate(QSFC(ime,jme))
-        QSFC=domain%qv(:,1,:)
+        QSFC=domain%qv(:,1,:) ! this should get updated by the lsm
         allocate(Ri(ime,jme))
         Ri=0
         allocate(z_atm(ime,jme))
@@ -379,6 +376,13 @@ contains
         CHS2=0.01
         allocate(CQS2(ime,jme))
         CQS2=0.01
+        
+        allocate(RAINBL(ime,jme))
+        RAINBL=domain%rain  ! used to store last time step accumulated precip so that it can be subtracted from the current step
+                            ! set to domain%rain incase this is a restart run and rain is non-zero to start
+        allocate(rain_bucket(ime,jme))
+        rain_bucket=domain%rain_bucket  ! used to store last time step accumulated precip so that it can be subtracted from the current step
+        
         
         domain%T2m = domain%th(:,1,:) * domain%pii(:,1,:)
         domain%Q2m = domain%qv(:,1,:)
@@ -554,7 +558,9 @@ contains
                             ISURBAN,ISICE, &
                             VEGFRAC, &
                             ALBEDO,ALBBCK,domain%znt,Z0,domain%soil_tdeep,domain%landmask,XICE,EMISS,EMBCK,     &
-                            SNOWC,QSFC,domain%rain-RAINBL,MMINLU,         &
+                            SNOWC,QSFC,                                   &
+                            (domain%rain-RAINBL)+(domain%rain_bucket-rain_bucket)*kPRECIP_BUCKET_SIZE, &
+                            MMINLU, &
                             num_soil_layers,lsm_dt,DZS,ITIMESTEP,         &
                             domain%soil_vwc,domain%soil_t,domain%snow_swe,&
                             domain%canopy_water,            &
@@ -587,6 +593,7 @@ contains
                 ! note this is more or less just diagnostic and could be removed
                 domain%lwup=stefan_boltzmann*EMISS*domain%skin_t**4
                 RAINBL=domain%rain
+                rain_bucket=domain%rain_bucket
                 
 !                 i=139
 !                 j=69
