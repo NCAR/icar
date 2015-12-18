@@ -121,6 +121,16 @@ contains
             endif
             options%t_offset=300
         endif
+        
+        if ((options%initial_mjd + options%ntimesteps/(86400.0/options%in_dt)) < options%start_mjd) then
+            write(*,*) "ERROR: start date is more than ntimesteps past the forcing start"
+            write(*,*) "Initial Modified Julian Day:",options%initial_mjd
+            write(*,*) "Start date Modified Julian Day:",options%start_mjd
+            write(*,*) "number of time steps:",options%ntimesteps
+            write(*,*) "number of days to simulate:",options%ntimesteps/(86400.0/options%in_dt)
+            stop "Start time is past stop time."
+        endif
+            
 
         ! convection can modify wind field, and ideal doesn't rebalance winds every timestep
         if ((options%physics%convection.ne.0).and.(options%ideal)) then
