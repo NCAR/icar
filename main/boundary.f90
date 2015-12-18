@@ -65,6 +65,8 @@ contains
         integer :: step
         
         step = (options%start_mjd-options%initial_mjd)/(options%in_dt / 86400.0d+0)
+        if (options%debug) print*, "bc_find_step",(options%start_mjd-options%initial_mjd)/(options%in_dt / 86400.0d+0)
+        if (options%debug) print*, "bc_find_step",step
         
     end function bc_find_step
     
@@ -514,14 +516,9 @@ contains
         endif
         
         write(*,*) "Reading atmospheric restart data"
-        call io_read3d(restart_file,"u",inputdata,timeslice)
-        call check_shapes_3d(inputdata,domain%u)
-        domain%u=inputdata
-        deallocate(inputdata)
-        call io_read3d(restart_file,"v",inputdata,timeslice)
-        domain%v=inputdata
-        deallocate(inputdata)
+        write(*,*) "   timestep:",trim(str(timeslice))," from file:",trim(restart_file)
         call io_read3d(restart_file,"qv",inputdata,timeslice)
+        call check_shapes_3d(inputdata,domain%qv)
         domain%qv=inputdata
         deallocate(inputdata)
         call io_read3d(restart_file,"qc",inputdata,timeslice)
@@ -689,8 +686,26 @@ contains
 !       load the restart file
         if (options%restart) then
             call load_restart_file(domain,options%restart_file,options%restart_step_in_file)
+            write(*,*) "Reading winds"
+            write(*,*) "  timestep:",trim(str(curstep)),"  from file:",trim(file_list(curfile))
             if (options%external_winds) then
                 call ext_winds_init(domain,bc,options)
+            elseif (options%lt_options%remove_lowres_linear) then
+                ! remove the low-res linear wind perturbation field 
+                call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
+                call smooth_wind(domain%u,smoothing_window,3)
+                call smooth_wind(domain%v,smoothing_window,3)
+            elseif (options%mean_winds) then
+                call mean_winds(domain,file_list(curfile),curstep,options)
+            else
+                call read_var(domain%u, file_list(curfile),options%uvar,  &
+                                bc%u_geo%geolut,bc%u_geo%vert_lut,curstep,boundary_value, &
+                                options)
+                call read_var(domain%v, file_list(curfile),options%vvar,  &
+                                bc%v_geo%geolut,bc%v_geo%vert_lut,curstep,boundary_value, &
+                                options)
+                call smooth_wind(domain%u,smoothing_window,3)
+                call smooth_wind(domain%v,smoothing_window,3)
             endif
             domain%pii=(domain%p/100000.0)**(Rd/cp)
             domain%rho=domain%p/(Rd*domain%th*domain%pii) ! kg/m^3

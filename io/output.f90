@@ -694,6 +694,9 @@ contains
         integer,intent(in)::timestep
         character(len=*),intent(in),optional :: inputfilename
         integer :: year, month, day, hour, minute, second
+        logical :: output_rain_rate
+        
+        output_rain_rate=.True.
         
         ! note, set this on every call so that we can output surface variables most of the time, and 3D variables once / month for restarts
         surface_io_only = options%surface_io_only
@@ -703,8 +706,13 @@ contains
         nz=size(domain%qv,2)
         ny=size(domain%qv,3)
         if (.not.allocated(last_rain)) then
+            output_rain_rate=.False.
             allocate(last_rain(nx,ny))
-            last_rain=0
+            if (options%restart) then
+                last_rain=domain%rain
+            else
+                last_rain=0
+            endif
         endif
         nsoil=size(domain%soil_t,2)
         
@@ -789,9 +797,11 @@ contains
         call check( nf90_put_var(ncid, varid(14), &
                                  domain%rain + domain%rain_bucket*kPRECIP_BUCKET_SIZE, &
                                  start_two_D), trim(filename)//":rain" )
-        call check( nf90_put_var(ncid, varid(32), &
-                                 domain%rain-last_rain, &
-                                 start_two_D), trim(filename)//":rainrate" )
+        if (output_rain_rate) then ! don't bother outputing if this is the first step in a restart run
+            call check( nf90_put_var(ncid, varid(32), &
+                                     domain%rain-last_rain, &
+                                     start_two_D), trim(filename)//":rainrate" )
+        endif
         call check( nf90_put_var(ncid, varid(15), &
                                  domain%snow + domain%snow_bucket*kPRECIP_BUCKET_SIZE, &
                                  start_two_D), trim(filename)//":snow" )
@@ -817,20 +827,24 @@ contains
         endif
         
         call check( nf90_put_var(ncid, varid(28), domain%skin_t,       start_two_D),  trim(filename)//":skin_t" )
-        call check( nf90_put_var(ncid, varid(34), domain%T2m, start_two_D),  trim(filename)//":t2m" )
-        call check( nf90_put_var(ncid, varid(35), domain%Q2m, start_two_D),  trim(filename)//":hus2m" )
-        call check( nf90_put_var(ncid, varid(36), domain%u10, start_two_D),  trim(filename)//":u10m" )
-        call check( nf90_put_var(ncid, varid(37), domain%v10, start_two_D),  trim(filename)//":v10m" )
-        call check( nf90_put_var(ncid, varid(23), domain%sensible_heat,start_two_D),  trim(filename)//":sensible_heat" )
-        call check( nf90_put_var(ncid, varid(24), domain%latent_heat,  start_two_D),  trim(filename)//":latent_heat" )
+        if (output_rain_rate) then ! don't bother outputing if this is the first step in a restart run
+            call check( nf90_put_var(ncid, varid(34), domain%T2m, start_two_D),  trim(filename)//":t2m" )
+            call check( nf90_put_var(ncid, varid(35), domain%Q2m, start_two_D),  trim(filename)//":hus2m" )
+            call check( nf90_put_var(ncid, varid(36), domain%u10, start_two_D),  trim(filename)//":u10m" )
+            call check( nf90_put_var(ncid, varid(37), domain%v10, start_two_D),  trim(filename)//":v10m" )
+            call check( nf90_put_var(ncid, varid(23), domain%sensible_heat,start_two_D),  trim(filename)//":sensible_heat" )
+            call check( nf90_put_var(ncid, varid(24), domain%latent_heat,  start_two_D),  trim(filename)//":latent_heat" )
+        endif
         ! these should only be output for lsm packages that compute them
         if (options%physics%landsurface==kLSM_NOAH) then
-            call check( nf90_put_var(ncid, varid(25), domain%ground_heat,  start_two_D),  trim(filename)//":ground_heat" )
             call check( nf90_put_var(ncid, varid(26), domain%soil_vwc,     start_three_D),trim(filename)//":soil_vwc" )
             call check( nf90_put_var(ncid, varid(27), domain%soil_t,       start_three_D),trim(filename)//":soil_t" )
-            call check( nf90_put_var(ncid, varid(29), domain%lwup,         start_two_D),  trim(filename)//":lwup" )
             call check( nf90_put_var(ncid, varid(30), domain%snow_swe,     start_two_D),  trim(filename)//":snow_swe" )
             call check( nf90_put_var(ncid, varid(31), domain%canopy_water, start_two_D),  trim(filename)//":canopy_water" )
+            if (output_rain_rate) then ! don't bother outputing if this is the first step in a restart run
+                call check( nf90_put_var(ncid, varid(25), domain%ground_heat,  start_two_D),  trim(filename)//":ground_heat" )
+                call check( nf90_put_var(ncid, varid(29), domain%lwup,         start_two_D),  trim(filename)//":lwup" )
+            endif
         endif
         
         last_rain=domain%rain
