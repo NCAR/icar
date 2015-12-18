@@ -387,8 +387,6 @@ contains
         domain%T2m = domain%th(:,1,:) * domain%pii(:,1,:)
         domain%Q2m = domain%qv(:,1,:)
         
-        
-        
         if (options%physics%landsurface==kLSM_SIMPLE) then
             write(*,*) "    Simple LSM (may not work?)"
             stop("Simple LSM not settup, choose a different LSM options")
@@ -424,9 +422,11 @@ contains
             endif
             cur_vegmonth=domain%current_month
             
+            ! save the canopy water in a temporary variable in case this is a restart run because lsm_init resets it to 0
+            CQS2=domain%canopy_water
             ! prevents init from failing when processing water poitns that may have "soil_t"=0
             where(domain%soil_t<200) domain%soil_t=200
-            where(domain%soil_vwc<0.001) domain%soil_vwc=0.001
+            where(domain%soil_vwc<0.0001) domain%soil_vwc=0.0001
             call LSM_NOAH_INIT(VEGFRAC,SNOW,SNOWC,SNOWH,domain%canopy_water,domain%soil_t,    &
                                 domain%soil_vwc, SFCRUNOFF,UDRUNOFF,ACSNOW,  &
                                 ACSNOM,domain%veg_type,domain%soil_type,     &
@@ -440,6 +440,8 @@ contains
                                 ims,ime, jms,jme, kms,kme,                   &
                                 its,ite, jts,jte, kts,kte  )
             
+            domain%canopy_water=CQS2
+            CQS2=0.01
             where(domain%veg_type==ISWATER) domain%landmask=kLC_WATER ! ensure VEGTYPE (land cover) and land-sea mask are consistent
         endif
         
