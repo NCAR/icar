@@ -1,14 +1,15 @@
 ###################################################################
 # Makefile rules:
-# <default> all: makes real
-#			install: makes and installs real in INSTALLDIR
+#
+# <default> all: makes icar
+#			install: makes and installs icar in INSTALLDIR
 #			clean: removes objects and module files
 #			allclean: makes clean and removes executables
 #			cleanall: alias for allclean
-#			tests: makes various unit tests (does not always work)
-#			real: makes the primary model
-#			ideal: makes an idealized version of the model (does not not always work)
-# 
+#			tests: makes various unit tests (not all work)
+#			icar: makes the primary model
+#
+# Optional setting:
 #	MODE = fast, debug, debugomp, debugslow, debugompslow
 #
 ###################################################################
@@ -167,7 +168,7 @@ ifeq ($(F90), gfortran)
 endif
 # Intel fortran
 ifeq ($(F90), ifort)
-	COMP=-c -u -openmp -liomp5 -O3 -no-prec-div -xHost -ftz
+	COMP=-c -u -openmp -liomp5 -O3 -no-prec-div -xHost -ftz -fpe0
 	LINK= -openmp -liomp5
 	PREPROC=-fpp
 	MODOUTPUT=-module $(BUILD)
@@ -253,7 +254,7 @@ ifeq ($(MODE), debugompslow)
 endif
 ifeq ($(MODE), debugomp)
 	ifeq ($(F90), ifort)
-		COMP= -openmp -liomp5 -debug -c -O1 -u -traceback -check all -check noarg_temp_created -fpe0 -fast-transcendentals -xhost
+		COMP= -openmp -liomp5 -debug -c -O3 -u -traceback -fpe0 -ftz -fast-transcendentals  -xHost #-check all -check noarg_temp_created -fpe0 -fast-transcendentals -xhost
 		LINK= -openmp -liomp5
 	endif
 	ifeq ($(F90), gfortran)
