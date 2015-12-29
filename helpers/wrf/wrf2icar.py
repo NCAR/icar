@@ -35,7 +35,7 @@ import os
 import traceback
 import argparse
 import numbers
-import types
+# import types
 
 from wrf_vars import wrfvars, tsvar, landmask, steps_per_day
 
@@ -107,7 +107,7 @@ def load_vars(filename,varnames):
             if verbose:print("Loading a list")
             outputdata.extend(load_vars(filename,v))
             
-        elif (type(v)==types.BuiltinFunctionType) or (type(v)==types.FunctionType):
+        elif (hasattr(v,__call__)):#(type(v)==types.BuiltinFunctionType) or (type(v)==types.FunctionType):
             # if this var is actually a function than store it as an operator to process
             op=v
             if verbose:print(op)
