@@ -753,13 +753,23 @@ contains
             call read_var(domain%qv,   file_list(curfile),   options%qvvar,  &
                             bc%geolut, bc%vert_lut, curstep, boundary_value, &
                             options)
-            call read_var(domain%cloud,file_list(curfile),   options%qcvar,  &
-                            bc%geolut, bc%vert_lut, curstep, boundary_value, &
-                            options)
-            call read_var(domain%ice,  file_list(curfile),   options%qivar,  &
-                            bc%geolut, bc%vert_lut, curstep, boundary_value, &
-                            options)
-
+            if (trim(options%qcvar)/="") then
+                call read_var(domain%cloud,file_list(curfile),   options%qcvar,  &
+                                bc%geolut, bc%vert_lut, curstep, boundary_value, &
+                                options)
+            else
+                if (options%debug) print*, "No Cloud water content specified"
+                domain%cloud=0
+            endif
+            if (trim(options%qivar)/="") then
+                call read_var(domain%ice,  file_list(curfile),   options%qivar,  &
+                                bc%geolut, bc%vert_lut, curstep, boundary_value, &
+                                options)
+            else
+                if (options%debug) print*, "No Cloud ice specified"
+                domain%ice=0
+            endif
+            
             if (options%physics%landsurface==kLSM_BASIC) then
                 call read_2dvar(domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep,options)
                 call read_2dvar(domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep,options)
@@ -1085,13 +1095,16 @@ contains
                       bc%geolut, bc%vert_lut, curstep, use_boundary,              &
                       options, time_varying_zlut=newbc%vert_lut)
                       
-        call read_var(bc%next_domain%cloud,   file_list(curfile), options%qcvar,  &
-                      bc%geolut, bc%vert_lut, curstep, use_boundary,              &
-                      options, time_varying_zlut=newbc%vert_lut)
-                      
-        call read_var(bc%next_domain%ice,     file_list(curfile), options%qivar,  &
-                      bc%geolut, bc%vert_lut, curstep, use_boundary,              &
-                      options, time_varying_zlut=newbc%vert_lut)
+        if (trim(options%qcvar)/="") then
+            call read_var(bc%next_domain%cloud,   file_list(curfile), options%qcvar,  &
+                          bc%geolut, bc%vert_lut, curstep, use_boundary,              &
+                          options, time_varying_zlut=newbc%vert_lut)
+        endif
+        if (trim(options%qivar)/="") then
+            call read_var(bc%next_domain%ice,     file_list(curfile), options%qivar,  &
+                          bc%geolut, bc%vert_lut, curstep, use_boundary,              &
+                          options, time_varying_zlut=newbc%vert_lut)
+        endif
 
         ! finally, if we need to read in land surface forcing read in those 2d variables as well. 
         if (options%physics%landsurface==kLSM_BASIC) then
