@@ -535,7 +535,7 @@ $(BUILD)adv_mpdata.o:$(PHYS)adv_mpdata.f90 $(PHYS)adv_mpdata_FCT_core.f90 $(BUIL
 $(BUILD)wind.o:$(PHYS)wind.f90 $(BUILD)linear_winds.o $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)wind.f90 -o $(BUILD)wind.o
 
-$(BUILD)linear_winds.o:$(PHYS)linear_winds.f90 $(BUILD)io_routines.o $(BUILD)data_structures.o $(BUILD)output.o $(BUILD)fftshift.o
+$(BUILD)linear_winds.o:$(PHYS)linear_winds.f90 $(BUILD)io_routines.o $(BUILD)data_structures.o $(BUILD)fftshift.o
 	${F90} ${FFLAGS} $(PHYS)linear_winds.f90 -o $(BUILD)linear_winds.o
 
 $(BUILD)fftshift.o:$(UTIL)fftshift.f90
