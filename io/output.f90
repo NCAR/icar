@@ -205,12 +205,12 @@ contains
         dimids(1)=x_id
         dimtwo_time(1)=x_id
         dimtwo(1)=x_id
-        call check( nf90_def_dim(ncid, "lev", nz, temp_id), trim(err)//"lev" )
-        dimids(2)=temp_id
         call check( nf90_def_dim(ncid, "lat", ny, y_id), trim(err)//"lat" )
-        dimids(3)=y_id
+        dimids(2)=y_id
         dimtwo_time(2)=y_id
         dimtwo(2)=y_id
+        call check( nf90_def_dim(ncid, "lev", nz, temp_id), trim(err)//"lev" )
+        dimids(3)=temp_id
         call check( nf90_def_dim(ncid, "lon_u", nx+1, xu_id), trim(err)//"lon_u" )
         call check( nf90_def_dim(ncid, "lat_v", ny+1, yv_id), trim(err)//"lat_v" )
         
@@ -309,13 +309,13 @@ contains
             varid(9)=temp_id
             dimids(1)=x_id
             
-            dimids(3)=yv_id
+            dimids(2)=yv_id
             call check( nf90_def_var(ncid, "v", NF90_REAL, dimids, temp_id), trim(err)//"v" )
             call check( nf90_put_att(ncid,temp_id,"standard_name","grid_northward_wind"))
             call check( nf90_put_att(ncid,temp_id,"long_name","Grid relative northward wind"))
             call check( nf90_put_att(ncid,temp_id,"units","m s-1"))
             varid(10)=temp_id
-            dimids(3)=y_id
+            dimids(2)=y_id
             
             call check( nf90_def_var(ncid, "w", NF90_REAL, dimids, temp_id), trim(err)//"w" )
             call check( nf90_put_att(ncid,temp_id,"standard_name","upward_air_velocity"))
@@ -521,7 +521,7 @@ contains
             call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
             varid(25)=temp_id
     
-            dimids(2)=soil_id
+            dimids(3)=soil_id
             call check( nf90_def_var(ncid, "soil_w", NF90_REAL, dimids, temp_id), trim(err)//"soil_w" )
             call check( nf90_put_att(ncid,temp_id,"standard_name","soil_moisture_content"))
             call check( nf90_put_att(ncid,temp_id,"long_name","Column Soil Moisture"))
@@ -668,7 +668,6 @@ contains
             varid(29)=temp_id
             call check( nf90_inq_varid(ncid, "hfgs",  temp_id), trim(err)//"hfgs" )
             varid(25)=temp_id
-            dimids(2)=soil_id
             call check( nf90_inq_varid(ncid, "soil_w", temp_id), trim(err)//"soil_w" )
             varid(26)=temp_id
             call check( nf90_inq_varid(ncid, "soil_t", temp_id), trim(err)//"soil_t" )
@@ -694,6 +693,7 @@ contains
         integer,intent(in)::timestep
         character(len=*),intent(in),optional :: inputfilename
         integer :: year, month, day, hour, minute, second
+        integer :: output_shape(3), zlast(3)
         logical :: output_rain_rate
         
         output_rain_rate=.True.
@@ -702,9 +702,13 @@ contains
         surface_io_only = options%surface_io_only
         
         ! these are module level variables
-        nx=size(domain%qv,1)
-        nz=size(domain%qv,2)
-        ny=size(domain%qv,3)
+        nx = size(domain%qv,1)
+        nz = size(domain%qv,2)
+        ny = size(domain%qv,3)
+        nsoil = size(domain%soil_t,2)
+        output_shape = [nx,ny,nz]
+        zlast = [1,3,2]
+        
         if (.not.allocated(last_rain)) then
             output_rain_rate=.False.
             allocate(last_rain(nx,ny))
@@ -714,7 +718,6 @@ contains
                 last_rain=0
             endif
         endif
-        nsoil=size(domain%soil_t,2)
         
         current_step=1
         if (present(inputfilename)) then
@@ -756,32 +759,36 @@ contains
             ! and write constant (in time) variables
             call check( nf90_put_var(ncid, lat_id,    domain%lat), trim(filename)//":Latitude" )
             call check( nf90_put_var(ncid, lon_id,    domain%lon), trim(filename)//":Longitude" )
-            call check( nf90_put_var(ncid, varid(20), domain%z) , trim(filename)//":Z")
+            call check( nf90_put_var(ncid, varid(20), reshape(domain%z, output_shape, order=zlast)) , trim(filename)//":Z")
         endif
         
         ! write the actual data
         call check( nf90_put_var(ncid, time_id,   domain%model_time/86400.0+50000, start_scalar ), trim(filename)//":Time" )
         
         if (.not.surface_io_only) then
-            call check( nf90_put_var(ncid, varid(1),  domain%qv,    start_three_D),    trim(filename)//":qv" )
-            call check( nf90_put_var(ncid, varid(2),  domain%cloud, start_three_D),    trim(filename)//":cloud" )
-            call check( nf90_put_var(ncid, varid(3),  domain%ice,   start_three_D),    trim(filename)//":ice" )
-            call check( nf90_put_var(ncid, varid(4),  domain%qrain, start_three_D),    trim(filename)//":qrain" )
-            call check( nf90_put_var(ncid, varid(5),  domain%qsnow, start_three_D),    trim(filename)//":qsnow" )
+            call check( nf90_put_var(ncid, varid(1),  reshape(domain%qv,    output_shape, order=zlast), start_three_D),    trim(filename)//":qv" )
+            call check( nf90_put_var(ncid, varid(2),  reshape(domain%cloud, output_shape, order=zlast), start_three_D),    trim(filename)//":cloud" )
+            call check( nf90_put_var(ncid, varid(3),  reshape(domain%ice,   output_shape, order=zlast), start_three_D),    trim(filename)//":ice" )
+            call check( nf90_put_var(ncid, varid(4),  reshape(domain%qrain, output_shape, order=zlast), start_three_D),    trim(filename)//":qrain" )
+            call check( nf90_put_var(ncid, varid(5),  reshape(domain%qsnow, output_shape, order=zlast), start_three_D),    trim(filename)//":qsnow" )
             ! these should only be output for thompson microphysics
             if (options%physics%microphysics==kMP_THOMPSON) then
-                call check( nf90_put_var(ncid, varid(6),  domain%qgrau, start_three_D),trim(filename)//":qgraupel" )
-                call check( nf90_put_var(ncid, varid(7),  domain%nrain, start_three_D),trim(filename)//":nrain" )
-                call check( nf90_put_var(ncid, varid(8),  domain%nice,  start_three_D),trim(filename)//":nice" )
+                call check( nf90_put_var(ncid, varid(6),  reshape(domain%qgrau, output_shape, order=zlast), start_three_D),trim(filename)//":qgraupel" )
+                call check( nf90_put_var(ncid, varid(7),  reshape(domain%nrain, output_shape, order=zlast), start_three_D),trim(filename)//":nrain" )
+                call check( nf90_put_var(ncid, varid(8),  reshape(domain%nice,  output_shape, order=zlast), start_three_D),trim(filename)//":nice" )
             endif
-            call check( nf90_put_var(ncid, varid(9),  domain%u,     start_three_D),    trim(filename)//":u" )
-            call check( nf90_put_var(ncid, varid(10), domain%v,     start_three_D),    trim(filename)//":v" )
-            call check( nf90_put_var(ncid, varid(11), domain%w_real,     start_three_D),    trim(filename)//":w" )
-            call check( nf90_put_var(ncid, varid(12), domain%p,     start_three_D),    trim(filename)//":p" )
-            call check( nf90_put_var(ncid, varid(13), domain%th,    start_three_D),    trim(filename)//":th" )
-            call check( nf90_put_var(ncid, varid(21), domain%rho,   start_three_D),    trim(filename)//":rho" )
+            output_shape(1)=output_shape(1)+1
+            call check( nf90_put_var(ncid, varid(9),  reshape(domain%u,     output_shape, order=zlast), start_three_D),    trim(filename)//":u" )
+            output_shape(1)=output_shape(1)-1
+            output_shape(2)=output_shape(2)+1
+            call check( nf90_put_var(ncid, varid(10), reshape(domain%v,     output_shape, order=zlast), start_three_D),    trim(filename)//":v" )
+            output_shape(2)=output_shape(2)-1
+            call check( nf90_put_var(ncid, varid(11), reshape(domain%w_real,output_shape, order=zlast), start_three_D),    trim(filename)//":w" )
+            call check( nf90_put_var(ncid, varid(12), reshape(domain%p,     output_shape, order=zlast), start_three_D),    trim(filename)//":p" )
+            call check( nf90_put_var(ncid, varid(13), reshape(domain%th,    output_shape, order=zlast), start_three_D),    trim(filename)//":th" )
+            call check( nf90_put_var(ncid, varid(21), reshape(domain%rho,   output_shape, order=zlast), start_three_D),    trim(filename)//":rho" )
             if (options%physics%windtype==kWIND_LINEAR) then
-                call check( nf90_put_var(ncid, varid(33), domain%nsquared, start_three_D), trim(filename)//":nsquared" )
+                call check( nf90_put_var(ncid, varid(33), reshape(domain%nsquared, output_shape, order=zlast), start_three_D), trim(filename)//":nsquared" )
             endif
         else
             call check( nf90_put_var(ncid, varid(1),  domain%qv(:,1,:), start_two_D),  trim(filename)//":qv" )
@@ -837,10 +844,13 @@ contains
         endif
         ! these should only be output for lsm packages that compute them
         if (options%physics%landsurface==kLSM_NOAH) then
-            call check( nf90_put_var(ncid, varid(26), domain%soil_vwc,     start_three_D),trim(filename)//":soil_vwc" )
-            call check( nf90_put_var(ncid, varid(27), domain%soil_t,       start_three_D),trim(filename)//":soil_t" )
+            output_shape(3) = nsoil
+            call check( nf90_put_var(ncid, varid(26), reshape(domain%soil_vwc, output_shape, order=zlast), start_three_D),trim(filename)//":soil_vwc" )
+            call check( nf90_put_var(ncid, varid(27), reshape(domain%soil_t,   output_shape, order=zlast), start_three_D),trim(filename)//":soil_t" )
+            
             call check( nf90_put_var(ncid, varid(30), domain%snow_swe,     start_two_D),  trim(filename)//":snow_swe" )
             call check( nf90_put_var(ncid, varid(31), domain%canopy_water, start_two_D),  trim(filename)//":canopy_water" )
+            
             if (output_rain_rate) then ! don't bother outputing if this is the first step in a restart run
                 call check( nf90_put_var(ncid, varid(25), domain%ground_heat,  start_two_D),  trim(filename)//":ground_heat" )
                 call check( nf90_put_var(ncid, varid(29), domain%lwup,         start_two_D),  trim(filename)//":lwup" )

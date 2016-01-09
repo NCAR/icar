@@ -36,7 +36,6 @@ module linear_theory_winds
     use fftshifter
     use data_structures
     use io_routines,        only : io_read6d, io_write6d, io_write3d, io_write2d, io_read2d
-    use output,             only : write_domain
     use string,             only : str
     implicit none
     private
