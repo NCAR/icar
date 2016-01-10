@@ -1,5 +1,8 @@
 #ICAR Code Overview
-**NOTE** This will be updated over time.  For now here is a cursory description to help point people to the right files. 
+**NOTE** Documentation is slowly being built up within the code using doxygen. After installing doxygen and dot, 
+run "make doc" to create the API documentation in docs/html/
+
+This will be updated over time.  For now here is a cursory description to help point people to the right files. 
 
 The main program resides in main/driver.f90
 
