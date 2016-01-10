@@ -359,18 +359,21 @@ install:icar
 	cp icar ${INSTALLDIR}
 
 clean:
-	rm $(BUILD)*.o $(BUILD)*.mod *.lst
+	${RM} $(BUILD)*.o $(BUILD)*.mod *.lst
 
 allclean:cleanall
 
 cleanall: clean
-	rm icar fftshift_test calendar_test mpdata_test
+	${RM} icar fftshift_test calendar_test mpdata_test
 	# geo_test wind_test #test_init
 
 test: fftshift_test calendar_test mpdata_test #geo_test wind_test #test_init
 
 icar:${OBJS}
 	${F90} ${LFLAGS} ${OBJS} -o icar  -lm -lfftw3
+	
+doc:
+	doxygen docs/doxygenConfig
 
 ###################################################################
 #	test cases
