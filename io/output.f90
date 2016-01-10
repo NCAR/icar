@@ -1,10 +1,9 @@
 !>------------------------------------------------------------
 !!  Model Output
 !!
-!!  Writes all model data to a (mostly?) CF compliant netcdf file
-!!  Currently does not contain a time variable. 
-!!  Ideally this should be added and the output file should just be updated
-!!  so ICAR doesn't generate quite so many small output files
+!!  Writes all model data to a (mostly?) CF compliant netcdf file. 
+!!  Eventually this should be updated to work with generic data structures rather
+!!  than specifying / hard codeing every possible variable name and attribute. 
 !!
 !!  @author
 !!  Ethan Gutmann (gutmann@ucar.edu)
@@ -20,20 +19,22 @@ module output
     private
     public :: write_domain
     
-    integer, parameter :: ndims = 4
-    integer, parameter :: nvars=37 ! current max = 37
-    ! This will be the netCDF ID for the file and data variable.
+    integer, parameter :: ndims = 4     !> number of dimensions in output (x,y,z,t)
+    integer, parameter :: nvars = 37    !> current number of vars = 37
+    !> This will be the netCDF ID for the file and data variable.
     integer :: ncid, temp_id
-    ! dimension IDs
+    !> dimension IDs
     integer :: t_id, x_id, y_id, xu_id, yv_id, soil_id
+    !> arrays to store dims for a given variable
     integer :: dimids(ndims)
     integer :: dimtwo(2)
     integer :: dimtwo_time(3)
-    ! variable IDs
+    !> variable IDs
     integer :: lat_id,lon_id,time_id
+    !> array to store ALL var ids
     integer :: varid(nvars)
     
-    ! the number of time steps to save in each file
+    !> the number of time steps to save in each file
     integer, parameter :: time_steps_per_file = 24
     integer, parameter :: EVERY_STEP = 0
     integer, parameter :: MONTHLY_FREQUENCY = 2
@@ -53,17 +54,26 @@ module output
     
 contains
     
+    !>------------------------------------------------------------
+    !! Keeps accumulated precip variables in reasonable bounds with a "bucket"
+    !!
+    !! Check if precip variables have exceeded kPRECIP_BUCKET_SIZE and if so, "tip" into the bucket
+    !! i.e. add one to the bucket and subtract kPRECIP_BUCKET_SIZE from the precip variable
+    !! and repeat while precip variable > kPRECIP_BUCKET_SIZE
+    !!
+    !! @param domain only: rain, crain, snow, graupel and their respective buckets
+    !!
+    !!------------------------------------------------------------
     subroutine tip_precip_to_buckets(domain)
-        ! Check if precip variables have exceeded kPRECIP_BUCKET_SIZE and if so, "tip" into the bucket
-        ! i.e. add one to the bucket and subtract kPRECIP_BUCKET_SIZE from the precip variable
-        ! and repeat while precip variable > kPRECIP_BUCKET_SIZE
         implicit none
         type(domain_type), intent(inout) :: domain
         
+        ! loop variables
         integer :: nx, ny, i, j
         
         nx=size(domain%rain,1)
         ny=size(domain%rain,2)
+        ! 2 to n-2 so we don't process the edges 
         do j=2,ny-2
             do i=2,nx-1
                 if (domain%rain(i,j)>kPRECIP_BUCKET_SIZE) then
@@ -95,10 +105,20 @@ contains
         end do
     end subroutine tip_precip_to_buckets
     
+    !>------------------------------------------------------------
+    !! Creates a new NetCDF output file
+    !!
+    !! Creates a new file including all variables, dimensions, and attributes
+    !!
+    !! @param filename  name of NetCDF output file to be created
+    !! @param options   model wide options so the correct output can be created 
+    !!
+    !!------------------------------------------------------------
     subroutine create_file(filename,options)
         character(len=255), intent(in) :: filename
         type(options_type), intent(in) :: options
         
+        ! store real (not model) timestamp
         character(len=19) :: todays_date_time
         integer,dimension(8) :: date_time
         character(len=49) :: date_format
@@ -130,6 +150,7 @@ contains
         call check( nf90_put_att(ncid,NF90_GLOBAL,"dx",options%dx), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"wind_smoothing",options%smooth_wind_distance), trim(err))
         
+        ! only output linear wind parameters if ICAR is using the linear wind calculations
         if (options%physics%windtype>0) then
             call check( nf90_put_att(ncid,NF90_GLOBAL,"vert_smooth",options%vert_smooth), trim(err))
             call check( nf90_put_att(ncid,NF90_GLOBAL,"linear_contribution",options%lt_options%linear_contribution), trim(err))
@@ -148,6 +169,7 @@ contains
                 call check( nf90_put_att(ncid,NF90_GLOBAL,"spatially_variable_N","spatially varying N"), trim(err))
             endif
         endif
+        ! general physics options
         call check( nf90_put_att(ncid,NF90_GLOBAL,"microphysics",options%physics%microphysics), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"advection",options%physics%advection), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"boundarylayer",options%physics%boundarylayer), trim(err))
@@ -199,21 +221,26 @@ contains
         ! define the dimensions
         err="Creating Dimension:"
         call check( nf90_def_dim(ncid, "time", NF90_UNLIMITED, t_id), trim(err)//"time" )
-        dimids(4)=t_id
-        dimtwo_time(3)=t_id
         call check( nf90_def_dim(ncid, "lon", nx, x_id), trim(err)//"lon" )
-        dimids(1)=x_id
-        dimtwo_time(1)=x_id
-        dimtwo(1)=x_id
         call check( nf90_def_dim(ncid, "lat", ny, y_id), trim(err)//"lat" )
-        dimids(2)=y_id
-        dimtwo_time(2)=y_id
-        dimtwo(2)=y_id
         call check( nf90_def_dim(ncid, "lev", nz, temp_id), trim(err)//"lev" )
-        dimids(3)=temp_id
+        ! standard 3D + time dimensions
+        dimids(1)=x_id
+        dimids(2)=y_id
+        dimids(3)=temp_id !=z
+        dimids(4)=t_id
+        ! 2D dimensions
+        dimtwo(1)=x_id
+        dimtwo(2)=y_id
+        ! 2D + time dimensions
+        dimtwo_time(1)=x_id
+        dimtwo_time(2)=y_id
+        dimtwo_time(3)=t_id
+        ! dimensions for the staggered grids
         call check( nf90_def_dim(ncid, "lon_u", nx+1, xu_id), trim(err)//"lon_u" )
         call check( nf90_def_dim(ncid, "lat_v", ny+1, yv_id), trim(err)//"lat_v" )
         
+        ! If ICAR is using Noah, then create a dimension for soil depth too. 
         if (options%physics%landsurface==kLSM_NOAH) then
             call check( nf90_def_dim(ncid, "depth", nsoil, soil_id), trim(err)//"depth" )
         endif
@@ -247,6 +274,7 @@ contains
             call check( nf90_put_att(ncid,time_id,"calendar","360-day"))
         endif
         
+        ! if we are outputting 3D fields (i.e. not surface fields only)
         if (.not.surface_io_only) then
             call check( nf90_def_var(ncid, "qv", NF90_REAL, dimids, temp_id), trim(err)//"qv" )
             call check( nf90_put_att(ncid,temp_id,"standard_name","water_vapor_mixing_ratio"))
@@ -301,6 +329,7 @@ contains
                 call check( nf90_put_att(ncid,temp_id,"units","cm-3"))
                 varid(8)=temp_id
             endif
+            ! need to modify dimids for staggered grids. 
             dimids(1)=xu_id
             call check( nf90_def_var(ncid, "u", NF90_REAL, dimids, temp_id), trim(err)//"u" )
             call check( nf90_put_att(ncid,temp_id,"standard_name","grid_eastward_wind"))
@@ -357,6 +386,7 @@ contains
                 varid(33)=temp_id
             endif
 
+        ! else we are just storing surface fields, create 2D fields for a lot of the 3D variables, but only store the lowest model layer
         else
             call check( nf90_def_var(ncid, "qv", NF90_REAL, dimtwo_time, temp_id), trim(err)//"qv" )
             call check( nf90_put_att(ncid,temp_id,"standard_name","water_vapor_mixing_ratio"))
@@ -553,6 +583,15 @@ contains
         
     end subroutine create_file
     
+    !>------------------------------------------------------------
+    !! Initialize Output Module
+    !!
+    !! Sets output frequency (daily, monthly, or every step)
+    !!
+    !! @param 
+    !! @retval 
+    !!
+    !!------------------------------------------------------------
     subroutine output_init(options)
         type(options_type), intent(in) :: options
         
@@ -569,6 +608,20 @@ contains
         
     end subroutine output_init
     
+    !>------------------------------------------------------------
+    !! Set up the varids for an existing NetCDF file by searching for the variable name
+    !!
+    !! Querys an existing NetCDF file, and setups of the variable ids for all variables
+    !! in the varids array. In some ways it would be better to have it create variables if
+    !! they don't exist, but this way there is an implicit check that a restarted model 
+    !! has consistent physics options. 
+    !!
+    !! Stops if a variable is missing from the NetCDF file
+    !!
+    !! @param ncid      Specifies the existing file by NetCDF ID
+    !! @param options   Model options to determine which varids to look for setup
+    !!
+    !!------------------------------------------------------------
     subroutine setup_varids(ncid,options)
         integer, intent(in) :: ncid
         type(options_type),intent(in)::options
@@ -680,11 +733,19 @@ contains
         
     end subroutine setup_varids
     
-!   simple routine to write all domain data from this current time step to the output file. 
-!   note these are instantaneous fields, precip etc are accumulated fluxes. 
-!   u/v are destaggered first
-!   We could accumulated multiple time periods per file at some point, but this routine would
-!   still serve as a good restart file
+    !>------------------------------------------------------------
+    !!  Simple routine to write all domain data from this current time step to the output file. 
+    !!
+    !!  Checks if the file needs to be created or simply checked for required variables. 
+    !!  Writes the actual data to the file (calls helper routines to create or set up the file as necessary). 
+    !!  Note these are mostly instantaneous output fields, precip etc are accumulated fluxes. 
+    !!
+    !! @param domain        Full model domain to write to the file
+    !! @param options       Model options to decipher what to write
+    !! @param timestep      Only used to permit -1 to be specified to write a file with the restarted conditions
+    !! @param inputfilename OPTIONAL: specify the output filename (otherwise options%output_file + date_time)
+    !!
+    !!------------------------------------------------------------
     subroutine write_domain(domain,options,timestep,inputfilename)
         implicit none
         ! This is the name of the data file and variable we will read. 
