@@ -1,8 +1,8 @@
 !> ----------------------------------------------------------------------------
-!!
 !!  A simple upwind advection scheme
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !! ----------------------------------------------------------------------------
 module adv_upwind

@@ -1,5 +1,4 @@
 !>------------------------------------------------
-!! 
 !! Contains type definitions for a variety of model data strucutres
 !! Also defines model constants (e.g. gravity, and MAXFILELENGTH)
 !!
@@ -72,7 +71,8 @@
 !! fzs      = buffered FFT(terrain) for linear wind calculations   
 !! </pre>
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !>------------------------------------------------
 module data_structures

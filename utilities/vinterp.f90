@@ -1,12 +1,12 @@
 !>------------------------------------------------------------
-!!
 !!  Module to provide vertical interpolation
 !!  includes setting up a vertical Look Up Table (vLUT)
 !!  and performing vertical interpolation (vinterp)
 !!
 !!  Similar in concept to the geo module  
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!------------------------------------------------------------
 module vertical_interpolation

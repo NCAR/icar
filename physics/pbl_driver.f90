@@ -1,5 +1,4 @@
 !>----------------------------------------------------------
-!!
 !! This module provides a wrapper to call various PBL models
 !! It sets up variables specific to the physics package to be used including both
 !!
@@ -21,7 +20,8 @@
 !!      dt              = time step (seconds)
 !! </pre>
 !!
-!! Author : Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!----------------------------------------------------------
 module planetary_boundary_layer

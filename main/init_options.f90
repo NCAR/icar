@@ -5,8 +5,9 @@
 !!  Entry point is init_options, everything else follows
 !!  
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
-!!    Trude Eidhammer added the ability to read microphysics parameters
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
+!!  Trude Eidhammer added the ability to read microphysics parameters
 !!
 !! ----------------------------------------------------------------------------
 module initialize_options

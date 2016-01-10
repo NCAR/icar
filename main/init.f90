@@ -12,7 +12,8 @@
 !!       datasets, and make them conform to the expectations of the current system. 
 !!      For now there are no plans to near term plans to substantially modify this. 
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !! ----------------------------------------------------------------------------
 module init

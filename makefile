@@ -1,16 +1,27 @@
 ###################################################################
 # Makefile rules:
 #
-# <default> all: makes icar
-#			install: makes and installs icar in INSTALLDIR
-#			clean: removes objects and module files
-#			allclean: makes clean and removes executables
-#			cleanall: alias for allclean
-#			tests: makes various unit tests (not all work)
-#			icar: makes the primary model
+# <default> all: 		makes icar
+#			install: 	makes and installs icar in INSTALLDIR
+#			clean: 		removes objects and module files
+#			allclean: 	makes clean and removes executables
+#			cleanall: 	alias for allclean
+#			tests: 		makes various unit tests (not all work)
+#			icar: 		makes the primary model
+#			doc: 		make doxygen documentation in docs/html
 #
 # Optional setting:
-#	MODE = fast, debug, debugomp, debugslow, debugompslow
+#	MODE =	fast:		Enables additional optimizations that are likely to break something
+# 			profile:	Enables profileing
+# 			debug:		Minimal debug options enabled, still optimized
+# 			debugomp:	same as debug, but OpenMP is enabled
+# 			debugslow:	Optimization curtailed, highly instrumented for debugging
+# 			debugompslow: same as debugslow by OpenMP is enabled
+#
+# Note: adding -jn will parallelize the compile itself over n processors
+#
+# Example:
+#	make clean; make install MODE=debugompslow -j4
 #
 ###################################################################
 # Variables that need to be set by the user: 

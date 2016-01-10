@@ -1,5 +1,4 @@
 !>----------------------------------------------------------
-!!
 !! This module provides a wrapper to call various microphysics models
 !! It sets up variables specific to the physics package to be used including 
 !! history variables not currently stored in the domain level data structure
@@ -22,7 +21,8 @@
 !!      dt              = time step (seconds)
 !! </pre>
 !!
-!! Author : Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!----------------------------------------------------------
 module microphysics

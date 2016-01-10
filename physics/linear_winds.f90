@@ -1,7 +1,9 @@
 !>----------------------------------------------------------
-!!
 !! This module provides the linear wind theory calculations
 !! 
+!!  Code is based primarily off equations in Barstad and Gronas (2006)
+!!  @see Appendix A of Barstad and Gronas (2006) Tellus,58A,2-18
+!!
 !! The main entry point to the code is:
 !!      linear_perturb(domain, options, vsmooth, reverse, useDensity)
 !!
@@ -28,7 +30,8 @@
 !!                          so it advection can properly incorporate density.
 !! </pre>
 !!
-!! Author : Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!----------------------------------------------------------
 module linear_theory_winds

@@ -1,5 +1,4 @@
 !>------------------------------------------------------------
-!!
 !!  Model Output
 !!
 !!  Writes all model data to a (mostly?) CF compliant netcdf file
@@ -7,7 +6,8 @@
 !!  Ideally this should be added and the output file should just be updated
 !!  so ICAR doesn't generate quite so many small output files
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!------------------------------------------------------------
 module output

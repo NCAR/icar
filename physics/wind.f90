@@ -1,6 +1,10 @@
 !>------------------------------------------------------------
+!! Module to manage the ICAR wind field, including calls to linear winds
+!! importantly it also rotates the wind field into the ICAR grid and 
+!! balances the U, V, and W fields for "mass" conservation
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!------------------------------------------------------------
 module wind

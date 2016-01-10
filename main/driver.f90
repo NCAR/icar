@@ -1,5 +1,4 @@
 !>-----------------------------------------
-!!
 !! Main Program
 !!
 !! Initialize options and memory in init_model
@@ -13,7 +12,8 @@
 !!
 !! Finally, loop until ntimesteps are reached updating boundary conditions and stepping the model forward
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!-----------------------------------------
 program icar
@@ -92,4 +92,3 @@ program icar
 !-----------------------------------------
     
 end program icar
-

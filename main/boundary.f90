@@ -1,5 +1,4 @@
 !>------------------------------------------------------------
-!!
 !!  Handles reading boundary conditions from the forcing file(s)
 !!  Provides necessary interpolation on to the grid. 
 !!
@@ -21,7 +20,8 @@
 !!  as necessary
 !! </pre>
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!------------------------------------------------------------
 module boundary_conditions

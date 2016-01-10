@@ -1,3 +1,10 @@
+!>------------------------------------------------------------
+!!  Noah Land Surface Model (from WRF)
+!!  
+!!  @author
+!!  various (see Chen and Dudhia 2001)
+!!
+!!------------------------------------------------------------
 MODULE module_sf_noahlsm
 !   USE module_model_constants, only : CP, R_D, XLF, XLV, RHOWATER, STBOLT, KARMAN
 

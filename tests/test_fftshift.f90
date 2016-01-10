@@ -1,8 +1,8 @@
 !>------------------------------------------------------------
-!!
 !!  Simple unit test to confirm that the fft_shift module works
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!------------------------------------------------------------
 program test_fftshift

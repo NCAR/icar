@@ -1,6 +1,5 @@
 !>----------------------------------------------------------
-!!
-!! Very simple microphysics code modeled after the microphysics
+!! Very simple microphysics code modeled after the microphysics of SB04
 !! used in Smith and Barstad '04 (the linear model). 
 !! 
 !! Clouds (solid and liquid) form and evaporate instantly
@@ -48,7 +47,8 @@
 !!   nz = number of vertical grid cells  - 0D - input  - n      - scalar
 !! </pre>
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!----------------------------------------------------------
 module module_mp_simple

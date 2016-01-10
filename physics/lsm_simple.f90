@@ -35,7 +35,8 @@
 !!   dt = time step                      - 0D - input  - seconds    - scalar
 !! </pre>
 !!
-!! Author : Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!----------------------------------------------------------
 module module_lsm_simple
