@@ -4,6 +4,12 @@
 
 The basic workflow described here follows a workflow originally outlined by [Vincent Driessen](http://nvie.com/posts/a-successful-git-branching-model/). The workflow is built around the Git version control system. A basic description of the branching strategy and release management used for ICAR is presented here. We use a central truth repository (https://github.com/NCAR/icar) that contains our main branches and the official release version of ICAR. All active development takes place on forks and clones of this repo.
 
+As you will note when reading below, this workflow can be a very branchy workflow.  Particularly if you work from multiple computers, this can lead to trying to remember a lot of git commands.  A useful tool to help with all these commands is called [git-flow](https://github.com/petervanderdoes/gitflow-avh). This allows you to do simpler things like: 
+
+    git flow feature start <some_new_feature>
+    <work work work>
+    git flow feature finish <some_new_feature>
+
 ## Main Branches
 
 There are two main branches: **master** and **develop**. The first one is the official release, the second one is the one undergoing active development.
@@ -96,7 +102,3 @@ The process would be as follows:
  * Issue a pull request. You do that on GitHub. Make sure that you make the pull request with respect to the correct branches. On your end this should be the `feature/crazy_convection` branch and on the other end the `develop` branch.
 
  * You changes will be reviewed and merged or more likely there will be some back-and-forth with suggested changes and clarifications.
-
-
-
-
