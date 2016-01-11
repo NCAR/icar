@@ -1,6 +1,7 @@
-!>---+-----------------------------------------------------------------+
+!>----------------------------------------------------------------------
 !!   This subroutine computes the moisture tendencies of water vapor,
 !!   cloud droplets, rain, cloud ice (pristine), snow, and graupel.
+!!
 !!   Prior to WRFv2.2 this code was based on Reisner et al (1998), but
 !!   few of those pieces remain.  A complete description is now found in
 !!   Thompson, G., P. R. Field, R. M. Rasmussen, and W. D. Hall, 2008:
@@ -32,7 +33,7 @@
 !!  @author Greg Thompson, NCAR-RAL, gthompsn@ucar.edu, 303-497-2805
 !!  Last modified: 27 Jul 2012
 !!
-!!+---+-----------------------------------------------------------------+
+!!--------------------------------------------------------------------
 !wrft:model_layer:physics
 !+---+-----------------------------------------------------------------+
 !
