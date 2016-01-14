@@ -124,7 +124,7 @@ contains
         integer,intent(out) :: dims(:)
         
         ! internal variables
-        integer :: ncidvarid,numDims,dimlen,i
+        integer :: ncid,varid,numDims,dimlen,i
         integer,dimension(io_maxDims) :: dimIds
         
         ! open the netcdf file
