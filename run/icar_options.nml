@@ -40,7 +40,7 @@
     ! wishlist = No Code Present yet
     pbl = 0,  ! 1=legacy (deprecated)      2=Simple (Local HP96)        3=YSU             (N/A)
     lsm = 0,  ! 1=use perscribed fluxes    2=Simple LSM (N/A)           3=Noah LSM
-    water=2,  ! 1=use perscribed (w/lsm=1) 2=Simple sea surface fluxes
+    water=0,  ! 1=use perscribed (w/lsm=1) 2=Simple sea surface fluxes
     mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison        (wishlist)
     rad = 0,  ! 1=use perscribed fluxes    2=Simple (empirical)         3=RRTMG           (wishlist)
     conv= 0,  ! 1=Tiedke Scheme            2=Simple Scheme (wishlist)   3=Kain-Fritsch
@@ -55,9 +55,11 @@
     ! this is the high resolution input filename
     init_conditions_file="baseline/geo_4km_conus.nc",
 
-    ! files to read "calibration" data from 
-    nsq_calibration_file="nsq_calibration.nc",
-    linear_mask_file="linear_weights.nc"
+    ! Files to read optional "calibration" (2D multiplier) data from
+    ! Only read if nsq_calibration=True (in lt_parameters)
+    ! nsq_calibration_file="nsq_calibration.nc",
+    ! Only read if linear_mask=True (in lt_parameters)
+    ! linear_mask_file="linear_weights.nc"
 
     ! this is the prefix for all output files (any directories must be created prior to running)
     output_file="output/icar_out",
@@ -75,7 +77,7 @@
     ! set this to the date to start running the model (defaults to the above date)
     start_date="1990-10-01_00:00:00"
     ! calendar used by the forcing data "gregorian", "standard", "noleap", "365-day", "360-day"
-    calendar="standard",
+    calendar="standard", ! note gregorian is the same as standard
     ! the number of (forcing) time steps to run for
     ntimesteps=8760,
     ! the length of an input forcing time step [s]
@@ -99,7 +101,7 @@
     ! this is now optional, if not supplied, ICAR will determine it from the number of levels specified
     ! if it is supplied it must be less than or equal to the number of levels specified below
     ! but it can be used to subset the number of levels used. 
-    ! nz=20,
+    nz=14,
     ! specify that the height of the forcing data will change through the simulation (common for atmospheric data)
     time_varying_z=true,
 
@@ -166,7 +168,7 @@
     qcvar="QCLOUD",			  ! cloud water mixing ratio
     qivar="QICE",			  ! cloud ice mixing ratio
     hgtvar="HGT",			  ! surface elevation
-    zvar="Z",				  ! model level elevations
+    zvar="Z",				  ! model level elevations (if =="PH": assumes it is geopotential and adds "PHB" then divides by 9.8)
     latvar="XLAT",			  ! latitude
     lonvar="XLONG",			  ! longitude
     sst_var="TSK"             ! Sea surface temperatures (*and* inland lakes)
@@ -181,15 +183,15 @@
     vlon="XLONG_V",			  ! longitude
 
     ! these are only used with lsm=1 (pbl should also be >0)
-    shvar="HFX",			  ! surface sensible heat flux
-    lhvar="LH",				  ! surface latent heat flux
+    ! shvar="HFX",			  ! surface sensible heat flux
+    ! lhvar="LH",				  ! surface latent heat flux
     
     ! for lsm=1,pbl=1
-    pblhvar="PBLH",			  ! Planetary boundary layer height
+    ! pblhvar="PBLH",			  ! Planetary boundary layer height
     
     ! required with rad=1
-    swdown_var="SWDOWN",      ! Shortwave down at the surface for use with rad=1
-    lwdown_var="GLW",         ! Longwave down at the surface for use with rad=1
+    ! swdown_var="SWDOWN",      ! Shortwave down at the surface for use with rad=1
+    ! lwdown_var="GLW",         ! Longwave down at the surface for use with rad=1
 
     ! only required for some physics code (Noah LSM, Tiedke, KF(?))
     landvar="LANDMASK",		  ! land-sea mask (including lakes) as in WRF 1=land, 0 or 2=water
@@ -212,7 +214,7 @@
     ! soil_t_var="TSLB",      ! soil temperature (4 levels)
     ! soil_vwc_var="SMOIS"	  ! soil water content (4 levels)
     
-    ! variables to read from calibration files, both default to "data"
+    ! variables to read from "calibration" files, both default to "data"
     ! nsq_calibration_var="data",
     ! linear_mask_var="data"
 /
@@ -245,7 +247,7 @@
     Ef_rw_l = .False.   ! True sets ef_rw = 1, insted of max 0.95
     Ef_sw_l = .False.   ! True sets ef_rw = 1, insted of max 0.95
 
-    top_mp_level = 0    ! if <=0 just use the actual model top
+    top_mp_level = 12    ! if <=0 just use the actual model top
     local_precip_fraction = 1.0 ! Fraction of micrphysics derived precipitation to deposit in the local grid cell
                                 ! the remaining precip is distributed to the surrounding grid cells. 
 /
@@ -281,9 +283,9 @@
     monthly_vegfrac=true            ! read / use a 12 month phenology of vegetation fraction
     
     ! These all default to values defined in common LU_Categories
-!     urban_category = -1             ! Int: index that defines the urban category in LU_Categories
-!     ice_category   = -1             ! Int: index that defines the ice category in LU_Categories
-!     water_category = -1             ! Int: index that defines the water category in LU_Categories
+    ! urban_category = -1             ! Int: index that defines the urban category in LU_Categories
+    ! ice_category   = -1             ! Int: index that defines the ice category in LU_Categories
+    ! water_category = -1             ! Int: index that defines the water category in LU_Categories
 /
 
 
@@ -308,38 +310,42 @@
     ! remove_lowres_linear=false,   ! attempt to "remove" the low resolution linear winds from the forcing data
     ! rm_linear_contribution=0.4,   ! fraction of linear perturbation to remove from the low-res wind field (if rm_lowres_linear==true)
 
-    variable_N=true,    ! use a time varying Nsq (e.g. calculate it from the data don't use the above fixed value)
     linear_update_fraction = 0.5 ! set this to the fraction of the current linear calculation to add to to a time-varying perturbation
                         ! setting to 1 means that waves form instantly, setting it to 0 means they will never form
                         ! anything in between is the contribution from the current time step
 
     ! used to test possible model calibration... not sure what these will do longer term
     nsq_calibration=false,
-    linear_mask=True
+    linear_mask=false,
 
     ! linear theory look up table generation parameters
     ! direction ranges and number of bins
     dirmax = 6.283185307 ! 2*pi
     dirmin = 0
-    n_dir_values = 36
+    n_dir_values = 25
     ! wind speed ranges and number of bins
     spdmax = 30
     spdmin = 0
-    n_spd_values = 10
+    n_spd_values = 6
     ! BV frequency ranges (in log space) and number of bins
     nsqmax = -7.42  ! ln(6e-4) defaults to ln(max_stability)
     nsqmin = -16.12 ! ln(1e-7) defaults to ln(min_stability)
-    n_nsq_values = 10
+    n_nsq_values = 5
     ! NOTE: this requires a LOT of RAM.  (and you still need some for the rest of the model)
     !   Calculate bytes of RAM required as nx * ny * nz * n_dir * n_spd * n_nsq * 2 * 4
     !   e.g. 320 * 250 * 14 * 36 * 10 * 10 * 2 * 4 = 30GB!
     !   (* 2 is for having to store U and V)
     !   (* 4 is for the number of bytes per float)
+    
+    ! To speed up the LUT generation, the LUT can be written to a file and restored from a file
+    ! write_lut=true means the LUT will be written to a file
+    ! read_lut=true means it will try to read in the LUT from the specified files
+    !
     ! WARNING!  At present this is very fragile.  dir, spd, and n bins defined above
     ! must match values used to generate these files if they are read in
-    ! no error checking is performed.  
-    read_LUT = .True.  ! read the Look up table from a specified file
-    write_LUT = .True. ! write the look up table to the specified file
+    ! no error checking is performed.  This is being improved. 
+    read_LUT = .False.  ! read the Look up table from a specified file(s)
+    write_LUT = .True.  ! write the look up table to the specified file(s)
     u_LUT_Filename = "Linear_Theory_u_LUT.nc"
     v_LUT_Filename = "Linear_Theory_v_LUT.nc"
 /
