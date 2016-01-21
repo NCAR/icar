@@ -6,3 +6,9 @@ calendar_test
 fftshift_test
 mpdata_test
 docs/html
+*.o
+*.a
+*.so
+*.mod
+*~
+*.pyc
