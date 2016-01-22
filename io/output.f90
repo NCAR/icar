@@ -141,7 +141,7 @@ contains
         call check( nf90_put_att(ncid,NF90_GLOBAL,"source","Intermediate Complexity Atmospheric Model version:"//trim(options%version)), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"history","Created:"//todays_date_time//UTCoffset), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"references", &
-                    "Gutmann et al. 2016: The Intermediate Complexity Atmospheric Model. JHM (in revision)"), trim(err))
+                    "Gutmann et al. 2016: The Intermediate Complexity Atmospheric Model (ICAR). J.Hydrometeor. doi:10.1175/JHM-D-15-0155.1, in press."), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"comment",trim(options%comment)), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"contact","Ethan Gutmann : gutmann@ucar.edu"), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"git",VERSION), trim(err))
