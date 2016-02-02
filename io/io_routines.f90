@@ -390,17 +390,25 @@ contains
     !! @param   data_out    6-dimensional array to write to the file
     !!
     !!------------------------------------------------------------
-    subroutine io_write6d(filename,varname,data_out)
+    subroutine io_write6d(filename,varname,data_out, dimnames)
         implicit none
         ! This is the name of the file and variable we will write. 
         character(len=*), intent(in) :: filename, varname
         real,intent(in) :: data_out(:,:,:,:,:,:)
+        character(len=*), optional, dimension(6), intent(in) :: dimnames
         
         ! We are writing 6D data, a nx, nz, ny, na, nb, nc grid. 
         integer :: nx,ny,nz, na,nb,nc
         integer, parameter :: ndims = 6
         ! This will be the netCDF ID for the file and data variable.
         integer :: ncid, varid,temp_dimid,dimids(ndims)
+        character(len=*), dimension(6) :: dims
+        
+        if (present(dimnames)) then
+            dims = dimnames
+        else
+            dims = ["x","y","z","a","b","c"]
+        endif
 
         nx=size(data_out,1)
         nz=size(data_out,2)
@@ -409,21 +417,20 @@ contains
         nb=size(data_out,5)
         nc=size(data_out,6)
         
-        ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
-        ! the file.
+        ! Open the file. NF90_CLOBBER tells netCDF we want overwrite existing files
         call check( nf90_create(filename, NF90_CLOBBER, ncid), filename)
         ! define the dimensions
-        call check( nf90_def_dim(ncid, "x", nx, temp_dimid) )
+        call check( nf90_def_dim(ncid, dims(1), nx, temp_dimid) )
         dimids(1)=temp_dimid
-        call check( nf90_def_dim(ncid, "z", nz, temp_dimid) )
+        call check( nf90_def_dim(ncid, dims(2), nz, temp_dimid) )
         dimids(2)=temp_dimid
-        call check( nf90_def_dim(ncid, "y", ny, temp_dimid) )
+        call check( nf90_def_dim(ncid, dims(3), ny, temp_dimid) )
         dimids(3)=temp_dimid
-        call check( nf90_def_dim(ncid, "a", na, temp_dimid) )
+        call check( nf90_def_dim(ncid, dims(4), na, temp_dimid) )
         dimids(4)=temp_dimid
-        call check( nf90_def_dim(ncid, "b", nb, temp_dimid) )
+        call check( nf90_def_dim(ncid, dims(5), nb, temp_dimid) )
         dimids(5)=temp_dimid
-        call check( nf90_def_dim(ncid, "c", nc, temp_dimid) )
+        call check( nf90_def_dim(ncid, dims(6), nc, temp_dimid) )
         dimids(6)=temp_dimid
         
         ! Create the variable returns varid of the data variable
