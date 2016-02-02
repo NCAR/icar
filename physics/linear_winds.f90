@@ -38,8 +38,9 @@ module linear_theory_winds
     use fft ! note fft module is defined in fftshift.f90
     use fftshifter
     use data_structures
-    use io_routines,        only : io_read6d, io_write6d, io_write3d, io_write2d, io_read2d
-    use string,             only : str
+    use io_routines,               only : io_write2d, io_read2d
+    use string,                    only : str
+    use linear_theory_lut_disk_io, only : read_LUT, write_LUT
     implicit none
     private
     public::linear_perturb
@@ -649,6 +650,7 @@ contains
         real :: u,v
         integer :: nx,ny,nz,i,j,k, nxu,nyv
         logical :: debug
+        integer, dimension(3,2) :: LUT_dims
         
         ! the domain to work over
         nx=size(domain%lat,1)
@@ -657,6 +659,10 @@ contains
 
         nxu=size(domain%u,1)
         nyv=size(domain%v,3)
+        
+        ! store to make it easy to check dim sizes in read_LUT
+        LUT_dims(:,1) = [nxu,nz,ny]
+        LUT_dims(:,2) = [nx,nz,nyv]
         
         ! save the old U and V values so we can restore them
         allocate(savedU(nxu,nz,ny))
@@ -693,9 +699,7 @@ contains
                 allocate(hi_v_LUT(n_spd_values,n_dir_values,n_nsq_values,nx,nz,nyv))
             else
                 print*, "Reading LUT from file: ", trim(options%lt_options%u_LUT_Filename)
-                call io_read6d(options%lt_options%u_LUT_Filename, "uLUT",hi_u_LUT)
-                print*, "Reading LUT from file: ", trim(options%lt_options%v_LUT_Filename)
-                call io_read6d(options%lt_options%v_LUT_Filename, "vLUT",hi_v_LUT)
+                call read_LUT(options%lt_options%u_LUT_Filename, hi_u_LUT, hi_v_LUT, LUT_dims, options%lt_options)
             endif
             u_LUT=>hi_u_LUT
             v_LUT=>hi_v_LUT
@@ -742,10 +746,8 @@ contains
             if (options%lt_options%read_LUT) then
                 print*, "Not writing Linear Theory LUT to file because LUT was read from file"
             else
-                print*, "Writing u-LUT from file: ", trim(options%lt_options%u_LUT_Filename)
-                call io_write6d(options%lt_options%u_LUT_Filename, "uLUT",hi_u_LUT)
-                print*, "Writing v-LUT from file: ", trim(options%lt_options%v_LUT_Filename)
-                call io_write6d(options%lt_options%v_LUT_Filename, "vLUT",hi_v_LUT)
+                print*, "Writing u-LUT to file: ", trim(options%lt_options%u_LUT_Filename)
+                call write_LUT(options%lt_options%u_LUT_Filename, hi_u_LUT, hi_u_LUT, options)
             endif
         endif            
         
