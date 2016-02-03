@@ -436,6 +436,11 @@ $(BUILD)init_options.o:$(MAIN)init_options.f90 $(BUILD)data_structures.o  $(BUIL
 					$(BUILD)model_tracking.o $(BUILD)time.o 
 	${F90} ${FFLAGS} $(MAIN)init_options.f90 -o $(BUILD)init_options.o
 
+
+###################################################################
+#	Utility Routines
+###################################################################
+
 $(BUILD)time.o:$(UTIL)time.f90
 	${F90} ${FFLAGS} $(UTIL)time.f90 -o $(BUILD)time.o
 
@@ -452,13 +457,20 @@ $(BUILD)output.o:$(IO)output.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o
 $(BUILD)io_routines.o:$(IO)io_routines.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(IO)io_routines.f90 -o $(BUILD)io_routines.o
 
+$(BUILD)lt_lut_io.o: $(IO)lt_lut_io.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o
+	${F90} ${FFLAGS} $(IO)lt_lut_io.f90 -o $(BUILD)lt_lut_io.o
+	
+
+###################################################################
+#	Interpolation Routines
+###################################################################
+
 $(BUILD)geo_reader.o:$(UTIL)geo_reader.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(UTIL)geo_reader.f90 -o $(BUILD)geo_reader.o
 
 $(BUILD)vinterp.o: $(UTIL)vinterp.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(UTIL)vinterp.f90 -o $(BUILD)vinterp.o
 	
-
 ###################################################################
 #	Microphysics code
 ###################################################################
@@ -493,6 +505,7 @@ $(BUILD)ra_driver.o:$(PHYS)ra_driver.f90 $(BUILD)ra_simple.o $(BUILD)data_struct
 
 $(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o $(BUILD)time.o
 	${F90} ${FFLAGS} $(PHYS)ra_simple.f90 -o $(BUILD)ra_simple.o
+
 ###################################################################
 #	Land Surface code
 ###################################################################
@@ -549,7 +562,8 @@ $(BUILD)adv_mpdata.o:$(PHYS)adv_mpdata.f90 $(PHYS)adv_mpdata_FCT_core.f90 $(BUIL
 $(BUILD)wind.o:$(PHYS)wind.f90 $(BUILD)linear_winds.o $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)wind.f90 -o $(BUILD)wind.o
 
-$(BUILD)linear_winds.o:$(PHYS)linear_winds.f90 $(BUILD)io_routines.o $(BUILD)data_structures.o $(BUILD)fftshift.o
+$(BUILD)linear_winds.o:$(PHYS)linear_winds.f90 $(BUILD)io_routines.o $(BUILD)data_structures.o \
+	 				   $(BUILD)fftshift.o $(BUILD)lt_lut_io.o
 	${F90} ${FFLAGS} $(PHYS)linear_winds.f90 -o $(BUILD)linear_winds.o
 
 $(BUILD)fftshift.o:$(UTIL)fftshift.f90
@@ -582,7 +596,7 @@ $(BUILD)test_mpdata.o:$(BUILD)adv_mpdata.o tests/test_mpdata.f90
 
 
 # 
-# NOTE: too many changes in data structures/init have broken most of these tests, 
+# The following text do not work anymore and will likely be removed in the near future
 #		not worth fixing right now. 
 #
 # tests/test_$(BUILD)wind.o:tests/test_$(PHYS)wind.f90 $(BUILD)wind.o $(BUILD)linear_winds.o
@@ -593,4 +607,3 @@ $(BUILD)test_mpdata.o:$(BUILD)adv_mpdata.o tests/test_mpdata.f90
 # 
 # test_init:tests/test_$(MAIN)init.f90 $(BUILD)init.o
 #	${F90} ${FFLAGS} tests/test_$(MAIN)init.f90 $(IO)io_routines.f90 $(MAIN)data_structures.f90 $(MAIN)init.f90 -o test_init
-
