@@ -39,7 +39,6 @@ module land_surface
     use module_lsm_simple,   only : lsm_simple, lsm_simple_init
     use module_water_simple, only : water_simple
     use io_routines,         only : io_write3d, io_write2d
-    use output,              only : write_domain
     use data_structures
     
     implicit none
