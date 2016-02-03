@@ -16,10 +16,13 @@
 !!------------------------------------------------------------
 module io_routines
     use netcdf
+    
     implicit none
     ! maximum number of dimensions for a netCDF file
     integer,parameter::io_maxDims=10
-    
+    ! maximum length of a dimension name not this could be in data_structures, but that simply adds
+    ! one more dependency on data_structures and prevents this being compiled in parallel
+    integer,parameter::MAXDIMLENGTH=255
     !>------------------------------------------------------------
     !! Generic interface to the netcdf read routines
     !!------------------------------------------------------------
@@ -33,6 +36,15 @@ module io_routines
     interface io_write
         module procedure io_write6d, io_write3d, io_write2d, io_write3di
     end interface
+    
+    !>------------------------------------------------------------
+    !! Generic interface to the netcdf read_attribute_TYPE routines
+    !!------------------------------------------------------------
+    interface io_read_attribute
+        module procedure io_read_attribute_r
+    end interface
+    !, io_read_attribute_d, &
+    !  io_read_attribute_i, io_read_attribute_c
 
 !   All routines are public
 contains
@@ -402,7 +414,7 @@ contains
         integer, parameter :: ndims = 6
         ! This will be the netCDF ID for the file and data variable.
         integer :: ncid, varid,temp_dimid,dimids(ndims)
-        character(len=*), dimension(6) :: dims
+        character(len=MAXDIMLENGTH), dimension(6) :: dims
         
         if (present(dimnames)) then
             dims = dimnames
@@ -489,7 +501,7 @@ contains
         ! End define mode. This tells netCDF we are done defining metadata.
         call check( nf90_enddef(ncid) )
         
-        !write the actual data to the file
+        ! write the actual data to the file
         call check( nf90_put_var(ncid, varid, data_out), trim(filename)//":"//trim(varname))
     
         ! Close the file, freeing all resources.
@@ -592,6 +604,45 @@ contains
         ! Close the file, freeing all resources.
         call check( nf90_close(ncid) )
     end subroutine io_write2d
+    
+    !>------------------------------------------------------------
+    !! Read a real type attribute from a named file from an optional variable
+    !!
+    !! If a variable name is given reads the named attribute of that variable
+    !! otherwise the named attribute is assumed to be a global attribute
+    !!
+    !! @param   filename    netcdf file to read the attribute from
+    !! @param   att_name    name of attribute to read
+    !! @param   att_value   output value to be returned (real*4)
+    !! @param   var_name    OPTIONAL name of variable to read attribute from 
+    !!
+    !!------------------------------------------------------------
+    subroutine io_read_attribute_r(filename, att_name, att_value, var_name)
+        implicit none
+        character(len=*), intent(in) :: filename
+        character(len=*), intent(in) :: att_name
+        real*4, intent(out) :: att_value
+        character(len=*), intent(in), optional :: var_name
+        
+        integer :: ncid, varid
+        
+        ! open the netcdf file
+        call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
+        
+        ! If a variable name was specified, get the varid of the variable
+        ! else search for a global attribute
+        if (present(var_name)) then
+            call check(nf90_inq_varid(ncid, var_name, varid),var_name)
+        else
+            varid=NF90_GLOBAL
+        endif
+        
+        ! Finally get the attribute data
+        call check(nf90_get_att(ncid, varid, att_name, att_value),att_name)
+        
+    end subroutine  io_read_attribute_r
+        
+        
     
     !>------------------------------------------------------------
     !! Simple error handling for common netcdf file errors
