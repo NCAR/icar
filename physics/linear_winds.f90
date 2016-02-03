@@ -648,7 +648,7 @@ contains
         logical, intent(in) :: reverse,useDensity
         real, allocatable, dimension(:,:,:) :: savedU, savedV
         real :: u,v
-        integer :: nx,ny,nz,i,j,k, nxu,nyv
+        integer :: nx,ny,nz,i,j,k, nxu,nyv, error
         logical :: debug
         integer, dimension(3,2) :: LUT_dims
         
@@ -699,7 +699,10 @@ contains
                 allocate(hi_v_LUT(n_spd_values,n_dir_values,n_nsq_values,nx,nz,nyv))
             else
                 print*, "Reading LUT from file: ", trim(options%lt_options%u_LUT_Filename)
-                call read_LUT(options%lt_options%u_LUT_Filename, hi_u_LUT, hi_v_LUT, LUT_dims, options%lt_options)
+                error = read_LUT(options%lt_options%u_LUT_Filename, hi_u_LUT, hi_v_LUT, LUT_dims, options%lt_options)
+            endif
+            if (error/=0) then
+                stop "Error LUT on disk does not match that specified in the namelist"
             endif
             u_LUT=>hi_u_LUT
             v_LUT=>hi_v_LUT
@@ -747,7 +750,7 @@ contains
                 print*, "Not writing Linear Theory LUT to file because LUT was read from file"
             else
                 print*, "Writing u-LUT to file: ", trim(options%lt_options%u_LUT_Filename)
-                call write_LUT(options%lt_options%u_LUT_Filename, hi_u_LUT, hi_u_LUT, options)
+                error = write_LUT(options%lt_options%u_LUT_Filename, hi_u_LUT, hi_u_LUT, options%lt_options)
             endif
         endif            
         

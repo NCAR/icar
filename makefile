@@ -326,6 +326,7 @@ OBJS=	$(BUILD)driver.o \
 		$(BUILD)time_step.o \
 		$(BUILD)output.o \
 		$(BUILD)io_routines.o \
+		$(BUILD)lt_lut_io.o \
 		$(BUILD)mp_driver.o \
 		$(BUILD)mp_thompson.o \
 		$(BUILD)mp_simple.o \

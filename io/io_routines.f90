@@ -41,10 +41,19 @@ module io_routines
     !! Generic interface to the netcdf read_attribute_TYPE routines
     !!------------------------------------------------------------
     interface io_read_attribute
-        module procedure io_read_attribute_r
+        module procedure io_read_attribute_r, io_read_attribute_i
     end interface
-    !, io_read_attribute_d, &
-    !  io_read_attribute_i, io_read_attribute_c
+    ! to be added as necessary
+    !, io_read_attribute_d, io_read_attribute_c
+    
+    !>------------------------------------------------------------
+    !! Generic interface to the netcdf add_attribute_TYPE routines
+    !!------------------------------------------------------------
+    interface io_add_attribute
+        module procedure io_add_attribute_r, io_add_attribute_i
+    end interface
+    ! to be added as necessary
+    !, io_add_attribute_d, io_add_attribute_i, io_add_attribute_c
 
 !   All routines are public
 contains
@@ -639,10 +648,127 @@ contains
         
         ! Finally get the attribute data
         call check(nf90_get_att(ncid, varid, att_name, att_value),att_name)
-        
+
+        call check( nf90_close(ncid), "closing:"//trim(filename))
     end subroutine  io_read_attribute_r
+    
+    !>------------------------------------------------------------
+    !! Read a integer type attribute from a named file from an optional variable
+    !!
+    !! If a variable name is given reads the named attribute of that variable
+    !! otherwise the named attribute is assumed to be a global attribute
+    !!
+    !! @param   filename    netcdf file to read the attribute from
+    !! @param   att_name    name of attribute to read
+    !! @param   att_value   output value to be returned (integer)
+    !! @param   var_name    OPTIONAL name of variable to read attribute from 
+    !!
+    !!------------------------------------------------------------
+    subroutine io_read_attribute_i(filename, att_name, att_value, var_name)
+        implicit none
+        character(len=*), intent(in) :: filename
+        character(len=*), intent(in) :: att_name
+        integer, intent(out) :: att_value
+        character(len=*), intent(in), optional :: var_name
         
+        integer :: ncid, varid
         
+        ! open the netcdf file
+        call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
+        
+        ! If a variable name was specified, get the varid of the variable
+        ! else search for a global attribute
+        if (present(var_name)) then
+            call check(nf90_inq_varid(ncid, var_name, varid),var_name)
+        else
+            varid=NF90_GLOBAL
+        endif
+        
+        ! Finally get the attribute data
+        call check(nf90_get_att(ncid, varid, att_name, att_value),att_name)
+
+        call check( nf90_close(ncid), "closing:"//trim(filename))
+    end subroutine  io_read_attribute_i
+    
+    !>------------------------------------------------------------
+    !! Write a real type attribute to a named file for an optional variable
+    !!
+    !! If a variable name is given writes the named attribute to that variable
+    !! otherwise the named attribute is assumed to be a global attribute
+    !!
+    !! @param   filename    netcdf file to write the attribute to
+    !! @param   att_name    name of attribute to write
+    !! @param   att_value   output value to be written (real*4)
+    !! @param   var_name    OPTIONAL name of variable to write attribute to
+    !!
+    !!------------------------------------------------------------
+    subroutine io_add_attribute_r(filename, att_name, att_value, varname)
+        implicit none
+        character(len=*), intent(in)           :: filename
+        character(len=*), intent(in)           :: att_name
+        real*4,           intent(in)           :: att_value
+        character(len=*), intent(in), optional :: varname
+        
+        integer :: ncid
+        integer :: varid
+        
+        ! open the netcdf file to add the attribute to
+        call check (nf90_open(filename, NF90_NOCLOBBER, ncid), "opening:"//trim(filename))
+        
+        ! if given a variable name find that variable ID to write the attribute to
+        ! else the attribute will be global
+        if (present(varname)) then
+            call check( nf90_inq_varid(ncid, varname, varid))
+        else
+            varid = NF90_GLOBAL
+        endif
+        
+        ! write the attribute to the file
+        call check( nf90_put_att(ncid, varid, att_name, att_value), "writing attribute:"//trim(att_name)//" to:"//trim(filename))
+        
+        call check( nf90_close(ncid), "closing:"//trim(filename))
+    end subroutine io_add_attribute_r
+
+    
+    !>------------------------------------------------------------
+    !! Write an integer type attribute to a named file for an optional variable
+    !!
+    !! If a variable name is given writes the named attribute to that variable
+    !! otherwise the named attribute is assumed to be a global attribute
+    !!
+    !! @param   filename    netcdf file to write the attribute to
+    !! @param   att_name    name of attribute to write
+    !! @param   att_value   output value to be written (integer)
+    !! @param   var_name    OPTIONAL name of variable to write attribute to
+    !!
+    !!------------------------------------------------------------
+    subroutine io_add_attribute_i(filename, att_name, att_value, varname)
+        implicit none
+        character(len=*), intent(in)           :: filename
+        character(len=*), intent(in)           :: att_name
+        integer,          intent(in)           :: att_value
+        character(len=*), intent(in), optional :: varname
+        
+        integer :: ncid
+        integer :: varid
+        
+        ! open the netcdf file to add the attribute to
+        call check (nf90_open(filename, NF90_NOCLOBBER, ncid), "opening:"//trim(filename))
+        
+        ! if given a variable name find that variable ID to write the attribute to
+        ! else the attribute will be global
+        if (present(varname)) then
+            call check( nf90_inq_varid(ncid, varname, varid))
+        else
+            varid = NF90_GLOBAL
+        endif
+        
+        ! write the attribute to the file
+        call check( nf90_put_att(ncid, varid, att_name, att_value), "writing attribute:"//trim(att_name)//" to:"//trim(filename))
+        
+        call check( nf90_close(ncid), "closing:"//trim(filename))
+    end subroutine io_add_attribute_i
+
     
     !>------------------------------------------------------------
     !! Simple error handling for common netcdf file errors
