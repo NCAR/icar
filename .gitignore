@@ -1,3 +1,6 @@
+*.o
+*.mod
+*.lst
 icar
 geo_test
 wind_test
