@@ -690,6 +690,7 @@ contains
         ! parameters to control reading from or writing an LUT file
         logical :: read_LUT, write_LUT
         character(len=MAXFILELENGTH) :: u_LUT_Filename, v_LUT_Filename
+        logical :: overwrite_lt_lut
         
         ! define the namelist
         namelist /lt_parameters/ variable_N, smooth_nsq, buffer, stability_window_size, max_stability, min_stability, &
@@ -697,7 +698,7 @@ contains
                                  remove_lowres_linear, rm_N_squared, rm_linear_contribution, &
                                  spatial_linear_fields, linear_mask, nsq_calibration, &
                                  dirmax, dirmin, spdmax, spdmin, nsqmax, nsqmin, n_dir_values, n_nsq_values, n_spd_values, &
-                                 read_LUT, write_LUT, u_LUT_Filename, v_LUT_Filename
+                                 read_LUT, write_LUT, u_LUT_Filename, v_LUT_Filename, overwrite_lt_lut
         
          ! because lt_options could be in a separate file
          if (options%use_lt_options) then
@@ -742,6 +743,7 @@ contains
         write_LUT = .False.
         u_LUT_Filename = "Linear_Theory_u_LUT.nc"
         v_LUT_Filename = "Linear_Theory_v_LUT.nc"
+        overwrite_lt_lut = .True.
         
         ! read the namelist options
         if (options%use_lt_options) then
@@ -779,6 +781,7 @@ contains
         lt_options%write_LUT = write_LUT
         lt_options%u_LUT_Filename = u_LUT_Filename
         lt_options%v_LUT_Filename = v_LUT_Filename
+        lt_options%overwrite_lt_lut = overwrite_lt_lut
         
         ! copy the data back into the global options data structure
         options%lt_options = lt_options        
