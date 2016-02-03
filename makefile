@@ -458,7 +458,7 @@ $(BUILD)output.o:$(IO)output.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o
 $(BUILD)io_routines.o:$(IO)io_routines.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(IO)io_routines.f90 -o $(BUILD)io_routines.o
 
-$(BUILD)lt_lut_io.o: $(IO)lt_lut_io.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o
+$(BUILD)lt_lut_io.o: $(IO)lt_lut_io.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)string.o
 	${F90} ${FFLAGS} $(IO)lt_lut_io.f90 -o $(BUILD)lt_lut_io.o
 
 
