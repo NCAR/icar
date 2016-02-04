@@ -659,7 +659,9 @@ contains
 
         nxu=size(domain%u,1)
         nyv=size(domain%v,3)
-
+        ! default assumes no errors in reading the LUT
+        error=0
+        
         ! store to make it easy to check dim sizes in read_LUT
         LUT_dims(:,1) = [nxu,nz,ny]
         LUT_dims(:,2) = [nx,nz,nyv]
@@ -697,23 +699,23 @@ contains
             if (.not.options%lt_options%read_LUT) then
                 allocate(hi_u_LUT(n_spd_values,n_dir_values,n_nsq_values,nxu,nz,ny))
                 allocate(hi_v_LUT(n_spd_values,n_dir_values,n_nsq_values,nx,nz,nyv))
+                error=0
             else
                 print*, "Reading LUT from file: ", trim(options%lt_options%u_LUT_Filename)
-                error = read_LUT(options%lt_options%u_LUT_Filename, hi_u_LUT, hi_v_LUT, LUT_dims, options%lt_options)
-            endif
-            if (error/=0) then
-                write(*,*) "Error LUT on disk does not match that specified in the namelist"
-                write(*,*) "LUT will be recreated"
-                if (allocated(hi_u_LUT)) deallocate(hi_u_LUT)
-                allocate(hi_u_LUT(n_spd_values,n_dir_values,n_nsq_values,nxu,nz,ny))
-                if (allocated(hi_v_LUT)) deallocate(hi_v_LUT)
-                allocate(hi_v_LUT(n_spd_values,n_dir_values,n_nsq_values,nx,nz,nyv))
+                error = read_LUT(options%lt_options%u_LUT_Filename, hi_u_LUT, hi_v_LUT, options%dz_levels, LUT_dims, options%lt_options)
+                if (error/=0) then
+                    write(*,*) "Error LUT on disk does not match that specified in the namelist"
+                    write(*,*) "LUT will be recreated"
+                    if (allocated(hi_u_LUT)) deallocate(hi_u_LUT)
+                    allocate(hi_u_LUT(n_spd_values,n_dir_values,n_nsq_values,nxu,nz,ny))
+                    if (allocated(hi_v_LUT)) deallocate(hi_v_LUT)
+                    allocate(hi_v_LUT(n_spd_values,n_dir_values,n_nsq_values,nx,nz,nyv))
+                endif
             endif
             u_LUT=>hi_u_LUT
             v_LUT=>hi_v_LUT
         endif
 
-        write(*,*) "Linear wind LUT uses all combinations of : "
         write(*,*) "Wind Speeds:",spd_values
         write(*,*) " Directions:",360*dir_values/(2*pi)
         write(*,*) "Stabilities:",exp(nsq_values)
@@ -755,7 +757,7 @@ contains
                 print*, "Not writing Linear Theory LUT to file because LUT was read from file"
             else
                 print*, "Writing u-LUT to file: ", trim(options%lt_options%u_LUT_Filename)
-                error = write_LUT(options%lt_options%u_LUT_Filename, hi_u_LUT, hi_v_LUT, options%lt_options)
+                error = write_LUT(options%lt_options%u_LUT_Filename, hi_u_LUT, hi_v_LUT, options%dz_levels, options%lt_options)
             endif
         endif
 
