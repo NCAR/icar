@@ -356,11 +356,6 @@ OBJS=	$(BUILD)driver.o \
 		$(BUILD)data_structures.o \
 		$(BUILD)string.o
 
-#
-# WINDOBJS=io_routines.o $(BUILD)data_structures.o $(BUILD)init.o tests/test_wind.o $(BUILD)wind.o $(BUILD)linear_winds.o $(BUILD)output.o $(BUILD)geo_reader.o
-#
-# GEOOBJS=io_routines.o $(BUILD)data_structures.o tests/test_geo.o $(BUILD)geo_reader.o
-
 ###################################################################
 #	User facing rules
 ###################################################################
@@ -377,9 +372,8 @@ allclean:cleanall
 
 cleanall: clean
 	${RM} icar fftshift_test calendar_test mpdata_test
-	# geo_test wind_test #test_init
 
-test: fftshift_test calendar_test mpdata_test #geo_test wind_test #test_init
+test: fftshift_test calendar_test mpdata_test
 
 icar:${OBJS}
 	${F90} ${LFLAGS} ${OBJS} -o icar  -lm -lfftw3
@@ -390,12 +384,6 @@ doc:
 ###################################################################
 #	test cases
 ###################################################################
-# geo_test:${GEOOBJS}
-#	${F90} ${LFLAGS} ${GEOOBJS} -o geo_test
-#
-# wind_test:${WINDOBJS}
-#	${F90} ${LFLAGS} ${WINDOBJS} -o wind_test -lfftw3 -lm
-#
 fftshift_test: $(BUILD)test_fftshift.o $(BUILD)fftshift.o
 	${F90} ${LFLAGS} $(BUILD)test_fftshift.o $(BUILD)fftshift.o -o fftshift_test
 
@@ -594,17 +582,3 @@ $(BUILD)test_calendar.o:$(BUILD)time.o tests/test_calendar.f90
 
 $(BUILD)test_mpdata.o:$(BUILD)adv_mpdata.o tests/test_mpdata.f90
 	${F90} ${FFLAGS} tests/test_mpdata.f90 -o $(BUILD)test_mpdata.o
-
-
-#
-# The following text do not work anymore and will likely be removed in the near future
-#		not worth fixing right now.
-#
-# tests/test_$(BUILD)wind.o:tests/test_$(PHYS)wind.f90 $(BUILD)wind.o $(BUILD)linear_winds.o
-#	${F90} ${FFLAGS} tests/test_$(PHYS)wind.f90 -o tests/test_$(BUILD)wind.o
-#
-# tests/test_geo.o:tests/test_geo.f90 $(BUILD)geo_reader.o $(BUILD)data_structures.o
-#	${F90} ${FFLAGS} tests/test_geo.f90 -o tests/test_geo.o
-#
-# test_init:tests/test_$(MAIN)init.f90 $(BUILD)init.o
-#	${F90} ${FFLAGS} tests/test_$(MAIN)init.f90 $(IO)io_routines.f90 $(MAIN)data_structures.f90 $(MAIN)init.f90 -o test_init
