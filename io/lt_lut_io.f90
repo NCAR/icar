@@ -24,7 +24,7 @@ module linear_theory_lut_disk_io
     public :: read_lut
     public :: write_lut
 
-    character(len=10), parameter :: lt_lut_version="0.9"
+    character(len=10), parameter :: lt_lut_version="1.0"
 
     interface write_var
         module procedure write_var_1d,write_var_6d
