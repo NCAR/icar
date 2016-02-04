@@ -9,3 +9,4 @@ calendar_test
 fftshift_test
 mpdata_test
 docs/html
+docs/doxygen_sqlite3.db

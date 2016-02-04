@@ -26,6 +26,10 @@ module linear_theory_lut_disk_io
 
     character(len=10), parameter :: lt_lut_version="0.9"
 
+    interface write_var
+        module procedure write_var_1d,write_var_6d
+    end interface write_var
+
     interface check_attribute
         module procedure check_attribute_r,check_attribute_i,check_attribute_c
     end interface check_attribute
@@ -79,7 +83,7 @@ contains
             return
         endif
 
-        error = write_var_1d(filename,"dz",dz, dimnames=[character(len=4) :: "nz"])
+        error = write_var(filename,"dz",dz, dimnames=[character(len=4) :: "nz"])
         if (error/=0) then
             write(*,*) "Error writing dz to LUT file:"//trim(filename)//" Error code = "//trim(str(error))
             return
@@ -174,6 +178,19 @@ contains
         ! return no error
     end function read_LUT
 
+    !>----------------------------------------------------------
+    !!  Check that the dimensions of a LUT file and current expected LUT match
+    !!
+    !!  @detail
+    !!  Takes a filename and the dimensions of the LUT the model is expecting
+    !!  Checks the expected dimensions against the dimension lengths for both
+    !!  the vLUT and the uLUT in the specified file.
+    !!
+    !!  @param filename     Name of LUT file to check
+    !!  @param dimensions   Array to hold u and v dimensions array is (3 x 2)
+    !!  @retval dims_match  True if they match, false if not
+    !!
+    !!----------------------------------------------------------
     function dims_match(filename,dimensions)
         implicit none
         character(len=*), intent(in) :: filename
@@ -182,15 +199,20 @@ contains
         logical :: dims_match
         integer :: i
 
+        ! default value = true, set to false if they don't match
         dims_match=.True.
+        ! read the dimensions for the uLUT first
         call io_getdims(filename,"uLUT",dims)
+        ! check all three spatial dimensions (nx, nz, ny)
         do i=1,3
+            ! note dims(i+4) because dims(1)=ndims, dims(2,3,4)=nspd,ndir,nnsq
             if (dimensions(i,1)/=dims(i+4)) then
                 dims_match=.False.
                 return
             endif
         enddo
-
+        
+        ! next perform the same check for the vLUT
         call io_getdims(filename,"vLUT",dims)
         do i=1,3
             if (dimensions(i,2)/=dims(i+4)) then
@@ -198,9 +220,21 @@ contains
                 return
             endif
         enddo
-
+        ! if we get here we are returning True
     end function dims_match
 
+    !>----------------------------------------------------------
+    !!  Check that the dz level thicknesses of a LUT file and current domain match
+    !!
+    !!  @detail
+    !!  Takes a filename and the dz thicknesses of the current model run.
+    !!  Checks the expected dz against the LUT file dz.
+    !!
+    !!  @param filename     Name of LUT file to check
+    !!  @param model_dz     Array to hold current model thicknesses (1D real)
+    !!  @retval error       0 if they match, 1 otherwise
+    !!
+    !!----------------------------------------------------------
     function check_dz(filename, model_dz) result(error)
         implicit none
         character(len=*), intent(in) :: filename ! LUT netcdf filename
@@ -231,15 +265,31 @@ contains
                 return
             endif
         enddo
-
+        ! returning 0 if we get to here
     end function check_dz
 
 
-    function write_var(filename,varname,data_out, dimnames, open_new_file) result(error)
+    !>----------------------------------------------------------
+    !!  Write a 6D variable to a netCDF file
+    !!
+    !!  @detail
+    !!  Takes a filename variable name, data, dimension names and optionally a
+    !!  flag to clobber existing files. If the specified dimensions don't exist
+    !!  they are created based on the size if the data_out variable. Then the
+    !!  netcdf variable is created with those dimensions and the data are written. 
+    !!
+    !!  @param filename     Name of LUT file to open or create
+    !!  @param varname      Name of variable to create
+    !!  @param data_out     Array with the data to be output to the file (6D real)
+    !!  @param dimnames     Array of dimension names (6 element 1D character)
+    !!  @param open_new_file Flag to clobber any existing file if true
+    !!  @retval error       0 if the file was successfully written
+    !!
+    !!----------------------------------------------------------
+    function write_var_6d(filename,varname,data_out, dimnames, open_new_file) result(error)
             implicit none
             ! We are writing 6D data, a nx, nz, ny, na, nb, nc grid.
             integer, parameter :: ndims = 6
-
             ! This is the name of the file and variable we will write.
             character(len=*), intent(in) :: filename, varname
             real,intent(in) :: data_out(:,:,:,:,:,:)
@@ -295,8 +345,25 @@ contains
             call check( nf90_close(ncid), filename)
 
             ! return error
-    end function write_var
+    end function write_var_6d
 
+    !>----------------------------------------------------------
+    !!  Same as write_var_6d but for a 1D variable
+    !!
+    !!  @detail
+    !!  Takes a filename variable name, data, dimension names and optionally a
+    !!  flag to clobber existing files. If the specified dimensions don't exist
+    !!  they are created based on the size if the data_out variable. Then the
+    !!  netcdf variable is created with those dimensions and the data are written. 
+    !!
+    !!  @param filename     Name of LUT file to open or create
+    !!  @param varname      Name of variable to create
+    !!  @param data_out     Array with the data to be output to the file (1D real)
+    !!  @param dimnames     Array of dimension names (1 element 1D character)
+    !!  @param open_new_file Flag to clobber any existing file if true
+    !!  @retval error       0 if the file was successfully written
+    !!
+    !!----------------------------------------------------------
     function write_var_1d(filename,varname,data_out, dimnames, open_new_file) result(error)
             implicit none
             ! We are writing 1D data expected to be nz grid.
@@ -360,15 +427,32 @@ contains
     end function write_var_1d
 
 
-
+    !>----------------------------------------------------------
+    !!  Setup a new variable to be written
+    !! 
+    !!  @detail
+    !!  Takes an open netCDF file id, variable name, dimension ids, and dimension lengths.
+    !!  If the variable doesn't exist it is created with the matching dimension ids. 
+    !!  These dimension lengths are then checked against the dimension lengths supplied. 
+    !!  This check is performed in case a variable with this name but different dims already
+    !!  existed in the file. 
+    !!  Supplied netCDF if must be a file that is in define mode
+    !! 
+    !!  @param      ncid    integer open netcdf file id
+    !!  @param      varname name of the variable to be created
+    !!  @param[out] varid   id of the existing or newly created variable
+    !!  @param      dimids  array of dimension ids to be used when creating the variable
+    !!  @param      dims    array of dimension lengths to be checked for existing variables
+    !!  @retval     error   0 if successful 3 otherwise
+    !!
+    !!----------------------------------------------------------
     function setup_var(ncid, varname, varid, dimids, dims) result(error)
         implicit none
-
-        integer, intent(in) :: ncid
-        character(len=*), intent(in) :: varname
-        integer, intent(out) :: varid
-        integer, intent(in), dimension(:) :: dimids
-        integer, intent(in), dimension(:) :: dims
+        integer,                intent(in) :: ncid
+        character(len=*),       intent(in) :: varname
+        integer,                intent(out):: varid
+        integer, dimension(:),  intent(in) :: dimids
+        integer, dimension(:),  intent(in) :: dims
         integer :: error
 
         integer, dimension(:), allocatable :: var_dimids
@@ -396,34 +480,63 @@ contains
         deallocate(var_dimids)
     end function setup_var
 
+    !>----------------------------------------------------------
+    !!  Setup a new dimension in a given netcdf file
+    !! 
+    !!  Takes an open netcdf file id and a dimension name. 
+    !!  returns the dimension id for the given dimension name and
+    !!  if given a dimension length (n) it is checked to make sure
+    !!  any existing dimension with this name has the write length. 
+    !! 
+    !!  @param      ncid    integer an open netcdf file id
+    !!  @param      dimname the name of the dimension to be checked
+    !!  @param[out] dimid   the existing or newly created dimension id. 
+    !!  @param      n       The length of the dimension
+    !!  @retval     error   0 if successful, 1 otherwise
+    !!
+    !!----------------------------------------------------------
     function setup_dim(ncid, dimname, dimid, n) result(error)
         implicit none
-        integer, intent(in) :: ncid
-        character(len=*), intent(in) :: dimname
-        integer, intent(inout) :: dimid
-        integer, intent(in), optional :: n
+        integer,          intent(in)    :: ncid
+        character(len=*), intent(in)    :: dimname
+        integer,          intent(inout) :: dimid
+        integer,          intent(in)    :: n
         integer :: error
         integer :: ncerror, dim_length
 
         error = 0
 
+        ! first check for an existing dimension with the given name
         ncerror = NF90_INQ_DIMID(ncid, dimname, dimid)
+        ! if the dimension does not exist, create it here. 
         if (ncerror/=NF90_NOERR) then
             call check( nf90_def_dim(ncid, dimname, n, dimid), "setup_dim:Creating dim:"//dimname )
-        endif
-
-        if (present(n)) then
+        else
+            ! else, check to make sure the existing dimension has the correct length
             call check( nf90_inquire_dimension(ncid, dimid, len = dim_length), "setup_dim:Reading dim:"//dimname)
-
+            
             if (dim_length/=n) then
                 error = 1
                 write(*,*) "Dim setup error: ", dimname, dimid, dim_length,"!=",n
             endif
         endif
-
         ! return error
     end function setup_dim
 
+    !>----------------------------------------------------------
+    !!  Check that a named real attribute matches the value in a file
+    !! 
+    !!  Takes a filename, attribute name, and expected attribute value
+    !!  Reads the attribute from the file, and compares the results to
+    !!  the expected value.  If the results are within 1e-20 of each other. 
+    !!  they are assumed to match, and 0 is returned, else 1 is returned
+    !! 
+    !!  @param  filename        name of the netCDF file
+    !!  @param  default_value   expected value of the attribute
+    !!  @param  value_name      name of the attribute to read
+    !!  @retval error           0 if expected matches read, 1 otherwise
+    !!
+    !!----------------------------------------------------------
     function check_attribute_r(filename, default_value, value_name) result(error)
         implicit none
         character(len=*), intent(in) :: filename
@@ -446,6 +559,20 @@ contains
         ! returns any error
     end function check_attribute_r
 
+    !>----------------------------------------------------------
+    !!  Check that a named integer attribute matches the value in a file
+    !! 
+    !!  Takes a filename, attribute name, and expected attribute value
+    !!  Reads the attribute from the file, and compares the results to
+    !!  the expected value.  If the results match the function is successful
+    !!  and 0 is returned, else 1 is returned
+    !! 
+    !!  @param  filename        name of the netCDF file
+    !!  @param  default_value   expected value of the attribute
+    !!  @param  value_name      name of the attribute to read
+    !!  @retval error           0 if expected matches read, 1 otherwise
+    !!
+    !!----------------------------------------------------------
     function check_attribute_i(filename, default_value, value_name) result(error)
         implicit none
         character(len=*), intent(in) :: filename
@@ -459,7 +586,7 @@ contains
         error = 0
 
         call io_read_attribute(filename, value_name, test_value)
-        if (abs(default_value - test_value)>1e-20) then
+        if (default_value==test_value) then
             error = 1
             write(*,*) "WARNING parameter option: "//trim(value_name)//"  "//trim(str(default_value)), &
                        " did not match file value: ",trim(str(test_value))
@@ -468,6 +595,20 @@ contains
         ! returns any error
     end function check_attribute_i
 
+    !>----------------------------------------------------------
+    !!  Check that a named character attribute matches the value in a file
+    !! 
+    !!  Takes a filename, attribute name, and expected attribute value
+    !!  Reads the attribute from the file, and compares the results to
+    !!  the expected value.  If the results match the function is successful
+    !!  and 0 is returned, else 1 is returned
+    !! 
+    !!  @param  filename        name of the netCDF file
+    !!  @param  default_value   expected value of the attribute
+    !!  @param  value_name      name of the attribute to read
+    !!  @retval error           0 if expected matches read, 1 otherwise
+    !!
+    !!----------------------------------------------------------
     function check_attribute_c(filename, default_value, value_name) result(error)
         implicit none
         character(len=*), intent(in) :: filename
