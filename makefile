@@ -116,8 +116,8 @@ ifeq ($(NODENAME),hydro-c1)
 	F90=ifort
 	NCDF_PATH = /opt/netcdf4-intel
 
-	F90=gfortran
-	NCDF_PATH = /opt/netcdf4-gcc
+	# F90=gfortran
+	# NCDF_PATH = /opt/netcdf4-gcc
 
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
@@ -305,7 +305,7 @@ endif
 ###################################################################
 ###################################################################
 # copy required libraries into a directory accessible on compute nodes and set LD_RUN_PATH e.g.
-# export LD_RUN_PATH=$LD_RUN_PATH:/path/to/libraries/lib:/home/gutmann/usr/local/lib
+# export LD_RUN_PATH=$LD_RUN_PATH:/path/to/netcdf/libraries/lib:/path/to/fftw/libraries/lib
 LFLAGS=$(LINK) $(PROF) ${LIBNETCDF} -L${LIBFFT}
 FFLAGS=$(COMP) $(PROF) ${INCNETCDF} -I${INCFFT} ${MODOUTPUT}
 
