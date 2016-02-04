@@ -586,7 +586,7 @@ contains
         error = 0
 
         call io_read_attribute(filename, value_name, test_value)
-        if (default_value==test_value) then
+        if (default_value/=test_value) then
             error = 1
             write(*,*) "WARNING parameter option: "//trim(value_name)//"  "//trim(str(default_value)), &
                        " did not match file value: ",trim(str(test_value))
