@@ -49,11 +49,12 @@ contains
     !!  @retval error   0 on success other values indicate and error
     !!
     !!----------------------------------------------------------
-    function write_lut(filename, uLUT, vLUT, options) result(error)
+    function write_lut(filename, uLUT, vLUT, dz, options) result(error)
         implicit none
         character(len=*), intent(in) :: filename
         real, dimension(:,:,:,:,:,:), intent(in) :: uLUT, vLUT
-        type(lt_options_type), intent(in) :: options
+        real, dimension(:),           intent(in) :: dz
+        type(lt_options_type),        intent(in) :: options
         integer :: error
         error=0
 
@@ -69,12 +70,18 @@ contains
         ! allocate(rev_u_LUT(n_spd_values,n_dir_values,n_nsq_values,nxu,nz,ny))
         error = write_var(filename,"uLUT",uLUT, dimnames=[character(len=4) :: "nspd","ndir","nnsq","nxu","nz","ny"], open_new_file=.True.)
         if (error/=0) then
-            write(*,*) "Error writing LUT file:"//trim(filename)//" Error code = "//trim(str(error))
+            write(*,*) "Error writing uLUT to file:"//trim(filename)//" Error code = "//trim(str(error))
             return
         endif
         error = write_var(filename,"vLUT",vLUT, dimnames=[character(len=4) :: "nspd","ndir","nnsq","nx","nz","nyv"])
         if (error/=0) then
-            write(*,*) "Error writing LUT file:"//trim(filename)//" Error code = "//trim(str(error))
+            write(*,*) "Error writing vLUT to file:"//trim(filename)//" Error code = "//trim(str(error))
+            return
+        endif
+
+        error = write_var_1d(filename,"dz",dz, dimnames=[character(len=4) :: "nz"])
+        if (error/=0) then
+            write(*,*) "Error writing dz to LUT file:"//trim(filename)//" Error code = "//trim(str(error))
             return
         endif
 
@@ -101,6 +108,8 @@ contains
     !!
     !!  @sideeffect
     !!  If the parameters do not match the parameters in the LUT file, the parameters structure is updated to match
+    !!  ... or at least they would if options was an inout variable... for now no update is performed an error is
+    !!  returned so that the requested LUT can be computed instead. 
     !!
     !!  @param filename Name of LUT file to write
     !!  @param uLUT     Array to hold u wind look up table
@@ -114,10 +123,11 @@ contains
     !!                  4 if the version in the LUT file doesn't match that of the code
     !!
     !!----------------------------------------------------------
-    function read_LUT(filename, uLUT, vLUT, dims, options) result(error)
+    function read_LUT(filename, uLUT, vLUT, dz, dims, options) result(error)
         implicit none
         character(len=*), intent(in) :: filename
         real, allocatable, dimension(:,:,:,:,:,:), intent(inout) :: uLUT, vLUT
+        real, dimension(:), intent(in) :: dz
         integer, dimension(3,2), intent(in) :: dims
         type(lt_options_type), intent(in) :: options
         ! type(lt_options_type), intent(inout) :: options
@@ -131,7 +141,7 @@ contains
         error = check_attribute(filename,lt_lut_version, "lt_LUT_version")
         if (error/=0) then
             error=4
-            write(*,*) "WARNING: LUT not read, file lt_lut_version does not match code"
+            write(*,*) "WARNING: LUT not read, file lt_LUT_version does not match code"
             return
         endif
         if (.not.dims_match(filename, dims)) then
@@ -151,14 +161,17 @@ contains
         error = error + check_attribute(filename, options%n_dir_values, "n_dir_values")
         error = error + check_attribute(filename, options%n_nsq_values, "n_nsq_values")
         error = error + check_attribute(filename, options%n_spd_values, "n_spd_values")
-
+        
+        ! check that the model levels are actually in the same vertical positions too. 
+        error = error + check_dz(filename,dz)
+        
         if (error/=0) return
 
         ! this is the slow part where we actually read in all the data
         call io_read(filename,"uLUT",uLUT)
         call io_read(filename,"vLUT",vLUT)
 
-        ! return error
+        ! return no error
     end function read_LUT
 
     function dims_match(filename,dimensions)
@@ -188,6 +201,38 @@ contains
 
     end function dims_match
 
+    function check_dz(filename, model_dz) result(error)
+        implicit none
+        character(len=*), intent(in) :: filename ! LUT netcdf filename
+        real, intent(in), dimension(:) :: model_dz ! dz being used in the model to verify matches LUT file
+        integer :: error ! return value
+        
+        ! local variables
+        real, allocatable, dimension(:) :: lut_dz ! variable to hold the values read from the LUT file
+        integer :: i, nz
+
+        ! default assumes no error, code will be set if an error occurs
+        error=0
+        
+        ! read in the dz variable from the lut file
+        call io_read(filename,"dz",lut_dz)
+        nz = size(lut_dz)
+        
+        ! I don't think this should be possible because we already checked dims_match for the file
+        if (nz/=size(model_dz)) then
+            error=1
+            return
+        endif
+        
+        ! loop through all levels verifying that the LUT file matches the current model values
+        do i=1,nz
+            if (model_dz(i)/=lut_dz(i)) then
+                error=1
+                return
+            endif
+        enddo
+
+    end function check_dz
 
 
     function write_var(filename,varname,data_out, dimnames, open_new_file) result(error)
@@ -251,6 +296,69 @@ contains
 
             ! return error
     end function write_var
+
+    function write_var_1d(filename,varname,data_out, dimnames, open_new_file) result(error)
+            implicit none
+            ! We are writing 1D data expected to be nz grid.
+            integer, parameter :: ndims = 1
+
+            ! This is the name of the file and variable we will write.
+            character(len=*), intent(in) :: filename, varname
+            real,intent(in) :: data_out(:)
+            character(len=*), optional, dimension(ndims), intent(in) :: dimnames
+            logical, optional, intent(in) :: open_new_file
+            integer :: error, i
+
+            ! This will be the netCDF ID for the file and data variable.
+            integer :: ncid, varid,dimids(ndims)
+            character(len=MAXVARLENGTH), dimension(ndims) :: dims
+            integer :: dim_length
+
+            if (present(dimnames)) then
+                dims = dimnames
+            else
+                dims = ["z"]
+            endif
+
+            error=0
+            ncid=-1
+            varid=-1
+            ! Open the file. NF90_NOCLOBBER tells netCDF we want append to existing files
+            if (present(open_new_file)) then
+                if (open_new_file) then
+                    call check( nf90_create(filename, NF90_CLOBBER, ncid), filename)
+                endif
+            endif
+            if (ncid==-1) then
+                ! open an existing netcdf file
+                call check( nf90_open(filename, NF90_WRITE, ncid), "write_var:creating file:"//filename )
+                ! put file back into define mode so new variables and dimensions can be created.
+                call check( nf90_redef(ncid) )
+            endif
+            ! define the dimensions or test that the existing dim matches the size it should
+            do i=1,ndims
+                dim_length = size(data_out, i)
+                error = error + (2**i) * setup_dim(ncid, dims(i), dimids(i), dim_length)
+            end do
+
+            varid = -1
+            if (error==0) then
+                error = error + 2**(ndims+1) * setup_var(ncid, varname, varid, dimids, shape(data_out))
+            endif
+
+            ! End define mode. This tells netCDF we are done defining metadata.
+            call check( nf90_enddef(ncid) )
+            ! write the actual data to the file
+            if (error == 0) then
+                call check( nf90_put_var(ncid, varid, data_out), trim(filename)//":"//trim(varname))
+            endif
+
+            ! Close the file, freeing all resources.
+            call check( nf90_close(ncid), filename)
+
+            ! return error
+    end function write_var_1d
+
 
 
     function setup_var(ncid, varname, varid, dimids, dims) result(error)

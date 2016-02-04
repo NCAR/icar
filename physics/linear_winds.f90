@@ -702,7 +702,7 @@ contains
                 error=0
             else
                 print*, "Reading LUT from file: ", trim(options%lt_options%u_LUT_Filename)
-                error = read_LUT(options%lt_options%u_LUT_Filename, hi_u_LUT, hi_v_LUT, LUT_dims, options%lt_options)
+                error = read_LUT(options%lt_options%u_LUT_Filename, hi_u_LUT, hi_v_LUT, options%dz_levels, LUT_dims, options%lt_options)
                 if (error/=0) then
                     write(*,*) "Error LUT on disk does not match that specified in the namelist"
                     write(*,*) "LUT will be recreated"
@@ -757,7 +757,7 @@ contains
                 print*, "Not writing Linear Theory LUT to file because LUT was read from file"
             else
                 print*, "Writing u-LUT to file: ", trim(options%lt_options%u_LUT_Filename)
-                error = write_LUT(options%lt_options%u_LUT_Filename, hi_u_LUT, hi_v_LUT, options%lt_options)
+                error = write_LUT(options%lt_options%u_LUT_Filename, hi_u_LUT, hi_v_LUT, options%dz_levels, options%lt_options)
             endif
         endif
 
