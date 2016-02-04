@@ -8,7 +8,7 @@
 #			cleanall: 	alias for allclean
 #			tests: 		makes various unit tests (not all work)
 #			icar: 		makes the primary model
-#			doc: 		make doxygen documentation in docs/html
+#			doc: 		make doxygen documentation in docs/html (requires doxygen)
 #
 # Optional setting:
 #	MODE =	fast:		Enables additional optimizations that are likely to break something
@@ -47,13 +47,10 @@ INSTALLDIR=~/bin/
 ###################################################################
 #	Various compiler specific flags, may need to edit
 ###################################################################
-# on hydro-c1:
-# note on hydro-c1 /usr/local is not available on compute nodes so
-# the ifort libraries must be copied to an available directory (e.g. ~/)
-# it is HIGHLY recommended that you set :
-# LD_RUN_PATH=$LD_RUN_PATH:/usr/local/netcdf-4.1.3/ifort-12.0.5/lib:/home/gutmann/usr/local/lib:/usr/local/netcdf3-ifort/lib
+# It is also recommended that you set :
+# LD_RUN_PATH=$LD_RUN_PATH:<your-netcdf-lib-path>:<your-fftw-lib-path>
 # in your environment to point to the libraries you will need so the locations will be encoded in the
-#  compiled binary and you don't need to set LD_LIBRARY_PATH at runtime.
+# compiled binary and you don't need to set LD_LIBRARY_PATH at runtime.
 
 ########################################################################################
 # These are default parameters
@@ -61,7 +58,9 @@ INSTALLDIR=~/bin/
 ########################################################################################
 F90=gfortran
 RM=/bin/rm
-FFTW_PATH = /usr/local
+CP=/bin/cp
+DOXYGEN=doxygen
+FFTW_PATH=/usr/local
 LIBFFT = ${FFTW_PATH}/lib
 INCFFT = ${FFTW_PATH}/include
 NCDF_PATH = /usr/local
@@ -95,6 +94,7 @@ ifeq ($(NODENAME), hexagon)
 endif
 
 # traveling laptop / home computer
+# may want to add -Wl,-no_compact_unwind to suppress some warnings
 ifeq ($(NODENAME), Nomad.local)
 	F90=gfortran
 	LIBFFT=/Users/gutmann/usr/local/lib
@@ -115,11 +115,9 @@ endif
 ifeq ($(NODENAME),hydro-c1)
 	F90=ifort
 	NCDF_PATH = /opt/netcdf4-intel
-	# NCDF_PATH = /usr/local/netcdf-4.1.3/ifort-12.0.5
-	# NCDF_PATH = /home/gutmann/.usr/local/intel
 
-	# F90=gfortran
-	# NCDF_PATH = /usr/local/netcdf-4.3.3.1+gcc-4.7.2
+	F90=gfortran
+	NCDF_PATH = /opt/netcdf4-gcc
 
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
@@ -173,7 +171,7 @@ GIT_VERSION := $(shell git describe --long --dirty --all --always | sed -e's/hea
 # GNU fortran
 ifeq ($(F90), gfortran)
 	COMP=-fopenmp -lgomp -O3 -c -ffree-line-length-none -ftree-vectorize -fimplicit-none -funroll-loops -march=native  -fno-protect-parens # -ffast-math #-flto #
-	LINK=-fopenmp -lgomp -Wl,-no_compact_unwind
+	LINK=-fopenmp -lgomp
 	PREPROC=-cpp
 	MODOUTPUT=-J $(BUILD)
 endif
@@ -363,15 +361,15 @@ OBJS=	$(BUILD)driver.o \
 all:icar
 
 install:icar
-	cp icar ${INSTALLDIR}
+	${CP} icar ${INSTALLDIR}
 
 clean:
-	${RM} $(BUILD)*.o $(BUILD)*.mod *.lst
+	${RM} $(BUILD)*.o $(BUILD)*.mod *.lst docs/doxygen_sqlite3.db 2>/dev/null ||:
 
 allclean:cleanall
 
 cleanall: clean
-	${RM} icar fftshift_test calendar_test mpdata_test
+	${RM} icar fftshift_test calendar_test mpdata_test 2>/dev/null ||:
 
 test: fftshift_test calendar_test mpdata_test
 

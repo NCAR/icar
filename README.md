@@ -46,7 +46,11 @@ Also to set the compiler for your machine if necessary (defaults to gfortran)
     make MODE=debug -j4  # uses 4 processes to compile in debug mode
 
 ---------------------------------------------------------------------------------
-##Running the model: 
+##Running the model:
+
+###Example
+
+$ icar options_file_name.nml
 
 ###Input files
 
@@ -63,7 +67,7 @@ Other settings files can be defined in the primary settings file, or all setting
 Must contain the following variables (optional variables are in square brackets) :
 NOTE: any variable name can be used as specified in the options file. 
 
-    QV      = Specific Humidity                         (kg/kg)
+    QV      = Water Vapor mixing ratio                  (kg/kg)
     T       = Air Temperature                           (K with an optional offset)
     P       = Pressure                                  (Pa with an optional [PB] offset)
     U       = East-West wind                            (m/s)
@@ -93,10 +97,10 @@ Must [optionally] contain:
     HGT     = Terrain Height                            (m)
     LAT     = Latitude on ICAR mass grid                (degrees)
     LONG    = Longitude on ICAR mass grid               (degrees)
-    [LATU]  = Latitude on the ICAR EW-wind grid         (degrees)
-    [LONGU] = Longitude on the ICAR EW-wind grid        (degrees)
-    [LATV]  = Latitude on the ICAR NS-wind grid         (degrees)
-    [LONGV] = Longitude on the ICAR NS-wind grid        (degrees)
+    [LATU]  = Latitude on the ICAR EW-staggered wind grid         (degrees)
+    [LONGU] = Longitude on the ICAR EW-staggered wind grid        (degrees)
+    [LATV]  = Latitude on the ICAR NS-staggered wind grid         (degrees)
+    [LONGV] = Longitude on the ICAR NS-staggered wind grid        (degrees)
     [LU]    = Land use cover classification for land surface model
     [SOIL]  = Soil type classification for land surface model
 
