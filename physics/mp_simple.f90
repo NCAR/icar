@@ -1,15 +1,15 @@
 !>----------------------------------------------------------
 !! Very simple microphysics code modeled after the microphysics of SB04
-!! used in Smith and Barstad '04 (the linear model). 
-!! 
+!! used in Smith and Barstad '04 (the linear model).
+!!
 !! Clouds (solid and liquid) form and evaporate instantly
 !! Clouds convert to rain (or snow) with a time constant tau [s]
 !!   typically rain_tau ~500s snow_tau ~2000s
-!! Fall speeds in SB04 assume 10m/s (rain) and 1.5m/s (snow). 
-!! In SB04 this is treated by means of a time constant (=height/speed). 
+!! Fall speeds in SB04 assume 10m/s (rain) and 1.5m/s (snow).
+!! In SB04 this is treated by means of a time constant (=height/speed).
 !! Here it is modeled explicitly with these fall speeds
 !!
-!! The entry point to the code is mp_simple_driver. 
+!! The entry point to the code is mp_simple_driver.
 !!
 !! <pre>
 !! Call tree graph :
@@ -19,12 +19,12 @@
 !!        cloud2hydrometeor,
 !!        phase_change],
 !!   sediment]
-!! 
+!!
 !! High level routine descriptions / purpose
 !!   mp_simple_driver    - loops over X,Y grid cells, calls mp_simple on columns
 !!   mp_simple           - calls mp_conversions for all z, then calls sediment
 !!   mp_conversions      - handles all microphysics conversions (e.g. vapor->cloud->rain[->snow->vapor],...)
-!!   cloud_conversion    - uses sat_mr to calculate sub or supersaturation and changes vapor and cloud water to balance 
+!!   cloud_conversion    - uses sat_mr to calculate sub or supersaturation and changes vapor and cloud water to balance
 !!                          (adjusts temperature for Latent Heating)
 !!   cloud2hydrometeor   - converts cloud water to rain or snow (temperature dependant)
 !!   phase_change        - handles rain and snow evaporation (can take a time constant)
@@ -56,7 +56,7 @@ module module_mp_simple
     implicit none
     private
     public::mp_simple_driver
-    
+
     real, parameter :: LH_vapor = 2.26E6 ! J/kg
     real, parameter :: dLHvdt   = 2400! APPROXIMATE increase in latent heat with a decrease in temperature (below 373.15K)
                                     ! derived from various curves plotted online
@@ -65,12 +65,12 @@ module module_mp_simple
     real, parameter :: LH_liquid = 3.34E5 ! J/kg
     real, parameter :: heat_capacity = 1006.0 ! air heat capacity J/kg/K
     real, parameter :: SMALL_VALUE = 1E-15
-    real, parameter :: SMALL_PRESSURE = 1000. ! in Pa this is actually pretty small... 
+    real, parameter :: SMALL_PRESSURE = 1000. ! in Pa this is actually pretty small...
 !     real, parameter :: mp_R = 287.058 ! J/(kg K) specific gas constant for air
 !     real, parameter :: mp_g = 9.81 ! gravity m/s^2
 
 ! arbitrary calibratable timescales default values as used in the linear model
-! these should be pulled out to a parameter file for calibration purposes 
+! these should be pulled out to a parameter file for calibration purposes
 ! but this is approximately how they are implemented in SB04
     real,parameter :: snow_formation_time_const = 1/2000.0 ! [1/s]
     real,parameter :: rain_formation_time_const = 1/500.0  ! [1/s]
@@ -79,8 +79,8 @@ module module_mp_simple
     real,parameter :: rain_fall_rate = 10.0                ! [m/s]   for a water vapor scale height of 3750m corresponds to tau_f = 375
     real,parameter :: snow_cloud_init = 0.00001            ! [kg/kg] cloud ice content before snow will start to form
     real,parameter :: rain_cloud_init = 0.00001            ! [kg/kg] cloud water content before rain will start to form
-    
-    
+
+
 !   these are recalculated every call because they are a function of dt
 !   conversion "time" = exp( -1 * time_constant * dt)
     real :: rain_evap = 0.999
@@ -89,21 +89,21 @@ module module_mp_simple
     real :: cloud2rain = 0.999
     real :: cloud2snow = 0.999
     !$omp threadprivate(cloud2rain,cloud2snow,snow_melt,snow_evap,rain_evap)
-    
+
     contains
 
     !>----------------------------------------------------------
     !!  Calculate the saturated mixing ratio for a given temperature and pressure
-    !! 
+    !!
     !!  If temperature > 0C: returns the saturated mixing ratio with respect to liquid
     !!  If temperature < 0C: returns the saturated mixing ratio with respect to ice
-    !! 
+    !!
     !!  @param temperature  Air Temperature [K]
     !!  @param pressure     Air Pressure [Pa]
-    !!  @retval sat_mr      Saturated water vapor mixing ratio [kg/kg] 
+    !!  @retval sat_mr      Saturated water vapor mixing ratio [kg/kg]
     !!
     !!  @see http://www.dtic.mil/dtic/tr/fulltext/u2/778316.pdf
-    !!   Lowe, P.R. and J.M. Ficke., 1974: The Computation of Saturation Vapor Pressure 
+    !!   Lowe, P.R. and J.M. Ficke., 1974: The Computation of Saturation Vapor Pressure
     !!   Environmental Prediction Research Facility, Technical Paper No. 4-74
     !!
     !!----------------------------------------------------------
@@ -114,12 +114,12 @@ module module_mp_simple
         real :: e_s,mr_s,a,b
 
         ! from http://www.dtic.mil/dtic/tr/fulltext/u2/778316.pdf
-        !   Lowe, P.R. and J.M. Ficke., 1974: THE COMPUTATION OF SATURATION VAPOR PRESSURE 
+        !   Lowe, P.R. and J.M. Ficke., 1974: THE COMPUTATION OF SATURATION VAPOR PRESSURE
         !       Environmental Prediction Research Facility, Technical Paper No. 4-74
         ! which references:
-        !   Murray, F. W., 1967: On the computation of saturation vapor pressure. 
+        !   Murray, F. W., 1967: On the computation of saturation vapor pressure.
         !       Journal of Applied Meteorology, Vol. 6, pp. 203-204.
-        ! Also notes a 6th order polynomial and look up table as viable options. 
+        ! Also notes a 6th order polynomial and look up table as viable options.
         if (temperature < freezing_threshold) then
             a = 21.8745584
             b = 7.66
@@ -135,19 +135,19 @@ module module_mp_simple
         ! e_s = 611.2*exp(17.67*(t-273.15)/(t-29.65)) ! (Pa)
         ! from : http://www.srh.noaa.gov/images/epz/wxcalc/vaporPressure.pdf
         ! e_s = 611.0*10.0**(7.5*(t-273.15)/(t-35.45))
-        
-        
+
+
         if ((pressure - e_s) <= 0) then
             e_s = pressure * 0.99999
         endif
         ! from : http://www.srh.noaa.gov/images/epz/wxcalc/mixingRatio.pdf
         sat_mr = 0.6219907 * e_s / (pressure - e_s) !(kg/kg)
     end function sat_mr
-    
+
 
     !>----------------------------------------------------------
     !!  Convert cloud water to vapor and back
-    !! 
+    !!
     !!  Iterates to find the conversion between liquid and vapor including temperature feedbacks
     !!
     !!  @param pressure     air pressure             [Pa]
@@ -156,7 +156,7 @@ module module_mp_simple
     !!  @param qc           cloud water mixing ratio [kg/kg]
     !!  @param qvsat        saturated mixing ratio   [kg/kg]
     !!  @param dt           time step                [sec.]
-    !! 
+    !!
     !!----------------------------------------------------------
     subroutine cloud_conversion(pressure,temperature,qv,qc,qvsat,dt)
         implicit none
@@ -165,7 +165,7 @@ module module_mp_simple
         real    :: vapor2temp,excess,deltat,pre_qc,pre_qv,pre_t,lastqv
         integer :: iteration
         real    :: maxerr
-        
+
         maxerr = 1e-6
         iteration = 0
         lastqv = qv+maxerr*2
@@ -174,8 +174,8 @@ module module_mp_simple
         pre_qv = qv !DEBUG
         pre_t = temperature !DEBUG
         excess = 0
-        
-        ! this should be written to use a slightly smarter iteration scheme. 
+
+        ! this should be written to use a slightly smarter iteration scheme.
         do while ((abs(lastqv-qv)>maxerr).and.(iteration<5))
             iteration = iteration+1
             lastqv = qv
@@ -214,11 +214,12 @@ module module_mp_simple
         ! else if (temperature>350) then
         !     temperature = 350
         ! endif
-        
+
         qc = max(qc,0.)
-        
+
         if ((temperature>350).or.(qc>0.01).or.(qvsat>1)) then
             deltat = excess*vapor2temp
+            !$omp critical
             print*, "mp_simple: data out of bounds"
             print*, "iter=",iteration
             print*, "preqc=",pre_qc,"preqv=",pre_qv,"pret=",pre_t,"pressure=",pressure
@@ -227,17 +228,18 @@ module module_mp_simple
 
             print*, "qv=",qv, "qvs=",qvsat, "qc=",qc, "preqc=",pre_qc, "temperature=",temperature, "excess=",excess, "vapor2temp=",vapor2temp
             print*, "temperature-deltat",temperature-deltat, "pressure=",pressure, "mrs_t-dT=",sat_mr(temperature-deltat,pressure)
+            !$omp end critical
         endif
-        
+
     end subroutine
 
 
     !>----------------------------------------------------------
     !!  Convert cloud water or ice to rain or snow
-    !! 
+    !!
     !!  Use a time constant to calculate the convertion between
     !!  cloud and hydrometeor and enforce reasonable bounds
-    !! 
+    !!
     !!  @param qc           Cloud water (or ice) mixing ratio       [kg/kg]
     !!  @param q            Rain (or snow) mixing ratio             [kg/kg]
     !!  @param conversion   time constant for conversion (*dt)      []
@@ -249,13 +251,13 @@ module module_mp_simple
         real,intent(inout) :: qc,q
         real,intent(in) :: conversion, qcmin
         real::delta
-        
+
         if (qc > qcmin) then
             delta = qc-(qc*conversion)
         else
             delta = 0
         endif
-        
+
         if (delta<qc) then
             qc = qc-delta
             q = q+delta
@@ -265,11 +267,11 @@ module module_mp_simple
         endif
         qc = max(qc,0.)
     end subroutine
-    
+
     !>----------------------------------------------------------
     !!  Change the "phase" of a hydrometeor (e.g. evaporate rain)
-    !! 
-    !!  Written to apply generically to any conversion. 
+    !!
+    !!  Written to apply generically to any conversion.
     !!  Convert from q1 (e.g. rain) to q2 (e.g. vapor) using Lheat to affect temperature
     !!  and change_rate to control the conversion time scale
     !!
@@ -288,17 +290,17 @@ module module_mp_simple
         real,intent(in) :: pressure,qmax,change_rate,Lheat
         real :: mass2temp,delta
         mass2temp = Lheat/heat_capacity!*(pressure/(R*temperature)*dV))
-        
+
         delta = (qmax-q2)*change_rate
         if (delta>q1) delta = q1
         ! hopefully we don't over shoot saturation (use a 1% buffer)
         if (delta>((qmax-q2)*0.99)) then
             delta = (qmax-q2)*0.99
         endif
-        
+
         q1 = q1-delta
         ! bounds checking
-        if (q1<0) then 
+        if (q1<0) then
             if ((q1+SMALL_VALUE)<0) then
                 q1 = 0
             else
@@ -309,17 +311,17 @@ module module_mp_simple
         endif
         q2 = q2+delta
         temperature = temperature+delta*mass2temp
-        
+
     end subroutine
-    
+
     !>----------------------------------------------------------
     !!  Compute microphysical conversions
-    !! 
-    !!  Convert cloud water to and from vapor 
+    !!
+    !!  Convert cloud water to and from vapor
     !!  Convert cloud water to rain, and cloud ice to snow
     !!  Cloud water is assumed to be ice if temperature is less than 0C
     !!  Conversions also include latent heat feedbacks to temperature
-    !! 
+    !!
     !!  @param pressure     air pressure             [Pa]
     !!  @param temperature  air temperature          [K]
     !!  @param qv           water vapor mixing ratio [kg/kg]
@@ -334,7 +336,7 @@ module module_mp_simple
         real, intent(inout) :: pressure,temperature,qv,qc,qr,qs
         real,intent(in)::dt
         real :: qvsat,L_evap,L_subl,L_melt
-        
+
         qvsat = 1
         L_melt = -1*LH_liquid  ! J/kg (should change with temperature)
         L_evap = -1*(LH_vapor+(373.15-temperature)*dLHvdt)   ! J/kg
@@ -355,7 +357,7 @@ module module_mp_simple
                 else
                     ! convert cloud water to snow flakes
                     call cloud2hydrometeor(qc,qs,cloud2snow,snow_cloud_init)
-                    
+
                 endif
             endif
             ! if unsaturated, evaporate any existing snow and rain
@@ -371,18 +373,18 @@ module module_mp_simple
             endif
         endif
     end subroutine
-    
+
     !>----------------------------------------------------------
     !!  Compute sedimentation in a column
-    !! 
+    !!
     !!  Takes a mixing ratio of some species along with the fall velocities,
-    !!  air densities and layer thicknesses.  
-    !! 
+    !!  air densities and layer thicknesses.
+    !!
     !!  @param  q   1D microphysical species to sediment (snow, rain, etc) [kg/kg]
     !!  @param  v   1D vertical velocity [m/s]
     !!  @param  rho 1D air density [kg/m^3]
     !!  @param  dz  1D layer thickness [m]
-    !!  @param  n   0D number of layers 
+    !!  @param  n   0D number of layers
     !!
     !!----------------------------------------------------------
     real function sediment(q,v,rho,dz,n)
@@ -392,10 +394,10 @@ module module_mp_simple
         integer,intent(in) :: n
         real,dimension(n) :: flux
         integer :: i
-        
+
 !       calculate the mass of material falling out of the bottom model level
         sediment = v(1)*q(1)*rho(1) ![m] * [kg/kg] * [kg/m^3] = [kg/m^2]
-!       remove that from the bottom model layer. 
+!       remove that from the bottom model layer.
         q(1) = q(1)-(sediment/dz(1)/rho(1)) ! [kg/m^2] / [m] / [kg/m^3] = [kg/kg]
         do i = 1,n-1
             flux(i) = v(i+1)*q(i+1)*rho(i+1)
@@ -404,14 +406,14 @@ module module_mp_simple
             q(i) = q(i)+flux(i)/(rho(i)*dz(i))
             q(i+1) = q(i+1)-flux(i)/(rho(i+1)*dz(i+1))
         enddo
-    
+
     end function
 
     !>----------------------------------------------------------
     !!  Basic microphysics code for a column of air
-    !! 
+    !!
     !!  Call microphysical conversion routines on each layer and sedimentation for the column
-    !! 
+    !!
     !!  @param pressure   = pressure                      - 1D - input  - Pa     - (nz)
     !!  @param temperature= air temperature               - 1D - in/out - K      - (nz)
     !!  @param rho        = air density                   - 1D - input  - kg/m^3 - (nz)
@@ -435,15 +437,15 @@ module module_mp_simple
         real,intent(in)::dt
         integer,intent(in)::nz
         logical,intent(in)::debug
-        
+
         real,dimension(nz)::fall_rate
         real::cfl,snowfall, qvsat
         integer::i,cfl_step
         real :: L_evap,L_subl,L_melt
-        
+
         qvsat = 1
         L_melt = -1*LH_liquid  ! J/kg (should change with temperature)
-        
+
         if ((debug).and.(dt<1)) print*, "internal dt=",dt
         do i = 1,nz
             ! convert specific humidity to mixing ratio
@@ -472,7 +474,7 @@ module module_mp_simple
                 enddo
             enddo
         endif
-        
+
         ! SEDIMENTATION for snow
         if (maxval(qs)>SMALL_VALUE) then
             fall_rate = snow_fall_rate
@@ -506,11 +508,11 @@ module module_mp_simple
 
     !>----------------------------------------------------------
     !!  Driver code to control simple microphysics
-    !! 
-    !!  Handles horizontal spatial dimensions and parallelization in space, 
-    !!  Calculates time constants for the current dt, 
+    !!
+    !!  Handles horizontal spatial dimensions and parallelization in space,
+    !!  Calculates time constants for the current dt,
     !!  Calculates real temperature from potential temperature
-    !! 
+    !!
     !!  @param pressure   = pressure                      - 3D - input  - Pa     - (nx,nz,ny)
     !!  @param th         = potential temperature         - 3D - in/out - K      - (nx,nz,ny)
     !!  @param pii        = exner function                - 3D - input  - []     - (nx,nz,ny)
@@ -533,11 +535,11 @@ module module_mp_simple
         real,intent(inout),dimension(nx,ny)    :: rain,snow
         real,intent(in)    :: dt
         integer,intent(in) :: nx,ny,nz
-        
+
         ! local variables
         real,allocatable,dimension(:) :: temperature
         integer :: i,j
-        
+
 !       calculate these once for every call because they are only a function of dt
         cloud2snow = exp(-1.0*snow_formation_time_const*dt)
         cloud2rain = exp(-1.0*rain_formation_time_const*dt)
@@ -556,7 +558,7 @@ module module_mp_simple
                             rain(i,j),snow(i,j),&
                             dt,dz(i,:,j),nz,((i==(nx/2+20)).and.(j==2)))
                 th(i,:,j) = temperature/pii(i,:,j)
-                
+
             enddo
             ! where(qs(:,:,j)<0) qs(:,:,j) = 0
             ! where(qr(:,:,j)<0) qr(:,:,j) = 0
@@ -589,7 +591,7 @@ end module
 !   snow=0
 !   cloud2snow=exp(-1.0*snow_formation_time_const*dt)
 !   cloud2rain=exp(-1.0*rain_formation_time_const*dt)
-!   
+!
 !   do i=1,10
 !       call mp_simple(pressure,temperature,qv,qc,qr,qs,rain,snow,dt,dx2,dz,nz,.True.)
 ! !         write(*,*) "pressure=",pressure
@@ -603,4 +605,3 @@ end module
 ! !         write(*,*) "snow=",snow
 !   end do
 ! end program
-    

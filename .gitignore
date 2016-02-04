@@ -1,3 +1,6 @@
+*.o
+*.mod
+*.lst
 icar
 geo_test
 wind_test
@@ -6,3 +9,4 @@ calendar_test
 fftshift_test
 mpdata_test
 docs/html
+docs/doxygen_sqlite3.db
