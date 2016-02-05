@@ -295,21 +295,19 @@ contains
         character(len=*),intent(in) :: filename
         type(options_type), intent(inout) :: options
         integer :: name_unit
-        character(len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,&
-                                        hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,     &
-                                        pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
-                                        soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
-                                        vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
-                                        swdown_var, lwdown_var, &
-                                        sst_var
+        character(len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar,  &
+                                        hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
+                                        pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,   &
+                                        soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
+                                        vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
+                                        swdown_var, lwdown_var, sst_var
                                         
-        namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
-                            landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar, &
-                            hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi, &
-                            soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
-                            vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
-                            swdown_var, lwdown_var, &
-                            sst_var
+        namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,   &
+                            landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar, &
+                            hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
+                            soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
+                            vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
+                            swdown_var, lwdown_var, sst_var
         
         hgtvar="HGT"
         latvar="XLAT"
@@ -321,12 +319,13 @@ contains
         vlat="XLAT_V"
         vlon="XLONG_V"
         pvar="P"
-        pbvar="PB"
+        pbvar=""
         tvar="T"
         qvvar="QVAPOR"
-        qcvar="QCLOUD"
-        qivar="QICE"
+        qcvar=""
+        qivar=""
         zvar="Z"
+        zbvar=""
         shvar=""
         lhvar=""
         swdown_var=""
@@ -375,6 +374,7 @@ contains
         options%qivar=qivar
 !       vertical coordinate
         options%zvar=zvar
+        options%zbvar=zbvar
 !       2D model variables (e.g. Land surface and PBL height)       
         options%shvar=shvar
         options%lhvar=lhvar
@@ -419,7 +419,7 @@ contains
         double precision :: end_mjd
         integer :: nz, n_ext_winds,buffer, warning_level
         logical :: ideal, readz, readdz, debug, external_winds, surface_io_only, &
-                   mean_winds, mean_fields, restart, advect_density, &
+                   mean_winds, mean_fields, restart, advect_density, z_is_geopotential,&
                    high_res_soil_state, use_agl_height, time_varying_z, &
                    use_mp_options, use_lt_options, use_adv_options, use_lsm_options
                    
@@ -431,7 +431,7 @@ contains
         namelist /parameters/ ntimesteps,outputinterval,inputinterval, surface_io_only, &
                               dx,dxlow,ideal,readz,readdz,nz,t_offset,debug, &
                               external_winds,buffer,n_ext_winds,advect_density,smooth_wind_distance, &
-                              mean_winds,mean_fields,restart, &
+                              mean_winds,mean_fields,restart, z_is_geopotential,&
                               date, calendar, high_res_soil_state,rotation_scale_height,warning_level, &
                               use_agl_height, start_date, forcing_start_date, end_date, time_varying_z, &
                               mp_options_filename, use_mp_options, &    ! trude added
@@ -447,7 +447,9 @@ contains
         n_ext_winds=1
         t_offset=(-9999)
         buffer=0
-        advect_density=.True.
+        advect_density=.False.
+        z_is_geopotential=.False.
+        dxlow=100000
         restart=.False.
         ideal=.False.
         debug=.False.
@@ -457,7 +459,7 @@ contains
         nz  = MAXLEVELS
         smooth_wind_distance=-9999
         calendar="gregorian"
-        high_res_soil_state=.True.
+        high_res_soil_state=.False.
         rotation_scale_height=2000.0
         use_agl_height=.True.
         start_date=""
@@ -499,15 +501,19 @@ contains
             
         
         if (smooth_wind_distance.eq.(-9999)) then
-            smooth_wind_distance=dxlow*3
-            write(*,*) "Default smoothing distance = lowdx*3 = ", smooth_wind_distance
+            smooth_wind_distance=dxlow*2
+            write(*,*) "Default smoothing distance = lowdx*2 = ", smooth_wind_distance
         endif
         
         options%t_offset=t_offset
         if (smooth_wind_distance<0) then 
             write(*,*) "Wind smoothing must be a positive number"
             write(*,*) "smooth_wind_distance = ",smooth_wind_distance
-            stop
+            if (warning_level>4) then
+                stop
+            else
+                smooth_wind_distance=dxlow*2
+            endif
         endif
         options%smooth_wind_distance=smooth_wind_distance
         
@@ -542,32 +548,33 @@ contains
             options%ntimesteps = (end_mjd-options%initial_mjd)*(86400.0/options%in_dt)
         endif
         options%time_step_zero = (options%start_mjd-options%initial_mjd)*(86400.0/options%in_dt)
-        options%time_zero=((options%initial_mjd-50000) * 86400.0)
-        options%dx=dx
-        options%dxlow=dxlow
-        options%ideal=ideal
+        options%time_zero = ((options%initial_mjd-50000) * 86400.0)
+        options%dx = dx
+        options%dxlow = dxlow
+        options%ideal = ideal
         if (ideal) then
             write(*,*) "Running Idealized simulation (time step does not advance)"
         endif
-        options%readz=readz
-        options%readdz=readdz
-        options%buffer=buffer
-        options%mean_winds=mean_winds
-        options%mean_fields=mean_fields
-        options%advect_density=advect_density
-        options%debug=debug
-        options%warning_level=warning_level
-        options%rotation_scale_height=rotation_scale_height
-        options%use_agl_height=use_agl_height
+        options%readz = readz
+        options%readdz = readdz
+        options%buffer = buffer
+        options%mean_winds = mean_winds
+        options%mean_fields = mean_fields
+        options%advect_density = advect_density
+        options%debug = debug
+        options%warning_level = warning_level
+        options%rotation_scale_height = rotation_scale_height
+        options%use_agl_height = use_agl_height
+        options%z_is_geopotential = z_is_geopotential
         
-        options%external_winds=external_winds
-        options%ext_winds_nfiles=n_ext_winds
-        options%restart=restart
+        options%external_winds = external_winds
+        options%ext_winds_nfiles = n_ext_winds
+        options%restart = restart
         
-        options%nz=nz
+        options%nz = nz
         
-        options%high_res_soil_state=high_res_soil_state
-        options%time_varying_z=time_varying_z
+        options%high_res_soil_state = high_res_soil_state
+        options%time_varying_z = time_varying_z
         
         options%use_mp_options = use_mp_options
         options%mp_options_filename  = mp_options_filename   ! trude added
@@ -728,7 +735,6 @@ contains
         vert_smooth = 2
         max_stability = 6e-4           ! limits on the calculated Brunt Vaisala Frequency
         min_stability = 1e-7           ! these may need to be a little narrower. 
-        linear_update_fraction  = 1    ! controls the rate at which the linearfield updates (should be calculated as f(in_dt))
     
         N_squared = 3e-5               ! static Brunt Vaisala Frequency (N^2) to use
         linear_contribution = 1        ! fractional contribution of linear perturbation to wind field (e.g. u_hat multiplied by this)
@@ -736,7 +742,7 @@ contains
         rm_N_squared = 3e-5            ! static Brunt Vaisala Frequency (N^2) to use in removing linear wind field
         rm_linear_contribution = 1     ! fractional contribution of linear perturbation to wind field to remove from the low-res field
     
-        linear_update_fraction = 1     ! fraction of linear perturbation to add each time step
+        linear_update_fraction = 0.2   ! fraction of linear perturbation to add each time step
         spatial_linear_fields = .True. ! use a spatially varying linear wind perturbation
         linear_mask = .False.          ! use a spatial mask for the linear wind field
         nsq_calibration = .False.      ! use a spatial mask to calibrate the nsquared (brunt vaisala frequency) field
@@ -745,15 +751,15 @@ contains
         dirmax = 2*pi
         dirmin = 0
         spdmax = 30
-        spdmin = -30
+        spdmin = 0
         nsqmax = log(max_stability)
         nsqmin = log(min_stability)
-        n_dir_values = 36
-        n_nsq_values = 10
-        n_spd_values = 10
+        n_dir_values = 24
+        n_nsq_values = 5
+        n_spd_values = 6
         
         read_LUT = .False.
-        write_LUT = .False.
+        write_LUT = .True.
         u_LUT_Filename = "MISSING"
         v_LUT_Filename = "MISSING"
         LUT_Filename   = "MISSING"

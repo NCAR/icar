@@ -31,7 +31,7 @@
 !!
 !!      ---- energy fluxes ----
 !! sensible_heat = Sensible heat flux from surface          [W/m^2]
-!! latent_heat   = Latent heat flux from surface                [W/m^2]
+!! latent_heat   = Latent heat flux from surface            [W/m^2]
 !! pbl_height    = Height of the planetary boundary layer   [m]
 !!
 !!      ---- Radiation variables ----
@@ -470,7 +470,7 @@ module data_structures
         character (len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
                                         hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi, &
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar,hgtvar, &
-                                        shvar,lhvar,pblhvar,zvar, &
+                                        shvar,lhvar,pblhvar,zvar,zbvar,&
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
                                         swdown_var, lwdown_var, &
@@ -491,6 +491,7 @@ module data_structures
         logical :: mean_winds           ! use only a mean wind field across the entire model domain
         logical :: mean_fields          ! use only a mean forcing field across the model boundaries 
         logical :: restart              ! this is a restart run, read model conditions from a restart file
+        logical :: z_is_geopotential    ! if true the z variable is interpreted as geopotential height
         logical :: advect_density       ! properly incorporate density into the advection calculations. 
                                         ! Doesn't play nice with linear winds
         logical :: high_res_soil_state  ! read the soil state from the high res input file not the low res file

@@ -43,7 +43,7 @@ contains
         "Output file z-axis has been changed", &
         "Pre-1.0 release added end_date, date->forcing_start_date, forcing_file_list"// &
         "      lt:LUT_filename, mp:update_interval, moved vert_smooth to lt_parameters,"// &
-        "      added z_is_geopotential, and PHBvar changed some defaults." &
+        "      added z_is_geopotential, and zbvar changed some defaults." &
         ]
         
     end subroutine init_model_diffs

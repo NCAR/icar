@@ -289,11 +289,11 @@ contains
             call smooth_wind(inputdata,1,2)
             
         ! For Temperature, we may need to add an offset
-        else if ((varname==options%tvar).and.(options%t_offset.ne.0)) then
+        else if ((varname==options%tvar).and.(options%t_offset/=0)) then
             inputdata=inputdata+options%t_offset
         
         ! For pressure, we may need to add a base pressure offset read from pbvar
-        else if ((varname==options%pvar).and.(options%pbvar.ne.'')) then
+        else if ((varname==options%pvar).and.(options%pbvar/='')) then
             call io_read3d(filename,options%pbvar,extra_data,curstep)
             inputdata=inputdata+extra_data
             deallocate(extra_data)
@@ -1213,20 +1213,22 @@ contains
         
         if (options%time_varying_z) then
             ! read in the updated vertical coordinate
-            if (allocated(newbc%z)) then
-                deallocate(newbc%z)
-            endif
+            if (allocated(newbc%z)) deallocate(newbc%z)
             call io_read3d(file_list(curfile), options%zvar, newbc%z, curstep)
             nx=size(newbc%z,1)
             ny=size(newbc%z,2)
             nz=size(newbc%z,3)
-            if (options%zvar=="PH") then
-                call io_read3d(file_list(curfile),"PHB", zbase, curstep)
-                newbc%z=(newbc%z+zbase) / gravity
-                zbase(:,:,1:nz-1)=(newbc%z(:,:,1:nz-1) + newbc%z(:,:,2:nz))/2
-                newbc%z=zbase
+            if (trim(options%zbvar)/="") then
+                call io_read3d(file_list(curfile),options%zbvar, zbase, curstep)
+                newbc%z=newbc%z+zbase
                 deallocate(zbase)
             endif
+            if (options%z_is_geopotential) then
+                newbc%z=newbc%z / gravity
+                write(*,*) "Interpreting geopotential height as residing between model layers"
+                newbc%z(:,:,1:nz-1)=(newbc%z(:,:,1:nz-1) + newbc%z(:,:,2:nz))/2
+            endif
+            
             ! now simply generate a look up table to convert the current z coordinate to the original z coordinate
             call vLUT_forcing(bc,newbc)
             ! set a maximum on z so we don't try to interpolate data above mass grid
