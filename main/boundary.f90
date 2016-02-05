@@ -498,7 +498,7 @@ contains
         deallocate(extra_data)
         
         ! remove the low-res linear wind contribution effect
-        call linear_perturb(bc,options,options%vert_smooth,reverse_winds,options%advect_density)
+        call linear_perturb(bc,options,options%lt_options%vert_smooth,reverse_winds,options%advect_density)
         
         ! finally interpolate low res winds to the high resolutions grid
         nx=size(domain%u,1)

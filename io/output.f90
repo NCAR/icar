@@ -152,7 +152,7 @@ contains
         
         ! only output linear wind parameters if ICAR is using the linear wind calculations
         if (options%physics%windtype>0) then
-            call check( nf90_put_att(ncid,NF90_GLOBAL,"vert_smooth",options%vert_smooth), trim(err))
+            call check( nf90_put_att(ncid,NF90_GLOBAL,"vert_smooth",options%lt_options%vert_smooth), trim(err))
             call check( nf90_put_att(ncid,NF90_GLOBAL,"linear_contribution",options%lt_options%linear_contribution), trim(err))
             if (options%lt_options%variable_N) then
                 call check( nf90_put_att(ncid,NF90_GLOBAL,"variable_N","time varying N"), trim(err))

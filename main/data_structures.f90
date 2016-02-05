@@ -388,6 +388,7 @@ module data_structures
         real :: t_adjust
         logical :: Ef_rw_l, EF_sw_l
         
+        real :: update_interval
         integer :: top_mp_level ! top model level to process in the microphysics
         real :: local_precip_fraction
     end type mp_options_type
@@ -403,6 +404,7 @@ module data_structures
         real    :: min_stability            ! these may need to be a little narrower. 
         logical :: variable_N               ! Compute the Brunt Vaisala Frequency (N^2) every time step
         logical :: smooth_nsq               ! Smooth the Calculated N^2 over vert_smooth vertical levels
+        integer :: vert_smooth              ! number of model levels to smooth winds over in the vertical
         
         real    :: N_squared                ! static Brunt Vaisala Frequency (N^2) to use
         real    :: linear_contribution      ! fractional contribution of linear perturbation to wind field (e.g. u_hat multiplied by this)
@@ -495,9 +497,9 @@ module data_structures
         logical :: surface_io_only      ! just output surface variables to speed up run and thin output
         
         integer :: buffer               ! buffer to remove from all sides of the high res grid supplied
-        integer :: vert_smooth          ! number of model levels to smooth winds over in the vertical
         ! various integer parameters/options
-        integer :: ntimesteps           ! total number of time steps to be simulated
+        integer :: ntimesteps           ! total number of time steps to be simulated (from the first forcing data)
+        integer :: time_step_zero       ! the initial time step for the simulation (from the first forcing data)
         integer :: nz                   ! number of model vertical levels
         integer :: ext_winds_nfiles     ! number of extrenal wind filenames to read from namelist
         integer :: restart_step         ! step in forcing data to begin running

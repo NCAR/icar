@@ -75,7 +75,7 @@ program icar
     do i=start_point,options%ntimesteps
         write(*,*) ""
         write(*,*) " ----------------------------------------------------------------------"
-        write(*,*) "Timestep:", i, "  of ", options%ntimesteps
+        write(*,*) "Timestep:", i-options%time_step_zero, "  of ", options%ntimesteps-options%time_step_zero
         write(*,*) "  Model time=", trim(str((model_time-options%time_zero)/3600.0,fmt="(F10.2)")) ,"hrs"
         call calendar_date(model_time/86400.0D+0 + 50000, year, month, day, hour, minute, second)
         domain%current_month=month
