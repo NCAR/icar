@@ -1,8 +1,10 @@
 #The Intermediate Complexity Atmospheric Research Model (ICAR)
 
-[![Documentation Status](https://readthedocs.org/projects/proto-icar/badge/?version=latest)](http://proto-icar.readthedocs.org/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/icar/badge/?version=latest)](http://icar.readthedocs.org/en/stable/?badge=latest)
 
 ICAR is a simplified atmospheric model designed primarily for climate downscaling, atmospheric sensitivity tests, and hopefully educational uses. At this early stage, the model is still undergoing rapid development, and users are encouraged to get updates frequently. 
+
+Documentation is (slowly) being build on [readthedocs](https://readthedocs.org/projects/icar/badge/?version=latest) and doxygen based documentation can be built now by hand, and will hopefully be available through [github-pages](http://NCAR.github.io/icar) soon. 
 
 ####Requirements
 To run the model 3D time-varying atmospheric data are required, though an ideal test case can be generated for simple simulations as well.  See "Running the Model" below. There are some sample python scripts to help make input forcing files, but the WRF pre-processing system can also be used.  Low-resolution WRF output files can be used directly, various reanalysis and GCM output files can be used with minimal pre-processing (just get all the variables in the same netcdf file.)  In addition, a high-resolution netCDF topography file is required.  This will define the grid that ICAR will run on.  Finally and ICAR options file is used to specify various parameters for the model.  A sample options file is provided in the run/ directory. 
