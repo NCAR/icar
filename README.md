@@ -1,5 +1,7 @@
 #The Intermediate Complexity Atmospheric Research Model (ICAR)
 
+[![Documentation Status](https://readthedocs.org/projects/proto-icar/badge/?version=latest)](http://proto-icar.readthedocs.org/en/latest/?badge=latest)
+
 ICAR is a simplified atmospheric model designed primarily for climate downscaling, atmospheric sensitivity tests, and hopefully educational uses. At this early stage, the model is still undergoing rapid development, and users are encouraged to get updates frequently. 
 
 ####Requirements
