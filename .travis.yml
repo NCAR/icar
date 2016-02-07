@@ -10,15 +10,15 @@ addons:
       - ubuntu-toolchain-r-test
     packages:
       - libnetcdf-dev
-      - libfftw3-3
+      - libfftw3-dev
+    #   - libfftw3-3
+    #   - fftw-dev
       - gfortran
 script:
-  - uname -a
   - uname -n
   - ls /usr/lib/
   - ls /usr/include/
-  - ls /usr/local/lib/
-  - ls /usr/local/include/
+  - locate fftw3.f03
   - sed -i "s|FFTW_PATH=/usr/local|FFTW_PATH=/usr|" makefile
   - sed -i "s|NCDF_PATH = /usr/local|NCDF_PATH = /usr|" makefile
   - make test -j4
