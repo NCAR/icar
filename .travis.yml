@@ -13,9 +13,6 @@ addons:
       - libnetcdf-dev
       - libfftw3-dev
 script:
-  - uname -n
-  - ls /usr/lib/*netcdf*
-  - ls /usr/include/*netcdf*
   - sed -i "s|FFTW_PATH=/usr/local|FFTW_PATH=/usr|" makefile
   - sed -i "s|NCDF_PATH = /usr/local|NCDF_PATH = /usr|" makefile
   - make test -j4
