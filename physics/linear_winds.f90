@@ -643,7 +643,7 @@ contains
     subroutine initialize_spatial_winds(domain,options,reverse,useDensity)
         ! compute look up tables for all combinations of  N different U speeds and N different V speeds
         implicit none
-        type(linearizable_type), intent(inout) :: domain
+        class(linearizable_type),intent(inout)::domain
         type(options_type), intent(in) :: options
         logical, intent(in) :: reverse,useDensity
         real, allocatable, dimension(:,:,:) :: savedU, savedV
@@ -815,7 +815,7 @@ contains
         ! for each grid point, find the closest LUT data in U and V space
         ! then bilinearly interpolate the nearest LUT values for that points linear wind field
         implicit none
-        type(linearizable_type), intent(inout) :: domain
+        class(linearizable_type),intent(inout)::domain
         logical, intent(in) :: reverse
         integer, intent(in) :: vsmooth
         integer :: nx,ny,nz,i,j,k, smoothz
