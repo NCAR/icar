@@ -1,0 +1,16 @@
+sudo: false
+language: fortran
+compiler:
+  - gfortran
+os:
+  - linux
+addons:
+  apt:
+    source:
+      - ubuntu-toolchain-r-test
+    packages:
+      - libnetcdf-dev
+      - libfftw3-3
+      - gfortran
+script:
+  - make
