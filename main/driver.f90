@@ -117,6 +117,6 @@ end program icar
 !!
 !!  @section Reference
 !!  Gutmann, E. D., I. Barstad, M. P. Clark, J. R. Arnold, and R. M. Rasmussen (2016), 
-!!  The Intermediate Complexity Atmospheric Research Model, J. Hydrometeor, accepted.
+!!  The Intermediate Complexity Atmospheric Research Model, J. Hydrometeor, doi:<a href="http://dx.doi.org/10.1175/JHM-D-15-0155.1">10.1175/JHM-D-15-0155.1</a>.
 !!
 !!------------------------------------------
