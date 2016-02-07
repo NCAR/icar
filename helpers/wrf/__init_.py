@@ -1,1 +1,0 @@
-import ideal2icar
