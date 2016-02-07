@@ -75,7 +75,7 @@ program icar
     do i=start_point,options%ntimesteps
         write(*,*) ""
         write(*,*) " ----------------------------------------------------------------------"
-        write(*,*) "Timestep:", i, "  of ", options%ntimesteps
+        write(*,*) "Timestep:", i-options%time_step_zero, "  of ", options%ntimesteps-options%time_step_zero
         write(*,*) "  Model time=", trim(str((model_time-options%time_zero)/3600.0,fmt="(F10.2)")) ,"hrs"
         call calendar_date(model_time/86400.0D+0 + 50000, year, month, day, hour, minute, second)
         domain%current_month=month
@@ -117,6 +117,6 @@ end program icar
 !!
 !!  @section Reference
 !!  Gutmann, E. D., I. Barstad, M. P. Clark, J. R. Arnold, and R. M. Rasmussen (2016), 
-!!  The Intermediate Complexity Atmospheric Research Model, J. Hydrometeor, accepted.
+!!  The Intermediate Complexity Atmospheric Research Model, J. Hydrometeor, doi:<a href="http://dx.doi.org/10.1175/JHM-D-15-0155.1">10.1175/JHM-D-15-0155.1</a>.
 !!
 !!------------------------------------------
