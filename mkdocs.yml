@@ -3,5 +3,6 @@ pages:
 - Home: index.md
 - Compiling: compiling.md
 - Running: running.md
+- Developing: developing.md
 - Errors: errors.md
 theme: readthedocs
