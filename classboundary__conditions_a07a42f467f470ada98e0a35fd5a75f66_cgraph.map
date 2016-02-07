@@ -1,0 +1,51 @@
+<map id="boundary_conditions::bc_init" name="boundary_conditions::bc_init">
+<area shape="rect" id="node2" href="$classboundary__conditions.html#a5c2fa14c6e1c09f3255e8aa0eb2aa395" title=" Find the time step in the input forcing to start the model on " alt="" coords="200,119,341,160"/>
+<area shape="rect" id="node3" href="$classio__routines.html#ae987ea578b7a3fe5c0d51363e0f154a7" title=" Read the dimensions of a variable in a given netcdf file " alt="" coords="397,315,553,342"/>
+<area shape="rect" id="node5" href="$classboundary__conditions.html#ad2ea45f7b77ad1c1d998b3ad7d236d89" title=" Load restart file " alt="" coords="200,556,341,597"/>
+<area shape="rect" id="node10" href="$classboundary__conditions.html#afd8110e2b16915ce0cb12ce4958fe09c" title=" Initialize the external winds information (filenames, nfiles, etc) and read the initial conditions ..." alt="" coords="200,429,341,471"/>
+<area shape="rect" id="node11" href="$classboundary__conditions.html#a3d4ddfc81942b206888c807998f4bb3c" title=" Generic routine to read a forcing variable (varname) from a netcdf file (filename) at a time step (c..." alt="" coords="404,767,545,808"/>
+<area shape="rect" id="node12" href="$classboundary__conditions.html#a4ea743610f85b3c52d69af94085b5bfa" title=" Smooth an array (written for wind but will work for anything) " alt="" coords="609,832,751,873"/>
+<area shape="rect" id="node18" href="$classboundary__conditions.html#ac4cfb5127bfecdc6e088ef949694ea4a" title=" Remove linear theory topographic winds perturbations from the low resolution wind field..." alt="" coords="195,851,347,892"/>
+<area shape="rect" id="node38" href="$classboundary__conditions.html#afe9c319bf80aa129881d9561771af7f3" title=" Compute the mean wind field and make them constant everywhere... " alt="" coords="200,683,341,724"/>
+<area shape="rect" id="node39" href="$classwind.html#a582192f02996b37543b966df84af1e78" title="wind::update_winds" alt="" coords="202,1102,339,1129"/>
+<area shape="rect" id="node42" href="$classoutput.html#a96fb2c72004c645360fa3e6f2b551b50" title=" Simple routine to write all domain data from this current time step to the output file..." alt="" coords="199,185,342,211"/>
+<area shape="rect" id="node47" href="$classboundary__conditions.html#a092406b0b0b0676f3fcd8e514b1a2663" title=" Same as read_var but for 2&#45;dimensional data " alt="" coords="200,1036,341,1077"/>
+<area shape="rect" id="node49" href="$classboundary__conditions.html#a3f59398683169f1de9bf8f548f1d7b96" title=" Adjust the pressure field for the vertical shift between the low and high&#45;res domains ..." alt="" coords="200,1153,341,1195"/>
+<area shape="rect" id="node50" href="$classboundary__conditions.html#ac929e30ca12cfd9dadd51b3f3ca091aa" title=" Calculate the ZNU and ZNW variables " alt="" coords="200,1219,341,1260"/>
+<area shape="rect" id="node4" href="$classio__routines.html#ac4835ed66f2e10d8e5bb40f6122f0ca1" title=" Simple error handling for common netcdf file errors " alt="" coords="616,214,744,241"/>
+<area shape="rect" id="node6" href="$interfaceio__routines_1_1io__read.html#a9b6dacfccbb234dd949e7136e5b67f8c" title=" Same as io_read6d but for 3&#45;dimensional data " alt="" coords="613,649,747,691"/>
+<area shape="rect" id="node7" href="$classboundary__conditions.html#afb4a98605fd483895eb2c0f8a27f7026" title=" Check that two model grids have the same shape " alt="" coords="404,497,545,539"/>
+<area shape="rect" id="node8" href="$classio__routines.html#a17f18d6dd50473973791b936651a50a2" title=" Tests to see if a variable is present in a netcdf file returns true of it is, false if it isn&#39;t ..." alt="" coords="397,432,552,473"/>
+<area shape="rect" id="node9" href="$interfaceio__routines_1_1io__read.html#a35290f3b01bd8f36bae0173749f6b870" title=" Same as io_read3d but for 2&#45;dimensional data " alt="" coords="823,905,958,947"/>
+<area shape="rect" id="node17" href="$classboundary__conditions.html#a1208205dcebb05812018d41b6b08e2ce" title=" Rotate winds from real space back to terrain following grid (approximately) " alt="" coords="398,367,551,408"/>
+<area shape="rect" id="node13" href="$classvertical__interpolation.html#a2d3f85573f18ea2ab18d6dcdec6a025a" title="vertical_interpolation\l::vinterp" alt="" coords="609,715,751,756"/>
+<area shape="rect" id="node15" href="$classgeo.html#acb54dc322e31524d40cc746c37b28898" title="geo::geo_interp" alt="" coords="625,781,735,807"/>
+<area shape="rect" id="node14" href="$classvertical__interpolation.html#a2625ecb49efcd1aaccf31125071f03e4" title="vertical_interpolation\l::vinterp_boundary" alt="" coords="820,527,961,568"/>
+<area shape="rect" id="node16" href="$classgeo.html#a61629d616a7b4ee1cd910362724f0f6d" title="geo::boundary_interpolate" alt="" coords="805,593,976,619"/>
+<area shape="rect" id="node19" href="$classlinear__theory__winds.html#a248a832d459ec9cd399c372d2ae9cb0a" title="linear_theory_winds\l::linear_perturb" alt="" coords="406,1036,543,1077"/>
+<area shape="rect" id="node20" href="$classlinear__theory__winds.html#a5aed1fad471120ba77c203fa6158a5ba" title="linear_theory_winds\l::setup_linwinds" alt="" coords="611,971,749,1012"/>
+<area shape="rect" id="node29" href="$classlinear__theory__winds.html#a352c9ebbb4416a470bc197c2c3b4c91a" title="linear_theory_winds\l::linear_winds" alt="" coords="1030,1163,1167,1204"/>
+<area shape="rect" id="node31" href="$classlinear__theory__winds.html#a2e662c05e82b0515704c9ab54f49373a" title="linear_theory_winds\l::spatial_winds" alt="" coords="611,897,749,939"/>
+<area shape="rect" id="node37" href="$classlinear__theory__winds.html#a00361916b4c433e510597f8af21db6ba" title="linear_theory_winds\l::calc_domain_stability" alt="" coords="603,1036,757,1077"/>
+<area shape="rect" id="node21" href="$classlinear__theory__winds.html#abd669b485ef98ac64dad6b8590974da3" title="linear_theory_winds\l::set_module_options" alt="" coords="817,1101,964,1143"/>
+<area shape="rect" id="node22" href="$classlinear__theory__winds.html#a9a4361691c200925fcb5da146c4f0691" title="linear_theory_winds\l::add_buffer_topo" alt="" coords="822,971,959,1012"/>
+<area shape="rect" id="node24" href="$classlinear__theory__winds.html#a1c7117dad74a51614a026a50aec8b988" title="linear_theory_winds\l::initialize_spatial_winds" alt="" coords="809,1036,972,1077"/>
+<area shape="rect" id="node23" href="$interfaceio__routines_1_1io__write.html#a96eb70acfac04d289ad2eb5892062172" title=" Same as io_write3d but for 2&#45;dimensional arrays " alt="" coords="1029,836,1168,877"/>
+<area shape="rect" id="node25" href="$classlinear__theory__lut__disk__io.html#a7b4e839b4cee03c05190479e277bc34a" title=" Write linear wind look up tables to disk along with the parameters for that table ..." alt="" coords="1025,967,1173,1008"/>
+<area shape="rect" id="node27" href="$classlinear__theory__winds.html#a813750f1f575af521dd81654aff2ee54" title="linear_theory_winds\l::calc_u" alt="" coords="1030,1097,1167,1139"/>
+<area shape="rect" id="node28" href="$classlinear__theory__winds.html#adbd589b5f5daf777414839f415fe8dbb" title="linear_theory_winds\l::calc_v" alt="" coords="1030,1032,1167,1073"/>
+<area shape="rect" id="node30" href="$classlinear__theory__lut__disk__io.html#a839923739fe9f10f439952d059c3261d" title=" Write linear wind look up tables to disk along with the parameters for that table ..." alt="" coords="1025,901,1173,943"/>
+<area shape="rect" id="node26" href="$classio__routines.html#a2f5490f632bd50662c7da9fd964e88e3" title=" Tests to see if a file exists " alt="" coords="1221,909,1373,935"/>
+<area shape="rect" id="node32" href="$classlinear__theory__winds.html#a027dc1b837380d8d4fbe2e9689e9ed46" title="linear_theory_winds\l::calc_stability" alt="" coords="822,644,959,685"/>
+<area shape="rect" id="node34" href="$classlinear__theory__winds.html#a5d36c6dd3036dc8a25e356c875f057f1" title="linear_theory_winds\l::calc_direction" alt="" coords="822,709,959,751"/>
+<area shape="rect" id="node35" href="$classlinear__theory__winds.html#aee928bfcffbea89852741b027a26b8c3" title="linear_theory_winds\l::calc_speed" alt="" coords="822,775,959,816"/>
+<area shape="rect" id="node36" href="$classlinear__theory__winds.html#a78baa74b650a59202683598d0b34fde2" title="linear_theory_winds\l::calc_weight" alt="" coords="822,840,959,881"/>
+<area shape="rect" id="node33" href="$classlinear__theory__winds.html#ad578ccb07e18c99e958d5ae7c43f3c19" title="linear_theory_winds\l::calc_dry_stability" alt="" coords="1030,644,1167,685"/>
+<area shape="rect" id="node40" href="$classwind.html#aa88349d86eb384908b06cdf2952f4cb3" title="wind::make_winds_grid\l_relative" alt="" coords="395,1229,554,1271"/>
+<area shape="rect" id="node41" href="$classwind.html#a73845b488c0d184ff37959a9a03b64c2" title="wind::balance_uvw" alt="" coords="408,1295,541,1322"/>
+<area shape="rect" id="node43" href="$classtime.html#a8736f37f83c6d8f62957c70df2239693" title="time::calendar_date" alt="" coords="407,97,543,123"/>
+<area shape="rect" id="node44" href="$classoutput.html#a92fd667efbd13e99735e947dc0344b30" title=" Set up the varids for an existing NetCDF file by searching for the variable name ..." alt="" coords="405,46,545,73"/>
+<area shape="rect" id="node45" href="$classoutput.html#abf88076008ba1520740fd573165ee72d" title=" Creates a new NetCDF output file " alt="" coords="411,214,538,241"/>
+<area shape="rect" id="node46" href="$classoutput.html#abbaeecac70df7edca0eba97e75fa9c7a" title=" Keeps accumulated precip variables in reasonable bounds with a &quot;bucket&quot; " alt="" coords="413,148,536,189"/>
+<area shape="rect" id="node48" href="$classgeo.html#ad6df2866b0f12fabc9d1b393be1b06d7" title="geo::geo_interp2d" alt="" coords="412,1178,537,1205"/>
+</map>

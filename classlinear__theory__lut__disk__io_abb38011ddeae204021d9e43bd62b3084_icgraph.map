@@ -1,0 +1,4 @@
+<map id="linear_theory_lut_disk_io::setup_dim" name="linear_theory_lut_disk_io::setup_dim">
+<area shape="rect" id="node2" href="$classlinear__theory__lut__disk__io.html#afded6d7210b9fcb3708f213aabfe56a4" title=" Write a 6D variable to a netCDF file " alt="" coords="203,5,351,46"/>
+<area shape="rect" id="node3" href="$classlinear__theory__lut__disk__io.html#a6a39ae31079f8c5a2e481a031b801870" title=" Same as write_var_6d but for a 1D variable " alt="" coords="203,70,351,111"/>
+</map>

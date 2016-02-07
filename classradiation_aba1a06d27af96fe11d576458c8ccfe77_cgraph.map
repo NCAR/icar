@@ -1,0 +1,11 @@
+<map id="radiation::rad" name="radiation::rad">
+<area shape="rect" id="node2" href="$classmodule__ra__simple.html#ad1c74605b2817f833d31e806f791e246" title="module_ra_simple::ra\l_simple" alt="" coords="152,129,299,170"/>
+<area shape="rect" id="node3" href="$classmodule__ra__simple.html#a383e37e85086ad3fd8f2da8601d997d0" title="module_ra_simple::relative\l_humidity" alt="" coords="355,5,533,46"/>
+<area shape="rect" id="node4" href="$classmodule__ra__simple.html#a4529da23ec7082aeafd82ffcad0e6e43" title="module_ra_simple::calc\l_solar_elevation" alt="" coords="365,70,523,111"/>
+<area shape="rect" id="node8" href="$classmodule__ra__simple.html#af96b45b6aa6ee7f751648e8edb2eff97" title="module_ra_simple::cloudfrac" alt="" coords="350,136,538,163"/>
+<area shape="rect" id="node9" href="$classmodule__ra__simple.html#a9fdfe8ded9ed1a2131513bf2d17db5e6" title="module_ra_simple::shortwave" alt="" coords="347,187,541,213"/>
+<area shape="rect" id="node10" href="$classmodule__ra__simple.html#ac17356062eed2cca6633da58b0899d09" title="module_ra_simple::longwave" alt="" coords="349,237,539,264"/>
+<area shape="rect" id="node5" href="$classtime.html#adfcbe10943e169e25a9ee15ddb3ce70b" title="time::calc_day_of_year" alt="" coords="589,77,747,104"/>
+<area shape="rect" id="node6" href="$classtime.html#a8736f37f83c6d8f62957c70df2239693" title="time::calendar_date" alt="" coords="795,52,931,79"/>
+<area shape="rect" id="node7" href="$classtime.html#a22e63418fe5d559327ca090619d097e0" title="time::date_to_mjd" alt="" coords="799,103,926,129"/>
+</map>

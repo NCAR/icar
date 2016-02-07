@@ -1,0 +1,8 @@
+<map id="wind::balance_uvw" name="wind::balance_uvw">
+<area shape="rect" id="node2" href="$classtime__step.html#ab024d227ede8d503dbe333dd3b38515a" title=" Updated all fields in domain using the respective dXdt variables " alt="" coords="193,5,319,46"/>
+<area shape="rect" id="node5" href="$classwind.html#a582192f02996b37543b966df84af1e78" title="wind::update_winds" alt="" coords="187,71,325,97"/>
+<area shape="rect" id="node3" href="$classtime__step.html#a2c022f11247af72e607b1493289aa974" title=" Step forward one IO time step. " alt="" coords="388,12,500,39"/>
+<area shape="rect" id="node4" href="$driver_8f90.html#ab1e5a5816a57fc6e95d9563c2bb53590" title=" Main Program " alt="" coords="563,71,605,97"/>
+<area shape="rect" id="node6" href="$classboundary__conditions.html#a07a42f467f470ada98e0a35fd5a75f66" title=" Initialize the boundary conditions (read inital conditions, etc.) " alt="" coords="373,63,515,105"/>
+<area shape="rect" id="node7" href="$classboundary__conditions.html#a1e8385c37634f3d7f70ea7c749dcda11" title=" Read in the next timestep of input data and apply to the dXdt grids as appropriate. " alt="" coords="373,129,515,170"/>
+</map>

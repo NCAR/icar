@@ -1,0 +1,8 @@
+<map id="output::write_domain" name="output::write_domain">
+<area shape="rect" id="node2" href="$classtime.html#a8736f37f83c6d8f62957c70df2239693" title="time::calendar_date" alt="" coords="205,5,341,32"/>
+<area shape="rect" id="node3" href="$classio__routines.html#a2f5490f632bd50662c7da9fd964e88e3" title=" Tests to see if a file exists " alt="" coords="197,56,349,83"/>
+<area shape="rect" id="node4" href="$classio__routines.html#ac4835ed66f2e10d8e5bb40f6122f0ca1" title=" Simple error handling for common netcdf file errors " alt="" coords="397,157,525,184"/>
+<area shape="rect" id="node5" href="$classoutput.html#a92fd667efbd13e99735e947dc0344b30" title=" Set up the varids for an existing NetCDF file by searching for the variable name ..." alt="" coords="203,157,343,184"/>
+<area shape="rect" id="node6" href="$classoutput.html#abf88076008ba1520740fd573165ee72d" title=" Creates a new NetCDF output file " alt="" coords="210,208,337,235"/>
+<area shape="rect" id="node7" href="$classoutput.html#abbaeecac70df7edca0eba97e75fa9c7a" title=" Keeps accumulated precip variables in reasonable bounds with a &quot;bucket&quot; " alt="" coords="212,259,335,301"/>
+</map>

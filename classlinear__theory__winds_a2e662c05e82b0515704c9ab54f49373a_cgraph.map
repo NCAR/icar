@@ -1,0 +1,9 @@
+<map id="linear_theory_winds::spatial_winds" name="linear_theory_winds::spatial_winds">
+<area shape="rect" id="node2" href="$classlinear__theory__winds.html#a027dc1b837380d8d4fbe2e9689e9ed46" title="linear_theory_winds\l::calc_stability" alt="" coords="193,37,330,78"/>
+<area shape="rect" id="node6" href="$classlinear__theory__winds.html#a5d36c6dd3036dc8a25e356c875f057f1" title="linear_theory_winds\l::calc_direction" alt="" coords="193,102,330,143"/>
+<area shape="rect" id="node7" href="$classlinear__theory__winds.html#aee928bfcffbea89852741b027a26b8c3" title="linear_theory_winds\l::calc_speed" alt="" coords="193,167,330,209"/>
+<area shape="rect" id="node8" href="$classlinear__theory__winds.html#a78baa74b650a59202683598d0b34fde2" title="linear_theory_winds\l::calc_weight" alt="" coords="193,233,330,274"/>
+<area shape="rect" id="node3" href="$classlinear__theory__winds.html#ad578ccb07e18c99e958d5ae7c43f3c19" title="linear_theory_winds\l::calc_dry_stability" alt="" coords="383,5,521,46"/>
+<area shape="rect" id="node4" href="$classlinear__theory__winds.html#af214d362ee340566892db3d7f0470c63" title="linear_theory_winds\l::calc_moist_stability" alt="" coords="379,70,525,111"/>
+<area shape="rect" id="node5" href="$classlinear__theory__winds.html#afe0e22332a64bd0a17cc533e6f1048fd" title="linear_theory_winds\l::calc_sat_lapse_rate" alt="" coords="573,70,720,111"/>
+</map>
