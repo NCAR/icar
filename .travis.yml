@@ -13,4 +13,4 @@ addons:
       - libfftw3-3
       - gfortran
 script:
-  - make
+  - make test
