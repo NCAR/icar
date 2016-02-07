@@ -13,4 +13,13 @@ addons:
       - libfftw3-3
       - gfortran
 script:
-  - make test
+  - uname -a
+  - uname -n
+  - ls /usr/lib/
+  - ls /usr/include/
+  - ls /usr/local/lib/
+  - ls /usr/local/include/
+  - sed -i "s|FFTW_PATH=/usr/local|FFTW_PATH=/usr|" makefile
+  - sed -i "s|NCDF_PATH = /usr/local|NCDF_PATH = /usr|" makefile
+  - make test -j4
+  - make -j4
