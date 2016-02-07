@@ -306,7 +306,7 @@ endif
 ###################################################################
 # copy required libraries into a directory accessible on compute nodes and set LD_RUN_PATH e.g.
 # export LD_RUN_PATH=$LD_RUN_PATH:/path/to/netcdf/libraries/lib:/path/to/fftw/libraries/lib
-LFLAGS=$(LINK) $(PROF) ${LIBNETCDF} -L${LIBFFT}
+LFLAGS=$(LINK) $(PROF) ${LIBNETCDF} -L${LIBFFT} -lm -lfftw3
 FFLAGS=$(COMP) $(PROF) ${INCNETCDF} -I${INCFFT} ${MODOUTPUT}
 
 # Model directories
@@ -374,7 +374,7 @@ cleanall: clean
 test: fftshift_test calendar_test mpdata_test
 
 icar:${OBJS}
-	${F90} ${LFLAGS} ${OBJS} -o icar  -lm -lfftw3
+	${F90} -o icar ${OBJS} ${LFLAGS}
 
 doc:
 	doxygen docs/doxygenConfig
@@ -383,13 +383,13 @@ doc:
 #	test cases
 ###################################################################
 fftshift_test: $(BUILD)test_fftshift.o $(BUILD)fftshift.o
-	${F90} ${LFLAGS} $(BUILD)test_fftshift.o $(BUILD)fftshift.o -o fftshift_test
+	${F90} $(BUILD)test_fftshift.o $(BUILD)fftshift.o -o fftshift_test ${LFLAGS}
 
 calendar_test: $(BUILD)test_calendar.o $(BUILD)time.o
-	${F90} ${LFLAGS} $(BUILD)test_calendar.o $(BUILD)time.o -o calendar_test
+	${F90} $(BUILD)test_calendar.o $(BUILD)time.o -o calendar_test ${LFLAGS}
 
 mpdata_test: $(BUILD)test_mpdata.o $(BUILD)adv_mpdata.o
-	${F90} ${LFLAGS} $(BUILD)test_mpdata.o $(BUILD)adv_mpdata.o -o mpdata_test
+	${F90} $(BUILD)test_mpdata.o $(BUILD)adv_mpdata.o -o mpdata_test ${LFLAGS}
 
 
 ###################################################################
