@@ -550,7 +550,7 @@ $(BUILD)wind.o:$(PHYS)wind.f90 $(BUILD)linear_winds.o $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)wind.f90 -o $(BUILD)wind.o
 
 $(BUILD)linear_winds.o:$(PHYS)linear_winds.f90 $(BUILD)io_routines.o $(BUILD)data_structures.o \
-	 				   $(BUILD)fftshift.o $(BUILD)lt_lut_io.o
+	 				   $(BUILD)fftshift.o $(BUILD)lt_lut_io.o $(BUILD)string.o
 	${F90} ${FFLAGS} $(PHYS)linear_winds.f90 -o $(BUILD)linear_winds.o
 
 $(BUILD)fftshift.o:$(UTIL)fftshift.f90
