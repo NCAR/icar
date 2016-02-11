@@ -171,7 +171,7 @@ contains
         endif
         
         ! prior to v 0.9.3 this was assumed, so throw a warning now just in case. 
-        if ((options%z_is_geopotential==.False.).and.(options%zvar=="PH")) then
+        if ((options%z_is_geopotential .eqv. .False.).and.(options%zvar=="PH")) then
             if (options%warning_level>1) then
                 write(*,*) "WARNING WARNING WARNING"
                 write(*,*) "WARNING z variable is no longer assumed to be geopotential height when it is 'PH'."
