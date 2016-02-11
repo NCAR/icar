@@ -640,7 +640,7 @@ contains
         if (options%z_is_geopotential) then
             boundary%lowres_z = boundary%lowres_z / gravity
             write(*,*) "Interpreting geopotential height as residing between model layers"
-            boundary%lowres_z(:,:,1:nz-1) = (boundary%lowres_z(:,:,1:nz-1) + boundary%lowres_z(:,:,2:nz))/2
+            boundary%lowres_z(:,1:nz-1,:) = (boundary%lowres_z(:,1:nz-1,:) + boundary%lowres_z(:,2:nz,:))/2
         endif
         
         ! all other structures must be allocated and initialized, but will be set on a high-res grid
