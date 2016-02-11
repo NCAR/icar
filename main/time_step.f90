@@ -181,9 +181,9 @@ contains
         domain%v10(2:nx-1,2:ny-1) = domain%ustar(2:nx-1,2:ny-1) * lastw
         
         ! now calculate master ustar based on U and V combined in quadrature
-        !write(*,*) "check values of wspd:"
+        write(*,*) "check values of wspd:"
         domain%wspd(2:nx-1,2:ny-1) = sqrt(domain%Um(2:nx-1,1,2:ny-1)**2 + domain%Vm(2:nx-1,1,2:ny-1)**2)
-        !write(*,*) domain%wspd
+        write(*,*) domain%wspd
         domain%ustar(2:nx-1,2:ny-1) = sqrt(domain%Um(2:nx-1,1,2:ny-1)**2 + domain%Vm(2:nx-1,1,2:ny-1)**2) * currw
         
         ! finally, calculate the real vertical motions (including U*dzdx + V*dzdy)
