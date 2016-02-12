@@ -629,7 +629,7 @@ contains
         logical :: Ef_rw_l, EF_sw_l
         integer :: top_mp_level
         real :: local_precip_fraction
-        real :: update_interval
+        integer :: update_interval
 
         namelist /mp_parameters/ Nt_c,TNO, am_s, rho_g, av_s,bv_s,fv_s,av_g,bv_g,av_i,Ef_si,Ef_rs,Ef_rg,Ef_ri,&     ! trude added Nt_c, TNO
                               C_cubes,C_sqrd, mu_r, Ef_rw_l, Ef_sw_l, t_adjust, top_mp_level, local_precip_fraction, update_interval

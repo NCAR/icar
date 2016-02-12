@@ -358,7 +358,7 @@ contains
             model_time=model_time+dt
             if (dt>1e-5) then
                 call advect(domain,options,dt)
-                call mp(domain,options,dt)
+                call mp(domain,options,dt, model_time)
                 call rad(domain,options,model_time/86400.0+50000, dt)
                 call lsm(domain,options,dt,model_time)
                 call pbl(domain,options,dt)
