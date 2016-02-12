@@ -753,7 +753,7 @@ contains
         deallocate(savedU,savedV)
 
         if (options%lt_options%write_LUT) then
-            if (options%lt_options%read_LUT) then
+            if ((options%lt_options%read_LUT) .and. (error == 0)) then
                 print*, "Not writing Linear Theory LUT to file because LUT was read from file"
             else
                 print*, "Writing u-LUT to file: ", trim(options%lt_options%u_LUT_Filename)
