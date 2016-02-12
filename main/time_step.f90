@@ -23,6 +23,7 @@ module time_step
     public :: step
 
     real, dimension(:,:), allocatable :: lastw, currw, uw, vw !> temporaries used to compute diagnostic w_real field
+    real, dimension(:,:), allocatable :: wspd !> needed for the YSU scheme
 contains
     
     !>------------------------------------------------------------
