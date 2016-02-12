@@ -42,6 +42,16 @@ module microphysics
     integer, dimension(npoints) :: y_list = [ 1,1,1, 0,0, -1,-1,-1]
 contains
     
+    
+    !>----------------------------------------------------------
+    !! Initialize microphysical routines
+    !!
+    !! This routine will call the initialization routines for the specified microphysics packages. 
+    !! It also initializes any module level variables, e.g. update_interval
+    !! 
+    !! @param   options     ICAR model options to specify required initializations
+    !!
+    !!----------------------------------------------------------
     subroutine mp_init(options)
         implicit none
         type(options_type), intent(in)::options
@@ -56,6 +66,18 @@ contains
         last_model_time = -999
     end subroutine mp_init
     
+    !>----------------------------------------------------------
+    !! Distribute the microphysics precipitation to neighboring grid cells
+    !!
+    !! Because ICAR can be too aggressive at putting precip on mountain tops, this
+    !! routine smooths out the precip by keeping only a fraction of it locally, and 
+    !! distributing the rest to the neighboring grid cells, weighted by distance. 
+    !! 
+    !! @param   [inout]current_precip   accumulated model precip at this time step
+    !! @param   [in]last_precip         accumulated model precip prior to microphysics call
+    !! @param   [in]local_fraction      fraction of precip to maintain in the local gridcell
+    !!
+    !!----------------------------------------------------------
     subroutine distribute_precip(current_precip, last_precip, local_fraction)
         real, dimension(:,:), intent(inout) :: current_precip, last_precip
         real, intent(in) :: local_fraction
@@ -86,6 +108,19 @@ contains
                 
     end subroutine distribute_precip
     
+    !>----------------------------------------------------------
+    !! Microphysical driver
+    !!
+    !! This routine handles calling the individual microphysics routine specified, that 
+    !! includes creating and passing any temporary variables, and checking when to update
+    !! the microphysics based on the specified update_interval. 
+    !! 
+    !! @param   domain      ICAR model domain structure
+    !! @param   options     ICAR model options structure
+    !! @param   dt_in       Current driving time step (this is the advection step)
+    !! @param   model_time  Current model time (to check if it will exceed the update_interval)
+    !!
+    !!----------------------------------------------------------
     subroutine mp(domain,options,dt_in, model_time)
         implicit none
         type(domain_type),intent(inout)::domain
@@ -188,10 +223,30 @@ contains
         
     end subroutine mp
     
-    subroutine mp_finish()
+    !>----------------------------------------------------------
+    !! Finalize microphysical routines
+    !!
+    !! This routine will call the finalization routines (if any) for the specified microphysics packages. 
+    !! It also deallocates any module level variables, e.g. SR
+    !! 
+    !! @param   options     ICAR model options to specify required initializations
+    !!
+    !!----------------------------------------------------------
+    subroutine mp_finish(options)
         implicit none
+        type(options_type),intent(in)::options
+        
         if (allocated(SR)) then
             deallocate(SR)
+        endif
+        if (allocated(last_snow)) then
+            deallocate(last_snow)
+        endif
+        if (allocated(last_rain)) then
+            deallocate(last_rain)
+        endif
+        if (allocated(this_precip)) then
+            deallocate(this_precip)
         endif
     end subroutine mp_finish
 end module microphysics
