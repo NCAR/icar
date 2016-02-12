@@ -115,7 +115,7 @@ var sectionId = 'dynsection-6';
 </g>
 <!-- Node16 -->
 <g id="node16" class="node"><title>Node16</title>
-<g id="a_node16"><a xlink:href="classmicrophysics.html#a97ab38e6007bb1f3aa63135be25a6145" target="_top" xlink:title="microphysics::mp">
+<g id="a_node16"><a xlink:href="classmicrophysics.html#ad2296bf9e02061a692cb9bebb6abcf7d" target="_top" xlink:title=" Microphysical driver ">
 <polygon fill="white" stroke="black" points="127,-626.5 127,-645.5 221,-645.5 221,-626.5 127,-626.5"/>
 <text text-anchor="middle" x="174" y="-633.5" font-family="Helvetica,sans-Serif" font-size="10.00">microphysics::mp</text>
 </a>
@@ -370,7 +370,7 @@ var sectionId = 'dynsection-6';
 </g>
 <!-- Node22 -->
 <g id="node22" class="node"><title>Node22</title>
-<g id="a_node22"><a xlink:href="classmicrophysics.html#a675e77b21fd7c1041f6a6c87176bc4dc" target="_top" xlink:title="microphysics::distribute\l_precip">
+<g id="a_node22"><a xlink:href="classmicrophysics.html#a675e77b21fd7c1041f6a6c87176bc4dc" target="_top" xlink:title=" Distribute the microphysics precipitation to neighboring grid cells ">
 <polygon fill="white" stroke="black" points="264,-695 264,-725 384,-725 384,-695 264,-695"/>
 <text text-anchor="start" x="272" y="-713" font-family="Helvetica,sans-Serif" font-size="10.00">microphysics::distribute</text>
 <text text-anchor="middle" x="324" y="-702" font-family="Helvetica,sans-Serif" font-size="10.00">_precip</text>

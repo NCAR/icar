@@ -1,5 +1,5 @@
 <map id="module_mp_thompson::thompson_init" name="module_mp_thompson::thompson_init">
-<area shape="rect" id="node2" href="$classmicrophysics.html#afa6d0466868d2249a5e1827b39907554" title="microphysics::mp_init" alt="" coords="208,12,357,39"/>
+<area shape="rect" id="node2" href="$classmicrophysics.html#afa6d0466868d2249a5e1827b39907554" title=" Initialize microphysical routines " alt="" coords="208,12,357,39"/>
 <area shape="rect" id="node3" href="$classinit.html#ad066397f42956c6e9d50884a2e84d4e4" title="init::init_physics" alt="" coords="406,12,522,39"/>
 <area shape="rect" id="node4" href="$driver_8f90.html#ab1e5a5816a57fc6e95d9563c2bb53590" title=" Main Program " alt="" coords="571,12,613,39"/>
 </map>

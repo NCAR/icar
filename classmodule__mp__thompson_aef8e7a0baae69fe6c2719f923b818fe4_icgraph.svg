@@ -77,7 +77,7 @@ var sectionId = 'dynsection-0';
 </g>
 <!-- Node3 -->
 <g id="node3" class="node"><title>Node3</title>
-<g id="a_node3"><a xlink:href="classmicrophysics.html#afa6d0466868d2249a5e1827b39907554" target="_top" xlink:title="microphysics::mp_init">
+<g id="a_node3"><a xlink:href="classmicrophysics.html#afa6d0466868d2249a5e1827b39907554" target="_top" xlink:title=" Initialize microphysical routines ">
 <polygon fill="white" stroke="black" points="304,-5.5 304,-24.5 416,-24.5 416,-5.5 304,-5.5"/>
 <text text-anchor="middle" x="360" y="-12.5" font-family="Helvetica,sans-Serif" font-size="10.00">microphysics::mp_init</text>
 </a>

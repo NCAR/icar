@@ -98,16 +98,28 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:afa6d0466868d2249a5e1827b39907554"><td class="memItemLeft" align="right" valign="top">subroutine&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmicrophysics.html#afa6d0466868d2249a5e1827b39907554">mp_init</a> (options)</td></tr>
+<tr class="memdesc:afa6d0466868d2249a5e1827b39907554"><td class="mdescLeft">&#160;</td><td class="mdescRight"><hr/>
+<p> Initialize microphysical routines  <a href="#afa6d0466868d2249a5e1827b39907554">More...</a><br /></td></tr>
 <tr class="separator:afa6d0466868d2249a5e1827b39907554"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a675e77b21fd7c1041f6a6c87176bc4dc"><td class="memItemLeft" align="right" valign="top">subroutine&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmicrophysics.html#a675e77b21fd7c1041f6a6c87176bc4dc">distribute_precip</a> (current_precip, last_precip, local_fraction)</td></tr>
+<tr class="memdesc:a675e77b21fd7c1041f6a6c87176bc4dc"><td class="mdescLeft">&#160;</td><td class="mdescRight"><hr/>
+<p> Distribute the microphysics precipitation to neighboring grid cells  <a href="#a675e77b21fd7c1041f6a6c87176bc4dc">More...</a><br /></td></tr>
 <tr class="separator:a675e77b21fd7c1041f6a6c87176bc4dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a97ab38e6007bb1f3aa63135be25a6145"><td class="memItemLeft" align="right" valign="top">subroutine&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmicrophysics.html#a97ab38e6007bb1f3aa63135be25a6145">mp</a> (domain, options, dt_in)</td></tr>
-<tr class="separator:a97ab38e6007bb1f3aa63135be25a6145"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3815599a563b2ac92e416a06f51da5ec"><td class="memItemLeft" align="right" valign="top">subroutine&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmicrophysics.html#a3815599a563b2ac92e416a06f51da5ec">mp_finish</a> ()</td></tr>
-<tr class="separator:a3815599a563b2ac92e416a06f51da5ec"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad2296bf9e02061a692cb9bebb6abcf7d"><td class="memItemLeft" align="right" valign="top">subroutine&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmicrophysics.html#ad2296bf9e02061a692cb9bebb6abcf7d">mp</a> (domain, options, dt_in, model_time)</td></tr>
+<tr class="memdesc:ad2296bf9e02061a692cb9bebb6abcf7d"><td class="mdescLeft">&#160;</td><td class="mdescRight"><hr/>
+<p> Microphysical driver  <a href="#ad2296bf9e02061a692cb9bebb6abcf7d">More...</a><br /></td></tr>
+<tr class="separator:ad2296bf9e02061a692cb9bebb6abcf7d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad26b72dffc7340bdc55b4a15420144f9"><td class="memItemLeft" align="right" valign="top">subroutine&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmicrophysics.html#ad26b72dffc7340bdc55b4a15420144f9">mp_finish</a> (options)</td></tr>
+<tr class="memdesc:ad26b72dffc7340bdc55b4a15420144f9"><td class="mdescLeft">&#160;</td><td class="mdescRight"><hr/>
+<p> Finalize microphysical routines  <a href="#ad26b72dffc7340bdc55b4a15420144f9">More...</a><br /></td></tr>
+<tr class="separator:ad26b72dffc7340bdc55b4a15420144f9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
+<tr class="memitem:a626ee73659e2115b58870452cb7650ff"><td class="memItemLeft" align="right" valign="top">integer&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmicrophysics.html#a626ee73659e2115b58870452cb7650ff">update_interval</a></td></tr>
+<tr class="separator:a626ee73659e2115b58870452cb7650ff"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5a33a2a2a9180839e144a98b27a366e1"><td class="memItemLeft" align="right" valign="top">real *8&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmicrophysics.html#a5a33a2a2a9180839e144a98b27a366e1">last_model_time</a></td></tr>
+<tr class="separator:a5a33a2a2a9180839e144a98b27a366e1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac6edfbf7b39c3472f9360f086d8cb6da"><td class="memItemLeft" align="right" valign="top">real, dimension(:,:), allocatable&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmicrophysics.html#ac6edfbf7b39c3472f9360f086d8cb6da">sr</a></td></tr>
 <tr class="separator:ac6edfbf7b39c3472f9360f086d8cb6da"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9d203898c1e5052613142e0f9de829e4"><td class="memItemLeft" align="right" valign="top">real, dimension(:,:), allocatable&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmicrophysics.html#a9d203898c1e5052613142e0f9de829e4">last_rain</a></td></tr>
@@ -172,16 +184,30 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
+<p><hr/>
+<p> Distribute the microphysics precipitation to neighboring grid cells </p>
+<p>Because ICAR can be too aggressive at putting precip on mountain tops, this routine smooths out the precip by keeping only a fraction of it locally, and distributing the rest to the neighboring grid cells, weighted by distance.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in,out]</td><td class="paramname"></td><td>accumulated model precip at this time step </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname"></td><td>accumulated model precip prior to microphysics call </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname"></td><td>fraction of precip to maintain in the local gridcell <hr/>
+ </td></tr>
+  </table>
+  </dd>
+</dl>
+
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><iframe scrolling="no" frameborder="0" src="classmicrophysics_a675e77b21fd7c1041f6a6c87176bc4dc_icgraph.svg" width="595" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="classmicrophysics_a675e77b21fd7c1041f6a6c87176bc4dc_icgraph.svg" width="595" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe>
+</div>
 </div>
 </p>
 
 </div>
 </div>
-<a class="anchor" id="a97ab38e6007bb1f3aa63135be25a6145"></a>
+<a class="anchor" id="ad2296bf9e02061a692cb9bebb6abcf7d"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
@@ -201,7 +227,13 @@ Here is the caller graph for this function:</div>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">real, intent(in)&#160;</td>
-          <td class="paramname"><em>dt_in</em>&#160;</td>
+          <td class="paramname"><em>dt_in</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double precision, intent(in)&#160;</td>
+          <td class="paramname"><em>model_time</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -211,34 +243,62 @@ Here is the caller graph for this function:</div>
       </table>
 </div><div class="memdoc">
 
+<p><hr/>
+<p> Microphysical driver </p>
+<p>This routine handles calling the individual microphysics routine specified, that includes creating and passing any temporary variables, and checking when to update the microphysics based on the specified update_interval.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">domain</td><td>ICAR model domain structure </td></tr>
+    <tr><td class="paramname">options</td><td>ICAR model options structure </td></tr>
+    <tr><td class="paramname">dt_in</td><td>Current driving time step (this is the advection step) </td></tr>
+    <tr><td class="paramname">model_time</td><td>Current model time (to check if it will exceed the update_interval) <hr/>
+ </td></tr>
+  </table>
+  </dd>
+</dl>
+
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="classmicrophysics_a97ab38e6007bb1f3aa63135be25a6145_cgraph.svg" width="100%" height="554"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="classmicrophysics_ad2296bf9e02061a692cb9bebb6abcf7d_cgraph.svg" width="100%" height="554"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 </div>
 </p>
 
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><iframe scrolling="no" frameborder="0" src="classmicrophysics_a97ab38e6007bb1f3aa63135be25a6145_icgraph.svg" width="387" height="38"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="classmicrophysics_ad2296bf9e02061a692cb9bebb6abcf7d_icgraph.svg" width="387" height="38"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe>
+</div>
 </div>
 </p>
 
 </div>
 </div>
-<a class="anchor" id="a3815599a563b2ac92e416a06f51da5ec"></a>
+<a class="anchor" id="ad26b72dffc7340bdc55b4a15420144f9"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
           <td class="memname">subroutine microphysics::mp_finish </td>
           <td>(</td>
-          <td class="paramname"></td><td>)</td>
+          <td class="paramtype">type(options_type), intent(in)&#160;</td>
+          <td class="paramname"><em>options</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p><hr/>
+<p> Finalize microphysical routines </p>
+<p>This routine will call the finalization routines (if any) for the specified microphysics packages. It also deallocates any module level variables, e.g. SR</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">options</td><td>ICAR model options to specify required initializations <hr/>
+ </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
@@ -255,6 +315,17 @@ Here is the caller graph for this function:</div>
         </tr>
       </table>
 </div><div class="memdoc">
+
+<p><hr/>
+<p> Initialize microphysical routines </p>
+<p>This routine will call the initialization routines for the specified microphysics packages. It also initializes any module level variables, e.g. update_interval</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">options</td><td>ICAR model options to specify required initializations <hr/>
+ </td></tr>
+  </table>
+  </dd>
+</dl>
 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
@@ -279,6 +350,18 @@ Here is the caller graph for this function:</div>
       <table class="memname">
         <tr>
           <td class="memname">real, dimension(<a class="el" href="classmicrophysics.html#a925a947b6bd9b502cd7ee3f5976a4ca2">npoints</a>) microphysics::dist_fraction = [ 0.1,0.15,0.1, 0.15,0.15, 0.1,0.15,0.1]</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a class="anchor" id="a5a33a2a2a9180839e144a98b27a366e1"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">real*8 microphysics::last_model_time</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -339,6 +422,18 @@ Here is the caller graph for this function:</div>
       <table class="memname">
         <tr>
           <td class="memname">real, dimension(:,:), allocatable microphysics::this_precip</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a class="anchor" id="a626ee73659e2115b58870452cb7650ff"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">integer microphysics::update_interval</td>
         </tr>
       </table>
 </div><div class="memdoc">
