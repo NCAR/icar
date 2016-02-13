@@ -314,7 +314,8 @@ contains
             ! Open the file. NF90_NOCLOBBER tells netCDF we want append to existing files
             if (present(open_new_file)) then
                 if (open_new_file) then
-                    call check( nf90_create(filename, NF90_CLOBBER, ncid), filename)
+                    !call check( nf90_create(filename, NF90_CLOBBER, ncid), filename)
+                    call check( nf90_create(filename, or(NF90_CLOBBER,nf90_64bit_offset), ncid), filename)
                 endif
             endif
             if (ncid==-1) then
