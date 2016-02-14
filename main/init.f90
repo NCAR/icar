@@ -325,6 +325,8 @@ contains
         domain%ptop=domain%p(:,nz,:)
         allocate(domain%psfc(nx,ny))        ! model surface pressure
         domain%psfc=domain%p_inter(:,1,:)
+        allocate(domain%wspd(nx,ny))        ! lowest level wind speed
+        domain%wspd=0
 
     end subroutine domain_allocation
 
