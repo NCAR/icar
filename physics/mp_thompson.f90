@@ -996,9 +996,13 @@
 !                         ' at i,j,k=', i,j,k
              ! CALL wrf_debug(150, mp_debug)
 !             endif
-            if (qv1d(k) .lt. 0.0) then
+            if (qv1d(k) .lt. 1.E-7) then
              if (k.lt.kte-2 .and. k.gt.kts+1) then
                 qv(i,k,j) = 0.5*(qv(i,k-1,j) + qv(i,k+1,j))
+                ! note, if qv(i,k+1,j) < 0 then qv(i,k,j) could still be < 0
+                if (qv1d(k) .lt. 1.E-7) then
+                    qv(i,k,j) = 1.E-7
+                endif
              else
                 qv(i,k,j) = 1.E-7
              endif

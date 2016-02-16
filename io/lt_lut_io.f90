@@ -312,9 +312,10 @@ contains
             ncid=-1
             varid=-1
             ! Open the file. NF90_NOCLOBBER tells netCDF we want append to existing files
+            !   nf90_64bit_offset tells netCDF that this may be a really LARGE file and it needs to support >2GB
             if (present(open_new_file)) then
                 if (open_new_file) then
-                    call check( nf90_create(filename, NF90_CLOBBER, ncid), filename)
+                    call check( nf90_create(filename, or(NF90_CLOBBER,nf90_64bit_offset), ncid), filename)
                 endif
             endif
             if (ncid==-1) then
@@ -335,7 +336,7 @@ contains
             endif
 
             ! End define mode. This tells netCDF we are done defining metadata.
-            call check( nf90_enddef(ncid) )
+            call check( nf90_enddef(ncid), "enddef file:"//trim(filename) )
             ! write the actual data to the file
             if (error == 0) then
                 call check( nf90_put_var(ncid, varid, data_out), trim(filename)//":"//trim(varname))
@@ -393,7 +394,7 @@ contains
             ! Open the file. NF90_NOCLOBBER tells netCDF we want append to existing files
             if (present(open_new_file)) then
                 if (open_new_file) then
-                    call check( nf90_create(filename, NF90_CLOBBER, ncid), filename)
+                    call check( nf90_create(filename, or(NF90_CLOBBER,nf90_64bit_offset), ncid), filename)
                 endif
             endif
             if (ncid==-1) then
