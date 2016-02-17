@@ -396,7 +396,7 @@ module data_structures
         real :: t_adjust
         logical :: Ef_rw_l, EF_sw_l
         
-        real :: update_interval
+        integer :: update_interval ! maximum number of seconds between updates
         integer :: top_mp_level ! top model level to process in the microphysics
         real :: local_precip_fraction
     end type mp_options_type
