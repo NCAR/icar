@@ -312,11 +312,10 @@ contains
             ncid=-1
             varid=-1
             ! Open the file. NF90_NOCLOBBER tells netCDF we want append to existing files
-            !   nf90_64bit_offset tells netCDF that this may be a really LARGE file and it needs to support >2GB
+            !   NF90_NETCDF4 tells netCDF that this may be a really LARGE file and it needs to support >4GB/variable
             if (present(open_new_file)) then
                 if (open_new_file) then
-                    !call check( nf90_create(filename, NF90_CLOBBER, ncid), filename)
-                    call check( nf90_create(filename, or(NF90_CLOBBER,nf90_64bit_offset), ncid), filename)
+                    call check( nf90_create(filename, or(NF90_CLOBBER,NF90_NETCDF4), ncid), filename)
                 endif
             endif
             if (ncid==-1) then
@@ -393,9 +392,10 @@ contains
             ncid=-1
             varid=-1
             ! Open the file. NF90_NOCLOBBER tells netCDF we want append to existing files
+            ! NF90_NETCDF4 is necessary to support variables >4GB in size
             if (present(open_new_file)) then
                 if (open_new_file) then
-                    call check( nf90_create(filename, or(NF90_CLOBBER,nf90_64bit_offset), ncid), filename)
+                    call check( nf90_create(filename, or(NF90_CLOBBER,NF90_NETCDF4), ncid), filename)
                 endif
             endif
             if (ncid==-1) then

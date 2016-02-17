@@ -188,9 +188,10 @@ contains
         ! calculate Monin Obukhov length using theta (domain%th)
         ! calculate the stability parameter zol (z over l)
         ! calculate the Bulk-Richardson number Rib
-        !thv(2:nx-1,2:ny-1) = domain%th(2:nx-1,1,2:ny-1)*(1+0.608*domain%qv(2:nx-1,1,2:ny-1)/1000)   ! devided by 1000 since domain%qv is in kg/kg and not in g/kg
+        !thv(2:nx-1,2:ny-1) = domain%th(2:nx-1,1,2:ny-1)*(1+0.608*domain%qv(2:nx-1,1,2:ny-1)*1000)   ! multiplied by 1000 since domain%qv is in kg/kg and not in g/kg
                                                                                                     ! normally should be specific humidity and not mixing ratio domain%qv but for first approach does not matter
-        !Rib(2:nx-1,2:ny-1) =  gravity/domain%th(2:nx-1,1,2:ny-1) * domain%z(2:nx-1,1,2:ny-1) * (thv(2:nx-1,1,2:ny-1) - Theta_vg)/domain%wspd(2:nx-1,2:ny-1) ! Wthat should the theta variables be
+        !thg(2:nx-1,2:ny-1) = domain%skin_t(2:nx-1,2:ny-1)/domain%pii(2:nx-1,1,2:ny-1)
+        !Rib(2:nx-1,2:ny-1) = gravity/domain%th(2:nx-1,1,2:ny-1) * domain%z(2:nx-1,1,2:ny-1) * (thv(2:nx-1,2:ny-1) - thg(2:nx-1,2:ny-1))/domain%wspd(2:nx-1,2:ny-1) ! From what height should the theta variables really be
         ! calculate the integrated similarity functions
         !if (Rib(2:nx-1,2:ny-1) >= 0.)then
         !    psim(2:nx-1,2:ny-1) = -10ln(domain%z(2:nx-1,1,2:ny-1)/domain%znt(2:nx-1,2:ny-1)) ! not clear yet what z really should be
