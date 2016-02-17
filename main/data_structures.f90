@@ -317,12 +317,12 @@ module data_structures
                                                                     ! and water vapor mixing ratio                  [kg/kg]
         ! Newly added by Patrik
         real, allocatable, dimension(:,:)   :: wspd                 ! windspeed of lowest level                     [m/s]
-        real, allocatable, dimension(:,:)   :: thstar               ! temperature scale                             [K]
-        real, allocatable, dimension(:,:)   :: l                    ! Monin-Obukhov length                          [m]
-        real, allocatable, dimension(:,:)   :: zol                  ! Monin-Obukhov stability parameter z/l         [dimensionless]
-        real, allocatable, dimension(:,:)   :: Rib                  ! Bulk-Richardson number
-        real, allocatable, dimension(:,:)   :: psim                 ! integrated similarity functions for momentum
-        real, allocatable, dimension(:,:)   :: psih                 ! integrated similarity functions for momentum
+        !real, allocatable, dimension(:,:)   :: thstar               ! temperature scale                             [K]
+        !real, allocatable, dimension(:,:)   :: l                    ! Monin-Obukhov length                          [m]
+        !real, allocatable, dimension(:,:)   :: zol                  ! Monin-Obukhov stability parameter z/l         [dimensionless]
+        !real, allocatable, dimension(:,:)   :: Rib                  ! Bulk-Richardson number
+        !real, allocatable, dimension(:,:)   :: psim                 ! integrated similarity functions for momentum
+        !real, allocatable, dimension(:,:)   :: psih                 ! integrated similarity functions for momentum
 
         ! current model time step length (should this be somewhere else?)
         real::dt

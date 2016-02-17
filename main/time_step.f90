@@ -188,25 +188,25 @@ contains
         ! calculate Monin Obukhov length using theta (domain%th)
         ! calculate the stability parameter zol (z over l)
         ! calculate the Bulk-Richardson number Rib
-        thv(2:nx-1,2:ny-1) = domain%th(2:nx-1,1,2:ny-1)*(1+0.608*domain%qv(2:nx-1,1,2:ny-1)/1000)   ! devided by 1000 since domain%qv is in kg/kg and not in g/kg
+        !thv(2:nx-1,2:ny-1) = domain%th(2:nx-1,1,2:ny-1)*(1+0.608*domain%qv(2:nx-1,1,2:ny-1)/1000)   ! devided by 1000 since domain%qv is in kg/kg and not in g/kg
                                                                                                     ! normally should be specific humidity and not mixing ratio domain%qv but for first approach does not matter
-        Rib(2:nx-1,2:ny-1) =  gravity/domain%th(2:nx-1,1,2:ny-1) * domain%z(2:nx-1,1,2:ny-1) * (thv(2:nx-1,1,2:ny-1) - Theta_vg)/domain%wspd(2:nx-1,2:ny-1) ! Wthat should the theta variables be
+        !Rib(2:nx-1,2:ny-1) =  gravity/domain%th(2:nx-1,1,2:ny-1) * domain%z(2:nx-1,1,2:ny-1) * (thv(2:nx-1,1,2:ny-1) - Theta_vg)/domain%wspd(2:nx-1,2:ny-1) ! Wthat should the theta variables be
         ! calculate the integrated similarity functions
-        if (Rib(2:nx-1,2:ny-1) >= 0.)then
-            psim(2:nx-1,2:ny-1) = -10ln(domain%z(2:nx-1,1,2:ny-1)/domain%znt(2:nx-1,2:ny-1)) ! not clear yet what z really should be
-            psih(2:nx-1,2:ny-1) = psim(2:nx-1,2:ny-1)
-        else if (Rib(2:nx-1,2:ny-1) < 0.2 .and. Rib(2:nx-1,2:ny-1) >= 0.0)then
-            psim(2:nx-1,2:ny-1) = -5*Rib(2:nx-1,2:ny-1)*ALOG(z(2:nx-1,1,2:ny-1)/znt(2:nx-1,2:ny-1))/(1.1-5*Rib(2:nx-1,2:ny-1))
-            psih(2:nx-1,2:ny-1) = psim(2:nx-1,2:ny-1)
-        else if (Rib(2:nx-1,2:ny-1).eq.0.)then
-            psim(2:nx-1,2:ny-1) = 0
-            psih(2:nx-1,2:ny-1) = 0
-        else if (Rib(2:nx-1,2:ny-1) < 0.)then
-            x(2:nx-1,2:ny-1) = (1-16*(domain%zol(2:nx-1,2:ny-1))
-            psim(2:nx-1,2:ny-1) = 2*ALOG*((1+x(2:nx-1,2:ny-1))/2) + ALOG((1+x(2:nx-1,2:ny-1))^2)/2) - 2*ATAN(1.)*x+pi/2
-            psih(2:nx-1,2:ny-1) = 2*ALOG*((1+x^2)/2)
-        end if
-        thstar(2:nx-1,2:ny-1) = karman*(Theta_a-Theta_g)/ALOG(z(2:nx-1,1,2:ny-1)/znt(2:nx-1,2:ny-1))-psih
+        !if (Rib(2:nx-1,2:ny-1) >= 0.)then
+        !    psim(2:nx-1,2:ny-1) = -10ln(domain%z(2:nx-1,1,2:ny-1)/domain%znt(2:nx-1,2:ny-1)) ! not clear yet what z really should be
+        !    psih(2:nx-1,2:ny-1) = psim(2:nx-1,2:ny-1)
+        !else if (Rib(2:nx-1,2:ny-1) < 0.2 .and. Rib(2:nx-1,2:ny-1) >= 0.0)then
+        !    psim(2:nx-1,2:ny-1) = -5*Rib(2:nx-1,2:ny-1)*ALOG(z(2:nx-1,1,2:ny-1)/znt(2:nx-1,2:ny-1))/(1.1-5*Rib(2:nx-1,2:ny-1))
+        !    psih(2:nx-1,2:ny-1) = psim(2:nx-1,2:ny-1)
+        !else if (Rib(2:nx-1,2:ny-1).eq.0.)then
+        !    psim(2:nx-1,2:ny-1) = 0
+        !    psih(2:nx-1,2:ny-1) = 0
+        !else if (Rib(2:nx-1,2:ny-1) < 0.)then
+        !    x(2:nx-1,2:ny-1) = (1-16*(domain%zol(2:nx-1,2:ny-1))
+        !    psim(2:nx-1,2:ny-1) = 2*ALOG*((1+x(2:nx-1,2:ny-1))/2) + ALOG((1+x(2:nx-1,2:ny-1))^2)/2) - 2*ATAN(1.)*x+pi/2
+        !    psih(2:nx-1,2:ny-1) = 2*ALOG*((1+x^2)/2)
+        !end if
+        !thstar(2:nx-1,2:ny-1) = karman*(Theta_a-Theta_g)/ALOG(z(2:nx-1,1,2:ny-1)/znt(2:nx-1,2:ny-1))-psih
         ! --- end sfc layer variables ---
 
         ! finally, calculate the real vertical motions (including U*dzdx + V*dzdy)
