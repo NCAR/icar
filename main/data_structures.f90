@@ -315,7 +315,14 @@ module data_structures
         real, allocatable, dimension(:,:)   :: u10, v10             ! 10m height u and v winds                      [m/s]
         real, allocatable, dimension(:,:)   :: t2m, q2m             ! 2m height air temperature                     [K] 
                                                                     ! and water vapor mixing ratio                  [kg/kg]
-        real, allocatable, dimension(:,:)   :: wspd                 ! windspeed of lowest level [m/s]
+        ! Newly added by Patrik
+        real, allocatable, dimension(:,:)   :: wspd                 ! windspeed of lowest level                     [m/s]
+        real, allocatable, dimension(:,:)   :: thstar               ! temperature scale                             [K]
+        real, allocatable, dimension(:,:)   :: l                    ! Monin-Obukhov length                          [m]
+        real, allocatable, dimension(:,:)   :: zol                  ! Monin-Obukhov stability parameter z/l         [dimensionless]
+        real, allocatable, dimension(:,:)   :: Rib                  ! Bulk-Richardson number
+        real, allocatable, dimension(:,:)   :: psim                 ! integrated similarity functions for momentum
+        real, allocatable, dimension(:,:)   :: psih                 ! integrated similarity functions for momentum
 
         ! current model time step length (should this be somewhere else?)
         real::dt
