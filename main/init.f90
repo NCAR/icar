@@ -325,9 +325,12 @@ contains
         domain%ptop=domain%p(:,nz,:)
         allocate(domain%psfc(nx,ny))        ! model surface pressure
         domain%psfc=domain%p_inter(:,1,:)
+        
         ! Newly added by Patrik
         allocate(domain%wspd(nx,ny))        ! lowest level wind speed
         domain%wspd=0
+        allocate(domain%thstar(nx,ny))        ! lowest level wind speed
+        domain%thstar=0
         !allocate(domain%l(nx,ny))           ! Monin-Obukhov length
         !domain%l=0
         !allocate(domain%zol(nx,ny))         ! Monin-Obukhov stability paramenter z/l
@@ -337,7 +340,7 @@ contains
         !allocate(domain%psim(nx,ny))        ! integrated similarity functions for momentum
         !domain%psim=0
         !allocate(domain%psih(nx,ny))        ! integrated similarity functions for heat
-        !domain%psim=0
+        !domain%psih=0
         
     end subroutine domain_allocation
 

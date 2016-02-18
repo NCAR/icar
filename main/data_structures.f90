@@ -159,6 +159,11 @@ module data_structures
     
     real, parameter ::  EP1  = Rw/Rd-1.
     real, parameter ::  EP2  = Rd/Rw
+
+    ! coriolis parameter f
+    real, parameter ::  eomeg = 9.37e-5
+    ! exhange parameter for heat
+    real, parameter :: exch_h = 0.01
     
 ! ------------------------------------------------
 !   various data structures for use in geographic interpolation routines
@@ -317,7 +322,7 @@ module data_structures
                                                                     ! and water vapor mixing ratio                  [kg/kg]
         ! Newly added by Patrik
         real, allocatable, dimension(:,:)   :: wspd                 ! windspeed of lowest level                     [m/s]
-        !real, allocatable, dimension(:,:)   :: thstar               ! temperature scale                             [K]
+        real, allocatable, dimension(:,:)   :: thstar               ! temperature scale                             [K]
         !real, allocatable, dimension(:,:)   :: l                    ! Monin-Obukhov length                          [m]
         !real, allocatable, dimension(:,:)   :: zol                  ! Monin-Obukhov stability parameter z/l         [dimensionless]
         !real, allocatable, dimension(:,:)   :: Rib                  ! Bulk-Richardson number

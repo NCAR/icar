@@ -93,25 +93,44 @@ contains
         endif
         
         if (options%physics%boundarylayer==kPBL_YSU) then
-            stop( "YSU PBL not implemented yet")
-!             call ysu(domain%Um, domain%Vm,   domain%th, domain%t,               &
-!                      domain%qv, domain%cloud,domain%ice,                        &
-!                      domain%p,domain%p_inter,domain%pii,                        &
-!                      domain%tend%u,domain%tend%v,domain%tend%th,                &
-!                      domain%tend%qv_pbl,domain%tend%qc,domain%tend%qi,flag_qi,  &
-!                      cp,gravity,rovcp,rd,rovg,                                  &
-!                      domain%dz_i, domain%z,    LH_vaporization,rv,domain%psfc,  &
-!                      domain%znu,  domain%znw,  domain%mut,domain%p_top,         &
-!STARTHERE                      domain%znt,  domain%ustar,zol, hol, hpbl, psim, psih,      &
-!                      domain%xland,domain%sensible_heat,domain%latent_heat,      &
-!                      domain%tskin,gz1oz0,      wspd, br,                        &
-!                      dt,dtmin,kpbl2d,                                           &
-!                      svp1,svp2,svp3,svpt0,ep1,ep2,karman,eomeg,stbolt,          &
-!                      exch_h,                                                    &
-!                      domain%u10,domain%v10,                                     &
-!                      ids,ide, jds,jde, kds,kde,                                 &
-!                      ims,ime, jms,jme, kms,kme,                                 &
-!                      its,ite, jts,jte, kts,kte)
+!            stop( "YSU PBL not implemented yet")
+!            call ysu(domain%Um, domain%Vm,   domain%th, domain%t,               &
+!                     domain%qv, domain%cloud,domain%ice,                        &
+!                     domain%p,domain%p_inter,domain%pii,                        &
+!                     domain%tend%u,domain%tend%v,domain%tend%th,                &
+!                     domain%tend%qv_pbl,domain%tend%qc,domain%tend%qi,flag_qi,  &
+!                     cp,gravity,rovcp,rd,rovg,                                  &
+!                     domain%dz_i, domain%z,    LH_vaporization,rv,domain%psfc,  &
+!                     domain%znu,  domain%znw,  domain%mut,domain%p_top,         &
+!                     domain%znt,  domain%ustar,zol, hol, hpbl, psim, psih,      &
+!                     domain%xland,domain%sensible_heat,domain%latent_heat,      &
+!                     domain%tskin,gz1oz0,      wspd, br,                        &
+!                     dt,dtmin,kpbl2d,                                           &
+!                     svp1,svp2,svp3,svpt0,ep1,ep2,karman,eomeg,stbolt,          &
+!                     exch_h,                                                    &
+!                     domain%u10,domain%v10,                                     &
+!                     ids,ide, jds,jde, kds,kde,                                 &
+!                     ims,ime, jms,jme, kms,kme,                                 &
+!                     its,ite, jts,jte, kts,kte)
+            call ysu(domain%Um, domain%Vm, domain%th, domain%t,                     &
+                     domain%qv, domain%cloud, domain%ice,                           &
+                     domain%p, domain%p_inter, domain%pii,                          &
+                     domain%tend%u, domain%tend%v, domain%tend%th,                  &
+                     domain%tend%qv_pbl, domain%tend%qc, domain%tend%qi, flag_qi,   &
+                     cp, gravity, rovcp, rd, rovg,                                  &
+                     domain%dz_i, domain%z, LH_vaporization, rv, domain%psfc,       &
+                     domain%znu, domain%znw, domain%mut, domain%p_top,              &
+                     domain%znt, domain%ustar,zol, hol, PBLh_init, psim, psih,           &
+                     domain%xland, domain%sensible_heat, domain%latent_heat,        &
+                     domain%tskin, gz1oz0, wspd, Rib,                               &
+                     dt, dtmin, kpbl2d,                                             &
+                     SVP1, SVP2, SVP3, SVPT0, EP1, EP2, karman, eomeg, stefan_boltzmann,      &
+                     exch_h,                                                        &
+                     domain%u10, domain%v10,                                        &
+                     ids,ide, jds,jde, kds,kde,                                     &
+                     ims,ime, jms,jme, kms,kme,                                     &
+                     its,ite, jts,jte, kts,kte,                                     &
+                     regime)
         endif
                         
     end subroutine pbl

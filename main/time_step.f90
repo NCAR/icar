@@ -23,6 +23,9 @@ module time_step
     public :: step
 
     real, dimension(:,:), allocatable :: lastw, currw, uw, vw !> temporaries used to compute diagnostic w_real field
+    real, dimension(:,:), allocatable :: thv, thg, PBLh_init, Rib, psim, psih, x, ustar_new, zol, hol, gz1oz0
+    real :: dtmin
+    integer :: regime
 contains
     
     !>------------------------------------------------------------
@@ -168,6 +171,29 @@ contains
             allocate(currw(nx-2,ny-2))
             allocate(uw(nx-1,ny-2))
             allocate(vw(nx-2,ny-1))
+            ! Newly added by Patrik
+            allocate(thv(nx,ny))
+            thv = 0
+            allocate(thg(nx,ny))
+            thg = 0
+            allocate(PBLh_init(nx,ny))
+            PBLh_init = 0
+            allocate(Rib(nx,ny))
+            Rib = 0
+            allocate(psim(nx,ny))
+            psim = 0
+            allocate(psih(nx,ny))
+            psih = 0
+            allocate(x(nx,ny))
+            x = 0
+            allocate(ustar_new(nx,ny))
+            ustar_new = 0
+            allocate(zol(nx,ny))
+            zol = 0
+            allocate(zol(nx,ny))
+            hol = 0
+            allocate(gz1oz0(nx,ny))
+            gz1oz0 = 0
         endif
         
         ! temporary constant
@@ -184,31 +210,46 @@ contains
         domain%wspd(2:nx-1,2:ny-1) = sqrt(domain%Um(2:nx-1,1,2:ny-1)**2 + domain%Vm(2:nx-1,1,2:ny-1)**2)
         domain%ustar(2:nx-1,2:ny-1) = domain%wspd(2:nx,2:ny-1) * currw
 
-        ! --- usually done by surface layer scheme ---
-        ! calculate Monin Obukhov length using theta (domain%th)
-        ! calculate the stability parameter zol (z over l)
+        ! ----- usually done by surface layer scheme ----- !
+    
         ! calculate the Bulk-Richardson number Rib
-        !thv(2:nx-1,2:ny-1) = domain%th(2:nx-1,1,2:ny-1)*(1+0.608*domain%qv(2:nx-1,1,2:ny-1)*1000)   ! multiplied by 1000 since domain%qv is in kg/kg and not in g/kg
+        thv(2:nx-1,2:ny-1) = domain%th(2:nx-1,1,2:ny-1)*(1+0.608*domain%qv(2:nx-1,1,2:ny-1)*1000)   ! multiplied by 1000 since domain%qv is in kg/kg and not in g/kg
                                                                                                     ! normally should be specific humidity and not mixing ratio domain%qv but for first approach does not matter
-        !thg(2:nx-1,2:ny-1) = domain%skin_t(2:nx-1,2:ny-1)/domain%pii(2:nx-1,1,2:ny-1)
-        !Rib(2:nx-1,2:ny-1) = gravity/domain%th(2:nx-1,1,2:ny-1) * domain%z(2:nx-1,1,2:ny-1) * (thv(2:nx-1,2:ny-1) - thg(2:nx-1,2:ny-1))/domain%wspd(2:nx-1,2:ny-1) ! From what height should the theta variables really be
+        thg(2:nx-1,2:ny-1) = domain%skin_t(2:nx-1,2:ny-1)/domain%pii(2:nx-1,1,2:ny-1) ! t2m should rather be used than skin_t
+        Rib_cr = 0.25 ! usually roughly 0.25 but can vary
+        PBLh_init(2:nx-1,2:ny-1) = Rib_cr * thv(2:nx-1,2:ny-1) * domain%wspd(2:nx-1,2:ny-1)**2 /gravity* (thg(2:nx-1,2:ny-1)) !U^2 and thv are from height PBLh in equation
+        Rib(2:nx-1,2:ny-1) = gravity/domain%th(2:nx-1,1,2:ny-1) * domain%z(2:nx-1,1,2:ny-1) * (thv(2:nx-1,2:ny-1) - thg(2:nx-1,2:ny-1))/domain%wspd(2:nx-1,2:ny-1) ! From what height should the theta variables really be, Rib is a function of height so actually it should be computed between the sfc layer and a level z bit in WRF it is a 2D input variable
         ! calculate the integrated similarity functions
-        !if (Rib(2:nx-1,2:ny-1) >= 0.)then
-        !    psim(2:nx-1,2:ny-1) = -10ln(domain%z(2:nx-1,1,2:ny-1)/domain%znt(2:nx-1,2:ny-1)) ! not clear yet what z really should be
-        !    psih(2:nx-1,2:ny-1) = psim(2:nx-1,2:ny-1)
-        !else if (Rib(2:nx-1,2:ny-1) < 0.2 .and. Rib(2:nx-1,2:ny-1) >= 0.0)then
-        !    psim(2:nx-1,2:ny-1) = -5*Rib(2:nx-1,2:ny-1)*ALOG(z(2:nx-1,1,2:ny-1)/znt(2:nx-1,2:ny-1))/(1.1-5*Rib(2:nx-1,2:ny-1))
-        !    psih(2:nx-1,2:ny-1) = psim(2:nx-1,2:ny-1)
-        !else if (Rib(2:nx-1,2:ny-1).eq.0.)then
-        !    psim(2:nx-1,2:ny-1) = 0
-        !    psih(2:nx-1,2:ny-1) = 0
-        !else if (Rib(2:nx-1,2:ny-1) < 0.)then
-        !    x(2:nx-1,2:ny-1) = (1-16*(domain%zol(2:nx-1,2:ny-1))
-        !    psim(2:nx-1,2:ny-1) = 2*ALOG*((1+x(2:nx-1,2:ny-1))/2) + ALOG((1+x(2:nx-1,2:ny-1))^2)/2) - 2*ATAN(1.)*x+pi/2
-        !    psih(2:nx-1,2:ny-1) = 2*ALOG*((1+x^2)/2)
-        !end if
-        !thstar(2:nx-1,2:ny-1) = karman*(Theta_a-Theta_g)/ALOG(z(2:nx-1,1,2:ny-1)/znt(2:nx-1,2:ny-1))-psih
-        ! --- end sfc layer variables ---
+        where(Rib(2:nx-1,2:ny-1) >= 0.)
+            psim(2:nx-1,2:ny-1) = -10ln(domain%z(2:nx-1,1,2:ny-1)/domain%znt(2:nx-1,2:ny-1)) ! not clear yet what z really should be
+            psih(2:nx-1,2:ny-1) = psim(2:nx-1,2:ny-1)
+            regime = 1
+        elsewhere (Rib(2:nx-1,2:ny-1) < 0.2 .and. Rib(2:nx-1,2:ny-1) >= 0.0)
+            psim(2:nx-1,2:ny-1) = -5*Rib(2:nx-1,2:ny-1)*ALOG(z(2:nx-1,1,2:ny-1)/znt(2:nx-1,2:ny-1))/(1.1-5*Rib(2:nx-1,2:ny-1))
+            psih(2:nx-1,2:ny-1) = psim(2:nx-1,2:ny-1)
+            regime = 2
+        elsewhere (Rib(2:nx-1,2:ny-1).eq.0.)
+            psim(2:nx-1,2:ny-1) = 0
+            psih(2:nx-1,2:ny-1) = 0
+            regime = 3
+        elsewhere (Rib(2:nx-1,2:ny-1) < 0.)
+            x(2:nx-1,2:ny-1) = (1-16*(domain%zol(2:nx-1,2:ny-1))
+            psim(2:nx-1,2:ny-1) = 2*ALOG*((1+x(2:nx-1,2:ny-1))/2) + ALOG((1+x(2:nx-1,2:ny-1))^2)/2) - 2*ATAN(1.)*x+pi/2
+            psih(2:nx-1,2:ny-1) = 2*ALOG*((1+x^2)/2)
+            regime = 4
+        endwhere
+        domain%thstar(2:nx-1,2:ny-1) = karman*(domain%th(2:nx-1,1,2:ny-1)-thg)/ALOG(z(2:nx-1,1,2:ny-1)/znt(2:nx-1,2:ny-1))-psih(2:nx-1,2:ny-1)
+        ustar_new(2:nx-1,2:ny-1) = karman*domain%wspd(2:nx-1,2:ny-1)/[ALOG(z(2:nx-1,1,2:ny-1)/domain%znt(2:nx-1,2:ny-1))-psim(2:nx-1,2:ny-1)]
+        ! calculate the Monin-Obukhov  stability parameter zol (z over l)
+        zol(2:nx-1,2:ny-1) = [karman*gravity*z(2:nx-1,1,2:ny-1)]/domain%th(2:nx-1,1,2:ny-1) * domain%thstar(2:nx-1,2:ny-1)/(ustar_new(2:nx-1,2:ny-1)*ustar_new(2:nx-1,2:ny-1))
+        ! calculate pblh over l
+        hol(2:nx-1,2:ny-1) = [karman*gravity*PBLh_init(2:nx-1,1,2:ny-1)]/domain%th(2:nx-1,1,2:ny-1) * domain%thstar(2:nx-1,2:ny-1)/(ustar_new(2:nx-1,2:ny-1)*ustar_new(2:nx-1,2:ny-1))
+        ! arbitrary variables
+        gz1oz0(2:nx-1,2:ny-1)=ALOG(z(2:nx-1,1,2:ny-1)/znt(2:nx-1,2:ny-1))
+        ! calculating dtmin
+        dtmin = domain%dt / 60.0
+        
+        ! ----- end sfc layer variables ----- !
 
         ! finally, calculate the real vertical motions (including U*dzdx + V*dzdy)
         lastw=0
