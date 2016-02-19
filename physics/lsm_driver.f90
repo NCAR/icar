@@ -58,6 +58,7 @@ module land_surface
                                            SNOW,SNOWC,SNOWH, ACSNOW, ACSNOM, SNOALB, QFX,           &
                                            QGH, GSW, ALBEDO, ALBBCK, Z0, XICE, EMISS,               &
                                            EMBCK, QSFC, RAINBL, CHS, CHS2, CQS2, CPM, SR,           &
+                                           !EMBCK, QSFC, RAINBL, CHS, CQS2, CPM, SR,           &
                                            CHKLOWQ, LAI, QZ0, VEGFRAC, SHDMIN,SHDMAX,SNOTIME,SNOPCX,&
                                            POTEVP,RIB, NOAHRES,FLX4_2D,FVB_2D,FBUR_2D,              &
                                            FGSN_2D, z_atm,lnz_atm_term,Ri,base_exchange_term

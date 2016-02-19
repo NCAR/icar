@@ -131,7 +131,7 @@ module data_structures
     real, parameter :: LH_vaporization=2260000.0 ! J/kg
     ! could be calculated as 2.5E6 + (-2112.0)*temp_degC ?
     real, parameter :: Rd  = 287.058   ! J/(kg K) specific gas constant for dry air
-    real, parameter :: Rw  = 461.5     ! J/(kg K) specific gas constant for moist air
+    real, parameter :: Rw  = 461.5     ! J/(kg K) specific gas constant for moist air (gas constant for water vapor)
     real, parameter :: cp  = 1012.0    ! J/kg/K   specific heat capacity of moist STP air? 
     real, parameter :: gravity= 9.81   ! m/s^2    gravity
     real, parameter :: pi  = 3.1415927 ! pi
@@ -162,8 +162,10 @@ module data_structures
 
     ! coriolis parameter f
     real, parameter ::  eomeg = 9.37e-5
-    ! exhange parameter for heat
-    real, parameter :: exch_h = 0.01
+    ! p_top
+    real ::  p_top = 10000
+    ! critical bulk-richardson #
+    real, parameter ::  Rib_cr = 0.25
     
 ! ------------------------------------------------
 !   various data structures for use in geographic interpolation routines
@@ -324,10 +326,22 @@ module data_structures
         real, allocatable, dimension(:,:)   :: wspd                 ! windspeed of lowest level                     [m/s]
         real, allocatable, dimension(:,:)   :: thstar               ! temperature scale                             [K]
         !real, allocatable, dimension(:,:)   :: l                    ! Monin-Obukhov length                          [m]
-        !real, allocatable, dimension(:,:)   :: zol                  ! Monin-Obukhov stability parameter z/l         [dimensionless]
-        !real, allocatable, dimension(:,:)   :: Rib                  ! Bulk-Richardson number
-        !real, allocatable, dimension(:,:)   :: psim                 ! integrated similarity functions for momentum
-        !real, allocatable, dimension(:,:)   :: psih                 ! integrated similarity functions for momentum
+        real, allocatable, dimension(:,:)   :: zol                  ! Monin-Obukhov stability parameter z/l         [dimensionless]
+        real, allocatable, dimension(:,:)   :: hol                  ! pbl height over Monin-Obukhov length
+        real, allocatable, dimension(:,:)   :: Rib                  ! Bulk-Richardson number
+        real, allocatable, dimension(:,:)   :: PBLh_init            ! pbl height used psi
+        real, allocatable, dimension(:,:)   :: psim                 ! integrated similarity functions for momentum
+        real, allocatable, dimension(:,:)   :: psih                 ! integrated similarity functions for heat
+        real, allocatable, dimension(:,:)   :: x                    ! 
+        real, allocatable, dimension(:,:)   :: ustar_new            ! ustar calculated using psi
+        real, allocatable, dimension(:,:)   :: gz1oz0               ! 
+        real, allocatable, dimension(:,:)   :: thv                  ! thv virtual th in lowest level
+        real, allocatable, dimension(:,:)   :: thg                  ! th at ground level
+        real, allocatable, dimension(:,:)   :: exch_h               ! exchange coefficient for heat
+        integer, allocatable, dimension(:,:)   :: kpbl2d            ! Not clear yet what this does
+        real :: dtmin                                               ! dt in minutes
+        !real :: regime                                              ! stability regime
+        
 
         ! current model time step length (should this be somewhere else?)
         real::dt

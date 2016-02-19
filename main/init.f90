@@ -329,18 +329,36 @@ contains
         ! Newly added by Patrik
         allocate(domain%wspd(nx,ny))        ! lowest level wind speed
         domain%wspd=0
-        allocate(domain%thstar(nx,ny))        ! lowest level wind speed
+        allocate(domain%thstar(nx,ny))      ! lowest level wind speed
         domain%thstar=0
+        allocate(domain%thv(nx,ny))         ! lowest level wind speed
+        domain%thv=0
+        allocate(domain%thg(nx,ny))         ! lowest level wind speed
+        domain%thg=0
         !allocate(domain%l(nx,ny))           ! Monin-Obukhov length
         !domain%l=0
-        !allocate(domain%zol(nx,ny))         ! Monin-Obukhov stability paramenter z/l
-        !domain%zol=0
-        !allocate(domain%Rib(nx,ny))         ! Bulk-Richardson number
-        !domain%Rib=0
-        !allocate(domain%psim(nx,ny))        ! integrated similarity functions for momentum
-        !domain%psim=0
-        !allocate(domain%psih(nx,ny))        ! integrated similarity functions for heat
-        !domain%psih=0
+        allocate(domain%zol(nx,ny))         ! Monin-Obukhov stability paramenter z/l
+        domain%zol=0
+        allocate(domain%hol(nx,ny))         ! Monin-Obukhov stability paramenter z/l
+        domain%hol=0
+        allocate(domain%Rib(nx,ny))         ! Bulk-Richardson number
+        domain%Rib=0
+        allocate(domain%PBLh_init(nx,ny))   ! pbl height calculated with psi
+        domain%PBLh_init=0
+        allocate(domain%ustar_new(nx,ny))   ! pbl height calculated with psi
+        domain%ustar_new=0
+        allocate(domain%psim(nx,ny))        ! integrated similarity functions for momentum
+        domain%psim=0
+        allocate(domain%psih(nx,ny))        ! integrated similarity functions for heat
+        domain%psih=0
+        allocate(domain%kpbl2d(nx,ny))      ! not clear yet what this is
+        domain%kpbl2d=0
+        allocate(domain%gz1oz0(nx,ny))      ! not clear yet what this is
+        domain%gz1oz0=0
+        !allocate(domain%CHS2(nx,ny))        ! exchange coefficient for heat
+        !domain%CHS2=0.01
+        allocate(domain%exch_h(nx,ny))        ! exchange coefficient for heat
+        domain%exch_h=0.01
         
     end subroutine domain_allocation
 

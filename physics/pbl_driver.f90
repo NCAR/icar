@@ -117,20 +117,19 @@ contains
                      domain%p, domain%p_inter, domain%pii,                          &
                      domain%tend%u, domain%tend%v, domain%tend%th,                  &
                      domain%tend%qv_pbl, domain%tend%qc, domain%tend%qi, flag_qi,   &
-                     cp, gravity, rovcp, rd, rovg,                                  &
-                     domain%dz_i, domain%z, LH_vaporization, rv, domain%psfc,       &
-                     domain%znu, domain%znw, domain%mut, domain%p_top,              &
-                     domain%znt, domain%ustar,zol, hol, PBLh_init, psim, psih,           &
-                     domain%xland, domain%sensible_heat, domain%latent_heat,        &
-                     domain%tskin, gz1oz0, wspd, Rib,                               &
-                     dt, dtmin, kpbl2d,                                             &
+                     cp, gravity, rovcp, Rd, rovg,                                  &
+                     domain%dz_inter, domain%z, LH_vaporization, Rw, domain%psfc,       &
+                     domain%znu, domain%znw, domain%mut, p_top,              &
+                     domain%znt, domain%ustar, domain%zol, domain%hol, domain%PBLh_init, domain%psim, domain%psih,           &
+                     domain%landmask, domain%sensible_heat, domain%latent_heat,        &
+                     domain%skin_t, domain%gz1oz0, domain%wspd, domain%Rib,                               &
+                     domain%dt, domain%dtmin, domain%kpbl2d,                                             &
                      SVP1, SVP2, SVP3, SVPT0, EP1, EP2, karman, eomeg, stefan_boltzmann,      &
-                     exch_h,                                                        &
+                     domain%exch_h,                                                        &
                      domain%u10, domain%v10,                                        &
                      ids,ide, jds,jde, kds,kde,                                     &
                      ims,ime, jms,jme, kms,kme,                                     &
-                     its,ite, jts,jte, kts,kte,                                     &
-                     regime)
+                     its,ite, jts,jte, kts,kte)
         endif
                         
     end subroutine pbl
