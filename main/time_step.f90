@@ -206,9 +206,9 @@ contains
             domain%psih(2:nx-1,2:ny-1) = 0
             !regime = 3
         elsewhere (domain%Rib(2:nx-1,2:ny-1) < 0.)
-            domain%x(2:nx-1,2:ny-1) = (1-16*(domain%zol(2:nx-1,2:ny-1)))
-            domain%psim(2:nx-1,2:ny-1) = 2*log((1+domain%x(2:nx-1,2:ny-1))/2) + log((1+domain%x(2:nx-1,2:ny-1))**2)/2 - 2*atan(1.)*domain%x+pi/2
-            domain%psih(2:nx-1,2:ny-1) = 2*log((1+domain%x**2)/2)
+            domain%psix(2:nx-1,2:ny-1) = (1-16*(domain%zol(2:nx-1,2:ny-1)))
+            domain%psim(2:nx-1,2:ny-1) = 2*log((1+domain%psix(2:nx-1,2:ny-1))/2) + log((1+domain%psix(2:nx-1,2:ny-1))**2)/2 - 2*atan(1.)*domain%psix+pi/2
+            domain%psih(2:nx-1,2:ny-1) = 2*log((1+domain%psix**2)/2)
             !regime = 4
         endwhere
         domain%thstar(2:nx-1,2:ny-1) = karman*(domain%th(2:nx-1,1,2:ny-1)-domain%thg)/log(domain%z(2:nx-1,1,2:ny-1)/domain%znt(2:nx-1,2:ny-1))-domain%psih(2:nx-1,2:ny-1)

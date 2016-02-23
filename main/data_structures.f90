@@ -332,7 +332,7 @@ module data_structures
         real, allocatable, dimension(:,:)   :: PBLh_init            ! pbl height used psi
         real, allocatable, dimension(:,:)   :: psim                 ! integrated similarity functions for momentum
         real, allocatable, dimension(:,:)   :: psih                 ! integrated similarity functions for heat
-        real, allocatable, dimension(:,:)   :: x                    ! 
+        real, allocatable, dimension(:,:)   :: psix                 ! x needed to compute psi functions for convective conditions
         real, allocatable, dimension(:,:)   :: ustar_new            ! ustar calculated using psi
         real, allocatable, dimension(:,:)   :: gz1oz0               ! 
         real, allocatable, dimension(:,:)   :: thv                  ! thv virtual th in lowest level

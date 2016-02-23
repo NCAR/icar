@@ -582,6 +582,7 @@ contains
 !     compute preliminary variables
 !
    dtstep = dt
+   write(*,*) "dtstep ",dtstep
    dt2 = 2.*dtstep
    rdt = 1./dt2
 !
@@ -658,6 +659,16 @@ contains
    do i = its,ite
      fm = gz1oz0(i)-psim(i)
      fh = gz1oz0(i)-psih(i)
+     write(*,*) "--- Write var in pbl_ysu.f90 ---"
+     write(*,*) "psim(i): ", psim(i)
+     write(*,*) "psih(i): ", psih(i)
+     write(*,*) "gz1oz0(i)", gz1oz0(i)
+     write(*,*) "fm: ", fm
+     write(*,*) "fh: ", fh
+     write(*,*) "rimin: ", rimin
+     write(*,*) "br(i): ", br(i)
+     write(*,*) "--- End write var pbl_ysu.f90 ---"
+     
      hol(i) = max(br(i)*fm*fm/fh,rimin)
      if(sfcflg(i))then
        hol(i) = min(hol(i),-zfmin)

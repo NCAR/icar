@@ -48,10 +48,12 @@ contains
         ime=size(domain%p,1)
         kme=size(domain%p,2)
         jme=size(domain%p,3)
-        ims=1; jms=1; kms=1
-        ids=ims; its=ims; ide=ime; ite=ime
-        kds=kms; kts=kms; kde=kme; kte=kme
-        jds=jms; jts=jms; jde=jme; jte=jme
+
+        ims=2; jms=2; kms=2
+
+        ids=ims; its=ims; ide=ime-1; ite=ime-1
+        kds=kms; kts=kms; kde=kme-1; kte=kme-1
+        jds=jms; jts=jms; jde=jme-1; jte=jme-1
         
         allowed_to_read=.True.
         restart=.False.
@@ -87,6 +89,8 @@ contains
         type(domain_type),intent(inout)::domain
         type(options_type),intent(in)::options
         real,intent(in)::dt_in
+        real :: dtmin_in
+        dtmin_in = dt_in/60.0
         
         if (options%physics%boundarylayer==kPBL_SIMPLE) then
             call simple_pbl(domain,dt_in)
@@ -112,6 +116,11 @@ contains
 !                     ids,ide, jds,jde, kds,kde,                                 &
 !                     ims,ime, jms,jme, kms,kme,                                 &
 !                     its,ite, jts,jte, kts,kte)
+            write(*,*) "--- Write var in pbl_driver ---"
+            write(*,*) "domain%psim: ", domain%psim
+            write(*,*) "domain%psih: ", domain%psih
+            write(*,*) "domain%gz1oz0: ", domain%gz1oz0
+            write(*,*) "--- End write var in pbl_driver ---"
             call ysu(domain%Um, domain%Vm, domain%th, domain%t,                     &
                      domain%qv, domain%cloud, domain%ice,                           &
                      domain%p, domain%p_inter, domain%pii,                          &
@@ -119,11 +128,11 @@ contains
                      domain%tend%qv_pbl, domain%tend%qc, domain%tend%qi, flag_qi,   &
                      cp, gravity, rovcp, Rd, rovg,                                  &
                      domain%dz_inter, domain%z, LH_vaporization, Rw, domain%psfc,       &
-                     domain%znu, domain%znw, domain%mut, p_top,              &
+                     domain%ZNU, domain%ZNW, domain%mut, p_top,              &
                      domain%znt, domain%ustar, domain%zol, domain%hol, domain%PBLh_init, domain%psim, domain%psih,           &
                      domain%landmask, domain%sensible_heat, domain%latent_heat,        &
                      domain%skin_t, domain%gz1oz0, domain%wspd, domain%Rib,                               &
-                     domain%dt, domain%dtmin, domain%kpbl2d,                                             &
+                     dt_in, dtmin_in, domain%kpbl2d,                                             &
                      SVP1, SVP2, SVP3, SVPT0, EP1, EP2, karman, eomeg, stefan_boltzmann,      &
                      domain%exch_h,                                                        &
                      domain%u10, domain%v10,                                        &

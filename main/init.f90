@@ -351,6 +351,8 @@ contains
         domain%psim=0
         allocate(domain%psih(nx,ny))        ! integrated similarity functions for heat
         domain%psih=0
+        allocate(domain%psix(nx,ny))        ! x needed to compute psi functions for convective conditions
+        domain%psix=0
         allocate(domain%kpbl2d(nx,ny))      ! not clear yet what this is
         domain%kpbl2d=0
         allocate(domain%gz1oz0(nx,ny))      ! not clear yet what this is
