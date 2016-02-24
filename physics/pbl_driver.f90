@@ -36,6 +36,7 @@ module planetary_boundary_layer
     integer :: ids, ide, jds, jde, kds, kde,  &
                ims, ime, jms, jme, kms, kme,  &
                its, ite, jts, jte, kts, kte
+    integer :: i
                
     logical :: allowed_to_read, restart, flag_qi
 
@@ -49,11 +50,11 @@ contains
         kme=size(domain%p,2)
         jme=size(domain%p,3)
 
-        ims=2; jms=2; kms=2
+        ims=1; jms=1; kms=1
 
-        ids=ims; its=ims; ide=ime-1; ite=ime-1
+        ids=ims; its=ims+1; ide=ime; ite=ime-1
         kds=kms; kts=kms; kde=kme-1; kte=kme-1
-        jds=jms; jts=jms; jde=jme-1; jte=jme-1
+        jds=jms; jts=jms+1; jde=jme; jte=jme-1
         
         allowed_to_read=.True.
         restart=.False.
@@ -117,9 +118,14 @@ contains
 !                     ims,ime, jms,jme, kms,kme,                                 &
 !                     its,ite, jts,jte, kts,kte)
             write(*,*) "--- Write var in pbl_driver ---"
-            write(*,*) "domain%psim: ", domain%psim
-            write(*,*) "domain%psih: ", domain%psih
-            write(*,*) "domain%gz1oz0: ", domain%gz1oz0
+            !do i=ims,ime
+            !    write(*,*) "ims-ime domain%psim: ", domain%psim(i,jms)
+            !enddo
+            !do i=ids,ide
+            !    write(*,*) "ids-ide domain%psim: ", domain%psim(i,jds)
+            !enddo
+            !write(*,*) "domain%psih: ", domain%psih
+            !write(*,*) "domain%gz1oz0: ", domain%gz1oz0
             write(*,*) "--- End write var in pbl_driver ---"
             call ysu(domain%Um, domain%Vm, domain%th, domain%t,                     &
                      domain%qv, domain%cloud, domain%ice,                           &
