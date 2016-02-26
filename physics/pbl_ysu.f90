@@ -582,7 +582,7 @@ contains
 !     compute preliminary variables
 !
    dtstep = dt
-   write(*,*) "dtstep ",dtstep
+   !write(*,*) "dtstep ",dtstep
    dt2 = 2.*dtstep
    rdt = 1./dt2
 !
