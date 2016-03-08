@@ -127,6 +127,19 @@ contains
             !write(*,*) "domain%psih: ", domain%psih
             !write(*,*) "domain%gz1oz0: ", domain%gz1oz0
             write(*,*) "--- End write var in pbl_driver ---"
+            write(*,*) "domain%qv: ", MAXVAL(domain%qv), MINVAL(domain%qv)
+            write(*,*) "domain%cloud: ", MAXVAL(domain%cloud), MINVAL(domain%cloud)
+            write(*,*) "domain%ice: ", MAXVAL(domain%ice), MINVAL(domain%ice)
+            write(*,*) "domain%th: ", MAXVAL(domain%th), MINVAL(domain%th)
+            write(*,*) "domain%psim: ", MAXVAL(domain%psim), MINVAL(domain%psim)
+            write(*,*) "domain%psih: ", MAXVAL(domain%psih), MINVAL(domain%psih)
+            write(*,*) "domain%PBLh_init: ", MAXVAL(domain%PBLh_init), MINVAL(domain%PBLh_init)
+            write(*,*) "domain%Rib: ", MAXVAL(domain%Rib), MINVAL(domain%Rib)
+            write(*,*) "domain%hol: ", MAXVAL(domain%hol), MINVAL(domain%hol)
+            write(*,*) "domain%zol: ", MAXVAL(domain%zol), MINVAL(domain%zol)
+            write(*,*) "domain%znt: ", MAXVAL(domain%znt), MINVAL(domain%znt)
+            write(*,*) "domain%ustar: ", MAXVAL(domain%ustar),MINVAL(domain%ustar)
+            write(*,*) "--- Start YSU-scheme ---"
             call ysu(domain%Um, domain%Vm, domain%th, domain%t,                     &
                      domain%qv, domain%cloud, domain%ice,                           &
                      domain%p, domain%p_inter, domain%pii,                          &
@@ -145,6 +158,19 @@ contains
                      ids,ide, jds,jde, kds,kde,                                     &
                      ims,ime, jms,jme, kms,kme,                                     &
                      its,ite, jts,jte, kts,kte)
+            write(*,*) "--- End YSU-scheme ---"
+            write(*,*) "domain%qv: ", MAXVAL(domain%qv), MINVAL(domain%qv)
+            write(*,*) "domain%cloud: ", MAXVAL(domain%cloud), MINVAL(domain%cloud)
+            write(*,*) "domain%ice: ", MAXVAL(domain%ice), MINVAL(domain%ice)
+            write(*,*) "domain%th: ", MAXVAL(domain%th), MINVAL(domain%th)
+            write(*,*) "domain%psim: ", MAXVAL(domain%psim), MINVAL(domain%psim)
+            write(*,*) "domain%psih: ", MAXVAL(domain%psih), MINVAL(domain%psih)
+            write(*,*) "domain%PBLh_init: ", MAXVAL(domain%PBLh_init), MINVAL(domain%PBLh_init)
+            write(*,*) "domain%Rib: ", MAXVAL(domain%Rib), MINVAL(domain%Rib)
+            write(*,*) "domain%hol: ", MAXVAL(domain%hol), MINVAL(domain%hol)
+            write(*,*) "domain%zol: ", MAXVAL(domain%zol), MINVAL(domain%zol)
+            write(*,*) "domain%znt: ", MAXVAL(domain%znt), MINVAL(domain%znt)
+            write(*,*) "domain%ustar: ", MAXVAL(domain%ustar), MINVAL(domain%ustar)
         endif
                         
     end subroutine pbl

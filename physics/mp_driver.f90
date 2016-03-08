@@ -197,6 +197,7 @@ contains
                     jts=jds+1;jte=jde-1
                 endif
                 ! call the thompson microphysics
+                write(*,*) "Befor call thomspon mp"
                 call mp_gt_driver(domain%qv, domain%cloud, domain%qrain, domain%ice, &
                                 domain%qsnow, domain%qgrau, domain%nice, domain%nrain, &
                                 domain%th, domain%pii, domain%p, domain%dz_inter, mp_dt, itimestep, &
@@ -207,6 +208,7 @@ contains
                                 ids,ide, jds,jde, kds,kde, &    ! domain dims
                                 ids,ide, jds,jde, kds,kde, &    ! memory dims
                                 its,ite, jts,jte, kts,kte)      ! tile dims
+                write(*,*) "After call thomspon mp"
                                 
             elseif (options%physics%microphysics==kMP_SB04) then
                 ! call the simple microphysics routine of SB04
