@@ -329,10 +329,16 @@ contains
         ! Newly added by Patrik
         allocate(domain%wspd(nx,ny))        ! lowest level wind speed
         domain%wspd=0
+        allocate(domain%wspd3d(nx,nz,ny))   ! wind speed at all levels
+        domain%wspd3d=0
+        allocate(domain%z_agl(nx,ny))    ! z above ground level
+        domain%z_agl=0
         allocate(domain%thstar(nx,ny))      ! lowest level wind speed
         domain%thstar=0
-        allocate(domain%thv(nx,ny))         ! lowest level wind speed
+        allocate(domain%thv(nx,ny))         ! virtual potential temp on lowestmodellevel
         domain%thv=0
+        allocate(domain%thv3d(nx,nz,ny))       ! virtual potential temp on full 3D field
+        domain%thv3d=0
         allocate(domain%thg(nx,ny))         ! lowest level wind speed
         domain%thg=0
         !allocate(domain%l(nx,ny))           ! Monin-Obukhov length
@@ -343,10 +349,12 @@ contains
         domain%hol=0
         allocate(domain%Rib(nx,ny))         ! Bulk-Richardson number
         domain%Rib=0
-        allocate(domain%PBLh_init(nx,ny))   ! pbl height calculated with psi
-        domain%PBLh_init=0
-        allocate(domain%ustar_new(nx,ny))   ! pbl height calculated with psi
+        allocate(domain%PBLh(nx,ny))        ! pbl height calculated with psi
+        domain%PBLh=0
+        allocate(domain%ustar_new(nx,ny))   ! ustar calculated using psi
         domain%ustar_new=0
+        allocate(domain%wstar_new(nx,ny))   ! wstar calculated using psi
+        domain%wstar_new=0
         allocate(domain%psim(nx,ny))        ! integrated similarity functions for momentum
         domain%psim=0
         allocate(domain%psih(nx,ny))        ! integrated similarity functions for heat

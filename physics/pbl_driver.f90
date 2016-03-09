@@ -45,6 +45,11 @@ contains
         implicit none
         type(domain_type),intent(inout)::domain
         type(options_type),intent(in)::options
+        integer :: nx,ny,nz
+
+        nx=size(domain%p,1)
+        nz=size(domain%p,2)
+        ny=size(domain%p,3)
         
         ime=size(domain%p,1)
         kme=size(domain%p,2)
@@ -82,6 +87,10 @@ contains
                          ids, ide, jds, jde, kds, kde,      &
                          ims, ime, jms, jme, kms, kme,      &
                          its, ite, jts, jte, kts, kte)
+            domain%thg(2:nx-1,2:ny-1) = domain%thv(2:nx-1,2:ny-1)   ! for init thg=thv since thT = 0, t2m should rather be used than skin_t, 
+                                                                    ! b=proportionality factor=7.8, Hong et al, 2006 only used for next time steps
+            domain%PBLh(2:nx-1,2:ny-1) = 0.0
+            !domain%PBLh(2:nx-1,2:ny-1) = Rib_cr * domain%thv(2:nx-1,2:ny-1) *domain%wspd3d(2:nx-1,8,2:ny-1)**2 / gravity * (domain%thv3d(2:nx-1,8,2:ny-1) -domain%thg(2:nx-1,2:ny-1)) !U^2 and thv are from height PBLh in equation
         endif
     end subroutine pbl_init
     
@@ -133,7 +142,7 @@ contains
             write(*,*) "domain%th: ", MAXVAL(domain%th), MINVAL(domain%th)
             write(*,*) "domain%psim: ", MAXVAL(domain%psim), MINVAL(domain%psim)
             write(*,*) "domain%psih: ", MAXVAL(domain%psih), MINVAL(domain%psih)
-            write(*,*) "domain%PBLh_init: ", MAXVAL(domain%PBLh_init), MINVAL(domain%PBLh_init)
+            write(*,*) "domain%PBLh: ", MAXVAL(domain%PBLh), MINVAL(domain%PBLh)
             write(*,*) "domain%Rib: ", MAXVAL(domain%Rib), MINVAL(domain%Rib)
             write(*,*) "domain%hol: ", MAXVAL(domain%hol), MINVAL(domain%hol)
             write(*,*) "domain%zol: ", MAXVAL(domain%zol), MINVAL(domain%zol)
@@ -148,7 +157,7 @@ contains
                      cp, gravity, rovcp, Rd, rovg,                                  &
                      domain%dz_inter, domain%z, LH_vaporization, Rw, domain%psfc,       &
                      domain%ZNU, domain%ZNW, domain%mut, p_top,              &
-                     domain%znt, domain%ustar, domain%zol, domain%hol, domain%PBLh_init, domain%psim, domain%psih,           &
+                     domain%znt, domain%ustar, domain%zol, domain%hol, domain%PBLh, domain%psim, domain%psih,           &
                      domain%landmask, domain%sensible_heat, domain%latent_heat,        &
                      domain%skin_t, domain%gz1oz0, domain%wspd, domain%Rib,                               &
                      dt_in, dtmin_in, domain%kpbl2d,                                             &
@@ -165,7 +174,7 @@ contains
             write(*,*) "domain%th: ", MAXVAL(domain%th), MINVAL(domain%th)
             write(*,*) "domain%psim: ", MAXVAL(domain%psim), MINVAL(domain%psim)
             write(*,*) "domain%psih: ", MAXVAL(domain%psih), MINVAL(domain%psih)
-            write(*,*) "domain%PBLh_init: ", MAXVAL(domain%PBLh_init), MINVAL(domain%PBLh_init)
+            write(*,*) "domain%PBLh: ", MAXVAL(domain%PBLh), MINVAL(domain%PBLh)
             write(*,*) "domain%Rib: ", MAXVAL(domain%Rib), MINVAL(domain%Rib)
             write(*,*) "domain%hol: ", MAXVAL(domain%hol), MINVAL(domain%hol)
             write(*,*) "domain%zol: ", MAXVAL(domain%zol), MINVAL(domain%zol)

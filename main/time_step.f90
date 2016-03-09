@@ -181,16 +181,33 @@ contains
         domain%v10(2:nx-1,2:ny-1) = domain%ustar(2:nx-1,2:ny-1) * lastw
         
         ! now calculate master ustar based on U and V combined in quadrature
-        domain%wspd(2:nx-1,2:ny-1) = sqrt(domain%Um(2:nx-1,1,2:ny-1)**2 + domain%Vm(2:nx-1,1,2:ny-1)**2)
+        domain%wspd3d(2:nx-1,1:nz,2:ny-1) = sqrt(domain%Um(2:nx-1,1:nz,2:ny-1)**2 + domain%Vm(2:nx-1,1:nz,2:ny-1)**2) ! added by Patrik in case we need this later for YSU
+        domain%wspd(2:nx-1,2:ny-1) = sqrt(domain%Um(2:nx-1,1,2:ny-1)**2 + domain%Vm(2:nx-1,1,2:ny-1)**2) ! added by Patrik since we need this for YSU
         domain%ustar(2:nx-1,2:ny-1) = domain%wspd(2:nx,2:ny-1) * currw
 
         ! ----- usually done by surface layer scheme ----- !
-    
+        write(*,*) "Calculate surface layer variables based on stability"
+        ! compute z above ground used for estimating indices for 
+        domain%z_agl(2:nx-1,2:ny-1) = (domain%z(2:nx-1,1,2:ny-1)-domain%terrain(2:nx-1,2:ny-1)) !added by Patrik in case we need this later for YSU
         ! calculate the Bulk-Richardson number Rib
-        domain%thv(2:nx-1,2:ny-1) = domain%th(2:nx-1,1,2:ny-1)*(1+0.608*domain%qv(2:nx-1,1,2:ny-1)*1000)   ! multiplied by 1000 since domain%qv is in kg/kg and not in g/kg
-                                                                                                    ! normally should be specific humidity and not mixing ratio domain%qv but for first approach does not matter
-        domain%thg(2:nx-1,2:ny-1) = domain%skin_t(2:nx-1,2:ny-1)/domain%pii(2:nx-1,1,2:ny-1) ! t2m should rather be used than skin_t
-        domain%PBLh_init(2:nx-1,2:ny-1) = Rib_cr * domain%thv(2:nx-1,2:ny-1) * domain%wspd(2:nx-1,2:ny-1)**2 /gravity* (domain%thg(2:nx-1,2:ny-1)) !U^2 and thv are from height PBLh in equation
+        domain%thv(2:nx-1,2:ny-1) = domain%th(2:nx-1,1,2:ny-1)*(1+0.608*domain%qv(2:nx-1,1,2:ny-1)*1000)    ! should domain%qv be multiplied by 1000? since domain%qv is in kg/kg and not in g/kg
+                                                                                                            ! normally should be specific humidity and not mixing ratio domain%qv but for first order approach does not matter
+        domain%thv3d(2:nx-1,1:nz,2:ny-1) = domain%th(2:nx-1,1:nz,2:ny-1)*(1+0.608*domain%qv(2:nx-1,1:nz,2:ny-1)*1000)   ! thv 3D
+        domain%thg(2:nx-1,2:ny-1) = domain%t2m(2:nx-1,2:ny-1)/domain%pii(2:nx-1,1,2:ny-1) ! t2m should rather be used than skin_t
+        !domain%wstar(2:nx-1,2:ny-1) = domain%ustar(2:nx-1,2:ny-1) / domain%psim(2:nx-1,2:ny-1)
+        !domain%thT(2:nx-1,2:ny-1) = propfact * (virtual heat flux)/domain%wstar ! virtual temperature excess
+        !domain%thg(2:nx-1,2:ny-1) = domain%thv(2:nx-1,2:ny-1) ! for init thg=thv since thT = 0, t2m should rather be used than skin_t, b=proportionality factor=7.8, Hong et al, 2006
+
+        ! find value of pbl heights for wspd3d
+        !domain%PBLh(2:nx-1,2:ny-1) = Rib_cr * domain%thv(2:nx-1,2:ny-1) * domain%wspd(2:nx-1,2:ny-1)**2 / gravity * (domain%thv(2:nx-1,2:ny-1) - domain%thg(2:nx-1,2:ny-1)) !U^2 and thv are from height PBLh in equation
+        write(*,*) "max min domain%pbl_height: ", maxval(domain%pbl_height), minval(domain%pbl_height)
+        write(*,*) "max min domain%PBLh: ", maxval(domain%PBLh), minval(domain%PBLh)
+        ! To prevent Rib from becoming too high a lower limit of 0.1 is applied
+        ! Jiminez et al 2012
+        where(domain%wspd(2:nx-1,2:ny-1) < 0.1)
+            domain%wspd(2:nx-1,2:ny-1) = 0.1
+        endwhere
+        
         domain%Rib(2:nx-1,2:ny-1) = gravity/domain%th(2:nx-1,1,2:ny-1) * domain%z(2:nx-1,1,2:ny-1) * (domain%thv(2:nx-1,2:ny-1) - domain%thg(2:nx-1,2:ny-1))/domain%wspd(2:nx-1,2:ny-1) ! From what height should the theta variables really be, Rib is a function of height so actually it should be computed between the sfc layer and a level z bit in WRF it is a 2D input variable
         ! calculate the integrated similarity functions
         where(domain%Rib(2:nx-1,2:ny-1) >= 0.)
@@ -216,13 +233,17 @@ contains
         ! calculate the Monin-Obukhov  stability parameter zol (z over l)
         domain%zol(2:nx-1,2:ny-1) = (karman*gravity*domain%z(2:nx-1,1,2:ny-1))/domain%th(2:nx-1,1,2:ny-1) * domain%thstar(2:nx-1,2:ny-1)/(domain%ustar_new(2:nx-1,2:ny-1)*domain%ustar_new(2:nx-1,2:ny-1))
         ! calculate pblh over l
-        domain%hol(2:nx-1,2:ny-1) = (karman*gravity*domain%PBLh_init(2:nx-1,2:ny-1))/domain%th(2:nx-1,1,2:ny-1) * domain%thstar(2:nx-1,2:ny-1)/(domain%ustar_new(2:nx-1,2:ny-1)*domain%ustar_new(2:nx-1,2:ny-1))
+        domain%hol(2:nx-1,2:ny-1) = (karman*gravity*domain%PBLh(2:nx-1,2:ny-1))/domain%th(2:nx-1,1,2:ny-1) * domain%thstar(2:nx-1,2:ny-1)/(domain%ustar_new(2:nx-1,2:ny-1)*domain%ustar_new(2:nx-1,2:ny-1))
         ! arbitrary variables
         domain%gz1oz0(2:nx-1,2:ny-1)=log(domain%z(2:nx-1,1,2:ny-1)/domain%znt(2:nx-1,2:ny-1))
         ! calculating dtmin
         domain%dtmin = domain%dt / 60.0
         ! p_top as a scalar, choosing just minimum from ptop as a start
         p_top = minval(domain%ptop)
+
+        write(*,*) "Counter: ", counter
+        counter = counter + 1
+        write(*,*) "Counter: ", counter
         ! ----- end sfc layer variables ----- !
 
         ! finally, calculate the real vertical motions (including U*dzdx + V*dzdy)
