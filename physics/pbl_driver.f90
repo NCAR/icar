@@ -87,10 +87,10 @@ contains
                          ids, ide, jds, jde, kds, kde,      &
                          ims, ime, jms, jme, kms, kme,      &
                          its, ite, jts, jte, kts, kte)
-            domain%thvg(2:nx-1,2:ny-1) = domain%thv(2:nx-1,2:ny-1)   ! for init thvg=thv since thT = 0, t2m should rather be used than skin_t, 
+            !domain%thvg(2:nx-1,2:ny-1) = domain%thv(2:nx-1,2:ny-1)   ! for init thvg=thv since thT = 0, t2m should rather be used than skin_t, 
                                                                     ! b=proportionality factor=7.8, Hong et al, 2006 only used for next time steps
-            domain%PBLh(2:nx-1,2:ny-1) = 0.0
-            !domain%PBLh(2:nx-1,2:ny-1) = Rib_cr * domain%thv(2:nx-1,2:ny-1) *domain%wspd3d(2:nx-1,8,2:ny-1)**2 / gravity * (domain%thv3d(2:nx-1,8,2:ny-1) -domain%thvg(2:nx-1,2:ny-1)) !U^2 and thv are from height PBLh in equation
+            !domain%PBLh(2:nx-1,2:ny-1) = 0.0
+            domain%PBLh(2:nx-1,2:ny-1) = Rib_cr * domain%thv(2:nx-1,2:ny-1) *domain%wspd3d(2:nx-1,8,2:ny-1)**2 / gravity * (domain%thv3d(2:nx-1,8,2:ny-1) -domain%thvg(2:nx-1,2:ny-1)) !U^2 and thv are from height PBLh in equation
         endif
     end subroutine pbl_init
     
@@ -126,7 +126,7 @@ contains
 !                     ids,ide, jds,jde, kds,kde,                                 &
 !                     ims,ime, jms,jme, kms,kme,                                 &
 !                     its,ite, jts,jte, kts,kte)
-            write(*,*) "--- Write var in pbl_driver ---"
+            !write(*,*) "--- Write var in pbl_driver ---"
             !do i=ims,ime
             !    write(*,*) "ims-ime domain%psim: ", domain%psim(i,jms)
             !enddo
@@ -135,7 +135,8 @@ contains
             !enddo
             !write(*,*) "domain%psih: ", domain%psih
             !write(*,*) "domain%gz1oz0: ", domain%gz1oz0
-            write(*,*) "--- End write var in pbl_driver ---"
+            !write(*,*) "--- End write var in pbl_driver ---"
+
             write(*,*) "domain%qv: ", MAXVAL(domain%qv), MINVAL(domain%qv)
             write(*,*) "domain%cloud: ", MAXVAL(domain%cloud), MINVAL(domain%cloud)
             write(*,*) "domain%ice: ", MAXVAL(domain%ice), MINVAL(domain%ice)
@@ -157,9 +158,9 @@ contains
                      domain%tend%u, domain%tend%v, domain%tend%th,                  &
                      domain%tend%qv_pbl, domain%tend%qc, domain%tend%qi, flag_qi,   &
                      cp, gravity, rovcp, Rd, rovg,                                  &
-                     domain%dz_inter, domain%z, LH_vaporization, Rw, domain%psfc,       &
+                     domain%dz_inter, domain%z_agl, LH_vaporization, Rw, domain%psfc,       &
                      domain%ZNU, domain%ZNW, domain%mut, p_top,              &
-                     domain%znt, domain%ustar, domain%zol, domain%hol, domain%PBLh, domain%psim, domain%psih,           &
+                     domain%znt, domain%ustar_new, domain%zol, domain%hol, domain%PBLh, domain%psim, domain%psih,           &
                      domain%landmask, domain%sensible_heat, domain%latent_heat,        &
                      domain%skin_t, domain%gz1oz0, domain%wspd, domain%Rib,                               &
                      dt_in, dtmin_in, domain%kpbl2d,                                             &

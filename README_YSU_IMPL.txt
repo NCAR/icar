@@ -2,7 +2,7 @@
 Readme document on changes made to the model when implementing YSU-scheme
 -------------------------------------------------------------------------
 
-The YSU -scheme needs additional input variables and need extra variables for initialization 
+The YSU-scheme needs additional input variables and extra variables for initialization 
 that did not exist in this model before. Normal procedure is to get relevant input from the 
 surface layer scheme, however a surface layer scheme is not yet implemented such that needed 
 variables are computed and or initialized in time_step.f90 and pbl_driver.f90.
@@ -54,7 +54,7 @@ from use of a moist gas.
 A primary goal of the surface layer parameterization is the calculation of the dimenensionless 
 bulk transfer coefficients for momentum, heat and moisture. There is a parameter called exch_h 
 which is going into the YSU-scheme which I assume to be the transfer coefficient for heat. 
-For the YSU-scheme the tranfer coefficient for heat is needed as a variable of type inout. 
+For the YSU-scheme the transfer coefficient for heat is needed as a variable of type inout. 
 It seems also to be altered in the YSU-code. However, since this is usually a parameter calculated 
 by the surface scheme I am not yet sure whether exch_h should only be initialized and then left 
 alone or whether I should update it along with other variables. Currently exch_h is initialized 
@@ -70,7 +70,7 @@ done using the log law.
 - Include the update and calculation of the dimenensionless bulk transfer coefficients for heat
   (momentum and moisture secondary since they do not seem to be needed by YSU). !!! DONE !!!
 - Include update and calculation of ustar from similarity function (already
-  existing in time_step.f90 but not yet used)
+  existing in time_step.f90 but not yet used) !!! DONE !!!
 - Include update of thvg using equation from Hong et al. 2006 (a bit difficult
   since I do not have the virtual heat flux from the surface), might not be
   crucial if I use a different approach e.g. using th near the ground.

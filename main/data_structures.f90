@@ -344,7 +344,8 @@ module data_structures
         real, allocatable, dimension(:,:)   :: gz1oz0               ! 
         real, allocatable, dimension(:,:)   :: thv                  ! thv virtual th in lowest level
         real, allocatable, dimension(:,:,:)   :: thv3d                ! thv virtual th on full 3d field
-        real, allocatable, dimension(:,:)   :: thvg                  ! th at ground level
+        real, allocatable, dimension(:,:)   :: thvg                 ! virtual th at ground level
+        real, allocatable, dimension(:,:)   :: thg                  ! th at ground level
         real, allocatable, dimension(:,:)   :: exch_h               ! exchange coefficient for heat
         integer, allocatable, dimension(:,:)   :: kpbl2d            ! Not clear yet what this does
         real :: dtmin                                               ! dt in minutes
