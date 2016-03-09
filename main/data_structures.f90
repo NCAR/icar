@@ -165,11 +165,11 @@ module data_structures
     ! p_top
     real ::  p_top = 10000
     ! critical bulk-richardson #
-    real, parameter ::  Rib_cr = 0.5 ! in Hong et al, 2006 they say 0.5 but why not 0.25?
+    real, parameter ::  Rib_cr = 0.5 ! in Hong et al. 2006 they say 0.5 but why not 0.25?
     ! proportionality factor
-    real, parameter :: propfact = 7.8
+    real, parameter :: propfact = 7.8 ! in Hong et al. 2006 this value is suggested
     ! counter
-    integer :: counter = 0
+    integer :: counter = 1
     
 ! ------------------------------------------------
 !   various data structures for use in geographic interpolation routines
@@ -344,7 +344,7 @@ module data_structures
         real, allocatable, dimension(:,:)   :: gz1oz0               ! 
         real, allocatable, dimension(:,:)   :: thv                  ! thv virtual th in lowest level
         real, allocatable, dimension(:,:,:)   :: thv3d                ! thv virtual th on full 3d field
-        real, allocatable, dimension(:,:)   :: thg                  ! th at ground level
+        real, allocatable, dimension(:,:)   :: thvg                  ! th at ground level
         real, allocatable, dimension(:,:)   :: exch_h               ! exchange coefficient for heat
         integer, allocatable, dimension(:,:)   :: kpbl2d            ! Not clear yet what this does
         real :: dtmin                                               ! dt in minutes

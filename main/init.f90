@@ -339,8 +339,8 @@ contains
         domain%thv=0
         allocate(domain%thv3d(nx,nz,ny))       ! virtual potential temp on full 3D field
         domain%thv3d=0
-        allocate(domain%thg(nx,ny))         ! lowest level wind speed
-        domain%thg=0
+        allocate(domain%thvg(nx,ny))         ! lowest level wind speed
+        domain%thvg=0
         !allocate(domain%l(nx,ny))           ! Monin-Obukhov length
         !domain%l=0
         allocate(domain%zol(nx,ny))         ! Monin-Obukhov stability paramenter z/l

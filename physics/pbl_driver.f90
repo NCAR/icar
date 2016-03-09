@@ -87,10 +87,10 @@ contains
                          ids, ide, jds, jde, kds, kde,      &
                          ims, ime, jms, jme, kms, kme,      &
                          its, ite, jts, jte, kts, kte)
-            domain%thg(2:nx-1,2:ny-1) = domain%thv(2:nx-1,2:ny-1)   ! for init thg=thv since thT = 0, t2m should rather be used than skin_t, 
+            domain%thvg(2:nx-1,2:ny-1) = domain%thv(2:nx-1,2:ny-1)   ! for init thvg=thv since thT = 0, t2m should rather be used than skin_t, 
                                                                     ! b=proportionality factor=7.8, Hong et al, 2006 only used for next time steps
             domain%PBLh(2:nx-1,2:ny-1) = 0.0
-            !domain%PBLh(2:nx-1,2:ny-1) = Rib_cr * domain%thv(2:nx-1,2:ny-1) *domain%wspd3d(2:nx-1,8,2:ny-1)**2 / gravity * (domain%thv3d(2:nx-1,8,2:ny-1) -domain%thg(2:nx-1,2:ny-1)) !U^2 and thv are from height PBLh in equation
+            !domain%PBLh(2:nx-1,2:ny-1) = Rib_cr * domain%thv(2:nx-1,2:ny-1) *domain%wspd3d(2:nx-1,8,2:ny-1)**2 / gravity * (domain%thv3d(2:nx-1,8,2:ny-1) -domain%thvg(2:nx-1,2:ny-1)) !U^2 and thv are from height PBLh in equation
         endif
     end subroutine pbl_init
     
@@ -148,6 +148,8 @@ contains
             write(*,*) "domain%zol: ", MAXVAL(domain%zol), MINVAL(domain%zol)
             write(*,*) "domain%znt: ", MAXVAL(domain%znt), MINVAL(domain%znt)
             write(*,*) "domain%ustar: ", MAXVAL(domain%ustar),MINVAL(domain%ustar)
+            write(*,*) "domain%ustar_new: ", MAXVAL(domain%ustar_new),MINVAL(domain%ustar_new)
+            write(*,*) "domain%exch_h: ", MAXVAL(domain%exch_h),MINVAL(domain%exch_h)
             write(*,*) "--- Start YSU-scheme ---"
             call ysu(domain%Um, domain%Vm, domain%th, domain%t,                     &
                      domain%qv, domain%cloud, domain%ice,                           &
@@ -180,6 +182,8 @@ contains
             write(*,*) "domain%zol: ", MAXVAL(domain%zol), MINVAL(domain%zol)
             write(*,*) "domain%znt: ", MAXVAL(domain%znt), MINVAL(domain%znt)
             write(*,*) "domain%ustar: ", MAXVAL(domain%ustar), MINVAL(domain%ustar)
+            write(*,*) "domain%ustar_new: ", MAXVAL(domain%ustar_new),MINVAL(domain%ustar_new)
+            write(*,*) "domain%exch_h: ", MAXVAL(domain%exch_h),MINVAL(domain%exch_h)
         endif
                         
     end subroutine pbl
