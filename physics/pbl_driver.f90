@@ -87,10 +87,13 @@ contains
                          ids, ide, jds, jde, kds, kde,      &
                          ims, ime, jms, jme, kms, kme,      &
                          its, ite, jts, jte, kts, kte)
+            ! ----- start surface layer variable initialization: ----- !
+            ! introduced by Patrik Bohlinger to provide initialization for the YSU-scheme
             !domain%thvg(2:nx-1,2:ny-1) = domain%thv(2:nx-1,2:ny-1)   ! for init thvg=thv since thT = 0, t2m should rather be used than skin_t, 
-                                                                    ! b=proportionality factor=7.8, Hong et al, 2006 only used for next time steps
+                                                                    ! b=proportionality factor=7.8, Hong et al. 2006 only used for next time steps
             !domain%PBLh(2:nx-1,2:ny-1) = 0.0
-            domain%PBLh(2:nx-1,2:ny-1) = Rib_cr * domain%thv(2:nx-1,2:ny-1) *domain%wspd3d(2:nx-1,8,2:ny-1)**2 / gravity * (domain%thv3d(2:nx-1,8,2:ny-1) -domain%thvg(2:nx-1,2:ny-1)) !U^2 and thv are from height PBLh in equation
+            domain%PBLh(2:nx-1,2:ny-1) = Rib_cr * domain%thv(2:nx-1,2:ny-1) *domain%wspd3d(2:nx-1,8,2:ny-1)**2 / gravity * (domain%thv3d(2:nx-1,8,2:ny-1) -domain%thvg(2:nx-1,2:ny-1)) !U^2 and thv are from height PBLh in equation. Arbitrary height is used in order to be able to use the initialization based on the similarity theory
+            ! ----- end surface layer variable initialization ----- !
         endif
     end subroutine pbl_init
     
@@ -137,6 +140,10 @@ contains
             !write(*,*) "domain%gz1oz0: ", domain%gz1oz0
             !write(*,*) "--- End write var in pbl_driver ---"
 
+            write(*,*) "domain%t: ", MAXVAL(domain%t), MINVAL(domain%t)
+            write(*,*) "domain%th: ", MAXVAL(domain%th), MINVAL(domain%th)
+            write(*,*) "domain%Um: ", MAXVAL(domain%Um), MINVAL(domain%Um)
+            write(*,*) "domain%Vm: ", MAXVAL(domain%Vm), MINVAL(domain%Vm)
             write(*,*) "domain%qv: ", MAXVAL(domain%qv), MINVAL(domain%qv)
             write(*,*) "domain%cloud: ", MAXVAL(domain%cloud), MINVAL(domain%cloud)
             write(*,*) "domain%ice: ", MAXVAL(domain%ice), MINVAL(domain%ice)
@@ -151,6 +158,8 @@ contains
             write(*,*) "domain%ustar: ", MAXVAL(domain%ustar),MINVAL(domain%ustar)
             write(*,*) "domain%ustar_new: ", MAXVAL(domain%ustar_new),MINVAL(domain%ustar_new)
             write(*,*) "domain%exch_h: ", MAXVAL(domain%exch_h),MINVAL(domain%exch_h)
+            write(*,*) "domain%z: ", MAXVAL(domain%z),MINVAL(domain%z)
+            write(*,*) "domain%z_agl: ", MAXVAL(domain%z_agl),MINVAL(domain%z_agl)
             write(*,*) "--- Start YSU-scheme ---"
             call ysu(domain%Um, domain%Vm, domain%th, domain%t,                     &
                      domain%qv, domain%cloud, domain%ice,                           &
@@ -171,6 +180,10 @@ contains
                      ims,ime, jms,jme, kms,kme,                                     &
                      its,ite, jts,jte, kts,kte)
             write(*,*) "--- End YSU-scheme ---"
+            write(*,*) "domain%t: ", MAXVAL(domain%t), MINVAL(domain%t)
+            write(*,*) "domain%th: ", MAXVAL(domain%th), MINVAL(domain%th)
+            write(*,*) "domain%Um: ", MAXVAL(domain%Um), MINVAL(domain%Um)
+            write(*,*) "domain%Vm: ", MAXVAL(domain%Vm), MINVAL(domain%Vm)
             write(*,*) "domain%qv: ", MAXVAL(domain%qv), MINVAL(domain%qv)
             write(*,*) "domain%cloud: ", MAXVAL(domain%cloud), MINVAL(domain%cloud)
             write(*,*) "domain%ice: ", MAXVAL(domain%ice), MINVAL(domain%ice)
@@ -185,6 +198,8 @@ contains
             write(*,*) "domain%ustar: ", MAXVAL(domain%ustar), MINVAL(domain%ustar)
             write(*,*) "domain%ustar_new: ", MAXVAL(domain%ustar_new),MINVAL(domain%ustar_new)
             write(*,*) "domain%exch_h: ", MAXVAL(domain%exch_h),MINVAL(domain%exch_h)
+            write(*,*) "domain%z: ", MAXVAL(domain%z),MINVAL(domain%z)
+            write(*,*) "domain%z_agl: ", MAXVAL(domain%z_agl),MINVAL(domain%z_agl)
         endif
                         
     end subroutine pbl

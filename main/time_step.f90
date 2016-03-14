@@ -181,44 +181,43 @@ contains
         domain%v10(2:nx-1,2:ny-1) = domain%ustar(2:nx-1,2:ny-1) * lastw
         
         ! now calculate master ustar based on U and V combined in quadrature
-        domain%wspd3d(2:nx-1,1:nz,2:ny-1) = sqrt(domain%Um(2:nx-1,1:nz,2:ny-1)**2 + domain%Vm(2:nx-1,1:nz,2:ny-1)**2) ! added by Patrik in case we need this later for YSU
-        domain%wspd(2:nx-1,2:ny-1) = sqrt(domain%Um(2:nx-1,1,2:ny-1)**2 + domain%Vm(2:nx-1,1,2:ny-1)**2) ! added by Patrik since we need this for YSU
+        domain%wspd3d(2:nx-1,1:nz,2:ny-1) = sqrt(domain%Um(2:nx-1,1:nz,2:ny-1)**2 + domain%Vm(2:nx-1,1:nz,2:ny-1)**2) ! added by Patrik Bohlinger in case we need this later for YSU (some variables seem to be 3D in articles like the YSU paper Hong et al. 2006)
+        domain%wspd(2:nx-1,2:ny-1) = sqrt(domain%Um(2:nx-1,1,2:ny-1)**2 + domain%Vm(2:nx-1,1,2:ny-1)**2) ! added by Patrik Bohlinger since we need this as input for YSU
         domain%ustar(2:nx-1,2:ny-1) = domain%wspd(2:nx,2:ny-1) * currw
 
-        ! ----- usually done by surface layer scheme ----- !
+        ! ----- usually done by surface layer scheme ----- 
+        ! start surface layer calculations introduced by Patrik Bohlinger
         write(*,*) "Calculate surface layer variables based on stability"
         ! compute z above ground used for estimating indices for 
         domain%z_agl(2:nx-1,2:ny-1) = (domain%z(2:nx-1,1,2:ny-1)-domain%terrain(2:nx-1,2:ny-1)) !added by Patrik in case we need this later for YSU
         ! calculate the Bulk-Richardson number Rib
-        domain%thv(2:nx-1,2:ny-1) = domain%th(2:nx-1,1,2:ny-1)*(1+0.608*domain%qv(2:nx-1,1,2:ny-1)*1000)    ! should domain%qv be multiplied by 1000? since domain%qv is in kg/kg and not in g/kg
+        domain%thv(2:nx-1,2:ny-1) = domain%th(2:nx-1,1,2:ny-1)*(1+0.608*domain%qv(2:nx-1,1,2:ny-1)*1000)    ! should domain%qv be multiplied by 1000? Did it since domain%qv is in kg/kg and not in g/kg
                                                                                                             ! normally should be specific humidity and not mixing ratio domain%qv but for first order approach does not matter
         domain%thv3d(2:nx-1,1:nz,2:ny-1) = domain%th(2:nx-1,1:nz,2:ny-1)*(1+0.608*domain%qv(2:nx-1,1:nz,2:ny-1)*1000)   ! thv 3D
         domain%thvg(2:nx-1,2:ny-1) = (domain%t2m(2:nx-1,2:ny-1)/domain%pii(2:nx-1,1,2:ny-1))*(1+0.608*domain%qv(2:nx-1,1,2:ny-1)*1000) ! t2m should rather be used than skin_t
         domain%thg(2:nx-1,2:ny-1) = domain%t2m(2:nx-1,2:ny-1)/domain%pii(2:nx-1,1,2:ny-1) ! t2m should rather be used than skin_t
-        !domain%wstar(2:nx-1,2:ny-1) = domain%ustar(2:nx-1,2:ny-1) / domain%psim(2:nx-1,2:ny-1)
+        
+        ! variables described for YSU but probably not needed to be calculated outside of the scheme:
+        !domain%wstar(2:nx-1,2:ny-1) = domain%ustar(2:nx-1,2:ny-1) / domain%psim(2:nx-1,2:ny-1) ! wstar = vertical wind speed scale
         !domain%thT(2:nx-1,2:ny-1) = propfact * (virtual heat flux)/domain%wstar ! virtual temperature excess
         !domain%thvg(2:nx-1,2:ny-1) = domain%thv(2:nx-1,2:ny-1) ! for init thvg=thv since thT = 0, t2m should rather be used than skin_t, b=proportionality factor=7.8, Hong et al, 2006
 
         ! find value of pbl heights for wspd3d
         !domain%PBLh(2:nx-1,2:ny-1) = Rib_cr * domain%thv(2:nx-1,2:ny-1) * domain%wspd(2:nx-1,2:ny-1)**2 / gravity * (domain%thv(2:nx-1,2:ny-1) - domain%thvg(2:nx-1,2:ny-1)) !U^2 and thv are from height PBLh in equation
         write(*,*) "max min domain%pbl_height: ", maxval(domain%pbl_height), minval(domain%pbl_height)
-        write(*,*) "max min domain%PBLh: ", maxval(domain%PBLh), minval(domain%PBLh)
-        ! To prevent Rib from becoming too high a lower limit of 0.1 is applied
-        ! Jiminez et al 2012
+        write(*,*) "max min domain%PBLh: ", maxval(domain%PBLh), minval(domain%PBLh) ! introduced the PBLh variabel to not overwrite pbl_height and compare new with old calculations as the pbl height is one of the most crucial factors of the non-local surface layer calculations needed by the YSU-scheme
+        ! To prevent Rib from becoming too high a lower limit of 0.1 is applied Jiminez et al 2012
         where(domain%wspd(2:nx-1,2:ny-1) < 0.1)
             domain%wspd(2:nx-1,2:ny-1) = 0.1
         endwhere
         
-        !domain%Rib(2:nx-1,2:ny-1) = gravity/domain%th(2:nx-1,1,2:ny-1) * domain%z(2:nx-1,1,2:ny-1) * (domain%thv(2:nx-1,2:ny-1) - domain%thvg(2:nx-1,2:ny-1))/domain%wspd(2:nx-1,2:ny-1) !From Jiminez et al. 2012, from what height should the theta variables really be, Rib is a function of height so actually it should be computed between the sfc layer and a level z bit in WRF it is a 2D input variable
         domain%Rib(2:nx-1,2:ny-1) = gravity/domain%th(2:nx-1,1,2:ny-1) * domain%z_agl(2:nx-1,2:ny-1) * (domain%thv(2:nx-1,2:ny-1) - domain%thvg(2:nx-1,2:ny-1))/domain%wspd(2:nx-1,2:ny-1) !From Jiminez et al. 2012, from what height should the theta variables really be, Rib is a function of height so actually it should be computed between the sfc layer and a level z bit in WRF it is a 2D input variable
         ! calculate the integrated similarity functions
         where(domain%Rib(2:nx-1,2:ny-1) >= 0.)
-            !domain%psim(2:nx-1,2:ny-1) = -10*log(domain%z(2:nx-1,1,2:ny-1)/domain%znt(2:nx-1,2:ny-1)) ! not clear yet what z really should be
             domain%psim(2:nx-1,2:ny-1) = -10*log(domain%z_agl(2:nx-1,2:ny-1)/domain%znt(2:nx-1,2:ny-1)) ! not clear yet what z really should be
             domain%psih(2:nx-1,2:ny-1) = domain%psim(2:nx-1,2:ny-1)
             !regime = 1
         elsewhere (domain%Rib(2:nx-1,2:ny-1) < 0.2 .and. domain%Rib(2:nx-1,2:ny-1) >= 0.0)
-            !domain%psim(2:nx-1,2:ny-1) = -5*domain%Rib(2:nx-1,2:ny-1)*log(domain%z(2:nx-1,1,2:ny-1)/domain%znt(2:nx-1,2:ny-1))/(1.1-5*domain%Rib(2:nx-1,2:ny-1))
             domain%psim(2:nx-1,2:ny-1) = -5*domain%Rib(2:nx-1,2:ny-1)*log(domain%z_agl(2:nx-1,2:ny-1)/domain%znt(2:nx-1,2:ny-1))/(1.1-5*domain%Rib(2:nx-1,2:ny-1))
             domain%psih(2:nx-1,2:ny-1) = domain%psim(2:nx-1,2:ny-1)
             !regime = 2
@@ -232,32 +231,33 @@ contains
             domain%psih(2:nx-1,2:ny-1) = 2*log((1+domain%psix**2)/2)
             !regime = 4
         endwhere
-        !domain%thstar(2:nx-1,2:ny-1) = karman*(domain%th(2:nx-1,1,2:ny-1)-domain%thg)/log(domain%z(2:nx-1,1,2:ny-1)/domain%znt(2:nx-1,2:ny-1))-domain%psih(2:nx-1,2:ny-1)
+        ! calculate thstar = temperature scale
         domain%thstar(2:nx-1,2:ny-1) = karman*(domain%th(2:nx-1,1,2:ny-1)-domain%thg)/log(domain%z_agl(2:nx-1,2:ny-1)/domain%znt(2:nx-1,2:ny-1))-domain%psih(2:nx-1,2:ny-1)
-        !domain%ustar_new(2:nx-1,2:ny-1) = karman*domain%wspd(2:nx-1,2:ny-1)/(log(domain%z(2:nx-1,1,2:ny-1)/domain%znt(2:nx-1,2:ny-1))-domain%psim(2:nx-1,2:ny-1))
+        ! calculate ustar = horizontal wind speed scale
         domain%ustar_new(2:nx-1,2:ny-1) = karman*domain%wspd(2:nx-1,2:ny-1)/(log(domain%z_agl(2:nx-1,2:ny-1)/domain%znt(2:nx-1,2:ny-1))-domain%psim(2:nx-1,2:ny-1))
-        where(domain%ustar_new(2:nx-1,2:ny-1) < 0.1) ! preventing ustar from being smaller than 0.1 as it could be under very stable conditions, Jiminez et al. 2012
+        ! preventing ustar from being smaller than 0.1 as it could be under very stable conditions, Jiminez et al. 2012
+        where(domain%ustar_new(2:nx-1,2:ny-1) < 0.1)
             domain%ustar_new(2:nx-1,2:ny-1) = 0.1
         endwhere
-        ! calculate the Monin-Obukhov  stability parameter zol (z over l)
-        !domain%zol(2:nx-1,2:ny-1) = (karman*gravity*domain%z(2:nx-1,1,2:ny-1))/domain%th(2:nx-1,1,2:ny-1) * domain%thstar(2:nx-1,2:ny-1)/(domain%ustar_new(2:nx-1,2:ny-1)*domain%ustar_new(2:nx-1,2:ny-1))
+        ! calculate the Monin-Obukhov  stability parameter zol (z over l) using ustar from the similarity theory
         domain%zol(2:nx-1,2:ny-1) = (karman*gravity*domain%z_agl(2:nx-1,2:ny-1))/domain%th(2:nx-1,1,2:ny-1) * domain%thstar(2:nx-1,2:ny-1)/(domain%ustar_new(2:nx-1,2:ny-1)*domain%ustar_new(2:nx-1,2:ny-1))
-        ! calculate pblh over l
+        ! calculate pblh over l using ustar and thstar from the similarity theory
         domain%hol(2:nx-1,2:ny-1) = (karman*gravity*domain%PBLh(2:nx-1,2:ny-1))/domain%th(2:nx-1,1,2:ny-1) * domain%thstar(2:nx-1,2:ny-1)/(domain%ustar_new(2:nx-1,2:ny-1)*domain%ustar_new(2:nx-1,2:ny-1))
         ! arbitrary variables
-        !domain%gz1oz0(2:nx-1,2:ny-1)=log(domain%z(2:nx-1,1,2:ny-1)/domain%znt(2:nx-1,2:ny-1))
         domain%gz1oz0(2:nx-1,2:ny-1)=log(domain%z_agl(2:nx-1,2:ny-1)/domain%znt(2:nx-1,2:ny-1))
         ! calculating dtmin
         domain%dtmin = domain%dt / 60.0
         ! p_top as a scalar, choosing just minimum from ptop as a start
         p_top = minval(domain%ptop)
         ! compute the dimensionless bulk coefficent for heat
-        ! domain%exch_h(2:nx-1,2:ny-1) = (karman**2)/((log(domain%z(2:nx-1,1,2:ny-1)/domain%znt(2:nx-1,2:ny-1))-domain%psim)*(log(domain%z(2:nx-1,1,2:ny-1)/domain%znt(2:nx-1,2:ny-1))-domain%psih))
         domain%exch_h(2:nx-1,2:ny-1) = (karman**2)/((log(domain%z_agl(2:nx-1,2:ny-1)/domain%znt(2:nx-1,2:ny-1))-domain%psim)*(log(domain%z_agl(2:nx-1,2:ny-1)/domain%znt(2:nx-1,2:ny-1))-domain%psih))
 
+        ! counter is just a variable helping me to detect how much rounds this
+        ! subroutine went through
         write(*,*) "Counter: ", counter
         counter = counter + 1
         write(*,*) "Counter: ", counter
+        ! end surface layer calculations introduced by Patrik Bohlinger
         ! ----- end sfc layer variables ----- !
 
         ! finally, calculate the real vertical motions (including U*dzdx + V*dzdy)

@@ -2417,13 +2417,13 @@
                    L_qc(k)) ) then
           clap = (qv(k)-qvs(k))/(1. + lvt2(k)*qvs(k))
           do n = 1, 3
-             !write(*,*) "n: ", n
+             write(*,*) "n: ", n
              fcd = qvs(k)* EXP(lvt2(k)*clap) - qv(k) + clap
-             !write(*,*) "clap: ", clap
-             !write(*,*) "qvs(k): ", qvs(k)
-             !write(*,*) "lvt2(k): ", lvt2(k)
-             !write(*,*) "qv(k): ", qv(k)
-             !write(*,*) "fcd: ", fcd
+             write(*,*) "clap: ", clap
+             write(*,*) "qvs(k): ", qvs(k)
+             write(*,*) "lvt2(k): ", lvt2(k)
+             write(*,*) "qv(k): ", qv(k)
+             write(*,*) "fcd: ", fcd
              dfcd = qvs(k)*lvt2(k)* EXP(lvt2(k)*clap) + 1.
              clap = clap - fcd/dfcd
           enddo
@@ -2443,6 +2443,15 @@
           rho(k) = 0.622*pres(k)/(RR2*temp(k)*(qv(k)+0.622))
           qvs(k) = rslf(pres(k), temp(k))
           ssatw(k) = qv(k)/qvs(k) - 1.
+          write(*,*) "qcten(k): ", qcten(k)
+          write(*,*) "qvten(k): ", qvten(k)
+          write(*,*) "tten(k): ", tten(k)
+          write(*,*) "rc(k): ", rc(k)
+          write(*,*) "qv(k): ", qv(k)
+          write(*,*) "temp(k): ", temp(k)
+          write(*,*) "rho(k): ", rho(k)
+          write(*,*) "qvs(k): ", qvs(k)
+          write(*,*) "ssatw(k): ", ssatw(k)
          endif
       enddo
 
