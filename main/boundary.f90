@@ -874,7 +874,7 @@ contains
             endif
             call read_var(domain%p,    file_list(curfile),   options%pvar,   &
                             bc%geolut, bc%vert_lut, curstep, boundary_value, &
-                            options,   bc%lowres_z,domain%z)
+                            options,   bc%lowres_z,domain%z, interp_vertical=.False.)
             call read_var(domain%th,   file_list(curfile),   options%tvar,   &
                             bc%geolut, bc%vert_lut, curstep, boundary_value, &
                             options)
