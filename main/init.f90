@@ -21,7 +21,7 @@ module init
     use io_routines,                only : io_read2d, io_read2di, io_read3d, &
                                            io_write3d,io_write3di
     use geo,                        only : geo_LUT, geo_interp, geo_interp2d
-    use vertical_interpolation,     only : vLUT
+    use vertical_interpolation,     only : vLUT, vinterp
     use microphysics,               only : mp_init
     use advection,                  only : adv_init
     use convection,                 only : init_convection
@@ -795,6 +795,7 @@ contains
         type(domain_type), intent(inout):: domain
         type(bc_type), intent(inout):: boundary
         type(geo_look_up_table) :: u_temp_geo,v_temp_geo
+        real, dimension(:,:,:), allocatable :: tempz
         integer::i,nx,ny,nz
             
         boundary%dx=options%dxlow
@@ -902,6 +903,23 @@ contains
         deallocate(boundary%v_geo%z,boundary%u_geo%z)
         ! swaps z and lowres_z (one of the cases where pointers would make life a lot easier)
         call swap_z(boundary)
+        
+        ! after swap_z call, boundary%z is on the forcing data grid, boundary%lowres_z is interpolated to the ICAR grid
+        ! Finally apply the vertical interpolation here as well
+        ! this is a little annoying because we have to allocate a temporary. 
+        nx=size(domain%terrain,1)
+        ny=size(domain%terrain,2)
+        nz=size(domain%p,2)
+        allocate(tempz(nx,nz,ny))
+        
+        call vinterp(tempz,    & 
+                     boundary%lowres_z, &
+                     boundary%vert_lut)
+        
+        deallocate(boundary%lowres_z)
+        allocate(boundary%lowres_z(nx,nz,ny))
+        boundary%lowres_z = tempz
+        deallocate(tempz)
         
     end subroutine init_bc
 end module
