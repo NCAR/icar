@@ -1,6 +1,7 @@
 import datetime,os
 import argparse
 import glob
+import sys
 
 import numpy as np
 
@@ -13,16 +14,27 @@ version="1.0"
 def set_bounds(info):
     atm_file=info.atmdir+info.atmfile
     cesm_file=atm_file.replace("_Y_",str(info.start_year)).replace("_VAR_","Q").replace("_ENS_",info.ensemble).replace("_EXP_",info.experiment)
-    cesm_file=glob.glob(cesm_file)[0]
+    try:
+        cesm_file=glob.glob(cesm_file)[0]
+    except:
+        print("ERROR searching for: "+cesm_file)
+        sys.exit(1)
     varlist=["lat","lon"]
     
     lat=io.read_nc(cesm_file,varlist[0]).data
     lon=io.read_nc(cesm_file,varlist[1]).data#-360
     
-    info.xmin=np.where(lon>=info.lon[0])[0][0]
-    info.xmax=np.where(lon<=info.lon[1])[0][-1]+1
-    info.ymin=np.where(lat>=info.lat[0])[0][0]
-    info.ymax=np.where(lat<=info.lat[1])[0][-1]+1
+    try:
+        info.xmin=np.where(lon>=info.lon[0])[0][0]
+        info.xmax=np.where(lon<=info.lon[1])[0][-1]+1
+        info.ymin=np.where(lat>=info.lat[0])[0][0]
+        info.ymax=np.where(lat<=info.lat[1])[0][-1]+1
+    except:
+        print("ERROR searching for lat/lon bounds:")
+        print(info.lat, info.lon)
+        print(lat.min(), lat.max())
+        print(lon.min(), lon.max())
+        sys.exit(1)
     
     lon,lat=np.meshgrid(lon[info.xmin:info.xmax],lat[info.ymin:info.ymax])
     info.lat_data=lat
@@ -63,6 +75,10 @@ def parse():
     start_date=datetime.datetime(start_year,1,1,0,0,0)
     end_date=datetime.datetime(start_year+nyears,1,1,0,0,0)
     
+    if (float(args.lon_w)<0):
+        args.lon_w = 360+float(args.lon_w)
+    if (float(args.lon_e)<0):
+        args.lon_e = 360+float(args.lon_e)
     info=Bunch(lat=[float(args.lat_s),float(args.lat_n)],
                lon=[float(args.lon_w),float(args.lon_e)],
                start_date=start_date,  end_date=end_date,
