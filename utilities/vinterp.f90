@@ -26,8 +26,13 @@ contains
         real, dimension(2) :: weights
         real :: zrange
         
-        weights(1)=(zin-zbot)/(ztop-zbot)
-        weights(2)=1-weights(1)
+        if (ztop==zbot) then
+            weights(1)=0.5
+            weights(2)=0.5
+        else
+            weights(1)=(zin-zbot)/(ztop-zbot)
+            weights(2)=1-weights(1)
+        endif
     end function weights
     
     ! Find the two points that border the input z in a column of z values
@@ -59,6 +64,9 @@ contains
                 if (z(i)<=zin) then
                     find_match(1)=i
                     find_match(2)=i+1
+                    if (i==n) then
+                        find_match(2)=i
+                    endif
                 endif
                 i=i-1
             end do
