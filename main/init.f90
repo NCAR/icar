@@ -730,6 +730,7 @@ contains
     end subroutine init_ext_winds
     
     subroutine swap_z(bc)
+        ! swap the lowres_z and z variables in bc
         type(bc_type), intent(inout) :: bc
         real,allocatable,dimension(:,:,:) :: tempz
         integer::nx,nz,ny, i
@@ -851,8 +852,6 @@ contains
             
         endif
         ! interpolate the low-res terrain to the high-res grid for pressure adjustments. 
-        ! the correct way would probably be to adjust all low-res pressures to Sea level before interpolating
-        ! then pressure adjustments all occur from SLP. 
         ! This should be done on a separate lowres terrain grid so the embedded high res terrain grid 
         ! can also be used in pressure adjustments on each time step...
         nx=size(domain%terrain,1)
