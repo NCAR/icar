@@ -923,7 +923,9 @@ contains
                 call read_2dvar(domain%sst,  file_list(curfile),options%sst_var,  bc%geolut,curstep)
             endif
             
+            print*, "pre-update pressure Pmax",maxval(domain%p), "pmin",minval(domain%p)
             call update_pressure(domain%p,bc%lowres_z,domain%z)
+            print*, "post-update pressure Pmax",maxval(domain%p), "pmin",minval(domain%p)
             
             nz=size(domain%th,2)
             domainsize=size(domain%th,1)*size(domain%th,3)
@@ -1113,8 +1115,8 @@ contains
             !$omp do 
             do j=1,ny
                 do i=1,nz
-                    slp = pressure(:,i,j) / (1 - 2.25577E-5 * z_lo(:,i,j))**5.25588
-                    pressure(:,i,j) = slp * (1 - 2.25577e-5 * z_hi(:,i,j))**5.25588
+                    ! slp = pressure(:,i,j) / (1 - 2.25577E-5 * z_lo(:,i,j))**5.25588
+                    pressure(:,i,j) = pressure(:,i,j) * (1 - 2.25577e-5 * (z_hi(:,i,j)-z_lo(:,i,j)))**5.25588
                 enddo
             enddo
             !$omp end do
@@ -1275,9 +1277,11 @@ contains
         ! for pressure update we need real temperature, not potential t to compute an exner function
         bc%next_domain%pii=(bc%next_domain%p/100000.0)**(Rd/cp)
         ! now update pressure using the high res T field
+        print*, "pre-update pressure Pmax",maxval(bc%next_domain%p), "pmin", minval(bc%next_domain%p)
         call update_pressure(bc%next_domain%p,bc%lowres_z,domain%z,  & 
                              lowresT = bc%next_domain%th * bc%next_domain%pii, &
                              hiresT  = domain%th * domain%pii)
+        print*, "post-update pressure Pmax",maxval(bc%next_domain%p), "pmin", minval(bc%next_domain%p)
         
                       
         call read_var(bc%next_domain%th,      file_list(curfile), options%tvar,   &
