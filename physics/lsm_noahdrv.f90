@@ -1,3 +1,10 @@
+!>------------------------------------------------------------
+!!  Noah Land Surface Model online driver code (from WRF)
+!!  
+!!  @author
+!!  various (see Chen and Dudhia 2001)
+!!
+!!------------------------------------------------------------
 MODULE module_sf_noahdrv
 
 !-------------------------------

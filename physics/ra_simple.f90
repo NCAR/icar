@@ -1,7 +1,6 @@
 !>----------------------------------------------------------
-!!
-!! Very simple radiation code modeled after the description
-!! in Finch and Best(2004?) of Reiff et al. 1984 shortwave and Idso and Jackson (1969) longwave. 
+!! Very simple radiation code modeled after the description in Finch and Best(2004?)
+!! of Reiff et al. 1984 shortwave and Idso and Jackson (1969) longwave. 
 !! 
 !! Clearsky Shortwave radiation is calculated as a function of day of year and time of day. 
 !! Cloudy Shortwave is calculated as clearsky SW * f(cloud cover) [0.25-1]
@@ -40,7 +39,8 @@
 !!   dt = time step                      - 0D - input  - seconds    - scalar
 !! </pre>
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!----------------------------------------------------------
 module module_ra_simple

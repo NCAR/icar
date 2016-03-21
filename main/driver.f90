@@ -1,5 +1,4 @@
 !>-----------------------------------------
-!!
 !! Main Program
 !!
 !! Initialize options and memory in init_model
@@ -13,7 +12,8 @@
 !!
 !! Finally, loop until ntimesteps are reached updating boundary conditions and stepping the model forward
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!-----------------------------------------
 program icar
@@ -75,7 +75,7 @@ program icar
     do i=start_point,options%ntimesteps
         write(*,*) ""
         write(*,*) " ----------------------------------------------------------------------"
-        write(*,*) "Timestep:", i, "  of ", options%ntimesteps
+        write(*,*) "Timestep:", i-options%time_step_zero, "  of ", options%ntimesteps-options%time_step_zero
         write(*,*) "  Model time=", trim(str((model_time-options%time_zero)/3600.0,fmt="(F10.2)")) ,"hrs"
         call calendar_date(model_time/86400.0D+0 + 50000, year, month, day, hour, minute, second)
         domain%current_month=month
@@ -93,3 +93,30 @@ program icar
     
 end program icar
 
+!>------------------------------------------
+!!  @mainpage
+!!
+!!  @section Introduction
+!!  ICAR is a simplified atmospheric model designed primarily for climate downscaling, atmospheric sensitivity tests, 
+!!  and hopefully educational uses. At this early stage, the model is still undergoing rapid development, and users 
+!!  are encouraged to get updates frequently.
+!!
+!!  @section Running_ICAR
+!!  To run the model 3D time-varying atmospheric data are required, though an ideal test case can be generated for 
+!!  simple simulations as well. There are some sample python scripts to help make input forcing files, but the WRF 
+!!  pre-processing system can also be used. Low-resolution WRF output files can be used directly, various reanalysis 
+!!  and GCM output files can be used with minimal pre-processing (just get all the variables in the same netcdf file.) 
+!!  In addition, a high-resolution netCDF topography file is required. This will define the grid that ICAR will run on.
+!!  Finally an ICAR options file is used to specify various parameters for the model. A sample options file is provided
+!!  in the run/ directory.
+!!
+!!  @section Developing
+!!  This document provides the primary API and code structure documentation. The code is based on github.com/NCAR/icar
+!!  Developers are encouraged to fork the main git repository and maintain their own git repository from which to 
+!!  issue pull requests. 
+!!
+!!  @section Reference
+!!  Gutmann, E. D., I. Barstad, M. P. Clark, J. R. Arnold, and R. M. Rasmussen (2016), 
+!!  The Intermediate Complexity Atmospheric Research Model, J. Hydrometeor, doi:<a href="http://dx.doi.org/10.1175/JHM-D-15-0155.1">10.1175/JHM-D-15-0155.1</a>.
+!!
+!!------------------------------------------

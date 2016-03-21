@@ -1,9 +1,9 @@
 !>------------------------------------------------------------
-!!
 !!  Test running ideal wind calculation.  Doesn't do much
 !!  Hasn't been updated in a while, not sure it will work. 
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!------------------------------------------------------------
 program test_winds

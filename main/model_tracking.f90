@@ -1,8 +1,8 @@
 !> ----------------------------------------------------------------------------
-!!
 !!  A tool to track model versions and print useful changes between model versions
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !! ----------------------------------------------------------------------------
 module model_tracking
@@ -14,14 +14,14 @@ contains
     
     subroutine init_model_diffs()
         implicit none
-        integer::n=12
+        integer::n=14
         
         allocate(versionlist(n))
         allocate(deltas(n))
         versionlist=[character(len=1024) :: &
-                     "0.5.1","0.5.2","0.6","0.7","0.7.1","0.7.2","0.7.3","0.8","0.8.1","0.8.2","0.9","0.9.1"]
+                     "0.5.1","0.5.2","0.6","0.7","0.7.1","0.7.2","0.7.3","0.8","0.8.1","0.8.2","0.9","0.9.1","0.9.2","0.9.3"]
         deltas=[ character(len=1024) :: & 
-        "Earliest version in record. ", &
+        "Earliest version in git. ", &
         "Added dxlow and variable name definitions pvar,tvar,qvvar,qcvar,qivar,"// &
         "      U/V:lat/lon:high/low res. ", &
         "Added variable name definitions for sensible(shvar)/latent(lhvar) heat"// &
@@ -39,7 +39,11 @@ contains
         "Added preliminary support for running the Noah LSM. ", &
         "Removed add_low_topo from options... MAJOR changes elsewhere, lots of "// &
         "      new options (mp_options, lt_options).", &
-        "Added MPDATA and adv_options" &
+        "Added MPDATA and adv_options", &
+        "Output file z-axis has been changed", &
+        "Pre-1.0 release added end_date, date->forcing_start_date, forcing_file_list"// &
+        "      lt:LUT_filename, mp:update_interval, moved vert_smooth to lt_parameters,"// &
+        "      added z_is_geopotential, and zbvar changed some defaults." &
         ]
         
     end subroutine init_model_diffs

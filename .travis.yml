@@ -1,0 +1,19 @@
+sudo: false
+language: fortran
+compiler:
+  - gfortran
+os:
+  - linux
+addons:
+  apt:
+    source:
+      - ubuntu-toolchain-r-test
+    packages:
+      - gfortran
+      - libnetcdf-dev
+      - libfftw3-dev
+script:
+  - sed -i "s|FFTW_PATH=/usr/local|FFTW_PATH=/usr|" makefile
+  - sed -i "s|NCDF_PATH = /usr/local|NCDF_PATH = /usr|" makefile
+  - make test -j4
+  - make -j4

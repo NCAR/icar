@@ -1,5 +1,4 @@
 !>------------------------------------------------------------
-!!
 !! Module provides geographic interpolation procedures
 !! Various functions used for spatial interpolation from low-res
 !! forcing grid to high-res model grid. 
@@ -13,7 +12,8 @@
 !!      geo_interp2d: interpolates from one grid to another
 !! </pre>
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!------------------------------------------------------------
 module geo

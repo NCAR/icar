@@ -5,8 +5,9 @@
 !!  Entry point is init_options, everything else follows
 !!  
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
-!!    Trude Eidhammer added the ability to read microphysics parameters
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
+!!  Trude Eidhammer added the ability to read microphysics parameters
 !!
 !! ----------------------------------------------------------------------------
 module initialize_options
@@ -74,7 +75,7 @@ contains
         INQUIRE(file=trim(options_file), exist=file_exists)
         if (.not.file_exists) then
             write(*,*) "Using options file = ", trim(options_file)
-            stop("Options file does not exist. ")
+            stop "Options file does not exist. "
         endif
     end function
 
@@ -96,9 +97,9 @@ contains
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=model_version)
         close(name_unit)
-        if (version.ne."0.9.1") then
+        if (version.ne."0.9.3") then
             write(*,*) "Model version does not match namelist version"
-            write(*,*) "  Model version: 0.9.1"
+            write(*,*) "  Model version: 0.9.3"
             write(*,*) "  Namelist version: ",trim(version)
             call print_model_diffs(version)
             stop
@@ -116,31 +117,69 @@ contains
         if (options%t_offset.eq.(-9999)) then
             if (options%warning_level>0) then
                 write(*,*) "WARNING, WARNING, WARNING"
-                write(*,*) "WARNING, Using default t_offset=300"
+                write(*,*) "WARNING, Using default t_offset=0"
                 write(*,*) "WARNING, WARNING, WARNING"
             endif
-            options%t_offset=300
+            options%t_offset = 0
         endif
+        
+        if ((options%initial_mjd + options%ntimesteps/(86400.0/options%in_dt)) < options%start_mjd) then
+            write(*,*) "ERROR: start date is more than ntimesteps past the forcing start"
+            write(*,*) "Initial Modified Julian Day:",options%initial_mjd
+            write(*,*) "Start date Modified Julian Day:",options%start_mjd
+            write(*,*) "number of time steps:",options%ntimesteps
+            write(*,*) "number of days to simulate:",options%ntimesteps/(86400.0/options%in_dt)
+            stop "Start time is past stop time."
+        endif
+            
 
         ! convection can modify wind field, and ideal doesn't rebalance winds every timestep
         if ((options%physics%convection.ne.0).and.(options%ideal)) then
-            if (options%warning_level>1) then
+            if (options%warning_level>3) then
                 write(*,*) "WARNING WARNING WARNING"
                 write(*,*) "WARNING, Running convection in ideal mode may be bad..."
                 write(*,*) "WARNING WARNING WARNING"
             endif
             if (options%warning_level==10) then
+                write(*,*) "Set warning_level<10 to continue"
                 stop
             endif
         endif
-        if ((options%physics%landsurface>0).and.(options%physics%boundarylayer==0)) then
-            if (options%warning_level>0) then
+        ! if using a real LSM, feedback will probably keep hot-air from getting even hotter, so not likely a problem
+        if ((options%physics%landsurface>1).and.(options%physics%boundarylayer==0)) then
+            if (options%warning_level>2) then
                 write(*,*) "WARNING WARNING WARNING"
                 write(*,*) "WARNING, Running LSM without PBL may overheat the surface and CRASH the model. "
                 write(*,*) "WARNING WARNING WARNING"
             endif
+            if (options%warning_level>=7) then
+                write(*,*) "Set warning_level<7 to continue"
+                stop
+            endif
+        endif
+        ! if using perscribed LSM fluxes, no feedbacks are present, so the surface layer is likely to overheat.
+        if ((options%physics%landsurface==1).and.(options%physics%boundarylayer==0)) then
+            if (options%warning_level>0) then
+                write(*,*) "WARNING WARNING WARNING"
+                write(*,*) "WARNING, Running prescribed LSM fluxes without a PBL overheat the surface and CRASH. "
+                write(*,*) "WARNING WARNING WARNING"
+            endif
             if (options%warning_level>=5) then
                 write(*,*) "Set warning_level<5 to continue"
+                stop
+            endif
+        endif
+        
+        ! prior to v 0.9.3 this was assumed, so throw a warning now just in case. 
+        if ((options%z_is_geopotential .eqv. .False.).and.(options%zvar=="PH")) then
+            if (options%warning_level>1) then
+                write(*,*) "WARNING WARNING WARNING"
+                write(*,*) "WARNING z variable is no longer assumed to be geopotential height when it is 'PH'."
+                write(*,*) "WARNING To treat z as geopotential, set z_is_geopotential=True in the namelist. "
+                write(*,*) "WARNING WARNING WARNING"
+            endif
+            if (options%warning_level>=7) then
+                write(*,*) "Set warning_level<7 to continue"
                 stop
             endif
         endif
@@ -284,21 +323,19 @@ contains
         character(len=*),intent(in) :: filename
         type(options_type), intent(inout) :: options
         integer :: name_unit
-        character(len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,&
-                                        hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,     &
-                                        pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
-                                        soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
-                                        vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
-                                        swdown_var, lwdown_var, &
-                                        sst_var
+        character(len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar,  &
+                                        hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
+                                        pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,   &
+                                        soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
+                                        vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
+                                        swdown_var, lwdown_var, sst_var
                                         
-        namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,&
-                            landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar, &
-                            hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi, &
-                            soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
-                            vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
-                            swdown_var, lwdown_var, &
-                            sst_var
+        namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,   &
+                            landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar, &
+                            hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
+                            soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
+                            vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
+                            swdown_var, lwdown_var, sst_var
         
         hgtvar="HGT"
         latvar="XLAT"
@@ -310,12 +347,13 @@ contains
         vlat="XLAT_V"
         vlon="XLONG_V"
         pvar="P"
-        pbvar="PB"
+        pbvar=""
         tvar="T"
         qvvar="QVAPOR"
-        qcvar="QCLOUD"
-        qivar="QICE"
+        qcvar=""
+        qivar=""
         zvar="Z"
+        zbvar=""
         shvar=""
         lhvar=""
         swdown_var=""
@@ -364,6 +402,7 @@ contains
         options%qivar=qivar
 !       vertical coordinate
         options%zvar=zvar
+        options%zbvar=zbvar
 !       2D model variables (e.g. Land surface and PBL height)       
         options%shvar=shvar
         options%lhvar=lhvar
@@ -404,14 +443,15 @@ contains
         
         real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance
         real    :: rotation_scale_height
-        integer :: ntimesteps, vert_smooth
+        integer :: ntimesteps
+        double precision :: end_mjd
         integer :: nz, n_ext_winds,buffer, warning_level
         logical :: ideal, readz, readdz, debug, external_winds, surface_io_only, &
-                   mean_winds, mean_fields, restart, advect_density, &
+                   mean_winds, mean_fields, restart, advect_density, z_is_geopotential,&
                    high_res_soil_state, use_agl_height, time_varying_z, &
                    use_mp_options, use_lt_options, use_adv_options, use_lsm_options
                    
-        character(len=MAXFILELENGTH) :: date, calendar, start_date
+        character(len=MAXFILELENGTH) :: date, calendar, start_date, forcing_start_date, end_date
         integer :: year, month, day, hour, minute, second
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, &
                                         adv_options_filename, lsm_options_filename
@@ -419,9 +459,9 @@ contains
         namelist /parameters/ ntimesteps,outputinterval,inputinterval, surface_io_only, &
                               dx,dxlow,ideal,readz,readdz,nz,t_offset,debug, &
                               external_winds,buffer,n_ext_winds,advect_density,smooth_wind_distance, &
-                              mean_winds,mean_fields,restart,vert_smooth, &
+                              mean_winds,mean_fields,restart, z_is_geopotential,&
                               date, calendar, high_res_soil_state,rotation_scale_height,warning_level, &
-                              use_agl_height, start_date, time_varying_z, &
+                              use_agl_height, start_date, forcing_start_date, end_date, time_varying_z, &
                               mp_options_filename, use_mp_options, &    ! trude added
                               lt_options_filename, use_lt_options, &
                               lsm_options_filename, use_lsm_options, &
@@ -435,7 +475,9 @@ contains
         n_ext_winds=1
         t_offset=(-9999)
         buffer=0
-        advect_density=.True.
+        advect_density=.False.
+        z_is_geopotential=.False.
+        dxlow=100000
         restart=.False.
         ideal=.False.
         debug=.False.
@@ -444,12 +486,13 @@ contains
         readdz=.True.
         nz  = MAXLEVELS
         smooth_wind_distance=-9999
-        vert_smooth=2
         calendar="gregorian"
-        high_res_soil_state=.True.
+        high_res_soil_state=.False.
         rotation_scale_height=2000.0
         use_agl_height=.True.
         start_date=""
+        forcing_start_date=""
+        end_date=""
         time_varying_z=.False.
         
         ! flag set to read specific parameterization options
@@ -469,6 +512,13 @@ contains
         read(name_unit,nml=parameters)
         close(name_unit)
         
+        if (trim(forcing_start_date)=="") then
+            if (trim(date)/="") then
+                forcing_start_date=date
+            endif
+        else
+            date=forcing_start_date
+        endif
         if (warning_level==-9999) then
             if (debug) then
                 warning_level=2
@@ -479,23 +529,21 @@ contains
             
         
         if (smooth_wind_distance.eq.(-9999)) then
-            smooth_wind_distance=dxlow*3
-            write(*,*) "Default smoothing distance = lowdx*3 = ", smooth_wind_distance
+            smooth_wind_distance=dxlow*2
+            write(*,*) "Default smoothing distance = lowdx*2 = ", smooth_wind_distance
         endif
         
         options%t_offset=t_offset
         if (smooth_wind_distance<0) then 
             write(*,*) "Wind smoothing must be a positive number"
             write(*,*) "smooth_wind_distance = ",smooth_wind_distance
-            stop
+            if (warning_level>4) then
+                stop
+            else
+                smooth_wind_distance=dxlow*2
+            endif
         endif
         options%smooth_wind_distance=smooth_wind_distance
-        if (vert_smooth<0) then 
-            write(*,*) "Vertical smoothing must be a positive integer"
-            write(*,*) "vert_smooth = ",vert_smooth
-            stop
-        endif
-        options%vert_smooth=vert_smooth
         
         options%ntimesteps=ntimesteps
         options%in_dt=inputinterval
@@ -522,33 +570,39 @@ contains
             call parse_date(start_date, year, month, day, hour, minute, second)
             options%start_mjd=date_to_mjd(year, month, day, hour, minute, second)
         endif
-            
-        options%time_zero=((options%initial_mjd-50000) * 86400.0)
-        options%dx=dx
-        options%dxlow=dxlow
-        options%ideal=ideal
+        if (trim(end_date)/="") then
+            call parse_date(end_date, year, month, day, hour, minute, second)
+            end_mjd=date_to_mjd(year, month, day, hour, minute, second)
+            options%ntimesteps = (end_mjd-options%initial_mjd)*(86400.0/options%in_dt)
+        endif
+        options%time_step_zero = (options%start_mjd-options%initial_mjd)*(86400.0/options%in_dt)
+        options%time_zero = ((options%initial_mjd-50000) * 86400.0)
+        options%dx = dx
+        options%dxlow = dxlow
+        options%ideal = ideal
         if (ideal) then
             write(*,*) "Running Idealized simulation (time step does not advance)"
         endif
-        options%readz=readz
-        options%readdz=readdz
-        options%buffer=buffer
-        options%mean_winds=mean_winds
-        options%mean_fields=mean_fields
-        options%advect_density=advect_density
-        options%debug=debug
-        options%warning_level=warning_level
-        options%rotation_scale_height=rotation_scale_height
-        options%use_agl_height=use_agl_height
+        options%readz = readz
+        options%readdz = readdz
+        options%buffer = buffer
+        options%mean_winds = mean_winds
+        options%mean_fields = mean_fields
+        options%advect_density = advect_density
+        options%debug = debug
+        options%warning_level = warning_level
+        options%rotation_scale_height = rotation_scale_height
+        options%use_agl_height = use_agl_height
+        options%z_is_geopotential = z_is_geopotential
         
-        options%external_winds=external_winds
-        options%ext_winds_nfiles=n_ext_winds
-        options%restart=restart
+        options%external_winds = external_winds
+        options%ext_winds_nfiles = n_ext_winds
+        options%restart = restart
         
-        options%nz=nz
+        options%nz = nz
         
-        options%high_res_soil_state=high_res_soil_state
-        options%time_varying_z=time_varying_z
+        options%high_res_soil_state = high_res_soil_state
+        options%time_varying_z = time_varying_z
         
         options%use_mp_options = use_mp_options
         options%mp_options_filename  = mp_options_filename   ! trude added
@@ -575,9 +629,10 @@ contains
         logical :: Ef_rw_l, EF_sw_l
         integer :: top_mp_level
         real :: local_precip_fraction
+        integer :: update_interval
 
         namelist /mp_parameters/ Nt_c,TNO, am_s, rho_g, av_s,bv_s,fv_s,av_g,bv_g,av_i,Ef_si,Ef_rs,Ef_rg,Ef_ri,&     ! trude added Nt_c, TNO
-                              C_cubes,C_sqrd, mu_r, Ef_rw_l, Ef_sw_l, t_adjust, top_mp_level, local_precip_fraction
+                              C_cubes,C_sqrd, mu_r, Ef_rw_l, Ef_sw_l, t_adjust, top_mp_level, local_precip_fraction, update_interval
         
         ! because mp_options could be in a separate file (shoudl probably set all namelists up to have this option)
         if (options%use_mp_options) then
@@ -610,6 +665,7 @@ contains
         Ef_rw_l = .False.   ! True sets ef_rw = 1, insted of max 0.95
         Ef_sw_l = .False.   ! True sets ef_rw = 1, insted of max 0.95
         
+        update_interval = 0 ! update every time step
         top_mp_level = 0    ! if <=0 just use the actual model top
         local_precip_fraction = 1 ! if <1: the remaining fraction (e.g. 1-x) of precip gets distributed to the surrounding grid cells        
         ! read in the namelist
@@ -641,6 +697,7 @@ contains
         options%mp_options%Ef_rw_l = Ef_rw_l
         options%mp_options%Ef_sw_l = Ef_sw_l
         
+        options%mp_options%update_interval = update_interval
         options%mp_options%top_mp_level = top_mp_level
         options%mp_options%local_precip_fraction = local_precip_fraction
     end subroutine mp_parameters_namelist
@@ -653,6 +710,7 @@ contains
         
         integer :: name_unit
 
+        integer :: vert_smooth
         logical :: variable_N           ! Compute the Brunt Vaisala Frequency (N^2) every time step
         logical :: smooth_nsq               ! Smooth the Calculated N^2 over vert_smooth vertical levels
         integer :: buffer                   ! number of grid cells to buffer around the domain MUST be >=1
@@ -678,15 +736,16 @@ contains
         integer :: n_dir_values, n_nsq_values, n_spd_values
         ! parameters to control reading from or writing an LUT file
         logical :: read_LUT, write_LUT
-        character(len=MAXFILELENGTH) :: u_LUT_Filename, v_LUT_Filename
+        character(len=MAXFILELENGTH) :: u_LUT_Filename, v_LUT_Filename, LUT_Filename
+        logical :: overwrite_lt_lut
         
         ! define the namelist
         namelist /lt_parameters/ variable_N, smooth_nsq, buffer, stability_window_size, max_stability, min_stability, &
-                                 linear_contribution, linear_update_fraction, N_squared, &
+                                 linear_contribution, linear_update_fraction, N_squared, vert_smooth, &
                                  remove_lowres_linear, rm_N_squared, rm_linear_contribution, &
                                  spatial_linear_fields, linear_mask, nsq_calibration, &
                                  dirmax, dirmin, spdmax, spdmin, nsqmax, nsqmin, n_dir_values, n_nsq_values, n_spd_values, &
-                                 read_LUT, write_LUT, u_LUT_Filename, v_LUT_Filename
+                                 read_LUT, write_LUT, u_LUT_Filename, v_LUT_Filename, overwrite_lt_lut, LUT_Filename
         
          ! because lt_options could be in a separate file
          if (options%use_lt_options) then
@@ -701,9 +760,9 @@ contains
         smooth_nsq = .False.
         buffer = 50                    ! number of grid cells to buffer around the domain MUST be >=1
         stability_window_size = 2      ! window to average nsq over
+        vert_smooth = 2
         max_stability = 6e-4           ! limits on the calculated Brunt Vaisala Frequency
         min_stability = 1e-7           ! these may need to be a little narrower. 
-        linear_update_fraction  = 1    ! controls the rate at which the linearfield updates (should be calculated as f(in_dt))
     
         N_squared = 3e-5               ! static Brunt Vaisala Frequency (N^2) to use
         linear_contribution = 1        ! fractional contribution of linear perturbation to wind field (e.g. u_hat multiplied by this)
@@ -711,7 +770,7 @@ contains
         rm_N_squared = 3e-5            ! static Brunt Vaisala Frequency (N^2) to use in removing linear wind field
         rm_linear_contribution = 1     ! fractional contribution of linear perturbation to wind field to remove from the low-res field
     
-        linear_update_fraction = 1     ! fraction of linear perturbation to add each time step
+        linear_update_fraction = 0.2   ! fraction of linear perturbation to add each time step
         spatial_linear_fields = .True. ! use a spatially varying linear wind perturbation
         linear_mask = .False.          ! use a spatial mask for the linear wind field
         nsq_calibration = .False.      ! use a spatial mask to calibrate the nsquared (brunt vaisala frequency) field
@@ -720,17 +779,19 @@ contains
         dirmax = 2*pi
         dirmin = 0
         spdmax = 30
-        spdmin = -30
+        spdmin = 0
         nsqmax = log(max_stability)
         nsqmin = log(min_stability)
-        n_dir_values = 36
-        n_nsq_values = 10
-        n_spd_values = 10
+        n_dir_values = 24
+        n_nsq_values = 5
+        n_spd_values = 6
         
         read_LUT = .False.
-        write_LUT = .False.
-        u_LUT_Filename = "Linear_Theory_u_LUT.nc"
-        v_LUT_Filename = "Linear_Theory_v_LUT.nc"
+        write_LUT = .True.
+        u_LUT_Filename = "MISSING"
+        v_LUT_Filename = "MISSING"
+        LUT_Filename   = "MISSING"
+        overwrite_lt_lut = .True.
         
         ! read the namelist options
         if (options%use_lt_options) then
@@ -746,6 +807,14 @@ contains
         lt_options%min_stability = min_stability
         lt_options%variable_N = variable_N
         lt_options%smooth_nsq = smooth_nsq
+        
+        if (vert_smooth<0) then 
+            write(*,*) "Vertical smoothing must be a positive integer"
+            write(*,*) "vert_smooth = ",vert_smooth
+            stop
+        endif
+        lt_options%vert_smooth=vert_smooth
+        
         lt_options%N_squared = N_squared
         lt_options%linear_contribution = linear_contribution
         lt_options%remove_lowres_linear = remove_lowres_linear
@@ -766,8 +835,17 @@ contains
         lt_options%n_spd_values = n_spd_values
         lt_options%read_LUT = read_LUT
         lt_options%write_LUT = write_LUT
+        if (trim(u_LUT_Filename)=="MISSING") then
+            if (trim(LUT_Filename)=="MISSING") then
+                u_LUT_Filename="Linear_Theory_LUT.nc"
+            else
+                u_LUT_Filename=LUT_Filename
+            endif
+        endif
+        
         lt_options%u_LUT_Filename = u_LUT_Filename
         lt_options%v_LUT_Filename = v_LUT_Filename
+        lt_options%overwrite_lt_lut = overwrite_lt_lut
         
         ! copy the data back into the global options data structure
         options%lt_options = lt_options        
@@ -968,6 +1046,39 @@ contains
         
     end subroutine model_levels_namelist
     
+    !> ----------------------------------------------------------------------------
+    !!  Read in the name of the boundary condition files from a text file
+    !!
+    !!  @param      filename        The name of the text file to read
+    !!  @param[out] forcing_files   An array to store the filenames in
+    !!  @retval     nfiles          The number of files read. 
+    !!
+    !! ----------------------------------------------------------------------------
+    function read_forcing_file_names(filename, forcing_files) result(nfiles)
+        implicit none
+        character(len=*) :: filename
+        character(len=MAXFILELENGTH), dimension(MAX_NUMBER_FILES) :: forcing_files
+        integer :: nfiles
+        integer :: file_unit
+        integer :: i, error
+        character(len=MAXFILELENGTH) :: temporary_file
+        
+        open(unit=io_newunit(file_unit), file=filename)
+        i=0
+        error=0
+        write(*,*) "Boundary conditions files to be used:"
+        do while (error==0)
+            read(file_unit, *, iostat=error) temporary_file
+            if (error==0) then
+                i=i+1
+                forcing_files(i) = temporary_file
+                write(*,*) "   "//trim(temporary_file)
+            endif
+        enddo
+        close(file_unit)
+        
+        nfiles = i
+    end function read_forcing_file_names
     
     subroutine filename_namelist(filename, options)
         ! read in filenames from up to two namelists
@@ -979,18 +1090,21 @@ contains
         character(len=*), intent(in) :: filename
         type(options_type), intent(inout) :: options
 
-        character(len=MAXFILELENGTH) :: init_conditions_file, output_file, linear_mask_file, nsq_calibration_file
+        character(len=MAXFILELENGTH) :: init_conditions_file, output_file, forcing_file_list, &
+                                        linear_mask_file, nsq_calibration_file
         character(len=MAXFILELENGTH), allocatable :: boundary_files(:), ext_wind_files(:)
         integer :: name_unit, nfiles, i
         
         ! set up namelist structures
-        namelist /files_list/ init_conditions_file, output_file, boundary_files, linear_mask_file, nsq_calibration_file
+        namelist /files_list/ init_conditions_file, output_file, boundary_files, forcing_file_list, &
+                              linear_mask_file, nsq_calibration_file
         namelist /ext_winds_info/ ext_wind_files
         
         linear_mask_file="MISSING"
         nsq_calibration_file="MISSING"
         allocate(boundary_files(MAX_NUMBER_FILES))
         boundary_files="MISSING"
+        forcing_file_list="MISSING"
         
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=files_list)
@@ -1003,6 +1117,13 @@ contains
             i=i+1
         end do
         nfiles=i-1
+        if ((nfiles==0).and.(trim(forcing_file_list)/="MISSING")) then
+            nfiles = read_forcing_file_names(forcing_file_list, boundary_files)
+        else
+            if (nfiles==0) then
+                stop "No boundary conditions files specified."
+            endif
+        endif
         
         allocate(options%boundary_files(nfiles))
         options%boundary_files=boundary_files(1:nfiles)

@@ -1,10 +1,10 @@
 !> ----------------------------------------------------------------------------
-!!
 !!  Main time stepping module. 
 !!  Calculates a stable time step (dt) and loops over physics calls
 !!  Also updates boundaries every time step. 
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !! ----------------------------------------------------------------------------
 module time_step
@@ -22,10 +22,20 @@ module time_step
     private
     public :: step
 
-    real, dimension(:,:), allocatable :: lastw, currw, uw, vw ! temporaries used to compute diagnostic w_real field
+    real, dimension(:,:), allocatable :: lastw, currw, uw, vw !> temporaries used to compute diagnostic w_real field
 contains
     
-!   update just the edges of curdata by adding dXdt
+    !>------------------------------------------------------------
+    !!  Update the edges of curdata by adding dXdt
+    !!
+    !!  Apply dXdt to the boundaries of a given data array. 
+    !!  For these variables, dXdt is a small array just storing the boundary increments
+    !!
+    !! @param curdata   data array to be updated
+    !! @param dXdt      Array containing increments to be applied to the boundaries. 
+    !!                  (nz x max(nx,ny) x 4)
+    !!
+    !!------------------------------------------------------------
     subroutine boundary_update(curdata,dXdt)
         implicit none
         real,dimension(:,:,:), intent(inout) :: curdata
@@ -50,7 +60,16 @@ contains
         
     end subroutine boundary_update
     
-!   updated all fields in domain using the respective dXdt variables
+    !>------------------------------------------------------------
+    !!  Updated all fields in domain using the respective dXdt variables
+    !!
+    !!  
+    !!
+    !! @param domain    full domain data structure to be updated
+    !! @param bc        boundary conditions (containing dXdt increments)
+    !! @param options   options structure specifies which variables need to be updated
+    !!
+    !!------------------------------------------------------------
     subroutine forcing_update(domain,bc,options)
         implicit none
         type(domain_type),intent(inout)::domain
@@ -77,7 +96,7 @@ contains
                 domain%latent_heat(:,j)    = domain%latent_heat(:,j)  + bc%dlh_dt(:,j)
             endif
             
-            ! these only get updated if we are using the fluxes derived from the forcing model
+            ! these only get updated if we are using the fluxes (and PBL height) derived from the forcing model
             if (options%physics%boundarylayer==kPBL_BASIC) then
                 domain%pbl_height(:,j) = domain%pbl_height(:,j)+ bc%dpblh_dt(:,j)
             endif
@@ -109,6 +128,15 @@ contains
         call diagnostic_update(domain,options)
     end subroutine forcing_update
     
+    !>------------------------------------------------------------
+    !! Update model diagnostic fields
+    !!
+    !! Calculates most model diagnostic fields such as Psfc, 10m height winds and ustar
+    !!
+    !! @param domain    Model domain data structure to be updated
+    !! @param options   Model options (not used at present)
+    !!
+    !!------------------------------------------------------------
     subroutine diagnostic_update(domain,options)
         implicit none
         type(domain_type), intent(inout) :: domain
@@ -176,8 +204,17 @@ contains
     end subroutine diagnostic_update
 
 
-!   Divides dXdt variables by n timesteps so that after adding it N times we will be at the
-!   correct final value. 
+    !>------------------------------------------------------------
+    !!  Uses the dt from step() to convert the forcing increments to per/time step increments
+    !!
+    !!  Divides dXdt variables by n timesteps so that after adding it N times we will be at the
+    !!  correct final value. 
+    !!
+    !! @param bc        Boundary conditions structure containing dXdt variables
+    !! @param nsteps    Number of time steps calculated in step() function
+    !! @param options   Model options structure specifies which variables need to be updated
+    !!
+    !!------------------------------------------------------------
     subroutine apply_dt(bc,nsteps, options)
         implicit none
         type(bc_type), intent(inout) :: bc
@@ -210,7 +247,7 @@ contains
         endif
         bc%dsst_dt   = bc%dsst_dt   / nsteps
 
-        
+        ! parallel version didn't seem to work
 !         !$omp parallel firstprivate(ny,nsteps) &
 !         !$omp private(j) &
 !         !$omp shared(bc)
@@ -253,7 +290,21 @@ contains
     end subroutine apply_dt
     
     
-!   Step forward one IO time step. 
+    !>------------------------------------------------------------
+    !!  Step forward one IO time step. 
+    !! 
+    !!  Calculated the internal model time step to satisfy the CFL criteria, 
+    !!  then updates all forcing update increments for that dt and loops through
+    !!  time calling physics modules. 
+    !!  Also checks to see if it is time to write a model output file.
+    !!
+    !! @param domain    domain data structure containing model state
+    !! @param options   model options structure
+    !! @param bc        model boundary conditions data structure
+    !! @param model_time    Current internal model time (seconds since start of run)
+    !! @param next_output   Next time to write an output file (in "model_time")
+    !!
+    !!------------------------------------------------------------
     subroutine step(domain,options,bc,model_time,next_output)
         implicit none
         type(domain_type),intent(inout)::domain
@@ -307,7 +358,7 @@ contains
             model_time=model_time+dt
             if (dt>1e-5) then
                 call advect(domain,options,dt)
-                call mp(domain,options,dt)
+                call mp(domain,options,dt, model_time)
                 call rad(domain,options,model_time/86400.0+50000, dt)
                 call lsm(domain,options,dt,model_time)
                 call pbl(domain,options,dt)

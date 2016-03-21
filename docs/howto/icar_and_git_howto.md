@@ -195,7 +195,13 @@ To make your changes visible to other users/developers, your changes must be inc
 
 The ICAR administrator and other developers will review your pull request and decide if/how they want to incorporate your changes into the code. They are likely to suggest some changes (code style, content, etc.).
 
+##### Useful git configuration
+If you frequently make (and delete) remote branches and work from multiple computers, it might be useful to configure git to automatically prune remote branches when they have been deleted by running: 
+
+    git config --local fetch.prune true
+
+This prevents you from deleting a remote branch from computer A, then accidentally creating it again from computer B.  
+
 ### Git workflow
 
-For us to leverage Git to its full potential, we have implemented a Git-oriented workflow. This requires developers to adhere to a few rules regarding branch names and merge requests. A full description of the workflow we use can be found [here](https://github.com/NCAR/icar/blob/master/docs/howto/icar_git_workflow.md).
-
+For us to leverage Git to its full potential, we have implemented a Git-oriented workflow. This requires developers to adhere to a few rules regarding branch names and merge requests. A full description of the workflow we use can be found [here](https://github.com/NCAR/icar/blob/master/docs/howto/icar_git_workflow.md).  A useful tool to help use this workflow is called [git-flow](https://github.com/petervanderdoes/gitflow-avh). 

@@ -12,7 +12,8 @@
 !!       datasets, and make them conform to the expectations of the current system. 
 !!      For now there are no plans to near term plans to substantially modify this. 
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !! ----------------------------------------------------------------------------
 module init
@@ -81,7 +82,7 @@ contains
 ! ------------------------------------------------------------------------------------------
 !-==== Model Domain Section ====
 !
-! Begining of section focused on allocating and initializeing the model domain data structures
+! Begining of section focused on allocating and initializing the model domain data structures
 !
 ! ------------------------------------------------------------------------------------------
 
@@ -630,17 +631,17 @@ contains
         allocate(boundary%lowres_z(nx,nz,ny))
         boundary%lowres_z=reshape(zbase,[nx,nz,ny],order=[1,3,2])
         deallocate(zbase)
-        if (options%zvar=="PH") then
-            write(*,*) ""
-            write(*,*) "WARNING: assumeing height variable is in geopotential units"
-            write(*,*) "    adding PHB (base state) and dividing by gravity..."
-            write(*,*) ""
-            call io_read3d(options%boundary_files(1),"PHB",zbase)
-            
-            boundary%lowres_z=(boundary%lowres_z+reshape(zbase,[nx,nz,ny],order=[1,3,2])) / gravity
+
+        if (trim(options%zbvar)/="") then
+            call io_read3d(options%boundary_files(1),options%zbvar, zbase)
+            boundary%lowres_z = boundary%lowres_z + reshape(zbase,[nx,nz,ny],order=[1,3,2])
             deallocate(zbase)
         endif
-        
+        if (options%z_is_geopotential) then
+            boundary%lowres_z = boundary%lowres_z / gravity
+            write(*,*) "Interpreting geopotential height as residing between model layers"
+            boundary%lowres_z(:,1:nz-1,:) = (boundary%lowres_z(:,1:nz-1,:) + boundary%lowres_z(:,2:nz,:))/2
+        endif
         
         ! all other structures must be allocated and initialized, but will be set on a high-res grid
         ! u/v are seperate so we can read them on the low res grid and adjust/rm-linearwinds before interpolating

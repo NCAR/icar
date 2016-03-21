@@ -1,6 +1,6 @@
 !>----------------------------------------------------------
+!!  Simple PBL diffusion package for ICAR
 !!
-!! simple PBL diffusion package for ICAR
 !!  Local-K diffusion type PBL as in Louis (1979) as documented in Hong and Pan (1996) = HP96
 !!  Hong and Pan used this for their free atmosphere diffusion, but noted differences
 !!  used in the "current operational model" notably the asymptotic length scale lambda 
@@ -15,7 +15,8 @@
 !!   q,U,V on full levels
 !! </pre>
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!----------------------------------------------------------
 module pbl_simple

@@ -1,3 +1,10 @@
+!>---------------
+!! MP-DATA flux correction core code
+!!
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!---------------
 ! For Reference, this is the core 1D implementation of mpdata included earlier in the code from adv_mpdata_core.f90
 !
 ! It is stored in a separate file so that the same code can

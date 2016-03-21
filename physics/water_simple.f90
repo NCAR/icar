@@ -1,35 +1,8 @@
 !>----------------------------------------------------------
-!! NOTE: CODE IS INCOMPLETE AND WILL NOT WORK
-!!
-!! Very simple land surface model code
+!!  Simple open water flux calculations
 !! 
-!! Rain is partitioned into infiltration and runoff
-!! Snow is accumulated on the surface, then melts, runsoff, or sublimates
-!! Soil moisture is permitted to be lost to ET or subsurface flow
-!! 
-!! ET, Sensible Heat Flux, and Longwave are partitioned using Penman Monteith.
-!!
-!! The entry point to the code is lsm_simple. 
-!!
-!! <pre>
-!! Call tree graph :
-!! lsm_simple->
-!!  [->],
-!!  [->],
-!!  [->]
-!! 
-!! High level routine descriptions / purpose
-!!   lsm_simple         - loops over X,Y grid cells, calls a, b, c
-!! 
-!! Driver inputs: p,th,pii,rho,qv,rain,snow,dt,dz
-!!   psfc= surface pressure              - 3D - input  - Pa     - (nx,ny)
-!!   t   = temperature                   - 3D - in/out - K      - (nx,nz,ny)
-!!   rho = air density                   - 3D - input  - kg/m^3 - (nx,nz,ny)
-!!   qv  = specific humidity             - 3D - in/out - kg/kg  - (nx,nz,ny)
-!!   wind= wind speed                    - 2D - input  - m/s    - (nx,ny)
-!! </pre>
-!!
-!! Author : Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!----------------------------------------------------------
 module module_water_simple

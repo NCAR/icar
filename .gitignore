@@ -5,3 +5,12 @@ test_init
 calendar_test
 fftshift_test
 mpdata_test
+docs/html
+docs/doxygen_sqlite3.db
+*.o
+*.a
+*.so
+*.mod
+*.lst
+*~
+*.pyc

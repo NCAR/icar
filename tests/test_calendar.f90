@@ -1,3 +1,14 @@
+!>------------------------------------------------------------
+!!  Module to test the calendar routines
+!!  
+!!  Loops through 2100? years checking that conversions two and from an
+!!  internal date-time (e.g. Modified Julian Day) and YMD hms are consistent
+!!  test multiple calendars
+!!
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!------------------------------------------------------------
 module calendar_test_module
     use time
     integer, parameter :: STRING_LENGTH = 255
