@@ -19,7 +19,7 @@
 module init
     use data_structures
     use io_routines,                only : io_read2d, io_read2di, io_read3d, &
-                                           io_write3d,io_write3di
+                                           io_write3d,io_write3di, io_write
     use geo,                        only : geo_LUT, geo_interp, geo_interp2d
     use vertical_interpolation,     only : vLUT, vinterp
     use microphysics,               only : mp_init
@@ -445,7 +445,7 @@ contains
             domain%soil_tdeep=temp_rdata_2d(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
             where(domain%soil_tdeep<200) domain%soil_tdeep=200 ! mitigates zeros that can cause problems
             if (options%soil_t_var=="") then
-                print*, "Missing explicit soil T, using deep soil T for all depths"
+                write(*,*) "Missing explicit soil T, using deep soil T for all depths"
                 do i=1,nz
                     domain%soil_t(:,i,:)=domain%soil_tdeep
                 end do
@@ -879,8 +879,8 @@ contains
 
         write(*,*) "Setting up vertical interpolation Look Up Tables"
         
-        if (options%debug) print*, "Domain z min=",minval(domain%z), "Domain z max=", maxval(domain%z)
-        if (options%debug) print*, "Forcing z min=",minval(boundary%z), "Forcing z max=", maxval(boundary%z)
+        if (options%debug) write(*,*) "Domain z min=",minval(domain%z), "Domain z max=", maxval(domain%z)
+        if (options%debug) write(*,*) "Forcing z min=",minval(boundary%z), "Forcing z max=", maxval(boundary%z)
         call vLUT(domain,boundary)
         call vLUT(domain%u_geo,boundary%u_geo)
         call vLUT(domain%v_geo,boundary%v_geo)
