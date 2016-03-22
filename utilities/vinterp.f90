@@ -141,6 +141,7 @@ contains
                         write(*,*) lo%z(i,:,j)
                         stop
                     endif
+                        
                     lo%vert_lut%z(:,i,k,j)=curpos
                     lo%vert_lut%w(:,i,k,j)=curweights
                     guess=curpos(2)
@@ -188,8 +189,8 @@ contains
                         curpos(1)=1
                         curpos(2)=2
                         ! note that this will be > 1
-                        curweights(1) = (hi%z(i,k,j)-lo%z(i,k,curpos(2))) / (lo%z(i,k,curpos(2))-lo%z(i,k,curpos(1)))
-                        ! note that this will be < 1 providing a bilinear extrapolation
+                        curweights(1) = (lo%z(i,k,curpos(2))-hi%z(i,k,j)) / (lo%z(i,k,curpos(2))-lo%z(i,k,curpos(1)))
+                        ! note that this will be < 0 providing a bilinear extrapolation
                         curweights(2) = 1-curweights(1)
                     elseif (curpos(1)==-2) then
                         ! matched above the grid so we must extrapolate upward.
@@ -197,7 +198,7 @@ contains
                         curpos(2)=lo_nz
                         ! note that this will be > 1
                         curweights(2) = (hi%z(i,k,j)-lo%z(i,k,curpos(1))) / (lo%z(i,k,curpos(2))-lo%z(i,k,curpos(1)))
-                        ! note that this will be < 1 providing a bilinear extrapolation
+                        ! note that this will be < 0 providing a bilinear extrapolation
                         curweights(1) = 1-curweights(2)
                     else
                         write(*,*) "find_match Failed to return appropriate position"
