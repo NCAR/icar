@@ -31,7 +31,7 @@ module boundary_conditions
 ! ----------------------------------------------------------------------------
     use data_structures
     use io_routines,            only : io_getdims, io_read3d, io_maxDims, io_read2d, io_variable_is_present, &
-                                       io_write3di, io_write3d
+                                       io_write
     use wind,                   only : update_winds,balance_uvw
     use linear_theory_winds,    only : linear_perturb
     use geo,                    only : geo_interp2d, geo_interp
@@ -324,7 +324,6 @@ contains
             call geo_interp(inputdata, &
                             extra_data, &
                             geolut,boundary_only)
-            
             ! Then apply vertical interpolation on that grid
             if (apply_vertical_interpolation) then
                 call vinterp(highres, inputdata, &
@@ -923,9 +922,7 @@ contains
                 call read_2dvar(domain%sst,  file_list(curfile),options%sst_var,  bc%geolut,curstep)
             endif
             
-            print*, "pre-update pressure Pmax",maxval(domain%p), "pmin",minval(domain%p)
             call update_pressure(domain%p,bc%lowres_z,domain%z)
-            print*, "post-update pressure Pmax",maxval(domain%p), "pmin",minval(domain%p)
             
             nz=size(domain%th,2)
             domainsize=size(domain%th,1)*size(domain%th,3)
@@ -1277,11 +1274,9 @@ contains
         ! for pressure update we need real temperature, not potential t to compute an exner function
         ! bc%next_domain%pii=(bc%next_domain%p/100000.0)**(Rd/cp)
         ! now update pressure using the high res T field
-        print*, "pre-update pressure Pmax",maxval(bc%next_domain%p), "pmin", minval(bc%next_domain%p)
         call update_pressure(bc%next_domain%p,bc%lowres_z,domain%z)!,  & 
                             !  lowresT = bc%next_domain%th * bc%next_domain%pii, &
                             !  hiresT  = domain%th * domain%pii)
-        print*, "post-update pressure Pmax",maxval(bc%next_domain%p), "pmin", minval(bc%next_domain%p)
         
         ! not necessary as long as we are interpolating above
         call read_var(bc%next_domain%th,      file_list(curfile), options%tvar,   &
