@@ -490,7 +490,7 @@ contains
         calendar="gregorian"
         high_res_soil_state=.False.
         rotation_scale_height=2000.0
-        use_agl_height=.True.
+        use_agl_height=.False.
         start_date=""
         forcing_start_date=""
         end_date=""
@@ -593,6 +593,10 @@ contains
         options%debug = debug
         options%warning_level = warning_level
         options%rotation_scale_height = rotation_scale_height
+        if (use_agl_height) then
+            write(*,*) "WARNING: use_agl_height=True is not currently supported, reseting to False"
+            use_agl_height=.False.
+        endif
         options%use_agl_height = use_agl_height
         options%z_is_geopotential = z_is_geopotential
         
