@@ -15,6 +15,7 @@ module initialize_options
     use io_routines,                only : io_nearest_time_step, io_newunit
     use model_tracking,             only : print_model_diffs
     use time,                       only : date_to_mjd, parse_date, time_init
+    use string,                     only : str
 
     implicit none
     
@@ -1066,18 +1067,27 @@ contains
         open(unit=io_newunit(file_unit), file=filename)
         i=0
         error=0
-        write(*,*) "Boundary conditions files to be used:"
         do while (error==0)
             read(file_unit, *, iostat=error) temporary_file
             if (error==0) then
                 i=i+1
                 forcing_files(i) = temporary_file
-                write(*,*) "   "//trim(temporary_file)
             endif
         enddo
         close(file_unit)
-        
         nfiles = i
+        ! print out a summary
+        write(*,*) "Boundary conditions files to be used:"
+        if (nfiles>10) then
+            write(*,*) "  nfiles=", trim(str(nfiles)), ", too many to print."
+            write(*,*) "  First file:", trim(forcing_files(1))
+            write(*,*) "  Last file: ", trim(forcing_files(nfiles))
+        else
+            do i=1,nfiles
+                write(*,*) "    ",trim(forcing_files(i))
+            enddo
+        endif
+
     end function read_forcing_file_names
     
     subroutine filename_namelist(filename, options)
