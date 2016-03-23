@@ -496,17 +496,19 @@ contains
         varid(28)=temp_id
 
         ! diagnosed surface fields (e.g. T2m, U10)
-        call check( nf90_def_var(ncid, "ta2m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"ta2m" )
-        call check( nf90_put_att(ncid,temp_id,"standard_name","air_temperature"))
-        call check( nf90_put_att(ncid,temp_id,"long_name","Bulk air temperature at 2m"))
-        call check( nf90_put_att(ncid,temp_id,"units","K"))
-        varid(34)=temp_id
+        if (options%physics%landsurface>kLSM_BASIC) then
+            call check( nf90_def_var(ncid, "ta2m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"ta2m" )
+            call check( nf90_put_att(ncid,temp_id,"standard_name","air_temperature"))
+            call check( nf90_put_att(ncid,temp_id,"long_name","Bulk air temperature at 2m"))
+            call check( nf90_put_att(ncid,temp_id,"units","K"))
+            varid(34)=temp_id
 
-        call check( nf90_def_var(ncid, "hus2m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"hus2m" )
-        call check( nf90_put_att(ncid,temp_id,"standard_name","specific_humidity"))
-        call check( nf90_put_att(ncid,temp_id,"long_name","Bulk air specific humidity at 2m"))
-        call check( nf90_put_att(ncid,temp_id,"units","kg kg-1"))
-        varid(35)=temp_id
+            call check( nf90_def_var(ncid, "hus2m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"hus2m" )
+            call check( nf90_put_att(ncid,temp_id,"standard_name","specific_humidity"))
+            call check( nf90_put_att(ncid,temp_id,"long_name","Bulk air specific humidity at 2m"))
+            call check( nf90_put_att(ncid,temp_id,"units","kg kg-1"))
+            varid(35)=temp_id
+        endif
         
         call check( nf90_def_var(ncid, "u10m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"u10m" )
         call check( nf90_put_att(ncid,temp_id,"standard_name","eastward_10m_wind_speed"))
@@ -702,10 +704,12 @@ contains
         
         call check( nf90_inq_varid(ncid, "ts",     temp_id), trim(err)//"ts" )
         varid(28)=temp_id
-        call check( nf90_inq_varid(ncid, "ta2m", temp_id), trim(err)//"ta2m" )
-        varid(34)=temp_id
-        call check( nf90_inq_varid(ncid, "hus2m", temp_id), trim(err)//"hus2m" )
-        varid(35)=temp_id
+        if (options%physics%landsurface>kLSM_BASIC) then
+            call check( nf90_inq_varid(ncid, "ta2m", temp_id), trim(err)//"ta2m" )
+            varid(34)=temp_id
+            call check( nf90_inq_varid(ncid, "hus2m", temp_id), trim(err)//"hus2m" )
+            varid(35)=temp_id
+        endif
         call check( nf90_inq_varid(ncid, "u10m", temp_id), trim(err)//"u10m" )
         varid(36)=temp_id
         call check( nf90_inq_varid(ncid, "v10m", temp_id), trim(err)//"v10m" )
@@ -896,8 +900,10 @@ contains
         
         call check( nf90_put_var(ncid, varid(28), domain%skin_t,       start_two_D),  trim(filename)//":skin_t" )
         if (output_rain_rate) then ! don't bother outputing if this is the first step in a restart run
-            call check( nf90_put_var(ncid, varid(34), domain%T2m, start_two_D),  trim(filename)//":t2m" )
-            call check( nf90_put_var(ncid, varid(35), domain%Q2m, start_two_D),  trim(filename)//":hus2m" )
+            if (options%physics%landsurface>kLSM_BASIC) then
+                call check( nf90_put_var(ncid, varid(34), domain%T2m, start_two_D),  trim(filename)//":t2m" )
+                call check( nf90_put_var(ncid, varid(35), domain%Q2m, start_two_D),  trim(filename)//":hus2m" )
+            endif
             call check( nf90_put_var(ncid, varid(36), domain%u10, start_two_D),  trim(filename)//":u10m" )
             call check( nf90_put_var(ncid, varid(37), domain%v10, start_two_D),  trim(filename)//":v10m" )
             call check( nf90_put_var(ncid, varid(23), domain%sensible_heat,start_two_D),  trim(filename)//":sensible_heat" )

@@ -31,7 +31,7 @@ module boundary_conditions
 ! ----------------------------------------------------------------------------
     use data_structures
     use io_routines,            only : io_getdims, io_read3d, io_maxDims, io_read2d, io_variable_is_present, &
-                                       io_write3di, io_write3d
+                                       io_write
     use wind,                   only : update_winds,balance_uvw
     use linear_theory_winds,    only : linear_perturb
     use geo,                    only : geo_interp2d, geo_interp
@@ -324,7 +324,6 @@ contains
             call geo_interp(inputdata, &
                             extra_data, &
                             geolut,boundary_only)
-            
             ! Then apply vertical interpolation on that grid
             if (apply_vertical_interpolation) then
                 call vinterp(highres, inputdata, &
@@ -874,7 +873,7 @@ contains
             endif
             call read_var(domain%p,    file_list(curfile),   options%pvar,   &
                             bc%geolut, bc%vert_lut, curstep, boundary_value, &
-                            options,   bc%lowres_z,domain%z)
+                            options,   bc%lowres_z,domain%z, interp_vertical=.True.)
             call read_var(domain%th,   file_list(curfile),   options%tvar,   &
                             bc%geolut, bc%vert_lut, curstep, boundary_value, &
                             options)
@@ -1113,8 +1112,8 @@ contains
             !$omp do 
             do j=1,ny
                 do i=1,nz
-                    slp = pressure(:,i,j) / (1 - 2.25577E-5 * z_lo(:,i,j))**5.25588
-                    pressure(:,i,j) = slp * (1 - 2.25577e-5 * z_hi(:,i,j))**5.25588
+                    ! slp = pressure(:,i,j) / (1 - 2.25577E-5 * z_lo(:,i,j))**5.25588
+                    pressure(:,i,j) = pressure(:,i,j) * (1 - 2.25577e-5 * (z_hi(:,i,j)-z_lo(:,i,j)))**5.25588
                 enddo
             enddo
             !$omp end do
@@ -1235,7 +1234,7 @@ contains
             where(newbc%vert_lut%z==nz) newbc%vert_lut%z=nz-1
             nz=size(newbc%z,3)
             ! generate a new high-res z dataset as well (for pressure interpolations)
-            call geo_interp(bc%lowres_z, reshape(newbc%z,[nx,nz,ny],order=[1,3,2]), bc%geolut,use_interior)
+            ! call geo_interp(bc%lowres_z, reshape(newbc%z,[nx,nz,ny],order=[1,3,2]), bc%geolut,use_interior)
             
         endif
         
@@ -1266,20 +1265,20 @@ contains
         ! for pressure do not apply vertical interpolation on IO, we will adjust it more accurately
         call read_var(bc%next_domain%p,       file_list(curfile), options%pvar,   &
                       bc%geolut, bc%vert_lut, curstep, use_interior,              &
-                      options, time_varying_zlut=newbc%vert_lut, interp_vertical=.False.)
+                      options, time_varying_zlut=newbc%vert_lut, interp_vertical=.True.)
         ! for pressure adjustment, we need temperature on the original model grid, 
         ! so read it without vertical interpolation (and for interior points too)
         call read_var(bc%next_domain%th,      file_list(curfile), options%tvar,   &
                       bc%geolut, bc%vert_lut, curstep, use_interior,              &
-                      options, time_varying_zlut=newbc%vert_lut, interp_vertical=.False. )
+                      options, time_varying_zlut=newbc%vert_lut, interp_vertical=.True. )
         ! for pressure update we need real temperature, not potential t to compute an exner function
-        bc%next_domain%pii=(bc%next_domain%p/100000.0)**(Rd/cp)
+        ! bc%next_domain%pii=(bc%next_domain%p/100000.0)**(Rd/cp)
         ! now update pressure using the high res T field
-        call update_pressure(bc%next_domain%p,bc%lowres_z,domain%z,  & 
-                             lowresT = bc%next_domain%th * bc%next_domain%pii, &
-                             hiresT  = domain%th * domain%pii)
+        call update_pressure(bc%next_domain%p,bc%lowres_z,domain%z)!,  & 
+                            !  lowresT = bc%next_domain%th * bc%next_domain%pii, &
+                            !  hiresT  = domain%th * domain%pii)
         
-                      
+        ! not necessary as long as we are interpolating above
         call read_var(bc%next_domain%th,      file_list(curfile), options%tvar,   &
                       bc%geolut, bc%vert_lut, curstep, use_boundary,              &
                       options, time_varying_zlut=newbc%vert_lut)

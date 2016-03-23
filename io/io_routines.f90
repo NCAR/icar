@@ -34,7 +34,7 @@ module io_routines
     !! Generic interface to the netcdf write routines
     !!------------------------------------------------------------
     interface io_write
-        module procedure io_write6d, io_write3d, io_write2d, io_write3di
+        module procedure io_write6d, io_write4d, io_write3d, io_write2d, io_write3di,io_write4di
     end interface
 
     !>------------------------------------------------------------
@@ -524,6 +524,115 @@ contains
         ! Close the file, freeing all resources.
         call check( nf90_close(ncid), filename)
     end subroutine io_write6d
+    
+    !>------------------------------------------------------------
+    !! Same as io_write6d but for 4-dimensional data
+    !!
+    !! Write a 4-dimensional variable to a netcdf file
+    !!
+    !! Create a netcdf file:filename with a variable:varname and write data_out to it
+    !!
+    !! @param   filename    Name of NetCDF file to write/create
+    !! @param   varname     Name of the NetCDF variable to write
+    !! @param   data_out    4-dimensional array to write to the file
+    !!
+    !!------------------------------------------------------------
+    subroutine io_write4d(filename,varname,data_out)
+        implicit none
+        ! This is the name of the file and variable we will write.
+        character(len=*), intent(in) :: filename, varname
+        real,intent(in) :: data_out(:,:,:,:)
+
+        ! We are writing 4D data, assume a nx x nz x ny x nr grid.
+        integer :: nx,ny,nz,nr
+        integer, parameter :: ndims = 4
+        ! This will be the netCDF ID for the file and data variable.
+        integer :: ncid, varid,temp_dimid,dimids(ndims)
+
+        nx=size(data_out,1)
+        nz=size(data_out,2)
+        ny=size(data_out,3)
+        nr=size(data_out,4)
+
+        ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
+        ! the file.
+        call check( nf90_create(filename, NF90_CLOBBER, ncid), filename)
+        ! define the dimensions
+        call check( nf90_def_dim(ncid, "x", nx, temp_dimid) )
+        dimids(1)=temp_dimid
+        call check( nf90_def_dim(ncid, "z", nz, temp_dimid) )
+        dimids(2)=temp_dimid
+        call check( nf90_def_dim(ncid, "y", ny, temp_dimid) )
+        dimids(3)=temp_dimid
+        call check( nf90_def_dim(ncid, "r", nr, temp_dimid) )
+        dimids(4)=temp_dimid
+
+        ! Create the variable returns varid of the data variable
+        call check( nf90_def_var(ncid, varname, NF90_REAL, dimids, varid), trim(filename)//":"//trim(varname))
+        ! End define mode. This tells netCDF we are done defining metadata.
+        call check( nf90_enddef(ncid) )
+
+        ! write the actual data to the file
+        call check( nf90_put_var(ncid, varid, data_out), trim(filename)//":"//trim(varname))
+
+        ! Close the file, freeing all resources.
+        call check( nf90_close(ncid), filename)
+    end subroutine io_write4d
+
+    !>------------------------------------------------------------
+    !! Same as io_write4d but for integer data
+    !!
+    !! Write a 4-dimensional variable to a netcdf file
+    !!
+    !! Create a netcdf file:filename with a variable:varname and write data_out to it
+    !!
+    !! @param   filename    Name of NetCDF file to write/create
+    !! @param   varname     Name of the NetCDF variable to write
+    !! @param   data_out    4-dimensional array to write to the file
+    !!
+    !!------------------------------------------------------------
+    subroutine io_write4di(filename,varname,data_out)
+        implicit none
+        ! This is the name of the file and variable we will write.
+        character(len=*), intent(in) :: filename, varname
+        integer,intent(in) :: data_out(:,:,:,:)
+
+        ! We are writing 4D data, assume a nx x nz x ny x nr grid.
+        integer :: nx,ny,nz,nr
+        integer, parameter :: ndims = 4
+        ! This will be the netCDF ID for the file and data variable.
+        integer :: ncid, varid,temp_dimid,dimids(ndims)
+
+        nx=size(data_out,1)
+        nz=size(data_out,2)
+        ny=size(data_out,3)
+        nr=size(data_out,4)
+
+        ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
+        ! the file.
+        call check( nf90_create(filename, NF90_CLOBBER, ncid), filename)
+        ! define the dimensions
+        call check( nf90_def_dim(ncid, "x", nx, temp_dimid) )
+        dimids(1)=temp_dimid
+        call check( nf90_def_dim(ncid, "z", nz, temp_dimid) )
+        dimids(2)=temp_dimid
+        call check( nf90_def_dim(ncid, "y", ny, temp_dimid) )
+        dimids(3)=temp_dimid
+        call check( nf90_def_dim(ncid, "r", nr, temp_dimid) )
+        dimids(4)=temp_dimid
+
+        ! Create the variable returns varid of the data variable
+        call check( nf90_def_var(ncid, varname, NF90_INT, dimids, varid), trim(filename)//":"//trim(varname))
+        ! End define mode. This tells netCDF we are done defining metadata.
+        call check( nf90_enddef(ncid) )
+
+        ! write the actual data to the file
+        call check( nf90_put_var(ncid, varid, data_out), trim(filename)//":"//trim(varname))
+
+        ! Close the file, freeing all resources.
+        call check( nf90_close(ncid), filename)
+    end subroutine io_write4di
+
 
     !>------------------------------------------------------------
     !! Same as io_write6d but for 3-dimensional data

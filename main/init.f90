@@ -19,9 +19,9 @@
 module init
     use data_structures
     use io_routines,                only : io_read2d, io_read2di, io_read3d, &
-                                           io_write3d,io_write3di
+                                           io_write3d,io_write3di, io_write
     use geo,                        only : geo_LUT, geo_interp, geo_interp2d
-    use vertical_interpolation,     only : vLUT
+    use vertical_interpolation,     only : vLUT, vinterp
     use microphysics,               only : mp_init
     use advection,                  only : adv_init
     use convection,                 only : init_convection
@@ -445,7 +445,7 @@ contains
             domain%soil_tdeep=temp_rdata_2d(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
             where(domain%soil_tdeep<200) domain%soil_tdeep=200 ! mitigates zeros that can cause problems
             if (options%soil_t_var=="") then
-                print*, "Missing explicit soil T, using deep soil T for all depths"
+                write(*,*) "Missing explicit soil T, using deep soil T for all depths"
                 do i=1,nz
                     domain%soil_t(:,i,:)=domain%soil_tdeep
                 end do
@@ -730,6 +730,7 @@ contains
     end subroutine init_ext_winds
     
     subroutine swap_z(bc)
+        ! swap the lowres_z and z variables in bc
         type(bc_type), intent(inout) :: bc
         real,allocatable,dimension(:,:,:) :: tempz
         integer::nx,nz,ny, i
@@ -794,6 +795,7 @@ contains
         type(domain_type), intent(inout):: domain
         type(bc_type), intent(inout):: boundary
         type(geo_look_up_table) :: u_temp_geo,v_temp_geo
+        real, dimension(:,:,:), allocatable :: tempz
         integer::i,nx,ny,nz
             
         boundary%dx=options%dxlow
@@ -851,8 +853,6 @@ contains
             
         endif
         ! interpolate the low-res terrain to the high-res grid for pressure adjustments. 
-        ! the correct way would probably be to adjust all low-res pressures to Sea level before interpolating
-        ! then pressure adjustments all occur from SLP. 
         ! This should be done on a separate lowres terrain grid so the embedded high res terrain grid 
         ! can also be used in pressure adjustments on each time step...
         nx=size(domain%terrain,1)
@@ -879,8 +879,8 @@ contains
 
         write(*,*) "Setting up vertical interpolation Look Up Tables"
         
-        if (options%debug) print*, "Domain z min=",minval(domain%z), "Domain z max=", maxval(domain%z)
-        if (options%debug) print*, "Forcing z min=",minval(boundary%z), "Forcing z max=", maxval(boundary%z)
+        if (options%debug) write(*,*) "Domain z min=",minval(domain%z), "Domain z max=", maxval(domain%z)
+        if (options%debug) write(*,*) "Forcing z min=",minval(boundary%z), "Forcing z max=", maxval(boundary%z)
         call vLUT(domain,boundary)
         call vLUT(domain%u_geo,boundary%u_geo)
         call vLUT(domain%v_geo,boundary%v_geo)
@@ -903,6 +903,23 @@ contains
         deallocate(boundary%v_geo%z,boundary%u_geo%z)
         ! swaps z and lowres_z (one of the cases where pointers would make life a lot easier)
         call swap_z(boundary)
+        
+        ! after swap_z call, boundary%z is on the forcing data grid, boundary%lowres_z is interpolated to the ICAR grid
+        ! Finally apply the vertical interpolation here as well
+        ! this is a little annoying because we have to allocate a temporary. 
+        nx=size(domain%terrain,1)
+        ny=size(domain%terrain,2)
+        nz=size(domain%p,2)
+        allocate(tempz(nx,nz,ny))
+        
+        call vinterp(tempz,    & 
+                     boundary%lowres_z, &
+                     boundary%vert_lut)
+        
+        deallocate(boundary%lowres_z)
+        allocate(boundary%lowres_z(nx,nz,ny))
+        boundary%lowres_z = tempz
+        deallocate(tempz)
         
     end subroutine init_bc
 end module

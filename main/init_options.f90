@@ -15,6 +15,7 @@ module initialize_options
     use io_routines,                only : io_nearest_time_step, io_newunit
     use model_tracking,             only : print_model_diffs
     use time,                       only : date_to_mjd, parse_date, time_init
+    use string,                     only : str
 
     implicit none
     
@@ -489,7 +490,7 @@ contains
         calendar="gregorian"
         high_res_soil_state=.False.
         rotation_scale_height=2000.0
-        use_agl_height=.True.
+        use_agl_height=.False.
         start_date=""
         forcing_start_date=""
         end_date=""
@@ -592,6 +593,10 @@ contains
         options%debug = debug
         options%warning_level = warning_level
         options%rotation_scale_height = rotation_scale_height
+        if (use_agl_height) then
+            write(*,*) "WARNING: use_agl_height=True is not currently supported, reseting to False"
+            use_agl_height=.False.
+        endif
         options%use_agl_height = use_agl_height
         options%z_is_geopotential = z_is_geopotential
         
@@ -1066,18 +1071,27 @@ contains
         open(unit=io_newunit(file_unit), file=filename)
         i=0
         error=0
-        write(*,*) "Boundary conditions files to be used:"
         do while (error==0)
             read(file_unit, *, iostat=error) temporary_file
             if (error==0) then
                 i=i+1
                 forcing_files(i) = temporary_file
-                write(*,*) "   "//trim(temporary_file)
             endif
         enddo
         close(file_unit)
-        
         nfiles = i
+        ! print out a summary
+        write(*,*) "Boundary conditions files to be used:"
+        if (nfiles>10) then
+            write(*,*) "  nfiles=", trim(str(nfiles)), ", too many to print."
+            write(*,*) "  First file:", trim(forcing_files(1))
+            write(*,*) "  Last file: ", trim(forcing_files(nfiles))
+        else
+            do i=1,nfiles
+                write(*,*) "    ",trim(forcing_files(i))
+            enddo
+        endif
+
     end function read_forcing_file_names
     
     subroutine filename_namelist(filename, options)
