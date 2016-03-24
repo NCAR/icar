@@ -21,6 +21,7 @@ If you plan on contributing to model development or would like a systematic way 
 More details are provided below, but if you just want a reminder of the key commands to set up your repository (replace https:// with ssh://git@ if appropriate) here is the basic setup:
 
     git clone https://github.com/<username>/icar.git
+    cd icar
     git remote add upstream https://github.com/NCAR/icar.git
 
 Then from the develop or master branch, periodically run:
