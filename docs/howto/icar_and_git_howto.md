@@ -17,6 +17,22 @@ In general, if you plan to apply the model rather than work directly on the sour
 ## ICAR for developers
 If you plan on contributing to model development or would like a systematic way to incorporate updates to the ICAR source code, we encourage you to use Git. The following sections are designed to get you started using Git and working with the ICAR source code repository.
 
+## Quickstart Cheatsheet
+More details are provided below, but if you just want a reminder of the key commands to set up your repository (replace https:// with ssh://git@ if appropriate) here is the basic setup:
+
+    git clone https://github.com/<username>/icar.git
+    cd icar
+    git remote add upstream https://github.com/NCAR/icar.git
+
+Then from the develop or master branch, periodically run:
+
+    git fetch upstream
+    git merge upstream/<branch_name>
+    
+or:
+
+    git pull upstream <branch_name>
+
 ### Git resources
 If you are not familiar with Git yet, we encourage you to spend a few minutes getting acquainted with the system before you starting working with the ICAR source code and Git. It's not difficult to use and a few minutes of learning about Git will go along way in helping you manage your code development.
 
