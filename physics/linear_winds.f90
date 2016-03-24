@@ -629,14 +629,14 @@ contains
             end do
         endif
 
-        if (present(debug)) then
-            if (debug) then
-                allocate(real_terrain(nx,ny))
-                real_terrain=buffer_topo
-                call io_write2d("buffered_terrain.nc","data",real_terrain)
-                deallocate(real_terrain)
-            endif
-        endif
+        ! if (present(debug)) then
+        !     if (debug) then
+        !         allocate(real_terrain(nx,ny))
+        !         real_terrain=buffer_topo
+        !         call io_write2d("buffered_terrain.nc","data",real_terrain)
+        !         deallocate(real_terrain)
+        !     endif
+        ! endif
 
     end subroutine add_buffer_topo
 
