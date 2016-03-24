@@ -27,10 +27,11 @@ More details are provided below, but if you just want a reminder of the key comm
 Then from the develop or master branch, periodically run:
 
     git fetch upstream
+    git merge upstream/<branch_name>
     
 or:
 
-    git pull upstream
+    git pull upstream <branch_name>
 
 ### Git resources
 If you are not familiar with Git yet, we encourage you to spend a few minutes getting acquainted with the system before you starting working with the ICAR source code and Git. It's not difficult to use and a few minutes of learning about Git will go along way in helping you manage your code development.
