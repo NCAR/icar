@@ -1,4 +1,53 @@
-!---------------------------------------------------------
+##ICAR settings file documentation
+
+###Main Namelists
+REQUIRED:
+ * model_version
+ * physics
+ * parameters
+ * files_list
+ * z_info (technically optional)
+ 
+ OPTIONAL:
+ * restart_info
+ * lt_parameters
+ * lsm_parameters
+ * mp_parameters
+ * adv_parameters
+
+
+###model_version
+This namelist specifies the model version associated with the settings file, and provides a place to enter a comment into the output files. 
+
+###physics
+This namelist specifies which physics options will be used when the model runs. 
+
+###parameters
+This namelist specifies various model settings. 
+
+###files_list
+This namelist specifies the name of various files that will be used by ICAR.  The most important files are the forcing data files, and the ICAR hi-res grid file (akin to the WRF geogrid).  Additional files can be specified for spatially variable calibration input, and a file to list the input forcing file names. 
+
+###z_info
+This namelist specifies the thickness of each model layer.  Technically this is optional as it will default to something reasonable, but it is recommended that it be set as the default uses too fine a discretization (and thus runs slower) than should be used. 
+
+###restart_info
+This optional namelist specifies the necessary input for a restart run. 
+
+###lt_parameters
+This optional namelist specifies various parameters that are used in the linear theory calculations. 
+
+###lsm_parameters
+This optional namelist specifies various parameters that are used in the land surface model. 
+
+###mp_parameters
+This optional namelist specifies various parameters that are used in the microphysics scheme. 
+
+###adv_parameters
+This optional namelist specifies various parameters that are used in the advection calculations. 
+
+
+<!-- !---------------------------------------------------------
 !   Model and run meta-data
 !---------------------------------------------------------
 &model_version
@@ -389,4 +438,4 @@
     
     ! date to start from, used to calculate position in both restart file and forcing file
     restart_date =  1990, 9, 30, 23, 0, 0
-/
+/ -->

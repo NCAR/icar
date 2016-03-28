@@ -315,7 +315,9 @@ contains
         ! locals
         real :: three_d_cfl = 0.577350269 ! = sqrt(3)/3
         integer :: i, j, k, nx, nz, ny, zoffset
-        real :: maxwind3d, maxwind1d, current_wind
+        real :: maxwind3d, maxwind1d, current_wind, sqrt3
+        
+        sqrt3 = sqrt(3.0) * 1.001 ! with a safety factor
         
         maxwind1d = 0
         maxwind3d = 0
@@ -329,7 +331,7 @@ contains
             maxwind1d = max( maxval(abs(u)), maxval(abs(v)))
             maxwind1d = max( maxwind1d, maxval(abs(w)))
             
-            maxwind3d = maxwind1d * 1.7321
+            maxwind3d = maxwind1d * sqrt3
         else if (cfl_strictness==5) then
             maxwind3d = maxval(abs(u)) + maxval(abs(v)) + maxval(abs(w))
         else
@@ -355,20 +357,21 @@ contains
                 ENDDO
             ENDDO
             
-            ! effectively divides by 3 to take the mean and multiplies by the sqrt(3) for the 3D advection limit
             if (cfl_strictness==2) then
+                ! effectively divides by 3 to take the mean and multiplies by the sqrt(3) for the 3D advection limit
                 maxwind3d = maxwind3d * three_d_cfl
                 
                 ! to ensure we are stable for 1D advection:
                 maxwind1d = max( maxval(abs(u)), maxval(abs(v)))
                 maxwind1d = max( maxwind1d, maxval(abs(w)))
+                ! also insure stability for 1D advection
                 maxwind3d = max(maxwind1d,maxwind3d)
 
             ! else if (cfl_strictness==3) then 
             !   leave maxwind3d as the sum of the max winds
             ! This should be the default, does it need to be multiplied by sqrt(3)?
             elseif (cfl_strictness==4) then
-                maxwind3d = maxwind3d * 1.7321
+                maxwind3d = maxwind3d * sqrt3
             endif
                 
         endif        
