@@ -288,7 +288,94 @@ contains
 !         endif
             
     end subroutine apply_dt
-    
+
+    !>------------------------------------------------------------
+    !!  Calculate the maximum stable time step given some CFL criteria 
+    !!  
+    !!  For each grid cell, find the mean of the wind speeds from each
+    !!  direction * sqrt(3) for the 3D advection CFL limited time step
+    !!  Also find the maximum wind speed anywhere in the domain to check 
+    !!  against a 1D advection limit. 
+    !!  
+    !! @param dx  [ scalar ]        horizontal grid cell width  [m]
+    !! @param u   [nx+1 x nz x ny]  east west wind speeds       [m/s]
+    !! @param v   [nx x nz x ny+1]  North South wind speed      [m/s]
+    !! @param w   [nx x nz x ny]    vertical wind speed         [m/s]
+    !! @param CFL [ scalar ]        CFL limit to use (e.g. 1.0)
+    !! @return dt [ scalar ]        Maximum stable time step    [s]
+    !!
+    !!------------------------------------------------------------
+    function compute_dt(dx, u, v, w, CFL, cfl_strictness) result(dt)
+        real, intent(in) :: dx
+        real, intent(in), dimension(:,:,:) :: u,v,w
+        real, intent(in) :: CFL
+        integer, intent(in) :: cfl_strictness
+        ! output value
+        real :: dt
+        ! locals
+        real :: three_d_cfl = 0.577350269 ! = sqrt(3)/3
+        integer :: i, j, k, nx, nz, ny, zoffset
+        real :: maxwind3d, maxwind1d, current_wind
+        
+        maxwind1d = 0
+        maxwind3d = 0
+        
+        nx = size(w,1)
+        nz = size(w,2)
+        ny = size(w,3)
+
+        if (cfl_strictness==1) then
+            ! to ensure we are stable for 1D advection:
+            maxwind1d = max( maxval(abs(u)), maxval(abs(v)))
+            maxwind1d = max( maxwind1d, maxval(abs(w)))
+            
+            maxwind3d = maxwind1d * 1.7321
+        else if (cfl_strictness==5) then
+            maxwind3d = maxval(abs(u)) + maxval(abs(v)) + maxval(abs(w))
+        else
+            ! to ensure we are stable for 3D advection we'll use the average "max" wind speed
+            ! but that average has to be divided by sqrt(3) for stability in 3 dimensional advection
+            do j=1,ny
+                do k=1,nz
+                    if (k==1) then
+                        zoffset = 0
+                    else
+                        zoffset = 1
+                    endif
+                    
+                    do i=1,nx
+                        ! just compute the sum of the wind speeds, but take the max over the two
+                        ! faces of the grid cell (e.g. east and west sides)
+                        ! this will be divided by 3 later by three_d_cfl
+                        current_wind = max(abs(u(i,k,j)), abs(u(i+1,k,j))) &
+                                      +max(abs(v(i,k,j)), abs(v(i,k,j+1))) & 
+                                      +max(abs(w(i,k,j)), abs(w(i,k+zoffset,j)))
+                        maxwind3d = max(maxwind3d, current_wind)
+                    ENDDO
+                ENDDO
+            ENDDO
+            
+            ! effectively divides by 3 to take the mean and multiplies by the sqrt(3) for the 3D advection limit
+            if (cfl_strictness==2) then
+                maxwind3d = maxwind3d * three_d_cfl
+                
+                ! to ensure we are stable for 1D advection:
+                maxwind1d = max( maxval(abs(u)), maxval(abs(v)))
+                maxwind1d = max( maxwind1d, maxval(abs(w)))
+                maxwind3d = max(maxwind1d,maxwind3d)
+
+            ! else if (cfl_strictness==3) then 
+            !   leave maxwind3d as the sum of the max winds
+            ! This should be the default, does it need to be multiplied by sqrt(3)?
+            elseif (cfl_strictness==4) then
+                maxwind3d = maxwind3d * 1.7321
+            endif
+                
+        endif        
+        
+        dt = CFL * dx / maxwind3d
+        
+    end function compute_dt
     
     !>------------------------------------------------------------
     !!  Step forward one IO time step. 
@@ -313,21 +400,22 @@ contains
         real*8,intent(inout)::model_time,next_output
         real*8::end_time
         integer::i,ntimesteps,tenp
-        real::dt,dtnext
+        real::dt,dtnext, CFL, cfl_reduction_factor
+        
+        CFL = 1.0
+        cfl_reduction_factor = options%cfl_reduction_factor
+        CFL = CFL * cfl_reduction_factor
         
 !       compute internal timestep dt to maintain stability
 !       courant condition for 3D advection. Note that w is normalized by dx/dz
-        dt = domain%dx/(maxval(abs(domain%u)) &
-                      + maxval(abs(domain%v)) &
-                      + maxval(abs(domain%w)))
 !       pick the minimum dt from the begining or the end of the current timestep
-        dtnext = domain%dx/(maxval(abs(bc%next_domain%u)) &
-                          + maxval(abs(bc%next_domain%v)) &
-                          + maxval(abs(bc%next_domain%w)))
-        
+        dt = compute_dt(domain%dx, domain%u, domain%v, domain%w, CFL, cfl_strictness=options%cfl_strictness)
+        ! print*, "Current dt = ",dt
+        dtnext = compute_dt(domain%dx, bc%next_domain%u, bc%next_domain%v, bc%next_domain%w, CFL, cfl_strictness=options%cfl_strictness)
+        ! print*, "Next    dt = ",dtnext
         dt=min(dt,dtnext)
 !       set an upper bound on dt to keep microphysics and convection stable (?) not sure what time is required here. 
-        dt=min(dt,120.0) !better min=180?
+        dt=min(dt,180.0) !better min=180?
 !       if we have too small a time step just throw an error
         if (dt<1e-1) then
             write(*,*) "dt=",dt
@@ -340,7 +428,7 @@ contains
         endif
         
 !       make dt an integer fraction of the full timestep
-        dt=options%in_dt/ceiling(options%in_dt/dt)
+        dt = options%in_dt/ceiling(options%in_dt/dt)
 !       calculate the number of timesteps
         ntimesteps=nint(options%in_dt/dt)
         end_time=model_time+options%in_dt

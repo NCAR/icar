@@ -443,10 +443,10 @@ contains
         integer :: name_unit
         
         real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance
-        real    :: rotation_scale_height
+        real    :: rotation_scale_height, cfl_reduction_factor
         integer :: ntimesteps
         double precision :: end_mjd
-        integer :: nz, n_ext_winds,buffer, warning_level
+        integer :: nz, n_ext_winds,buffer, warning_level, cfl_strictness
         logical :: ideal, readz, readdz, debug, external_winds, surface_io_only, &
                    mean_winds, mean_fields, restart, advect_density, z_is_geopotential,&
                    high_res_soil_state, use_agl_height, time_varying_z, &
@@ -463,6 +463,7 @@ contains
                               mean_winds,mean_fields,restart, z_is_geopotential,&
                               date, calendar, high_res_soil_state,rotation_scale_height,warning_level, &
                               use_agl_height, start_date, forcing_start_date, end_date, time_varying_z, &
+                              cfl_reduction_factor, cfl_strictness, &
                               mp_options_filename, use_mp_options, &    ! trude added
                               lt_options_filename, use_lt_options, &
                               lsm_options_filename, use_lsm_options, &
@@ -495,6 +496,8 @@ contains
         forcing_start_date=""
         end_date=""
         time_varying_z=.False.
+        cfl_reduction_factor = 1.0
+        cfl_strictness = 3
         
         ! flag set to read specific parameterization options
         use_mp_options=.False.
@@ -608,6 +611,9 @@ contains
         
         options%high_res_soil_state = high_res_soil_state
         options%time_varying_z = time_varying_z
+        options%cfl_reduction_factor = cfl_reduction_factor
+        options%cfl_strictness = cfl_strictness
+
         
         options%use_mp_options = use_mp_options
         options%mp_options_filename  = mp_options_filename   ! trude added
