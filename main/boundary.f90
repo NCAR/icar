@@ -729,10 +729,12 @@ contains
         if (io_variable_is_present(restart_file,"soil_t")) then
             write(*,*) "Reading land surface restart data"
             call io_read3d(restart_file,"soil_t",inputdata,timeslice)
+            call swap_y_z_dimensions(inputdata)
             call check_shapes_3d(inputdata,domain%soil_t)
             domain%soil_t=inputdata
             deallocate(inputdata)
             call io_read3d(restart_file,"soil_w",inputdata,timeslice)
+            call swap_y_z_dimensions(inputdata)
             domain%soil_vwc=inputdata
             deallocate(inputdata)
         
