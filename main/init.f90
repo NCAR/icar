@@ -561,15 +561,11 @@ contains
             call io_read2d(options%init_conditions_file,options%ulat_hi,domain%u_geo%lat,1)
         else
             call interpolate_in_x(domain%lat,domain%u_geo%lat)
-            print*, domain%lat(1:4,1)
-            print*, domain%u_geo%lat(1:5,1)
         endif
         if (options%ulon_hi/="") then
             call io_read2d(options%init_conditions_file,options%ulon_hi,domain%u_geo%lon,1)
         else
             call interpolate_in_x(domain%lon,domain%u_geo%lon)
-            print*, domain%lon(1:4,1)
-            print*, domain%u_geo%lon(1:5,1)
         endif
         call convert_longitudes(domain%u_geo%lon)
         
@@ -577,15 +573,11 @@ contains
             call io_read2d(options%init_conditions_file,options%vlat_hi,domain%v_geo%lat,1)
         else
             call interpolate_in_y(domain%lat,domain%v_geo%lat)
-            print*, domain%lat(1,1:4)
-            print*, domain%v_geo%lat(1,1:5)
         endif
         if (options%vlon_hi/="") then
             call io_read2d(options%init_conditions_file,options%vlon_hi,domain%v_geo%lon,1)
         else
             call interpolate_in_y(domain%lon,domain%v_geo%lon)
-            print*, domain%lon(1,1:4)
-            print*, domain%v_geo%lon(1,1:5)
         endif
         call convert_longitudes(domain%v_geo%lon)
         
