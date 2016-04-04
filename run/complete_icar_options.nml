@@ -113,6 +113,8 @@
     nz = 15, ! []
     !   Set this to true of the zvar in the input data is actually in units of geopotential height (m/s^2)
     z_is_geopotential = False,
+    !   Set this to true of the zvar in the input data is specified on model interfaces (as WRF geopotential height is)
+    z_is_on_interface = False,
     !   Specify that the height of the forcing data will change through the simulation (common for atmospheric model-level output)
     time_varying_z = True,
     !   Use height above ground layer to interpolate the wind field instead of height above sea level.

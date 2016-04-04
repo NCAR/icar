@@ -744,7 +744,7 @@ contains
             if (options%debug) write(*,*) "Raw forcing z_base min=",minval(zbase), " max=", maxval(zbase)
             deallocate(zbase)
         endif
-        if (options%z_is_geopotential) then
+        if (options%z_is_on_interface) then
             boundary%lowres_z = boundary%lowres_z / gravity
             write(*,*) "Interpreting geopotential height as residing between model layers"
             boundary%lowres_z(:,1:nz-1,:) = (boundary%lowres_z(:,1:nz-1,:) + boundary%lowres_z(:,2:nz,:))/2

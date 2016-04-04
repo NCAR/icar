@@ -492,6 +492,7 @@ module data_structures
         logical :: mean_fields          ! use only a mean forcing field across the model boundaries 
         logical :: restart              ! this is a restart run, read model conditions from a restart file
         logical :: z_is_geopotential    ! if true the z variable is interpreted as geopotential height
+        logical :: z_is_on_interface    ! if true the z variable is interpreted as residing at model level interfaces
         logical :: advect_density       ! properly incorporate density into the advection calculations. 
                                         ! Doesn't play nice with linear winds
         logical :: high_res_soil_state  ! read the soil state from the high res input file not the low res file

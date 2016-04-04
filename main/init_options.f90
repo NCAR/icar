@@ -184,6 +184,14 @@ contains
                 stop
             endif
         endif
+        if ((options%z_is_geopotential .eqv. .True.).and.(options%z_is_on_interface .eqv. .False.)) then
+            if (options%warning_level>1) then
+                write(*,*) "WARNING WARNING WARNING"
+                write(*,*) "WARNING geopotential height is no longer assumed to be on model interface levels."
+                write(*,*) "WARNING To interpolate geopotential, set z_is_on_interface=True in the namelist. "
+                write(*,*) "WARNING WARNING WARNING"
+            endif
+        endif
     
     end subroutine options_check
     
@@ -452,7 +460,7 @@ contains
         double precision :: end_mjd
         integer :: nz, n_ext_winds,buffer, warning_level, cfl_strictness
         logical :: ideal, readz, readdz, debug, external_winds, surface_io_only, &
-                   mean_winds, mean_fields, restart, advect_density, z_is_geopotential,&
+                   mean_winds, mean_fields, restart, advect_density, z_is_geopotential, z_is_on_interface,&
                    high_res_soil_state, use_agl_height, time_varying_z, &
                    use_mp_options, use_lt_options, use_adv_options, use_lsm_options
                    
@@ -464,7 +472,7 @@ contains
         namelist /parameters/ ntimesteps,outputinterval,inputinterval, surface_io_only, &
                               dx,dxlow,ideal,readz,readdz,nz,t_offset,debug, &
                               external_winds,buffer,n_ext_winds,advect_density,smooth_wind_distance, &
-                              mean_winds,mean_fields,restart, z_is_geopotential,&
+                              mean_winds,mean_fields,restart, z_is_geopotential, z_is_on_interface,&
                               date, calendar, high_res_soil_state,rotation_scale_height,warning_level, &
                               use_agl_height, start_date, forcing_start_date, end_date, time_varying_z, &
                               cfl_reduction_factor, cfl_strictness, &
@@ -483,6 +491,7 @@ contains
         buffer=0
         advect_density=.False.
         z_is_geopotential=.False.
+        z_is_on_interface=.False.
         dxlow=100000
         restart=.False.
         ideal=.False.
@@ -606,6 +615,7 @@ contains
         endif
         options%use_agl_height = use_agl_height
         options%z_is_geopotential = z_is_geopotential
+        options%z_is_on_interface = z_is_on_interface
         
         options%external_winds = external_winds
         options%ext_winds_nfiles = n_ext_winds
