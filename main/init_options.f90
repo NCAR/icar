@@ -342,11 +342,11 @@ contains
         latvar="XLAT"
         lonvar="XLONG"
         uvar="U"
-        ulat="XLAT_U"
-        ulon="XLONG_U"
+        ulat=""
+        ulon=""
         vvar="V"
-        vlat="XLAT_V"
-        vlon="XLONG_V"
+        vlat=""
+        vlon=""
         pvar="P"
         pbvar=""
         tvar="T"
@@ -365,10 +365,10 @@ contains
         landvar="XLAND"
         lat_hi="XLAT"
         lon_hi="XLONG"
-        ulat_hi="XLAT_U"
-        ulon_hi="XLONG_U"
-        vlat_hi="XLAT_V"
-        vlon_hi="XLONG_V"
+        ulat_hi=""
+        ulon_hi=""
+        vlat_hi=""
+        vlon_hi=""
         soiltype_var="" !"SOILTYPE"
         soil_t_var="" !"TSOIL"
         soil_vwc_var="" !"SOILSMC"
@@ -382,39 +382,43 @@ contains
         read(name_unit,nml=var_list)
         close(name_unit)
 
-!       2D geometry variable names (for coarse model)
+        ! 2D geometry variable names (for coarse model)
         options%hgtvar=hgtvar
         options%latvar=latvar
         options%lonvar=lonvar
-!       U varname and associated lat/lon var names
+        ! U varname and associated lat/lon var names
         options%uvar=uvar
+        if (ulat=="") ulat=latvar
+        if (ulon=="") ulon=lonvar
         options%ulat=ulat
         options%ulon=ulon
-!       V varname and associated lat/lon var names
+        ! V varname and associated lat/lon var names
         options%vvar=vvar
+        if (vlat=="") vlat=latvar
+        if (vlon=="") vlon=lonvar
         options%vlat=vlat
         options%vlon=vlon
-!       Primary model variable names
+        ! Primary model variable names
         options%pbvar=pbvar
         options%pvar=pvar
         options%tvar=tvar
         options%qvvar=qvvar
         options%qcvar=qcvar
         options%qivar=qivar
-!       vertical coordinate
+        ! vertical coordinate
         options%zvar=zvar
         options%zbvar=zbvar
-!       2D model variables (e.g. Land surface and PBL height)       
+        ! 2D model variables (e.g. Land surface and PBL height)       
         options%shvar=shvar
         options%lhvar=lhvar
         options%pblhvar=pblhvar
-!       Shortwave and longwave down at the surface
+        ! Shortwave and longwave down at the surface
         options%swdown_var=swdown_var
         options%lwdown_var=lwdown_var
         ! Sea surface temperature
         options%sst_var = sst_var
         
-!       separate variable names for the high resolution domain
+        ! separate variable names for the high resolution domain
         options%hgt_hi=hgt_hi
         options%landvar=landvar
         options%lat_hi=lat_hi
@@ -424,7 +428,7 @@ contains
         options%vlat_hi=vlat_hi
         options%vlon_hi=vlon_hi
         
-!       soil and vegetation parameters
+        ! soil and vegetation parameters
         options%soiltype_var=soiltype_var
         options%soil_t_var=soil_t_var
         options%soil_vwc_var=soil_vwc_var

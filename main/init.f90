@@ -86,11 +86,25 @@ contains
 !
 ! ------------------------------------------------------------------------------------------
 
-! convert longitudes that may be -180-180 into 0-360 range
+    !> ----------------------------------------------------------------------------
+    !!  Conver longitudes into a common format for geographic interpolation
+    !!
+    !!  First convert longitudes that may be -180-180 into 0-360 range first. 
+    !!  If data straddle the 0 degree longitude, convert back to -180-180 so interpolation will be smooth
+    !!
+    !!  @param[inout]   long_data  2D array of longitudes (either -180 - 180 or 0 - 360)
+    !!
+    !! ----------------------------------------------------------------------------
     subroutine convert_longitudes(long_data)
         implicit none
         real, dimension(:,:), intent(inout) :: long_data
+        
         where(long_data<0) long_data = 360+long_data
+        
+        if ((minval(long_data)<10).and.(maxval(long_data)>350)) then
+            where(long_data>180) long_data = long_data-360
+        endif
+        
     end subroutine convert_longitudes
 
 !   Allow running over a sub-domain, by removing the outer N grid cells from all sides of the domain (lat,lon,terrain)
@@ -455,7 +469,78 @@ contains
         
         
     end subroutine init_domain_land
+    
+    !> ----------------------------------------------------------------------------
+    !!  Interpolate a 2D data array in the "x" (first) dimension, extrapolate out one on edges
+    !!  
+    !!  If data_out is not allocated, it will be allocated as (nx+1,ny). Then a simple average between
+    !!  grid cells computes a bilinear interpolation. Edge cells are extrapolated outwards using a
+    !!  similar method. 
+    !!  
+    !!  @param[in]  data_in     real 2D array to be interpolated
+    !!  @param[out] data_out    real 2D allocatable array to store the interpolated output
+    !!
+    !> ----------------------------------------------------------------------------
+    subroutine interpolate_in_x(data_in, data_out)
+        implicit none
+        real, dimension(:,:), intent(in) :: data_in
+        real, dimension(:,:), allocatable, intent(out) :: data_out
         
+        integer :: nx, ny
+        
+        nx=size(data_in,1)
+        ny=size(data_in,2)
+        if (.not.allocated(data_out)) then
+            allocate(data_out(nx+1,ny))
+        else
+            if ((size(data_out,1)/=nx+1).or.(size(data_out,2)/=ny)) then
+                deallocate(data_out)
+                allocate(data_out(nx+1,ny))
+            endif
+        endif
+        
+        ! simple bilinear inteprolation (included extrapolation one grid cell out)
+        data_out(2:nx,:) = (data_in(2:,:) + data_in(1:nx-1,:))/2
+        data_out(1,:)    = data_in(1,:)*2 - data_in(2,:)
+        data_out(nx+1,:) = data_in(nx,:)*2 - data_in(nx-1,:)
+        ! result is data_out
+    end subroutine interpolate_in_x
+
+    !> ----------------------------------------------------------------------------
+    !!  Interpolate a 2D data array in the "y" (second) dimension, extrapolate out one on edges
+    !!  
+    !!  If data_out is not allocated, it will be allocated as (nx,ny+1). Then a simple average between
+    !!  grid cells computes a bilinear interpolation. Edge cells are extrapolated outwards using a
+    !!  similar method. 
+    !!  
+    !!  @param[in]  data_in     real 2D array to be interpolated
+    !!  @param[out] data_out    real 2D allocatable array to store the interpolated output
+    !!
+    !> ----------------------------------------------------------------------------
+    subroutine interpolate_in_y(data_in, data_out)
+        implicit none
+        real, dimension(:,:), intent(in) :: data_in
+        real, dimension(:,:), allocatable, intent(out) :: data_out
+        
+        integer :: nx, ny
+        
+        nx=size(data_in,1)
+        ny=size(data_in,2)
+        if (.not.allocated(data_out)) then
+            allocate(data_out(nx,ny+1))
+        else
+            if ((size(data_out,1)/=nx).or.(size(data_out,2)/=ny+1)) then
+                deallocate(data_out)
+                allocate(data_out(nx,ny+1))
+            endif
+        endif
+        
+        ! simple bilinear inteprolation (included extrapolation one grid cell out)
+        data_out(:,2:ny) = (data_in(:,2:) + data_in(:,1:ny-1))/2
+        data_out(:,1)    = data_in(:,1)*2 - data_in(:,2)
+        data_out(:,ny+1) = data_in(:,ny)*2 - data_in(:,ny-1)
+        ! result is data_out
+    end subroutine interpolate_in_y
 
 !   initialize the domain e.g. lat,lon,terrain, 3D z coordinate
     subroutine init_domain(options, domain)
@@ -470,11 +555,38 @@ contains
         call io_read2d(options%init_conditions_file,options%lat_hi,domain%lat,1)
         call io_read2d(options%init_conditions_file,options%lon_hi,domain%lon,1)
         call convert_longitudes(domain%lon)
-        call io_read2d(options%init_conditions_file,options%ulat_hi,domain%u_geo%lat,1)
-        call io_read2d(options%init_conditions_file,options%ulon_hi,domain%u_geo%lon,1)
+        
+        !  because u/vlat/lon_hi are optional, we calculated them by interplating from the mass lat/lon if necessary
+        if (options%ulat_hi/="") then
+            call io_read2d(options%init_conditions_file,options%ulat_hi,domain%u_geo%lat,1)
+        else
+            call interpolate_in_x(domain%lat,domain%u_geo%lat)
+            print*, domain%lat(1:4,1)
+            print*, domain%u_geo%lat(1:5,1)
+        endif
+        if (options%ulon_hi/="") then
+            call io_read2d(options%init_conditions_file,options%ulon_hi,domain%u_geo%lon,1)
+        else
+            call interpolate_in_x(domain%lon,domain%u_geo%lon)
+            print*, domain%lon(1:4,1)
+            print*, domain%u_geo%lon(1:5,1)
+        endif
         call convert_longitudes(domain%u_geo%lon)
-        call io_read2d(options%init_conditions_file,options%vlat_hi,domain%v_geo%lat,1)
-        call io_read2d(options%init_conditions_file,options%vlon_hi,domain%v_geo%lon,1)
+        
+        if (options%vlat_hi/="") then
+            call io_read2d(options%init_conditions_file,options%vlat_hi,domain%v_geo%lat,1)
+        else
+            call interpolate_in_y(domain%lat,domain%v_geo%lat)
+            print*, domain%lat(1,1:4)
+            print*, domain%v_geo%lat(1,1:5)
+        endif
+        if (options%vlon_hi/="") then
+            call io_read2d(options%init_conditions_file,options%vlon_hi,domain%v_geo%lon,1)
+        else
+            call interpolate_in_y(domain%lon,domain%v_geo%lon)
+            print*, domain%lon(1,1:4)
+            print*, domain%v_geo%lon(1,1:5)
+        endif
         call convert_longitudes(domain%v_geo%lon)
         
         if (options%landvar/="") then
@@ -630,11 +742,14 @@ contains
         nz=size(zbase,3)
         allocate(boundary%lowres_z(nx,nz,ny))
         boundary%lowres_z=reshape(zbase,[nx,nz,ny],order=[1,3,2])
+        
+        if (options%debug) write(*,*) "Raw input forcing z min=",minval(zbase), " z max=", maxval(zbase)
         deallocate(zbase)
 
         if (trim(options%zbvar)/="") then
             call io_read3d(options%boundary_files(1),options%zbvar, zbase)
             boundary%lowres_z = boundary%lowres_z + reshape(zbase,[nx,nz,ny],order=[1,3,2])
+            if (options%debug) write(*,*) "Raw forcing z_base min=",minval(zbase), " max=", maxval(zbase)
             deallocate(zbase)
         endif
         if (options%z_is_geopotential) then
@@ -695,12 +810,32 @@ contains
         call io_read2d(options%ext_wind_files(1),options%latvar,bc%ext_winds%lat)
         call io_read2d(options%ext_wind_files(1),options%lonvar,bc%ext_winds%lon)
         call convert_longitudes(bc%ext_winds%lon)
-        call io_read2d(options%ext_wind_files(1),options%ulat_hi,bc%ext_winds%u_geo%lat)
-        call io_read2d(options%ext_wind_files(1),options%ulon_hi,bc%ext_winds%u_geo%lon)
+        
+        ! ulat_hi and vlat_hi are optional, if they are not supplied interpolate the mass lat/lon grid
+        if (options%ulat_hi/="") then
+            call io_read2d(options%ext_wind_files(1),options%ulat_hi,bc%ext_winds%u_geo%lat,1)
+        else
+            call interpolate_in_x(bc%ext_winds%lat,bc%ext_winds%u_geo%lat)
+        endif
+        if (options%ulon_hi/="") then
+            call io_read2d(options%ext_wind_files(1),options%ulon_hi,bc%ext_winds%u_geo%lon,1)
+        else
+            call interpolate_in_x(bc%ext_winds%lon,bc%ext_winds%u_geo%lon)
+        endif
         call convert_longitudes(bc%ext_winds%u_geo%lon)
-        call io_read2d(options%ext_wind_files(1),options%vlat_hi,bc%ext_winds%v_geo%lat)
-        call io_read2d(options%ext_wind_files(1),options%vlon_hi,bc%ext_winds%v_geo%lon)
+        
+        if (options%vlat_hi/="") then
+            call io_read2d(options%ext_wind_files(1),options%vlat_hi,bc%ext_winds%v_geo%lat,1)
+        else
+            call interpolate_in_y(bc%ext_winds%lat,bc%ext_winds%v_geo%lat)
+        endif
+        if (options%vlon_hi/="") then
+            call io_read2d(options%ext_wind_files(1),options%vlon_hi,bc%ext_winds%v_geo%lon,1)
+        else
+            call interpolate_in_y(bc%ext_winds%lon,bc%ext_winds%v_geo%lon)
+        endif
         call convert_longitudes(bc%ext_winds%v_geo%lon)
+
         
         write(*,*) "Setting up ext wind geoLUTs"
         call geo_LUT(bc%next_domain%u_geo, bc%ext_winds%u_geo)
@@ -721,10 +856,12 @@ contains
         
         ! force all weight to be on the first x,y pair...
         ! this assumes the "external winds" file is on the exact same grid as the high res model grid
-        bc%ext_winds%u_geo%geolut%w(2:,:,:)=0
-        bc%ext_winds%u_geo%geolut%w(1,:,:)=1
-        bc%ext_winds%v_geo%geolut%w(2:,:,:)=0
-        bc%ext_winds%v_geo%geolut%w(1,:,:)=1
+        ! probably better not to do this incase they are not on the same grid. This also assumes the first x,y pair
+        ! is the closes grid cell.  This should be the case for the current geolut algorithm, but it is not required. 
+        ! bc%ext_winds%u_geo%geolut%w(2:,:,:)=0
+        ! bc%ext_winds%u_geo%geolut%w(1,:,:)=1
+        ! bc%ext_winds%v_geo%geolut%w(2:,:,:)=0
+        ! bc%ext_winds%v_geo%geolut%w(1,:,:)=1
         bc%ext_winds%dx=bc%next_domain%dx
         call setup_extwinds(bc%ext_winds)
     end subroutine init_ext_winds
