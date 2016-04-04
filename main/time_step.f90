@@ -342,7 +342,7 @@ contains
                     if (k==1) then
                         zoffset = 0
                     else
-                        zoffset = 1
+                        zoffset = -1
                     endif
                     
                     do i=1,nx
