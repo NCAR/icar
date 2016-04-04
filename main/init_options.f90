@@ -610,8 +610,7 @@ contains
         options%warning_level = warning_level
         options%rotation_scale_height = rotation_scale_height
         if (use_agl_height) then
-            write(*,*) "WARNING: use_agl_height=True is not currently supported, reseting to False"
-            use_agl_height=.False.
+            write(*,*) "WARNING: use_agl_height=True is only supported for winds. "
         endif
         options%use_agl_height = use_agl_height
         options%z_is_geopotential = z_is_geopotential

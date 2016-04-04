@@ -657,7 +657,6 @@ contains
         
         ! all other variables should be allocated and initialized to 0
         call domain_allocation(domain,options,nx,nz,ny)
-        
         ! initializing land
         call init_domain_land(domain,options)
         
@@ -959,77 +958,87 @@ contains
                 boundary%lowres_z(:,i,:)=boundary%lowres_z(:,i,:)+boundary%terrain
             enddo
         endif
-        if (options%zvar=="PH") then
-            write(*,*) "WARNING interpolating forcing z levels to half / mass levels"
-            write(*,*) "  Assuming PH variable is geopotential between mass levels (as in WRF)"
+        if (options%z_is_on_interface) then
             boundary%lowres_z(:,1:nz-1,:) = (boundary%lowres_z(:,1:nz-1,:) + boundary%lowres_z(:,2:nz,:)) / 2
         endif
+        
         ! if we want vertical interpolations between forcing and model grid to be done from 
-        ! height above ground level (and we should, esp. for wind!), then we need to remove the 
+        ! height above ground level (and we should for wind?), then we need to remove the 
         ! topography from both grids first
         if (options%use_agl_height) then
             nz=size(boundary%lowres_z,2)
+            
+            ! First set the forcing data z into AGL coordinates
             do i=1,nz
                 boundary%lowres_z(:,i,:)=boundary%lowres_z(:,i,:)-boundary%terrain
             enddo
+            ! Then put the model domain into AGL coordinates
             nz=size(domain%z,2)
             do i=1,nz
                 domain%z(:,i,:)=domain%z(:,i,:)-domain%terrain
             enddo
-            
+
+            ! finally, get the model terrain onto the u and v staggered grids
             call copy_z(domain,domain%u_geo,interpolate_dim=1)
             call copy_z(domain,domain%v_geo,interpolate_dim=3)
-            
-        endif
-        ! interpolate the low-res terrain to the high-res grid for pressure adjustments. 
-        ! This should be done on a separate lowres terrain grid so the embedded high res terrain grid 
-        ! can also be used in pressure adjustments on each time step...
-        nx=size(domain%terrain,1)
-        ny=size(domain%terrain,2)
-        allocate(boundary%lowres_terrain(nx,ny))
-        call geo_interp2d(boundary%lowres_terrain,boundary%terrain,boundary%geolut)
-        
-        nz=size(boundary%lowres_z,2)
-        allocate(boundary%z(nx,nz,ny))
-        call geo_interp(boundary%z,boundary%lowres_z,boundary%geolut,.false.)
-        
-        nx=size(domain%u_geo%lat,1)
-        ny=size(domain%u_geo%lat,2)
-        allocate(boundary%u_geo%z(nx,nz,ny))
-        call geo_interp(boundary%u_geo%z,boundary%lowres_z,u_temp_geo,.false.)
-        
-        nx=size(domain%v_geo%lat,1)
-        ny=size(domain%v_geo%lat,2)
-        allocate(boundary%v_geo%z(nx,nz,ny))
-        call geo_interp(boundary%v_geo%z,boundary%lowres_z,v_temp_geo,.false.)
-        
-        call destroy_lut(v_temp_geo)
-        call destroy_lut(u_temp_geo)
 
-        write(*,*) "Setting up vertical interpolation Look Up Tables"
-        
-        if (options%debug) write(*,*) "Domain z min=",minval(domain%z), "Domain z max=", maxval(domain%z)
-        if (options%debug) write(*,*) "Forcing z min=",minval(boundary%z), "Forcing z max=", maxval(boundary%z)
-        call vLUT(domain,boundary)
-        call vLUT(domain%u_geo,boundary%u_geo)
-        call vLUT(domain%v_geo,boundary%v_geo)
-        
-        if (options%use_agl_height) then
-            nz=size(boundary%z,2)
-!           call io_write3d("bc_hiresz-hgt.nc","data",boundary%z)
-            do i=1,nz
-                boundary%z(:,i,:)=boundary%z(:,i,:)+boundary%lowres_terrain
-                boundary%lowres_z(:,i,:)=boundary%lowres_z(:,i,:)+boundary%terrain
-            enddo
-            nz=size(domain%z,2)
-!           call io_write3d("domain_z-hgt.nc","data",domain%z)
+            ! this is the only place we need the domain z to be in AGL space, so revert back immediately
             do i=1,nz
                 domain%z(:,i,:)=domain%z(:,i,:)+domain%terrain
             enddo
         endif
         
+        ! This section all happens in AGL space if use_agl_height=True
+        ! interpolate lowres_z into the u_geo and v_geo data structures (on their staggered grids)
+        nx=size(domain%u_geo%lat,1)
+        ny=size(domain%u_geo%lat,2)
+        nz=size(boundary%lowres_z,2)
+        allocate(boundary%u_geo%z(nx,nz,ny))
+        call geo_interp(boundary%u_geo%z,boundary%lowres_z,u_temp_geo,.false.)
+
+        nx=size(domain%v_geo%lat,1)
+        ny=size(domain%v_geo%lat,2)
+        allocate(boundary%v_geo%z(nx,nz,ny))
+        call geo_interp(boundary%v_geo%z,boundary%lowres_z,v_temp_geo,.false.)
+        
+        ! destroy the geographic look up tables to save space
+        ! geoLUTs for forcing data are separate
+        call destroy_lut(v_temp_geo)
+        call destroy_lut(u_temp_geo)
+        
+        write(*,*) "Setting up vertical interpolation Look Up Tables"
+        ! generate the vertical inteprolateion look up tables for the u and v grids
+        call vLUT(domain%u_geo,boundary%u_geo)
+        call vLUT(domain%v_geo,boundary%v_geo)
+        
+        ! restore the lowres_z variable to ASL space for the mass grid vLUT generation
+        if (options%use_agl_height) then
+            ! interpolate the low-res terrain to the high-res grid to make it faster to restore the lowres_z. 
+            nx=size(domain%terrain,1)
+            ny=size(domain%terrain,2)
+            allocate(boundary%lowres_terrain(nx,ny))
+            call geo_interp2d(boundary%lowres_terrain,boundary%terrain,boundary%geolut)
+
+            ! restore lowres_z variable to be in ASL space
+            nz=size(boundary%lowres_z,2)
+            do i=1,nz
+                boundary%lowres_z(:,i,:)=boundary%lowres_z(:,i,:)+boundary%terrain
+            enddo
+        endif
+
+        ! Finally, take care of the mass grid in ASL space
+        nx=size(domain%terrain,1)
+        ny=size(domain%terrain,2)
+        nz=size(boundary%lowres_z,2)
+        allocate(boundary%z(nx,nz,ny))
+        call geo_interp(boundary%z,boundary%lowres_z,boundary%geolut,.false.)
+
+        if (options%debug) write(*,*) "Domain z min=",minval(domain%z), "Domain z max=", maxval(domain%z)
+        if (options%debug) write(*,*) "Forcing z min=",minval(boundary%z), "Forcing z max=", maxval(boundary%z)
+        call vLUT(domain,boundary)
+
         ! these are not longer needed and (without adjustments) are potentially unreliable (AGL vs ASL)
-        deallocate(boundary%v_geo%z,boundary%u_geo%z)
+        deallocate(boundary%v_geo%z, boundary%u_geo%z,domain%u_geo%z,domain%v_geo%z)
         ! swaps z and lowres_z (one of the cases where pointers would make life a lot easier)
         call swap_z(boundary)
         
