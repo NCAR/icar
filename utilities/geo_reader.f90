@@ -26,39 +26,77 @@ module geo
     public::geo_interp2d ! apply geoLUT to interpolate in 2d for a 2d grid
     
 contains
-    
-    ! calculate the weights to use for bilinear interpolation between surrounding points x, y
-    !   to position xi,yi
+    !>------------------------------------------------------------
+    !! Calculate the weights to use for bilinear interpolation between surrounding points x, y
+    !! 
+    !! Takes a point (yi,xi) and a set of 4 surrounding points (y[4],x[4]) as input
+    !! 
+    !! @param   real    yi  input y location to interpolate to. 
+    !! @param   real    y   Array of surrounding y-locations to interpolate from. 
+    !! @param   real    xi  input x location to interpolate to. 
+    !! @param   real    x   Array of surrounding x-locations to interpolate from. 
+    !! @retval  real    weights
+    !!
+    !!------------------------------------------------------------    
     function bilin_weights(yi,y,xi,x)
         implicit none
         real,intent(in)::yi,y(0:3),xi,x(0:3)
         real::x0,x1,x2,x3,y5,y6,f1,f2
         real, dimension(4) ::bilin_weights
+        
+        ! handle the special case if x(1) and x(0) are identical
         if ((x(1)-x(0))==0) then
             x0=1
         else
+            ! compute the linear interpolation between x0 and x1
             x0=abs((xi-x(0))/(x(1)-x(0)))
         endif
+        ! the weights for the other x are just the complement
         x1=1-x0
+        
+        ! handle the special case if x(3) and x(2) are identical
         if ((x(3)-x(2))==0) then
             x2=1
         else
+            ! compute the linear interpolation between x2 and x3
             x2=abs((xi-x(2))/(x(3)-x(2)))
         endif
+        ! the weights for the other x are just the complement
         x3=1-x2
+        
+        ! now compute the y interpolation weights
+        ! first find the y locations after performing the x interpolation
         y5=y(0)*x1+y(1)*x0
         y6=y(2)*x3+y(3)*x2
+        ! now find the interpolation weights between those interpolated y points
         if ((y6-y5)==0) then
+            ! the special case again
             f1=1
         else
+            ! the standard linear interpolation case
             f1=(yi-y5)/(y6-y5)
         endif
+        ! the complement
         f2=1-f1
         
+        ! note that the final weights are a mixture of the x and y weights
         bilin_weights=(/x1*f2,x0*f2,x3*f1,x2*f1/)
     end function bilin_weights
     
-    !   xw=minxw(xw,lo%lon,xc,yc,lon)
+
+    !>------------------------------------------------------------
+    !! Find the minimum x
+    !! Takes a point (yi,xi) and a set of 4 surrounding points (y[4],x[4]) as input
+    !! 
+    !! Example : xw = minxw(xw,lo%lon,xc,yc,lon)
+    !!
+    !! @param   real    yi  input y location to interpolate to. 
+    !! @param   real    y   Array of surrounding y-locations to interpolate from. 
+    !! @param   real    xi  input x location to interpolate to. 
+    !! @param   real    x   Array of surrounding x-locations to interpolate from. 
+    !! @retval  real    weights
+    !!
+    !!------------------------------------------------------------     
     integer function minxw(xw,longrid,xpos,ypos,lon)
         implicit none
         integer, intent(in)::xw,xpos,ypos
@@ -80,6 +118,7 @@ contains
             endif
         endif
     end function minxw
+    
     !   yw=minyw(yw,lo%lat,xc,yc,lat)
     integer function minyw(yw,latgrid,xpos,ypos,lat)
         integer, intent(in)::yw,xpos,ypos
