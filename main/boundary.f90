@@ -36,7 +36,7 @@ module boundary_conditions
     use linear_theory_winds,    only : linear_perturb
     use geo,                    only : geo_interp2d, geo_interp
     use vertical_interpolation, only : vinterp, vLUT_forcing
-    use output,                 only : write_domain
+    use output,                 only : write_domain, output_init
     use string,                 only : str
     
     implicit none
@@ -891,6 +891,7 @@ contains
             ! we can't just call balance_uvw because the linear winds may need to be initialized
             !call balance_uvw(domain,options)
             
+            call output_init(domain,options)
             call write_domain(domain,options,-1)
         else
 !           else load data from the first Boundary conditions file
