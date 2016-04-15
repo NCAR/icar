@@ -247,7 +247,8 @@ contains
         integer, dimension(io_maxDims)  :: diminfo !will hold dimension lengths
         integer, dimension(io_maxDims)  :: dimstart
         ! This will be the netCDF ID for the file and data_in variable.
-        integer :: ncid, varid,i
+        integer :: ncid, varid,i, err
+        real :: scale, offset
 
         if (present(extradim)) then
             dimstart=extradim
@@ -264,6 +265,11 @@ contains
         call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
         ! Get the varid of the data_in variable, based on its name.
         call check(nf90_inq_varid(ncid, varname, varid),trim(filename)//":"//trim(varname))
+        err = nf90_get_att(ncid,varid,'scale_factor', scale)
+        if (err/=0) scale=1
+        err = nf90_get_att(ncid,varid,'add_offset', offset)
+        if (err/=0) offset=0
+
 
         ! Read the data_in. skip the slowest varying indices if there are more than 3 dimensions (typically this will be time)
         if (diminfo(1)>3) then
@@ -276,6 +282,7 @@ contains
         else
             call check(nf90_get_var(ncid, varid, data_in),trim(filename)//":"//trim(varname))
         endif
+        data_in = data_in * scale + offset
         ! Close the file, freeing all resources.
         call check( nf90_close(ncid),filename)
 
@@ -306,7 +313,8 @@ contains
         integer, dimension(io_maxDims)  :: diminfo ! will hold dimension lengths
         integer, dimension(io_maxDims)  :: dimstart
         ! This will be the netCDF ID for the file and data_in variable.
-        integer :: ncid, varid,i
+        integer :: ncid, varid,i, err
+        real :: scale, offset
 
         if (present(extradim)) then
             dimstart=extradim
@@ -323,6 +331,12 @@ contains
         call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
         ! Get the varid of the data_in variable, based on its name.
         call check(nf90_inq_varid(ncid, varname, varid),trim(filename)//":"//trim(varname))
+        err = nf90_get_att(ncid,varid,'scale_factor', scale)
+        if (err/=0) scale=1
+        err = nf90_get_att(ncid,varid,'add_offset', offset)
+        if (err/=0) offset=0
+
+
 
         ! Read the data_in. skip the slowest varying indices if there are more than 3 dimensions (typically this will be time)
         if (diminfo(1)>2) then
@@ -335,6 +349,7 @@ contains
         else
             call check(nf90_get_var(ncid, varid, data_in),trim(filename)//":"//trim(varname))
         endif
+        data_in = data_in * scale + offset
 
         ! Close the file, freeing all resources.
         call check( nf90_close(ncid),filename)
