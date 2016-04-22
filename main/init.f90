@@ -728,13 +728,12 @@ contains
         
         ! read in the vertical coordinate
         call io_read3d(options%boundary_files(1),options%zvar,zbase)
+        if (options%debug) write(*,*) "Raw input forcing z min=",minval(zbase), " z max=", maxval(zbase)
         nx=size(zbase,1)
         ny=size(zbase,2)
         nz=size(zbase,3)
         allocate(boundary%lowres_z(nx,nz,ny))
         boundary%lowres_z=reshape(zbase,[nx,nz,ny],order=[1,3,2])
-        
-        if (options%debug) write(*,*) "Raw input forcing z min=",minval(zbase), " z max=", maxval(zbase)
         deallocate(zbase)
 
         if (trim(options%zbvar)/="") then
@@ -743,8 +742,11 @@ contains
             if (options%debug) write(*,*) "Raw forcing z_base min=",minval(zbase), " max=", maxval(zbase)
             deallocate(zbase)
         endif
+        if (options%z_is_geopotential) then
+             boundary%lowres_z = boundary%lowres_z/ gravity
+        endif
+        if (options%debug) write(*,*) "Pre-interpolation forcing z min=",minval(boundary%lowres_z), " z max=", maxval(boundary%lowres_z)
         if (options%z_is_on_interface) then
-            boundary%lowres_z = boundary%lowres_z / gravity
             write(*,*) "Interpreting geopotential height as residing between model layers"
             boundary%lowres_z(:,1:nz-1,:) = (boundary%lowres_z(:,1:nz-1,:) + boundary%lowres_z(:,2:nz,:))/2
         endif
