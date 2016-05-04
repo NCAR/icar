@@ -30,7 +30,10 @@ In both cases, the solution is to delete (or move) the existing output files, or
 
     
 3) **dz_levels namelist error**
+    "Fortran runtime error: Bad data for namelist object dz_levels"
+
     If compiled with gfortran, the namelist format for arrays has to be slightly different than is supplied in the run directory. An easy fix is to put the dz_levels array all onto one line. 
     
     
-        
+4) **other namelist error**
+    If a newer namelist is used with an older version of code, you may get errors telling you that a given variable is not supported.  You can probably remove that line from the namelist and it will run correctly, though you should think about the variable that is being removed to decide what it means.  
