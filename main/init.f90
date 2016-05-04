@@ -954,11 +954,8 @@ contains
         
         nz=size(boundary%lowres_z,2)
         if (maxval(boundary%terrain)>maxval(boundary%lowres_z(:,1,:))) then
-            write(*,*) "WARNING Assuming forcing Z levels are AGL, not ASL : adding ground surface height"
-            write(*,*) "Terrain Max=",maxval(boundary%terrain), "Lowest level Max=",maxval(boundary%lowres_z(:,1,:))
-            do i=1,nz
-                boundary%lowres_z(:,i,:)=boundary%lowres_z(:,i,:)+boundary%terrain
-            enddo
+            write(*,*) "WARNING : Forcing Z levels are below the terrain provided. "
+            write(*,*) "          For pressure level forcing data this is expected, but not well tested. "
         endif
         if (options%z_is_on_interface) then
             boundary%lowres_z(:,1:nz-1,:) = (boundary%lowres_z(:,1:nz-1,:) + boundary%lowres_z(:,2:nz,:)) / 2
@@ -1015,13 +1012,6 @@ contains
         
         ! restore the lowres_z variable to ASL space for the mass grid vLUT generation
         if (options%use_agl_height) then
-            ! interpolate the low-res terrain to the high-res grid to make it faster to restore the lowres_z. 
-            nx=size(domain%terrain,1)
-            ny=size(domain%terrain,2)
-            allocate(boundary%lowres_terrain(nx,ny))
-            call geo_interp2d(boundary%lowres_terrain,boundary%terrain,boundary%geolut)
-
-            ! restore lowres_z variable to be in ASL space
             nz=size(boundary%lowres_z,2)
             do i=1,nz
                 boundary%lowres_z(:,i,:)=boundary%lowres_z(:,i,:)+boundary%terrain
