@@ -1,0 +1,10 @@
+<map id="G" name="G">
+<area shape="rect" id="node3" href="$namespacemodule__ra__simple.html#ad1c74605b2817f833d31e806f791e246" title="module_ra_simple::ra_simple" alt="" coords="153,112,343,141"/>
+<area shape="rect" id="node5" href="$namespacemodule__ra__simple.html#a22df846814d36f313ab2a16722dacd38" title="module_ra_simple::calc_solar_elevation" alt="" coords="392,32,645,61"/>
+<area shape="rect" id="node13" href="$namespacemodule__ra__simple.html#a61270061e4ba1e987f09531e8e785d6a" title="module_ra_simple::longwave" alt="" coords="424,85,613,115"/>
+<area shape="rect" id="node15" href="$namespacemodule__ra__simple.html#a377b8499bf6d1ac05be783ccb72c48e1" title="module_ra_simple::relative_humidity" alt="" coords="403,139,635,168"/>
+<area shape="rect" id="node17" href="$namespacemodule__ra__simple.html#a3545a06cb9b8c2c28fcddbbd636463fb" title="module_ra_simple::shortwave" alt="" coords="421,192,616,221"/>
+<area shape="rect" id="node7" href="$namespacetime.html#af49822a864c9cfdeb45786c92ae5973d" title="time::calc_day_of_year" alt="" coords="693,32,851,61"/>
+<area shape="rect" id="node9" href="$namespacetime.html#a147739c1924e484a7542973676a7c1ea" title="time::calendar_date" alt="" coords="899,5,1035,35"/>
+<area shape="rect" id="node11" href="$namespacetime.html#a294e92920909a8293123d62d0ce2c22f" title="time::date_to_mjd" alt="" coords="904,59,1029,88"/>
+</map>

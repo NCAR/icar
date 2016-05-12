@@ -1,0 +1,5 @@
+<map id="G" name="G">
+<area shape="rect" id="node3" href="$namespacelinear__theory__winds.html#ab1a90b11136aa206179e98ab418cf2c3" title="linear_theory_winds::calc_dry_stability" alt="" coords="283,5,528,35"/>
+<area shape="rect" id="node5" href="$namespacelinear__theory__winds.html#a0fb7ac3d33e14bf07955cf4bedd23f9f" title="linear_theory_winds::calc_moist_stability" alt="" coords="276,59,535,88"/>
+<area shape="rect" id="node7" href="$namespacelinear__theory__winds.html#ac91acb919d598923ccc41bbfc4d323a8" title="linear_theory_winds::calc_sat_lapse_rate" alt="" coords="584,59,845,88"/>
+</map>
