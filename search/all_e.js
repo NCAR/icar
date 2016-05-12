@@ -35,7 +35,7 @@ var searchData=
   ['output_5ffile',['output_file',['../structdata__structures_1_1options__type.html#a400311604d0526e43713ee37dacbe0d3',1,'data_structures::options_type']]],
   ['output_5ffile_5ffrequency',['output_file_frequency',['../structdata__structures_1_1options__type.html#aac065778fcf0107bd16ae0a2c670c5f7',1,'data_structures::options_type']]],
   ['output_5ffrequency',['output_frequency',['../classoutput.html#af45d6eeb231b35c1dba1bc36a3cd260f',1,'output']]],
-  ['output_5finit',['output_init',['../classoutput.html#a1f3263c6caa6f6824e652f03cf24bc6d',1,'output']]],
+  ['output_5finit',['output_init',['../classoutput.html#a4bd03410286e4be92c719114b06c27e6',1,'output']]],
   ['outputinterval',['outputinterval',['../structdata__structures_1_1options__type.html#a5819843b981528e8eebcffd5e13d32a9',1,'data_structures::options_type']]],
   ['overwrite_5flt_5flut',['overwrite_lt_lut',['../structdata__structures_1_1lt__options__type.html#a60be7928064048bdf2842e471aaf3a1b',1,'data_structures::lt_options_type']]]
 ];

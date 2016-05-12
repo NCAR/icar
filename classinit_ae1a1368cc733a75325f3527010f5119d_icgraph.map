@@ -1,6 +1,6 @@
 <map id="init::destroy_lut" name="init::destroy_lut">
-<area shape="rect" id="node2" href="$classinit.html#acbdc0285617ecd4acfdc2e09c615de40" title="init::move_lut" alt="" coords="166,5,266,32"/>
-<area shape="rect" id="node3" href="$classinit.html#a1c6cab46bb16bea719da3b193c43ccb3" title="init::init_bc" alt="" coords="315,31,400,57"/>
-<area shape="rect" id="node4" href="$classinit.html#a1dd1e2b38eef39cba464f65c9ce82568" title="init::init_model" alt="" coords="448,31,555,57"/>
-<area shape="rect" id="node5" href="$driver_8f90.html#ab1e5a5816a57fc6e95d9563c2bb53590" title=" Main Program " alt="" coords="603,31,645,57"/>
+<area shape="rect" id="node2" href="$classinit.html#acbdc0285617ecd4acfdc2e09c615de40" title="init::move_lut" alt="" coords="164,5,264,32"/>
+<area shape="rect" id="node3" href="$classinit.html#a1c6cab46bb16bea719da3b193c43ccb3" title="init::init_bc" alt="" coords="312,31,397,57"/>
+<area shape="rect" id="node4" href="$classinit.html#a1dd1e2b38eef39cba464f65c9ce82568" title="init::init_model" alt="" coords="445,31,552,57"/>
+<area shape="rect" id="node5" href="$driver_8f90.html#ab1e5a5816a57fc6e95d9563c2bb53590" title=" Main Program " alt="" coords="600,31,643,57"/>
 </map>

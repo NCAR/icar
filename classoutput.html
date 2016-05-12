@@ -98,6 +98,10 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
+<tr class="memitem:a4bd03410286e4be92c719114b06c27e6"><td class="memItemLeft" align="right" valign="top">subroutine, public&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classoutput.html#a4bd03410286e4be92c719114b06c27e6">output_init</a> (domain, options)</td></tr>
+<tr class="memdesc:a4bd03410286e4be92c719114b06c27e6"><td class="mdescLeft">&#160;</td><td class="mdescRight"><hr/>
+<p> Initialize the output module  <a href="#a4bd03410286e4be92c719114b06c27e6">More...</a><br /></td></tr>
+<tr class="separator:a4bd03410286e4be92c719114b06c27e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a96fb2c72004c645360fa3e6f2b551b50"><td class="memItemLeft" align="right" valign="top">subroutine, public&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classoutput.html#a96fb2c72004c645360fa3e6f2b551b50">write_domain</a> (domain, options, timestep, inputfilename)</td></tr>
 <tr class="memdesc:a96fb2c72004c645360fa3e6f2b551b50"><td class="mdescLeft">&#160;</td><td class="mdescRight"><hr/>
 <p> Simple routine to write all domain data from this current time step to the output file.  <a href="#a96fb2c72004c645360fa3e6f2b551b50">More...</a><br /></td></tr>
@@ -113,10 +117,6 @@ Private Member Functions</h2></td></tr>
 <tr class="memdesc:abf88076008ba1520740fd573165ee72d"><td class="mdescLeft">&#160;</td><td class="mdescRight"><hr/>
 <p> Creates a new NetCDF output file  <a href="#abf88076008ba1520740fd573165ee72d">More...</a><br /></td></tr>
 <tr class="separator:abf88076008ba1520740fd573165ee72d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1f3263c6caa6f6824e652f03cf24bc6d"><td class="memItemLeft" align="right" valign="top">subroutine&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classoutput.html#a1f3263c6caa6f6824e652f03cf24bc6d">output_init</a> (options)</td></tr>
-<tr class="memdesc:a1f3263c6caa6f6824e652f03cf24bc6d"><td class="mdescLeft">&#160;</td><td class="mdescRight"><hr/>
-<p> Initialize Output Module  <a href="#a1f3263c6caa6f6824e652f03cf24bc6d">More...</a><br /></td></tr>
-<tr class="separator:a1f3263c6caa6f6824e652f03cf24bc6d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a92fd667efbd13e99735e947dc0344b30"><td class="memItemLeft" align="right" valign="top">subroutine&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classoutput.html#a92fd667efbd13e99735e947dc0344b30">setup_varids</a> (<a class="el" href="classoutput.html#a3dfbb14a1d630b38975af3b0dd25700d">ncid</a>, options)</td></tr>
 <tr class="memdesc:a92fd667efbd13e99735e947dc0344b30"><td class="mdescLeft">&#160;</td><td class="mdescRight"><hr/>
 <p> Set up the varids for an existing NetCDF file by searching for the variable name  <a href="#a92fd667efbd13e99735e947dc0344b30">More...</a><br /></td></tr>
@@ -268,51 +268,64 @@ parameter&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href=
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><iframe scrolling="no" frameborder="0" src="classoutput_abf88076008ba1520740fd573165ee72d_cgraph.svg" width="315" height="38"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="classoutput_abf88076008ba1520740fd573165ee72d_cgraph.svg" width="314" height="38"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe>
+</div>
 </div>
 </p>
 
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><iframe scrolling="no" frameborder="0" src="classoutput_abf88076008ba1520740fd573165ee72d_icgraph.svg" width="611" height="154"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="classoutput_abf88076008ba1520740fd573165ee72d_icgraph.svg" width="608" height="155"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe>
+</div>
 </div>
 </p>
 
 </div>
 </div>
-<a class="anchor" id="a1f3263c6caa6f6824e652f03cf24bc6d"></a>
+<a class="anchor" id="a4bd03410286e4be92c719114b06c27e6"></a>
 <div class="memitem">
 <div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">subroutine output::output_init </td>
+          <td class="memname">subroutine, public output::output_init </td>
           <td>(</td>
-          <td class="paramtype">type(options_type), intent(<a class="el" href="classoutput.html#ab79687f4275152618f4060ce21dc2cca">in</a>)&#160;</td>
-          <td class="paramname"><em>options</em></td><td>)</td>
+          <td class="paramtype">type(domain_type), intent(<a class="el" href="classoutput.html#ab79687f4275152618f4060ce21dc2cca">in</a>)&#160;</td>
+          <td class="paramname"><em>domain</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">type(options_type), intent(<a class="el" href="classoutput.html#ab79687f4275152618f4060ce21dc2cca">in</a>)&#160;</td>
+          <td class="paramname"><em>options</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">private</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
 
 <p><hr/>
-<p> Initialize Output Module </p>
-<p>Sets output frequency (daily, monthly, or every step)</p>
+<p> Initialize the output module </p>
+<p>Set up module level variables nx,ny,nz,nsoil and last_rain Sets output frequency (daily, monthly, or every step)</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname"></td><td>retval <hr/>
+    <tr><td class="paramdir">[in]</td><td class="paramname">domain</td><td>model domain datatype, fields must be initialized </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">options</td><td>model options datatype, fields must be initialized <hr/>
  </td></tr>
   </table>
   </dd>
 </dl>
+
+<p><div class="dynheader">
+Here is the caller graph for this function:</div>
+<div class="dyncontent">
+<div class="center"><iframe scrolling="no" frameborder="0" src="classoutput_a4bd03410286e4be92c719114b06c27e6_icgraph.svg" width="418" height="75"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe>
+</div>
+</div>
+</p>
 
 </div>
 </div>
@@ -364,14 +377,16 @@ Here is the caller graph for this function:</div>
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><iframe scrolling="no" frameborder="0" src="classoutput_a92fd667efbd13e99735e947dc0344b30_cgraph.svg" width="328" height="38"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="classoutput_a92fd667efbd13e99735e947dc0344b30_cgraph.svg" width="327" height="38"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe>
+</div>
 </div>
 </p>
 
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><iframe scrolling="no" frameborder="0" src="classoutput_a92fd667efbd13e99735e947dc0344b30_icgraph.svg" width="624" height="154"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="classoutput_a92fd667efbd13e99735e947dc0344b30_icgraph.svg" width="622" height="155"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe>
+</div>
 </div>
 </p>
 
@@ -413,7 +428,8 @@ Here is the caller graph for this function:</div>
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><iframe scrolling="no" frameborder="0" src="classoutput_abbaeecac70df7edca0eba97e75fa9c7a_icgraph.svg" width="606" height="154"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="classoutput_abbaeecac70df7edca0eba97e75fa9c7a_icgraph.svg" width="604" height="155"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe>
+</div>
 </div>
 </p>
 
@@ -472,14 +488,16 @@ Here is the caller graph for this function:</div>
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><iframe scrolling="no" frameborder="0" src="classoutput_a96fb2c72004c645360fa3e6f2b551b50_cgraph.svg" width="531" height="306"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="classoutput_a96fb2c72004c645360fa3e6f2b551b50_cgraph.svg" width="530" height="307"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe>
+</div>
 </div>
 </p>
 
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><iframe scrolling="no" frameborder="0" src="classoutput_a96fb2c72004c645360fa3e6f2b551b50_icgraph.svg" width="435" height="154"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="classoutput_a96fb2c72004c645360fa3e6f2b551b50_icgraph.svg" width="434" height="155"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe>
+</div>
 </div>
 </p>
 

@@ -1,6 +1,3 @@
 <map id="module_lsm_basic::simple_land_surface_fluxes" name="module_lsm_basic::simple_land_surface_fluxes">
-<area shape="rect" id="node2" href="$classmodule__lsm__basic.html#a1acb1c23aafdeaef72a00a123bed7ed2" title="module_lsm_basic::lsm\l_basic" alt="" coords="230,5,389,46"/>
-<area shape="rect" id="node3" href="$classland__surface.html#a5eda887fb43d0e56a673bbec669be5ad" title="land_surface::lsm" alt="" coords="437,12,563,39"/>
-<area shape="rect" id="node4" href="$classtime__step.html#a2c022f11247af72e607b1493289aa974" title=" Step forward one IO time step. " alt="" coords="611,12,723,39"/>
-<area shape="rect" id="node5" href="$driver_8f90.html#ab1e5a5816a57fc6e95d9563c2bb53590" title=" Main Program " alt="" coords="771,12,813,39"/>
+<area shape="rect" id="node2" href="$classmodule__lsm__basic.html#a1acb1c23aafdeaef72a00a123bed7ed2" title="module_lsm_basic::lsm\l_basic" alt="" coords="229,5,388,47"/>
 </map>

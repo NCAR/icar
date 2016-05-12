@@ -1,4 +1,4 @@
 <map id="geo::find_location" name="geo::find_location">
-<area shape="rect" id="node2" href="$classgeo.html#a90d24402dc82ec462d2683728881818e" title="geo::minxw" alt="" coords="179,5,269,32"/>
-<area shape="rect" id="node3" href="$classgeo.html#a26f0801662f938ba2e6cd8d33a7be586" title="geo::minyw" alt="" coords="179,56,269,83"/>
+<area shape="rect" id="node2" href="$classgeo.html#a90d24402dc82ec462d2683728881818e" title=" Find the minimum next step size in the x direction xw=minxw(xw,lolon,xc,yc,lon) " alt="" coords="177,5,267,32"/>
+<area shape="rect" id="node3" href="$classgeo.html#a26f0801662f938ba2e6cd8d33a7be586" title=" Find the minimum next step size in the y direction yw = minyw(yw,lolat,xc,yc,lat) ..." alt="" coords="177,56,267,83"/>
 </map>

@@ -1,18 +1,18 @@
 <map id="module_cu_kf::kfpara" name="module_cu_kf::kfpara">
-<area shape="rect" id="node2" href="$classradiation.html#aba1a06d27af96fe11d576458c8ccfe77" title="radiation::rad" alt="" coords="233,136,330,163"/>
-<area shape="rect" id="node12" href="$classmodule__cu__kf.html#a14ba09c3fd0b8b15dda4ad48569cdf66" title="module_cu_kf::tpmix" alt="" coords="210,187,353,213"/>
-<area shape="rect" id="node13" href="$classmodule__cu__kf.html#af2327f26de87db52430520eba8535bbb" title="module_cu_kf::condload" alt="" coords="200,237,363,264"/>
-<area shape="rect" id="node14" href="$classmodule__cu__kf.html#ab12ebce72807d1f9ae2e754c0119e881" title="module_cu_kf::dtfrznew" alt="" coords="201,288,362,315"/>
-<area shape="rect" id="node15" href="$classmodule__cu__kf.html#a4d1c66ccc19c619ff0c10b45a4ce2f68" title="module_cu_kf::envirtht" alt="" coords="204,339,359,365"/>
-<area shape="rect" id="node16" href="$classmodule__cu__kf.html#a64f684eda86f23948eb433686ce76baa" title="module_cu_kf::prof5" alt="" coords="211,389,351,416"/>
-<area shape="rect" id="node17" href="$classmodule__cu__kf.html#a140e3e31016a2be359bc0f8ac9c800d3" title="module_cu_kf::tpdd" alt="" coords="213,440,349,467"/>
-<area shape="rect" id="node3" href="$classmodule__ra__simple.html#ad1c74605b2817f833d31e806f791e246" title="module_ra_simple::ra\l_simple" alt="" coords="411,129,557,170"/>
-<area shape="rect" id="node4" href="$classmodule__ra__simple.html#a383e37e85086ad3fd8f2da8601d997d0" title="module_ra_simple::relative\l_humidity" alt="" coords="614,5,791,46"/>
-<area shape="rect" id="node5" href="$classmodule__ra__simple.html#a4529da23ec7082aeafd82ffcad0e6e43" title="module_ra_simple::calc\l_solar_elevation" alt="" coords="623,70,782,111"/>
-<area shape="rect" id="node9" href="$classmodule__ra__simple.html#af96b45b6aa6ee7f751648e8edb2eff97" title="module_ra_simple::cloudfrac" alt="" coords="609,136,797,163"/>
-<area shape="rect" id="node10" href="$classmodule__ra__simple.html#a9fdfe8ded9ed1a2131513bf2d17db5e6" title="module_ra_simple::shortwave" alt="" coords="605,187,800,213"/>
-<area shape="rect" id="node11" href="$classmodule__ra__simple.html#ac17356062eed2cca6633da58b0899d09" title="module_ra_simple::longwave" alt="" coords="607,237,798,264"/>
-<area shape="rect" id="node6" href="$classtime.html#adfcbe10943e169e25a9ee15ddb3ce70b" title="time::calc_day_of_year" alt="" coords="848,77,1005,104"/>
-<area shape="rect" id="node7" href="$classtime.html#a8736f37f83c6d8f62957c70df2239693" title="time::calendar_date" alt="" coords="1053,52,1189,79"/>
-<area shape="rect" id="node8" href="$classtime.html#a22e63418fe5d559327ca090619d097e0" title="time::date_to_mjd" alt="" coords="1058,103,1185,129"/>
+<area shape="rect" id="node2" href="$classradiation.html#aba1a06d27af96fe11d576458c8ccfe77" title="radiation::rad" alt="" coords="233,137,330,163"/>
+<area shape="rect" id="node12" href="$classmodule__cu__kf.html#a14ba09c3fd0b8b15dda4ad48569cdf66" title="module_cu_kf::tpmix" alt="" coords="210,187,353,214"/>
+<area shape="rect" id="node13" href="$classmodule__cu__kf.html#af2327f26de87db52430520eba8535bbb" title="module_cu_kf::condload" alt="" coords="200,238,363,265"/>
+<area shape="rect" id="node14" href="$classmodule__cu__kf.html#ab12ebce72807d1f9ae2e754c0119e881" title="module_cu_kf::dtfrznew" alt="" coords="201,289,362,315"/>
+<area shape="rect" id="node15" href="$classmodule__cu__kf.html#a4d1c66ccc19c619ff0c10b45a4ce2f68" title="module_cu_kf::envirtht" alt="" coords="204,339,359,366"/>
+<area shape="rect" id="node16" href="$classmodule__cu__kf.html#a64f684eda86f23948eb433686ce76baa" title="module_cu_kf::prof5" alt="" coords="211,390,351,417"/>
+<area shape="rect" id="node17" href="$classmodule__cu__kf.html#a140e3e31016a2be359bc0f8ac9c800d3" title="module_cu_kf::tpdd" alt="" coords="213,441,349,467"/>
+<area shape="rect" id="node3" href="$classmodule__ra__simple.html#ad1c74605b2817f833d31e806f791e246" title="module_ra_simple::ra\l_simple" alt="" coords="411,129,557,171"/>
+<area shape="rect" id="node4" href="$classmodule__ra__simple.html#a383e37e85086ad3fd8f2da8601d997d0" title="module_ra_simple::relative\l_humidity" alt="" coords="614,5,791,47"/>
+<area shape="rect" id="node5" href="$classmodule__ra__simple.html#a4529da23ec7082aeafd82ffcad0e6e43" title="module_ra_simple::calc\l_solar_elevation" alt="" coords="623,71,782,112"/>
+<area shape="rect" id="node9" href="$classmodule__ra__simple.html#af96b45b6aa6ee7f751648e8edb2eff97" title="module_ra_simple::cloudfrac" alt="" coords="609,137,797,163"/>
+<area shape="rect" id="node10" href="$classmodule__ra__simple.html#a9fdfe8ded9ed1a2131513bf2d17db5e6" title="module_ra_simple::shortwave" alt="" coords="605,187,800,214"/>
+<area shape="rect" id="node11" href="$classmodule__ra__simple.html#ac17356062eed2cca6633da58b0899d09" title="module_ra_simple::longwave" alt="" coords="607,238,798,265"/>
+<area shape="rect" id="node6" href="$classtime.html#adfcbe10943e169e25a9ee15ddb3ce70b" title="time::calc_day_of_year" alt="" coords="848,78,1005,105"/>
+<area shape="rect" id="node7" href="$classtime.html#a8736f37f83c6d8f62957c70df2239693" title="time::calendar_date" alt="" coords="1053,53,1189,79"/>
+<area shape="rect" id="node8" href="$classtime.html#a22e63418fe5d559327ca090619d097e0" title="time::date_to_mjd" alt="" coords="1058,103,1185,130"/>
 </map>

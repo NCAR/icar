@@ -1,5 +1,5 @@
 <map id="module_ra_simple::calc_solar_elevation" name="module_ra_simple::calc_solar_elevation">
-<area shape="rect" id="node2" href="$classtime.html#adfcbe10943e169e25a9ee15ddb3ce70b" title="time::calc_day_of_year" alt="" coords="213,31,371,57"/>
-<area shape="rect" id="node3" href="$classtime.html#a8736f37f83c6d8f62957c70df2239693" title="time::calendar_date" alt="" coords="419,5,555,32"/>
-<area shape="rect" id="node4" href="$classtime.html#a22e63418fe5d559327ca090619d097e0" title="time::date_to_mjd" alt="" coords="423,56,550,83"/>
+<area shape="rect" id="node2" href="$classtime.html#adfcbe10943e169e25a9ee15ddb3ce70b" title="time::calc_day_of_year" alt="" coords="212,31,369,57"/>
+<area shape="rect" id="node3" href="$classtime.html#a8736f37f83c6d8f62957c70df2239693" title="time::calendar_date" alt="" coords="417,5,553,32"/>
+<area shape="rect" id="node4" href="$classtime.html#a22e63418fe5d559327ca090619d097e0" title="time::date_to_mjd" alt="" coords="422,56,549,83"/>
 </map>

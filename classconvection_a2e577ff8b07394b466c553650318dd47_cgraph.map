@@ -1,4 +1,4 @@
 <map id="convection::init_convection" name="convection::init_convection">
-<area shape="rect" id="node2" href="$classmodule__cu__tiedtke.html#a60f0cad4dfe50584efbfe0fd3f2e4d33" title="module_cu_tiedtke::\ltiedtkeinit" alt="" coords="235,5,373,46"/>
-<area shape="rect" id="node3" href="$classmodule__cu__kf.html#a1220d4bd1b534a12c94b07e3f45ebec4" title="module_cu_kf::kfinit" alt="" coords="235,71,373,97"/>
+<area shape="rect" id="node2" href="$classmodule__cu__tiedtke.html#a60f0cad4dfe50584efbfe0fd3f2e4d33" title="module_cu_tiedtke::\ltiedtkeinit" alt="" coords="233,5,372,47"/>
+<area shape="rect" id="node3" href="$classmodule__cu__kf.html#a1220d4bd1b534a12c94b07e3f45ebec4" title="module_cu_kf::kfinit" alt="" coords="233,71,372,98"/>
 </map>

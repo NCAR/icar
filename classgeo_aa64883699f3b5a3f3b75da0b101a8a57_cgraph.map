@@ -1,7 +1,7 @@
 <map id="geo::geo_lut" name="geo::geo_lut">
-<area shape="rect" id="node2" href="$classgeo.html#a1e7273d41823570bc9f9de6b30aa60fd" title="geo::find_location" alt="" coords="158,31,282,57"/>
-<area shape="rect" id="node5" href="$classgeo.html#a7d14c8e02963a466d18edcd79f330359" title="geo::find_surrounding" alt="" coords="147,81,293,108"/>
-<area shape="rect" id="node6" href="$classgeo.html#af4b522675af159cdf68f947dbaba102c" title="geo::bilin_weights" alt="" coords="157,132,283,159"/>
-<area shape="rect" id="node3" href="$classgeo.html#a90d24402dc82ec462d2683728881818e" title="geo::minxw" alt="" coords="342,5,431,32"/>
-<area shape="rect" id="node4" href="$classgeo.html#a26f0801662f938ba2e6cd8d33a7be586" title="geo::minyw" alt="" coords="342,56,431,83"/>
+<area shape="rect" id="node2" href="$classgeo.html#a1e7273d41823570bc9f9de6b30aa60fd" title=" Find a location lat,lon in lolat,lon grids Assumes that the lat/lon grids are semi&#45;regular (dx/dy ar..." alt="" coords="158,31,282,57"/>
+<area shape="rect" id="node5" href="$classgeo.html#a7d14c8e02963a466d18edcd79f330359" title=" Given a closest position, return the 4 points surrounding the lat/lon position in lolat/lon ..." alt="" coords="147,81,293,108"/>
+<area shape="rect" id="node6" href="$classgeo.html#af4b522675af159cdf68f947dbaba102c" title=" Calculate the weights to use for bilinear interpolation between surrounding points x..." alt="" coords="157,132,283,159"/>
+<area shape="rect" id="node3" href="$classgeo.html#a90d24402dc82ec462d2683728881818e" title=" Find the minimum next step size in the x direction xw=minxw(xw,lolon,xc,yc,lon) " alt="" coords="341,5,431,32"/>
+<area shape="rect" id="node4" href="$classgeo.html#a26f0801662f938ba2e6cd8d33a7be586" title=" Find the minimum next step size in the y direction yw = minyw(yw,lolat,xc,yc,lat) ..." alt="" coords="341,56,431,83"/>
 </map>

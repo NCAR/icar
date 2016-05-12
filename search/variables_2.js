@@ -18,6 +18,8 @@ var searchData=
   ['cevapcu1',['cevapcu1',['../classmodule__cu__tiedtke.html#abe7ab8669e0e665deebcaf93923b74fe',1,'module_cu_tiedtke']]],
   ['cevapcu2',['cevapcu2',['../classmodule__cu__tiedtke.html#a5ca688378fcab9898abee7fc63ed47cc',1,'module_cu_tiedtke']]],
   ['cfactr_5fdata',['cfactr_data',['../classmodule__sf__noahlsm.html#a49b5bd6e866a73374623128552be22ec',1,'module_sf_noahlsm']]],
+  ['cfl_5freduction_5ffactor',['cfl_reduction_factor',['../structdata__structures_1_1options__type.html#ade438de4f9baf08c07d2bc7c9e21dc0f',1,'data_structures::options_type']]],
+  ['cfl_5fstrictness',['cfl_strictness',['../structdata__structures_1_1options__type.html#aa7533721de58ccaa0f88479388bc05a2',1,'data_structures::options_type']]],
   ['cge',['cge',['../classmodule__mp__thompson.html#a7b59c8f1421cfd9dddd40adb4a6c3cbb',1,'module_mp_thompson']]],
   ['cgg',['cgg',['../classmodule__mp__thompson.html#a1b04df9cb92eabd2a96aca8e66dc82eb',1,'module_mp_thompson']]],
   ['chklowq',['chklowq',['../classland__surface.html#a420528cd8803160e0c9e3f963b7a4795',1,'land_surface']]],

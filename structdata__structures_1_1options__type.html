@@ -96,7 +96,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="dynheader">
 Collaboration diagram for data_structures::options_type:</div>
 <div class="dyncontent">
-<div class="center"><iframe scrolling="no" frameborder="0" src="structdata__structures_1_1options__type__coll__graph.svg" width="526" height="299"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="structdata__structures_1_1options__type__coll__graph.svg" width="526" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe>
+</div>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
@@ -235,6 +236,8 @@ dimension(:), allocatable&#160;</td><td class="memItemRight" valign="bottom"><a 
 <tr class="separator:aebfc61ac205f14e0f337e585046f3c2c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a12f8de4b1dba3929b00fcdd1b86e0167"><td class="memItemLeft" align="right" valign="top">logical&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdata__structures_1_1options__type.html#a12f8de4b1dba3929b00fcdd1b86e0167">z_is_geopotential</a></td></tr>
 <tr class="separator:a12f8de4b1dba3929b00fcdd1b86e0167"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4b650f7af709a97c438f887a28bedc48"><td class="memItemLeft" align="right" valign="top">logical&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdata__structures_1_1options__type.html#a4b650f7af709a97c438f887a28bedc48">z_is_on_interface</a></td></tr>
+<tr class="separator:a4b650f7af709a97c438f887a28bedc48"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a555c6e896c44c59603b04a4cfe08933b"><td class="memItemLeft" align="right" valign="top">logical&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdata__structures_1_1options__type.html#a555c6e896c44c59603b04a4cfe08933b">advect_density</a></td></tr>
 <tr class="separator:a555c6e896c44c59603b04a4cfe08933b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0fe19dd1bd94e0a0bc1b50b538bc6db3"><td class="memItemLeft" align="right" valign="top">logical&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdata__structures_1_1options__type.html#a0fe19dd1bd94e0a0bc1b50b538bc6db3">high_res_soil_state</a></td></tr>
@@ -273,6 +276,10 @@ dimension(:), allocatable&#160;</td><td class="memItemRight" valign="bottom"><a 
 <tr class="separator:adae4c14276ad59ed7170a13bc097bff3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac6125cf4f9d502950433dcd0b11d1c06"><td class="memItemLeft" align="right" valign="top">logical&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdata__structures_1_1options__type.html#ac6125cf4f9d502950433dcd0b11d1c06">time_varying_z</a></td></tr>
 <tr class="separator:ac6125cf4f9d502950433dcd0b11d1c06"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ade438de4f9baf08c07d2bc7c9e21dc0f"><td class="memItemLeft" align="right" valign="top">real&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdata__structures_1_1options__type.html#ade438de4f9baf08c07d2bc7c9e21dc0f">cfl_reduction_factor</a></td></tr>
+<tr class="separator:ade438de4f9baf08c07d2bc7c9e21dc0f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa7533721de58ccaa0f88479388bc05a2"><td class="memItemLeft" align="right" valign="top">integer&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdata__structures_1_1options__type.html#aa7533721de58ccaa0f88479388bc05a2">cfl_strictness</a></td></tr>
+<tr class="separator:aa7533721de58ccaa0f88479388bc05a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1fb4181974a9a85917516f2821a99767"><td class="memItemLeft" align="right" valign="top">double precision&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdata__structures_1_1options__type.html#a1fb4181974a9a85917516f2821a99767">initial_mjd</a></td></tr>
 <tr class="separator:a1fb4181974a9a85917516f2821a99767"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0c0a3e4a15105d3a73dff4184b004c28"><td class="memItemLeft" align="right" valign="top">double precision&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdata__structures_1_1options__type.html#a0c0a3e4a15105d3a73dff4184b004c28">start_mjd</a></td></tr>
@@ -375,6 +382,30 @@ dimension(:), allocatable&#160;</td><td class="memItemRight" valign="bottom"><a 
       <table class="memname">
         <tr>
           <td class="memname">character(len=<a class="el" href="classdata__structures.html#a796579be3daa301ab072b595d1cad2a6">maxfilelength</a>) data_structures::options_type::calendar</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a class="anchor" id="ade438de4f9baf08c07d2bc7c9e21dc0f"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">real data_structures::options_type::cfl_reduction_factor</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a class="anchor" id="aa7533721de58ccaa0f88479388bc05a2"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">integer data_structures::options_type::cfl_strictness</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -1503,6 +1534,18 @@ dimension(:), allocatable&#160;</td><td class="memItemRight" valign="bottom"><a 
       <table class="memname">
         <tr>
           <td class="memname">logical data_structures::options_type::z_is_geopotential</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a class="anchor" id="a4b650f7af709a97c438f887a28bedc48"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">logical data_structures::options_type::z_is_on_interface</td>
         </tr>
       </table>
 </div><div class="memdoc">

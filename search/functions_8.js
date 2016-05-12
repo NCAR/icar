@@ -22,6 +22,8 @@ var searchData=
   ['init_5fwinds',['init_winds',['../classwind.html#aa3e008f44175ff536a88fe141d295601',1,'wind']]],
   ['init_5fznu',['init_znu',['../classboundary__conditions.html#ac929e30ca12cfd9dadd51b3f3ca091aa',1,'boundary_conditions']]],
   ['initialize_5fspatial_5fwinds',['initialize_spatial_winds',['../classlinear__theory__winds.html#a1c7117dad74a51614a026a50aec8b988',1,'linear_theory_winds']]],
+  ['interpolate_5fin_5fx',['interpolate_in_x',['../classinit.html#acc580cb29fb9163913d039be6a7442a9',1,'init']]],
+  ['interpolate_5fin_5fy',['interpolate_in_y',['../classinit.html#ad45c97ba7b7d1f2c70d6596ff77334bd',1,'init']]],
   ['io_5fadd_5fattribute_5fc',['io_add_attribute_c',['../interfaceio__routines_1_1io__add__attribute.html#aea3e344547d0820ec73892853b7b011a',1,'io_routines::io_add_attribute::io_add_attribute_c()'],['../classio__routines.html#ac3a947fae3ad6f98884c1816c88ce9d5',1,'io_routines::io_add_attribute_c()']]],
   ['io_5fadd_5fattribute_5fi',['io_add_attribute_i',['../interfaceio__routines_1_1io__add__attribute.html#a20772ca073c3a60019dfbe4afd6e84de',1,'io_routines::io_add_attribute::io_add_attribute_i()'],['../classio__routines.html#a91996ae291448cc3af6c62f5f633a071',1,'io_routines::io_add_attribute_i()']]],
   ['io_5fadd_5fattribute_5fr',['io_add_attribute_r',['../interfaceio__routines_1_1io__add__attribute.html#a0a277a41aa10c7ee2a810ddf40018f52',1,'io_routines::io_add_attribute::io_add_attribute_r()'],['../classio__routines.html#a7deda15a61d8c75745d1632a48872685',1,'io_routines::io_add_attribute_r()']]],
@@ -40,5 +42,7 @@ var searchData=
   ['io_5fwrite2d',['io_write2d',['../interfaceio__routines_1_1io__write.html#a96eb70acfac04d289ad2eb5892062172',1,'io_routines::io_write::io_write2d()'],['../classio__routines.html#a7b166a4ab2614f8c788e63d7b3b05862',1,'io_routines::io_write2d()']]],
   ['io_5fwrite3d',['io_write3d',['../interfaceio__routines_1_1io__write.html#a85d0a748ec084ce8b0be383b960947ad',1,'io_routines::io_write::io_write3d()'],['../classio__routines.html#aa27a95c5b349d5a435a4714319a913d7',1,'io_routines::io_write3d()']]],
   ['io_5fwrite3di',['io_write3di',['../interfaceio__routines_1_1io__write.html#a63e4474530cb606234053597346798da',1,'io_routines::io_write::io_write3di()'],['../classio__routines.html#ae7be8aa8aee31f44b10ebee72e15dd8f',1,'io_routines::io_write3di()']]],
+  ['io_5fwrite4d',['io_write4d',['../interfaceio__routines_1_1io__write.html#a42dd26cc9bb6afc69383a50dd9025cac',1,'io_routines::io_write::io_write4d()'],['../classio__routines.html#a4a4b6ccc5a655443345ad07127e92a31',1,'io_routines::io_write4d()']]],
+  ['io_5fwrite4di',['io_write4di',['../interfaceio__routines_1_1io__write.html#a7fd1c5406165ef255ba495ad530fedba',1,'io_routines::io_write::io_write4di()'],['../classio__routines.html#a0879e4ff9a49ff1b8ebb9aabeccff258',1,'io_routines::io_write4di()']]],
   ['io_5fwrite6d',['io_write6d',['../interfaceio__routines_1_1io__write.html#aaf2caaba27ba296f11e99ec831a4bf0e',1,'io_routines::io_write::io_write6d()'],['../classio__routines.html#a854f47811c08569cb6ea433ec432a52d',1,'io_routines::io_write6d()']]]
 ];

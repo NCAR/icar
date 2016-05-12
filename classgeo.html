@@ -98,25 +98,43 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:aa64883699f3b5a3f3b75da0b101a8a57"><td class="memItemLeft" align="right" valign="top">subroutine, public&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classgeo.html#aa64883699f3b5a3f3b75da0b101a8a57">geo_lut</a> (hi, lo)</td></tr>
+<tr class="memdesc:aa64883699f3b5a3f3b75da0b101a8a57"><td class="mdescLeft">&#160;</td><td class="mdescRight"><hr/>
+<p> Compute the geographic look up table from LOw resolution grid to HIgh resolution grid  <a href="#aa64883699f3b5a3f3b75da0b101a8a57">More...</a><br /></td></tr>
 <tr class="separator:aa64883699f3b5a3f3b75da0b101a8a57"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acb54dc322e31524d40cc746c37b28898"><td class="memItemLeft" align="right" valign="top">subroutine, public&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classgeo.html#acb54dc322e31524d40cc746c37b28898">geo_interp</a> (fieldout, fieldin, geolut, boundary_only)</td></tr>
+<tr class="memdesc:acb54dc322e31524d40cc746c37b28898"><td class="mdescLeft">&#160;</td><td class="mdescRight"><hr/>
+<p> Interpolate fieldout to fieldin using geolut. if boundary_only is true, call boundary_interpolate instead loops over y,z,x but geolut is only defined over x,y (for now)  <a href="#acb54dc322e31524d40cc746c37b28898">More...</a><br /></td></tr>
 <tr class="separator:acb54dc322e31524d40cc746c37b28898"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad6df2866b0f12fabc9d1b393be1b06d7"><td class="memItemLeft" align="right" valign="top">subroutine, public&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classgeo.html#ad6df2866b0f12fabc9d1b393be1b06d7">geo_interp2d</a> (fieldout, fieldin, geolut)</td></tr>
+<tr class="memdesc:ad6df2866b0f12fabc9d1b393be1b06d7"><td class="mdescLeft">&#160;</td><td class="mdescRight"><hr/>
+<p> Interpolate fieldout to fieldin using geolut.  <a href="#ad6df2866b0f12fabc9d1b393be1b06d7">More...</a><br /></td></tr>
 <tr class="separator:ad6df2866b0f12fabc9d1b393be1b06d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pri-methods"></a>
 Private Member Functions</h2></td></tr>
 <tr class="memitem:af4b522675af159cdf68f947dbaba102c"><td class="memItemLeft" align="right" valign="top">real function, dimension(4)&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classgeo.html#af4b522675af159cdf68f947dbaba102c">bilin_weights</a> (yi, y, xi, x)</td></tr>
+<tr class="memdesc:af4b522675af159cdf68f947dbaba102c"><td class="mdescLeft">&#160;</td><td class="mdescRight"><hr/>
+<p> Calculate the weights to use for bilinear interpolation between surrounding points x, y to position xi,yi  <a href="#af4b522675af159cdf68f947dbaba102c">More...</a><br /></td></tr>
 <tr class="separator:af4b522675af159cdf68f947dbaba102c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a90d24402dc82ec462d2683728881818e"><td class="memItemLeft" align="right" valign="top">integer function&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classgeo.html#a90d24402dc82ec462d2683728881818e">minxw</a> (xw, longrid, xpos, ypos, lon)</td></tr>
+<tr class="memdesc:a90d24402dc82ec462d2683728881818e"><td class="mdescLeft">&#160;</td><td class="mdescRight"><hr/>
+<p> Find the minimum next step size in the x direction xw=minxw(xw,lolon,xc,yc,lon)  <a href="#a90d24402dc82ec462d2683728881818e">More...</a><br /></td></tr>
 <tr class="separator:a90d24402dc82ec462d2683728881818e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a26f0801662f938ba2e6cd8d33a7be586"><td class="memItemLeft" align="right" valign="top">integer function&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classgeo.html#a26f0801662f938ba2e6cd8d33a7be586">minyw</a> (yw, latgrid, xpos, ypos, lat)</td></tr>
+<tr class="memdesc:a26f0801662f938ba2e6cd8d33a7be586"><td class="mdescLeft">&#160;</td><td class="mdescRight"><hr/>
+<p> Find the minimum next step size in the y direction yw = minyw(yw,lolat,xc,yc,lat)  <a href="#a26f0801662f938ba2e6cd8d33a7be586">More...</a><br /></td></tr>
 <tr class="separator:a26f0801662f938ba2e6cd8d33a7be586"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1e7273d41823570bc9f9de6b30aa60fd"><td class="memItemLeft" align="right" valign="top">type(position) function&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classgeo.html#a1e7273d41823570bc9f9de6b30aa60fd">find_location</a> (lo, lat, lon, lastpos)</td></tr>
+<tr class="memdesc:a1e7273d41823570bc9f9de6b30aa60fd"><td class="mdescLeft">&#160;</td><td class="mdescRight"><hr/>
+<p> Find a location lat,lon in lolat,lon grids Assumes that the lat/lon grids are semi-regular (dx/dy aren't constant but they are nearly so) Calculates dx/dy at the middle of the lat/lon grids, then calculates the location of lat,lon input point using those coordinates. Next proceeds to calculate a new position based on the dx/dy at that position until the new position is within 1 gridcell of the current position Once that "within 1" position is found, search all cells in a 3x3 grid for the minimum distance return a position datatype that includes the found x/y location  <a href="#a1e7273d41823570bc9f9de6b30aa60fd">More...</a><br /></td></tr>
 <tr class="separator:a1e7273d41823570bc9f9de6b30aa60fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7d14c8e02963a466d18edcd79f330359"><td class="memItemLeft" align="right" valign="top">type(fourpos) function&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classgeo.html#a7d14c8e02963a466d18edcd79f330359">find_surrounding</a> (lo, lat, lon, pos, nx, ny)</td></tr>
+<tr class="memdesc:a7d14c8e02963a466d18edcd79f330359"><td class="mdescLeft">&#160;</td><td class="mdescRight"><hr/>
+<p> Given a closest position, return the 4 points surrounding the lat/lon position in lolat/lon  <a href="#a7d14c8e02963a466d18edcd79f330359">More...</a><br /></td></tr>
 <tr class="separator:a7d14c8e02963a466d18edcd79f330359"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a61629d616a7b4ee1cd910362724f0f6d"><td class="memItemLeft" align="right" valign="top">subroutine&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classgeo.html#a61629d616a7b4ee1cd910362724f0f6d">boundary_interpolate</a> (fieldout, fieldin, geolut)</td></tr>
+<tr class="memdesc:a61629d616a7b4ee1cd910362724f0f6d"><td class="mdescLeft">&#160;</td><td class="mdescRight"><hr/>
+<p> Interpolate boundaries of fieldout to fieldin using geolut  <a href="#a61629d616a7b4ee1cd910362724f0f6d">More...</a><br /></td></tr>
 <tr class="separator:a61629d616a7b4ee1cd910362724f0f6d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -176,10 +194,15 @@ Private Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
+<p><hr/>
+<p> Calculate the weights to use for bilinear interpolation between surrounding points x, y to position xi,yi </p>
+<hr/>
+ 
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="classgeo_af4b522675af159cdf68f947dbaba102c_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="classgeo_af4b522675af159cdf68f947dbaba102c_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 </div>
 </p>
 
@@ -223,10 +246,15 @@ Here is the caller graph for this function:</div>
 </table>
 </div><div class="memdoc">
 
+<p><hr/>
+<p> Interpolate boundaries of fieldout to fieldin using geolut </p>
+<hr/>
+ 
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="classgeo_a61629d616a7b4ee1cd910362724f0f6d_icgraph.svg" width="100%" height="591"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="classgeo_a61629d616a7b4ee1cd910362724f0f6d_icgraph.svg" width="100%" height="528"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 </div>
 </p>
 
@@ -276,17 +304,23 @@ Here is the caller graph for this function:</div>
 </table>
 </div><div class="memdoc">
 
+<p><hr/>
+<p> Find a location lat,lon in lolat,lon grids Assumes that the lat/lon grids are semi-regular (dx/dy aren't constant but they are nearly so) Calculates dx/dy at the middle of the lat/lon grids, then calculates the location of lat,lon input point using those coordinates. Next proceeds to calculate a new position based on the dx/dy at that position until the new position is within 1 gridcell of the current position Once that "within 1" position is found, search all cells in a 3x3 grid for the minimum distance return a position datatype that includes the found x/y location </p>
+<p>currently tries up to three methods to find the location 1) assume relatively even dxdy and compute location (iterate a &lt;20times) 2) use a log(n) search (divide and conquer) also iterate &lt;20times) a) if 1 or 2 are approximately successful: search a small region around the "best" point to find the real best point 3) in the diabolical case where 1 and 2 fail (rare) just search every single location (n^2) Could add a 2.5) downhill search algorithm... </p><hr/>
+ 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><iframe scrolling="no" frameborder="0" src="classgeo_a1e7273d41823570bc9f9de6b30aa60fd_cgraph.svg" width="275" height="88"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="classgeo_a1e7273d41823570bc9f9de6b30aa60fd_cgraph.svg" width="272" height="88"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe>
+</div>
 </div>
 </p>
 
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="classgeo_a1e7273d41823570bc9f9de6b30aa60fd_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="classgeo_a1e7273d41823570bc9f9de6b30aa60fd_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 </div>
 </p>
 
@@ -348,10 +382,15 @@ Here is the caller graph for this function:</div>
 </table>
 </div><div class="memdoc">
 
+<p><hr/>
+<p> Given a closest position, return the 4 points surrounding the lat/lon position in lolat/lon </p>
+<hr/>
+ 
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="classgeo_a7d14c8e02963a466d18edcd79f330359_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="classgeo_a7d14c8e02963a466d18edcd79f330359_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 </div>
 </p>
 
@@ -393,17 +432,23 @@ Here is the caller graph for this function:</div>
       </table>
 </div><div class="memdoc">
 
+<p><hr/>
+<p> Interpolate fieldout to fieldin using geolut. if boundary_only is true, call boundary_interpolate instead loops over y,z,x but geolut is only defined over x,y (for now) </p>
+<hr/>
+ 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><iframe scrolling="no" frameborder="0" src="classgeo_acb54dc322e31524d40cc746c37b28898_cgraph.svg" width="342" height="38"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="classgeo_acb54dc322e31524d40cc746c37b28898_cgraph.svg" width="340" height="38"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe>
+</div>
 </div>
 </p>
 
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="classgeo_acb54dc322e31524d40cc746c37b28898_icgraph.svg" width="100%" height="591"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="classgeo_acb54dc322e31524d40cc746c37b28898_icgraph.svg" width="100%" height="528"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 </div>
 </p>
 
@@ -439,10 +484,15 @@ Here is the caller graph for this function:</div>
       </table>
 </div><div class="memdoc">
 
+<p><hr/>
+<p> Interpolate fieldout to fieldin using geolut. </p>
+<hr/>
+ 
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="classgeo_ad6df2866b0f12fabc9d1b393be1b06d7_icgraph.svg" width="100%" height="426"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="classgeo_ad6df2866b0f12fabc9d1b393be1b06d7_icgraph.svg" width="100%" height="427"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 </div>
 </p>
 
@@ -472,17 +522,23 @@ Here is the caller graph for this function:</div>
       </table>
 </div><div class="memdoc">
 
+<p><hr/>
+<p> Compute the geographic look up table from LOw resolution grid to HIgh resolution grid </p>
+<hr/>
+ 
 <p><div class="dynheader">
 Here is the call graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><iframe scrolling="no" frameborder="0" src="classgeo_aa64883699f3b5a3f3b75da0b101a8a57_cgraph.svg" width="438" height="164"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="classgeo_aa64883699f3b5a3f3b75da0b101a8a57_cgraph.svg" width="436" height="164"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe>
+</div>
 </div>
 </p>
 
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><iframe scrolling="no" frameborder="0" src="classgeo_aa64883699f3b5a3f3b75da0b101a8a57_icgraph.svg" width="662" height="63"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="classgeo_aa64883699f3b5a3f3b75da0b101a8a57_icgraph.svg" width="662" height="63"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe>
+</div>
 </div>
 </p>
 
@@ -538,10 +594,15 @@ Here is the caller graph for this function:</div>
 </table>
 </div><div class="memdoc">
 
+<p><hr/>
+<p> Find the minimum next step size in the x direction xw=minxw(xw,lolon,xc,yc,lon) </p>
+<hr/>
+ 
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="classgeo_a90d24402dc82ec462d2683728881818e_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="classgeo_a90d24402dc82ec462d2683728881818e_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 </div>
 </p>
 
@@ -597,10 +658,15 @@ Here is the caller graph for this function:</div>
 </table>
 </div><div class="memdoc">
 
+<p><hr/>
+<p> Find the minimum next step size in the y direction yw = minyw(yw,lolat,xc,yc,lat) </p>
+<hr/>
+ 
 <p><div class="dynheader">
 Here is the caller graph for this function:</div>
 <div class="dyncontent">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="classgeo_a26f0801662f938ba2e6cd8d33a7be586_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="classgeo_a26f0801662f938ba2e6cd8d33a7be586_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 </div>
 </p>
 

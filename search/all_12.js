@@ -124,6 +124,7 @@ var searchData=
   ['svp2',['svp2',['../classdata__structures.html#a20faab945817bbc82904da8921f09b15',1,'data_structures']]],
   ['svp3',['svp3',['../classdata__structures.html#aff86d558094570790b9581de96cb352a',1,'data_structures']]],
   ['svpt0',['svpt0',['../classdata__structures.html#abcd4b3bf6dfba25691758acc44d53784',1,'data_structures']]],
+  ['swap_5fy_5fz_5fdimensions',['swap_y_z_dimensions',['../classboundary__conditions.html#aa517afe1f0fdcd1f813378365d4c0a8d',1,'boundary_conditions']]],
   ['swap_5fz',['swap_z',['../classinit.html#abd3d01e0027c3704064c778c8f6609d8',1,'init']]],
   ['swdown',['swdown',['../structdata__structures_1_1domain__type.html#a68d198cd3d20350a93f419fea0120c9a',1,'data_structures::domain_type']]],
   ['swdown_5fvar',['swdown_var',['../structdata__structures_1_1options__type.html#a754e004091d88ed27e3e792746157f01',1,'data_structures::options_type']]]

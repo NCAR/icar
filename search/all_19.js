@@ -7,6 +7,7 @@ var searchData=
   ['z_5fatm',['z_atm',['../classland__surface.html#ad1a9aa7b4153c54e881818eabe7ea9e5',1,'land_surface::z_atm()'],['../classmodule__lsm__simple.html#a9f268dc816527a72e1a9d69573eda1ed',1,'module_lsm_simple::z_atm()']]],
   ['z_5finter',['z_inter',['../structdata__structures_1_1domain__type.html#a157ff80b00bdefe8acbf241ee86ee57c',1,'data_structures::domain_type']]],
   ['z_5fis_5fgeopotential',['z_is_geopotential',['../structdata__structures_1_1options__type.html#a12f8de4b1dba3929b00fcdd1b86e0167',1,'data_structures::options_type']]],
+  ['z_5fis_5fon_5finterface',['z_is_on_interface',['../structdata__structures_1_1options__type.html#a4b650f7af709a97c438f887a28bedc48',1,'data_structures::options_type']]],
   ['zbot_5fdata',['zbot_data',['../classmodule__sf__noahlsm.html#a1e5f83b829493815912f8e801edd7b17',1,'module_sf_noahlsm']]],
   ['zbotvtbl',['zbotvtbl',['../classmodule__sf__noahlsm.html#a5e4d45f6d99b175703cb7cf1c2485e8a',1,'module_sf_noahlsm']]],
   ['zbuo0',['zbuo0',['../classmodule__cu__tiedtke.html#a7e8e62961c0d55a796243305486187d4',1,'module_cu_tiedtke']]],

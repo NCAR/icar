@@ -1,5 +1,5 @@
 <map id="module_water_simple::water_simple" name="module_water_simple::water_simple">
-<area shape="rect" id="node2" href="$classland__surface.html#ab611d871ec5af4909055c4484c2695e9" title="land_surface::sat_mr" alt="" coords="207,5,351,32"/>
-<area shape="rect" id="node3" href="$classmodule__water__simple.html#a5b9a1a842f3dc930a7240399069f9810" title="module_water_simple\l::ocean_roughness" alt="" coords="205,57,353,98"/>
-<area shape="rect" id="node4" href="$classland__surface.html#a91d5fd091cf016fb3312e53c3907d1c5" title="land_surface::calc\l_exchange_coefficient" alt="" coords="203,122,355,163"/>
+<area shape="rect" id="node2" href="$classland__surface.html#ab611d871ec5af4909055c4484c2695e9" title="land_surface::sat_mr" alt="" coords="205,5,349,32"/>
+<area shape="rect" id="node3" href="$classmodule__water__simple.html#a5b9a1a842f3dc930a7240399069f9810" title="module_water_simple\l::ocean_roughness" alt="" coords="203,57,351,98"/>
+<area shape="rect" id="node4" href="$classland__surface.html#a91d5fd091cf016fb3312e53c3907d1c5" title="land_surface::calc\l_exchange_coefficient" alt="" coords="201,122,353,163"/>
 </map>

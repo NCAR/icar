@@ -1,9 +1,9 @@
 <map id="planetary_boundary_layer::pbl" name="planetary_boundary_layer::pbl">
-<area shape="rect" id="node2" href="$classpbl__simple.html#a0c4a8ea58856a89e2ea7c5026ac60a08" title="pbl_simple::simple_pbl" alt="" coords="189,129,344,156"/>
-<area shape="rect" id="node3" href="$classpbl__simple.html#a6b1fe03ca9231f332047fd4ba5f35eee" title="pbl_simple::calc_shear" alt="" coords="407,5,561,32"/>
-<area shape="rect" id="node4" href="$classpbl__simple.html#ae135b8a6c073b2ccfe5e09b08186d119" title="pbl_simple::calc_virt\l_pot_temp_zgradient" alt="" coords="413,57,555,98"/>
-<area shape="rect" id="node5" href="$classpbl__simple.html#a85584b50fb36fe526cb983be6285d043" title="pbl_simple::calc_richardson\l_gradient" alt="" coords="393,122,575,163"/>
-<area shape="rect" id="node6" href="$classpbl__simple.html#a8e7ecce7552960f3cf065d3f9df3185e" title="pbl_simple::calc_pbl\l_stability_function" alt="" coords="414,187,554,229"/>
-<area shape="rect" id="node7" href="$classpbl__simple.html#ac0ae6a1dedd3692028d78ebdc400ba41" title="pbl_simple::pbl_diffusion" alt="" coords="401,253,567,280"/>
-<area shape="rect" id="node8" href="$classpbl__simple.html#a71af4ee570111d01415ca516d2b23c62" title="pbl_simple::diffuse\l_variable" alt="" coords="624,246,755,287"/>
+<area shape="rect" id="node2" href="$classpbl__simple.html#a0c4a8ea58856a89e2ea7c5026ac60a08" title="pbl_simple::simple_pbl" alt="" coords="188,129,343,156"/>
+<area shape="rect" id="node3" href="$classpbl__simple.html#a6b1fe03ca9231f332047fd4ba5f35eee" title="pbl_simple::calc_shear" alt="" coords="405,5,559,32"/>
+<area shape="rect" id="node4" href="$classpbl__simple.html#ae135b8a6c073b2ccfe5e09b08186d119" title="pbl_simple::calc_virt\l_pot_temp_zgradient" alt="" coords="411,57,553,98"/>
+<area shape="rect" id="node5" href="$classpbl__simple.html#a85584b50fb36fe526cb983be6285d043" title="pbl_simple::calc_richardson\l_gradient" alt="" coords="391,122,573,163"/>
+<area shape="rect" id="node6" href="$classpbl__simple.html#a8e7ecce7552960f3cf065d3f9df3185e" title="pbl_simple::calc_pbl\l_stability_function" alt="" coords="412,187,552,229"/>
+<area shape="rect" id="node7" href="$classpbl__simple.html#ac0ae6a1dedd3692028d78ebdc400ba41" title="pbl_simple::pbl_diffusion" alt="" coords="399,253,565,280"/>
+<area shape="rect" id="node8" href="$classpbl__simple.html#a71af4ee570111d01415ca516d2b23c62" title="pbl_simple::diffuse\l_variable" alt="" coords="621,246,752,287"/>
 </map>
