@@ -130,7 +130,7 @@ ifeq ($(LMOD_FAMILY_COMPILER),gnu)
 	F90=gfortran
 	LIBFFT=/glade/u/home/gutmann/usr/local/lib
 	INCFFT=/glade/u/home/gutmann/usr/local/include
-	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/gnu/4.9.2
+	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/gnu/4.8.2
 	# LIBNETCDF = $(LIB_NCAR) # when netcdf includes are setup by the yellowstone module system
 	# INCNETCDF = $(INC_NCAR)
 	LIBNETCDF = -Wl,-rpath,$(NCDF_PATH)/lib -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf # if using a compiler for which netcdf includes are

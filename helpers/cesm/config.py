@@ -51,7 +51,8 @@ def update_info(info):
     
 
 def parse():
-    parser= argparse.ArgumentParser(description='Convert cesm files to ICAR input forcing files')
+    parser= argparse.ArgumentParser(description='Convert cesm files to ICAR input forcing files',
+                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('experiment',nargs="?",action='store',help="Experiment (20TR,RCP85)",            default="20TR")
     parser.add_argument('start_year',nargs="?",action='store',help="Specify starting year (yyyy)",       default="1990")
     parser.add_argument('ensemble',  nargs="?",action='store',help="Ensemble member (030)",              default="030")

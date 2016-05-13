@@ -36,7 +36,7 @@ module boundary_conditions
     use linear_theory_winds,    only : linear_perturb
     use geo,                    only : geo_interp2d, geo_interp
     use vertical_interpolation, only : vinterp, vLUT_forcing
-    use output,                 only : write_domain
+    use output,                 only : write_domain, output_init
     use string,                 only : str
     
     implicit none
@@ -77,8 +77,7 @@ contains
         integer :: step
         
         step = (options%start_mjd-options%initial_mjd)/(options%in_dt / 86400.0d+0)
-        if (options%debug) print*, "bc_find_step",(options%start_mjd-options%initial_mjd)/(options%in_dt / 86400.0d+0)
-        if (options%debug) print*, "bc_find_step",step
+        if (options%debug) write(*,*), "bc_find_step: First forcing time step = ",trim(str(step))
         
     end function bc_find_step
     
@@ -729,10 +728,12 @@ contains
         if (io_variable_is_present(restart_file,"soil_t")) then
             write(*,*) "Reading land surface restart data"
             call io_read3d(restart_file,"soil_t",inputdata,timeslice)
+            call swap_y_z_dimensions(inputdata)
             call check_shapes_3d(inputdata,domain%soil_t)
             domain%soil_t=inputdata
             deallocate(inputdata)
             call io_read3d(restart_file,"soil_w",inputdata,timeslice)
+            call swap_y_z_dimensions(inputdata)
             domain%soil_vwc=inputdata
             deallocate(inputdata)
         
@@ -890,6 +891,7 @@ contains
             ! we can't just call balance_uvw because the linear winds may need to be initialized
             !call balance_uvw(domain,options)
             
+            call output_init(domain,options)
             call write_domain(domain,options,-1)
         else
 !           else load data from the first Boundary conditions file
@@ -898,8 +900,8 @@ contains
             ny=size(domain%p,3)
             if (options%external_winds) then
                 call ext_winds_init(domain,bc,options)
-!               call smooth_wind(domain%u,1,3)
-!               call smooth_wind(domain%v,1,3)
+                ! call smooth_wind(domain%u,1,3)
+                ! call smooth_wind(domain%v,1,3)
             elseif (options%lt_options%remove_lowres_linear) then
                 ! remove the low-res linear wind perturbation field 
                 call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
@@ -1270,7 +1272,8 @@ contains
             endif
             if (options%z_is_geopotential) then
                 newbc%z=newbc%z / gravity
-                write(*,*) "Interpreting geopotential height as residing between model layers"
+            endif
+            if (options%z_is_on_interface) then
                 newbc%z(:,:,1:nz-1)=(newbc%z(:,:,1:nz-1) + newbc%z(:,:,2:nz))/2
             endif
             

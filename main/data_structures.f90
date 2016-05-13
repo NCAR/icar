@@ -492,6 +492,7 @@ module data_structures
         logical :: mean_fields          ! use only a mean forcing field across the model boundaries 
         logical :: restart              ! this is a restart run, read model conditions from a restart file
         logical :: z_is_geopotential    ! if true the z variable is interpreted as geopotential height
+        logical :: z_is_on_interface    ! if true the z variable is interpreted as residing at model level interfaces
         logical :: advect_density       ! properly incorporate density into the advection calculations. 
                                         ! Doesn't play nice with linear winds
         logical :: high_res_soil_state  ! read the soil state from the high res input file not the low res file
@@ -516,6 +517,8 @@ module data_structures
         real :: inputinterval           ! time steps per input
         real :: smooth_wind_distance    ! distance over which to smooth the forcing wind field (m)
         logical :: time_varying_z       ! read in a new z coordinate every time step and interpolate accordingly
+        real :: cfl_reduction_factor    ! amount to multiple CFL by to improve stability (typically 1)
+        integer :: cfl_strictness       ! CFL method 1=3D from 1D*sqrt(3), 2=ave.3D wind*sqrt(3), 3=sum.3D wind, 4=opt3 * sqrt(3), 5 = sum(max.3d)
         
         ! date/time parameters
         double precision :: initial_mjd ! Modified Julian Day of the first forcing time step [days]

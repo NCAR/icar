@@ -17,7 +17,7 @@ module output
     use data_structures
     implicit none
     private
-    public :: write_domain
+    public :: write_domain, output_init
     
     integer, parameter :: ndims = 4     !> number of dimensions in output (x,y,z,t)
     integer, parameter :: nvars = 37    !> current number of vars = 37
@@ -585,30 +585,6 @@ contains
         
     end subroutine create_file
     
-    !>------------------------------------------------------------
-    !! Initialize Output Module
-    !!
-    !! Sets output frequency (daily, monthly, or every step)
-    !!
-    !! @param 
-    !! @retval 
-    !!
-    !!------------------------------------------------------------
-    subroutine output_init(options)
-        type(options_type), intent(in) :: options
-        
-        if (trim(options%output_file_frequency)=="monthly") then
-            write(*,*) "Outputing a file per month"
-            output_frequency=MONTHLY_FREQUENCY
-        else if (trim(options%output_file_frequency)=="daily") then
-            write(*,*) "Outputing a file per day"
-            output_frequency=DAILY_FREQUENCY
-        else
-            write(*,*) "Outputing a file per time step"
-            output_frequency=EVERY_STEP
-        endif
-        
-    end subroutine output_init
     
     !>------------------------------------------------------------
     !! Set up the varids for an existing NetCDF file by searching for the variable name
@@ -738,6 +714,53 @@ contains
     end subroutine setup_varids
     
     !>------------------------------------------------------------
+    !!  Initialize the output module
+    !!
+    !!  Set up module level variables nx,ny,nz,nsoil and last_rain
+    !!  Sets output frequency (daily, monthly, or every step)
+    !!
+    !!  @param[in]  domain  model domain datatype, fields must be initialized
+    !!  @param[in]  options model options datatype, fields must be initialized
+    !!
+    !!------------------------------------------------------------
+    subroutine output_init(domain, options)
+        implicit none
+        ! This is the name of the data file and variable we will read. 
+        type(domain_type), intent(in)::domain
+        type(options_type),intent(in)::options
+        
+        ! these are module level variables
+        nx = size(domain%qv,1)
+        nz = size(domain%qv,2)
+        ny = size(domain%qv,3)
+        nsoil = size(domain%soil_t,2)
+        
+        !! Sets output frequency (daily, monthly, or every step)
+        if (trim(options%output_file_frequency)=="monthly") then
+            write(*,*) "Outputing a file per month"
+            output_frequency=MONTHLY_FREQUENCY
+        else if (trim(options%output_file_frequency)=="daily") then
+            write(*,*) "Outputing a file per day"
+            output_frequency=DAILY_FREQUENCY
+        else
+            write(*,*) "Outputing a file per time step"
+            output_frequency=EVERY_STEP
+        endif
+
+        
+        
+        if (.not.allocated(last_rain)) then
+            allocate(last_rain(nx,ny))
+            if (options%restart) then
+                last_rain=domain%rain
+            else
+                last_rain=0
+            endif
+        endif
+    end subroutine output_init
+
+    
+    !>------------------------------------------------------------
     !!  Simple routine to write all domain data from this current time step to the output file. 
     !!
     !!  Checks if the file needs to be created or simply checked for required variables. 
@@ -766,23 +789,8 @@ contains
         ! note, set this on every call so that we can output surface variables most of the time, and 3D variables once / month for restarts
         surface_io_only = options%surface_io_only
         
-        ! these are module level variables
-        nx = size(domain%qv,1)
-        nz = size(domain%qv,2)
-        ny = size(domain%qv,3)
-        nsoil = size(domain%soil_t,2)
         output_shape = [nx,ny,nz]
         zlast = [1,3,2]
-        
-        if (.not.allocated(last_rain)) then
-            output_rain_rate=.False.
-            allocate(last_rain(nx,ny))
-            if (options%restart) then
-                last_rain=domain%rain
-            else
-                last_rain=0
-            endif
-        endif
         
         current_step=1
         if (present(inputfilename)) then

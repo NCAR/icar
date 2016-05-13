@@ -31,7 +31,7 @@ VERSION
 
     
 """
-
+from __future__ import print_function
 import sys
 import os
 import traceback
@@ -152,7 +152,8 @@ def topo2grid(topo,lat,lon):
     for i in range(ny):
         if (nyl>100):
             if (i%20)==0:
-                print("{0:4.0f}%".format(100.0*i/float(ny)))
+                print("\r{0:4.0f}%".format(100.0*i/float(ny)), end="")
+                sys.stdout.flush()
         dists=(lat-topo.lat[i,0])**2 + (lon-topo.lon[i,0])**2
         cury,curx=np.unravel_index(np.argmin(dists),dists.shape)
         for j in range(nx):
@@ -174,6 +175,7 @@ def topo2grid(topo,lat,lon):
     
     output_n[output_n==0]=1
     
+    print("  Finished")
     return Bunch(topo=output_data/output_n, lat=lat, lon=lon)
     
 

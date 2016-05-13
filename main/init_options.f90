@@ -184,6 +184,14 @@ contains
                 stop
             endif
         endif
+        if ((options%z_is_geopotential .eqv. .True.).and.(options%z_is_on_interface .eqv. .False.)) then
+            if (options%warning_level>1) then
+                write(*,*) "WARNING WARNING WARNING"
+                write(*,*) "WARNING geopotential height is no longer assumed to be on model interface levels."
+                write(*,*) "WARNING To interpolate geopotential, set z_is_on_interface=True in the namelist. "
+                write(*,*) "WARNING WARNING WARNING"
+            endif
+        endif
     
     end subroutine options_check
     
@@ -342,11 +350,11 @@ contains
         latvar="XLAT"
         lonvar="XLONG"
         uvar="U"
-        ulat="XLAT_U"
-        ulon="XLONG_U"
+        ulat=""
+        ulon=""
         vvar="V"
-        vlat="XLAT_V"
-        vlon="XLONG_V"
+        vlat=""
+        vlon=""
         pvar="P"
         pbvar=""
         tvar="T"
@@ -365,10 +373,10 @@ contains
         landvar="XLAND"
         lat_hi="XLAT"
         lon_hi="XLONG"
-        ulat_hi="XLAT_U"
-        ulon_hi="XLONG_U"
-        vlat_hi="XLAT_V"
-        vlon_hi="XLONG_V"
+        ulat_hi=""
+        ulon_hi=""
+        vlat_hi=""
+        vlon_hi=""
         soiltype_var="" !"SOILTYPE"
         soil_t_var="" !"TSOIL"
         soil_vwc_var="" !"SOILSMC"
@@ -382,39 +390,43 @@ contains
         read(name_unit,nml=var_list)
         close(name_unit)
 
-!       2D geometry variable names (for coarse model)
+        ! 2D geometry variable names (for coarse model)
         options%hgtvar=hgtvar
         options%latvar=latvar
         options%lonvar=lonvar
-!       U varname and associated lat/lon var names
+        ! U varname and associated lat/lon var names
         options%uvar=uvar
+        if (ulat=="") ulat=latvar
+        if (ulon=="") ulon=lonvar
         options%ulat=ulat
         options%ulon=ulon
-!       V varname and associated lat/lon var names
+        ! V varname and associated lat/lon var names
         options%vvar=vvar
+        if (vlat=="") vlat=latvar
+        if (vlon=="") vlon=lonvar
         options%vlat=vlat
         options%vlon=vlon
-!       Primary model variable names
+        ! Primary model variable names
         options%pbvar=pbvar
         options%pvar=pvar
         options%tvar=tvar
         options%qvvar=qvvar
         options%qcvar=qcvar
         options%qivar=qivar
-!       vertical coordinate
+        ! vertical coordinate
         options%zvar=zvar
         options%zbvar=zbvar
-!       2D model variables (e.g. Land surface and PBL height)       
+        ! 2D model variables (e.g. Land surface and PBL height)       
         options%shvar=shvar
         options%lhvar=lhvar
         options%pblhvar=pblhvar
-!       Shortwave and longwave down at the surface
+        ! Shortwave and longwave down at the surface
         options%swdown_var=swdown_var
         options%lwdown_var=lwdown_var
         ! Sea surface temperature
         options%sst_var = sst_var
         
-!       separate variable names for the high resolution domain
+        ! separate variable names for the high resolution domain
         options%hgt_hi=hgt_hi
         options%landvar=landvar
         options%lat_hi=lat_hi
@@ -424,7 +436,7 @@ contains
         options%vlat_hi=vlat_hi
         options%vlon_hi=vlon_hi
         
-!       soil and vegetation parameters
+        ! soil and vegetation parameters
         options%soiltype_var=soiltype_var
         options%soil_t_var=soil_t_var
         options%soil_vwc_var=soil_vwc_var
@@ -443,12 +455,12 @@ contains
         integer :: name_unit
         
         real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance
-        real    :: rotation_scale_height
+        real    :: rotation_scale_height, cfl_reduction_factor
         integer :: ntimesteps
         double precision :: end_mjd
-        integer :: nz, n_ext_winds,buffer, warning_level
+        integer :: nz, n_ext_winds,buffer, warning_level, cfl_strictness
         logical :: ideal, readz, readdz, debug, external_winds, surface_io_only, &
-                   mean_winds, mean_fields, restart, advect_density, z_is_geopotential,&
+                   mean_winds, mean_fields, restart, advect_density, z_is_geopotential, z_is_on_interface,&
                    high_res_soil_state, use_agl_height, time_varying_z, &
                    use_mp_options, use_lt_options, use_adv_options, use_lsm_options
                    
@@ -460,9 +472,10 @@ contains
         namelist /parameters/ ntimesteps,outputinterval,inputinterval, surface_io_only, &
                               dx,dxlow,ideal,readz,readdz,nz,t_offset,debug, &
                               external_winds,buffer,n_ext_winds,advect_density,smooth_wind_distance, &
-                              mean_winds,mean_fields,restart, z_is_geopotential,&
+                              mean_winds,mean_fields,restart, z_is_geopotential, z_is_on_interface,&
                               date, calendar, high_res_soil_state,rotation_scale_height,warning_level, &
                               use_agl_height, start_date, forcing_start_date, end_date, time_varying_z, &
+                              cfl_reduction_factor, cfl_strictness, &
                               mp_options_filename, use_mp_options, &    ! trude added
                               lt_options_filename, use_lt_options, &
                               lsm_options_filename, use_lsm_options, &
@@ -478,6 +491,7 @@ contains
         buffer=0
         advect_density=.False.
         z_is_geopotential=.False.
+        z_is_on_interface=.False.
         dxlow=100000
         restart=.False.
         ideal=.False.
@@ -495,6 +509,8 @@ contains
         forcing_start_date=""
         end_date=""
         time_varying_z=.False.
+        cfl_reduction_factor = 1.0
+        cfl_strictness = 3
         
         ! flag set to read specific parameterization options
         use_mp_options=.False.
@@ -594,11 +610,11 @@ contains
         options%warning_level = warning_level
         options%rotation_scale_height = rotation_scale_height
         if (use_agl_height) then
-            write(*,*) "WARNING: use_agl_height=True is not currently supported, reseting to False"
-            use_agl_height=.False.
+            write(*,*) "WARNING: use_agl_height=True is only supported for winds. "
         endif
         options%use_agl_height = use_agl_height
         options%z_is_geopotential = z_is_geopotential
+        options%z_is_on_interface = z_is_on_interface
         
         options%external_winds = external_winds
         options%ext_winds_nfiles = n_ext_winds
@@ -608,6 +624,9 @@ contains
         
         options%high_res_soil_state = high_res_soil_state
         options%time_varying_z = time_varying_z
+        options%cfl_reduction_factor = cfl_reduction_factor
+        options%cfl_strictness = cfl_strictness
+
         
         options%use_mp_options = use_mp_options
         options%mp_options_filename  = mp_options_filename   ! trude added

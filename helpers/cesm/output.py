@@ -58,6 +58,9 @@ def write_file(date,info,cesm):
     atts=Bunch(long_name="Surface Longwave Radiation (positive down)",units="W m**-2")
     extra_vars.append(Bunch(name="lwdown",data=cesm["lw"],dims=dims_3d,dtype="f",attributes=atts))
 
+    atts=Bunch(long_name="Skin Temperature",units="K")
+    extra_vars.append(Bunch(name="tskin",data=cesm["ts"],dims=dims_3d,dtype="f",attributes=atts))
+
     atts=Bunch(long_name="latitude",units="degrees")
     extra_vars.append(Bunch(name="lat",data=info.lat_data,dims=dims_2d,dtype="f",attributes=atts))
     
@@ -73,6 +76,11 @@ def write_file(date,info,cesm):
 
     qvatts=Bunch(long_name="Specific Humidity",units="kg kg**-1")
     
+    print(" ")
+    print(" ")
+    print("Writing:"+filename)
+    print(" ")
+    print(" ")
     # write to output file
     mygis.write(filename=filename,varname="qv",data=cesm.qv,dims=dims, attributes=qvatts,dtype="f",
                   extravars=extra_vars)#,history=" Produced by cesm2icar v."+info.version)

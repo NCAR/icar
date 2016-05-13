@@ -21,7 +21,7 @@ program icar
     use init,               only : init_model, init_physics           ! Initialize model (not initial conditions)
     use boundary_conditions,only : bc_init,bc_update,bc_find_step     ! Boundary and initial conditions
     use data_structures          ! *_type datatypes                   ! Data-types and physical "constants"
-    use output,             only : write_domain                       ! Used to output initial model state
+    use output,             only : write_domain, output_init          ! Used to output initial model state
     use time_step,          only : step                               ! Advance the model forward in time
     use string,             only : str                                ! Convert real,integer,double to string
     
@@ -39,7 +39,7 @@ program icar
 !   initialize model including options, terrain, lat, lon data. 
     call init_model(options,domain,boundary)
     
-!   set up the timeing for the model
+    ! set up the timeing for the model
     if (options%restart) then
         start_point=options%restart_step-1
     else
@@ -53,14 +53,16 @@ program icar
     call calendar_date(model_time/86400.0D+0 + 50000, year, month, day, hour, minute, second)
     domain%current_month=month
     
-!   read initial conditions from the boundary file
+    ! read initial conditions from the boundary file
     write(*,*) "Initializing Boundary conditions"
     call bc_init(domain, boundary, options)
     
     write(*,*) "Initializing Physics packages"
     call init_physics(options,domain)
-!   update the boundary conditions for the next time step so we can integrate from one to the next
-!     call bc_update(domain,boundary,options)
+    
+    ! initialize the output module
+    ! this can't be called until after bc_init, so that rain accumulations can be initialized in a restart
+    call output_init(domain, options)
     
     ! write the initial state of the model (primarily useful for debugging)
     if (.not.options%restart) then
@@ -81,10 +83,10 @@ program icar
         domain%current_month=month
         write(*,'(A,i4,"/",i2.2"/"i2.2" "i2.2":"i2.2":"i2.2)') "  Date = ",year,month,day,hour,minute,second
         
-!       update boundary conditions (dXdt variables) so we can integrate to the next step
+        ! update boundary conditions (dXdt variables) so we can integrate to the next step
         call bc_update(domain,boundary,options)
         
-!       this is the meat of the model physics, run all the physics for the current time step looping over internal timesteps
+        ! this is the meat of the model physics, run all the physics for the current time step looping over internal timesteps
         call step(domain,options,boundary,model_time,next_output)
 
     end do
@@ -92,6 +94,8 @@ program icar
 !-----------------------------------------
     
 end program icar
+
+! This is the Doxygen mainpage documentation.  This should be moved to another file at some point. 
 
 !>------------------------------------------
 !!  @mainpage

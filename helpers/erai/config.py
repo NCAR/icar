@@ -8,7 +8,7 @@ import mygis
 
 import io_routines as io
 
-version="1.0"
+version="1.1"
 
 def set_bounds(info):
     atm_file=info.atmdir+info.atmfile

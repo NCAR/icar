@@ -21,44 +21,82 @@ module geo
     implicit none
     
     private
-    public::geo_LUT ! Create a geographic Look up table
-    public::geo_interp ! apply geoLUT to interpolate in 2d for a 3d grid
+    
+    public::geo_LUT      ! Create a geographic Look up table
+    public::geo_interp   ! apply geoLUT to interpolate in 2d for a 3d grid
     public::geo_interp2d ! apply geoLUT to interpolate in 2d for a 2d grid
     
 contains
-    
-    ! calculate the weights to use for bilinear interpolation between surrounding points x, y
-    !   to position xi,yi
+    !>------------------------------------------------------------
+    !! Calculate the weights to use for bilinear interpolation between surrounding points x, y
+    !! 
+    !! Takes a point (yi,xi) and a set of 4 surrounding points (y[4],x[4]) as input
+    !! 
+    !! @param   real    yi  input y location to interpolate to. 
+    !! @param   real    y   Array of surrounding y-locations to interpolate from. 
+    !! @param   real    xi  input x location to interpolate to. 
+    !! @param   real    x   Array of surrounding x-locations to interpolate from. 
+    !! @retval  real    weights
+    !!
+    !!------------------------------------------------------------    
     function bilin_weights(yi,y,xi,x)
         implicit none
         real,intent(in)::yi,y(0:3),xi,x(0:3)
         real::x0,x1,x2,x3,y5,y6,f1,f2
         real, dimension(4) ::bilin_weights
+        
+        ! handle the special case if x(1) and x(0) are identical
         if ((x(1)-x(0))==0) then
             x0=1
         else
+            ! compute the linear interpolation between x0 and x1
             x0=abs((xi-x(0))/(x(1)-x(0)))
         endif
+        ! the weights for the other x are just the complement
         x1=1-x0
+        
+        ! handle the special case if x(3) and x(2) are identical
         if ((x(3)-x(2))==0) then
             x2=1
         else
+            ! compute the linear interpolation between x2 and x3
             x2=abs((xi-x(2))/(x(3)-x(2)))
         endif
+        ! the weights for the other x are just the complement
         x3=1-x2
+        
+        ! now compute the y interpolation weights
+        ! first find the y locations after performing the x interpolation
         y5=y(0)*x1+y(1)*x0
         y6=y(2)*x3+y(3)*x2
+        ! now find the interpolation weights between those interpolated y points
         if ((y6-y5)==0) then
+            ! the special case again
             f1=1
         else
+            ! the standard linear interpolation case
             f1=(yi-y5)/(y6-y5)
         endif
+        ! the complement
         f2=1-f1
         
+        ! note that the final weights are a mixture of the x and y weights
         bilin_weights=(/x1*f2,x0*f2,x3*f1,x2*f1/)
     end function bilin_weights
     
-    !   xw=minxw(xw,lo%lon,xc,yc,lon)
+    !>------------------------------------------------------------
+    !! Find the minimum x
+    !! Takes a point (yi,xi) and a set of 4 surrounding points (y[4],x[4]) as input
+    !! 
+    !! Example : xw = minxw(xw,lo%lon,xc,yc,lon)
+    !!
+    !! @param   real    yi  input y location to interpolate to. 
+    !! @param   real    y   Array of surrounding y-locations to interpolate from. 
+    !! @param   real    xi  input x location to interpolate to. 
+    !! @param   real    x   Array of surrounding x-locations to interpolate from. 
+    !! @retval  real    weights
+    !!
+    !!------------------------------------------------------------     
     integer function minxw(xw,longrid,xpos,ypos,lon)
         implicit none
         integer, intent(in)::xw,xpos,ypos
@@ -80,7 +118,11 @@ contains
             endif
         endif
     end function minxw
-    !   yw=minyw(yw,lo%lat,xc,yc,lat)
+    !>------------------------------------------------------------
+    !!  Find the minimum next step size in the y direction
+    !!  yw = minyw(yw,lo%lat,xc,yc,lat)
+    !!
+    !!------------------------------------------------------------
     integer function minyw(yw,latgrid,xpos,ypos,lat)
         integer, intent(in)::yw,xpos,ypos
         real,intent(in)::latgrid(:,:),lat
@@ -102,22 +144,25 @@ contains
         endif
     end function minyw
     
-    ! Find a location lat,lon in lo%lat,lon grids
-    !  Assumes that the lat/lon grids are semi-regular (dx/dy aren't constant but they are nearly so)
-    !  Calculates dx/dy at the middle of the lat/lon grids, then calculates the location of lat,lon
-    !  input point using those coordinates.  
-    !  Next proceeds to calculate a new position based on the dx/dy at that position until the new
-    !  position is within 1 gridcell of the current position
-    !  Once that "within 1" position is found, search all cells in a 3x3 grid for the minimum distance
-    !  return a position datatype that includes the found x/y location
-    ! 
-    ! currently tries up to three methods to find the location 
-    !   1) assume relatively even dxdy and compute location (iterate a <20times)
-    !   2) use a log(n) search (divide and conquer) also iterate <20times)
-    !   a) if 1 or 2 are approximately successful: 
-    !       search a small region around the "best" point to find the real best point
-    !   3) in the diabolical case where 1 and 2 fail (rare) just search every single location (n^2)
-    !   Could add a 2.5) downhill search algorithm...
+    !>------------------------------------------------------------
+    !! Find a location lat,lon in lo%lat,lon grids
+    !!  Assumes that the lat/lon grids are semi-regular (dx/dy are not constant but they are nearly so)
+    !!  Calculates dx/dy at the middle of the lat/lon grids, then calculates the location of lat,lon
+    !!  input point using those coordinates.  
+    !!  Next proceeds to calculate a new position based on the dx/dy at that position until the new
+    !!  position is within 1 gridcell of the current position
+    !!  Once that "within 1" position is found, search all cells in a 3x3 grid for the minimum distance
+    !!  return a position datatype that includes the found x/y location
+    !! 
+    !! currently tries up to three methods to find the location 
+    !!   1) assume relatively even dxdy and compute location (iterate a <20times)
+    !!   2) use a log(n) search (divide and conquer) also iterate <20times)
+    !!   a) if 1 or 2 are approximately successful: 
+    !!       search a small region around the "best" point to find the real best point
+    !!   3) in the diabolical case where 1 and 2 fail (rare) just search every single location (n^2)
+    !!   Could add a 2.5) downhill search algorithm...
+    !!
+    !!------------------------------------------------------------
     type(position) function find_location(lo,lat,lon,lastpos)
         implicit none
         class(interpolable_type),intent(inout)::lo
@@ -307,9 +352,12 @@ contains
         find_location%x=x
         find_location%y=y
     end function find_location
-        
-        
-    ! given a closest position, return the 4 points surrounding the lat/lon position in lo%lat/lon
+    
+    
+    !>------------------------------------------------------------
+    !!  Given a closest position, return the 4 points surrounding the lat/lon position in lo%lat/lon
+    !!
+    !!------------------------------------------------------------
     type(fourpos) function find_surrounding(lo,lat,lon,pos,nx,ny)
         implicit none
         class(interpolable_type),intent(in)::lo
@@ -336,7 +384,10 @@ contains
         
     end function find_surrounding           
     
-    ! compute the geographic look up table from LOw resolution grid to HIgh resolution grid
+    !>------------------------------------------------------------
+    !!  Compute the geographic look up table from LOw resolution grid to HIgh resolution grid
+    !!
+    !!------------------------------------------------------------
     subroutine geo_LUT(hi, lo)
         implicit none
         class(interpolable_type),intent(in)::hi
@@ -392,7 +443,10 @@ contains
         
     end subroutine geo_LUT
     
-    ! interpolate boundaries of fieldout to fieldin using geolut
+    !>------------------------------------------------------------
+    !!  Interpolate boundaries of fieldout to fieldin using geolut
+    !!
+    !!------------------------------------------------------------
     subroutine boundary_interpolate(fieldout, fieldin, geolut)
         implicit none
         real,intent(inout)::fieldout(:,:,:)
@@ -438,9 +492,12 @@ contains
 
     end subroutine boundary_interpolate
     
-    ! interpolate fieldout to fieldin using geolut.  
-    ! if boundary_only is true, call boundary_interpolate instead
-    ! loops over y,z,x but geolut is only defined over x,y (for now)
+    !>------------------------------------------------------------
+    !!  Interpolate fieldout to fieldin using geolut.  
+    !!  if boundary_only is true, call boundary_interpolate instead
+    !!  loops over y,z,x but geolut is only defined over x,y (for now)
+    !!
+    !!------------------------------------------------------------
     subroutine geo_interp(fieldout,fieldin,geolut,boundary_only)
         implicit none
         real,intent(inout)::fieldout(:,:,:)
@@ -479,7 +536,10 @@ contains
         endif
     end subroutine geo_interp
     
-    ! interpolate fieldout to fieldin using geolut.  
+    !>------------------------------------------------------------
+    !!  Interpolate fieldout to fieldin using geolut. 
+    !!
+    !!------------------------------------------------------------
     subroutine geo_interp2d(fieldout, fieldin, geolut)
         implicit none
         real, dimension(:,:),intent(inout) :: fieldout
