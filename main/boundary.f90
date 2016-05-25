@@ -695,6 +695,18 @@ contains
             domain%nice=inputdata
             deallocate(inputdata)
         endif
+        if (io_variable_is_present(restart_file,"ngraupel")) then
+            call io_read3d(restart_file,"ngraupel",inputdata,timeslice)
+            call swap_y_z_dimensions(inputdata)
+            domain%ngraupel=inputdata
+            deallocate(inputdata)
+        endif
+        if (io_variable_is_present(restart_file,"nsnow")) then
+            call io_read3d(restart_file,"nsnow",inputdata,timeslice)
+            call swap_y_z_dimensions(inputdata)
+            domain%nsnow=inputdata
+            deallocate(inputdata)
+        endif
         call io_read3d(restart_file,"p",inputdata,timeslice)
         call swap_y_z_dimensions(inputdata)
         domain%p=inputdata
