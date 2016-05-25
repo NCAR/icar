@@ -233,8 +233,12 @@ contains
         domain%nrain=0
         allocate(domain%qsnow(nx,nz,ny))    ! snow  mixing ratio [kg/kg]
         domain%qsnow=0
+        allocate(domain%nsnow(nx,nz,ny))    ! snow number concentration [cm-3]
+        domain%nsnow=0
         allocate(domain%qgrau(nx,nz,ny))    ! graupel mixing ratio [kg/kg]
         domain%qgrau=0
+        allocate(domain%ngraupel(nx,nz,ny)) ! graupel number concentration [cm-3]
+        domain%ngraupel=0
         allocate(domain%pii(nx,nz,ny))      ! exner function
         domain%pii=1
         allocate(domain%rho(nx,nz,ny))      ! air density [kg/m^3]

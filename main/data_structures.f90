@@ -99,6 +99,7 @@ module data_structures
 
     integer, parameter :: kMP_THOMPSON   = 1
     integer, parameter :: kMP_SB04       = 2
+    integer, parameter :: kMP_MORRISON   = 3
 
     integer, parameter :: kPBL_BASIC     = 1
     integer, parameter :: kPBL_SIMPLE    = 2
@@ -264,6 +265,7 @@ module data_structures
         real, allocatable, dimension(:,:,:) :: w,ur,vr,wr   ! w, and u,v,w * density
         real, allocatable, dimension(:,:,:) :: w_real       ! real space w on the mass grid (including U,V*dz/dx component) for output
         real, allocatable, dimension(:,:,:) :: nice,nrain   ! number concentration for ice and rain
+        real, allocatable, dimension(:,:,:) :: nsnow,ngraupel! number concentration for snow and graupel (used in mp_morrison)
         real, allocatable, dimension(:,:,:) :: qgrau        ! graupel mass mixing ratio 
         real, allocatable, dimension(:,:,:) :: p_inter      ! pressure on the vertical interfaces (p[:,1,:]=psfc)
         real, allocatable, dimension(:,:,:) :: z_inter      ! z height on interface levels

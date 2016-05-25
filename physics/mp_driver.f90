@@ -27,15 +27,16 @@
 !!----------------------------------------------------------
 module microphysics
     use data_structures
-    use module_mp_thompson, only:   mp_gt_driver, thompson_init
-    use module_mp_simple,   only:   mp_simple_driver
+    use module_mp_thompson,         only: mp_gt_driver, thompson_init
+    use module_mp_morr_two_moment,  only: MORR_TWO_MOMENT_INIT, MP_MORR_TWO_MOMENT
+    use module_mp_simple,           only: mp_simple_driver
     implicit none
 
     ! permit the microphysics to update on a longer time step than the advection
     integer :: update_interval
     real*8 :: last_model_time
     ! temporary variables
-    real,allocatable,dimension(:,:) :: SR, last_rain, last_snow, this_precip
+    real,allocatable,dimension(:,:) :: SR, last_rain, last_snow, this_precip,refl_10cm
     integer, parameter :: npoints=8
     real,    dimension(npoints) :: dist_fraction = [ 0.1,0.15,0.1, 0.15,0.15, 0.1,0.15,0.1]
     integer, dimension(npoints) :: x_list = [ -1,0,1, -1,1, -1,0,1]
@@ -60,6 +61,8 @@ contains
         if (options%physics%microphysics==kMP_THOMPSON) then
             write(*,*) "    Thompson Microphysics"
             call thompson_init(options%mp_options)
+        elseif (options%physics%microphysics==kMP_MORRISON) then 
+            call MORR_TWO_MOMENT_INIT(hail_opt=0)
         endif
 
         update_interval = options%mp_options%update_interval
@@ -129,13 +132,14 @@ contains
         double precision, intent(in) :: model_time
         real :: mp_dt
         integer ::ids,ide,jds,jde,kds,kde,itimestep=1
-        integer ::its,ite,jts,jte,kts,kte, nx,ny
+        integer ::its,ite,jts,jte,kts,kte, nx,ny,nz
         
         ids=1
         ide=size(domain%qv,1)
         nx=ide
         kds=1
         kde=size(domain%qv,2)
+        nz=kde
         jds=1
         jde=size(domain%qv,3)
         ny=jde
@@ -165,6 +169,22 @@ contains
             allocate(this_precip(nx,ny))
             this_precip=0
         endif
+        if (.not.allocated(refl_10cm)) then
+            allocate(refl_10cm(nx,ny))
+            refl_10cm=0
+        endif
+        if (.not.allocated(domain%tend%qr)) then
+            allocate(domain%tend%qr(nx,nz,ny))
+            domain%tend%qr=0
+        endif
+        if (.not.allocated(domain%tend%qs)) then
+            allocate(domain%tend%qs(nx,nz,ny))
+            domain%tend%qs=0
+        endif
+        if (.not.allocated(domain%tend%qi)) then
+            allocate(domain%tend%qi(nx,nz,ny))
+            domain%tend%qi=0
+        endif
 
         ! only run the microphysics if the next time step would put it over the update_interval time
         if (((model_time+dt_in)-last_model_time)>=update_interval) then
@@ -180,22 +200,22 @@ contains
                 last_snow=domain%snow
             endif
             
+            kts=kds
+            kte=kde
+            ! set the current tile to the top layer to process microphysics for
+            if (options%mp_options%top_mp_level>0) then
+                kte=min(kte, options%mp_options%top_mp_level)
+            endif
+            if (options%ideal) then
+                ! for ideal runs process the boundaries as well to be consistent with WRF
+                its=ids;ite=ide
+                jts=jds;jte=jde
+            else
+                its=ids+1;ite=ide-1
+                jts=jds+1;jte=jde-1
+            endif
             ! run the thompson microphysics
             if (options%physics%microphysics==kMP_THOMPSON) then
-                kts=kds
-                kte=kde
-                ! set the current tile to the top layer to process microphysics for
-                if (options%mp_options%top_mp_level>0) then
-                    kte=min(kte, options%mp_options%top_mp_level)
-                endif
-                if (options%ideal) then
-                    ! for ideal runs process the boundaries as well to be consistent with WRF
-                    its=ids;ite=ide
-                    jts=jds;jte=jde
-                else
-                    its=ids+1;ite=ide-1
-                    jts=jds+1;jte=jde-1
-                endif
                 ! call the thompson microphysics
                 call mp_gt_driver(domain%qv, domain%cloud, domain%qrain, domain%ice, &
                                 domain%qsnow, domain%qgrau, domain%nice, domain%nrain, &
@@ -213,9 +233,27 @@ contains
                 call mp_simple_driver(domain%p,domain%th,domain%pii,domain%rho,domain%qv,domain%cloud, &
                                 domain%qrain,domain%qsnow,domain%rain,domain%snow,&
                                 mp_dt,domain%dz,ide,jde,kde)
+            elseif (options%physics%microphysics==kMP_MORRISON) then 
+                call MP_MORR_TWO_MOMENT(itimestep,                         &
+                                domain%th, domain%qv, domain%cloud,     &
+                                domain%qrain, domain%ice, domain%qsnow, &
+                                domain%qgrau, domain%nice, domain%nsnow,&
+                                domain%nrain, domain%ngraupel,          &
+                                domain%rho, domain%pii, domain%p,       &
+                                mp_dt, domain%dz, domain%w,             &
+                                domain%rain, last_rain, SR,             &
+                                domain%snow, last_snow, domain%graupel, &
+                                this_precip,                            & ! hm added 7/13/13
+                                refl_10cm, .False., 0,                  & ! GT added for reflectivity calcs
+                                domain%tend%qr, domain%tend%qs,         &
+                                domain%tend%qi                          & 
+                               ,IDS,IDE, JDS,JDE, KDS,KDE               & ! domain dims
+                               ,IDS,IDE, JDS,JDE, KDS,KDE               & ! memory dims
+                               ,ITS,ITE, JTS,JTE, KTS,KTE               & ! tile   dims            )
+                           )
             endif
             
-            if (options%mp_options%local_precip_fraction<1) then
+            if ((options%mp_options%local_precip_fraction<1).and.(options%physics%microphysics/=kMP_MORRISON) ) then
                 call distribute_precip(domain%rain, last_rain, options%mp_options%local_precip_fraction)
                 call distribute_precip(domain%snow, last_snow, options%mp_options%local_precip_fraction)
             endif

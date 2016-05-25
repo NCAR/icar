@@ -328,6 +328,7 @@ OBJS=	$(BUILD)driver.o \
 		$(BUILD)mp_driver.o \
 		$(BUILD)mp_thompson.o \
 		$(BUILD)mp_simple.o \
+		$(BUILD)mp_morrison.o \
 		$(BUILD)cu_driver.o \
 		$(BUILD)cu_tiedtke.o \
 		$(BUILD)cu_kf.o \
@@ -462,8 +463,12 @@ $(BUILD)vinterp.o: $(UTIL)vinterp.f90 $(BUILD)data_structures.o
 #	Microphysics code
 ###################################################################
 
-$(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_thompson.o $(BUILD)mp_simple.o $(BUILD)data_structures.o
+$(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_thompson.o $(BUILD)mp_simple.o \
+					$(BUILD)mp_morrison.o $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)mp_driver.f90 -o $(BUILD)mp_driver.o
+
+$(BUILD)mp_morrison.o:$(PHYS)mp_morrison.f90 $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(PHYS)mp_morrison.f90 -o $(BUILD)mp_morrison.o
 
 $(BUILD)mp_thompson.o:$(PHYS)mp_thompson.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)mp_thompson.f90 -o $(BUILD)mp_thompson.o
