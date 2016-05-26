@@ -1,82 +1,86 @@
+!>----------------------------------------------------------------------
+!! THIS MODULE CONTAINS THE TWO-MOMENT MICROPHYSICS CODE DESCRIBED BY
+!!     MORRISON ET AL. (2009, MWR)
+!!
+!! CHANGES FOR V3.2, RELATIVE TO MOST RECENT (BUG-FIX) CODE FOR V3.1
+!!
+!! 1) ADDED ACCELERATED MELTING OF GRAUPEL/SNOW DUE TO COLLISION WITH RAIN, FOLLOWING LIN ET AL. (1983)
+!! 2) INCREASED MINIMUM LAMBDA FOR RAIN, AND ADDED RAIN DROP BREAKUP FOLLOWING MODIFIED VERSION
+!!     OF VERLINDE AND COTTON (1993)
+!! 3) CHANGE MINIMUM ALLOWED MIXING RATIOS IN DRY CONDITIONS (RH < 90%), THIS IMPROVES RADAR REFLECTIIVITY
+!!     IN LOW REFLECTIVITY REGIONS
+!! 4) BUG FIX TO MAXIMUM ALLOWED PARTICLE FALLSPEEDS AS A FUNCTION OF AIR DENSITY
+!! 5) BUG FIX TO CALCULATION OF LIQUID WATER SATURATION VAPOR PRESSURE (CHANGE IS VERY MINOR)
+!! 6) INCLUDE WRF CONSTANTS PER SUGGESTION OF JIMY
+!!
+!! bug fix, 5/12/10
+!! 7) bug fix for saturation vapor pressure in low pressure, to avoid division by zero
+!! 8) include 'EP2' WRF constant for saturation mixing ratio calculation, instead of hardwire constant
+!!
+!! CHANGES FOR V3.3
+!! 1) MODIFICATION FOR COUPLING WITH WRF-CHEM (PREDICTED DROPLET NUMBER CONCENTRATION) AS AN OPTION
+!! 2) MODIFY FALLSPEED BELOW THE LOWEST LEVEL OF PRECIPITATION, WHICH PREVENTS
+!!      POTENTIAL FOR SPURIOUS ACCUMULATION OF PRECIPITATION DURING SUB-STEPPING FOR SEDIMENTATION
+!! 3) BUG FIX TO LATENT HEAT RELEASE DUE TO COLLISIONS OF CLOUD ICE WITH RAIN
+!! 4) CLEAN UP OF COMMENTS IN THE CODE
+!!    
+!! additional minor bug fixes and small changes, 5/30/2011
+!! minor revisions by A. Ackerman April 2011:
+!! 1) replaced kinematic with dynamic viscosity 
+!! 2) replaced scaling by air density for cloud droplet sedimentation
+!!    with viscosity-dependent Stokes expression
+!! 3) use Ikawa and Saito (1991) air-density scaling for cloud ice
+!! 4) corrected typo in 2nd digit of ventilation constant F2R
+!!
+!! additional fixes:
+!! 5) TEMPERATURE FOR ACCELERATED MELTING DUE TO COLLIIONS OF SNOW AND GRAUPEL
+!!    WITH RAIN SHOULD USE CELSIUS, NOT KELVIN (BUG REPORTED BY K. VAN WEVERBERG)
+!! 6) NPRACS IS NOT SUBTRACTED FROM SNOW NUMBER CONCENTRATION, SINCE
+!!    DECREASE IN SNOW NUMBER IS ALREADY ACCOUNTED FOR BY NSMLTS 
+!! 7) fix for switch for running w/o graupel/hail (cloud ice and snow only)
+!!
+!! hm bug fix 3/16/12
+!!
+!! 1) very minor change to limits on autoconversion source of rain number when cloud water is depleted
+!!
+!! WRFV3.5
+!! hm/A. Ackerman bug fix 11/08/12
+!!
+!! 1) for accelerated melting from collisions, should use rain mass collected by snow, not snow mass 
+!!    collected by rain
+!! 2) minor changes to some comments
+!! 3) reduction of maximum-allowed ice concentration from 10 cm-3 to 0.3
+!!    cm-3. This was done to address the problem of excessive and persistent
+!!    anvil cirrus produced by the scheme.
+!!
+!! CHANGES FOR WRFV3.5.1
+!! 1) added output for snow+cloud ice and graupel time step and accumulated
+!!    surface precipitation
+!! 2) bug fix to option w/o graupel/hail (IGRAUP = 1), include PRACI, PGSACW,
+!!    and PGRACS as sources for snow instead of graupel/hail, bug reported by
+!!    Hailong Wang (PNNL)
+!! 3) very minor fix to immersion freezing rate formulation (negligible impact)
+!! 4) clarifications to code comments
+!! 5) minor change to shedding of rain, remove limit so that the number of 
+!!    collected drops can smaller than number of shed drops
+!! 6) change of specific heat of liquid water from 4218 to 4187 J/kg/K
+!!
+!! CHANGES FOR WRFV3.6.1
+!! 1) minor bug fix to melting of snow and graupel, an extra factor of air density (RHO) was removed
+!!    from the calculation of PSMLT and PGMLT
+!! 2) redundant initialization of PSMLT (non answer-changing)
+!!
+!! ----------------------------------------------------------------------
+!!
+!! THIS SCHEME IS A BULK DOUBLE-MOMENT SCHEME THAT PREDICTS MIXING
+!! RATIOS AND NUMBER CONCENTRATIONS OF FIVE HYDROMETEOR SPECIES:
+!! CLOUD DROPLETS, CLOUD (SMALL) ICE, RAIN, SNOW, AND GRAUPEL.
+!!----------------------------------------------------------------------
+!
 !WRF:MODEL_LAYER:PHYSICS
 !
 
-! THIS MODULE CONTAINS THE TWO-MOMENT MICROPHYSICS CODE DESCRIBED BY
-!     MORRISON ET AL. (2009, MWR)
 
-! CHANGES FOR V3.2, RELATIVE TO MOST RECENT (BUG-FIX) CODE FOR V3.1
-
-! 1) ADDED ACCELERATED MELTING OF GRAUPEL/SNOW DUE TO COLLISION WITH RAIN, FOLLOWING LIN ET AL. (1983)
-! 2) INCREASED MINIMUM LAMBDA FOR RAIN, AND ADDED RAIN DROP BREAKUP FOLLOWING MODIFIED VERSION
-!     OF VERLINDE AND COTTON (1993)
-! 3) CHANGE MINIMUM ALLOWED MIXING RATIOS IN DRY CONDITIONS (RH < 90%), THIS IMPROVES RADAR REFLECTIIVITY
-!     IN LOW REFLECTIVITY REGIONS
-! 4) BUG FIX TO MAXIMUM ALLOWED PARTICLE FALLSPEEDS AS A FUNCTION OF AIR DENSITY
-! 5) BUG FIX TO CALCULATION OF LIQUID WATER SATURATION VAPOR PRESSURE (CHANGE IS VERY MINOR)
-! 6) INCLUDE WRF CONSTANTS PER SUGGESTION OF JIMY
-
-! bug fix, 5/12/10
-! 7) bug fix for saturation vapor pressure in low pressure, to avoid division by zero
-! 8) include 'EP2' WRF constant for saturation mixing ratio calculation, instead of hardwire constant
-
-! CHANGES FOR V3.3
-! 1) MODIFICATION FOR COUPLING WITH WRF-CHEM (PREDICTED DROPLET NUMBER CONCENTRATION) AS AN OPTION
-! 2) MODIFY FALLSPEED BELOW THE LOWEST LEVEL OF PRECIPITATION, WHICH PREVENTS
-!      POTENTIAL FOR SPURIOUS ACCUMULATION OF PRECIPITATION DURING SUB-STEPPING FOR SEDIMENTATION
-! 3) BUG FIX TO LATENT HEAT RELEASE DUE TO COLLISIONS OF CLOUD ICE WITH RAIN
-! 4) CLEAN UP OF COMMENTS IN THE CODE
-    
-! additional minor bug fixes and small changes, 5/30/2011
-! minor revisions by A. Ackerman April 2011:
-! 1) replaced kinematic with dynamic viscosity 
-! 2) replaced scaling by air density for cloud droplet sedimentation
-!    with viscosity-dependent Stokes expression
-! 3) use Ikawa and Saito (1991) air-density scaling for cloud ice
-! 4) corrected typo in 2nd digit of ventilation constant F2R
-
-! additional fixes:
-! 5) TEMPERATURE FOR ACCELERATED MELTING DUE TO COLLIIONS OF SNOW AND GRAUPEL
-!    WITH RAIN SHOULD USE CELSIUS, NOT KELVIN (BUG REPORTED BY K. VAN WEVERBERG)
-! 6) NPRACS IS NOT SUBTRACTED FROM SNOW NUMBER CONCENTRATION, SINCE
-!    DECREASE IN SNOW NUMBER IS ALREADY ACCOUNTED FOR BY NSMLTS 
-! 7) fix for switch for running w/o graupel/hail (cloud ice and snow only)
-
-! hm bug fix 3/16/12
-
-! 1) very minor change to limits on autoconversion source of rain number when cloud water is depleted
-
-! WRFV3.5
-! hm/A. Ackerman bug fix 11/08/12
-
-! 1) for accelerated melting from collisions, should use rain mass collected by snow, not snow mass 
-!    collected by rain
-! 2) minor changes to some comments
-! 3) reduction of maximum-allowed ice concentration from 10 cm-3 to 0.3
-!    cm-3. This was done to address the problem of excessive and persistent
-!    anvil cirrus produced by the scheme.
-
-! CHANGES FOR WRFV3.5.1
-! 1) added output for snow+cloud ice and graupel time step and accumulated
-!    surface precipitation
-! 2) bug fix to option w/o graupel/hail (IGRAUP = 1), include PRACI, PGSACW,
-!    and PGRACS as sources for snow instead of graupel/hail, bug reported by
-!    Hailong Wang (PNNL)
-! 3) very minor fix to immersion freezing rate formulation (negligible impact)
-! 4) clarifications to code comments
-! 5) minor change to shedding of rain, remove limit so that the number of 
-!    collected drops can smaller than number of shed drops
-! 6) change of specific heat of liquid water from 4218 to 4187 J/kg/K
-
-! CHANGES FOR WRFV3.6.1
-! 1) minor bug fix to melting of snow and graupel, an extra factor of air density (RHO) was removed
-!    from the calculation of PSMLT and PGMLT
-! 2) redundant initialization of PSMLT (non answer-changing)
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-! THIS SCHEME IS A BULK DOUBLE-MOMENT SCHEME THAT PREDICTS MIXING
-! RATIOS AND NUMBER CONCENTRATIONS OF FIVE HYDROMETEOR SPECIES:
-! CLOUD DROPLETS, CLOUD (SMALL) ICE, RAIN, SNOW, AND GRAUPEL.
 
 MODULE MODULE_MP_MORR_TWO_MOMENT
    ! USE     module_wrf_error
