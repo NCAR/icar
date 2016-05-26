@@ -84,7 +84,7 @@ MODULE MODULE_MP_MORR_TWO_MOMENT
    ! USE module_domain, ONLY : HISTORY_ALARM, Is_alarm_tstep  ! GT
    ! USE module_mp_radar
 
-! USE WRF PHYSICS CONSTANTS
+! USE WRF PHYSICS CONSTANTS taken from ICAR data_structures module
   use data_structures, ONLY: CP, G=>gravity, R => Rd, RV => Rw, EP_2=>EP2
 !  USE module_state_description
 
@@ -150,7 +150,7 @@ MODULE MODULE_MP_MORR_TWO_MOMENT
 ! ISUB = 0, INCLUDE SUB-GRID W (RECOMMENDED FOR LOWER RESOLUTION)
 ! ISUB = 1, EXCLUDE SUB-GRID W, ONLY USE GRID-SCALE W
 
-     INTEGER, PRIVATE ::  ISUB      
+     INTEGER, PRIVATE ::  ISUB
 
 ! SWITCH FOR GRAUPEL/NO GRAUPEL
 ! IGRAUP = 0, INCLUDE GRAUPEL
@@ -732,12 +732,16 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
    END DO
    END DO
 
-   !$omp parallel default(shared) &
+   ! default firstprivate to handle all of the module level variables that are defined in init (I hope this works as intented...)
+   !$omp parallel default(firstprivate) &
    !$omp private(i,j,k) &
    !$omp private(QC_TEND1D,QI_TEND1D,QNI_TEND1D,QR_TEND1D,NI_TEND1D,NS_TEND1D,NR_TEND1D,T_TEND1D,QV_TEND1D,nc_tend1d) &
    !$omp private(QC1D,QI1D,QS1D,QR1D,NI1D,NS1D,NR1D,QG1D,NG1D,QG_TEND1D,NG_TEND1D) &
    !$omp private(T1D,QV1D,P1D,DZ1D,W1D,WVAR1D,qrcu1d,qscu1d,qicu1d,nc1d,iinum) &
-   !$omp private(PRECPRT1D,SNOWPRT1D,GRPLPRT1D)
+   !$omp private(PRECPRT1D,SNOWPRT1D,GRPLPRT1D) &
+   !$omp shared(QC,QI,QS,QR,NI,NS,NR,QG,NG,T,QV,P,DZ,W,WVAR,qrcuten,qscuten,qicuten) &
+   !$omp shared(TH,EFFC,EFFI,EFFS,EFFR,EFFG,RAINNC,RAINNCV,SNOWNC,SNOWNCV,GRAUPELNC,GRAUPELNCV,SR) &
+   !$omp firstprivate(IHAIL,IGRAUP,ISUB,IBASE,INUC,ILIQ,NDCNST,INUM,IACT)
    !$omp do
    do j=jts,jte      ! j loop (north-south)
    do i=its,ite      ! i loop (east-west)
@@ -837,7 +841,7 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
           NI(i,k,j)        = NI1D(k)
           NS(i,k,j)        = NS1D(k)          
           NR(i,k,j)        = NR1D(k)
-	  QG(I,K,j)        = QG1D(K)
+	      QG(I,K,j)        = QG1D(K)
           NG(I,K,j)        = NG1D(K)
 
           T(i,k,j)         = T1D(k)
@@ -881,6 +885,7 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
       end do
 
 ! hm modified so that m2005 precip variables correctly match wrf precip variables
+
       RAINNC(i,j) = RAINNC(I,J)+PRECPRT1D
       RAINNCV(i,j) = PRECPRT1D
 ! hm, added 7/13/13
