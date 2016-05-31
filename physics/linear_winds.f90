@@ -839,7 +839,7 @@ contains
         endif
         !$omp parallel firstprivate(nx,ny,nz, vsmooth, winsz), default(none), &
         !$omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom), &
-        !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, winsz, smoothz), &
+        !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, smoothz), &
         !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
         !$omp shared(domain, spd_values, dir_values, nsq_values, u_LUT, v_LUT), &
         !$omp shared(u_perturbation, v_perturbation, linear_update_fraction, nsq_calibration), &
