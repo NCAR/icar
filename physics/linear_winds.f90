@@ -864,20 +864,17 @@ contains
 
             if (smooth_nsq) then
                 do j=1,nz
-                    top=min(j+vsmooth,nz)
-                    if (top==j) then
-                        bottom=j-vsmooth
-                    else
-                        bottom=j
-                    endif
+                    ! compute window as above. 
+                    top = min(j+vsmooth,nz)
+                    bottom = max(1, j - (vsmooth - (top-j)) )
 
-                    do smoothz=bottom, j-1
+                    do smoothz = bottom, j-1
                         domain%nsquared(:,j,k) = domain%nsquared(:,j,k) + domain%nsquared(:,smoothz,k)
                     end do
-                    do smoothz=j+1,top
+                    do smoothz = j+1, top
                         domain%nsquared(:,j,k) = domain%nsquared(:,j,k) + domain%nsquared(:,smoothz,k)
                     end do
-                    domain%nsquared(:,j,k)=domain%nsquared(:,j,k)/(top-bottom+1)
+                    domain%nsquared(:,j,k) = domain%nsquared(:,j,k)/(top-bottom+1)
                 end do
             endif
         end do
