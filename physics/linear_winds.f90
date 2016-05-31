@@ -809,7 +809,7 @@ contains
 
     end function
 
-    subroutine spatial_winds(domain,reverse, vsmooth)
+    subroutine spatial_winds(domain,reverse, vsmooth, winsz)
         ! compute a spatially variable linear wind perturbation
         ! based off of look uptables computed in via setup
         ! for each grid point, find the closest LUT data in U and V space
@@ -818,10 +818,12 @@ contains
         class(linearizable_type),intent(inout)::domain
         logical, intent(in) :: reverse
         integer, intent(in) :: vsmooth
+        integer, intent(in) :: winsz
+        
         integer :: nx,ny,nz,i,j,k, smoothz
         integer :: uk, vi !store a separate value of i for v and of k for u to we can handle nx+1, ny+1
         integer :: step, dpos, npos, spos, nexts, nextd, nextn
-        integer :: north, south, east, west, top, bottom, winsz, n
+        integer :: north, south, east, west, top, bottom, n
         real :: dweight, nweight, sweight, curspd, curdir, curnsq, wind_first, wind_second
 
         nx=size(domain%lat,1)
@@ -835,14 +837,13 @@ contains
             u_LUT=>hi_u_LUT
             v_LUT=>hi_v_LUT
         endif
-        !$omp parallel firstprivate(nx,ny,nz, vsmooth), default(none), &
+        !$omp parallel firstprivate(nx,ny,nz, vsmooth, winsz), default(none), &
         !$omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom), &
         !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, winsz, smoothz), &
         !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
         !$omp shared(domain, spd_values, dir_values, nsq_values, u_LUT, v_LUT), &
         !$omp shared(u_perturbation, v_perturbation, linear_update_fraction, nsq_calibration), &
         !$omp shared(min_stability, max_stability, n_dir_values, n_spd_values, n_nsq_values, smooth_nsq)
-        winsz=4
         !$omp do
         do k=1,ny
             do j=1,nz
@@ -1148,11 +1149,11 @@ contains
         endif
         ! this is a little trickier, because it does have to be domain dependant... could at least be stored in the domain though...
         if (rev) then
-            linear_contribution=options%lt_options%rm_linear_contribution
-            N_squared=options%lt_options%rm_N_squared
+            linear_contribution = options%lt_options%rm_linear_contribution
+            N_squared = options%lt_options%rm_N_squared
         else
-            linear_contribution=options%lt_options%linear_contribution
-            N_squared=options%lt_options%N_squared
+            linear_contribution = options%lt_options%linear_contribution
+            N_squared = options%lt_options%N_squared
         endif
 
         ! if linear_perturb hasn't been called before we need to perform some setup actions.
@@ -1164,10 +1165,10 @@ contains
         ! if we are reverseing the effects, that means we are in the low-res domain
         ! that domain does not have a spatial LUT calculated, so it can not be performed
         if (use_spatial_linear_fields)then
-            call spatial_winds(domain,rev, vsmooth)
+            call spatial_winds(domain,rev, vsmooth, stability_window_size)
         else
             ! Nsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability
-            stability=calc_domain_stability(domain)
+            stability = calc_domain_stability(domain)
             ! This should probably be called twice, once for dry, and once or moist regions
             call linear_winds(domain,stability,vsmooth,reverse,useDensity,debug)
         endif
