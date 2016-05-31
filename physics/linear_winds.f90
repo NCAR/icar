@@ -847,13 +847,11 @@ contains
         do k=1,ny
             do j=1,nz
                 do i=1,nx
-                    top=min(j+vsmooth,nz)
-                    if (top==j) then
-                        bottom=j-vsmooth
-                    else
-                        bottom=j
-                    endif
-
+                    ! look up vsmooth gridcells up to nz at the maximum
+                    top = min(j+vsmooth, nz)
+                    ! if (top-j)/=vsmooth, then look down enough layers to make the window vsmooth in size
+                    bottom = max(1, j - (vsmooth - (top-j)) )
+                    
                     domain%nsquared(i,j,k) = calc_stability(domain%th(i,bottom,k), domain%th(i,top,k),  &
                                             domain%pii(i,bottom,k),domain%pii(i,top,k), &
                                             domain%z(i,bottom,k),  domain%z(i,top,k),   &
