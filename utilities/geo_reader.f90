@@ -162,169 +162,177 @@ contains
     !!   3) in the diabolical case where 1 and 2 fail (rare) just search every single location (n^2)
     !!   Could add a 2.5) downhill search algorithm...
     !!
+    !!  @param  lo              low resolution interpolable object to search for new position
+    !!  @param  lat             latitude of new position to find
+    !!  @param  lon             longitude of new position to find
+    !!  @param  lastpos         previously found position to begin search from
+    !!  @retval find_location   position that most closely matches input lat/lon
+    !!
     !!------------------------------------------------------------
     type(position) function find_location(lo,lat,lon,lastpos)
         implicit none
-        class(interpolable_type),intent(inout)::lo
-        real,intent(in)::lat,lon
-        type(position),intent(in)::lastpos
-        real::mindist, curdist,dx,dy,xsign,ysign,x,y
-        integer::nx,ny,xc,yc,xw,yw,iterations,xstep,ystep
+        class(interpolable_type),intent(inout)::lo      ! input interpolable object to search
+        real,intent(in)::lat,lon                        ! input position to find
+        type(position),intent(in)::lastpos              ! position to start search from
+        ! locals
+        real::mindist, curdist,dx,dy,xsign,ysign,x,y    ! temporary variables to use during the search
+        integer::nx,ny,xc,yc,xw,yw,iterations,xstep,ystep   ! more temporary variables
         
-        nx=size(lo%lat,1)
-        ny=size(lo%lat,2)
+        nx = size(lo%lat, 1)
+        ny = size(lo%lat, 2)
         ! calcualte dx/dy at the middle of the grid
-        dx=lo%lon(2,1)-lo%lon(1,1)
-        dy=lo%lat(1,2)-lo%lat(1,1)
+        dx = lo%lon(2,1) - lo%lon(1,1)
+        dy = lo%lat(1,2) - lo%lat(1,1)
         
         ! Handle weird edge case for WRF ideal simulations
-        if (dx==0) then
+        if (dx == 0) then
             if (.not.lo%dx_errors_printed) then
                 print*, "ERROR : geo_find_location : DX = 0 !  Check your inputfile Longitude data"
                 print*, "  Attempting to continue by assuming the grids are the same or can wrap arround"
                 lo%dx_errors_printed=.True.
             endif
-            find_location%x=-1
-            find_location%y=-1
+            find_location%x = -1
+            find_location%y = -1
             return
         endif
-        if (dy==0) then
+        if (dy == 0) then
             if (.not.lo%dy_errors_printed) then
                 print*, "ERROR : geo_find_location : DY = 0 !  Check your inputfile Latitude data"
                 print*, "  Attempting to continue by assuming the grids are the same or can wrap arround"
                 lo%dy_errors_printed=.True.
             endif
-            find_location%x=-1
-            find_location%y=-1
+            find_location%x = -1
+            find_location%y = -1
             return
         endif
-        ! current/starting position = the middle of the grid
-!       xc=nx/2
-!       yc=ny/2
-        xc=lastpos%x
-        yc=lastpos%y
-        x=lo%lon(xc,yc)
-        y=lo%lat(xc,yc)
+        ! current/starting position = the middle of the grid this is the default that should be given
+        !       xc=nx/2
+        !       yc=ny/2
+        xc = lastpos%x
+        yc = lastpos%y
+        
+        x = lo%lon(xc,yc)
+        y = lo%lat(xc,yc)
+        
         ! steps to take = the difference the between the current point and the input point / dx
-        xstep=(lon-x)/dx
-        ystep=(lat-y)/dy
+        xstep = (lon-x)/dx
+        ystep = (lat-y)/dy
         
         ! CASE 1 assume a quasi regular dx/dy and caluate new location
         !  while we need to step by more than one grid cell, iterate
         !  if the grid is highly regular, we will only iterate 1-2x, highly irregular might require more iterations
         !  in the diabolical case, this could fail? 
         !  in most cases this succeeds with a few iterations. 
-        iterations=0
+        iterations = 0
         do while (((abs(xstep)>1).or.(abs(ystep)>1)).and.iterations<20)
-            iterations=iterations+1
+            iterations = iterations+1
             ! update the current x/y locations
             ! force it to be <nx-1 so we can calculate dx from (xc+1)-xc
-            xc=max(1,min(nx-1,xc+xstep))
-            yc=max(1,min(ny-1,yc+ystep))
-            x=lo%lon(xc,yc)
-            y=lo%lat(xc,yc)
+            xc = max(1,min(nx-1,xc+xstep))
+            yc = max(1,min(ny-1,yc+ystep))
+            x = lo%lon(xc,yc)
+            y = lo%lat(xc,yc)
             ! calculate a new dx/dy and x/y step
             if (xc<nx) then
-                dx=lo%lon(xc+1,yc)-lo%lon(xc,yc)
+                dx = lo%lon(xc+1,yc) - lo%lon(xc,yc)
             else
-                dx=lo%lon(xc,yc)-lo%lon(xc-1,yc)
+                dx = lo%lon(xc,yc) - lo%lon(xc-1,yc)
             endif
             if(yc<ny) then
-                dy=lo%lat(xc,yc+1)-lo%lat(xc,yc)
+                dy = lo%lat(xc,yc+1) - lo%lat(xc,yc)
             else
-                dy=lo%lat(xc,yc)-lo%lat(xc,yc-1)
+                dy = lo%lat(xc,yc) - lo%lat(xc,yc-1)
             endif
-            xstep=NINT((lon-x)/dx)
-            ystep=NINT((lat-y)/dy)
+            xstep = NINT( (lon-x) / dx )
+            ystep = NINT( (lat-y) / dy )
         enddo
         ! because one or both steps could actually be 1... 
         ! this is deliberate so we can find the edge of the array if necessary
-        xc=max(1,min(nx,xc+xstep))
-        yc=max(1,min(ny,yc+ystep))
+        xc = max(1, min(nx, xc+xstep ) )
+        yc = max(1, min(ny, yc+ystep ) )
         
         ! CASE 2 use a log(n search)
         ! in case we hit some pathologically varying dx case 
         ! use a "straightforward" log(n) search
-        if (iterations>=20) then
-!           write(*,*) "   Using log(n) search for :",lat,lon
-            nx=size(lo%lat,1)
-            ny=size(lo%lat,2)
+        if (iterations >= 20) then
+            nx = size(lo%lat, 1)
+            ny = size(lo%lat, 2)
         
-            xc=nx/2
-            yc=ny/2
-            xw=xc
-            yw=yc
+            xc = nx/2
+            yc = ny/2
+            xw = xc
+            yw = yc
             ! use xsign and ysign in case lat/lon don't increase in a positive index direction
-            ysign=sign(1.0,lo%lat(1,2)-lo%lat(1,1))
-            xsign=sign(1.0,lo%lon(2,1)-lo%lon(1,1))
+            ysign = sign(1.0, lo%lat(1,2) - lo%lat(1,1) )
+            xsign = sign(1.0, lo%lon(2,1) - lo%lon(1,1) )
         
             ! use a O(log(n)) search instead of O(nxm)
             ! start at the halfway point and find the best direction to take in both directions
-            iterations=0
-            do while (((xw>2).or.(yw>2)).and.iterations<20)
-                iterations=iterations+1
-                xc=min(max(xc,1),nx)
-                yc=min(max(yc,1),ny)
+            iterations = 0
+            do while ( (( xw > 2 ).or.( yw > 2 )).and.( iterations < 20) )
+                iterations = iterations+1
+                xc = min( max(xc, 1), nx)
+                yc = min( max(yc, 1), ny)
                 ! figure out which direction to step, then step half of the last step distance
-                if (lo%lat(xc,yc)>lat) then
-                    if (yw==2) then
-                        yw=1
+                if (lo%lat(xc,yc) > lat) then
+                    if (yw == 2) then
+                        yw = 1
                     else
-                        yw=yw/2+1
+                        yw = yw/2 + 1
                     endif
-                    yc=yc-ysign*yw
+                    yc = yc - ysign * yw
                 endif
-                yc=min(max(yc,1),ny)
-                if (lo%lat(xc,yc)<lat) then
-                    if (yw==2) then
-                        yw=1
+                yc = min( max(yc, 1), ny)
+                if (lo%lat(xc,yc) < lat) then
+                    if (yw == 2) then
+                        yw = 1
                     else
-                        yw=yw/2+1
+                        yw = yw/2 + 1
                     endif
-                    yc=yc+ysign*yw
+                    yc = yc + ysign * yw
                 endif
-                yc=min(max(yc,1),ny)
+                yc = min( max(yc, 1), ny)
                 ! in case lat is exactly equal to lat(xc,yc)
-                if (lo%lat(xc,yc)==lat) then
-                    yw=0
+                if (lo%lat(xc,yc) == lat) then
+                    yw = 0
                 endif
-                if (lo%lon(xc,yc)>lon) then
-                    if (xw==2) then
-                        xw=1
+                if (lo%lon(xc,yc) > lon) then
+                    if (xw == 2) then
+                        xw = 1
                     else
-                        xw=xw/2+1
+                        xw = xw/2 + 1
                     endif
-                    xc=xc-xsign*xw
+                    xc = xc - xsign * xw
                 endif
-                xc=min(max(xc,1),nx)
-                if (lo%lon(xc,yc)<lon) then
-                    if (xw==2) then
-                        xw=1
+                xc = min( max(xc, 1), nx)
+                if (lo%lon(xc,yc) < lon) then
+                    if (xw == 2) then
+                        xw = 1
                     else
-                        xw=xw/2+1
+                        xw = xw/2 + 1
                     endif
-                    xc=xc+xsign*xw
+                    xc = xc + xsign * xw
                 endif
-                xc=min(max(xc,1),nx)
+                xc = min( max(xc, 1), nx)
                 ! in case lon is exactly equal to lon(xc,yc)
-                if (lo%lon(xc,yc)==lon) then
-                    xw=0
+                if (lo%lon(xc,yc) == lon) then
+                    xw = 0
                 endif
-                xw=minxw(xw,lo%lon,xc,yc,lon)
-                yw=minyw(yw,lo%lat,xc,yc,lat)
+                xw = minxw(xw, lo%lon, xc, yc, lon)
+                yw = minyw(yw, lo%lat, xc, yc, lat)
             enddo
         endif
 
         ! once we have a "good" location we need to find the actual minimum (we could be above or below it by 1 or 2)
-        if (iterations<20) then
-            mindist=9999.9
-            do xw=max(1,xc-15),min(nx,xc+15)
-                do yw=max(1,yc-15),min(ny,yc+15)
-                    curdist=sqrt((lo%lat(xw,yw)-lat)**2 + (lo%lon(xw,yw)-lon)**2)
-                    if (curdist<mindist) then
-                        mindist=curdist
-                        x=xw
-                        y=yw
+        if (iterations < 20) then
+            mindist = 9999.9
+            do xw = max(1, xc-15), min(nx, xc+15)
+                do yw = max(1, yc-15), min(ny, yc+15)
+                    curdist = sqrt( (lo%lat(xw,yw) - lat)**2 + (lo%lon(xw,yw) - lon)**2 )
+                    if (curdist < mindist) then
+                        mindist = curdist
+                        x = xw
+                        y = yw
                     endif
                 enddo
             enddo
@@ -349,8 +357,8 @@ contains
         endif
 
         
-        find_location%x=x
-        find_location%y=y
+        find_location%x = x
+        find_location%y = y
     end function find_location
     
     

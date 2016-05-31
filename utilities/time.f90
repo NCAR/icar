@@ -10,6 +10,7 @@
 !!------------------------------------------------------------
 module time
     implicit none
+    ! define calendars
     integer, parameter :: GREGORIAN=0, NOLEAP=1, THREESIXTY=2
     integer, parameter :: YEAR_ZERO=1800  ! starting year for noleap and 360day calendars
     integer :: calendar
