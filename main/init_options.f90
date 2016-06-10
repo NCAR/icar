@@ -370,7 +370,7 @@ contains
         sst_var=""
         pblhvar=""
         hgt_hi="HGT"
-        landvar="XLAND"
+        landvar=""
         lat_hi="XLAT"
         lon_hi="XLONG"
         ulat_hi=""
