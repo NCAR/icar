@@ -216,6 +216,7 @@ contains
             do k=2,nz
                 hydrometeors=hydrometeors+qc(:,k,j)+qs(:,k,j)+qr(:,k,j)
             end do
+            where(hydrometeors<0) hydrometeors = 0
             
             solar_elevation=calc_solar_elevation(date,lon,j,nx,day_frac)
             

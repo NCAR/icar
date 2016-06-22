@@ -380,95 +380,24 @@ contains
         
         error=0
         
-!         print*, "qv"
         call advect3d(domain%qv,   U_m,V_m,W_m, domain%rho,domain%dz,nx,nz,ny,options, error)
-        if (error/=0) then
-            print*, "qv", error
-            if (error>0) then
-                stop "MPDATA Error"
-            endif
+        call advect3d(domain%cloud,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
+        call advect3d(domain%qrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
+        call advect3d(domain%qsnow,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
+        call advect3d(domain%th,   U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
+        
+        if ((options%physics%microphysics == kMP_THOMPSON).or.(options%physics%microphysics == kMP_MORRISON)) then
+            call advect3d(domain%ice,  U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
+            call advect3d(domain%qgrau,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
+            call advect3d(domain%nice, U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
+            call advect3d(domain%nrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
         endif
         
-        error=0
-!         print*, "qc"
-        call advect3d(domain%cloud,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
-        if (error/=0) then
-            print*, "qc", error
-            if (error>0) then
-                stop "MPDATA Error"
-            endif
+        if (options%physics%microphysics == kMP_MORRISON) then
+            call advect3d(domain%ngraupel,  U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
+            call advect3d(domain%nsnow,     U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
         endif
 
-        error=0
-!         print*, "qr"
-        call advect3d(domain%qrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
-        if (error/=0) then
-            print*, "qr", error
-            if (error>0) then
-                stop "MPDATA Error"
-            endif
-        endif
-
-        error=0
-!         print*, "qs"
-        call advect3d(domain%qsnow,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
-        if (error/=0) then
-            print*, "qs", error
-            if (error>0) then
-                stop "MPDATA Error"
-            endif
-        endif
-
-        error=0
-!         print*, "th"
-        call advect3d(domain%th,   U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
-        if (error/=0) then
-            print*, "th", error
-            if (error>0) then
-                stop "MPDATA Error"
-            endif
-        endif
-        if (options%physics%microphysics==kMP_THOMPSON) then
-            error=0
-!             print*, "qi"
-            call advect3d(domain%ice,  U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
-            if (error/=0) then
-                print*, "qi", error
-                if (error>0) then
-                    stop "MPDATA Error"
-                endif
-            endif
-
-            error=0
-!             print*, "qg"
-            call advect3d(domain%qgrau,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
-            if (error/=0) then
-                print*, "qg", error
-                if (error>0) then
-                    stop "MPDATA Error"
-                endif
-            endif
-
-            error=0
-!             print*, "ni"
-            call advect3d(domain%nice, U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
-            if ((error/=0).and.(error/=2)) then
-                print*, "ni", error
-!                 if (error>0) then
-!                     stop "MPDATA Error"
-!                 endif
-            endif
-
-            error=0
-!             print*, "nr"
-            call advect3d(domain%nrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
-            if ((error/=0).and.(error/=2)) then
-                print*, "nr", error
-!                 if (error>0) then
-!                     stop "MPDATA Error"
-!                 endif
-            endif
-        endif
         order=mod(order+1,3)
         
     end subroutine mpdata
