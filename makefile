@@ -539,7 +539,8 @@ $(BUILD)pbl_ysu.o: $(PHYS)pbl_ysu.f90
 ###################################################################
 #	Advection related code
 ###################################################################
-$(BUILD)advection_driver.o:$(PHYS)advection_driver.f90 $(BUILD)data_structures.o $(BUILD)advect.o $(BUILD)adv_mpdata.o
+$(BUILD)advection_driver.o:$(PHYS)advection_driver.f90 $(BUILD)data_structures.o $(BUILD)advect.o $(BUILD)adv_mpdata.o \
+							$(BUILD)debug_utils.o
 	${F90} ${FFLAGS} $(PHYS)advection_driver.f90 -o $(BUILD)advection_driver.o
 
 $(BUILD)advect.o:$(PHYS)advect.f90 $(BUILD)data_structures.o
