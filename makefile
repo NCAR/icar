@@ -353,7 +353,8 @@ OBJS=	$(BUILD)driver.o \
 		$(BUILD)vinterp.o \
 		$(BUILD)time.o \
 		$(BUILD)data_structures.o \
-		$(BUILD)string.o
+		$(BUILD)string.o \
+		$(BUILD)debug_utils.o
 
 ###################################################################
 #	User facing rules
@@ -417,7 +418,7 @@ $(BUILD)boundary.o:$(MAIN)boundary.f90 $(BUILD)data_structures.o $(BUILD)io_rout
 
 $(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.o $(BUILD)output.o \
 					$(BUILD)advection_driver.o $(BUILD)ra_driver.o $(BUILD)lsm_driver.o $(BUILD)cu_driver.o \
-					$(BUILD)pbl_driver.o $(BUILD)mp_driver.o $(BUILD)boundary.o
+					$(BUILD)pbl_driver.o $(BUILD)mp_driver.o $(BUILD)boundary.o $(BUILD)debug_utils.o
 	${F90} ${FFLAGS} $(MAIN)time_step.f90 -o $(BUILD)time_step.o
 
 $(BUILD)init_options.o:$(MAIN)init_options.f90 $(BUILD)data_structures.o  $(BUILD)io_routines.o \
@@ -573,6 +574,9 @@ $(BUILD)data_structures.o:$(MAIN)data_structures.f90
 ###################################################################
 $(BUILD)model_tracking.o:$(MAIN)model_tracking.f90
 	${F90} ${FFLAGS} $(MAIN)model_tracking.f90 -o $(BUILD)model_tracking.o
+
+$(BUILD)debug_utils.o:$(UTIL)debug_utils.f90 $(BUILD)data_structures.o $(BUILD)string.o
+	${F90} ${FFLAGS} $(UTIL)debug_utils.f90 -o $(BUILD)debug_utils.o
 
 ###################################################################
 #	Unit tests

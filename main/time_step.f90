@@ -18,6 +18,7 @@ module time_step
     use planetary_boundary_layer,   only : pbl
     use radiation,                  only : rad
     use boundary_conditions,        only : update_pressure
+    use debug_module,               only : domain_check
     implicit none
     private
     public :: step
@@ -247,45 +248,6 @@ contains
         endif
         bc%dsst_dt   = bc%dsst_dt   / nsteps
 
-        ! parallel version didn't seem to work
-!         !$omp parallel firstprivate(ny,nsteps) &
-!         !$omp private(j) &
-!         !$omp shared(bc)
-!         !$omp do schedule(static)
-!         do j=1,ny
-!             bc%du_dt(:,:,j)  = bc%du_dt(:,:,j)  / nsteps
-!             bc%dv_dt(:,:,j)  = bc%dv_dt(:,:,j)  / nsteps
-!             bc%dp_dt(:,:,j)  = bc%dp_dt(:,:,j)  / nsteps
-!             bc%dth_dt(:,j,:) = bc%dth_dt(:,j,:) / nsteps
-!             bc%dqv_dt(:,j,:) = bc%dqv_dt(:,j,:) / nsteps
-!             bc%dqc_dt(:,j,:) = bc%dqc_dt(:,j,:) / nsteps
-!
-!             ! these only get updated if we are using the fluxes derived from the forcing model
-!             if (options%physics%landsurface==kLSM_BASIC) then
-!                 bc%dsh_dt(:,j)   = bc%dsh_dt(:,j)   / nsteps
-!                 bc%dlh_dt(:,j)   = bc%dlh_dt(:,j)   / nsteps
-!             endif
-!             ! these only get updated if we are using the fluxes derived from the forcing model
-!             if (options%physics%boundarylayer==kPBL_BASIC) then
-!                 bc%dpblh_dt(:,j) = bc%dpblh_dt(:,j) / nsteps
-!             endif
-!             ! these only get updated if we are using the fluxes derived from the forcing model
-!             if (options%physics%radiation==kRA_BASIC) then
-!                 bc%dsw_dt(:,j)   = bc%dsw_dt(:,j)   / nsteps
-!                 bc%dlw_dt(:,j)   = bc%dlw_dt(:,j)   / nsteps
-!             endif
-!             bc%dsw_dt(:,j)   = bc%dsw_dt(:,j)       / nsteps
-!             
-!         end do
-!         !$omp end do
-!         !$omp end parallel
-!         if (nx>ny) then
-!             do j=ny+1,nx
-!                 bc%dth_dt(:,j,:) = bc%dth_dt(:,j,:) / nsteps
-!                 bc%dqv_dt(:,j,:) = bc%dqv_dt(:,j,:) / nsteps
-!                 bc%dqc_dt(:,j,:) = bc%dqc_dt(:,j,:) / nsteps
-!             end do
-!         endif
             
     end subroutine apply_dt
 
@@ -380,6 +342,7 @@ contains
         
     end function compute_dt
     
+    
     !>------------------------------------------------------------
     !!  Step forward one IO time step. 
     !! 
@@ -448,16 +411,24 @@ contains
         do i=1,ntimesteps
             model_time=model_time+dt
             if (dt>1e-5) then
+                if (options%debug) call domain_check(domain,"Time step loop start")
                 call advect(domain,options,dt)
+                if (options%debug) call domain_check(domain,"After advection")
                 call mp(domain,options,dt, model_time)
+                if (options%debug) call domain_check(domain,"After microphysics")
                 call rad(domain,options,model_time/86400.0+50000, dt)
+                if (options%debug) call domain_check(domain,"After radiation")
                 call lsm(domain,options,dt,model_time)
+                if (options%debug) call domain_check(domain,"After LSM")
                 call pbl(domain,options,dt)
+                if (options%debug) call domain_check(domain,"After PBL")
                 call convect(domain,options,dt)
+                if (options%debug) call domain_check(domain,"After Convection")
 
     !           apply/update boundary conditions including internal wind and pressure changes. 
                 call forcing_update(domain,bc,options)
-            
+                if (options%debug) call domain_check(domain,"After Forcing update")
+
     !           step model time forward
                 domain%model_time=model_time
                 if ((abs(model_time-next_output)<1e-1).or.(model_time>next_output)) then
