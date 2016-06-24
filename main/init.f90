@@ -588,6 +588,8 @@ contains
         if (options%landvar/="") then
             call io_read2d(options%init_conditions_file,options%landvar,domain%landmask,1)
             where(domain%landmask==0) domain%landmask=kLC_WATER
+            print*, "WARNING truncating water surface to be > 0"
+            where((domain%terrain<0) .and. (domain%landmask==kLC_WATER)) domain%terrain=0
         else
             nx=size(domain%lat,1)
             ny=size(domain%lat,2)
