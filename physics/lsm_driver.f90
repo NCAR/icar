@@ -77,7 +77,7 @@ module land_surface
     real, parameter :: SMALL_PRESSURE=0.1 !note: 0.1Pa is very small 1e-10 wouldn't affect a single-precision float
     real, parameter :: SMALL_QV=1e-10
     real, parameter :: MAX_EXCHANGE_C = 0.5
-    real, parameter :: MIN_EXCHANGE_C = 0.0009
+    real, parameter :: MIN_EXCHANGE_C = 0.002
     
     character(len=MAXVARLENGTH) :: MMINLU
     logical :: FNDSOILW,FNDSNOWH,RDMAXALB
@@ -488,8 +488,6 @@ contains
                 call calc_mahrt_holtslag_exchange_coefficient(windspd,domain%skin_t,domain%T,domain%znt,CHS)
             endif
 !             print*, CHS(128,103)
-            CHS2=CHS
-            CQS2=CHS
             
             ! --------------------------------------------------
             ! First handle the open water surface options
@@ -514,6 +512,10 @@ contains
                                   domain%z, Z0, domain%landmask, QSFC, QFX, domain%skin_t)
             endif
             
+            where(windspd<1) windspd=1
+            CHS = CHS * windspd
+            CHS2=CHS
+            CQS2=CHS
             
             ! --------------------------------------------------
             ! Now handle the land surface options
@@ -606,17 +608,17 @@ contains
                 RAINBL=domain%rain
                 rain_bucket=domain%rain_bucket
                 
-!                 i=139
-!                 j=69
-!                 print*,"            ---------------------------"
-!                 print*, "   soil_t ", "       skin_t ", "         T2m"
-!                 print*, domain%soil_t(i,1,j), domain%skin_t(i,j), domain%T2m(i,j)
-!                 print*, "   Tair ", "        sensible ", "        CHS"
-!                 print*, domain%T(i,1,j), domain%sensible_heat(i,j), CHS(i,j)
-!                 print*, "    SWD  ", "          LWD ", "         LWU ", "          G  "
-!                 print*, domain%swdown(i,j), domain%lwdown(i,j), domain%lwup(i,j), domain%ground_heat(i,j)
-!                 print*, "ln z term,        base exchange term        wind"
-!                 print*, lnz_atm_term(i,j), base_exchange_term(i,j), windspd(i,j)
+                ! i=32
+                ! j=82
+                ! print*,"            ---------------------------"
+                ! print*, "   soil_t ", "       skin_t ", "         T2m"
+                ! print*, domain%soil_t(i,1,j), domain%skin_t(i,j), domain%T2m(i,j)
+                ! print*, "   Tair ", "        sensible ", "        latent   ", "        CHS"
+                ! print*, domain%T(i,1,j), domain%sensible_heat(i,j), domain%latent_heat(i,j), CHS(i,j)
+                ! print*, "    SWD  ", "          LWD ", "         LWU ", "          G  "
+                ! print*, domain%swdown(i,j), domain%lwdown(i,j), domain%lwup(i,j), domain%ground_heat(i,j)
+                ! print*, "ln z term,        base exchange term        wind"
+                ! print*, lnz_atm_term(i,j), base_exchange_term(i,j), windspd(i,j)
                 
             endif
             ! 2m Air T and Q are not well defined if Tskin is not coupled with the surface fluxes
