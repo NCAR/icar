@@ -381,7 +381,7 @@ contains
         ! print*, "Next    dt = ",dtnext
         dt=min(dt,dtnext)
 !       set an upper bound on dt to keep microphysics and convection stable (?) not sure what time is required here. 
-        dt=min(dt,180.0) !better min=180?
+        dt=min(dt,120.0) !better min=180?
 !       if we have too small a time step just throw an error
         if (dt<1e-1) then
             write(*,*) "dt=",dt
