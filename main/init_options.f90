@@ -509,7 +509,7 @@ contains
         forcing_start_date=""
         end_date=""
         time_varying_z=.False.
-        cfl_reduction_factor = 1.0
+        cfl_reduction_factor = 0.9
         cfl_strictness = 3
         
         ! flag set to read specific parameterization options
