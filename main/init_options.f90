@@ -98,9 +98,9 @@ contains
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=model_version)
         close(name_unit)
-        if (version.ne."0.9.3") then
+        if (version.ne.kVERSION_STRING) then
             write(*,*) "Model version does not match namelist version"
-            write(*,*) "  Model version: 0.9.3"
+            write(*,*) "  Model version: ",kVERSION_STRING
             write(*,*) "  Namelist version: ",trim(version)
             call print_model_diffs(version)
             stop
