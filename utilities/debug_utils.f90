@@ -93,25 +93,16 @@ contains
         real,               intent(inout), dimension(:,:,:), allocatable :: var
         real,               intent(in),    optional         :: greater_than, less_than
         
-        real :: vmax, vmin
-        
         if (.not.allocated(var)) then
             return
         endif
-
         
         if (present(greater_than)) then
-            vmax = maxval(var)
-            if (vmax > greater_than) then
-                where(var > greater_than) var = greater_than
-            endif
+            where(var > greater_than) var = greater_than
         endif
 
         if (present(less_than)) then
-            vmin = minval(var)
-            if (vmin < less_than) then
-                where(var < less_than) var = less_than
-            endif
+            where(var < less_than) var = less_than
         endif
         
     end subroutine fix_var
