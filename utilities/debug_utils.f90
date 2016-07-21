@@ -41,7 +41,7 @@ contains
             vmax = maxval(var)
             if (vmax > greater_than) then
                 write(*,*) trim(msg)
-                write(*,*) trim(name)//" is greater than "//str(greater_than)//" : "//str(vmax)
+                write(*,*) trim(name)//" is greater than "//trim(str(greater_than))//" : "//trim(str(vmax))
                 
                 if (present(fix)) then
                     if (fix) then
@@ -56,7 +56,7 @@ contains
             vmin = minval(var)
             if (vmin < less_than) then
                 write(*,*) trim(msg)
-                write(*,*) trim(name)//" is less than "//str(less_than)//" : "//str(vmin)
+                write(*,*) trim(name)//" is less than "//trim(str(less_than))//" : "//trim(str(vmin))
                 
                 if (present(fix)) then
                     if (fix) then
