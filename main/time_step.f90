@@ -180,10 +180,10 @@ contains
         currw = karman / log((domain%z(2:nx-1,1,2:ny-1)-domain%terrain(2:nx-1,2:ny-1)) / domain%znt(2:nx-1,2:ny-1))
         ! use log-law of the wall to convert from surface to 10m height
         lastw = log(10.0 / domain%znt(2:nx-1,2:ny-1)) / karman
-        domain%ustar(2:nx-1,2:ny-1) = domain%Um(2:nx-1,1,2:ny-1) * currw
-        domain%u10(2:nx-1,2:ny-1) = domain%ustar(2:nx-1,2:ny-1) * lastw
-        domain%ustar(2:nx-1,2:ny-1) = domain%Vm(2:nx-1,1,2:ny-1) * currw
-        domain%v10(2:nx-1,2:ny-1) = domain%ustar(2:nx-1,2:ny-1) * lastw
+        domain%ustar(2:nx-1,2:ny-1) = domain%Um   (2:nx-1,1,2:ny-1) * currw
+        domain%u10  (2:nx-1,2:ny-1) = domain%ustar(2:nx-1,2:ny-1)   * lastw
+        domain%ustar(2:nx-1,2:ny-1) = domain%Vm   (2:nx-1,1,2:ny-1) * currw
+        domain%v10  (2:nx-1,2:ny-1) = domain%ustar(2:nx-1,2:ny-1)   * lastw
         
         ! now calculate master ustar based on U and V combined in quadrature
         domain%ustar(2:nx-1,2:ny-1) = sqrt(domain%Um(2:nx-1,1,2:ny-1)**2 + domain%Vm(2:nx-1,1,2:ny-1)**2) * currw
@@ -406,7 +406,7 @@ contains
             dt = compute_dt(domain%dx, domain%u, domain%v, domain%w, CFL, cfl_strictness=options%cfl_strictness)
             ! set an upper bound on dt to keep microphysics and convection stable (?) not sure what time is required here. 
             dt = min(dt,120.0) !better min=180?
-            
+            if (options%debug) write(*,"(A,f5.1,A,f5.1,A$)") char(13), 100-max(0.0,(end_time-model_time-dt)/options%in_dt*100)," %  dt=",dt,"s  "
             ! Make sure we don't over step the forcing period
             if ((model_time + dt) > end_time) then
                 dt = end_time - model_time
@@ -443,10 +443,12 @@ contains
             ! step model_time forward
             model_time = model_time + dt
             domain%model_time = model_time
+            
             if ((abs(model_time-next_output)<1e-1).or.(model_time>next_output)) then
                 call write_domain(domain,options,nint((model_time-options%time_zero)/options%out_dt))
-                next_output=next_output+options%out_dt
+                next_output = next_output + options%out_dt
             endif
+            
         enddo
         
     end subroutine step
