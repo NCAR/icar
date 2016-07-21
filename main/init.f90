@@ -41,7 +41,8 @@ contains
         type(options_type), intent(inout) :: options
         type(domain_type), intent(inout):: domain
         type(bc_type), intent(inout):: boundary
-        
+
+        call welcome_message()
 !       read in options file
         write(*,*) "Initializing Options"
         call init_options(options)
@@ -1058,4 +1059,24 @@ contains
         deallocate(tempz)
         
     end subroutine init_bc
+    
+    subroutine welcome_message()
+        implicit none
+        
+        write(*,*) ""
+        write(*,*) "============================================================"
+        write(*,*) "|                                                          |"
+        write(*,*) "|  The Intermediate Complexity Atmospheric Research Model  |"
+        write(*,*) "|                          (ICAR)                          |"
+        write(*,*) "|                                                          |"
+        write(*,*) "|   Developed at NCAR:                                     |"
+        write(*,*) "|     The National Center for Atmospheric Research         |"
+        write(*,*) "|     NCAR is sponsored by the National Science Foundation |"
+        write(*,*) "|                                                          |"
+        write(*,*) "|   Version: ",kVERSION_STRING,"                                         |"
+        write(*,*) "|                                                          |"
+        write(*,*) "============================================================"
+        write(*,*) ""        
+        
+    end subroutine welcome_message
 end module
