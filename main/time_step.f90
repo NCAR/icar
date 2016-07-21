@@ -8,7 +8,7 @@
 !!
 !! ----------------------------------------------------------------------------
 module time_step
-    use data_structures     ! *_type  types
+    use data_structures             ! *_type  types and kCONSTANTS
     use microphysics,               only : mp
     use convection,                 only : convect
     use land_surface,               only : lsm
@@ -48,16 +48,16 @@ contains
         ny=size(curdata,3)
 
         do i=1,nz
-            curdata(1,i,2:ny-1)  = curdata(1,i,2:ny-1)  + dXdt(i,2:ny-1,1)
-            curdata(nx,i,2:ny-1) = curdata(nx,i,2:ny-1) + dXdt(i,2:ny-1,2)
-            curdata(:,i,1)  = curdata(:,i,1)  + dXdt(i,1:nx,3)
-            curdata(:,i,ny) = curdata(:,i,ny) + dXdt(i,1:nx,4)
+            curdata(1, i,2:ny-1) = curdata(1, i, 2:ny-1) + dXdt(i,2:ny-1,1)
+            curdata(nx,i,2:ny-1) = curdata(nx,i, 2:ny-1) + dXdt(i,2:ny-1,2)
+            curdata(:, i,1 )     = curdata(:, i, 1)      + dXdt(i,1:nx,  3)
+            curdata(:, i,ny)     = curdata(:, i, ny)     + dXdt(i,1:nx,  4)
         enddo
         ! correct possible rounding errors, primarily an issue of clouds...
-        where(curdata(1,:,:)<0) curdata(1,:,:)=0
-        where(curdata(nx,:,:)<0) curdata(nx,:,:)=0
-        where(curdata(:,:,1)<0) curdata(:,:,1)=0
-        where(curdata(:,:,ny)<0) curdata(:,:,ny)=0
+        where(curdata(1, :,: )<0) curdata(1, :,: ) = 0
+        where(curdata(nx,:,: )<0) curdata(nx,:,: ) = 0
+        where(curdata(:, :,1 )<0) curdata(:, :,1 ) = 0
+        where(curdata(:, :,ny)<0) curdata(:, :,ny) = 0
         
     end subroutine boundary_update
     
@@ -71,54 +71,58 @@ contains
     !! @param options   options structure specifies which variables need to be updated
     !!
     !!------------------------------------------------------------
-    subroutine forcing_update(domain,bc,options)
+    subroutine forcing_update(domain, bc, options, dt)
         implicit none
-        type(domain_type),intent(inout)::domain
-        type(bc_type),intent(inout)::bc
-        type(options_type),intent(in)::options
-        integer::j,ny
-        ny=size(domain%p,3)
-        !$omp parallel firstprivate(ny) &
+        type(domain_type),  intent(inout) :: domain
+        type(bc_type),      intent(inout) :: bc
+        type(options_type), intent(in)    :: options
+        real,               intent(in)    :: dt
+        integer :: j,ny
+        
+        ny = size(domain%p, 3)
+        
+        !$omp parallel firstprivate(ny, dt) &
         !$omp private(j) &
-        !$omp shared(bc,domain)
+        !$omp shared(bc, domain)
         !$omp do schedule(static)
         do j=1,ny
-            domain%u(:,:,j)=domain%u(:,:,j)+bc%du_dt(:,:,j)
-            domain%v(:,:,j)=domain%v(:,:,j)+bc%dv_dt(:,:,j)
+            domain%u(:,:,j) = domain%u(:,:,j) + (bc%du_dt(:,:,j) * dt)
+            domain%v(:,:,j) = domain%v(:,:,j) + (bc%dv_dt(:,:,j) * dt)
             if (.not.options%ideal) then
-                domain%p(:,:,j)=domain%p(:,:,j)+bc%dp_dt(:,:,j)
-                domain%pii(:,:,j)=(domain%p(:,:,j)/100000.0)**(Rd/cp)
-                domain%rho(:,:,j)=domain%p(:,:,j)/(Rd*domain%th(:,:,j)*domain%pii(:,:,j)) ! kg/m^3
+                domain%p(:,:,j)   =  domain%p(:,:,j) + (bc%dp_dt(:,:,j) * dt)
+                ! update the exner function and model density while we are at it should this be in diagnostic_update(?)
+                domain%pii(:,:,j) = (domain%p(:,:,j) / 100000.0)**(Rd/cp)
+                domain%rho(:,:,j) =  domain%p(:,:,j) / (Rd * domain%th(:,:,j) * domain%pii(:,:,j)) ! kg/m^3
             endif
             
             ! these only get updated if we are using the fluxes derived from the forcing model
             if (options%physics%landsurface==kLSM_BASIC) then
-                domain%sensible_heat(:,j)  = domain%sensible_heat(:,j)+ bc%dsh_dt(:,j)
-                domain%latent_heat(:,j)    = domain%latent_heat(:,j)  + bc%dlh_dt(:,j)
+                domain%sensible_heat(:,j)  = domain%sensible_heat(:,j)+ (bc%dsh_dt(:,j) * dt)
+                domain%latent_heat(:,j)    = domain%latent_heat(:,j)  + (bc%dlh_dt(:,j) * dt)
             endif
             
             ! these only get updated if we are using the fluxes (and PBL height) derived from the forcing model
             if (options%physics%boundarylayer==kPBL_BASIC) then
-                domain%pbl_height(:,j) = domain%pbl_height(:,j)+ bc%dpblh_dt(:,j)
+                domain%pbl_height(:,j) = domain%pbl_height(:,j)+ (bc%dpblh_dt(:,j) * dt)
             endif
             
             ! these only get updated if we are using the fluxes derived from the forcing model
             if (options%physics%radiation==kRA_BASIC) then
-                domain%swdown(:,j)  = domain%swdown(:,j)  + bc%dsw_dt(:,j)
-                domain%lwdown(:,j)  = domain%lwdown(:,j)  + bc%dlw_dt(:,j)
+                domain%swdown(:,j)  = domain%swdown(:,j)  + (bc%dsw_dt(:,j) * dt)
+                domain%lwdown(:,j)  = domain%lwdown(:,j)  + (bc%dlw_dt(:,j) * dt)
             endif
-            domain%sst(:,j)  = domain%sst(:,j)  + bc%dsst_dt(:,j)
+            domain%sst(:,j)  = domain%sst(:,j)  + (bc%dsst_dt(:,j) * dt)
         enddo
         !$omp end do
         !$omp end parallel
         ! v has one more y element than others
-        ny=ny+1
-        domain%v(:,:,ny)=domain%v(:,:,ny)+bc%dv_dt(:,:,ny)
+        ny = ny + 1
+        domain%v(:,:,ny) = domain%v(:,:,ny) + (bc%dv_dt(:,:,ny) * dt)
         ! dXdt for qv,qc,th are only applied to the boundarys
         if (.not.options%ideal) then
-            call boundary_update(domain%th,bc%dth_dt)
-            call boundary_update(domain%qv,bc%dqv_dt)
-            call boundary_update(domain%cloud,bc%dqc_dt)
+            call boundary_update(domain%th, bc%dth_dt * dt)
+            call boundary_update(domain%qv, bc%dqv_dt * dt)
+            call boundary_update(domain%cloud, bc%dqc_dt * dt)
         endif
         
         ! because density changes with each time step, u/v/w have to be rebalanced as well. 
@@ -140,8 +144,8 @@ contains
     !!------------------------------------------------------------
     subroutine diagnostic_update(domain,options)
         implicit none
-        type(domain_type), intent(inout) :: domain
-        type(options_type), intent(in) :: options
+        type(domain_type),  intent(inout)   :: domain
+        type(options_type), intent(in)      :: options
         
         integer :: nx,ny,nz, y, z
         
@@ -208,46 +212,47 @@ contains
     !>------------------------------------------------------------
     !!  Uses the dt from step() to convert the forcing increments to per/time step increments
     !!
-    !!  Divides dXdt variables by n timesteps so that after adding it N times we will be at the
-    !!  correct final value. 
+    !!  Divides dXdt variables by the length of the input timestep so that it can be multiplied by the internal
+    !!  timestep to get the each update value. 
     !!
     !! @param bc        Boundary conditions structure containing dXdt variables
-    !! @param nsteps    Number of time steps calculated in step() function
+    !! @param dt        Length of time between input forcing data for which the dXdt updates were calculated
     !! @param options   Model options structure specifies which variables need to be updated
     !!
     !!------------------------------------------------------------
-    subroutine apply_dt(bc,nsteps, options)
+    subroutine apply_dt(bc, dt, options)
         implicit none
-        type(bc_type), intent(inout) :: bc
-        integer,intent(in)::nsteps
-        type(options_type), intent(in) :: options
-        integer::j, ny, nx
+        type(bc_type),      intent(inout)   :: bc
+        real,               intent(in)      :: dt
+        type(options_type), intent(in)      :: options
+        ! internal variables
+        integer :: j, ny, nx
+        
         ny=size(bc%du_dt,3)
         nx=size(bc%du_dt,1)
 
-        bc%du_dt  = bc%du_dt  / nsteps
-        bc%dv_dt  = bc%dv_dt  / nsteps
-        bc%dp_dt  = bc%dp_dt  / nsteps
-        bc%dth_dt = bc%dth_dt / nsteps
-        bc%dqv_dt = bc%dqv_dt / nsteps
-        bc%dqc_dt = bc%dqc_dt / nsteps
+        bc%du_dt  = bc%du_dt  / dt
+        bc%dv_dt  = bc%dv_dt  / dt
+        bc%dp_dt  = bc%dp_dt  / dt
+        bc%dth_dt = bc%dth_dt / dt
+        bc%dqv_dt = bc%dqv_dt / dt
+        bc%dqc_dt = bc%dqc_dt / dt
 
         ! these only get updated if we are using the fluxes derived from the forcing model
         if (options%physics%landsurface==kLSM_BASIC) then
-            bc%dsh_dt   = bc%dsh_dt   / nsteps
-            bc%dlh_dt   = bc%dlh_dt   / nsteps
+            bc%dsh_dt   = bc%dsh_dt   / dt
+            bc%dlh_dt   = bc%dlh_dt   / dt
         endif
         ! these only get updated if we are using the fluxes derived from the forcing model
         if (options%physics%boundarylayer==kPBL_BASIC) then
-            bc%dpblh_dt = bc%dpblh_dt / nsteps
+            bc%dpblh_dt = bc%dpblh_dt / dt
         endif
         ! these only get updated if we are using the fluxes derived from the forcing model
         if (options%physics%radiation==kRA_BASIC) then
-            bc%dsw_dt   = bc%dsw_dt   / nsteps
-            bc%dlw_dt   = bc%dlw_dt   / nsteps
+            bc%dsw_dt   = bc%dsw_dt   / dt
+            bc%dlw_dt   = bc%dlw_dt   / dt
         endif
-        bc%dsst_dt   = bc%dsst_dt   / nsteps
-
+        bc%dsst_dt   = bc%dsst_dt   / dt
             
     end subroutine apply_dt
 
@@ -268,10 +273,10 @@ contains
     !!
     !!------------------------------------------------------------
     function compute_dt(dx, u, v, w, CFL, cfl_strictness) result(dt)
-        real, intent(in) :: dx
-        real, intent(in), dimension(:,:,:) :: u,v,w
-        real, intent(in) :: CFL
-        integer, intent(in) :: cfl_strictness
+        real,       intent(in)                   :: dx
+        real,       intent(in), dimension(:,:,:) :: u, v, w
+        real,       intent(in)                   :: CFL
+        integer,    intent(in)                   :: cfl_strictness
         ! output value
         real :: dt
         ! locals
@@ -340,6 +345,16 @@ contains
         
         dt = CFL * dx / maxwind3d
         
+        ! If we have too small a time step throw an error
+        ! something is probably wrong in the physics or input data
+        if (dt<1e-1) then
+            write(*,*) "dt   = ", dt
+            write(*,*) "Umax = ", maxval(abs(u))
+            write(*,*) "Vmax = ", maxval(abs(v))
+            write(*,*) "Wmax = ", maxval(abs(w))
+            stop "ERROR time step too small"
+        endif
+        
     end function compute_dt
     
     
@@ -360,85 +375,77 @@ contains
     !!------------------------------------------------------------
     subroutine step(domain,options,bc,model_time,next_output)
         implicit none
-        type(domain_type),intent(inout)::domain
-        type(bc_type),intent(inout)::bc
-        type(options_type),intent(in)::options
-        real*8,intent(inout)::model_time,next_output
-        real*8::end_time
-        integer::i,ntimesteps,tenp
-        real::dt,dtnext, CFL, cfl_reduction_factor
+        type(domain_type),  intent(inout)   :: domain
+        type(bc_type),      intent(inout)   :: bc
+        type(options_type), intent(in)      :: options
+        real*8,             intent(inout)   :: model_time, next_output
+        
+        real*8  :: end_time
+        real    :: dt, CFL, cfl_reduction_factor
         
         CFL = 1.0
         cfl_reduction_factor = options%cfl_reduction_factor
         CFL = CFL * cfl_reduction_factor
         
-!       compute internal timestep dt to maintain stability
-!       courant condition for 3D advection. Note that w is normalized by dx/dz
-!       pick the minimum dt from the begining or the end of the current timestep
-        dt = compute_dt(domain%dx, domain%u, domain%v, domain%w, CFL, cfl_strictness=options%cfl_strictness)
-        ! print*, "Current dt = ",dt
-        dtnext = compute_dt(domain%dx, bc%next_domain%u, bc%next_domain%v, bc%next_domain%w, CFL, cfl_strictness=options%cfl_strictness)
-        ! print*, "Next    dt = ",dtnext
-        dt=min(dt,dtnext)
-!       set an upper bound on dt to keep microphysics and convection stable (?) not sure what time is required here. 
-        dt=min(dt,120.0) !better min=180?
-!       if we have too small a time step just throw an error
-        if (dt<1e-1) then
-            write(*,*) "dt=",dt
-            write(*,*) "Umax",maxval(abs(domain%u)),maxval(abs(bc%next_domain%u))
-            write(*,*) "Vmax",maxval(abs(domain%v)),maxval(abs(bc%next_domain%v))
-            write(*,*) "Wmax",maxval(abs(domain%w)),maxval(abs(bc%next_domain%w))
-            call write_domain(domain,options,99998)
-            call write_domain(bc%next_domain,options,99999,'timestep_error_file.nc')
-            stop "ERROR time step too small"
-        endif
+        ! calculate the number of timesteps
+        end_time = model_time + options%in_dt
         
-!       make dt an integer fraction of the full timestep
-        dt = options%in_dt/ceiling(options%in_dt/dt)
-!       calculate the number of timesteps
-        ntimesteps=nint(options%in_dt/dt)
-        end_time=model_time+options%in_dt
+        ! Make the boundary condition dXdt values into units of [X]/s
+        call apply_dt(bc, options%in_dt, options)
         
-!       adjust the boundary condition dXdt values for the number of time steps
-        call apply_dt(bc,ntimesteps,options)
-        write(*,*) "    dt=",dt, "nsteps=",ntimesteps
-        
-!       ensure internal model consistency (should only need to be called here when the model starts...)
-!       e.g. for potential temperature and temperature
+        ! ensure internal model consistency (should only need to be called here when the model starts...)
+        ! e.g. for potential temperature and temperature
         call diagnostic_update(domain,options)
         
-!       now just loop over internal timesteps computing all physics in order (operator splitting...)
-        do i=1,ntimesteps
-            model_time=model_time+dt
-            if (dt>1e-5) then
+        ! now just loop over internal timesteps computing all physics in order (operator splitting...)
+        do while (model_time < end_time)
+            
+            ! compute internal timestep dt to maintain stability
+            ! courant condition for 3D advection. Note that w is normalized by dx/dz
+            ! pick the minimum dt from the begining or the end of the current timestep
+            dt = compute_dt(domain%dx, domain%u, domain%v, domain%w, CFL, cfl_strictness=options%cfl_strictness)
+            ! set an upper bound on dt to keep microphysics and convection stable (?) not sure what time is required here. 
+            dt = min(dt,120.0) !better min=180?
+            
+            ! Make sure we don't over step the forcing period
+            if ((model_time + dt) > end_time) then
+                dt = end_time - model_time
+            endif
+            
+            ! this if is to avoid round off errors causing an additional physics call that won't really do anything
+            if (dt > 1e-5) then
                 if (options%debug) call domain_check(domain,"Time step loop start")
+                
                 call advect(domain,options,dt)
                 if (options%debug) call domain_check(domain,"After advection")
+                
                 call mp(domain,options,dt, model_time)
                 if (options%debug) call domain_check(domain,"After microphysics")
+                
                 call rad(domain,options,model_time/86400.0+50000, dt)
                 if (options%debug) call domain_check(domain,"After radiation")
+                
                 call lsm(domain,options,dt,model_time)
                 if (options%debug) call domain_check(domain,"After LSM")
+                
                 call pbl(domain,options,dt)
                 if (options%debug) call domain_check(domain,"After PBL")
+                
                 call convect(domain,options,dt)
                 if (options%debug) call domain_check(domain,"After Convection")
-
-    !           apply/update boundary conditions including internal wind and pressure changes. 
-                call forcing_update(domain,bc,options)
+                
+                ! apply/update boundary conditions including internal wind and pressure changes. 
+                call forcing_update(domain, bc, options, dt)
                 if (options%debug) call domain_check(domain,"After Forcing update")
 
-    !           step model time forward
-                domain%model_time=model_time
-                if ((abs(model_time-next_output)<1e-1).or.(model_time>next_output)) then
-                    call write_domain(domain,options,nint((model_time-options%time_zero)/options%out_dt))
-                    next_output=next_output+options%out_dt
-                endif
-    !           in case out_dt and in_dt arent even multiples of each other.  Make sure we don't over step
-                if ((model_time+dt)>end_time) then
-                    dt=end_time-model_time
-                endif
+            endif
+            
+            ! step model_time forward
+            model_time = model_time + dt
+            domain%model_time = model_time
+            if ((abs(model_time-next_output)<1e-1).or.(model_time>next_output)) then
+                call write_domain(domain,options,nint((model_time-options%time_zero)/options%out_dt))
+                next_output=next_output+options%out_dt
             endif
         enddo
         
