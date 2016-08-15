@@ -43,18 +43,20 @@ contains
         type(bc_type), intent(inout):: boundary
 
         call welcome_message()
-!       read in options file
+        ! read in options file
         write(*,*) "Initializing Options"
         call init_options(options)
 
-!       allocate and initialize the domain
+        ! allocate and initialize the domain
+        write(*,*) ""
         write(*,*) "Initializing Domain"
         call init_domain(options,domain)
-!       allocate and initialize the boundary conditions structure (includes 3D grids too...)
-!       this might be more apropriately though of as a forcing data structure (for low res model)
+        ! allocate and initialize the boundary conditions structure (includes 3D grids too...)
+        ! this might be more apropriately though of as a forcing data structure (for low res model)
+        write(*,*) ""
         write(*,*) "Initializing Boundaries"
         call init_bc(options,domain,boundary)
-!         write(*,*) ""
+        write(*,*) ""
         write(*,'(/ A)') "Finished basic initialization"
         write(*,'(A /)') "---------------------------------------"
         
@@ -589,8 +591,8 @@ contains
         if (options%landvar/="") then
             call io_read2d(options%init_conditions_file,options%landvar,domain%landmask,1)
             where(domain%landmask==0) domain%landmask=kLC_WATER
-            print*, "WARNING truncating water surface to be > 0"
-            where((domain%terrain<0) .and. (domain%landmask==kLC_WATER)) domain%terrain=0
+            ! print*, "WARNING truncating water surface to be > 0"
+            ! where((domain%terrain<0) .and. (domain%landmask==kLC_WATER)) domain%terrain=0
         else
             nx=size(domain%lat,1)
             ny=size(domain%lat,2)
