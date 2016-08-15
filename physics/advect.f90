@@ -154,23 +154,23 @@ contains
             W_m = domain%w           * (dt/dx)
         endif
 
-        call advect3d(domain%qv,          U_m,V_m,W_m, domain%rho, domain%dz, nx,nz,ny, options)
-        call advect3d(domain%cloud,       U_m,V_m,W_m, domain%rho, domain%dz, nx,nz,ny, options)
-        call advect3d(domain%qrain,       U_m,V_m,W_m, domain%rho, domain%dz, nx,nz,ny, options)
-        call advect3d(domain%qsnow,       U_m,V_m,W_m, domain%rho, domain%dz, nx,nz,ny, options)
-        call advect3d(domain%th,          U_m,V_m,W_m, domain%rho, domain%dz, nx,nz,ny, options)
+        call advect3d(domain%qv,          U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
+        call advect3d(domain%cloud,       U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
+        call advect3d(domain%qrain,       U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
+        call advect3d(domain%qsnow,       U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
+        call advect3d(domain%th,          U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
         if (options%physics%microphysics == kMP_THOMPSON) then
-            call advect3d(domain%ice,     U_m,V_m,W_m, domain%rho, domain%dz, nx,nz,ny, options)
-            call advect3d(domain%qgrau,   U_m,V_m,W_m, domain%rho, domain%dz, nx,nz,ny, options)
-            call advect3d(domain%nice,    U_m,V_m,W_m, domain%rho, domain%dz, nx,nz,ny, options)
-            call advect3d(domain%nrain,   U_m,V_m,W_m, domain%rho, domain%dz, nx,nz,ny, options)
+            call advect3d(domain%ice,     U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
+            call advect3d(domain%qgrau,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
+            call advect3d(domain%nice,    U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
+            call advect3d(domain%nrain,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
         elseif (options%physics%microphysics == kMP_MORRISON) then
-            call advect3d(domain%ice,     U_m,V_m,W_m, domain%rho, domain%dz, nx,nz,ny, options)
-            call advect3d(domain%qgrau,   U_m,V_m,W_m, domain%rho, domain%dz, nx,nz,ny, options)
-            call advect3d(domain%nice,    U_m,V_m,W_m, domain%rho, domain%dz, nx,nz,ny, options)
-            call advect3d(domain%nrain,   U_m,V_m,W_m, domain%rho, domain%dz, nx,nz,ny, options)
-            call advect3d(domain%nsnow,   U_m,V_m,W_m, domain%rho, domain%dz, nx,nz,ny, options)
-            call advect3d(domain%ngraupel,U_m,V_m,W_m, domain%rho, domain%dz, nx,nz,ny, options)
+            call advect3d(domain%ice,     U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
+            call advect3d(domain%qgrau,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
+            call advect3d(domain%nice,    U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
+            call advect3d(domain%nrain,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
+            call advect3d(domain%nsnow,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
+            call advect3d(domain%ngraupel,U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
         endif
         
         ! used in some physics routines
