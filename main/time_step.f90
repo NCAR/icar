@@ -272,11 +272,12 @@ contains
     !! @return dt [ scalar ]        Maximum stable time step    [s]
     !!
     !!------------------------------------------------------------
-    function compute_dt(dx, u, v, w, CFL, cfl_strictness) result(dt)
+    function compute_dt(dx, u, v, w, rho, dz, CFL, cfl_strictness, use_density) result(dt)
         real,       intent(in)                   :: dx
-        real,       intent(in), dimension(:,:,:) :: u, v, w
+        real,       intent(in), dimension(:,:,:) :: u, v, w, rho, dz
         real,       intent(in)                   :: CFL
         integer,    intent(in)                   :: cfl_strictness
+        logical,    intent(in)                   :: use_density
         ! output value
         real :: dt
         ! locals
@@ -289,18 +290,31 @@ contains
         maxwind1d = 0
         maxwind3d = 0
         
-        nx = size(w,1)
-        nz = size(w,2)
-        ny = size(w,3)
+        nx = size(rho,1)
+        nz = size(rho,2)
+        ny = size(rho,3)
 
         if (cfl_strictness==1) then
             ! to ensure we are stable for 1D advection:
-            maxwind1d = max( maxval(abs(u)), maxval(abs(v)))
-            maxwind1d = max( maxwind1d, maxval(abs(w)))
-            
+            if (use_density) then
+                maxwind1d = max( maxval(abs(u(2:,:,:) / (rho*dz*dx) )), maxval(abs(v(:,:,2:) / (rho*dz*dx))) )
+                maxwind1d = max( maxwind1d, maxval(abs(w/(rho*dz*dx))) )
+            else
+                maxwind1d = max( maxval(abs(u)), maxval(abs(v)))
+                maxwind1d = max( maxwind1d, maxval(abs(w)))
+            endif
+                        
             maxwind3d = maxwind1d * sqrt3
         else if (cfl_strictness==5) then
-            maxwind3d = maxval(abs(u)) + maxval(abs(v)) + maxval(abs(w))
+            
+            if (use_density) then
+                maxwind1d = maxval(abs(u(2:,:,:) / (rho*dz*dx) )) &
+                          + maxval(abs(v(:,:,2:) / (rho*dz*dx) )) &
+                          + maxval(abs(w(:,:, :) / (rho*dz*dx) ))
+            else
+                maxwind3d = maxval(abs(u)) + maxval(abs(v)) + maxval(abs(w))
+            endif
+
         else
             ! to ensure we are stable for 3D advection we'll use the average "max" wind speed
             ! but that average has to be divided by sqrt(3) for stability in 3 dimensional advection
@@ -316,9 +330,16 @@ contains
                         ! just compute the sum of the wind speeds, but take the max over the two
                         ! faces of the grid cell (e.g. east and west sides)
                         ! this will be divided by 3 later by three_d_cfl
-                        current_wind = max(abs(u(i,k,j)), abs(u(i+1,k,j))) &
-                                      +max(abs(v(i,k,j)), abs(v(i,k,j+1))) & 
-                                      +max(abs(w(i,k,j)), abs(w(i,k+zoffset,j)))
+                        if (use_density) then
+                            current_wind = (max(abs(u(i,k,j)), abs(u(i+1,k,j))) &
+                                          + max(abs(v(i,k,j)), abs(v(i,k,j+1))) & 
+                                          + max(abs(w(i,k,j)), abs(w(i,k+zoffset,j))) ) &
+                                          / (rho(i,k,j) * dz(i,k,j) * dx)
+                        else
+                            current_wind = max(abs(u(i,k,j)), abs(u(i+1,k,j))) &
+                                          +max(abs(v(i,k,j)), abs(v(i,k,j+1))) & 
+                                          +max(abs(w(i,k,j)), abs(w(i,k+zoffset,j)))
+                        endif
                         maxwind3d = max(maxwind3d, current_wind)
                     ENDDO
                 ENDDO
@@ -329,8 +350,13 @@ contains
                 maxwind3d = maxwind3d * three_d_cfl
                 
                 ! to ensure we are stable for 1D advection:
-                maxwind1d = max( maxval(abs(u)), maxval(abs(v)))
-                maxwind1d = max( maxwind1d, maxval(abs(w)))
+                if (use_density) then
+                    maxwind1d = max( maxval(abs(u(2:,:,:) / (rho*dz*dx) )), maxval(abs(v(:,:,2:) / (rho*dz*dx))) )
+                    maxwind1d = max( maxwind1d, maxval(abs(w/(rho*dz*dx))) )
+                else
+                    maxwind1d = max( maxval(abs(u)), maxval(abs(v)))
+                    maxwind1d = max( maxwind1d, maxval(abs(w)))
+                endif
                 ! also insure stability for 1D advection
                 maxwind3d = max(maxwind1d,maxwind3d)
 
@@ -403,7 +429,13 @@ contains
             ! compute internal timestep dt to maintain stability
             ! courant condition for 3D advection. Note that w is normalized by dx/dz
             ! pick the minimum dt from the begining or the end of the current timestep
-            dt = compute_dt(domain%dx, domain%u, domain%v, domain%w, CFL, cfl_strictness=options%cfl_strictness)
+            if (options%advect_density) then
+                dt = compute_dt(domain%dx, domain%ur, domain%vr, domain%wr, domain%rho, domain%dz_inter, &
+                                CFL, cfl_strictness=options%cfl_strictness, use_density=options%advect_density)
+            else
+                dt = compute_dt(domain%dx, domain%u, domain%v, domain%w, domain%rho, domain%dz_inter, &
+                                CFL, cfl_strictness=options%cfl_strictness, use_density=options%advect_density)
+            endif
             ! set an upper bound on dt to keep microphysics and convection stable (?) not sure what time is required here. 
             dt = min(dt,120.0) !better min=180?
             if (options%debug) write(*,"(A,f5.1,A,f5.1,A$)") char(13), 100-max(0.0,(end_time-model_time-dt)/options%in_dt*100)," %  dt=",dt,"s  "
