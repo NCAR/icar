@@ -1113,8 +1113,8 @@ contains
 
                 write(*,*) "Generating a spatially variable linear perturbation look up table"
                 call initialize_spatial_winds(domain,options,reverse,useDensity)
-            else
-                write(*,*) "Skipping spatial wind field for presumed domain repeat"
+            ! else
+            !     write(*,*) "Skipping spatial wind field for presumed domain repeat"
             endif
         endif
 
