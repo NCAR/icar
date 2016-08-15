@@ -337,11 +337,10 @@ module module_mp_simple
         real,intent(in)::dt
         real :: qvsat,L_evap,L_subl,L_melt
 
-        qvsat = 1
         L_melt = -1*LH_liquid  ! J/kg (should change with temperature)
         L_evap = -1*(LH_vapor+(373.15-temperature)*dLHvdt)   ! J/kg
         L_subl = L_melt+L_evap ! J/kg
-        ! convert cloud water to and from water vapor
+        ! convert cloud water to and from water vapor (also initializes qvsat)
         call cloud_conversion(pressure,temperature,qv,qc,qvsat,dt)
         ! if there are no species to process we will just return
         if ((qc+qr+qs) >SMALL_VALUE) then
