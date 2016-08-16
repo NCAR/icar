@@ -931,7 +931,7 @@ contains
                         u_perturbation(i,j,k)=u_perturbation(i,j,k) * (1-linear_update_fraction) &
                                     + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
 
-                        domain%u(i,j,k) = domain%u(i,j,k) + u_perturbation(i,j,k) * linear_contribution
+                        domain%u(i,j,k) = domain%u(i,j,k) + u_perturbation(i,j,k)
                     endif
                     if (i<=nx) then
                         wind_first =      nweight  * (dweight * v_LUT(spos,dpos,npos,i,j,k)  + (1-dweight) * v_LUT(spos,nextd,npos,i,j,k))    &
@@ -943,7 +943,7 @@ contains
                         v_perturbation(i,j,k)=v_perturbation(i,j,k) * (1-linear_update_fraction) &
                                     + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
 
-                        domain%v(i,j,k) = domain%v(i,j,k) + v_perturbation(i,j,k) * linear_contribution
+                        domain%v(i,j,k) = domain%v(i,j,k) + v_perturbation(i,j,k)
                     endif
                 end do
             end do
@@ -1108,6 +1108,14 @@ contains
                 
                 linear_contribution = saved_linear_contribution
                 linear_mask = linear_mask * linear_contribution
+                
+                if (reverse) then
+                    rev_u_LUT = rev_u_LUT * linear_contribution
+                    rev_v_LUT = rev_v_LUT * linear_contribution
+                else
+                    hi_u_LUT = hi_u_LUT * linear_contribution
+                    hi_v_LUT = hi_v_LUT * linear_contribution
+                endif
             ! else
             !     write(*,*) "Skipping spatial wind field for presumed domain repeat"
             endif
