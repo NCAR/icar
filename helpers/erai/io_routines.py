@@ -69,8 +69,15 @@ def load_sfc(time,info):
         nc_data=mygis.read_nc(nc_file,v,returnNCvar=True)
         input_data=nc_data.data[:,info.ymin:info.ymax,info.xmin:info.xmax]
         if ((s=="latent_heat") or (s=="sensible_heat") or (s=="sw") or (s=="lw")):
-            if offset>0:
+            # if offset>=3:
+            #     input_data[offset,...]-=input_data[offset-3,...]
+            #     input_data[offset,...]/3.0
+            if offset>=2:
+                input_data[offset,...]-=input_data[offset-2,...]
+                input_data[offset,...]/2.0
+            elif offset>=1:
                 input_data[offset,...]-=input_data[offset-1,...]
+                
         outputdata[s]=input_data[int(offset),:,:]
         nc_data.ncfile.close()
     

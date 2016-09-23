@@ -112,6 +112,11 @@ contains
                 domain%lwdown(:,j)  = domain%lwdown(:,j)  + (bc%dlw_dt(:,j) * dt)
             endif
             domain%sst(:,j)  = domain%sst(:,j)  + (bc%dsst_dt(:,j) * dt)
+
+            if (trim(options%rain_var)/="") then
+                domain%rain(:,j) = domain%rain(:,j) + (bc%drain_dt(:,j) * dt)
+            endif
+
         enddo
         !$omp end do
         !$omp end parallel
@@ -237,6 +242,10 @@ contains
         bc%dth_dt = bc%dth_dt / dt
         bc%dqv_dt = bc%dqv_dt / dt
         bc%dqc_dt = bc%dqc_dt / dt
+        
+        if (trim(options%rain_var)/="") then
+            bc%drain_dt = bc%drain_dt / dt
+        endif
 
         ! these only get updated if we are using the fluxes derived from the forcing model
         if (options%physics%landsurface==kLSM_BASIC) then

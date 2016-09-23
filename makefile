@@ -105,9 +105,9 @@ ifeq ($(NODENAME), Nomad.local)
 endif
 ifeq ($(NODENAME), dablam.rap.ucar.edu)
 	F90=gfortran
-	LIBFFT=/usr/local/fftw-3.3.4/lib
-	INCFFT=/usr/local/fftw-3.3.4/include
-	NCDF_PATH = /usr/local/netcdf
+	LIBFFT=/usr/local/lib
+	INCFFT=/usr/local/include
+	NCDF_PATH = /usr/local
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
 endif
@@ -373,7 +373,7 @@ allclean:cleanall
 cleanall: clean
 	${RM} icar fftshift_test calendar_test mpdata_test 2>/dev/null ||:
 
-test: fftshift_test calendar_test mpdata_test
+test: fftshift_test calendar_test mpdata_test fftw_test
 
 icar:${OBJS}
 	${F90} -o icar ${OBJS} ${LFLAGS}
@@ -384,6 +384,9 @@ doc:
 ###################################################################
 #	test cases
 ###################################################################
+fftw_test: $(BUILD)test_fftw.o
+	${F90} $(BUILD)test_fftw.o -o fftw_test ${LFLAGS}
+
 fftshift_test: $(BUILD)test_fftshift.o $(BUILD)fftshift.o
 	${F90} $(BUILD)test_fftshift.o $(BUILD)fftshift.o -o fftshift_test ${LFLAGS}
 
@@ -582,6 +585,9 @@ $(BUILD)debug_utils.o:$(UTIL)debug_utils.f90 $(BUILD)data_structures.o $(BUILD)s
 ###################################################################
 #	Unit tests
 ###################################################################
+$(BUILD)test_fftw.o: tests/test_fftw.f90
+	${F90} ${FFLAGS} tests/test_fftw.f90 -o $(BUILD)test_fftw.o
+
 $(BUILD)test_fftshift.o:$(BUILD)fftshift.o tests/test_fftshift.f90
 	${F90} ${FFLAGS} tests/test_fftshift.f90 -o $(BUILD)test_fftshift.o
 
