@@ -342,6 +342,7 @@ module data_structures
         ! sh, lh, and pblh fields are only 2d. 
         ! These are only used with LSM option 1 and are derived from forcing file
         real, allocatable, dimension(:,:)   :: dsh_dt,dlh_dt,dpblh_dt
+        real, allocatable, dimension(:,:)   :: drain_dt
         ! change in shortwave and longwave at surface if read from forcing
         real, allocatable, dimension(:,:)   :: dsw_dt, dlw_dt
         ! change in sst if read from forcing file
