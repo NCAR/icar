@@ -12,15 +12,16 @@
 !!       datasets, and make them conform to the expectations of the current system. 
 !!      For now there are no plans to near term plans to substantially modify this. 
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !! ----------------------------------------------------------------------------
 module init
     use data_structures
     use io_routines,                only : io_read2d, io_read2di, io_read3d, &
-                                           io_write3d,io_write3di
+                                           io_write3d,io_write3di, io_write
     use geo,                        only : geo_LUT, geo_interp, geo_interp2d
-    use vertical_interpolation,     only : vLUT
+    use vertical_interpolation,     only : vLUT, vinterp
     use microphysics,               only : mp_init
     use advection,                  only : adv_init
     use convection,                 only : init_convection
@@ -81,15 +82,29 @@ contains
 ! ------------------------------------------------------------------------------------------
 !-==== Model Domain Section ====
 !
-! Begining of section focused on allocating and initializeing the model domain data structures
+! Begining of section focused on allocating and initializing the model domain data structures
 !
 ! ------------------------------------------------------------------------------------------
 
-! convert longitudes that may be -180-180 into 0-360 range
+    !> ----------------------------------------------------------------------------
+    !!  Conver longitudes into a common format for geographic interpolation
+    !!
+    !!  First convert longitudes that may be -180-180 into 0-360 range first. 
+    !!  If data straddle the 0 degree longitude, convert back to -180-180 so interpolation will be smooth
+    !!
+    !!  @param[inout]   long_data  2D array of longitudes (either -180 - 180 or 0 - 360)
+    !!
+    !! ----------------------------------------------------------------------------
     subroutine convert_longitudes(long_data)
         implicit none
         real, dimension(:,:), intent(inout) :: long_data
+        
         where(long_data<0) long_data = 360+long_data
+        
+        if ((minval(long_data)<10).and.(maxval(long_data)>350)) then
+            where(long_data>180) long_data = long_data-360
+        endif
+        
     end subroutine convert_longitudes
 
 !   Allow running over a sub-domain, by removing the outer N grid cells from all sides of the domain (lat,lon,terrain)
@@ -444,7 +459,7 @@ contains
             domain%soil_tdeep=temp_rdata_2d(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
             where(domain%soil_tdeep<200) domain%soil_tdeep=200 ! mitigates zeros that can cause problems
             if (options%soil_t_var=="") then
-                print*, "Missing explicit soil T, using deep soil T for all depths"
+                write(*,*) "Missing explicit soil T, using deep soil T for all depths"
                 do i=1,nz
                     domain%soil_t(:,i,:)=domain%soil_tdeep
                 end do
@@ -454,7 +469,78 @@ contains
         
         
     end subroutine init_domain_land
+    
+    !> ----------------------------------------------------------------------------
+    !!  Interpolate a 2D data array in the "x" (first) dimension, extrapolate out one on edges
+    !!  
+    !!  If data_out is not allocated, it will be allocated as (nx+1,ny). Then a simple average between
+    !!  grid cells computes a bilinear interpolation. Edge cells are extrapolated outwards using a
+    !!  similar method. 
+    !!  
+    !!  @param[in]  data_in     real 2D array to be interpolated
+    !!  @param[out] data_out    real 2D allocatable array to store the interpolated output
+    !!
+    !> ----------------------------------------------------------------------------
+    subroutine interpolate_in_x(data_in, data_out)
+        implicit none
+        real, dimension(:,:), intent(in) :: data_in
+        real, dimension(:,:), allocatable, intent(out) :: data_out
         
+        integer :: nx, ny
+        
+        nx=size(data_in,1)
+        ny=size(data_in,2)
+        if (.not.allocated(data_out)) then
+            allocate(data_out(nx+1,ny))
+        else
+            if ((size(data_out,1)/=nx+1).or.(size(data_out,2)/=ny)) then
+                deallocate(data_out)
+                allocate(data_out(nx+1,ny))
+            endif
+        endif
+        
+        ! simple bilinear inteprolation (included extrapolation one grid cell out)
+        data_out(2:nx,:) = (data_in(2:,:) + data_in(1:nx-1,:))/2
+        data_out(1,:)    = data_in(1,:)*2 - data_in(2,:)
+        data_out(nx+1,:) = data_in(nx,:)*2 - data_in(nx-1,:)
+        ! result is data_out
+    end subroutine interpolate_in_x
+
+    !> ----------------------------------------------------------------------------
+    !!  Interpolate a 2D data array in the "y" (second) dimension, extrapolate out one on edges
+    !!  
+    !!  If data_out is not allocated, it will be allocated as (nx,ny+1). Then a simple average between
+    !!  grid cells computes a bilinear interpolation. Edge cells are extrapolated outwards using a
+    !!  similar method. 
+    !!  
+    !!  @param[in]  data_in     real 2D array to be interpolated
+    !!  @param[out] data_out    real 2D allocatable array to store the interpolated output
+    !!
+    !> ----------------------------------------------------------------------------
+    subroutine interpolate_in_y(data_in, data_out)
+        implicit none
+        real, dimension(:,:), intent(in) :: data_in
+        real, dimension(:,:), allocatable, intent(out) :: data_out
+        
+        integer :: nx, ny
+        
+        nx=size(data_in,1)
+        ny=size(data_in,2)
+        if (.not.allocated(data_out)) then
+            allocate(data_out(nx,ny+1))
+        else
+            if ((size(data_out,1)/=nx).or.(size(data_out,2)/=ny+1)) then
+                deallocate(data_out)
+                allocate(data_out(nx,ny+1))
+            endif
+        endif
+        
+        ! simple bilinear inteprolation (included extrapolation one grid cell out)
+        data_out(:,2:ny) = (data_in(:,2:) + data_in(:,1:ny-1))/2
+        data_out(:,1)    = data_in(:,1)*2 - data_in(:,2)
+        data_out(:,ny+1) = data_in(:,ny)*2 - data_in(:,ny-1)
+        ! result is data_out
+    end subroutine interpolate_in_y
 
 !   initialize the domain e.g. lat,lon,terrain, 3D z coordinate
     subroutine init_domain(options, domain)
@@ -469,11 +555,30 @@ contains
         call io_read2d(options%init_conditions_file,options%lat_hi,domain%lat,1)
         call io_read2d(options%init_conditions_file,options%lon_hi,domain%lon,1)
         call convert_longitudes(domain%lon)
-        call io_read2d(options%init_conditions_file,options%ulat_hi,domain%u_geo%lat,1)
-        call io_read2d(options%init_conditions_file,options%ulon_hi,domain%u_geo%lon,1)
+        
+        !  because u/vlat/lon_hi are optional, we calculated them by interplating from the mass lat/lon if necessary
+        if (options%ulat_hi/="") then
+            call io_read2d(options%init_conditions_file,options%ulat_hi,domain%u_geo%lat,1)
+        else
+            call interpolate_in_x(domain%lat,domain%u_geo%lat)
+        endif
+        if (options%ulon_hi/="") then
+            call io_read2d(options%init_conditions_file,options%ulon_hi,domain%u_geo%lon,1)
+        else
+            call interpolate_in_x(domain%lon,domain%u_geo%lon)
+        endif
         call convert_longitudes(domain%u_geo%lon)
-        call io_read2d(options%init_conditions_file,options%vlat_hi,domain%v_geo%lat,1)
-        call io_read2d(options%init_conditions_file,options%vlon_hi,domain%v_geo%lon,1)
+        
+        if (options%vlat_hi/="") then
+            call io_read2d(options%init_conditions_file,options%vlat_hi,domain%v_geo%lat,1)
+        else
+            call interpolate_in_y(domain%lat,domain%v_geo%lat)
+        endif
+        if (options%vlon_hi/="") then
+            call io_read2d(options%init_conditions_file,options%vlon_hi,domain%v_geo%lon,1)
+        else
+            call interpolate_in_y(domain%lon,domain%v_geo%lon)
+        endif
         call convert_longitudes(domain%v_geo%lon)
         
         if (options%landvar/="") then
@@ -552,7 +657,6 @@ contains
         
         ! all other variables should be allocated and initialized to 0
         call domain_allocation(domain,options,nx,nz,ny)
-        
         ! initializing land
         call init_domain_land(domain,options)
         
@@ -624,23 +728,28 @@ contains
         
         ! read in the vertical coordinate
         call io_read3d(options%boundary_files(1),options%zvar,zbase)
+        if (options%debug) write(*,*) "Raw input forcing z min=",minval(zbase), " z max=", maxval(zbase)
         nx=size(zbase,1)
         ny=size(zbase,2)
         nz=size(zbase,3)
         allocate(boundary%lowres_z(nx,nz,ny))
         boundary%lowres_z=reshape(zbase,[nx,nz,ny],order=[1,3,2])
         deallocate(zbase)
-        if (options%zvar=="PH") then
-            write(*,*) ""
-            write(*,*) "WARNING: assumeing height variable is in geopotential units"
-            write(*,*) "    adding PHB (base state) and dividing by gravity..."
-            write(*,*) ""
-            call io_read3d(options%boundary_files(1),"PHB",zbase)
-            
-            boundary%lowres_z=(boundary%lowres_z+reshape(zbase,[nx,nz,ny],order=[1,3,2])) / gravity
+
+        if (trim(options%zbvar)/="") then
+            call io_read3d(options%boundary_files(1),options%zbvar, zbase)
+            boundary%lowres_z = boundary%lowres_z + reshape(zbase,[nx,nz,ny],order=[1,3,2])
+            if (options%debug) write(*,*) "Raw forcing z_base min=",minval(zbase), " max=", maxval(zbase)
             deallocate(zbase)
         endif
-        
+        if (options%z_is_geopotential) then
+             boundary%lowres_z = boundary%lowres_z/ gravity
+        endif
+        if (options%debug) write(*,*) "Pre-interpolation forcing z min=",minval(boundary%lowres_z), " z max=", maxval(boundary%lowres_z)
+        if (options%z_is_on_interface) then
+            write(*,*) "Interpreting geopotential height as residing between model layers"
+            boundary%lowres_z(:,1:nz-1,:) = (boundary%lowres_z(:,1:nz-1,:) + boundary%lowres_z(:,2:nz,:))/2
+        endif
         
         ! all other structures must be allocated and initialized, but will be set on a high-res grid
         ! u/v are seperate so we can read them on the low res grid and adjust/rm-linearwinds before interpolating
@@ -694,12 +803,32 @@ contains
         call io_read2d(options%ext_wind_files(1),options%latvar,bc%ext_winds%lat)
         call io_read2d(options%ext_wind_files(1),options%lonvar,bc%ext_winds%lon)
         call convert_longitudes(bc%ext_winds%lon)
-        call io_read2d(options%ext_wind_files(1),options%ulat_hi,bc%ext_winds%u_geo%lat)
-        call io_read2d(options%ext_wind_files(1),options%ulon_hi,bc%ext_winds%u_geo%lon)
+        
+        ! ulat_hi and vlat_hi are optional, if they are not supplied interpolate the mass lat/lon grid
+        if (options%ulat_hi/="") then
+            call io_read2d(options%ext_wind_files(1),options%ulat_hi,bc%ext_winds%u_geo%lat,1)
+        else
+            call interpolate_in_x(bc%ext_winds%lat,bc%ext_winds%u_geo%lat)
+        endif
+        if (options%ulon_hi/="") then
+            call io_read2d(options%ext_wind_files(1),options%ulon_hi,bc%ext_winds%u_geo%lon,1)
+        else
+            call interpolate_in_x(bc%ext_winds%lon,bc%ext_winds%u_geo%lon)
+        endif
         call convert_longitudes(bc%ext_winds%u_geo%lon)
-        call io_read2d(options%ext_wind_files(1),options%vlat_hi,bc%ext_winds%v_geo%lat)
-        call io_read2d(options%ext_wind_files(1),options%vlon_hi,bc%ext_winds%v_geo%lon)
+        
+        if (options%vlat_hi/="") then
+            call io_read2d(options%ext_wind_files(1),options%vlat_hi,bc%ext_winds%v_geo%lat,1)
+        else
+            call interpolate_in_y(bc%ext_winds%lat,bc%ext_winds%v_geo%lat)
+        endif
+        if (options%vlon_hi/="") then
+            call io_read2d(options%ext_wind_files(1),options%vlon_hi,bc%ext_winds%v_geo%lon,1)
+        else
+            call interpolate_in_y(bc%ext_winds%lon,bc%ext_winds%v_geo%lon)
+        endif
         call convert_longitudes(bc%ext_winds%v_geo%lon)
+
         
         write(*,*) "Setting up ext wind geoLUTs"
         call geo_LUT(bc%next_domain%u_geo, bc%ext_winds%u_geo)
@@ -720,15 +849,18 @@ contains
         
         ! force all weight to be on the first x,y pair...
         ! this assumes the "external winds" file is on the exact same grid as the high res model grid
-        bc%ext_winds%u_geo%geolut%w(2:,:,:)=0
-        bc%ext_winds%u_geo%geolut%w(1,:,:)=1
-        bc%ext_winds%v_geo%geolut%w(2:,:,:)=0
-        bc%ext_winds%v_geo%geolut%w(1,:,:)=1
+        ! probably better not to do this incase they are not on the same grid. This also assumes the first x,y pair
+        ! is the closes grid cell.  This should be the case for the current geolut algorithm, but it is not required. 
+        ! bc%ext_winds%u_geo%geolut%w(2:,:,:)=0
+        ! bc%ext_winds%u_geo%geolut%w(1,:,:)=1
+        ! bc%ext_winds%v_geo%geolut%w(2:,:,:)=0
+        ! bc%ext_winds%v_geo%geolut%w(1,:,:)=1
         bc%ext_winds%dx=bc%next_domain%dx
         call setup_extwinds(bc%ext_winds)
     end subroutine init_ext_winds
     
     subroutine swap_z(bc)
+        ! swap the lowres_z and z variables in bc
         type(bc_type), intent(inout) :: bc
         real,allocatable,dimension(:,:,:) :: tempz
         integer::nx,nz,ny, i
@@ -793,6 +925,7 @@ contains
         type(domain_type), intent(inout):: domain
         type(bc_type), intent(inout):: boundary
         type(geo_look_up_table) :: u_temp_geo,v_temp_geo
+        real, dimension(:,:,:), allocatable :: tempz
         integer::i,nx,ny,nz
             
         boundary%dx=options%dxlow
@@ -821,87 +954,102 @@ contains
         
         nz=size(boundary%lowres_z,2)
         if (maxval(boundary%terrain)>maxval(boundary%lowres_z(:,1,:))) then
-            write(*,*) "WARNING Assuming forcing Z levels are AGL, not ASL : adding ground surface height"
-            write(*,*) "Terrain Max=",maxval(boundary%terrain), "Lowest level Max=",maxval(boundary%lowres_z(:,1,:))
-            do i=1,nz
-                boundary%lowres_z(:,i,:)=boundary%lowres_z(:,i,:)+boundary%terrain
-            enddo
+            write(*,*) "WARNING : Forcing Z levels are below the terrain provided. "
+            write(*,*) "          For pressure level forcing data this is expected, but not well tested. "
         endif
-        if (options%zvar=="PH") then
-            write(*,*) "WARNING interpolating forcing z levels to half / mass levels"
-            write(*,*) "  Assuming PH variable is geopotential between mass levels (as in WRF)"
+        if (options%z_is_on_interface) then
             boundary%lowres_z(:,1:nz-1,:) = (boundary%lowres_z(:,1:nz-1,:) + boundary%lowres_z(:,2:nz,:)) / 2
         endif
+        
         ! if we want vertical interpolations between forcing and model grid to be done from 
-        ! height above ground level (and we should, esp. for wind!), then we need to remove the 
+        ! height above ground level (and we should for wind?), then we need to remove the 
         ! topography from both grids first
         if (options%use_agl_height) then
             nz=size(boundary%lowres_z,2)
+            
+            ! First set the forcing data z into AGL coordinates
             do i=1,nz
                 boundary%lowres_z(:,i,:)=boundary%lowres_z(:,i,:)-boundary%terrain
             enddo
+            ! Then put the model domain into AGL coordinates
             nz=size(domain%z,2)
             do i=1,nz
                 domain%z(:,i,:)=domain%z(:,i,:)-domain%terrain
             enddo
-            
+
+            ! finally, get the model terrain onto the u and v staggered grids
             call copy_z(domain,domain%u_geo,interpolate_dim=1)
             call copy_z(domain,domain%v_geo,interpolate_dim=3)
-            
-        endif
-        ! interpolate the low-res terrain to the high-res grid for pressure adjustments. 
-        ! the correct way would probably be to adjust all low-res pressures to Sea level before interpolating
-        ! then pressure adjustments all occur from SLP. 
-        ! This should be done on a separate lowres terrain grid so the embedded high res terrain grid 
-        ! can also be used in pressure adjustments on each time step...
-        nx=size(domain%terrain,1)
-        ny=size(domain%terrain,2)
-        allocate(boundary%lowres_terrain(nx,ny))
-        call geo_interp2d(boundary%lowres_terrain,boundary%terrain,boundary%geolut)
-        
-        nz=size(boundary%lowres_z,2)
-        allocate(boundary%z(nx,nz,ny))
-        call geo_interp(boundary%z,boundary%lowres_z,boundary%geolut,.false.)
-        
-        nx=size(domain%u_geo%lat,1)
-        ny=size(domain%u_geo%lat,2)
-        allocate(boundary%u_geo%z(nx,nz,ny))
-        call geo_interp(boundary%u_geo%z,boundary%lowres_z,u_temp_geo,.false.)
-        
-        nx=size(domain%v_geo%lat,1)
-        ny=size(domain%v_geo%lat,2)
-        allocate(boundary%v_geo%z(nx,nz,ny))
-        call geo_interp(boundary%v_geo%z,boundary%lowres_z,v_temp_geo,.false.)
-        
-        call destroy_lut(v_temp_geo)
-        call destroy_lut(u_temp_geo)
 
-        write(*,*) "Setting up vertical interpolation Look Up Tables"
-        
-        if (options%debug) print*, "Domain z min=",minval(domain%z), "Domain z max=", maxval(domain%z)
-        if (options%debug) print*, "Forcing z min=",minval(boundary%z), "Forcing z max=", maxval(boundary%z)
-        call vLUT(domain,boundary)
-        call vLUT(domain%u_geo,boundary%u_geo)
-        call vLUT(domain%v_geo,boundary%v_geo)
-        
-        if (options%use_agl_height) then
-            nz=size(boundary%z,2)
-!           call io_write3d("bc_hiresz-hgt.nc","data",boundary%z)
-            do i=1,nz
-                boundary%z(:,i,:)=boundary%z(:,i,:)+boundary%lowres_terrain
-                boundary%lowres_z(:,i,:)=boundary%lowres_z(:,i,:)+boundary%terrain
-            enddo
-            nz=size(domain%z,2)
-!           call io_write3d("domain_z-hgt.nc","data",domain%z)
+            ! this is the only place we need the domain z to be in AGL space, so revert back immediately
             do i=1,nz
                 domain%z(:,i,:)=domain%z(:,i,:)+domain%terrain
             enddo
         endif
         
+        ! This section all happens in AGL space if use_agl_height=True
+        ! interpolate lowres_z into the u_geo and v_geo data structures (on their staggered grids)
+        nx=size(domain%u_geo%lat,1)
+        ny=size(domain%u_geo%lat,2)
+        nz=size(boundary%lowres_z,2)
+        allocate(boundary%u_geo%z(nx,nz,ny))
+        call geo_interp(boundary%u_geo%z,boundary%lowres_z,u_temp_geo,.false.)
+
+        nx=size(domain%v_geo%lat,1)
+        ny=size(domain%v_geo%lat,2)
+        allocate(boundary%v_geo%z(nx,nz,ny))
+        call geo_interp(boundary%v_geo%z,boundary%lowres_z,v_temp_geo,.false.)
+        
+        ! destroy the geographic look up tables to save space
+        ! geoLUTs for forcing data are separate
+        call destroy_lut(v_temp_geo)
+        call destroy_lut(u_temp_geo)
+        
+        write(*,*) "Setting up vertical interpolation Look Up Tables"
+        ! generate the vertical inteprolateion look up tables for the u and v grids
+        call vLUT(domain%u_geo,boundary%u_geo)
+        call vLUT(domain%v_geo,boundary%v_geo)
+        
+        ! restore the lowres_z variable to ASL space for the mass grid vLUT generation
+        if (options%use_agl_height) then
+            nz=size(boundary%lowres_z,2)
+            do i=1,nz
+                boundary%lowres_z(:,i,:)=boundary%lowres_z(:,i,:)+boundary%terrain
+            enddo
+        endif
+
+        ! Finally, take care of the mass grid in ASL space
+        nx=size(domain%terrain,1)
+        ny=size(domain%terrain,2)
+        nz=size(boundary%lowres_z,2)
+        allocate(boundary%z(nx,nz,ny))
+        call geo_interp(boundary%z,boundary%lowres_z,boundary%geolut,.false.)
+
+        if (options%debug) write(*,*) "Domain z min=",minval(domain%z), "Domain z max=", maxval(domain%z)
+        if (options%debug) write(*,*) "Forcing z min=",minval(boundary%z), "Forcing z max=", maxval(boundary%z)
+        call vLUT(domain,boundary)
+
         ! these are not longer needed and (without adjustments) are potentially unreliable (AGL vs ASL)
-        deallocate(boundary%v_geo%z,boundary%u_geo%z)
+        deallocate(boundary%v_geo%z, boundary%u_geo%z,domain%u_geo%z,domain%v_geo%z)
         ! swaps z and lowres_z (one of the cases where pointers would make life a lot easier)
         call swap_z(boundary)
+        
+        ! after swap_z call, boundary%z is on the forcing data grid, boundary%lowres_z is interpolated to the ICAR grid
+        ! Finally apply the vertical interpolation here as well
+        ! this is a little annoying because we have to allocate a temporary. 
+        nx=size(domain%terrain,1)
+        ny=size(domain%terrain,2)
+        nz=size(domain%p,2)
+        allocate(tempz(nx,nz,ny))
+        
+        call vinterp(tempz,    & 
+                     boundary%lowres_z, &
+                     boundary%vert_lut)
+        
+        deallocate(boundary%lowres_z)
+        allocate(boundary%lowres_z(nx,nz,ny))
+        boundary%lowres_z = tempz
+        deallocate(tempz)
         
     end subroutine init_bc
 end module

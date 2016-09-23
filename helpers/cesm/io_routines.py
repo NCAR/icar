@@ -28,12 +28,12 @@ def read_nc(filename,var="data",proj=None,returnNCvar=False):
         if returnNCvar:
             outputdata=data
         else:
-            # outputdata=data[:]
-            ntimes=365*4
-            if len(data.shape)>2:
-                outputdata=data[:ntimes,...]
-            else:
-                outputdata=data[:]
+            outputdata=data[:]
+            # ntimes=365*4
+            # if len(data.shape)>2:
+                # outputdata=data[:ntimes,...]
+            # else:
+                # outputdata=data[:]
     outputproj=None
     if proj!=None:
         projection=d.variables[proj]
@@ -91,17 +91,38 @@ def load_sfc(time, info,starttime,endtime):
     """docstring for load_sfc"""
     outputdata=Bunch()
     basefile="/glade/p/cesmdata/cseg/inputdata/atm/cam/topo/USGS-gtopo30_0.9x1.25_remap_c051027.nc"
-    outputdata.hgt=read_nc(basefile,"PHIS").data[info.ymin:info.ymax,info.xmin:info.xmax]/g
+    
+    lat = read_nc(basefile,"lat").data
+    lon = read_nc(basefile,"lon").data#-360
+    
+    xmin=np.where(lon>=info.lon[0])[0][0]
+    xmax=np.where(lon<=info.lon[1])[0][-1]+1
+    ymin=np.where(lat>=info.lat[0])[0][0]
+    ymax=np.where(lat<=info.lat[1])[0][-1]+1
+
+    print("xmin,xmax,ymin,ymax")
+    print(xmin,xmax,ymin,ymax)
+    
+    outputdata.hgt=read_nc(basefile,"PHIS").data[ymin:ymax,xmin:xmax]/g
 
     outputdata.land=np.zeros(outputdata.hgt.shape)
-    landfrac=read_nc(basefile,"LANDFRAC").data[info.ymin:info.ymax,info.xmin:info.xmax]
+    landfrac=read_nc(basefile,"LANDFRAC").data[ymin:ymax,xmin:xmax]
     outputdata.land[landfrac>=0.5]=1
     
     tsfile=find_atm_file(time, "TS", info)
     outputdata.ts=read_nc(tsfile,"TS").data[starttime:endtime,info.ymin:info.ymax,info.xmin:info.xmax]
 
     swfile=find_atm_file(time, "FSDS", info)
-    outputdata.sw=read_nc(swfile,"FSDS").data[starttime:endtime,info.ymin:info.ymax,info.xmin:info.xmax]
+    tmp=read_nc(swfile,"FSDS",returnNCvar=True)
+    # print(tmp.data.shape)
+    tmp.ncfile.close()
+    tmp=read_nc(swfile,"FSDS").data
+    # print(tmp.shape, starttime, endtime)
+    outputdata.sw=tmp[starttime:endtime,info.ymin:info.ymax,info.xmin:info.xmax]
+    # print(swfile, starttime, endtime, info.xmin,info.xmax, info.ymin, info.ymax)
+    # print(outputdata.sw.shape)
+    # print(outputdata.sw[0].max(),outputdata.sw[0].min())
+    # print(outputdata.sw.max(),outputdata.sw.min())
 
     lwfile=find_atm_file(time, "FLDS", info)
     outputdata.lw=read_nc(lwfile,"FLDS").data[starttime:endtime,info.ymin:info.ymax,info.xmin:info.xmax]
@@ -114,5 +135,3 @@ def load_data(time,info,starttime,endtime):
     atm=load_atm(time,info,starttime,endtime)
     sfc=load_sfc(time,info,starttime,endtime)
     return Bunch(sfc=sfc,atm=atm)
-
-

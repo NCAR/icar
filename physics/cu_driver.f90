@@ -1,8 +1,8 @@
 !> ----------------------------------------------------------------------------
-!!
 !!  Driver to call different convection schemes
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !! ----------------------------------------------------------------------------
 module convection

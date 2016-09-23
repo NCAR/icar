@@ -1,6 +1,6 @@
 !>----------------------------------------------------------
-!!
 !! This module provides a wrapper to call various land surface models
+!!
 !! It sets up variables specific to the LSM to be used including both
 !! history variables not currently stored in the domain level data 
 !! structure, and runtime parameters
@@ -29,7 +29,8 @@
 !!      model_time      = time since beginning date (seconds)
 !! </pre>
 !!
-!! Author : Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!----------------------------------------------------------
 module land_surface
@@ -38,7 +39,6 @@ module land_surface
     use module_lsm_simple,   only : lsm_simple, lsm_simple_init
     use module_water_simple, only : water_simple
     use io_routines,         only : io_write3d, io_write2d
-    use output,              only : write_domain
     use data_structures
     
     implicit none
@@ -77,7 +77,7 @@ module land_surface
     real, parameter :: SMALL_PRESSURE=0.1 !note: 0.1Pa is very small 1e-10 wouldn't affect a single-precision float
     real, parameter :: SMALL_QV=1e-10
     real, parameter :: MAX_EXCHANGE_C = 0.5
-    real, parameter :: MIN_EXCHANGE_C = 0.001
+    real, parameter :: MIN_EXCHANGE_C = 0.0009
     
     character(len=MAXVARLENGTH) :: MMINLU
     logical :: FNDSOILW,FNDSNOWH,RDMAXALB
@@ -117,6 +117,7 @@ contains
         ! e_s = 611.0*10.0**(7.5*(t-273.15)/(t-35.45))
         
         ! enforce e_s < air pressure incase we are out on one edge of a polynomial
+        ! I'm not sure this should ever be encounted anymore, but left in for now...
         if ((p-e_s)<=0) then
             e_s=p*0.99999
         endif
@@ -492,17 +493,20 @@ contains
             ! --------------------------------------------------
             ! First handle the open water surface options
             ! --------------------------------------------------
-            if (options%physics%watersurface==kWATER_BASIC) then
-                do j=1,ny
-                    do i=1,nx
-                        if (domain%landmask(i,j)==kLC_WATER) then
-                            QFX(i,j) = domain%latent_heat(i,j) / LH_vaporization
-                            QSFC(i,j)=sat_mr(domain%T2m(i,j),domain%psfc(i,j))
-                        endif
-                    enddo
-                enddo
-                
-            elseif (options%physics%watersurface==kWATER_SIMPLE) then
+            ! if (options%physics%watersurface==kWATER_BASIC) then
+                ! Note, do nothing because QFX and QSFC are only used for to calculate diagnostic
+                !    T2m and Q2m.  However, the fluxes and stability terms are not coordinated, so 
+                !    This leads to problems in the current formulation and this has been removed. 
+                ! do j=1,ny
+                !     do i=1,nx
+                !         if (domain%landmask(i,j)==kLC_WATER) then
+                !             QFX(i,j) = domain%latent_heat(i,j) / LH_vaporization
+                !             QSFC(i,j)=sat_mr(domain%T2m(i,j),domain%psfc(i,j))
+                !         endif
+                !     enddo
+                ! enddo
+            ! else
+            if (options%physics%watersurface==kWATER_SIMPLE) then
                 call water_simple(domain%sst, domain%psfc, windspd, domain%ustar,  &
                                   domain%qv, domain%t,                             &
                                   domain%sensible_heat, domain%latent_heat,        &
@@ -513,19 +517,23 @@ contains
             ! --------------------------------------------------
             ! Now handle the land surface options
             ! --------------------------------------------------
-            if (options%physics%landsurface==kLSM_BASIC) then
-                call lsm_basic(domain,options,lsm_dt)
-                do j=1,ny
-                    do i=1,nx
-                        if (domain%landmask(i,j)==kLC_LAND) then
-                            QFX(i,j) = domain%latent_heat(i,j) / LH_vaporization
-                            QSFC(i,j)=max(domain%qv(i,1,j),0.5*sat_mr(domain%T2m(i,j),domain%psfc(i,j)))
-                        endif
-                    enddo
-                enddo
+            ! if (options%physics%landsurface==kLSM_BASIC) then
+                ! call lsm_basic(domain,options,lsm_dt)
+                ! Note, do nothing because QFX and QSFC are only used for to calculate diagnostic
+                !    T2m and Q2m.  However, the fluxes and stability terms are not coordinated, so 
+                !    This leads to problems in the current formulation and this has been removed. 
+                ! do j=1,ny
+                !     do i=1,nx
+                !         if (domain%landmask(i,j)==kLC_LAND) then
+                !             QFX(i,j) = domain%latent_heat(i,j) / LH_vaporization
+                !             QSFC(i,j)=max(domain%qv(i,1,j),0.5*sat_mr(domain%T2m(i,j),domain%psfc(i,j)))
+                !         endif
+                !     enddo
+                ! enddo
                 
                 
-            else if (options%physics%landsurface==kLSM_SIMPLE) then
+            ! else 
+            if (options%physics%landsurface==kLSM_SIMPLE) then
                 write(*,*) "--------------------------"
                 stop "Simple LSM not implemented yet"
                 call lsm_simple(domain%th,domain%pii,domain%qv,domain%current_rain, domain%current_snow,domain%p_inter, &
@@ -620,8 +628,11 @@ contains
 !                 end do
                 
             endif
-            call surface_diagnostics(domain%sensible_heat, QFX, domain%skin_t, QSFC,  &
-                                     CHS2, CQS2,domain%T2m, domain%Q2m, domain%psfc)
+            ! 2m Air T and Q are not well defined if Tskin is not coupled with the surface fluxes
+            if (options%physics%landsurface > kLSM_BASIC) then
+                call surface_diagnostics(domain%sensible_heat, QFX, domain%skin_t, QSFC,  &
+                                         CHS2, CQS2,domain%T2m, domain%Q2m, domain%psfc)
+            endif
         endif
         if (options%physics%landsurface>0) then
             call apply_fluxes(domain,dt)

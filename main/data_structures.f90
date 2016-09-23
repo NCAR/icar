@@ -1,5 +1,4 @@
 !>------------------------------------------------
-!! 
 !! Contains type definitions for a variety of model data strucutres
 !! Also defines model constants (e.g. gravity, and MAXFILELENGTH)
 !!
@@ -32,7 +31,7 @@
 !!
 !!      ---- energy fluxes ----
 !! sensible_heat = Sensible heat flux from surface          [W/m^2]
-!! latent_heat   = Latent heat flux from surface                [W/m^2]
+!! latent_heat   = Latent heat flux from surface            [W/m^2]
 !! pbl_height    = Height of the planetary boundary layer   [m]
 !!
 !!      ---- Radiation variables ----
@@ -72,7 +71,8 @@
 !! fzs      = buffered FFT(terrain) for linear wind calculations   
 !! </pre>
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !>------------------------------------------------
 module data_structures
@@ -388,6 +388,7 @@ module data_structures
         real :: t_adjust
         logical :: Ef_rw_l, EF_sw_l
         
+        integer :: update_interval ! maximum number of seconds between updates
         integer :: top_mp_level ! top model level to process in the microphysics
         real :: local_precip_fraction
     end type mp_options_type
@@ -403,6 +404,7 @@ module data_structures
         real    :: min_stability            ! these may need to be a little narrower. 
         logical :: variable_N               ! Compute the Brunt Vaisala Frequency (N^2) every time step
         logical :: smooth_nsq               ! Smooth the Calculated N^2 over vert_smooth vertical levels
+        integer :: vert_smooth              ! number of model levels to smooth winds over in the vertical
         
         real    :: N_squared                ! static Brunt Vaisala Frequency (N^2) to use
         real    :: linear_contribution      ! fractional contribution of linear perturbation to wind field (e.g. u_hat multiplied by this)
@@ -424,6 +426,7 @@ module data_structures
         logical :: read_LUT, write_LUT      ! options to read the LUT from disk (or write it)
         character(len=MAXFILELENGTH) :: u_LUT_Filename  ! u LUT filename to write
         character(len=MAXFILELENGTH) :: v_LUT_Filename  ! v LUT filename to write
+        logical :: overwrite_lt_lut         ! if true any existing LUT file will be over written
         
     end type lt_options_type
     
@@ -467,7 +470,7 @@ module data_structures
         character (len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
                                         hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi, &
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar,hgtvar, &
-                                        shvar,lhvar,pblhvar,zvar, &
+                                        shvar,lhvar,pblhvar,zvar,zbvar,&
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
                                         swdown_var, lwdown_var, &
@@ -488,15 +491,17 @@ module data_structures
         logical :: mean_winds           ! use only a mean wind field across the entire model domain
         logical :: mean_fields          ! use only a mean forcing field across the model boundaries 
         logical :: restart              ! this is a restart run, read model conditions from a restart file
+        logical :: z_is_geopotential    ! if true the z variable is interpreted as geopotential height
+        logical :: z_is_on_interface    ! if true the z variable is interpreted as residing at model level interfaces
         logical :: advect_density       ! properly incorporate density into the advection calculations. 
                                         ! Doesn't play nice with linear winds
         logical :: high_res_soil_state  ! read the soil state from the high res input file not the low res file
         logical :: surface_io_only      ! just output surface variables to speed up run and thin output
         
         integer :: buffer               ! buffer to remove from all sides of the high res grid supplied
-        integer :: vert_smooth          ! number of model levels to smooth winds over in the vertical
         ! various integer parameters/options
-        integer :: ntimesteps           ! total number of time steps to be simulated
+        integer :: ntimesteps           ! total number of time steps to be simulated (from the first forcing data)
+        integer :: time_step_zero       ! the initial time step for the simulation (from the first forcing data)
         integer :: nz                   ! number of model vertical levels
         integer :: ext_winds_nfiles     ! number of extrenal wind filenames to read from namelist
         integer :: restart_step         ! step in forcing data to begin running
@@ -512,6 +517,8 @@ module data_structures
         real :: inputinterval           ! time steps per input
         real :: smooth_wind_distance    ! distance over which to smooth the forcing wind field (m)
         logical :: time_varying_z       ! read in a new z coordinate every time step and interpolate accordingly
+        real :: cfl_reduction_factor    ! amount to multiple CFL by to improve stability (typically 1)
+        integer :: cfl_strictness       ! CFL method 1=3D from 1D*sqrt(3), 2=ave.3D wind*sqrt(3), 3=sum.3D wind, 4=opt3 * sqrt(3), 5 = sum(max.3d)
         
         ! date/time parameters
         double precision :: initial_mjd ! Modified Julian Day of the first forcing time step [days]

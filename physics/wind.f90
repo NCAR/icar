@@ -1,6 +1,10 @@
 !>------------------------------------------------------------
+!! Module to manage the ICAR wind field, including calls to linear winds
+!! importantly it also rotates the wind field into the ICAR grid and 
+!! balances the U, V, and W fields for "mass" conservation
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!------------------------------------------------------------
 module wind
@@ -151,7 +155,7 @@ contains
         
         ! linear winds
         if (options%physics%windtype==kWIND_LINEAR) then
-            call linear_perturb(domain,options,options%vert_smooth,.False.,options%advect_density)
+            call linear_perturb(domain,options,options%lt_options%vert_smooth,.False.,options%advect_density)
         endif
         ! else assumes even flow over the mountains
         

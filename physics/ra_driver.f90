@@ -1,5 +1,4 @@
 !>----------------------------------------------------------
-!!
 !! This module provides a wrapper to call various radiation models
 !! It sets up variables specific to the physics package to be used
 !!
@@ -19,7 +18,8 @@
 !!      dt              = time step (seconds)
 !! </pre>
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!----------------------------------------------------------
 module radiation

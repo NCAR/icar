@@ -1,8 +1,8 @@
 !>------------------------------------------------------------
-!!
 !!  Test running initialization code.  Doesn't do much. 
 !! 
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!------------------------------------------------------------
 program test_init

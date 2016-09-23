@@ -1,11 +1,8 @@
 !>------------------------------------------------------------
+!! Fortran interface to FFTW
 !!
-!! Supplies 1D and 2D FFT shift procedures ala matlab fftshift
-!! uses a generic interfacse so that procedures can be called with
-!! any variation of complex, real, 1D or 2D arrays
-!! 2D can also be called with C_DOUBLE_COMPLEX variables
-!!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  The FFTW team. 
 !!
 !!------------------------------------------------------------
 module fft
@@ -14,6 +11,17 @@ module fft
 end module fft
 
 
+!>------------------------------------------------------------
+!! Supplies 1D and 2D FFT shift procedures ala matlab fftshift
+!!
+!! Uses a generic interfacse so that procedures can be called with
+!! any variation of complex, real, 1D or 2D arrays
+!! 2D can also be called with C_DOUBLE_COMPLEX variables
+!!
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!------------------------------------------------------------
 module fftshifter
     use fft
     implicit none

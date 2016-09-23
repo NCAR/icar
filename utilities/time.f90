@@ -1,9 +1,11 @@
 !>------------------------------------------------------------
-!!
 !!  date / time module
 !!  
-!!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  Contains various utilities for working with dates and times. 
+!!  Utilities are capable of handling multiple model calendars. 
+!!  
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!------------------------------------------------------------
 module time
