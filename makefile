@@ -348,6 +348,7 @@ OBJS=	$(BUILD)driver.o \
 		$(BUILD)advect.o \
 		$(BUILD)wind.o \
 		$(BUILD)linear_winds.o \
+		$(BUILD)fftw.o \
 		$(BUILD)fftshift.o \
 		$(BUILD)geo_reader.o \
 		$(BUILD)vinterp.o \
@@ -371,7 +372,7 @@ clean:
 allclean:cleanall
 
 cleanall: clean
-	${RM} icar fftshift_test calendar_test mpdata_test 2>/dev/null ||:
+	${RM} icar fftshift_test calendar_test mpdata_test fftw_test 2>/dev/null ||:
 
 test: fftshift_test calendar_test mpdata_test fftw_test
 
@@ -560,10 +561,17 @@ $(BUILD)wind.o:$(PHYS)wind.f90 $(BUILD)linear_winds.o $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)wind.f90 -o $(BUILD)wind.o
 
 $(BUILD)linear_winds.o:$(PHYS)linear_winds.f90 $(BUILD)io_routines.o $(BUILD)data_structures.o \
-	 				   $(BUILD)fftshift.o $(BUILD)lt_lut_io.o $(BUILD)string.o
+	 				   $(BUILD)fftshift.o $(BUILD)lt_lut_io.o $(BUILD)string.o $(BUILD)fftw.o
 	${F90} ${FFLAGS} $(PHYS)linear_winds.f90 -o $(BUILD)linear_winds.o
 
-$(BUILD)fftshift.o:$(UTIL)fftshift.f90
+###################################################################
+#	FFT code
+###################################################################
+
+$(BUILD)fftw.o:$(UTIL)fftw.f90
+	${F90} ${FFLAGS} $(UTIL)fftw.f90 -o $(BUILD)fftw.o
+
+$(BUILD)fftshift.o:$(UTIL)fftshift.f90 $(BUILD)fftw.o
 	${F90} ${FFLAGS} $(UTIL)fftshift.f90 -o $(BUILD)fftshift.o
 
 
@@ -585,7 +593,7 @@ $(BUILD)debug_utils.o:$(UTIL)debug_utils.f90 $(BUILD)data_structures.o $(BUILD)s
 ###################################################################
 #	Unit tests
 ###################################################################
-$(BUILD)test_fftw.o: tests/test_fftw.f90
+$(BUILD)test_fftw.o: tests/test_fftw.f90 $(BUILD)fftw.o
 	${F90} ${FFLAGS} tests/test_fftw.f90 -o $(BUILD)test_fftw.o
 
 $(BUILD)test_fftshift.o:$(BUILD)fftshift.o tests/test_fftshift.f90
