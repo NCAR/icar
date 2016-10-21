@@ -340,6 +340,7 @@ contains
         type(domain_type), intent(inout) :: domain
         type(options_type), intent(in) :: options
         
+        ! originally used to permit the order of dimensions in advection to be rotated
         order    = 0
     end subroutine mpdata_init
     
@@ -380,23 +381,29 @@ contains
         
         error=0
         
-        call advect3d(domain%qv,   U_m,V_m,W_m, domain%rho,domain%dz,nx,nz,ny,options, error)
-        call advect3d(domain%cloud,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
-        call advect3d(domain%qrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
-        call advect3d(domain%qsnow,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
-        call advect3d(domain%th,   U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
+        call advect3d(domain%qv,   U_m,V_m,W_m, domain%rho,domain%dz_inter,nx,nz,ny,options, error)
+        call advect3d(domain%cloud,U_m,V_m,W_m, domain%rho,domain%dz_inter,nx,nz,ny,options, error)
+        call advect3d(domain%qrain,U_m,V_m,W_m, domain%rho,domain%dz_inter,nx,nz,ny,options, error)
+        call advect3d(domain%qsnow,U_m,V_m,W_m, domain%rho,domain%dz_inter,nx,nz,ny,options, error)
+        call advect3d(domain%th,   U_m,V_m,W_m, domain%rho,domain%dz_inter,nx,nz,ny,options, error)
         
         if ((options%physics%microphysics == kMP_THOMPSON).or.(options%physics%microphysics == kMP_MORRISON)) then
-            call advect3d(domain%ice,  U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
-            call advect3d(domain%qgrau,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
-            call advect3d(domain%nice, U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
-            call advect3d(domain%nrain,U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
+            call advect3d(domain%ice,  U_m,V_m,W_m,domain%rho,domain%dz_inter,nx,nz,ny,options, error)
+            call advect3d(domain%qgrau,U_m,V_m,W_m,domain%rho,domain%dz_inter,nx,nz,ny,options, error)
+            call advect3d(domain%nice, U_m,V_m,W_m,domain%rho,domain%dz_inter,nx,nz,ny,options, error)
+            call advect3d(domain%nrain,U_m,V_m,W_m,domain%rho,domain%dz_inter,nx,nz,ny,options, error)
         endif
         
         if (options%physics%microphysics == kMP_MORRISON) then
-            call advect3d(domain%ngraupel,  U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
-            call advect3d(domain%nsnow,     U_m,V_m,W_m,domain%rho,domain%dz,nx,nz,ny,options, error)
+            call advect3d(domain%ngraupel,  U_m,V_m,W_m,domain%rho,domain%dz_inter,nx,nz,ny,options, error)
+            call advect3d(domain%nsnow,     U_m,V_m,W_m,domain%rho,domain%dz_inter,nx,nz,ny,options, error)
         endif
+
+        if (options%physics%microphysics == kMP_WSM6) then
+            call advect3d(domain%ice,     U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options, error)
+            call advect3d(domain%qgrau,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options, error)
+        endif
+
 
         order=mod(order+1,3)
         

@@ -262,7 +262,7 @@ contains
                 ! call the simple microphysics routine of SB04
                 call mp_simple_driver(domain%p,domain%th,domain%pii,domain%rho,domain%qv,domain%cloud, &
                                 domain%qrain,domain%qsnow,domain%rain,domain%snow,&
-                                mp_dt,domain%dz,ide,jde,kde)
+                                mp_dt,domain%dz_inter,ide,jde,kde)
             elseif (options%physics%microphysics==kMP_MORRISON) then 
                 call MP_MORR_TWO_MOMENT(itimestep,                         &
                                 domain%th, domain%qv, domain%cloud,     &
@@ -270,7 +270,7 @@ contains
                                 domain%qgrau, domain%nice, domain%nsnow,&
                                 domain%nrain, domain%ngraupel,          &
                                 domain%rho, domain%pii, domain%p,       &
-                                mp_dt, domain%dz, domain%w,             &
+                                mp_dt, domain%dz_inter, domain%w,       &
                                 domain%rain, last_rain, SR,             &
                                 domain%snow, last_snow, domain%graupel, &
                                 this_precip,                            & ! hm added 7/13/13
@@ -284,7 +284,7 @@ contains
             elseif (options%physics%microphysics==kMP_WSM6) then 
                 call wsm6(domain%th, domain%qv, domain%cloud, domain%qrain,      &
                                 domain%ice, domain%qsnow, domain%qgrau           & ! check these, should p and dz be between interfaces or levels? 
-                               ,domain%rho, domain%pii, domain%p, domain%dz      &
+                               ,domain%rho, domain%pii, domain%p, domain%dz_inter&
                                ,mp_dt,gravity, cp, cpv, rd, rw, 273.15          &
                                ,ep1, ep2, epsilon                                &
                                ,XLS, XLV, XLF, rhoair0,rhowater                  &
