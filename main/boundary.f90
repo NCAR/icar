@@ -77,7 +77,7 @@ contains
         integer :: step
         
         step = (options%start_mjd-options%initial_mjd)/(options%in_dt / 86400.0d+0)
-        if (options%debug) write(*,*), "bc_find_step: First forcing time step = ",trim(str(step))
+        if (options%debug) write(*,*) "bc_find_step: First forcing time step = ",trim(str(step))
         
     end function bc_find_step
     
