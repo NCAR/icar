@@ -359,6 +359,12 @@ contains
                 call check( nf90_put_att(ncid,temp_id,"long_name","Snow number concentration"))
                 call check( nf90_put_att(ncid,temp_id,"units","cm-3"))
                 varid(39)=temp_id
+            elseif (options%physics%microphysics==kMP_WSM6) then
+                call check( nf90_def_var(ncid, "qg", NF90_REAL, dimids, temp_id), trim(err)//"qg" )
+                call check( nf90_put_att(ncid,temp_id,"standard_name","mass_fraction_of_graupel_in_air"))
+                call check( nf90_put_att(ncid,temp_id,"long_name","Graupel ice content"))
+                call check( nf90_put_att(ncid,temp_id,"units","kg kg-1"))
+                varid(6)=temp_id
             endif
             ! need to modify dimids for staggered grids. 
             dimids(1)=xu_id
@@ -479,7 +485,9 @@ contains
         call check( nf90_put_att(ncid,temp_id,"units","kg m-2"))
         varid(15)=temp_id
         
-        if ((options%physics%microphysics==kMP_THOMPSON).or.(options%physics%microphysics==kMP_MORRISON)) then
+        if     ((options%physics%microphysics==kMP_THOMPSON)        &
+            .or.(options%physics%microphysics==kMP_MORRISON)        &
+            .or.(options%physics%microphysics==kMP_WSM6))           then
             call check( nf90_def_var(ncid, "graupel", NF90_REAL, dimtwo_time, temp_id), trim(err)//"graupel" )
             call check( nf90_put_att(ncid,temp_id,"standard_name","graupel_amount"))
             call check( nf90_put_att(ncid,temp_id,"long_name","Combined large scale and convective graupel (accumulated)"))
@@ -671,6 +679,9 @@ contains
                 varid(38)=temp_id
                 call check( nf90_inq_varid(ncid, "nsnow", temp_id), trim(err)//"nsnow" )
                 varid(39)=temp_id
+            elseif (options%physics%microphysics==kMP_WSM6) then
+                call check( nf90_inq_varid(ncid, "qg", temp_id), trim(err)//"qg" )
+                varid(6)=temp_id
             endif
             call check( nf90_inq_varid(ncid, "w",  temp_id), trim(err)//"w" )
             varid(11)=temp_id
@@ -698,7 +709,10 @@ contains
         varid(32)=temp_id
         call check( nf90_inq_varid(ncid, "snow",temp_id), trim(err)//"snow" )
         varid(15)=temp_id
-        if ((options%physics%microphysics==kMP_THOMPSON).or.(options%physics%microphysics==kMP_MORRISON)) then
+        
+        if ((options%physics%microphysics==kMP_THOMPSON)    &
+        .or.(options%physics%microphysics==kMP_MORRISON)    &
+        .or.(options%physics%microphysics==kMP_WSM6))       then
             call check( nf90_inq_varid(ncid, "graupel", temp_id), trim(err)//"graupel" )
             varid(16)=temp_id
         endif
@@ -897,6 +911,8 @@ contains
                 call check( nf90_put_var(ncid, varid(8),  reshape(domain%nice,  output_shape, order=zlast), start_three_D),trim(filename)//":nice" )
                 call check( nf90_put_var(ncid, varid(38), reshape(domain%ngraupel, output_shape, order=zlast), start_three_D),trim(filename)//":ngraupel" )
                 call check( nf90_put_var(ncid, varid(39), reshape(domain%nsnow,  output_shape, order=zlast), start_three_D),trim(filename)//":nsnow" )
+            elseif (options%physics%microphysics==kMP_WSM6) then
+                call check( nf90_put_var(ncid, varid(6),  reshape(domain%qgrau, output_shape, order=zlast), start_three_D),trim(filename)//":qgraupel" )
             endif
             output_shape(1)=output_shape(1)+1
             call check( nf90_put_var(ncid, varid(9),  reshape(domain%u,     output_shape, order=zlast), start_three_D),    trim(filename)//":u" )
@@ -934,7 +950,9 @@ contains
                                  domain%snow + domain%snow_bucket*kPRECIP_BUCKET_SIZE, &
                                  start_two_D), trim(filename)//":snow" )
         
-        if ((options%physics%microphysics==kMP_THOMPSON).or.(options%physics%microphysics==kMP_MORRISON)) then
+        if ((options%physics%microphysics==kMP_THOMPSON)    &
+        .or.(options%physics%microphysics==kMP_MORRISON)    &
+        .or.(options%physics%microphysics==kMP_WSM6))       then
             call check( nf90_put_var(ncid, varid(16), &
                                      domain%graupel + domain%graupel_bucket*kPRECIP_BUCKET_SIZE, &
                                      start_two_D), trim(filename)//":graupel" )
