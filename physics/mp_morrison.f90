@@ -737,15 +737,17 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
    END DO
 
    ! default firstprivate to handle all of the module level variables that are defined in init (I hope this works as intented...)
-   !$omp parallel default(firstprivate) &
+   !$omp parallel default(shared) &
    !$omp private(i,j,k) &
    !$omp private(QC_TEND1D,QI_TEND1D,QNI_TEND1D,QR_TEND1D,NI_TEND1D,NS_TEND1D,NR_TEND1D,T_TEND1D,QV_TEND1D,nc_tend1d) &
    !$omp private(QC1D,QI1D,QS1D,QR1D,NI1D,NS1D,NR1D,QG1D,NG1D,QG_TEND1D,NG_TEND1D) &
    !$omp private(T1D,QV1D,P1D,DZ1D,W1D,WVAR1D,qrcu1d,qscu1d,qicu1d,nc1d,iinum) &
    !$omp private(PRECPRT1D,SNOWPRT1D,GRPLPRT1D) &
+   !$omp private(QGSTEN,QRSTEN, QISTEN, QNISTEN, QCSTEN, EFFC1D, EFFI1D, EFFS1D, EFFR1D) &
    !$omp shared(QC,QI,QS,QR,NI,NS,NR,QG,NG,T,QV,P,DZ,W,WVAR,qrcuten,qscuten,qicuten) &
    !$omp shared(TH,EFFC,EFFI,EFFS,EFFR,EFFG,RAINNC,RAINNCV,SNOWNC,SNOWNCV,GRAUPELNC,GRAUPELNCV,SR) &
-   !$omp firstprivate(IHAIL,IGRAUP,ISUB,IBASE,INUC,ILIQ,NDCNST,INUM,IACT)
+   !$omp firstprivate(IHAIL,IGRAUP,ISUB,IBASE,INUC,ILIQ,NDCNST,INUM,IACT,DT) &
+   !$omp firstprivate(its, ite, jts, jte, kts,kte)
    !$omp do
    do j=jts,jte      ! j loop (north-south)
    do i=its,ite      ! i loop (east-west)
