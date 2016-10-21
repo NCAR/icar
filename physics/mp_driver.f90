@@ -80,6 +80,7 @@ contains
             call MORR_TWO_MOMENT_INIT(hail_opt=0)
             precip_delta=.False.
         elseif (options%physics%microphysics==kMP_WSM6) then 
+            write(*,*) "    WSM6 Microphysics"
             call wsm6init(rhoair0,rhowater,rhosnow,cliq,cpv)
         endif
 
