@@ -41,7 +41,7 @@ contains
             vmax = maxval(var)
             if (vmax > greater_than) then
                 write(*,*) trim(msg)
-                write(*,*) trim(name)//" is greater than "//str(greater_than)//" : "//str(vmax)
+                write(*,*) trim(name)//" is greater than "//trim(str(greater_than))//" : "//trim(str(vmax))
                 
                 if (present(fix)) then
                     if (fix) then
@@ -56,7 +56,7 @@ contains
             vmin = minval(var)
             if (vmin < less_than) then
                 write(*,*) trim(msg)
-                write(*,*) trim(name)//" is less than "//str(less_than)//" : "//str(vmin)
+                write(*,*) trim(name)//" is less than "//trim(str(less_than))//" : "//trim(str(vmin))
                 
                 if (present(fix)) then
                     if (fix) then
@@ -93,25 +93,16 @@ contains
         real,               intent(inout), dimension(:,:,:), allocatable :: var
         real,               intent(in),    optional         :: greater_than, less_than
         
-        real :: vmax, vmin
-        
         if (.not.allocated(var)) then
             return
         endif
-
         
         if (present(greater_than)) then
-            vmax = maxval(var)
-            if (vmax > greater_than) then
-                where(var > greater_than) var = greater_than
-            endif
+            where(var > greater_than) var = greater_than
         endif
 
         if (present(less_than)) then
-            vmin = minval(var)
-            if (vmin < less_than) then
-                where(var < less_than) var = less_than
-            endif
+            where(var < less_than) var = less_than
         endif
         
     end subroutine fix_var

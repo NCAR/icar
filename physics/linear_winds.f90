@@ -763,19 +763,6 @@ contains
 
     end subroutine initialize_spatial_winds
 
-! Code to test that the direction calculation works.
-!     if ((k==n_spd_values).and.(j==1)) then
-!         print*, "Direction:", &
-!             dir_values(i), "Calc=", calc_direction(domain%u(1,1,1), domain%v(1,1,1)), &
-!             "  U=",domain%u(1,1,1), "  V=",domain%v(1,1,1)
-!         if (abs(dir_values(i) - calc_direction(domain%u(1,1,1), domain%v(1,1,1)))>1e-5) then
-!             print*, "ERROR ERROR ERROR ERROR ERROR ERROR ERROR ERROR ERROR ERROR ERROR "
-!             print*, "Error with direction:", &
-!                 dir_values(i), "Calc=", calc_direction(domain%u(1,1,1), domain%v(1,1,1)), &
-!                 "  U=",domain%u(1,1,1), "  V=",domain%v(1,1,1)
-!         endif
-!     endif
-
 
     function calc_weight(indata, bestpos, nextpos, match) result(weight)
         ! simply calculate the weights between the positions bestpos and nextpos
@@ -842,7 +829,7 @@ contains
         !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, smoothz), &
         !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
         !$omp shared(domain, spd_values, dir_values, nsq_values, u_LUT, v_LUT), &
-        !$omp shared(u_perturbation, v_perturbation, linear_update_fraction, nsq_calibration), &
+        !$omp shared(u_perturbation, v_perturbation, linear_update_fraction, linear_contribution, nsq_calibration), &
         !$omp shared(min_stability, max_stability, n_dir_values, n_spd_values, n_nsq_values, smooth_nsq)
         !$omp do
         do k=1,ny
@@ -973,7 +960,6 @@ contains
         original_buffer = options%lt_options%buffer
         variable_N = options%lt_options%variable_N
         smooth_nsq = options%lt_options%smooth_nsq
-        linear_contribution = options%lt_options%linear_contribution
 
         stability_window_size = options%lt_options%stability_window_size        ! window to average nsq over
         max_stability = options%lt_options%max_stability                        ! limits on the calculated Brunt Vaisala Frequency
@@ -1016,6 +1002,7 @@ contains
         complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::complex_terrain
         type(C_PTR) :: plan
         integer::nx,ny,nz, save_buffer
+        real :: saved_linear_contribution ! temporary variable to save the linear contribution state so we can restore
 
         ! store module level variables so we don't have to pass options through everytime
         ! lots of these things probably need to be moved to the linearizable class so they
@@ -1110,11 +1097,35 @@ contains
         write(*,*) "Max U perturb:",maxval(u_perturbation), "Max V perturb:",maxval(v_perturbation)
         if (use_spatial_linear_fields) then
             if ((.not.allocated(hi_u_LUT) .and. (.not.reverse)) .or. ((.not.allocated(rev_u_LUT)) .and. reverse)) then
-
+                ! Need linear_contribution to be 1 for initialize_spatial_winds, it will be applied at "real" time. 
+                ! should probably set linear_mask to 1 too... for not linear_mask is set at LUT creation. 
+                linear_mask = linear_mask / linear_contribution
+                saved_linear_contribution = linear_contribution
+                linear_contribution = 1.0
+                
                 write(*,*) "Generating a spatially variable linear perturbation look up table"
                 call initialize_spatial_winds(domain,options,reverse,useDensity)
-            else
-                write(*,*) "Skipping spatial wind field for presumed domain repeat"
+                
+                linear_contribution = saved_linear_contribution
+                linear_mask = linear_mask * linear_contribution
+                
+                if (reverse) then
+                    rev_u_LUT = rev_u_LUT * linear_contribution
+                    rev_v_LUT = rev_v_LUT * linear_contribution
+                else
+                    hi_u_LUT = hi_u_LUT * linear_contribution
+                    hi_v_LUT = hi_v_LUT * linear_contribution
+                endif
+            ! else
+            !     write(*,*) "Skipping spatial wind field for presumed domain repeat"
+            endif
+            if (minval(linear_mask) > linear_contribution) then
+                write(*,*) " "
+                write(*,*) "  ---------------  !!!WARNING!!!  --------------- "
+                write(*,*) " Spatially variable linear mask is fixed at LUT creation"
+                write(*,*) " If the LUT was read from disk it could be 'wrong' "
+                write(*,*) "  ---------------  !!!WARNING!!!  --------------- "
+                write(*,*) " "
             endif
         endif
 
