@@ -79,7 +79,7 @@ module data_structures
     use, intrinsic :: iso_c_binding ! needed for fftw compatible complex types
     implicit none
     
-    character(len=5) :: kVERSION_STRING = "0.9.3"
+    character(len=5) :: kVERSION_STRING = "0.9.4"
 
 ! ------------------------------------------------
 ! Model constants (string lengths)
