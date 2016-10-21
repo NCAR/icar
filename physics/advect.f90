@@ -171,6 +171,9 @@ contains
             call advect3d(domain%nrain,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
             call advect3d(domain%nsnow,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
             call advect3d(domain%ngraupel,U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
+        elseif (options%physics%microphysics == kMP_WSM6) then
+            call advect3d(domain%ice,     U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
+            call advect3d(domain%qgrau,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
         endif
         
         ! used in some physics routines
