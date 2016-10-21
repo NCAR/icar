@@ -130,7 +130,11 @@ CONTAINS
   REAL, DIMENSION( its:ite , kts:kte, 3 ) ::   qrs
   INTEGER ::               i,j,k
 
-
+      !$omp parallel               &
+      !$omp default(shared)        &
+      !$omp private(t,qci, qrs)    &
+      !$omp private(i,j,k)
+      !$omp do
       DO j=jts,jte
          DO k=kts,kte
          DO i=its,ite
@@ -173,6 +177,8 @@ CONTAINS
 
 
       ENDDO
+      !$omp end do
+      !$omp end parallel
   END SUBROUTINE wsm6
 !===================================================================
 !
