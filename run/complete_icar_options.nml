@@ -11,22 +11,11 @@
 !---------------------------------------------------------
 &z_info
     !   Sample model level thickness [m]  Bottom levels could be thicker.
+    !   NB: if using gfortran put all on one line
     dz_levels = 50.,   75.,  125.,  200.,  300.,  400.,  500.,  500.,  500.,  500.,    !  1-10
                500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,    ! 10-20
                500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,    ! 20-30
                500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.     ! 30-40
-
-    !   If you want to line up model level with common forcing data
-    !   ERAi levels
-    !dz_levels= 24.8,  36.5,  51.8,  70.1,  90.8, 113.5, 137.9, 163.7, 190.5, 218.1,   !  1-10
-    !          246.4, 275.1, 304.3, 333.6, 363.0, 392.4, 421.7, 450.8, 479.6, 508.0,   ! 10-20
-    !          535.9, 563.2, 589.8, 615.7, 640.9, 665.5, 689.8, 714.1, 739.4, 767.2,   ! 20-30
-    !          796.8, 826.6, 856.2, 885.1, 912.5, 937.9, 961.4, 979.4, 990.1, 976.6    ! 30-40
-    !   WRF levels from Headwaters 36km runs
-    !dz_levels= 36.,   51.,   58.,   73.,   74.,  111.,  113.,  152.,  155.,  157.,    !  1-10
-    !          160.,  245.,  251.,  258.,  265.,  365.,  379.,  395.,  413.,  432.,    ! 10-20
-    !          453.,  476.,  503.,  533.,  422.,  443.,  467.,  326.,  339.,  353.,    ! 20-30
-    !          369.,  386.,  405.,  426.,  450.,  477.,  455.,  429.,  396.,  357.     ! 30-40
 /
 
 !---------------------------------------------------------
@@ -40,13 +29,13 @@
     ! wishlist = No Code Present yet
 
     pbl = 0,  ! 1=legacy (deprecated)      2=Simple (Local HP96)        3=YSU             (N/A)
-    lsm = 0,  ! 1=use prescribed fluxes    2=Simple LSM (N/A)           3=Noah LSM
+    lsm = 0,  ! 1=use prescribed fluxes    2=Simple LSM (N/A)           3=Noah LSM                  4=NoahMP (wishlist)
     water=2,  ! 1=use prescribed (w/lsm=1) 2=Simple sea surface fluxes
-    mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison
+    mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison                  4=WSM6
     rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG           (wishlist)
     conv= 0,  ! 1=Tiedke Scheme            2=Simple Scheme (wishlist)   3=Kain-Fritsch
     adv = 1,  ! 1=Upwind                   2=MPDATA                     3=Adams-Bashforth (wishlist)
-    wind= 1   ! 1=Linear Theory            2=INFORM style (wishlist)    3=Dynamical?      (wishlist)
+    wind= 1   ! 1=Linear Theory
 /
 
 !---------------------------------------------------------
@@ -121,8 +110,10 @@
     use_agl_height = False,
     
     !   Multiplier on CFL number to increase stability if unstable (make it <1 to increase stability, >1 to increase model speed)
-    ! cfl_reduction_factor = 1.0
-    !   CFL method 1 = max(1D winds) * sqrt(3), 2=max(1D,ave.3D wind)*sqrt(3), 3=max(sum.3D wind), 4=max(sum.3D wind)*sqrt(3), 5 = sum(max.3d)
+    ! cfl_reduction_factor = 1.0  ! default=0.9
+    
+    !   CFL method/strictness settings:
+    !   1 = max(1D winds)*sqrt(3), 2=max(1D,ave.3D)*sqrt(3), 3=max(sum.3D), 4=max(sum.3D)*sqrt(3), 5=sum(max.3d)
     !   Note that 4 is probably the safest, but 3 has always been stable and is left as the default. 
     !   5 is the value that used to be used. 
     !   Simulations with 4 will run 1.7x slower. 
