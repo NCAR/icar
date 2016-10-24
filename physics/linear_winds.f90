@@ -96,7 +96,10 @@ module linear_theory_winds
 
 contains
 
-    ! calculate direction [0-2*pi) from u and v wind speeds
+    !>----------------------------------------------------------
+    !! Calculate direction [0-2*pi) from u and v wind speeds
+    !!
+    !!----------------------------------------------------------
     pure function calc_direction(u,v) result(direction)
         implicit none
         real, intent(in) :: u,v
@@ -120,7 +123,10 @@ contains
 
     end function calc_direction
 
-    ! calculate the strength of the u wind field given a direction [0-2*pi] and magnitude
+    !>----------------------------------------------------------
+    !! Calculate the strength of the u wind field given a direction [0-2*pi] and magnitude
+    !!
+    !!----------------------------------------------------------
     pure function calc_speed(u, v) result(speed)
         implicit none
         real, intent(in) :: u,v
@@ -129,7 +135,10 @@ contains
         speed = sqrt(u**2 + v**2)
     end function calc_speed
 
-    ! calculate the strength of the u wind field given a direction [0-2*pi] and magnitude
+    !>----------------------------------------------------------
+    !! Calculate the strength of the u wind field given a direction [0-2*pi] and magnitude
+    !!
+    !!----------------------------------------------------------
     pure function calc_u(direction, magnitude) result(u)
         implicit none
         real, intent(in) :: direction, magnitude
@@ -138,7 +147,10 @@ contains
         u = sin(direction) * magnitude
     end function calc_u
 
-    ! calculate the strength of the v wind field given a direction [0-2*pi] and magnitude
+    !>----------------------------------------------------------
+    !! Calculate the strength of the v wind field given a direction [0-2*pi] and magnitude
+    !!
+    !!----------------------------------------------------------
     pure function calc_v(direction, magnitude) result(v)
         implicit none
         real, intent(in) :: direction, magnitude
@@ -147,12 +159,17 @@ contains
         v = cos(direction) * magnitude
     end function calc_v
 
-    ! return the moist / saturated adiabatic lapse rate for a given
-    ! Temperature and mixing ratio (really MR could be calculated as f(T))
-    ! from http://glossary.ametsoc.org/wiki/Saturation-adiabatic_lapse_rate
+    !>----------------------------------------------------------
+    !! Calculate the saturated adiabatic lapse rate from a T/Moisture input
+    !!
+    !! return the moist / saturated adiabatic lapse rate for a given
+    !! Temperature and mixing ratio (really MR could be calculated as f(T))
+    !! from http://glossary.ametsoc.org/wiki/Saturation-adiabatic_lapse_rate
+    !!
+    !!----------------------------------------------------------
     pure function calc_sat_lapse_rate(T,mr) result(sat_lapse)
         implicit none
-        real, intent(in) :: T,mr  ! inputs T in K (?) and mr in kg/kg
+        real, intent(in) :: T,mr  ! inputs T in K and mr in kg/kg
         real :: L
         real :: sat_lapse
 
@@ -161,8 +178,11 @@ contains
                     / (cp + (L*L*mr*(Rd/Rw)) / (Rd*T*T) ))
     end function calc_sat_lapse_rate
 
-    ! calculate the moist brunt vaisala frequency (Nm^2)
-    ! formula from Durran and Klemp, 1982 after Lalas and Einaudi 1974
+    !>----------------------------------------------------------
+    !! Calculate the moist brunt vaisala frequency (Nm^2)
+    !! formula from Durran and Klemp, 1982 after Lalas and Einaudi 1974
+    !!
+    !!----------------------------------------------------------
     pure function calc_moist_stability(t_top, t_bot, z_top, z_bot, qv_top, qv_bot, qc) result(BV_freq)
         implicit none
         real, intent(in) :: t_top, t_bot, z_top, z_bot, qv_top, qv_bot, qc
@@ -178,7 +198,10 @@ contains
                   (1 + (LH_vaporization*qv)/(Rd*t)) - (gravity/(1+qv+qc) * (qv_top-qv_bot)/dz)
     end function calc_moist_stability
 
-    ! calculate the dry brunt vaisala frequency (Nd^2)
+    !>----------------------------------------------------------
+    !! Calculate the dry brunt vaisala frequency (Nd^2)
+    !!
+    !!----------------------------------------------------------
     pure function calc_dry_stability(th_top, th_bot, z_top, z_bot) result(BV_freq)
         implicit none
         real, intent(in) :: th_top, th_bot, z_top, z_bot
@@ -188,7 +211,10 @@ contains
 
     end function calc_dry_stability
 
-    ! calculate either moist or dry brunt vaisala frequency and keep within min and max bounds
+    !>----------------------------------------------------------
+    !! Calculate either moist or dry brunt vaisala frequency and keep within min and max bounds
+    !!
+    !!----------------------------------------------------------
     pure function calc_stability(th_top, th_bot, pii_top, pii_bot, z_top, z_bot, qv_top, qv_bot, qc) result(BV_freq)
         implicit none
         real, intent(in) :: th_top, th_bot, pii_top, pii_bot, z_top, z_bot, qv_top, qv_bot, qc
@@ -212,7 +238,10 @@ contains
 
     end function calc_stability
 
-    ! calculate a single brunt vaisala frequency effectively averaged across the entire domain
+    !>----------------------------------------------------------
+    !! Calculate a single brunt vaisala frequency effectively averaged across the entire domain
+    !!
+    !!----------------------------------------------------------
     pure function calc_domain_stability(domain) result(BV_freq)
         implicit none
         class(linearizable_type),intent(in)::domain
@@ -250,36 +279,30 @@ contains
         deallocate(vertical_N)
     end function calc_domain_stability
 
-    ! Compute linear wind perturbations to U and V and add them back to the domain
-    !
-    ! see Appendix A of Barstad and Gronas (2006) Tellus,58A,2-18
-    ! -------------------------------------------------------------------------------
-    ! Ndsq  = 0.003**2      # dry BV freq sq. was 0.01**2 initially, Idar suggested 0.005**2
-    ! 1E-8 keeps it relatively stable, no wild oscillations in u,v
-    ! but 1E-8 doesn't damp vertical winds with height very fast
-    ! could/should be calculated from the real atm profile with limits
-    ! f  = 9.37e-5           # rad/s Coriolis frequency for 40deg north
-    ! ---------------------------------------------------------------------------------
-    subroutine linear_winds(domain,Nsq,vsmooth,reverse,useDensity,debug,savedata)
+    !>----------------------------------------------------------
+    !! Compute linear wind perturbations to U and V and add them back to the domain
+    !!
+    !! see Appendix A of Barstad and Gronas (2006) Tellus,58A,2-18
+    !!
+    !!----------------------------------------------------------
+    subroutine linear_winds(domain, Nsq, vsmooth, reverse, useDensity, debug)
         use, intrinsic :: iso_c_binding
         implicit none
-        class(linearizable_type),intent(inout)::domain
-        real, intent(in)::Nsq
-        integer, intent(in)::vsmooth ! number of layers to smooth winds over in the vertical
-        logical, intent(in) :: reverse, useDensity, debug
-        logical, intent(in), optional :: savedata
-        real::gain,offset !used in setting up k and l arrays
-        integer::nx,ny,nz,i,z,realnx,realny,realnx_u,realny_v,bottom,top
-        logical :: staggered, zaxis_is_third, save_intermediate
-        real::U,V
-        real,dimension(:),allocatable::U_layers,V_layers,preU_layers,preV_layers
-        integer(C_SIZE_T) :: n_elements
+        class(linearizable_type),intent(inout) :: domain
+        real,    intent(in) :: Nsq      !> Input brunt-vaisalla frequency to use
+        integer, intent(in) :: vsmooth  !> Number of vertical layers to smooth winds over
+        logical, intent(in) :: reverse  !> reverse the linear solution (to "remove" linear wind effects)
+        logical, intent(in) :: useDensity !> Specify that we are using density in the advection calculations
+                                        !> if useDensity: use hueristics to modify the linear perturbation accordingly
+        logical, intent(in) :: debug    !> Debug flag to print additional information
 
-        if (present(savedata)) then
-            save_intermediate=savedata
-        else
-            save_intermediate=.False.
-        endif
+        ! Local variables
+        real    :: gain, offset !used in setting up k and l arrays
+        integer :: nx, ny, nz, i, z, realnx, realny, realnx_u, realny_v, bottom,top
+        logical :: staggered, zaxis_is_third
+        real    :: U, V         ! used to store the domain wide average values
+        real,dimension(:),allocatable :: U_layers, V_layers, preU_layers, preV_layers
+        integer(C_SIZE_T) :: n_elements
 
         nx=size(domain%fzs,1)
         nz=size(domain%u,2)
@@ -420,8 +443,8 @@ contains
 
         !$omp do
         do z=1,nz
-            U=U_layers(z)
-            V=V_layers(z)
+            U = U_layers(z)
+            V = V_layers(z)
             if ((abs(U)+abs(V))>0.5) then
                 sig  = U*k+V*l
                 where(sig==0.0) sig=1e-15
@@ -440,42 +463,41 @@ contains
                 ! mimag.imag=(np.sqrt(-msq)).real
                 ! m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
 
-                msq = Nsq/denom * kl
-                mimag=0+0*j ! be sure to reset real and imaginary components
-                mimag=mimag+(real(sqrt(-msq))*j)
-                ! m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
+                msq   = Nsq / denom * kl
+                mimag = 0 + 0 * j ! be sure to reset real and imaginary components
+                mimag = mimag + (real(sqrt(-msq)) * j)
+
                 m = sqrt(msq)         ! # % vertical wave number, hydrostatic
-                where(sig<0) m=m*(-1)   ! equivilant to m=m*sign(sig)
-                where(real(msq)<0) m=mimag
+                where(sig < 0) m = m * (-1)   ! equivilant to m=m*sign(sig)
+                where(real(msq) < 0) m = mimag
 
                 if (zaxis_is_third) then
-                    ineta=j*domain%fzs*exp(j*m* &
-                            sum(domain%z(:,:,z)-domain%z(:,:,1)) / (realnx*realny))
+                    ineta = j * domain%fzs * exp(j * m * &
+                            sum(domain%z(:,:,z) - domain%z(:,:,1)) / (realnx*realny))
                 else
                     ineta=j*domain%fzs*exp(j*m* &
                             sum(domain%z(:,z,:)-domain%z(:,1,:)) / (realnx*realny))
                 endif
                 !  what=sig*ineta
 
-                !# with coriolis : [+/-]j*[l/k]*f
-                !uhat = (0-m)*(sig*k-j*l*f)*ineta/kl
-                !vhat = (0-m)*(sig*l+j*k*f)*ineta/kl
-                !# removed coriolis term
-                ineta=ineta/(kl/((0-m)*sig))
-                uhat(:,:,z)=k*ineta
-                vhat(:,:,z)=l*ineta
+                ! with coriolis : [+/-]j*[l/k]*f
+                !uhat = (0 - m) * ((sig * k) - (j * l * f)) * ineta / kl
+                !vhat = (0 - m) * ((sig * l) + (j * k * f)) * ineta / kl
+                ! removed coriolis term assumes the scale coriolis operates at is largely defined by the coarse model
+                ! if using e.g. a sounding or otherwise spatially constant u/v, then coriolis should be defined. 
+                ineta = ineta / (kl / ((0 - m) * sig))
+                uhat(:,:,z) = k * ineta
+                vhat(:,:,z) = l * ineta
 
                 ! pull it back out of fourier space.
                 ! NOTE, the fftw transform inherently scales by N so the Fzs/Nx/Ny provides the only normalization necessary (I think)
-
-                ! it should be possible to store the plan and execute it everytime rather than recreating it everytime, doesn't matter too much
                 call ifftshift(uhat, fixed_axis=z)
                 call ifftshift(vhat, fixed_axis=z)
-
+                ! plans are only created once and re-used, this is a limit to further parallelization at the moment.
                 call fftw_execute_dft(uplans(z), uhat(:,:,z),u_hat(:,:,z))
                 call fftw_execute_dft(vplans(z), vhat(:,:,z),v_hat(:,:,z))
 
-                ! the linear_mask field only applies to the high res grid (for now at least)
+                ! The linear_mask field only applies to the high res grid (for now at least)
                 ! NOTE: we should be able to do this without the loop, but ifort -O was giving the wrong answer...
                 ! possible compiler bug version 12.1.x?
                 if (.not.reverse) then
@@ -499,10 +521,11 @@ contains
                     i=ny
                     u_hat(1:nx-1,i,z) = (u_hat(1:nx-1,i,z) + u_hat(2:nx,i,z)) /2
                 endif
+                
+                ! If we are using density in the advection calculations, modify the linear perturbation
+                ! to get the vertical velocities closer to what they would be without density (boussinesq)
+                ! need to check if this makes the most sense when close to the surface
                 if (useDensity) then
-                    ! if we are using density in the advection calculations, modify the linear perturbation
-                    ! to get the vertical velocities closer to what they would be without density (boussinesq)
-                    ! need to check if this makes the most sense when close to the surface
                     if (debug) then
                         write(*,*) "Using a density correction in linear winds"
                     endif
@@ -511,25 +534,26 @@ contains
                     v_hat(buffer:realnx+buffer,buffer:realny_v+buffer,z) = &
                         2*real(v_hat(buffer:realnx+buffer,buffer:realny_v+buffer,z))! / domain%rho(1:realnx,z,1:realny)
                 endif
-                ! if we are removing linear winds from a low res field, subtract u_hat v_hat instead
+                
+                ! If we are removing linear winds from a low res field, subtract u_hat v_hat instead
                 ! real(real()) extracts real component of complex, then converts to a real data type (may not be necessary except for IO?)
                 if (reverse) then
-                    domain%u(:,z,:)=domain%u(:,z,:) - &
+                    domain%u(:,z,:) = domain%u(:,z,:) - &
                         real(real( u_hat(1+buffer:realnx_u+buffer, 1+buffer:realny+buffer  ,z) ))*linear_contribution
 
-                    domain%v(:,z,:)=domain%v(:,z,:) - &
+                    domain%v(:,z,:) = domain%v(:,z,:) - &
                         real(real( v_hat(1+buffer:realnx+buffer,   1+buffer:realny_v+buffer,z) ))*linear_contribution
                 else
                     ! note, linear_contribution component comes from the linear mask applied above on the mass grid
                     if (staggered) then
-                        domain%u(2:realnx,z,:)=domain%u(2:realnx,z,:) + &
+                        domain%u(2:realnx,z,:) = domain%u(2:realnx,z,:) + &
                             real(real(u_hat(1+buffer:realnx-1+buffer,1+buffer:realny+buffer  ,z) ))
-                        domain%v(:,z,2:realny)=domain%v(:,z,2:realny) + &
+                        domain%v(:,z,2:realny) = domain%v(:,z,2:realny) + &
                             real(real(v_hat(1+buffer:realnx+buffer,  1+buffer:realny-1+buffer,z) ))
                     else
-                        domain%u(:,z,:)=domain%u(:,z,:) + &
+                        domain%u(:,z,:) = domain%u(:,z,:) + &
                             real(real(u_hat(1+buffer:realnx_u+buffer,1+buffer:realny+buffer  ,z) ))
-                        domain%v(:,z,:)=domain%v(:,z,:) + &
+                        domain%v(:,z,:) = domain%v(:,z,:) + &
                             real(real(v_hat(1+buffer:realnx+buffer,  1+buffer:realny_v+buffer,z) ))
                     endif
                 endif
@@ -540,11 +564,6 @@ contains
                         write(*,*) "U=",U, "    V=",V
                         write(*,*) "realnx=",realnx, "; nx=",nx, "; buffer=",buffer
                         write(*,*) "realny=",realny, "; ny=",ny!, buffer
-!                         write(*,*) "Writing internal linear wind data"
-!                         call io_write2d("u_hat_sub2.nc","data", real(real(u_hat(1+buffer:nx-buffer-1,1+buffer:realny+buffer,z))) )
-!                         call io_write2d("v_hat_sub2.nc","data", real(real(v_hat(1+buffer:nx-buffer,1+buffer:realny+buffer-1,z))) )
-!                         call io_write2d("u_hat_full.nc","data", real(real(u_hat(:,:,z))) )
-!                         call io_write2d("v_hat_full.nc","data", real(real(v_hat(:,:,z))) )
                     endif
                 endif
             endif
@@ -552,7 +571,6 @@ contains
         !$omp end do
 
         ! finally deallocate all temporary arrays that were created... chould be a datastructure and a subroutine...
-!       if (.not.save_intermediate) then
         deallocate(k,l,kl,sig,denom,m,ineta,msq,mimag)
 
         !$omp end parallel
@@ -562,7 +580,7 @@ contains
     end subroutine linear_winds
 
 
-    subroutine add_buffer_topo(terrain,buffer_topo,smooth_window, debug)
+    subroutine add_buffer_topo(terrain, buffer_topo, smooth_window, debug)
         ! add a smoothed buffer around the edge of the terrain to prevent crazy wrap around effects
         ! in the FFT due to discontinuities between the left and right (or top and bottom) edges of the domain
         implicit none
@@ -653,49 +671,55 @@ contains
         integer, dimension(3,2) :: LUT_dims
 
         ! the domain to work over
-        nx=size(domain%lat,1)
-        nz=size(domain%u,2)
-        ny=size(domain%lat,2)
+        nx = size(domain%lat,1)
+        nz = size(domain%u,2)
+        ny = size(domain%lat,2)
 
-        nxu=size(domain%u,1)
-        nyv=size(domain%v,3)
+        nxu = size(domain%u,1)
+        nyv = size(domain%v,3)
         ! default assumes no errors in reading the LUT
-        error=0
+        error = 0
         
         ! store to make it easy to check dim sizes in read_LUT
         LUT_dims(:,1) = [nxu,nz,ny]
         LUT_dims(:,2) = [nx,nz,nyv]
 
         ! save the old U and V values so we can restore them
-        allocate(savedU(nxu,nz,ny))
-        allocate(savedV(nx,nz,nyv))
+        allocate( savedU(nxu, nz, ny ) )
+        allocate( savedV(nx,  nz, nyv) )
 
-        savedU=domain%u
-        savedV=domain%v
+        savedU = domain%u
+        savedV = domain%v
 
         ! create the array of dir and nsq values to create LUTs for
         if (.not.allocated(dir_values)) then
-            allocate(dir_values(n_dir_values))
-            allocate(nsq_values(n_nsq_values))
-            allocate(spd_values(n_spd_values))
+            allocate( dir_values(n_dir_values) )
+            allocate( nsq_values(n_nsq_values) )
+            allocate( spd_values(n_spd_values) )
         endif
+        ! generate the values for each look up table dimension
+        ! generate table of wind directions to be used
         do i=1,n_dir_values
-            dir_values(i)=(i-1)/real(n_dir_values-1) * (dirmax-dirmin) + dirmin
+            dir_values(i) = (i - 1) / real(n_dir_values - 1) * (dirmax - dirmin) + dirmin
         enddo
+        ! generate table of wind speeds to be used
         do i=1,n_spd_values
-            spd_values(i)=(i-1)/real(n_spd_values-1) * (spdmax-spdmin) + spdmin
+            spd_values(i) = (i - 1) / real(n_spd_values - 1) * (spdmax - spdmin) + spdmin
         enddo
+        ! generate table of Brunt-Vaisalla frequencies (Nsq) to be used
         do i=1,n_nsq_values
-            nsq_values(i)=(i-1)/real(n_nsq_values-1) * (nsqmax-nsqmin) + nsqmin
+            nsq_values(i) = (i - 1) / real(n_nsq_values - 1) * (nsqmax - nsqmin) + nsqmin
         enddo
 
-        ! allocate the (LARGE) look up tables for both U and V
+        ! Allocate the (LARGE) look up tables for both U and V
         if (reverse) then
+            ! This is the reverse LUT to remove the linear contribution from the low res field
             allocate(rev_u_LUT(n_spd_values,n_dir_values,n_nsq_values,nxu,nz,ny))
             allocate(rev_v_LUT(n_spd_values,n_dir_values,n_nsq_values,nx,nz,nyv))
             u_LUT=>rev_u_LUT
             v_LUT=>rev_v_LUT
-        else
+        else 
+            ! this is the more common forward transform
             if (.not.options%lt_options%read_LUT) then
                 allocate(hi_u_LUT(n_spd_values,n_dir_values,n_nsq_values,nxu,nz,ny))
                 allocate(hi_v_LUT(n_spd_values,n_dir_values,n_nsq_values,nx,nz,nyv))
@@ -716,9 +740,11 @@ contains
             v_LUT=>hi_v_LUT
         endif
 
-        write(*,*) "Wind Speeds:",spd_values
-        write(*,*) " Directions:",360*dir_values/(2*pi)
-        write(*,*) "Stabilities:",exp(nsq_values)
+        if (options%debug) then
+            write(*,*) "Wind Speeds:",spd_values
+            write(*,*) " Directions:",360*dir_values/(2*pi)
+            write(*,*) "Stabilities:",exp(nsq_values)
+        endif
 
         if (.not.((options%lt_options%read_LUT).and.(error==0))) then
             ! loop over combinations of U and V values
@@ -740,14 +766,14 @@ contains
 
                         debug=.False. ! after the first time through set debug to false
 
-                        u_LUT(k,i,j,:,:,:)=(domain%u-calc_u(dir_values(i),spd_values(k)))
-                        v_LUT(k,i,j,:,:,:)=(domain%v-calc_v(dir_values(i),spd_values(k)))
+                        u_LUT(k,i,j,:,:,:) = (domain%u - calc_u(dir_values(i),spd_values(k)))
+                        v_LUT(k,i,j,:,:,:) = (domain%v - calc_v(dir_values(i),spd_values(k)))
                     end do
                 end do
             end do
             write(*,*) char(10),"--------  Linear wind look up table generation complete ---------"
-            domain%u=savedU
-            domain%v=savedV
+            domain%u = savedU
+            domain%v = savedV
         end if
 
         deallocate(savedU,savedV)
@@ -841,10 +867,11 @@ contains
                     bottom = max(1, j - (vsmooth - (top-j)) )
                     
                     domain%nsquared(i,j,k) = calc_stability(domain%th(i,bottom,k), domain%th(i,top,k),  &
-                                            domain%pii(i,bottom,k),domain%pii(i,top,k), &
-                                            domain%z(i,bottom,k),  domain%z(i,top,k),   &
-                                            domain%qv(i,bottom,k), domain%qv(i,top,k),  &
-                                            domain%cloud(i,j,k)+domain%ice(i,j,k)+domain%qrain(i,j,k)+domain%qsnow(i,j,k))
+                                                            domain%pii(i,bottom,k),domain%pii(i,top,k), &
+                                                            domain%z(i,bottom,k),  domain%z(i,top,k),   &
+                                                            domain%qv(i,bottom,k), domain%qv(i,top,k),  &
+                                                            domain%cloud(i,j,k)+domain%ice(i,j,k)       &
+                                                            +domain%qrain(i,j,k)+domain%qsnow(i,j,k))
                     domain%nsquared(i,j,k) = max(min(domain%nsquared(i,j,k) * nsq_calibration(i,k), max_stability), min_stability)
                 end do
             end do
@@ -903,23 +930,23 @@ contains
 
                     npos=1
                     do step=1,n_nsq_values
-                        if (curnsq>nsq_values(step)) then
-                            npos=step
+                        if (curnsq > nsq_values(step)) then
+                            npos = step
                         endif
                     end do
 
-                    top=min(j+1,nz)
-                    if (top==j) then
-                        bottom=j-1
+                    top = min(j+1, nz)
+                    if (top == j) then
+                        bottom = j-1
                     else
-                        bottom=j
+                        bottom = j
                     endif
 
                     ! calculate the weights and the "next" u/v position
                     ! "next" usually = pos+1 but for edge cases next = 1 or n
-                    dweight=calc_weight(dir_values, dpos,nextd,curdir)
-                    sweight=calc_weight(spd_values, spos,nexts,curspd)
-                    nweight=calc_weight(nsq_values, npos,nextn,curnsq)
+                    dweight = calc_weight(dir_values, dpos,nextd,curdir)
+                    sweight = calc_weight(spd_values, spos,nexts,curspd)
+                    nweight = calc_weight(nsq_values, npos,nextn,curnsq)
                     ! perform linear interpolation between LUT values
                     if (k<=ny) then
                         wind_first =      nweight  * (dweight * u_LUT(spos,dpos,npos,i,j,k)  + (1-dweight) * u_LUT(spos,nextd,npos,i,j,k))    &
