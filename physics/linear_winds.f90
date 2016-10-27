@@ -580,9 +580,12 @@ contains
     end subroutine linear_winds
 
 
+    !>----------------------------------------------------------
+    !! Add a smoothed buffer around the edge of the terrain to prevent crazy wrap around effects
+    !! in the FFT due to discontinuities between the left and right (or top and bottom) edges of the domain
+    !!
+    !!----------------------------------------------------------
     subroutine add_buffer_topo(terrain, buffer_topo, smooth_window, debug)
-        ! add a smoothed buffer around the edge of the terrain to prevent crazy wrap around effects
-        ! in the FFT due to discontinuities between the left and right (or top and bottom) edges of the domain
         implicit none
         real, dimension(:,:), intent(in) :: terrain
         complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:), intent(inout) :: buffer_topo
@@ -647,19 +650,13 @@ contains
             end do
         endif
 
-        ! if (present(debug)) then
-        !     if (debug) then
-        !         allocate(real_terrain(nx,ny))
-        !         real_terrain=buffer_topo
-        !         call io_write2d("buffered_terrain.nc","data",real_terrain)
-        !         deallocate(real_terrain)
-        !     endif
-        ! endif
-
     end subroutine add_buffer_topo
 
+    !>----------------------------------------------------------
+    !! Compute look up tables for all combinations of U, V, and Nsq
+    !!
+    !!----------------------------------------------------------
     subroutine initialize_spatial_winds(domain,options,reverse,useDensity)
-        ! compute look up tables for all combinations of  N different U speeds and N different V speeds
         implicit none
         class(linearizable_type),intent(inout)::domain
         type(options_type), intent(in) :: options
@@ -790,12 +787,15 @@ contains
     end subroutine initialize_spatial_winds
 
 
+    !>----------------------------------------------------------
+    !! Calculate the weights between the positions bestpos and nextpos
+    !! based on the distance between match and indata(nextpos) (normalized by nextpos - bestpos)
+    !! assumes indata is monotonically increasing,
+    !! bestpos must be set prior to entry
+    !! nextpos is calculated internally (either 1, bestpos+1, or n)
+    !!
+    !!----------------------------------------------------------
     function calc_weight(indata, bestpos, nextpos, match) result(weight)
-        ! simply calculate the weights between the positions bestpos and nextpos
-        ! based on the distance between match and indata(nextpos) (normalized by nextpos - bestpos)
-        ! assumes indata is monotonically increasing,
-        ! bestpos must be set prior to entry
-        ! nextpos is calculated internally (either 1, bestpos+1, or n)
         implicit none
         real :: weight
         real, dimension(:), intent(in) :: indata
@@ -822,11 +822,14 @@ contains
 
     end function
 
+    !>----------------------------------------------------------
+    !! Compute a spatially variable linear wind perturbation
+    !! based off of look uptables computed in via setup
+    !! for each grid point, find the closest LUT data in U and V space
+    !! then bilinearly interpolate the nearest LUT values for that points linear wind field
+    !!
+    !!----------------------------------------------------------
     subroutine spatial_winds(domain,reverse, vsmooth, winsz)
-        ! compute a spatially variable linear wind perturbation
-        ! based off of look uptables computed in via setup
-        ! for each grid point, find the closest LUT data in U and V space
-        ! then bilinearly interpolate the nearest LUT values for that points linear wind field
         implicit none
         class(linearizable_type),intent(inout)::domain
         logical, intent(in) :: reverse
@@ -895,79 +898,78 @@ contains
         !$omp end do
         !$omp barrier
         !$omp do
-        do k=1,ny+1
-            do j=1,nz
-                do i=1,nx+1
-                    uk=min(k,ny)
-                    vi=min(i,nx)
+        do k=1, ny+1
+            do j=1, nz
+                do i=1, nx+1
+                    uk = min(k,ny)
+                    vi = min(i,nx)
 
-                    dpos=1
-                    curdir=calc_direction(domain%u(i,j,uk), domain%v(vi,j,k))
-                    do step=1,n_dir_values
-                        if (curdir>dir_values(step)) then
-                            dpos=step
+                    ! Calculate the direction of the current grid cell wind
+                    dpos = 1
+                    curdir = calc_direction( domain%u(i,j,uk), domain%v(vi,j,k))
+                    ! and find the corresponding position in the Look up Table
+                    do step=1, n_dir_values
+                        if (curdir > dir_values(step)) then
+                            dpos = step
                         endif
                     end do
 
-                    spos=1
-                    curspd=calc_speed(domain%u(i,j,uk), domain%v(vi,j,k))
-                    do step=1,n_spd_values
-                        if (curspd>spd_values(step)) then
-                            spos=step
+                    ! Calculate the wind speed of the current grid cell
+                    spos = 1
+                    curspd = calc_speed( domain%u(i,j,uk), domain%v(vi,j,k))
+                    ! and find the corresponding position in the Look up Table
+                    do step=1, n_spd_values
+                        if (curspd > spd_values(step)) then
+                            spos = step
                         endif
                     end do
 
-                    west  = max(i-winsz,1)
-                    east  = min(i+winsz,nx)
-                    bottom= max(j-winsz,1)
-                    top   = min(j+winsz,nz)
-                    south = max(k-winsz,1)
-                    north = min(k+winsz,ny)
+                    ! Calculate the Brunt-Vaisalla frequency of the current grid cell
+                    west  = max(i - winsz, 1)
+                    east  = min(i + winsz,nx)
+                    bottom= max(j - winsz, 1)
+                    top   = min(j + winsz,nz)
+                    south = max(k - winsz, 1)
+                    north = min(k + winsz,ny)
                     n = (((east-west)+1) * ((top-bottom)+1) * ((north-south)+1))
-
-                    curnsq = sum(log(domain%nsquared(west:east, bottom:top,south:north)))
+                    ! compute the mean in log space
+                    curnsq = sum(log( domain%nsquared(west:east, bottom:top, south:north) ))
                     curnsq = curnsq / n
-
-                    npos=1
-                    do step=1,n_nsq_values
+                    ! and find the corresponding position in the Look up Table
+                    npos = 1
+                    do step=1, n_nsq_values
                         if (curnsq > nsq_values(step)) then
                             npos = step
                         endif
                     end do
-
-                    top = min(j+1, nz)
-                    if (top == j) then
-                        bottom = j-1
-                    else
-                        bottom = j
-                    endif
-
+                    
                     ! calculate the weights and the "next" u/v position
                     ! "next" usually = pos+1 but for edge cases next = 1 or n
-                    dweight = calc_weight(dir_values, dpos,nextd,curdir)
-                    sweight = calc_weight(spd_values, spos,nexts,curspd)
-                    nweight = calc_weight(nsq_values, npos,nextn,curnsq)
+                    dweight = calc_weight(dir_values, dpos, nextd, curdir)
+                    sweight = calc_weight(spd_values, spos, nexts, curspd)
+                    nweight = calc_weight(nsq_values, npos, nextn, curnsq)
+                    
                     ! perform linear interpolation between LUT values
                     if (k<=ny) then
-                        wind_first =      nweight  * (dweight * u_LUT(spos,dpos,npos,i,j,k)  + (1-dweight) * u_LUT(spos,nextd,npos,i,j,k))    &
-                                    +  (1-nweight) * (dweight * u_LUT(spos,dpos,nextn,i,j,k) + (1-dweight) * u_LUT(spos,nextd,nextn,i,j,k))
+                        wind_first =      nweight  * (dweight * u_LUT(spos, dpos,npos, i,j,k) + (1-dweight) * u_LUT(spos, nextd,npos, i,j,k))   &
+                                    +  (1-nweight) * (dweight * u_LUT(spos, dpos,nextn,i,j,k) + (1-dweight) * u_LUT(spos, nextd,nextn,i,j,k))
 
-                        wind_second=      nweight  * (dweight * u_LUT(nexts,dpos,npos,i,j,k) + (1-dweight) * u_LUT(nexts,nextd,npos,i,j,k))    &
-                                    +  (1-nweight) * (dweight * u_LUT(nexts,dpos,nextn,i,j,k)+ (1-dweight) * u_LUT(nexts,nextd,nextn,i,j,k))
+                        wind_second=      nweight  * (dweight * u_LUT(nexts,dpos,npos, i,j,k) + (1-dweight) * u_LUT(nexts,nextd,npos, i,j,k))   &
+                                    +  (1-nweight) * (dweight * u_LUT(nexts,dpos,nextn,i,j,k) + (1-dweight) * u_LUT(nexts,nextd,nextn,i,j,k))
 
-                        u_perturbation(i,j,k)=u_perturbation(i,j,k) * (1-linear_update_fraction) &
+                        u_perturbation(i,j,k) = u_perturbation(i,j,k) * (1-linear_update_fraction) &
                                     + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
 
                         domain%u(i,j,k) = domain%u(i,j,k) + u_perturbation(i,j,k)
                     endif
                     if (i<=nx) then
-                        wind_first =      nweight  * (dweight * v_LUT(spos,dpos,npos,i,j,k)  + (1-dweight) * v_LUT(spos,nextd,npos,i,j,k))    &
-                                    +  (1-nweight) * (dweight * v_LUT(spos,dpos,nextn,i,j,k) + (1-dweight) * v_LUT(spos,nextd,nextn,i,j,k))
+                        wind_first =      nweight  * (dweight * v_LUT(spos, dpos,npos, i,j,k) + (1-dweight) * v_LUT(spos, nextd,npos, i,j,k))    &
+                                    +  (1-nweight) * (dweight * v_LUT(spos, dpos,nextn,i,j,k) + (1-dweight) * v_LUT(spos, nextd,nextn,i,j,k))
 
-                        wind_second=      nweight  * (dweight * v_LUT(nexts,dpos,npos,i,j,k) + (1-dweight) * v_LUT(nexts,nextd,npos,i,j,k))    &
-                                    +  (1-nweight) * (dweight * v_LUT(nexts,dpos,nextn,i,j,k)+ (1-dweight) * v_LUT(nexts,nextd,nextn,i,j,k))
+                        wind_second=      nweight  * (dweight * v_LUT(nexts,dpos,npos, i,j,k) + (1-dweight) * v_LUT(nexts,nextd,npos, i,j,k))    &
+                                    +  (1-nweight) * (dweight * v_LUT(nexts,dpos,nextn,i,j,k) + (1-dweight) * v_LUT(nexts,nextd,nextn,i,j,k))
 
-                        v_perturbation(i,j,k)=v_perturbation(i,j,k) * (1-linear_update_fraction) &
+                        v_perturbation(i,j,k) = v_perturbation(i,j,k) * (1-linear_update_fraction) &
                                     + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
 
                         domain%v(i,j,k) = domain%v(i,j,k) + v_perturbation(i,j,k)
@@ -980,24 +982,28 @@ contains
 
     end subroutine spatial_winds
 
+    !>----------------------------------------------------------
+    !! Copy options from the options data structure into module level variables
+    !!
+    !!----------------------------------------------------------
     subroutine set_module_options(options)
         implicit none
         type(options_type), intent(in) :: options
 
-        original_buffer = options%lt_options%buffer
-        variable_N = options%lt_options%variable_N
-        smooth_nsq = options%lt_options%smooth_nsq
+        original_buffer       = options%lt_options%buffer
+        variable_N            = options%lt_options%variable_N
+        smooth_nsq            = options%lt_options%smooth_nsq
 
         stability_window_size = options%lt_options%stability_window_size        ! window to average nsq over
-        max_stability = options%lt_options%max_stability                        ! limits on the calculated Brunt Vaisala Frequency
-        min_stability = options%lt_options%min_stability                        ! these may need to be a little narrower.
-        linear_contribution = options%lt_options%linear_contribution            ! multiplier on uhat,vhat before adding to u,v
+        max_stability         = options%lt_options%max_stability                ! limits on the calculated Brunt Vaisala Frequency
+        min_stability         = options%lt_options%min_stability                ! these may need to be a little narrower.
+        linear_contribution   = options%lt_options%linear_contribution          ! multiplier on uhat,vhat before adding to u,v
                                                                                 ! =fractional contribution of linear perturbation to wind field
         ! these are defined per call to permit different values for low res and high res domains
-        ! N_squared = options%lt_options%N_squared                              ! static Brunt Vaisala Frequency (N^2) to use
-        ! rm_N_squared = options%lt_options%rm_N_squared                        ! static BV Frequency (N^2) to use in removing linear wind field
+        ! N_squared              = options%lt_options%N_squared                 ! static Brunt Vaisala Frequency (N^2) to use
+        ! rm_N_squared           = options%lt_options%rm_N_squared              ! static BV Frequency (N^2) to use in removing linear wind field
         ! rm_linear_contribution = options%lt_options%rm_linear_contribution    ! fractional contribution of linear perturbation to remove wind field
-        ! remove_lowres_linear = options%lt_options%remove_lowres_linear        ! remove the linear mountain wave from low res forcing model
+        ! remove_lowres_linear   = options%lt_options%remove_lowres_linear      ! remove the linear mountain wave from low res forcing model
 
         linear_update_fraction    = options%lt_options%linear_update_fraction   ! controls the rate at which the linearfield updates
                                                                                 ! =fraction of linear perturbation to add each time step
@@ -1018,8 +1024,11 @@ contains
 
     end subroutine set_module_options
 
-    ! called from linear_perturb the first time perturb is called
-    ! compute FFT(terrain), and dzdx,dzdy components
+    !>----------------------------------------------------------
+    !! Called from linear_perturb the first time perturb is called
+    !! compute FFT(terrain), and dzdx,dzdy components
+    !!
+    !!----------------------------------------------------------
     subroutine setup_linwinds(domain,options,reverse,useDensity)
         implicit none
         class(linearizable_type),intent(inout)::domain
@@ -1159,8 +1168,12 @@ contains
 
     end subroutine setup_linwinds
 
-    ! Primary entry point!
-    ! Called from ICAR to update the U and V wind fields based on linear theory (W is calculated to balance U/V)
+    !>----------------------------------------------------------
+    !! Initialize and/or apply linear wind solution. 
+    !!
+    !! Called from ICAR to update the U and V wind fields based on linear theory (W is calculated to balance U/V)
+    !!
+    !!----------------------------------------------------------
     subroutine linear_perturb(domain,options,vsmooth,reverse,useDensity)
         implicit none
         class(linearizable_type),intent(inout)::domain
@@ -1171,17 +1184,19 @@ contains
         logical, save :: debug=.True.
         real::stability
 
+        ! these probably need to get moved to options...
         if (present(reverse)) then
             rev=reverse
         else
             rev=.False.
         endif
-        ! these probably need to get moved to options...
+        
         if (present(useDensity)) then
             useD=useDensity
         else
             useD=.False.
         endif
+        
         ! this is a little trickier, because it does have to be domain dependant... could at least be stored in the domain though...
         if (rev) then
             linear_contribution = options%lt_options%rm_linear_contribution
