@@ -65,7 +65,8 @@ module linear_theory_winds
 
     ! store the linear perturbation so we can update it slightly each time step
     ! this permits the linear field to build up over time.
-    real, allocatable, dimension(:,:,:) :: u_perturbation, v_perturbation
+    real, allocatable, target, dimension(:,:,:) :: hi_u_perturbation, hi_v_perturbation, lo_u_perturbation, lo_v_perturbation
+    real, pointer,     dimension(:,:,:) :: u_perturbation, v_perturbation
 
     logical :: use_spatial_linear_fields
     logical :: use_linear_mask     ! use a spatial mask for the linear wind field
@@ -361,22 +362,22 @@ contains
                 write(*,"(A,A)") char(13),"Allocating Linear Wind Data and FFTW plans"
             endif
             ! using fftw_alloc routines to ensure better allignment for vectorization
-            n_elements=nx*ny*nz
-            uh_aligned_data=fftw_alloc_complex(n_elements)
+            n_elements = nx*ny*nz
+            uh_aligned_data = fftw_alloc_complex(n_elements)
             call c_f_pointer(uh_aligned_data, uhat, [nx,ny,nz])
-            u_h_aligned_data=fftw_alloc_complex(n_elements)
+            u_h_aligned_data = fftw_alloc_complex(n_elements)
             call c_f_pointer(u_h_aligned_data, u_hat, [nx,ny,nz])
-            vh_aligned_data=fftw_alloc_complex(n_elements)
+            vh_aligned_data = fftw_alloc_complex(n_elements)
             call c_f_pointer(vh_aligned_data, vhat, [nx,ny,nz])
-            v_h_aligned_data=fftw_alloc_complex(n_elements)
+            v_h_aligned_data = fftw_alloc_complex(n_elements)
             call c_f_pointer(v_h_aligned_data, v_hat, [nx,ny,nz])
-            data_allocated=.True.
+            data_allocated = .True.
 
             allocate(uplans(nz))
             allocate(vplans(nz))
             do i=1,nz
-                uplans(i) = fftw_plan_dft_2d(ny,nx, uhat(:,:,i),u_hat(:,:,i), FFTW_BACKWARD,FFTW_MEASURE)!PATIENT)!FFTW_ESTIMATE)
-                vplans(i) = fftw_plan_dft_2d(ny,nx, vhat(:,:,i),v_hat(:,:,i), FFTW_BACKWARD,FFTW_MEASURE)!PATIENT)!FFTW_ESTIMATE)
+                uplans(i) = fftw_plan_dft_2d(ny,nx, uhat(:,:,i),u_hat(:,:,i), FFTW_BACKWARD, FFTW_MEASURE)!PATIENT)!FFTW_ESTIMATE)
+                vplans(i) = fftw_plan_dft_2d(ny,nx, vhat(:,:,i),v_hat(:,:,i), FFTW_BACKWARD, FFTW_MEASURE)!PATIENT)!FFTW_ESTIMATE)
             enddo
             if (debug) then
                 write(*,*) "Allocation Complete:",trim(str(nx))," ",trim(str(ny))," ",trim(str(nz))
@@ -743,20 +744,20 @@ contains
             write(*,*) "Stabilities:",exp(nsq_values)
         endif
 
-        if (.not.((options%lt_options%read_LUT).and.(error==0))) then
+        if (reverse.or.(.not.((options%lt_options%read_LUT).and.(error==0)))) then
             ! loop over combinations of U and V values
             write(*,*) "Percent Completed:"
             debug=options%debug
             ! this could be parallelized to speed it up a little, but the linear_wind calculation is already parallelized
             ! over the vertical domain, so it wouldn't add much (unless a lot more than cores are available than levels)
-            do i=1,n_dir_values
+            do i=1, n_dir_values
                 write(*,"(A,f5.1,A$)") char(13), i/real(n_dir_values)*100," %"
                 ! set the domain wide U and V values to the current u and v values
                 ! this could use u/v_perturbation, but those would need to be put in a linearizable structure...
-                do k=1,n_spd_values
-                    do j=1,n_nsq_values
-                        domain%u=calc_u(dir_values(i),spd_values(k))
-                        domain%v=calc_v(dir_values(i),spd_values(k))
+                do k=1, n_spd_values
+                    do j=1, n_nsq_values
+                        domain%u = calc_u(dir_values(i),spd_values(k))
+                        domain%v = calc_v(dir_values(i),spd_values(k))
 
                         ! calculate the linear wind field for the current u and v values
                         call linear_winds(domain,exp(nsq_values(j)), 0, reverse,useDensity,debug=debug)
@@ -773,13 +774,13 @@ contains
             domain%v = savedV
         end if
 
-        deallocate(savedU,savedV)
+        deallocate(savedU, savedV)
 
-        if (options%lt_options%write_LUT) then
+        if ((options%lt_options%write_LUT).and.(.not.reverse)) then
             if ((options%lt_options%read_LUT) .and. (error == 0)) then
                 print*, "Not writing Linear Theory LUT to file because LUT was read from file"
             else
-                print*, "Writing u-LUT to file: ", trim(options%lt_options%u_LUT_Filename)
+                print*, "Writing Linear Theory LUT to file: ", trim(options%lt_options%u_LUT_Filename)
                 error = write_LUT(options%lt_options%u_LUT_Filename, hi_u_LUT, hi_v_LUT, options%dz_levels, options%lt_options)
             endif
         endif
@@ -849,11 +850,16 @@ contains
         if (reverse) then
             u_LUT=>rev_u_LUT
             v_LUT=>rev_v_LUT
+            u_perturbation=>lo_u_perturbation
+            v_perturbation=>lo_v_perturbation
         else
             u_LUT=>hi_u_LUT
             v_LUT=>hi_v_LUT
+            u_perturbation=>hi_u_perturbation
+            v_perturbation=>hi_v_perturbation
         endif
-        !$omp parallel firstprivate(nx,ny,nz, vsmooth, winsz), default(none), &
+        if (reverse) print*, "WARNING using fixed nsq for linear wind removal: 3e-6"
+        !$omp parallel firstprivate(nx,ny,nz, reverse, vsmooth, winsz), default(none), &
         !$omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom), &
         !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, smoothz), &
         !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
@@ -869,13 +875,17 @@ contains
                     ! if (top-j)/=vsmooth, then look down enough layers to make the window vsmooth in size
                     bottom = max(1, j - (vsmooth - (top-j)) )
                     
-                    domain%nsquared(i,j,k) = calc_stability(domain%th(i,bottom,k), domain%th(i,top,k),  &
-                                                            domain%pii(i,bottom,k),domain%pii(i,top,k), &
-                                                            domain%z(i,bottom,k),  domain%z(i,top,k),   &
-                                                            domain%qv(i,bottom,k), domain%qv(i,top,k),  &
-                                                            domain%cloud(i,j,k)+domain%ice(i,j,k)       &
-                                                            +domain%qrain(i,j,k)+domain%qsnow(i,j,k))
-                    domain%nsquared(i,j,k) = max(min(domain%nsquared(i,j,k) * nsq_calibration(i,k), max_stability), min_stability)
+                    if (.not.reverse) then
+                        domain%nsquared(i,j,k) = calc_stability(domain%th(i,bottom,k), domain%th(i,top,k),  &
+                                                                domain%pii(i,bottom,k),domain%pii(i,top,k), &
+                                                                domain%z(i,bottom,k),  domain%z(i,top,k),   &
+                                                                domain%qv(i,bottom,k), domain%qv(i,top,k),  &
+                                                                domain%cloud(i,j,k)+domain%ice(i,j,k)       &
+                                                                +domain%qrain(i,j,k)+domain%qsnow(i,j,k))
+                        domain%nsquared(i,j,k) = max(min(domain%nsquared(i,j,k) * nsq_calibration(i,k), max_stability), min_stability)
+                    else
+                        domain%nsquared(i,j,k) = 3e-6
+                    endif
                 end do
             end do
 
@@ -925,6 +935,7 @@ contains
                     end do
 
                     ! Calculate the Brunt-Vaisalla frequency of the current grid cell
+                    !   First find the bounds of the region to average over
                     west  = max(i - winsz, 1)
                     east  = min(i + winsz,nx)
                     bottom= max(j - winsz, 1)
@@ -932,10 +943,10 @@ contains
                     south = max(k - winsz, 1)
                     north = min(k + winsz,ny)
                     n = (((east-west)+1) * ((top-bottom)+1) * ((north-south)+1))
-                    ! compute the mean in log space
+                    !   Then compute the mean in log space
                     curnsq = sum(log( domain%nsquared(west:east, bottom:top, south:north) ))
                     curnsq = curnsq / n
-                    ! and find the corresponding position in the Look up Table
+                    !   and find the corresponding position in the Look up Table
                     npos = 1
                     do step=1, n_nsq_values
                         if (curnsq > nsq_values(step)) then
@@ -943,7 +954,7 @@ contains
                         endif
                     end do
                     
-                    ! calculate the weights and the "next" u/v position
+                    ! Calculate the weights and the "next" u/v position
                     ! "next" usually = pos+1 but for edge cases next = 1 or n
                     dweight = calc_weight(dir_values, dpos, nextd, curdir)
                     sweight = calc_weight(spd_values, spos, nexts, curspd)
@@ -1031,14 +1042,16 @@ contains
     !!----------------------------------------------------------
     subroutine setup_linwinds(domain,options,reverse,useDensity)
         implicit none
-        class(linearizable_type),intent(inout)::domain
-        type(options_type),intent(in) :: options
-        logical, intent(in) :: reverse,useDensity
-        complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::complex_terrain_firstpass
-        complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::complex_terrain
+        class(linearizable_type),intent(inout)  :: domain
+        type(options_type),      intent(in)     :: options
+        logical,                 intent(in)     :: reverse, useDensity
+        ! locals
+        complex(C_DOUBLE_COMPLEX), allocatable  :: complex_terrain_firstpass(:,:)
+        complex(C_DOUBLE_COMPLEX), allocatable  :: complex_terrain(:,:)
         type(C_PTR) :: plan
-        integer::nx,ny,nz, save_buffer
-        real :: saved_linear_contribution ! temporary variable to save the linear contribution state so we can restore
+        integer     :: nx, ny, nz
+        real        :: saved_linear_contribution ! temporary variable to save the linear contribution state so we can restore
+        integer     :: save_buffer
 
         ! store module level variables so we don't have to pass options through everytime
         ! lots of these things probably need to be moved to the linearizable class so they
@@ -1047,59 +1060,56 @@ contains
         ! twice, once for domain and once for bc%next_domain
         call set_module_options(options)
 
-        ! note, the buffer actually really seems to help ideal simulations too
-        buffer=original_buffer
-        if (.not.options%ideal) then
-            call add_buffer_topo(domain%terrain,complex_terrain_firstpass,5)
-            buffer=2
-            call add_buffer_topo(real(real(complex_terrain_firstpass)),complex_terrain,0, debug=options%debug)
-            buffer=buffer+original_buffer
-        else
-            call add_buffer_topo(domain%terrain,complex_terrain,0, debug=options%debug)
-        endif
+        ! Create a buffer zone around the topography to smooth the edges
+        buffer = original_buffer
+        ! first create it including a 5 grid cell smoothing function
+        call add_buffer_topo(domain%terrain, complex_terrain_firstpass, 5)
+        buffer = 2
+        ! then further add a small (~2) grid cell buffer where all cells have the same value
+        call add_buffer_topo(real(real(complex_terrain_firstpass)), complex_terrain, 0, debug=options%debug)
+        buffer = buffer + original_buffer
 
-        nx=size(complex_terrain,1)
-        ny=size(complex_terrain,2)
+        nx = size(complex_terrain, 1)
+        ny = size(complex_terrain, 2)
 
         write(*,*) "Initializing linear winds : ",nx,ny
         allocate(domain%fzs(nx,ny))
 
         ! calculate the fourier transform of the terrain for use in linear winds
-        plan = fftw_plan_dft_2d(ny,nx, complex_terrain,domain%fzs, FFTW_FORWARD,FFTW_ESTIMATE)
-        call fftw_execute_dft(plan, complex_terrain,domain%fzs)
+        plan = fftw_plan_dft_2d(ny, nx, complex_terrain, domain%fzs, FFTW_FORWARD, FFTW_ESTIMATE)
+        call fftw_execute_dft(plan, complex_terrain, domain%fzs)
         call fftw_destroy_plan(plan)
         ! normalize FFT by N - grid cells
-        domain%fzs=domain%fzs/(nx*ny)
+        domain%fzs = domain%fzs / (nx * ny)
+        ! shift the grid cell quadrants
+        ! need to test what effect all of the related shifts actually have...
         call fftshift(domain%fzs)
 
-        ! cleanup temporary array
-        deallocate(complex_terrain)
-        if (allocated(complex_terrain_firstpass)) then
-            deallocate(complex_terrain_firstpass)
-        endif
+        ! cleanup temporary array Note this isn't necessary because exiting the subroutine will perform this
+        ! if (allocated(complex_terrain))           deallocate(complex_terrain)
+        ! if (allocated(complex_terrain_firstpass)) deallocate(complex_terrain_firstpass)
 
         if (linear_contribution/=1) then
             write(*,*) "Using a fraction of the linear perturbation:",linear_contribution
         endif
 
-        nx=size(domain%terrain,1)
-        nz=size(domain%u,2)
-        ny=size(domain%terrain,2)
+        nx = size(domain%terrain, 1)
+        nz = size(domain%u,       2)
+        ny = size(domain%terrain, 2)
 
-        if (.not.allocated(domain%nsquared)) then
-            allocate(domain%nsquared(nx,nz,ny))
-        endif
+        if (.not.allocated(domain%nsquared)) allocate(domain%nsquared(nx,nz,ny))
 
         ! set up linear_mask variable
-        if ( (.not.reverse) .and. (.not.allocated(linear_mask)) ) then
+        if (.not.reverse) then
+            if (allocated(linear_mask)) deallocate(linear_mask)
             allocate(linear_mask(nx,ny))
-            linear_mask=linear_contribution
+            linear_mask = linear_contribution
 
             if (use_linear_mask) then
                 write(*,*) "Reading Linear Mask"
-                write(*,*) "  from file: "//trim(options%linear_mask_file)
-                write(*,*) "  varname: "//trim(options%linear_mask_var)
-                call io_read2d(options%linear_mask_file,options%linear_mask_var,domain%linear_mask)
+                write(*,*) "  from file: " // trim(options%linear_mask_file)
+                write(*,*) "  with var: "  // trim(options%linear_mask_var)
+                call io_read2d(options%linear_mask_file, options%linear_mask_var, domain%linear_mask)
                 linear_mask = domain%linear_mask * linear_contribution
             endif
         endif
@@ -1107,40 +1117,58 @@ contains
         ! set up nsq_calibration variable
         if ( (.not.reverse) .and. (.not.allocated(nsq_calibration)) ) then
             allocate(nsq_calibration(nx,ny))
-            nsq_calibration=1
+            nsq_calibration = 1
 
             if (use_nsq_calibration) then
                 write(*,*) "Reading Linear Mask"
-                write(*,*) "  from file: "//trim(options%nsq_calibration_file)
-                write(*,*) "  varname: "//trim(options%nsq_calibration_var)
-                call io_read2d(options%nsq_calibration_file,options%nsq_calibration_var,domain%nsq_calibration)
-                nsq_calibration=domain%nsq_calibration
-
-                where(nsq_calibration<1) nsq_calibration = 1+1/((1-1/nsq_calibration)/100)
-                where(nsq_calibration>1) nsq_calibration = 1+(nsq_calibration-1)/100
+                write(*,*) "  from file: " // trim(options%nsq_calibration_file)
+                write(*,*) "  with var: "  // trim(options%nsq_calibration_var)
+                call io_read2d(options%nsq_calibration_file, options%nsq_calibration_var, domain%nsq_calibration)
+                nsq_calibration = domain%nsq_calibration
+                
+                where(nsq_calibration<1) nsq_calibration = 1 + 1/( (1-1/nsq_calibration)/100 )
+                where(nsq_calibration>1) nsq_calibration = 1 + (nsq_calibration-1)/100
             endif
         endif
 
         ! allocate the fields that will hold the perturbation only so we can update it
         ! slowly and add the total to the domain%u,v
-        if (.not.allocated(u_perturbation)) then
-            allocate(u_perturbation(nx+1,nz,ny))
-            u_perturbation=0
-            allocate(v_perturbation(nx,nz,ny+1))
-            v_perturbation=0
+        if (reverse) then
+            if (.not.allocated(lo_u_perturbation)) then
+                allocate(lo_u_perturbation(nx+1,nz,ny))
+                lo_u_perturbation=0
+                allocate(lo_v_perturbation(nx,nz,ny+1))
+                lo_v_perturbation=0
+            endif
+            u_perturbation=>lo_u_perturbation
+            v_perturbation=>lo_v_perturbation
+        else
+            if (.not.allocated(hi_u_perturbation)) then
+                allocate(hi_u_perturbation(nx+1,nz,ny))
+                hi_u_perturbation=0
+                allocate(hi_v_perturbation(nx,nz,ny+1))
+                hi_v_perturbation=0
+            endif
+            u_perturbation=>hi_u_perturbation
+            v_perturbation=>hi_v_perturbation
         endif
+
 
         write(*,*) "Max U perturb:",maxval(u_perturbation), "Max V perturb:",maxval(v_perturbation)
         if (use_spatial_linear_fields) then
             if ((.not.allocated(hi_u_LUT) .and. (.not.reverse)) .or. ((.not.allocated(rev_u_LUT)) .and. reverse)) then
                 ! Need linear_contribution to be 1 for initialize_spatial_winds, it will be applied at "real" time. 
                 ! should probably set linear_mask to 1 too... for not linear_mask is set at LUT creation. 
+                if (.not.allocated(linear_mask)) then
+                    allocate(linear_mask(nx,ny))
+                    linear_mask = linear_contribution
+                endif
                 linear_mask = linear_mask / linear_contribution
                 saved_linear_contribution = linear_contribution
                 linear_contribution = 1.0
                 
                 write(*,*) "Generating a spatially variable linear perturbation look up table"
-                call initialize_spatial_winds(domain,options,reverse,useDensity)
+                call initialize_spatial_winds(domain, options, reverse, useDensity)
                 
                 linear_contribution = saved_linear_contribution
                 linear_mask = linear_mask * linear_contribution
@@ -1152,10 +1180,9 @@ contains
                     hi_u_LUT = hi_u_LUT * linear_contribution
                     hi_v_LUT = hi_v_LUT * linear_contribution
                 endif
-            ! else
-            !     write(*,*) "Skipping spatial wind field for presumed domain repeat"
             endif
             if (minval(linear_mask) > linear_contribution) then
+                print*, minval(linear_mask), maxval(linear_mask), linear_contribution
                 write(*,*) " "
                 write(*,*) "  ---------------  !!!WARNING!!!  --------------- "
                 write(*,*) " Spatially variable linear mask is fixed at LUT creation"
@@ -1209,6 +1236,7 @@ contains
         ! if linear_perturb hasn't been called before we need to perform some setup actions.
         if (.not.allocated(domain%fzs)) then
             call setup_linwinds(domain,options,rev,useD)
+            print*, "Setup Complete"
         endif
 
         ! add the spatially variable linear field
