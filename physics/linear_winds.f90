@@ -47,7 +47,7 @@ module linear_theory_winds
 
     logical :: variable_N
     logical :: smooth_nsq
-    real :: N_squared
+    real    :: N_squared
     !! unfortunately these have to be allocated every call because we could be calling on both the high-res
     !! domain and the low res domain (to "remove" the linear winds)
     real,allocatable,dimension(:,:)::k,l,kl,sig
@@ -94,6 +94,8 @@ module linear_theory_winds
     integer :: n_spd_values=10
 
     complex,parameter :: j= (0,1)
+    
+    real, parameter :: SMALL_VALUE = 1e-15
 
 contains
 
@@ -209,7 +211,6 @@ contains
         real :: BV_freq
 
         BV_freq = gravity * (log(th_top)-log(th_bot)) / (z_top - z_bot)
-
     end function calc_dry_stability
 
     !>----------------------------------------------------------
@@ -280,6 +281,65 @@ contains
         deallocate(vertical_N)
     end function calc_domain_stability
 
+    !>----------------------------------------------------------
+    !! Compute linear wind perturbations given background U, V, Nsq
+    !!
+    !! see Appendix A of Barstad and Gronas (2006) Tellus,58A,2-18
+    !!
+    !!----------------------------------------------------------
+    subroutine linear_perturbation(U, V, Nsq, z, fourier_terrain, u_perturb, v_perturb, lt_data)
+        use, intrinsic :: iso_c_binding
+        implicit none
+        real,                     intent(in)    :: U, V ! U and V components of background wind
+        real,                     intent(in)    :: Nsq  ! Brunt-Vaisalla frequency (N squared)
+        real,                     intent(in)    :: z    ! elevation at which to compute the linear solution
+        complex(C_DOUBLE_COMPLEX),intent(in)    :: fourier_terrain(:,:) ! FFT(terrain)
+        complex(C_DOUBLE_COMPLEX),intent(inout) :: u_perturb(:,:), v_perturb(:,:)
+        type(linear_theory_type), intent(inout) :: lt_data
+        
+        
+        integer :: nx, ny ! store the size of the grid
+        
+        nx = size(fourier_terrain, 1)
+        ny = size(fourier_terrain, 2)
+        
+        lt_data%sig  = U * lt_data%k + V * lt_data%l
+        ! prevent divide by zero
+        where(lt_data%sig == 0) lt_data%sig = SMALL_VALUE
+        
+        lt_data%denom = lt_data%sig**2 ! -f**2 ! to add coriolis
+
+        lt_data%msq   = Nsq / lt_data%denom * lt_data%kl
+        lt_data%mimag = 0 + 0 * j ! be sure to reset real and imaginary components
+        lt_data%mimag = lt_data%mimag + (real(sqrt(-lt_data%msq)) * j)
+
+        lt_data%m = sqrt(lt_data%msq)                         ! # % vertical wave number, hydrostatic
+        where(lt_data%sig < 0) lt_data%m = lt_data%m * (-1)   ! equivilant to m=m*sign(sig)
+        where(real(lt_data%msq) < 0) lt_data%m = lt_data%mimag
+
+        lt_data%ineta = j * fourier_terrain * exp(j * lt_data%m * z)
+        !  what=sig*ineta
+
+        ! with coriolis : [+/-]j*[l/k]*f
+        !uhat = (0 - m) * ((sig * k) - (j * l * f)) * ineta / kl
+        !vhat = (0 - m) * ((sig * l) + (j * k * f)) * ineta / kl
+        ! removed coriolis term assumes the scale coriolis operates at is largely defined by the coarse model
+        ! if using e.g. a sounding or otherwise spatially constant u/v, then coriolis should be defined. 
+        lt_data%ineta = lt_data%ineta / (lt_data%kl / ((0 - lt_data%m) * lt_data%sig))
+        lt_data%uhat  = lt_data%k * lt_data%ineta
+        lt_data%vhat  = lt_data%l * lt_data%ineta
+
+        ! pull it back out of fourier space.
+        ! NOTE, the fftw transform inherently scales by N so the Fzs/Nx/Ny provides the only normalization necessary (I think)
+        call ifftshift(lt_data%uhat)
+        call ifftshift(lt_data%vhat)
+        ! plans are only created once and re-used, this is a limit to further parallelization at the moment.
+        call fftw_execute_dft(lt_data%uplan, lt_data%uhat, u_perturb)
+        call fftw_execute_dft(lt_data%vplan, lt_data%vhat, v_perturb)
+
+        ! returns u_perturb and v_perturb
+    end subroutine linear_perturbation
+    
     !>----------------------------------------------------------
     !! Compute linear wind perturbations to U and V and add them back to the domain
     !!
