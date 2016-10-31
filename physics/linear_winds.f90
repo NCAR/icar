@@ -492,12 +492,6 @@ contains
             WHERE (kl==0.0) kl=1e-15
         endif
 
-        ! process each array independantly
-        ! note fftw_plan_... may not be threadsafe so this can't be OMP parallelized without pulling that outside of the loop.
-        ! to parallelize, compute uhat,vhat in parallel
-        ! then compute the plans serially
-        ! then perform ffts etc in parallel
-        ! finally destroy plans serially
         m=1
 
         !$omp do
@@ -755,12 +749,14 @@ contains
         lt_data%kl = lt_data%k**2 + lt_data%l**2
         WHERE (lt_data%kl == 0.0) lt_data%kl = SMALL_VALUE
         
-        ! using fftw_alloc routines to ensure better allignment for vectorization
+        ! using fftw_alloc routines to ensure better allignment for vectorization may not be threadsafe
         n_elements = nx * ny
+        !$omp critical (fftw_lock)
         lt_data%uh_aligned_data = fftw_alloc_complex(n_elements)
         lt_data%up_aligned_data = fftw_alloc_complex(n_elements)
         lt_data%vh_aligned_data = fftw_alloc_complex(n_elements)
         lt_data%vp_aligned_data = fftw_alloc_complex(n_elements)
+        !$omp end critical (fftw_lock)
         
         call c_f_pointer(lt_data%uh_aligned_data,   lt_data%uhat,       [nx,ny])
         call c_f_pointer(lt_data%up_aligned_data,   lt_data%u_perturb,  [nx,ny])
@@ -768,13 +764,47 @@ contains
         call c_f_pointer(lt_data%vp_aligned_data,   lt_data%v_perturb,  [nx,ny])
 
         ! note FFTW plan creation is not threadsafe
-        !$omp critical (fftw_plan_lock)
+        !$omp critical (fftw_lock)
         lt_data%uplan = fftw_plan_dft_2d(ny,nx, lt_data%uhat, lt_data%u_perturb, FFTW_BACKWARD, FFTW_MEASURE) ! alternatives to MEASURE are PATIENT, or ESTIMATE
         lt_data%vplan = fftw_plan_dft_2d(ny,nx, lt_data%vhat, lt_data%v_perturb, FFTW_BACKWARD, FFTW_MEASURE) ! alternatives to MEASURE are PATIENT, or ESTIMATE
-        !$omp end critical (fftw_plan_lock)
+        !$omp end critical (fftw_lock)
 
         
     end subroutine initialize_linear_theory_data
+
+
+    subroutine destroy_linear_theory_data(lt_data)
+        implicit none
+        type(linear_theory_type), intent(inout) :: lt_data
+        
+        if (allocated(lt_data%k))       deallocate(lt_data%k)
+        if (allocated(lt_data%l))       deallocate(lt_data%l)
+        if (allocated(lt_data%kl))      deallocate(lt_data%kl)
+        if (allocated(lt_data%sig))     deallocate(lt_data%sig)
+        if (allocated(lt_data%denom))   deallocate(lt_data%denom)
+        if (allocated(lt_data%m))       deallocate(lt_data%m)
+        if (allocated(lt_data%msq))     deallocate(lt_data%msq)
+        if (allocated(lt_data%mimag))   deallocate(lt_data%mimag)
+        if (allocated(lt_data%ineta))   deallocate(lt_data%ineta)
+
+        !$omp critical (fftw_lock)
+        call fftw_free(lt_data%uh_aligned_data)
+        call fftw_free(lt_data%up_aligned_data)
+        call fftw_free(lt_data%vh_aligned_data)
+        call fftw_free(lt_data%vp_aligned_data)
+        !$omp end critical (fftw_lock)
+        
+        NULLIFY(lt_data%uhat)
+        NULLIFY(lt_data%u_perturb)
+        NULLIFY(lt_data%vhat)
+        NULLIFY(lt_data%v_perturb)
+
+        ! note FFTW plan creation is not threadsafe
+        !$omp critical (fftw_lock)
+        call fftw_destroy_plan(lt_data%uplan)
+        call fftw_destroy_plan(lt_data%vplan)
+        !$omp end critical (fftw_lock)
+    end subroutine destroy_linear_theory_data
 
     !>----------------------------------------------------------
     !! Compute look up tables for all combinations of U, V, and Nsq
@@ -785,11 +815,14 @@ contains
         class(linearizable_type),intent(inout)::domain
         type(options_type), intent(in) :: options
         logical, intent(in) :: reverse,useDensity
-        real, allocatable, dimension(:,:,:) :: savedU, savedV
+        
+        ! note this data structure holds a lot of important variables for the new linear_perturbation subroutine
+        type(linear_theory_type) :: lt_data
         real :: u,v
-        integer :: nx,ny,nz,i,j,k, nxu,nyv, error
-        logical :: debug
+        integer :: nx,ny,nz, i,j,k,z, nxu,nyv, error
+        integer :: fftnx, fftny
         integer, dimension(3,2) :: LUT_dims
+        ! integer :: buffer
 
         ! the domain to work over
         nx = size(domain%lat,1)
@@ -798,19 +831,18 @@ contains
 
         nxu = size(domain%u,1)
         nyv = size(domain%v,3)
+        
+        fftnx = size(domain%fzs,1)
+        fftny = size(domain%fzs,2)
+        ! note: 
+        ! buffer = (fftnx - nx)/2
+
         ! default assumes no errors in reading the LUT
         error = 0
         
         ! store to make it easy to check dim sizes in read_LUT
         LUT_dims(:,1) = [nxu,nz,ny]
         LUT_dims(:,2) = [nx,nz,nyv]
-
-        ! save the old U and V values so we can restore them
-        allocate( savedU(nxu, nz, ny ) )
-        allocate( savedV(nx,  nz, nyv) )
-
-        savedU = domain%u
-        savedV = domain%v
 
         ! create the array of dir and nsq values to create LUTs for
         if (.not.allocated(dir_values)) then
@@ -870,34 +902,44 @@ contains
         if (reverse.or.(.not.((options%lt_options%read_LUT).and.(error==0)))) then
             ! loop over combinations of U and V values
             write(*,*) "Percent Completed:"
-            debug=options%debug
             ! this could be parallelized to speed it up a little, but the linear_wind calculation is already parallelized
             ! over the vertical domain, so it wouldn't add much (unless a lot more than cores are available than levels)
+            call initialize_linear_theory_data(lt_data, fftnx, fftny, domain%dx)
             do i=1, n_dir_values
                 write(*,"(A,f5.1,A$)") char(13), i/real(n_dir_values)*100," %"
                 ! set the domain wide U and V values to the current u and v values
                 ! this could use u/v_perturbation, but those would need to be put in a linearizable structure...
                 do k=1, n_spd_values
                     do j=1, n_nsq_values
-                        domain%u = calc_u(dir_values(i),spd_values(k))
-                        domain%v = calc_v(dir_values(i),spd_values(k))
+                        u = calc_u( dir_values(i), spd_values(k) )
+                        v = calc_v( dir_values(i), spd_values(k) )
 
                         ! calculate the linear wind field for the current u and v values
-                        call linear_winds(domain,exp(nsq_values(j)), 0, reverse,useDensity,debug=debug)
+                        do z=1,nz
+                            call linear_perturbation(u, v, exp(nsq_values(j)), domain%z(1,z,1)-domain%terrain(1,1), domain%fzs, lt_data)
 
-                        debug=.False. ! after the first time through set debug to false
+                            ! need to handle stagger (nxu /= nx) and buffer
+                            if (nxu /= nx) then
+                                u_LUT(k,i,j,2:nx,z, :  ) = real( real(                                  &
+                                        ( lt_data%u_perturb(1+buffer:nx+buffer-1,   1+buffer:ny+buffer) &
+                                        + lt_data%u_perturb(2+buffer:nx+buffer,     1+buffer:ny+buffer)) )) / 2
+                                                         
+                                v_LUT(k,i,j, :,  z,2:ny) = real( real(                                      &
+                                        ( lt_data%v_perturb(1+buffer:nx+buffer,     1+buffer:ny+buffer-1)   &
+                                        + lt_data%v_perturb(1+buffer:nx+buffer,     2+buffer:ny+buffer)) )) / 2
+                            else
+                                u_LUT(k,i,j,:,z,:) = real( real(                                  &
+                                        lt_data%u_perturb(1+buffer:nx+buffer,     1+buffer:ny+buffer) ))
+                                v_LUT(k,i,j,:,z,:) = real( real(                                  &
+                                        lt_data%v_perturb(1+buffer:nx+buffer,     1+buffer:ny+buffer) ))
+                            endif
+                        enddo
 
-                        u_LUT(k,i,j,:,:,:) = (domain%u - calc_u(dir_values(i),spd_values(k)))
-                        v_LUT(k,i,j,:,:,:) = (domain%v - calc_v(dir_values(i),spd_values(k)))
                     end do
                 end do
             end do
             write(*,*) char(10),"--------  Linear wind look up table generation complete ---------"
-            domain%u = savedU
-            domain%v = savedV
         end if
-
-        deallocate(savedU, savedV)
 
         if ((options%lt_options%write_LUT).and.(.not.reverse)) then
             if ((options%lt_options%read_LUT) .and. (error == 0)) then
@@ -1207,10 +1249,6 @@ contains
         ! shift the grid cell quadrants
         ! need to test what effect all of the related shifts actually have...
         call fftshift(domain%fzs)
-
-        ! cleanup temporary array Note this isn't necessary because exiting the subroutine will perform this
-        ! if (allocated(complex_terrain))           deallocate(complex_terrain)
-        ! if (allocated(complex_terrain_firstpass)) deallocate(complex_terrain_firstpass)
 
         if (linear_contribution/=1) then
             write(*,*) "Using a fraction of the linear perturbation:",linear_contribution
