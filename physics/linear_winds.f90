@@ -286,14 +286,13 @@ contains
     !! see Appendix A of Barstad and Gronas (2006) Tellus,58A,2-18
     !!
     !!----------------------------------------------------------
-    subroutine linear_perturbation(U, V, Nsq, z, fourier_terrain, u_perturb, v_perturb, lt_data)
+    subroutine linear_perturbation(U, V, Nsq, z, fourier_terrain, lt_data)
         use, intrinsic :: iso_c_binding
         implicit none
         real,                     intent(in)    :: U, V ! U and V components of background wind
         real,                     intent(in)    :: Nsq  ! Brunt-Vaisalla frequency (N squared)
         real,                     intent(in)    :: z    ! elevation at which to compute the linear solution
         complex(C_DOUBLE_COMPLEX),intent(in)    :: fourier_terrain(:,:) ! FFT(terrain)
-        complex(C_DOUBLE_COMPLEX),intent(inout) :: u_perturb(:,:), v_perturb(:,:)
         type(linear_theory_type), intent(inout) :: lt_data
         
         
@@ -333,8 +332,8 @@ contains
         call ifftshift(lt_data%uhat)
         call ifftshift(lt_data%vhat)
         ! plans are only created once and re-used, this is a limit to further parallelization at the moment.
-        call fftw_execute_dft(lt_data%uplan, lt_data%uhat, u_perturb)
-        call fftw_execute_dft(lt_data%vplan, lt_data%vhat, v_perturb)
+        call fftw_execute_dft(lt_data%uplan, lt_data%uhat, lt_data%u_perturb)
+        call fftw_execute_dft(lt_data%vplan, lt_data%vhat, lt_data%v_perturb)
 
         ! returns u_perturb and v_perturb
     end subroutine linear_perturbation
@@ -711,6 +710,71 @@ contains
         endif
 
     end subroutine add_buffer_topo
+
+    subroutine initialize_linear_theory_data(lt_data, nx, ny, dx)
+        implicit none
+        type(linear_theory_type), intent(inout) :: lt_data
+        integer, intent(in) :: nx, ny
+        real,    intent(in) :: dx
+        
+        integer(C_SIZE_T) :: n_elements
+        real :: gain, offset
+        integer :: i
+
+        
+        allocate(lt_data%k(nx,ny))
+        allocate(lt_data%l(nx,ny))
+        allocate(lt_data%kl(nx,ny))
+        allocate(lt_data%sig(nx,ny))
+        allocate(lt_data%denom(nx,ny))
+        allocate(lt_data%m(nx,ny))
+        allocate(lt_data%msq(nx,ny))
+        allocate(lt_data%mimag(nx,ny))
+        allocate(lt_data%ineta(nx,ny))
+
+        ! Compute 2D k and l wavenumber fields
+        offset = pi / dx
+        gain = 2 * offset / (nx-1)
+
+        do i=1, nx
+            lt_data%k(i,1) = ((i-1) * gain - offset)
+        end do
+        do i=2, ny
+            lt_data%k(:,i) = lt_data%k(:,1)
+        enddo
+
+        gain = 2 * offset / (ny-1)
+        do i=1,ny
+            lt_data%l(1,i) = ((i-1)*gain-offset)
+        end do
+        do i=2,nx
+            lt_data%l(i,:) = lt_data%l(1,:)
+        enddo
+
+        ! finally compute the kl combination array
+        lt_data%kl = lt_data%k**2 + lt_data%l**2
+        WHERE (lt_data%kl == 0.0) lt_data%kl = SMALL_VALUE
+        
+        ! using fftw_alloc routines to ensure better allignment for vectorization
+        n_elements = nx * ny
+        lt_data%uh_aligned_data = fftw_alloc_complex(n_elements)
+        lt_data%up_aligned_data = fftw_alloc_complex(n_elements)
+        lt_data%vh_aligned_data = fftw_alloc_complex(n_elements)
+        lt_data%vp_aligned_data = fftw_alloc_complex(n_elements)
+        
+        call c_f_pointer(lt_data%uh_aligned_data,   lt_data%uhat,       [nx,ny])
+        call c_f_pointer(lt_data%up_aligned_data,   lt_data%u_perturb,  [nx,ny])
+        call c_f_pointer(lt_data%vh_aligned_data,   lt_data%vhat,       [nx,ny])
+        call c_f_pointer(lt_data%vp_aligned_data,   lt_data%v_perturb,  [nx,ny])
+
+        ! note FFTW plan creation is not threadsafe
+        !$omp critical (fftw_plan_lock)
+        lt_data%uplan = fftw_plan_dft_2d(ny,nx, lt_data%uhat, lt_data%u_perturb, FFTW_BACKWARD, FFTW_MEASURE) ! alternatives to MEASURE are PATIENT, or ESTIMATE
+        lt_data%vplan = fftw_plan_dft_2d(ny,nx, lt_data%vhat, lt_data%v_perturb, FFTW_BACKWARD, FFTW_MEASURE) ! alternatives to MEASURE are PATIENT, or ESTIMATE
+        !$omp end critical (fftw_plan_lock)
+
+        
+    end subroutine initialize_linear_theory_data
 
     !>----------------------------------------------------------
     !! Compute look up tables for all combinations of U, V, and Nsq
