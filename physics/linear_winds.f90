@@ -312,8 +312,8 @@ contains
         lt_data%mimag = 0 + 0 * j ! be sure to reset real and imaginary components
         lt_data%mimag = lt_data%mimag + (real(sqrt(-lt_data%msq)) * j)
 
-        lt_data%m = sqrt(lt_data%msq)                         ! # % vertical wave number, hydrostatic
-        where(lt_data%sig < 0) lt_data%m = lt_data%m * (-1)   ! equivilant to m=m*sign(sig)
+        lt_data%m = sqrt(lt_data%msq)                         ! vertical wave number, hydrostatic
+        where(lt_data%sig < 0) lt_data%m = lt_data%m * (-1)   ! equivalent to m = m * sign(sig)
         where(real(lt_data%msq) < 0) lt_data%m = lt_data%mimag
 
         lt_data%ineta = j * fourier_terrain * exp(j * lt_data%m * z)
@@ -329,7 +329,7 @@ contains
         lt_data%vhat  = lt_data%l * lt_data%ineta
 
         ! pull it back out of fourier space.
-        ! NOTE, the fftw transform inherently scales by N so the Fzs/Nx/Ny provides the only normalization necessary (I think)
+        ! The fftw transform scales by N so the previous Fzs/Nx/Ny provides the only normalization necessary (?)
         call ifftshift(lt_data%uhat)
         call ifftshift(lt_data%vhat)
         ! plans are only created once and re-used, this is a limit to further parallelization at the moment.
@@ -528,7 +528,7 @@ contains
                 mimag = mimag + (real(sqrt(-msq)) * j)
 
                 m = sqrt(msq)         ! # % vertical wave number, hydrostatic
-                where(sig < 0) m = m * (-1)   ! equivilant to m=m*sign(sig)
+                where(sig < 0) m = m * (-1)   ! equivalent to m=m*sign(sig)
                 where(real(msq) < 0) m = mimag
 
                 if (zaxis_is_third) then
