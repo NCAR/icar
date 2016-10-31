@@ -356,6 +356,7 @@ OBJS=	$(BUILD)driver.o 		\
 		$(BUILD)vinterp.o 		\
 		$(BUILD)time.o 			\
 		$(BUILD)data_structures.o \
+		$(BUILD)icar_constants.o\
 		$(BUILD)wrf_constants.o \
 		$(BUILD)string.o 		\
 		$(BUILD)debug_utils.o
@@ -584,12 +585,14 @@ $(BUILD)fftshift.o:$(UTIL)fftshift.f90 $(BUILD)fftw.o
 ###################################################################
 #	Generic data structures, used by almost everything
 ###################################################################
-$(BUILD)data_structures.o:$(MAIN)data_structures.f90
+$(BUILD)data_structures.o:$(MAIN)data_structures.f90 $(BUILD)icar_constants.o
 	${F90} ${FFLAGS} $(MAIN)data_structures.f90 -o $(BUILD)data_structures.o
 	
 $(BUILD)wrf_constants.o:$(CONST)wrf_constants.f90
 	${F90} ${FFLAGS} $(CONST)wrf_constants.f90 -o $(BUILD)wrf_constants.o
 
+$(BUILD)icar_constants.o:$(CONST)icar_constants.f90
+	${F90} ${FFLAGS} $(CONST)icar_constants.f90 -o $(BUILD)icar_constants.o
 
 ###################################################################
 #	Keep track of model versions for user information
