@@ -237,7 +237,6 @@ contains
         endif
 
         BV_freq = min(max(BV_freq,min_stability),max_stability)
-
     end function calc_stability
 
     !>----------------------------------------------------------
