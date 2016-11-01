@@ -28,13 +28,13 @@ program fftw_test
     type(C_PTR) :: fftw_aligned_data
     complex(C_DOUBLE_COMPLEX), pointer, dimension(:,:,:) :: fftw_fdata
     
-    nx=100
-    ny=100
-    nz=20
+    nx = 100
+    ny = 100
+    nz = 20
     
-    n_elements=nx*ny*nz
+    n_elements = nx * ny * nz
     print*, "Testing fftw_alloc_complex"
-    fftw_aligned_data=fftw_alloc_complex(n_elements)
+    fftw_aligned_data = fftw_alloc_complex(n_elements)
     call c_f_pointer(fftw_aligned_data, fftw_fdata, [nx,ny,nz])
     
     fftw_fdata(1,1,1) = 10
@@ -42,5 +42,5 @@ program fftw_test
     if (real(fftw_fdata(1,1,1)) == 10) then
         print*, "PASSED"
     endif
-
+    
 end program fftw_test
