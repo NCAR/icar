@@ -42,7 +42,7 @@ def convert_atm(data):
 def convert_sfc(data):
     global last_longwave
     global last_shortwave
-    dt= -3.*60.*60.
+    dt = 3.0 * 60.0 * 60.0
     output_data=Bunch()
     output_data.sensible_heat   = data.sensible_heat[np.newaxis,::-1,:]/dt  # W/m^2
     output_data.latent_heat     = data.latent_heat[np.newaxis,::-1,:]/dt    # W/m^2

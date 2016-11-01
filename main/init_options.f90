@@ -98,16 +98,16 @@ contains
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=model_version)
         close(name_unit)
-        if (version.ne."0.9.3") then
+        if (version.ne.kVERSION_STRING) then
             write(*,*) "Model version does not match namelist version"
-            write(*,*) "  Model version: 0.9.3"
+            write(*,*) "  Model version: ",kVERSION_STRING
             write(*,*) "  Namelist version: ",trim(version)
             call print_model_diffs(version)
             stop
         endif
         options%version=version
         options%comment=comment
-        write(*,*) "Model version: ",trim(version)
+        write(*,*) "  Model version: ",trim(version)
     end subroutine version_check
 
     subroutine options_check(options)
@@ -234,6 +234,7 @@ contains
             write(*,*) "date",        restart_date
             write(*,*) "file",   trim(restart_file)
             write(*,*) "forcing step",restart_step
+            write(*,*) " ------------------ "
         endif
         
         ! used in calculations below
@@ -244,7 +245,7 @@ contains
             ! +1e-4 prevents floating point rounding error from setting it back one day/hour/minute etc
             ! +1 because Fortran arrays are 1 based, so if restart-initial = 0 then we want the 1st array element
             restart_step=FLOOR((restart_mjd - options%initial_mjd + 1e-4) * input_steps_per_day) + 1
-            if (options%debug) write(*,*) "updated forcing step",restart_step
+            if (options%debug) write(*,*) " updated forcing step",restart_step
         endif
         
         ! save the parameters in the master options structure
@@ -255,11 +256,11 @@ contains
         ! In case the supplied restart date doesn't line up with an input forcing step, recalculate
         ! The restart date (mjd) based off the nearest input step
         restart_mjd = options%initial_mjd + ((restart_step-1)/input_steps_per_day)
-        if (options%debug) write(*,*) "updated mjd",restart_mjd
+        if (options%debug) write(*,*) " updated mjd",restart_mjd
         
         ! now find the closest previous output step to the current restart date
         options%restart_step_in_file = io_nearest_time_step(restart_file, restart_mjd)
-        if (options%debug) write(*,*) "step in restart file",options%restart_step_in_file
+        if (options%debug) write(*,*) " step in restart file",options%restart_step_in_file
         
     end subroutine init_restart_options
     
@@ -337,14 +338,14 @@ contains
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,   &
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
-                                        swdown_var, lwdown_var, sst_var
+                                        swdown_var, lwdown_var, sst_var, rain_var
                                         
         namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,   &
                             landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar, &
                             hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
                             soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
                             vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
-                            swdown_var, lwdown_var, sst_var
+                            swdown_var, lwdown_var, sst_var, rain_var
         
         hgtvar="HGT"
         latvar="XLAT"
@@ -385,6 +386,7 @@ contains
         vegfrac_var="" !"VEGFRAC"
         linear_mask_var="data"
         nsq_calibration_var="data"
+        rain_var=""
         
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=var_list)
@@ -425,6 +427,7 @@ contains
         options%lwdown_var=lwdown_var
         ! Sea surface temperature
         options%sst_var = sst_var
+        options%rain_var = rain_var
         
         ! separate variable names for the high resolution domain
         options%hgt_hi=hgt_hi
@@ -509,7 +512,7 @@ contains
         forcing_start_date=""
         end_date=""
         time_varying_z=.False.
-        cfl_reduction_factor = 1.0
+        cfl_reduction_factor = 0.9
         cfl_strictness = 3
         
         ! flag set to read specific parameterization options
@@ -547,13 +550,13 @@ contains
         
         if (smooth_wind_distance.eq.(-9999)) then
             smooth_wind_distance=dxlow*2
-            write(*,*) "Default smoothing distance = lowdx*2 = ", smooth_wind_distance
+            write(*,*) " Default smoothing distance = lowdx*2 = ", smooth_wind_distance
         endif
         
         options%t_offset=t_offset
         if (smooth_wind_distance<0) then 
-            write(*,*) "Wind smoothing must be a positive number"
-            write(*,*) "smooth_wind_distance = ",smooth_wind_distance
+            write(*,*) " Wind smoothing must be a positive number"
+            write(*,*) " smooth_wind_distance = ",smooth_wind_distance
             if (warning_level>4) then
                 stop
             else
@@ -598,7 +601,7 @@ contains
         options%dxlow = dxlow
         options%ideal = ideal
         if (ideal) then
-            write(*,*) "Running Idealized simulation (time step does not advance)"
+            write(*,*) " Running Idealized simulation (time step does not advance)"
         endif
         options%readz = readz
         options%readdz = readdz
@@ -609,9 +612,6 @@ contains
         options%debug = debug
         options%warning_level = warning_level
         options%rotation_scale_height = rotation_scale_height
-        if (use_agl_height) then
-            write(*,*) "WARNING: use_agl_height=True is only supported for winds. "
-        endif
         options%use_agl_height = use_agl_height
         options%z_is_geopotential = z_is_geopotential
         options%z_is_on_interface = z_is_on_interface
@@ -833,8 +833,8 @@ contains
         lt_options%smooth_nsq = smooth_nsq
         
         if (vert_smooth<0) then 
-            write(*,*) "Vertical smoothing must be a positive integer"
-            write(*,*) "vert_smooth = ",vert_smooth
+            write(*,*) " Vertical smoothing must be a positive integer"
+            write(*,*) " vert_smooth = ",vert_smooth
             stop
         endif
         lt_options%vert_smooth=vert_smooth
@@ -1100,14 +1100,14 @@ contains
         close(file_unit)
         nfiles = i
         ! print out a summary
-        write(*,*) "Boundary conditions files to be used:"
+        write(*,*) "  Boundary conditions files to be used:"
         if (nfiles>10) then
-            write(*,*) "  nfiles=", trim(str(nfiles)), ", too many to print."
-            write(*,*) "  First file:", trim(forcing_files(1))
-            write(*,*) "  Last file: ", trim(forcing_files(nfiles))
+            write(*,*) "    nfiles=", trim(str(nfiles)), ", too many to print."
+            write(*,*) "    First file:", trim(forcing_files(1))
+            write(*,*) "    Last file: ", trim(forcing_files(nfiles))
         else
             do i=1,nfiles
-                write(*,*) "    ",trim(forcing_files(i))
+                write(*,*) "      ",trim(forcing_files(i))
             enddo
         endif
 

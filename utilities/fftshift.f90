@@ -1,17 +1,4 @@
 !>------------------------------------------------------------
-!! Fortran interface to FFTW
-!!
-!!  @author
-!!  The FFTW team. 
-!!
-!!------------------------------------------------------------
-module fft
-    use, intrinsic :: iso_c_binding
-    include 'fftw3.f03'
-end module fft
-
-
-!>------------------------------------------------------------
 !! Supplies 1D and 2D FFT shift procedures ala matlab fftshift
 !!
 !! Uses a generic interface so that procedures can be called with

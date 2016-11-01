@@ -64,7 +64,7 @@ module module_mp_simple
                                     ! NOTE, ice = 2110 (J/kg/K), steam = 2080 (J/kg/K)
     real, parameter :: LH_liquid = 3.34E5 ! J/kg
     real, parameter :: heat_capacity = 1006.0 ! air heat capacity J/kg/K
-    real, parameter :: SMALL_VALUE = 1E-15
+    real, parameter :: SMALL_VALUE = 1E-30
     real, parameter :: SMALL_PRESSURE = 1000. ! in Pa this is actually pretty small...
 !     real, parameter :: mp_R = 287.058 ! J/(kg K) specific gas constant for air
 !     real, parameter :: mp_g = 9.81 ! gravity m/s^2
@@ -127,6 +127,7 @@ module module_mp_simple
             a = 17.2693882
             b = 35.86
         endif
+
         e_s = 610.78 * exp(a * (temperature - 273.16) / (temperature - b)) !(Pa)
 
         ! alternate formulations
@@ -204,16 +205,11 @@ module module_mp_simple
                 excess = excess*(-1) !DEBUG
             endif
         enddo
-        if (iteration==5) then
+        if (iteration==15) then
             qv = sat_mr(pre_t,pressure)
             temperature = pre_t
             qc = pre_qc
         endif
-        ! if (temperature<170) then
-        !     temperature = 170
-        ! else if (temperature>350) then
-        !     temperature = 350
-        ! endif
 
         qc = max(qc,0.)
 
@@ -337,11 +333,10 @@ module module_mp_simple
         real,intent(in)::dt
         real :: qvsat,L_evap,L_subl,L_melt
 
-        qvsat = 1
         L_melt = -1*LH_liquid  ! J/kg (should change with temperature)
         L_evap = -1*(LH_vapor+(373.15-temperature)*dLHvdt)   ! J/kg
         L_subl = L_melt+L_evap ! J/kg
-        ! convert cloud water to and from water vapor
+        ! convert cloud water to and from water vapor (also initializes qvsat)
         call cloud_conversion(pressure,temperature,qv,qc,qvsat,dt)
         ! if there are no species to process we will just return
         if ((qc+qr+qs) >SMALL_VALUE) then
@@ -349,11 +344,10 @@ module module_mp_simple
                 if (temperature>freezing_threshold) then
                     ! convert cloud water to rain drops
                     call cloud2hydrometeor(qc,qr,cloud2rain,rain_cloud_init)
-!                   if (qs>SMALL_VALUE) then
-!                       ! it is above freezing, so start melting any snow if present
-!                       call phase_change(pressure,temperature,qs,100.,qr,L_melt,dt/snow_melt_time)
-! !                         write(*,*) "Snow Melt",temperature
-!                   endif
+                    if (qs>SMALL_VALUE) then
+                        ! it is above freezing, so start melting any snow if present
+                        call phase_change(pressure,temperature,qs,100.,qr,L_melt,cloud2rain)
+                    endif
                 else
                     ! convert cloud water to snow flakes
                     call cloud2hydrometeor(qc,qs,cloud2snow,snow_cloud_init)
@@ -364,11 +358,11 @@ module module_mp_simple
             if (qv<qvsat) then
                 if (qr>SMALL_VALUE) then
                     ! evaporate rain
-                    call phase_change(pressure,temperature,qr,qvsat,qv,L_evap,1.0) !cloud2rain)
+                    call phase_change(pressure,temperature,qr,qvsat,qv,L_evap,cloud2rain/2)
                 endif
                 if (qs>SMALL_VALUE) then
                     ! sublimate snow
-                    call phase_change(pressure,temperature,qs,qvsat,qv,L_subl,1.0) !cloud2snow)
+                    call phase_change(pressure,temperature,qs,qvsat,qv,L_subl,cloud2snow/2)
                 endif
             endif
         endif
@@ -452,7 +446,7 @@ module module_mp_simple
 !           qv(i) = qv(i)/(1-qv(i))
             call mp_conversions(pressure(i),temperature(i),qv(i),qc(i),qr(i),qs(i),dt)
         enddo
-
+        
         ! SEDIMENTATION for rain
         if (maxval(qr)>SMALL_VALUE) then
             fall_rate = rain_fall_rate
@@ -468,11 +462,12 @@ module module_mp_simple
                     if (qv(i)<qvsat) then
                         if (qr(i)>SMALL_VALUE) then
                             ! evaporate rain
-                            call phase_change(pressure(i),temperature(i),qr(i),qvsat,qv(i),L_evap,1.0) !cloud2rain)
+                            call phase_change(pressure(i),temperature(i),qr(i),qvsat,qv(i),L_evap,cloud2rain/(2*nint(cfl)))
                         endif
                     endif
                 enddo
             enddo
+
         endif
 
         ! SEDIMENTATION for snow
@@ -493,7 +488,7 @@ module module_mp_simple
                     if (qv(i)<qvsat) then
                         if (qs(i)>SMALL_VALUE) then
                             ! sublimate snow
-                            call phase_change(pressure(i),temperature(i),qs(i),qvsat,qv(i),L_subl,1.0) !cloud2snow)
+                            call phase_change(pressure(i),temperature(i),qs(i),qvsat,qv(i),L_subl,cloud2snow/(2*nint(cfl)))
                         endif
                     endif
                 enddo

@@ -77,7 +77,7 @@ contains
         integer :: step
         
         step = (options%start_mjd-options%initial_mjd)/(options%in_dt / 86400.0d+0)
-        if (options%debug) write(*,*), "bc_find_step: First forcing time step = ",trim(str(step))
+        if (options%debug) write(*,*) "bc_find_step: First forcing time step = ",trim(str(step))
         
     end function bc_find_step
     
@@ -981,6 +981,9 @@ contains
             if (trim(options%sst_var)/="") then
                 call read_2dvar(domain%sst,  file_list(curfile),options%sst_var,  bc%geolut,curstep)
             endif
+            if (trim(options%rain_var)/="") then
+                call read_2dvar(bc%drain_dt,  file_list(curfile),options%rain_var,  bc%geolut,curstep)
+            endif
             
             call update_pressure(domain%p,bc%lowres_z,domain%z)
             
@@ -1385,6 +1388,10 @@ contains
         if (trim(options%sst_var)/="") then
             call read_2dvar(bc%next_domain%sst,  file_list(curfile),options%sst_var,  bc%geolut,curstep)
         endif
+        if (trim(options%rain_var)/="") then
+            call read_2dvar(bc%drain_dt,  file_list(curfile),options%rain_var,  bc%geolut,curstep)
+        endif
+
         
         ! if we want to supply mean forcing fields on the boundaries, compute those here. 
         if (options%mean_fields) then

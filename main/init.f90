@@ -41,19 +41,22 @@ contains
         type(options_type), intent(inout) :: options
         type(domain_type), intent(inout):: domain
         type(bc_type), intent(inout):: boundary
-        
-!       read in options file
+
+        call welcome_message()
+        ! read in options file
         write(*,*) "Initializing Options"
         call init_options(options)
 
-!       allocate and initialize the domain
+        ! allocate and initialize the domain
+        write(*,*) ""
         write(*,*) "Initializing Domain"
         call init_domain(options,domain)
-!       allocate and initialize the boundary conditions structure (includes 3D grids too...)
-!       this might be more apropriately though of as a forcing data structure (for low res model)
+        ! allocate and initialize the boundary conditions structure (includes 3D grids too...)
+        ! this might be more apropriately though of as a forcing data structure (for low res model)
+        write(*,*) ""
         write(*,*) "Initializing Boundaries"
         call init_bc(options,domain,boundary)
-!         write(*,*) ""
+        write(*,*) ""
         write(*,'(/ A)') "Finished basic initialization"
         write(*,'(A /)') "---------------------------------------"
         
@@ -115,70 +118,70 @@ contains
         integer::nx1,ny1,nx2,ny2,nz
         real,allocatable,dimension(:,:)::temp_data
         
-        nx1=size(domain%lat,1)
-        ny1=size(domain%lat,2)
-        nx2=nx1-(edgesize*2)
-        ny2=ny1-(edgesize*2)
+        nx1 = size(domain%lat,1)
+        ny1 = size(domain%lat,2)
+        nx2 = nx1-(edgesize*2)
+        ny2 = ny1-(edgesize*2)
         
         allocate(temp_data(nx1,ny1))
         
-        temp_data=domain%lat
+        temp_data = domain%lat
         deallocate(domain%lat)
         allocate(domain%lat(nx2,ny2))
-        domain%lat=temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
+        domain%lat = temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
         
-        temp_data=domain%lon
+        temp_data = domain%lon
         deallocate(domain%lon)
         allocate(domain%lon(nx2,ny2))
 
-        domain%lon=temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
+        domain%lon = temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
 
-        temp_data=domain%terrain
+        temp_data = domain%terrain
         deallocate(domain%terrain)
         allocate(domain%terrain(nx2,ny2))
-        domain%terrain=temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
+        domain%terrain = temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
 
-        temp_data=domain%landmask
+        temp_data = domain%landmask
         deallocate(domain%landmask)
         allocate(domain%landmask(nx2,ny2))
-        domain%landmask=temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
+        domain%landmask = temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
 
         
         deallocate(temp_data)
         
-        nx1=size(domain%u_geo%lat,1)
-        ny1=size(domain%u_geo%lat,2)
-        nx2=nx1-(edgesize*2)
-        ny2=ny1-(edgesize*2)
+        nx1 = size(domain%u_geo%lat,1)
+        ny1 = size(domain%u_geo%lat,2)
+        nx2 = nx1-(edgesize*2)
+        ny2 = ny1-(edgesize*2)
         
         allocate(temp_data(nx1,ny1))
-        temp_data=domain%u_geo%lat
+        temp_data = domain%u_geo%lat
         deallocate(domain%u_geo%lat)
         allocate(domain%u_geo%lat(nx2,ny2))
-        domain%u_geo%lat=temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
+        domain%u_geo%lat = temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
         
-        temp_data=domain%u_geo%lon
+        temp_data = domain%u_geo%lon
         deallocate(domain%u_geo%lon)
         allocate(domain%u_geo%lon(nx2,ny2))
-        domain%u_geo%lon=temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
+        domain%u_geo%lon = temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
 
         deallocate(temp_data)
         
-        nx1=size(domain%v_geo%lat,1)
-        ny1=size(domain%v_geo%lat,2)
-        nx2=nx1-(edgesize*2)
-        ny2=ny1-(edgesize*2)
+        nx1 = size(domain%v_geo%lat,1)
+        ny1 = size(domain%v_geo%lat,2)
+        nx2 = nx1-(edgesize*2)
+        ny2 = ny1-(edgesize*2)
         
         allocate(temp_data(nx1,ny1))
-        temp_data=domain%v_geo%lat
+        temp_data = domain%v_geo%lat
         deallocate(domain%v_geo%lat)
         allocate(domain%v_geo%lat(nx2,ny2))
-        domain%v_geo%lat=temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
+        domain%v_geo%lat = temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
         
-        temp_data=domain%v_geo%lon
+        temp_data = domain%v_geo%lon
         deallocate(domain%v_geo%lon)
         allocate(domain%v_geo%lon(nx2,ny2))
-        domain%v_geo%lon=temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
+        domain%v_geo%lon = temp_data(1+edgesize:nx1-edgesize,1+edgesize:ny1-edgesize)
         
         deallocate(temp_data)
     end subroutine remove_edges
@@ -193,156 +196,156 @@ contains
         
         integer :: ns
         
-        ns=4
+        ns = 4
         if (present(nsoil)) then
-            ns=nsoil
+            ns = nsoil
         endif
         
         ! atmosphere allocation
         allocate(domain%p(nx,nz,ny))        ! air pressure [Pa]
-        domain%p=100000
+        domain%p = 100000
         allocate(domain%u(nx+1,nz,ny))      ! eastward wind [m/s]
-        domain%u=0
+        domain%u = 0
         allocate(domain%v(nx,nz,ny+1))      ! northward wind [m/s]
-        domain%v=0
+        domain%v = 0
         allocate(domain%w(nx,nz,ny))        ! vertical wind [grid/s]
-        domain%w=0
+        domain%w = 0
         allocate(domain%w_real(nx,nz,ny))   ! real vertical wind [m/s] including the U,V * dz/dx component
-        domain%w_real=0
+        domain%w_real = 0
         if (options%advect_density) then
             allocate(domain%ur(nx+1,nz,ny))     ! eastward wind * density [m/s kg/m^3]
-            domain%ur=0
+            domain%ur = 0
             allocate(domain%vr(nx,nz,ny+1))     ! northward wind * density[m/s kg/m^3]
-            domain%vr=0
+            domain%vr = 0
             allocate(domain%wr(nx,nz,ny))       ! vertical wind * density [grid/s kg/m^3]
-            domain%wr=0
+            domain%wr = 0
         endif
         allocate(domain%th(nx,nz,ny))       ! potential temperature [K]
-        domain%th=280
+        domain%th = 280
         allocate(domain%qv(nx,nz,ny))       ! water vapor [kg/kg]
-        domain%qv=0.0002
+        domain%qv = 0.0002
         allocate(domain%cloud(nx,nz,ny))    ! liquid cloud water content mixing ratio [kg/kg]
-        domain%cloud=0
+        domain%cloud = 0
         allocate(domain%ice(nx,nz,ny))      ! frozen cloud water content mixing ratio [kg/kg]
-        domain%ice=0
+        domain%ice = 0
         allocate(domain%nice(nx,nz,ny))     ! cloud ice number concentration [cm-3]
-        domain%nice=0
+        domain%nice = 0
         allocate(domain%qrain(nx,nz,ny))    ! rain mixing ratio [kg/kg]
-        domain%qrain=0
+        domain%qrain = 0
         allocate(domain%nrain(nx,nz,ny))    ! rain drop number concentration [cm-3]
-        domain%nrain=0
+        domain%nrain = 0
         allocate(domain%qsnow(nx,nz,ny))    ! snow  mixing ratio [kg/kg]
-        domain%qsnow=0
+        domain%qsnow = 0
         allocate(domain%nsnow(nx,nz,ny))    ! snow number concentration [cm-3]
-        domain%nsnow=0
+        domain%nsnow = 0
         allocate(domain%qgrau(nx,nz,ny))    ! graupel mixing ratio [kg/kg]
-        domain%qgrau=0
+        domain%qgrau = 0
         allocate(domain%ngraupel(nx,nz,ny)) ! graupel number concentration [cm-3]
-        domain%ngraupel=0
+        domain%ngraupel = 0
         allocate(domain%pii(nx,nz,ny))      ! exner function
-        domain%pii=1
+        domain%pii = 1
         allocate(domain%rho(nx,nz,ny))      ! air density [kg/m^3]
-        domain%rho=1
+        domain%rho = 1
         allocate(domain%cloudfrac(nx,ny))   ! cloud fraction
-        domain%cloudfrac=0
+        domain%cloudfrac = 0
 
         allocate(domain%t(nx,nz,ny))        ! real air temperature [K]
-        domain%t=domain%th*domain%pii
+        domain%t = domain%th*domain%pii
         allocate(domain%p_inter(nx,nz,ny))  ! air pressure on vertical interfaces [Pa]
-        domain%p_inter=100000
+        domain%p_inter = 100000
         allocate(domain%Um(nx,nz,ny))       ! eastward wind on mass grid [m/s]
-        domain%Um=0
+        domain%Um = 0
         allocate(domain%Vm(nx,nz,ny))       ! northward wind on mass grid [m/s]
-        domain%Vm=0
+        domain%Vm = 0
         allocate(domain%mut(nx,nz,ny))      ! dry mass in each grid cell (p_inter[i] - p_inter[i+1])
-        domain%mut=0
+        domain%mut = 0
         
         ! land-atm flux allocation
         allocate(domain%rain(nx,ny))        ! accumulated total rainfall [kg/m^2]
-        domain%rain=0
+        domain%rain = 0
         allocate(domain%crain(nx,ny))       ! accumulated convective rainfall
-        domain%crain=0
+        domain%crain = 0
         allocate(domain%snow(nx,ny))        ! accumulated snow fall
-        domain%snow=0
+        domain%snow = 0
         allocate(domain%graupel(nx,ny))     ! accumulated graupel fall
-        domain%graupel=0
+        domain%graupel = 0
         allocate(domain%rain_bucket(nx,ny))        ! accumulated total rainfall [kg/m^2]
-        domain%rain_bucket=0
+        domain%rain_bucket = 0
         allocate(domain%crain_bucket(nx,ny))       ! accumulated convective rainfall
-        domain%crain_bucket=0
+        domain%crain_bucket = 0
         allocate(domain%snow_bucket(nx,ny))        ! accumulated snow fall
-        domain%snow_bucket=0
+        domain%snow_bucket = 0
         allocate(domain%graupel_bucket(nx,ny))     ! accumulated graupel fall
-        domain%graupel_bucket=0
+        domain%graupel_bucket = 0
         allocate(domain%current_rain(nx,ny))! rain fall in current time step
-        domain%current_rain=0
+        domain%current_rain = 0
         allocate(domain%current_snow(nx,ny))! snow fall in current time step
-        domain%current_snow=0
+        domain%current_snow = 0
         allocate(domain%swdown(nx,ny))      ! shortwave down at surface
-        domain%swdown=0
+        domain%swdown = 0
         allocate(domain%lwdown(nx,ny))      ! longwave down at surface
-        domain%lwdown=0
+        domain%lwdown = 0
         allocate(domain%lwup(nx,ny))        ! longwave up from surface
-        domain%lwup=0
+        domain%lwup = 0
 
         allocate(domain%sst(nx,ny))         ! sea surface temperature
-        domain%sst=280
+        domain%sst = 280
 
         allocate(domain%sensible_heat(nx,ny)) ! sensible heat flux from surface
-        domain%sensible_heat=0
+        domain%sensible_heat = 0
         allocate(domain%latent_heat(nx,ny)) ! latent heat flux from surface
-        domain%latent_heat=0
+        domain%latent_heat = 0
         allocate(domain%ground_heat(nx,ny)) ! ground heat flux into ground
-        domain%ground_heat=0
+        domain%ground_heat = 0
         allocate(domain%pbl_height(nx,ny))  ! planetary boundary layer height (not always used)
-        domain%pbl_height=0
+        domain%pbl_height = 0
         
         ! land surface allocation
         allocate(domain%soil_t(nx,ns,ny))   ! 3D soil temperature
-        domain%soil_t=280
+        domain%soil_t = 280
         allocate(domain%soil_vwc(nx,ns,ny)) ! 3D soil volumetric water content
-        domain%soil_vwc=0.25
+        domain%soil_vwc = 0.25
         
         allocate(domain%soil_tdeep(nx,ny))      ! deep soil temperature
-        domain%soil_tdeep=280
+        domain%soil_tdeep = 280
         allocate(domain%soil_totalmoisture(nx,ny))  ! soil column total moisture content
-        domain%soil_totalmoisture=500 ! =2000mm * 0.25 (vwc)
+        domain%soil_totalmoisture = 500 ! =2000mm * 0.25 (vwc)
         allocate(domain%skin_t(nx,ny))          ! skin temperature
-        domain%skin_t=280
+        domain%skin_t = 280
         allocate(domain%snow_swe(nx,ny))        ! snow water equivalent
-        domain%snow_swe=0
+        domain%snow_swe = 0
         
         if (options%lsm_options%monthly_vegfrac) then
             allocate(domain%vegfrac(nx,ny,12))        ! vegetation cover fraction (%)
         else
             allocate(domain%vegfrac(nx,ny,1))         ! vegetation cover fraction (%)
         endif
-        domain%vegfrac=50 !% veg cover
+        domain%vegfrac = 50 !% veg cover
         
         allocate(domain%canopy_water(nx,ny))    ! canopy water content
-        domain%canopy_water=0
+        domain%canopy_water = 0
         allocate(domain%soil_type(nx,ny))       ! USGS soil type
-        domain%soil_type=6 ! Loam
+        domain%soil_type = 6 ! Loam
         allocate(domain%veg_type(nx,ny))        ! Vegetation type
-        domain%veg_type=7  ! grassland
+        domain%veg_type = 7  ! grassland
         
         allocate(domain%u10(nx,ny))         ! 10m height U wind
-        domain%u10=0
+        domain%u10 = 0
         allocate(domain%v10(nx,ny))         ! 10m height V wind
-        domain%v10=0
+        domain%v10 = 0
         allocate(domain%t2m(nx,ny))         ! 2m height air temperature
-        domain%t2m=domain%t(:,1,:)
+        domain%t2m = domain%t(:,1,:)
         allocate(domain%q2m(nx,ny))         ! 2m height air mixing ratio
-        domain%q2m=domain%qv(:,1,:)
+        domain%q2m = domain%qv(:,1,:)
         
         allocate(domain%znt(nx,ny))         ! surface roughness
-        domain%znt=0.2
+        domain%znt = 0.2
         allocate(domain%ustar(nx,ny))       ! surface shear stress (u*)
-        domain%ustar=0
+        domain%ustar = 0
         allocate(domain%ptop(nx,ny))        ! model top pressure
-        domain%ptop=domain%p(:,nz,:)
+        domain%ptop = domain%p(:,nz,:)
         allocate(domain%psfc(nx,ny))        ! model surface pressure
-        domain%psfc=domain%p_inter(:,1,:)
+        domain%psfc = domain%p_inter(:,1,:)
 
     end subroutine domain_allocation
 
@@ -358,13 +361,13 @@ contains
         integer::nxi,nyi,nzi,nxo,nyo,nzo
         
         ! dimensions of the input data
-        nxi=size(input%z,1)
-        nzi=size(input%z,2)
-        nyi=size(input%z,3)
+        nxi = size(input%z,1)
+        nzi = size(input%z,2)
+        nyi = size(input%z,3)
         ! dimensions of the output data
-        nxo=size(output%lat,1)
-        nzo=nzi
-        nyo=size(output%lat,2)
+        nxo = size(output%lat,1)
+        nzo = nzi
+        nyo = size(output%lat,2)
 
         if (allocated(output%z)) then
             deallocate(output%z)
@@ -374,16 +377,16 @@ contains
             if ((nxo/=(nxi+1)).or.(nyo/=nyi).or.(nzo/=nzi)) then
                 stop("Error copying z levels from mass grid to U grid, dimensions don't match")
             endif
-            output%z(2:nxo-1,:,:)=(input%z(1:nxi-1,:,:) + input%z(2:nxi,:,:))/2
-            output%z(1,:,:)=input%z(1,:,:)
-            output%z(nxo,:,:)=input%z(nxi,:,:)
+            output%z(2:nxo-1,:,:) = (input%z(1:nxi-1,:,:) + input%z(2:nxi,:,:))/2
+            output%z(1,:,:) = input%z(1,:,:)
+            output%z(nxo,:,:) = input%z(nxi,:,:)
         else if (interpolate_dim==3) then
             if ((nyo/=(nyi+1)).or.(nxo/=nxi).or.(nzo/=nzi)) then
                 stop("Error copying z levels from mass grid to V grid, dimensions don't match")
             endif
-            output%z(:,:,2:nyo-1)=(input%z(:,:,1:nyi-1) + input%z(:,:,2:nyi))/2
-            output%z(:,:,1)=input%z(:,:,1)
-            output%z(:,:,nyo)=input%z(:,:,nyi)
+            output%z(:,:,2:nyo-1) = (input%z(:,:,1:nyi-1) + input%z(:,:,2:nyi))/2
+            output%z(:,:,1) = input%z(:,:,1)
+            output%z(:,:,nyo) = input%z(:,:,nyi)
         else
             write(*,*) "Can not interpolate z data over z dimension"
         endif
@@ -401,10 +404,10 @@ contains
         
         integer:: buffer,nx,ny,nz, i
         
-        buffer=options%buffer
-        nx=size(domain%veg_type,1)+buffer*2
-        ny=size(domain%veg_type,2)+buffer*2
-        nz=size(domain%soil_t,2)
+        buffer = options%buffer
+        nx = size(domain%veg_type,1)+buffer*2
+        ny = size(domain%veg_type,2)+buffer*2
+        nz = size(domain%soil_t,2)
         
         
         ! Veg cover fraction = 2D/3D real
@@ -412,39 +415,39 @@ contains
             ! if we are supposed to read a veg fraction for each month then it will be a 3D variable
             if (options%lsm_options%monthly_vegfrac) then
                 call io_read3d(options%init_conditions_file,options%vegfrac_var,temp_rdata,1)
-                domain%vegfrac=temp_rdata(1+buffer:nx-buffer,1+buffer:ny-buffer,:)  ! subset the data by buffer grid cells
+                domain%vegfrac = temp_rdata(1+buffer:nx-buffer,1+buffer:ny-buffer,:)  ! subset the data by buffer grid cells
                 deallocate(temp_rdata)
             else
                 ! otherwise we just read a 2D variable and store it in the first time entry in the 3D vegfrac field
                 call io_read2d(options%init_conditions_file,options%vegfrac_var,temp_rdata_2d,1)
-                domain%vegfrac(:,:,1)=temp_rdata_2d(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
+                domain%vegfrac(:,:,1) = temp_rdata_2d(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
                 deallocate(temp_rdata_2d)
             endif
         endif
         ! if the input vegetation fraction is a fraction (0-1) 
         ! then convert it to a percent
         if (maxval(domain%vegfrac)<=1) then
-            domain%vegfrac=domain%vegfrac*100
+            domain%vegfrac = domain%vegfrac*100
         endif
 
         ! Veg TYPE = 2D integer
         if (options%vegtype_var.ne."") then
             call io_read2di(options%init_conditions_file,options%vegtype_var,temp_idata,1)
-            domain%veg_type=temp_idata(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
+            domain%veg_type = temp_idata(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
             deallocate(temp_idata)
         endif
         
         ! Soil TYPE = 2D integer
         if (options%soiltype_var.ne."") then
             call io_read2di(options%init_conditions_file,options%soiltype_var,temp_idata,1)
-            domain%soil_type=temp_idata(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
+            domain%soil_type = temp_idata(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
             deallocate(temp_idata)
         endif
         
         ! Soil Volumetric Water Content = 3D real
         if (options%soil_vwc_var.ne."") then
             call io_read3d(options%init_conditions_file,options%soil_vwc_var,temp_rdata,1)  
-            domain%soil_vwc=reshape(temp_rdata(1+buffer:nx-buffer,1+buffer:ny-buffer,1:nz) &    ! subset the data by buffer grid cells
+            domain%soil_vwc = reshape(temp_rdata(1+buffer:nx-buffer,1+buffer:ny-buffer,1:nz) &    ! subset the data by buffer grid cells
                                     ,[nx-buffer*2,nz,ny-buffer*2],order=[1,3,2])                ! and reshape to move the z axis to the middle
             deallocate(temp_rdata)
         endif
@@ -452,7 +455,7 @@ contains
         ! Soil Temperature = 3D real
         if (options%soil_t_var.ne."") then
             call io_read3d(options%init_conditions_file,options%soil_t_var,temp_rdata,1)
-            domain%soil_t=reshape(temp_rdata(1+buffer:nx-buffer,1+buffer:ny-buffer,1:nz) &  ! subset the data by buffer grid cells
+            domain%soil_t = reshape(temp_rdata(1+buffer:nx-buffer,1+buffer:ny-buffer,1:nz) &  ! subset the data by buffer grid cells
                                     ,[nx-buffer*2,nz,ny-buffer*2],order=[1,3,2])            ! and reshape to move the z axis to the middle
             deallocate(temp_rdata)
         endif
@@ -460,12 +463,12 @@ contains
         ! Deep Soil Temperature = 2D real
         if (options%soil_deept_var.ne."") then
             call io_read2d(options%init_conditions_file,options%soil_deept_var,temp_rdata_2d,1)
-            domain%soil_tdeep=temp_rdata_2d(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
-            where(domain%soil_tdeep<200) domain%soil_tdeep=200 ! mitigates zeros that can cause problems
+            domain%soil_tdeep = temp_rdata_2d(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
+            where(domain%soil_tdeep<200) domain%soil_tdeep = 200 ! mitigates zeros that can cause problems
             if (options%soil_t_var=="") then
                 write(*,*) "Missing explicit soil T, using deep soil T for all depths"
-                do i=1,nz
-                    domain%soil_t(:,i,:)=domain%soil_tdeep
+                do i = 1,nz
+                    domain%soil_t(:,i,:) = domain%soil_tdeep
                 end do
             endif
             deallocate(temp_rdata_2d)
@@ -492,8 +495,8 @@ contains
         
         integer :: nx, ny
         
-        nx=size(data_in,1)
-        ny=size(data_in,2)
+        nx = size(data_in,1)
+        ny = size(data_in,2)
         if (.not.allocated(data_out)) then
             allocate(data_out(nx+1,ny))
         else
@@ -528,8 +531,8 @@ contains
         
         integer :: nx, ny
         
-        nx=size(data_in,1)
-        ny=size(data_in,2)
+        nx = size(data_in,1)
+        ny = size(data_in,2)
         if (.not.allocated(data_out)) then
             allocate(data_out(nx,ny+1))
         else
@@ -587,14 +590,12 @@ contains
         
         if (options%landvar/="") then
             call io_read2d(options%init_conditions_file,options%landvar,domain%landmask,1)
-            where(domain%landmask==0) domain%landmask=kLC_WATER
-            print*, "WARNING truncating water surface to be > 0"
-            where((domain%terrain<0) .and. (domain%landmask==kLC_WATER)) domain%terrain=0
+            where(domain%landmask==0) domain%landmask = kLC_WATER
         else
-            nx=size(domain%lat,1)
-            ny=size(domain%lat,2)
+            nx = size(domain%lat,1)
+            ny = size(domain%lat,2)
             allocate(domain%landmask(nx,ny))
-            domain%landmask=kLC_LAND !if we weren't supplied a landmask field, assume all is land (what we care about anyway)
+            domain%landmask = kLC_LAND !if we weren't supplied a landmask field, assume all is land (what we care about anyway)
         endif
         
         ! remove n grid cells from all sides of the domain if requested
@@ -604,10 +605,10 @@ contains
         endif
         
         ! use the lat variable to define the x and y dimensions for all other variables
-        nx=size(domain%lat,1)
-        ny=size(domain%lat,2)
+        nx = size(domain%lat,1)
+        ny = size(domain%lat,2)
         ! assumes nz is defined in the options
-        nz=options%nz
+        nz = options%nz
         
         ! if a 3d grid was also specified, then read those data in
         if ((options%readz).and.(options%ideal).and.(options%zvar.ne."")) then
@@ -616,18 +617,18 @@ contains
             
             call io_read3d(options%init_conditions_file,options%zvar, domain%z)
             ! dz also has to be calculated from the 3d z file
-            buf=options%buffer
+            buf = options%buffer
             allocate(domain%dz(nx,nz,ny))
             allocate(temporary_z(nx,nz,ny))
-            do i=1,nz-1
-                domain%dz(:,i,:)=domain%z(buf+1:nx+buf,buf+1:ny+buf,i+1)-domain%z(buf+1:nx+buf,buf+1:ny+buf,i)
-                temporary_z(:,i,:)=domain%z(buf+1:nx+buf,buf+1:ny+buf,i)
+            do i = 1,nz-1
+                domain%dz(:,i,:) = domain%z(buf+1:nx+buf,buf+1:ny+buf,i+1)-domain%z(buf+1:nx+buf,buf+1:ny+buf,i)
+                temporary_z(:,i,:) = domain%z(buf+1:nx+buf,buf+1:ny+buf,i)
             enddo
-            temporary_z(:,nz,:)=domain%z(buf+1:nx+buf,buf+1:ny+buf,nz)
-            domain%dz(:,nz,:)=domain%dz(:,nz-1,:)
+            temporary_z(:,nz,:) = domain%z(buf+1:nx+buf,buf+1:ny+buf,nz)
+            domain%dz(:,nz,:) = domain%dz(:,nz-1,:)
             deallocate(domain%z)
             allocate(domain%z(nx,nz,ny))
-            domain%z=temporary_z
+            domain%z = temporary_z
             deallocate(temporary_z)
             
         else
@@ -638,24 +639,24 @@ contains
             allocate(domain%dz(nx,nz,ny))
             allocate(domain%dz_inter(nx,nz,ny))
             ! lowest model level is half of the lowest dz above the land surface
-            domain%z(:,1,:)=domain%terrain+options%dz_levels(1)/2
-            domain%z_inter(:,1,:)=domain%terrain
+            domain%z(:,1,:) = domain%terrain+options%dz_levels(1)/2
+            domain%z_inter(:,1,:) = domain%terrain
             ! dz between the mass grid points is half of each dz
-            domain%dz(:,1,:)=(options%dz_levels(1) + options%dz_levels(2))/2
+            domain%dz(:,1,:) = (options%dz_levels(1) + options%dz_levels(2))/2
             ! dz between the interface points = dz = thickness of mass grid cells
-            domain%dz_inter(:,1,:)=options%dz_levels(1)
-            do i=2,nz
+            domain%dz_inter(:,1,:) = options%dz_levels(1)
+            do i = 2,nz
                 domain%z(:,i,:)       = domain%z(:,i-1,:)       + (options%dz_levels(i)+options%dz_levels(i-1))/2
                 domain%z_inter(:,i,:) = domain%z_inter(:,i-1,:) +  options%dz_levels(i)
                 
                 ! dz between the interface points = dz = thickness of mass grid cells
-                domain%dz_inter(:,i,:)=options%dz_levels(i)
+                domain%dz_inter(:,i,:) = options%dz_levels(i)
                 ! dz between the mass grid points is half of each dz
                 if (i<nz) then
-                    domain%dz(:,i,:)=(options%dz_levels(i) + options%dz_levels(i+1))/2
+                    domain%dz(:,i,:) = (options%dz_levels(i) + options%dz_levels(i+1))/2
                 endif
             enddo
-            domain%dz(:,nz,:)=options%dz_levels(nz)
+            domain%dz(:,nz,:) = options%dz_levels(nz)
             
         endif
         call copy_z(domain,domain%u_geo,interpolate_dim=1)
@@ -667,7 +668,7 @@ contains
         call init_domain_land(domain,options)
         
         ! store dx in domain as well as options, read as an option, but it is more appropriate in domain
-        domain%dx=options%dx
+        domain%dx = options%dx
         
         call init_winds(domain,options)
     end subroutine init_domain
@@ -685,29 +686,31 @@ contains
         integer,intent(in)::nx,nz,ny
         
         allocate(boundary%du_dt(nx+1,nz,ny))
-        boundary%du_dt=0
+        boundary%du_dt = 0
         allocate(boundary%dv_dt(nx,nz,ny+1))
-        boundary%dv_dt=0
+        boundary%dv_dt = 0
         allocate(boundary%dp_dt(nx,nz,ny))
-        boundary%dp_dt=0
+        boundary%dp_dt = 0
         allocate(boundary%dth_dt(nz,max(nx,ny),4))
-        boundary%dth_dt=0
+        boundary%dth_dt = 0
         allocate(boundary%dqv_dt(nz,max(nx,ny),4))
-        boundary%dqv_dt=0
+        boundary%dqv_dt = 0
         allocate(boundary%dqc_dt(nz,max(nx,ny),4))
-        boundary%dqc_dt=0
+        boundary%dqc_dt = 0
         allocate(boundary%dlh_dt(nx,ny))
-        boundary%dlh_dt=0
+        boundary%dlh_dt = 0
         allocate(boundary%dsh_dt(nx,ny))
-        boundary%dsh_dt=0
+        boundary%dsh_dt = 0
         allocate(boundary%dlw_dt(nx,ny))
-        boundary%dlw_dt=0
+        boundary%dlw_dt = 0
         allocate(boundary%dsw_dt(nx,ny))
-        boundary%dsw_dt=0
+        boundary%dsw_dt = 0
         allocate(boundary%dsst_dt(nx,ny))
-        boundary%dsst_dt=0
+        boundary%dsst_dt = 0
         allocate(boundary%dpblh_dt(nx,ny))
-        boundary%dpblh_dt=0
+        boundary%dpblh_dt = 0
+        allocate(boundary%drain_dt(nx,ny))
+        boundary%drain_dt = 0
     end subroutine boundary_allocate
     
 ! initialize the boundary condition data structure e.g. lat,lon,terrain,3D Z coord
@@ -735,11 +738,11 @@ contains
         ! read in the vertical coordinate
         call io_read3d(options%boundary_files(1),options%zvar,zbase)
         if (options%debug) write(*,*) "Raw input forcing z min=",minval(zbase), " z max=", maxval(zbase)
-        nx=size(zbase,1)
-        ny=size(zbase,2)
-        nz=size(zbase,3)
+        nx = size(zbase,1)
+        ny = size(zbase,2)
+        nz = size(zbase,3)
         allocate(boundary%lowres_z(nx,nz,ny))
-        boundary%lowres_z=reshape(zbase,[nx,nz,ny],order=[1,3,2])
+        boundary%lowres_z = reshape(zbase,[nx,nz,ny],order=[1,3,2])
         deallocate(zbase)
 
         if (trim(options%zbvar)/="") then
@@ -760,18 +763,18 @@ contains
         ! all other structures must be allocated and initialized, but will be set on a high-res grid
         ! u/v are seperate so we can read them on the low res grid and adjust/rm-linearwinds before interpolating
         ! this also makes it easier to change how these variables are read from various forcing model file structures
-        nx=size(boundary%u_geo%lon,1)
-        ny=size(boundary%u_geo%lon,2)
+        nx = size(boundary%u_geo%lon,1)
+        ny = size(boundary%u_geo%lon,2)
         allocate(boundary%u(nx,nz,ny))
-        boundary%u=0
-        nx=size(boundary%v_geo%lon,1)
-        ny=size(boundary%v_geo%lon,2)
+        boundary%u = 0
+        nx = size(boundary%v_geo%lon,1)
+        ny = size(boundary%v_geo%lon,2)
         allocate(boundary%v(nx,nz,ny))
-        boundary%v=0
+        boundary%v = 0
         
-        nz=options%nz
-        nx=size(domain%lat,1)
-        ny=size(domain%lat,2)
+        nz = options%nz
+        nx = size(domain%lat,1)
+        ny = size(domain%lat,2)
         
         call boundary_allocate(boundary,nx,nz,ny)
     end subroutine init_bc_data
@@ -784,14 +787,14 @@ contains
         type(wind_type),intent(inout)::domain
         integer::nx,ny
         
-        nx=size(domain%terrain,1)
-        ny=size(domain%terrain,2)
+        nx = size(domain%terrain,1)
+        ny = size(domain%terrain,2)
         
         ! dzdx/y used in rotating windfield back to terrain following grid in a simple fashion
         allocate(domain%dzdx(nx-1,ny))
         allocate(domain%dzdy(nx,ny-1))
-        domain%dzdx=sqrt((domain%terrain(2:nx,:)-domain%terrain(1:nx-1,:))**2+domain%dx**2)/domain%dx
-        domain%dzdy=sqrt((domain%terrain(:,2:ny)-domain%terrain(:,1:ny-1))**2+domain%dx**2)/domain%dx
+        domain%dzdx = sqrt((domain%terrain(2:nx,:)-domain%terrain(1:nx-1,:))**2+domain%dx**2)/domain%dx
+        domain%dzdy = sqrt((domain%terrain(:,2:ny)-domain%terrain(:,1:ny-1))**2+domain%dx**2)/domain%dx
     end subroutine setup_extwinds
     
     
@@ -846,7 +849,7 @@ contains
             (size(bc%ext_winds%terrain,2)/=size(bc%next_domain%terrain,2))) then
             call geo_LUT(bc%next_domain, bc%ext_winds)
             allocate(temporary_terrain(size(bc%ext_winds%terrain,1),size(bc%ext_winds%terrain,2)))
-            temporary_terrain=bc%ext_winds%terrain
+            temporary_terrain = bc%ext_winds%terrain
             deallocate(bc%ext_winds%terrain)
             allocate(bc%ext_winds%terrain(size(bc%next_domain%terrain,1),size(bc%next_domain%terrain,2)))
             call geo_interp2d(bc%ext_winds%terrain,temporary_terrain,bc%ext_winds%geolut)
@@ -857,11 +860,11 @@ contains
         ! this assumes the "external winds" file is on the exact same grid as the high res model grid
         ! probably better not to do this incase they are not on the same grid. This also assumes the first x,y pair
         ! is the closes grid cell.  This should be the case for the current geolut algorithm, but it is not required. 
-        ! bc%ext_winds%u_geo%geolut%w(2:,:,:)=0
-        ! bc%ext_winds%u_geo%geolut%w(1,:,:)=1
-        ! bc%ext_winds%v_geo%geolut%w(2:,:,:)=0
-        ! bc%ext_winds%v_geo%geolut%w(1,:,:)=1
-        bc%ext_winds%dx=bc%next_domain%dx
+        ! bc%ext_winds%u_geo%geolut%w(2:,:,:) = 0
+        ! bc%ext_winds%u_geo%geolut%w(1,:,:) = 1
+        ! bc%ext_winds%v_geo%geolut%w(2:,:,:) = 0
+        ! bc%ext_winds%v_geo%geolut%w(1,:,:) = 1
+        bc%ext_winds%dx = bc%next_domain%dx
         call setup_extwinds(bc%ext_winds)
     end subroutine init_ext_winds
     
@@ -870,26 +873,26 @@ contains
         type(bc_type), intent(inout) :: bc
         real,allocatable,dimension(:,:,:) :: tempz
         integer::nx,nz,ny, i
-        nx=size(bc%lowres_z,1)
-        nz=size(bc%lowres_z,2)
-        ny=size(bc%lowres_z,3)
+        nx = size(bc%lowres_z,1)
+        nz = size(bc%lowres_z,2)
+        ny = size(bc%lowres_z,3)
         allocate(tempz(nx,nz,ny))
-        tempz=bc%lowres_z
+        tempz = bc%lowres_z
         
-        nx=size(bc%z,1)
-        nz=size(bc%z,2)
-        ny=size(bc%z,3)
+        nx = size(bc%z,1)
+        nz = size(bc%z,2)
+        ny = size(bc%z,3)
         deallocate(bc%lowres_z)
         allocate(bc%lowres_z(nx,nz,ny))
-        bc%lowres_z=bc%z
+        bc%lowres_z = bc%z
 
-        nx=size(tempz,1)
-        nz=size(tempz,2)
-        ny=size(tempz,3)
+        nx = size(tempz,1)
+        nz = size(tempz,2)
+        ny = size(tempz,3)
         deallocate(bc%z)
         allocate(bc%z(nx,ny,nz))
-        do i=1,nz
-            bc%z(:,:,i)=tempz(:,i,:)
+        do i = 1,nz
+            bc%z(:,:,i) = tempz(:,i,:)
         end do
         deallocate(tempz)
         
@@ -900,17 +903,17 @@ contains
         ! moving implies deletion of the initial data, so inputgeo is destroyed
         type(geo_look_up_table), intent(inout) :: inputgeo,outputgeo
         integer::nx,ny,nz
-        nx=size(inputgeo%x,1)
-        ny=size(inputgeo%x,2)
-        nz=size(inputgeo%x,3)
+        nx = size(inputgeo%x,1)
+        ny = size(inputgeo%x,2)
+        nz = size(inputgeo%x,3)
         
         allocate(outputgeo%x(nx,ny,nz))
         allocate(outputgeo%y(nx,ny,nz))
         allocate(outputgeo%w(nx,ny,nz))
         
-        outputgeo%x=inputgeo%x
-        outputgeo%y=inputgeo%y
-        outputgeo%w=inputgeo%w
+        outputgeo%x = inputgeo%x
+        outputgeo%y = inputgeo%y
+        outputgeo%w = inputgeo%w
         
         call destroy_lut(inputgeo)
     end subroutine move_lut
@@ -934,7 +937,7 @@ contains
         real, dimension(:,:,:), allocatable :: tempz
         integer::i,nx,ny,nz
             
-        boundary%dx=options%dxlow
+        boundary%dx = options%dxlow
         ! set up base data
         call init_bc_data(options,boundary,domain)
         call init_domain(options,boundary%next_domain) !set up a domain to hold the forcing for the next time step
@@ -958,7 +961,7 @@ contains
             call init_ext_winds(options,boundary)
         endif
         
-        nz=size(boundary%lowres_z,2)
+        nz = size(boundary%lowres_z,2)
         if (maxval(boundary%terrain)>maxval(boundary%lowres_z(:,1,:))) then
             write(*,*) "WARNING : Forcing Z levels are below the terrain provided. "
             write(*,*) "          For pressure level forcing data this is expected, but not well tested. "
@@ -971,16 +974,16 @@ contains
         ! height above ground level (and we should for wind?), then we need to remove the 
         ! topography from both grids first
         if (options%use_agl_height) then
-            nz=size(boundary%lowres_z,2)
+            nz = size(boundary%lowres_z,2)
             
             ! First set the forcing data z into AGL coordinates
-            do i=1,nz
-                boundary%lowres_z(:,i,:)=boundary%lowres_z(:,i,:)-boundary%terrain
+            do i = 1,nz
+                boundary%lowres_z(:,i,:) = boundary%lowres_z(:,i,:)-boundary%terrain
             enddo
             ! Then put the model domain into AGL coordinates
-            nz=size(domain%z,2)
-            do i=1,nz
-                domain%z(:,i,:)=domain%z(:,i,:)-domain%terrain
+            nz = size(domain%z,2)
+            do i = 1,nz
+                domain%z(:,i,:) = domain%z(:,i,:)-domain%terrain
             enddo
 
             ! finally, get the model terrain onto the u and v staggered grids
@@ -988,21 +991,21 @@ contains
             call copy_z(domain,domain%v_geo,interpolate_dim=3)
 
             ! this is the only place we need the domain z to be in AGL space, so revert back immediately
-            do i=1,nz
-                domain%z(:,i,:)=domain%z(:,i,:)+domain%terrain
+            do i = 1,nz
+                domain%z(:,i,:) = domain%z(:,i,:)+domain%terrain
             enddo
         endif
         
         ! This section all happens in AGL space if use_agl_height=True
         ! interpolate lowres_z into the u_geo and v_geo data structures (on their staggered grids)
-        nx=size(domain%u_geo%lat,1)
-        ny=size(domain%u_geo%lat,2)
-        nz=size(boundary%lowres_z,2)
+        nx = size(domain%u_geo%lat,1)
+        ny = size(domain%u_geo%lat,2)
+        nz = size(boundary%lowres_z,2)
         allocate(boundary%u_geo%z(nx,nz,ny))
         call geo_interp(boundary%u_geo%z,boundary%lowres_z,u_temp_geo,.false.)
 
-        nx=size(domain%v_geo%lat,1)
-        ny=size(domain%v_geo%lat,2)
+        nx = size(domain%v_geo%lat,1)
+        ny = size(domain%v_geo%lat,2)
         allocate(boundary%v_geo%z(nx,nz,ny))
         call geo_interp(boundary%v_geo%z,boundary%lowres_z,v_temp_geo,.false.)
         
@@ -1018,16 +1021,16 @@ contains
         
         ! restore the lowres_z variable to ASL space for the mass grid vLUT generation
         if (options%use_agl_height) then
-            nz=size(boundary%lowres_z,2)
-            do i=1,nz
-                boundary%lowres_z(:,i,:)=boundary%lowres_z(:,i,:)+boundary%terrain
+            nz = size(boundary%lowres_z,2)
+            do i = 1,nz
+                boundary%lowres_z(:,i,:) = boundary%lowres_z(:,i,:)+boundary%terrain
             enddo
         endif
 
         ! Finally, take care of the mass grid in ASL space
-        nx=size(domain%terrain,1)
-        ny=size(domain%terrain,2)
-        nz=size(boundary%lowres_z,2)
+        nx = size(domain%terrain,1)
+        ny = size(domain%terrain,2)
+        nz = size(boundary%lowres_z,2)
         allocate(boundary%z(nx,nz,ny))
         call geo_interp(boundary%z,boundary%lowres_z,boundary%geolut,.false.)
 
@@ -1043,9 +1046,9 @@ contains
         ! after swap_z call, boundary%z is on the forcing data grid, boundary%lowres_z is interpolated to the ICAR grid
         ! Finally apply the vertical interpolation here as well
         ! this is a little annoying because we have to allocate a temporary. 
-        nx=size(domain%terrain,1)
-        ny=size(domain%terrain,2)
-        nz=size(domain%p,2)
+        nx = size(domain%terrain,1)
+        ny = size(domain%terrain,2)
+        nz = size(domain%p,2)
         allocate(tempz(nx,nz,ny))
         
         call vinterp(tempz,    & 
@@ -1058,4 +1061,24 @@ contains
         deallocate(tempz)
         
     end subroutine init_bc
+    
+    subroutine welcome_message()
+        implicit none
+        
+        write(*,*) ""
+        write(*,*) "============================================================"
+        write(*,*) "|                                                          |"
+        write(*,*) "|  The Intermediate Complexity Atmospheric Research Model  |"
+        write(*,*) "|                          (ICAR)                          |"
+        write(*,*) "|                                                          |"
+        write(*,*) "|   Developed at NCAR:                                     |"
+        write(*,*) "|     The National Center for Atmospheric Research         |"
+        write(*,*) "|     NCAR is sponsored by the National Science Foundation |"
+        write(*,*) "|                                                          |"
+        write(*,*) "|   Version: ",kVERSION_STRING,"                                         |"
+        write(*,*) "|                                                          |"
+        write(*,*) "============================================================"
+        write(*,*) ""        
+        
+    end subroutine welcome_message
 end module

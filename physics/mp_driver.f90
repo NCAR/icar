@@ -27,9 +27,12 @@
 !!----------------------------------------------------------
 module microphysics
     use data_structures
+    use mod_wrf_constants
     use module_mp_thompson,         only: mp_gt_driver, thompson_init
     use module_mp_morr_two_moment,  only: MORR_TWO_MOMENT_INIT, MP_MORR_TWO_MOMENT
+    use module_mp_wsm6,             only: wsm6, wsm6init
     use module_mp_simple,           only: mp_simple_driver
+    use mod_wrf_constants !,          only: rhoair0, rhowater, rhosnow, cliq, cpv
     implicit none
 
     ! permit the microphysics to update on a longer time step than the advection
@@ -76,6 +79,9 @@ contains
             write(*,*) "    Morrison Microphysics"
             call MORR_TWO_MOMENT_INIT(hail_opt=0)
             precip_delta=.False.
+        elseif (options%physics%microphysics==kMP_WSM6) then 
+            write(*,*) "    WSM6 Microphysics"
+            call wsm6init(rhoair0,rhowater,rhosnow,cliq,cpv)
         endif
 
         update_interval = options%mp_options%update_interval
@@ -257,7 +263,7 @@ contains
                 ! call the simple microphysics routine of SB04
                 call mp_simple_driver(domain%p,domain%th,domain%pii,domain%rho,domain%qv,domain%cloud, &
                                 domain%qrain,domain%qsnow,domain%rain,domain%snow,&
-                                mp_dt,domain%dz,ide,jde,kde)
+                                mp_dt,domain%dz_inter,ide,jde,kde)
             elseif (options%physics%microphysics==kMP_MORRISON) then 
                 call MP_MORR_TWO_MOMENT(itimestep,                         &
                                 domain%th, domain%qv, domain%cloud,     &
@@ -265,7 +271,7 @@ contains
                                 domain%qgrau, domain%nice, domain%nsnow,&
                                 domain%nrain, domain%ngraupel,          &
                                 domain%rho, domain%pii, domain%p,       &
-                                mp_dt, domain%dz, domain%w,             &
+                                mp_dt, domain%dz_inter, domain%w,       &
                                 domain%rain, last_rain, SR,             &
                                 domain%snow, last_snow, domain%graupel, &
                                 this_precip,                            & ! hm added 7/13/13
@@ -276,6 +282,23 @@ contains
                                ,IDS,IDE, JDS,JDE, KDS,KDE               & ! memory dims
                                ,ITS,ITE, JTS,JTE, KTS,KTE               & ! tile   dims            )
                            )
+            elseif (options%physics%microphysics==kMP_WSM6) then 
+                call wsm6(domain%th, domain%qv, domain%cloud, domain%qrain,      &
+                                domain%ice, domain%qsnow, domain%qgrau           & ! check these, should p and dz be between interfaces or levels? 
+                               ,domain%rho, domain%pii, domain%p, domain%dz_inter&
+                               ,mp_dt,gravity, cp, cpv, rd, rw, 273.15          &
+                               ,ep1, ep2, epsilon                                &
+                               ,XLS, XLV, XLF, rhoair0,rhowater                  &
+                               ,cliq,cice,psat                                   &
+                               ,domain%rain, last_rain                           &
+                               ,domain%snow, last_snow                           &
+                               ,sr                                               &
+                               ,domain%graupel, this_precip                      &
+                               ,ids,ide, jds,jde, kds,kde                        &
+                               ,ids,ide, jds,jde, kds,kde                        &
+                               ,its,ite, jts,jte, kts,kte                        &
+                                                                                 )
+
             endif
             
             if (options%mp_options%local_precip_fraction<1) then

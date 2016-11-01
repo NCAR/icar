@@ -78,6 +78,8 @@
 module data_structures
     use, intrinsic :: iso_c_binding ! needed for fftw compatible complex types
     implicit none
+    
+    character(len=5) :: kVERSION_STRING = "0.9.4"
 
 ! ------------------------------------------------
 ! Model constants (string lengths)
@@ -100,6 +102,7 @@ module data_structures
     integer, parameter :: kMP_THOMPSON   = 1
     integer, parameter :: kMP_SB04       = 2
     integer, parameter :: kMP_MORRISON   = 3
+    integer, parameter :: kMP_WSM6       = 4
 
     integer, parameter :: kPBL_BASIC     = 1
     integer, parameter :: kPBL_SIMPLE    = 2
@@ -342,6 +345,7 @@ module data_structures
         ! sh, lh, and pblh fields are only 2d. 
         ! These are only used with LSM option 1 and are derived from forcing file
         real, allocatable, dimension(:,:)   :: dsh_dt,dlh_dt,dpblh_dt
+        real, allocatable, dimension(:,:)   :: drain_dt
         ! change in shortwave and longwave at surface if read from forcing
         real, allocatable, dimension(:,:)   :: dsw_dt, dlw_dt
         ! change in sst if read from forcing file
@@ -476,7 +480,7 @@ module data_structures
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
                                         swdown_var, lwdown_var, &
-                                        sst_var
+                                        sst_var, rain_var
                                         
         ! Filenames for files to read various physics options from
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, adv_options_filename, &
