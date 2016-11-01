@@ -263,7 +263,7 @@ ifeq ($(MODE), debugompslow)
 endif
 ifeq ($(MODE), debugomp)
 	ifeq ($(F90), ifort)
-		COMP= -openmp -liomp5 -debug -c -O3 -u -traceback -fpe0 -ftz -fast-transcendentals  -xHost #-check all -check noarg_temp_created -fpe0 -fast-transcendentals -xhost
+		COMP= -openmp -liomp5 -debug -c -O3 -u -traceback -fpe0 -ftz -xHost # -fast-transcendentals -check all -check noarg_temp_created -fpe0
 		LINK= -openmp -liomp5
 	endif
 	ifeq ($(F90), gfortran)

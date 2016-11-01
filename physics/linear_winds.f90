@@ -48,25 +48,32 @@ module linear_theory_winds
     logical :: variable_N
     logical :: smooth_nsq
     real    :: N_squared
+    
     !! unfortunately these have to be allocated every call because we could be calling on both the high-res
     !! domain and the low res domain (to "remove" the linear winds)
-    real,allocatable,dimension(:,:)::k,l,kl,sig
-    complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:)::denom,m,ineta,msq,mimag
-    complex(C_DOUBLE_COMPLEX),pointer,dimension(:,:,:)::uhat,u_hat,vhat,v_hat
-    logical :: data_allocated=.False. ! need a boolean because you cant test if a cptr is allocated?
-    type(C_PTR) :: uh_aligned_data, u_h_aligned_data, vh_aligned_data, v_h_aligned_data
-    type(C_PTR), allocatable :: uplans(:), vplans(:)
+    real,                       allocatable,    dimension(:,:)  :: k, l, kl, sig
+    complex(C_DOUBLE_COMPLEX),  allocatable,    dimension(:,:)  :: denom, m, ineta, msq, mimag
+    complex(C_DOUBLE_COMPLEX),  pointer,        dimension(:,:,:):: uhat, u_hat, vhat, v_hat
+    type(C_PTR),                allocatable,    dimension(:)    :: uplans, vplans
+    type(C_PTR)              :: uh_aligned_data, u_h_aligned_data, vh_aligned_data, v_h_aligned_data
+    logical                  :: data_allocated=.False. ! need a boolean because you cant test if a cptr is allocated?
 
-    real, allocatable, dimension(:) :: dir_values, nsq_values, spd_values
+    ! note this data structure holds a lot of important variables for the new linear_perturbation subroutine
+    ! this is created at the module scope to prevent some apparent stack issues related to OpenMP and ifort
+    type(linear_theory_type) :: lt_data_m
+    !$omp threadprivate(lt_data_m)
+
+    !! Linear wind look up table values and tables
+    real, allocatable,          dimension(:)           :: dir_values, nsq_values, spd_values
     ! Look Up Tables for linear perturbation are nspd x n_dir_values x n_nsq_values x nx x nz x ny
-    real, allocatable, target, dimension(:,:,:,:,:,:) :: hi_u_LUT, hi_v_LUT, rev_u_LUT, rev_v_LUT
-    real, pointer, dimension(:,:,:,:,:,:) :: u_LUT, v_LUT
-    real, allocatable, dimension(:,:) :: linear_mask, nsq_calibration
+    real, allocatable, target,  dimension(:,:,:,:,:,:) :: hi_u_LUT, hi_v_LUT, rev_u_LUT, rev_v_LUT
+    real, pointer,              dimension(:,:,:,:,:,:) :: u_LUT, v_LUT
+    real, allocatable,          dimension(:,:)         :: linear_mask, nsq_calibration
 
     ! store the linear perturbation so we can update it slightly each time step
     ! this permits the linear field to build up over time.
-    real, allocatable, target, dimension(:,:,:) :: hi_u_perturbation, hi_v_perturbation, lo_u_perturbation, lo_v_perturbation
-    real, pointer,     dimension(:,:,:) :: u_perturbation, v_perturbation
+    real, allocatable, target,  dimension(:,:,:) :: hi_u_perturbation, hi_v_perturbation, lo_u_perturbation, lo_v_perturbation
+    real, pointer,              dimension(:,:,:) :: u_perturbation, v_perturbation
 
     logical :: use_spatial_linear_fields
     logical :: use_linear_mask     ! use a spatial mask for the linear wind field
@@ -383,6 +390,7 @@ contains
                 zaxis_is_third = (minval(domain%z(:,:,2) - domain%z(:,:,1)) >  0) .and. &
                                  (minval(domain%z(:,2,:) - domain%z(:,1,:)) <= 0)
                 if (debug) then
+                    !$omp critical (print_lock)
                     write(*,*) "Warning: z axis in a domain is not determined:"
                     write(*,*) "Z shape = ", shape(domain%z)
                     write(*,*) "U shape = ", shape(domain%u)
@@ -391,6 +399,7 @@ contains
                     else
                         write(*,*) "Assuming zaxis is the second axis"
                     endif
+                    !$omp end critical (print_lock)
                 endif
             endif
         endif
@@ -417,7 +426,9 @@ contains
 
         if (.not.data_allocated) then
             if (debug) then
+                !$omp critical (print_lock)
                 write(*,"(A,A)") char(13),"Allocating Linear Wind Data and FFTW plans"
+                !$omp end critical (print_lock)
             endif
             ! using fftw_alloc routines to ensure better allignment for vectorization
             n_elements = nx*ny*nz
@@ -438,12 +449,16 @@ contains
                 vplans(i) = fftw_plan_dft_2d(ny,nx, vhat(:,:,i),v_hat(:,:,i), FFTW_BACKWARD, FFTW_MEASURE)!PATIENT)!FFTW_ESTIMATE)
             enddo
             if (debug) then
+                !$omp critical (print_lock)
                 write(*,*) "Allocation Complete:",trim(str(nx))," ",trim(str(ny))," ",trim(str(nz))
+                !$omp end critical (print_lock)
             endif
         endif
         if (reverse) then
+            !$omp critical (print_lock)
             write(*,*) "ERROR: reversing linear winds not set up for parallel fftw computation yet"
             write(*,*) "also not set up for the new spatial wind LUTs"
+            !$omp end critical (print_lock)
             stop
         endif
 
@@ -580,7 +595,9 @@ contains
                 ! need to check if this makes the most sense when close to the surface
                 if (useDensity) then
                     if (debug) then
+                        !$omp critical (print_lock)
                         write(*,*) "Using a density correction in linear winds"
+                        !$omp end critical (print_lock)
                     endif
                     u_hat(buffer:realnx_u+buffer,buffer:realny+buffer,z) = &
                         2*real(u_hat(buffer:realnx_u+buffer,buffer:realny+buffer,z))! / domain%rho(1:realnx,z,1:realny)
@@ -613,10 +630,12 @@ contains
 
                 if (debug) then
                     if (z==1)then
+                        !$omp critical (print_lock)
                         write(*,*) "Nsq = ", Nsq
                         write(*,*) "U=",U, "    V=",V
                         write(*,*) "realnx=",realnx, "; nx=",nx, "; buffer=",buffer
                         write(*,*) "realny=",realny, "; ny=",ny!, buffer
+                        !$omp end critical (print_lock)
                     endif
                 endif
             endif
@@ -730,17 +749,21 @@ contains
         offset = pi / dx
         gain = 2 * offset / (nx-1)
 
+        ! compute k wave numbers for the first row
         do i=1, nx
             lt_data%k(i,1) = ((i-1) * gain - offset)
         end do
+        ! copy k wave numbers to all other rows
         do i=2, ny
             lt_data%k(:,i) = lt_data%k(:,1)
         enddo
 
         gain = 2 * offset / (ny-1)
+        ! compute l wave numbers for the first column
         do i=1,ny
             lt_data%l(1,i) = ((i-1)*gain-offset)
         end do
+        ! copy l wave numbers to all other columns
         do i=2,nx
             lt_data%l(i,:) = lt_data%l(1,:)
         enddo
@@ -816,13 +839,12 @@ contains
         type(options_type), intent(in) :: options
         logical, intent(in) :: reverse,useDensity
         
-        ! note this data structure holds a lot of important variables for the new linear_perturbation subroutine
-        type(linear_theory_type) :: lt_data
-        real :: u,v
+        ! local variables used to calculate the LUT
+        real :: u,v, layer_height
         integer :: nx,ny,nz, i,j,k,z, nxu,nyv, error
         integer :: fftnx, fftny
         integer, dimension(3,2) :: LUT_dims
-        ! integer :: buffer
+        integer :: loops_completed ! this is just used to measure progress in the LUT creation
 
         ! the domain to work over
         nx = size(domain%lat,1)
@@ -881,8 +903,8 @@ contains
                 print*, "Reading LUT from file: ", trim(options%lt_options%u_LUT_Filename)
                 error = read_LUT(options%lt_options%u_LUT_Filename, hi_u_LUT, hi_v_LUT, options%dz_levels, LUT_dims, options%lt_options)
                 if (error/=0) then
-                    write(*,*) "Error LUT on disk does not match that specified in the namelist"
-                    write(*,*) "LUT will be recreated"
+                    write(*,*) "WARNING: LUT on disk does not match that specified in the namelist or does not exist."
+                    write(*,*) "    LUT will be recreated"
                     if (allocated(hi_u_LUT)) deallocate(hi_u_LUT)
                     allocate(hi_u_LUT(n_spd_values,n_dir_values,n_nsq_values,nxu,nz,ny))
                     if (allocated(hi_v_LUT)) deallocate(hi_v_LUT)
@@ -895,49 +917,65 @@ contains
 
         if (options%debug) then
             write(*,*) "Wind Speeds:",spd_values
-            write(*,*) " Directions:",360*dir_values/(2*pi)
+            write(*,*) "Directions:",360*dir_values/(2*pi)
             write(*,*) "Stabilities:",exp(nsq_values)
         endif
 
         if (reverse.or.(.not.((options%lt_options%read_LUT).and.(error==0)))) then
-            ! loop over combinations of U and V values
+            ! loop over combinations of U, V, and Nsq values
+            loops_completed = 0
             write(*,*) "Percent Completed:"
-            ! this could be parallelized to speed it up a little, but the linear_wind calculation is already parallelized
-            ! over the vertical domain, so it wouldn't add much (unless a lot more than cores are available than levels)
-            call initialize_linear_theory_data(lt_data, fftnx, fftny, domain%dx)
+            !$omp parallel default(shared) &
+            !$omp private(i,j,k,z, u,v, layer_height)
+            ! $omp private(lt_data_m)
+            
+            ! initialization has to happen in each thread so each thread has its own copy
+            ! lt_data_m is a threadprivate variable, within initialization, there are omp critical sections for fftw calls
+            call initialize_linear_theory_data(lt_data_m, fftnx, fftny, domain%dx)
+            !$omp do
             do i=1, n_dir_values
-                write(*,"(A,f5.1,A$)") char(13), i/real(n_dir_values)*100," %"
                 ! set the domain wide U and V values to the current u and v values
                 ! this could use u/v_perturbation, but those would need to be put in a linearizable structure...
                 do k=1, n_spd_values
+                    !$omp critical (print_lock)
+                    write(*,"(A,f5.1,A$)") char(13), loops_completed/real(n_dir_values*n_spd_values)*100," %"
+                    !$omp end critical (print_lock)
                     do j=1, n_nsq_values
                         u = calc_u( dir_values(i), spd_values(k) )
                         v = calc_v( dir_values(i), spd_values(k) )
 
                         ! calculate the linear wind field for the current u and v values
                         do z=1,nz
-                            call linear_perturbation(u, v, exp(nsq_values(j)), domain%z(1,z,1)-domain%terrain(1,1), domain%fzs, lt_data)
+                            layer_height = domain%z(1,z,1)-domain%terrain(1,1)
+                            call linear_perturbation(u, v, exp(nsq_values(j)), layer_height, domain%fzs, lt_data_m)
 
-                            ! need to handle stagger (nxu /= nx) and buffer
+                            ! need to handle stagger (nxu /= nx) and the buffer around edges of the domain
                             if (nxu /= nx) then
                                 u_LUT(k,i,j,2:nx,z, :  ) = real( real(                                  &
-                                        ( lt_data%u_perturb(1+buffer:nx+buffer-1,   1+buffer:ny+buffer) &
-                                        + lt_data%u_perturb(2+buffer:nx+buffer,     1+buffer:ny+buffer)) )) / 2
+                                        ( lt_data_m%u_perturb(1+buffer:nx+buffer-1,   1+buffer:ny+buffer) &
+                                        + lt_data_m%u_perturb(2+buffer:nx+buffer,     1+buffer:ny+buffer)) )) / 2
                                                          
                                 v_LUT(k,i,j, :,  z,2:ny) = real( real(                                      &
-                                        ( lt_data%v_perturb(1+buffer:nx+buffer,     1+buffer:ny+buffer-1)   &
-                                        + lt_data%v_perturb(1+buffer:nx+buffer,     2+buffer:ny+buffer)) )) / 2
+                                        ( lt_data_m%v_perturb(1+buffer:nx+buffer,     1+buffer:ny+buffer-1)   &
+                                        + lt_data_m%v_perturb(1+buffer:nx+buffer,     2+buffer:ny+buffer)) )) / 2
                             else
                                 u_LUT(k,i,j,:,z,:) = real( real(                                  &
-                                        lt_data%u_perturb(1+buffer:nx+buffer,     1+buffer:ny+buffer) ))
+                                        lt_data_m%u_perturb(1+buffer:nx+buffer,     1+buffer:ny+buffer) ))
                                 v_LUT(k,i,j,:,z,:) = real( real(                                  &
-                                        lt_data%v_perturb(1+buffer:nx+buffer,     1+buffer:ny+buffer) ))
+                                        lt_data_m%v_perturb(1+buffer:nx+buffer,     1+buffer:ny+buffer) ))
                             endif
                         enddo
 
                     end do
+                    !$omp critical (print_lock)
+                    loops_completed = loops_completed+1
+                    !$omp end critical (print_lock)
                 end do
+
             end do
+            !$omp end do
+            !$omp end parallel
+            write(*,"(A,f5.1,A$)") char(13), loops_completed/real(n_dir_values*n_spd_values)*100," %"
             write(*,*) char(10),"--------  Linear wind look up table generation complete ---------"
         end if
 
@@ -1314,8 +1352,6 @@ contains
             v_perturbation=>hi_v_perturbation
         endif
 
-
-        write(*,*) "Max U perturb:",maxval(u_perturbation), "Max V perturb:",maxval(v_perturbation)
         if (use_spatial_linear_fields) then
             if ((.not.allocated(hi_u_LUT) .and. (.not.reverse)) .or. ((.not.allocated(rev_u_LUT)) .and. reverse)) then
                 ! Need linear_contribution to be 1 for initialize_spatial_winds, it will be applied at "real" time. 
