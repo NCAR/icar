@@ -593,17 +593,17 @@ contains
                 ! If we are using density in the advection calculations, modify the linear perturbation
                 ! to get the vertical velocities closer to what they would be without density (boussinesq)
                 ! need to check if this makes the most sense when close to the surface
-                if (useDensity) then
-                    if (debug) then
-                        !$omp critical (print_lock)
-                        write(*,*) "Using a density correction in linear winds"
-                        !$omp end critical (print_lock)
-                    endif
-                    u_hat(buffer:realnx_u+buffer,buffer:realny+buffer,z) = &
-                        2*real(u_hat(buffer:realnx_u+buffer,buffer:realny+buffer,z))! / domain%rho(1:realnx,z,1:realny)
-                    v_hat(buffer:realnx+buffer,buffer:realny_v+buffer,z) = &
-                        2*real(v_hat(buffer:realnx+buffer,buffer:realny_v+buffer,z))! / domain%rho(1:realnx,z,1:realny)
-                endif
+                ! if (useDensity) then
+                !     if (debug) then
+                !         !$omp critical (print_lock)
+                !         write(*,*) "Using a density correction in linear winds"
+                !         !$omp end critical (print_lock)
+                !     endif
+                !     u_hat(buffer:realnx_u+buffer,buffer:realny+buffer,z) = &
+                !         2*real(u_hat(buffer:realnx_u+buffer,buffer:realny+buffer,z))! / domain%rho(1:realnx,z,1:realny)
+                !     v_hat(buffer:realnx+buffer,buffer:realny_v+buffer,z) = &
+                !         2*real(v_hat(buffer:realnx+buffer,buffer:realny_v+buffer,z))! / domain%rho(1:realnx,z,1:realny)
+                ! endif
                 
                 ! If we are removing linear winds from a low res field, subtract u_hat v_hat instead
                 ! real(real()) extracts real component of complex, then converts to a real data type (may not be necessary except for IO?)
@@ -833,11 +833,11 @@ contains
     !! Compute look up tables for all combinations of U, V, and Nsq
     !!
     !!----------------------------------------------------------
-    subroutine initialize_spatial_winds(domain,options,reverse,useDensity)
+    subroutine initialize_spatial_winds(domain,options,reverse)
         implicit none
         class(linearizable_type),intent(inout)::domain
         type(options_type), intent(in) :: options
-        logical, intent(in) :: reverse,useDensity
+        logical, intent(in) :: reverse
         
         ! local variables used to calculate the LUT
         real :: u,v, layer_height
@@ -913,6 +913,7 @@ contains
             endif
             u_LUT=>hi_u_LUT
             v_LUT=>hi_v_LUT
+
         endif
 
         if (options%debug) then
@@ -920,7 +921,7 @@ contains
             write(*,*) "Directions:",360*dir_values/(2*pi)
             write(*,*) "Stabilities:",exp(nsq_values)
         endif
-        print*, shape(domain%z), shape(domain%u), shape(domain%terrain)
+
         if (reverse.or.(.not.((options%lt_options%read_LUT).and.(error==0)))) then
             ! loop over combinations of U, V, and Nsq values
             loops_completed = 0
@@ -983,8 +984,8 @@ contains
             !$omp end parallel
             write(*,"(A,f5.1,A$)") char(13), loops_completed/real(n_dir_values*n_spd_values)*100," %"
             write(*,*) char(10),"--------  Linear wind look up table generation complete ---------"
-        end if
-
+        endif
+        
         if ((options%lt_options%write_LUT).and.(.not.reverse)) then
             if ((options%lt_options%read_LUT) .and. (error == 0)) then
                 print*, "Not writing Linear Theory LUT to file because LUT was read from file"
@@ -1068,18 +1069,20 @@ contains
             u_perturbation=>hi_u_perturbation
             v_perturbation=>hi_v_perturbation
         endif
+
         if (reverse) print*, "WARNING using fixed nsq for linear wind removal: 3e-6"
         !$omp parallel firstprivate(nx,ny,nz, reverse, vsmooth, winsz), default(none), &
         !$omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom), &
         !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, smoothz, u, v), &
         !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
-        !$omp shared(domain, spd_values, dir_values, nsq_values, u_LUT, v_LUT), &
+        !$omp shared(domain, spd_values, dir_values, nsq_values, u_LUT, v_LUT, linear_mask), &
         !$omp shared(u_perturbation, v_perturbation, linear_update_fraction, linear_contribution, nsq_calibration), &
         !$omp shared(min_stability, max_stability, n_dir_values, n_spd_values, n_nsq_values, smooth_nsq)
         !$omp do
         do k=1,ny
             do j=1,nz
                 do i=1,nx
+                    
                     ! look up vsmooth gridcells up to nz at the maximum
                     top = min(j+vsmooth, nz)
                     ! if (top-j)/=vsmooth, then look down enough layers to make the window vsmooth in size
@@ -1094,6 +1097,9 @@ contains
                                                                 +domain%qrain(i,j,k)+domain%qsnow(i,j,k))
                         domain%nsquared(i,j,k) = max(min(domain%nsquared(i,j,k) * nsq_calibration(i,k), max_stability), min_stability)
                     else
+                        ! Low-res boundary condition variables will be in a different array format.  It should be 
+                        ! easy enough to call calc_stability after e.g. transposing z and y dimension, but some
+                        ! e.g. pii will not be set in the forcing data, so this may need a little thought. 
                         domain%nsquared(i,j,k) = 3e-6
                     endif
                 end do
@@ -1141,7 +1147,7 @@ contains
                         v = domain%v(vi,j,k)
                     endif
                     n = n * ((top-bottom)+1)
-
+                    
                     ! Calculate the direction of the current grid cell wind
                     dpos = 1
                     curdir = calc_direction( u, v )
@@ -1208,9 +1214,10 @@ contains
                                     + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
 
                         if (reverse) then
-                            domain%v(i,j,k) = domain%v(i,j,k) - v_perturbation(i,j,k)
+                            domain%v(i,j,k) = domain%v(i,j,k) - v_perturbation(i,j,k) * linear_contribution
                         else
-                            domain%v(i,j,k) = domain%v(i,j,k) + v_perturbation(i,j,k)
+                            ! for the high res domain, linear_mask should incorporate linear_contribution
+                            domain%v(i,j,k) = domain%v(i,j,k) + v_perturbation(i,j,k) * linear_mask(min(nx,i),min(ny,k))
                         endif
                     endif
                 end do
@@ -1218,7 +1225,6 @@ contains
         end do
         !$omp end do
         !$omp end parallel
-
     end subroutine spatial_winds
 
     !>----------------------------------------------------------
@@ -1268,7 +1274,7 @@ contains
     !! compute FFT(terrain), and dzdx,dzdy components
     !!
     !!----------------------------------------------------------
-    subroutine setup_linwinds(domain,options,reverse,useDensity)
+    subroutine setup_linwinds(domain, options, reverse, useDensity)
         implicit none
         class(linearizable_type),intent(inout)  :: domain
         type(options_type),      intent(in)     :: options
@@ -1334,7 +1340,16 @@ contains
                 write(*,*) "  from file: " // trim(options%linear_mask_file)
                 write(*,*) "  with var: "  // trim(options%linear_mask_var)
                 call io_read2d(options%linear_mask_file, options%linear_mask_var, domain%linear_mask)
+                
                 linear_mask = domain%linear_mask * linear_contribution
+            endif
+
+            ! Stupidly simple adjustment to the linear wind field to account for using density. 
+            ! If we are using density in the advection calculations, modify the linear perturbation
+            ! to get the vertical velocities closer to what they would be without density (boussinesq)
+            ! need to check if this makes the most sense when close to the surface
+            if (useDensity) then
+                linear_mask = linear_mask * 2
             endif
         endif
 
@@ -1378,39 +1393,12 @@ contains
         endif
 
         if (use_spatial_linear_fields) then
-            if ((.not.allocated(hi_u_LUT) .and. (.not.reverse)) .or. ((.not.allocated(rev_u_LUT)) .and. reverse)) then
-                ! Need linear_contribution to be 1 for initialize_spatial_winds, it will be applied at "real" time. 
-                ! should probably set linear_mask to 1 too... for not linear_mask is set at LUT creation. 
-                if (.not.allocated(linear_mask)) then
-                    allocate(linear_mask(nx,ny))
-                    linear_mask = linear_contribution
-                endif
-                linear_mask = linear_mask / linear_contribution
-                saved_linear_contribution = linear_contribution
-                linear_contribution = 1.0
-                
+            if    ((.not.allocated(hi_u_LUT)  .and. (.not.reverse)) &
+             .or.  (.not.allocated(rev_u_LUT) .and. reverse)) then
+
                 write(*,*) "Generating a spatially variable linear perturbation look up table"
-                call initialize_spatial_winds(domain, options, reverse, useDensity)
+                call initialize_spatial_winds(domain, options, reverse)
                 
-                linear_contribution = saved_linear_contribution
-                linear_mask = linear_mask * linear_contribution
-                
-                if (reverse) then
-                    rev_u_LUT = rev_u_LUT * linear_contribution
-                    rev_v_LUT = rev_v_LUT * linear_contribution
-                else
-                    hi_u_LUT = hi_u_LUT * linear_contribution
-                    hi_v_LUT = hi_v_LUT * linear_contribution
-                endif
-            endif
-            if (minval(linear_mask) > linear_contribution) then
-                print*, minval(linear_mask), maxval(linear_mask), linear_contribution
-                write(*,*) " "
-                write(*,*) "  ---------------  !!!WARNING!!!  --------------- "
-                write(*,*) " Spatially variable linear mask is fixed at LUT creation"
-                write(*,*) " If the LUT was read from disk it could be 'wrong' "
-                write(*,*) "  ---------------  !!!WARNING!!!  --------------- "
-                write(*,*) " "
             endif
         endif
 
@@ -1457,8 +1445,7 @@ contains
 
         ! if linear_perturb hasn't been called before we need to perform some setup actions.
         if (.not.allocated(domain%fzs)) then
-            call setup_linwinds(domain,options,rev,useD)
-            print*, "Setup Complete"
+            call setup_linwinds(domain, options, rev, useD)
         endif
 
         ! add the spatially variable linear field
