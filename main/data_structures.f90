@@ -447,6 +447,14 @@ module data_structures
 
 
     ! ------------------------------------------------
+    ! store Online Bias Correction options
+    ! ------------------------------------------------
+    type bias_options_type
+        character(len=MAXFILELENGTH):: filename             ! file containing bias correction data
+        character(len=MAXVARLENGTH) :: rain_fraction_var    ! name of variable containing the fraction to multiply rain by
+    end type bias_options_type
+    
+    ! ------------------------------------------------
     ! store Land Surface Model options
     ! ------------------------------------------------
     type lsm_options_type
@@ -484,7 +492,7 @@ module data_structures
                                         
         ! Filenames for files to read various physics options from
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, adv_options_filename, &
-                                        lsm_options_filename
+                                        lsm_options_filename, bias_options_filename
         character(len=MAXFILELENGTH) :: calendar
         
 
@@ -551,6 +559,9 @@ module data_structures
         
         logical :: use_lsm_options
         type(lsm_options_type) :: lsm_options
+
+        logical :: use_bias_correction
+        type(bias_options_type) :: bias_options
                     
         integer :: warning_level        ! level of warnings to issue when checking options settings 0-10.  
                                         ! 0  = Don't print anything
