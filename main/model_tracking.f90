@@ -45,7 +45,8 @@ contains
         "Pre-1.0 release added end_date, date->forcing_start_date, forcing_file_list"// &
         "      lt:LUT_filename, mp:update_interval, moved vert_smooth to lt_parameters,"// &
         "      added z_is_geopotential, and zbvar changed some defaults.", &
-        "Added Morrison, WSM6 microphysics, lots of small tweaks and bug fixes." &
+        "Added Morrison and WSM6 microphysics, and the ability to remove the low "// &
+        "      resolution linear wind field.  Lots of smaller tweaks and bug fixes." &
         ]
         
     end subroutine init_model_diffs
