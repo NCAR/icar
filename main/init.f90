@@ -202,149 +202,149 @@ contains
         endif
         
         ! atmosphere allocation
-        allocate(domain%p(nx,nz,ny))        ! air pressure [Pa]
+        allocate(domain%p(nx,nz,ny))                ! air pressure [Pa]
         domain%p = 100000
-        allocate(domain%u(nx+1,nz,ny))      ! eastward wind [m/s]
+        allocate(domain%u(nx+1,nz,ny))              ! eastward wind [m/s]
         domain%u = 0
-        allocate(domain%v(nx,nz,ny+1))      ! northward wind [m/s]
+        allocate(domain%v(nx,nz,ny+1))              ! northward wind [m/s]
         domain%v = 0
-        allocate(domain%w(nx,nz,ny))        ! vertical wind [grid/s]
+        allocate(domain%w(nx,nz,ny))                ! vertical wind [grid/s]
         domain%w = 0
-        allocate(domain%w_real(nx,nz,ny))   ! real vertical wind [m/s] including the U,V * dz/dx component
+        allocate(domain%w_real(nx,nz,ny))           ! real vertical wind [m/s] including the U,V * dz/dx component
         domain%w_real = 0
         if (options%advect_density) then
-            allocate(domain%ur(nx+1,nz,ny))     ! eastward wind * density [m/s kg/m^3]
+            allocate(domain%ur(nx+1,nz,ny))         ! eastward wind * density [m/s kg/m^3]
             domain%ur = 0
-            allocate(domain%vr(nx,nz,ny+1))     ! northward wind * density[m/s kg/m^3]
+            allocate(domain%vr(nx,nz,ny+1))         ! northward wind * density[m/s kg/m^3]
             domain%vr = 0
-            allocate(domain%wr(nx,nz,ny))       ! vertical wind * density [grid/s kg/m^3]
+            allocate(domain%wr(nx,nz,ny))           ! vertical wind * density [grid/s kg/m^3]
             domain%wr = 0
         endif
-        allocate(domain%th(nx,nz,ny))       ! potential temperature [K]
+        allocate(domain%th(nx,nz,ny))               ! potential temperature [K]
         domain%th = 280
-        allocate(domain%qv(nx,nz,ny))       ! water vapor [kg/kg]
+        allocate(domain%qv(nx,nz,ny))               ! water vapor [kg/kg]
         domain%qv = 0.0002
-        allocate(domain%cloud(nx,nz,ny))    ! liquid cloud water content mixing ratio [kg/kg]
+        allocate(domain%cloud(nx,nz,ny))            ! liquid cloud water content mixing ratio [kg/kg]
         domain%cloud = 0
-        allocate(domain%ice(nx,nz,ny))      ! frozen cloud water content mixing ratio [kg/kg]
+        allocate(domain%ice(nx,nz,ny))              ! frozen cloud water content mixing ratio [kg/kg]
         domain%ice = 0
-        allocate(domain%nice(nx,nz,ny))     ! cloud ice number concentration [cm-3]
+        allocate(domain%nice(nx,nz,ny))             ! cloud ice number concentration [cm-3]
         domain%nice = 0
-        allocate(domain%qrain(nx,nz,ny))    ! rain mixing ratio [kg/kg]
+        allocate(domain%qrain(nx,nz,ny))            ! rain mixing ratio [kg/kg]
         domain%qrain = 0
-        allocate(domain%nrain(nx,nz,ny))    ! rain drop number concentration [cm-3]
+        allocate(domain%nrain(nx,nz,ny))            ! rain drop number concentration [cm-3]
         domain%nrain = 0
-        allocate(domain%qsnow(nx,nz,ny))    ! snow  mixing ratio [kg/kg]
+        allocate(domain%qsnow(nx,nz,ny))            ! snow  mixing ratio [kg/kg]
         domain%qsnow = 0
-        allocate(domain%nsnow(nx,nz,ny))    ! snow number concentration [cm-3]
+        allocate(domain%nsnow(nx,nz,ny))            ! snow number concentration [cm-3]
         domain%nsnow = 0
-        allocate(domain%qgrau(nx,nz,ny))    ! graupel mixing ratio [kg/kg]
+        allocate(domain%qgrau(nx,nz,ny))            ! graupel mixing ratio [kg/kg]
         domain%qgrau = 0
-        allocate(domain%ngraupel(nx,nz,ny)) ! graupel number concentration [cm-3]
+        allocate(domain%ngraupel(nx,nz,ny))         ! graupel number concentration [cm-3]
         domain%ngraupel = 0
-        allocate(domain%pii(nx,nz,ny))      ! exner function
+        allocate(domain%pii(nx,nz,ny))              ! exner function
         domain%pii = 1
-        allocate(domain%rho(nx,nz,ny))      ! air density [kg/m^3]
+        allocate(domain%rho(nx,nz,ny))              ! air density [kg/m^3]
         domain%rho = 1
-        allocate(domain%cloudfrac(nx,ny))   ! cloud fraction
+        allocate(domain%cloudfrac(nx,ny))           ! cloud fraction
         domain%cloudfrac = 0
 
-        allocate(domain%t(nx,nz,ny))        ! real air temperature [K]
+        allocate(domain%t(nx,nz,ny))                ! real air temperature [K]
         domain%t = domain%th*domain%pii
-        allocate(domain%p_inter(nx,nz,ny))  ! air pressure on vertical interfaces [Pa]
+        allocate(domain%p_inter(nx,nz,ny))          ! air pressure on vertical interfaces [Pa]
         domain%p_inter = 100000
-        allocate(domain%Um(nx,nz,ny))       ! eastward wind on mass grid [m/s]
+        allocate(domain%Um(nx,nz,ny))               ! eastward wind on mass grid [m/s]
         domain%Um = 0
-        allocate(domain%Vm(nx,nz,ny))       ! northward wind on mass grid [m/s]
+        allocate(domain%Vm(nx,nz,ny))               ! northward wind on mass grid [m/s]
         domain%Vm = 0
-        allocate(domain%mut(nx,nz,ny))      ! dry mass in each grid cell (p_inter[i] - p_inter[i+1])
+        allocate(domain%mut(nx,nz,ny))              ! dry mass in each grid cell (p_inter[i] - p_inter[i+1])
         domain%mut = 0
         
         ! land-atm flux allocation
-        allocate(domain%rain(nx,ny))        ! accumulated total rainfall [kg/m^2]
+        allocate(domain%rain(nx,ny))                ! accumulated total rainfall [kg/m^2]
         domain%rain = 0
-        allocate(domain%crain(nx,ny))       ! accumulated convective rainfall
+        allocate(domain%crain(nx,ny))               ! accumulated convective rainfall
         domain%crain = 0
-        allocate(domain%snow(nx,ny))        ! accumulated snow fall
+        allocate(domain%snow(nx,ny))                ! accumulated snow fall
         domain%snow = 0
-        allocate(domain%graupel(nx,ny))     ! accumulated graupel fall
+        allocate(domain%graupel(nx,ny))             ! accumulated graupel fall
         domain%graupel = 0
-        allocate(domain%rain_bucket(nx,ny))        ! accumulated total rainfall [kg/m^2]
+        allocate(domain%rain_bucket(nx,ny))         ! accumulated total rainfall [kg/m^2]
         domain%rain_bucket = 0
-        allocate(domain%crain_bucket(nx,ny))       ! accumulated convective rainfall
+        allocate(domain%crain_bucket(nx,ny))        ! accumulated convective rainfall
         domain%crain_bucket = 0
-        allocate(domain%snow_bucket(nx,ny))        ! accumulated snow fall
+        allocate(domain%snow_bucket(nx,ny))         ! accumulated snow fall
         domain%snow_bucket = 0
-        allocate(domain%graupel_bucket(nx,ny))     ! accumulated graupel fall
+        allocate(domain%graupel_bucket(nx,ny))      ! accumulated graupel fall
         domain%graupel_bucket = 0
-        allocate(domain%current_rain(nx,ny))! rain fall in current time step
+        allocate(domain%current_rain(nx,ny))        ! rain fall in current time step
         domain%current_rain = 0
-        allocate(domain%current_snow(nx,ny))! snow fall in current time step
+        allocate(domain%current_snow(nx,ny))        ! snow fall in current time step
         domain%current_snow = 0
-        allocate(domain%swdown(nx,ny))      ! shortwave down at surface
+        allocate(domain%swdown(nx,ny))              ! shortwave down at surface
         domain%swdown = 0
-        allocate(domain%lwdown(nx,ny))      ! longwave down at surface
+        allocate(domain%lwdown(nx,ny))              ! longwave down at surface
         domain%lwdown = 0
-        allocate(domain%lwup(nx,ny))        ! longwave up from surface
+        allocate(domain%lwup(nx,ny))                ! longwave up from surface
         domain%lwup = 0
 
-        allocate(domain%sst(nx,ny))         ! sea surface temperature
+        allocate(domain%sst(nx,ny))                 ! sea surface temperature
         domain%sst = 280
 
-        allocate(domain%sensible_heat(nx,ny)) ! sensible heat flux from surface
+        allocate(domain%sensible_heat(nx,ny))       ! sensible heat flux from surface
         domain%sensible_heat = 0
-        allocate(domain%latent_heat(nx,ny)) ! latent heat flux from surface
+        allocate(domain%latent_heat(nx,ny))         ! latent heat flux from surface
         domain%latent_heat = 0
-        allocate(domain%ground_heat(nx,ny)) ! ground heat flux into ground
+        allocate(domain%ground_heat(nx,ny))         ! ground heat flux into ground
         domain%ground_heat = 0
-        allocate(domain%pbl_height(nx,ny))  ! planetary boundary layer height (not always used)
+        allocate(domain%pbl_height(nx,ny))          ! planetary boundary layer height (not always used)
         domain%pbl_height = 0
         
         ! land surface allocation
-        allocate(domain%soil_t(nx,ns,ny))   ! 3D soil temperature
+        allocate(domain%soil_t(nx,ns,ny))           ! 3D soil temperature
         domain%soil_t = 280
-        allocate(domain%soil_vwc(nx,ns,ny)) ! 3D soil volumetric water content
+        allocate(domain%soil_vwc(nx,ns,ny))         ! 3D soil volumetric water content
         domain%soil_vwc = 0.25
         
-        allocate(domain%soil_tdeep(nx,ny))      ! deep soil temperature
+        allocate(domain%soil_tdeep(nx,ny))          ! deep soil temperature
         domain%soil_tdeep = 280
         allocate(domain%soil_totalmoisture(nx,ny))  ! soil column total moisture content
         domain%soil_totalmoisture = 500 ! =2000mm * 0.25 (vwc)
-        allocate(domain%skin_t(nx,ny))          ! skin temperature
+        allocate(domain%skin_t(nx,ny))              ! skin temperature
         domain%skin_t = 280
-        allocate(domain%snow_swe(nx,ny))        ! snow water equivalent
+        allocate(domain%snow_swe(nx,ny))            ! snow water equivalent
         domain%snow_swe = 0
         
         if (options%lsm_options%monthly_vegfrac) then
-            allocate(domain%vegfrac(nx,ny,12))        ! vegetation cover fraction (%)
+            allocate(domain%vegfrac(nx,ny,12))      ! vegetation cover fraction (%)
         else
-            allocate(domain%vegfrac(nx,ny,1))         ! vegetation cover fraction (%)
+            allocate(domain%vegfrac(nx,ny,1))       ! vegetation cover fraction (%)
         endif
         domain%vegfrac = 50 !% veg cover
         
-        allocate(domain%canopy_water(nx,ny))    ! canopy water content
+        allocate(domain%canopy_water(nx,ny))        ! canopy water content
         domain%canopy_water = 0
-        allocate(domain%soil_type(nx,ny))       ! USGS soil type
+        allocate(domain%soil_type(nx,ny))           ! USGS soil type
         domain%soil_type = 6 ! Loam
-        allocate(domain%veg_type(nx,ny))        ! Vegetation type
+        allocate(domain%veg_type(nx,ny))            ! Vegetation type
         domain%veg_type = 7  ! grassland
         
-        allocate(domain%u10(nx,ny))         ! 10m height U wind
+        allocate(domain%u10(nx,ny))                 ! 10m height U wind
         domain%u10 = 0
-        allocate(domain%v10(nx,ny))         ! 10m height V wind
+        allocate(domain%v10(nx,ny))                 ! 10m height V wind
         domain%v10 = 0
-        allocate(domain%t2m(nx,ny))         ! 2m height air temperature
+        allocate(domain%t2m(nx,ny))                 ! 2m height air temperature
         domain%t2m = domain%t(:,1,:)
-        allocate(domain%q2m(nx,ny))         ! 2m height air mixing ratio
+        allocate(domain%q2m(nx,ny))                 ! 2m height air mixing ratio
         domain%q2m = domain%qv(:,1,:)
         
-        allocate(domain%znt(nx,ny))         ! surface roughness
+        allocate(domain%znt(nx,ny))                 ! surface roughness
         domain%znt = 0.2
-        allocate(domain%ustar(nx,ny))       ! surface shear stress (u*)
+        allocate(domain%ustar(nx,ny))               ! surface shear stress (u*)
         domain%ustar = 0
-        allocate(domain%ptop(nx,ny))        ! model top pressure
+        allocate(domain%ptop(nx,ny))                ! model top pressure
         domain%ptop = domain%p(:,nz,:)
-        allocate(domain%psfc(nx,ny))        ! model surface pressure
+        allocate(domain%psfc(nx,ny))                ! model surface pressure
         domain%psfc = domain%p_inter(:,1,:)
 
     end subroutine domain_allocation
@@ -1034,7 +1034,8 @@ contains
         allocate(boundary%z(nx,nz,ny))
         call geo_interp(boundary%z,boundary%lowres_z,boundary%geolut,.false.)
 
-        if (options%debug) write(*,*) "Domain z min=",minval(domain%z), "Domain z max=", maxval(domain%z)
+        if (options%debug) write(*,*) "Terrain z min=",minval(domain%terrain), "Terrain z max=", maxval(domain%terrain)
+        if (options%debug) write(*,*) "Domain z min=", minval(domain%z), "Domain z max=", maxval(domain%z)
         if (options%debug) write(*,*) "Forcing z min=",minval(boundary%z), "Forcing z max=", maxval(boundary%z)
         call vLUT(domain,boundary)
 
