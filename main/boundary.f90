@@ -483,7 +483,7 @@ contains
         ny=size(extra_data,2)
         nz=size(extra_data,3)
         call smooth_wind(extra_data,1,2)
-        bc%u=reshape(extra_data,[nx,nz,ny],order=[1,3,2])
+        bc%u(1:nx,1:nz,1:ny)=reshape(extra_data,[nx,nz,ny],order=[1,3,2])
         deallocate(extra_data)
         
         ! load low-res V data
@@ -492,7 +492,7 @@ contains
         ny=size(extra_data,2)
         nz=size(extra_data,3)
         call smooth_wind(extra_data,1,2)
-        bc%v=reshape(extra_data,[nx,nz,ny],order=[1,3,2])
+        bc%v(1:nx,1:nz,1:ny)=reshape(extra_data,[nx,nz,ny],order=[1,3,2])
         deallocate(extra_data)
         
         ! remove the low-res linear wind contribution effect
