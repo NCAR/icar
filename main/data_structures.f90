@@ -6,21 +6,24 @@
 !! General Field Definitions
 !!
 !! ---- 3D fields ---- NX x NZ x NY
-!! u     = wind in east direction                           [m/s]
-!! v     = wind in north direction                          [m/s]
-!! w     = wind in vertical direction                       [m/s] (possibly scaled by dx/dz)
+!! u        = wind in east direction                        [m/s]
+!! v        = wind in north direction                       [m/s]
+!! w        = wind in vertical direction                    [m/s] (possibly scaled by dx/dz)
 !! 
-!! p     = pressure                                         [pa]
-!! th    = potential temperature                            [K]
+!! p        = pressure                                      [pa]
+!! th       = potential temperature                         [K]
 !!
-!! qv    = water vapor (mixing ratio)                       [kg/kg]
-!! cloud = cloud water                                      [kg/kg]
-!! ice   = cloud ice                                        [kg/kg]
-!! qrain = rain mixing ratio                                [kg/kg]
-!! qsnow = snow mixing ratio                                [kg/kg]
-!! qgrau = graupel mixing ratio                             [kg/kg]
-!! nice  = ice number concentration                         [1/cm^3]
-!! nrain = rain number concentration                        [1/cm^3]
+!! qv       = water vapor (mixing ratio)                    [kg/kg]
+!! cloud    = cloud water                                   [kg/kg]
+!! ice      = cloud ice                                     [kg/kg]
+!! qrain    = rain mixing ratio                             [kg/kg]
+!! qsnow    = snow mixing ratio                             [kg/kg]
+!! qgrau    = graupel mixing ratio                          [kg/kg]
+!! nice     = ice number concentration                      [1/cm^3]
+!! nrain    = rain number concentration                     [1/cm^3]
+!!
+!! rho      = dry air density                               [kg/m^3]
+!! pii      = exner function                                []
 !!
 !! ---- 2D fields ---- NX x NY
 !!      ---- moisture fluxes ----
@@ -62,9 +65,10 @@
 !! some of these are 2d, some are 3d
 !! 
 !! ---- model structure ----
-!! terrain  = surface elevation                 [m]
-!! z        = model layer height (at mid point) [m]
-!! dz       = layer thickness                   [m]
+!! terrain  = surface elevation                             [m]
+!! z        = model layer height (at mid point)             [m]
+!! dz       = Model layer thickness (between mass levels)   [m]
+!! dz_inter = Layer thickness (between interface levels)    [m]
 !!
 !! sintheta = sine of the angle between grid and geographic coords   [-]
 !! costheta = cosine of the angle between grid and geographic coords [-]
@@ -77,92 +81,9 @@
 !>------------------------------------------------
 module data_structures
     use, intrinsic :: iso_c_binding ! needed for fftw compatible complex types
+    use :: icar_constants           ! Many constants including things like fixed string lengths
     implicit none
     
-    character(len=5) :: kVERSION_STRING = "0.9.4"
-
-! ------------------------------------------------
-! Model constants (string lengths)
-! ------------------------------------------------
-    integer,parameter::MAXFILELENGTH    = 200   ! maximum file name length
-    integer,parameter::MAXVARLENGTH     = 200   ! maximum variable name length
-    integer,parameter::MAXLEVELS        = 500   ! maximum number of vertical layers (should typically be ~10-20)
-    integer,parameter::MAX_NUMBER_FILES = 50000 ! maximum number of permitted input files (probably a bit extreme)
-
-! ------------------------------------------------
-! Physics scheme selection definitions
-!
-! NB: BASIC typically means "use the data from the low res model"
-!     SIMPLE typically means a relatively simple formulation written for ICAR
-! ------------------------------------------------
-    integer, parameter :: kCU_TIEDTKE    = 1
-    integer, parameter :: kCU_SIMPLE     = 2
-    integer, parameter :: kCU_KAINFR     = 3
-
-    integer, parameter :: kMP_THOMPSON   = 1
-    integer, parameter :: kMP_SB04       = 2
-    integer, parameter :: kMP_MORRISON   = 3
-    integer, parameter :: kMP_WSM6       = 4
-
-    integer, parameter :: kPBL_BASIC     = 1
-    integer, parameter :: kPBL_SIMPLE    = 2
-    integer, parameter :: kPBL_YSU       = 3
-    
-    integer, parameter :: kWATER_BASIC   = 1
-    integer, parameter :: kWATER_SIMPLE  = 2
-    
-    integer, parameter :: kLSM_BASIC     = 1
-    integer, parameter :: kLSM_SIMPLE    = 2
-    integer, parameter :: kLSM_NOAH      = 3
-
-    integer, parameter :: kRA_BASIC      = 1
-    integer, parameter :: kRA_SIMPLE     = 2
-
-    integer, parameter :: kADV_UPWIND    = 1
-    integer, parameter :: kADV_MPDATA    = 2
-    
-    integer, parameter :: kWIND_LINEAR   = 1
-    
-    integer, parameter :: kLC_LAND       = 1
-    integer, parameter :: kLC_WATER      = 2
-    
-    ! mm of accumulated precip before "tipping" into the bucket
-    ! only performed on output operations
-    integer, parameter :: kPRECIP_BUCKET_SIZE=100
-! ------------------------------------------------
-! Physical Constants
-! ------------------------------------------------
-    real, parameter :: LH_vaporization=2260000.0 ! J/kg
-    ! could be calculated as 2.5E6 + (-2112.0)*temp_degC ?
-    real, parameter :: Rd  = 287.058   ! J/(kg K) specific gas constant for dry air
-    real, parameter :: Rw  = 461.5     ! J/(kg K) specific gas constant for moist air
-    real, parameter :: cp  = 1012.0    ! J/kg/K   specific heat capacity of moist STP air? 
-    real, parameter :: gravity= 9.81   ! m/s^2    gravity
-    real, parameter :: pi  = 3.1415927 ! pi
-    real, parameter :: stefan_boltzmann = 5.67e-8 ! the Stefan-Boltzmann constant
-    real, parameter :: karman = 0.41   ! the von Karman constant
-    
-    ! convenience parameters for various physics packages
-    real, parameter :: rovcp = Rd/cp
-    real, parameter :: rovg  = Rd/gravity
-    
-    ! from wrf module_model_constants
-    ! parameters for calculating latent heat as a function of temperature for 
-    ! vaporization
-    real, parameter ::  XLV0 = 3.15E6 
-    real, parameter ::  XLV1 = 2370.
-    ! sublimation
-    real, parameter ::  XLS0 = 2.905E6
-    real, parameter ::  XLS1 = 259.532
-    
-    ! saturated vapor pressure parameters (?)
-    real, parameter ::  SVP1 = 0.6112
-    real, parameter ::  SVP2 = 17.67
-    real, parameter ::  SVP3 = 29.65
-    real, parameter ::  SVPT0= 273.15
-    
-    real, parameter ::  EP1  = Rw/Rd-1.
-    real, parameter ::  EP2  = Rd/Rw
     
 ! ------------------------------------------------
 !   various data structures for use in geographic interpolation routines
@@ -180,9 +101,9 @@ module data_structures
     type geo_look_up_table
         ! x,y index positions, [n by m by 4] where there are 4 surrounding low-res points 
         ! for every high resolution point grid point to interpolate to
-        integer,allocatable,dimension(:,:,:)::x,y
+        integer,allocatable, dimension(:,:,:)   :: x, y
         ! weights to use for each of the 4 surrounding gridpoints.  Sum(over axis 3) must be 1.0
-        real,allocatable,dimension(:,:,:)::w
+        real,   allocatable, dimension(:,:,:)   :: w
     end type geo_look_up_table
 
     ! ------------------------------------------------
@@ -190,9 +111,10 @@ module data_structures
     ! ------------------------------------------------
     type vert_look_up_table
         ! z index positions for all x,y,z points (x 2 for above and below z levels)
-        integer,allocatable,dimension(:,:,:,:)::z
+        integer,allocatable, dimension(:,:,:,:) :: z
+        
         ! weights to use for each of the two surrounding points.  Sum (over axis 1) must be 1.0
-        real,allocatable,dimension(:,:,:,:)::w
+        real,   allocatable, dimension(:,:,:,:) :: w
     end type vert_look_up_table
 
     ! ------------------------------------------------
@@ -227,6 +149,7 @@ module data_structures
 
     ! ------------------------------------------------
     ! generic linearizable type so we can add linear wind field to domain or remove it from low-res (BC) U/V
+    ! Because of the need to compute the Brunt-Vaisala frequency, this now includes many atmospheric fields
     ! ------------------------------------------------
     type, extends(interpolable_type) :: linearizable_type
         ! linear theory computes u,v at z.  Trying rho to mitigate boussinesq approx... 
@@ -247,6 +170,21 @@ module data_structures
         real, allocatable, dimension(:,:)   :: nsq_calibration      ! calibration parameter to multiply brunt-vaisala frequency by [0-]
         complex(C_DOUBLE_COMPLEX), allocatable, dimension(:,:) :: fzs ! FFT(terrain)
     end type linearizable_type
+    
+    
+    ! ------------------------------------------------
+    ! Data type to hold all of the array temporaries required by the lineary theory calculations
+    ! e.g. k and l wave number arrays
+    ! ------------------------------------------------
+    type linear_theory_type
+        real,                       allocatable, dimension(:,:) :: sig, k, l, kl
+        complex(C_DOUBLE_COMPLEX),  allocatable, dimension(:,:) :: denom, msq, mimag, m, ineta
+        
+        complex(C_DOUBLE_COMPLEX),  pointer,     dimension(:,:) :: uhat, vhat, u_perturb, v_perturb
+        type(C_PTR) :: uh_aligned_data, up_aligned_data, vh_aligned_data, vp_aligned_data
+        
+        type(C_PTR) :: uplan, vplan
+    end type linear_theory_type
     
     ! ------------------------------------------------
     ! Tendency terms output by various physics subroutines

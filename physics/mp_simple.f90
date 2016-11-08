@@ -177,7 +177,7 @@ module module_mp_simple
         excess = 0
 
         ! this should be written to use a slightly smarter iteration scheme.
-        do while ((abs(lastqv-qv)>maxerr).and.(iteration<5))
+        do while ((abs(lastqv-qv)>maxerr).and.(iteration<15))
             iteration = iteration+1
             lastqv = qv
             ! calculate the saturating mixing ratio
@@ -216,14 +216,20 @@ module module_mp_simple
         if ((temperature>350).or.(qc>0.01).or.(qvsat>1)) then
             deltat = excess*vapor2temp
             !$omp critical
-            print*, "mp_simple: data out of bounds"
+            print*, ""
+            print*, ""
+            print*, "mp_simple ERROR: "
+            if (temperature > 350 ) print*, "Temperature out of bounds", temperature
+            if (qc          > 0.01) print*, "Qc out of bounds", qc
+            if (qvsat       > 1   ) print*, "saturated qv out of bounds", qvsat
             print*, "iter=",iteration
-            print*, "preqc=",pre_qc,"preqv=",pre_qv,"pret=",pre_t,"pressure=",pressure
-            print*, "qc=",qc, "qv=",qv,"temperature=",temperature, "qvsat=",qvsat
-            print*, "mrs_pret=",sat_mr(pre_t,pressure),"mrs_t=",sat_mr(temperature,pressure), "mrs_delta=",sat_mr(pre_t,pressure)-sat_mr(temperature,pressure)
-
-            print*, "qv=",qv, "qvs=",qvsat, "qc=",qc, "preqc=",pre_qc, "temperature=",temperature, "excess=",excess, "vapor2temp=",vapor2temp
-            print*, "temperature-deltat",temperature-deltat, "pressure=",pressure, "mrs_t-dT=",sat_mr(temperature-deltat,pressure)
+            print*, ""
+            print*, "   preqc=",pre_qc,"       preqv=",pre_qv,"        pret=",pre_t
+            print*, "   qc=",qc, "      qv=",qv,"       temperature=",temperature
+            print*, "   pressure=",pressure, "        qvsat=",qvsat
+            print*, "   mrs_pret=",sat_mr(pre_t,pressure),"     mrs_t=",sat_mr(temperature,pressure), "     mrs_delta=",sat_mr(pre_t,pressure)-sat_mr(temperature,pressure)
+            print*, "   excess=",excess, "      vapor2temp=",vapor2temp
+            print*, "   temperature-deltat=",temperature-deltat, "      mrs_(t-dT)=",sat_mr(temperature-deltat,pressure)
             !$omp end critical
         endif
 

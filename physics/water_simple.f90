@@ -75,7 +75,7 @@ contains
         real :: z0
         
         ! approximately from Beljaars (1995?) in ECMWF model
-        z0 = 8e-6 / max(ustar,1e-10)
+        z0 = 8e-6 / max(ustar,1e-7)
     end function ocean_roughness
     
     subroutine water_simple(sst, psfc, wind, ustar, qv, temperature,  &
@@ -83,9 +83,9 @@ contains
                             z_atm, Z0, landmask, &
                             qv_surf, evap_flux, tskin)
         implicit none
-        real, dimension(:,:,:),intent(in)    :: qv, temperature, z_atm
+        real, dimension(:,:,:),intent(in)    :: qv, temperature
         real, dimension(:,:),  intent(inout) :: sensible_heat, latent_heat, Z0, qv_surf, evap_flux, tskin
-        real, dimension(:,:),  intent(in)    :: sst, psfc, wind, ustar, landmask
+        real, dimension(:,:),  intent(in)    :: sst, psfc, wind, ustar, landmask, z_atm
         
         integer :: nx, ny, i, j
         real :: base_exchange_term, lnz_atm_term, exchange_C, z
@@ -99,7 +99,7 @@ contains
                     qv_surf(i,j) = 0.98 * sat_mr(sst(i,j),psfc(i,j)) ! multiply by 0.98 to account for salinity
                     
                     Z0(i,j) = ocean_roughness(ustar(i,j))
-                    z=z_atm(i,1,j)
+                    z=z_atm(i,j)
                     lnz_atm_term = log((z+Z0(i,j))/Z0(i,j))
                     base_exchange_term=(75*karman**2 * sqrt((z+Z0(i,j))/Z0(i,j))) / (lnz_atm_term**2)
                     lnz_atm_term=(karman/lnz_atm_term)**2

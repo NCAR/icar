@@ -375,19 +375,21 @@ contains
         integer :: i
         
         if ((lo%lat(pos%x,pos%y)-lat) > 0) then
-            find_surrounding%y=(/pos%y,pos%y,pos%y-1,pos%y-1/)
+            find_surrounding%y = (/pos%y,pos%y,pos%y-1,pos%y-1/)
         else
-            find_surrounding%y=(/pos%y,pos%y,pos%y+1,pos%y+1/)
+            find_surrounding%y = (/pos%y,pos%y,pos%y+1,pos%y+1/)
         endif
-
+        
         if ((lo%lon(pos%x,pos%y)-lon) > 0) then
-            find_surrounding%x=(/pos%x,pos%x-1,pos%x,pos%x-1/)
+            find_surrounding%x = (/pos%x,pos%x-1,pos%x,pos%x-1/)
         else
-            find_surrounding%x=(/pos%x,pos%x+1,pos%x,pos%x+1/)
+            find_surrounding%x = (/pos%x,pos%x+1,pos%x,pos%x+1/)
         endif
+        
+        ! enforce that surround points fall within the bounds of the full domain
         do i=1,4
-            find_surrounding%x(i)=min(max(find_surrounding%x(i),1),nx)
-            find_surrounding%y(i)=min(max(find_surrounding%y(i),1),ny)
+            find_surrounding%x(i) = min(max(find_surrounding%x(i),1), nx)
+            find_surrounding%y(i) = min(max(find_surrounding%y(i),1), ny)
         enddo
         
     end function find_surrounding           
@@ -398,53 +400,60 @@ contains
     !!------------------------------------------------------------
     subroutine geo_LUT(hi, lo)
         implicit none
-        class(interpolable_type),intent(in)::hi
-        class(interpolable_type),intent(inout)::lo
-        type(fourpos)::xy
-        type(position)::curpos,lastpos
-        integer :: nx,ny,i,j,k,lo_nx,lo_ny
-        real,dimension(4) :: lat,lon
+        class(interpolable_type), intent(in)    :: hi
+        class(interpolable_type), intent(inout) :: lo
+        type(fourpos) :: xy
+        type(position) :: curpos, lastpos
+        integer :: nx, ny, i, j, k, lo_nx, lo_ny
+        real, dimension(4) :: lat, lon
         
-        nx=size(hi%lat,1)
-        ny=size(hi%lat,2)
-        lo_nx=size(lo%lat,1)
-        lo_ny=size(lo%lat,2)
+        nx    = size(hi%lat,1)
+        ny    = size(hi%lat,2)
+        lo_nx = size(lo%lat,1)
+        lo_ny = size(lo%lat,2)
         
         allocate(lo%geolut%x(4,nx,ny))
         allocate(lo%geolut%y(4,nx,ny))
         allocate(lo%geolut%w(4,nx,ny))
 
-        curpos%x=1
-        curpos%y=1
+        curpos%x = 1
+        curpos%y = 1
         
         do j=1,ny
-            curpos%x=1
-            lastpos=find_location(lo,hi%lat(1,j),hi%lon(1,j),curpos)
+            curpos%x = 1
+            ! use a brute force approach to find a starting
+            lastpos  = find_location(lo, hi%lat(1,j), hi%lon(1,j), curpos)
             if (lastpos%x<1) then
                 ! something broke, try assuming that the grids are the same
-                lastpos%x=1
-                lastpos%y=j
+                ! should put in some check here to make sure this doesn't happen in a real case
+                lastpos%x = 1
+                lastpos%y = j
+                write(*,*) "Error in Geographic interpolation, check input lat / lon grids", 1,j
             endif
-                
-            do i=1,nx
-!               curpos=next_pos(lo,hi,i,j,lastpos,windowsize)
-                curpos=find_location(lo,hi%lat(i,j),hi%lon(i,j),lastpos)
+            
+            do i=1, nx
+                curpos = find_location(lo, hi%lat(i,j), hi%lon(i,j), lastpos)
                 if (curpos%x<1) then
                     ! something broke, try assuming that the grids are the same possibly wrapping (for ideal)
-                    curpos%x=mod(i-1,lo_nx)+1
-                    curpos%y=mod(j-1,lo_ny)+1
-                    lo%geolut%x(:,i,j)=curpos%x
-                    lo%geolut%y(:,i,j)=curpos%y
-                    lo%geolut%w(:,i,j)=0.25
+                    write(*,*) "Error in Geographic interpolation, check input lat / lon grids", i,j
+                    curpos%x = mod(i-1, lo_nx) + 1
+                    curpos%y = mod(j-1, lo_ny) + 1
+                    ! all "surrounding" grid points are "this" grid point
+                    lo%geolut%x(:,i,j) = curpos%x
+                    lo%geolut%y(:,i,j) = curpos%y
+                    lo%geolut%w(:,i,j) = 0.25
                 else
-                    xy=find_surrounding(lo,hi%lat(i,j),hi%lon(i,j),curpos,lo_nx,lo_ny)
-                    lo%geolut%x(:,i,j)=xy%x
-                    lo%geolut%y(:,i,j)=xy%y
+                    ! Found a good point, now find the other 3 of the surrounding 4 points
+                    xy = find_surrounding(lo, hi%lat(i,j), hi%lon(i,j), curpos, lo_nx, lo_ny)
+                    lo%geolut%x(:,i,j) = xy%x
+                    lo%geolut%y(:,i,j) = xy%y
+                    ! load those latitutes and longitudes into 1D arrays to calculate weights
                     do k=1,4
-                        lat(k)=lo%lat(xy%x(k),xy%y(k))
-                        lon(k)=lo%lon(xy%x(k),xy%y(k))
+                        lat(k) = lo%lat(xy%x(k), xy%y(k))
+                        lon(k) = lo%lon(xy%x(k), xy%y(k))
                     enddo
-                    lo%geolut%w(:,i,j)=bilin_weights(hi%lat(i,j),lat,hi%lon(i,j),lon)
+                    ! and calculate the weights to apply to each gridcell
+                    lo%geolut%w(:,i,j) = bilin_weights(hi%lat(i,j), lat, hi%lon(i,j), lon)
                 endif
             enddo
         enddo
