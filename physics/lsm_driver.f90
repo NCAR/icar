@@ -509,7 +509,8 @@ contains
                 call water_simple(domain%sst, domain%psfc, windspd, domain%ustar,  &
                                   domain%qv, domain%t,                             &
                                   domain%sensible_heat, domain%latent_heat,        &
-                                  domain%z, Z0, domain%landmask, QSFC, QFX, domain%skin_t)
+                                  domain%z(:,1,:)-domain%terrain, Z0,              &
+                                  domain%landmask, QSFC, QFX, domain%skin_t)
             endif
             
             where(windspd<1) windspd=1

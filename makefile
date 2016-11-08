@@ -131,6 +131,8 @@ ifeq ($(LMOD_FAMILY_COMPILER),gnu)
 	LIBFFT=/glade/u/home/gutmann/usr/local/lib
 	INCFFT=/glade/u/home/gutmann/usr/local/include
 	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/gnu/4.8.2
+	# note this works for almost all versions of gfortran EXCEPT 4.8.2... the default version
+	# NCDF_PATH=/glade/apps/opt/netcdf/4.3.3.1/gnu/$(GNU_MAJOR_VERSION).$(GNU_MINOR_VERSION)
 	# LIBNETCDF = $(LIB_NCAR) # when netcdf includes are setup by the yellowstone module system
 	# INCNETCDF = $(INC_NCAR)
 	LIBNETCDF = -Wl,-rpath,$(NCDF_PATH)/lib -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf # if using a compiler for which netcdf includes are
@@ -263,7 +265,7 @@ ifeq ($(MODE), debugompslow)
 endif
 ifeq ($(MODE), debugomp)
 	ifeq ($(F90), ifort)
-		COMP= -openmp -liomp5 -debug -c -O3 -u -traceback -fpe0 -ftz -fast-transcendentals  -xHost #-check all -check noarg_temp_created -fpe0 -fast-transcendentals -xhost
+		COMP= -openmp -liomp5 -debug -c -O3 -u -traceback -fpe0 -ftz -xHost # -fast-transcendentals -check all -check noarg_temp_created -fpe0
 		LINK= -openmp -liomp5
 	endif
 	ifeq ($(F90), gfortran)
@@ -356,6 +358,7 @@ OBJS=	$(BUILD)driver.o 		\
 		$(BUILD)vinterp.o 		\
 		$(BUILD)time.o 			\
 		$(BUILD)data_structures.o \
+		$(BUILD)icar_constants.o\
 		$(BUILD)wrf_constants.o \
 		$(BUILD)string.o 		\
 		$(BUILD)debug_utils.o
@@ -584,12 +587,14 @@ $(BUILD)fftshift.o:$(UTIL)fftshift.f90 $(BUILD)fftw.o
 ###################################################################
 #	Generic data structures, used by almost everything
 ###################################################################
-$(BUILD)data_structures.o:$(MAIN)data_structures.f90
+$(BUILD)data_structures.o:$(MAIN)data_structures.f90 $(BUILD)icar_constants.o
 	${F90} ${FFLAGS} $(MAIN)data_structures.f90 -o $(BUILD)data_structures.o
 	
 $(BUILD)wrf_constants.o:$(CONST)wrf_constants.f90
 	${F90} ${FFLAGS} $(CONST)wrf_constants.f90 -o $(BUILD)wrf_constants.o
 
+$(BUILD)icar_constants.o:$(CONST)icar_constants.f90
+	${F90} ${FFLAGS} $(CONST)icar_constants.f90 -o $(BUILD)icar_constants.o
 
 ###################################################################
 #	Keep track of model versions for user information

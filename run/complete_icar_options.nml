@@ -2,7 +2,7 @@
 !   Model and run meta-data
 !---------------------------------------------------------
 &model_version
-    version = "0.9.3",                    ! This must match the version of the compiled code
+    version = "0.9.4",                    ! This must match the version of the compiled code
     comment = "Add your comment here"     ! This will be stored in output files
 /
 
@@ -330,7 +330,7 @@
     ! linear_contribution = 1.0,    ! set this to the fraction of the linear perturbation you wish to use (1.0 = full/standard linear field)
     spatial_linear_fields = true,   ! use a spatially variable wind field when calculating the linear wind field
 
-    ! NOTE THIS DOES NOT WORK RIGHT NOW
+    ! NOTE THIS uses a fixed Nsq, not the value specified here yet
     ! rm_N_squared = 9e-5,          ! set this to use a fixed brunt-vaisalla frequency in linear wind calculations
     ! remove_lowres_linear = false, ! attempt to "remove" the low resolution linear winds from the forcing data
     ! rm_linear_contribution = 0.4, ! fraction of linear perturbation to remove from the low-res wind field (if rm_lowres_linear==true)
