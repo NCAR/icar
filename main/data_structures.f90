@@ -66,8 +66,8 @@
 !! z        = model layer height (at mid point) [m]
 !! dz       = layer thickness                   [m]
 !!
-!! sintheta = sine of the angle between grid and geographic coords   []
-!! costheta = cosine of the angle between grid and geographic coords []
+!! sintheta = sine of the angle between grid and geographic coords   [-]
+!! costheta = cosine of the angle between grid and geographic coords [-]
 !! fzs      = buffered FFT(terrain) for linear wind calculations   
 !! </pre>
 !!
@@ -234,7 +234,7 @@ module data_structures
         ! these are needed to compute Brunt Vaisalla Frequency... 
         real, allocatable, dimension(:,:,:) :: th                   ! potential temperature         [K]
         real, allocatable, dimension(:,:,:) :: p                    ! pressure                      [Pa]
-        real, allocatable, dimension(:,:,:) :: pii                  ! exner function                []
+        real, allocatable, dimension(:,:,:) :: pii                  ! exner function                [-]
         real, allocatable, dimension(:,:,:) :: qv                   ! water vapor mixing ratio      [kg/kg]
         ! used to determine if moist or dry brunt vaisala frequency is used
         real, allocatable, dimension(:,:,:) :: cloud,ice,qsnow,qrain ! hydrometeor mixing ratios    [kg/kg]
@@ -276,28 +276,28 @@ module data_structures
         real, allocatable, dimension(:,:,:) :: mut          ! mass in a given cell ? (pbot-ptop) used in some physics schemes
         ! 3D soil field
         real, allocatable, dimension(:,:,:) :: soil_t       ! soil temperature (nx, nsoil, ny)  [K]
-        real, allocatable, dimension(:,:,:) :: soil_vwc     ! soil volumetric water content     []
+        real, allocatable, dimension(:,:,:) :: soil_vwc     ! soil volumetric water content     [-]
         
         ! 2D fields, primarily fluxes to/from the land surface
         ! surface pressure and model top pressure
         real, allocatable, dimension(:,:)   :: psfc, ptop
         ! precipitation fluxes
-        real, allocatable, dimension(:,:)   :: rain, crain, snow, graupel   ! accumulated : total precip, convective precip, snow, and graupel
-        real, allocatable, dimension(:,:)   :: current_rain, current_snow   ! current time step rain and snow
-        integer, allocatable, dimension(:,:):: rain_bucket,crain_bucket,snow_bucket,graupel_bucket  ! buckets to preserve accuracy in all variables
+        real,    allocatable, dimension(:,:):: rain, crain, snow, graupel   ! accumulated : total precip, convective precip, snow, and graupel
+        real,    allocatable, dimension(:,:):: current_rain, current_snow   ! current time step rain and snow
+        integer, allocatable, dimension(:,:):: rain_bucket, crain_bucket, snow_bucket, graupel_bucket  ! buckets to preserve accuracy in all variables
         
         ! radiative fluxes (and cloud fraction)
-        real, allocatable, dimension(:,:)   :: swdown       ! shortwave down at the surface
-        real, allocatable, dimension(:,:)   :: lwdown       ! longwave down at the surface
-        real, allocatable, dimension(:,:)   :: cloudfrac    ! total column cloud fraction
-        real, allocatable, dimension(:,:)   :: lwup         ! longwave up at/from the surface
+        real, allocatable, dimension(:,:)   :: swdown                       ! shortwave down at the surface         [W/m^2]
+        real, allocatable, dimension(:,:)   :: lwdown                       ! longwave down at the surface          [W/m^2]
+        real, allocatable, dimension(:,:)   :: cloudfrac                    ! total column cloud fraction           [-]
+        real, allocatable, dimension(:,:)   :: lwup                         ! longwave up at/from the surface       [W/m^2]
         
-        ! turbulent fluxes (and ground heat flux)
-        real, allocatable, dimension(:,:)   :: sensible_heat, latent_heat, ground_heat
+        ! turbulent and ground heat fluxes
+        real, allocatable, dimension(:,:)   :: sensible_heat, latent_heat, ground_heat       !  [W/m^2]
         
         ! domain parameters
-        real, allocatable, dimension(:,:)   :: landmask             ! store the land-sea mask
-        real, allocatable, dimension(:,:)   :: sintheta, costheta   ! rotations about the E-W, N-S grid
+        real, allocatable, dimension(:,:)   :: landmask             ! store the land-sea mask                       [-]
+        real, allocatable, dimension(:,:)   :: sintheta, costheta   ! rotations about the E-W, N-S grid             [-]
         real, allocatable, dimension(:)     :: ZNU, ZNW             ! = (p-p_top)/(psfc-ptop),  (p_inter-p_top)/(psfc-ptop)
         
         ! land surface state and parameters primarily used by Noah LSM
@@ -327,6 +327,9 @@ module data_structures
         double precision :: model_time
         integer :: current_month ! used to store the current month (should probably be fractional for interpolation...)
         
+        ! online bias correction data
+        real, allocatable, dimension(:,:,:) :: rain_fraction        ! seasonally varying fraction to multiple rain  [-]
+
         ! model specific fields
         real, allocatable, dimension(:,:,:) :: Um, Vm ! U and V on mass coordinates
         real, allocatable, dimension(:,:,:) :: T      ! real T (not potential)
