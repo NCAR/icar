@@ -1319,7 +1319,15 @@ contains
                 newbc%z=newbc%z / gravity
             endif
             if (options%z_is_on_interface) then
-                newbc%z(:,:,1:nz-1)=(newbc%z(:,:,1:nz-1) + newbc%z(:,:,2:nz))/2
+                nz = nz - 1
+                ! zbase is used as a temporary variable while we deallocate/reallocate bc%z
+                if (allocated(zbase)) deallocate(zbase)
+                allocate(zbase(nx,ny,nz))
+                zbase = (newbc%z(:,:,1:nz) + newbc%z(:,:,2:nz+1))/2
+                deallocate(newbc%z)
+                allocate(newbc%z(nx,ny,nz))
+                newbc%z = zbase
+                deallocate(zbase)
             endif
             
             ! now simply generate a look up table to convert the current z coordinate to the original z coordinate

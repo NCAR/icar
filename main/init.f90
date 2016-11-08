@@ -755,9 +755,18 @@ contains
              boundary%lowres_z = boundary%lowres_z/ gravity
         endif
         if (options%debug) write(*,*) "Pre-interpolation forcing z min=",minval(boundary%lowres_z), " z max=", maxval(boundary%lowres_z)
+        
         if (options%z_is_on_interface) then
             write(*,*) "Interpreting geopotential height as residing between model layers"
-            boundary%lowres_z(:,1:nz-1,:) = (boundary%lowres_z(:,1:nz-1,:) + boundary%lowres_z(:,2:nz,:))/2
+            nz = nz - 1
+            ! zbase is used as a temporary variable while we deallocate/reallocate bc%z
+            if (allocated(zbase)) deallocate(zbase)
+            allocate(zbase(nx,nz,ny))
+            zbase = (boundary%lowres_z(:,1:nz,:) + boundary%lowres_z(:,2:nz+1,:))/2
+            deallocate(boundary%lowres_z)
+            allocate(boundary%lowres_z(nx,nz,ny))
+            boundary%lowres_z = zbase
+            deallocate(zbase)
         endif
         
         ! all other structures must be allocated and initialized, but will be set on a high-res grid
@@ -965,9 +974,6 @@ contains
         if (maxval(boundary%terrain)>maxval(boundary%lowres_z(:,1,:))) then
             write(*,*) "WARNING : Forcing Z levels are below the terrain provided. "
             write(*,*) "          For pressure level forcing data this is expected, but not well tested. "
-        endif
-        if (options%z_is_on_interface) then
-            boundary%lowres_z(:,1:nz-1,:) = (boundary%lowres_z(:,1:nz-1,:) + boundary%lowres_z(:,2:nz,:)) / 2
         endif
         
         ! if we want vertical interpolations between forcing and model grid to be done from 
