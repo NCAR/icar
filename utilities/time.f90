@@ -16,7 +16,7 @@ module time
     integer :: calendar
     integer, dimension(13) :: month_start
     private
-    public :: time_init, date_to_mjd, calendar_date, calc_day_of_year, parse_date
+    public :: time_init, date_to_mjd, calendar_date, calc_day_of_year, parse_date, calc_year_fraction
     public :: calendar
     public :: GREGORIAN, NOLEAP, THREESIXTY, YEAR_ZERO
 contains
@@ -161,6 +161,26 @@ contains
             calc_day_of_year = mod(mjd,360.0)
         endif
     end function calc_day_of_year
+
+
+    function calc_year_fraction(mjd)
+        implicit none
+        real :: calc_year_fraction
+        double precision, intent(in) :: mjd
+        double precision :: year_start
+        
+        integer :: year, month, day, hour, minute, second
+
+        if (calendar==GREGORIAN) then
+            call calendar_date(mjd,year, month, day, hour, minute, second)
+            year_start = date_to_mjd(year, 1,1,0,0,0)
+            calc_year_fraction = (mjd - year_start) / (date_to_mjd(year+1, 1,1,0,0,0) - year_start)
+        else if (calendar==NOLEAP) then
+            calc_year_fraction = calc_day_of_year(mjd) / 365.0
+        else if (calendar==THREESIXTY) then
+            calc_year_fraction = calc_day_of_year(mjd) / 360.0
+        endif
+    end function calc_year_fraction
 
     ! convert an input date string in the form YYYY/MM/DD or YYYY/MM/DD hh:mm:ss
     ! into integer variables
