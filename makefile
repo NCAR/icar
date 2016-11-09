@@ -132,7 +132,7 @@ ifeq ($(LMOD_FAMILY_COMPILER),gnu)
 	INCFFT=/glade/u/home/gutmann/usr/local/include
 	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/gnu/4.8.2
 	# note this works for almost all versions of gfortran EXCEPT 4.8.2... the default version
-	# NCDF_PATH=/glade/apps/opt/netcdf/4.3.3.1/gnu/$(GNU_MAJOR_VERSION).$(GNU_MINOR_VERSION)
+	NCDF_PATH=/glade/apps/opt/netcdf/4.3.3.1/gnu/$(GNU_MAJOR_VERSION).$(GNU_MINOR_VERSION)
 	# LIBNETCDF = $(LIB_NCAR) # when netcdf includes are setup by the yellowstone module system
 	# INCNETCDF = $(INC_NCAR)
 	LIBNETCDF = -Wl,-rpath,$(NCDF_PATH)/lib -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf # if using a compiler for which netcdf includes are
@@ -179,7 +179,7 @@ ifeq ($(F90), gfortran)
 endif
 # Intel fortran
 ifeq ($(F90), ifort)
-	COMP=-c -u -openmp -liomp5 -O3 -no-prec-div -xHost -ftz -fpe0
+	COMP=-c -u -openmp -liomp5 -O3 -no-prec-div -xHost -ftz -fpe0 # -check stack,bounds -fp-stack-check
 	LINK= -openmp -liomp5
 	PREPROC=-fpp
 	MODOUTPUT=-module $(BUILD)

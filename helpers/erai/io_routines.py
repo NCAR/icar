@@ -20,11 +20,13 @@ def grib2nc(erai_file,varlist,output_dir):
     """convert a grib file to a netcdf file"""
     print("Converting: "+erai_file.split("/")[-1])
     # print("ncl_convert2nc "+erai_file+" -e grb -L -v "+",".join(varlist)+" -o "+output_dir)
-    try:
-        os.system("ncl_convert2nc "+erai_file+" -e grb -L -v "+",".join(varlist)+" -o "+output_dir +"&> /dev/null")
-    except:
-        print("ERROR: ncl_convert2nc is not available in your $PATH (?)")
     outputfile=output_dir+erai_file.split("/")[-1]+".nc"
+    if not os.path.isfile(outputfile):
+        try:
+            os.system("ncl_convert2nc "+erai_file+" -e grb -L -v "+",".join(varlist)+" -o "+output_dir +"&> /dev/null")
+        except:
+            print("ERROR: ncl_convert2nc is not available in your $PATH (?)")
+
     return outputfile
 
 def find_sfc_file(time,info):
