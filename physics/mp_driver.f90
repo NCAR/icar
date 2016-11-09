@@ -162,7 +162,8 @@ contains
         
         n_correction_points = size(rain_fraction,3)
         year_fraction = calc_year_fraction(current_date)
-        correction_step = nint(n_correction_points * year_fraction)
+        correction_step = min(  floor(n_correction_points * year_fraction)+1, &
+                                n_correction_points)
         
         if (precip_delta) then
             do j=2,ny-1
@@ -273,7 +274,7 @@ contains
             
             ! If we are going to distribute the current precip over a few grid cells, we need to keep track of
             ! the last_precip so we know how much fell
-            if (options%mp_options%local_precip_fraction<1) then
+            if ((options%mp_options%local_precip_fraction<1).or.(options%use_bias_correction)) then
                 last_rain=domain%rain
                 last_snow=domain%snow
             endif
