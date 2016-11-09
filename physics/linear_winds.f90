@@ -1047,7 +1047,7 @@ contains
         integer, intent(in) :: vsmooth
         integer, intent(in) :: winsz
         
-        integer :: nx,ny,nz,i,j,k, smoothz
+        integer :: nx,nxu, ny,nyv, nz, i,j,k, smoothz
         integer :: uk, vi !store a separate value of i for v and of k for u to we can handle nx+1, ny+1
         integer :: step, dpos, npos, spos, nexts, nextd, nextn
         integer :: north, south, east, west, top, bottom, n
@@ -1057,6 +1057,8 @@ contains
         nx=size(domain%lat,1)
         ny=size(domain%lat,2)
         nz=size(domain%u,2)
+        nxu=size(domain%u,1)
+        nyv=size(domain%v,3)
 
         if (reverse) then
             u_LUT=>rev_u_LUT
@@ -1071,7 +1073,7 @@ contains
         endif
 
         if (reverse) print*, "WARNING using fixed nsq for linear wind removal: 3e-6"
-        !$omp parallel firstprivate(nx,ny,nz, reverse, vsmooth, winsz), default(none), &
+        !$omp parallel firstprivate(nx,nxu,ny,nyv,nz, reverse, vsmooth, winsz), default(none), &
         !$omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom), &
         !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, smoothz, u, v), &
         !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
@@ -1124,9 +1126,9 @@ contains
         !$omp end do
         !$omp barrier
         !$omp do
-        do k=1, ny+1
+        do k=1, nyv
             do j=1, nz
-                do i=1, nx+1
+                do i=1, nxu
                     uk = min(k,ny)
                     vi = min(i,nx)
                     
