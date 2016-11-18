@@ -463,7 +463,7 @@ contains
         integer :: ntimesteps
         double precision :: end_mjd
         integer :: nz, n_ext_winds,buffer, warning_level, cfl_strictness
-        logical :: ideal, readz, readdz, debug, external_winds, surface_io_only, &
+        logical :: ideal, readz, readdz, interactive, debug, external_winds, surface_io_only, &
                    mean_winds, mean_fields, restart, advect_density, z_is_geopotential, z_is_on_interface,&
                    high_res_soil_state, use_agl_height, time_varying_z, &
                    use_mp_options, use_lt_options, use_adv_options, use_lsm_options, use_bias_correction
@@ -475,7 +475,7 @@ contains
                                         bias_options_filename
 
         namelist /parameters/ ntimesteps,outputinterval,inputinterval, surface_io_only, &
-                              dx,dxlow,ideal,readz,readdz,nz,t_offset,debug, &
+                              dx,dxlow,ideal,readz,readdz,nz,t_offset,debug, interactive, &
                               external_winds,buffer,n_ext_winds,advect_density,smooth_wind_distance, &
                               mean_winds,mean_fields,restart, z_is_geopotential, z_is_on_interface,&
                               date, calendar, high_res_soil_state,rotation_scale_height,warning_level, &
@@ -502,6 +502,7 @@ contains
         restart=.False.
         ideal=.False.
         debug=.False.
+        interactive=.False.
         warning_level=-9999
         readz=.False.
         readdz=.True.
@@ -616,6 +617,7 @@ contains
         options%mean_fields = mean_fields
         options%advect_density = advect_density
         options%debug = debug
+        options%interactive = interactive
         options%warning_level = warning_level
         options%rotation_scale_height = rotation_scale_height
         options%use_agl_height = use_agl_height

@@ -938,9 +938,11 @@ contains
                 ! set the domain wide U and V values to the current u and v values
                 ! this could use u/v_perturbation, but those would need to be put in a linearizable structure...
                 do k=1, n_spd_values
-                    !$omp critical (print_lock)
-                    write(*,"(A,f5.1,A$)") char(13), loops_completed/real(n_dir_values*n_spd_values)*100," %"
-                    !$omp end critical (print_lock)
+                    if (options%interactive) then
+                        !$omp critical (print_lock)
+                        write(*,"(A,f5.1,A$)") char(13), loops_completed/real(n_dir_values*n_spd_values)*100," %"
+                        !$omp end critical (print_lock)
+                    endif
                     do j=1, n_nsq_values
                         u = calc_u( dir_values(i), spd_values(k) )
                         v = calc_v( dir_values(i), spd_values(k) )

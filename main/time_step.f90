@@ -447,7 +447,9 @@ contains
             endif
             ! set an upper bound on dt to keep microphysics and convection stable (?) not sure what time is required here. 
             dt = min(dt,120.0) !better min=180?
-            if (options%debug) write(*,"(A,f5.1,A,f5.1,A$)") char(13), 100-max(0.0,(end_time-model_time-dt)/options%in_dt*100)," %  dt=",dt,"s  "
+            if (options%interactive) then
+                write(*,"(A,f5.1,A,f5.1,A$)") char(13), 100-max(0.0,(end_time-model_time-dt)/options%in_dt*100)," %  dt=",dt,"s  "
+            endif
             ! Make sure we don't over step the forcing period
             if ((model_time + dt) > end_time) then
                 dt = end_time - model_time

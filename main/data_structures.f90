@@ -438,10 +438,11 @@ module data_structures
         
 
         ! various boolean options
+        logical :: debug                ! outputs a little more information at runtime (not much at present)
+        logical :: interactive          ! set to true if running at the commandline to see %complete printed
         logical :: ideal                ! this is an ideal simulation, forcing will be held constant
         logical :: readz                ! read atmospheric grid elevations from file
         logical :: readdz               ! read atm model layer thicknesses from namelist
-        logical :: debug                ! outputs a little more information at runtime (not much at present)
         logical :: external_winds       ! read a high res 3d wind field from an external file (e.g. a high res WRF run)
         logical :: mean_winds           ! use only a mean wind field across the entire model domain
         logical :: mean_fields          ! use only a mean forcing field across the model boundaries 
