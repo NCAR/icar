@@ -962,7 +962,7 @@ contains
         endif
         
         ! surface pressure
-        call check( nf90_put_var(ncid, varid(20), domain%psfc, start_two_D), trim(filename)//":ps" )
+        call check( nf90_put_var(ncid, varid(40), domain%psfc, start_two_D), trim(filename)//":ps" )
         
         ! Write precip variables (rain, snow, graupel, crain) adjusting for the internal precip bucket
         call tip_precip_to_buckets(domain)
