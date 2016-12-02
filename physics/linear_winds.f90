@@ -1202,9 +1202,9 @@ contains
                                     + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
 
                         if (reverse) then
-                            domain%u(i,j,k) = domain%u(i,j,k) - u_perturbation(i,j,k)
+                            domain%u(i,j,k) = domain%u(i,j,k) - u_perturbation(i,j,k) * linear_contribution
                         else
-                            domain%u(i,j,k) = domain%u(i,j,k) + u_perturbation(i,j,k)
+                            domain%u(i,j,k) = domain%u(i,j,k) + u_perturbation(i,j,k) * linear_mask(min(nx,i),min(ny,k))
                         endif
                     endif
                     if (i<=nx) then
