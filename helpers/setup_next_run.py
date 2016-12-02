@@ -22,28 +22,29 @@ def find_last_output(options_file):
     filelist=glob.glob(outputfile+"*00.nc")
     filelist.sort()
 
-    return filelist[-1], filelist[-2]
+    return filelist[-1], filelist[-2], outputfile
 
-def load_last_date(filename):
+def load_last_date(filename, prefix):
     """docstring for load_last_date"""
     time_data=mygis.read_nc(filename,"time").data
     last_hour=len(time_data)
     
-    year=filename.split("_")[-4]
-    month=filename.split("_")[-3]
-    day=filename.split("_")[-2]
-    hour=last_hour-1 # look back one time step incase it hadn't finished writing the last timestep
+    date_string = filename.replace(prefix,"")
+    year    = date_string.split("_")[-4]
+    month   = date_string.split("_")[-3]
+    day     = date_string.split("_")[-2]
+    hour    = last_hour-1 # look back one time step incase it hadn't finished writing the last timestep
     
     return "{0}, {1}, {2}, {3}, 0, 0".format(year,month,day,hour),hour
     
     
 def main(options_file, template_file):
     """docstring for main"""
-    restart_file,backup_file=find_last_output(options_file)
-    restart_date,hour=load_last_date(restart_file)
+    restart_file,backup_file,output_prefix=find_last_output(options_file)
+    restart_date,hour=load_last_date(restart_file, output_prefix)
     if hour<2:
         restart_file=backup_file
-        restart_date,hour=load_last_date(restart_file)
+        restart_date,hour=load_last_date(restart_file, output_prefix)
     
     print("Using restart file: "+restart_file)
     print("      restart date: "+restart_date)
