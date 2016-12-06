@@ -284,11 +284,11 @@ contains
         
         ! Variable specific options
         ! For wind variables run a first pass of smoothing over the low res data
-        ! if (((varname==options%vvar).or.(varname==options%uvar)).and.(.not.options%ideal)) then
-        !     call smooth_wind(inputdata,1,2)
+        if (((varname==options%vvar).or.(varname==options%uvar)).and.(.not.options%ideal)) then
+            call smooth_wind(inputdata,1,2)
             
         ! For Temperature, we may need to add an offset
-        if ((varname==options%tvar).and.(options%t_offset/=0)) then
+        elseif ((varname==options%tvar).and.(options%t_offset/=0)) then
             inputdata=inputdata+options%t_offset
         
         ! For pressure, we may need to add a base pressure offset read from pbvar
