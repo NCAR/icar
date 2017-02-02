@@ -10,8 +10,8 @@ contains
         type(domain_type),  intent(inout)   :: domain
         character(len=*),   intent(in)      :: error_msg
         
-        call check_var(domain%th,       name="th",      msg=error_msg, less_than    =100.0)
-        call check_var(domain%th,       name="th",      msg=error_msg, greater_than =600.0)
+        call check_var(domain%th,       name="th",      msg=error_msg, less_than    =100.0,fix=.True.)
+        call check_var(domain%th,       name="th",      msg=error_msg, greater_than =600.0,fix=.True.)
         call check_var(domain%qv,       name="qv",      msg=error_msg, less_than    =0.0, fix=.True.)
         call check_var(domain%cloud,    name="cloud",   msg=error_msg, less_than    =0.0, fix=.True.)
         call check_var(domain%ice,      name="ice",     msg=error_msg, less_than    =0.0, fix=.True.)
