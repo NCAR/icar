@@ -33,6 +33,7 @@ module microphysics
     use module_mp_wsm6,             only: wsm6, wsm6init
     use module_mp_simple,           only: mp_simple_driver
     use mod_wrf_constants !,          only: rhoair0, rhowater, rhosnow, cliq, cpv
+    use time,                       only: calc_year_fraction
     implicit none
 
     ! permit the microphysics to update on a longer time step than the advection
@@ -102,6 +103,7 @@ contains
     !!
     !!----------------------------------------------------------
     subroutine distribute_precip(current_precip, last_precip, local_fraction, precip_delta)
+        implicit none
         real, dimension(:,:), intent(inout) :: current_precip, last_precip
         real, intent(in) :: local_fraction
         logical, intent(in) :: precip_delta
@@ -116,14 +118,14 @@ contains
         if (precip_delta) then
             do j=2,ny-1
                 do i=2,nx-1
-                    this_precip(i,j) = current_precip(i,j)-last_precip(i,j)
+                    this_precip(i,j)    = current_precip(i,j)-last_precip(i,j)
                     current_precip(i,j) = last_precip(i,j)
                 end do
             end do
         else
             do j=2,ny-1
                 do i=2,nx-1
-                    this_precip(i,j) = last_precip(i,j)
+                    this_precip(i,j)    = last_precip(i,j)
                     current_precip(i,j) = current_precip(i,j)-last_precip(i,j)
                 end do
             end do
@@ -141,6 +143,52 @@ contains
         end do
                 
     end subroutine distribute_precip
+    
+    subroutine apply_rain_fraction(current_date, rain_fraction, current_precip, last_precip, precip_delta)
+        implicit none
+        double precision                        :: current_date
+        real, dimension(:,:,:), intent(in)      :: rain_fraction
+        real, dimension(:,:),   intent(inout)   :: current_precip, last_precip
+        logical,                intent(in)      :: precip_delta
+        ! relies on module variable this_precip as a temporary array
+        
+        integer :: i,j, nx,ny
+        integer :: x,y, point
+        integer :: n_correction_points, correction_step
+        real    :: year_fraction
+        
+        nx=size(current_precip,1)
+        ny=size(current_precip,2)
+        
+        n_correction_points = size(rain_fraction,3)
+        year_fraction = calc_year_fraction(current_date)
+        correction_step = min(  floor(n_correction_points * year_fraction)+1, &
+                                n_correction_points)
+        
+        if (precip_delta) then
+            do j=2,ny-1
+                do i=2,nx-1
+                    this_precip(i,j)    = current_precip(i,j)-last_precip(i,j)
+                    current_precip(i,j) = last_precip(i,j)
+                end do
+            end do
+        else
+            do j=2,ny-1
+                do i=2,nx-1
+                    this_precip(i,j)    = last_precip(i,j)
+                    current_precip(i,j) = current_precip(i,j)-last_precip(i,j)
+                end do
+            end do
+        endif
+        
+        do j=2,ny-1
+            do i=2,nx-1
+                current_precip(i,j) = current_precip(i,j)+this_precip(i,j)*rain_fraction(i,j,correction_step)
+            end do
+        end do
+                
+    end subroutine apply_rain_fraction
+
     
     !>----------------------------------------------------------
     !! Microphysical driver
@@ -226,7 +274,7 @@ contains
             
             ! If we are going to distribute the current precip over a few grid cells, we need to keep track of
             ! the last_precip so we know how much fell
-            if (options%mp_options%local_precip_fraction<1) then
+            if ((options%mp_options%local_precip_fraction<1).or.(options%use_bias_correction)) then
                 last_rain=domain%rain
                 last_snow=domain%snow
             endif
@@ -299,6 +347,11 @@ contains
                                ,its,ite, jts,jte, kts,kte                        &
                                                                                  )
 
+            endif
+            
+            if (options%use_bias_correction) then
+                call apply_rain_fraction(model_time/86400.0+50000, domain%rain_fraction, domain%rain, last_rain, precip_delta)
+                call apply_rain_fraction(model_time/86400.0+50000, domain%rain_fraction, domain%snow, last_snow, precip_delta)
             endif
             
             if (options%mp_options%local_precip_fraction<1) then
