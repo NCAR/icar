@@ -64,7 +64,7 @@ module module_mp_simple
                                     ! NOTE, ice = 2110 (J/kg/K), steam = 2080 (J/kg/K)
     real, parameter :: LH_liquid = 3.34E5 ! J/kg
     real, parameter :: heat_capacity = 1006.0 ! air heat capacity J/kg/K
-    real, parameter :: SMALL_VALUE = 1E-15
+    real, parameter :: SMALL_VALUE = 1E-30
     real, parameter :: SMALL_PRESSURE = 1000. ! in Pa this is actually pretty small...
 !     real, parameter :: mp_R = 287.058 ! J/(kg K) specific gas constant for air
 !     real, parameter :: mp_g = 9.81 ! gravity m/s^2
@@ -72,15 +72,14 @@ module module_mp_simple
 ! arbitrary calibratable timescales default values as used in the linear model
 ! these should be pulled out to a parameter file for calibration purposes
 ! but this is approximately how they are implemented in SB04
-    real,parameter :: snow_formation_time_const = 1/2000.0 ! [1/s]
-    real,parameter :: rain_formation_time_const = 1/500.0  ! [1/s]
-    real,parameter :: freezing_threshold = 273.15          ! [K]
-    real,parameter :: snow_fall_rate = 1.5                 ! [m/s]   for a water vapor scale height of 3750m corresponds to tau_f = 2500
-    real,parameter :: rain_fall_rate = 10.0                ! [m/s]   for a water vapor scale height of 3750m corresponds to tau_f = 375
-    real,parameter :: snow_cloud_init = 0.00001            ! [kg/kg] cloud ice content before snow will start to form
-    real,parameter :: rain_cloud_init = 0.00001            ! [kg/kg] cloud water content before rain will start to form
-
-
+    real,parameter :: snow_formation_time_const=1/2000.0 ! [1/s]
+    real,parameter :: rain_formation_time_const=1/500.0  ! [1/s]
+    real,parameter :: freezing_threshold=273.15          ! [K]
+    real,parameter :: snow_fall_rate=1.5                 ! [m/s]   for a water vapor scale height of 3750m corresponds to tau_f = 2500
+    real,parameter :: rain_fall_rate=10.0                ! [m/s]   for a water vapor scale height of 3750m corresponds to tau_f = 375
+    real,parameter :: snow_cloud_init=0.0001            ! [kg/kg] cloud ice content before snow will start to form
+    real,parameter :: rain_cloud_init=0.0001            ! [kg/kg] cloud water content before rain will start to form
+    
 !   these are recalculated every call because they are a function of dt
 !   conversion "time" = exp( -1 * time_constant * dt)
     real :: rain_evap = 0.999
@@ -127,6 +126,7 @@ module module_mp_simple
             a = 17.2693882
             b = 35.86
         endif
+
         e_s = 610.78 * exp(a * (temperature - 273.16) / (temperature - b)) !(Pa)
 
         ! alternate formulations
@@ -176,7 +176,7 @@ module module_mp_simple
         excess = 0
 
         ! this should be written to use a slightly smarter iteration scheme.
-        do while ((abs(lastqv-qv)>maxerr).and.(iteration<5))
+        do while ((abs(lastqv-qv)>maxerr).and.(iteration<15))
             iteration = iteration+1
             lastqv = qv
             ! calculate the saturating mixing ratio
@@ -204,30 +204,31 @@ module module_mp_simple
                 excess = excess*(-1) !DEBUG
             endif
         enddo
-        if (iteration==5) then
+        if (iteration==15) then
             qv = sat_mr(pre_t,pressure)
             temperature = pre_t
             qc = pre_qc
         endif
-        ! if (temperature<170) then
-        !     temperature = 170
-        ! else if (temperature>350) then
-        !     temperature = 350
-        ! endif
 
         qc = max(qc,0.)
 
         if ((temperature>350).or.(qc>0.01).or.(qvsat>1)) then
             deltat = excess*vapor2temp
             !$omp critical
-            print*, "mp_simple: data out of bounds"
+            print*, ""
+            print*, ""
+            print*, "mp_simple ERROR: "
+            if (temperature > 350 ) print*, "Temperature out of bounds", temperature
+            if (qc          > 0.01) print*, "Qc out of bounds", qc
+            if (qvsat       > 1   ) print*, "saturated qv out of bounds", qvsat
             print*, "iter=",iteration
-            print*, "preqc=",pre_qc,"preqv=",pre_qv,"pret=",pre_t,"pressure=",pressure
-            print*, "qc=",qc, "qv=",qv,"temperature=",temperature, "qvsat=",qvsat
-            print*, "mrs_pret=",sat_mr(pre_t,pressure),"mrs_t=",sat_mr(temperature,pressure), "mrs_delta=",sat_mr(pre_t,pressure)-sat_mr(temperature,pressure)
-
-            print*, "qv=",qv, "qvs=",qvsat, "qc=",qc, "preqc=",pre_qc, "temperature=",temperature, "excess=",excess, "vapor2temp=",vapor2temp
-            print*, "temperature-deltat",temperature-deltat, "pressure=",pressure, "mrs_t-dT=",sat_mr(temperature-deltat,pressure)
+            print*, ""
+            print*, "   preqc=",pre_qc,"       preqv=",pre_qv,"        pret=",pre_t
+            print*, "   qc=",qc, "      qv=",qv,"       temperature=",temperature
+            print*, "   pressure=",pressure, "        qvsat=",qvsat
+            print*, "   mrs_pret=",sat_mr(pre_t,pressure),"     mrs_t=",sat_mr(temperature,pressure), "     mrs_delta=",sat_mr(pre_t,pressure)-sat_mr(temperature,pressure)
+            print*, "   excess=",excess, "      vapor2temp=",vapor2temp
+            print*, "   temperature-deltat=",temperature-deltat, "      mrs_(t-dT)=",sat_mr(temperature-deltat,pressure)
             !$omp end critical
         endif
 
@@ -337,11 +338,10 @@ module module_mp_simple
         real,intent(in)::dt
         real :: qvsat,L_evap,L_subl,L_melt
 
-        qvsat = 1
         L_melt = -1*LH_liquid  ! J/kg (should change with temperature)
         L_evap = -1*(LH_vapor+(373.15-temperature)*dLHvdt)   ! J/kg
         L_subl = L_melt+L_evap ! J/kg
-        ! convert cloud water to and from water vapor
+        ! convert cloud water to and from water vapor (also initializes qvsat)
         call cloud_conversion(pressure,temperature,qv,qc,qvsat,dt)
         ! if there are no species to process we will just return
         if ((qc+qr+qs) >SMALL_VALUE) then
@@ -349,11 +349,10 @@ module module_mp_simple
                 if (temperature>freezing_threshold) then
                     ! convert cloud water to rain drops
                     call cloud2hydrometeor(qc,qr,cloud2rain,rain_cloud_init)
-!                   if (qs>SMALL_VALUE) then
-!                       ! it is above freezing, so start melting any snow if present
-!                       call phase_change(pressure,temperature,qs,100.,qr,L_melt,dt/snow_melt_time)
-! !                         write(*,*) "Snow Melt",temperature
-!                   endif
+                    if (qs>SMALL_VALUE) then
+                        ! it is above freezing, so start melting any snow if present
+                        call phase_change(pressure,temperature,qs,100.,qr,L_melt,cloud2rain)
+                    endif
                 else
                     ! convert cloud water to snow flakes
                     call cloud2hydrometeor(qc,qs,cloud2snow,snow_cloud_init)
@@ -364,11 +363,11 @@ module module_mp_simple
             if (qv<qvsat) then
                 if (qr>SMALL_VALUE) then
                     ! evaporate rain
-                    call phase_change(pressure,temperature,qr,qvsat,qv,L_evap,1.0) !cloud2rain)
+                    call phase_change(pressure,temperature,qr,qvsat,qv,L_evap,cloud2rain/2)
                 endif
                 if (qs>SMALL_VALUE) then
                     ! sublimate snow
-                    call phase_change(pressure,temperature,qs,qvsat,qv,L_subl,1.0) !cloud2snow)
+                    call phase_change(pressure,temperature,qs,qvsat,qv,L_subl,cloud2snow/2)
                 endif
             endif
         endif
@@ -452,7 +451,7 @@ module module_mp_simple
 !           qv(i) = qv(i)/(1-qv(i))
             call mp_conversions(pressure(i),temperature(i),qv(i),qc(i),qr(i),qs(i),dt)
         enddo
-
+        
         ! SEDIMENTATION for rain
         if (maxval(qr)>SMALL_VALUE) then
             fall_rate = rain_fall_rate
@@ -468,11 +467,12 @@ module module_mp_simple
                     if (qv(i)<qvsat) then
                         if (qr(i)>SMALL_VALUE) then
                             ! evaporate rain
-                            call phase_change(pressure(i),temperature(i),qr(i),qvsat,qv(i),L_evap,1.0) !cloud2rain)
+                            call phase_change(pressure(i),temperature(i),qr(i),qvsat,qv(i),L_evap,cloud2rain/(2*nint(cfl)))
                         endif
                     endif
                 enddo
             enddo
+
         endif
 
         ! SEDIMENTATION for snow
@@ -493,7 +493,7 @@ module module_mp_simple
                     if (qv(i)<qvsat) then
                         if (qs(i)>SMALL_VALUE) then
                             ! sublimate snow
-                            call phase_change(pressure(i),temperature(i),qs(i),qvsat,qv(i),L_subl,1.0) !cloud2snow)
+                            call phase_change(pressure(i),temperature(i),qs(i),qvsat,qv(i),L_subl,cloud2snow/(2*nint(cfl)))
                         endif
                     endif
                 enddo

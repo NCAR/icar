@@ -105,9 +105,9 @@ ifeq ($(NODENAME), Nomad.local)
 endif
 ifeq ($(NODENAME), dablam.rap.ucar.edu)
 	F90=gfortran
-	LIBFFT=/usr/local/fftw-3.3.4/lib
-	INCFFT=/usr/local/fftw-3.3.4/include
-	NCDF_PATH = /usr/local/netcdf
+	LIBFFT=/usr/local/lib
+	INCFFT=/usr/local/include
+	NCDF_PATH = /usr/local
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
 endif
@@ -131,6 +131,8 @@ ifeq ($(LMOD_FAMILY_COMPILER),gnu)
 	LIBFFT=/glade/u/home/gutmann/usr/local/lib
 	INCFFT=/glade/u/home/gutmann/usr/local/include
 	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/gnu/4.8.2
+	# note this works for almost all versions of gfortran EXCEPT 4.8.2... the default version
+	NCDF_PATH=/glade/apps/opt/netcdf/4.3.3.1/gnu/$(GNU_MAJOR_VERSION).$(GNU_MINOR_VERSION)
 	# LIBNETCDF = $(LIB_NCAR) # when netcdf includes are setup by the yellowstone module system
 	# INCNETCDF = $(INC_NCAR)
 	LIBNETCDF = -Wl,-rpath,$(NCDF_PATH)/lib -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf # if using a compiler for which netcdf includes are
@@ -177,7 +179,7 @@ ifeq ($(F90), gfortran)
 endif
 # Intel fortran
 ifeq ($(F90), ifort)
-	COMP=-c -u -openmp -liomp5 -O3 -no-prec-div -xHost -ftz -fpe0
+	COMP=-c -u -openmp -liomp5 -O3 -no-prec-div -xHost -ftz -fpe0 # -check stack,bounds -fp-stack-check
 	LINK= -openmp -liomp5
 	PREPROC=-fpp
 	MODOUTPUT=-module $(BUILD)
@@ -263,7 +265,7 @@ ifeq ($(MODE), debugompslow)
 endif
 ifeq ($(MODE), debugomp)
 	ifeq ($(F90), ifort)
-		COMP= -openmp -liomp5 -debug -c -O3 -u -traceback -fpe0 -ftz -fast-transcendentals  -xHost #-check all -check noarg_temp_created -fpe0 -fast-transcendentals -xhost
+		COMP= -openmp -liomp5 -debug -c -O3 -u -traceback -fpe0 -ftz -xHost # -fast-transcendentals -check all -check noarg_temp_created -fpe0
 		LINK= -openmp -liomp5
 	endif
 	ifeq ($(F90), gfortran)
@@ -315,44 +317,51 @@ PHYS=physics/
 IO=io/
 MAIN=main/
 UTIL=utilities/
+CONST=constants/
 
-OBJS=	$(BUILD)driver.o \
-		$(BUILD)init.o \
-		$(BUILD)init_options.o \
+OBJS=	$(BUILD)driver.o 		\
+		$(BUILD)init.o 			\
+		$(BUILD)init_options.o 	\
 		$(BUILD)model_tracking.o \
-		$(BUILD)boundary.o \
-		$(BUILD)time_step.o \
-		$(BUILD)output.o \
-		$(BUILD)io_routines.o \
-		$(BUILD)lt_lut_io.o \
-		$(BUILD)mp_driver.o \
-		$(BUILD)mp_thompson.o \
-		$(BUILD)mp_simple.o \
-		$(BUILD)cu_driver.o \
-		$(BUILD)cu_tiedtke.o \
-		$(BUILD)cu_kf.o \
-		$(BUILD)ra_driver.o \
-		$(BUILD)ra_simple.o \
-		$(BUILD)lsm_driver.o \
-		$(BUILD)lsm_simple.o \
-		$(BUILD)lsm_basic.o \
-		$(BUILD)lsm_noahdrv.o \
-		$(BUILD)lsm_noahlsm.o \
-		$(BUILD)water_simple.o \
-		$(BUILD)pbl_driver.o \
-		$(BUILD)pbl_simple.o \
-		$(BUILD)pbl_ysu.o \
+		$(BUILD)boundary.o 		\
+		$(BUILD)time_step.o 	\
+		$(BUILD)output.o 		\
+		$(BUILD)io_routines.o 	\
+		$(BUILD)lt_lut_io.o 	\
+		$(BUILD)mp_driver.o 	\
+		$(BUILD)mp_wsm6.o 		\
+		$(BUILD)mp_thompson.o 	\
+		$(BUILD)mp_simple.o 	\
+		$(BUILD)mp_morrison.o 	\
+		$(BUILD)cu_driver.o 	\
+		$(BUILD)cu_tiedtke.o 	\
+		$(BUILD)cu_kf.o 		\
+		$(BUILD)ra_driver.o 	\
+		$(BUILD)ra_simple.o 	\
+		$(BUILD)lsm_driver.o 	\
+		$(BUILD)lsm_simple.o 	\
+		$(BUILD)lsm_basic.o 	\
+		$(BUILD)lsm_noahdrv.o 	\
+		$(BUILD)lsm_noahlsm.o 	\
+		$(BUILD)water_simple.o 	\
+		$(BUILD)pbl_driver.o 	\
+		$(BUILD)pbl_simple.o 	\
+		$(BUILD)pbl_ysu.o 		\
 		$(BUILD)advection_driver.o \
-		$(BUILD)adv_mpdata.o \
-		$(BUILD)advect.o \
-		$(BUILD)wind.o \
-		$(BUILD)linear_winds.o \
-		$(BUILD)fftshift.o \
-		$(BUILD)geo_reader.o \
-		$(BUILD)vinterp.o \
-		$(BUILD)time.o \
+		$(BUILD)adv_mpdata.o 	\
+		$(BUILD)advect.o 		\
+		$(BUILD)wind.o 			\
+		$(BUILD)linear_winds.o 	\
+		$(BUILD)fftw.o 			\
+		$(BUILD)fftshift.o 		\
+		$(BUILD)geo_reader.o 	\
+		$(BUILD)vinterp.o 		\
+		$(BUILD)time.o 			\
 		$(BUILD)data_structures.o \
-		$(BUILD)string.o
+		$(BUILD)icar_constants.o\
+		$(BUILD)wrf_constants.o \
+		$(BUILD)string.o 		\
+		$(BUILD)debug_utils.o
 
 ###################################################################
 #	User facing rules
@@ -369,9 +378,9 @@ clean:
 allclean:cleanall
 
 cleanall: clean
-	${RM} icar fftshift_test calendar_test mpdata_test 2>/dev/null ||:
+	${RM} icar fftshift_test calendar_test mpdata_test fftw_test 2>/dev/null ||:
 
-test: fftshift_test calendar_test mpdata_test
+test: fftshift_test calendar_test mpdata_test fftw_test
 
 icar:${OBJS}
 	${F90} -o icar ${OBJS} ${LFLAGS}
@@ -382,6 +391,9 @@ doc:
 ###################################################################
 #	test cases
 ###################################################################
+fftw_test: $(BUILD)test_fftw.o
+	${F90} $(BUILD)test_fftw.o -o fftw_test ${LFLAGS}
+
 fftshift_test: $(BUILD)test_fftshift.o $(BUILD)fftshift.o
 	${F90} $(BUILD)test_fftshift.o $(BUILD)fftshift.o -o fftshift_test ${LFLAGS}
 
@@ -416,7 +428,7 @@ $(BUILD)boundary.o:$(MAIN)boundary.f90 $(BUILD)data_structures.o $(BUILD)io_rout
 
 $(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.o $(BUILD)output.o \
 					$(BUILD)advection_driver.o $(BUILD)ra_driver.o $(BUILD)lsm_driver.o $(BUILD)cu_driver.o \
-					$(BUILD)pbl_driver.o $(BUILD)mp_driver.o $(BUILD)boundary.o
+					$(BUILD)pbl_driver.o $(BUILD)mp_driver.o $(BUILD)boundary.o $(BUILD)debug_utils.o
 	${F90} ${FFLAGS} $(MAIN)time_step.f90 -o $(BUILD)time_step.o
 
 $(BUILD)init_options.o:$(MAIN)init_options.f90 $(BUILD)data_structures.o  $(BUILD)io_routines.o \
@@ -462,9 +474,16 @@ $(BUILD)vinterp.o: $(UTIL)vinterp.f90 $(BUILD)data_structures.o
 #	Microphysics code
 ###################################################################
 
-$(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_thompson.o $(BUILD)mp_simple.o $(BUILD)data_structures.o
+$(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_thompson.o $(BUILD)mp_simple.o \
+					$(BUILD)mp_morrison.o $(BUILD)data_structures.o $(BUILD)mp_wsm6.o
 	${F90} ${FFLAGS} $(PHYS)mp_driver.f90 -o $(BUILD)mp_driver.o
 
+$(BUILD)mp_morrison.o:$(PHYS)mp_morrison.f90 $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(PHYS)mp_morrison.f90 -o $(BUILD)mp_morrison.o
+
+$(BUILD)mp_wsm6.o:$(PHYS)mp_wsm6.f90 $(BUILD)wrf_constants.o
+	${F90} ${FFLAGS} $(PHYS)mp_wsm6.f90 -o $(BUILD)mp_wsm6.o
+	
 $(BUILD)mp_thompson.o:$(PHYS)mp_thompson.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)mp_thompson.f90 -o $(BUILD)mp_thompson.o
 
@@ -533,7 +552,8 @@ $(BUILD)pbl_ysu.o: $(PHYS)pbl_ysu.f90
 ###################################################################
 #	Advection related code
 ###################################################################
-$(BUILD)advection_driver.o:$(PHYS)advection_driver.f90 $(BUILD)data_structures.o $(BUILD)advect.o $(BUILD)adv_mpdata.o
+$(BUILD)advection_driver.o:$(PHYS)advection_driver.f90 $(BUILD)data_structures.o $(BUILD)advect.o $(BUILD)adv_mpdata.o \
+							$(BUILD)debug_utils.o
 	${F90} ${FFLAGS} $(PHYS)advection_driver.f90 -o $(BUILD)advection_driver.o
 
 $(BUILD)advect.o:$(PHYS)advect.f90 $(BUILD)data_structures.o
@@ -550,18 +570,31 @@ $(BUILD)wind.o:$(PHYS)wind.f90 $(BUILD)linear_winds.o $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)wind.f90 -o $(BUILD)wind.o
 
 $(BUILD)linear_winds.o:$(PHYS)linear_winds.f90 $(BUILD)io_routines.o $(BUILD)data_structures.o \
-	 				   $(BUILD)fftshift.o $(BUILD)lt_lut_io.o $(BUILD)string.o
+	 				   $(BUILD)fftshift.o $(BUILD)lt_lut_io.o $(BUILD)string.o $(BUILD)fftw.o
 	${F90} ${FFLAGS} $(PHYS)linear_winds.f90 -o $(BUILD)linear_winds.o
 
-$(BUILD)fftshift.o:$(UTIL)fftshift.f90
+###################################################################
+#	FFT code
+###################################################################
+
+$(BUILD)fftw.o:$(UTIL)fftw.f90
+	${F90} ${FFLAGS} $(UTIL)fftw.f90 -o $(BUILD)fftw.o
+
+$(BUILD)fftshift.o:$(UTIL)fftshift.f90 $(BUILD)fftw.o
 	${F90} ${FFLAGS} $(UTIL)fftshift.f90 -o $(BUILD)fftshift.o
 
 
 ###################################################################
 #	Generic data structures, used by almost everything
 ###################################################################
-$(BUILD)data_structures.o:$(MAIN)data_structures.f90
+$(BUILD)data_structures.o:$(MAIN)data_structures.f90 $(BUILD)icar_constants.o
 	${F90} ${FFLAGS} $(MAIN)data_structures.f90 -o $(BUILD)data_structures.o
+	
+$(BUILD)wrf_constants.o:$(CONST)wrf_constants.f90
+	${F90} ${FFLAGS} $(CONST)wrf_constants.f90 -o $(BUILD)wrf_constants.o
+
+$(BUILD)icar_constants.o:$(CONST)icar_constants.f90
+	${F90} ${FFLAGS} $(CONST)icar_constants.f90 -o $(BUILD)icar_constants.o
 
 ###################################################################
 #	Keep track of model versions for user information
@@ -569,9 +602,15 @@ $(BUILD)data_structures.o:$(MAIN)data_structures.f90
 $(BUILD)model_tracking.o:$(MAIN)model_tracking.f90
 	${F90} ${FFLAGS} $(MAIN)model_tracking.f90 -o $(BUILD)model_tracking.o
 
+$(BUILD)debug_utils.o:$(UTIL)debug_utils.f90 $(BUILD)data_structures.o $(BUILD)string.o
+	${F90} ${FFLAGS} $(UTIL)debug_utils.f90 -o $(BUILD)debug_utils.o
+
 ###################################################################
 #	Unit tests
 ###################################################################
+$(BUILD)test_fftw.o: tests/test_fftw.f90 $(BUILD)fftw.o
+	${F90} ${FFLAGS} tests/test_fftw.f90 -o $(BUILD)test_fftw.o
+
 $(BUILD)test_fftshift.o:$(BUILD)fftshift.o tests/test_fftshift.f90
 	${F90} ${FFLAGS} tests/test_fftshift.f90 -o $(BUILD)test_fftshift.o
 

@@ -6,21 +6,24 @@
 !! General Field Definitions
 !!
 !! ---- 3D fields ---- NX x NZ x NY
-!! u     = wind in east direction                           [m/s]
-!! v     = wind in north direction                          [m/s]
-!! w     = wind in vertical direction                       [m/s] (possibly scaled by dx/dz)
+!! u        = wind in east direction                        [m/s]
+!! v        = wind in north direction                       [m/s]
+!! w        = wind in vertical direction                    [m/s] (possibly scaled by dx/dz)
 !! 
-!! p     = pressure                                         [pa]
-!! th    = potential temperature                            [K]
+!! p        = pressure                                      [pa]
+!! th       = potential temperature                         [K]
 !!
-!! qv    = water vapor (mixing ratio)                       [kg/kg]
-!! cloud = cloud water                                      [kg/kg]
-!! ice   = cloud ice                                        [kg/kg]
-!! qrain = rain mixing ratio                                [kg/kg]
-!! qsnow = snow mixing ratio                                [kg/kg]
-!! qgrau = graupel mixing ratio                             [kg/kg]
-!! nice  = ice number concentration                         [1/cm^3]
-!! nrain = rain number concentration                        [1/cm^3]
+!! qv       = water vapor (mixing ratio)                    [kg/kg]
+!! cloud    = cloud water                                   [kg/kg]
+!! ice      = cloud ice                                     [kg/kg]
+!! qrain    = rain mixing ratio                             [kg/kg]
+!! qsnow    = snow mixing ratio                             [kg/kg]
+!! qgrau    = graupel mixing ratio                          [kg/kg]
+!! nice     = ice number concentration                      [1/cm^3]
+!! nrain    = rain number concentration                     [1/cm^3]
+!!
+!! rho      = dry air density                               [kg/m^3]
+!! pii      = exner function                                []
 !!
 !! ---- 2D fields ---- NX x NY
 !!      ---- moisture fluxes ----
@@ -62,12 +65,13 @@
 !! some of these are 2d, some are 3d
 !! 
 !! ---- model structure ----
-!! terrain  = surface elevation                 [m]
-!! z        = model layer height (at mid point) [m]
-!! dz       = layer thickness                   [m]
+!! terrain  = surface elevation                             [m]
+!! z        = model layer height (at mid point)             [m]
+!! dz       = Model layer thickness (between mass levels)   [m]
+!! dz_inter = Layer thickness (between interface levels)    [m]
 !!
-!! sintheta = sine of the angle between grid and geographic coords   []
-!! costheta = cosine of the angle between grid and geographic coords []
+!! sintheta = sine of the angle between grid and geographic coords   [-]
+!! costheta = cosine of the angle between grid and geographic coords [-]
 !! fzs      = buffered FFT(terrain) for linear wind calculations   
 !! </pre>
 !!
@@ -77,88 +81,9 @@
 !>------------------------------------------------
 module data_structures
     use, intrinsic :: iso_c_binding ! needed for fftw compatible complex types
+    use :: icar_constants           ! Many constants including things like fixed string lengths
     implicit none
-
-! ------------------------------------------------
-! Model constants (string lengths)
-! ------------------------------------------------
-    integer,parameter::MAXFILELENGTH    = 200   ! maximum file name length
-    integer,parameter::MAXVARLENGTH     = 200   ! maximum variable name length
-    integer,parameter::MAXLEVELS        = 500   ! maximum number of vertical layers (should typically be ~10-20)
-    integer,parameter::MAX_NUMBER_FILES = 50000 ! maximum number of permitted input files (probably a bit extreme)
-
-! ------------------------------------------------
-! Physics scheme selection definitions
-!
-! NB: BASIC typically means "use the data from the low res model"
-!     SIMPLE typically means a relatively simple formulation written for ICAR
-! ------------------------------------------------
-    integer, parameter :: kCU_TIEDTKE    = 1
-    integer, parameter :: kCU_SIMPLE     = 2
-    integer, parameter :: kCU_KAINFR     = 3
-
-    integer, parameter :: kMP_THOMPSON   = 1
-    integer, parameter :: kMP_SB04       = 2
-
-    integer, parameter :: kPBL_BASIC     = 1
-    integer, parameter :: kPBL_SIMPLE    = 2
-    integer, parameter :: kPBL_YSU       = 3
     
-    integer, parameter :: kWATER_BASIC   = 1
-    integer, parameter :: kWATER_SIMPLE  = 2
-    
-    integer, parameter :: kLSM_BASIC     = 1
-    integer, parameter :: kLSM_SIMPLE    = 2
-    integer, parameter :: kLSM_NOAH      = 3
-
-    integer, parameter :: kRA_BASIC      = 1
-    integer, parameter :: kRA_SIMPLE     = 2
-
-    integer, parameter :: kADV_UPWIND    = 1
-    integer, parameter :: kADV_MPDATA    = 2
-    
-    integer, parameter :: kWIND_LINEAR   = 1
-    
-    integer, parameter :: kLC_LAND       = 1
-    integer, parameter :: kLC_WATER      = 2
-    
-    ! mm of accumulated precip before "tipping" into the bucket
-    ! only performed on output operations
-    integer, parameter :: kPRECIP_BUCKET_SIZE=100
-! ------------------------------------------------
-! Physical Constants
-! ------------------------------------------------
-    real, parameter :: LH_vaporization=2260000.0 ! J/kg
-    ! could be calculated as 2.5E6 + (-2112.0)*temp_degC ?
-    real, parameter :: Rd  = 287.058   ! J/(kg K) specific gas constant for dry air
-    real, parameter :: Rw  = 461.5     ! J/(kg K) specific gas constant for moist air
-    real, parameter :: cp  = 1012.0    ! J/kg/K   specific heat capacity of moist STP air? 
-    real, parameter :: gravity= 9.81   ! m/s^2    gravity
-    real, parameter :: pi  = 3.1415927 ! pi
-    real, parameter :: stefan_boltzmann = 5.67e-8 ! the Stefan-Boltzmann constant
-    real, parameter :: karman = 0.41   ! the von Karman constant
-    
-    ! convenience parameters for various physics packages
-    real, parameter :: rovcp = Rd/cp
-    real, parameter :: rovg  = Rd/gravity
-    
-    ! from wrf module_model_constants
-    ! parameters for calculating latent heat as a function of temperature for 
-    ! vaporization
-    real, parameter ::  XLV0 = 3.15E6 
-    real, parameter ::  XLV1 = 2370.
-    ! sublimation
-    real, parameter ::  XLS0 = 2.905E6
-    real, parameter ::  XLS1 = 259.532
-    
-    ! saturated vapor pressure parameters (?)
-    real, parameter ::  SVP1 = 0.6112
-    real, parameter ::  SVP2 = 17.67
-    real, parameter ::  SVP3 = 29.65
-    real, parameter ::  SVPT0= 273.15
-    
-    real, parameter ::  EP1  = Rw/Rd-1.
-    real, parameter ::  EP2  = Rd/Rw
     
 ! ------------------------------------------------
 !   various data structures for use in geographic interpolation routines
@@ -176,9 +101,9 @@ module data_structures
     type geo_look_up_table
         ! x,y index positions, [n by m by 4] where there are 4 surrounding low-res points 
         ! for every high resolution point grid point to interpolate to
-        integer,allocatable,dimension(:,:,:)::x,y
+        integer,allocatable, dimension(:,:,:)   :: x, y
         ! weights to use for each of the 4 surrounding gridpoints.  Sum(over axis 3) must be 1.0
-        real,allocatable,dimension(:,:,:)::w
+        real,   allocatable, dimension(:,:,:)   :: w
     end type geo_look_up_table
 
     ! ------------------------------------------------
@@ -186,9 +111,10 @@ module data_structures
     ! ------------------------------------------------
     type vert_look_up_table
         ! z index positions for all x,y,z points (x 2 for above and below z levels)
-        integer,allocatable,dimension(:,:,:,:)::z
+        integer,allocatable, dimension(:,:,:,:) :: z
+        
         ! weights to use for each of the two surrounding points.  Sum (over axis 1) must be 1.0
-        real,allocatable,dimension(:,:,:,:)::w
+        real,   allocatable, dimension(:,:,:,:) :: w
     end type vert_look_up_table
 
     ! ------------------------------------------------
@@ -223,6 +149,7 @@ module data_structures
 
     ! ------------------------------------------------
     ! generic linearizable type so we can add linear wind field to domain or remove it from low-res (BC) U/V
+    ! Because of the need to compute the Brunt-Vaisala frequency, this now includes many atmospheric fields
     ! ------------------------------------------------
     type, extends(interpolable_type) :: linearizable_type
         ! linear theory computes u,v at z.  Trying rho to mitigate boussinesq approx... 
@@ -230,7 +157,7 @@ module data_structures
         ! these are needed to compute Brunt Vaisalla Frequency... 
         real, allocatable, dimension(:,:,:) :: th                   ! potential temperature         [K]
         real, allocatable, dimension(:,:,:) :: p                    ! pressure                      [Pa]
-        real, allocatable, dimension(:,:,:) :: pii                  ! exner function                []
+        real, allocatable, dimension(:,:,:) :: pii                  ! exner function                [-]
         real, allocatable, dimension(:,:,:) :: qv                   ! water vapor mixing ratio      [kg/kg]
         ! used to determine if moist or dry brunt vaisala frequency is used
         real, allocatable, dimension(:,:,:) :: cloud,ice,qsnow,qrain ! hydrometeor mixing ratios    [kg/kg]
@@ -243,6 +170,21 @@ module data_structures
         real, allocatable, dimension(:,:)   :: nsq_calibration      ! calibration parameter to multiply brunt-vaisala frequency by [0-]
         complex(C_DOUBLE_COMPLEX), allocatable, dimension(:,:) :: fzs ! FFT(terrain)
     end type linearizable_type
+    
+    
+    ! ------------------------------------------------
+    ! Data type to hold all of the array temporaries required by the lineary theory calculations
+    ! e.g. k and l wave number arrays
+    ! ------------------------------------------------
+    type linear_theory_type
+        real,                       allocatable, dimension(:,:) :: sig, k, l, kl
+        complex(C_DOUBLE_COMPLEX),  allocatable, dimension(:,:) :: denom, msq, mimag, m, ineta
+        
+        complex(C_DOUBLE_COMPLEX),  pointer,     dimension(:,:) :: uhat, vhat, u_perturb, v_perturb
+        type(C_PTR) :: uh_aligned_data, up_aligned_data, vh_aligned_data, vp_aligned_data
+        
+        type(C_PTR) :: uplan, vplan
+    end type linear_theory_type
     
     ! ------------------------------------------------
     ! Tendency terms output by various physics subroutines
@@ -264,6 +206,7 @@ module data_structures
         real, allocatable, dimension(:,:,:) :: w,ur,vr,wr   ! w, and u,v,w * density
         real, allocatable, dimension(:,:,:) :: w_real       ! real space w on the mass grid (including U,V*dz/dx component) for output
         real, allocatable, dimension(:,:,:) :: nice,nrain   ! number concentration for ice and rain
+        real, allocatable, dimension(:,:,:) :: nsnow,ngraupel! number concentration for snow and graupel (used in mp_morrison)
         real, allocatable, dimension(:,:,:) :: qgrau        ! graupel mass mixing ratio 
         real, allocatable, dimension(:,:,:) :: p_inter      ! pressure on the vertical interfaces (p[:,1,:]=psfc)
         real, allocatable, dimension(:,:,:) :: z_inter      ! z height on interface levels
@@ -271,28 +214,28 @@ module data_structures
         real, allocatable, dimension(:,:,:) :: mut          ! mass in a given cell ? (pbot-ptop) used in some physics schemes
         ! 3D soil field
         real, allocatable, dimension(:,:,:) :: soil_t       ! soil temperature (nx, nsoil, ny)  [K]
-        real, allocatable, dimension(:,:,:) :: soil_vwc     ! soil volumetric water content     []
+        real, allocatable, dimension(:,:,:) :: soil_vwc     ! soil volumetric water content     [-]
         
         ! 2D fields, primarily fluxes to/from the land surface
         ! surface pressure and model top pressure
         real, allocatable, dimension(:,:)   :: psfc, ptop
         ! precipitation fluxes
-        real, allocatable, dimension(:,:)   :: rain, crain, snow, graupel   ! accumulated : total precip, convective precip, snow, and graupel
-        real, allocatable, dimension(:,:)   :: current_rain, current_snow   ! current time step rain and snow
-        integer, allocatable, dimension(:,:):: rain_bucket,crain_bucket,snow_bucket,graupel_bucket  ! buckets to preserve accuracy in all variables
+        real,    allocatable, dimension(:,:):: rain, crain, snow, graupel   ! accumulated : total precip, convective precip, snow, and graupel
+        real,    allocatable, dimension(:,:):: current_rain, current_snow   ! current time step rain and snow
+        integer, allocatable, dimension(:,:):: rain_bucket, crain_bucket, snow_bucket, graupel_bucket  ! buckets to preserve accuracy in all variables
         
         ! radiative fluxes (and cloud fraction)
-        real, allocatable, dimension(:,:)   :: swdown       ! shortwave down at the surface
-        real, allocatable, dimension(:,:)   :: lwdown       ! longwave down at the surface
-        real, allocatable, dimension(:,:)   :: cloudfrac    ! total column cloud fraction
-        real, allocatable, dimension(:,:)   :: lwup         ! longwave up at/from the surface
+        real, allocatable, dimension(:,:)   :: swdown                       ! shortwave down at the surface         [W/m^2]
+        real, allocatable, dimension(:,:)   :: lwdown                       ! longwave down at the surface          [W/m^2]
+        real, allocatable, dimension(:,:)   :: cloudfrac                    ! total column cloud fraction           [-]
+        real, allocatable, dimension(:,:)   :: lwup                         ! longwave up at/from the surface       [W/m^2]
         
-        ! turbulent fluxes (and ground heat flux)
-        real, allocatable, dimension(:,:)   :: sensible_heat, latent_heat, ground_heat
+        ! turbulent and ground heat fluxes
+        real, allocatable, dimension(:,:)   :: sensible_heat, latent_heat, ground_heat       !  [W/m^2]
         
         ! domain parameters
-        real, allocatable, dimension(:,:)   :: landmask             ! store the land-sea mask
-        real, allocatable, dimension(:,:)   :: sintheta, costheta   ! rotations about the E-W, N-S grid
+        real, allocatable, dimension(:,:)   :: landmask             ! store the land-sea mask                       [-]
+        real, allocatable, dimension(:,:)   :: sintheta, costheta   ! rotations about the E-W, N-S grid             [-]
         real, allocatable, dimension(:)     :: ZNU, ZNW             ! = (p-p_top)/(psfc-ptop),  (p_inter-p_top)/(psfc-ptop)
         
         ! land surface state and parameters primarily used by Noah LSM
@@ -322,6 +265,9 @@ module data_structures
         double precision :: model_time
         integer :: current_month ! used to store the current month (should probably be fractional for interpolation...)
         
+        ! online bias correction data
+        real, allocatable, dimension(:,:,:) :: rain_fraction        ! seasonally varying fraction to multiple rain  [-]
+
         ! model specific fields
         real, allocatable, dimension(:,:,:) :: Um, Vm ! U and V on mass coordinates
         real, allocatable, dimension(:,:,:) :: T      ! real T (not potential)
@@ -340,6 +286,7 @@ module data_structures
         ! sh, lh, and pblh fields are only 2d. 
         ! These are only used with LSM option 1 and are derived from forcing file
         real, allocatable, dimension(:,:)   :: dsh_dt,dlh_dt,dpblh_dt
+        real, allocatable, dimension(:,:)   :: drain_dt
         ! change in shortwave and longwave at surface if read from forcing
         real, allocatable, dimension(:,:)   :: dsw_dt, dlw_dt
         ! change in sst if read from forcing file
@@ -441,6 +388,14 @@ module data_structures
 
 
     ! ------------------------------------------------
+    ! store Online Bias Correction options
+    ! ------------------------------------------------
+    type bias_options_type
+        character(len=MAXFILELENGTH):: filename             ! file containing bias correction data
+        character(len=MAXVARLENGTH) :: rain_fraction_var    ! name of variable containing the fraction to multiply rain by
+    end type bias_options_type
+    
+    ! ------------------------------------------------
     ! store Land Surface Model options
     ! ------------------------------------------------
     type lsm_options_type
@@ -474,19 +429,20 @@ module data_structures
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
                                         swdown_var, lwdown_var, &
-                                        sst_var
+                                        sst_var, rain_var
                                         
         ! Filenames for files to read various physics options from
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, adv_options_filename, &
-                                        lsm_options_filename
+                                        lsm_options_filename, bias_options_filename
         character(len=MAXFILELENGTH) :: calendar
         
 
         ! various boolean options
+        logical :: debug                ! outputs a little more information at runtime (not much at present)
+        logical :: interactive          ! set to true if running at the commandline to see %complete printed
         logical :: ideal                ! this is an ideal simulation, forcing will be held constant
         logical :: readz                ! read atmospheric grid elevations from file
         logical :: readdz               ! read atm model layer thicknesses from namelist
-        logical :: debug                ! outputs a little more information at runtime (not much at present)
         logical :: external_winds       ! read a high res 3d wind field from an external file (e.g. a high res WRF run)
         logical :: mean_winds           ! use only a mean wind field across the entire model domain
         logical :: mean_fields          ! use only a mean forcing field across the model boundaries 
@@ -545,6 +501,9 @@ module data_structures
         
         logical :: use_lsm_options
         type(lsm_options_type) :: lsm_options
+
+        logical :: use_bias_correction
+        type(bias_options_type) :: bias_options
                     
         integer :: warning_level        ! level of warnings to issue when checking options settings 0-10.  
                                         ! 0  = Don't print anything

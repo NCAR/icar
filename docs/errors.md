@@ -1,7 +1,7 @@
 ##Common errors
 
 1) **Segmentation fault**:
-    Most likely due to your shell's stacksize limit (particularly with ifort). 
+    Possibly due to your shell's stacksize limit (particularly with ifort). 
     
 To *fix* it try the following: 
 
@@ -37,3 +37,6 @@ In both cases, the solution is to delete (or move) the existing output files, or
     
 4) **other namelist error**
     If a newer namelist is used with an older version of code, you may get errors telling you that a given variable is not supported.  You can probably remove that line from the namelist and it will run correctly, though you should think about the variable that is being removed to decide what it means.  
+
+5) **Floating Point errors**
+    Check your input data.  For example, if you are supplying Shortwave or longwave down at the surface, but those terms are 0, the LSM can cool off and the surface layer becomes too stable. This causes the surface fluxes to become numerically unstable, and eventually the system breaks. 

@@ -9,6 +9,10 @@
 module string
 
     implicit none
+    !>-----------------------------
+    !!  Generic interface to various types of string conversion functions
+    !!
+    !!-----------------------------
     interface str
         module procedure str_d
         module procedure str_r
@@ -17,65 +21,106 @@ module string
     
     integer,parameter::MAXSTRINGLENGTH=100
 contains
+    !>------------------------------
+    !! Convert a string to a double precision real number
+    !!
+    !!------------------------------
     function get_double(str_in)
         implicit none
-        character(len=*), intent(in) :: str_in
-        double precision :: get_double
+        character(len=*), intent(in) :: str_in      ! input string
+        double precision :: get_double              ! double precision return value
+        
         read(str_in,*) get_double
+        
     end function get_double
     
+    !>------------------------------
+    !! Convert a string to a single precision real number
+    !!
+    !!------------------------------
     function get_real(str_in)
         implicit none
-        character(len=*), intent(in) :: str_in
-        real :: get_real
+        character(len=*), intent(in) :: str_in      ! input string
+        real :: get_real                            ! return real value
+        
         read(str_in,*) get_real
+        
     end function get_real
 
+    !>------------------------------
+    !! Convert a string to a single precision integer
+    !!
+    !!------------------------------
     function get_integer(str_in)
         implicit none
-        character(len=*), intent(in) :: str_in
-        integer :: get_integer
+        character(len=*), intent(in) :: str_in      ! input string
+        integer :: get_integer                      ! return integer value
+        
         read(str_in,*) get_integer
+        
     end function get_integer
     
     
-    
+    !>------------------------------
+    !! Convert a double precision real number to a string
+    !!
+    !!  Optionally specify a format string
+    !!
+    !!------------------------------
     function str_d(value,fmt) result(output_string)
         implicit none
-        double precision :: value
-        character(len=*), optional :: fmt
-        character(len=MAXSTRINGLENGTH) :: output_string
+        double precision :: value                       ! double precision value to be converted
+        character(len=*), optional :: fmt               ! optional format string for conversion
+        character(len=MAXSTRINGLENGTH) :: output_string ! return value
+        
         if (present(fmt)) then
             write(output_string,fmt) value
         else
             write(output_string,*) value
         endif
+        
         output_string=adjustl(output_string)
     end function str_d
 
+    !>------------------------------
+    !! Convert a single precision real number to a string
+    !!
+    !!  Optionally specify a format string
+    !!
+    !!------------------------------
     function str_r(value,fmt) result(output_string)
         implicit none
-        real :: value
-        character(len=*), optional :: fmt
-        character(len=MAXSTRINGLENGTH) :: output_string
+        real :: value                                   ! single precision value to be converted
+        character(len=*), optional :: fmt               ! optional format string for conversion
+        character(len=MAXSTRINGLENGTH) :: output_string ! return value
+        
         if (present(fmt)) then
             write(output_string,fmt) value
         else
             write(output_string,*) value
         endif
+        
         output_string=adjustl(output_string)
     end function str_r
 
+    !>------------------------------
+    !! Convert a single precision integer to a string
+    !!
+    !!  Optionally specify a format string
+    !!
+    !!------------------------------
     function str_i(value,fmt) result(output_string)
         implicit none
-        integer :: value
-        character(len=*), optional :: fmt
-        character(len=MAXSTRINGLENGTH) :: output_string
+        integer :: value                                ! integer value to be converted
+        character(len=*), optional :: fmt               ! optional format string for conversion
+        character(len=MAXSTRINGLENGTH) :: output_string ! return value
+        
         if (present(fmt)) then
             write(output_string,fmt) value
         else
             write(output_string,*) value
         endif
+        
         output_string=adjustl(output_string)
     end function str_i
 

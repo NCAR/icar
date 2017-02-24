@@ -77,7 +77,7 @@ contains
         integer :: step
         
         step = (options%start_mjd-options%initial_mjd)/(options%in_dt / 86400.0d+0)
-        if (options%debug) write(*,*), "bc_find_step: First forcing time step = ",trim(str(step))
+        if (options%debug) write(*,*) "bc_find_step: First forcing time step = ",trim(str(step))
         
     end function bc_find_step
     
@@ -288,7 +288,7 @@ contains
             call smooth_wind(inputdata,1,2)
             
         ! For Temperature, we may need to add an offset
-        else if ((varname==options%tvar).and.(options%t_offset/=0)) then
+        elseif ((varname==options%tvar).and.(options%t_offset/=0)) then
             inputdata=inputdata+options%t_offset
         
         ! For pressure, we may need to add a base pressure offset read from pbvar
@@ -483,7 +483,7 @@ contains
         ny=size(extra_data,2)
         nz=size(extra_data,3)
         call smooth_wind(extra_data,1,2)
-        bc%u=reshape(extra_data,[nx,nz,ny],order=[1,3,2])
+        bc%u(1:nx,1:nz,1:ny)=reshape(extra_data,[nx,nz,ny],order=[1,3,2])
         deallocate(extra_data)
         
         ! load low-res V data
@@ -492,7 +492,7 @@ contains
         ny=size(extra_data,2)
         nz=size(extra_data,3)
         call smooth_wind(extra_data,1,2)
-        bc%v=reshape(extra_data,[nx,nz,ny],order=[1,3,2])
+        bc%v(1:nx,1:nz,1:ny)=reshape(extra_data,[nx,nz,ny],order=[1,3,2])
         deallocate(extra_data)
         
         ! remove the low-res linear wind contribution effect
@@ -654,6 +654,8 @@ contains
         
         write(*,*) "Reading atmospheric restart data"
         write(*,*) "   timestep:",trim(str(timeslice))," from file:",trim(restart_file)
+        
+        ! The first variables here are required. If they do not exist, ICAR *should* exit with a netCDF error
         call io_read3d(restart_file,"qv",inputdata,timeslice)
         call swap_y_z_dimensions(inputdata)
         call check_shapes_3d(inputdata,domain%qv)
@@ -669,14 +671,40 @@ contains
         call swap_y_z_dimensions(inputdata)
         domain%qrain=inputdata
         deallocate(inputdata)
-        call io_read3d(restart_file,"qi",inputdata,timeslice)
+        
+        call io_read3d(restart_file,"p",inputdata,timeslice)
         call swap_y_z_dimensions(inputdata)
-        domain%ice=inputdata
+        domain%p=inputdata
         deallocate(inputdata)
-        call io_read3d(restart_file,"qs",inputdata,timeslice)
+        
+        call io_read3d(restart_file,"th",inputdata,timeslice)
         call swap_y_z_dimensions(inputdata)
-        domain%qsnow=inputdata
+        domain%th=inputdata
         deallocate(inputdata)
+        
+        call io_read3d(restart_file,"rho",inputdata,timeslice)
+        call swap_y_z_dimensions(inputdata)
+        domain%rho=inputdata
+        deallocate(inputdata)
+        
+        call io_read2d(restart_file,"rain",inputdata_2d,timeslice)
+        domain%rain=inputdata_2d
+        deallocate(inputdata_2d)
+        
+
+        ! The variables below are optional depending on the physics options used so test for their presence
+        if (io_variable_is_present(restart_file,"qi")) then
+            call io_read3d(restart_file,"qi",inputdata,timeslice)
+            call swap_y_z_dimensions(inputdata)
+            domain%ice=inputdata
+            deallocate(inputdata)
+        endif
+        if (io_variable_is_present(restart_file,"qs")) then
+            call io_read3d(restart_file,"qs",inputdata,timeslice)
+            call swap_y_z_dimensions(inputdata)
+            domain%qsnow=inputdata
+            deallocate(inputdata)
+        endif
         if (io_variable_is_present(restart_file,"qg")) then
             call io_read3d(restart_file,"qg",inputdata,timeslice)
             call swap_y_z_dimensions(inputdata)
@@ -695,25 +723,25 @@ contains
             domain%nice=inputdata
             deallocate(inputdata)
         endif
-        call io_read3d(restart_file,"p",inputdata,timeslice)
-        call swap_y_z_dimensions(inputdata)
-        domain%p=inputdata
-        deallocate(inputdata)
-        call io_read3d(restart_file,"th",inputdata,timeslice)
-        call swap_y_z_dimensions(inputdata)
-        domain%th=inputdata
-        deallocate(inputdata)
-        call io_read3d(restart_file,"rho",inputdata,timeslice)
-        call swap_y_z_dimensions(inputdata)
-        domain%rho=inputdata
-        deallocate(inputdata)
+        if (io_variable_is_present(restart_file,"ngraupel")) then
+            call io_read3d(restart_file,"ngraupel",inputdata,timeslice)
+            call swap_y_z_dimensions(inputdata)
+            domain%ngraupel=inputdata
+            deallocate(inputdata)
+        endif
+        if (io_variable_is_present(restart_file,"nsnow")) then
+            call io_read3d(restart_file,"nsnow",inputdata,timeslice)
+            call swap_y_z_dimensions(inputdata)
+            domain%nsnow=inputdata
+            deallocate(inputdata)
+        endif
         
-        call io_read2d(restart_file,"rain",inputdata_2d,timeslice)
-        domain%rain=inputdata_2d
-        deallocate(inputdata_2d)
-        call io_read2d(restart_file,"snow",inputdata_2d,timeslice)
-        domain%snow=inputdata_2d
-        deallocate(inputdata_2d)
+        if (io_variable_is_present(restart_file,"snow")) then
+            call io_read2d(restart_file,"snow",inputdata_2d,timeslice)
+            domain%snow=inputdata_2d
+            deallocate(inputdata_2d)
+        endif
+        
         if (io_variable_is_present(restart_file,"graupel")) then
             call io_read2d(restart_file,"graupel",inputdata_2d,timeslice)
             domain%graupel=inputdata_2d
@@ -726,28 +754,41 @@ contains
         endif
         
         if (io_variable_is_present(restart_file,"soil_t")) then
-            write(*,*) "Reading land surface restart data"
             call io_read3d(restart_file,"soil_t",inputdata,timeslice)
             call swap_y_z_dimensions(inputdata)
             call check_shapes_3d(inputdata,domain%soil_t)
             domain%soil_t=inputdata
             deallocate(inputdata)
+        endif
+        if (io_variable_is_present(restart_file, "soil_w")) then
             call io_read3d(restart_file,"soil_w",inputdata,timeslice)
             call swap_y_z_dimensions(inputdata)
             domain%soil_vwc=inputdata
             deallocate(inputdata)
+        endif
         
-            call io_read2d(restart_file,"ts",inputdata_2d,timeslice)
-            domain%skin_t=inputdata_2d
-            deallocate(inputdata_2d)
+        if (io_variable_is_present(restart_file, "hfgs")) then
             call io_read2d(restart_file,"hfgs",inputdata_2d,timeslice)
             domain%ground_heat=inputdata_2d
             deallocate(inputdata_2d)
+        endif
+
+        if (io_variable_is_present(restart_file, "snw")) then
             call io_read2d(restart_file,"snw",inputdata_2d,timeslice)
             domain%snow_swe=inputdata_2d
             deallocate(inputdata_2d)
+        endif
+        
+        if (io_variable_is_present(restart_file, "canwat")) then
             call io_read2d(restart_file,"canwat",inputdata_2d,timeslice)
             domain%canopy_water=inputdata_2d
+            deallocate(inputdata_2d)
+        endif
+
+        if (io_variable_is_present(restart_file, "ts")) then
+            call io_read2d(restart_file,"ts",inputdata_2d,timeslice)
+            domain%skin_t=inputdata_2d
+            domain%sst = inputdata_2d
             deallocate(inputdata_2d)
         endif
         
@@ -755,12 +796,13 @@ contains
             call io_read2d(restart_file,"rsds",inputdata_2d,timeslice)
             domain%swdown=inputdata_2d
             deallocate(inputdata_2d)
-            
+        endif
+        
+        if (io_variable_is_present(restart_file,"rlds")) then
             call io_read2d(restart_file,"rlds",inputdata_2d,timeslice)
             domain%lwdown=inputdata_2d
             deallocate(inputdata_2d)
         endif
-        
         
     end subroutine load_restart_file
     
@@ -968,6 +1010,9 @@ contains
             endif
             if (trim(options%sst_var)/="") then
                 call read_2dvar(domain%sst,  file_list(curfile),options%sst_var,  bc%geolut,curstep)
+            endif
+            if (trim(options%rain_var)/="") then
+                call read_2dvar(bc%drain_dt,  file_list(curfile),options%rain_var,  bc%geolut,curstep)
             endif
             
             call update_pressure(domain%p,bc%lowres_z,domain%z)
@@ -1274,7 +1319,15 @@ contains
                 newbc%z=newbc%z / gravity
             endif
             if (options%z_is_on_interface) then
-                newbc%z(:,:,1:nz-1)=(newbc%z(:,:,1:nz-1) + newbc%z(:,:,2:nz))/2
+                nz = nz - 1
+                ! zbase is used as a temporary variable while we deallocate/reallocate bc%z
+                if (allocated(zbase)) deallocate(zbase)
+                allocate(zbase(nx,ny,nz))
+                zbase = (newbc%z(:,:,1:nz) + newbc%z(:,:,2:nz+1))/2
+                deallocate(newbc%z)
+                allocate(newbc%z(nx,ny,nz))
+                newbc%z = zbase
+                deallocate(zbase)
             endif
             
             ! now simply generate a look up table to convert the current z coordinate to the original z coordinate
@@ -1373,6 +1426,10 @@ contains
         if (trim(options%sst_var)/="") then
             call read_2dvar(bc%next_domain%sst,  file_list(curfile),options%sst_var,  bc%geolut,curstep)
         endif
+        if (trim(options%rain_var)/="") then
+            call read_2dvar(bc%drain_dt,  file_list(curfile),options%rain_var,  bc%geolut,curstep)
+        endif
+
         
         ! if we want to supply mean forcing fields on the boundaries, compute those here. 
         if (options%mean_fields) then

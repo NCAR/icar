@@ -20,11 +20,13 @@ def grib2nc(erai_file,varlist,output_dir):
     """convert a grib file to a netcdf file"""
     print("Converting: "+erai_file.split("/")[-1])
     # print("ncl_convert2nc "+erai_file+" -e grb -L -v "+",".join(varlist)+" -o "+output_dir)
-    try:
-        os.system("ncl_convert2nc "+erai_file+" -e grb -L -v "+",".join(varlist)+" -o "+output_dir +"&> /dev/null")
-    except:
-        print("ERROR: ncl_convert2nc is not available in your $PATH (?)")
     outputfile=output_dir+erai_file.split("/")[-1]+".nc"
+    if not os.path.isfile(outputfile):
+        try:
+            os.system("ncl_convert2nc "+erai_file+" -e grb -L -v "+",".join(varlist)+" -o "+output_dir +"&> /dev/null")
+        except:
+            print("ERROR: ncl_convert2nc is not available in your $PATH (?)")
+
     return outputfile
 
 def find_sfc_file(time,info):
@@ -69,8 +71,15 @@ def load_sfc(time,info):
         nc_data=mygis.read_nc(nc_file,v,returnNCvar=True)
         input_data=nc_data.data[:,info.ymin:info.ymax,info.xmin:info.xmax]
         if ((s=="latent_heat") or (s=="sensible_heat") or (s=="sw") or (s=="lw")):
-            if offset>0:
+            # if offset>=3:
+            #     input_data[offset,...]-=input_data[offset-3,...]
+            #     input_data[offset,...]/3.0
+            if offset>=2:
+                input_data[offset,...]-=input_data[offset-2,...]
+                input_data[offset,...]/2.0
+            elif offset>=1:
                 input_data[offset,...]-=input_data[offset-1,...]
+                
         outputdata[s]=input_data[int(offset),:,:]
         nc_data.ncfile.close()
     

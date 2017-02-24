@@ -2,7 +2,7 @@
 !   Model and run meta-data
 !---------------------------------------------------------
 &model_version
-    version = "0.9.3",                    ! This must match the version of the compiled code
+    version = "0.9.4",                    ! This must match the version of the compiled code
     comment = "Add your comment here"     ! This will be stored in output files
 /
 
@@ -20,13 +20,13 @@
     pbl = 0,  ! 1=legacy (deprecated)      2=Simple (Local HP96)        3=YSU             (N/A)
     
     ! Land Surface Model
-    lsm = 0,  ! 1=use prescribed fluxes    2=Simple LSM (N/A)           3=Noah LSM
+    lsm = 0,  ! 1=use prescribed fluxes    2=Simple LSM (N/A)           3=Noah LSM                  4=NoahMP (wishlist)
     
     ! Open water fluxes
     water=0,  ! 1=use prescribed (w/lsm=1) 2=Simple sea surface fluxes
     
     ! Microphysics Scheme
-    mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison        (wishlist)
+    mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison                  4=WSM6
     
     ! Radiation Scheme
     rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG           (wishlist)
@@ -38,7 +38,7 @@
     adv = 1,  ! 1=Upwind                   2=MPDATA                     3=Adams-Bashforth (wishlist)
     
     ! Wind field calculations
-    wind= 1   ! 1=Linear Theory            2=INFORM style (wishlist)    3=Dynamical?      (wishlist)
+    wind= 1   ! 1=Linear Theory
 /
 
 !---------------------------------------------------------
@@ -92,11 +92,13 @@
     !   if it is supplied it must be less than or equal to the number of levels specified below
     !   but it can be used to subset the number of levels used.
     nz = 15, ! []
-    !   Set this to true of the zvar in the input data is actually in units of geopotential height (m/s^2)
+    !   Set this to true if the zvar in the input data is actually in units of geopotential height (m/s^2)
     z_is_geopotential = True,
+    !   Set this to true if the zvar in the input data is specified on the interfaces between mass levels
+    z_is_on_interface = True,
     !   Specify that the height of the forcing data will change through the simulation (common for atmospheric model-level output)
     time_varying_z = true,
-    !   Use height above ground layer to interpolate the wind field instead of height above sea level.
+    !   Use height above ground level to interpolate the wind field instead of height above sea level.
     use_agl_height = False,
 
     !   If the forcing data come from WRF, the temperature data probably have an offset applied
@@ -139,17 +141,18 @@
     vlat    = "XLAT_V",     ! latitude                  [degrees]
     vlon    = "XLONG_V",    ! longitude                 [degrees]
 
-    ! only required for some physics code (Noah LSM, water, Tiedke, KF(?))
-    landvar = "LANDMASK",   ! land-water mask (as in WRF) 1=land, 0 or 2=water
-
     ! NOTE, these variables should be in the high-resolution initial conditions netcdf file
     lat_hi  = "XLAT_M",     ! latitude (mass grid)      [degrees]
     lon_hi  = "XLONG_M",    ! longitude (mass grid)     [degrees]
     hgt_hi  = "HGT_M"       ! surface elevation         [m]
+    
+    ! only required for some physics code (Noah LSM, water, Tiedke, KF(?))
+    landvar = "LANDMASK",   ! land-water mask (as in WRF) 1=land, 0 or 2=water
 /
 
 !---------------------------------------------------------
-!   Model levels specification (may be optional, but should be specified)
+!   Model levels specification (may be optional, but should be specified) 
+!   If compiled with gfortran put all levels on one line. 
 !---------------------------------------------------------
 &z_info
     !   Sample model level thickness [m]  Bottom levels could be thicker.
