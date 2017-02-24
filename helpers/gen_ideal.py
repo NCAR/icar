@@ -5,7 +5,7 @@ from copy import copy
 import numpy as np
 
 from bunch import Bunch
-from stat_down import myio as io
+import mygis as io
 import load_data
 
 case_study=2
@@ -176,4 +176,3 @@ if __name__ == '__main__':
             wind_speed=float(ws)
             case_study=case
             main()
-

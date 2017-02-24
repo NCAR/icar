@@ -72,15 +72,14 @@ module module_mp_simple
 ! arbitrary calibratable timescales default values as used in the linear model
 ! these should be pulled out to a parameter file for calibration purposes
 ! but this is approximately how they are implemented in SB04
-    real,parameter :: snow_formation_time_const = 1/2000.0 ! [1/s]
-    real,parameter :: rain_formation_time_const = 1/500.0  ! [1/s]
-    real,parameter :: freezing_threshold = 273.15          ! [K]
-    real,parameter :: snow_fall_rate = 1.5                 ! [m/s]   for a water vapor scale height of 3750m corresponds to tau_f = 2500
-    real,parameter :: rain_fall_rate = 10.0                ! [m/s]   for a water vapor scale height of 3750m corresponds to tau_f = 375
-    real,parameter :: snow_cloud_init = 0.00001            ! [kg/kg] cloud ice content before snow will start to form
-    real,parameter :: rain_cloud_init = 0.00001            ! [kg/kg] cloud water content before rain will start to form
-
-
+    real,parameter :: snow_formation_time_const=1/2000.0 ! [1/s]
+    real,parameter :: rain_formation_time_const=1/500.0  ! [1/s]
+    real,parameter :: freezing_threshold=273.15          ! [K]
+    real,parameter :: snow_fall_rate=1.5                 ! [m/s]   for a water vapor scale height of 3750m corresponds to tau_f = 2500
+    real,parameter :: rain_fall_rate=10.0                ! [m/s]   for a water vapor scale height of 3750m corresponds to tau_f = 375
+    real,parameter :: snow_cloud_init=0.0001            ! [kg/kg] cloud ice content before snow will start to form
+    real,parameter :: rain_cloud_init=0.0001            ! [kg/kg] cloud water content before rain will start to form
+    
 !   these are recalculated every call because they are a function of dt
 !   conversion "time" = exp( -1 * time_constant * dt)
     real :: rain_evap = 0.999
