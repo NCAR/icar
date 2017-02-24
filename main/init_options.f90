@@ -734,7 +734,7 @@ contains
         options%mp_options%Ef_sw_l = Ef_sw_l
 
         options%mp_options%update_interval = update_interval
-        if (top_mp_level < 0) then top_mp_level = options%nz + top_mp_level
+        if (top_mp_level < 0) top_mp_level = options%nz + top_mp_level
         options%mp_options%top_mp_level = top_mp_level
         options%mp_options%local_precip_fraction = local_precip_fraction
     end subroutine mp_parameters_namelist
