@@ -231,15 +231,15 @@ contains
 
         if (qc<1e-7) then
             if (variable_N) then
-                BV_freq=calc_dry_stability(th_top, th_bot, z_top, z_bot)
+                BV_freq = calc_dry_stability(th_top, th_bot, z_top, z_bot)
             else
-                BV_freq=N_squared
+                BV_freq = N_squared
             endif
         else
             if (variable_N) then
-                BV_freq=calc_moist_stability(th_top*pii_top, th_bot*pii_bot, z_top, z_bot, qv_top, qv_bot, qc)
+                BV_freq = calc_moist_stability(th_top*pii_top, th_bot*pii_bot, z_top, z_bot, qv_top, qv_bot, qc)
             else
-                BV_freq=N_squared/10.0 ! might be better as max(1e-7,N_squared-(1e-4))
+                BV_freq = N_squared/10.0 ! might be better as max(1e-7,N_squared-(1e-4))
             endif
         endif
 
@@ -1090,7 +1090,7 @@ contains
                     ! look up vsmooth gridcells up to nz at the maximum
                     top = min(j+vsmooth, nz)
                     ! if (top-j)/=vsmooth, then look down enough layers to make the window vsmooth in size
-                    bottom = max(1, j - (vsmooth - (top-j)) )
+                    bottom = max(1, j - (vsmooth - (top-j)))
 
                     if (.not.reverse) then
                         domain%nsquared(i,j,k) = calc_stability(domain%th(i,bottom,k), domain%th(i,top,k),  &
@@ -1147,8 +1147,9 @@ contains
                         u = sum( domain%u(west:east,j,south:north) ) / n
                         v = sum( domain%v(west:east,j,south:north) ) / n
                     else
-                        u = domain%u(i,j,uk)
-                        v = domain%v(vi,j,k)
+                        ! smooth the winds vertically first
+                        u = sum(domain%u( i, bottom:top,uk)) / (top-bottom+1)
+                        v = sum(domain%v(vi, bottom:top, k)) / (top-bottom+1)
                     endif
                     n = n * ((top-bottom)+1)
 
