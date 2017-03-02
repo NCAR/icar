@@ -153,12 +153,48 @@ contains
         U_4cu_u           =  (dt/dx) * (domain%u(1:nx,:,:)      + domain%u(2:nx+1,:,:)) / 2
         V_4cu_u(2:nx,:,:) =  (dt/dx) * (domain%v(1:nx-1,:,2:ny) + domain%v(2:nx,:,2:ny)) / 2
         W_4cu_u(2:nx,:,:) =  (dt/dx) * (domain%w(1:nx-1,:,:)    + domain%w(2:nx,:,:)) / 2
+        call rebalance_cu_winds(U_4cu_u, V_4cu_u, W_4cu_u)
 
         U_4cu_v(:,:,2:ny) =  (dt/dx) * (domain%u(2:nx,:,1:ny-1) + domain%u(2:nx,:,2:ny)) / 2
         V_4cu_v           =  (dt/dx) * (domain%v(:,:,1:ny)      + domain%v(:,:,2:ny+1)) / 2
         W_4cu_v(:,:,2:ny) =  (dt/dx) * (domain%w(:,:,1:ny-1)    + domain%w(:,:,2:ny)) / 2
+        call rebalance_cu_winds(U_4cu_v, V_4cu_v, W_4cu_v)
 
     end subroutine setup_cu_winds
+
+    subroutine rebalance_cu_winds(u,v,w)
+        implicit none
+        ! u, v, w 3D east-west, south-north, and up-down winds repsectively
+        ! note for this code, u is [nx-1,nz,ny] and v is [nx,nz,ny-1]
+        real, dimension(:,:,:), intent(inout) :: u, v, w
+
+        real, allocatable, dimension(:,:) :: divergence, du, dv
+        integer :: i,nx,ny,nz
+
+        nx = size(w,1)
+        nz = size(w,2)
+        ny = size(w,3)
+
+        allocate(divergence(nx-2,ny-2))
+        allocate(du(nx-2,ny-2))
+        allocate(dv(nx-2,ny-2))
+
+        do i=1,nz
+            ! calculate horizontal divergence
+            dv = v(2:nx-1,i,2:ny-1) - v(2:nx-1,i,1:ny-2)
+            du = u(2:nx-1,i,2:ny-1) - u(1:nx-2,i,2:ny-1)
+            divergence = du + dv
+            ! Then calculate w to balance
+            if (i==1) then
+                ! if this is the first model level start from 0 at the ground
+                w(2:nx-1,i,2:ny-1) = 0 - divergence
+            else
+                ! else calculate w as a change from w at the level below
+                w(2:nx-1,i,2:ny-1) = w(2:nx-1,i-1,2:ny-1) - divergence
+            endif
+        enddo
+
+    end subroutine rebalance_cu_winds
 
     subroutine advect_cu_winds(domain, options, dt)
         implicit none
@@ -220,6 +256,7 @@ contains
                 U_m = (domain%u_cu(2:nx,:,:) + domain%u(2:nx,:,:)) * (dt/dx)
                 V_m = (domain%v_cu(:,:,2:ny) + domain%v(:,:,2:ny)) * (dt/dx)
                 W_m = (domain%w_cu + domain%w)                     * (dt/dx)
+                call rebalance_cu_winds(U_m,V_m,W_m)
             else
                 U_m = domain%u(2:nx,:,:) * (dt/dx)
                 V_m = domain%v(:,:,2:ny) * (dt/dx)
