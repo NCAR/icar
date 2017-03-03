@@ -373,8 +373,8 @@ contains
             current_z = current_z + step_size
         enddo
 
-        lt_data%u_accumulator = lt_data%u_accumulator / n_steps
-        lt_data%v_accumulator = lt_data%v_accumulator / n_steps
+        lt_data%u_perturb = lt_data%u_accumulator / n_steps
+        lt_data%v_perturb = lt_data%v_accumulator / n_steps
     end subroutine linear_perturbation
 
     !>----------------------------------------------------------
