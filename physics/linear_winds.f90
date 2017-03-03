@@ -325,7 +325,7 @@ contains
         lt_data%ineta = j * fourier_terrain * exp(j * lt_data%m * z)
         !  what=sig*ineta
 
-        ! with coriolis : [+/-]j*[l/k]*f
+        ! with coriolis : [-/+] j * [l/k] * f
         !uhat = (0 - m) * ((sig * k) - (j * l * f)) * ineta / kl
         !vhat = (0 - m) * ((sig * l) + (j * k * f)) * ineta / kl
         ! removed coriolis term assumes the scale coriolis operates at is largely defined by the coarse model
@@ -364,7 +364,8 @@ contains
         lt_data%u_accumulator = 0
         lt_data%v_accumulator = 0
 
-        current_z = step_size / 2
+        current_z = z_bottom + step_size / 2
+
         do i=1,n_steps
             call linear_perturbation_at_height(U,V,Nsq,current_z, fourier_terrain, lt_data)
             lt_data%u_accumulator = lt_data%u_accumulator + lt_data%u_perturb
@@ -484,7 +485,7 @@ contains
         if (reverse) then
             !$omp critical (print_lock)
             write(*,*) "ERROR: reversing linear winds not set up for parallel fftw computation yet"
-            write(*,*) "also not set up for the new spatial wind LUTs"
+            write(*,*) "Use only with spatially varying wind LUTs"
             !$omp end critical (print_lock)
             stop
         endif
@@ -897,9 +898,9 @@ contains
         ! default assumes no errors in reading the LUT
         error = 0
 
-        print*, "WARNING: minimum_layer_size hard coded at 100 m"
-        ! minimum_layer_size = optione%minimum_layer_size
+        ! minimum_layer_size = options%minimum_layer_size
         minimum_layer_size = 100
+        print*, "WARNING: minimum_layer_size hard coded as", minimum_layer_size
 
         ! store to make it easy to check dim sizes in read_LUT
         LUT_dims(:,1) = [nxu,nz,ny]
@@ -966,7 +967,8 @@ contains
             loops_completed = 0
             write(*,*) "Percent Completed:"
             !$omp parallel default(shared) &
-            !$omp private(i,j,k,z, u,v, layer_height, layer_height_bottom, layer_height_top, minimum_layer_size)
+            !$omp private(i,j,k,z, u,v, layer_height, layer_height_bottom, layer_height_top) &
+            !$omp firstprivate(minimum_layer_size, n_dir_values, n_spd_values, n_nsq_values, nz,nx,ny,nxu,nyv,fftnx,fftny)
             ! $omp private(lt_data_m)
 
             ! initialization has to happen in each thread so each thread has its own copy
@@ -990,13 +992,14 @@ contains
                         do z=1,nz
                             if (reverse) then
                                 layer_height        = domain%z(1,1,z) - domain%terrain(1,1)
-                                layer_height_bottom = layer_height - (domain%dz(1,1,z) / 2)
-                                layer_height_top    = layer_height + (domain%dz(1,1,z) / 2)
+                                layer_height_bottom = layer_height - (options%dz_levels(z) / 2)
+                                layer_height_top    = layer_height + (options%dz_levels(z) / 2)
                             else
                                 layer_height = domain%z(1,z,1) - domain%terrain(1,1)
-                                layer_height_bottom = layer_height - (domain%dz(1,z,1) / 2)
-                                layer_height_top    = layer_height + (domain%dz(1,z,1) / 2)
+                                layer_height_bottom = layer_height - (options%dz_levels(z) / 2)
+                                layer_height_top    = layer_height + (options%dz_levels(z) / 2)
                             endif
+
                             call linear_perturbation(u, v, exp(nsq_values(j)),                                  &
                                                      layer_height_bottom, layer_height_top, minimum_layer_size, &
                                                      domain%fzs, lt_data_m)
