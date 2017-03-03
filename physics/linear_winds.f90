@@ -293,7 +293,7 @@ contains
     !! see Appendix A of Barstad and Gronas (2006) Tellus,58A,2-18
     !!
     !!----------------------------------------------------------
-    subroutine linear_perturbation(U, V, Nsq, z, fourier_terrain, lt_data)
+    subroutine linear_perturbation_at_height(U, V, Nsq, z, fourier_terrain, lt_data)
         use, intrinsic :: iso_c_binding
         implicit none
         real,                     intent(in)    :: U, V ! U and V components of background wind
@@ -343,6 +343,38 @@ contains
         call fftw_execute_dft(lt_data%vplan, lt_data%vhat, lt_data%v_perturb)
 
         ! returns u_perturb and v_perturb
+    end subroutine linear_perturbation_at_height
+
+    subroutine linear_perturbation(U, V, Nsq, z_bottom, z_top, minimum_step, fourier_terrain, lt_data)
+        use, intrinsic :: iso_c_binding
+        implicit none
+        real,                     intent(in)    :: U, V             ! U and V components of background wind
+        real,                     intent(in)    :: Nsq              ! Brunt-Vaisalla frequency (N squared)
+        real,                     intent(in)    :: z_top, z_bottom  ! elevation for the top and bottom bound of a layer
+        real,                     intent(in)    :: minimum_step     ! minimum layer step size to compute LT for
+        complex(C_DOUBLE_COMPLEX),intent(in)    :: fourier_terrain(:,:) ! FFT(terrain)
+        type(linear_theory_type), intent(inout) :: lt_data          ! intermediate arrays needed for LT calc
+
+        integer :: n_steps, i
+        real    :: step_size, current_z
+
+        n_steps = max(1,ceiling((z_top - z_bottom) / minimum_step))
+        step_size = (z_top - z_bottom) / n_steps
+
+        lt_data%u_accumulator = 0
+        lt_data%v_accumulator = 0
+
+        current_z = step_size / 2
+        do i=1,n_steps
+            call linear_perturbation_at_height(U,V,Nsq,current_z, fourier_terrain, lt_data)
+            lt_data%u_accumulator = lt_data%u_accumulator + lt_data%u_perturb
+            lt_data%v_accumulator = lt_data%v_accumulator + lt_data%v_perturb
+
+            current_z = current_z + step_size
+        enddo
+
+        lt_data%u_accumulator = lt_data%u_accumulator / n_steps
+        lt_data%v_accumulator = lt_data%v_accumulator / n_steps
     end subroutine linear_perturbation
 
     !>----------------------------------------------------------
@@ -772,14 +804,18 @@ contains
         !$omp critical (fftw_lock)
         lt_data%uh_aligned_data = fftw_alloc_complex(n_elements)
         lt_data%up_aligned_data = fftw_alloc_complex(n_elements)
+        lt_data%ua_aligned_data = fftw_alloc_complex(n_elements)
         lt_data%vh_aligned_data = fftw_alloc_complex(n_elements)
         lt_data%vp_aligned_data = fftw_alloc_complex(n_elements)
+        lt_data%va_aligned_data = fftw_alloc_complex(n_elements)
         !$omp end critical (fftw_lock)
 
-        call c_f_pointer(lt_data%uh_aligned_data,   lt_data%uhat,       [nx,ny])
-        call c_f_pointer(lt_data%up_aligned_data,   lt_data%u_perturb,  [nx,ny])
-        call c_f_pointer(lt_data%vh_aligned_data,   lt_data%vhat,       [nx,ny])
-        call c_f_pointer(lt_data%vp_aligned_data,   lt_data%v_perturb,  [nx,ny])
+        call c_f_pointer(lt_data%uh_aligned_data,   lt_data%uhat,           [nx,ny])
+        call c_f_pointer(lt_data%up_aligned_data,   lt_data%u_perturb,      [nx,ny])
+        call c_f_pointer(lt_data%ua_aligned_data,   lt_data%u_accumulator,  [nx,ny])
+        call c_f_pointer(lt_data%vh_aligned_data,   lt_data%vhat,           [nx,ny])
+        call c_f_pointer(lt_data%vp_aligned_data,   lt_data%v_perturb,      [nx,ny])
+        call c_f_pointer(lt_data%va_aligned_data,   lt_data%v_accumulator,  [nx,ny])
 
         ! note FFTW plan creation is not threadsafe
         !$omp critical (fftw_lock)
@@ -808,14 +844,18 @@ contains
         !$omp critical (fftw_lock)
         call fftw_free(lt_data%uh_aligned_data)
         call fftw_free(lt_data%up_aligned_data)
+        call fftw_free(lt_data%ua_aligned_data)
         call fftw_free(lt_data%vh_aligned_data)
         call fftw_free(lt_data%vp_aligned_data)
+        call fftw_free(lt_data%va_aligned_data)
         !$omp end critical (fftw_lock)
 
         NULLIFY(lt_data%uhat)
         NULLIFY(lt_data%u_perturb)
+        NULLIFY(lt_data%u_accumulator)
         NULLIFY(lt_data%vhat)
         NULLIFY(lt_data%v_perturb)
+        NULLIFY(lt_data%v_accumulator)
 
         ! note FFTW plan creation is not threadsafe
         !$omp critical (fftw_lock)
@@ -835,7 +875,7 @@ contains
         logical, intent(in) :: reverse
 
         ! local variables used to calculate the LUT
-        real :: u,v, layer_height
+        real :: u,v, layer_height, layer_height_bottom, layer_height_top, minimum_layer_size
         integer :: nx,ny,nz, i,j,k,z, nxu,nyv, error
         integer :: fftnx, fftny
         integer, dimension(3,2) :: LUT_dims
@@ -856,6 +896,10 @@ contains
 
         ! default assumes no errors in reading the LUT
         error = 0
+
+        print*, "WARNING: minimum_layer_size hard coded at 100 m"
+        ! minimum_layer_size = optione%minimum_layer_size
+        minimum_layer_size = 100
 
         ! store to make it easy to check dim sizes in read_LUT
         LUT_dims(:,1) = [nxu,nz,ny]
@@ -922,7 +966,7 @@ contains
             loops_completed = 0
             write(*,*) "Percent Completed:"
             !$omp parallel default(shared) &
-            !$omp private(i,j,k,z, u,v, layer_height)
+            !$omp private(i,j,k,z, u,v, layer_height, layer_height_bottom, layer_height_top, minimum_layer_size)
             ! $omp private(lt_data_m)
 
             ! initialization has to happen in each thread so each thread has its own copy
@@ -945,25 +989,32 @@ contains
                         ! calculate the linear wind field for the current u and v values
                         do z=1,nz
                             if (reverse) then
-                                layer_height = domain%z(1,1,z)-domain%terrain(1,1)
+                                layer_height        = domain%z(1,1,z) - domain%terrain(1,1)
+                                layer_height_bottom = layer_height - (domain%dz(1,1,z) / 2)
+                                layer_height_top    = layer_height + (domain%dz(1,1,z) / 2)
                             else
-                                layer_height = domain%z(1,z,1)-domain%terrain(1,1)
+                                layer_height = domain%z(1,z,1) - domain%terrain(1,1)
+                                layer_height_bottom = layer_height - (domain%dz(1,z,1) / 2)
+                                layer_height_top    = layer_height + (domain%dz(1,z,1) / 2)
                             endif
-                            call linear_perturbation(u, v, exp(nsq_values(j)), layer_height, domain%fzs, lt_data_m)
+                            call linear_perturbation(u, v, exp(nsq_values(j)),                                  &
+                                                     layer_height_bottom, layer_height_top, minimum_layer_size, &
+                                                     domain%fzs, lt_data_m)
 
                             ! need to handle stagger (nxu /= nx) and the buffer around edges of the domain
                             if (nxu /= nx) then
-                                u_LUT(k,i,j,2:nx,z, :  ) = real( real(                                  &
-                                        ( lt_data_m%u_perturb(1+buffer:nx+buffer-1,   1+buffer:ny+buffer) &
+                                u_LUT(k,i,j,2:nx,z, :  ) = real( real(                                              &
+                                        ( lt_data_m%u_perturb(1+buffer:nx+buffer-1,   1+buffer:ny+buffer)           &
                                         + lt_data_m%u_perturb(2+buffer:nx+buffer,     1+buffer:ny+buffer)) )) / 2
 
-                                v_LUT(k,i,j, :,  z,2:ny) = real( real(                                      &
-                                        ( lt_data_m%v_perturb(1+buffer:nx+buffer,     1+buffer:ny+buffer-1)   &
+                                v_LUT(k,i,j, :,  z,2:ny) = real( real(                                              &
+                                        ( lt_data_m%v_perturb(1+buffer:nx+buffer,     1+buffer:ny+buffer-1)         &
                                         + lt_data_m%v_perturb(1+buffer:nx+buffer,     2+buffer:ny+buffer)) )) / 2
                             else
-                                u_LUT(k,i,j,:,z,:) = real( real(                                  &
+                                u_LUT(k,i,j,:,z,:) = real( real(                                                    &
                                         lt_data_m%u_perturb(1+buffer:nx+buffer,     1+buffer:ny+buffer) ))
-                                v_LUT(k,i,j,:,z,:) = real( real(                                  &
+
+                                v_LUT(k,i,j,:,z,:) = real( real(                                                    &
                                         lt_data_m%v_perturb(1+buffer:nx+buffer,     1+buffer:ny+buffer) ))
                             endif
                         enddo
@@ -1457,7 +1508,7 @@ contains
             ! Nsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability
             stability = calc_domain_stability(domain)
             ! This should probably be called twice, once for dry, and once or moist regions
-            call linear_winds(domain,stability,vsmooth,reverse,useDensity,debug)
+            call linear_winds(domain,stability,vsmooth,rev,useD,debug)
         endif
         debug=.False.
 

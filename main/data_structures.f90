@@ -180,8 +180,11 @@ module data_structures
         real,                       allocatable, dimension(:,:) :: sig, k, l, kl
         complex(C_DOUBLE_COMPLEX),  allocatable, dimension(:,:) :: denom, msq, mimag, m, ineta
 
-        complex(C_DOUBLE_COMPLEX),  pointer,     dimension(:,:) :: uhat, vhat, u_perturb, v_perturb
-        type(C_PTR) :: uh_aligned_data, up_aligned_data, vh_aligned_data, vp_aligned_data
+        complex(C_DOUBLE_COMPLEX),  pointer,     dimension(:,:) :: uhat, vhat
+        complex(C_DOUBLE_COMPLEX),  pointer,     dimension(:,:) :: u_perturb, v_perturb
+        complex(C_DOUBLE_COMPLEX),  pointer,     dimension(:,:) :: u_accumulator, v_accumulator
+        type(C_PTR) :: uh_aligned_data, up_aligned_data, ua_aligned_data
+        type(C_PTR) :: vh_aligned_data, vp_aligned_data, va_aligned_data
 
         type(C_PTR) :: uplan, vplan
     end type linear_theory_type
