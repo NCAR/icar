@@ -412,14 +412,9 @@ contains
             preV_layers(i)=sum(domain%v(:,i,:realny_v))/(realnx * realny_v)
         enddo
         do i=1,nz
-            bottom=i-vsmooth
-            top=i+vsmooth
-            if (bottom<1) then
-                bottom=1
-            endif
-            if (top>nz) then
-                top=nz
-            endif
+            bottom = max(1, i-vsmooth)
+            top    = min(i+vsmooth, nz)
+
             U_layers(i)=sum(preU_layers(bottom:top))/(top-bottom+1)
             V_layers(i)=sum(preV_layers(bottom:top))/(top-bottom+1)
         enddo
