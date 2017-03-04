@@ -877,7 +877,7 @@ contains
 
         ! local variables used to calculate the LUT
         real :: u,v, layer_height, layer_height_bottom, layer_height_top, minimum_layer_size
-        integer :: nx,ny,nz, i,j,k,z, nxu,nyv, error
+        integer :: nx,ny,nz, i,j,k,z,ik, nxu,nyv, error
         integer :: fftnx, fftny
         integer, dimension(3,2) :: LUT_dims
         integer :: loops_completed ! this is just used to measure progress in the LUT creation
@@ -967,18 +967,24 @@ contains
             loops_completed = 0
             write(*,*) "Percent Completed:"
             !$omp parallel default(shared) &
-            !$omp private(i,j,k,z, u,v, layer_height, layer_height_bottom, layer_height_top) &
+            !$omp private(i,j,k,ik,z, u,v, layer_height, layer_height_bottom, layer_height_top) &
             !$omp firstprivate(minimum_layer_size, n_dir_values, n_spd_values, n_nsq_values, nz,nx,ny,nxu,nyv,fftnx,fftny)
-            ! $omp private(lt_data_m)
+            ! $omp threadprivate(lt_data_m) declared at the top of the module
 
             ! initialization has to happen in each thread so each thread has its own copy
             ! lt_data_m is a threadprivate variable, within initialization, there are omp critical sections for fftw calls
             call initialize_linear_theory_data(lt_data_m, fftnx, fftny, domain%dx)
             !$omp do
-            do i=1, n_dir_values
+            do ik=0, n_dir_values*n_spd_values-1
                 ! set the domain wide U and V values to the current u and v values
-                ! this could use u/v_perturbation, but those would need to be put in a linearizable structure...
-                do k=1, n_spd_values
+                ! loop over the combined ik space to improve parallelization (more granular parallelization)
+                ! because it is one combined loop, we have to calculate the i,k indicies from the combined ik variable
+                i = ik/n_spd_values + 1
+                k = mod(ik,n_spd_values) + 1
+
+                ! do k=1, n_spd_values
+
+                    ! print the current status if this is being run "interactively"
                     if (options%interactive) then
                         !$omp critical (print_lock)
                         write(*,"(A,f5.1,A$)") char(13), loops_completed/real(n_dir_values*n_spd_values)*100," %"
@@ -1026,7 +1032,7 @@ contains
                     !$omp critical (print_lock)
                     loops_completed = loops_completed+1
                     !$omp end critical (print_lock)
-                end do
+                ! end do
 
             end do
             !$omp end do
