@@ -955,11 +955,8 @@ contains
             endif
             output_shape(2)=output_shape(2)-1
 
-            if (options%physics%convection > 0) then
-                call check( nf90_put_var(ncid, varid(11), reshape(domain%w_real + domain%w_cu, output_shape, order=zlast), start_three_D),    trim(filename)//":w" )
-            else
-                call check( nf90_put_var(ncid, varid(11), reshape(domain%w_real, output_shape, order=zlast), start_three_D),    trim(filename)//":w" )
-            endif
+            call check( nf90_put_var(ncid, varid(11), reshape(domain%w_real, output_shape, order=zlast), start_three_D),    trim(filename)//":w" )
+
             call check( nf90_put_var(ncid, varid(12), reshape(domain%p,     output_shape, order=zlast), start_three_D),    trim(filename)//":p" )
             call check( nf90_put_var(ncid, varid(13), reshape(domain%th,    output_shape, order=zlast), start_three_D),    trim(filename)//":th" )
             call check( nf90_put_var(ncid, varid(21), reshape(domain%rho,   output_shape, order=zlast), start_three_D),    trim(filename)//":rho" )
