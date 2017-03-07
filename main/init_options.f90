@@ -771,6 +771,9 @@ contains
         real :: spdmax, spdmin
         real :: nsqmax, nsqmin
         integer :: n_dir_values, n_nsq_values, n_spd_values
+        real    :: minimum_layer_size       ! Minimum vertical step to permit when computing LUT.
+                                            ! If model layers are thicker, substepping will be used.
+
         ! parameters to control reading from or writing an LUT file
         logical :: read_LUT, write_LUT
         character(len=MAXFILELENGTH) :: u_LUT_Filename, v_LUT_Filename, LUT_Filename
@@ -780,7 +783,7 @@ contains
         namelist /lt_parameters/ variable_N, smooth_nsq, buffer, stability_window_size, max_stability, min_stability, &
                                  linear_contribution, linear_update_fraction, N_squared, vert_smooth, &
                                  remove_lowres_linear, rm_N_squared, rm_linear_contribution, &
-                                 spatial_linear_fields, linear_mask, nsq_calibration, &
+                                 spatial_linear_fields, linear_mask, nsq_calibration, minimum_layer_size, &
                                  dirmax, dirmin, spdmax, spdmin, nsqmax, nsqmin, n_dir_values, n_nsq_values, n_spd_values, &
                                  read_LUT, write_LUT, u_LUT_Filename, v_LUT_Filename, overwrite_lt_lut, LUT_Filename
 
@@ -822,6 +825,7 @@ contains
         n_dir_values = 24
         n_nsq_values = 5
         n_spd_values = 6
+        minimum_layer_size = 100
 
         read_LUT = .False.
         write_LUT = .True.
@@ -870,6 +874,7 @@ contains
         lt_options%n_dir_values = n_dir_values
         lt_options%n_nsq_values = n_nsq_values
         lt_options%n_spd_values = n_spd_values
+        lt_options%minimum_layer_size = minimum_layer_size
         lt_options%read_LUT = read_LUT
         lt_options%write_LUT = write_LUT
         if (trim(u_LUT_Filename)=="MISSING") then

@@ -373,11 +373,14 @@ module data_structures
         real    :: spdmax, spdmin           ! minimum and maximum wind speeds to use in the LU (typically 0 and ~30)
         real    :: nsqmax, nsqmin           ! minimum and maximum brunt_vaisalla frequencies (typically ~1e-8 and 1e-3)
         integer :: n_dir_values, n_nsq_values, n_spd_values ! number of LUT bins for each parameter
+        real    :: minimum_layer_size       ! Minimum vertical step to permit when computing LUT.
+                                            ! If model layers are thicker, substepping will be used.
 
         logical :: read_LUT, write_LUT      ! options to read the LUT from disk (or write it)
         character(len=MAXFILELENGTH) :: u_LUT_Filename  ! u LUT filename to write
         character(len=MAXFILELENGTH) :: v_LUT_Filename  ! v LUT filename to write
         logical :: overwrite_lt_lut         ! if true any existing LUT file will be over written
+
 
     end type lt_options_type
 

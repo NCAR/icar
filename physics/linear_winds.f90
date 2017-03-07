@@ -898,9 +898,7 @@ contains
         ! default assumes no errors in reading the LUT
         error = 0
 
-        ! minimum_layer_size = options%minimum_layer_size
-        minimum_layer_size = 100
-        print*, "WARNING: minimum_layer_size hard coded as", minimum_layer_size
+        minimum_layer_size = options%lt_options%minimum_layer_size
 
         ! store to make it easy to check dim sizes in read_LUT
         LUT_dims(:,1) = [nxu,nz,ny]
