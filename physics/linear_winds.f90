@@ -38,12 +38,15 @@ module linear_theory_winds
     use fft ! note fft module is defined in fftshift.f90
     use fftshifter
     use data_structures
-    use io_routines,               only : io_write2d, io_read2d
+    use io_routines,               only : io_read
     use string,                    only : str
     use linear_theory_lut_disk_io, only : read_LUT, write_LUT
+    use mod_atm_utilities
+
     implicit none
+
     private
-    public::linear_perturb
+    public :: linear_perturb, linear_perturbation_at_height, initialize_linear_theory_data
 
     logical :: variable_N
     logical :: smooth_nsq
@@ -55,8 +58,8 @@ module linear_theory_winds
     complex(C_DOUBLE_COMPLEX),  allocatable,    dimension(:,:)  :: denom, m, ineta, msq, mimag
     complex(C_DOUBLE_COMPLEX),  pointer,        dimension(:,:,:):: uhat, u_hat, vhat, v_hat
     type(C_PTR),                allocatable,    dimension(:)    :: uplans, vplans
-    type(C_PTR)              :: uh_aligned_data, u_h_aligned_data, vh_aligned_data, v_h_aligned_data
-    logical                  :: data_allocated=.False. ! need a boolean because you cant test if a cptr is allocated?
+    type(C_PTR)                 :: uh_aligned_data, u_h_aligned_data, vh_aligned_data, v_h_aligned_data
+    logical                     :: data_allocated=.False. ! need a boolean because you cant test if a cptr is allocated?
 
     ! note this data structure holds a lot of important variables for the new linear_perturbation subroutine
     ! this is created at the module scope to prevent some apparent stack issues related to OpenMP and ifort
@@ -95,6 +98,7 @@ module linear_theory_winds
     real :: spdmin ! =0
     real :: nsqmax ! =log(max_stability)
     real :: nsqmin ! =log(min_stability)
+    real :: minimum_layer_size
 
     integer :: n_dir_values=36
     integer :: n_nsq_values=10
@@ -105,146 +109,6 @@ module linear_theory_winds
     real, parameter :: SMALL_VALUE = 1e-15
 
 contains
-
-    !>----------------------------------------------------------
-    !! Calculate direction [0-2*pi) from u and v wind speeds
-    !!
-    !!----------------------------------------------------------
-    pure function calc_direction(u,v) result(direction)
-        implicit none
-        real, intent(in) :: u,v
-        real :: direction
-
-        if (v<0) then
-            direction = atan(u/v) + pi
-        elseif (v==0) then
-            if (u>0) then
-                direction=pi/2.0
-            else
-                direction=pi*1.5
-            endif
-        else
-            if (u>=0) then
-                direction = atan(u/v)
-            else
-                direction = atan(u/v) + (2*pi)
-            endif
-        endif
-
-    end function calc_direction
-
-    !>----------------------------------------------------------
-    !! Calculate the strength of the u wind field given a direction [0-2*pi] and magnitude
-    !!
-    !!----------------------------------------------------------
-    pure function calc_speed(u, v) result(speed)
-        implicit none
-        real, intent(in) :: u,v
-        real :: speed
-
-        speed = sqrt(u**2 + v**2)
-    end function calc_speed
-
-    !>----------------------------------------------------------
-    !! Calculate the strength of the u wind field given a direction [0-2*pi] and magnitude
-    !!
-    !!----------------------------------------------------------
-    pure function calc_u(direction, magnitude) result(u)
-        implicit none
-        real, intent(in) :: direction, magnitude
-        real :: u
-
-        u = sin(direction) * magnitude
-    end function calc_u
-
-    !>----------------------------------------------------------
-    !! Calculate the strength of the v wind field given a direction [0-2*pi] and magnitude
-    !!
-    !!----------------------------------------------------------
-    pure function calc_v(direction, magnitude) result(v)
-        implicit none
-        real, intent(in) :: direction, magnitude
-        real :: v
-
-        v = cos(direction) * magnitude
-    end function calc_v
-
-    !>----------------------------------------------------------
-    !! Calculate the saturated adiabatic lapse rate from a T/Moisture input
-    !!
-    !! return the moist / saturated adiabatic lapse rate for a given
-    !! Temperature and mixing ratio (really MR could be calculated as f(T))
-    !! from http://glossary.ametsoc.org/wiki/Saturation-adiabatic_lapse_rate
-    !!
-    !!----------------------------------------------------------
-    pure function calc_sat_lapse_rate(T,mr) result(sat_lapse)
-        implicit none
-        real, intent(in) :: T,mr  ! inputs T in K and mr in kg/kg
-        real :: L
-        real :: sat_lapse
-
-        L=LH_vaporization ! short cut for imported parameter
-        sat_lapse = gravity*((1 + (L*mr) / (Rd*T))          &
-                    / (cp + (L*L*mr*(Rd/Rw)) / (Rd*T*T) ))
-    end function calc_sat_lapse_rate
-
-    !>----------------------------------------------------------
-    !! Calculate the moist brunt vaisala frequency (Nm^2)
-    !! formula from Durran and Klemp, 1982 after Lalas and Einaudi 1974
-    !!
-    !!----------------------------------------------------------
-    pure function calc_moist_stability(t_top, t_bot, z_top, z_bot, qv_top, qv_bot, qc) result(BV_freq)
-        implicit none
-        real, intent(in) :: t_top, t_bot, z_top, z_bot, qv_top, qv_bot, qc
-        real :: t,qv, dz, sat_lapse
-        real :: BV_freq
-
-        t  = ( t_top +  t_bot)/2
-        qv = (qv_top + qv_bot)/2
-        dz = ( z_top - z_bot)
-        sat_lapse = calc_sat_lapse_rate(t,qv)
-
-        BV_freq = (gravity/t) * ((t_top-t_bot)/dz + sat_lapse) * &
-                  (1 + (LH_vaporization*qv)/(Rd*t)) - (gravity/(1+qv+qc) * (qv_top-qv_bot)/dz)
-    end function calc_moist_stability
-
-    !>----------------------------------------------------------
-    !! Calculate the dry brunt vaisala frequency (Nd^2)
-    !!
-    !!----------------------------------------------------------
-    pure function calc_dry_stability(th_top, th_bot, z_top, z_bot) result(BV_freq)
-        implicit none
-        real, intent(in) :: th_top, th_bot, z_top, z_bot
-        real :: BV_freq
-
-        BV_freq = gravity * (log(th_top)-log(th_bot)) / (z_top - z_bot)
-    end function calc_dry_stability
-
-    !>----------------------------------------------------------
-    !! Calculate either moist or dry brunt vaisala frequency and keep within min and max bounds
-    !!
-    !!----------------------------------------------------------
-    pure function calc_stability(th_top, th_bot, pii_top, pii_bot, z_top, z_bot, qv_top, qv_bot, qc) result(BV_freq)
-        implicit none
-        real, intent(in) :: th_top, th_bot, pii_top, pii_bot, z_top, z_bot, qv_top, qv_bot, qc
-        real :: BV_freq
-
-        if (qc<1e-7) then
-            if (variable_N) then
-                BV_freq = calc_dry_stability(th_top, th_bot, z_top, z_bot)
-            else
-                BV_freq = N_squared
-            endif
-        else
-            if (variable_N) then
-                BV_freq = calc_moist_stability(th_top*pii_top, th_bot*pii_bot, z_top, z_bot, qv_top, qv_bot, qc)
-            else
-                BV_freq = N_squared/10.0 ! might be better as max(1e-7,N_squared-(1e-4))
-            endif
-        endif
-
-        BV_freq = min(max(BV_freq,min_stability),max_stability)
-    end function calc_stability
 
     !>----------------------------------------------------------
     !! Calculate a single brunt vaisala frequency effectively averaged across the entire domain
@@ -315,7 +179,7 @@ contains
         lt_data%denom = lt_data%sig**2 ! -f**2 ! to add coriolis
 
         lt_data%msq   = Nsq / lt_data%denom * lt_data%kl
-        lt_data%mimag = 0 + 0 * j ! be sure to reset real and imaginary components
+        lt_data%mimag = (0, 0) ! be sure to reset real and imaginary components
         lt_data%mimag = lt_data%mimag + (real(sqrt(-lt_data%msq)) * j)
 
         lt_data%m = sqrt(lt_data%msq)                         ! vertical wave number, hydrostatic
@@ -876,7 +740,7 @@ contains
         logical, intent(in) :: reverse
 
         ! local variables used to calculate the LUT
-        real :: u,v, layer_height, layer_height_bottom, layer_height_top, minimum_layer_size
+        real :: u,v, layer_height, layer_height_bottom, layer_height_top
         integer :: nx,ny,nz, i,j,k,z,ik, nxu,nyv, error
         integer :: fftnx, fftny
         integer, dimension(3,2) :: LUT_dims
@@ -897,8 +761,6 @@ contains
 
         ! default assumes no errors in reading the LUT
         error = 0
-
-        minimum_layer_size = options%lt_options%minimum_layer_size
 
         ! store to make it easy to check dim sizes in read_LUT
         LUT_dims(:,1) = [nxu,nz,ny]
@@ -1324,6 +1186,7 @@ contains
         n_dir_values = options%lt_options%n_dir_values
         n_nsq_values = options%lt_options%n_nsq_values
         n_spd_values = options%lt_options%n_spd_values
+        minimum_layer_size = options%lt_options%minimum_layer_size
 
     end subroutine set_module_options
 
@@ -1397,7 +1260,7 @@ contains
                 write(*,*) "Reading Linear Mask"
                 write(*,*) "  from file: " // trim(options%linear_mask_file)
                 write(*,*) "  with var: "  // trim(options%linear_mask_var)
-                call io_read2d(options%linear_mask_file, options%linear_mask_var, domain%linear_mask)
+                call io_read(options%linear_mask_file, options%linear_mask_var, domain%linear_mask)
 
                 linear_mask = domain%linear_mask * linear_contribution
             endif
@@ -1420,7 +1283,7 @@ contains
                 write(*,*) "Reading Linear Mask"
                 write(*,*) "  from file: " // trim(options%nsq_calibration_file)
                 write(*,*) "  with var: "  // trim(options%nsq_calibration_var)
-                call io_read2d(options%nsq_calibration_file, options%nsq_calibration_var, domain%nsq_calibration)
+                call io_read(options%nsq_calibration_file, options%nsq_calibration_var, domain%nsq_calibration)
                 nsq_calibration = domain%nsq_calibration
 
                 where(nsq_calibration<1) nsq_calibration = 1 + 1/( (1-1/nsq_calibration)/100 )

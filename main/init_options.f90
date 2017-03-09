@@ -765,6 +765,7 @@ contains
         logical :: spatial_linear_fields    ! use a spatially varying linear wind perturbation
         logical :: linear_mask              ! use a spatial mask for the linear wind field
         logical :: nsq_calibration          ! use a spatial mask to calibrate the nsquared (brunt vaisala frequency) field
+        logical :: blocked_flow             ! use a blocking parameterization
 
         ! Look up table generation parameters
         real :: dirmax, dirmin
@@ -785,7 +786,8 @@ contains
                                  remove_lowres_linear, rm_N_squared, rm_linear_contribution, &
                                  spatial_linear_fields, linear_mask, nsq_calibration, minimum_layer_size, &
                                  dirmax, dirmin, spdmax, spdmin, nsqmax, nsqmin, n_dir_values, n_nsq_values, n_spd_values, &
-                                 read_LUT, write_LUT, u_LUT_Filename, v_LUT_Filename, overwrite_lt_lut, LUT_Filename
+                                 read_LUT, write_LUT, u_LUT_Filename, v_LUT_Filename, overwrite_lt_lut, LUT_Filename, &
+                                 blocked_flow
 
          ! because lt_options could be in a separate file
          if (options%use_lt_options) then
@@ -814,6 +816,8 @@ contains
         spatial_linear_fields = .True. ! use a spatially varying linear wind perturbation
         linear_mask = .False.          ! use a spatial mask for the linear wind field
         nsq_calibration = .False.      ! use a spatial mask to calibrate the nsquared (brunt vaisala frequency) field
+
+        blocked_flow = .False.
 
         ! look up table generation parameters
         dirmax = 2*pi
@@ -888,6 +892,8 @@ contains
         lt_options%u_LUT_Filename = u_LUT_Filename
         lt_options%v_LUT_Filename = v_LUT_Filename
         lt_options%overwrite_lt_lut = overwrite_lt_lut
+
+        lt_options%blocked_flow = blocked_flow
 
         ! copy the data back into the global options data structure
         options%lt_options = lt_options

@@ -30,6 +30,7 @@ module init
     use land_surface,               only : lsm_init
     use wind,                       only : init_winds
     use initialize_options,         only : init_options
+    use mod_atm_utilities,          only : init_atm_utilities
 
     implicit none
     private
@@ -46,6 +47,8 @@ contains
         ! read in options file
         write(*,*) "Initializing Options"
         call init_options(options)
+        ! initialize the atmospheric helper utilities
+        call init_atm_utilities(options)
 
         ! allocate and initialize the domain
         write(*,*) ""
@@ -231,7 +234,7 @@ contains
             allocate(domain%w_cu(nx,nz,ny))         ! vertical wind [grid/s]
             domain%w_cu = 0
         endif
-        
+
         allocate(domain%th(nx,nz,ny))               ! potential temperature [K]
         domain%th = 280
         allocate(domain%qv(nx,nz,ny))               ! water vapor [kg/kg]

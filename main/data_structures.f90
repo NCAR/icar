@@ -381,6 +381,7 @@ module data_structures
         character(len=MAXFILELENGTH) :: v_LUT_Filename  ! v LUT filename to write
         logical :: overwrite_lt_lut         ! if true any existing LUT file will be over written
 
+        logical :: blocked_flow             ! if true, use a blocking parameterization
 
     end type lt_options_type
 
