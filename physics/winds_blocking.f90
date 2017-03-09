@@ -1,9 +1,11 @@
 module mod_blocking
 
     use data_structures
-    use linear_theory_winds, only : linear_perturbation_at_height, initialize_linear_theory_data
-    use mod_atm_utilities
-    use array_utilities,     only : linear_space
+    use linear_theory_winds, only : linear_perturbation_at_height, initialize_linear_theory_data, linear_perturbation, add_buffer_topo
+    use io_routines,         only : io_write
+    use mod_atm_utilities,   only : calc_u, calc_v, calc_direction, calc_speed
+    use array_utilities,     only : linear_space, calc_weight
+    use string,              only : str
 
     use fft
     use fftshifter
@@ -18,13 +20,23 @@ module mod_blocking
     public compute_blocked_flow_for_wind, compute_fft_topography, compute_flow_for_wind
 
     type(linear_theory_type) :: lt_data
+    !$omp threadprivate(lt_data)
     real, allocatable, dimension(:,:,:,:,:) :: blocked_u_lut, blocked_v_lut
+    real, allocatable, dimension(:,:,:)     :: u_perturbation, v_perturbation
     real, allocatable, dimension(:)         :: dir_values, spd_values
+
+    ! note this could be another config option, but it *shouldnt* matter much
+    ! this just sets the maximum size of the smoothing window used when buffer topography
+    ! ultimately, buffered topography should probably be created exactly as it is in linear_winds...
+    integer, parameter :: smooth_window = 5
+    ! these are just short cuts for values from the options structure
     integer :: ndir, nspeed
     real :: dir_min, dir_max
     real :: spd_min, spd_max
     real :: Nsq = 1e-4
-    real :: fraction_continued_divergence
+    real :: fraction_continued_divergence = 0.05
+    real :: minimum_step = 100
+    integer :: buffer = 0
 
     logical :: initialized = .False.
 
@@ -39,7 +51,120 @@ contains
             call initialize_blocking(domain, options)
         endif
 
+        call spatial_blocking(domain, options%lt_options%stability_window_size)
+
     end subroutine add_blocked_flow
+
+    !>----------------------------------------------------------
+    !! Compute a spatially variable linear wind perturbation
+    !! based off of look uptables computed in via setup
+    !! for each grid point, find the closest LUT data in U and V space
+    !! then bilinearly interpolate the nearest LUT values for that points linear wind field
+    !!
+    !!----------------------------------------------------------
+    subroutine spatial_blocking(domain, winsz)
+        implicit none
+        class(linearizable_type),intent(inout)::domain
+        integer, intent(in) :: winsz
+
+        integer :: nx,nxu, ny,nyv, nz, i,j,k, smoothz
+        integer :: uk, vi !store a separate value of i for v and of k for u to we can handle nx+1, ny+1
+        integer :: step, dpos, spos, nexts, nextd
+        integer :: north, south, east, west, top, bottom, n
+        real :: u, v
+        real :: dweight, sweight, curspd, curdir, wind_first, wind_second
+
+        nx=size(domain%lat,1)
+        ny=size(domain%lat,2)
+        nz=size(domain%u,2)
+        nxu=size(domain%u,1)
+        nyv=size(domain%v,3)
+
+        ! $omp parallel firstprivate(nx,nxu,ny,nyv,nz, winsz), default(none), &
+        ! $omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom), &
+        ! $omp private(spos, dpos, nexts,nextd, n, smoothz, u, v), &
+        ! $omp private(curspd, curdir, sweight, dweight), &
+        ! $omp shared(domain, spd_values, dir_values, blocked_u_lut, blocked_v_lut), &
+        ! $omp shared(u_perturbation, v_perturbation), &
+        ! $omp shared(ndir, nspeed)
+        ! $omp do
+        do k=1, nyv
+            do j=1, nz
+                do i=1, nxu
+                    uk = min(k,ny)
+                    vi = min(i,nx)
+
+                    !   First find the bounds of the region to average over
+                    west  = max(i - winsz, 1)
+                    east  = min(i + winsz,nx)
+                    bottom= max(j - winsz, 1)
+                    top   = min(j + winsz,nz)
+                    south = max(k - winsz, 1)
+                    north = min(k + winsz,ny)
+
+                    ! smooth the winds vertically first
+                    u = sum(domain%u( i, bottom:top,uk)) / (top-bottom+1)
+                    v = sum(domain%v(vi, bottom:top, k)) / (top-bottom+1)
+
+                    n = (((east-west)+1) * ((north-south)+1))
+                    n = n * ((top-bottom)+1)
+
+                    ! Calculate the direction of the current grid cell wind
+                    dpos = 1
+                    curdir = calc_direction( u, v )
+                    ! and find the corresponding position in the Look up Table
+                    do step=1, ndir
+                        if (curdir > dir_values(step)) then
+                            dpos = step
+                        endif
+                    end do
+
+                    ! Calculate the wind speed of the current grid cell
+                    spos = 1
+                    curspd = calc_speed( u, v )
+                    ! and find the corresponding position in the Look up Table
+                    do step=1, nspeed
+                        if (curspd > spd_values(step)) then
+                            spos = step
+                        endif
+                    end do
+
+                    ! Calculate the weights and the "next" u/v position
+                    ! "next" usually = pos+1 but for edge cases next = 1 or n
+                    dweight = calc_weight(dir_values, dpos, nextd, curdir)
+                    sweight = calc_weight(spd_values, spos, nexts, curspd)
+
+                    ! perform linear interpolation between LUT values
+                    if (k<=ny) then
+                        u_perturbation(i,j,k) =      sweight  * (dweight    * blocked_u_lut(i,j,k, dpos, spos)     &
+                                                              + (1-dweight) * blocked_u_lut(i,j,k, nextd,spos))    &
+                                               +  (1-sweight) * (dweight    * blocked_u_lut(i,j,k, dpos, nexts)    &
+                                                              + (1-dweight) * blocked_u_lut(i,j,k, nextd,nexts))
+
+                        ! u_perturbation(i,j,k) = u_perturbation(i,j,k) * (1-linear_update_fraction) &
+                        !             + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
+
+                        domain%u(i,j,k) = domain%u(i,j,k) + u_perturbation(i,j,k) !* linear_mask(min(nx,i),min(ny,k))
+                    endif
+                    if (i<=nx) then
+                        v_perturbation(i,j,k) =      sweight  * (dweight    * blocked_v_lut(i,j,k, dpos, spos)     &
+                                                              + (1-dweight) * blocked_v_lut(i,j,k, nextd,spos))    &
+                                               +  (1-sweight) * (dweight    * blocked_v_lut(i,j,k, dpos, nexts)    &
+                                                              + (1-dweight) * blocked_v_lut(i,j,k, nextd,nexts))
+
+                        ! v_perturbation(i,j,k) = v_perturbation(i,j,k) * (1-linear_update_fraction) &
+                        !             + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
+
+                        ! for the high res domain, linear_mask should incorporate linear_contribution
+                        domain%v(i,j,k) = domain%v(i,j,k) + v_perturbation(i,j,k) !* linear_mask(min(nx,i),min(ny,k))
+                    endif
+                end do
+            end do
+        end do
+        ! $omp end do
+        ! $omp end parallel
+    end subroutine spatial_blocking
+
 
     !>---------------------------------------------
     !> Initialize module level variables for blocking parameterization
@@ -60,64 +185,92 @@ contains
         ny = size(domain%terrain,2)
         nz = size(domain%z, 2)
 
-        fraction_continued_divergence = 0.05
-
         write(*,*) ""
         write(*,*) "Initializing Blocking Parameterization"
+        fraction_continued_divergence = 0.05
+        minimum_step = options%lt_options%minimum_layer_size
+        buffer = options%lt_options%buffer
+
         call initialize_directions(options)
         call initialize_speeds(options)
-        call initialize_linear_theory_data(lt_data, nx, ny, dx)
+        ! call initialize_linear_theory_data(lt_data, nx+buffer*2, ny+buffer*2, dx)
 
         allocate(blocked_u_lut(nx+1, nz, ny,   ndir, nspeed))
         allocate(blocked_v_lut(nx,   nz, ny+1, ndir, nspeed))
 
-        call generate_blocked_flow_lut(domain%terrain, domain%z(1,:,1)-domain%terrain(1,1), dx)
+        allocate(u_perturbation(nx+1,nz,ny  ))
+        allocate(v_perturbation(nx,  nz,ny+1))
+
+        call generate_blocked_flow_lut(domain%terrain, domain%z_interface_layers, dx, buffer)
+
+        call io_write("u_blocked_lut.nc","data",blocked_u_lut)
+        call io_write("v_blocked_lut.nc","data",blocked_v_lut)
 
         write(*,*) "Blocking Parameterization Initialized"
         initialized = .True.
     end subroutine initialize_blocking
 
-    subroutine generate_blocked_flow_lut(terrain, layers, dx)
+    subroutine generate_blocked_flow_lut(terrain, layers, dx, buf_in)
         implicit none
-        real, intent(in) :: terrain(:,:)
-        real, intent(in) :: layers(:)
-        real, intent(in) :: dx
+        real,    intent(in) :: terrain(:,:)
+        real,    intent(in) :: layers(:)
+        real,    intent(in) :: dx
+        integer, intent(in), optional :: buf_in
 
-        integer :: nx, ny, nz, dir, speed
+        integer :: nx, ny, nz, dir, speed, buf, lut_iteration
         real    :: u, v, direction, magnitude
         real, allocatable, dimension(:,:,:)     :: u_field, v_field
         complex(C_DOUBLE_COMPLEX), allocatable  :: fft_terrain(:,:)       !> Fourier transform of the terrain
+
 
         nx  = size(terrain,1)
         ny  = size(terrain,2)
         nz  = size(layers)
 
-        allocate(u_field(nx, nz, ny))
-        allocate(v_field(nx, nz, ny))
+        buf = buffer
+        if (present(buf_in)) buf = buf_in
 
-        call create_fft_terrain(terrain, fft_terrain)
+        allocate(u_field(nx+buf*2, nz, ny+buf*2))
+        allocate(v_field(nx+buf*2, nz, ny+buf*2))
 
-        do dir = 1,ndir
-            print*, dir, ndir
-            do speed = 1,nspeed
+        call create_fft_terrain(terrain, fft_terrain, buf)
 
-                direction = dir_values(direction)
-                magnitude = spd_values(speed)
+        !$omp parallel default(shared) &! though not listed, lt_data is defined as threadprivate at the module level
+        !$omp private(lut_iteration, dir, speed, u, v, direction, magnitude, u_field, v_field)  &
+        !$omp firstprivate(ndir, nspeed, dir_values, spd_values)                                &
+        !$omp firstprivate(layers, dx, nx, ny, buf)
+        !$omp do
+        do lut_iteration = 0, ndir*nspeed-1
+            ! make two loops into one to increase the granularity of parallelization
+            dir     = lut_iteration / nspeed + 1
+            speed   = mod(lut_iteration,nspeed) + 1
 
-                u = calc_u(direction, magnitude)
-                v = calc_v(direction, magnitude)
+            direction = dir_values(dir)
+            magnitude = spd_values(speed)
 
-                call compute_blocked_flow_for_wind(u, v, layers, dx, fft_terrain, lt_data, u_field, v_field)
+            u = calc_u(direction, magnitude)
+            v = calc_v(direction, magnitude)
 
-                blocked_u_lut(2:nx,:, :,  dir, speed) = ( u_field(2:nx,:,:) + u_field(1:nx-1,:,:) ) /2
-                blocked_u_lut( 1,  :, :,  dir, speed) = u_field(1,:,:)
-                blocked_u_lut(nx+1,:, :,  dir, speed) = u_field(nx,:,:)
+            call compute_blocked_flow_for_wind(u, v, layers, dx, fft_terrain, lt_data, u_field, v_field, debug=.False.)
 
-                blocked_v_lut( :,  :,2:ny,dir, speed) = ( v_field(:,:,2:ny) + v_field(:,:,1:ny-1) ) /2
-                blocked_v_lut( :,  :, 1,  dir, speed) = v_field(:,:,1)
-                blocked_v_lut( :,  :,ny+1,dir, speed) = v_field(:,:,ny)
-            enddo
+            blocked_u_lut(2:nx,:, :,  dir, speed) = ( u_field(buf+2:buf+nx,:,buf:ny+buf) + u_field(buf+1:buf+nx-1,:,buf:ny+buf) ) /2
+            blocked_u_lut( 1,  :, :,  dir, speed) =   u_field(buf+1, :,buf:ny+buf)
+            blocked_u_lut(nx+1,:, :,  dir, speed) =   u_field(buf+nx,:,buf:ny+buf)
+
+            blocked_v_lut( :,  :,2:ny,dir, speed) = ( v_field(buf:nx+buf,:,buf+2:buf+ny) + v_field(buf:nx+buf,:,buf+1:buf+ny-1) ) /2
+            blocked_v_lut( :,  :, 1,  dir, speed) =   v_field(buf:nx+buf,:,buf+1)
+            blocked_v_lut( :,  :,ny+1,dir, speed) =   v_field(buf:nx+buf,:,buf+ny)
         enddo
+        !$omp end do
+        !$omp end parallel
+
+        ! oddly, it was getting non-zero values for 0 wind speed, though all other values looked OK
+        ! should probably make something like this into a small function for general usage
+        ! if (abs(spd_values(1)/max(abs(spd_values(1)),kSMALL_VALUE)) < kSMALL_VALUE) then
+        !     blocked_u_lut(:,:,:,:,1) = 0
+        !     blocked_v_lut(:,:,:,:,1) = 0
+        ! endif
+
 
     end subroutine generate_blocked_flow_lut
 
@@ -152,7 +305,7 @@ contains
     end subroutine compute_flow_for_wind
 
 
-    subroutine compute_blocked_flow_for_wind(u, v, z_layers, dx, fft_terrain, lt_data, ufield, vfield)
+    subroutine compute_blocked_flow_for_wind(u, v, z_layers, dx, fft_terrain, lt_data, ufield, vfield, debug)
         implicit none
         real,                       intent(in)    :: u, v              !> background u and v magnitudes             [m / s]
         real,                       intent(in)    :: z_layers(:)       !> vertical coordinate =height of each layer [m]
@@ -161,15 +314,16 @@ contains
         type(linear_theory_type),   intent(inout) :: lt_data           !> linear theory data structure
         real,                       intent(inout) :: ufield(:,:,:)     !> output 3D U values for blocked flow       [m / s]
         real,                       intent(inout) :: vfield(:,:,:)     !> output 3D V values for blocked flow       [m / s]
+        logical,                    intent(in)    :: debug
 
 
         real, allocatable :: wfield(:,:,:)
         integer :: nx, ny, nz, i, key_level
-        real :: z
+        real :: z, z_bottom, z_top
 
         nx = size(fft_terrain,1)
         ny = size(fft_terrain,2)
-        nz = size(z_layers)
+        nz = size(z_layers) - 1
 
         allocate(wfield(nx,nz,ny))
         wfield = 0
@@ -179,8 +333,11 @@ contains
         endif
 
         do i=1,nz
-            z = z_layers(i)
-            call linear_perturbation_at_height(u, v, Nsq, z, fft_terrain, lt_data)
+            z_bottom = z_layers(i)
+            z_top    = z_layers(i+1)
+
+            call linear_perturbation(u, v, Nsq, z_bottom, z_top, minimum_step, fft_terrain, lt_data)
+            ! call linear_perturbation_at_height(u, v, Nsq, z, fft_terrain, lt_data)
 
             ufield(:,i,:) = real(real(lt_data%u_perturb))
             vfield(:,i,:) = real(real(lt_data%v_perturb))
@@ -195,14 +352,17 @@ contains
         where(wfield > 0) wfield = 0
 
         key_level = find_maximum_downward_motion(wfield)
-
+        if (debug) then
+            !$omp critical (print_lock)
+            print*, key_level, u, v
+            !$omp end critical (print_lock)
+        endif
         if (key_level < nz) then
             do i=key_level+1,nz
                 ufield(:,i,:) = ufield(:,key_level,:) * fraction_continued_divergence
                 vfield(:,i,:) = vfield(:,key_level,:) * fraction_continued_divergence
             enddo
         endif
-
 
     end subroutine compute_blocked_flow_for_wind
 
@@ -232,18 +392,20 @@ contains
 
     end function find_maximum_downward_motion
 
-    subroutine create_fft_terrain(terrain, fft_terrain)
+    subroutine create_fft_terrain(terrain, fft_terrain, buffer)
         implicit none
         real,                                    intent(in)    :: terrain(:,:)
         complex(C_DOUBLE_COMPLEX), allocatable,  intent(inout) :: fft_terrain(:,:)       !> Fourier transform of the terrain
+        integer,                                 intent(in)    :: buffer                 !> number of grid cells to add as a buffer around the terrain
 
         integer :: nx, ny
         complex(C_DOUBLE_COMPLEX), allocatable :: complex_terrain(:,:)   !> Terrain as a complex data array
 
         nx = size(terrain,1)
         ny = size(terrain,2)
-        allocate(complex_terrain(nx,ny))
-        complex_terrain = terrain
+
+        call add_buffer_topo(terrain, complex_terrain, smooth_window, buffer)
+
         call compute_fft_topography(complex_terrain,fft_terrain)
 
     end subroutine create_fft_terrain

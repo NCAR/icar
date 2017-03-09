@@ -3,6 +3,12 @@ module array_utilities
     implicit none
 
 contains
+    !>----------------------------------------------------------
+    !! Generate an array with n_values elements spanning the range min to max
+    !!
+    !! This is similar to the matlab/numpy/etc linspace function
+    !!
+    !!----------------------------------------------------------
     subroutine linear_space(input_array, min_value, max_value, n_values)
         implicit none
         real,   intent(inout), allocatable :: input_array(:)
@@ -26,5 +32,42 @@ contains
         enddo
 
     end subroutine linear_space
+
+
+    !>----------------------------------------------------------
+    !! Calculate the weights between the positions bestpos and nextpos
+    !! based on the distance between match and indata(nextpos) (normalized by nextpos - bestpos)
+    !! assumes indata is monotonically increasing,
+    !! bestpos must be set prior to entry
+    !! nextpos is calculated internally (either 1, bestpos+1, or n)
+    !!
+    !!----------------------------------------------------------
+    function calc_weight(indata, bestpos, nextpos, match) result(weight)
+        implicit none
+        real :: weight
+        real, dimension(:), intent(in) :: indata
+        integer, intent(in) :: bestpos
+        integer, intent(inout) :: nextpos
+        real, intent(in) :: match
+
+        integer :: n
+
+        n=size(indata)
+
+        if (match<indata(1)) then
+            nextpos=1
+            weight=1
+        else
+            if (bestpos==n) then
+                nextpos=n
+                weight=1
+            else
+                nextpos=bestpos+1
+                weight=(indata(nextpos)-match) / (indata(nextpos) - indata(bestpos))
+            endif
+        endif
+
+    end function
+
 
 end module array_utilities

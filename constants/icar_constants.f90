@@ -11,6 +11,12 @@ module icar_constants
     integer,parameter :: MAXLEVELS        = 500   ! maximum number of vertical layers (should typically be ~10-20)
     integer,parameter :: MAX_NUMBER_FILES = 50000 ! maximum number of permitted input files (probably a bit extreme)
 
+
+! ------------------------------------------------
+! Value to accept for difference between real numbers should be as a fraction but then have to test for non-zero...
+! ------------------------------------------------
+    real,   parameter :: kSMALL_VALUE = 1e-6
+
 ! ------------------------------------------------
 ! Physics scheme selection definitions
 !

@@ -606,7 +606,7 @@ $(BUILD)linear_winds.o:$(PHYS)linear_winds.f90 $(BUILD)io_routines.o $(BUILD)dat
 
 $(BUILD)winds_blocking.o:$(PHYS)winds_blocking.f90 $(BUILD)linear_winds.o 	\
 	 					$(BUILD)fftshift.o $(BUILD)fftw.o $(BUILD)array_utilities.o \
-						$(BUILD)data_structures.o $(BUILD)atm_utilities.o
+						$(BUILD)data_structures.o $(BUILD)atm_utilities.o $(BUILD)string.o
 	${F90} ${FFLAGS} $(PHYS)winds_blocking.f90 -o $(BUILD)winds_blocking.o
 
 ###################################################################

@@ -42,11 +42,13 @@ module linear_theory_winds
     use string,                    only : str
     use linear_theory_lut_disk_io, only : read_LUT, write_LUT
     use mod_atm_utilities
+    use array_utilities,           only : calc_weight, linear_space
 
     implicit none
 
     private
-    public :: linear_perturb, linear_perturbation_at_height, initialize_linear_theory_data
+    public :: linear_perturb, linear_perturbation, linear_perturbation_at_height
+    public :: add_buffer_topo, initialize_linear_theory_data
 
     logical :: variable_N
     logical :: smooth_nsq
@@ -169,6 +171,12 @@ contains
 
         integer :: nx, ny ! store the size of the grid
 
+        if ((U==0).and.(V==0)) then
+            lt_data%u_perturb = 0
+            lt_data%v_perturb = 0
+            return
+        endif
+
         nx = size(fourier_terrain, 1)
         ny = size(fourier_terrain, 2)
 
@@ -221,6 +229,13 @@ contains
 
         integer :: n_steps, i
         real    :: step_size, current_z
+
+        ! Handle the trivial case quickly
+        if ((U==0).and.(V==0)) then
+            lt_data%u_perturb = 0
+            lt_data%v_perturb = 0
+            return
+        endif
 
         n_steps = max(1,ceiling((z_top - z_bottom) / minimum_step))
         step_size = (z_top - z_bottom) / n_steps
@@ -549,15 +564,17 @@ contains
     !! in the FFT due to discontinuities between the left and right (or top and bottom) edges of the domain
     !!
     !!----------------------------------------------------------
-    subroutine add_buffer_topo(terrain, buffer_topo, smooth_window, debug)
+    subroutine add_buffer_topo(terrain, buffer_topo, smooth_window, buffer, debug)
         implicit none
         real, dimension(:,:), intent(in) :: terrain
         complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:), intent(inout) :: buffer_topo
         integer, intent(in) :: smooth_window
+        integer, intent(in) :: buffer
         logical, intent(in), optional :: debug
         real, dimension(:,:),allocatable :: real_terrain
         integer::nx,ny,i,j,pos, xs,xe,ys,ye, window
         real::weight
+
         nx=size(terrain,1)+buffer*2
         ny=size(terrain,2)+buffer*2
         allocate(buffer_topo(nx,ny))
@@ -766,25 +783,14 @@ contains
         LUT_dims(:,1) = [nxu,nz,ny]
         LUT_dims(:,2) = [nx,nz,nyv]
 
-        ! create the array of dir and nsq values to create LUTs for
-        if (.not.allocated(dir_values)) then
-            allocate( dir_values(n_dir_values) )
-            allocate( nsq_values(n_nsq_values) )
-            allocate( spd_values(n_spd_values) )
-        endif
-        ! generate the values for each look up table dimension
+        ! create the array of spd,dir, and nsq values to create LUTs for
+        ! generates the values for each look up table dimension
         ! generate table of wind directions to be used
-        do i=1,n_dir_values
-            dir_values(i) = (i - 1) / real(n_dir_values - 1) * (dirmax - dirmin) + dirmin
-        enddo
+        call linear_space(dir_values,dirmin,dirmax,n_dir_values)
         ! generate table of wind speeds to be used
-        do i=1,n_spd_values
-            spd_values(i) = (i - 1) / real(n_spd_values - 1) * (spdmax - spdmin) + spdmin
-        enddo
+        call linear_space(nsq_values,nsqmin,nsqmax,n_nsq_values)
         ! generate table of Brunt-Vaisalla frequencies (Nsq) to be used
-        do i=1,n_nsq_values
-            nsq_values(i) = (i - 1) / real(n_nsq_values - 1) * (nsqmax - nsqmin) + nsqmin
-        enddo
+        call linear_space(spd_values,spdmin,spdmax,n_spd_values)
 
         ! Allocate the (LARGE) look up tables for both U and V
         if (reverse) then
@@ -914,41 +920,6 @@ contains
 
     end subroutine initialize_spatial_winds
 
-
-    !>----------------------------------------------------------
-    !! Calculate the weights between the positions bestpos and nextpos
-    !! based on the distance between match and indata(nextpos) (normalized by nextpos - bestpos)
-    !! assumes indata is monotonically increasing,
-    !! bestpos must be set prior to entry
-    !! nextpos is calculated internally (either 1, bestpos+1, or n)
-    !!
-    !!----------------------------------------------------------
-    function calc_weight(indata, bestpos, nextpos, match) result(weight)
-        implicit none
-        real :: weight
-        real, dimension(:), intent(in) :: indata
-        integer, intent(in) :: bestpos
-        integer, intent(inout) :: nextpos
-        real, intent(in) :: match
-
-        integer :: n
-
-        n=size(indata)
-
-        if (match<indata(1)) then
-            nextpos=1
-            weight=1
-        else
-            if (bestpos==n) then
-                nextpos=n
-                weight=1
-            else
-                nextpos=bestpos+1
-                weight=(indata(nextpos)-match) / (indata(nextpos) - indata(bestpos))
-            endif
-        endif
-
-    end function
 
     !>----------------------------------------------------------
     !! Compute a spatially variable linear wind perturbation
@@ -1218,10 +1189,10 @@ contains
         ! Create a buffer zone around the topography to smooth the edges
         buffer = original_buffer
         ! first create it including a 5 grid cell smoothing function
-        call add_buffer_topo(domain%terrain, complex_terrain_firstpass, 5)
+        call add_buffer_topo(domain%terrain, complex_terrain_firstpass, 5, buffer)
         buffer = 2
         ! then further add a small (~2) grid cell buffer where all cells have the same value
-        call add_buffer_topo(real(real(complex_terrain_firstpass)), complex_terrain, 0, debug=options%debug)
+        call add_buffer_topo(real(real(complex_terrain_firstpass)), complex_terrain, 0, buffer, debug=options%debug)
         buffer = buffer + original_buffer
 
         nx = size(complex_terrain, 1)

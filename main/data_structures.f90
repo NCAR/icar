@@ -214,6 +214,7 @@ module data_structures
         real, allocatable, dimension(:,:,:) :: qgrau        ! graupel mass mixing ratio
         real, allocatable, dimension(:,:,:) :: p_inter      ! pressure on the vertical interfaces (p[:,1,:]=psfc)
         real, allocatable, dimension(:,:,:) :: z_inter      ! z height on interface levels
+        real, allocatable, dimension(:)     :: z_layers, z_interface_layers
         real, allocatable, dimension(:,:,:) :: dz_inter     ! dz between interface levels
         real, allocatable, dimension(:,:,:) :: mut          ! mass in a given cell ? (pbot-ptop) used in some physics schemes
         ! 3D soil field

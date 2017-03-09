@@ -663,6 +663,8 @@ contains
             allocate(domain%z_inter(nx,nz,ny))
             allocate(domain%dz(nx,nz,ny))
             allocate(domain%dz_inter(nx,nz,ny))
+            allocate(domain%z_layers(nz))
+            allocate(domain%z_interface_layers(nz+1))
             ! lowest model level is half of the lowest dz above the land surface
             domain%z(:,1,:) = domain%terrain+options%dz_levels(1)/2
             domain%z_inter(:,1,:) = domain%terrain
@@ -670,7 +672,15 @@ contains
             domain%dz(:,1,:) = (options%dz_levels(1) + options%dz_levels(2))/2
             ! dz between the interface points = dz = thickness of mass grid cells
             domain%dz_inter(:,1,:) = options%dz_levels(1)
+            ! create 1D arrays to store the height of each level and interface above the terrain too
+            domain%z_layers(1) = options%dz_levels(1)/2
+            domain%z_interface_layers(1) = 0
+            domain%z_interface_layers(2) = options%dz_levels(1)/2
             do i = 2,nz
+                domain%z_interface_layers(i+1) = domain%z_interface_layers(i) + options%dz_levels(i)
+                domain%z_layers(i)    = domain%z_interface_layers(i) + options%dz_levels(i) / 2
+
+                ! although these are almost identical, they have topography added to the first layer
                 domain%z(:,i,:)       = domain%z(:,i-1,:)       + (options%dz_levels(i)+options%dz_levels(i-1))/2
                 domain%z_inter(:,i,:) = domain%z_inter(:,i-1,:) +  options%dz_levels(i)
 

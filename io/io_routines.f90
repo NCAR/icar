@@ -27,14 +27,14 @@ module io_routines
     !! Generic interface to the netcdf read routines
     !!------------------------------------------------------------
     interface io_read
-        module procedure io_read2d, io_read3d, io_read6d, io_read2di, io_read1d
+        module procedure io_read6d, io_read3d, io_read2d, io_read1d, io_read2di
     end interface
 
     !>------------------------------------------------------------
     !! Generic interface to the netcdf write routines
     !!------------------------------------------------------------
     interface io_write
-        module procedure io_write6d, io_write4d, io_write3d, io_write2d, io_write3di,io_write4di
+        module procedure io_write6d, io_write5d, io_write4d, io_write3d, io_write2d, io_write4di, io_write3di
     end interface
 
     !>------------------------------------------------------------
@@ -539,7 +539,72 @@ contains
         ! Close the file, freeing all resources.
         call check( nf90_close(ncid), filename)
     end subroutine io_write6d
-    
+
+    !>------------------------------------------------------------
+    !! Same as io_write6d but for 5-dimensional data
+    !!
+    !! Write a 5-dimensional variable to a netcdf file
+    !!
+    !! Create a netcdf file:filename with a variable:varname and write data_out to it
+    !!
+    !! @param   filename    Name of NetCDF file to write/create
+    !! @param   varname     Name of the NetCDF variable to write
+    !! @param   data_out    5-dimensional array to write to the file
+    !!
+    !!------------------------------------------------------------
+    subroutine io_write5d(filename,varname,data_out, dimnames)
+        implicit none
+        ! This is the name of the file and variable we will write.
+        character(len=*), intent(in) :: filename, varname
+        real,intent(in) :: data_out(:,:,:,:,:)
+        character(len=*), optional, dimension(5), intent(in) :: dimnames
+
+        ! We are writing 5D data, a nx, nz, ny, na, nb, nc grid.
+        integer :: nx,ny,nz, na,nb
+        integer, parameter :: ndims = 5
+        ! This will be the netCDF ID for the file and data variable.
+        integer :: ncid, varid,temp_dimid,dimids(ndims)
+        character(len=MAXDIMLENGTH), dimension(5) :: dims
+
+        if (present(dimnames)) then
+            dims = dimnames
+        else
+            dims = ["x","y","z","a","b"]
+        endif
+
+        nx=size(data_out,1)
+        nz=size(data_out,2)
+        ny=size(data_out,3)
+        na=size(data_out,4)
+        nb=size(data_out,5)
+
+        ! Open the file. NF90_CLOBBER tells netCDF we want overwrite existing files
+        call check( nf90_create(filename, NF90_CLOBBER, ncid), filename)
+        ! define the dimensions
+        call check( nf90_def_dim(ncid, dims(1), nx, temp_dimid) )
+        dimids(1)=temp_dimid
+        call check( nf90_def_dim(ncid, dims(2), nz, temp_dimid) )
+        dimids(2)=temp_dimid
+        call check( nf90_def_dim(ncid, dims(3), ny, temp_dimid) )
+        dimids(3)=temp_dimid
+        call check( nf90_def_dim(ncid, dims(4), na, temp_dimid) )
+        dimids(4)=temp_dimid
+        call check( nf90_def_dim(ncid, dims(5), nb, temp_dimid) )
+        dimids(5)=temp_dimid
+
+        ! Create the variable returns varid of the data variable
+        call check( nf90_def_var(ncid, varname, NF90_REAL, dimids, varid), trim(filename)//":"//trim(varname))
+        ! End define mode. This tells netCDF we are done defining metadata.
+        call check( nf90_enddef(ncid) )
+
+        !write the actual data to the file
+        call check( nf90_put_var(ncid, varid, data_out), trim(filename)//":"//trim(varname))
+
+        ! Close the file, freeing all resources.
+        call check( nf90_close(ncid), filename)
+    end subroutine io_write5d
+
+
     !>------------------------------------------------------------
     !! Same as io_write6d but for 4-dimensional data
     !!
