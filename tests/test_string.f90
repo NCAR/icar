@@ -1,6 +1,6 @@
 program main
   use string, only : get_double, get_real, get_integer, str
-  use iso_fortran_env, only : real32, real64, int32
+  use iso_fortran_env, only : real32, real64, int32, output_unit, error_unit
   implicit none
 
   ! Enumerate the test-result array indices:
@@ -22,9 +22,9 @@ program main
   write(integer_string,*) integer_datum
 
   ! Test each string conversion function
-  if ( get_double(real64_string)   == real64_datum         ) test_passed(get_double_) = .true.
-  if ( get_real(real32_string)     == real32_datum         ) test_passed(get_real_) = .true.
-  if ( get_integer(integer_string) == integer_datum        ) test_passed(get_integer_) = .true.
+  if ( get_double(real64_string)   == real64_datum  ) test_passed(get_double_) = .true.
+  if ( get_real(real32_string)     == real32_datum  ) test_passed(get_real_) = .true.
+  if ( get_integer(integer_string) == integer_datum ) test_passed(get_integer_) = .true.
 
   ! Left-justify the expected results for comparison
   if ( adjustl(real64_string)      == str(real64_datum)  ) test_passed(str_d_) = .true.
@@ -33,14 +33,14 @@ program main
 
   ! Test each string conversion function
   if (all(test_passed)) then
-     print *,"Test passed." 
+     write(output_unit,*) "Test passed." 
   else
-     if ( .not. test_passed(get_double_ )) print *,"In strings.f90, get_double failed."
-     if ( .not. test_passed(get_real_   )) print *,"In strings.f90, get_real failed."
-     if ( .not. test_passed(get_integer_)) print *,"In strings.f90, get_integer failed."
-     if ( .not. test_passed(str_d_      )) print *,"In strings.f90, str_d failed."
-     if ( .not. test_passed(str_r_      )) print *,"In strings.f90, str_r failed."
-     if ( .not. test_passed(str_i_      )) print *,"In strings.f90, str_i failed."
+     if ( .not. test_passed(get_double_ )) write(error_unit,*) "Test get_double failed."
+     if ( .not. test_passed(get_real_   )) write(error_unit,*) "Test get_real failed."
+     if ( .not. test_passed(get_integer_)) write(error_unit,*) "Test get_integer failed."
+     if ( .not. test_passed(str_d_      )) write(error_unit,*) "Test str_d failed."
+     if ( .not. test_passed(str_r_      )) write(error_unit,*) "Test str_r failed."
+     if ( .not. test_passed(str_i_      )) write(error_unit,*) "Test str_i failed."
   end if
 
 end program
