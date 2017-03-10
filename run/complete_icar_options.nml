@@ -333,6 +333,8 @@
     ! linear_contribution = 1.0,    ! set this to the fraction of the linear perturbation you wish to use (1.0 = full/standard linear field)
     spatial_linear_fields = true,   ! use a spatially variable wind field when calculating the linear wind field
 
+    blocked_flow = false,           ! use the blocked flow parameterization eventually this should be in it's own namelist...
+
     ! NOTE THIS uses a fixed Nsq, not the value specified here yet
     ! rm_N_squared = 9e-5,          ! set this to use a fixed brunt-vaisalla frequency in linear wind calculations
     ! remove_lowres_linear = false, ! attempt to "remove" the low resolution linear winds from the forcing data
