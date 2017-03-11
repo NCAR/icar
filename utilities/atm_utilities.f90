@@ -10,7 +10,7 @@
 !!----------------------------------------------------------
 module mod_atm_utilities
 
-    use icar_constants, only : pi, gravity, Rd, Rw, cp, LH_vaporization
+    use icar_constants, only : pi, gravity, Rd, Rw, cp, LH_vaporization, kMAX_FROUDE, kMIN_FROUDE
     use data_structures
 
     implicit none
@@ -182,6 +182,23 @@ contains
         endif
 
     end function calc_froude
+
+    !>----------------------------------------------------------
+    !! Compute the fraction of blocking winds to apply
+    !!
+    !!----------------------------------------------------------
+    function blocking_fraction(froude) result(fraction)
+        implicit none
+        real, intent(in) :: froude
+        real :: fraction
+
+        real :: gain = 1 / max(kMAX_FROUDE-kMIN_FROUDE, 0.001)
+
+        fraction = (kMAX_FROUDE-froude) * gain
+        fraction = min(max( fraction, 0.), 1.)
+
+    end function blocking_fraction
+
 
     subroutine init_atm_utilities(options)
         implicit none

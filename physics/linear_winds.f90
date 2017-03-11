@@ -941,6 +941,7 @@ contains
         integer :: north, south, east, west, top, bottom, n
         real :: u, v
         real :: dweight, nweight, sweight, curspd, curdir, curnsq, wind_first, wind_second
+        real :: blocked
 
         nx=size(domain%lat,1)
         ny=size(domain%lat,2)
@@ -963,7 +964,7 @@ contains
         if (reverse) print*, "WARNING using fixed nsq for linear wind removal: 3e-6"
         !$omp parallel firstprivate(nx,nxu,ny,nyv,nz, reverse, vsmooth, winsz), default(none), &
         !$omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom), &
-        !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, smoothz, u, v), &
+        !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, smoothz, u, v, blocked), &
         !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
         !$omp shared(domain, spd_values, dir_values, nsq_values, u_LUT, v_LUT, linear_mask), &
         !$omp shared(u_perturbation, v_perturbation, linear_update_fraction, linear_contribution, nsq_calibration), &
@@ -1017,98 +1018,103 @@ contains
         do k=1, nyv
             do j=1, nz
                 do i=1, nxu
-                    uk = min(k,ny)
-                    vi = min(i,nx)
 
-                    !   First find the bounds of the region to average over
-                    west  = max(i - winsz, 1)
-                    east  = min(i + winsz,nx)
-                    bottom= max(j - winsz, 1)
-                    top   = min(j + winsz,nz)
-                    south = max(k - winsz, 1)
-                    north = min(k + winsz,ny)
+                    blocked = blocking_fraction(domain%froude(min(i,nx),min(k,ny)))
+                    if (blocked<1) then
 
-                    n = (((east-west)+1) * ((north-south)+1))
-                    if (reverse) then
-                        u = sum( domain%u(west:east,j,south:north) ) / n
-                        v = sum( domain%v(west:east,j,south:north) ) / n
-                    else
-                        ! smooth the winds vertically first
-                        u = sum(domain%u( i, bottom:top,uk)) / (top-bottom+1)
-                        v = sum(domain%v(vi, bottom:top, k)) / (top-bottom+1)
-                    endif
-                    n = n * ((top-bottom)+1)
+                        uk = min(k,ny)
+                        vi = min(i,nx)
 
-                    ! Calculate the direction of the current grid cell wind
-                    dpos = 1
-                    curdir = calc_direction( u, v )
-                    ! and find the corresponding position in the Look up Table
-                    do step=1, n_dir_values
-                        if (curdir > dir_values(step)) then
-                            dpos = step
-                        endif
-                    end do
+                        !   First find the bounds of the region to average over
+                        west  = max(i - winsz, 1)
+                        east  = min(i + winsz,nx)
+                        bottom= max(j - winsz, 1)
+                        top   = min(j + winsz,nz)
+                        south = max(k - winsz, 1)
+                        north = min(k + winsz,ny)
 
-                    ! Calculate the wind speed of the current grid cell
-                    spos = 1
-                    curspd = calc_speed( u, v )
-                    ! and find the corresponding position in the Look up Table
-                    do step=1, n_spd_values
-                        if (curspd > spd_values(step)) then
-                            spos = step
-                        endif
-                    end do
-
-                    ! Calculate the Brunt-Vaisalla frequency of the current grid cell
-                    !   Then compute the mean in log space
-                    curnsq = sum(log( domain%nsquared(west:east, bottom:top, south:north) ))
-                    curnsq = curnsq / n
-                    !   and find the corresponding position in the Look up Table
-                    npos = 1
-                    do step=1, n_nsq_values
-                        if (curnsq > nsq_values(step)) then
-                            npos = step
-                        endif
-                    end do
-
-                    ! Calculate the weights and the "next" u/v position
-                    ! "next" usually = pos+1 but for edge cases next = 1 or n
-                    dweight = calc_weight(dir_values, dpos, nextd, curdir)
-                    sweight = calc_weight(spd_values, spos, nexts, curspd)
-                    nweight = calc_weight(nsq_values, npos, nextn, curnsq)
-
-                    ! perform linear interpolation between LUT values
-                    if (k<=ny) then
-                        wind_first =      nweight  * (dweight * u_LUT(spos, dpos,npos, i,j,k) + (1-dweight) * u_LUT(spos, nextd,npos, i,j,k))   &
-                                    +  (1-nweight) * (dweight * u_LUT(spos, dpos,nextn,i,j,k) + (1-dweight) * u_LUT(spos, nextd,nextn,i,j,k))
-
-                        wind_second=      nweight  * (dweight * u_LUT(nexts,dpos,npos, i,j,k) + (1-dweight) * u_LUT(nexts,nextd,npos, i,j,k))   &
-                                    +  (1-nweight) * (dweight * u_LUT(nexts,dpos,nextn,i,j,k) + (1-dweight) * u_LUT(nexts,nextd,nextn,i,j,k))
-
-                        u_perturbation(i,j,k) = u_perturbation(i,j,k) * (1-linear_update_fraction) &
-                                    + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
-
+                        n = (((east-west)+1) * ((north-south)+1))
                         if (reverse) then
-                            domain%u(i,j,k) = domain%u(i,j,k) - u_perturbation(i,j,k) * linear_contribution
+                            u = sum( domain%u(west:east,j,south:north) ) / n
+                            v = sum( domain%v(west:east,j,south:north) ) / n
                         else
-                            domain%u(i,j,k) = domain%u(i,j,k) + u_perturbation(i,j,k) * linear_mask(min(nx,i),min(ny,k))
+                            ! smooth the winds vertically first
+                            u = sum(domain%u( i, bottom:top,uk)) / (top-bottom+1)
+                            v = sum(domain%v(vi, bottom:top, k)) / (top-bottom+1)
                         endif
-                    endif
-                    if (i<=nx) then
-                        wind_first =      nweight  * (dweight * v_LUT(spos, dpos,npos, i,j,k) + (1-dweight) * v_LUT(spos, nextd,npos, i,j,k))    &
-                                    +  (1-nweight) * (dweight * v_LUT(spos, dpos,nextn,i,j,k) + (1-dweight) * v_LUT(spos, nextd,nextn,i,j,k))
+                        n = n * ((top-bottom)+1)
 
-                        wind_second=      nweight  * (dweight * v_LUT(nexts,dpos,npos, i,j,k) + (1-dweight) * v_LUT(nexts,nextd,npos, i,j,k))    &
-                                    +  (1-nweight) * (dweight * v_LUT(nexts,dpos,nextn,i,j,k) + (1-dweight) * v_LUT(nexts,nextd,nextn,i,j,k))
+                        ! Calculate the direction of the current grid cell wind
+                        dpos = 1
+                        curdir = calc_direction( u, v )
+                        ! and find the corresponding position in the Look up Table
+                        do step=1, n_dir_values
+                            if (curdir > dir_values(step)) then
+                                dpos = step
+                            endif
+                        end do
 
-                        v_perturbation(i,j,k) = v_perturbation(i,j,k) * (1-linear_update_fraction) &
-                                    + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
+                        ! Calculate the wind speed of the current grid cell
+                        spos = 1
+                        curspd = calc_speed( u, v )
+                        ! and find the corresponding position in the Look up Table
+                        do step=1, n_spd_values
+                            if (curspd > spd_values(step)) then
+                                spos = step
+                            endif
+                        end do
 
-                        if (reverse) then
-                            domain%v(i,j,k) = domain%v(i,j,k) - v_perturbation(i,j,k) * linear_contribution
-                        else
-                            ! for the high res domain, linear_mask should incorporate linear_contribution
-                            domain%v(i,j,k) = domain%v(i,j,k) + v_perturbation(i,j,k) * linear_mask(min(nx,i),min(ny,k))
+                        ! Calculate the Brunt-Vaisalla frequency of the current grid cell
+                        !   Then compute the mean in log space
+                        curnsq = sum(log( domain%nsquared(west:east, bottom:top, south:north) ))
+                        curnsq = curnsq / n
+                        !   and find the corresponding position in the Look up Table
+                        npos = 1
+                        do step=1, n_nsq_values
+                            if (curnsq > nsq_values(step)) then
+                                npos = step
+                            endif
+                        end do
+
+                        ! Calculate the weights and the "next" u/v position
+                        ! "next" usually = pos+1 but for edge cases next = 1 or n
+                        dweight = calc_weight(dir_values, dpos, nextd, curdir)
+                        sweight = calc_weight(spd_values, spos, nexts, curspd)
+                        nweight = calc_weight(nsq_values, npos, nextn, curnsq)
+
+                        ! perform linear interpolation between LUT values
+                        if (k<=ny) then
+                            wind_first =      nweight  * (dweight * u_LUT(spos, dpos,npos, i,j,k) + (1-dweight) * u_LUT(spos, nextd,npos, i,j,k))   &
+                                        +  (1-nweight) * (dweight * u_LUT(spos, dpos,nextn,i,j,k) + (1-dweight) * u_LUT(spos, nextd,nextn,i,j,k))
+
+                            wind_second=      nweight  * (dweight * u_LUT(nexts,dpos,npos, i,j,k) + (1-dweight) * u_LUT(nexts,nextd,npos, i,j,k))   &
+                                        +  (1-nweight) * (dweight * u_LUT(nexts,dpos,nextn,i,j,k) + (1-dweight) * u_LUT(nexts,nextd,nextn,i,j,k))
+
+                            u_perturbation(i,j,k) = u_perturbation(i,j,k) * (1-linear_update_fraction) &
+                                        + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
+
+                            if (reverse) then
+                                domain%u(i,j,k) = domain%u(i,j,k) - u_perturbation(i,j,k) * linear_contribution
+                            else
+                                domain%u(i,j,k) = domain%u(i,j,k) + u_perturbation(i,j,k) * linear_mask(min(nx,i),min(ny,k)) * (1-blocked)
+                            endif
+                        endif
+                        if (i<=nx) then
+                            wind_first =      nweight  * (dweight * v_LUT(spos, dpos,npos, i,j,k) + (1-dweight) * v_LUT(spos, nextd,npos, i,j,k))    &
+                                        +  (1-nweight) * (dweight * v_LUT(spos, dpos,nextn,i,j,k) + (1-dweight) * v_LUT(spos, nextd,nextn,i,j,k))
+
+                            wind_second=      nweight  * (dweight * v_LUT(nexts,dpos,npos, i,j,k) + (1-dweight) * v_LUT(nexts,nextd,npos, i,j,k))    &
+                                        +  (1-nweight) * (dweight * v_LUT(nexts,dpos,nextn,i,j,k) + (1-dweight) * v_LUT(nexts,nextd,nextn,i,j,k))
+
+                            v_perturbation(i,j,k) = v_perturbation(i,j,k) * (1-linear_update_fraction) &
+                                        + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
+
+                            if (reverse) then
+                                domain%v(i,j,k) = domain%v(i,j,k) - v_perturbation(i,j,k) * linear_contribution
+                            else
+                                ! for the high res domain, linear_mask should incorporate linear_contribution
+                                domain%v(i,j,k) = domain%v(i,j,k) + v_perturbation(i,j,k) * linear_mask(min(nx,i),min(ny,k)) * (1-blocked)
+                            endif
                         endif
                     endif
                 end do
@@ -1117,6 +1123,7 @@ contains
         !$omp end do
         !$omp end parallel
     end subroutine spatial_winds
+
 
     !>----------------------------------------------------------
     !! Copy options from the options data structure into module level variables

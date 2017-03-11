@@ -169,6 +169,9 @@ module data_structures
         real, allocatable, dimension(:,:)   :: linear_mask          ! weights to multiply linear wind by (default=1)
         real, allocatable, dimension(:,:)   :: nsq_calibration      ! calibration parameter to multiply brunt-vaisala frequency by [0-]
         complex(C_DOUBLE_COMPLEX), allocatable, dimension(:,:) :: fzs ! FFT(terrain)
+
+        real, allocatable, dimension(:,:)   :: froude               ! store a distributed map of froude numbers
+
     end type linearizable_type
 
 
@@ -266,7 +269,6 @@ module data_structures
                                                                     ! and water vapor mixing ratio                  [kg/kg]
 
         real, allocatable, dimension(:,:)   :: terrain_blocking     ! smoothed terrain delta for froude num calc.   [m]
-        real, allocatable, dimension(:,:)   :: froude               ! store a distributed map of froude numbers
         logical :: blocking_initialized                             ! flag to mark that the terrain_blocking field has been initialized
 
         ! current model time step length (should this be somewhere else?)

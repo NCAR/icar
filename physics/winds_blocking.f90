@@ -3,9 +3,11 @@ module mod_blocking
     use data_structures
     use linear_theory_winds, only : linear_perturbation_at_height, initialize_linear_theory_data, linear_perturbation, add_buffer_topo
     use io_routines,         only : io_write, io_read, file_exists
-    use mod_atm_utilities,   only : calc_u, calc_v, calc_direction, calc_speed, calc_froude, calc_dry_stability
+    use mod_atm_utilities,   only : calc_u, calc_v, calc_direction, calc_speed, &
+                                    calc_froude, calc_dry_stability, blocking_fraction
     use array_utilities,     only : linear_space, calc_weight, check_array_dims
     use string,              only : str
+    use icar_constants,      only : kMAX_FROUDE, kMIN_FROUDE
 
     use fft
     use fftshifter
@@ -129,7 +131,7 @@ contains
                 do i=1, nxu
 
                     froude = domain%froude(min(i,nx), min(k,ny))
-                    if (froude < 1.25) then
+                    if (froude < kMAX_FROUDE) then
 
                         uk = min(k,ny)
                         vi = min(i,nx)
@@ -183,7 +185,7 @@ contains
 
                             ! u_perturbation(i,j,k) = u_perturbation(i,j,k) * (1-linear_update_fraction) &
                             !             + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
-                            u_perturbation(i,j,k) = u_perturbation(i,j,k) * min(max((1.25-froude)*2, 0.), 1.)
+                            u_perturbation(i,j,k) = u_perturbation(i,j,k) * blocking_fraction(froude)
                             domain%u(i,j,k) = domain%u(i,j,k) + u_perturbation(i,j,k) !* linear_mask(min(nx,i),min(ny,k))
                         endif
                         if (i<=nx) then
@@ -195,7 +197,7 @@ contains
                             ! v_perturbation(i,j,k) = v_perturbation(i,j,k) * (1-linear_update_fraction) &
                             !             + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
 
-                            v_perturbation(i,j,k) = v_perturbation(i,j,k) * min(max((1.25-froude)*2, 0.), 1.)
+                            v_perturbation(i,j,k) = v_perturbation(i,j,k) * blocking_fraction(froude)
                             domain%v(i,j,k) = domain%v(i,j,k) + v_perturbation(i,j,k) !* linear_mask(min(nx,i),min(ny,k))
                         endif
                     endif
@@ -324,7 +326,7 @@ contains
                 temp_terrain(x,y) = maxval(terrain_blocking(xs:xe,ys:ye)) - minval(terrain_blocking(xs:xe,ys:ye))
             enddo
         enddo
-        call io_write("initial_terrain_delta.nc","data",temp_terrain)
+        ! call io_write("initial_terrain_delta.nc","data",temp_terrain)
 
         ! finally smooth that terrain delta field slightly as well
         smooth_window = 2
@@ -338,7 +340,7 @@ contains
                 terrain_blocking(x,y) = sum(temp_terrain(xs:xe,ys:ye)) / n
             enddo
         enddo
-        call io_write("terrain_blocking.nc","data",terrain_blocking)
+        ! call io_write("terrain_blocking.nc","data",terrain_blocking)
 
     end subroutine compute_terrain_blocking_heights
 

@@ -20,7 +20,7 @@ module output
     public :: write_domain, output_init
 
     integer, parameter :: ndims = 4     !> number of dimensions in output (x,y,z,t)
-    integer, parameter :: nvars = 41    !> current number of vars = 41
+    integer, parameter :: nvars = 42    !> current number of vars = 41
     !> This will be the netCDF ID for the file and data variable.
     integer :: ncid, temp_id
     !> dimension IDs
@@ -424,6 +424,15 @@ contains
                 varid(33)=temp_id
             endif
 
+            if (options%lt_options%blocked_flow) then
+                call check( nf90_def_var(ncid, "froude", NF90_REAL, dimids, temp_id), trim(err)//"froude" )
+                call check( nf90_put_att(ncid,temp_id,"standard_name","froude_number"))
+                call check( nf90_put_att(ncid,temp_id,"long_name","Froude Number"))
+                call check( nf90_put_att(ncid,temp_id,"description", "Tendency for topographic blocking to occur = U / (Z * N)"))
+                call check( nf90_put_att(ncid,temp_id,"units","(m s-1) (m s-1)-1"))
+                varid(42)=temp_id
+            endif
+
         ! else we are just storing surface fields, create 2D fields for a lot of the 3D variables, but only store the lowest model layer
         else
             call check( nf90_def_var(ncid, "qv", NF90_REAL, dimtwo_time, temp_id), trim(err)//"qv" )
@@ -706,6 +715,10 @@ contains
                 call check( nf90_inq_varid(ncid, "nsq", temp_id), trim(err)//"nsq" )
                 varid(33)=temp_id
             endif
+            if (options%lt_options%blocked_flow) then
+                call check( nf90_inq_varid(ncid, "froude", temp_id), trim(err)//"froude" )
+                varid(42)=temp_id
+            endif
         endif
         call check( nf90_inq_varid(ncid, "u",  temp_id), trim(err)//"u" )
         varid(9)=temp_id
@@ -963,6 +976,9 @@ contains
 
             if (options%physics%windtype==kWIND_LINEAR) then
                 call check( nf90_put_var(ncid, varid(33), reshape(domain%nsquared, output_shape, order=zlast), start_three_D), trim(filename)//":nsquared" )
+            endif
+            if (options%lt_options%blocked_flow) then
+                call check( nf90_put_var(ncid, varid(42), reshape(domain%froude, output_shape, order=zlast), start_three_D), trim(filename)//":froude" )
             endif
         else
             call check( nf90_put_var(ncid, varid(1),  domain%qv(:,1,:), start_two_D),  trim(filename)//":qv" )
