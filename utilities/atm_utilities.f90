@@ -171,8 +171,16 @@ contains
         real, intent(in) :: barrier_height              ! [ m ]
         real, intent(in) :: wind_speed                  ! [ m / s ]
         real :: froude                                  ! []
+        real :: denom
 
-        froude = wind_speed / (barrier_height * brunt_vaisalla_frequency)
+        denom = (barrier_height * brunt_vaisalla_frequency)
+
+        if (denom==0) then
+            froude = 100 ! anything over ~5 is effectively infinite anyway
+        else
+            froude = wind_speed / denom
+        endif
+
     end function calc_froude
 
     subroutine init_atm_utilities(options)

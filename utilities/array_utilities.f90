@@ -33,6 +33,40 @@ contains
 
     end subroutine linear_space
 
+    pure function check_array_dims(input_array, d1, d2, d3, d4, d5) result(passed)
+        implicit none
+        real,    intent(in) :: input_array(:,:,:,:,:)
+        integer, intent(in) :: d1, d2, d3, d4, d5
+        logical :: passed
+
+        passed = .True.
+
+        if (size(input_array,1)/=d1) then
+            passed = .False.
+            return
+        endif
+
+        if (size(input_array,2)/=d2) then
+            passed = .False.
+            return
+        endif
+
+        if (size(input_array,3)/=d3) then
+            passed = .False.
+            return
+        endif
+
+        if (size(input_array,4)/=d4) then
+            passed = .False.
+            return
+        endif
+
+        if (size(input_array,5)/=d5) then
+            passed = .False.
+            return
+        endif
+
+    end function check_array_dims
 
     !>----------------------------------------------------------
     !! Calculate the weights between the positions bestpos and nextpos

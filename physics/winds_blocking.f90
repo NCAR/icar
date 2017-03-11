@@ -2,9 +2,9 @@ module mod_blocking
 
     use data_structures
     use linear_theory_winds, only : linear_perturbation_at_height, initialize_linear_theory_data, linear_perturbation, add_buffer_topo
-    use io_routines,         only : io_write
-    use mod_atm_utilities,   only : calc_u, calc_v, calc_direction, calc_speed
-    use array_utilities,     only : linear_space, calc_weight
+    use io_routines,         only : io_write, io_read, file_exists
+    use mod_atm_utilities,   only : calc_u, calc_v, calc_direction, calc_speed, calc_froude, calc_dry_stability
+    use array_utilities,     only : linear_space, calc_weight, check_array_dims
     use string,              only : str
 
     use fft
@@ -51,9 +51,45 @@ contains
             call initialize_blocking(domain, options)
         endif
 
+        call update_froude_number(domain)
         call spatial_blocking(domain, options%lt_options%stability_window_size)
 
     end subroutine add_blocked_flow
+
+    subroutine update_froude_number(domain)
+        implicit none
+        type(domain_type), intent(inout) :: domain
+
+        integer :: i, j , nx, ny, nz
+        real :: wind_speed, u, v, stability
+        real :: z_top, z_bot, th_top, th_bot
+
+        nx = size(domain%terrain_blocking,1)
+        ny = size(domain%terrain_blocking,2)
+        nz = size(domain%z_layers)
+
+        if (.not.domain%blocking_initialized) then
+            call compute_terrain_blocking_heights(domain%terrain_blocking, domain%terrain)
+            domain%blocking_initialized = .True.
+        endif
+
+        do j=1,ny
+            do i=1,nx
+                u = sum(domain%u(i:i+1,:,j    )) / (nz*2)
+                v = sum(domain%v(i,    :,j:j+1)) / (nz*2)
+                wind_speed = sqrt(u**2 + v**2)
+
+                th_bot = domain%th(i,1,j)
+                th_top = domain%th(i,nz,j)
+                z_bot  = domain%z(i,1,j)
+                z_top  = domain%z(i,nz,j)
+                stability = calc_dry_stability(th_top, th_bot, z_top, z_bot) !sum(domain%nsquared(i,:,j)) / nz
+                stability = sqrt(max(stability, 0.))
+
+                domain%froude(i,j) = calc_froude(stability, domain%terrain_blocking(i,j), wind_speed)
+            enddo
+        enddo
+    end subroutine update_froude_number
 
     !>----------------------------------------------------------
     !! Compute a spatially variable linear wind perturbation
@@ -64,14 +100,14 @@ contains
     !!----------------------------------------------------------
     subroutine spatial_blocking(domain, winsz)
         implicit none
-        class(linearizable_type),intent(inout)::domain
+        type(domain_type),intent(inout)::domain
         integer, intent(in) :: winsz
 
         integer :: nx,nxu, ny,nyv, nz, i,j,k, smoothz
         integer :: uk, vi !store a separate value of i for v and of k for u to we can handle nx+1, ny+1
         integer :: step, dpos, spos, nexts, nextd
         integer :: north, south, east, west, top, bottom, n
-        real :: u, v
+        real :: u, v, froude
         real :: dweight, sweight, curspd, curdir, wind_first, wind_second
 
         nx=size(domain%lat,1)
@@ -83,7 +119,7 @@ contains
         ! $omp parallel firstprivate(nx,nxu,ny,nyv,nz, winsz), default(none), &
         ! $omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom), &
         ! $omp private(spos, dpos, nexts,nextd, n, smoothz, u, v), &
-        ! $omp private(curspd, curdir, sweight, dweight), &
+        ! $omp private(curspd, curdir, sweight, dweight, froude), &
         ! $omp shared(domain, spd_values, dir_values, blocked_u_lut, blocked_v_lut), &
         ! $omp shared(u_perturbation, v_perturbation), &
         ! $omp shared(ndir, nspeed)
@@ -91,72 +127,77 @@ contains
         do k=1, nyv
             do j=1, nz
                 do i=1, nxu
-                    uk = min(k,ny)
-                    vi = min(i,nx)
 
-                    !   First find the bounds of the region to average over
-                    west  = max(i - winsz, 1)
-                    east  = min(i + winsz,nx)
-                    bottom= max(j - winsz, 1)
-                    top   = min(j + winsz,nz)
-                    south = max(k - winsz, 1)
-                    north = min(k + winsz,ny)
+                    froude = domain%froude(min(i,nx), min(k,ny))
+                    if (froude < 1.25) then
 
-                    ! smooth the winds vertically first
-                    u = sum(domain%u( i, bottom:top,uk)) / (top-bottom+1)
-                    v = sum(domain%v(vi, bottom:top, k)) / (top-bottom+1)
+                        uk = min(k,ny)
+                        vi = min(i,nx)
 
-                    n = (((east-west)+1) * ((north-south)+1))
-                    n = n * ((top-bottom)+1)
+                        !   First find the bounds of the region to average over
+                        west  = max(i - winsz, 1)
+                        east  = min(i + winsz,nx)
+                        bottom= max(j - winsz, 1)
+                        top   = min(j + winsz,nz)
+                        south = max(k - winsz, 1)
+                        north = min(k + winsz,ny)
 
-                    ! Calculate the direction of the current grid cell wind
-                    dpos = 1
-                    curdir = calc_direction( u, v )
-                    ! and find the corresponding position in the Look up Table
-                    do step=1, ndir
-                        if (curdir > dir_values(step)) then
-                            dpos = step
+                        ! smooth the winds vertically first
+                        u = sum(domain%u( i, bottom:top,uk)) / (top-bottom+1)
+                        v = sum(domain%v(vi, bottom:top, k)) / (top-bottom+1)
+
+                        n = (((east-west)+1) * ((north-south)+1))
+                        n = n * ((top-bottom)+1)
+
+                        ! Calculate the direction of the current grid cell wind
+                        dpos = 1
+                        curdir = calc_direction( u, v )
+                        ! and find the corresponding position in the Look up Table
+                        do step=1, ndir
+                            if (curdir > dir_values(step)) then
+                                dpos = step
+                            endif
+                        end do
+
+                        ! Calculate the wind speed of the current grid cell
+                        spos = 1
+                        curspd = calc_speed( u, v )
+                        ! and find the corresponding position in the Look up Table
+                        do step=1, nspeed
+                            if (curspd > spd_values(step)) then
+                                spos = step
+                            endif
+                        end do
+
+                        ! Calculate the weights and the "next" u/v position
+                        ! "next" usually = pos+1 but for edge cases next = 1 or n
+                        dweight = calc_weight(dir_values, dpos, nextd, curdir)
+                        sweight = calc_weight(spd_values, spos, nexts, curspd)
+
+                        ! perform linear interpolation between LUT values
+                        if (k<=ny) then
+                            u_perturbation(i,j,k) =      sweight  * (dweight    * blocked_u_lut(i,j,k, dpos, spos)     &
+                                                                  + (1-dweight) * blocked_u_lut(i,j,k, nextd,spos))    &
+                                                   +  (1-sweight) * (dweight    * blocked_u_lut(i,j,k, dpos, nexts)    &
+                                                                  + (1-dweight) * blocked_u_lut(i,j,k, nextd,nexts))
+
+                            ! u_perturbation(i,j,k) = u_perturbation(i,j,k) * (1-linear_update_fraction) &
+                            !             + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
+                            u_perturbation(i,j,k) = u_perturbation(i,j,k) * min(max((1.25-froude)*2, 0.), 1.)
+                            domain%u(i,j,k) = domain%u(i,j,k) + u_perturbation(i,j,k) !* linear_mask(min(nx,i),min(ny,k))
                         endif
-                    end do
+                        if (i<=nx) then
+                            v_perturbation(i,j,k) =      sweight  * (dweight    * blocked_v_lut(i,j,k, dpos, spos)     &
+                                                                  + (1-dweight) * blocked_v_lut(i,j,k, nextd,spos))    &
+                                                   +  (1-sweight) * (dweight    * blocked_v_lut(i,j,k, dpos, nexts)    &
+                                                                  + (1-dweight) * blocked_v_lut(i,j,k, nextd,nexts))
 
-                    ! Calculate the wind speed of the current grid cell
-                    spos = 1
-                    curspd = calc_speed( u, v )
-                    ! and find the corresponding position in the Look up Table
-                    do step=1, nspeed
-                        if (curspd > spd_values(step)) then
-                            spos = step
+                            ! v_perturbation(i,j,k) = v_perturbation(i,j,k) * (1-linear_update_fraction) &
+                            !             + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
+
+                            v_perturbation(i,j,k) = v_perturbation(i,j,k) * min(max((1.25-froude)*2, 0.), 1.)
+                            domain%v(i,j,k) = domain%v(i,j,k) + v_perturbation(i,j,k) !* linear_mask(min(nx,i),min(ny,k))
                         endif
-                    end do
-
-                    ! Calculate the weights and the "next" u/v position
-                    ! "next" usually = pos+1 but for edge cases next = 1 or n
-                    dweight = calc_weight(dir_values, dpos, nextd, curdir)
-                    sweight = calc_weight(spd_values, spos, nexts, curspd)
-
-                    ! perform linear interpolation between LUT values
-                    if (k<=ny) then
-                        u_perturbation(i,j,k) =      sweight  * (dweight    * blocked_u_lut(i,j,k, dpos, spos)     &
-                                                              + (1-dweight) * blocked_u_lut(i,j,k, nextd,spos))    &
-                                               +  (1-sweight) * (dweight    * blocked_u_lut(i,j,k, dpos, nexts)    &
-                                                              + (1-dweight) * blocked_u_lut(i,j,k, nextd,nexts))
-
-                        ! u_perturbation(i,j,k) = u_perturbation(i,j,k) * (1-linear_update_fraction) &
-                        !             + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
-
-                        domain%u(i,j,k) = domain%u(i,j,k) + u_perturbation(i,j,k) !* linear_mask(min(nx,i),min(ny,k))
-                    endif
-                    if (i<=nx) then
-                        v_perturbation(i,j,k) =      sweight  * (dweight    * blocked_v_lut(i,j,k, dpos, spos)     &
-                                                              + (1-dweight) * blocked_v_lut(i,j,k, nextd,spos))    &
-                                               +  (1-sweight) * (dweight    * blocked_v_lut(i,j,k, dpos, nexts)    &
-                                                              + (1-dweight) * blocked_v_lut(i,j,k, nextd,nexts))
-
-                        ! v_perturbation(i,j,k) = v_perturbation(i,j,k) * (1-linear_update_fraction) &
-                        !             + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
-
-                        ! for the high res domain, linear_mask should incorporate linear_contribution
-                        domain%v(i,j,k) = domain%v(i,j,k) + v_perturbation(i,j,k) !* linear_mask(min(nx,i),min(ny,k))
                     endif
                 end do
             end do
@@ -177,7 +218,7 @@ contains
         type(domain_type),  intent(inout) :: domain
         type(options_type), intent(in)    :: options
 
-        integer :: nx, ny, nz
+        integer :: nx, ny, nz, err
         real :: dx
 
         dx = domain%dx
@@ -191,24 +232,115 @@ contains
         minimum_step = options%lt_options%minimum_layer_size
         buffer = options%lt_options%buffer
 
+        call compute_terrain_blocking_heights(domain%terrain_blocking, domain%terrain)
+
         call initialize_directions(options)
         call initialize_speeds(options)
         ! call initialize_linear_theory_data(lt_data, nx+buffer*2, ny+buffer*2, dx)
 
-        allocate(blocked_u_lut(nx+1, nz, ny,   ndir, nspeed))
-        allocate(blocked_v_lut(nx,   nz, ny+1, ndir, nspeed))
-
         allocate(u_perturbation(nx+1,nz,ny  ))
         allocate(v_perturbation(nx,  nz,ny+1))
 
-        call generate_blocked_flow_lut(domain%terrain, domain%z_interface_layers, dx, buffer)
+        err = 0
+        if (file_exists("u_blocked_lut.nc")) then
+            call io_read("u_blocked_lut.nc","data",blocked_u_lut)
+            if (.not.check_array_dims(blocked_u_lut, nx+1, nz, ny,   ndir, nspeed)) then
+                deallocate(blocked_u_lut)
+                err = 1
+            endif
+        else
+            err = 1
+        endif
 
-        call io_write("u_blocked_lut.nc","data",blocked_u_lut)
-        call io_write("v_blocked_lut.nc","data",blocked_v_lut)
+        if (allocated(blocked_u_lut)) then
+            if (file_exists("v_blocked_lut.nc")) then
+                call io_read("v_blocked_lut.nc","data",blocked_v_lut)
+                if (.not.check_array_dims(blocked_v_lut, nx, nz, ny+1,   ndir, nspeed)) then
+                    deallocate(blocked_v_lut)
+                    deallocate(blocked_u_lut)
+                    err = 1
+                endif
+            else
+                err = 1
+            endif
+        endif
+
+        if (err/=0) then
+            allocate(blocked_u_lut(nx+1, nz, ny,   ndir, nspeed))
+            allocate(blocked_v_lut(nx,   nz, ny+1, ndir, nspeed))
+
+            call generate_blocked_flow_lut(domain%terrain, domain%z_interface_layers, dx, buffer)
+
+            call io_write("u_blocked_lut.nc","data",blocked_u_lut)
+            call io_write("v_blocked_lut.nc","data",blocked_v_lut)
+        endif
 
         write(*,*) "Blocking Parameterization Initialized"
+
+        domain%blocking_initialized = .True.
         initialized = .True.
     end subroutine initialize_blocking
+
+    !>-----------------------------------------
+    !> Compute a smoothed terrain varience field for use in Froude number calculation
+    !>
+    !------------------------------------------
+    subroutine compute_terrain_blocking_heights(terrain_blocking, terrain)
+        implicit none
+        real, intent(inout) :: terrain_blocking(:,:)
+        real, intent(in)    :: terrain(:,:)
+
+        integer :: nx, ny, x, y
+        integer :: xs,xe, ys,ye, n
+        integer :: window_size, smooth_window
+        real, allocatable :: temp_terrain(:,:)
+
+        window_size   = 5
+        smooth_window = 1
+        nx = size(terrain,1)
+        ny = size(terrain,2)
+
+        allocate(temp_terrain(nx,ny))
+
+        ! first compute lightly smoothed terrain
+        do y=1,ny
+            ys = max( y - smooth_window, 1)
+            ye = min( y + smooth_window, ny)
+            do x=1,nx
+                xs = max( x - smooth_window, 1)
+                xe = min( x + smooth_window, nx)
+                n = (xe-xs+1) * (ye-ys+1)
+                terrain_blocking(x,y) = sum(terrain(xs:xe,ys:ye)) / n
+            enddo
+        enddo
+
+        ! then compute the range of terrain (max-min) in a given window
+        do y=1,ny
+            ys = max( y - window_size, 1)
+            ye = min( y + window_size, ny)
+            do x=1,nx
+                xs = max( x - window_size, 1)
+                xe = min( x + window_size, nx)
+                temp_terrain(x,y) = maxval(terrain_blocking(xs:xe,ys:ye)) - minval(terrain_blocking(xs:xe,ys:ye))
+            enddo
+        enddo
+        call io_write("initial_terrain_delta.nc","data",temp_terrain)
+
+        ! finally smooth that terrain delta field slightly as well
+        smooth_window = 2
+        do y=1,ny
+            ys = max( y - smooth_window, 1)
+            ye = min( y + smooth_window, ny)
+            do x=1,nx
+                xs = max( x - smooth_window, 1)
+                xe = min( x + smooth_window, nx)
+                n = (xe-xs+1) * (ye-ys+1)
+                terrain_blocking(x,y) = sum(temp_terrain(xs:xe,ys:ye)) / n
+            enddo
+        enddo
+        call io_write("terrain_blocking.nc","data",terrain_blocking)
+
+    end subroutine compute_terrain_blocking_heights
 
     subroutine generate_blocked_flow_lut(terrain, layers, dx, buf_in)
         implicit none

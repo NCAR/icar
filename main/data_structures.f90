@@ -207,7 +207,8 @@ module data_structures
     type, extends(linearizable_type) :: domain_type
         ! 3D atmospheric fields
         real, allocatable, dimension(:,:,:) :: w,ur,vr,wr   ! w, and u,v,w * density
-        real, allocatable, dimension(:,:,:) :: u_cu, v_cu, w_cu   ! u and v fields from convective processes
+        real, allocatable, dimension(:,:,:) :: u_cu, v_cu, w_cu            ! wind from convective processes
+        real, allocatable, dimension(:,:,:) :: u_block, v_block, w_block   ! wind from blocking process
         real, allocatable, dimension(:,:,:) :: w_real       ! real space w on the mass grid (including U,V*dz/dx component) for output
         real, allocatable, dimension(:,:,:) :: nice,nrain   ! number concentration for ice and rain
         real, allocatable, dimension(:,:,:) :: nsnow,ngraupel! number concentration for snow and graupel (used in mp_morrison)
@@ -263,6 +264,10 @@ module data_structures
         real, allocatable, dimension(:,:)   :: u10, v10             ! 10m height u and v winds                      [m/s]
         real, allocatable, dimension(:,:)   :: t2m, q2m             ! 2m height air temperature                     [K]
                                                                     ! and water vapor mixing ratio                  [kg/kg]
+
+        real, allocatable, dimension(:,:)   :: terrain_blocking     ! smoothed terrain delta for froude num calc.   [m]
+        real, allocatable, dimension(:,:)   :: froude               ! store a distributed map of froude numbers
+        logical :: blocking_initialized                             ! flag to mark that the terrain_blocking field has been initialized
 
         ! current model time step length (should this be somewhere else?)
         real::dt
