@@ -731,8 +731,8 @@ contains
         character(len=MAXFILELENGTH) :: err
 
         err="setup_varids: Searching for variable in existing file: "
-        call check( nf90_inq_varid(ncid, "latitude", lat_id), trim(err)//"lat" )
-        call check( nf90_inq_varid(ncid, "longitude", lon_id), trim(err)//"lon" )
+        call check( nf90_inq_varid(ncid, "lat", lat_id), trim(err)//"lat" )
+        call check( nf90_inq_varid(ncid, "lon", lon_id), trim(err)//"lon" )
         call check( nf90_inq_varid(ncid, "time", time_id), trim(err)//"time" )
         call check( nf90_inq_varid(ncid, "qv", temp_id), trim(err)//"qv" )
         varid(1)=temp_id
