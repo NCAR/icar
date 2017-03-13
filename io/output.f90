@@ -267,6 +267,7 @@ contains
         call check( nf90_put_att(ncid,lev_id,"standard_name","height"))
         call check( nf90_put_att(ncid,lev_id,"long_name","height above ground level"))
         call check( nf90_put_att(ncid,lev_id,"description","model level height (AGL)"))
+        call check( nf90_put_att(ncid,lev_id,"units","m"))
 
         if (calendar==GREGORIAN) then
             call check( nf90_put_att(ncid,time_id,"long_name","modified Julian Day"))
