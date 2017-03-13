@@ -147,7 +147,7 @@ contains
         call check( nf90_put_att(ncid,NF90_GLOBAL,"contact","Ethan Gutmann : gutmann@ucar.edu"), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"git",VERSION), trim(err))
 
-        call check( nf90_put_att(ncid,NF90_GLOBAL,"bucket_size",kPRECIP_BUCKET_SIZE), trim(err))
+        ! call check( nf90_put_att(ncid,NF90_GLOBAL,"bucket_size",kPRECIP_BUCKET_SIZE), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"dx",options%dx), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"wind_smoothing",options%smooth_wind_distance), trim(err))
 
@@ -248,13 +248,13 @@ contains
 
         ! Create the variable returns varid of the data variable
         err="Defining Variable: "
-        call check( nf90_def_var(ncid, "latitude", NF90_REAL, dimtwo, lat_id), trim(err)//"lat" )
+        call check( nf90_def_var(ncid, "lat", NF90_REAL, dimtwo, lat_id), trim(err)//"lat" )
         call check( nf90_put_att(ncid,lat_id,"standard_name","latitude"))
         call check( nf90_put_att(ncid,lat_id,"long_name","latitude"))
         call check( nf90_put_att(ncid,lat_id,"units","degrees_north"))
         call check( nf90_put_att(ncid,lat_id,"axis","Y"))
 
-        call check( nf90_def_var(ncid, "longitude", NF90_REAL, dimtwo, lon_id), trim(err)//"lon" )
+        call check( nf90_def_var(ncid, "lon", NF90_REAL, dimtwo, lon_id), trim(err)//"lon" )
         call check( nf90_put_att(ncid,lon_id,"standard_name","longitude"))
         call check( nf90_put_att(ncid,lon_id,"long_name","longitude"))
         call check( nf90_put_att(ncid,lon_id,"units","degrees_east"))
@@ -263,6 +263,13 @@ contains
         call check( nf90_def_var(ncid, "time", NF90_DOUBLE, t_id, time_id), trim(err)//"time" )
         call check( nf90_put_att(ncid,time_id,"standard_name","time"))
         call check( nf90_put_att(ncid,time_id,"UTCoffset","0"))
+
+        ! call check( nf90_def_var(ncid, "z_agl", NF90_REAL, dimtwo, lat_id), trim(err)//"z_agl" )
+        ! call check( nf90_put_att(ncid,lat_id,"standard_name","latitude"))
+        ! call check( nf90_put_att(ncid,lat_id,"long_name","latitude"))
+        ! call check( nf90_put_att(ncid,lat_id,"units","degrees_north"))
+        ! call check( nf90_put_att(ncid,lat_id,"axis","Y"))
+
         if (calendar==GREGORIAN) then
             call check( nf90_put_att(ncid,time_id,"long_name","modified Julian Day"))
             call check( nf90_put_att(ncid,time_id,"units","days since 1858-11-17 00:00:00"))
