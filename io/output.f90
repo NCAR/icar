@@ -425,7 +425,7 @@ contains
             endif
 
             if (options%lt_options%blocked_flow) then
-                call check( nf90_def_var(ncid, "froude", NF90_REAL, dimids, temp_id), trim(err)//"froude" )
+                call check( nf90_def_var(ncid, "froude", NF90_REAL, dimtwo_time, temp_id), trim(err)//"froude" )
                 call check( nf90_put_att(ncid,temp_id,"standard_name","froude_number"))
                 call check( nf90_put_att(ncid,temp_id,"long_name","Froude Number"))
                 call check( nf90_put_att(ncid,temp_id,"description", "Tendency for topographic blocking to occur = U / (Z * N)"))
@@ -978,7 +978,7 @@ contains
                 call check( nf90_put_var(ncid, varid(33), reshape(domain%nsquared, output_shape, order=zlast), start_three_D), trim(filename)//":nsquared" )
             endif
             if (options%lt_options%blocked_flow) then
-                call check( nf90_put_var(ncid, varid(42), reshape(domain%froude, output_shape, order=zlast), start_three_D), trim(filename)//":froude" )
+                call check( nf90_put_var(ncid, varid(42), domain%froude, start_two_D), trim(filename)//":froude" )
             endif
         else
             call check( nf90_put_var(ncid, varid(1),  domain%qv(:,1,:), start_two_D),  trim(filename)//":qv" )
