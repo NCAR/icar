@@ -285,7 +285,7 @@ contains
         ! if we are outputting 3D fields (i.e. not surface fields only)
         if (.not.surface_io_only) then
             call check( nf90_def_var(ncid, "qv", NF90_REAL, dimids, temp_id), trim(err)//"qv" )
-            call check( nf90_put_att(ncid,temp_id,"standard_name","water_vapor_mixing_ratio"))
+            call check( nf90_put_att(ncid,temp_id,"non_standard_name","mass_fraction_of_water_vapor_in_air"))
             call check( nf90_put_att(ncid,temp_id,"long_name","Water Wapor Mixing Ratio"))
             call check( nf90_put_att(ncid,temp_id,"units","kg kg-1"))
             call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
@@ -306,7 +306,7 @@ contains
             varid(3)=temp_id
 
             call check( nf90_def_var(ncid, "qr", NF90_REAL, dimids, temp_id), trim(err)//"qr" )
-            call check( nf90_put_att(ncid,temp_id,"standard_name","mass_fraction_of_rain_with_air"))
+            call check( nf90_put_att(ncid,temp_id,"standard_name","mass_fraction_of_rain_in_air"))
             call check( nf90_put_att(ncid,temp_id,"long_name","Rain water content"))
             call check( nf90_put_att(ncid,temp_id,"WARNING","Could be mixing ratio, not mass fraction w/thompson scheme"))
             call check( nf90_put_att(ncid,temp_id,"units","kg kg-1"))
@@ -314,7 +314,7 @@ contains
             varid(4)=temp_id
 
             call check( nf90_def_var(ncid, "qs", NF90_REAL, dimids, temp_id), trim(err)//"qs" )
-            call check( nf90_put_att(ncid,temp_id,"standard_name","mass_fraction_of_snow_with_air"))
+            call check( nf90_put_att(ncid,temp_id,"standard_name","mass_fraction_of_snow_in_air"))
             call check( nf90_put_att(ncid,temp_id,"long_name","Snow ice content"))
             call check( nf90_put_att(ncid,temp_id,"WARNING","Could be mixing ratio, not mass fraction w/thompson scheme"))
             call check( nf90_put_att(ncid,temp_id,"units","kg kg-1"))
@@ -332,7 +332,7 @@ contains
                 varid(6)=temp_id
 
                 call check( nf90_def_var(ncid, "nr", NF90_REAL, dimids, temp_id), trim(err)//"nr" )
-                call check( nf90_put_att(ncid,temp_id,"standard_name","number_concentration_of_rain_particles_in_air"))
+                call check( nf90_put_att(ncid,temp_id,"non_standard_name","number_concentration_of_rain_particles_in_air"))
                 call check( nf90_put_att(ncid,temp_id,"long_name","Rain number concentration"))
                 call check( nf90_put_att(ncid,temp_id,"units","cm-3"))
                 call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
@@ -354,7 +354,7 @@ contains
                 varid(6)=temp_id
 
                 call check( nf90_def_var(ncid, "nr", NF90_REAL, dimids, temp_id), trim(err)//"nr" )
-                call check( nf90_put_att(ncid,temp_id,"standard_name","number_concentration_of_rain_particles_in_air"))
+                call check( nf90_put_att(ncid,temp_id,"non_standard_name","number_concentration_of_rain_particles_in_air"))
                 call check( nf90_put_att(ncid,temp_id,"long_name","Rain number concentration"))
                 call check( nf90_put_att(ncid,temp_id,"units","cm-3"))
                 call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
@@ -368,14 +368,14 @@ contains
                 varid(8)=temp_id
 
                 call check( nf90_def_var(ncid, "ngraupel", NF90_REAL, dimids, temp_id), trim(err)//"ngraupel" )
-                call check( nf90_put_att(ncid,temp_id,"standard_name","number_concentration_of_graupel_particles_in_air"))
+                call check( nf90_put_att(ncid,temp_id,"non_standard_name","number_concentration_of_graupel_particles_in_air"))
                 call check( nf90_put_att(ncid,temp_id,"long_name","Graupel number concentration"))
                 call check( nf90_put_att(ncid,temp_id,"units","cm-3"))
                 call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
                 varid(38)=temp_id
 
                 call check( nf90_def_var(ncid, "nsnow", NF90_REAL, dimids, temp_id), trim(err)//"nsnow" )
-                call check( nf90_put_att(ncid,temp_id,"standard_name","number_concentration_of_snow_particles_in_air"))
+                call check( nf90_put_att(ncid,temp_id,"non_standard_name","number_concentration_of_snow_particles_in_air"))
                 call check( nf90_put_att(ncid,temp_id,"long_name","Snow number concentration"))
                 call check( nf90_put_att(ncid,temp_id,"units","cm-3"))
                 call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
@@ -454,7 +454,7 @@ contains
 
             if (options%lt_options%blocked_flow) then
                 call check( nf90_def_var(ncid, "froude", NF90_REAL, dimtwo_time, temp_id), trim(err)//"froude" )
-                call check( nf90_put_att(ncid,temp_id,"standard_name","froude_number"))
+                call check( nf90_put_att(ncid,temp_id,"non_standard_name","froude_number"))
                 call check( nf90_put_att(ncid,temp_id,"long_name","Froude Number"))
                 call check( nf90_put_att(ncid,temp_id,"description", "Tendency for topographic blocking to occur = U / (Z * N)"))
                 call check( nf90_put_att(ncid,temp_id,"units","(m s-1) (m s-1)-1"))
@@ -465,7 +465,7 @@ contains
         ! else we are just storing surface fields, create 2D fields for a lot of the 3D variables, but only store the lowest model layer
         else
             call check( nf90_def_var(ncid, "qv", NF90_REAL, dimtwo_time, temp_id), trim(err)//"qv" )
-            call check( nf90_put_att(ncid,temp_id,"standard_name","water_vapor_mixing_ratio"))
+            call check( nf90_put_att(ncid,temp_id,"non_standard_name","mass_fraction_of_water_vapor_in_air"))
             call check( nf90_put_att(ncid,temp_id,"long_name","Water Wapor Mixing Ratio"))
             call check( nf90_put_att(ncid,temp_id,"units","kg kg-1"))
             call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
@@ -544,7 +544,7 @@ contains
 
         call check( nf90_def_var(ncid, "snow", NF90_REAL, dimtwo_time, temp_id), trim(err)//"snow" )
         call check( nf90_put_att(ncid,temp_id,"standard_name","snowfall_amount"))
-        call check( nf90_put_att(ncid,temp_id,"long_name","Combined large scale and convective snow (accumulated)"))
+        call check( nf90_put_att(ncid,temp_id,"long_name","Combined large scale and convective snow liq_equiv. (accumulated)"))
         call check( nf90_put_att(ncid,temp_id,"units","kg m-2"))
         call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
         varid(15)=temp_id
@@ -553,8 +553,8 @@ contains
             .or.(options%physics%microphysics==kMP_MORRISON)        &
             .or.(options%physics%microphysics==kMP_WSM6))           then
             call check( nf90_def_var(ncid, "graupel", NF90_REAL, dimtwo_time, temp_id), trim(err)//"graupel" )
-            call check( nf90_put_att(ncid,temp_id,"standard_name","graupel_amount"))
-            call check( nf90_put_att(ncid,temp_id,"long_name","Combined large scale and convective graupel (accumulated)"))
+            call check( nf90_put_att(ncid,temp_id,"non_standard_name","graupel_amount"))
+            call check( nf90_put_att(ncid,temp_id,"long_name","Combined large scale and convective graupel liq_equiv. (accumulated)"))
             call check( nf90_put_att(ncid,temp_id,"units","kg m-2"))
             call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
             varid(16)=temp_id
@@ -575,7 +575,7 @@ contains
             call check( nf90_def_var(ncid, "clt", NF90_REAL, dimtwo_time, temp_id), trim(err)//"clt" )
             call check( nf90_put_att(ncid,temp_id,"standard_name","cloud_area_fraction"))
             call check( nf90_put_att(ncid,temp_id,"long_name","Fractional cloud cover"))
-            call check( nf90_put_att(ncid,temp_id,"units","[0-1]"))
+            call check( nf90_put_att(ncid,temp_id,"units","1"))
             call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
             varid(22)=temp_id
         endif
@@ -622,14 +622,14 @@ contains
         endif
 
         call check( nf90_def_var(ncid, "u10m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"u10m" )
-        call check( nf90_put_att(ncid,temp_id,"standard_name","eastward_10m_wind_speed"))
+        call check( nf90_put_att(ncid,temp_id,"non_standard_name","eastward_10m_wind_speed"))
         call check( nf90_put_att(ncid,temp_id,"long_name","Eastward wind speed at 2m"))
         call check( nf90_put_att(ncid,temp_id,"units","m s-1"))
         call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
         varid(36)=temp_id
 
         call check( nf90_def_var(ncid, "v10m", NF90_REAL, dimtwo_time, temp_id), trim(err)//"v10m" )
-        call check( nf90_put_att(ncid,temp_id,"standard_name","northward_10m_wind_speed"))
+        call check( nf90_put_att(ncid,temp_id,"non_standard_name","northward_10m_wind_speed"))
         call check( nf90_put_att(ncid,temp_id,"long_name","Northward wind speed at 2m"))
         call check( nf90_put_att(ncid,temp_id,"units","m s-1"))
         call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
