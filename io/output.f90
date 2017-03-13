@@ -30,7 +30,7 @@ module output
     integer :: dimtwo(2)
     integer :: dimtwo_time(3)
     !> variable IDs
-    integer :: lat_id,lon_id,time_id
+    integer :: lat_id,lon_id,time_id, lev_id
     !> array to store ALL var ids
     integer :: varid(nvars)
 
@@ -147,7 +147,6 @@ contains
         call check( nf90_put_att(ncid,NF90_GLOBAL,"contact","Ethan Gutmann : gutmann@ucar.edu"), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"git",VERSION), trim(err))
 
-        ! call check( nf90_put_att(ncid,NF90_GLOBAL,"bucket_size",kPRECIP_BUCKET_SIZE), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"dx",options%dx), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"wind_smoothing",options%smooth_wind_distance), trim(err))
 
@@ -264,11 +263,10 @@ contains
         call check( nf90_put_att(ncid,time_id,"standard_name","time"))
         call check( nf90_put_att(ncid,time_id,"UTCoffset","0"))
 
-        ! call check( nf90_def_var(ncid, "z_agl", NF90_REAL, dimtwo, lat_id), trim(err)//"z_agl" )
-        ! call check( nf90_put_att(ncid,lat_id,"standard_name","latitude"))
-        ! call check( nf90_put_att(ncid,lat_id,"long_name","latitude"))
-        ! call check( nf90_put_att(ncid,lat_id,"units","degrees_north"))
-        ! call check( nf90_put_att(ncid,lat_id,"axis","Y"))
+        call check( nf90_def_var(ncid, "lev", NF90_REAL, dimids(3), lev_id), trim(err)//"lev" )
+        call check( nf90_put_att(ncid,lev_id,"standard_name","height"))
+        call check( nf90_put_att(ncid,lev_id,"long_name","height above ground level"))
+        call check( nf90_put_att(ncid,lev_id,"description","model level height (AGL)"))
 
         if (calendar==GREGORIAN) then
             call check( nf90_put_att(ncid,time_id,"long_name","modified Julian Day"))
@@ -431,11 +429,10 @@ contains
             varid(13)=temp_id
 
             call check( nf90_def_var(ncid, "z", NF90_REAL, dimids(1:3), temp_id), trim(err)//"z" )
-            call check( nf90_put_att(ncid,temp_id,"standard_name","height"))
+            call check( nf90_put_att(ncid,temp_id,"standard_name","height_above_reference_ellipsoid"))
             call check( nf90_put_att(ncid,temp_id,"long_name","Model level height (ASL)"))
             call check( nf90_put_att(ncid,temp_id,"units","m"))
-            call check( nf90_put_att(ncid,temp_id,"axis","Z"))
-            ! call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
+            call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
             varid(20)=temp_id
 
             call check( nf90_def_var(ncid, "rho", NF90_REAL, dimids, temp_id), trim(err)//"rho" )
@@ -507,8 +504,8 @@ contains
             varid(13)=temp_id
 
             call check( nf90_def_var(ncid, "z",  NF90_REAL, dimtwo, temp_id), trim(err)//"z" )
-            call check( nf90_put_att(ncid,temp_id,"standard_name","height"))
-            call check( nf90_put_att(ncid,temp_id,"long_name","Model level height (AGL)"))
+            call check( nf90_put_att(ncid,temp_id,"standard_name","height_above_reference_ellipsoid"))
+            call check( nf90_put_att(ncid,temp_id,"long_name","Model level height (ASL)"))
             call check( nf90_put_att(ncid,temp_id,"units","m"))
             call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
             varid(20)=temp_id
@@ -734,6 +731,7 @@ contains
         call check( nf90_inq_varid(ncid, "lat", lat_id), trim(err)//"lat" )
         call check( nf90_inq_varid(ncid, "lon", lon_id), trim(err)//"lon" )
         call check( nf90_inq_varid(ncid, "time", time_id), trim(err)//"time" )
+        call check( nf90_inq_varid(ncid, "lev", lev_id), trim(err)//"lev" )
         call check( nf90_inq_varid(ncid, "qv", temp_id), trim(err)//"qv" )
         varid(1)=temp_id
         if (.not.surface_io_only) then
@@ -984,7 +982,13 @@ contains
             ! and write constant (in time) variables
             call check( nf90_put_var(ncid, lat_id,    domain%lat), trim(filename)//":Latitude" )
             call check( nf90_put_var(ncid, lon_id,    domain%lon), trim(filename)//":Longitude" )
-            call check( nf90_put_var(ncid, varid(20), reshape(domain%z, output_shape, order=zlast)) , trim(filename)//":Z")
+            call check( nf90_put_var(ncid, lev_id,    domain%z(1,:,1)-domain%terrain(1,1)), trim(filename)//":Level" )
+
+            if (.not.surface_io_only) then
+                call check( nf90_put_var(ncid, varid(20), reshape(domain%z, output_shape, order=zlast)) , trim(filename)//":Z")
+            else
+                call check( nf90_put_var(ncid, varid(20), domain%z(:,1,:)) , trim(filename)//":Z")
+            endif
         endif
 
         ! write the actual data
