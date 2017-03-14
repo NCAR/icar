@@ -362,7 +362,7 @@ contains
         allocate(domain%psfc(nx,ny))                ! model surface pressure
         domain%psfc = domain%p_inter(:,1,:)
 
-        if (options%lt_options%blocked_flow) then
+        if (options%block_options%block_flow) then
             allocate(domain%froude(nx,ny))          ! used to store a smoothed topographic difference field for Froude no.
             domain%froude = 1
             allocate(domain%terrain_blocking(nx,ny))! used to store a smoothed topographic difference field for Froude no.

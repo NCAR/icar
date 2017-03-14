@@ -7,7 +7,6 @@ module mod_blocking
                                     calc_froude, calc_dry_stability, blocking_fraction
     use array_utilities,     only : linear_space, calc_weight, check_array_dims
     use string,              only : str
-    use icar_constants,      only : kMAX_FROUDE, kMIN_FROUDE
 
     use fft
     use fftshifter
@@ -40,6 +39,12 @@ module mod_blocking
     real :: minimum_step = 100
     integer :: buffer = 0
 
+    real    :: blocking_contribution  ! fractional contribution of flow blocking perturbation that is added [0-1]
+    real    :: smooth_froude_distance ! distance (m) over which Froude number is smoothed
+    integer :: nsmooth_gridcells      ! number of grid cells corresponding to smooth_froude_distance/dx
+    integer :: n_smoothing_passes     ! number of times the smoothing window is applied
+    real    :: max_froude             ! max froude no at which flow is only partially blocked above, no blocking
+
     logical :: initialized = .False.
 
 contains
@@ -68,10 +73,8 @@ contains
         real :: z_top, z_bot, th_top, th_bot
         integer :: ymin, ymax, xmin, xmax
         real, allocatable :: temp_froude(:,:)
-        integer :: window, nsmooth
 
-        nsmooth = 3
-        window = 3
+
         nx = size(domain%terrain_blocking,1)
         ny = size(domain%terrain_blocking,2)
         nz = size(domain%z_layers)
@@ -110,19 +113,19 @@ contains
             enddo
         enddo
 
-        do k = 1,nsmooth
+        do k = 1,n_smoothing_passes
             do j=1,ny
-                ymin = max(j-window, 1)
-                ymax = min(j+window, ny)
+                ymin = max(j-nsmooth_gridcells, 1)
+                ymax = min(j+nsmooth_gridcells, ny)
                 do i=1,nx
-                    xmin = max(i-window, 1)
-                    xmax = min(i+window, nx)
+                    xmin = max(i-nsmooth_gridcells, 1)
+                    xmax = min(i+nsmooth_gridcells, nx)
 
                     domain%froude(i,j) = sum(temp_froude(xmin:xmax,ymin:ymax)) / ((xmax-xmin+1) * (ymax-ymin+1))
                 enddo
             enddo
 
-            if (k/=nsmooth) then
+            if (k/=n_smoothing_passes) then
                 temp_froude = domain%froude
             endif
         enddo
@@ -167,7 +170,7 @@ contains
                 do i=1, nxu
 
                     froude = domain%froude(min(i,nx), min(k,ny))
-                    if (froude < kMAX_FROUDE) then
+                    if (froude < max_froude) then
 
                         uk = min(k,ny)
                         vi = min(i,nx)
@@ -224,7 +227,7 @@ contains
 
                             ! u_perturbation(i,j,k) = u_perturbation(i,j,k) * (1-linear_update_fraction) &
                             !             + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
-                            u_perturbation(i,j,k) = u_perturbation(i,j,k) * blocking_fraction(froude) * 0.5
+                            u_perturbation(i,j,k) = u_perturbation(i,j,k) * blocking_fraction(froude) * blocking_contribution
                             domain%u(i,j,k) = domain%u(i,j,k) + u_perturbation(i,j,k) !* linear_mask(min(nx,i),min(ny,k))
                         endif
                         if (i<=nx) then
@@ -236,7 +239,7 @@ contains
                             ! v_perturbation(i,j,k) = v_perturbation(i,j,k) * (1-linear_update_fraction) &
                             !             + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
 
-                            v_perturbation(i,j,k) = v_perturbation(i,j,k) * blocking_fraction(froude) * 0.5
+                            v_perturbation(i,j,k) = v_perturbation(i,j,k) * blocking_fraction(froude) * blocking_contribution
                             domain%v(i,j,k) = domain%v(i,j,k) + v_perturbation(i,j,k) !* linear_mask(min(nx,i),min(ny,k))
                         endif
                     endif
@@ -272,6 +275,12 @@ contains
         fraction_continued_divergence = 0.05
         minimum_step = options%lt_options%minimum_layer_size
         buffer = options%lt_options%buffer
+
+        blocking_contribution   = options%block_options%blocking_contribution
+        smooth_froude_distance  = options%block_options%smooth_froude_distance
+        nsmooth_gridcells       = nint(smooth_froude_distance / options%dx)
+        n_smoothing_passes      = options%block_options%n_smoothing_passes
+        max_froude              = options%block_options%block_fr_max
 
         call compute_terrain_blocking_heights(domain%terrain_blocking, domain%terrain)
 
@@ -320,6 +329,7 @@ contains
 
         domain%blocking_initialized = .True.
         initialized = .True.
+
     end subroutine initialize_blocking
 
     !>-----------------------------------------
@@ -335,11 +345,10 @@ contains
         integer :: xs,xe, ys,ye, n
         integer :: window_size, smooth_window
         real, allocatable :: temp_terrain(:,:)
-        integer :: i, nsmooth
+        integer :: i
 
         window_size   = 5
         smooth_window = 2
-        nsmooth = 4
 
         nx = size(terrain,1)
         ny = size(terrain,2)
@@ -372,7 +381,7 @@ contains
 
         ! finally smooth that terrain delta field a few times as well
         smooth_window = 2
-        do i=1,nsmooth
+        do i=1,n_smoothing_passes
             do y=1,ny
                 ys = max( y - smooth_window, 1)
                 ye = min( y + smooth_window, ny)
@@ -383,7 +392,7 @@ contains
                     terrain_blocking(x,y) = sum(temp_terrain(xs:xe,ys:ye)) / n
                 enddo
             enddo
-            if (i /= nsmooth) then
+            if (i /= n_smoothing_passes) then
                 temp_terrain = terrain_blocking
             endif
         enddo

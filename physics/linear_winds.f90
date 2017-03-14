@@ -1158,7 +1158,8 @@ contains
         use_spatial_linear_fields = options%lt_options%spatial_linear_fields    ! use a spatially varying linear wind perturbation
         use_linear_mask           = options%lt_options%linear_mask              ! use a spatial mask for the linear wind field
         use_nsq_calibration       = options%lt_options%nsq_calibration          ! use a spatial mask to calibrate the nsquared (brunt vaisala frequency) field
-        using_blocked_flow        = options%lt_options%blocked_flow
+
+        using_blocked_flow        = options%block_options%block_flow
 
         ! Look up table generation parameters, range for each parameter, and number of steps to cover that range
         dirmax = options%lt_options%dirmax

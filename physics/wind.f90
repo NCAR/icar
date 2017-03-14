@@ -198,7 +198,7 @@ contains
         endif
 
         ! flow blocking parameterization
-        if (options%lt_options%blocked_flow) then
+        if (options%block_options%block_flow) then
             call add_blocked_flow(domain, options)
         endif
 

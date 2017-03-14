@@ -1460,7 +1460,7 @@ contains
         if (options%physics%windtype==kWIND_LINEAR) then
             domain%nsquared=bc%next_domain%nsquared
         endif
-        if (options%lt_options%blocked_flow) then
+        if (options%block_options%block_flow) then
             domain%froude = bc%next_domain%froude
         endif
 

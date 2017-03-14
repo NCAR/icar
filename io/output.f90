@@ -454,7 +454,7 @@ contains
                 varid(33)=temp_id
             endif
 
-            if (options%lt_options%blocked_flow) then
+            if (options%block_options%block_flow) then
                 call check( nf90_def_var(ncid, "froude", NF90_REAL, dimtwo_time, temp_id), trim(err)//"froude" )
                 call check( nf90_put_att(ncid,temp_id,"non_standard_name","froude_number"))
                 call check( nf90_put_att(ncid,temp_id,"long_name","Froude Number"))
@@ -770,7 +770,7 @@ contains
                 call check( nf90_inq_varid(ncid, "nsq", temp_id), trim(err)//"nsq" )
                 varid(33)=temp_id
             endif
-            if (options%lt_options%blocked_flow) then
+            if (options%block_options%block_flow) then
                 call check( nf90_inq_varid(ncid, "froude", temp_id), trim(err)//"froude" )
                 varid(42)=temp_id
             endif
@@ -1038,7 +1038,7 @@ contains
             if (options%physics%windtype==kWIND_LINEAR) then
                 call check( nf90_put_var(ncid, varid(33), reshape(domain%nsquared, output_shape, order=zlast), start_three_D), trim(filename)//":nsquared" )
             endif
-            if (options%lt_options%blocked_flow) then
+            if (options%block_options%block_flow) then
                 call check( nf90_put_var(ncid, varid(42), domain%froude, start_two_D), trim(filename)//":froude" )
             endif
         else

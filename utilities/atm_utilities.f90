@@ -2,7 +2,9 @@
 !! This module provides basic atmospheric utility functions.
 !!
 !!  Utilities exist to convert u, v into speed and direction (and vice versa)
-!!  and to compute the dry and moist lapse rates and Brunt Vaisalla stabilities
+!!  Compute the dry and moist lapse rates and Brunt Vaisalla stabilities
+!!  Compute the terrain blocking froude number (U / (terrain_height * brunt_vaisalla_frequency ))
+!!  Compute the fraction of flow that is blocked (linear interpolation between froude_max and froude_min)
 !!
 !!  @author
 !!  Ethan Gutmann (gutmann@ucar.edu)
@@ -10,13 +12,14 @@
 !!----------------------------------------------------------
 module mod_atm_utilities
 
-    use icar_constants, only : pi, gravity, Rd, Rw, cp, LH_vaporization, kMAX_FROUDE, kMIN_FROUDE
+    use icar_constants, only : pi, gravity, Rd, Rw, cp, LH_vaporization
     use data_structures
 
     implicit none
 
     real,     private :: N_squared  = 1e-5
     logical,  private :: variable_N = .True.
+    real,     private :: max_froude, min_froude, froude_gain
 
 contains
 
@@ -192,9 +195,7 @@ contains
         real, intent(in) :: froude
         real :: fraction
 
-        real :: gain = 1 / max(kMAX_FROUDE-kMIN_FROUDE, 0.001)
-
-        fraction = (kMAX_FROUDE-froude) * gain
+        fraction = (max_froude-froude) * froude_gain
         fraction = min(max( fraction, 0.), 1.)
 
     end function blocking_fraction
@@ -206,6 +207,10 @@ contains
 
         N_squared   = options%lt_options%N_squared
         variable_N  = options%lt_options%variable_N
+
+        max_froude  = options%block_options%block_fr_max
+        min_froude  = options%block_options%block_fr_min
+        froude_gain = 1 / max(max_froude-min_froude, 0.001)
 
     end subroutine init_atm_utilities
 

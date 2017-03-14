@@ -335,23 +335,35 @@ module data_structures
     ! ------------------------------------------------
 !! ++ trude
     type mp_options_type
-        real :: Nt_c
-        real :: TNO
-        real :: am_s
-        real :: rho_g
-        real :: av_s, bv_s, fv_s, av_i
-        real :: av_g, bv_g
-        real :: Ef_si, Ef_rs, Ef_rg, Ef_ri
-        real :: C_cubes, C_sqrd
-        real :: mu_r
-        real :: t_adjust
+        real    :: Nt_c
+        real    :: TNO
+        real    :: am_s
+        real    :: rho_g
+        real    :: av_s, bv_s, fv_s, av_i
+        real    :: av_g, bv_g
+        real    :: Ef_si, Ef_rs, Ef_rg, Ef_ri
+        real    :: C_cubes, C_sqrd
+        real    :: mu_r
+        real    :: t_adjust
         logical :: Ef_rw_l, EF_sw_l
 
-        integer :: update_interval ! maximum number of seconds between updates
-        integer :: top_mp_level ! top model level to process in the microphysics
-        real :: local_precip_fraction
+        integer :: update_interval  ! maximum number of seconds between updates
+        integer :: top_mp_level     ! top model level to process in the microphysics
+        real    :: local_precip_fraction    ! fraction of grid cell precip to keep local vs distributing to surrounding
     end type mp_options_type
 !! -- trude
+
+    ! ------------------------------------------------
+    ! store Blocked flow options
+    ! ------------------------------------------------
+    type block_options_type
+        real    :: blocking_contribution  ! fractional contribution of flow blocking perturbation that is added [0-1]
+        real    :: smooth_froude_distance ! distance (m) over which Froude number is smoothed
+        integer :: n_smoothing_passes     ! number of times the smoothing window is applied
+        real    :: block_fr_max           ! max froude no at which flow is only partially blocked above, no blocking
+        real    :: block_fr_min           ! min froude no at which flow is only partially blocked below, full blocking
+        logical :: block_flow             ! switch to use or not use the flow blocking parameterization
+    end type block_options_type
 
     ! ------------------------------------------------
     ! store Linear Theory options
@@ -388,8 +400,6 @@ module data_structures
         character(len=MAXFILELENGTH) :: u_LUT_Filename  ! u LUT filename to write
         character(len=MAXFILELENGTH) :: v_LUT_Filename  ! v LUT filename to write
         logical :: overwrite_lt_lut         ! if true any existing LUT file will be over written
-
-        logical :: blocked_flow             ! if true, use a blocking parameterization
 
     end type lt_options_type
 
@@ -449,7 +459,7 @@ module data_structures
 
         ! Filenames for files to read various physics options from
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, adv_options_filename, &
-                                        lsm_options_filename, bias_options_filename
+                                        lsm_options_filename, bias_options_filename, block_options_filename
         character(len=MAXFILELENGTH) :: calendar
 
 
@@ -511,6 +521,9 @@ module data_structures
 
         logical :: use_lt_options
         type(lt_options_type) :: lt_options
+
+        logical :: use_block_options
+        type(block_options_type) :: block_options
 
         logical :: use_adv_options
         type(adv_options_type) :: adv_options
