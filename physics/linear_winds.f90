@@ -52,6 +52,7 @@ module linear_theory_winds
 
     logical :: variable_N
     logical :: smooth_nsq
+    logical :: using_blocked_flow
     real    :: N_squared
 
     !! unfortunately these have to be allocated every call because we could be calling on both the high-res
@@ -962,7 +963,7 @@ contains
         endif
 
         if (reverse) print*, "WARNING using fixed nsq for linear wind removal: 3e-6"
-        !$omp parallel firstprivate(nx,nxu,ny,nyv,nz, reverse, vsmooth, winsz), default(none), &
+        !$omp parallel firstprivate(nx,nxu,ny,nyv,nz, reverse, vsmooth, winsz, using_blocked_flow), default(none), &
         !$omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom), &
         !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, smoothz, u, v, blocked), &
         !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
@@ -1019,7 +1020,11 @@ contains
             do j=1, nz
                 do i=1, nxu
 
-                    blocked = blocking_fraction(domain%froude(min(i,nx),min(k,ny)))
+                    if (using_blocked_flow) then
+                        blocked = blocking_fraction(domain%froude(min(i,nx),min(k,ny)))
+                    else
+                        blocked = 0
+                    endif
                     if (blocked<1) then
 
                         uk = min(k,ny)
@@ -1153,6 +1158,7 @@ contains
         use_spatial_linear_fields = options%lt_options%spatial_linear_fields    ! use a spatially varying linear wind perturbation
         use_linear_mask           = options%lt_options%linear_mask              ! use a spatial mask for the linear wind field
         use_nsq_calibration       = options%lt_options%nsq_calibration          ! use a spatial mask to calibrate the nsquared (brunt vaisala frequency) field
+        using_blocked_flow        = options%lt_options%blocked_flow
 
         ! Look up table generation parameters, range for each parameter, and number of steps to cover that range
         dirmax = options%lt_options%dirmax

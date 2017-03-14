@@ -54,6 +54,7 @@ contains
         endif
 
         call update_froude_number(domain)
+        print*, "adding blocked flow"
         call spatial_blocking(domain, options%lt_options%stability_window_size)
 
     end subroutine add_blocked_flow
@@ -62,35 +63,70 @@ contains
         implicit none
         type(domain_type), intent(inout) :: domain
 
-        integer :: i, j , nx, ny, nz
+        integer :: i, j, k, nx, ny, nz
         real :: wind_speed, u, v, stability
         real :: z_top, z_bot, th_top, th_bot
+        integer :: ymin, ymax, xmin, xmax
+        real, allocatable :: temp_froude(:,:)
+        integer :: window, nsmooth
 
+        nsmooth = 3
+        window = 3
         nx = size(domain%terrain_blocking,1)
         ny = size(domain%terrain_blocking,2)
         nz = size(domain%z_layers)
+
+        allocate(temp_froude(nx,ny))
 
         if (.not.domain%blocking_initialized) then
             call compute_terrain_blocking_heights(domain%terrain_blocking, domain%terrain)
             domain%blocking_initialized = .True.
         endif
 
+        ! use a homogenous background temperature gradient and wind field from the boundaryies
+        th_bot = (sum(domain%th(:, 1,1)) / nx + sum(domain%th(:, 1,ny)) / nx)  / 2
+        th_top = (sum(domain%th(:,nz,1)) / nx + sum(domain%th(:,nz,ny)) / nx)  / 2
+
+        u = (sum(domain%u(:,:,1)) / (nx*nz) + sum(domain%u(:,:,ny)) / (nx*nz)) / 2
+        v = (sum(domain%v(:,:,1)) / (nx*nz) + sum(domain%v(:,:,ny)) / (nx*nz)) / 2
+        wind_speed = sqrt(u**2 + v**2)
+
+        z_bot  = domain%z(1, 1,1)
+        z_top  = domain%z(1,nz,1)
         do j=1,ny
             do i=1,nx
-                u = sum(domain%u(i:i+1,:,j    )) / (nz*2)
-                v = sum(domain%v(i,    :,j:j+1)) / (nz*2)
-                wind_speed = sqrt(u**2 + v**2)
+                ! u = sum(domain%u(i:i+1,:,j    )) / (nz*2)
+                ! v = sum(domain%v(i,    :,j:j+1)) / (nz*2)
+                ! wind_speed = sqrt(u**2 + v**2)
 
-                th_bot = domain%th(i,1,j)
-                th_top = domain%th(i,nz,j)
-                z_bot  = domain%z(i,1,j)
-                z_top  = domain%z(i,nz,j)
+                ! th_bot = domain%th(i,1,j)
+                ! th_top = domain%th(i,nz,j)
+                ! z_bot  = domain%z(i,1,j)
+                ! z_top  = domain%z(i,nz,j)
                 stability = calc_dry_stability(th_top, th_bot, z_top, z_bot) !sum(domain%nsquared(i,:,j)) / nz
                 stability = sqrt(max(stability, 0.))
 
-                domain%froude(i,j) = calc_froude(stability, domain%terrain_blocking(i,j), wind_speed)
+                temp_froude(i,j) = calc_froude(stability, domain%terrain_blocking(i,j), wind_speed)
             enddo
         enddo
+
+        do k = 1,nsmooth
+            do j=1,ny
+                ymin = max(j-window, 1)
+                ymax = min(j+window, ny)
+                do i=1,nx
+                    xmin = max(i-window, 1)
+                    xmax = min(i+window, nx)
+
+                    domain%froude(i,j) = sum(temp_froude(xmin:xmax,ymin:ymax)) / ((xmax-xmin+1) * (ymax-ymin+1))
+                enddo
+            enddo
+
+            if (k/=nsmooth) then
+                temp_froude = domain%froude
+            endif
+        enddo
+
     end subroutine update_froude_number
 
     !>----------------------------------------------------------
@@ -176,6 +212,9 @@ contains
                         dweight = calc_weight(dir_values, dpos, nextd, curdir)
                         sweight = calc_weight(spd_values, spos, nexts, curspd)
 
+                        if ((i==20).and.((k>15).or.(k<25))) then
+                            print*, u, j, froude, blocking_fraction(froude)
+                        endif
                         ! perform linear interpolation between LUT values
                         if (k<=ny) then
                             u_perturbation(i,j,k) =      sweight  * (dweight    * blocked_u_lut(i,j,k, dpos, spos)     &
@@ -185,7 +224,7 @@ contains
 
                             ! u_perturbation(i,j,k) = u_perturbation(i,j,k) * (1-linear_update_fraction) &
                             !             + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
-                            u_perturbation(i,j,k) = u_perturbation(i,j,k) * blocking_fraction(froude)
+                            u_perturbation(i,j,k) = u_perturbation(i,j,k) * blocking_fraction(froude) * 0.5
                             domain%u(i,j,k) = domain%u(i,j,k) + u_perturbation(i,j,k) !* linear_mask(min(nx,i),min(ny,k))
                         endif
                         if (i<=nx) then
@@ -197,7 +236,7 @@ contains
                             ! v_perturbation(i,j,k) = v_perturbation(i,j,k) * (1-linear_update_fraction) &
                             !             + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
 
-                            v_perturbation(i,j,k) = v_perturbation(i,j,k) * blocking_fraction(froude)
+                            v_perturbation(i,j,k) = v_perturbation(i,j,k) * blocking_fraction(froude) * 0.5
                             domain%v(i,j,k) = domain%v(i,j,k) + v_perturbation(i,j,k) !* linear_mask(min(nx,i),min(ny,k))
                         endif
                     endif
@@ -296,9 +335,12 @@ contains
         integer :: xs,xe, ys,ye, n
         integer :: window_size, smooth_window
         real, allocatable :: temp_terrain(:,:)
+        integer :: i, nsmooth
 
         window_size   = 5
-        smooth_window = 1
+        smooth_window = 2
+        nsmooth = 4
+
         nx = size(terrain,1)
         ny = size(terrain,2)
 
@@ -328,17 +370,22 @@ contains
         enddo
         ! call io_write("initial_terrain_delta.nc","data",temp_terrain)
 
-        ! finally smooth that terrain delta field slightly as well
+        ! finally smooth that terrain delta field a few times as well
         smooth_window = 2
-        do y=1,ny
-            ys = max( y - smooth_window, 1)
-            ye = min( y + smooth_window, ny)
-            do x=1,nx
-                xs = max( x - smooth_window, 1)
-                xe = min( x + smooth_window, nx)
-                n = (xe-xs+1) * (ye-ys+1)
-                terrain_blocking(x,y) = sum(temp_terrain(xs:xe,ys:ye)) / n
+        do i=1,nsmooth
+            do y=1,ny
+                ys = max( y - smooth_window, 1)
+                ye = min( y + smooth_window, ny)
+                do x=1,nx
+                    xs = max( x - smooth_window, 1)
+                    xe = min( x + smooth_window, nx)
+                    n = (xe-xs+1) * (ye-ys+1)
+                    terrain_blocking(x,y) = sum(temp_terrain(xs:xe,ys:ye)) / n
+                enddo
             enddo
+            if (i /= nsmooth) then
+                temp_terrain = terrain_blocking
+            endif
         enddo
         ! call io_write("terrain_blocking.nc","data",terrain_blocking)
 

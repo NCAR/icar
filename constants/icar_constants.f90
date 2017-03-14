@@ -18,7 +18,7 @@ module icar_constants
     real,   parameter :: kSMALL_VALUE = 1e-6
 
 ! NOTE THESE ARE PARAMETERS THAT SHOULD BE IN A CONFIG FILE !
-    real,    parameter :: kMAX_FROUDE   = 1
+    real,    parameter :: kMAX_FROUDE   = 0.75
     real,    parameter :: kMIN_FROUDE   = 0.5
 
 ! ------------------------------------------------
