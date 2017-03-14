@@ -267,6 +267,7 @@ contains
         call check( nf90_put_att(ncid,lev_id,"standard_name","height"))
         call check( nf90_put_att(ncid,lev_id,"long_name","height above ground level"))
         call check( nf90_put_att(ncid,lev_id,"description","model level height (AGL)"))
+        call check( nf90_put_att(ncid,lev_id,"positive","up"))
         call check( nf90_put_att(ncid,lev_id,"units","m"))
 
         if (calendar==GREGORIAN) then
@@ -584,7 +585,6 @@ contains
             call check( nf90_def_var(ncid, "rsds", NF90_REAL, dimtwo_time, temp_id), trim(err)//"rsds" )
             call check( nf90_put_att(ncid,temp_id,"standard_name","surface_downwelling_shortwave_flux_in_air"))
             call check( nf90_put_att(ncid,temp_id,"long_name","Shortwave downward radiation energy flux at the surface"))
-            call check( nf90_put_att(ncid,temp_id,"positive","down"))
             call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
             call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
             varid(18)=temp_id
@@ -592,7 +592,6 @@ contains
             call check( nf90_def_var(ncid, "rlds", NF90_REAL, dimtwo_time, temp_id), trim(err)//"rlds" )
             call check( nf90_put_att(ncid,temp_id,"standard_name","surface_downwelling_longwave_flux_in_air"))
             call check( nf90_put_att(ncid,temp_id,"long_name","Longwave downward radiation energy flux at the surface"))
-            call check( nf90_put_att(ncid,temp_id,"positive","down"))
             call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
             call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
             varid(19)=temp_id
@@ -639,7 +638,6 @@ contains
         call check( nf90_def_var(ncid, "hfss", NF90_REAL, dimtwo_time, temp_id), trim(err)//"hfss" )
         call check( nf90_put_att(ncid,temp_id,"standard_name","surface_upward_sensible_heat_flux"))
         call check( nf90_put_att(ncid,temp_id,"long_name","Sensible heat flux"))
-        call check( nf90_put_att(ncid,temp_id,"positive","up"))
         call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
         call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
         varid(23)=temp_id
@@ -647,7 +645,6 @@ contains
         call check( nf90_def_var(ncid, "hfls", NF90_REAL, dimtwo_time, temp_id), trim(err)//"hfls" )
         call check( nf90_put_att(ncid,temp_id,"standard_name","surface_upward_latent_heat_flux"))
         call check( nf90_put_att(ncid,temp_id,"long_name","Latent Heat Flux"))
-        call check( nf90_put_att(ncid,temp_id,"positive","up"))
         call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
         call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
         varid(24)=temp_id
@@ -658,7 +655,6 @@ contains
             call check( nf90_def_var(ncid, "rlus", NF90_REAL, dimtwo_time, temp_id), trim(err)//"rlus" )
             call check( nf90_put_att(ncid,temp_id,"standard_name","surface_upwelling_longwave_flux_in_air"))
             call check( nf90_put_att(ncid,temp_id,"long_name","Longwave upward radiative energy flux from the surface"))
-            call check( nf90_put_att(ncid,temp_id,"positive","up"))
             call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
             call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
             varid(29)=temp_id
@@ -666,7 +662,6 @@ contains
             call check( nf90_def_var(ncid, "hfgs", NF90_REAL, dimtwo_time, temp_id), trim(err)//"hfgs" )
             call check( nf90_put_att(ncid,temp_id,"standard_name","upward_heat_flux_at_ground_level_in_soil"))
             call check( nf90_put_att(ncid,temp_id,"long_name","Ground Heat Flux"))
-            call check( nf90_put_att(ncid,temp_id,"positive","up"))
             call check( nf90_put_att(ncid,temp_id,"units","W m-2"))
             call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
             varid(25)=temp_id
