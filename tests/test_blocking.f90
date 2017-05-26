@@ -47,7 +47,7 @@ program test_blocking
         z_layers(i) = z_layers(i-1) + z_layers(i)
     enddo
 
-    call compute_blocked_flow_for_wind(u, v, z_layers, dx, fft_terrain, lt_data, ufield, vfield)
+    call compute_blocked_flow_for_wind(u, v, z_layers, dx, fft_terrain, lt_data, ufield, vfield, debug=.False.)
 
     call io_write("ideal_terrain.nc","data",terrain)
     call io_write("ufield.nc", "data", ufield)
