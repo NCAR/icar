@@ -389,6 +389,7 @@ contains
             dimstart=1
         endif
 
+        diminfo = 1
         ! Read the dimension lengths
         call io_getdims(filename,varname,diminfo)
         allocate(data_in(diminfo(2),diminfo(3)))
@@ -412,6 +413,8 @@ contains
                                     [ (diminfo(i+1), i=1,diminfo(1)) ],&    ! count=n or 1 created through an implied do loop
                                     [ (1,            i=1,diminfo(1)) ] ), & ! for all dims, stride = 1      " implied do loop
                                     trim(filename)//":"//trim(varname)) !pass varname to check so it can give us more info
+        elseif (diminfo(1)==1) then
+            call check(nf90_get_var(ncid, varid, data_in(:,1)),trim(filename)//":"//trim(varname))
         else
             call check(nf90_get_var(ncid, varid, data_in),trim(filename)//":"//trim(varname))
         endif
@@ -1187,7 +1190,7 @@ contains
             print *, trim(nf90_strerror(status))
             if(present(extra)) then
                 ! print any optionally provided context
-                print*, trim(extra)
+                write(*,*) trim(extra)
             endif
             ! STOP the program execution
             stop "Stopped"
