@@ -80,14 +80,17 @@ endif
 ifeq ($(patsubst hexagon%,hexagon,$(NODENAME)), hexagon)
 	NODENAME=hexagon
 endif
+ifeq ($(patsubst cheyenne%,cheyenne,$(NODENAME)), cheyenne)
+	NODENAME=cheyenne
+endif
 
 
 # on hexagon (uib computer)
 ifeq ($(NODENAME), hexagon)
 	F90=ftn
 	FFTW_PATH = /home/gfi/pbo003/Libraries/FFTW/fftw-3.3.4
-	LIBFFT = ${FFTW_PATH}/lib
-	INCFFT = ${FFTW_PATH}/include
+	LIBFFT = -L${FFTW_PATH}/lib -lm -lfftw3
+	INCFFT = -I${FFTW_PATH}/include
 	NCDF_PATH = /opt/cray/netcdf/default/cray/83
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
@@ -97,16 +100,16 @@ endif
 # may want to add -Wl,-no_compact_unwind to suppress some warnings
 ifeq ($(NODENAME), Nomad.local)
 	F90=gfortran
-	LIBFFT=/Users/gutmann/usr/local/lib
-	INCFFT=/Users/gutmann/usr/local/include
+	LIBFFT=-L/Users/gutmann/usr/local/lib -lm -lfftw3
+	INCFFT=-I/Users/gutmann/usr/local/include
 	NCDF_PATH = /usr/local/
 	LIBNETCDF = -L/usr/local/gfortran/lib -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
 endif
 ifeq ($(NODENAME), dablam.rap.ucar.edu)
 	F90=gfortran
-	LIBFFT=/usr/local/lib
-	INCFFT=/usr/local/include
+	LIBFFT=-L/usr/local/lib -lm -lfftw3
+	INCFFT=-I/usr/local/include
 	NCDF_PATH = /usr/local
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
@@ -122,14 +125,14 @@ ifeq ($(NODENAME),hydro-c1)
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
 
-	LIBFFT=/home/gutmann/.usr/local/lib
-	INCFFT=/home/gutmann/.usr/local/include
+	LIBFFT=-L/home/gutmann/.usr/local/lib -lm -lfftw3
+	INCFFT=-I/home/gutmann/.usr/local/include
 endif
 # on yellowstone:
 ifeq ($(LMOD_FAMILY_COMPILER),gnu)
 	F90=gfortran
-	LIBFFT=/glade/u/home/gutmann/usr/local/lib
-	INCFFT=/glade/u/home/gutmann/usr/local/include
+	LIBFFT = -L/glade/u/home/gutmann/usr/local/lib -lm -lfftw3
+	INCFFT = -I/glade/u/home/gutmann/usr/local/include
 	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/gnu/4.8.2
 	# note this works for almost all versions of gfortran EXCEPT 4.8.2... the default version
 	NCDF_PATH=/glade/apps/opt/netcdf/4.3.3.1/gnu/$(GNU_MAJOR_VERSION).$(GNU_MINOR_VERSION)
@@ -140,24 +143,33 @@ ifeq ($(LMOD_FAMILY_COMPILER),gnu)
 endif
 ifeq ($(LMOD_FAMILY_COMPILER),intel)
 	F90=ifort
-	LIBFFT=/glade/u/home/gutmann/usr/local/lib
-	INCFFT=/glade/u/home/gutmann/usr/local/include
+	LIBFFT = -L/glade/u/home/gutmann/usr/local/lib -lm -lfftw3
+	INCFFT = -I/glade/u/home/gutmann/usr/local/include
 	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/intel/default
 	LIBNETCDF = $(LIB_NCAR) #-L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = $(INC_NCAR) #-I$(NCDF_PATH)/include # netcdf includes are setup by the yellowstone module system
 endif
 ifeq ($(LMOD_FAMILY_COMPILER),pgi)
 	F90=pgf90
-	LIBFFT=/glade/u/home/gutmann/usr/local/lib
-	INCFFT=/glade/u/home/gutmann/usr/local/include
+	LIBFFT = -L/glade/u/home/gutmann/usr/local/lib -lm -lfftw3
+	INCFFT = -I/glade/u/home/gutmann/usr/local/include
 	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/pgi/default
 	LIBNETCDF = -rpath $(NCDF_PATH)/lib -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf # if using a compiler for which netcdf includes are
 	INCNETCDF = -I$(NCDF_PATH)/include # NOT setup correctly by the yellowstone module system
 endif
 
+ifeq ($(NODENAME), cheyenne)
+	F90=$(FC)
+	FFTW_PATH = /glade/u/home/gutmann/usr/local
+	LIBFFT = -L$(FFTW_PATH)/lib -lm -lfftw3
+	INCFFT = -I$(FFTW_PATH)/include
+	NCDF_PATH = $(NETCDF)
+	LIBNETCDF = -L$(NCAR_LDFLAGS_NETCDF) $(NCAR_LIBS_NETCDF)
+	INCNETCDF = -I$(NCAR_INC_NETCDF)
+endif
+
 # get GIT version info
 GIT_VERSION := $(shell git describe --long --dirty --all --always | sed -e's/heads\///')
-
 
 ########################################################################################
 #
@@ -165,10 +177,6 @@ GIT_VERSION := $(shell git describe --long --dirty --all --always | sed -e's/hea
 # now we can set up compiler specific flags (may be overwritten later if MODE is set)
 #
 ########################################################################################
-# Consider adding vectorization "encouragement" to the compile lines
-#  ifort should vectorize to SSE with -fast, may need -axAVX to add AVX
-#  gcc should vectorize with -Ofast (adds -ftree-vectorize) and optionally -mavx -march=corei7-avx
-#  could also add alignment in ifort with -align array64byte not sure why that isn't included in -fast
 
 # GNU fortran
 ifeq ($(F90), gfortran)
@@ -179,8 +187,8 @@ ifeq ($(F90), gfortran)
 endif
 # Intel fortran
 ifeq ($(F90), ifort)
-	COMP=-c -u -openmp -liomp5 -O3 -no-prec-div -xHost -ftz -fpe0 # -check stack,bounds -fp-stack-check
-	LINK= -openmp -liomp5
+	COMP=-c -u -qopenmp -liomp5 -O3 -no-prec-div -xHost -ftz -fpe0 # -check stack,bounds -fp-stack-check
+	LINK= -qopenmp -liomp5
 	PREPROC=-fpp
 	MODOUTPUT=-module $(BUILD)
 endif
@@ -245,8 +253,8 @@ endif
 ifeq ($(MODE), debugompslow)
 	ifeq ($(F90), ifort)
 		# COMP= -openmp -liomp5 -debug -debug-parameters all -traceback -ftrapuv -g -fpe0 -c -u -check all -check noarg_temp_created -CB
-		COMP= -openmp -liomp5 -debug -c -u	-fpe0 -traceback -check all -check noarg_temp_created -fp-stack-check
-		LINK= -openmp -liomp5
+		COMP= -qopenmp -liomp5 -debug -c -u	-fpe0 -traceback -check all -check noarg_temp_created -fp-stack-check
+		LINK= -qopenmp -liomp5
 	endif
 	ifeq ($(F90), gfortran)
 		COMP= -fopenmp -lgomp -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
@@ -265,8 +273,8 @@ ifeq ($(MODE), debugompslow)
 endif
 ifeq ($(MODE), debugomp)
 	ifeq ($(F90), ifort)
-		COMP= -openmp -liomp5 -debug -c -O3 -u -traceback -fpe0 -ftz -xHost # -fast-transcendentals -check all -check noarg_temp_created -fpe0
-		LINK= -openmp -liomp5
+		COMP= -qopenmp -liomp5 -debug -c -O3 -u -traceback -fpe0 -ftz -xHost # -fast-transcendentals -check all -check noarg_temp_created -fpe0
+		LINK= -qopenmp -liomp5
 	endif
 	ifeq ($(F90), gfortran)
 		COMP= -fopenmp -lgomp -c -O1 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
@@ -308,8 +316,20 @@ endif
 ###################################################################
 # copy required libraries into a directory accessible on compute nodes and set LD_RUN_PATH e.g.
 # export LD_RUN_PATH=$LD_RUN_PATH:/path/to/netcdf/libraries/lib:/path/to/fftw/libraries/lib
-LFLAGS=$(LINK) $(PROF) ${LIBNETCDF} -L${LIBFFT} -lm -lfftw3
-FFLAGS=$(COMP) $(PROF) ${INCNETCDF} -I${INCFFT} ${MODOUTPUT}
+LFLAGS=$(LINK) $(PROF) ${LIBNETCDF} ${LIBFFT}
+FFLAGS=$(COMP) $(PROF) ${INCNETCDF} ${INCFFT} ${MODOUTPUT}
+
+
+$(info $$NODENAME    = ${NODENAME})
+$(info $$FC          = ${F90})
+$(info $$NCDF_PATH   = ${NCDF_PATH})
+$(info $$GIT_VERSION = ${GIT_VERSION})
+$(info $$COMP        = ${COMP})
+$(info $$LINK        = ${LINK})
+$(info $$PREPROC     = ${PREPROC})
+$(info $$MODOUTPUT   = ${MODOUTPUT})
+$(info $$MODE        = ${MODE})
+
 
 # Model directories
 BUILD=build/
