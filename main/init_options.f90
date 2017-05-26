@@ -538,6 +538,9 @@ contains
         use_bias_correction=.False.
         bias_options_filename = filename
 
+        use_block_options=.False.
+        block_options_filename = filename
+
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=parameters)
         close(name_unit)
@@ -653,6 +656,9 @@ contains
 
         options%use_bias_correction = use_bias_correction
         options%bias_options_filename  = bias_options_filename
+
+        options%use_block_options = use_block_options
+        options%block_options_filename  = block_options_filename
 
         ! options are updated when complete
     end subroutine parameters_namelist
