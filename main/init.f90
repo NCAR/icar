@@ -20,7 +20,7 @@ module init
     use data_structures
     use io_routines,                only : io_read, &
                                            io_write3d,io_write3di, io_write
-    use geo,                        only : geo_LUT, geo_interp, geo_interp2d
+    use geo,                        only : geo_LUT, geo_interp, geo_interp2d, standardize_coordinates
     use vertical_interpolation,     only : vLUT, vinterp
     use microphysics,               only : mp_init
     use advection,                  only : adv_init
@@ -599,7 +599,7 @@ contains
         call io_read(options%init_conditions_file,options%hgt_hi,domain%terrain,1)
         call io_read(options%init_conditions_file,options%lat_hi,domain%lat,1)
         call io_read(options%init_conditions_file,options%lon_hi,domain%lon,1)
-        call convert_longitudes(domain%lon)
+        call standardize_coordinates(domain)
 
         !  because u/vlat/lon_hi are optional, we calculated them by interplating from the mass lat/lon if necessary
         if (options%ulat_hi/="") then
@@ -612,7 +612,8 @@ contains
         else
             call interpolate_in_x(domain%lon,domain%u_geo%lon)
         endif
-        call convert_longitudes(domain%u_geo%lon)
+
+        call standardize_coordinates(domain%u_geo)
 
         if (options%vlat_hi/="") then
             call io_read(options%init_conditions_file,options%vlat_hi,domain%v_geo%lat,1)
@@ -624,7 +625,7 @@ contains
         else
             call interpolate_in_y(domain%lon,domain%v_geo%lon)
         endif
-        call convert_longitudes(domain%v_geo%lon)
+        call standardize_coordinates(domain%v_geo)
 
         if (options%landvar/="") then
             call io_read(options%init_conditions_file,options%landvar,domain%landmask,1)
@@ -774,13 +775,13 @@ contains
         ! these variables are required for any boundary/forcing file type
         call io_read(options%boundary_files(1),options%latvar,boundary%lat)
         call io_read(options%boundary_files(1),options%lonvar,boundary%lon)
-        call convert_longitudes(boundary%lon)
+        call standardize_coordinates(boundary)
         call io_read(options%boundary_files(1),options%ulat,boundary%u_geo%lat)
         call io_read(options%boundary_files(1),options%ulon,boundary%u_geo%lon)
-        call convert_longitudes(boundary%u_geo%lon)
+        call standardize_coordinates(boundary%u_geo)
         call io_read(options%boundary_files(1),options%vlat,boundary%v_geo%lat)
         call io_read(options%boundary_files(1),options%vlon,boundary%v_geo%lon)
-        call convert_longitudes(boundary%v_geo%lon)
+        call standardize_coordinates(boundary%v_geo)
         call io_read(options%boundary_files(1),options%hgtvar,boundary%terrain)
 
         ! read in the vertical coordinate
@@ -868,7 +869,7 @@ contains
         call io_read(options%ext_wind_files(1),options%hgt_hi,bc%ext_winds%terrain,1)
         call io_read(options%ext_wind_files(1),options%latvar,bc%ext_winds%lat)
         call io_read(options%ext_wind_files(1),options%lonvar,bc%ext_winds%lon)
-        call convert_longitudes(bc%ext_winds%lon)
+        call standardize_coordinates(bc%ext_winds)
 
         ! ulat_hi and vlat_hi are optional, if they are not supplied interpolate the mass lat/lon grid
         if (options%ulat_hi/="") then
@@ -881,7 +882,7 @@ contains
         else
             call interpolate_in_x(bc%ext_winds%lon,bc%ext_winds%u_geo%lon)
         endif
-        call convert_longitudes(bc%ext_winds%u_geo%lon)
+        call standardize_coordinates(bc%ext_winds%u_geo)
 
         if (options%vlat_hi/="") then
             call io_read(options%ext_wind_files(1),options%vlat_hi,bc%ext_winds%v_geo%lat,1)
@@ -893,7 +894,7 @@ contains
         else
             call interpolate_in_y(bc%ext_winds%lon,bc%ext_winds%v_geo%lon)
         endif
-        call convert_longitudes(bc%ext_winds%v_geo%lon)
+        call standardize_coordinates(bc%ext_winds%v_geo)
 
 
         write(*,*) "Setting up ext wind geoLUTs"
