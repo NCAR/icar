@@ -69,7 +69,7 @@ contains
             elseif (error==-1) then
                 write(*,*) "Options filename = ", trim(options_file), " ...<cutoff>"
                 write(*,*) "Maximum filename length = ", MAXFILELENGTH
-                stop("ERROR: options filename too long")
+                stop ("ERROR: options filename too long")
             endif
         else
             options_file="icar_options.nml"

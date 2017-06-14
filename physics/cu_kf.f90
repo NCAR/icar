@@ -1886,7 +1886,7 @@ CONTAINS
         ERR2=(QFNL-QINIT)*100./QINIT                                  
 !     WRITE(98,1110)QINIT,QFNL,ERR2                                  
 !        IF(ABS(ERR2).GT.0.05)STOP 'QVERR'                           
-        IF(ABS(ERR2).GT.0.05) stop( 'module_cu_kf.F: QVERR' )
+        IF(ABS(ERR2).GT.0.05) stop ( 'module_cu_kf.F: QVERR' )
         RELERR=ERR2*QINIT/(PPTFLX*TIMEC+1.E-10)                   
 !     WRITE(98,1120)RELERR                                       
 !     WRITE(98,*)'TDER, CPR, USR, TRPPT =',                     
