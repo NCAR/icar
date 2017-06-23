@@ -391,7 +391,7 @@ contains
         
         if (options%physics%landsurface==kLSM_SIMPLE) then
             write(*,*) "    Simple LSM (may not work?)"
-            stop("Simple LSM not settup, choose a different LSM options")
+            stop ("Simple LSM not settup, choose a different LSM options")
             call lsm_simple_init(domain,options)
         endif
         ! Noah Land Surface Model

@@ -6,7 +6,7 @@
 #			clean: 		removes objects and module files
 #			allclean: 	makes clean and removes executables
 #			cleanall: 	alias for allclean
-#			tests: 		makes various unit tests (not all work)
+#			test: 		makes various unit tests (not all work)
 #			icar: 		makes the primary model
 #			doc: 		make doxygen documentation in docs/html (requires doxygen)
 #
@@ -35,6 +35,7 @@
 # Dependencies: fftw, netcdf
 #	FFTW is available here: http://www.fftw.org/
 #		FFTW is a C library with fortran headers
+# JPH version 3 needed.
 #	netcdf is available here: http://www.unidata.ucar.edu/software/netcdf/
 #		netcdf is a fortran library and must be compiled with the same fortran
 #		compiler you are using to be compatible
@@ -60,10 +61,14 @@ F90=gfortran
 RM=/bin/rm
 CP=/bin/cp
 DOXYGEN=doxygen
-FFTW_PATH=/usr/local
+##JPH change default fftw path
+FFTW_PATH = ${FFTW}
+##FFTW_PATH=/usr/local
 LIBFFT = ${FFTW_PATH}/lib
 INCFFT = ${FFTW_PATH}/include
-NCDF_PATH = /usr/local
+##JPH change default netcdf path
+NCDF_PATH = ${NETCDF}
+##NCDF_PATH = #/usr/local 
 LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 INCNETCDF = -I$(NCDF_PATH)/include
 
@@ -475,7 +480,7 @@ $(BUILD)vinterp.o: $(UTIL)vinterp.f90 $(BUILD)data_structures.o
 ###################################################################
 
 $(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_thompson.o $(BUILD)mp_simple.o \
-					$(BUILD)mp_morrison.o $(BUILD)data_structures.o $(BUILD)mp_wsm6.o
+					$(BUILD)mp_morrison.o $(BUILD)data_structures.o $(BUILD)mp_wsm6.o $(BUILD)time.o
 	${F90} ${FFLAGS} $(PHYS)mp_driver.f90 -o $(BUILD)mp_driver.o
 
 $(BUILD)mp_morrison.o:$(PHYS)mp_morrison.f90 $(BUILD)data_structures.o
