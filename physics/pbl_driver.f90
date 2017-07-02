@@ -93,7 +93,7 @@ contains
         endif
         
         if (options%physics%boundarylayer==kPBL_YSU) then
-            stop( "YSU PBL not implemented yet")
+            stop ( "YSU PBL not implemented yet")
 !             call ysu(domain%Um, domain%Vm,   domain%th, domain%t,               &
 !                      domain%qv, domain%cloud,domain%ice,                        &
 !                      domain%p,domain%p_inter,domain%pii,                        &

@@ -6,7 +6,7 @@
 #			clean: 		removes objects and module files
 #			allclean: 	makes clean and removes executables
 #			cleanall: 	alias for allclean
-#			tests: 		makes various unit tests (not all work)
+#			test: 		makes various unit tests (not all work)
 #			icar: 		makes the primary model
 #			doc: 		make doxygen documentation in docs/html (requires doxygen)
 #
@@ -32,17 +32,18 @@
 # LIBNETCDF	 : location of netdcdf libraries	default = compiler/machine dependant /usr/local/lib
 # INCNETCDF	 : location of netcdf headers		default = compiler/machine dependant /usr/local/include
 #
-# Dependencies: fftw, netcdf
+# Dependencies: fftw (v3), netcdf (v4)
 #	FFTW is available here: http://www.fftw.org/
 #		FFTW is a C library with fortran headers
 #	netcdf is available here: http://www.unidata.ucar.edu/software/netcdf/
-#		netcdf is a fortran library and must be compiled with the same fortran
-#		compiler you are using to be compatible
+#		NB Requires the same compiler be used to compile the Fortran interface as is used to compile ICAR
 
 ###################################################################
 #  Specify where you want the resulting executable installed
 ###################################################################
-INSTALLDIR=~/bin/
+ifndef INSTALLDIR
+	INSTALLDIR=~/bin/
+endif
 
 ###################################################################
 #	Various compiler specific flags, may need to edit
@@ -53,17 +54,30 @@ INSTALLDIR=~/bin/
 # compiled binary and you don't need to set LD_LIBRARY_PATH at runtime.
 
 ########################################################################################
-# These are default parameters
+# These are default parameters, also tries to load from environment variables
 # They are overwritten with machine specific options below if known
 ########################################################################################
-F90=gfortran
 RM=/bin/rm
 CP=/bin/cp
+# doxygen only required to enable "make doc"
 DOXYGEN=doxygen
-FFTW_PATH=/usr/local
+
+ifndef FC
+	FC=gfortran
+endif
+F90=${FC}
+
+ifndef FFTW
+	FFTW=/usr/local
+endif
+FFTW_PATH = ${FFTW}
 LIBFFT = ${FFTW_PATH}/lib
 INCFFT = ${FFTW_PATH}/include
-NCDF_PATH = /usr/local
+
+ifndef NETCDF
+	NETCDF=/usr/local
+endif
+NCDF_PATH = ${NETCDF}
 LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 INCNETCDF = -I$(NCDF_PATH)/include
 
@@ -475,7 +489,7 @@ $(BUILD)vinterp.o: $(UTIL)vinterp.f90 $(BUILD)data_structures.o
 ###################################################################
 
 $(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_thompson.o $(BUILD)mp_simple.o \
-					$(BUILD)mp_morrison.o $(BUILD)data_structures.o $(BUILD)mp_wsm6.o
+					$(BUILD)mp_morrison.o $(BUILD)data_structures.o $(BUILD)mp_wsm6.o $(BUILD)time.o
 	${F90} ${FFLAGS} $(PHYS)mp_driver.f90 -o $(BUILD)mp_driver.o
 
 $(BUILD)mp_morrison.o:$(PHYS)mp_morrison.f90 $(BUILD)data_structures.o
@@ -483,7 +497,7 @@ $(BUILD)mp_morrison.o:$(PHYS)mp_morrison.f90 $(BUILD)data_structures.o
 
 $(BUILD)mp_wsm6.o:$(PHYS)mp_wsm6.f90 $(BUILD)wrf_constants.o
 	${F90} ${FFLAGS} $(PHYS)mp_wsm6.f90 -o $(BUILD)mp_wsm6.o
-	
+
 $(BUILD)mp_thompson.o:$(PHYS)mp_thompson.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)mp_thompson.f90 -o $(BUILD)mp_thompson.o
 
@@ -589,7 +603,7 @@ $(BUILD)fftshift.o:$(UTIL)fftshift.f90 $(BUILD)fftw.o
 ###################################################################
 $(BUILD)data_structures.o:$(MAIN)data_structures.f90 $(BUILD)icar_constants.o
 	${F90} ${FFLAGS} $(MAIN)data_structures.f90 -o $(BUILD)data_structures.o
-	
+
 $(BUILD)wrf_constants.o:$(CONST)wrf_constants.f90
 	${F90} ${FFLAGS} $(CONST)wrf_constants.f90 -o $(BUILD)wrf_constants.o
 

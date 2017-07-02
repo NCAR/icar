@@ -231,7 +231,7 @@ contains
             allocate(domain%w_cu(nx,nz,ny))         ! vertical wind [grid/s]
             domain%w_cu = 0
         endif
-        
+
         allocate(domain%th(nx,nz,ny))               ! potential temperature [K]
         domain%th = 280
         allocate(domain%qv(nx,nz,ny))               ! water vapor [kg/kg]
@@ -387,14 +387,14 @@ contains
         allocate(output%z(nxo,nzo,nyo))
         if (interpolate_dim==1) then
             if ((nxo/=(nxi+1)).or.(nyo/=nyi).or.(nzo/=nzi)) then
-                stop("Error copying z levels from mass grid to U grid, dimensions don't match")
+                stop ("Error copying z levels from mass grid to U grid, dimensions don't match")
             endif
             output%z(2:nxo-1,:,:) = (input%z(1:nxi-1,:,:) + input%z(2:nxi,:,:))/2
             output%z(1,:,:) = input%z(1,:,:)
             output%z(nxo,:,:) = input%z(nxi,:,:)
         else if (interpolate_dim==3) then
             if ((nyo/=(nyi+1)).or.(nxo/=nxi).or.(nzo/=nzi)) then
-                stop("Error copying z levels from mass grid to V grid, dimensions don't match")
+                stop ("Error copying z levels from mass grid to V grid, dimensions don't match")
             endif
             output%z(:,:,2:nyo-1) = (input%z(:,:,1:nyi-1) + input%z(:,:,2:nyi))/2
             output%z(:,:,1) = input%z(:,:,1)
@@ -635,7 +635,7 @@ contains
         ! if a 3d grid was also specified, then read those data in
         if ((options%readz).and.(options%ideal).and.(options%zvar.ne."")) then
 
-            stop("Reading Z from an external file is not currently supported, use a fixed dz")
+            stop ("Reading Z from an external file is not currently supported, use a fixed dz")
 
             call io_read(options%init_conditions_file,options%zvar, domain%z)
             ! dz also has to be calculated from the 3d z file
