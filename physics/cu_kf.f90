@@ -1540,7 +1540,7 @@ CONTAINS
         DO 499 NK=1,LTOP
           IF(QG(NK).LT.0.)THEN
             IF(NK.EQ.1)THEN
-              stop ( 'module_cu_kf.F: problem with kf scheme:  qg = 0 at the surface' )
+              stop 'module_cu_kf.F: problem with kf scheme:  qg = 0 at the surface'
             ENDIF
             NK1=NK+1
             IF(NK.EQ.LTOP)NK1=KLCL
@@ -1865,7 +1865,7 @@ CONTAINS
                             U0(K),V0(K),DP(K)/100.,W0AVG1D(K)
 !               CALL wrf_message ( TRIM( wrf_err_message ) )
   310       CONTINUE
-            stop ( 'module_cu_kf.F: KAIN-FRITSCH' )
+            stop 'module_cu_kf.F: KAIN-FRITSCH'
           ENDIF
         ENDIF
         CNDTNF=(1.-EQFRC(LFS))*(QLIQ(LFS)+QICE(LFS))*DMF(LFS)
@@ -1957,7 +1957,7 @@ CONTAINS
                  DQIDT(K)=DQIDT(K)+(QSG(K)-QS0(K))/TIMEC
               ENDIF
             ELSE
-              stop ( 'module_cu_kf: THIS COMBINATION OF IMOIST,  IICE NOT ALLOWED' )
+              stop 'module_cu_kf: THIS COMBINATION OF IMOIST,  IICE NOT ALLOWED'
             ENDIF
 !         ENDIF
           DTDT(K)=(TG(K)-T0(K))/TIMEC
