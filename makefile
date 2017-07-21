@@ -71,8 +71,8 @@ ifndef FFTW
 	FFTW=/usr/local
 endif
 FFTW_PATH = ${FFTW}
-LIBFFT = ${FFTW_PATH}/lib
-INCFFT = ${FFTW_PATH}/include
+LIBFFT = -L${FFTW_PATH}/lib
+INCFFT = -I${FFTW_PATH}/include
 
 ifndef NETCDF
 	NETCDF=/usr/local
@@ -336,10 +336,13 @@ FFLAGS=$(COMP) $(PROF) ${INCNETCDF} ${INCFFT} ${MODOUTPUT}
 
 $(info $$NODENAME    = ${NODENAME})
 $(info $$FC          = ${F90})
+$(info $$FFTW_PATH   = ${FFTW_PATH})
 $(info $$NCDF_PATH   = ${NCDF_PATH})
 $(info $$GIT_VERSION = ${GIT_VERSION})
 $(info $$COMP        = ${COMP})
 $(info $$LINK        = ${LINK})
+$(info $$FFLAGS      = ${FFLAGS})
+$(info $$LFLAGS      = ${LFLAGS})
 $(info $$PREPROC     = ${PREPROC})
 $(info $$MODOUTPUT   = ${MODOUTPUT})
 $(info $$MODE        = ${MODE})
