@@ -71,7 +71,7 @@ ifndef FFTW
 	FFTW=/usr/local
 endif
 FFTW_PATH = ${FFTW}
-LIBFFT = -L${FFTW_PATH}/lib
+LIBFFT = -L${FFTW_PATH}/lib -lm -lfftw3
 INCFFT = -I${FFTW_PATH}/include
 
 ifndef NETCDF
