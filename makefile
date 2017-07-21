@@ -341,10 +341,6 @@ $(info $$NCDF_PATH   = ${NCDF_PATH})
 $(info $$GIT_VERSION = ${GIT_VERSION})
 $(info $$COMP        = ${COMP})
 $(info $$LINK        = ${LINK})
-$(info $$FFLAGS      = ${FFLAGS})
-$(info $$LFLAGS      = ${LFLAGS})
-$(info $$PREPROC     = ${PREPROC})
-$(info $$MODOUTPUT   = ${MODOUTPUT})
 $(info $$MODE        = ${MODE})
 
 
