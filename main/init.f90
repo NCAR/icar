@@ -18,7 +18,7 @@
 !! ----------------------------------------------------------------------------
 module init
     use data_structures
-    use io_routines,                only : io_read2d, io_read2di, io_read3d, &
+    use io_routines,                only : io_read, &
                                            io_write3d,io_write3di, io_write
     use geo,                        only : geo_LUT, geo_interp, geo_interp2d
     use vertical_interpolation,     only : vLUT, vinterp
@@ -57,6 +57,7 @@ contains
         write(*,*) "Initializing Boundaries"
         call init_bc(options,domain,boundary)
         write(*,*) ""
+        call setup_bias_correction(options,domain)
         write(*,'(/ A)') "Finished basic initialization"
         write(*,'(A /)') "---------------------------------------"
         
@@ -393,6 +394,16 @@ contains
         
     end subroutine copy_z
 
+    subroutine setup_bias_correction(options, domain)
+        implicit none
+        type(options_type), intent(in) :: options
+        type(domain_type), intent(inout):: domain
+        
+        if (options%use_bias_correction) then
+            call io_read(options%bias_options%filename, options%bias_options%rain_fraction_var, domain%rain_fraction)
+        endif
+    end subroutine setup_bias_correction
+
     subroutine init_domain_land(domain,options)
         implicit none
         type(options_type), intent(in) :: options
@@ -414,12 +425,12 @@ contains
         if (options%vegfrac_var.ne."") then
             ! if we are supposed to read a veg fraction for each month then it will be a 3D variable
             if (options%lsm_options%monthly_vegfrac) then
-                call io_read3d(options%init_conditions_file,options%vegfrac_var,temp_rdata,1)
+                call io_read(options%init_conditions_file,options%vegfrac_var,temp_rdata,1)
                 domain%vegfrac = temp_rdata(1+buffer:nx-buffer,1+buffer:ny-buffer,:)  ! subset the data by buffer grid cells
                 deallocate(temp_rdata)
             else
                 ! otherwise we just read a 2D variable and store it in the first time entry in the 3D vegfrac field
-                call io_read2d(options%init_conditions_file,options%vegfrac_var,temp_rdata_2d,1)
+                call io_read(options%init_conditions_file,options%vegfrac_var,temp_rdata_2d,1)
                 domain%vegfrac(:,:,1) = temp_rdata_2d(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
                 deallocate(temp_rdata_2d)
             endif
@@ -432,21 +443,21 @@ contains
 
         ! Veg TYPE = 2D integer
         if (options%vegtype_var.ne."") then
-            call io_read2di(options%init_conditions_file,options%vegtype_var,temp_idata,1)
+            call io_read(options%init_conditions_file,options%vegtype_var,temp_idata,1)
             domain%veg_type = temp_idata(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
             deallocate(temp_idata)
         endif
         
         ! Soil TYPE = 2D integer
         if (options%soiltype_var.ne."") then
-            call io_read2di(options%init_conditions_file,options%soiltype_var,temp_idata,1)
+            call io_read(options%init_conditions_file,options%soiltype_var,temp_idata,1)
             domain%soil_type = temp_idata(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
             deallocate(temp_idata)
         endif
         
         ! Soil Volumetric Water Content = 3D real
         if (options%soil_vwc_var.ne."") then
-            call io_read3d(options%init_conditions_file,options%soil_vwc_var,temp_rdata,1)  
+            call io_read(options%init_conditions_file,options%soil_vwc_var,temp_rdata,1)  
             domain%soil_vwc = reshape(temp_rdata(1+buffer:nx-buffer,1+buffer:ny-buffer,1:nz) &    ! subset the data by buffer grid cells
                                     ,[nx-buffer*2,nz,ny-buffer*2],order=[1,3,2])                ! and reshape to move the z axis to the middle
             deallocate(temp_rdata)
@@ -454,7 +465,7 @@ contains
         
         ! Soil Temperature = 3D real
         if (options%soil_t_var.ne."") then
-            call io_read3d(options%init_conditions_file,options%soil_t_var,temp_rdata,1)
+            call io_read(options%init_conditions_file,options%soil_t_var,temp_rdata,1)
             domain%soil_t = reshape(temp_rdata(1+buffer:nx-buffer,1+buffer:ny-buffer,1:nz) &  ! subset the data by buffer grid cells
                                     ,[nx-buffer*2,nz,ny-buffer*2],order=[1,3,2])            ! and reshape to move the z axis to the middle
             deallocate(temp_rdata)
@@ -462,7 +473,7 @@ contains
         
         ! Deep Soil Temperature = 2D real
         if (options%soil_deept_var.ne."") then
-            call io_read2d(options%init_conditions_file,options%soil_deept_var,temp_rdata_2d,1)
+            call io_read(options%init_conditions_file,options%soil_deept_var,temp_rdata_2d,1)
             domain%soil_tdeep = temp_rdata_2d(1+buffer:nx-buffer,1+buffer:ny-buffer)  ! subset the data by buffer grid cells
             where(domain%soil_tdeep<200) domain%soil_tdeep = 200 ! mitigates zeros that can cause problems
             if (options%soil_t_var=="") then
@@ -558,38 +569,38 @@ contains
         integer:: ny,nz,nx,i,buf
         
 !       these are the only required variables on a high-res grid, lat, lon, and terrain elevation
-        call io_read2d(options%init_conditions_file,options%hgt_hi,domain%terrain,1)
-        call io_read2d(options%init_conditions_file,options%lat_hi,domain%lat,1)
-        call io_read2d(options%init_conditions_file,options%lon_hi,domain%lon,1)
+        call io_read(options%init_conditions_file,options%hgt_hi,domain%terrain,1)
+        call io_read(options%init_conditions_file,options%lat_hi,domain%lat,1)
+        call io_read(options%init_conditions_file,options%lon_hi,domain%lon,1)
         call convert_longitudes(domain%lon)
         
         !  because u/vlat/lon_hi are optional, we calculated them by interplating from the mass lat/lon if necessary
         if (options%ulat_hi/="") then
-            call io_read2d(options%init_conditions_file,options%ulat_hi,domain%u_geo%lat,1)
+            call io_read(options%init_conditions_file,options%ulat_hi,domain%u_geo%lat,1)
         else
             call interpolate_in_x(domain%lat,domain%u_geo%lat)
         endif
         if (options%ulon_hi/="") then
-            call io_read2d(options%init_conditions_file,options%ulon_hi,domain%u_geo%lon,1)
+            call io_read(options%init_conditions_file,options%ulon_hi,domain%u_geo%lon,1)
         else
             call interpolate_in_x(domain%lon,domain%u_geo%lon)
         endif
         call convert_longitudes(domain%u_geo%lon)
         
         if (options%vlat_hi/="") then
-            call io_read2d(options%init_conditions_file,options%vlat_hi,domain%v_geo%lat,1)
+            call io_read(options%init_conditions_file,options%vlat_hi,domain%v_geo%lat,1)
         else
             call interpolate_in_y(domain%lat,domain%v_geo%lat)
         endif
         if (options%vlon_hi/="") then
-            call io_read2d(options%init_conditions_file,options%vlon_hi,domain%v_geo%lon,1)
+            call io_read(options%init_conditions_file,options%vlon_hi,domain%v_geo%lon,1)
         else
             call interpolate_in_y(domain%lon,domain%v_geo%lon)
         endif
         call convert_longitudes(domain%v_geo%lon)
         
         if (options%landvar/="") then
-            call io_read2d(options%init_conditions_file,options%landvar,domain%landmask,1)
+            call io_read(options%init_conditions_file,options%landvar,domain%landmask,1)
             where(domain%landmask==0) domain%landmask = kLC_WATER
         else
             nx = size(domain%lat,1)
@@ -615,7 +626,7 @@ contains
             
             stop("Reading Z from an external file is not currently supported, use a fixed dz")
             
-            call io_read3d(options%init_conditions_file,options%zvar, domain%z)
+            call io_read(options%init_conditions_file,options%zvar, domain%z)
             ! dz also has to be calculated from the 3d z file
             buf = options%buffer
             allocate(domain%dz(nx,nz,ny))
@@ -724,19 +735,19 @@ contains
         integer::nx,ny,nz,i
         
         ! these variables are required for any boundary/forcing file type
-        call io_read2d(options%boundary_files(1),options%latvar,boundary%lat)
-        call io_read2d(options%boundary_files(1),options%lonvar,boundary%lon)
+        call io_read(options%boundary_files(1),options%latvar,boundary%lat)
+        call io_read(options%boundary_files(1),options%lonvar,boundary%lon)
         call convert_longitudes(boundary%lon)
-        call io_read2d(options%boundary_files(1),options%ulat,boundary%u_geo%lat)
-        call io_read2d(options%boundary_files(1),options%ulon,boundary%u_geo%lon)
+        call io_read(options%boundary_files(1),options%ulat,boundary%u_geo%lat)
+        call io_read(options%boundary_files(1),options%ulon,boundary%u_geo%lon)
         call convert_longitudes(boundary%u_geo%lon)
-        call io_read2d(options%boundary_files(1),options%vlat,boundary%v_geo%lat)
-        call io_read2d(options%boundary_files(1),options%vlon,boundary%v_geo%lon)
+        call io_read(options%boundary_files(1),options%vlat,boundary%v_geo%lat)
+        call io_read(options%boundary_files(1),options%vlon,boundary%v_geo%lon)
         call convert_longitudes(boundary%v_geo%lon)
-        call io_read2d(options%boundary_files(1),options%hgtvar,boundary%terrain)
+        call io_read(options%boundary_files(1),options%hgtvar,boundary%terrain)
         
         ! read in the vertical coordinate
-        call io_read3d(options%boundary_files(1),options%zvar,zbase)
+        call io_read(options%boundary_files(1),options%zvar,zbase)
         if (options%debug) write(*,*) "Raw input forcing z min=",minval(zbase), " z max=", maxval(zbase)
         nx = size(zbase,1)
         ny = size(zbase,2)
@@ -746,7 +757,7 @@ contains
         deallocate(zbase)
 
         if (trim(options%zbvar)/="") then
-            call io_read3d(options%boundary_files(1),options%zbvar, zbase)
+            call io_read(options%boundary_files(1),options%zbvar, zbase)
             boundary%lowres_z = boundary%lowres_z + reshape(zbase,[nx,nz,ny],order=[1,3,2])
             if (options%debug) write(*,*) "Raw forcing z_base min=",minval(zbase), " max=", maxval(zbase)
             deallocate(zbase)
@@ -817,31 +828,31 @@ contains
         real, allocatable, dimension(:,:) :: lat,lon
         real, allocatable, dimension(:,:) :: temporary_terrain
         
-        call io_read2d(options%ext_wind_files(1),options%hgt_hi,bc%ext_winds%terrain,1)
-        call io_read2d(options%ext_wind_files(1),options%latvar,bc%ext_winds%lat)
-        call io_read2d(options%ext_wind_files(1),options%lonvar,bc%ext_winds%lon)
+        call io_read(options%ext_wind_files(1),options%hgt_hi,bc%ext_winds%terrain,1)
+        call io_read(options%ext_wind_files(1),options%latvar,bc%ext_winds%lat)
+        call io_read(options%ext_wind_files(1),options%lonvar,bc%ext_winds%lon)
         call convert_longitudes(bc%ext_winds%lon)
         
         ! ulat_hi and vlat_hi are optional, if they are not supplied interpolate the mass lat/lon grid
         if (options%ulat_hi/="") then
-            call io_read2d(options%ext_wind_files(1),options%ulat_hi,bc%ext_winds%u_geo%lat,1)
+            call io_read(options%ext_wind_files(1),options%ulat_hi,bc%ext_winds%u_geo%lat,1)
         else
             call interpolate_in_x(bc%ext_winds%lat,bc%ext_winds%u_geo%lat)
         endif
         if (options%ulon_hi/="") then
-            call io_read2d(options%ext_wind_files(1),options%ulon_hi,bc%ext_winds%u_geo%lon,1)
+            call io_read(options%ext_wind_files(1),options%ulon_hi,bc%ext_winds%u_geo%lon,1)
         else
             call interpolate_in_x(bc%ext_winds%lon,bc%ext_winds%u_geo%lon)
         endif
         call convert_longitudes(bc%ext_winds%u_geo%lon)
         
         if (options%vlat_hi/="") then
-            call io_read2d(options%ext_wind_files(1),options%vlat_hi,bc%ext_winds%v_geo%lat,1)
+            call io_read(options%ext_wind_files(1),options%vlat_hi,bc%ext_winds%v_geo%lat,1)
         else
             call interpolate_in_y(bc%ext_winds%lat,bc%ext_winds%v_geo%lat)
         endif
         if (options%vlon_hi/="") then
-            call io_read2d(options%ext_wind_files(1),options%vlon_hi,bc%ext_winds%v_geo%lon,1)
+            call io_read(options%ext_wind_files(1),options%vlon_hi,bc%ext_winds%v_geo%lon,1)
         else
             call interpolate_in_y(bc%ext_winds%lon,bc%ext_winds%v_geo%lon)
         endif

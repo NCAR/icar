@@ -153,6 +153,9 @@
     !   Doesn't do much at the moment, increases output print at runtime
     debug = true,
     warning_level = 4, ! 0-10 increases the level of errors it warns about and quits over (slightly)
+    
+    ! controls printing of % completed for longer processes.  Nice to see if it is running in a console, not nice to see in a log file. 
+    interactive=False
 
     !   If the following are true, their respective namelists (below) will also be read in. 
     !   Read parameters for advection

@@ -34,16 +34,17 @@ contains
         options_filename=get_options_file()
         write(*,*) "Using options file = ", trim(options_filename)
         
-        call version_check(options_filename,options)
-        call physics_namelist(options_filename,options)
-        call var_namelist(options_filename,options)
-        call parameters_namelist(options_filename,options)
-        call model_levels_namelist(options_filename, options)
+        call version_check(         options_filename,   options)
+        call physics_namelist(      options_filename,   options)
+        call var_namelist(          options_filename,   options)
+        call parameters_namelist(   options_filename,   options)
+        call model_levels_namelist( options_filename,   options)
         
-        call lt_parameters_namelist(options%lt_options_filename, options)
-        call mp_parameters_namelist(options%mp_options_filename,options)
-        call adv_parameters_namelist(options%adv_options_filename,options)
-        call lsm_parameters_namelist(options%lsm_options_filename,options)
+        call lt_parameters_namelist(    options%lt_options_filename,    options)
+        call mp_parameters_namelist(    options%mp_options_filename,    options)
+        call adv_parameters_namelist(   options%adv_options_filename,   options)
+        call lsm_parameters_namelist(   options%lsm_options_filename,   options)
+        call bias_parameters_namelist(  options%bias_options_filename,  options)
 
         if (options%restart) then
             call init_restart_options(options_filename,options)
@@ -462,27 +463,29 @@ contains
         integer :: ntimesteps
         double precision :: end_mjd
         integer :: nz, n_ext_winds,buffer, warning_level, cfl_strictness
-        logical :: ideal, readz, readdz, debug, external_winds, surface_io_only, &
+        logical :: ideal, readz, readdz, interactive, debug, external_winds, surface_io_only, &
                    mean_winds, mean_fields, restart, advect_density, z_is_geopotential, z_is_on_interface,&
                    high_res_soil_state, use_agl_height, time_varying_z, &
-                   use_mp_options, use_lt_options, use_adv_options, use_lsm_options
+                   use_mp_options, use_lt_options, use_adv_options, use_lsm_options, use_bias_correction
                    
         character(len=MAXFILELENGTH) :: date, calendar, start_date, forcing_start_date, end_date
         integer :: year, month, day, hour, minute, second
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, &
-                                        adv_options_filename, lsm_options_filename
+                                        adv_options_filename, lsm_options_filename, &
+                                        bias_options_filename
 
         namelist /parameters/ ntimesteps,outputinterval,inputinterval, surface_io_only, &
-                              dx,dxlow,ideal,readz,readdz,nz,t_offset,debug, &
+                              dx,dxlow,ideal,readz,readdz,nz,t_offset,debug, interactive, &
                               external_winds,buffer,n_ext_winds,advect_density,smooth_wind_distance, &
                               mean_winds,mean_fields,restart, z_is_geopotential, z_is_on_interface,&
                               date, calendar, high_res_soil_state,rotation_scale_height,warning_level, &
                               use_agl_height, start_date, forcing_start_date, end_date, time_varying_z, &
                               cfl_reduction_factor, cfl_strictness, &
-                              mp_options_filename, use_mp_options, &    ! trude added
-                              lt_options_filename, use_lt_options, &
-                              lsm_options_filename, use_lsm_options, &
-                              adv_options_filename, use_adv_options
+                              mp_options_filename,      use_mp_options, &
+                              lt_options_filename,      use_lt_options, &
+                              lsm_options_filename,     use_lsm_options, &
+                              adv_options_filename,     use_adv_options, &
+                              bias_options_filename,    use_bias_correction
         
 !       default parameters
         surface_io_only=.False.
@@ -499,6 +502,7 @@ contains
         restart=.False.
         ideal=.False.
         debug=.False.
+        interactive=.False.
         warning_level=-9999
         readz=.False.
         readdz=.True.
@@ -527,6 +531,9 @@ contains
 
         use_lsm_options=.False.
         lsm_options_filename = filename
+
+        use_bias_correction=.False.
+        bias_options_filename = filename
         
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=parameters)
@@ -610,6 +617,7 @@ contains
         options%mean_fields = mean_fields
         options%advect_density = advect_density
         options%debug = debug
+        options%interactive = interactive
         options%warning_level = warning_level
         options%rotation_scale_height = rotation_scale_height
         options%use_agl_height = use_agl_height
@@ -640,6 +648,10 @@ contains
         options%use_lsm_options = use_lsm_options
         options%lsm_options_filename  = lsm_options_filename
 
+        options%use_bias_correction = use_bias_correction
+        options%bias_options_filename  = bias_options_filename
+
+        ! options are updated when complete
     end subroutine parameters_namelist
 
     subroutine mp_parameters_namelist(mp_filename,options)
@@ -958,6 +970,49 @@ contains
     end subroutine set_default_LU_categories
 
     
+    subroutine bias_parameters_namelist(filename, options)
+        implicit none
+        character(len=*),   intent(in)   :: filename
+        type(options_type), intent(inout):: options
+        
+        type(bias_options_type)     ::  bias_options
+        
+        integer :: name_unit
+
+        character(len=MAXFILELENGTH):: bias_correction_filename ! file containing bias correction data
+        character(len=MAXVARLENGTH) :: rain_fraction_var        ! name of variable containing the fraction to multiply rain by
+        
+        ! define the namelist
+        namelist /bias_parameters/ bias_correction_filename, rain_fraction_var
+        
+         ! because adv_options could be in a separate file
+         if (options%use_bias_correction) then
+             if (trim(filename)/=trim(get_options_file())) then
+                 call version_check(filename,options)
+             endif
+         endif
+        
+        
+        ! set default values
+        bias_correction_filename = options%init_conditions_file
+        rain_fraction_var        = "rain_fraction"
+        
+        ! read the namelist options
+        if (options%use_bias_correction) then
+            open(io_newunit(name_unit), file=filename)
+            read(name_unit,nml=bias_parameters)
+            close(name_unit)
+        endif
+        
+        ! store everything in the bias_options structure
+        bias_options%filename           = bias_correction_filename
+        bias_options%rain_fraction_var  = rain_fraction_var
+        
+        ! copy the data back into the global options data structure
+        options%bias_options = bias_options
+    end subroutine bias_parameters_namelist
+
+    
     subroutine lsm_parameters_namelist(filename, options)
         implicit none
         character(len=*), intent(in) :: filename
@@ -1183,8 +1238,6 @@ contains
             options%ext_wind_files=ext_wind_files
             deallocate(ext_wind_files)
         endif
-        
     end subroutine filename_namelist
-
 
 end module initialize_options

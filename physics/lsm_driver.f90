@@ -77,7 +77,7 @@ module land_surface
     real, parameter :: SMALL_PRESSURE=0.1 !note: 0.1Pa is very small 1e-10 wouldn't affect a single-precision float
     real, parameter :: SMALL_QV=1e-10
     real, parameter :: MAX_EXCHANGE_C = 0.5
-    real, parameter :: MIN_EXCHANGE_C = 0.002
+    real, parameter :: MIN_EXCHANGE_C = 0.004
     
     character(len=MAXVARLENGTH) :: MMINLU
     logical :: FNDSOILW,FNDSNOWH,RDMAXALB

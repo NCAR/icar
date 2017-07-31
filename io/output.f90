@@ -20,7 +20,7 @@ module output
     public :: write_domain, output_init
     
     integer, parameter :: ndims = 4     !> number of dimensions in output (x,y,z,t)
-    integer, parameter :: nvars = 39    !> current number of vars = 39
+    integer, parameter :: nvars = 41    !> current number of vars = 41
     !> This will be the netCDF ID for the file and data variable.
     integer :: ncid, temp_id
     !> dimension IDs
@@ -47,7 +47,7 @@ module output
     integer :: start_two_D(3)  = [1,1,1]
     integer :: start_scalar(1) = [1]
 
-    real, allocatable, dimension(:,:) :: last_rain
+    real, allocatable, dimension(:,:) :: last_rain, last_snow
     logical :: surface_io_only
     ! We are writing 3D data, a (ny x nz x nx) grid or (ny x nsoil x nx) grid
     integer :: nx,ny,nz,i,nsoil
@@ -93,6 +93,7 @@ contains
                     do while (domain%snow(i,j)>kPRECIP_BUCKET_SIZE)
                         domain%snow(i,j) = domain%snow(i,j)-kPRECIP_BUCKET_SIZE
                         domain%snow_bucket(i,j) = domain%snow_bucket(i,j)+1
+                        last_snow(i,j)=last_snow(i,j)-kPRECIP_BUCKET_SIZE
                     end do
                 endif
                 if (domain%graupel(i,j)>kPRECIP_BUCKET_SIZE) then
@@ -465,6 +466,14 @@ contains
             call check( nf90_put_att(ncid,temp_id,"units","m"))
             varid(20)=temp_id
         endif
+
+        ! surface pressure
+        call check( nf90_def_var(ncid, "ps", NF90_REAL, dimtwo_time, temp_id), trim(err)//"ps")
+        call check( nf90_put_att(ncid,temp_id,"standard_name","surface_air_pressure"))
+        call check( nf90_put_att(ncid,temp_id,"long_name","Surface Air Pressure"))
+        call check( nf90_put_att(ncid,temp_id,"units","Pa"))
+        varid(40)=temp_id
+
     
         ! surface precip fluxes
         call check( nf90_def_var(ncid, "rain", NF90_REAL, dimtwo_time, temp_id), trim(err)//"rain" )
@@ -475,10 +484,16 @@ contains
 
         call check( nf90_def_var(ncid, "rain_rate", NF90_REAL, dimtwo_time, temp_id), trim(err)//"rain_rate" )
         call check( nf90_put_att(ncid,temp_id,"standard_name","precipitation_amount"))
-        call check( nf90_put_att(ncid,temp_id,"long_name","Combined large scale and convective rain, snow and graupel"))
+        call check( nf90_put_att(ncid,temp_id,"long_name","Time step total combined rain, snow and graupel"))
         call check( nf90_put_att(ncid,temp_id,"units","kg m-2"))
         varid(32)=temp_id
     
+        call check( nf90_def_var(ncid, "snow_rate", NF90_REAL, dimtwo_time, temp_id), trim(err)//"snow_rate" )
+        call check( nf90_put_att(ncid,temp_id,"standard_name","snowfall_amount"))
+        call check( nf90_put_att(ncid,temp_id,"long_name","Time step total snowfall (liquid equivalent)"))
+        call check( nf90_put_att(ncid,temp_id,"units","kg m-2"))
+        varid(41)=temp_id
+
         call check( nf90_def_var(ncid, "snow", NF90_REAL, dimtwo_time, temp_id), trim(err)//"snow" )
         call check( nf90_put_att(ncid,temp_id,"standard_name","snowfall_amount"))
         call check( nf90_put_att(ncid,temp_id,"long_name","Combined large scale and convective snow (accumulated)"))
@@ -702,11 +717,15 @@ contains
         varid(13)=temp_id
         call check( nf90_inq_varid(ncid, "z",  temp_id), trim(err)//"z" )
         varid(20)=temp_id
+        call check( nf90_inq_varid(ncid, "ps",temp_id), trim(err)//"ps" )
+        varid(40)=temp_id
         ! surface precip fluxes
         call check( nf90_inq_varid(ncid, "rain",temp_id), trim(err)//"rain" )
         varid(14)=temp_id
         call check( nf90_inq_varid(ncid, "rain_rate",temp_id), trim(err)//"rain_rate" )
         varid(32)=temp_id
+        call check( nf90_inq_varid(ncid, "snow_rate",temp_id), trim(err)//"snow_rate" )
+        varid(41)=temp_id
         call check( nf90_inq_varid(ncid, "snow",temp_id), trim(err)//"snow" )
         varid(15)=temp_id
         
@@ -807,10 +826,13 @@ contains
         
         if (.not.allocated(last_rain)) then
             allocate(last_rain(nx,ny))
+            allocate(last_snow(nx,ny))
             if (options%restart) then
                 last_rain=domain%rain
+                last_snow=domain%snow
             else
                 last_rain=0
+                last_snow=0
             endif
         endif
     end subroutine output_init
@@ -914,27 +936,33 @@ contains
             elseif (options%physics%microphysics==kMP_WSM6) then
                 call check( nf90_put_var(ncid, varid(6),  reshape(domain%qgrau, output_shape, order=zlast), start_three_D),trim(filename)//":qgraupel" )
             endif
+            
+            ! for u add one to the x shape then revert
             output_shape(1)=output_shape(1)+1
             call check( nf90_put_var(ncid, varid(9),  reshape(domain%u,     output_shape, order=zlast), start_three_D),    trim(filename)//":u" )
             output_shape(1)=output_shape(1)-1
+            
+            ! for v add one to the y shape then revert
             output_shape(2)=output_shape(2)+1
             call check( nf90_put_var(ncid, varid(10), reshape(domain%v,     output_shape, order=zlast), start_three_D),    trim(filename)//":v" )
             output_shape(2)=output_shape(2)-1
+            
             call check( nf90_put_var(ncid, varid(11), reshape(domain%w_real,output_shape, order=zlast), start_three_D),    trim(filename)//":w" )
             call check( nf90_put_var(ncid, varid(12), reshape(domain%p,     output_shape, order=zlast), start_three_D),    trim(filename)//":p" )
             call check( nf90_put_var(ncid, varid(13), reshape(domain%th,    output_shape, order=zlast), start_three_D),    trim(filename)//":th" )
             call check( nf90_put_var(ncid, varid(21), reshape(domain%rho,   output_shape, order=zlast), start_three_D),    trim(filename)//":rho" )
+            
             if (options%physics%windtype==kWIND_LINEAR) then
                 call check( nf90_put_var(ncid, varid(33), reshape(domain%nsquared, output_shape, order=zlast), start_three_D), trim(filename)//":nsquared" )
             endif
         else
             call check( nf90_put_var(ncid, varid(1),  domain%qv(:,1,:), start_two_D),  trim(filename)//":qv" )
-!             call check( nf90_put_var(ncid, varid(9),  domain%u(:,1,:),  start_two_D),  trim(filename)//":u" )
-!             call check( nf90_put_var(ncid, varid(10), domain%v(:,1,:),  start_two_D),  trim(filename)//":v" )
             call check( nf90_put_var(ncid, varid(12), domain%p(:,1,:),  start_two_D),  trim(filename)//":p" )
             call check( nf90_put_var(ncid, varid(13), domain%th(:,1,:), start_two_D),  trim(filename)//":th" )
         endif
         
+        ! surface pressure
+        call check( nf90_put_var(ncid, varid(40), domain%psfc, start_two_D), trim(filename)//":ps" )
         
         ! Write precip variables (rain, snow, graupel, crain) adjusting for the internal precip bucket
         call tip_precip_to_buckets(domain)
@@ -945,6 +973,10 @@ contains
             call check( nf90_put_var(ncid, varid(32), &
                                      domain%rain-last_rain, &
                                      start_two_D), trim(filename)//":rainrate" )
+
+            call check( nf90_put_var(ncid, varid(41), &
+                                     domain%snow-last_snow, &
+                                     start_two_D), trim(filename)//":snowrate" )
         endif
         call check( nf90_put_var(ncid, varid(15), &
                                  domain%snow + domain%snow_bucket*kPRECIP_BUCKET_SIZE, &
@@ -999,6 +1031,7 @@ contains
         endif
         
         last_rain=domain%rain
+        last_snow=domain%snow
         ! Close the file, freeing all resources.
         call check( nf90_close(ncid), trim(filename) )
     end subroutine write_domain
