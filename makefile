@@ -178,8 +178,8 @@ ifeq ($(NODENAME), cheyenne)
 	LIBFFT = -L$(FFTW_PATH)/lib -lm -lfftw3
 	INCFFT = -I$(FFTW_PATH)/include
 	NCDF_PATH = $(NETCDF)
-	LIBNETCDF = -L$(NCAR_LDFLAGS_NETCDF) $(NCAR_LIBS_NETCDF)
-	INCNETCDF = -I$(NCAR_INC_NETCDF)
+	LIBNETCDF = -L$(NETCDF)/lib -lnetcdff -lnetcdf
+	INCNETCDF = -I$(NETCDF)/include
 endif
 
 # get GIT version info
