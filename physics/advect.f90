@@ -312,9 +312,9 @@ contains
             call advect3d(domain%qgrau,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
         endif
 
-        if (options%physics%convection > 0) then
-            call advect_cu_winds(domain, options, dt)
-        endif
+        ! if (options%physics%convection > 0) then
+        !     call advect_cu_winds(domain, options, dt)
+        ! endif
 
         ! used in some physics routines
         domain%tend%qv_adv = (domain%qv - lastqv_m) / dt
