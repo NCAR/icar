@@ -81,7 +81,11 @@ def load_last_date(filename, prefix):
 def main(options_file, template_file, skip):
     """docstring for main"""
     restart_file, backup_file, output_prefix = find_last_output(options_file, skip)
-    restart_date, hour = load_last_date(restart_file, output_prefix)
+    try:
+        restart_date, hour = load_last_date(restart_file, output_prefix)
+    except:
+        hour=0
+
     if hour<2:
         restart_file = backup_file
         restart_date, hour = load_last_date(restart_file, output_prefix)
