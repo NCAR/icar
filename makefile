@@ -201,7 +201,7 @@ ifeq ($(F90), gfortran)
 endif
 # Intel fortran
 ifeq ($(F90), ifort)
-	COMP=-c -u -qopenmp -liomp5 -O3 -no-prec-div -xHost -ftz -fpe0 # -check stack,bounds -fp-stack-check
+	COMP=-c -u -qopenmp -liomp5 -O3 -xHost -ftz -fpe0 # -check stack,bounds -fp-stack-check
 	LINK= -qopenmp -liomp5
 	PREPROC=-fpp
 	MODOUTPUT=-module $(BUILD)
@@ -310,7 +310,7 @@ PROF=
 ifeq ($(MODE), profile)
 	ifeq ($(F90), ifort)
 		PROF=-pg -debug inline-debug-info -shared-intel
-		COMP=-c -u -openmp -liomp5 -O3 -no-prec-div -xHost -ftz #because -fast includes -static # not available in ifort <13 -align array64byte
+		COMP=-c -u -qopenmp -liomp5 -O3 -xHost -ftz #because -fast includes -static # not available in ifort <13 -align array64byte
 	endif
 	ifeq ($(F90), gfortran)
 		PROF=-g
