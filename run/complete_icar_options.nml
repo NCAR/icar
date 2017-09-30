@@ -333,6 +333,8 @@
     ! linear_contribution = 1.0,    ! set this to the fraction of the linear perturbation you wish to use (1.0 = full/standard linear field)
     spatial_linear_fields = true,   ! use a spatially variable wind field when calculating the linear wind field
 
+    blocked_flow = false,           ! use the blocked flow parameterization eventually this should be in it's own namelist...
+
     ! NOTE THIS uses a fixed Nsq, not the value specified here yet
     ! rm_N_squared = 9e-5,          ! set this to use a fixed brunt-vaisalla frequency in linear wind calculations
     ! remove_lowres_linear = false, ! attempt to "remove" the low resolution linear winds from the forcing data
@@ -359,6 +361,11 @@
     nsqmax = -7.42  ! ln(6e-4) defaults to ln(max_stability)
     nsqmin = -16.12 ! ln(1e-7) defaults to ln(min_stability)
     n_nsq_values = 10
+
+    ! Minimum thickness of a layer to permit when computing the LUT.
+    ! If a model layer is thicker than this, it is divided evenly into sub
+    ! steps such that each substep is <= minimum_layer_size
+    minimum_layer_size = 100.0
 
     ! NOTE: this look up table requires a LOT of RAM.  (and you still need some for the rest of the model)
     !   Calculate bytes of RAM required as nx * ny * nz * n_dir * n_spd * n_nsq * 2 * 4

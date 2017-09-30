@@ -41,6 +41,7 @@ contains
         call model_levels_namelist( options_filename,   options)
 
         call lt_parameters_namelist(    options%lt_options_filename,    options)
+        call block_parameters_namelist( options%block_options_filename, options)
         call mp_parameters_namelist(    options%mp_options_filename,    options)
         call adv_parameters_namelist(   options%adv_options_filename,   options)
         call lsm_parameters_namelist(   options%lsm_options_filename,   options)
@@ -69,7 +70,7 @@ contains
             elseif (error==-1) then
                 write(*,*) "Options filename = ", trim(options_file), " ...<cutoff>"
                 write(*,*) "Maximum filename length = ", MAXFILELENGTH
-                stop("ERROR: options filename too long")
+                stop "ERROR: options filename too long"
             endif
         else
             options_file="icar_options.nml"
@@ -466,13 +467,14 @@ contains
         logical :: ideal, readz, readdz, interactive, debug, external_winds, surface_io_only, &
                    mean_winds, mean_fields, restart, advect_density, z_is_geopotential, z_is_on_interface,&
                    high_res_soil_state, use_agl_height, time_varying_z, &
-                   use_mp_options, use_lt_options, use_adv_options, use_lsm_options, use_bias_correction
+                   use_mp_options, use_lt_options, use_adv_options, use_lsm_options, use_bias_correction, &
+                   use_block_options
 
         character(len=MAXFILELENGTH) :: date, calendar, start_date, forcing_start_date, end_date
         integer :: year, month, day, hour, minute, second
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, &
                                         adv_options_filename, lsm_options_filename, &
-                                        bias_options_filename
+                                        bias_options_filename, block_options_filename
 
         namelist /parameters/ ntimesteps,outputinterval,inputinterval, surface_io_only, &
                               dx,dxlow,ideal,readz,readdz,nz,t_offset,debug, interactive, &
@@ -480,11 +482,12 @@ contains
                               mean_winds,mean_fields,restart, z_is_geopotential, z_is_on_interface,&
                               date, calendar, high_res_soil_state,rotation_scale_height,warning_level, &
                               use_agl_height, start_date, forcing_start_date, end_date, time_varying_z, &
-                              cfl_reduction_factor, cfl_strictness, &
-                              mp_options_filename,      use_mp_options, &
-                              lt_options_filename,      use_lt_options, &
-                              lsm_options_filename,     use_lsm_options, &
-                              adv_options_filename,     use_adv_options, &
+                              cfl_reduction_factor, cfl_strictness,         &
+                              mp_options_filename,      use_mp_options,     &
+                              block_options_filename,   use_block_options,  &
+                              lt_options_filename,      use_lt_options,     &
+                              lsm_options_filename,     use_lsm_options,    &
+                              adv_options_filename,     use_adv_options,    &
                               bias_options_filename,    use_bias_correction
 
 !       default parameters
@@ -534,6 +537,9 @@ contains
 
         use_bias_correction=.False.
         bias_options_filename = filename
+
+        use_block_options=.False.
+        block_options_filename = filename
 
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=parameters)
@@ -651,6 +657,9 @@ contains
         options%use_bias_correction = use_bias_correction
         options%bias_options_filename  = bias_options_filename
 
+        options%use_block_options = use_block_options
+        options%block_options_filename  = block_options_filename
+
         ! options are updated when complete
     end subroutine parameters_namelist
 
@@ -739,11 +748,69 @@ contains
         options%mp_options%local_precip_fraction = local_precip_fraction
     end subroutine mp_parameters_namelist
 
+    subroutine block_parameters_namelist(filename, options)
+        implicit none
+
+        character(len=*),   intent(in)   :: filename
+        type(options_type), intent(inout):: options
+
+        integer :: name_unit
+
+        real    :: blocking_contribution  ! fractional contribution of flow blocking perturbation that is added [0-1]
+        real    :: smooth_froude_distance ! distance (m) over which Froude number is smoothed
+        integer :: n_smoothing_passes     ! number of times the smoothing window is applied
+        real    :: block_fr_max           ! max froude no at which flow is only partially blocked above, no blocking
+        real    :: block_fr_min           ! min froude no at which flow is only partially blocked below, full blocking
+        logical :: block_flow             ! use a blocking parameterization
+
+
+        ! define the namelist
+        namelist /block_parameters/ smooth_froude_distance, &
+                                    n_smoothing_passes,     &
+                                    block_fr_max,           &
+                                    block_fr_min,           &
+                                    blocking_contribution,  &
+                                    block_flow
+
+        ! because block_options could be in a separate file
+        if (options%use_block_options) then
+            if (trim(filename)/=trim(get_options_file())) then
+                call version_check(filename,options)
+            endif
+        endif
+
+        ! set default values
+        smooth_froude_distance  = 6000
+        n_smoothing_passes      = 3
+        block_fr_max            = 0.75
+        block_fr_min            = 0.5
+        blocking_contribution   = 0.5
+        block_flow              = .False.
+
+        ! read the namelist options
+        if (options%use_block_options) then
+            open(io_newunit(name_unit), file=filename)
+            read(name_unit,nml=block_parameters)
+            close(name_unit)
+        endif
+
+        ! copy values into data type
+        associate( opt => options%block_options )
+            opt%smooth_froude_distance = smooth_froude_distance
+            opt%n_smoothing_passes     = n_smoothing_passes
+            opt%block_fr_max           = block_fr_max
+            opt%block_fr_min           = block_fr_min
+            opt%blocking_contribution  = blocking_contribution
+            opt%block_flow             = block_flow
+        end associate
+
+    end subroutine block_parameters_namelist
+
+
     subroutine lt_parameters_namelist(filename, options)
         implicit none
-        character(len=*), intent(in) :: filename
-        type(options_type), intent(inout)::options
-        type(lt_options_type)::lt_options
+        character(len=*),   intent(in)   :: filename
+        type(options_type), intent(inout):: options
 
         integer :: name_unit
 
@@ -752,25 +819,28 @@ contains
         logical :: smooth_nsq               ! Smooth the Calculated N^2 over vert_smooth vertical levels
         integer :: buffer                   ! number of grid cells to buffer around the domain MUST be >=1
         integer :: stability_window_size    ! window to average nsq over
-        real :: max_stability               ! limits on the calculated Brunt Vaisala Frequency
-        real :: min_stability               ! these may need to be a little narrower.
-        real :: linear_contribution         ! multiplier on uhat,vhat before adding to u,v
-        real :: linear_update_fraction      ! controls the rate at which the linearfield updates (should be calculated as f(in_dt))
+        real    :: max_stability            ! limits on the calculated Brunt Vaisala Frequency
+        real    :: min_stability            ! these may need to be a little narrower.
+        real    :: linear_contribution      ! multiplier on uhat,vhat before adding to u,v
+        real    :: linear_update_fraction   ! controls the rate at which the linearfield updates (should be calculated as f(in_dt))
 
-        real :: N_squared                   ! static Brunt Vaisala Frequency (N^2) to use
+        real    :: N_squared                ! static Brunt Vaisala Frequency (N^2) to use
         logical :: remove_lowres_linear     ! attempt to remove the linear mountain wave from the forcing low res model
-        real :: rm_N_squared                ! static Brunt Vaisala Frequency (N^2) to use in removing linear wind field
-        real :: rm_linear_contribution      ! fractional contribution of linear perturbation to wind field to remove from the low-res field
+        real    :: rm_N_squared             ! static Brunt Vaisala Frequency (N^2) to use in removing linear wind field
+        real    :: rm_linear_contribution   ! fractional contribution of linear perturbation to wind field to remove from the low-res field
 
         logical :: spatial_linear_fields    ! use a spatially varying linear wind perturbation
         logical :: linear_mask              ! use a spatial mask for the linear wind field
         logical :: nsq_calibration          ! use a spatial mask to calibrate the nsquared (brunt vaisala frequency) field
 
         ! Look up table generation parameters
-        real :: dirmax, dirmin
-        real :: spdmax, spdmin
-        real :: nsqmax, nsqmin
+        real    :: dirmax, dirmin
+        real    :: spdmax, spdmin
+        real    :: nsqmax, nsqmin
         integer :: n_dir_values, n_nsq_values, n_spd_values
+        real    :: minimum_layer_size       ! Minimum vertical step to permit when computing LUT.
+                                            ! If model layers are thicker, substepping will be used.
+
         ! parameters to control reading from or writing an LUT file
         logical :: read_LUT, write_LUT
         character(len=MAXFILELENGTH) :: u_LUT_Filename, v_LUT_Filename, LUT_Filename
@@ -780,7 +850,7 @@ contains
         namelist /lt_parameters/ variable_N, smooth_nsq, buffer, stability_window_size, max_stability, min_stability, &
                                  linear_contribution, linear_update_fraction, N_squared, vert_smooth, &
                                  remove_lowres_linear, rm_N_squared, rm_linear_contribution, &
-                                 spatial_linear_fields, linear_mask, nsq_calibration, &
+                                 spatial_linear_fields, linear_mask, nsq_calibration, minimum_layer_size, &
                                  dirmax, dirmin, spdmax, spdmin, nsqmax, nsqmin, n_dir_values, n_nsq_values, n_spd_values, &
                                  read_LUT, write_LUT, u_LUT_Filename, v_LUT_Filename, overwrite_lt_lut, LUT_Filename
 
@@ -822,6 +892,7 @@ contains
         n_dir_values = 24
         n_nsq_values = 5
         n_spd_values = 6
+        minimum_layer_size = 100
 
         read_LUT = .False.
         write_LUT = .True.
@@ -838,54 +909,56 @@ contains
         endif
 
         ! store everything in the lt_options structure
-        lt_options%buffer = buffer
-        lt_options%stability_window_size = stability_window_size
-        lt_options%max_stability = max_stability
-        lt_options%min_stability = min_stability
-        lt_options%variable_N = variable_N
-        lt_options%smooth_nsq = smooth_nsq
+        associate(opt => options%lt_options )
+            opt%buffer = buffer
+            opt%stability_window_size = stability_window_size
+            opt%max_stability = max_stability
+            opt%min_stability = min_stability
+            opt%variable_N = variable_N
+            opt%smooth_nsq = smooth_nsq
 
-        if (vert_smooth<0) then
-            write(*,*) " Vertical smoothing must be a positive integer"
-            write(*,*) " vert_smooth = ",vert_smooth
-            stop
-        endif
-        lt_options%vert_smooth=vert_smooth
-
-        lt_options%N_squared = N_squared
-        lt_options%linear_contribution = linear_contribution
-        lt_options%remove_lowres_linear = remove_lowres_linear
-        lt_options%rm_N_squared = rm_N_squared
-        lt_options%rm_linear_contribution = rm_linear_contribution
-        lt_options%linear_update_fraction = linear_update_fraction
-        lt_options%spatial_linear_fields = spatial_linear_fields
-        lt_options%linear_mask = linear_mask
-        lt_options%nsq_calibration = nsq_calibration
-        lt_options%dirmax = dirmax
-        lt_options%dirmin = dirmin
-        lt_options%spdmax = spdmax
-        lt_options%spdmin = spdmin
-        lt_options%nsqmax = nsqmax
-        lt_options%nsqmin = nsqmin
-        lt_options%n_dir_values = n_dir_values
-        lt_options%n_nsq_values = n_nsq_values
-        lt_options%n_spd_values = n_spd_values
-        lt_options%read_LUT = read_LUT
-        lt_options%write_LUT = write_LUT
-        if (trim(u_LUT_Filename)=="MISSING") then
-            if (trim(LUT_Filename)=="MISSING") then
-                u_LUT_Filename="Linear_Theory_LUT.nc"
-            else
-                u_LUT_Filename=LUT_Filename
+            if (vert_smooth<0) then
+                write(*,*) " Vertical smoothing must be a positive integer"
+                write(*,*) " vert_smooth = ",vert_smooth
+                stop
             endif
-        endif
+            opt%vert_smooth=vert_smooth
 
-        lt_options%u_LUT_Filename = u_LUT_Filename
-        lt_options%v_LUT_Filename = v_LUT_Filename
-        lt_options%overwrite_lt_lut = overwrite_lt_lut
+            opt%N_squared = N_squared
+            opt%linear_contribution = linear_contribution
+            opt%remove_lowres_linear = remove_lowres_linear
+            opt%rm_N_squared = rm_N_squared
+            opt%rm_linear_contribution = rm_linear_contribution
+            opt%linear_update_fraction = linear_update_fraction
+            opt%spatial_linear_fields = spatial_linear_fields
+            opt%linear_mask = linear_mask
+            opt%nsq_calibration = nsq_calibration
+            opt%dirmax = dirmax
+            opt%dirmin = dirmin
+            opt%spdmax = spdmax
+            opt%spdmin = spdmin
+            opt%nsqmax = nsqmax
+            opt%nsqmin = nsqmin
+            opt%n_dir_values = n_dir_values
+            opt%n_nsq_values = n_nsq_values
+            opt%n_spd_values = n_spd_values
+            opt%minimum_layer_size = minimum_layer_size
+            opt%read_LUT = read_LUT
+            opt%write_LUT = write_LUT
+            if (trim(u_LUT_Filename)=="MISSING") then
+                if (trim(LUT_Filename)=="MISSING") then
+                    u_LUT_Filename="Linear_Theory_LUT.nc"
+                else
+                    u_LUT_Filename=LUT_Filename
+                endif
+            endif
 
-        ! copy the data back into the global options data structure
-        options%lt_options = lt_options
+            opt%u_LUT_Filename = u_LUT_Filename
+            opt%v_LUT_Filename = v_LUT_Filename
+            opt%overwrite_lt_lut = overwrite_lt_lut
+
+        end associate
+
     end subroutine lt_parameters_namelist
 
 

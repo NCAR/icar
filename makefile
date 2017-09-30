@@ -6,7 +6,7 @@
 #			clean: 		removes objects and module files
 #			allclean: 	makes clean and removes executables
 #			cleanall: 	alias for allclean
-#			tests: 		makes various unit tests (not all work)
+#			test: 		makes various unit tests (not all work)
 #			icar: 		makes the primary model
 #			doc: 		make doxygen documentation in docs/html (requires doxygen)
 #
@@ -32,17 +32,18 @@
 # LIBNETCDF	 : location of netdcdf libraries	default = compiler/machine dependant /usr/local/lib
 # INCNETCDF	 : location of netcdf headers		default = compiler/machine dependant /usr/local/include
 #
-# Dependencies: fftw, netcdf
+# Dependencies: fftw (v3), netcdf (v4)
 #	FFTW is available here: http://www.fftw.org/
 #		FFTW is a C library with fortran headers
 #	netcdf is available here: http://www.unidata.ucar.edu/software/netcdf/
-#		netcdf is a fortran library and must be compiled with the same fortran
-#		compiler you are using to be compatible
+#		NB Requires the same compiler be used to compile the Fortran interface as is used to compile ICAR
 
 ###################################################################
 #  Specify where you want the resulting executable installed
 ###################################################################
-INSTALLDIR=~/bin/
+ifndef INSTALLDIR
+	INSTALLDIR=~/bin/
+endif
 
 ###################################################################
 #	Various compiler specific flags, may need to edit
@@ -53,17 +54,30 @@ INSTALLDIR=~/bin/
 # compiled binary and you don't need to set LD_LIBRARY_PATH at runtime.
 
 ########################################################################################
-# These are default parameters
+# These are default parameters, also tries to load from environment variables
 # They are overwritten with machine specific options below if known
 ########################################################################################
-F90=gfortran
 RM=/bin/rm
 CP=/bin/cp
+# doxygen only required to enable "make doc"
 DOXYGEN=doxygen
-FFTW_PATH=/usr/local
-LIBFFT = ${FFTW_PATH}/lib
-INCFFT = ${FFTW_PATH}/include
-NCDF_PATH = /usr/local
+
+ifndef FC
+	FC=gfortran
+endif
+F90=${FC}
+
+ifndef FFTW
+	FFTW=/usr/local
+endif
+FFTW_PATH = ${FFTW}
+LIBFFT = -L${FFTW_PATH}/lib -lm -lfftw3
+INCFFT = -I${FFTW_PATH}/include
+
+ifndef NETCDF
+	NETCDF=/usr/local
+endif
+NCDF_PATH = ${NETCDF}
 LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 INCNETCDF = -I$(NCDF_PATH)/include
 
@@ -80,14 +94,17 @@ endif
 ifeq ($(patsubst hexagon%,hexagon,$(NODENAME)), hexagon)
 	NODENAME=hexagon
 endif
+ifeq ($(patsubst cheyenne%,cheyenne,$(NODENAME)), cheyenne)
+	NODENAME=cheyenne
+endif
 
 
 # on hexagon (uib computer)
 ifeq ($(NODENAME), hexagon)
 	F90=ftn
 	FFTW_PATH = /home/gfi/pbo003/Libraries/FFTW/fftw-3.3.4
-	LIBFFT = ${FFTW_PATH}/lib
-	INCFFT = ${FFTW_PATH}/include
+	LIBFFT = -L${FFTW_PATH}/lib -lm -lfftw3
+	INCFFT = -I${FFTW_PATH}/include
 	NCDF_PATH = /opt/cray/netcdf/default/cray/83
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
@@ -97,16 +114,16 @@ endif
 # may want to add -Wl,-no_compact_unwind to suppress some warnings
 ifeq ($(NODENAME), Nomad.local)
 	F90=gfortran
-	LIBFFT=/Users/gutmann/usr/local/lib
-	INCFFT=/Users/gutmann/usr/local/include
+	LIBFFT=-L/Users/gutmann/usr/local/lib -lm -lfftw3
+	INCFFT=-I/Users/gutmann/usr/local/include
 	NCDF_PATH = /usr/local/
 	LIBNETCDF = -L/usr/local/gfortran/lib -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
 endif
 ifeq ($(NODENAME), dablam.rap.ucar.edu)
 	F90=gfortran
-	LIBFFT=/usr/local/lib
-	INCFFT=/usr/local/include
+	LIBFFT=-L/usr/local/lib -lm -lfftw3
+	INCFFT=-I/usr/local/include
 	NCDF_PATH = /usr/local
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
@@ -122,14 +139,14 @@ ifeq ($(NODENAME),hydro-c1)
 	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = -I$(NCDF_PATH)/include
 
-	LIBFFT=/home/gutmann/.usr/local/lib
-	INCFFT=/home/gutmann/.usr/local/include
+	LIBFFT=-L/home/gutmann/.usr/local/lib -lm -lfftw3
+	INCFFT=-I/home/gutmann/.usr/local/include
 endif
 # on yellowstone:
 ifeq ($(LMOD_FAMILY_COMPILER),gnu)
 	F90=gfortran
-	LIBFFT=/glade/u/home/gutmann/usr/local/lib
-	INCFFT=/glade/u/home/gutmann/usr/local/include
+	LIBFFT = -L/glade/u/home/gutmann/usr/local/lib -lm -lfftw3
+	INCFFT = -I/glade/u/home/gutmann/usr/local/include
 	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/gnu/4.8.2
 	# note this works for almost all versions of gfortran EXCEPT 4.8.2... the default version
 	NCDF_PATH=/glade/apps/opt/netcdf/4.3.3.1/gnu/$(GNU_MAJOR_VERSION).$(GNU_MINOR_VERSION)
@@ -140,24 +157,33 @@ ifeq ($(LMOD_FAMILY_COMPILER),gnu)
 endif
 ifeq ($(LMOD_FAMILY_COMPILER),intel)
 	F90=ifort
-	LIBFFT=/glade/u/home/gutmann/usr/local/lib
-	INCFFT=/glade/u/home/gutmann/usr/local/include
+	LIBFFT = -L/glade/u/home/gutmann/usr/local/lib -lm -lfftw3
+	INCFFT = -I/glade/u/home/gutmann/usr/local/include
 	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/intel/default
 	LIBNETCDF = $(LIB_NCAR) #-L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 	INCNETCDF = $(INC_NCAR) #-I$(NCDF_PATH)/include # netcdf includes are setup by the yellowstone module system
 endif
 ifeq ($(LMOD_FAMILY_COMPILER),pgi)
 	F90=pgf90
-	LIBFFT=/glade/u/home/gutmann/usr/local/lib
-	INCFFT=/glade/u/home/gutmann/usr/local/include
+	LIBFFT = -L/glade/u/home/gutmann/usr/local/lib -lm -lfftw3
+	INCFFT = -I/glade/u/home/gutmann/usr/local/include
 	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/pgi/default
 	LIBNETCDF = -rpath $(NCDF_PATH)/lib -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf # if using a compiler for which netcdf includes are
 	INCNETCDF = -I$(NCDF_PATH)/include # NOT setup correctly by the yellowstone module system
 endif
 
+ifeq ($(NODENAME), cheyenne)
+	F90=$(FC)
+	FFTW_PATH = /glade/u/home/gutmann/usr/local
+	LIBFFT = -L$(FFTW_PATH)/lib -lm -lfftw3
+	INCFFT = -I$(FFTW_PATH)/include
+	NCDF_PATH = $(NETCDF)
+	LIBNETCDF = -L$(NETCDF)/lib -lnetcdff -lnetcdf
+	INCNETCDF = -I$(NETCDF)/include
+endif
+
 # get GIT version info
 GIT_VERSION := $(shell git describe --long --dirty --all --always | sed -e's/heads\///')
-
 
 ########################################################################################
 #
@@ -165,10 +191,6 @@ GIT_VERSION := $(shell git describe --long --dirty --all --always | sed -e's/hea
 # now we can set up compiler specific flags (may be overwritten later if MODE is set)
 #
 ########################################################################################
-# Consider adding vectorization "encouragement" to the compile lines
-#  ifort should vectorize to SSE with -fast, may need -axAVX to add AVX
-#  gcc should vectorize with -Ofast (adds -ftree-vectorize) and optionally -mavx -march=corei7-avx
-#  could also add alignment in ifort with -align array64byte not sure why that isn't included in -fast
 
 # GNU fortran
 ifeq ($(F90), gfortran)
@@ -179,8 +201,8 @@ ifeq ($(F90), gfortran)
 endif
 # Intel fortran
 ifeq ($(F90), ifort)
-	COMP=-c -u -openmp -liomp5 -O3 -no-prec-div -xHost -ftz -fpe0 # -check stack,bounds -fp-stack-check
-	LINK= -openmp -liomp5
+	COMP=-c -u -qopenmp -liomp5 -O3 -xHost -ftz -fpe0 # -check stack,bounds -fp-stack-check
+	LINK= -qopenmp -liomp5
 	PREPROC=-fpp
 	MODOUTPUT=-module $(BUILD)
 endif
@@ -245,8 +267,8 @@ endif
 ifeq ($(MODE), debugompslow)
 	ifeq ($(F90), ifort)
 		# COMP= -openmp -liomp5 -debug -debug-parameters all -traceback -ftrapuv -g -fpe0 -c -u -check all -check noarg_temp_created -CB
-		COMP= -openmp -liomp5 -debug -c -u	-fpe0 -traceback -check all -check noarg_temp_created -fp-stack-check
-		LINK= -openmp -liomp5
+		COMP= -qopenmp -liomp5 -debug -c -u	-fpe0 -traceback -check all -check noarg_temp_created -fp-stack-check
+		LINK= -qopenmp -liomp5
 	endif
 	ifeq ($(F90), gfortran)
 		COMP= -fopenmp -lgomp -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
@@ -265,8 +287,8 @@ ifeq ($(MODE), debugompslow)
 endif
 ifeq ($(MODE), debugomp)
 	ifeq ($(F90), ifort)
-		COMP= -openmp -liomp5 -debug -c -O3 -u -traceback -fpe0 -ftz -xHost # -fast-transcendentals -check all -check noarg_temp_created -fpe0
-		LINK= -openmp -liomp5
+		COMP= -qopenmp -liomp5 -debug -c -O3 -u -traceback -fpe0 -ftz -xHost # -fast-transcendentals -check all -check noarg_temp_created -fpe0
+		LINK= -qopenmp -liomp5
 	endif
 	ifeq ($(F90), gfortran)
 		COMP= -fopenmp -lgomp -c -O1 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
@@ -288,7 +310,7 @@ PROF=
 ifeq ($(MODE), profile)
 	ifeq ($(F90), ifort)
 		PROF=-pg -debug inline-debug-info -shared-intel
-		COMP=-c -u -openmp -liomp5 -O3 -no-prec-div -xHost -ftz #because -fast includes -static # not available in ifort <13 -align array64byte
+		COMP=-c -u -qopenmp -liomp5 -O3 -xHost -ftz #because -fast includes -static # not available in ifort <13 -align array64byte
 	endif
 	ifeq ($(F90), gfortran)
 		PROF=-g
@@ -308,8 +330,19 @@ endif
 ###################################################################
 # copy required libraries into a directory accessible on compute nodes and set LD_RUN_PATH e.g.
 # export LD_RUN_PATH=$LD_RUN_PATH:/path/to/netcdf/libraries/lib:/path/to/fftw/libraries/lib
-LFLAGS=$(LINK) $(PROF) ${LIBNETCDF} -L${LIBFFT} -lm -lfftw3
-FFLAGS=$(COMP) $(PROF) ${INCNETCDF} -I${INCFFT} ${MODOUTPUT}
+LFLAGS=$(LINK) $(PROF) ${LIBNETCDF} ${LIBFFT}
+FFLAGS=$(COMP) $(PROF) ${INCNETCDF} ${INCFFT} ${MODOUTPUT}
+
+
+$(info $$NODENAME    = ${NODENAME})
+$(info $$FC          = ${F90})
+$(info $$FFTW_PATH   = ${FFTW_PATH})
+$(info $$NCDF_PATH   = ${NCDF_PATH})
+$(info $$GIT_VERSION = ${GIT_VERSION})
+$(info $$COMP        = ${COMP})
+$(info $$LINK        = ${LINK})
+$(info $$MODE        = ${MODE})
+
 
 # Model directories
 BUILD=build/
@@ -319,55 +352,70 @@ MAIN=main/
 UTIL=utilities/
 CONST=constants/
 
-OBJS=	$(BUILD)driver.o 		\
-		$(BUILD)init.o 			\
-		$(BUILD)init_options.o 	\
-		$(BUILD)model_tracking.o \
-		$(BUILD)boundary.o 		\
-		$(BUILD)time_step.o 	\
-		$(BUILD)output.o 		\
-		$(BUILD)io_routines.o 	\
-		$(BUILD)lt_lut_io.o 	\
-		$(BUILD)mp_driver.o 	\
-		$(BUILD)mp_wsm6.o 		\
-		$(BUILD)mp_thompson.o 	\
-		$(BUILD)mp_simple.o 	\
-		$(BUILD)mp_morrison.o 	\
-		$(BUILD)cu_driver.o 	\
-		$(BUILD)cu_tiedtke.o 	\
-		$(BUILD)cu_kf.o 		\
-		$(BUILD)ra_driver.o 	\
-		$(BUILD)ra_simple.o 	\
-		$(BUILD)lsm_driver.o 	\
-		$(BUILD)lsm_simple.o 	\
-		$(BUILD)lsm_basic.o 	\
-		$(BUILD)lsm_noahdrv.o 	\
-		$(BUILD)lsm_noahlsm.o 	\
-		$(BUILD)water_simple.o 	\
-		$(BUILD)pbl_driver.o 	\
-		$(BUILD)pbl_simple.o 	\
-		$(BUILD)pbl_ysu.o 		\
-		$(BUILD)advection_driver.o \
-		$(BUILD)adv_mpdata.o 	\
-		$(BUILD)advect.o 		\
-		$(BUILD)wind.o 			\
-		$(BUILD)linear_winds.o 	\
-		$(BUILD)fftw.o 			\
-		$(BUILD)fftshift.o 		\
-		$(BUILD)geo_reader.o 	\
-		$(BUILD)vinterp.o 		\
-		$(BUILD)time.o 			\
-		$(BUILD)data_structures.o \
-		$(BUILD)icar_constants.o\
-		$(BUILD)wrf_constants.o \
-		$(BUILD)string.o 		\
+OBJS=	$(BUILD)driver.o 			\
+		$(BUILD)init.o 				\
+		$(BUILD)init_options.o 		\
+		$(BUILD)model_tracking.o 	\
+		$(BUILD)boundary.o 			\
+		$(BUILD)time_step.o 		\
+		$(BUILD)output.o 			\
+		$(BUILD)io_routines.o 		\
+		$(BUILD)lt_lut_io.o 		\
+		$(BUILD)mp_driver.o 		\
+		$(BUILD)mp_wsm6.o 			\
+		$(BUILD)mp_thompson.o 		\
+		$(BUILD)mp_simple.o 		\
+		$(BUILD)mp_morrison.o 		\
+		$(BUILD)cu_driver.o 		\
+		$(BUILD)cu_tiedtke.o 		\
+		$(BUILD)cu_kf.o 			\
+		$(BUILD)ra_driver.o 		\
+		$(BUILD)ra_simple.o 		\
+		$(BUILD)lsm_driver.o 		\
+		$(BUILD)lsm_simple.o 		\
+		$(BUILD)lsm_basic.o 		\
+		$(BUILD)lsm_noahdrv.o 		\
+		$(BUILD)lsm_noahlsm.o 		\
+		$(BUILD)water_simple.o 		\
+		$(BUILD)pbl_driver.o 		\
+		$(BUILD)pbl_simple.o 		\
+		$(BUILD)pbl_ysu.o 			\
+		$(BUILD)advection_driver.o 	\
+		$(BUILD)adv_mpdata.o 		\
+		$(BUILD)advect.o 			\
+		$(BUILD)wind.o 				\
+		$(BUILD)linear_winds.o 		\
+		$(BUILD)winds_blocking.o	\
+		$(BUILD)fftw.o 				\
+		$(BUILD)fftshift.o 			\
+		$(BUILD)geo_reader.o 		\
+		$(BUILD)vinterp.o 			\
+		$(BUILD)atm_utilities.o 	\
+		$(BUILD)time.o 				\
+		$(BUILD)data_structures.o 	\
+		$(BUILD)icar_constants.o	\
+		$(BUILD)wrf_constants.o 	\
+		$(BUILD)string.o 			\
+		$(BUILD)array_utilities.o 	\
 		$(BUILD)debug_utils.o
+
+
+TEST_EXECUTABLES= 	fftshift_test	\
+	  				calendar_test	\
+	  				mpdata_test		\
+	  				fftw_test		\
+	  				blocking_test	\
+	  				array_util_test
+
 
 ###################################################################
 #	User facing rules
 ###################################################################
 
-all:icar
+icar:${OBJS}
+	${F90} -o icar ${OBJS} ${LFLAGS}
+
+all:icar test
 
 install:icar
 	${CP} icar ${INSTALLDIR}
@@ -378,12 +426,9 @@ clean:
 allclean:cleanall
 
 cleanall: clean
-	${RM} icar fftshift_test calendar_test mpdata_test fftw_test 2>/dev/null ||:
+	${RM} icar $(TEST_EXECUTABLES) 2>/dev/null ||:
 
-test: fftshift_test calendar_test mpdata_test fftw_test
-
-icar:${OBJS}
-	${F90} -o icar ${OBJS} ${LFLAGS}
+test: $(TEST_EXECUTABLES)
 
 doc:
 	doxygen docs/doxygenConfig
@@ -392,16 +437,25 @@ doc:
 #	test cases
 ###################################################################
 fftw_test: $(BUILD)test_fftw.o
-	${F90} $(BUILD)test_fftw.o -o fftw_test ${LFLAGS}
+	${F90} $^ -o $@ ${LFLAGS}
 
 fftshift_test: $(BUILD)test_fftshift.o $(BUILD)fftshift.o
-	${F90} $(BUILD)test_fftshift.o $(BUILD)fftshift.o -o fftshift_test ${LFLAGS}
+	${F90} $^ -o $@ ${LFLAGS}
 
 calendar_test: $(BUILD)test_calendar.o $(BUILD)time.o
-	${F90} $(BUILD)test_calendar.o $(BUILD)time.o -o calendar_test ${LFLAGS}
+	${F90} $^ -o $@ ${LFLAGS}
 
 mpdata_test: $(BUILD)test_mpdata.o $(BUILD)adv_mpdata.o
-	${F90} $(BUILD)test_mpdata.o $(BUILD)adv_mpdata.o -o mpdata_test ${LFLAGS}
+	${F90} $^ -o $@ ${LFLAGS}
+
+blocking_test: $(BUILD)test_blocking.o $(BUILD)io_routines.o $(BUILD)winds_blocking.o \
+				$(BUILD)linear_winds.o $(BUILD)fftshift.o $(BUILD)string.o 		      \
+				$(BUILD)lt_lut_io.o $(BUILD)atm_utilities.o $(BUILD)array_utilities.o
+	${F90} $^ -o $@ ${LFLAGS}
+
+array_util_test: $(BUILD)test_array_utilities.o $(BUILD)array_utilities.o
+	${F90} $^ -o $@ ${LFLAGS}
+
 
 
 ###################################################################
@@ -419,7 +473,8 @@ $(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)data_structures.o $(BUILD)init.o $(BU
 
 $(BUILD)init.o:$(MAIN)init.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)geo_reader.o $(BUILD)vinterp.o \
 					$(BUILD)mp_driver.o $(BUILD)cu_driver.o $(BUILD)pbl_driver.o $(BUILD)wind.o \
-					$(BUILD)ra_driver.o $(BUILD)lsm_driver.o $(BUILD)init_options.o $(BUILD)advection_driver.o
+					$(BUILD)ra_driver.o $(BUILD)lsm_driver.o $(BUILD)init_options.o $(BUILD)advection_driver.o \
+					$(BUILD)atm_utilities.o
 	${F90} ${FFLAGS} $(MAIN)init.f90 -o $(BUILD)init.o
 
 $(BUILD)boundary.o:$(MAIN)boundary.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)wind.o $(BUILD)geo_reader.o \
@@ -445,6 +500,13 @@ $(BUILD)time.o:$(UTIL)time.f90
 
 $(BUILD)string.o:$(UTIL)string.f90
 	${F90} ${FFLAGS} $(UTIL)string.f90 -o $(BUILD)string.o
+
+$(BUILD)array_utilities.o:$(UTIL)array_utilities.f90
+	${F90} ${FFLAGS} $(UTIL)array_utilities.f90 -o $(BUILD)array_utilities.o
+
+$(BUILD)atm_utilities.o:$(UTIL)atm_utilities.f90 $(BUILD)icar_constants.o $(BUILD)data_structures.o
+	${F90} ${FFLAGS} $(UTIL)atm_utilities.f90 -o $(BUILD)atm_utilities.o
+
 
 ###################################################################
 #	I/O routines
@@ -475,7 +537,7 @@ $(BUILD)vinterp.o: $(UTIL)vinterp.f90 $(BUILD)data_structures.o
 ###################################################################
 
 $(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_thompson.o $(BUILD)mp_simple.o \
-					$(BUILD)mp_morrison.o $(BUILD)data_structures.o $(BUILD)mp_wsm6.o
+					$(BUILD)mp_morrison.o $(BUILD)data_structures.o $(BUILD)mp_wsm6.o $(BUILD)time.o
 	${F90} ${FFLAGS} $(PHYS)mp_driver.f90 -o $(BUILD)mp_driver.o
 
 $(BUILD)mp_morrison.o:$(PHYS)mp_morrison.f90 $(BUILD)data_structures.o
@@ -483,7 +545,7 @@ $(BUILD)mp_morrison.o:$(PHYS)mp_morrison.f90 $(BUILD)data_structures.o
 
 $(BUILD)mp_wsm6.o:$(PHYS)mp_wsm6.f90 $(BUILD)wrf_constants.o
 	${F90} ${FFLAGS} $(PHYS)mp_wsm6.f90 -o $(BUILD)mp_wsm6.o
-	
+
 $(BUILD)mp_thompson.o:$(PHYS)mp_thompson.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)mp_thompson.f90 -o $(BUILD)mp_thompson.o
 
@@ -513,7 +575,7 @@ $(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o $(BUILD)time.
 	${F90} ${FFLAGS} $(PHYS)ra_simple.f90 -o $(BUILD)ra_simple.o
 
 ###################################################################
-#	Land Surface code
+#	Surface code
 ###################################################################
 $(BUILD)lsm_driver.o: $(PHYS)lsm_driver.f90 $(BUILD)data_structures.o $(BUILD)lsm_simple.o \
 						$(BUILD)lsm_basic.o $(BUILD)lsm_noahdrv.o $(BUILD)lsm_noahlsm.o \
@@ -566,12 +628,19 @@ $(BUILD)adv_mpdata.o:$(PHYS)adv_mpdata.f90 $(PHYS)adv_mpdata_FCT_core.f90 $(BUIL
 ###################################################################
 #	Wind related code
 ###################################################################
-$(BUILD)wind.o:$(PHYS)wind.f90 $(BUILD)linear_winds.o $(BUILD)data_structures.o
+$(BUILD)wind.o:$(PHYS)wind.f90 $(BUILD)data_structures.o \
+				$(BUILD)winds_blocking.o $(BUILD)linear_winds.o
 	${F90} ${FFLAGS} $(PHYS)wind.f90 -o $(BUILD)wind.o
 
 $(BUILD)linear_winds.o:$(PHYS)linear_winds.f90 $(BUILD)io_routines.o $(BUILD)data_structures.o \
-	 				   $(BUILD)fftshift.o $(BUILD)lt_lut_io.o $(BUILD)string.o $(BUILD)fftw.o
+	 				   $(BUILD)fftshift.o $(BUILD)lt_lut_io.o $(BUILD)string.o $(BUILD)fftw.o  \
+					   $(BUILD)atm_utilities.o $(BUILD)array_utilities.o
 	${F90} ${FFLAGS} $(PHYS)linear_winds.f90 -o $(BUILD)linear_winds.o
+
+$(BUILD)winds_blocking.o:$(PHYS)winds_blocking.f90 $(BUILD)linear_winds.o 	\
+	 					$(BUILD)fftshift.o $(BUILD)fftw.o $(BUILD)array_utilities.o \
+						$(BUILD)data_structures.o $(BUILD)atm_utilities.o $(BUILD)string.o
+	${F90} ${FFLAGS} $(PHYS)winds_blocking.f90 -o $(BUILD)winds_blocking.o
 
 ###################################################################
 #	FFT code
@@ -589,7 +658,7 @@ $(BUILD)fftshift.o:$(UTIL)fftshift.f90 $(BUILD)fftw.o
 ###################################################################
 $(BUILD)data_structures.o:$(MAIN)data_structures.f90 $(BUILD)icar_constants.o
 	${F90} ${FFLAGS} $(MAIN)data_structures.f90 -o $(BUILD)data_structures.o
-	
+
 $(BUILD)wrf_constants.o:$(CONST)wrf_constants.f90
 	${F90} ${FFLAGS} $(CONST)wrf_constants.f90 -o $(BUILD)wrf_constants.o
 
@@ -619,3 +688,10 @@ $(BUILD)test_calendar.o:$(BUILD)time.o tests/test_calendar.f90
 
 $(BUILD)test_mpdata.o:$(BUILD)adv_mpdata.o tests/test_mpdata.f90
 	${F90} ${FFLAGS} tests/test_mpdata.f90 -o $(BUILD)test_mpdata.o
+
+$(BUILD)test_blocking.o:tests/test_blocking.f90 $(BUILD)winds_blocking.o $(BUILD)linear_winds.o \
+						$(BUILD)data_structures.o $(BUILD)icar_constants.o $(BUILD)io_routines.o
+	${F90} ${FFLAGS} tests/test_blocking.f90 -o $(BUILD)test_blocking.o
+
+$(BUILD)test_array_utilities.o:tests/test_array_utilities.f90 $(BUILD)array_utilities.o
+	${F90} ${FFLAGS} tests/test_array_utilities.f90 -o $(BUILD)test_array_utilities.o

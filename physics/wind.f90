@@ -9,11 +9,12 @@
 !!------------------------------------------------------------
 module wind
     use linear_theory_winds, only : linear_perturb
+    use mod_blocking,        only : add_blocked_flow
     use data_structures
 !   use output, only: write_domain
     implicit none
     private
-    public::update_winds,balance_uvw,init_winds
+    public::update_winds, balance_uvw, init_winds
     real, parameter::deg2rad=0.017453293 !2*pi/360
 contains
 
@@ -90,11 +91,14 @@ contains
                 endif
             else
                 !------------------------------------------------------------
-                ! If we are not incorporating density, this is much easier to understand
+                ! If we are not incorporating density this is simpler
                 !------------------------------------------------------------
                 ! calculate horizontal divergence
+                !   in the North-South direction
                 dv = domain%v(2:nx-1,i,3:ny) - domain%v(2:nx-1,i,2:ny-1)
+                !   in the East-West direction
                 du = domain%u(3:nx,i,2:ny-1) - domain%u(2:nx-1,i,2:ny-1)
+                !   in net
                 divergence = du + dv
 
                 ! Then calculate w to balance
@@ -107,7 +111,7 @@ contains
                 endif
 
                 !------------------------------------------------------------
-                ! Now do the same for the convective wind field *if needed*
+                ! Now do the same for the convective wind field if needed
                 !------------------------------------------------------------
                 if (options%physics%convection > 0) then
                     ! calculate horizontal divergence
@@ -191,6 +195,11 @@ contains
         ! rotate winds from cardinal directions to grid orientation (e.g. u is grid relative not truly E-W)
         if (.not.options%ideal) then
             call make_winds_grid_relative(domain)
+        endif
+
+        ! flow blocking parameterization
+        if (options%block_options%block_flow) then
+            call add_blocked_flow(domain, options)
         endif
 
         ! linear winds

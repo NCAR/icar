@@ -19,11 +19,13 @@ def set_bounds(info):
         os.mkdir(output_dir)
     except:
         pass
-        
+
     ncfile=io.grib2nc(erai_file,varlist,output_dir)
     lat=mygis.read_nc(ncfile,varlist[0]).data
     lon=mygis.read_nc(ncfile,varlist[1]).data-360
-    
+
+    # print(lon, info.lon[0])
+    lon[lon<-180]+=360
     info.xmin=np.where(lon>=info.lon[0])[0][0]
     info.xmax=np.where(lon<=info.lon[1])[0][-1]+1
     #note lat is inverted from "expected"
@@ -32,7 +34,7 @@ def set_bounds(info):
     lon,lat=np.meshgrid(lon[info.xmin:info.xmax],lat[info.ymin:info.ymax][::-1])
     info.lat_data=lat
     info.lon_data=lon
-    
+
 def make_timelist(info):
     hrs=6.0
     dt=datetime.timedelta(hrs/24)
@@ -41,9 +43,9 @@ def make_timelist(info):
 
 def update_info(info):
     make_timelist(info)
-    
+
     set_bounds(info)
-    
+
 
 def parse():
     parser= argparse.ArgumentParser(description='Convert ERAi files to ICAR input forcing files')
@@ -60,27 +62,27 @@ def parse():
     parser.add_argument('atmuvfile',nargs="?",     action='store',  help="ERAi U/V atm file",                  default="ei.oper.an.ml.regn128uv._Y__M__D__h_")
     parser.add_argument('sfcfile',  nargs="?",     action='store',  help="ERAi surface file",                  default="ei.oper.fc.sfc.regn128sc._Y__M__D__h_")
     parser.add_argument('temp_nc_dir',nargs="?",   action='store',  help="temporary directory to store netCDF files in",default="temp_nc_dir")
-    
+
     parser.add_argument('-v', '--version',action='version',
             version='ERAi2ICAR v'+version)
     parser.add_argument ('--verbose', action='store_true',
             default=False, help='verbose output', dest='verbose')
     args = parser.parse_args()
-    
+
     date0=args.start_date.split("-")
     start_date=datetime.datetime(int(date0[0]),int(date0[1]),int(date0[2]))
 
     date0=args.end_date.split("-")
     end_date=datetime.datetime(int(date0[0]),int(date0[1]),int(date0[2]))
-    
+
     if args.temp_nc_dir[-1]!="/":
         args.temp_nc_dir+="/"
-    
+
     info=Bunch(lat=[float(args.lat_s),float(args.lat_n)],
                lon=[float(args.lon_w),float(args.lon_e)],
                start_date=start_date,end_date=end_date,
                atmdir=args.dir+args.atmdir,sfcdir=args.dir+args.sfcdir,
                atmfile=args.atmfile,uvfile=args.atmuvfile,sfcfile=args.sfcfile,
                nc_file_dir=args.temp_nc_dir,version=version)
-    
+
     return info

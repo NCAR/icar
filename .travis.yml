@@ -13,7 +13,12 @@ addons:
       - libnetcdf-dev
       - libfftw3-dev
 script:
-  - sed -i "s|FFTW_PATH=/usr/local|FFTW_PATH=/usr|" makefile
-  - sed -i "s|NCDF_PATH = /usr/local|NCDF_PATH = /usr|" makefile
-  - make test -j4
+  - export FC=gfortran
+  - export FFTW=/usr
+  - export NETCDF=/usr
+  - make test -j4 # test parallel compile
   - make -j4
+  - make clean # test serial compile
+  - make
+  - make clean # test parallel debug compile
+  - make MODE=debugslow -j4

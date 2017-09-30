@@ -169,6 +169,9 @@ module data_structures
         real, allocatable, dimension(:,:)   :: linear_mask          ! weights to multiply linear wind by (default=1)
         real, allocatable, dimension(:,:)   :: nsq_calibration      ! calibration parameter to multiply brunt-vaisala frequency by [0-]
         complex(C_DOUBLE_COMPLEX), allocatable, dimension(:,:) :: fzs ! FFT(terrain)
+
+        real, allocatable, dimension(:,:)   :: froude               ! store a distributed map of froude numbers
+
     end type linearizable_type
 
 
@@ -180,8 +183,11 @@ module data_structures
         real,                       allocatable, dimension(:,:) :: sig, k, l, kl
         complex(C_DOUBLE_COMPLEX),  allocatable, dimension(:,:) :: denom, msq, mimag, m, ineta
 
-        complex(C_DOUBLE_COMPLEX),  pointer,     dimension(:,:) :: uhat, vhat, u_perturb, v_perturb
-        type(C_PTR) :: uh_aligned_data, up_aligned_data, vh_aligned_data, vp_aligned_data
+        complex(C_DOUBLE_COMPLEX),  pointer,     dimension(:,:) :: uhat, vhat
+        complex(C_DOUBLE_COMPLEX),  pointer,     dimension(:,:) :: u_perturb, v_perturb
+        complex(C_DOUBLE_COMPLEX),  pointer,     dimension(:,:) :: u_accumulator, v_accumulator
+        type(C_PTR) :: uh_aligned_data, up_aligned_data, ua_aligned_data
+        type(C_PTR) :: vh_aligned_data, vp_aligned_data, va_aligned_data
 
         type(C_PTR) :: uplan, vplan
     end type linear_theory_type
@@ -204,13 +210,15 @@ module data_structures
     type, extends(linearizable_type) :: domain_type
         ! 3D atmospheric fields
         real, allocatable, dimension(:,:,:) :: w,ur,vr,wr   ! w, and u,v,w * density
-        real, allocatable, dimension(:,:,:) :: u_cu, v_cu, w_cu   ! u and v fields from convective processes
+        real, allocatable, dimension(:,:,:) :: u_cu, v_cu, w_cu            ! wind from convective processes
+        real, allocatable, dimension(:,:,:) :: u_block, v_block, w_block   ! wind from blocking process
         real, allocatable, dimension(:,:,:) :: w_real       ! real space w on the mass grid (including U,V*dz/dx component) for output
         real, allocatable, dimension(:,:,:) :: nice,nrain   ! number concentration for ice and rain
         real, allocatable, dimension(:,:,:) :: nsnow,ngraupel! number concentration for snow and graupel (used in mp_morrison)
         real, allocatable, dimension(:,:,:) :: qgrau        ! graupel mass mixing ratio
         real, allocatable, dimension(:,:,:) :: p_inter      ! pressure on the vertical interfaces (p[:,1,:]=psfc)
         real, allocatable, dimension(:,:,:) :: z_inter      ! z height on interface levels
+        real, allocatable, dimension(:)     :: z_layers, z_interface_layers
         real, allocatable, dimension(:,:,:) :: dz_inter     ! dz between interface levels
         real, allocatable, dimension(:,:,:) :: mut          ! mass in a given cell ? (pbot-ptop) used in some physics schemes
         ! 3D soil field
@@ -259,6 +267,9 @@ module data_structures
         real, allocatable, dimension(:,:)   :: u10, v10             ! 10m height u and v winds                      [m/s]
         real, allocatable, dimension(:,:)   :: t2m, q2m             ! 2m height air temperature                     [K]
                                                                     ! and water vapor mixing ratio                  [kg/kg]
+
+        real, allocatable, dimension(:,:)   :: terrain_blocking     ! smoothed terrain delta for froude num calc.   [m]
+        logical :: blocking_initialized                             ! flag to mark that the terrain_blocking field has been initialized
 
         ! current model time step length (should this be somewhere else?)
         real::dt
@@ -324,23 +335,35 @@ module data_structures
     ! ------------------------------------------------
 !! ++ trude
     type mp_options_type
-        real :: Nt_c
-        real :: TNO
-        real :: am_s
-        real :: rho_g
-        real :: av_s, bv_s, fv_s, av_i
-        real :: av_g, bv_g
-        real :: Ef_si, Ef_rs, Ef_rg, Ef_ri
-        real :: C_cubes, C_sqrd
-        real :: mu_r
-        real :: t_adjust
+        real    :: Nt_c
+        real    :: TNO
+        real    :: am_s
+        real    :: rho_g
+        real    :: av_s, bv_s, fv_s, av_i
+        real    :: av_g, bv_g
+        real    :: Ef_si, Ef_rs, Ef_rg, Ef_ri
+        real    :: C_cubes, C_sqrd
+        real    :: mu_r
+        real    :: t_adjust
         logical :: Ef_rw_l, EF_sw_l
 
-        integer :: update_interval ! maximum number of seconds between updates
-        integer :: top_mp_level ! top model level to process in the microphysics
-        real :: local_precip_fraction
+        integer :: update_interval  ! maximum number of seconds between updates
+        integer :: top_mp_level     ! top model level to process in the microphysics
+        real    :: local_precip_fraction    ! fraction of grid cell precip to keep local vs distributing to surrounding
     end type mp_options_type
 !! -- trude
+
+    ! ------------------------------------------------
+    ! store Blocked flow options
+    ! ------------------------------------------------
+    type block_options_type
+        real    :: blocking_contribution  ! fractional contribution of flow blocking perturbation that is added [0-1]
+        real    :: smooth_froude_distance ! distance (m) over which Froude number is smoothed
+        integer :: n_smoothing_passes     ! number of times the smoothing window is applied
+        real    :: block_fr_max           ! max froude no at which flow is only partially blocked above, no blocking
+        real    :: block_fr_min           ! min froude no at which flow is only partially blocked below, full blocking
+        logical :: block_flow             ! switch to use or not use the flow blocking parameterization
+    end type block_options_type
 
     ! ------------------------------------------------
     ! store Linear Theory options
@@ -370,6 +393,8 @@ module data_structures
         real    :: spdmax, spdmin           ! minimum and maximum wind speeds to use in the LU (typically 0 and ~30)
         real    :: nsqmax, nsqmin           ! minimum and maximum brunt_vaisalla frequencies (typically ~1e-8 and 1e-3)
         integer :: n_dir_values, n_nsq_values, n_spd_values ! number of LUT bins for each parameter
+        real    :: minimum_layer_size       ! Minimum vertical step to permit when computing LUT.
+                                            ! If model layers are thicker, substepping will be used.
 
         logical :: read_LUT, write_LUT      ! options to read the LUT from disk (or write it)
         character(len=MAXFILELENGTH) :: u_LUT_Filename  ! u LUT filename to write
@@ -434,7 +459,7 @@ module data_structures
 
         ! Filenames for files to read various physics options from
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, adv_options_filename, &
-                                        lsm_options_filename, bias_options_filename
+                                        lsm_options_filename, bias_options_filename, block_options_filename
         character(len=MAXFILELENGTH) :: calendar
 
 
@@ -496,6 +521,9 @@ module data_structures
 
         logical :: use_lt_options
         type(lt_options_type) :: lt_options
+
+        logical :: use_block_options
+        type(block_options_type) :: block_options
 
         logical :: use_adv_options
         type(adv_options_type) :: adv_options
