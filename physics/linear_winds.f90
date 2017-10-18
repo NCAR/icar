@@ -423,7 +423,7 @@ contains
             V = V_layers(z)
             if ((abs(U)+abs(V))>0.5) then
                 sig  = U*k+V*l
-                where(sig==0.0) sig=1e-15
+                where(sig<1e-10) sig=1e-10
                 denom = sig**2 ! -f**2
 
                 !   where(denom.eq.0) denom=1e-20
