@@ -48,6 +48,7 @@ module module_ra_simple
     use time
     implicit none
     real, allocatable, dimension(:,:) :: cos_lat_m,sin_lat_m
+    integer :: nrad_layers
     real, parameter :: So=1367.0 ! Solar "constant" W/m^2
     real, parameter :: qcmin=1e-5 ! arbitrarily selected minimum "cloud" water content to affect radiation
     real, parameter :: MINIMUM_RH=1e-10 ! bounds on relative humidity = [min_rh to 1-min_rh]
@@ -66,32 +67,34 @@ contains
         cos_lat_m=cos(domain%lat/360.0 * 2*pi)
         sin_lat_m=sin(domain%lat/360.0 * 2*pi)
 
+        nrad_layers = 5
+
     end subroutine ra_simple_init
 
 !   day_of_year=calc_day_of_year(date)
 !   time_of_day=calc_time_of_day(date)
 
 
-    function relative_humidity(t,qv,p,j,nx)
+    function relative_humidity(t,qv,p,nx)
         implicit none
-        real,dimension(nx) :: relative_humidity
-        real,intent(in),dimension(nx)::t
-        real,intent(in),dimension(:,:,:)::qv,p
-        integer,intent(in)::j,nx
-        real,dimension(nx) :: mr, e, es
+        real,               dimension(nx) :: relative_humidity
+        real,   intent(in), dimension(nx) :: t
+        real,   intent(in), dimension(nx)  :: qv, p
+        integer,intent(in) :: nx
+        real,               dimension(nx) :: mr, e, es
 
         ! convert sensible humidity to mixing ratio
-        mr=qv(:,1,j)/(1-qv(:,1,j))
+        mr = qv / (1-qv)
         ! convert mixing ratio to vapor pressure
-        e=mr*p(:,1,j)/(0.62197+mr)
+        e = mr * p / (0.62197+mr)
         ! convert temperature to saturated vapor pressure
-        es=611.2*exp(17.67*(t-273.15)/(t-29.65))
+        es = 611.2 * exp(17.67 * (t - 273.15) / (t - 29.65))
         ! finally return relative humidity
-        relative_humidity= e/es
+        relative_humidity = e / es
         ! because it is an approximation things could go awry and rh outside or reasonable bounds could break something else.
         ! alternatively air could be supersaturated (esp. on boundary cells) but cloud fraction calculations will break.
-        where(relative_humidity>(1-MINIMUM_RH)) relative_humidity=1-MINIMUM_RH
-        where(relative_humidity<MINIMUM_RH) relative_humidity=MINIMUM_RH
+        where(relative_humidity > (1-MINIMUM_RH))   relative_humidity = 1 - MINIMUM_RH
+        where(relative_humidity < MINIMUM_RH)       relative_humidity = MINIMUM_RH
     end function relative_humidity
 
     function shortwave(day_frac, cloud_cover, solar_elevation,nx)
@@ -124,7 +127,7 @@ contains
         effective_emissivity = 1 - 0.261 * exp((-7.77e-4) * (273.16-T_air)**2)
         longwave = effective_emissivity * stefan_boltzmann * T_air**4
 
-        longwave = longwave * (1+0.2*cloud_cover)
+        longwave = min(longwave * (1+0.2*cloud_cover), 600.0)
     end function longwave
 
     function cloudfrac(rh,qc,nx)
@@ -217,20 +220,26 @@ contains
         !$omp do
         do j=2,ny-1
 
-            T_air=theta(:,1,j)*pii(:,1,j)
-            rh=relative_humidity(T_air,qv,p,j,nx)
+            T_air=0
+            rh=0
+            do k=1,nrad_layers
+                T_air = T_air + (theta(:,k,j)*pii(:,k,j))
+                rh    = rh    + relative_humidity((theta(:,k,j)*pii(:,k,j)),qv(:,k,j),p(:,k,j),nx)
+            enddo
+            T_air = T_air / nrad_layers
+            rh    = rh    / nrad_layers
 
-            hydrometeors=qc(:,1,j)+qs(:,1,j)+qr(:,1,j)
+            hydrometeors = qc(:,1,j)+qs(:,1,j)+qr(:,1,j)
             do k=2,nz
-                hydrometeors=hydrometeors+qc(:,k,j)+qs(:,k,j)+qr(:,k,j)
+                hydrometeors = hydrometeors+qc(:,k,j)+qs(:,k,j)+qr(:,k,j)
             end do
             where(hydrometeors<0) hydrometeors = 0
 
-            solar_elevation=calc_solar_elevation(date,lon,j,nx,day_frac)
+            solar_elevation  = calc_solar_elevation(date,lon,j,nx,day_frac)
 
             cloud_cover(:,j) = cloudfrac(rh,hydrometeors,nx)
-            swdown(:,j) = shortwave(day_frac,cloud_cover(:,j),solar_elevation,nx)
-            lwdown(:,j) = longwave(T_air,cloud_cover(:,j),nx)
+            swdown(:,j)      = shortwave(day_frac,cloud_cover(:,j),solar_elevation,nx)
+            lwdown(:,j)      = longwave(T_air,cloud_cover(:,j),nx)
             ! apply a simple radiative cooling to the atmosphere
             theta(2:nx-1,:,j)=theta(2:nx-1,:,j) - (((theta(2:nx-1,:,j)*pii(2:nx-1,:,j))**4) * coolingrate)
 

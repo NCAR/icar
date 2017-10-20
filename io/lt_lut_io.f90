@@ -24,7 +24,7 @@ module linear_theory_lut_disk_io
     public :: read_lut
     public :: write_lut
 
-    character(len=10), parameter :: lt_lut_version="1.0"
+    character(len=10), parameter :: lt_lut_version="1.1"
 
     interface write_var
         module procedure write_var_1d,write_var_6d
@@ -98,6 +98,7 @@ contains
         call io_add_attribute(filename, "n_dir_values", options%n_dir_values)
         call io_add_attribute(filename, "n_nsq_values", options%n_nsq_values)
         call io_add_attribute(filename, "n_spd_values", options%n_spd_values)
+        call io_add_attribute(filename, "minimum_layer_size", options%minimum_layer_size)
 
         call io_add_attribute(filename, "lt_LUT_version", trim(lt_lut_version))
 
@@ -113,7 +114,7 @@ contains
     !!  @sideeffect
     !!  If the parameters do not match the parameters in the LUT file, the parameters structure is updated to match
     !!  ... or at least they would if options was an inout variable... for now no update is performed an error is
-    !!  returned so that the requested LUT can be computed instead. 
+    !!  returned so that the requested LUT can be computed instead.
     !!
     !!  @param filename Name of LUT file to write
     !!  @param uLUT     Array to hold u wind look up table
@@ -165,10 +166,11 @@ contains
         error = error + check_attribute(filename, options%n_dir_values, "n_dir_values")
         error = error + check_attribute(filename, options%n_nsq_values, "n_nsq_values")
         error = error + check_attribute(filename, options%n_spd_values, "n_spd_values")
-        
-        ! check that the model levels are actually in the same vertical positions too. 
+        error = error + check_attribute(filename, options%minimum_layer_size, "minimum_layer_size")
+
+        ! check that the model levels are actually in the same vertical positions too.
         error = error + check_dz(filename,dz)
-        
+
         if (error/=0) return
 
         ! this is the slow part where we actually read in all the data
@@ -211,7 +213,7 @@ contains
                 return
             endif
         enddo
-        
+
         ! next perform the same check for the vLUT
         call io_getdims(filename,"vLUT",dims)
         do i=1,3
@@ -240,24 +242,24 @@ contains
         character(len=*), intent(in) :: filename ! LUT netcdf filename
         real, intent(in), dimension(:) :: model_dz ! dz being used in the model to verify matches LUT file
         integer :: error ! return value
-        
+
         ! local variables
         real, allocatable, dimension(:) :: lut_dz ! variable to hold the values read from the LUT file
         integer :: i, nz
 
         ! default assumes no error, code will be set if an error occurs
         error=0
-        
+
         ! read in the dz variable from the lut file
         call io_read(filename,"dz",lut_dz)
         nz = size(lut_dz)
-        
+
         ! I don't think this should be possible because we already checked dims_match for the file
         if (nz/=size(model_dz)) then
             error=1
             return
         endif
-        
+
         ! loop through all levels verifying that the LUT file matches the current model values
         do i=1,nz
             if (model_dz(i)/=lut_dz(i)) then
@@ -276,7 +278,7 @@ contains
     !!  Takes a filename variable name, data, dimension names and optionally a
     !!  flag to clobber existing files. If the specified dimensions don't exist
     !!  they are created based on the size if the data_out variable. Then the
-    !!  netcdf variable is created with those dimensions and the data are written. 
+    !!  netcdf variable is created with those dimensions and the data are written.
     !!
     !!  @param filename     Name of LUT file to open or create
     !!  @param varname      Name of variable to create
@@ -355,7 +357,7 @@ contains
     !!  Takes a filename variable name, data, dimension names and optionally a
     !!  flag to clobber existing files. If the specified dimensions don't exist
     !!  they are created based on the size if the data_out variable. Then the
-    !!  netcdf variable is created with those dimensions and the data are written. 
+    !!  netcdf variable is created with those dimensions and the data are written.
     !!
     !!  @param filename     Name of LUT file to open or create
     !!  @param varname      Name of variable to create
@@ -431,15 +433,15 @@ contains
 
     !>----------------------------------------------------------
     !!  Setup a new variable to be written
-    !! 
+    !!
     !!  @detail
     !!  Takes an open netCDF file id, variable name, dimension ids, and dimension lengths.
-    !!  If the variable doesn't exist it is created with the matching dimension ids. 
-    !!  These dimension lengths are then checked against the dimension lengths supplied. 
+    !!  If the variable doesn't exist it is created with the matching dimension ids.
+    !!  These dimension lengths are then checked against the dimension lengths supplied.
     !!  This check is performed in case a variable with this name but different dims already
-    !!  existed in the file. 
+    !!  existed in the file.
     !!  Supplied netCDF if must be a file that is in define mode
-    !! 
+    !!
     !!  @param      ncid    integer open netcdf file id
     !!  @param      varname name of the variable to be created
     !!  @param[out] varid   id of the existing or newly created variable
@@ -484,15 +486,15 @@ contains
 
     !>----------------------------------------------------------
     !!  Setup a new dimension in a given netcdf file
-    !! 
-    !!  Takes an open netcdf file id and a dimension name. 
+    !!
+    !!  Takes an open netcdf file id and a dimension name.
     !!  returns the dimension id for the given dimension name and
     !!  if given a dimension length (n) it is checked to make sure
-    !!  any existing dimension with this name has the write length. 
-    !! 
+    !!  any existing dimension with this name has the write length.
+    !!
     !!  @param      ncid    integer an open netcdf file id
     !!  @param      dimname the name of the dimension to be checked
-    !!  @param[out] dimid   the existing or newly created dimension id. 
+    !!  @param[out] dimid   the existing or newly created dimension id.
     !!  @param      n       The length of the dimension
     !!  @retval     error   0 if successful, 1 otherwise
     !!
@@ -510,13 +512,13 @@ contains
 
         ! first check for an existing dimension with the given name
         ncerror = NF90_INQ_DIMID(ncid, dimname, dimid)
-        ! if the dimension does not exist, create it here. 
+        ! if the dimension does not exist, create it here.
         if (ncerror/=NF90_NOERR) then
             call check( nf90_def_dim(ncid, dimname, n, dimid), "setup_dim:Creating dim:"//dimname )
         else
             ! else, check to make sure the existing dimension has the correct length
             call check( nf90_inquire_dimension(ncid, dimid, len = dim_length), "setup_dim:Reading dim:"//dimname)
-            
+
             if (dim_length/=n) then
                 error = 1
                 write(*,*) "Dim setup error: ", dimname, dimid, dim_length,"!=",n
@@ -527,12 +529,12 @@ contains
 
     !>----------------------------------------------------------
     !!  Check that a named real attribute matches the value in a file
-    !! 
+    !!
     !!  Takes a filename, attribute name, and expected attribute value
     !!  Reads the attribute from the file, and compares the results to
-    !!  the expected value.  If the results are within 1e-20 of each other. 
+    !!  the expected value.  If the results are within 1e-20 of each other.
     !!  they are assumed to match, and 0 is returned, else 1 is returned
-    !! 
+    !!
     !!  @param  filename        name of the netCDF file
     !!  @param  default_value   expected value of the attribute
     !!  @param  value_name      name of the attribute to read
@@ -563,12 +565,12 @@ contains
 
     !>----------------------------------------------------------
     !!  Check that a named integer attribute matches the value in a file
-    !! 
+    !!
     !!  Takes a filename, attribute name, and expected attribute value
     !!  Reads the attribute from the file, and compares the results to
     !!  the expected value.  If the results match the function is successful
     !!  and 0 is returned, else 1 is returned
-    !! 
+    !!
     !!  @param  filename        name of the netCDF file
     !!  @param  default_value   expected value of the attribute
     !!  @param  value_name      name of the attribute to read
@@ -599,12 +601,12 @@ contains
 
     !>----------------------------------------------------------
     !!  Check that a named character attribute matches the value in a file
-    !! 
+    !!
     !!  Takes a filename, attribute name, and expected attribute value
     !!  Reads the attribute from the file, and compares the results to
     !!  the expected value.  If the results match the function is successful
     !!  and 0 is returned, else 1 is returned
-    !! 
+    !!
     !!  @param  filename        name of the netCDF file
     !!  @param  default_value   expected value of the attribute
     !!  @param  value_name      name of the attribute to read

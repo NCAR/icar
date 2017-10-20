@@ -16,9 +16,9 @@ script:
   - export FC=gfortran
   - export FFTW=/usr
   - export NETCDF=/usr
-  # - sed -i "s|FFTW=/usr/local|FFTW=/usr|" makefile
-  # - sed -i "s|NETCDF=/usr/local|NCDF=/usr|" makefile
   - make test -j4 # test parallel compile
   - make -j4
   - make clean # test serial compile
   - make
+  - make clean # test parallel debug compile
+  - make MODE=debugslow -j4

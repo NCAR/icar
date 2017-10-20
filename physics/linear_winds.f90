@@ -38,15 +38,21 @@ module linear_theory_winds
     use fft ! note fft module is defined in fftshift.f90
     use fftshifter
     use data_structures
-    use io_routines,               only : io_write2d, io_read2d
+    use io_routines,               only : io_read
     use string,                    only : str
     use linear_theory_lut_disk_io, only : read_LUT, write_LUT
+    use mod_atm_utilities
+    use array_utilities,           only : calc_weight, linear_space
+
     implicit none
+
     private
-    public::linear_perturb
+    public :: linear_perturb, linear_perturbation, linear_perturbation_at_height
+    public :: add_buffer_topo, initialize_linear_theory_data
 
     logical :: variable_N
     logical :: smooth_nsq
+    logical :: using_blocked_flow
     real    :: N_squared
 
     !! unfortunately these have to be allocated every call because we could be calling on both the high-res
@@ -55,8 +61,8 @@ module linear_theory_winds
     complex(C_DOUBLE_COMPLEX),  allocatable,    dimension(:,:)  :: denom, m, ineta, msq, mimag
     complex(C_DOUBLE_COMPLEX),  pointer,        dimension(:,:,:):: uhat, u_hat, vhat, v_hat
     type(C_PTR),                allocatable,    dimension(:)    :: uplans, vplans
-    type(C_PTR)              :: uh_aligned_data, u_h_aligned_data, vh_aligned_data, v_h_aligned_data
-    logical                  :: data_allocated=.False. ! need a boolean because you cant test if a cptr is allocated?
+    type(C_PTR)                 :: uh_aligned_data, u_h_aligned_data, vh_aligned_data, v_h_aligned_data
+    logical                     :: data_allocated=.False. ! need a boolean because you cant test if a cptr is allocated?
 
     ! note this data structure holds a lot of important variables for the new linear_perturbation subroutine
     ! this is created at the module scope to prevent some apparent stack issues related to OpenMP and ifort
@@ -95,6 +101,7 @@ module linear_theory_winds
     real :: spdmin ! =0
     real :: nsqmax ! =log(max_stability)
     real :: nsqmin ! =log(min_stability)
+    real :: minimum_layer_size
 
     integer :: n_dir_values=36
     integer :: n_nsq_values=10
@@ -105,146 +112,6 @@ module linear_theory_winds
     real, parameter :: SMALL_VALUE = 1e-15
 
 contains
-
-    !>----------------------------------------------------------
-    !! Calculate direction [0-2*pi) from u and v wind speeds
-    !!
-    !!----------------------------------------------------------
-    pure function calc_direction(u,v) result(direction)
-        implicit none
-        real, intent(in) :: u,v
-        real :: direction
-
-        if (v<0) then
-            direction = atan(u/v) + pi
-        elseif (v==0) then
-            if (u>0) then
-                direction=pi/2.0
-            else
-                direction=pi*1.5
-            endif
-        else
-            if (u>=0) then
-                direction = atan(u/v)
-            else
-                direction = atan(u/v) + (2*pi)
-            endif
-        endif
-
-    end function calc_direction
-
-    !>----------------------------------------------------------
-    !! Calculate the strength of the u wind field given a direction [0-2*pi] and magnitude
-    !!
-    !!----------------------------------------------------------
-    pure function calc_speed(u, v) result(speed)
-        implicit none
-        real, intent(in) :: u,v
-        real :: speed
-
-        speed = sqrt(u**2 + v**2)
-    end function calc_speed
-
-    !>----------------------------------------------------------
-    !! Calculate the strength of the u wind field given a direction [0-2*pi] and magnitude
-    !!
-    !!----------------------------------------------------------
-    pure function calc_u(direction, magnitude) result(u)
-        implicit none
-        real, intent(in) :: direction, magnitude
-        real :: u
-
-        u = sin(direction) * magnitude
-    end function calc_u
-
-    !>----------------------------------------------------------
-    !! Calculate the strength of the v wind field given a direction [0-2*pi] and magnitude
-    !!
-    !!----------------------------------------------------------
-    pure function calc_v(direction, magnitude) result(v)
-        implicit none
-        real, intent(in) :: direction, magnitude
-        real :: v
-
-        v = cos(direction) * magnitude
-    end function calc_v
-
-    !>----------------------------------------------------------
-    !! Calculate the saturated adiabatic lapse rate from a T/Moisture input
-    !!
-    !! return the moist / saturated adiabatic lapse rate for a given
-    !! Temperature and mixing ratio (really MR could be calculated as f(T))
-    !! from http://glossary.ametsoc.org/wiki/Saturation-adiabatic_lapse_rate
-    !!
-    !!----------------------------------------------------------
-    pure function calc_sat_lapse_rate(T,mr) result(sat_lapse)
-        implicit none
-        real, intent(in) :: T,mr  ! inputs T in K and mr in kg/kg
-        real :: L
-        real :: sat_lapse
-
-        L=LH_vaporization ! short cut for imported parameter
-        sat_lapse = gravity*((1 + (L*mr) / (Rd*T))          &
-                    / (cp + (L*L*mr*(Rd/Rw)) / (Rd*T*T) ))
-    end function calc_sat_lapse_rate
-
-    !>----------------------------------------------------------
-    !! Calculate the moist brunt vaisala frequency (Nm^2)
-    !! formula from Durran and Klemp, 1982 after Lalas and Einaudi 1974
-    !!
-    !!----------------------------------------------------------
-    pure function calc_moist_stability(t_top, t_bot, z_top, z_bot, qv_top, qv_bot, qc) result(BV_freq)
-        implicit none
-        real, intent(in) :: t_top, t_bot, z_top, z_bot, qv_top, qv_bot, qc
-        real :: t,qv, dz, sat_lapse
-        real :: BV_freq
-
-        t  = ( t_top +  t_bot)/2
-        qv = (qv_top + qv_bot)/2
-        dz = ( z_top - z_bot)
-        sat_lapse = calc_sat_lapse_rate(t,qv)
-
-        BV_freq = (gravity/t) * ((t_top-t_bot)/dz + sat_lapse) * &
-                  (1 + (LH_vaporization*qv)/(Rd*t)) - (gravity/(1+qv+qc) * (qv_top-qv_bot)/dz)
-    end function calc_moist_stability
-
-    !>----------------------------------------------------------
-    !! Calculate the dry brunt vaisala frequency (Nd^2)
-    !!
-    !!----------------------------------------------------------
-    pure function calc_dry_stability(th_top, th_bot, z_top, z_bot) result(BV_freq)
-        implicit none
-        real, intent(in) :: th_top, th_bot, z_top, z_bot
-        real :: BV_freq
-
-        BV_freq = gravity * (log(th_top)-log(th_bot)) / (z_top - z_bot)
-    end function calc_dry_stability
-
-    !>----------------------------------------------------------
-    !! Calculate either moist or dry brunt vaisala frequency and keep within min and max bounds
-    !!
-    !!----------------------------------------------------------
-    pure function calc_stability(th_top, th_bot, pii_top, pii_bot, z_top, z_bot, qv_top, qv_bot, qc) result(BV_freq)
-        implicit none
-        real, intent(in) :: th_top, th_bot, pii_top, pii_bot, z_top, z_bot, qv_top, qv_bot, qc
-        real :: BV_freq
-
-        if (qc<1e-7) then
-            if (variable_N) then
-                BV_freq=calc_dry_stability(th_top, th_bot, z_top, z_bot)
-            else
-                BV_freq=N_squared
-            endif
-        else
-            if (variable_N) then
-                BV_freq=calc_moist_stability(th_top*pii_top, th_bot*pii_bot, z_top, z_bot, qv_top, qv_bot, qc)
-            else
-                BV_freq=N_squared/10.0 ! might be better as max(1e-7,N_squared-(1e-4))
-            endif
-        endif
-
-        BV_freq = min(max(BV_freq,min_stability),max_stability)
-    end function calc_stability
 
     !>----------------------------------------------------------
     !! Calculate a single brunt vaisala frequency effectively averaged across the entire domain
@@ -293,7 +160,7 @@ contains
     !! see Appendix A of Barstad and Gronas (2006) Tellus,58A,2-18
     !!
     !!----------------------------------------------------------
-    subroutine linear_perturbation(U, V, Nsq, z, fourier_terrain, lt_data)
+    subroutine linear_perturbation_at_height(U, V, Nsq, z, fourier_terrain, lt_data)
         use, intrinsic :: iso_c_binding
         implicit none
         real,                     intent(in)    :: U, V ! U and V components of background wind
@@ -305,6 +172,12 @@ contains
 
         integer :: nx, ny ! store the size of the grid
 
+        if ((U==0).and.(V==0)) then
+            lt_data%u_perturb = 0
+            lt_data%v_perturb = 0
+            return
+        endif
+
         nx = size(fourier_terrain, 1)
         ny = size(fourier_terrain, 2)
 
@@ -315,7 +188,7 @@ contains
         lt_data%denom = lt_data%sig**2 ! -f**2 ! to add coriolis
 
         lt_data%msq   = Nsq / lt_data%denom * lt_data%kl
-        lt_data%mimag = 0 + 0 * j ! be sure to reset real and imaginary components
+        lt_data%mimag = (0, 0) ! be sure to reset real and imaginary components
         lt_data%mimag = lt_data%mimag + (real(sqrt(-lt_data%msq)) * j)
 
         lt_data%m = sqrt(lt_data%msq)                         ! vertical wave number, hydrostatic
@@ -325,7 +198,7 @@ contains
         lt_data%ineta = j * fourier_terrain * exp(j * lt_data%m * z)
         !  what=sig*ineta
 
-        ! with coriolis : [+/-]j*[l/k]*f
+        ! with coriolis : [-/+] j * [l/k] * f
         !uhat = (0 - m) * ((sig * k) - (j * l * f)) * ineta / kl
         !vhat = (0 - m) * ((sig * l) + (j * k * f)) * ineta / kl
         ! removed coriolis term assumes the scale coriolis operates at is largely defined by the coarse model
@@ -343,6 +216,46 @@ contains
         call fftw_execute_dft(lt_data%vplan, lt_data%vhat, lt_data%v_perturb)
 
         ! returns u_perturb and v_perturb
+    end subroutine linear_perturbation_at_height
+
+    subroutine linear_perturbation(U, V, Nsq, z_bottom, z_top, minimum_step, fourier_terrain, lt_data)
+        use, intrinsic :: iso_c_binding
+        implicit none
+        real,                     intent(in)    :: U, V             ! U and V components of background wind
+        real,                     intent(in)    :: Nsq              ! Brunt-Vaisalla frequency (N squared)
+        real,                     intent(in)    :: z_top, z_bottom  ! elevation for the top and bottom bound of a layer
+        real,                     intent(in)    :: minimum_step     ! minimum layer step size to compute LT for
+        complex(C_DOUBLE_COMPLEX),intent(in)    :: fourier_terrain(:,:) ! FFT(terrain)
+        type(linear_theory_type), intent(inout) :: lt_data          ! intermediate arrays needed for LT calc
+
+        integer :: n_steps, i
+        real    :: step_size, current_z
+
+        ! Handle the trivial case quickly
+        if ((U==0).and.(V==0)) then
+            lt_data%u_perturb = 0
+            lt_data%v_perturb = 0
+            return
+        endif
+
+        n_steps = max(1,ceiling((z_top - z_bottom) / minimum_step))
+        step_size = (z_top - z_bottom) / n_steps
+
+        lt_data%u_accumulator = 0
+        lt_data%v_accumulator = 0
+
+        current_z = z_bottom + step_size / 2
+
+        do i=1,n_steps
+            call linear_perturbation_at_height(U,V,Nsq,current_z, fourier_terrain, lt_data)
+            lt_data%u_accumulator = lt_data%u_accumulator + lt_data%u_perturb
+            lt_data%v_accumulator = lt_data%v_accumulator + lt_data%v_perturb
+
+            current_z = current_z + step_size
+        enddo
+
+        lt_data%u_perturb = lt_data%u_accumulator / n_steps
+        lt_data%v_perturb = lt_data%v_accumulator / n_steps
     end subroutine linear_perturbation
 
     !>----------------------------------------------------------
@@ -412,14 +325,9 @@ contains
             preV_layers(i)=sum(domain%v(:,i,:realny_v))/(realnx * realny_v)
         enddo
         do i=1,nz
-            bottom=i-vsmooth
-            top=i+vsmooth
-            if (bottom<1) then
-                bottom=1
-            endif
-            if (top>nz) then
-                top=nz
-            endif
+            bottom = max(1, i-vsmooth)
+            top    = min(i+vsmooth, nz)
+
             U_layers(i)=sum(preU_layers(bottom:top))/(top-bottom+1)
             V_layers(i)=sum(preV_layers(bottom:top))/(top-bottom+1)
         enddo
@@ -457,7 +365,7 @@ contains
         if (reverse) then
             !$omp critical (print_lock)
             write(*,*) "ERROR: reversing linear winds not set up for parallel fftw computation yet"
-            write(*,*) "also not set up for the new spatial wind LUTs"
+            write(*,*) "Use only with spatially varying wind LUTs"
             !$omp end critical (print_lock)
             stop
         endif
@@ -515,8 +423,9 @@ contains
             V = V_layers(z)
             if ((abs(U)+abs(V))>0.5) then
                 sig  = U*k+V*l
-                where(sig==0.0) sig=1e-15
+                where(sig==0) sig=1e-10
                 denom = sig**2 ! -f**2
+                where(denom==0) denom=1e-20
 
                 !   where(denom.eq.0) denom=1e-20
                 ! # two possible non-hydrostatic versions
@@ -657,15 +566,17 @@ contains
     !! in the FFT due to discontinuities between the left and right (or top and bottom) edges of the domain
     !!
     !!----------------------------------------------------------
-    subroutine add_buffer_topo(terrain, buffer_topo, smooth_window, debug)
+    subroutine add_buffer_topo(terrain, buffer_topo, smooth_window, buffer, debug)
         implicit none
         real, dimension(:,:), intent(in) :: terrain
         complex(C_DOUBLE_COMPLEX),allocatable,dimension(:,:), intent(inout) :: buffer_topo
         integer, intent(in) :: smooth_window
+        integer, intent(in) :: buffer
         logical, intent(in), optional :: debug
         real, dimension(:,:),allocatable :: real_terrain
         integer::nx,ny,i,j,pos, xs,xe,ys,ye, window
         real::weight
+
         nx=size(terrain,1)+buffer*2
         ny=size(terrain,2)+buffer*2
         allocate(buffer_topo(nx,ny))
@@ -777,14 +688,18 @@ contains
         !$omp critical (fftw_lock)
         lt_data%uh_aligned_data = fftw_alloc_complex(n_elements)
         lt_data%up_aligned_data = fftw_alloc_complex(n_elements)
+        lt_data%ua_aligned_data = fftw_alloc_complex(n_elements)
         lt_data%vh_aligned_data = fftw_alloc_complex(n_elements)
         lt_data%vp_aligned_data = fftw_alloc_complex(n_elements)
+        lt_data%va_aligned_data = fftw_alloc_complex(n_elements)
         !$omp end critical (fftw_lock)
 
-        call c_f_pointer(lt_data%uh_aligned_data,   lt_data%uhat,       [nx,ny])
-        call c_f_pointer(lt_data%up_aligned_data,   lt_data%u_perturb,  [nx,ny])
-        call c_f_pointer(lt_data%vh_aligned_data,   lt_data%vhat,       [nx,ny])
-        call c_f_pointer(lt_data%vp_aligned_data,   lt_data%v_perturb,  [nx,ny])
+        call c_f_pointer(lt_data%uh_aligned_data,   lt_data%uhat,           [nx,ny])
+        call c_f_pointer(lt_data%up_aligned_data,   lt_data%u_perturb,      [nx,ny])
+        call c_f_pointer(lt_data%ua_aligned_data,   lt_data%u_accumulator,  [nx,ny])
+        call c_f_pointer(lt_data%vh_aligned_data,   lt_data%vhat,           [nx,ny])
+        call c_f_pointer(lt_data%vp_aligned_data,   lt_data%v_perturb,      [nx,ny])
+        call c_f_pointer(lt_data%va_aligned_data,   lt_data%v_accumulator,  [nx,ny])
 
         ! note FFTW plan creation is not threadsafe
         !$omp critical (fftw_lock)
@@ -813,14 +728,18 @@ contains
         !$omp critical (fftw_lock)
         call fftw_free(lt_data%uh_aligned_data)
         call fftw_free(lt_data%up_aligned_data)
+        call fftw_free(lt_data%ua_aligned_data)
         call fftw_free(lt_data%vh_aligned_data)
         call fftw_free(lt_data%vp_aligned_data)
+        call fftw_free(lt_data%va_aligned_data)
         !$omp end critical (fftw_lock)
 
         NULLIFY(lt_data%uhat)
         NULLIFY(lt_data%u_perturb)
+        NULLIFY(lt_data%u_accumulator)
         NULLIFY(lt_data%vhat)
         NULLIFY(lt_data%v_perturb)
+        NULLIFY(lt_data%v_accumulator)
 
         ! note FFTW plan creation is not threadsafe
         !$omp critical (fftw_lock)
@@ -840,8 +759,8 @@ contains
         logical, intent(in) :: reverse
 
         ! local variables used to calculate the LUT
-        real :: u,v, layer_height
-        integer :: nx,ny,nz, i,j,k,z, nxu,nyv, error
+        real :: u,v, layer_height, layer_height_bottom, layer_height_top
+        integer :: nx,ny,nz, i,j,k,z,ik, nxu,nyv, error
         integer :: fftnx, fftny
         integer, dimension(3,2) :: LUT_dims
         integer :: loops_completed ! this is just used to measure progress in the LUT creation
@@ -866,25 +785,14 @@ contains
         LUT_dims(:,1) = [nxu,nz,ny]
         LUT_dims(:,2) = [nx,nz,nyv]
 
-        ! create the array of dir and nsq values to create LUTs for
-        if (.not.allocated(dir_values)) then
-            allocate( dir_values(n_dir_values) )
-            allocate( nsq_values(n_nsq_values) )
-            allocate( spd_values(n_spd_values) )
-        endif
-        ! generate the values for each look up table dimension
+        ! create the array of spd,dir, and nsq values to create LUTs for
+        ! generates the values for each look up table dimension
         ! generate table of wind directions to be used
-        do i=1,n_dir_values
-            dir_values(i) = (i - 1) / real(n_dir_values - 1) * (dirmax - dirmin) + dirmin
-        enddo
+        call linear_space(dir_values,dirmin,dirmax,n_dir_values)
         ! generate table of wind speeds to be used
-        do i=1,n_spd_values
-            spd_values(i) = (i - 1) / real(n_spd_values - 1) * (spdmax - spdmin) + spdmin
-        enddo
+        call linear_space(nsq_values,nsqmin,nsqmax,n_nsq_values)
         ! generate table of Brunt-Vaisalla frequencies (Nsq) to be used
-        do i=1,n_nsq_values
-            nsq_values(i) = (i - 1) / real(n_nsq_values - 1) * (nsqmax - nsqmin) + nsqmin
-        enddo
+        call linear_space(spd_values,spdmin,spdmax,n_spd_values)
 
         ! Allocate the (LARGE) look up tables for both U and V
         if (reverse) then
@@ -900,7 +808,7 @@ contains
                 allocate(hi_v_LUT(n_spd_values,n_dir_values,n_nsq_values,nx,nz,nyv))
                 error=0
             else
-                print*, "Reading LUT from file: ", trim(options%lt_options%u_LUT_Filename)
+                print*, "    Reading LUT from file: ", trim(options%lt_options%u_LUT_Filename)
                 error = read_LUT(options%lt_options%u_LUT_Filename, hi_u_LUT, hi_v_LUT, options%dz_levels, LUT_dims, options%lt_options)
                 if (error/=0) then
                     write(*,*) "WARNING: LUT on disk does not match that specified in the namelist or does not exist."
@@ -927,17 +835,24 @@ contains
             loops_completed = 0
             write(*,*) "Percent Completed:"
             !$omp parallel default(shared) &
-            !$omp private(i,j,k,z, u,v, layer_height)
-            ! $omp private(lt_data_m)
+            !$omp private(i,j,k,ik,z, u,v, layer_height, layer_height_bottom, layer_height_top) &
+            !$omp firstprivate(minimum_layer_size, n_dir_values, n_spd_values, n_nsq_values, nz,nx,ny,nxu,nyv,fftnx,fftny)
+            ! $omp threadprivate(lt_data_m) declared at the top of the module
 
             ! initialization has to happen in each thread so each thread has its own copy
             ! lt_data_m is a threadprivate variable, within initialization, there are omp critical sections for fftw calls
             call initialize_linear_theory_data(lt_data_m, fftnx, fftny, domain%dx)
             !$omp do
-            do i=1, n_dir_values
+            do ik=0, n_dir_values*n_spd_values-1
                 ! set the domain wide U and V values to the current u and v values
-                ! this could use u/v_perturbation, but those would need to be put in a linearizable structure...
-                do k=1, n_spd_values
+                ! loop over the combined ik space to improve parallelization (more granular parallelization)
+                ! because it is one combined loop, we have to calculate the i,k indicies from the combined ik variable
+                i = ik/n_spd_values + 1
+                k = mod(ik,n_spd_values) + 1
+
+                ! do k=1, n_spd_values
+
+                    ! print the current status if this is being run "interactively"
                     if (options%interactive) then
                         !$omp critical (print_lock)
                         write(*,"(A,f5.1,A$)") char(13), loops_completed/real(n_dir_values*n_spd_values)*100," %"
@@ -950,25 +865,33 @@ contains
                         ! calculate the linear wind field for the current u and v values
                         do z=1,nz
                             if (reverse) then
-                                layer_height = domain%z(1,1,z)-domain%terrain(1,1)
+                                layer_height        = domain%z(1,1,z) - domain%terrain(1,1)
+                                layer_height_bottom = layer_height - (options%dz_levels(z) / 2)
+                                layer_height_top    = layer_height + (options%dz_levels(z) / 2)
                             else
-                                layer_height = domain%z(1,z,1)-domain%terrain(1,1)
+                                layer_height = domain%z(1,z,1) - domain%terrain(1,1)
+                                layer_height_bottom = layer_height - (options%dz_levels(z) / 2)
+                                layer_height_top    = layer_height + (options%dz_levels(z) / 2)
                             endif
-                            call linear_perturbation(u, v, exp(nsq_values(j)), layer_height, domain%fzs, lt_data_m)
+
+                            call linear_perturbation(u, v, exp(nsq_values(j)),                                  &
+                                                     layer_height_bottom, layer_height_top, minimum_layer_size, &
+                                                     domain%fzs, lt_data_m)
 
                             ! need to handle stagger (nxu /= nx) and the buffer around edges of the domain
                             if (nxu /= nx) then
-                                u_LUT(k,i,j,2:nx,z, :  ) = real( real(                                  &
-                                        ( lt_data_m%u_perturb(1+buffer:nx+buffer-1,   1+buffer:ny+buffer) &
+                                u_LUT(k,i,j,2:nx,z, :  ) = real( real(                                              &
+                                        ( lt_data_m%u_perturb(1+buffer:nx+buffer-1,   1+buffer:ny+buffer)           &
                                         + lt_data_m%u_perturb(2+buffer:nx+buffer,     1+buffer:ny+buffer)) )) / 2
 
-                                v_LUT(k,i,j, :,  z,2:ny) = real( real(                                      &
-                                        ( lt_data_m%v_perturb(1+buffer:nx+buffer,     1+buffer:ny+buffer-1)   &
+                                v_LUT(k,i,j, :,  z,2:ny) = real( real(                                              &
+                                        ( lt_data_m%v_perturb(1+buffer:nx+buffer,     1+buffer:ny+buffer-1)         &
                                         + lt_data_m%v_perturb(1+buffer:nx+buffer,     2+buffer:ny+buffer)) )) / 2
                             else
-                                u_LUT(k,i,j,:,z,:) = real( real(                                  &
+                                u_LUT(k,i,j,:,z,:) = real( real(                                                    &
                                         lt_data_m%u_perturb(1+buffer:nx+buffer,     1+buffer:ny+buffer) ))
-                                v_LUT(k,i,j,:,z,:) = real( real(                                  &
+
+                                v_LUT(k,i,j,:,z,:) = real( real(                                                    &
                                         lt_data_m%v_perturb(1+buffer:nx+buffer,     1+buffer:ny+buffer) ))
                             endif
                         enddo
@@ -977,7 +900,7 @@ contains
                     !$omp critical (print_lock)
                     loops_completed = loops_completed+1
                     !$omp end critical (print_lock)
-                end do
+                ! end do
 
             end do
             !$omp end do
@@ -990,50 +913,15 @@ contains
 
         if ((options%lt_options%write_LUT).and.(.not.reverse)) then
             if ((options%lt_options%read_LUT) .and. (error == 0)) then
-                print*, "Not writing Linear Theory LUT to file because LUT was read from file"
+                print*, "    Not writing Linear Theory LUT to file because LUT was read from file"
             else
-                print*, "Writing Linear Theory LUT to file: ", trim(options%lt_options%u_LUT_Filename)
+                print*, "    Writing Linear Theory LUT to file: ", trim(options%lt_options%u_LUT_Filename)
                 error = write_LUT(options%lt_options%u_LUT_Filename, hi_u_LUT, hi_v_LUT, options%dz_levels, options%lt_options)
             endif
         endif
 
     end subroutine initialize_spatial_winds
 
-
-    !>----------------------------------------------------------
-    !! Calculate the weights between the positions bestpos and nextpos
-    !! based on the distance between match and indata(nextpos) (normalized by nextpos - bestpos)
-    !! assumes indata is monotonically increasing,
-    !! bestpos must be set prior to entry
-    !! nextpos is calculated internally (either 1, bestpos+1, or n)
-    !!
-    !!----------------------------------------------------------
-    function calc_weight(indata, bestpos, nextpos, match) result(weight)
-        implicit none
-        real :: weight
-        real, dimension(:), intent(in) :: indata
-        integer, intent(in) :: bestpos
-        integer, intent(inout) :: nextpos
-        real, intent(in) :: match
-
-        integer :: n
-
-        n=size(indata)
-
-        if (match<indata(1)) then
-            nextpos=1
-            weight=1
-        else
-            if (bestpos==n) then
-                nextpos=n
-                weight=1
-            else
-                nextpos=bestpos+1
-                weight=(indata(nextpos)-match) / (indata(nextpos) - indata(bestpos))
-            endif
-        endif
-
-    end function
 
     !>----------------------------------------------------------
     !! Compute a spatially variable linear wind perturbation
@@ -1055,6 +943,7 @@ contains
         integer :: north, south, east, west, top, bottom, n
         real :: u, v
         real :: dweight, nweight, sweight, curspd, curdir, curnsq, wind_first, wind_second
+        real :: blocked
 
         nx=size(domain%lat,1)
         ny=size(domain%lat,2)
@@ -1075,9 +964,9 @@ contains
         endif
 
         if (reverse) print*, "WARNING using fixed nsq for linear wind removal: 3e-6"
-        !$omp parallel firstprivate(nx,nxu,ny,nyv,nz, reverse, vsmooth, winsz), default(none), &
+        !$omp parallel firstprivate(nx,nxu,ny,nyv,nz, reverse, vsmooth, winsz, using_blocked_flow), default(none), &
         !$omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom), &
-        !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, smoothz, u, v), &
+        !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, smoothz, u, v, blocked), &
         !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
         !$omp shared(domain, spd_values, dir_values, nsq_values, u_LUT, v_LUT, linear_mask), &
         !$omp shared(u_perturbation, v_perturbation, linear_update_fraction, linear_contribution, nsq_calibration), &
@@ -1090,7 +979,7 @@ contains
                     ! look up vsmooth gridcells up to nz at the maximum
                     top = min(j+vsmooth, nz)
                     ! if (top-j)/=vsmooth, then look down enough layers to make the window vsmooth in size
-                    bottom = max(1, j - (vsmooth - (top-j)) )
+                    bottom = max(1, j - (vsmooth - (top-j)))
 
                     if (.not.reverse) then
                         domain%nsquared(i,j,k) = calc_stability(domain%th(i,bottom,k), domain%th(i,top,k),  &
@@ -1131,97 +1020,116 @@ contains
         do k=1, nyv
             do j=1, nz
                 do i=1, nxu
-                    uk = min(k,ny)
-                    vi = min(i,nx)
 
-                    !   First find the bounds of the region to average over
-                    west  = max(i - winsz, 1)
-                    east  = min(i + winsz,nx)
-                    bottom= max(j - winsz, 1)
-                    top   = min(j + winsz,nz)
-                    south = max(k - winsz, 1)
-                    north = min(k + winsz,ny)
-
-                    n = (((east-west)+1) * ((north-south)+1))
-                    if (reverse) then
-                        u = sum( domain%u(west:east,j,south:north) ) / n
-                        v = sum( domain%v(west:east,j,south:north) ) / n
+                    if (using_blocked_flow) then
+                        blocked = blocking_fraction(domain%froude(min(i,nx),min(k,ny)))
                     else
-                        u = domain%u(i,j,uk)
-                        v = domain%v(vi,j,k)
+                        blocked = 0
                     endif
-                    n = n * ((top-bottom)+1)
+                    if (blocked<1) then
 
-                    ! Calculate the direction of the current grid cell wind
-                    dpos = 1
-                    curdir = calc_direction( u, v )
-                    ! and find the corresponding position in the Look up Table
-                    do step=1, n_dir_values
-                        if (curdir > dir_values(step)) then
-                            dpos = step
-                        endif
-                    end do
+                        uk = min(k,ny)
+                        vi = min(i,nx)
 
-                    ! Calculate the wind speed of the current grid cell
-                    spos = 1
-                    curspd = calc_speed( u, v )
-                    ! and find the corresponding position in the Look up Table
-                    do step=1, n_spd_values
-                        if (curspd > spd_values(step)) then
-                            spos = step
-                        endif
-                    end do
+                        !   First find the bounds of the region to average over
+                        west  = max(i - winsz, 1)
+                        east  = min(i + winsz,nx)
+                        bottom= max(j - winsz, 1)
+                        top   = min(j + winsz,nz)
+                        south = max(k - winsz, 1)
+                        north = min(k + winsz,ny)
 
-                    ! Calculate the Brunt-Vaisalla frequency of the current grid cell
-                    !   Then compute the mean in log space
-                    curnsq = sum(log( domain%nsquared(west:east, bottom:top, south:north) ))
-                    curnsq = curnsq / n
-                    !   and find the corresponding position in the Look up Table
-                    npos = 1
-                    do step=1, n_nsq_values
-                        if (curnsq > nsq_values(step)) then
-                            npos = step
-                        endif
-                    end do
-
-                    ! Calculate the weights and the "next" u/v position
-                    ! "next" usually = pos+1 but for edge cases next = 1 or n
-                    dweight = calc_weight(dir_values, dpos, nextd, curdir)
-                    sweight = calc_weight(spd_values, spos, nexts, curspd)
-                    nweight = calc_weight(nsq_values, npos, nextn, curnsq)
-
-                    ! perform linear interpolation between LUT values
-                    if (k<=ny) then
-                        wind_first =      nweight  * (dweight * u_LUT(spos, dpos,npos, i,j,k) + (1-dweight) * u_LUT(spos, nextd,npos, i,j,k))   &
-                                    +  (1-nweight) * (dweight * u_LUT(spos, dpos,nextn,i,j,k) + (1-dweight) * u_LUT(spos, nextd,nextn,i,j,k))
-
-                        wind_second=      nweight  * (dweight * u_LUT(nexts,dpos,npos, i,j,k) + (1-dweight) * u_LUT(nexts,nextd,npos, i,j,k))   &
-                                    +  (1-nweight) * (dweight * u_LUT(nexts,dpos,nextn,i,j,k) + (1-dweight) * u_LUT(nexts,nextd,nextn,i,j,k))
-
-                        u_perturbation(i,j,k) = u_perturbation(i,j,k) * (1-linear_update_fraction) &
-                                    + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
-
+                        n = (((east-west)+1) * ((north-south)+1))
                         if (reverse) then
-                            domain%u(i,j,k) = domain%u(i,j,k) - u_perturbation(i,j,k) * linear_contribution
+                            u = domain%u(i,j,uk)
+                            v = domain%v(vi,j,k)
+                            ! WARNING: see below for why this does not work (yet)
+                            ! u = sum( domain%u(west:east,j,south:north) ) / n
+                            ! v = sum( domain%v(west:east,j,south:north) ) / n
                         else
-                            domain%u(i,j,k) = domain%u(i,j,k) + u_perturbation(i,j,k) * linear_mask(min(nx,i),min(ny,k))
+                            ! smooth the winds vertically first
+                            u = domain%u(i,j,uk)
+                            v = domain%v(vi,j,k)
+                            ! WARNING for now domain%u,v are updated inside the loop, so the code below will end
+                            ! up using u and v values that have had the linear theory applied already (not good)
+                            ! eventually this should be pulled out and only the pertubration should be updated in the
+                            ! parallel region
+                            ! u = sum(domain%u( i, bottom:top,uk)) / (top-bottom+1)
+                            ! v = sum(domain%v(vi, bottom:top, k)) / (top-bottom+1)
                         endif
-                    endif
-                    if (i<=nx) then
-                        wind_first =      nweight  * (dweight * v_LUT(spos, dpos,npos, i,j,k) + (1-dweight) * v_LUT(spos, nextd,npos, i,j,k))    &
-                                    +  (1-nweight) * (dweight * v_LUT(spos, dpos,nextn,i,j,k) + (1-dweight) * v_LUT(spos, nextd,nextn,i,j,k))
+                        n = n * ((top-bottom)+1)
 
-                        wind_second=      nweight  * (dweight * v_LUT(nexts,dpos,npos, i,j,k) + (1-dweight) * v_LUT(nexts,nextd,npos, i,j,k))    &
-                                    +  (1-nweight) * (dweight * v_LUT(nexts,dpos,nextn,i,j,k) + (1-dweight) * v_LUT(nexts,nextd,nextn,i,j,k))
+                        ! Calculate the direction of the current grid cell wind
+                        dpos = 1
+                        curdir = calc_direction( u, v )
+                        ! and find the corresponding position in the Look up Table
+                        do step=1, n_dir_values
+                            if (curdir > dir_values(step)) then
+                                dpos = step
+                            endif
+                        end do
 
-                        v_perturbation(i,j,k) = v_perturbation(i,j,k) * (1-linear_update_fraction) &
-                                    + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
+                        ! Calculate the wind speed of the current grid cell
+                        spos = 1
+                        curspd = calc_speed( u, v )
+                        ! and find the corresponding position in the Look up Table
+                        do step=1, n_spd_values
+                            if (curspd > spd_values(step)) then
+                                spos = step
+                            endif
+                        end do
 
-                        if (reverse) then
-                            domain%v(i,j,k) = domain%v(i,j,k) - v_perturbation(i,j,k) * linear_contribution
-                        else
-                            ! for the high res domain, linear_mask should incorporate linear_contribution
-                            domain%v(i,j,k) = domain%v(i,j,k) + v_perturbation(i,j,k) * linear_mask(min(nx,i),min(ny,k))
+                        ! Calculate the Brunt-Vaisalla frequency of the current grid cell
+                        !   Then compute the mean in log space
+                        curnsq = sum(log( domain%nsquared(west:east, bottom:top, south:north) ))
+                        curnsq = curnsq / n
+                        !   and find the corresponding position in the Look up Table
+                        npos = 1
+                        do step=1, n_nsq_values
+                            if (curnsq > nsq_values(step)) then
+                                npos = step
+                            endif
+                        end do
+
+                        ! Calculate the weights and the "next" u/v position
+                        ! "next" usually = pos+1 but for edge cases next = 1 or n
+                        dweight = calc_weight(dir_values, dpos, nextd, curdir)
+                        sweight = calc_weight(spd_values, spos, nexts, curspd)
+                        nweight = calc_weight(nsq_values, npos, nextn, curnsq)
+
+                        ! perform linear interpolation between LUT values
+                        if (k<=ny) then
+                            wind_first =      nweight  * (dweight * u_LUT(spos, dpos,npos, i,j,k) + (1-dweight) * u_LUT(spos, nextd,npos, i,j,k))   &
+                                        +  (1-nweight) * (dweight * u_LUT(spos, dpos,nextn,i,j,k) + (1-dweight) * u_LUT(spos, nextd,nextn,i,j,k))
+
+                            wind_second=      nweight  * (dweight * u_LUT(nexts,dpos,npos, i,j,k) + (1-dweight) * u_LUT(nexts,nextd,npos, i,j,k))   &
+                                        +  (1-nweight) * (dweight * u_LUT(nexts,dpos,nextn,i,j,k) + (1-dweight) * u_LUT(nexts,nextd,nextn,i,j,k))
+
+                            u_perturbation(i,j,k) = u_perturbation(i,j,k) * (1-linear_update_fraction) &
+                                        + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
+
+                            if (reverse) then
+                                domain%u(i,j,k) = domain%u(i,j,k) - u_perturbation(i,j,k) * linear_contribution
+                            else
+                                domain%u(i,j,k) = domain%u(i,j,k) + u_perturbation(i,j,k) * linear_mask(min(nx,i),min(ny,k)) * (1-blocked)
+                            endif
+                        endif
+                        if (i<=nx) then
+                            wind_first =      nweight  * (dweight * v_LUT(spos, dpos,npos, i,j,k) + (1-dweight) * v_LUT(spos, nextd,npos, i,j,k))    &
+                                        +  (1-nweight) * (dweight * v_LUT(spos, dpos,nextn,i,j,k) + (1-dweight) * v_LUT(spos, nextd,nextn,i,j,k))
+
+                            wind_second=      nweight  * (dweight * v_LUT(nexts,dpos,npos, i,j,k) + (1-dweight) * v_LUT(nexts,nextd,npos, i,j,k))    &
+                                        +  (1-nweight) * (dweight * v_LUT(nexts,dpos,nextn,i,j,k) + (1-dweight) * v_LUT(nexts,nextd,nextn,i,j,k))
+
+                            v_perturbation(i,j,k) = v_perturbation(i,j,k) * (1-linear_update_fraction) &
+                                        + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
+
+                            if (reverse) then
+                                domain%v(i,j,k) = domain%v(i,j,k) - v_perturbation(i,j,k) * linear_contribution
+                            else
+                                ! for the high res domain, linear_mask should incorporate linear_contribution
+                                domain%v(i,j,k) = domain%v(i,j,k) + v_perturbation(i,j,k) * linear_mask(min(nx,i),min(ny,k)) * (1-blocked)
+                            endif
                         endif
                     endif
                 end do
@@ -1230,6 +1138,7 @@ contains
         !$omp end do
         !$omp end parallel
     end subroutine spatial_winds
+
 
     !>----------------------------------------------------------
     !! Copy options from the options data structure into module level variables
@@ -1260,6 +1169,8 @@ contains
         use_linear_mask           = options%lt_options%linear_mask              ! use a spatial mask for the linear wind field
         use_nsq_calibration       = options%lt_options%nsq_calibration          ! use a spatial mask to calibrate the nsquared (brunt vaisala frequency) field
 
+        using_blocked_flow        = options%block_options%block_flow
+
         ! Look up table generation parameters, range for each parameter, and number of steps to cover that range
         dirmax = options%lt_options%dirmax
         dirmin = options%lt_options%dirmin
@@ -1270,6 +1181,7 @@ contains
         n_dir_values = options%lt_options%n_dir_values
         n_nsq_values = options%lt_options%n_nsq_values
         n_spd_values = options%lt_options%n_spd_values
+        minimum_layer_size = options%lt_options%minimum_layer_size
 
     end subroutine set_module_options
 
@@ -1301,16 +1213,16 @@ contains
         ! Create a buffer zone around the topography to smooth the edges
         buffer = original_buffer
         ! first create it including a 5 grid cell smoothing function
-        call add_buffer_topo(domain%terrain, complex_terrain_firstpass, 5)
+        call add_buffer_topo(domain%terrain, complex_terrain_firstpass, 5, buffer)
         buffer = 2
         ! then further add a small (~2) grid cell buffer where all cells have the same value
-        call add_buffer_topo(real(real(complex_terrain_firstpass)), complex_terrain, 0, debug=options%debug)
+        call add_buffer_topo(real(real(complex_terrain_firstpass)), complex_terrain, 0, buffer, debug=options%debug)
         buffer = buffer + original_buffer
 
         nx = size(complex_terrain, 1)
         ny = size(complex_terrain, 2)
 
-        write(*,*) "Initializing linear winds : ",nx,ny
+        write(*,*) "Initializing linear winds"
         allocate(domain%fzs(nx,ny))
 
         ! calculate the fourier transform of the terrain for use in linear winds
@@ -1324,7 +1236,7 @@ contains
         call fftshift(domain%fzs)
 
         if (linear_contribution/=1) then
-            write(*,*) "Using a fraction of the linear perturbation:",linear_contribution
+            write(*,*) "  Using a fraction of the linear perturbation:",linear_contribution
         endif
 
         nx = size(domain%terrain, 1)
@@ -1340,10 +1252,10 @@ contains
             linear_mask = linear_contribution
 
             if (use_linear_mask) then
-                write(*,*) "Reading Linear Mask"
-                write(*,*) "  from file: " // trim(options%linear_mask_file)
-                write(*,*) "  with var: "  // trim(options%linear_mask_var)
-                call io_read2d(options%linear_mask_file, options%linear_mask_var, domain%linear_mask)
+                write(*,*) "  Reading Linear Mask"
+                write(*,*) "    from file: " // trim(options%linear_mask_file)
+                write(*,*) "    with var: "  // trim(options%linear_mask_var)
+                call io_read(options%linear_mask_file, options%linear_mask_var, domain%linear_mask)
 
                 linear_mask = domain%linear_mask * linear_contribution
             endif
@@ -1363,10 +1275,10 @@ contains
             nsq_calibration = 1
 
             if (use_nsq_calibration) then
-                write(*,*) "Reading Linear Mask"
-                write(*,*) "  from file: " // trim(options%nsq_calibration_file)
-                write(*,*) "  with var: "  // trim(options%nsq_calibration_var)
-                call io_read2d(options%nsq_calibration_file, options%nsq_calibration_var, domain%nsq_calibration)
+                write(*,*) "  Reading Linear Mask"
+                write(*,*) "    from file: " // trim(options%nsq_calibration_file)
+                write(*,*) "    with var: "  // trim(options%nsq_calibration_var)
+                call io_read(options%nsq_calibration_file, options%nsq_calibration_var, domain%nsq_calibration)
                 nsq_calibration = domain%nsq_calibration
 
                 where(nsq_calibration<1) nsq_calibration = 1 + 1/( (1-1/nsq_calibration)/100 )
@@ -1400,7 +1312,7 @@ contains
             if    ((.not.allocated(hi_u_LUT)  .and. (.not.reverse)) &
              .or.  (.not.allocated(rev_u_LUT) .and. reverse)) then
 
-                write(*,*) "Generating a spatially variable linear perturbation look up table"
+                write(*,*) "  Generating a spatially variable linear perturbation look up table"
                 call initialize_spatial_winds(domain, options, reverse)
 
             endif
@@ -1461,7 +1373,7 @@ contains
             ! Nsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability
             stability = calc_domain_stability(domain)
             ! This should probably be called twice, once for dry, and once or moist regions
-            call linear_winds(domain,stability,vsmooth,reverse,useDensity,debug)
+            call linear_winds(domain,stability,vsmooth,rev,useD,debug)
         endif
         debug=.False.
 

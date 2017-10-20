@@ -29,7 +29,7 @@ LICENSE
 
 VERSION
 
-    
+
 """
 
 import sys
@@ -39,16 +39,16 @@ import argparse
 import re
 
 def main (options_file, template_file):
-    
+
     entered_restart_section=False
-    
+
     with open(options_file,"r") as opt:
         with open(template_file,"w") as tmpl:
             for l in opt:
-                
+
                 if re.match("\s*&restart_info\s*",l):
                     entered_restart_section=True
-                
+
                 key = (l.split("=")[0]).strip().lower()
                 if key == "restart_file":
                     if verbose: print("Writing restart_file line")
@@ -64,7 +64,7 @@ def main (options_file, template_file):
                     tmpl.write('    restart=true,\n')
                 else:
                     tmpl.write(l)
-            
+
             if not entered_restart_section:
                 if verbose: print("Adding restart section")
                 tmpl.write("\n")
@@ -84,19 +84,19 @@ if __name__ == '__main__':
         parser.add_argument ('--verbose', action='store_true',
                 default=False, help='verbose output', dest='verbose')
         args = parser.parse_args()
-        
+
         global verbose
         verbose=args.verbose
-        
+
         exit_code = main(args.option, args.template)
         if exit_code is None:
             exit_code = 0
         sys.exit(exit_code)
-    except KeyboardInterrupt, e: # Ctrl-C
+    except KeyboardInterrupt as e: # Ctrl-C
         raise e
-    except SystemExit, e: # sys.exit()
+    except SystemExit as e: # sys.exit()
         raise e
-    except Exception, e:
+    except Exception as e:
         print('ERROR, UNEXPECTED EXCEPTION')
         print(str(e))
         traceback.print_exc()
