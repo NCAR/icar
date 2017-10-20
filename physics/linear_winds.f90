@@ -423,8 +423,9 @@ contains
             V = V_layers(z)
             if ((abs(U)+abs(V))>0.5) then
                 sig  = U*k+V*l
-                where(sig<1e-10) sig=1e-10
+                where(sig==0) sig=1e-10
                 denom = sig**2 ! -f**2
+                where(denom==0) denom=1e-20
 
                 !   where(denom.eq.0) denom=1e-20
                 ! # two possible non-hydrostatic versions
@@ -1040,12 +1041,21 @@ contains
 
                         n = (((east-west)+1) * ((north-south)+1))
                         if (reverse) then
-                            u = sum( domain%u(west:east,j,south:north) ) / n
-                            v = sum( domain%v(west:east,j,south:north) ) / n
+                            u = domain%u(i,j,uk)
+                            v = domain%v(vi,j,k)
+                            ! WARNING: see below for why this does not work (yet)
+                            ! u = sum( domain%u(west:east,j,south:north) ) / n
+                            ! v = sum( domain%v(west:east,j,south:north) ) / n
                         else
                             ! smooth the winds vertically first
-                            u = sum(domain%u( i, bottom:top,uk)) / (top-bottom+1)
-                            v = sum(domain%v(vi, bottom:top, k)) / (top-bottom+1)
+                            u = domain%u(i,j,uk)
+                            v = domain%v(vi,j,k)
+                            ! WARNING for now domain%u,v are updated inside the loop, so the code below will end
+                            ! up using u and v values that have had the linear theory applied already (not good)
+                            ! eventually this should be pulled out and only the pertubration should be updated in the
+                            ! parallel region
+                            ! u = sum(domain%u( i, bottom:top,uk)) / (top-bottom+1)
+                            ! v = sum(domain%v(vi, bottom:top, k)) / (top-bottom+1)
                         endif
                         n = n * ((top-bottom)+1)
 
