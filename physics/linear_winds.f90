@@ -808,7 +808,7 @@ contains
                 allocate(hi_v_LUT(n_spd_values,n_dir_values,n_nsq_values,nx,nz,nyv))
                 error=0
             else
-                print*, "Reading LUT from file: ", trim(options%lt_options%u_LUT_Filename)
+                print*, "    Reading LUT from file: ", trim(options%lt_options%u_LUT_Filename)
                 error = read_LUT(options%lt_options%u_LUT_Filename, hi_u_LUT, hi_v_LUT, options%dz_levels, LUT_dims, options%lt_options)
                 if (error/=0) then
                     write(*,*) "WARNING: LUT on disk does not match that specified in the namelist or does not exist."
@@ -913,9 +913,9 @@ contains
 
         if ((options%lt_options%write_LUT).and.(.not.reverse)) then
             if ((options%lt_options%read_LUT) .and. (error == 0)) then
-                print*, "Not writing Linear Theory LUT to file because LUT was read from file"
+                print*, "    Not writing Linear Theory LUT to file because LUT was read from file"
             else
-                print*, "Writing Linear Theory LUT to file: ", trim(options%lt_options%u_LUT_Filename)
+                print*, "    Writing Linear Theory LUT to file: ", trim(options%lt_options%u_LUT_Filename)
                 error = write_LUT(options%lt_options%u_LUT_Filename, hi_u_LUT, hi_v_LUT, options%dz_levels, options%lt_options)
             endif
         endif
@@ -1222,7 +1222,7 @@ contains
         nx = size(complex_terrain, 1)
         ny = size(complex_terrain, 2)
 
-        write(*,*) "Initializing linear winds : ",nx,ny
+        write(*,*) "Initializing linear winds"
         allocate(domain%fzs(nx,ny))
 
         ! calculate the fourier transform of the terrain for use in linear winds
@@ -1236,7 +1236,7 @@ contains
         call fftshift(domain%fzs)
 
         if (linear_contribution/=1) then
-            write(*,*) "Using a fraction of the linear perturbation:",linear_contribution
+            write(*,*) "  Using a fraction of the linear perturbation:",linear_contribution
         endif
 
         nx = size(domain%terrain, 1)
@@ -1252,9 +1252,9 @@ contains
             linear_mask = linear_contribution
 
             if (use_linear_mask) then
-                write(*,*) "Reading Linear Mask"
-                write(*,*) "  from file: " // trim(options%linear_mask_file)
-                write(*,*) "  with var: "  // trim(options%linear_mask_var)
+                write(*,*) "  Reading Linear Mask"
+                write(*,*) "    from file: " // trim(options%linear_mask_file)
+                write(*,*) "    with var: "  // trim(options%linear_mask_var)
                 call io_read(options%linear_mask_file, options%linear_mask_var, domain%linear_mask)
 
                 linear_mask = domain%linear_mask * linear_contribution
@@ -1275,9 +1275,9 @@ contains
             nsq_calibration = 1
 
             if (use_nsq_calibration) then
-                write(*,*) "Reading Linear Mask"
-                write(*,*) "  from file: " // trim(options%nsq_calibration_file)
-                write(*,*) "  with var: "  // trim(options%nsq_calibration_var)
+                write(*,*) "  Reading Linear Mask"
+                write(*,*) "    from file: " // trim(options%nsq_calibration_file)
+                write(*,*) "    with var: "  // trim(options%nsq_calibration_var)
                 call io_read(options%nsq_calibration_file, options%nsq_calibration_var, domain%nsq_calibration)
                 nsq_calibration = domain%nsq_calibration
 
@@ -1312,7 +1312,7 @@ contains
             if    ((.not.allocated(hi_u_LUT)  .and. (.not.reverse)) &
              .or.  (.not.allocated(rev_u_LUT) .and. reverse)) then
 
-                write(*,*) "Generating a spatially variable linear perturbation look up table"
+                write(*,*) "  Generating a spatially variable linear perturbation look up table"
                 call initialize_spatial_winds(domain, options, reverse)
 
             endif

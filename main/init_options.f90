@@ -139,6 +139,7 @@ contains
         ! convection can modify wind field, and ideal doesn't rebalance winds every timestep
         if ((options%physics%convection.ne.0).and.(options%ideal)) then
             if (options%warning_level>3) then
+                write(*,*) ""
                 write(*,*) "WARNING WARNING WARNING"
                 write(*,*) "WARNING, Running convection in ideal mode may be bad..."
                 write(*,*) "WARNING WARNING WARNING"
@@ -151,6 +152,7 @@ contains
         ! if using a real LSM, feedback will probably keep hot-air from getting even hotter, so not likely a problem
         if ((options%physics%landsurface>1).and.(options%physics%boundarylayer==0)) then
             if (options%warning_level>2) then
+                write(*,*) ""
                 write(*,*) "WARNING WARNING WARNING"
                 write(*,*) "WARNING, Running LSM without PBL may overheat the surface and CRASH the model. "
                 write(*,*) "WARNING WARNING WARNING"
@@ -163,8 +165,9 @@ contains
         ! if using perscribed LSM fluxes, no feedbacks are present, so the surface layer is likely to overheat.
         if ((options%physics%landsurface==1).and.(options%physics%boundarylayer==0)) then
             if (options%warning_level>0) then
+                write(*,*) ""
                 write(*,*) "WARNING WARNING WARNING"
-                write(*,*) "WARNING, Running prescribed LSM fluxes without a PBL overheat the surface and CRASH. "
+                write(*,*) "WARNING, Prescribed LSM fluxes without a PBL may overheat the surface and CRASH. "
                 write(*,*) "WARNING WARNING WARNING"
             endif
             if (options%warning_level>=5) then
@@ -176,9 +179,10 @@ contains
         ! prior to v 0.9.3 this was assumed, so throw a warning now just in case.
         if ((options%z_is_geopotential .eqv. .False.).and.(options%zvar=="PH")) then
             if (options%warning_level>1) then
+                write(*,*) ""
                 write(*,*) "WARNING WARNING WARNING"
-                write(*,*) "WARNING z variable is no longer assumed to be geopotential height when it is 'PH'."
-                write(*,*) "WARNING To treat z as geopotential, set z_is_geopotential=True in the namelist. "
+                write(*,*) "WARNING z variable is not assumed to be geopotential height when it is 'PH'."
+                write(*,*) "WARNING If z is geopotential, set z_is_geopotential=True in the namelist."
                 write(*,*) "WARNING WARNING WARNING"
             endif
             if (options%warning_level>=7) then
@@ -188,6 +192,7 @@ contains
         endif
         if ((options%z_is_geopotential .eqv. .True.).and.(options%z_is_on_interface .eqv. .False.)) then
             if (options%warning_level>1) then
+                write(*,*) ""
                 write(*,*) "WARNING WARNING WARNING"
                 write(*,*) "WARNING geopotential height is no longer assumed to be on model interface levels."
                 write(*,*) "WARNING To interpolate geopotential, set z_is_on_interface=True in the namelist. "

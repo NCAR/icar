@@ -8,11 +8,11 @@
 !! Call tree graph :
 !!  radiation_init->[ external initialization routines]
 !!  rad->[  external radiation routines]
-!! 
+!!
 !! High level routine descriptions / purpose
 !!   radiation_init     - initializes physics package
 !!   rad                - sets up and calls main physics package
-!! 
+!!
 !! Inputs: domain, options, dt
 !!      domain,options  = as defined in data_structures
 !!      dt              = time step (seconds)
@@ -25,16 +25,16 @@
 module radiation
     use module_ra_simple, only: ra_simple, ra_simple_init
     use data_structures
-    
+
     implicit none
-    
+
 contains
     subroutine radiation_init(domain,options)
         type(domain_type), intent(in) :: domain
         type(options_type),intent(in)    :: options
-        
-        write(*,*) "Initializing radiation"
-        
+
+        write(*,*) "Initializing Radiation"
+
         if (options%physics%radiation==kRA_BASIC) then
             write(*,*) "    Basic Radiation"
         endif
@@ -42,12 +42,12 @@ contains
             write(*,*) "    Simple Radiation"
             call ra_simple_init(domain,options)
         endif
-        
+
     end subroutine radiation_init
-    
+
     subroutine rad(domain,options,date,dt)
         implicit none
-        
+
         type(domain_type), intent(inout) :: domain
         type(options_type),intent(in)    :: options
         double precision, intent(in) :: date
@@ -58,6 +58,6 @@ contains
                         domain%qrain,domain%p,domain%swdown,domain%lwdown,domain%cloudfrac,&
                         domain%lat,domain%lon,date,options,dt)
         endif
-        
+
     end subroutine rad
 end module radiation

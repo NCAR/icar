@@ -878,15 +878,17 @@ contains
         ny = size(domain%qv,3)
         nsoil = size(domain%soil_t,2)
 
+        write(*,*) "Initializing Output module"
+
         !! Sets output frequency (daily, monthly, or every step)
         if (trim(options%output_file_frequency)=="monthly") then
-            write(*,*) "Outputing a file per month"
+            write(*,*) "  Outputing a file per month"
             output_frequency=MONTHLY_FREQUENCY
         else if (trim(options%output_file_frequency)=="daily") then
-            write(*,*) "Outputing a file per day"
+            write(*,*) "  Outputing a file per day"
             output_frequency=DAILY_FREQUENCY
         else
-            write(*,*) "Outputing a file per time step"
+            write(*,*) "  Outputing a file per time step"
             output_frequency=EVERY_STEP
         endif
 
