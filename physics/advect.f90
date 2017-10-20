@@ -218,6 +218,10 @@ contains
 
         call setup_cu_winds(domain, options, dt)
 
+        ! set the top boundary condition for CU winds to 0 to prevent artifacts coming in from the "top"
+        domain%u_cu(:,nz,:) = 0
+        domain%v_cu(:,nz,:) = 0
+
         call advect3d(domain%u_cu, U_4cu_u,V_4cu_u,W_4cu_u, domain%rho, domain%dz_inter, nx+1,nz,ny, options)
         call advect3d(domain%v_cu, U_4cu_v,V_4cu_v,W_4cu_v, domain%rho, domain%dz_inter, nx,nz,ny+1, options)
 
@@ -308,9 +312,9 @@ contains
             call advect3d(domain%qgrau,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
         endif
 
-        if (options%physics%convection > 0) then
-            call advect_cu_winds(domain, options, dt)
-        endif
+        ! if (options%physics%convection > 0) then
+        !     call advect_cu_winds(domain, options, dt)
+        ! endif
 
         ! used in some physics routines
         domain%tend%qv_adv = (domain%qv - lastqv_m) / dt

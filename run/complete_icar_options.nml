@@ -2,7 +2,7 @@
 !   Model and run meta-data
 !---------------------------------------------------------
 &model_version
-    version = "0.9.4",                    ! This must match the version of the compiled code
+    version = "0.9.5",                    ! This must match the version of the compiled code
     comment = "Add your comment here"     ! This will be stored in output files
 /
 
@@ -159,15 +159,17 @@
 
     !   If the following are true, their respective namelists (below) will also be read in.
     !   Read parameters for advection
-    use_adv_options = true,
+    use_adv_options = true
     !   Read parameters for linear theory
-    use_lt_options = true,
+    use_lt_options = true
     !   Read parameters for microphysics (primarily thompson only at this point)
     use_mp_options = true
     !   Read parameters for land surface model
-    use_lsm_options = true,
+    use_lsm_options = true
     !   Read parameters for online bias correction
-    use_bias_correction = False
+    use_bias_correction = false
+    !   Read parameters for experimental blocked flow parameterization
+    use_block_options = false
 /
 
 !---------------------------------------------------------
@@ -315,9 +317,9 @@
 !---------------------------------------------------------
 &lt_parameters
     buffer = 50                     ! The number of grid cells of buffer to use around the topography for the fft calculations
-    stability_window_size = 2       ! The number of grid cells in all directions to average Nsq over for variable_N
-    vert_smooth = 2,                ! The number of vertical levels to look up and down when calculating brunt vaisalla frequency
-    smooth_nsq = .False.,           ! set to true to provide additional vertical smoothing of Nsq within spatial_linear_winds
+    stability_window_size = 10      ! The number of grid cells in all directions to average Nsq over for variable_N
+    vert_smooth = 10,               ! The number of vertical levels to look up and down when calculating brunt vaisalla frequency
+    smooth_nsq = .True.,            ! set to true to provide additional vertical smoothing of Nsq within spatial_linear_winds
     max_stability = 6e-4            ! The maximum Brunt-Vaisalla frequency to allow
     min_stability = 1e-7            ! The minimum Brunt-Vaisalla frequency to allow
 
@@ -360,6 +362,11 @@
     nsqmin = -16.12 ! ln(1e-7) defaults to ln(min_stability)
     n_nsq_values = 10
 
+    ! Minimum thickness of a layer to permit when computing the LUT.
+    ! If a model layer is thicker than this, it is divided evenly into sub
+    ! steps such that each substep is <= minimum_layer_size
+    minimum_layer_size = 100.0
+
     ! NOTE: this look up table requires a LOT of RAM.  (and you still need some for the rest of the model)
     !   Calculate bytes of RAM required as nx * ny * nz * n_dir * n_spd * n_nsq * 2 * 4
     !   e.g. 320 * 250 * 14 * 36 * 10 * 10 * 2 * 4 = 30GB!
@@ -387,6 +394,18 @@
     ! variable should have a time dimension that will be interpolated over a one year period to permit a seasonality
     ! to the bias correction
     rain_fraction_var = ""
+/
+
+!---------------------------------------------------------
+!   Optionally Parameters for highly experimental blocked flow parameterization
+!---------------------------------------------------------
+&block_parameters
+    blocking_contribution   = 0.5       ! fractional contribution of flow blocking perturbation that is added [0-1]
+    smooth_froude_distance  = 6000      ! distance (m) over which Froude number is smoothed
+    n_smoothing_passes      = 3         ! number of times the smoothing window is applied
+    block_fr_max            = 0.75      ! max froude no at which flow is only partially blocked above, no blocking
+    block_fr_min            = 0.5       ! min froude no at which flow is only partially blocked below, full blocking
+    block_flow              = .False.   ! use the blocking parameterization
 /
 
 

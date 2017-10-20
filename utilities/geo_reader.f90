@@ -1,10 +1,10 @@
 !>------------------------------------------------------------
 !! Module provides geographic interpolation procedures
 !! Various functions used for spatial interpolation from low-res
-!! forcing grid to high-res model grid. 
+!! forcing grid to high-res model grid.
 !!
 !! <pre>
-!!  Entry points: 
+!!  Entry points:
 !!      geo_LUT     : creates a geographic look uptable to convert one
 !!                    grid to another
 !!      geo_interp  : interpolates from one grid to another and
@@ -19,32 +19,33 @@
 module geo
     use data_structures
     implicit none
-    
+
     private
-    
+
     public::geo_LUT      ! Create a geographic Look up table
     public::geo_interp   ! apply geoLUT to interpolate in 2d for a 3d grid
     public::geo_interp2d ! apply geoLUT to interpolate in 2d for a 2d grid
-    
+    public::standardize_coordinates
+
 contains
     !>------------------------------------------------------------
     !! Calculate the weights to use for bilinear interpolation between surrounding points x, y
-    !! 
+    !!
     !! Takes a point (yi,xi) and a set of 4 surrounding points (y[4],x[4]) as input
-    !! 
-    !! @param   real    yi  input y location to interpolate to. 
-    !! @param   real    y   Array of surrounding y-locations to interpolate from. 
-    !! @param   real    xi  input x location to interpolate to. 
-    !! @param   real    x   Array of surrounding x-locations to interpolate from. 
+    !!
+    !! @param   real    yi  input y location to interpolate to.
+    !! @param   real    y   Array of surrounding y-locations to interpolate from.
+    !! @param   real    xi  input x location to interpolate to.
+    !! @param   real    x   Array of surrounding x-locations to interpolate from.
     !! @retval  real    weights
     !!
-    !!------------------------------------------------------------    
+    !!------------------------------------------------------------
     function bilin_weights(yi,y,xi,x)
         implicit none
         real,intent(in)::yi,y(0:3),xi,x(0:3)
         real::x0,x1,x2,x3,y5,y6,f1,f2
         real, dimension(4) ::bilin_weights
-        
+
         ! handle the special case if x(1) and x(0) are identical
         if ((x(1)-x(0))==0) then
             x0=1
@@ -54,7 +55,7 @@ contains
         endif
         ! the weights for the other x are just the complement
         x1=1-x0
-        
+
         ! handle the special case if x(3) and x(2) are identical
         if ((x(3)-x(2))==0) then
             x2=1
@@ -64,7 +65,7 @@ contains
         endif
         ! the weights for the other x are just the complement
         x3=1-x2
-        
+
         ! now compute the y interpolation weights
         ! first find the y locations after performing the x interpolation
         y5=y(0)*x1+y(1)*x0
@@ -79,31 +80,31 @@ contains
         endif
         ! the complement
         f2=1-f1
-        
+
         ! note that the final weights are a mixture of the x and y weights
         bilin_weights=(/x1*f2,x0*f2,x3*f1,x2*f1/)
     end function bilin_weights
-    
+
     !>------------------------------------------------------------
     !! Find the minimum x
     !! Takes a point (yi,xi) and a set of 4 surrounding points (y[4],x[4]) as input
-    !! 
+    !!
     !! Example : xw = minxw(xw,lo%lon,xc,yc,lon)
     !!
-    !! @param   real    yi  input y location to interpolate to. 
-    !! @param   real    y   Array of surrounding y-locations to interpolate from. 
-    !! @param   real    xi  input x location to interpolate to. 
-    !! @param   real    x   Array of surrounding x-locations to interpolate from. 
+    !! @param   real    yi  input y location to interpolate to.
+    !! @param   real    y   Array of surrounding y-locations to interpolate from.
+    !! @param   real    xi  input x location to interpolate to.
+    !! @param   real    x   Array of surrounding x-locations to interpolate from.
     !! @retval  real    weights
     !!
-    !!------------------------------------------------------------     
+    !!------------------------------------------------------------
     integer function minxw(xw,longrid,xpos,ypos,lon)
         implicit none
         integer, intent(in)::xw,xpos,ypos
         real,intent(in)::longrid(:,:),lon
         real::curdist,dx
         integer::nx
-        
+
         nx=size(longrid,1)
         curdist=abs(lon-longrid(xpos,ypos))
         if (xpos<nx) then
@@ -128,7 +129,7 @@ contains
         real,intent(in)::latgrid(:,:),lat
         real::curdist,dx
         integer::ny
-        
+
         ny=size(latgrid,2)
         curdist=abs(lat-latgrid(xpos,ypos))
         if (ypos<ny) then
@@ -143,21 +144,21 @@ contains
             endif
         endif
     end function minyw
-    
+
     !>------------------------------------------------------------
     !! Find a location lat,lon in lo%lat,lon grids
     !!  Assumes that the lat/lon grids are semi-regular (dx/dy are not constant but they are nearly so)
     !!  Calculates dx/dy at the middle of the lat/lon grids, then calculates the location of lat,lon
-    !!  input point using those coordinates.  
+    !!  input point using those coordinates.
     !!  Next proceeds to calculate a new position based on the dx/dy at that position until the new
     !!  position is within 1 gridcell of the current position
     !!  Once that "within 1" position is found, search all cells in a 3x3 grid for the minimum distance
     !!  return a position datatype that includes the found x/y location
-    !! 
-    !! currently tries up to three methods to find the location 
+    !!
+    !! currently tries up to three methods to find the location
     !!   1) assume relatively even dxdy and compute location (iterate a <20times)
     !!   2) use a log(n) search (divide and conquer) also iterate <20times)
-    !!   a) if 1 or 2 are approximately successful: 
+    !!   a) if 1 or 2 are approximately successful:
     !!       search a small region around the "best" point to find the real best point
     !!   3) in the diabolical case where 1 and 2 fail (rare) just search every single location (n^2)
     !!   Could add a 2.5) downhill search algorithm...
@@ -177,13 +178,13 @@ contains
         ! locals
         real::mindist, curdist,dx,dy,xsign,ysign,x,y    ! temporary variables to use during the search
         integer::nx,ny,xc,yc,xw,yw,iterations,xstep,ystep   ! more temporary variables
-        
+
         nx = size(lo%lat, 1)
         ny = size(lo%lat, 2)
         ! calcualte dx/dy at the middle of the grid
         dx = lo%lon(2,1) - lo%lon(1,1)
         dy = lo%lat(1,2) - lo%lat(1,1)
-        
+
         ! Handle weird edge case for WRF ideal simulations
         if (dx == 0) then
             if (.not.lo%dx_errors_printed) then
@@ -210,19 +211,19 @@ contains
         !       yc=ny/2
         xc = lastpos%x
         yc = lastpos%y
-        
+
         x = lo%lon(xc,yc)
         y = lo%lat(xc,yc)
-        
+
         ! steps to take = the difference the between the current point and the input point / dx
         xstep = (lon-x)/dx
         ystep = (lat-y)/dy
-        
+
         ! CASE 1 assume a quasi regular dx/dy and caluate new location
         !  while we need to step by more than one grid cell, iterate
         !  if the grid is highly regular, we will only iterate 1-2x, highly irregular might require more iterations
-        !  in the diabolical case, this could fail? 
-        !  in most cases this succeeds with a few iterations. 
+        !  in the diabolical case, this could fail?
+        !  in most cases this succeeds with a few iterations.
         iterations = 0
         do while (((abs(xstep)>1).or.(abs(ystep)>1)).and.iterations<20)
             iterations = iterations+1
@@ -246,18 +247,18 @@ contains
             xstep = NINT( (lon-x) / dx )
             ystep = NINT( (lat-y) / dy )
         enddo
-        ! because one or both steps could actually be 1... 
+        ! because one or both steps could actually be 1...
         ! this is deliberate so we can find the edge of the array if necessary
         xc = max(1, min(nx, xc+xstep ) )
         yc = max(1, min(ny, yc+ystep ) )
-        
+
         ! CASE 2 use a log(n search)
-        ! in case we hit some pathologically varying dx case 
+        ! in case we hit some pathologically varying dx case
         ! use a "straightforward" log(n) search
         if (iterations >= 20) then
             nx = size(lo%lat, 1)
             ny = size(lo%lat, 2)
-        
+
             xc = nx/2
             yc = ny/2
             xw = xc
@@ -265,7 +266,7 @@ contains
             ! use xsign and ysign in case lat/lon don't increase in a positive index direction
             ysign = sign(1.0, lo%lat(1,2) - lo%lat(1,1) )
             xsign = sign(1.0, lo%lon(2,1) - lo%lon(1,1) )
-        
+
             ! use a O(log(n)) search instead of O(nxm)
             ! start at the halfway point and find the best direction to take in both directions
             iterations = 0
@@ -356,12 +357,12 @@ contains
             enddo
         endif
 
-        
+
         find_location%x = x
         find_location%y = y
     end function find_location
-    
-    
+
+
     !>------------------------------------------------------------
     !!  Given a closest position, return the 4 points surrounding the lat/lon position in lo%lat/lon
     !!
@@ -373,27 +374,27 @@ contains
         type(position),intent(in)::pos
         integer,intent(in) :: nx,ny
         integer :: i
-        
+
         if ((lo%lat(pos%x,pos%y)-lat) > 0) then
             find_surrounding%y = (/pos%y,pos%y,pos%y-1,pos%y-1/)
         else
             find_surrounding%y = (/pos%y,pos%y,pos%y+1,pos%y+1/)
         endif
-        
+
         if ((lo%lon(pos%x,pos%y)-lon) > 0) then
             find_surrounding%x = (/pos%x,pos%x-1,pos%x,pos%x-1/)
         else
             find_surrounding%x = (/pos%x,pos%x+1,pos%x,pos%x+1/)
         endif
-        
+
         ! enforce that surround points fall within the bounds of the full domain
         do i=1,4
             find_surrounding%x(i) = min(max(find_surrounding%x(i),1), nx)
             find_surrounding%y(i) = min(max(find_surrounding%y(i),1), ny)
         enddo
-        
-    end function find_surrounding           
-    
+
+    end function find_surrounding
+
     !>------------------------------------------------------------
     !!  Compute the geographic look up table from LOw resolution grid to HIgh resolution grid
     !!
@@ -406,19 +407,19 @@ contains
         type(position) :: curpos, lastpos
         integer :: nx, ny, i, j, k, lo_nx, lo_ny
         real, dimension(4) :: lat, lon
-        
+
         nx    = size(hi%lat,1)
         ny    = size(hi%lat,2)
         lo_nx = size(lo%lat,1)
         lo_ny = size(lo%lat,2)
-        
+
         allocate(lo%geolut%x(4,nx,ny))
         allocate(lo%geolut%y(4,nx,ny))
         allocate(lo%geolut%w(4,nx,ny))
 
         curpos%x = 1
         curpos%y = 1
-        
+
         do j=1,ny
             curpos%x = 1
             ! use a brute force approach to find a starting
@@ -430,7 +431,7 @@ contains
                 lastpos%y = j
                 write(*,*) "Error in Geographic interpolation, check input lat / lon grids", 1,j
             endif
-            
+
             do i=1, nx
                 curpos = find_location(lo, hi%lat(i,j), hi%lon(i,j), lastpos)
                 if (curpos%x<1) then
@@ -457,9 +458,9 @@ contains
                 endif
             enddo
         enddo
-        
+
     end subroutine geo_LUT
-    
+
     !>------------------------------------------------------------
     !!  Interpolate boundaries of fieldout to fieldin using geolut
     !!
@@ -472,7 +473,7 @@ contains
         integer::nx,nz,ny
         integer:: i,j,k,l,localx,localy
         real::localw
-        
+
         nx=size(fieldout,1)
         nz=size(fieldout,2)
         ny=size(fieldout,3)
@@ -508,9 +509,9 @@ contains
         enddo
 
     end subroutine boundary_interpolate
-    
+
     !>------------------------------------------------------------
-    !!  Interpolate fieldout to fieldin using geolut.  
+    !!  Interpolate fieldout to fieldin using geolut.
     !!  if boundary_only is true, call boundary_interpolate instead
     !!  loops over y,z,x but geolut is only defined over x,y (for now)
     !!
@@ -524,11 +525,11 @@ contains
         integer::nx,nz,ny
         integer:: i,j,k,l,localx,localy
         real::localw
-        
+
         nx=size(fieldout,1)
         nz=size(fieldout,2)
         ny=size(fieldout,3)
-        
+
         ! if we are only processing the boundary, then make x and y increments be the size of the array
         ! so we only hit the edges of the array
         if (boundary_only) then
@@ -552,9 +553,9 @@ contains
             enddo
         endif
     end subroutine geo_interp
-    
+
     !>------------------------------------------------------------
-    !!  Interpolate fieldout to fieldin using geolut. 
+    !!  Interpolate fieldout to fieldin using geolut.
     !!
     !!------------------------------------------------------------
     subroutine geo_interp2d(fieldout, fieldin, geolut)
@@ -564,7 +565,7 @@ contains
         type(geo_look_up_table),intent(in)::geolut
         integer::i,k,l,ny,nx,localx,localy
         real::localw
-        
+
         nx=size(fieldout,1)
         ny=size(fieldout,2)
         ! use the geographic lookup table generated earlier to
@@ -580,8 +581,42 @@ contains
                 enddo
             enddo
         enddo
-        
+
     end subroutine  geo_interp2d
 
-    
+
+    subroutine standardize_coordinates(domain)
+        implicit none
+        class(interpolable_type), intent(inout) :: domain
+
+        real, dimension(:,:), allocatable :: temporary_geo_data
+        integer :: nx, ny, i
+
+        ! if the lat, lon data were given as 1D variables, we need to make them 2D for interpolability
+        if (size(domain%lat,2)==1) then
+            nx = size(domain%lon,1)
+            ny = size(domain%lat,1)
+
+            allocate(temporary_geo_data(nx,ny))
+            do i = 1, ny
+                temporary_geo_data(:,i) = domain%lon(:,1)
+            end do
+            deallocate(domain%lon)
+            allocate(domain%lon(nx,ny))
+            domain%lon = temporary_geo_data
+
+            do i = 1, nx
+                temporary_geo_data(i,:) = domain%lat(:,1)
+            end do
+            deallocate(domain%lat)
+            allocate(domain%lat(nx,ny))
+            domain%lat = temporary_geo_data
+
+        endif
+
+        ! also convert from a -180 to 180 coordinate system into a 0-360 coordinate system if necessary
+        where(domain%lon<0) domain%lon = 360+domain%lon
+
+    end subroutine standardize_coordinates
+
 end module geo
