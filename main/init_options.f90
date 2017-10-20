@@ -864,10 +864,10 @@ contains
 
         ! set default values
         variable_N = .True.
-        smooth_nsq = .False.
+        smooth_nsq = .True.
         buffer = 50                    ! number of grid cells to buffer around the domain MUST be >=1
-        stability_window_size = 2      ! window to average nsq over
-        vert_smooth = 2
+        stability_window_size = 10     ! window to average nsq over
+        vert_smooth = 10
         max_stability = 6e-4           ! limits on the calculated Brunt Vaisala Frequency
         min_stability = 1e-7           ! these may need to be a little narrower.
 

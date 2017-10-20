@@ -2,7 +2,7 @@
 !   Model and run meta-data
 !---------------------------------------------------------
 &model_version
-    version = "0.9.4",                    ! This must match the version of the compiled code
+    version = "0.9.5",                    ! This must match the version of the compiled code
     comment = "Add your comment here"     ! This will be stored in output files
 /
 
@@ -317,9 +317,9 @@
 !---------------------------------------------------------
 &lt_parameters
     buffer = 50                     ! The number of grid cells of buffer to use around the topography for the fft calculations
-    stability_window_size = 2       ! The number of grid cells in all directions to average Nsq over for variable_N
-    vert_smooth = 2,                ! The number of vertical levels to look up and down when calculating brunt vaisalla frequency
-    smooth_nsq = .False.,           ! set to true to provide additional vertical smoothing of Nsq within spatial_linear_winds
+    stability_window_size = 10      ! The number of grid cells in all directions to average Nsq over for variable_N
+    vert_smooth = 10,               ! The number of vertical levels to look up and down when calculating brunt vaisalla frequency
+    smooth_nsq = .True.,            ! set to true to provide additional vertical smoothing of Nsq within spatial_linear_winds
     max_stability = 6e-4            ! The maximum Brunt-Vaisalla frequency to allow
     min_stability = 1e-7            ! The minimum Brunt-Vaisalla frequency to allow
 
@@ -334,8 +334,6 @@
 
     ! linear_contribution = 1.0,    ! set this to the fraction of the linear perturbation you wish to use (1.0 = full/standard linear field)
     spatial_linear_fields = true,   ! use a spatially variable wind field when calculating the linear wind field
-
-    blocked_flow = false,           ! use the blocked flow parameterization eventually this should be in it's own namelist...
 
     ! NOTE THIS uses a fixed Nsq, not the value specified here yet
     ! rm_N_squared = 9e-5,          ! set this to use a fixed brunt-vaisalla frequency in linear wind calculations
