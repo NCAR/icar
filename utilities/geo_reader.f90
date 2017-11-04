@@ -22,6 +22,8 @@ module geo
 
     private
 
+    public::point_in_poly
+    public::point_is_on_line
     public::geo_LUT      ! Create a geographic Look up table
     public::geo_interp   ! apply geoLUT to interpolate in 2d for a 3d grid
     public::geo_interp2d ! apply geoLUT to interpolate in 2d for a 2d grid
@@ -119,6 +121,7 @@ contains
             endif
         endif
     end function minxw
+
     !>------------------------------------------------------------
     !!  Find the minimum next step size in the y direction
     !!  yw = minyw(yw,lo%lat,xc,yc,lat)
@@ -362,6 +365,155 @@ contains
         find_location%y = y
     end function find_location
 
+    !>------------------------------------------------------------
+    !! Determine if a point is on a line defined by two points
+    !!
+    !! WARNING: assumes y is between y0 and y1 and x < max(x0,x1)
+    !!
+    !! x,y are the real point location
+    !! x0,y0 defines one end of a line
+    !! x1,y1 defines the other end of the line
+    !!
+    !! precision optionally defines the tolerance permitted to consider around the line
+    !!
+    !!------------------------------------------------------------
+    function point_is_on_line(x,y,x0,y0,x1,y1, precision) result(online)
+        ! WARNING: assumes y is between y0 and y1 and x < max(x0,x1)
+        implicit none
+        real, intent(in) :: x,y,x0,y0,x1,y1
+        real, intent(in), optional :: precision
+        logical :: online
+
+        real :: internal_precision
+        double precision :: slope, offset
+
+        internal_precision = 1e-7
+        if (present(precision)) internal_precision = precision
+
+        online=.False.
+        ! can we abort testing whether we are actually on a border?
+        if (x >= min(x0,x1)) then
+            ! we COULD be on a border
+            if (x0/=x1) then
+                ! find the equation of the line and check if we are on it.
+                ! this is performed in double precision space to be as precise as possible
+                ! so that rounding errors are minimized
+                slope = (DBLE(y1)-y0) / (DBLE(x1)-x0)
+                offset = y0 - (slope * x0)
+                ! note that due to rounding errors we could be "close" but not on it...
+                if (abs( ((slope * x) + offset) - y) < internal_precision) then
+                    ! we are on a border, return true
+                    online=.True.
+                endif
+            else
+                ! if x0=x1 and x is between x0,x1 and y is between y0,y1 then
+                online=.True.
+            endif
+        endif
+
+    end function
+
+    !>------------------------------------------------------------
+    !! Determine if a point is inside a given polygon or not
+    !!
+    !!   Polygon is a list of (x,y) pairs. This fuction returns True or False.
+    !!   The algorithm is called the Ray Casting Method.
+    !!
+    !! loosely based off: http://www.ariel.com.au/a/python-point-int-poly.html
+    !! Note additional discussion here: https://wrf.ecse.rpi.edu//Research/Short_Notes/pnpoly.html
+    !!
+    !!------------------------------------------------------------
+    function point_in_poly(x, y, poly) result(inside)
+        implicit none
+        real, intent(in) :: x, y
+        real, intent(in) :: poly(:,:)
+        logical :: inside
+
+        integer :: n, i
+        real :: x0,y0,x1,y1
+        double precision :: slope, x_line
+
+        n = size(poly,2)
+
+        ! by default we assume we are not in the polygon
+        inside = .False.
+
+        ! check if point is a vertex
+        do i=1,n
+            ! check if the point is the next vertex
+            if ((x==poly(1,i)).and.(y==poly(2,i))) then
+                ! if the point is a vertex, we are inside the polygon, so return true
+                inside=.True.
+                return
+            endif
+        enddo
+
+        x0 = poly(1,1)
+        y0 = poly(2,1)
+        ! now step through all edges checking to see if the number of edges that have to be crossed is odd or even
+        do i=1,n
+            x1 = poly(1,mod(i,n)+1)
+            y1 = poly(2,mod(i,n)+1)
+            ! the first if statements test to see if we can abort early
+            if (y >= min(y0,y1)) then
+                if (y <= max(y0,y1)) then
+                    if (x <= max(x0,x1)) then
+
+                        if (point_is_on_line(x,y,x0,y0,x1,y1)) then
+                            inside=.True.
+                            return
+                        endif
+
+                        if (y0 /= y1) then
+                            ! note slope is reversed from "normal" because we are looking across x
+                            ! performed in double precision to match what is done in point_is_on_line (roughly)
+                            slope = (dble(x1)-x0)/(dble(y1)-y0)
+                            x_line = (y-dble(y0)) * slope + x0
+                        else
+                            x_line = -1e10
+                        endif
+                        ! if we cross one line then we are inside, but if we cross two we are outside, and so on
+                        if ((x0 == x1) .or. (x <= x_line)) then
+                            inside = .not. inside
+                        endif
+                    endif
+                endif
+            endif
+            x0 = x1
+            y0 = y1
+        enddo
+
+        ! inside will be set to the correct value
+    end function point_in_poly
+
+
+    function test_surrounding(lat,lon, lo, positions, nx, ny, n) result(surrounded)
+        implicit none
+        real,                    intent(in) :: lat, lon
+        class(interpolable_type),intent(in) :: lo
+        type(fourpos),           intent(inout) :: positions
+        integer,                 intent(in) :: nx, ny, n
+        logical :: surrounded
+        integer :: i
+
+        real :: polygon(2,n)
+
+        ! first enforce that all points passed in are within the bounds of the lat/lon arrays
+        do i=1,n
+            positions%x(i) = min(max(positions%x(i),1), nx)
+            positions%y(i) = min(max(positions%y(i),1), ny)
+        enddo
+
+        ! then setup a polygon containing the lat/lon data from the input
+        do i=1,n
+            polygon(1,i) = lo%lon( positions%x(i), positions%y(i))
+            polygon(2,i) = lo%lat( positions%x(i), positions%y(i))
+        enddo
+
+        ! finally test that the provided lat/lon point falls within this polygon
+        surrounded = point_in_poly(lon, lat, polygon)
+
+    end function test_surrounding
 
     !>------------------------------------------------------------
     !!  Given a closest position, return the 4 points surrounding the lat/lon position in lo%lat/lon
@@ -375,23 +527,39 @@ contains
         integer,intent(in) :: nx,ny
         integer :: i
 
-        if ((lo%lat(pos%x,pos%y)-lat) > 0) then
-            find_surrounding%y = (/pos%y,pos%y,pos%y-1,pos%y-1/)
-        else
-            find_surrounding%y = (/pos%y,pos%y,pos%y+1,pos%y+1/)
-        endif
+        ! test the lower left quadrant
+        find_surrounding%x = [pos%x, pos%x-1, pos%x-1, pos%x  ]
+        find_surrounding%y = [pos%y, pos%y,   pos%y-1, pos%y-1]
 
-        if ((lo%lon(pos%x,pos%y)-lon) > 0) then
-            find_surrounding%x = (/pos%x,pos%x-1,pos%x,pos%x-1/)
-        else
-            find_surrounding%x = (/pos%x,pos%x+1,pos%x,pos%x+1/)
-        endif
+        if (test_surrounding(lat, lon, lo, find_surrounding, nx, ny, 4)) return
 
+
+        ! test the upper left quadrant
+        find_surrounding%x = [pos%x, pos%x-1, pos%x-1, pos%x  ]
+        find_surrounding%y = [pos%y, pos%y,   pos%y+1, pos%y+1]
+
+        if (test_surrounding(lat, lon, lo, find_surrounding, nx, ny, 4)) return
+
+
+        ! test the upper right quadrant
+        find_surrounding%x = [pos%x, pos%x+1, pos%x+1, pos%x  ]
+        find_surrounding%y = [pos%y, pos%y,   pos%y+1, pos%y+1]
+
+        if (test_surrounding(lat, lon, lo, find_surrounding, nx, ny, 4)) return
+
+
+        ! test the lower right quadrant
+        find_surrounding%x = [pos%x, pos%x+1, pos%x+1, pos%x  ]
+        find_surrounding%y = [pos%y, pos%y,   pos%y-1, pos%y-1]
+
+        if (test_surrounding(lat, lon, lo, find_surrounding, nx, ny, 4)) return
+
+        write(*,*) "ERROR: Failed to find point", lon, lat, " in a quadrant near:"
+        write(*,*) lo%lon(pos%x, pos%y), lo%lat(pos%x, pos%y)
+        write(*,*) pos
+        write(*,*) nx, ny
+        stop "Failed to find point"
         ! enforce that surround points fall within the bounds of the full domain
-        do i=1,4
-            find_surrounding%x(i) = min(max(find_surrounding%x(i),1), nx)
-            find_surrounding%y(i) = min(max(find_surrounding%y(i),1), ny)
-        enddo
 
     end function find_surrounding
 
