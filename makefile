@@ -405,6 +405,7 @@ TEST_EXECUTABLES= 	fftshift_test	\
 	  				mpdata_test		\
 	  				fftw_test		\
 	  				blocking_test	\
+					point_in_on_test\
 	  				array_util_test
 
 
@@ -446,6 +447,9 @@ calendar_test: $(BUILD)test_calendar.o $(BUILD)time.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 mpdata_test: $(BUILD)test_mpdata.o $(BUILD)adv_mpdata.o
+	${F90} $^ -o $@ ${LFLAGS}
+
+point_in_on_test: $(BUILD)test_point_in_on.o $(BUILD)geo_reader.o $(BUILD)data_structures.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 blocking_test: $(BUILD)test_blocking.o $(BUILD)io_routines.o $(BUILD)winds_blocking.o \
@@ -685,6 +689,9 @@ $(BUILD)test_fftshift.o:$(BUILD)fftshift.o tests/test_fftshift.f90
 
 $(BUILD)test_calendar.o:$(BUILD)time.o tests/test_calendar.f90
 	${F90} ${FFLAGS} tests/test_calendar.f90 -o $(BUILD)test_calendar.o
+
+$(BUILD)test_point_in_on.o:$(BUILD)geo_reader.o tests/test_point_in_on.f90
+	${F90} ${FFLAGS} tests/test_point_in_on.f90 -o $(BUILD)test_point_in_on.o
 
 $(BUILD)test_mpdata.o:$(BUILD)adv_mpdata.o tests/test_mpdata.f90
 	${F90} ${FFLAGS} tests/test_mpdata.f90 -o $(BUILD)test_mpdata.o
