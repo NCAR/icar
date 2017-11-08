@@ -413,6 +413,59 @@ contains
 
     end function
 
+    subroutine check_vertex_hits(y, y0, y1, inside, top_vertex, bottom_vertex, precision)
+        implicit none
+        real,    intent(in)    :: y, y0, y1
+        logical, intent(inout) :: top_vertex, bottom_vertex, inside
+        real,    intent(in)    :: precision
+
+        ! if the segment just parallels the line, then don't reset top_vertex, bottom_vertex history
+        ! and don't flip inside/out
+        if (y0==y1) return
+
+        ! check if we hit the y0 vertex with our ray
+        if (abs(y-y0) < precision) then
+            ! if so, check if we are above or below the other vertex segment
+            if (y<=y1) then
+                ! we are below the other vertex
+                if (top_vertex) then
+                    ! if we already found the other vertex (from testing the previous segment)
+                    ! so reverse our inside outside to avoid double counting this vertex hit
+                    top_vertex=.False.
+                    inside = .not.inside
+                else
+                    ! otherwise, store the fact that we hit a bottom vertex for the next segment
+                    bottom_vertex=.True.
+                endif
+            else if (y>=y1) then
+                if (bottom_vertex) then
+                    bottom_vertex=.False.
+                    inside=.not.inside
+                else
+                    top_vertex=.True.
+                endif
+            endif
+        endif
+
+        if (abs(y-y1) < precision) then
+            if (y<=y0) then
+                if (top_vertex) then
+                    top_vertex=.False.
+                    inside = .not.inside
+                else
+                    bottom_vertex=.True.
+                endif
+            else if (y>=y0) then
+                if (bottom_vertex) then
+                    bottom_vertex=.False.
+                    inside=.not.inside
+                else
+                    top_vertex=.True.
+                endif
+            endif
+        endif
+    end subroutine check_vertex_hits
+
     !>------------------------------------------------------------
     !! Determine if a point is inside a given polygon or not
     !!
@@ -423,20 +476,27 @@ contains
     !! Note additional discussion here: https://wrf.ecse.rpi.edu//Research/Short_Notes/pnpoly.html
     !!
     !!------------------------------------------------------------
-    function point_in_poly(x, y, poly) result(inside)
+    function point_in_poly(x, y, poly, precision) result(inside)
         implicit none
         real, intent(in) :: x, y
         real, intent(in) :: poly(:,:)
+        real, intent(in), optional :: precision
         logical :: inside
+        logical :: top_vertex, bottom_vertex
 
+        real :: internal_precision
         integer :: n, i
         real :: x0,y0,x1,y1
         double precision :: slope, x_line
 
+        internal_precision = 1e-7
+        if (present(precision)) internal_precision = precision
         n = size(poly,2)
 
         ! by default we assume we are not in the polygon
         inside = .False.
+        top_vertex = .False.
+        bottom_vertex = .False.
 
         ! check if point is a vertex
         do i=1,n
@@ -459,7 +519,7 @@ contains
                 if (y <= max(y0,y1)) then
                     if (x <= max(x0,x1)) then
 
-                        if (point_is_on_line(x,y,x0,y0,x1,y1)) then
+                        if (point_is_on_line(x,y,x0,y0,x1,y1, internal_precision)) then
                             inside=.True.
                             return
                         endif
@@ -470,11 +530,15 @@ contains
                             slope = (dble(x1)-x0)/(dble(y1)-y0)
                             x_line = (y-dble(y0)) * slope + x0
                         else
-                            x_line = -1e10
+                            x_line = -1e10 ! only inside if x0==x1
                         endif
                         ! if we cross one line then we are inside, but if we cross two we are outside, and so on
                         if ((x0 == x1) .or. (x <= x_line)) then
                             inside = .not. inside
+                            call check_vertex_hits(y,y0,y1,inside, top_vertex, bottom_vertex, internal_precision)
+                        else
+                            top_vertex = .False.
+                            bottom_vertex = .False.
                         endif
                     endif
                 endif
