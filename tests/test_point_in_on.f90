@@ -4,7 +4,7 @@ program test_point_in_on
     implicit none
 
     real :: x,y
-    real :: poly(2,4)
+    real :: poly(2,4), large_poly(2,8)
     real :: x0,y0,x1,y1
 
     logical :: passing
@@ -41,19 +41,153 @@ program test_point_in_on
     poly(1,:) = [0.5,0.0,0.5,1.0]
     poly(2,:) = [0.0,0.5,1.0,0.5]
 
+    print*, "Testing diamond polygon edge cases"
+    print*, " x = polygon vertex "
+    print*, " o = test point     "
+    print*, ""
+
     x=0.5; y=0.5
-    passing = passing.and.test_poly(x,y,poly,.True.)
-    x=0.51; y=0.51
-    passing = passing.and.test_poly(x,y,poly,.True.)
-    x=0.25; y=0.25
-    passing = passing.and.test_poly(x,y,poly,.True.)
-    x=0.2; y=0.25
-    passing = passing.and.test_poly(x,y,poly,.False.)
-    x=0.2; y=0.75
-    passing = passing.and.test_poly(x,y,poly,.False.)
-    x=0.25; y=0.75
+    print*, ""
+    print*, "Testing: ", x, y
+    print*, "          x      "
+    print*, "         / \     "
+    print*, "        /   \    "
+    print*, "       x  o  x   "
+    print*, "        \   /    "
+    print*, "         \ /     "
+    print*, "          x      "
     passing = passing.and.test_poly(x,y,poly,.True.)
 
+    x=-0.1; y=0.5
+    print*, ""
+    print*, "Testing: ", x, y
+    print*, "          x      "
+    print*, "         / \     "
+    print*, "        /   \    "
+    print*, "   o   x     x   "
+    print*, "        \   /    "
+    print*, "         \ /     "
+    print*, "          x      "
+    passing = passing.and.test_poly(x,y,poly,.False.)
+
+    x=0.1; y=0.0
+    print*, ""
+    print*, "Testing: ", x, y
+    print*, "          x      "
+    print*, "         / \     "
+    print*, "        /   \    "
+    print*, "       x     x   "
+    print*, "        \   /    "
+    print*, "         \ /     "
+    print*, "   o      x      "
+    passing = passing.and.test_poly(x,y,poly,.False.)
+
+    x=0.51; y=0.51
+    print*, ""
+    print*, "Testing: ", x, y
+    print*, "          x      "
+    print*, "         / \     "
+    print*, "        / o \    "
+    print*, "       x     x   "
+    print*, "        \   /    "
+    print*, "         \ /     "
+    print*, "          x      "
+    passing = passing.and.test_poly(x,y,poly,.True.)
+
+    x=0.25; y=0.25
+    print*, ""
+    print*, "Testing: ", x, y
+    print*, "          x      "
+    print*, "         / \     "
+    print*, "        /   \    "
+    print*, "       x     x   "
+    print*, "        \   /    "
+    print*, "         o /     "
+    print*, "          x      "
+    passing = passing.and.test_poly(x,y,poly,.True.)
+
+    x=0.2; y=0.25
+    print*, ""
+    print*, "Testing: ", x, y
+    print*, "          x      "
+    print*, "         / \     "
+    print*, "        /   \    "
+    print*, "       x     x   "
+    print*, "        \   /    "
+    print*, "        o\ /     "
+    print*, "          x      "
+    passing = passing.and.test_poly(x,y,poly,.False.)
+
+    x=0.9; y=0.25
+    print*, ""
+    print*, "Testing: ", x, y
+    print*, "          x      "
+    print*, "         / \     "
+    print*, "        /   \    "
+    print*, "       x     x   "
+    print*, "        \   /    "
+    print*, "         \ / o   "
+    print*, "          x      "
+    passing = passing.and.test_poly(x,y,poly,.False.)
+
+    x=0.2; y=0.75
+    print*, ""
+    print*, "Testing: ", x, y
+    print*, "          x      "
+    print*, "        o/ \     "
+    print*, "        /   \    "
+    print*, "       x     x   "
+    print*, "        \   /    "
+    print*, "         \ /     "
+    print*, "          x      "
+    passing = passing.and.test_poly(x,y,poly,.False.)
+
+    x=0.25; y=0.75
+    print*, ""
+    print*, "Testing: ", x, y
+    print*, "          x      "
+    print*, "         o \     "
+    print*, "        /   \    "
+    print*, "       x     x   "
+    print*, "        \   /    "
+    print*, "         \ /     "
+    print*, "          x      "
+    passing = passing.and.test_poly(x,y,poly,.True.)
+
+    print*, "Testing larger polygon edge cases"
+    large_poly(1,:) = [0.0, 0.0, 1.0, 1.0, 0.75, 0.75, 0.25, 0.25]
+    large_poly(2,:) = [0.0, 1.0, 1.0, 0.0, 0.00, 0.50, 0.50, 0.00]
+
+    x=0.25; y=0.5
+    print*, ""
+    print*, "Testing: ", x, y
+    print*, "  x-------------x"
+    print*, "  |             |"
+    print*, "  |  o x---x    |"
+    print*, "  |    |   |    |"
+    print*, "  x----x   x----x"
+    passing = passing.and.test_poly(x,y,large_poly,.True.)
+
+
+    print*, ""
+    large_poly(1,:) = [0.0, 0.0, 1.0, 1.0,  0.75, 0.75, 0.25, 0.25]
+    large_poly(2,:) = [0.0, 1.0, 1.0, 0.75, 0.75, 0.50, 0.50, 0.00]
+
+    x=0.25; y=0.5
+    print*, ""
+    print*, "Testing: ", x, y
+    print*, "  x--------------x"
+    print*, "  |              |"
+    print*, "  |         x----x"
+    print*, "  |  o x----x     "
+    print*, "  |    |          "
+    print*, "  |    |          "
+    print*, "  x----x          "
+
+    passing = passing.and.test_poly(x,y,large_poly,.True.)
+
+    print*, ""
+    print*, "Final Result:"
     if (passing) then
         print*, "Passed"
     else
@@ -73,8 +207,11 @@ contains
             passed=.True.
         else
             passed=.False.
-            print*, "point_in_poly Failed", x, y
+            print*, "point_in_poly Failed for:"
+            print*, " x=",x,"    y=",y
+            print*, "Polygon x vertices:"
             print*, poly(1,:)
+            print*, "Polygon y vertices:"
             print*, poly(2,:)
         endif
 
