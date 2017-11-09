@@ -18,6 +18,7 @@
 !!------------------------------------------------------------
 module geo
     use data_structures
+    use io_routines, only:io_write
     implicit none
 
     private
@@ -86,6 +87,41 @@ contains
         ! note that the final weights are a mixture of the x and y weights
         bilin_weights=(/x1*f2,x0*f2,x3*f1,x2*f1/)
     end function bilin_weights
+
+    !>------------------------------------------------------------
+    !! Calculate the weights to use for inverse distance interpolation between surrounding points x, y
+    !!
+    !! Takes a point (yi,xi) and a set of 4 surrounding points (y[4],x[4]) as input
+    !!
+    !! @param   real    yi  input y location to interpolate to.
+    !! @param   real    y   Array of surrounding y-locations to interpolate from.
+    !! @param   real    xi  input x location to interpolate to.
+    !! @param   real    x   Array of surrounding x-locations to interpolate from.
+    !! @retval  real    weights
+    !!
+    !!------------------------------------------------------------
+    function idw_weights(yi,y,xi,x)
+        implicit none
+        real,intent(in)::yi,y(:),xi,x(:)
+        real, allocatable, dimension(:) :: idw_weights
+
+        real, allocatable, dimension(:) :: distances
+        integer :: n
+        real    :: total_inverse_distance
+
+        n = size(x)
+        allocate(distances(n))
+        allocate(idw_weights(n))
+
+        distances = 1.0/sqrt((y-yi)**2 + (x-xi)**2)
+
+        total_inverse_distance = sum(distances)
+        ! print*, distances
+        ! print*, distances / total_inverse_distance
+
+        idw_weights = distances / total_inverse_distance
+
+    end function idw_weights
 
     !>------------------------------------------------------------
     !! Find the minimum x
@@ -595,28 +631,44 @@ contains
         find_surrounding%x = [pos%x, pos%x-1, pos%x-1, pos%x  ]
         find_surrounding%y = [pos%y, pos%y,   pos%y-1, pos%y-1]
 
-        if (test_surrounding(lat, lon, lo, find_surrounding, nx, ny, 4)) return
+        if (test_surrounding(lat, lon, lo, find_surrounding, nx, ny, 4)) then
+            ! rearrange the order consistent with what bilin_weights is expecting
+            find_surrounding%x = [pos%x, pos%x-1, pos%x, pos%x-1]
+            return
+        endif
 
 
         ! test the upper left quadrant
         find_surrounding%x = [pos%x, pos%x-1, pos%x-1, pos%x  ]
         find_surrounding%y = [pos%y, pos%y,   pos%y+1, pos%y+1]
 
-        if (test_surrounding(lat, lon, lo, find_surrounding, nx, ny, 4)) return
+        if (test_surrounding(lat, lon, lo, find_surrounding, nx, ny, 4)) then
+            ! rearrange the order consistent with what bilin_weights is expecting
+            find_surrounding%x = [pos%x, pos%x-1, pos%x, pos%x-1]
+            return
+        endif
 
 
         ! test the upper right quadrant
         find_surrounding%x = [pos%x, pos%x+1, pos%x+1, pos%x  ]
         find_surrounding%y = [pos%y, pos%y,   pos%y+1, pos%y+1]
 
-        if (test_surrounding(lat, lon, lo, find_surrounding, nx, ny, 4)) return
+        if (test_surrounding(lat, lon, lo, find_surrounding, nx, ny, 4)) then
+            ! rearrange the order consistent with what bilin_weights is expecting
+            find_surrounding%x = [pos%x, pos%x+1, pos%x, pos%x+1]
+            return
+        endif
 
 
         ! test the lower right quadrant
         find_surrounding%x = [pos%x, pos%x+1, pos%x+1, pos%x  ]
         find_surrounding%y = [pos%y, pos%y,   pos%y-1, pos%y-1]
 
-        if (test_surrounding(lat, lon, lo, find_surrounding, nx, ny, 4)) return
+        if (test_surrounding(lat, lon, lo, find_surrounding, nx, ny, 4)) then
+            ! rearrange the order consistent with what bilin_weights is expecting
+            find_surrounding%x = [pos%x, pos%x+1, pos%x, pos%x+1]
+            return
+        endif
 
         write(*,*) "ERROR: Failed to find point", lon, lat, " in a quadrant near:"
         write(*,*) lo%lon(pos%x, pos%y), lo%lat(pos%x, pos%y)
@@ -666,6 +718,7 @@ contains
 
             do i=1, nx
                 curpos = find_location(lo, hi%lat(i,j), hi%lon(i,j), lastpos)
+
                 if (curpos%x<1) then
                     ! something broke, try assuming that the grids are the same possibly wrapping (for ideal)
                     write(*,*) "Error in Geographic interpolation, check input lat / lon grids", i,j
@@ -686,11 +739,25 @@ contains
                         lon(k) = lo%lon(xy%x(k), xy%y(k))
                     enddo
                     ! and calculate the weights to apply to each gridcell
-                    lo%geolut%w(:,i,j) = bilin_weights(hi%lat(i,j), lat, hi%lon(i,j), lon)
+                    lo%geolut%w(:,i,j) = idw_weights(hi%lat(i,j), lat, hi%lon(i,j), lon)
+                    ! lo%geolut%w(:,i,j) = bilin_weights(hi%lat(i,j), lat, hi%lon(i,j), lon)
                 endif
+                ! if ((j>=93).and.(j<=99)) then
+                !     if ((i>79).and.(i<85)) then
+                !         print*, "--------------------"
+                !         print*, i, j
+                !         print*, curpos%x, curpos%y
+                !         print*, lo%geolut%x(1,i,j), lo%geolut%y(1,i,j)
+                !         print*, hi%lat(i,j), hi%lon(i,j)
+                !         print*, lo%lat(curpos%x, curpos%y), lo%lon(curpos%x, curpos%y)
+                !     endif
+                ! endif
+
             enddo
         enddo
-
+        call io_write("geolut_x.nc","data",lo%geolut%x)
+        call io_write("geolut_y.nc","data",lo%geolut%y)
+        call io_write("geolut_w.nc","data",lo%geolut%w)
     end subroutine geo_LUT
 
     !>------------------------------------------------------------
