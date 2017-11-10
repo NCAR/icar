@@ -943,13 +943,15 @@ contains
     !! @param   var_name    OPTIONAL name of variable to read attribute from
     !!
     !!------------------------------------------------------------
-    subroutine io_read_attribute_r(filename, att_name, att_value, var_name)
+    subroutine io_read_attribute_r(filename, att_name, att_value, var_name, error)
         implicit none
-        character(len=*), intent(in) :: filename
-        character(len=*), intent(in) :: att_name
-        real*4, intent(out) :: att_value
+        character(len=*), intent(in)  :: filename
+        character(len=*), intent(in)  :: att_name
+        real*4,           intent(out) :: att_value
         character(len=*), intent(in), optional :: var_name
+        integer,          intent(out),optional :: error
 
+        integer :: internal_error
         integer :: ncid, varid
 
         ! open the netcdf file
@@ -964,7 +966,12 @@ contains
         endif
 
         ! Finally get the attribute data
-        call check(nf90_get_att(ncid, varid, att_name, att_value),att_name)
+        internal_error = nf90_get_att(ncid, varid, att_name, att_value)
+        if (present(error)) then
+            error = internal_error
+        else
+            call check(error, att_name)
+        endif
 
         call check( nf90_close(ncid), "closing:"//trim(filename))
     end subroutine  io_read_attribute_r
@@ -981,13 +988,15 @@ contains
     !! @param   var_name    OPTIONAL name of variable to read attribute from
     !!
     !!------------------------------------------------------------
-    subroutine io_read_attribute_i(filename, att_name, att_value, var_name)
+    subroutine io_read_attribute_i(filename, att_name, att_value, var_name, error)
         implicit none
         character(len=*), intent(in) :: filename
         character(len=*), intent(in) :: att_name
-        integer, intent(out) :: att_value
+        integer,          intent(out):: att_value
         character(len=*), intent(in), optional :: var_name
+        integer,          intent(out),optional :: error
 
+        integer :: internal_error
         integer :: ncid, varid
 
         ! open the netcdf file
@@ -1002,7 +1011,12 @@ contains
         endif
 
         ! Finally get the attribute data
-        call check(nf90_get_att(ncid, varid, att_name, att_value),att_name)
+        internal_error = nf90_get_att(ncid, varid, att_name, att_value)
+        if (present(error)) then
+            error = internal_error
+        else
+            call check(error, att_name)
+        endif
 
         call check( nf90_close(ncid), "closing:"//trim(filename))
     end subroutine  io_read_attribute_i
@@ -1019,13 +1033,15 @@ contains
     !! @param   var_name    OPTIONAL name of variable to read attribute from
     !!
     !!------------------------------------------------------------
-    subroutine io_read_attribute_c(filename, att_name, att_value, var_name)
+    subroutine io_read_attribute_c(filename, att_name, att_value, var_name, error)
         implicit none
         character(len=*), intent(in) :: filename
         character(len=*), intent(in) :: att_name
         character(len=*), intent(out) :: att_value
         character(len=*), intent(in), optional :: var_name
+        integer,          intent(out),optional :: error
 
+        integer :: internal_error
         integer :: ncid, varid
 
         ! open the netcdf file
@@ -1040,7 +1056,12 @@ contains
         endif
 
         ! Finally get the attribute data
-        call check(nf90_get_att(ncid, varid, att_name, att_value),att_name)
+        internal_error = nf90_get_att(ncid, varid, att_name, att_value)
+        if (present(error)) then
+            error = internal_error
+        else
+            call check(error, att_name)
+        endif
 
         call check( nf90_close(ncid), "closing:"//trim(filename))
     end subroutine  io_read_attribute_c

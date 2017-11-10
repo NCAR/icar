@@ -10,6 +10,7 @@ module icar_constants
     integer,parameter :: MAXVARLENGTH     =1024   ! maximum variable name length
     integer,parameter :: MAXLEVELS        = 500   ! maximum number of vertical layers (should typically be ~10-20)
     integer,parameter :: MAX_NUMBER_FILES = 50000 ! maximum number of permitted input files (probably a bit extreme)
+    integer,parameter :: MAXSTRINGLENGTH  = 1024  ! maximum length of other strings (e.g. netcdf attributes)
 
 
 ! ------------------------------------------------
