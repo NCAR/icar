@@ -169,7 +169,7 @@ contains
 
         end associate
 
-        tri_weights = [w1, w2, w3, 0]
+        tri_weights = [w1, w2, w3, 0.0]
 
     end function tri_weights
 
