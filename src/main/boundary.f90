@@ -30,8 +30,7 @@ module boundary_conditions
 !       of possible input files; however it may be necessary to modify it.
 ! ----------------------------------------------------------------------------
     use data_structures
-    use io_routines,            only : io_getdims, io_read3d, io_maxDims, io_read2d, io_variable_is_present, &
-                                       io_write
+    use io_routines,            only : io_getdims, io_read, io_maxDims, io_variable_is_present
     use wind,                   only : update_winds,balance_uvw
     use linear_theory_winds,    only : linear_perturb
     use geo,                    only : geo_interp2d, geo_interp
@@ -276,7 +275,7 @@ contains
         endif
 
         ! Read the data in, should be relatively fast because we are reading a low resolution forcing file
-        call io_read3d(filename,varname,inputdata,curstep)
+        call io_read(filename,varname,inputdata,curstep)
 
         nx=size(inputdata,1)
         ny=size(inputdata,2)
@@ -293,7 +292,7 @@ contains
 
         ! For pressure, we may need to add a base pressure offset read from pbvar
         else if ((varname==options%pvar).and.(options%pbvar/='')) then
-            call io_read3d(filename,options%pbvar,extra_data,curstep)
+            call io_read(filename,options%pbvar,extra_data,curstep)
             inputdata=inputdata+extra_data
             deallocate(extra_data)
         endif
@@ -362,7 +361,7 @@ contains
         real,dimension(:,:),allocatable :: inputdata
 
 !       Read the data in
-        call io_read2d(filename,varname,inputdata,curstep)
+        call io_read(filename,varname,inputdata,curstep)
 !       interpolate data onto the high resolution grid
         call geo_interp2d(highres,inputdata,geolut)
         deallocate(inputdata)
@@ -478,7 +477,7 @@ contains
 
         ! first read in the low-res U and V data directly
         ! load low-res U data
-        call io_read3d(filename,options%uvar,extra_data,curstep)
+        call io_read(filename,options%uvar,extra_data,curstep)
         nx=size(extra_data,1)
         ny=size(extra_data,2)
         nz=size(extra_data,3)
@@ -487,7 +486,7 @@ contains
         deallocate(extra_data)
 
         ! load low-res V data
-        call io_read3d(filename,options%vvar,extra_data,curstep)
+        call io_read(filename,options%vvar,extra_data,curstep)
         nx=size(extra_data,1)
         ny=size(extra_data,2)
         nz=size(extra_data,3)
@@ -567,12 +566,12 @@ contains
         nz=size(domain%u,2)
 
 !       load low-res U data
-        call io_read3d(filename,options%uvar,extra_data,curstep)
+        call io_read(filename,options%uvar,extra_data,curstep)
         domain%u=sum(extra_data(:,:,:nz))/size(extra_data(:,:,:nz))
         deallocate(extra_data)
 
 !       load low-res V data
-        call io_read3d(filename,options%vvar,extra_data,curstep)
+        call io_read(filename,options%vvar,extra_data,curstep)
         domain%v=sum(extra_data(:,:,:nz))/size(extra_data(:,:,:nz))
         deallocate(extra_data)
 
@@ -656,150 +655,150 @@ contains
         write(*,*) "   timestep:",trim(str(timeslice))," from file:",trim(restart_file)
 
         ! The first variables here are required. If they do not exist, ICAR *should* exit with a netCDF error
-        call io_read3d(restart_file,"qv",inputdata,timeslice)
+        call io_read(restart_file,"qv",inputdata,timeslice)
         call swap_y_z_dimensions(inputdata)
         call check_shapes_3d(inputdata,domain%qv)
         domain%qv=inputdata
         deallocate(inputdata)
 
-        call io_read3d(restart_file,"qc",inputdata,timeslice)
+        call io_read(restart_file,"qc",inputdata,timeslice)
         call swap_y_z_dimensions(inputdata)
         domain%cloud=inputdata
         deallocate(inputdata)
 
-        call io_read3d(restart_file,"qr",inputdata,timeslice)
+        call io_read(restart_file,"qr",inputdata,timeslice)
         call swap_y_z_dimensions(inputdata)
         domain%qrain=inputdata
         deallocate(inputdata)
 
-        call io_read3d(restart_file,"p",inputdata,timeslice)
+        call io_read(restart_file,"p",inputdata,timeslice)
         call swap_y_z_dimensions(inputdata)
         domain%p=inputdata
         deallocate(inputdata)
 
-        call io_read3d(restart_file,"th",inputdata,timeslice)
+        call io_read(restart_file,"th",inputdata,timeslice)
         call swap_y_z_dimensions(inputdata)
         domain%th=inputdata
         deallocate(inputdata)
 
-        call io_read3d(restart_file,"rho",inputdata,timeslice)
+        call io_read(restart_file,"rho",inputdata,timeslice)
         call swap_y_z_dimensions(inputdata)
         domain%rho=inputdata
         deallocate(inputdata)
 
-        call io_read2d(restart_file,"rain",inputdata_2d,timeslice)
+        call io_read(restart_file,"rain",inputdata_2d,timeslice)
         domain%rain=inputdata_2d
         deallocate(inputdata_2d)
 
 
         ! The variables below are optional depending on the physics options used so test for their presence
         if (io_variable_is_present(restart_file,"qi")) then
-            call io_read3d(restart_file,"qi",inputdata,timeslice)
+            call io_read(restart_file,"qi",inputdata,timeslice)
             call swap_y_z_dimensions(inputdata)
             domain%ice=inputdata
             deallocate(inputdata)
         endif
         if (io_variable_is_present(restart_file,"qs")) then
-            call io_read3d(restart_file,"qs",inputdata,timeslice)
+            call io_read(restart_file,"qs",inputdata,timeslice)
             call swap_y_z_dimensions(inputdata)
             domain%qsnow=inputdata
             deallocate(inputdata)
         endif
         if (io_variable_is_present(restart_file,"qg")) then
-            call io_read3d(restart_file,"qg",inputdata,timeslice)
+            call io_read(restart_file,"qg",inputdata,timeslice)
             call swap_y_z_dimensions(inputdata)
             domain%qgrau=inputdata
             deallocate(inputdata)
         endif
         if (io_variable_is_present(restart_file,"nr")) then
-            call io_read3d(restart_file,"nr",inputdata,timeslice)
+            call io_read(restart_file,"nr",inputdata,timeslice)
             call swap_y_z_dimensions(inputdata)
             domain%nrain=inputdata
             deallocate(inputdata)
         endif
         if (io_variable_is_present(restart_file,"ni")) then
-            call io_read3d(restart_file,"ni",inputdata,timeslice)
+            call io_read(restart_file,"ni",inputdata,timeslice)
             call swap_y_z_dimensions(inputdata)
             domain%nice=inputdata
             deallocate(inputdata)
         endif
         if (io_variable_is_present(restart_file,"ngraupel")) then
-            call io_read3d(restart_file,"ngraupel",inputdata,timeslice)
+            call io_read(restart_file,"ngraupel",inputdata,timeslice)
             call swap_y_z_dimensions(inputdata)
             domain%ngraupel=inputdata
             deallocate(inputdata)
         endif
         if (io_variable_is_present(restart_file,"nsnow")) then
-            call io_read3d(restart_file,"nsnow",inputdata,timeslice)
+            call io_read(restart_file,"nsnow",inputdata,timeslice)
             call swap_y_z_dimensions(inputdata)
             domain%nsnow=inputdata
             deallocate(inputdata)
         endif
 
         if (io_variable_is_present(restart_file,"snow")) then
-            call io_read2d(restart_file,"snow",inputdata_2d,timeslice)
+            call io_read(restart_file,"snow",inputdata_2d,timeslice)
             domain%snow=inputdata_2d
             deallocate(inputdata_2d)
         endif
 
         if (io_variable_is_present(restart_file,"graupel")) then
-            call io_read2d(restart_file,"graupel",inputdata_2d,timeslice)
+            call io_read(restart_file,"graupel",inputdata_2d,timeslice)
             domain%graupel=inputdata_2d
             deallocate(inputdata_2d)
         endif
         if (io_variable_is_present(restart_file,"crain")) then
-            call io_read2d(restart_file,"crain",inputdata_2d,timeslice)
+            call io_read(restart_file,"crain",inputdata_2d,timeslice)
             domain%crain=inputdata_2d
             deallocate(inputdata_2d)
         endif
 
         if (io_variable_is_present(restart_file,"soil_t")) then
-            call io_read3d(restart_file,"soil_t",inputdata,timeslice)
+            call io_read(restart_file,"soil_t",inputdata,timeslice)
             call swap_y_z_dimensions(inputdata)
             call check_shapes_3d(inputdata,domain%soil_t)
             domain%soil_t=inputdata
             deallocate(inputdata)
         endif
         if (io_variable_is_present(restart_file, "soil_w")) then
-            call io_read3d(restart_file,"soil_w",inputdata,timeslice)
+            call io_read(restart_file,"soil_w",inputdata,timeslice)
             call swap_y_z_dimensions(inputdata)
             domain%soil_vwc=inputdata
             deallocate(inputdata)
         endif
 
         if (io_variable_is_present(restart_file, "hfgs")) then
-            call io_read2d(restart_file,"hfgs",inputdata_2d,timeslice)
+            call io_read(restart_file,"hfgs",inputdata_2d,timeslice)
             domain%ground_heat=inputdata_2d
             deallocate(inputdata_2d)
         endif
 
         if (io_variable_is_present(restart_file, "snw")) then
-            call io_read2d(restart_file,"snw",inputdata_2d,timeslice)
+            call io_read(restart_file,"snw",inputdata_2d,timeslice)
             domain%snow_swe=inputdata_2d
             deallocate(inputdata_2d)
         endif
 
         if (io_variable_is_present(restart_file, "canwat")) then
-            call io_read2d(restart_file,"canwat",inputdata_2d,timeslice)
+            call io_read(restart_file,"canwat",inputdata_2d,timeslice)
             domain%canopy_water=inputdata_2d
             deallocate(inputdata_2d)
         endif
 
         if (io_variable_is_present(restart_file, "ts")) then
-            call io_read2d(restart_file,"ts",inputdata_2d,timeslice)
+            call io_read(restart_file,"ts",inputdata_2d,timeslice)
             domain%skin_t=inputdata_2d
             domain%sst = inputdata_2d
             deallocate(inputdata_2d)
         endif
 
         if (io_variable_is_present(restart_file,"rsds")) then
-            call io_read2d(restart_file,"rsds",inputdata_2d,timeslice)
+            call io_read(restart_file,"rsds",inputdata_2d,timeslice)
             domain%swdown=inputdata_2d
             deallocate(inputdata_2d)
         endif
 
         if (io_variable_is_present(restart_file,"rlds")) then
-            call io_read2d(restart_file,"rlds",inputdata_2d,timeslice)
+            call io_read(restart_file,"rlds",inputdata_2d,timeslice)
             domain%lwdown=inputdata_2d
             deallocate(inputdata_2d)
         endif
@@ -1306,12 +1305,12 @@ contains
         if (options%time_varying_z) then
             ! read in the updated vertical coordinate
             if (allocated(newbc%z)) deallocate(newbc%z)
-            call io_read3d(file_list(curfile), options%zvar, newbc%z, curstep)
+            call io_read(file_list(curfile), options%zvar, newbc%z, curstep)
             nx=size(newbc%z,1)
             ny=size(newbc%z,2)
             nz=size(newbc%z,3)
             if (trim(options%zbvar)/="") then
-                call io_read3d(file_list(curfile),options%zbvar, zbase, curstep)
+                call io_read(file_list(curfile),options%zbvar, zbase, curstep)
                 newbc%z=newbc%z+zbase
                 deallocate(zbase)
             endif
