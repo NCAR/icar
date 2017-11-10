@@ -272,7 +272,7 @@ module data_structures
         logical :: blocking_initialized                             ! flag to mark that the terrain_blocking field has been initialized
 
         ! current model time step length (should this be somewhere else?)
-        real::dt
+        real :: dt
         ! current model time (seconds from options%time_zero)
         double precision :: model_time
         integer :: current_month ! used to store the current month (should probably be fractional for interpolation...)
@@ -455,7 +455,7 @@ module data_structures
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
                                         swdown_var, lwdown_var, &
-                                        sst_var, rain_var
+                                        sst_var, rain_var, time_var
 
         ! Filenames for files to read various physics options from
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, adv_options_filename, &

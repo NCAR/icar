@@ -178,6 +178,9 @@
 &var_list
     ! These are the names of the variables in the forcing data files
     ! variables on the mass / center grid
+    time_var= "time",       ! Time                      [defined in netcdf attributes] OPTIONAL
+    latvar  = "XLAT",       ! latitude                  [degrees]
+    lonvar  = "XLONG",      ! longitude                 [degrees]
     pvar    = "P",          ! pressure                  [Pa]
     pbvar   = "PB",         ! base pressure state       [Pa]        OPTIONAL
     tvar    = "T",          ! temperature               [K]   (with optional offset)
@@ -187,8 +190,6 @@
     hgtvar  = "HGT",        ! surface elevation         [m]
     zvar    = "PH",         ! model level elevations    [m or m/s^2 if z_is_geopotential]
     zbvar   = "PHB",        ! base height state         [m or m/s^2] OPTIONAL
-    latvar  = "XLAT",       ! latitude                  [degrees]
-    lonvar  = "XLONG",      ! longitude                 [degrees]
     sst_var = "TSK"         ! Water surface temperature [K]          OPTIONAL (used with water=2)
 
     ! variables on the ew staggered (U) grid

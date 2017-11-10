@@ -345,31 +345,33 @@ contains
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,   &
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
-                                        swdown_var, lwdown_var, sst_var, rain_var
+                                        swdown_var, lwdown_var, sst_var, rain_var, time_var
 
         namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,   &
                             landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar, &
                             hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
                             soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
                             vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
-                            swdown_var, lwdown_var, sst_var, rain_var
+                            swdown_var, lwdown_var, sst_var, rain_var, time_var
 
-        hgtvar="HGT"
-        latvar="XLAT"
-        lonvar="XLONG"
-        uvar="U"
+        ! no default values supplied for variable names
+        hgtvar=""
+        latvar=""
+        lonvar=""
+        time_var=""
+        uvar=""
         ulat=""
         ulon=""
-        vvar="V"
+        vvar=""
         vlat=""
         vlon=""
-        pvar="P"
+        pvar=""
         pbvar=""
-        tvar="T"
-        qvvar="QVAPOR"
+        tvar=""
+        qvvar=""
         qcvar=""
         qivar=""
-        zvar="Z"
+        zvar=""
         zbvar=""
         shvar=""
         lhvar=""
@@ -377,22 +379,22 @@ contains
         lwdown_var=""
         sst_var=""
         pblhvar=""
-        hgt_hi="HGT"
+        hgt_hi=""
         landvar=""
-        lat_hi="XLAT"
-        lon_hi="XLONG"
+        lat_hi=""
+        lon_hi=""
         ulat_hi=""
         ulon_hi=""
         vlat_hi=""
         vlon_hi=""
-        soiltype_var="" !"SOILTYPE"
-        soil_t_var="" !"TSOIL"
-        soil_vwc_var="" !"SOILSMC"
-        soil_deept_var="" !"DEEPT"
-        vegtype_var="" !"VEGTYPE"
-        vegfrac_var="" !"VEGFRAC"
-        linear_mask_var="data"
-        nsq_calibration_var="data"
+        soiltype_var=""
+        soil_t_var=""
+        soil_vwc_var=""
+        soil_deept_var=""
+        vegtype_var=""
+        vegfrac_var=""
+        linear_mask_var=""
+        nsq_calibration_var=""
         rain_var=""
 
         open(io_newunit(name_unit), file=filename)
@@ -400,62 +402,72 @@ contains
         close(name_unit)
 
         ! 2D geometry variable names (for coarse model)
-        options%hgtvar=hgtvar
-        options%latvar=latvar
-        options%lonvar=lonvar
+        options%hgtvar      = hgtvar
+        options%latvar      = latvar
+        options%lonvar      = lonvar
+        options%time_var    = time_var
+
         ! U varname and associated lat/lon var names
-        options%uvar=uvar
+        options%uvar        = uvar
         if (ulat=="") ulat=latvar
         if (ulon=="") ulon=lonvar
-        options%ulat=ulat
-        options%ulon=ulon
+        options%ulat        = ulat
+        options%ulon        = ulon
+
         ! V varname and associated lat/lon var names
-        options%vvar=vvar
+        options%vvar        = vvar
         if (vlat=="") vlat=latvar
         if (vlon=="") vlon=lonvar
-        options%vlat=vlat
-        options%vlon=vlon
-        ! Primary model variable names
-        options%pbvar=pbvar
-        options%pvar=pvar
-        options%tvar=tvar
-        options%qvvar=qvvar
-        options%qcvar=qcvar
-        options%qivar=qivar
-        ! vertical coordinate
-        options%zvar=zvar
-        options%zbvar=zbvar
-        ! 2D model variables (e.g. Land surface and PBL height)
-        options%shvar=shvar
-        options%lhvar=lhvar
-        options%pblhvar=pblhvar
-        ! Shortwave and longwave down at the surface
-        options%swdown_var=swdown_var
-        options%lwdown_var=lwdown_var
-        ! Sea surface temperature
-        options%sst_var = sst_var
-        options%rain_var = rain_var
+        options%vlat        = vlat
+        options%vlon        = vlon
 
-        ! separate variable names for the high resolution domain
-        options%hgt_hi=hgt_hi
-        options%landvar=landvar
-        options%lat_hi=lat_hi
-        options%lon_hi=lon_hi
-        options%ulat_hi=ulat_hi
-        options%ulon_hi=ulon_hi
-        options%vlat_hi=vlat_hi
-        options%vlon_hi=vlon_hi
+        ! Primary model variable names
+        options%pbvar       = pbvar
+        options%pvar        = pvar
+        options%tvar        = tvar
+        options%qvvar       = qvvar
+        options%qcvar       = qcvar
+        options%qivar       = qivar
+
+        ! vertical coordinate
+        options%zvar        = zvar
+        options%zbvar       = zbvar
+
+        ! 2D model variables (e.g. Land surface and PBL height)
+        options%shvar       = shvar
+        options%lhvar       = lhvar
+        options%pblhvar     = pblhvar
+
+        ! Shortwave and longwave down at the surface
+        options%swdown_var  = swdown_var
+        options%lwdown_var  = lwdown_var
+
+        ! Sea surface temperature
+        options%sst_var     = sst_var
+        options%rain_var    = rain_var
+
+        !------------------------------------------------------
+        ! variable names for the high resolution domain
+        options%hgt_hi          = hgt_hi
+        options%landvar         = landvar
+        options%lat_hi          = lat_hi
+        options%lon_hi          = lon_hi
+        options%ulat_hi         = ulat_hi
+        options%ulon_hi         = ulon_hi
+        options%vlat_hi         = vlat_hi
+        options%vlon_hi         = vlon_hi
 
         ! soil and vegetation parameters
-        options%soiltype_var=soiltype_var
-        options%soil_t_var=soil_t_var
-        options%soil_vwc_var=soil_vwc_var
-        options%soil_deept_var=soil_deept_var
-        options%vegtype_var=vegtype_var
-        options%vegfrac_var=vegfrac_var
+        options%soiltype_var    = soiltype_var
+        options%soil_t_var      = soil_t_var
+        options%soil_vwc_var    = soil_vwc_var
+        options%soil_deept_var  = soil_deept_var
+        options%vegtype_var     = vegtype_var
+        options%vegfrac_var     = vegfrac_var
 
-        options%linear_mask_var=linear_mask_var
-        options%nsq_calibration_var=nsq_calibration_var
+        ! optional calibration variables for linear wind solution
+        options%linear_mask_var     = linear_mask_var
+        options%nsq_calibration_var = nsq_calibration_var
     end subroutine var_namelist
 
     subroutine parameters_namelist(filename,options)
