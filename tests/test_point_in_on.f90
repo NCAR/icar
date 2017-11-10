@@ -186,6 +186,54 @@ program test_point_in_on
 
     passing = passing.and.test_poly(x,y,large_poly,.True.)
 
+
+    large_poly(1,1:3) = [281.6548,281.7756,281.9876]
+    large_poly(2,1:3) = [34.91632, 35.36251,35.08936]
+
+    x=281.98; y=35.0
+    print*, ""
+    print*, "Testing: ", x, y
+    print*, "  x-----x"
+    print*, "  |    / "
+    print*, "  |   /o "
+    print*, "  |  /   "
+    print*, "  | /    "
+    print*, "  |/     "
+    print*, "  x      "
+    passing = passing.and.test_poly(x,y,large_poly(:,1:3),.False.)
+
+
+    large_poly(1,1:3) = [281.6548,282.1,281.9876]
+    large_poly(2,1:3) = [34.91632, 34.8,35.08936]
+
+    x=281.98; y=35.0
+    print*, ""
+    print*, "Testing: ", x, y
+    print*, "        x "
+    print*, "       /| "
+    print*, "      /o| "
+    print*, "     /  | "
+    print*, "    /   | "
+    print*, "   /    | "
+    print*, "  x-----x"
+    passing = passing.and.test_poly(x,y,large_poly(:,1:3),.True.)
+
+    large_poly(1,1:3) =[290.0750,289.8967,289.7062]
+    large_poly(2,1:3) =[38.79078,38.35439,38.64164]
+    x=289.9; y=38.72
+    print*, ""
+    print*, "Testing: ", x, y
+    print*, "        x "
+    print*, "       /| "
+    print*, "      o | "
+    print*, "     /  | "
+    print*, "    /   | "
+    print*, "   /    | "
+    print*, "  x-----x"
+    passing = passing.and.test_poly(x,y,large_poly(:,1:3),.True.)
+
+
+
     print*, ""
     print*, "Final Result:"
     if (passing) then
