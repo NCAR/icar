@@ -38,16 +38,19 @@ module time_object
         double precision :: current_date_time = 0
 
       contains
-        procedure, public  :: init        => time_init
         procedure, public  :: date        => calendar_date
         procedure, public  :: mjd         => get_mjd
         procedure, public  :: day_of_year => calc_day_of_year
         procedure, public  :: date_to_mjd => date_to_mjd
         procedure, public  :: as_string   => as_string
 
+        generic,   public  :: init        => time_init_c
+        generic,   public  :: init        => time_init_i
         generic,   public  :: set         => set_from_string
         generic,   public  :: set         => set_from_date
         generic,   public  :: set         => set_from_mjd
+        procedure, private :: time_init_c
+        procedure, private :: time_init_i
         procedure, private :: set_from_string
         procedure, private :: set_from_date
         procedure, private :: set_from_mjd
@@ -80,7 +83,7 @@ contains
     !!  Set the object calendar and base year
     !!
     !!------------------------------------------------------------
-    subroutine time_init(this, calendar_name, year_zero, month_zero, day_zero)
+    subroutine time_init_c(this, calendar_name, year_zero, month_zero, day_zero)
         implicit none
         class(Time_type) :: this
         character(len=*), intent(in) :: calendar_name
@@ -118,7 +121,53 @@ contains
             this%day_zero = day_zero
         endif
 
-    end subroutine time_init
+    end subroutine time_init_c
+
+    !>------------------------------------------------------------
+    !!  Initialize the time object
+    !!
+    !!  Set the object calendar and base year
+    !!
+    !!------------------------------------------------------------
+    subroutine time_init_i(this, calendar, year_zero, month_zero, day_zero)
+        implicit none
+        class(Time_type) :: this
+        integer, intent(in) :: calendar
+        integer, intent(in), optional :: year_zero, month_zero, day_zero
+
+        integer :: i
+
+        ! zero based month_starts (will have 1 added below)
+        this%month_start = [0,31,59,90,120,151,181,212,243,273,304,334,365]
+
+        this%calendar = calendar
+
+        if (this%calendar == GREGORIAN) then
+            this%year_zero = NON_VALID_YEAR
+        else
+            this%year_zero = 0
+        endif
+
+        if (this%calendar == THREESIXTY) then
+            do i=0,12
+                this%month_start(i+1) = i*30
+            end do
+        endif
+        do i=0,12
+            this%month_start(i+1) = this%month_start(i+1) + 1
+        end do
+
+        if ( present(year_zero) ) then
+            this%year_zero = year_zero
+        endif
+        if ( present(month_zero) ) then
+            this%month_zero = month_zero
+        endif
+        if ( present(day_zero) ) then
+            this%day_zero = day_zero
+        endif
+
+    end subroutine time_init_i
 
     !>------------------------------------------------------------
     !!  Set the calendar from a given name
@@ -283,7 +332,7 @@ contains
             if (this%year_zero == NON_VALID_YEAR) then
                 jday = nint(mjd+2400000.5)
             else
-                jday = nint(mjd + gregorian_julian_day(this%year_zero, 1, 1, 0, 0, 0))
+                jday = nint(mjd + gregorian_julian_day(this%year_zero, this%month_zero, this%day_zero, 0, 0, 0))
             endif
             f = jday+j+(((4*jday+B)/146097)*3)/4+C
             e = r*f+v
@@ -632,12 +681,28 @@ contains
     end function less_than
 
     ! note, this requires the time_delta object
-    function difference(time1, time2) result(dt)
+    function difference(t1, t2) result(dt)
         implicit none
-        class(Time_type), intent(in) :: time1, time2
+        class(Time_type), intent(in) :: t1, t2
         type(time_delta_t) :: dt
 
-        call dt%set_time_delta(days=time1%mjd() - time2%mjd())
+        type(Time_type) :: temp_time
+        integer :: year, month, day, hour, minute, second
+
+        if (((t1%calendar == t2%calendar).and.(t1%year_zero == t2%year_zero)) &
+            .and.((t1%month_zero == t2%month_zero).and.(t1%day_zero == t2%day_zero))) then
+
+            call dt%set_time_delta(days=t1%mjd() - t2%mjd())
+        else
+            ! if the two time object reference calendars don't match
+            ! create a new time object with the same referecnce as t1
+            ! then copy the date/time data into it from t2 before computing the time delta
+            call temp_time%init(t1%calendar,t1%year_zero,t1%month_zero,t1%day_zero)
+            call t1%date(year, month, day, hour, minute, second)
+            call temp_time%set(year, month, day, hour, minute, second)
+
+            call dt%set_time_delta(days=t1%mjd() - temp_time%mjd())
+        endif
 
     end function difference
 
