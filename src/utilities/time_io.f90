@@ -115,9 +115,9 @@ contains
             stop "Time variable does not have units attribute"
         endif
 
-        ! puts the units to seconds since ...
-        ! in case it is in units of e.g. "hours since" or "days since"
-        temp_times = temp_times * calendar_gain
+        ! converts the input units to "days since ..."
+        ! in case it is in units of e.g. "hours since" or "seconds since"
+        temp_times = temp_times / calendar_gain
         if (present(timezone_offset)) then
             temp_times = temp_times + timezone_offset / 24.0
         endif
