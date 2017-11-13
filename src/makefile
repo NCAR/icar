@@ -391,6 +391,9 @@ OBJS=	$(BUILD)driver.o 			\
 		$(BUILD)geo_reader.o 		\
 		$(BUILD)vinterp.o 			\
 		$(BUILD)atm_utilities.o 	\
+		$(BUILD)time_obj.o 			\
+		$(BUILD)time_delta_obj.o 	\
+		$(BUILD)time_io.o 			\
 		$(BUILD)time.o 				\
 		$(BUILD)data_structures.o 	\
 		$(BUILD)icar_constants.o	\
@@ -491,7 +494,7 @@ $(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.
 	${F90} ${FFLAGS} $(MAIN)time_step.f90 -o $(BUILD)time_step.o
 
 $(BUILD)init_options.o:$(MAIN)init_options.f90 $(BUILD)data_structures.o  $(BUILD)io_routines.o \
-					$(BUILD)model_tracking.o $(BUILD)time.o
+					$(BUILD)model_tracking.o $(BUILD)time.o $(BUILD)time_io.o
 	${F90} ${FFLAGS} $(MAIN)init_options.f90 -o $(BUILD)init_options.o
 
 
@@ -501,6 +504,16 @@ $(BUILD)init_options.o:$(MAIN)init_options.f90 $(BUILD)data_structures.o  $(BUIL
 
 $(BUILD)time.o:$(UTIL)time.f90
 	${F90} ${FFLAGS} $(UTIL)time.f90 -o $(BUILD)time.o
+
+$(BUILD)time_delta_obj.o:$(UTIL)time_delta_obj.f90
+	${F90} ${FFLAGS} $(UTIL)time_delta_obj.f90 -o $(BUILD)time_delta_obj.o
+
+$(BUILD)time_obj.o:$(UTIL)time_obj.f90 $(BUILD)time_delta_obj.o
+	${F90} ${FFLAGS} $(UTIL)time_obj.f90 -o $(BUILD)time_obj.o
+
+$(BUILD)time_io.o:$(UTIL)time_io.f90 $(BUILD)time_obj.o $(BUILD)data_structures.o \
+					$(BUILD)icar_constants.o $(BUILD)string.o $(BUILD)io_routines.o
+	${F90} ${FFLAGS} $(UTIL)time_io.f90 -o $(BUILD)time_io.o
 
 $(BUILD)string.o:$(UTIL)string.f90
 	${F90} ${FFLAGS} $(UTIL)string.f90 -o $(BUILD)string.o
