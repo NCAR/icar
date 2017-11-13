@@ -237,7 +237,7 @@ contains
     subroutine apply_dt(bc, dt, options)
         implicit none
         type(bc_type),      intent(inout)   :: bc
-        real,               intent(in)      :: dt
+        double precision,   intent(in)      :: dt
         type(options_type), intent(in)      :: options
         ! internal variables
         integer :: j, ny, nx
@@ -424,25 +424,22 @@ contains
         type(options_type), intent(in)      :: options
         real*8,             intent(inout)   :: model_time, next_output
 
-        real*8  :: end_time
-        real    :: dt, CFL, cfl_reduction_factor
+        real :: time_percent
+        real :: dt, CFL, cfl_reduction_factor
 
         CFL = 1.0
         cfl_reduction_factor = options%cfl_reduction_factor
         CFL = CFL * cfl_reduction_factor
 
-        ! calculate the number of timesteps
-        end_time = model_time + options%in_dt
-
         ! Make the boundary condition dXdt values into units of [X]/s
-        call apply_dt(bc, options%in_dt, options)
+        call apply_dt(bc, bc%dt, options)
 
         ! ensure internal model consistency (should only need to be called here when the model starts...)
         ! e.g. for potential temperature and temperature
         call diagnostic_update(domain,options)
 
         ! now just loop over internal timesteps computing all physics in order (operator splitting...)
-        do while (model_time < end_time)
+        do while (model_time < bc%next_domain%model_time)
 
             ! compute internal timestep dt to maintain stability
             ! courant condition for 3D advection. Note that w is normalized by dx/dz
@@ -454,18 +451,20 @@ contains
                 dt = compute_dt(domain%dx, domain%u, domain%v, domain%w, domain%rho, domain%dz_inter, &
                                 CFL, cfl_strictness=options%cfl_strictness, use_density=options%advect_density)
             endif
-            ! set an upper bound on dt to keep microphysics and convection stable (?) not sure what time is required here.
+            ! set an upper bound on dt to keep microphysics and convection stable (?)
+            ! some sort of explicit stability check would be better, but is not possible at the moment
             dt = min(dt,120.0) !better min=180?
             if (options%interactive) then
-                write(*,"(A,f5.1,A,f5.1,A$)") char(13), 100-max(0.0,(end_time-model_time-dt)/options%in_dt*100)," %  dt=",dt,"s  "
+                time_percent = (bc%next_domain%model_time - model_time - dt) / bc%dt * 100
+                write(*,"(A,f5.1,A,f5.1,A$)") char(13), 100-max(0.0,time_percent)," %  dt=",dt,"s  "
             endif
             ! Make sure we don't over step the forcing period
-            if ((model_time + dt) > end_time) then
-                dt = end_time - model_time
+            if ((model_time + dt) > bc%next_domain%model_time) then
+                dt = bc%next_domain%model_time - model_time
             endif
 
             ! this if is to avoid round off errors causing an additional physics call that won't really do anything
-            if (dt > 1e-5) then
+            if (dt > 1e-3) then
                 if (options%debug) call domain_check(domain,"Time step loop start")
 
                 call advect(domain,options,dt)
@@ -496,8 +495,10 @@ contains
             model_time = model_time + dt
             domain%model_time = model_time
 
-            if ((abs(model_time-next_output)<1e-1).or.(model_time>next_output)) then
-                call write_domain(domain,options,nint((model_time-options%time_zero)/options%out_dt))
+            if ((abs(model_time - next_output) < 1e-1).or.(model_time > next_output)) then
+                call write_domain(domain, options, nint((next_output - options%time_zero)/options%out_dt))
+                ! Note that over a long simulation, this can build up errors.
+                ! Need to add some checks with respect to model initial time...
                 next_output = next_output + options%out_dt
             endif
 
