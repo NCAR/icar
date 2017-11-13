@@ -27,7 +27,7 @@ module io_routines
     !! Generic interface to the netcdf read routines
     !!------------------------------------------------------------
     interface io_read
-        module procedure io_read6d, io_read5d, io_read3d, io_read2d, io_read1d, io_read2di, io_read1dd
+        module procedure io_read6d, io_read5d, io_read3d, io_read2d, io_read1d, io_read2di, io_read1dd, io_read_scalar_d
     end interface
 
     !>------------------------------------------------------------
@@ -603,6 +603,36 @@ contains
         call check( nf90_close(ncid),filename)
 
     end subroutine io_read1dd
+
+    subroutine io_read_scalar_d(filename, varname, result, step)
+        implicit none
+        ! This is the name of the data_in file and variable we will read.
+        character(len=*), intent(in)  :: filename, varname
+        double precision, intent(out) :: result
+        integer,          intent(in)  :: step
+
+        double precision, allocatable :: data_in(:)
+        ! This will be the netCDF ID for the file and data_in variable.
+        integer :: ncid, varid,i
+
+        ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
+        ! the file.
+        call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
+
+        ! Get the varid of the data_in variable, based on its name.
+        call check(nf90_inq_varid(ncid, varname, varid),trim(filename)//":"//trim(varname))
+
+        ! Read the data_in. Just reads a scalar from the 1D array
+        call check(nf90_get_var(ncid, varid, data_in), &
+                    trim(filename)//":"//trim(varname))
+
+        result = data_in(step)
+        deallocate(data_in)
+
+        ! Close the file, freeing all resources.
+        call check( nf90_close(ncid),filename)
+
+    end subroutine io_read_scalar_d
 
 
     !>------------------------------------------------------------
