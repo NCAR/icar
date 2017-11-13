@@ -485,7 +485,7 @@ $(BUILD)init.o:$(MAIN)init.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $
 	${F90} ${FFLAGS} $(MAIN)init.f90 -o $(BUILD)init.o
 
 $(BUILD)boundary.o:$(MAIN)boundary.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)wind.o $(BUILD)geo_reader.o \
-					$(BUILD)vinterp.o $(BUILD)output.o $(BUILD)linear_winds.o
+					$(BUILD)vinterp.o $(BUILD)output.o $(BUILD)linear_winds.o $(BUILD)time_io.o
 	${F90} ${FFLAGS} $(MAIN)boundary.f90 -o $(BUILD)boundary.o
 
 $(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.o $(BUILD)output.o \
@@ -494,7 +494,7 @@ $(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.
 	${F90} ${FFLAGS} $(MAIN)time_step.f90 -o $(BUILD)time_step.o
 
 $(BUILD)init_options.o:$(MAIN)init_options.f90 $(BUILD)data_structures.o  $(BUILD)io_routines.o \
-					$(BUILD)model_tracking.o $(BUILD)time.o $(BUILD)time_io.o
+					$(BUILD)model_tracking.o $(BUILD)time.o
 	${F90} ${FFLAGS} $(MAIN)init_options.f90 -o $(BUILD)init_options.o
 
 

@@ -25,12 +25,11 @@
 !!
 !!------------------------------------------------------------
 module boundary_conditions
-! ----------------------------------------------------------------------------
-!   NOTE: This module attempts to be sufficiently general to work with a variety
-!       of possible input files; however it may be necessary to modify it.
-! ----------------------------------------------------------------------------
+
     use data_structures
     use io_routines,            only : io_getdims, io_read, io_maxDims, io_variable_is_present
+    use time_io,                only : read_times
+    use time_object,            only : Time_type
     use wind,                   only : update_winds,balance_uvw
     use linear_theory_winds,    only : linear_perturb
     use geo,                    only : geo_interp2d, geo_interp
@@ -368,6 +367,32 @@ contains
 
     end subroutine read_2dvar
 
+    !>------------------------------------------------------------
+    !!  Read in the time step from a boundary conditions file if available
+    !!
+    !!  if not time_var is specified, nothing happens
+    !!
+    !! @param model_time    Double Scalar to hold time data
+    !! @param filename      Name of the NetCDF file to read.
+    !! @param varname       Name of the time variable to read from <filename>.
+    !! @param curstep       The time step in <filename> to read.
+    !!
+    !!------------------------------------------------------------
+    subroutine read_bc_time(model_time, filename, time_var, curstep)
+        implicit none
+        double precision,   intent(inout) :: model_time
+        character(len=*),   intent(in)    :: filename, time_var
+        integer,            intent(in)    :: curstep
+
+        type(Time_type), dimension(:), allocatable :: times
+
+        if (time_var/="") then
+            call read_times(filename, time_var, times)
+            model_time = (times(curstep)%mjd() - 50000) * 86400
+        endif
+    end subroutine read_bc_time
+
+
 
     !>------------------------------------------------------------
     !!  Rotate winds from real space back to terrain following grid (approximately)
@@ -638,11 +663,12 @@ contains
     !!------------------------------------------------------------
     subroutine load_restart_file(domain,restart_file,time_step)
         implicit none
-        type(domain_type), intent(inout) :: domain
-        character(len=*),intent(in)::restart_file
-        integer,optional,intent(in) :: time_step
-        real,allocatable,dimension(:,:,:)::inputdata
-        real,allocatable,dimension(:,:)::inputdata_2d
+        type(domain_type),  intent(inout)   :: domain
+        character(len=*),   intent(in)      :: restart_file
+        integer, optional,  intent(in)      :: time_step
+
+        real, allocatable, dimension(:,:,:) :: inputdata_3d
+        real, allocatable, dimension(:,:)   :: inputdata_2d
         integer :: timeslice
 
         if (present(time_step)) then
@@ -654,37 +680,41 @@ contains
         write(*,*) "Reading atmospheric restart data"
         write(*,*) "   timestep:",trim(str(timeslice))," from file:",trim(restart_file)
 
+        call io_read(restart_file, "time", domain%model_time, timeslice)
+        ! convert Modified Julian Day into seconds
+        domain%model_time = (domain%model_time-50000) * 86400.0
+
         ! The first variables here are required. If they do not exist, ICAR *should* exit with a netCDF error
-        call io_read(restart_file,"qv",inputdata,timeslice)
-        call swap_y_z_dimensions(inputdata)
-        call check_shapes_3d(inputdata,domain%qv)
-        domain%qv=inputdata
-        deallocate(inputdata)
+        call io_read(restart_file,"qv",inputdata_3d,timeslice)
+        call swap_y_z_dimensions(inputdata_3d)
+        call check_shapes_3d(inputdata_3d,domain%qv)
+        domain%qv=inputdata_3d
+        deallocate(inputdata_3d)
 
-        call io_read(restart_file,"qc",inputdata,timeslice)
-        call swap_y_z_dimensions(inputdata)
-        domain%cloud=inputdata
-        deallocate(inputdata)
+        call io_read(restart_file,"qc",inputdata_3d,timeslice)
+        call swap_y_z_dimensions(inputdata_3d)
+        domain%cloud=inputdata_3d
+        deallocate(inputdata_3d)
 
-        call io_read(restart_file,"qr",inputdata,timeslice)
-        call swap_y_z_dimensions(inputdata)
-        domain%qrain=inputdata
-        deallocate(inputdata)
+        call io_read(restart_file,"qr",inputdata_3d,timeslice)
+        call swap_y_z_dimensions(inputdata_3d)
+        domain%qrain=inputdata_3d
+        deallocate(inputdata_3d)
 
-        call io_read(restart_file,"p",inputdata,timeslice)
-        call swap_y_z_dimensions(inputdata)
-        domain%p=inputdata
-        deallocate(inputdata)
+        call io_read(restart_file,"p",inputdata_3d,timeslice)
+        call swap_y_z_dimensions(inputdata_3d)
+        domain%p=inputdata_3d
+        deallocate(inputdata_3d)
 
-        call io_read(restart_file,"th",inputdata,timeslice)
-        call swap_y_z_dimensions(inputdata)
-        domain%th=inputdata
-        deallocate(inputdata)
+        call io_read(restart_file,"th",inputdata_3d,timeslice)
+        call swap_y_z_dimensions(inputdata_3d)
+        domain%th=inputdata_3d
+        deallocate(inputdata_3d)
 
-        call io_read(restart_file,"rho",inputdata,timeslice)
-        call swap_y_z_dimensions(inputdata)
-        domain%rho=inputdata
-        deallocate(inputdata)
+        call io_read(restart_file,"rho",inputdata_3d,timeslice)
+        call swap_y_z_dimensions(inputdata_3d)
+        domain%rho=inputdata_3d
+        deallocate(inputdata_3d)
 
         call io_read(restart_file,"rain",inputdata_2d,timeslice)
         domain%rain=inputdata_2d
@@ -693,46 +723,46 @@ contains
 
         ! The variables below are optional depending on the physics options used so test for their presence
         if (io_variable_is_present(restart_file,"qi")) then
-            call io_read(restart_file,"qi",inputdata,timeslice)
-            call swap_y_z_dimensions(inputdata)
-            domain%ice=inputdata
-            deallocate(inputdata)
+            call io_read(restart_file,"qi",inputdata_3d,timeslice)
+            call swap_y_z_dimensions(inputdata_3d)
+            domain%ice=inputdata_3d
+            deallocate(inputdata_3d)
         endif
         if (io_variable_is_present(restart_file,"qs")) then
-            call io_read(restart_file,"qs",inputdata,timeslice)
-            call swap_y_z_dimensions(inputdata)
-            domain%qsnow=inputdata
-            deallocate(inputdata)
+            call io_read(restart_file,"qs",inputdata_3d,timeslice)
+            call swap_y_z_dimensions(inputdata_3d)
+            domain%qsnow=inputdata_3d
+            deallocate(inputdata_3d)
         endif
         if (io_variable_is_present(restart_file,"qg")) then
-            call io_read(restart_file,"qg",inputdata,timeslice)
-            call swap_y_z_dimensions(inputdata)
-            domain%qgrau=inputdata
-            deallocate(inputdata)
+            call io_read(restart_file,"qg",inputdata_3d,timeslice)
+            call swap_y_z_dimensions(inputdata_3d)
+            domain%qgrau=inputdata_3d
+            deallocate(inputdata_3d)
         endif
         if (io_variable_is_present(restart_file,"nr")) then
-            call io_read(restart_file,"nr",inputdata,timeslice)
-            call swap_y_z_dimensions(inputdata)
-            domain%nrain=inputdata
-            deallocate(inputdata)
+            call io_read(restart_file,"nr",inputdata_3d,timeslice)
+            call swap_y_z_dimensions(inputdata_3d)
+            domain%nrain=inputdata_3d
+            deallocate(inputdata_3d)
         endif
         if (io_variable_is_present(restart_file,"ni")) then
-            call io_read(restart_file,"ni",inputdata,timeslice)
-            call swap_y_z_dimensions(inputdata)
-            domain%nice=inputdata
-            deallocate(inputdata)
+            call io_read(restart_file,"ni",inputdata_3d,timeslice)
+            call swap_y_z_dimensions(inputdata_3d)
+            domain%nice=inputdata_3d
+            deallocate(inputdata_3d)
         endif
         if (io_variable_is_present(restart_file,"ngraupel")) then
-            call io_read(restart_file,"ngraupel",inputdata,timeslice)
-            call swap_y_z_dimensions(inputdata)
-            domain%ngraupel=inputdata
-            deallocate(inputdata)
+            call io_read(restart_file,"ngraupel",inputdata_3d,timeslice)
+            call swap_y_z_dimensions(inputdata_3d)
+            domain%ngraupel=inputdata_3d
+            deallocate(inputdata_3d)
         endif
         if (io_variable_is_present(restart_file,"nsnow")) then
-            call io_read(restart_file,"nsnow",inputdata,timeslice)
-            call swap_y_z_dimensions(inputdata)
-            domain%nsnow=inputdata
-            deallocate(inputdata)
+            call io_read(restart_file,"nsnow",inputdata_3d,timeslice)
+            call swap_y_z_dimensions(inputdata_3d)
+            domain%nsnow=inputdata_3d
+            deallocate(inputdata_3d)
         endif
 
         if (io_variable_is_present(restart_file,"snow")) then
@@ -753,17 +783,17 @@ contains
         endif
 
         if (io_variable_is_present(restart_file,"soil_t")) then
-            call io_read(restart_file,"soil_t",inputdata,timeslice)
-            call swap_y_z_dimensions(inputdata)
-            call check_shapes_3d(inputdata,domain%soil_t)
-            domain%soil_t=inputdata
-            deallocate(inputdata)
+            call io_read(restart_file,"soil_t",inputdata_3d,timeslice)
+            call swap_y_z_dimensions(inputdata_3d)
+            call check_shapes_3d(inputdata_3d,domain%soil_t)
+            domain%soil_t=inputdata_3d
+            deallocate(inputdata_3d)
         endif
         if (io_variable_is_present(restart_file, "soil_w")) then
-            call io_read(restart_file,"soil_w",inputdata,timeslice)
-            call swap_y_z_dimensions(inputdata)
-            domain%soil_vwc=inputdata
-            deallocate(inputdata)
+            call io_read(restart_file,"soil_w",inputdata_3d,timeslice)
+            call swap_y_z_dimensions(inputdata_3d)
+            domain%soil_vwc=inputdata_3d
+            deallocate(inputdata_3d)
         endif
 
         if (io_variable_is_present(restart_file, "hfgs")) then
@@ -852,14 +882,15 @@ contains
     !!------------------------------------------------------------
     subroutine bc_init(domain,bc,options)
         implicit none
-        type(domain_type),intent(inout)::domain
-        type(bc_type),intent(inout)::bc
-        type(options_type),intent(in)::options
-        integer,dimension(io_maxDims)::dims !note, io_maxDims is included from io_routines.
-        real,dimension(:,:,:),allocatable::inputdata
+        type(domain_type),  intent(inout)   :: domain
+        type(bc_type),      intent(inout)   :: bc
+        type(options_type), intent(in)      :: options
+
+        integer,    dimension(io_maxDims)   :: dims !note, io_maxDims is included from io_routines.
+        real,       dimension(:,:,:),   allocatable :: inputdata
         logical :: boundary_value
-        integer::nx,ny,nz,i
-        real::domainsize
+        integer :: nx, ny, nz, i
+        real    :: domainsize
         ! MODULE variables : curstep, curfile, nfiles, steps_in_file, file_list
 
 !       in case we are using a restart file we have some trickery to do here to find the proper file to be reading from
@@ -935,6 +966,8 @@ contains
             call output_init(domain,options)
             call write_domain(domain,options,-1)
         else
+            call read_bc_time(domain%model_time, file_list(curfile), options%time_var, curstep)
+
 !           else load data from the first Boundary conditions file
             boundary_value=.False.
             nx=size(domain%p,1)
@@ -1301,6 +1334,9 @@ contains
         endif
         use_interior=.False. ! this is passed to the use_boundary flag in geo_interp
         use_boundary=.True.
+
+        call read_bc_time(bc%next_domain%model_time, file_list(curfile), options%time_var, curstep)
+        bc%dt = bc%next_domain%model_time - domain%model_time
 
         if (options%time_varying_z) then
             ! read in the updated vertical coordinate
