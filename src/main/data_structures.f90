@@ -292,6 +292,13 @@ module data_structures
     ! boundary conditions type, must be linearizable so we can remove low res linear wind field
     ! ------------------------------------------------
     type, extends(linearizable_type) :: bc_type
+        ! store the full high-res 3D grid for the next time step to compute dXdt fields
+        ! includes high res versions of low res terrain and z
+        type(domain_type)::next_domain
+
+        ! store the timestep to the next input
+        double precision :: dt
+
         ! dX_dt variables are the change in variable X between two forcing time steps
         ! wind and pressure dX_dt fields applied to full 3d grid, others applied only to boundaries
         real, allocatable, dimension(:,:,:) :: du_dt,dv_dt,dp_dt,dth_dt,dqv_dt,dqc_dt
@@ -307,9 +314,7 @@ module data_structures
         ! store the low resolution versiof of terrain and atmospheric elevations
         real,allocatable,dimension(:,:)     :: lowres_terrain
         real,allocatable,dimension(:,:,:)   :: lowres_z
-        ! store the full high-res 3D grid for the next time step to compute dXdt fields
-        ! includes high res versions of low res terrain and z
-        type(domain_type)::next_domain
+
         ! if we are using an external wind field, store them here temporarily...
         ! does this need to be separate from next_domain other than the nfiles attribute?
         type(wind_type)::ext_winds
