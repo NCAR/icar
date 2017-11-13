@@ -41,12 +41,12 @@ program icar
 
     ! set up the timeing for the model
     if (options%restart) then
-        start_point=options%restart_step-1
+        start_point = options%restart_step-1
     else
-        start_point=bc_find_step(options)
+        start_point = bc_find_step(options)
     endif
 
-    model_time=start_point * DBLE(options%in_dt) + options%time_zero
+    model_time = start_point * DBLE(options%in_dt) + options%time_zero
     domain%model_time=model_time
     next_output=model_time+options%out_dt
 
@@ -56,6 +56,7 @@ program icar
     ! read initial conditions from the boundary file
     write(*,*) "Initializing Boundary conditions"
     call bc_init(domain, boundary, options)
+    model_time = domain%model_time
 
     write(*,*) "Initializing Physics packages"
     call init_physics(options,domain)
