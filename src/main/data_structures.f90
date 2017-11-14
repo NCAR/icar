@@ -81,7 +81,9 @@
 !>------------------------------------------------
 module data_structures
     use, intrinsic :: iso_c_binding ! needed for fftw compatible complex types
-    use :: icar_constants           ! Many constants including things like fixed string lengths
+    use time_object,        only : Time_type
+    use time_delta_object,  only : time_delta_t
+    use icar_constants           ! Many constants including things like fixed string lengths
     implicit none
 
 
@@ -274,8 +276,7 @@ module data_structures
         ! current model time step length (should this be somewhere else?)
         real :: dt
         ! current model time (seconds from options%time_zero)
-        double precision :: model_time
-        integer :: current_month ! used to store the current month (should probably be fractional for interpolation...)
+        type(Time_type) :: model_time
 
         ! online bias correction data
         real, allocatable, dimension(:,:,:) :: rain_fraction        ! seasonally varying fraction to multiple rain  [-]
@@ -297,7 +298,7 @@ module data_structures
         type(domain_type)::next_domain
 
         ! store the timestep to the next input
-        double precision :: dt
+        type(time_delta_t) :: dt
 
         ! dX_dt variables are the change in variable X between two forcing time steps
         ! wind and pressure dX_dt fields applied to full 3d grid, others applied only to boundaries
@@ -488,10 +489,10 @@ module data_structures
         integer :: buffer               ! buffer to remove from all sides of the high res grid supplied
         ! various integer parameters/options
         integer :: ntimesteps           ! total number of time steps to be simulated (from the first forcing data)
-        integer :: time_step_zero       ! the initial time step for the simulation (from the first forcing data)
         integer :: nz                   ! number of model vertical levels
         integer :: ext_winds_nfiles     ! number of extrenal wind filenames to read from namelist
-        integer :: restart_step         ! step in forcing data to begin running
+        type(Time_type) :: restart_time ! Date of the restart time step
+        ! integer :: restart_step         ! step in forcing data to begin running
         integer :: restart_date(6)      ! date to initialize from (y,m,d, h,m,s)
         integer :: restart_step_in_file ! step in restart file to initialize from
 
@@ -500,6 +501,7 @@ module data_structures
         real :: dxlow                   ! forcing model grid cell width [m]
         real :: in_dt                   ! time step between forcing inputs [s]
         real :: out_dt                  ! time step between output [s]
+        type(time_delta_t) :: output_dt ! store out_dt as a time delta object
         real :: outputinterval          ! time steps per output
         real :: inputinterval           ! time steps per input
         real :: smooth_wind_distance    ! distance over which to smooth the forcing wind field (m)
@@ -508,9 +510,9 @@ module data_structures
         integer :: cfl_strictness       ! CFL method 1=3D from 1D*sqrt(3), 2=ave.3D wind*sqrt(3), 3=sum.3D wind, 4=opt3 * sqrt(3), 5 = sum(max.3d)
 
         ! date/time parameters
-        double precision :: initial_mjd ! Modified Julian Day of the first forcing time step [days]
-        double precision :: start_mjd   ! Modified Julian Day of the date to start running the model [days]
-        double precision :: time_zero   ! Starting model initial time step (mjd-50000)*3600 [s]
+        type(Time_type) :: initial_time ! Date of the first forcing time step
+        type(Time_type) :: start_time   ! Date to start running the model
+        type(Time_type) :: end_time     ! End point for the model simulation
 
         real :: t_offset                ! offset to temperature because WRF outputs potential temperature-300
         real, allocatable, dimension(:)::dz_levels ! model layer thicknesses to be read from namelist

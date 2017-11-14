@@ -38,6 +38,7 @@ module land_surface
     use module_lsm_basic,    only : lsm_basic
     use module_lsm_simple,   only : lsm_simple, lsm_simple_init
     use module_water_simple, only : water_simple
+    use time_object,         only : Time_type
     use io_routines,         only : io_write3d, io_write2d
     use data_structures
 
@@ -418,14 +419,14 @@ contains
             call allocate_noah_data(ime,jme,kme,num_soil_layers)
 
             if (options%lsm_options%monthly_vegfrac) then
-                VEGFRAC=domain%vegfrac(:,:,domain%current_month)
+                VEGFRAC = domain%vegfrac(:,:,domain%model_time%month)
             else
-                VEGFRAC=domain%vegfrac(:,:,1)
+                VEGFRAC = domain%vegfrac(:,:,1)
             endif
-            cur_vegmonth=domain%current_month
+            cur_vegmonth = domain%model_time%month
 
             ! save the canopy water in a temporary variable in case this is a restart run because lsm_init resets it to 0
-            CQS2=domain%canopy_water
+            CQS2 = domain%canopy_water
             ! prevents init from failing when processing water poitns that may have "soil_t"=0
             where(domain%soil_t<200) domain%soil_t=200
             where(domain%soil_vwc<0.0001) domain%soil_vwc=0.0001
@@ -461,24 +462,23 @@ contains
     end subroutine lsm_init
 
 
-    subroutine lsm(domain,options,dt,model_time)
+    subroutine lsm(domain,options,dt)
         implicit none
 
         type(domain_type), intent(inout) :: domain
         type(options_type),intent(in)    :: options
         real, intent(in) :: dt
         real ::lsm_dt
-        double precision, intent(in) :: model_time
         integer :: nx,ny,i,j
 
         if (last_model_time==-999) then
-            last_model_time=model_time-update_interval
+            last_model_time = domain%model_time%seconds()-update_interval
         endif
         nx=size(domain%qv,1)
         ny=size(domain%qv,3)
-        if ((model_time-last_model_time)>=update_interval) then
-            lsm_dt=model_time-last_model_time
-            last_model_time=model_time
+        if ((domain%model_time%seconds() - last_model_time) >= update_interval) then
+            lsm_dt = domain%model_time%seconds() - last_model_time
+            last_model_time = domain%model_time%seconds()
 
             ! exchange coefficients
             windspd=sqrt(domain%u10**2+domain%v10**2)
@@ -558,9 +558,9 @@ contains
                     enddo
                 enddo
                 if (options%lsm_options%monthly_vegfrac) then
-                    if (cur_vegmonth/=domain%current_month) then
-                        VEGFRAC=domain%vegfrac(:,:,domain%current_month)
-                        cur_vegmonth=domain%current_month
+                    if (cur_vegmonth /= domain%model_time%month) then
+                        VEGFRAC = domain%vegfrac(:,:,domain%model_time%month)
+                        cur_vegmonth = domain%model_time%month
                     endif
                 endif
 

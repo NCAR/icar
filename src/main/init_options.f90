@@ -15,6 +15,9 @@ module initialize_options
     use io_routines,                only : io_nearest_time_step, io_newunit
     use model_tracking,             only : print_model_diffs
     use time,                       only : date_to_mjd, parse_date, time_init
+    use time_io,                    only : find_timestep_in_file
+    use time_object,                only : Time_type
+    use time_delta_object,          only : time_delta_t
     use string,                     only : str
 
     implicit none
@@ -126,15 +129,6 @@ contains
             options%t_offset = 0
         endif
 
-        if ((options%initial_mjd + options%ntimesteps/(86400.0/options%in_dt)) < options%start_mjd) then
-            write(*,*) "ERROR: start date is more than ntimesteps past the forcing start"
-            write(*,*) "Initial Modified Julian Day:",options%initial_mjd
-            write(*,*) "Start date Modified Julian Day:",options%start_mjd
-            write(*,*) "number of time steps:",options%ntimesteps
-            write(*,*) "number of days to simulate:",options%ntimesteps/(86400.0/options%in_dt)
-            stop "Start time is past stop time."
-        endif
-
 
         ! convection can modify wind field, and ideal doesn't rebalance winds every timestep
         if ((options%physics%convection.ne.0).and.(options%ideal)) then
@@ -213,8 +207,8 @@ contains
         integer :: restart_step                         ! time step relative to the start of the restart file
         integer :: restart_date(6)                      ! date to restart
         integer :: name_unit                            ! logical unit number for namelist
-        double precision :: restart_mjd                 ! restart date as a modified julian day
-        real :: input_steps_per_day                     ! number of input time steps per day (for calculating restart_mjd)
+        type(Time_type) :: restart_time, time_at_step   ! restart date as a modified julian day
+        real :: input_steps_per_day                     ! number of input time steps per day (for calculating restart_time)
 
         namelist /restart_info/ restart_step, restart_file, restart_date
 
@@ -231,42 +225,39 @@ contains
         endif
 
         ! calculate the modified julian day for th restart date given
-        restart_mjd = date_to_mjd(restart_date(1), restart_date(2), restart_date(3), &
-                                  restart_date(4), restart_date(5), restart_date(6))
+        call restart_time%init(options%calendar)
+        call restart_time%set(restart_date(1), restart_date(2), restart_date(3), &
+                              restart_date(4), restart_date(5), restart_date(6))
+
+        ! find the time step that most closely matches the requested restart time (<=)
+        restart_step = find_timestep_in_file(restart_file, 'time', restart_time, time_at_step)
+
+        ! check to see if we actually udpated the restart date and print if in a more verbose mode
+        if (options%debug) then
+            if (restart_time /= time_at_step) then
+                write(*,*) " updated restart date: ", trim(time_at_step%as_string())
+            endif
+        endif
+
+        restart_time = time_at_step
 
         if (options%debug) then
             write(*,*) " ------------------ "
             write(*,*) "RESTART INFORMATION"
-            write(*,*) "mjd",         restart_mjd
+            write(*,*) "mjd",         restart_time%mjd()
+            write(*,*) "date:",       restart_time%as_string()
             write(*,*) "date",        restart_date
             write(*,*) "file",   trim(restart_file)
             write(*,*) "forcing step",restart_step
             write(*,*) " ------------------ "
         endif
 
-        ! used in calculations below
-        input_steps_per_day = 86400.0/options%in_dt
-
-        ! if the user did not specify the restart_step (and they really shouldn't)
-        if (restart_step==-999) then
-            ! +1e-4 prevents floating point rounding error from setting it back one day/hour/minute etc
-            ! +1 because Fortran arrays are 1 based, so if restart-initial = 0 then we want the 1st array element
-            restart_step=FLOOR((restart_mjd - options%initial_mjd + 1e-4) * input_steps_per_day) + 1
-            if (options%debug) write(*,*) " updated forcing step",restart_step
-        endif
-
         ! save the parameters in the master options structure
-        options%restart_step=restart_step
-        options%restart_file=restart_file
-        options%restart_date=restart_date
+        options%restart_step_in_file = restart_step
+        options%restart_file         = restart_file
+        options%restart_date         = restart_date
+        options%restart_time         = restart_time
 
-        ! In case the supplied restart date doesn't line up with an input forcing step, recalculate
-        ! The restart date (mjd) based off the nearest input step
-        restart_mjd = options%initial_mjd + ((restart_step-1)/input_steps_per_day)
-        if (options%debug) write(*,*) " updated mjd",restart_mjd
-
-        ! now find the closest previous output step to the current restart date
-        options%restart_step_in_file = io_nearest_time_step(restart_file, restart_mjd)
         if (options%debug) write(*,*) " step in restart file",options%restart_step_in_file
 
     end subroutine init_restart_options
@@ -479,7 +470,7 @@ contains
         real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance
         real    :: rotation_scale_height, cfl_reduction_factor
         integer :: ntimesteps
-        double precision :: end_mjd
+        type(time_delta_t) :: dt
         integer :: nz, n_ext_winds,buffer, warning_level, cfl_strictness
         logical :: ideal, readz, readdz, interactive, debug, external_winds, surface_io_only, &
                    mean_winds, mean_fields, restart, advect_density, z_is_geopotential, z_is_on_interface,&
@@ -590,14 +581,14 @@ contains
             if (warning_level>4) then
                 stop
             else
-                smooth_wind_distance=dxlow*2
+                smooth_wind_distance = dxlow*2
             endif
         endif
-        options%smooth_wind_distance=smooth_wind_distance
+        options%smooth_wind_distance = smooth_wind_distance
 
-        options%ntimesteps=ntimesteps
-        options%in_dt=inputinterval
-        options%out_dt=outputinterval
+        options%in_dt      = inputinterval
+        options%out_dt     = outputinterval
+        call options%output_dt%set(seconds=outputinterval)
         ! if outputing at half-day or longer intervals, create monthly files
         if (outputinterval>=43200) then
             options%output_file_frequency="monthly"
@@ -610,23 +601,24 @@ contains
         endif
         options%surface_io_only = surface_io_only
 
-        call parse_date(date, year, month, day, hour, minute, second)
+
         options%calendar=calendar
         call time_init(calendar)
-        options%initial_mjd=date_to_mjd(year, month, day, hour, minute, second)
+        call options%initial_time%init(calendar)
+        call options%initial_time%set(date)
         if (start_date=="") then
-            options%start_mjd=options%initial_mjd
+            options%start_time = options%initial_time
         else
-            call parse_date(start_date, year, month, day, hour, minute, second)
-            options%start_mjd=date_to_mjd(year, month, day, hour, minute, second)
+            call options%start_time%init(calendar)
+            call options%start_time%set(start_date)
         endif
         if (trim(end_date)/="") then
-            call parse_date(end_date, year, month, day, hour, minute, second)
-            end_mjd=date_to_mjd(year, month, day, hour, minute, second)
-            options%ntimesteps = (end_mjd-options%initial_mjd)*(86400.0/options%in_dt)
+            call options%end_time%init(calendar)
+            call options%end_time%set(end_date)
+        else
+            call dt%set(seconds=ntimesteps * inputinterval)
+            options%end_time = options%start_time + dt
         endif
-        options%time_step_zero = (options%start_mjd-options%initial_mjd)*(86400.0/options%in_dt)
-        options%time_zero = ((options%initial_mjd-50000) * 86400.0)
         options%dx = dx
         options%dxlow = dxlow
         options%ideal = ideal

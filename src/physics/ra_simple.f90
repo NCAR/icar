@@ -189,13 +189,13 @@ contains
 
     subroutine ra_simple(theta,pii,qv,qc,qs,qr,p,swdown,lwdown,cloud_cover,lat,lon,date,options,dt)
         implicit none
-        real,dimension(:,:,:), intent(inout) :: theta
-        real,dimension(:,:,:), intent(in) :: pii,qv,qc,qs,qr,p
-        real,dimension(:,:), intent(out) :: swdown,lwdown,cloud_cover
-        real,dimension(:,:), intent(in) :: lat,lon
-        double precision, intent(in) :: date
-        type(options_type),intent(in)    :: options
-        real, intent(in) :: dt
+        real,dimension(:,:,:), intent(inout):: theta
+        real,dimension(:,:,:), intent(in)   :: pii,qv,qc,qs,qr,p
+        real,dimension(:,:),   intent(out)  :: swdown,lwdown,cloud_cover
+        real,dimension(:,:),   intent(in)   :: lat,lon
+        double precision,      intent(in)   :: date
+        type(options_type),    intent(in)   :: options
+        real,                  intent(in)   :: dt
         real :: coolingrate
         integer :: nx,ny,j,k,nz
         real, allocatable, dimension(:) :: rh,T_air,solar_elevation, hydrometeors,day_frac

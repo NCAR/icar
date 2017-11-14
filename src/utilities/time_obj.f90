@@ -40,9 +40,12 @@ module time_object
       contains
         procedure, public  :: date        => calendar_date
         procedure, public  :: mjd         => get_mjd
+        procedure, public  :: seconds     => get_seconds
         procedure, public  :: day_of_year => calc_day_of_year
         procedure, public  :: date_to_mjd => date_to_mjd
         procedure, public  :: as_string   => as_string
+        procedure, public  :: equals      => equals_with_precision
+        procedure, public  :: units       => units
 
         generic,   public  :: init        => time_init_c
         generic,   public  :: init        => time_init_i
@@ -70,6 +73,8 @@ module time_object
         procedure, private :: less_or_eq
         generic,   public  :: operator(<=)   => less_or_eq
 
+        procedure, private :: addition
+        generic,   public  :: operator(+)    => addition
         procedure, private :: difference
         generic,   public  :: operator(-)    => difference
 
@@ -224,6 +229,24 @@ contains
         endif
 
     end subroutine set_calendar
+
+
+    !>------------------------------------------------------------
+    !!  Return the current date number (seconds since reference time)
+    !!
+    !!  For a gregorian calendar, if no year is specified, this will be
+    !!  a modified Julian day (*86400).  For all other calendars it will be
+    !!  seconds since startyear/startmonth/startday
+    !!
+    !!------------------------------------------------------------
+    function get_seconds(this) result(seconds)
+        implicit none
+        class(Time_type) :: this
+        double precision :: seconds
+
+        seconds = this%current_date_time * 86400.0D0
+    end function get_seconds
+
 
     !>------------------------------------------------------------
     !!  Return the current date number (days since initial year)
@@ -502,6 +525,22 @@ contains
     end subroutine set_from_mjd
 
     !>------------------------------------------------------------
+    !!  Create a formated "units" string for this object
+    !!
+    !!  For example "days since 1858-11-17 00:00:00"
+    !!
+    !!------------------------------------------------------------
+    function units(this)
+        implicit none
+        class(Time_type), intent(in)   :: this
+        character(len=MAXSTRINGLENGTH) :: units
+
+        write(units, '("days since ",i4,"-",i2.2,"-",i2.2," 00:00:00")') &
+                this%year_zero,this%month_zero,this%day_zero
+
+    end function units
+
+    !>------------------------------------------------------------
     !!  Convert the date object into a string in the 0-filled format : "YYYY/MM/DD hh:mm:ss"
     !!
     !!------------------------------------------------------------
@@ -545,6 +584,16 @@ contains
 
     end function as_string
 
+    !>------------------------------------------------------------
+    !!  Test that time 1 is greater than time 2
+    !!
+    !!  Used to implement the [>] operator
+    !!  If the two input times have the same refernce calender, it just returns
+    !!  > on the internal time representation between the two
+    !!  Otherwise it retrieves the year, month, day, ... from both and checks for
+    !!  > on all elements sequentially (year, then month, then day...)
+    !!
+    !!------------------------------------------------------------
     function greater_than(t1, t2)
         implicit none
         class(Time_type), intent(in) :: t1, t2
@@ -586,6 +635,16 @@ contains
 
     end function greater_than
 
+    !>------------------------------------------------------------
+    !!  Test that time 1 is greater than or equal to time 2
+    !!
+    !!  Used to implement the [>=] operator
+    !!  If the two input times have the same refernce calender, it just returns
+    !!  >= on the internal time representation between the two
+    !!  Otherwise it retrieves the year, month, day, ... from both and checks for
+    !!  >= on all elements sequentially (year, then month, then day...)
+    !!
+    !!------------------------------------------------------------
     function greater_or_eq(t1, t2)
         implicit none
         class(Time_type), intent(in) :: t1, t2
@@ -617,9 +676,7 @@ contains
                         if (t1%minute > t2%minute) then
                             greater_or_eq = .True.
                         else if (t1%minute == t2%minute) then
-                            if (t1%second > t2%second) then
-                                greater_or_eq = .True.
-                            else if (t1%second >= t2%second) then
+                            if (t1%second >= t2%second) then
                                 greater_or_eq = .True.
                             endif
                         endif
@@ -631,6 +688,16 @@ contains
     end function greater_or_eq
 
 
+    !>------------------------------------------------------------
+    !!  Test that time 1 is equal to time 2
+    !!
+    !!  Used to implement the [==] operator
+    !!  If the two input times have the same refernce calender, it just returns
+    !!  == on the internal time representation between the two
+    !!  Otherwise it retrieves the year, month, day, ... from both and checks for
+    !!  equality on all elements
+    !!
+    !!------------------------------------------------------------
     function equal(t1, t2)
         implicit none
         class(Time_type), intent(in) :: t1, t2
@@ -652,6 +719,14 @@ contains
 
     end function equal
 
+
+    !>------------------------------------------------------------
+    !!  Test that time 1 is not equal to time 2
+    !!
+    !!  Used to implement the [/=] operator
+    !!  Simply returns not ==
+    !!
+    !!------------------------------------------------------------
     function not_equal(t1, t2)
         implicit none
         class(Time_type), intent(in) :: t1, t2
@@ -662,6 +737,13 @@ contains
     end function not_equal
 
 
+    !>------------------------------------------------------------
+    !!  Test that time 1 is less than or equal to time 2
+    !!
+    !!  Used to implement the [<=] operator
+    !!  Simply returns not >
+    !!
+    !!------------------------------------------------------------
     function less_or_eq(t1, t2)
         implicit none
         class(Time_type), intent(in) :: t1, t2
@@ -671,6 +753,13 @@ contains
 
     end function less_or_eq
 
+    !>------------------------------------------------------------
+    !!  Test that time 1 is less than time 2
+    !!
+    !!  Used to implement the [<] operator
+    !!  Simply returns not >=
+    !!
+    !!------------------------------------------------------------
     function less_than(t1, t2)
         implicit none
         class(Time_type), intent(in) :: t1, t2
@@ -680,7 +769,34 @@ contains
 
     end function less_than
 
-    ! note, this requires the time_delta object
+    !>------------------------------------------------------------
+    !!  Compare that two time objects are equal to within a specified precision
+    !!
+    !!  If precision is not specified, just returns the == operator result
+    !!  If precision is specified, returns true if abs(t1-t2) <= precision
+    !!
+    !!------------------------------------------------------------
+    function equals_with_precision(t1,t2, precision) result(equals)
+        implicit none
+        class(Time_type),    intent(in) :: t1, t2
+        class(time_delta_t), intent(in), optional :: precision
+        logical :: equals
+        type(time_delta_t) :: dt
+
+        if (.not.present(precision)) then
+            equals = (t1%equal(t2))
+        else
+            dt = t1 - t2
+            equals = abs(dt%seconds()) <= precision%seconds()
+        endif
+
+    end function equals_with_precision
+
+
+    !>------------------------------------------------------------
+    !!  Subtract two times and return a time_delta object
+    !!
+    !!------------------------------------------------------------
     function difference(t1, t2) result(dt)
         implicit none
         class(Time_type), intent(in) :: t1, t2
@@ -692,7 +808,7 @@ contains
         if (((t1%calendar == t2%calendar).and.(t1%year_zero == t2%year_zero)) &
             .and.((t1%month_zero == t2%month_zero).and.(t1%day_zero == t2%day_zero))) then
 
-            call dt%set_time_delta(days=t1%mjd() - t2%mjd())
+            call dt%set(days=t1%mjd() - t2%mjd())
         else
             ! if the two time object reference calendars don't match
             ! create a new time object with the same referecnce as t1
@@ -701,9 +817,27 @@ contains
             call t1%date(year, month, day, hour, minute, second)
             call temp_time%set(year, month, day, hour, minute, second)
 
-            call dt%set_time_delta(days=t1%mjd() - temp_time%mjd())
+            call dt%set(days=t1%mjd() - temp_time%mjd())
         endif
 
     end function difference
+
+    !>------------------------------------------------------------
+    !!  Add a given time delta to a time object
+    !!
+    !!  returns a new time object
+    !!
+    !!------------------------------------------------------------
+    function addition(t1, dt) result(t2)
+        implicit none
+        class(Time_type),   intent(in) :: t1
+        type(time_delta_t), intent(in) :: dt
+        type(Time_type) :: t2
+
+        t2 = t1 ! set calendar startyear, etc.
+
+        call t2%set(t1%mjd() + dt%days())
+
+    end function addition
 
 end module time_object

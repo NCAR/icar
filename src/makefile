@@ -673,7 +673,7 @@ $(BUILD)fftshift.o:$(UTIL)fftshift.f90 $(BUILD)fftw.o
 ###################################################################
 #	Generic data structures, used by almost everything
 ###################################################################
-$(BUILD)data_structures.o:$(MAIN)data_structures.f90 $(BUILD)icar_constants.o
+$(BUILD)data_structures.o:$(MAIN)data_structures.f90 $(BUILD)icar_constants.o $(BUILD)time_obj.o
 	${F90} ${FFLAGS} $(MAIN)data_structures.f90 -o $(BUILD)data_structures.o
 
 $(BUILD)wrf_constants.o:$(CONST)wrf_constants.f90

@@ -2,13 +2,73 @@ module time_io
 
     use data_structures
     use icar_constants
-    use time_object, only : Time_type
-    use string,      only : get_integer
-    use io_routines, only : io_read, io_read_attribute
+    use time_object,        only : Time_type
+    use time_delta_object,  only : time_delta_t
+    use string,             only : get_integer
+    use io_routines,        only : io_read, io_read_attribute
 
     implicit none
 
 contains
+
+    function find_timestep_in_file(filename, time_var, time, time_at_step, precision, error) result(step)
+        implicit none
+        character(len=*),  intent(in) :: filename
+        character(len=*),  intent(in) :: time_var
+        type(Time_type),   intent(in) :: time
+        type(Time_type),   intent(inout), optional :: time_at_step
+        type(time_delta_t),intent(in),    optional :: precision
+        integer,           intent(inout), optional :: error
+        integer :: step
+
+        type(Time_type), allocatable :: times_in_file(:)
+        type(time_delta_t) :: max_dt
+        integer :: i,n
+        logical :: found
+
+        call max_dt%set(seconds=1.0)
+        if (present(precision)) max_dt = precision
+        if (present(error)) error=0
+
+        ! read the times for all timesteps in the specified file
+        call read_times(filename, time_var, times_in_file)
+
+        step = -1
+        found= .False.
+        n    = size(times_in_file)
+        ! loop through times looking for a time that matches the input time to within
+        ! a specified maximum delta t
+        do i = 1, n
+            if (.not.found) then
+                if (times_in_file(i)%equals(time, precision=max_dt)) then
+                    step = i
+                    found=.True.
+                elseif (times_in_file(i) > time) then
+                    step = i-1
+                    found=.True.
+                endif
+            endif
+        enddo
+
+        if (step < 1) then
+            if (present(error)) then
+                error = 1
+            else
+                write(*,*) "ERROR: Unable to find requested date in file."
+                write(*,*) "Filename: ",trim(filename)
+                write(*,*) "  time  : ",trim(time%as_string())
+                write(*,*) "First time in file : ", trim(times_in_file(1)%as_string())
+                write(*,*) " Last time in file : ", trim(times_in_file(n)%as_string())
+                stop "Unable to find date in file"
+            endif
+        endif
+
+        if (present(time_at_step)) time_at_step = times_in_file(step)
+
+        deallocate(times_in_file)
+
+    end function find_timestep_in_file
+
 
     function time_gain_from_units(units) result(gain)
         implicit none
