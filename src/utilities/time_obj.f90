@@ -101,20 +101,13 @@ contains
 
         call this%set_calendar(calendar_name)
 
-        if (this%calendar == GREGORIAN) then
-            this%year_zero = NON_VALID_YEAR
-        else
-            this%year_zero = 0
-        endif
-
         if (this%calendar == THREESIXTY) then
             do i=0,12
                 this%month_start(i+1) = i*30
             end do
         endif
-        do i=0,12
-            this%month_start(i+1) = this%month_start(i+1) + 1
-        end do
+
+        this%month_start = this%month_start + 1
 
         if ( present(year_zero) ) then
             this%year_zero = year_zero
@@ -147,20 +140,13 @@ contains
 
         this%calendar = calendar
 
-        if (this%calendar == GREGORIAN) then
-            this%year_zero = NON_VALID_YEAR
-        else
-            this%year_zero = 0
-        endif
-
         if (this%calendar == THREESIXTY) then
             do i=0,12
                 this%month_start(i+1) = i*30
             end do
         endif
-        do i=0,12
-            this%month_start(i+1) = this%month_start(i+1) + 1
-        end do
+
+        this%month_start = this%month_start + 1
 
         if ( present(year_zero) ) then
             this%year_zero = year_zero
@@ -311,13 +297,7 @@ contains
         if (this%calendar==GREGORIAN) then
             date_to_mjd = gregorian_julian_day(year, month, day, hour, minute, second)
 
-            if (this%year_zero == NON_VALID_YEAR) then
-                date_to_mjd = date_to_mjd - 2400000.5
-                !  - 2400000.5 converts from Julina day (days since January 1, 4713 BC in the Julian calendar)
-                ! to modified julian day (days since Nov 17, 1858)
-            else
-                date_to_mjd = date_to_mjd - gregorian_julian_day(this%year_zero, this%month_zero, this%day_zero, 0, 0, 0)
-            endif
+            date_to_mjd = date_to_mjd - gregorian_julian_day(this%year_zero, this%month_zero, this%day_zero, 0, 0, 0)
 
         else if (this%calendar==NOLEAP) then
             date_to_mjd = (year-this%year_zero)*365 + this%month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0
@@ -352,11 +332,8 @@ contains
         !
         !------------------------------------------------------------
         if (this%calendar==GREGORIAN) then
-            if (this%year_zero == NON_VALID_YEAR) then
-                jday = nint(mjd+2400000.5)
-            else
-                jday = nint(mjd + gregorian_julian_day(this%year_zero, this%month_zero, this%day_zero, 0, 0, 0))
-            endif
+            jday = nint(mjd + gregorian_julian_day(this%year_zero, this%month_zero, this%day_zero, 0, 0, 0))
+
             f = jday+j+(((4*jday+B)/146097)*3)/4+C
             e = r*f+v
             g = mod(e,p)/r

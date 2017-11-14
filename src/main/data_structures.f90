@@ -500,6 +500,7 @@ module data_structures
         real :: dx                      ! grid cell width [m]
         real :: dxlow                   ! forcing model grid cell width [m]
         real :: in_dt                   ! time step between forcing inputs [s]
+        type(time_delta_t) :: input_dt  ! store in_dt as a time delta object
         real :: out_dt                  ! time step between output [s]
         type(time_delta_t) :: output_dt ! store out_dt as a time delta object
         real :: outputinterval          ! time steps per output
@@ -516,7 +517,6 @@ module data_structures
 
         real :: t_offset                ! offset to temperature because WRF outputs potential temperature-300
         real, allocatable, dimension(:)::dz_levels ! model layer thicknesses to be read from namelist
-        real :: rotation_scale_height   ! height to minimize wind rotation into the terrain following grid below [m]
         logical :: use_agl_height       ! interpolate from forcing to model layers using Z above ground level, not sea level
 
         ! defines which physics package to be used.

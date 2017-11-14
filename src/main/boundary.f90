@@ -37,6 +37,7 @@ module boundary_conditions
     use vertical_interpolation, only : vinterp, vLUT_forcing
     use output,                 only : write_domain, output_init
     use string,                 only : str
+    use array_utilities,        only : smooth_array
 
     implicit none
     private
@@ -76,7 +77,8 @@ contains
         type(time_delta_t) :: dt
 
         dt = (options%start_time - options%initial_time)
-        step = dt%seconds() / options%in_dt
+        step = dt%seconds() / options%in_dt + 1
+
         if (options%debug) write(*,*) "bc_find_step: First forcing time step = ",trim(str(step))
 
     end function bc_find_step
@@ -115,10 +117,9 @@ contains
         ! these are module variables that should be correctly set when the subroutine returns
         curfile=1
         curstep=1
+        if (trim(options%time_var)=="") then
 
-        if (options%time_var=="") then
             curstep = bc_find_step(options)
-
             steps_in_file = get_n_timesteps(file_list(curfile), options%pvar)
 
             do while (curstep > steps_in_file)
@@ -150,152 +151,6 @@ contains
     end subroutine set_curfile_curstep
 
 
-    !>------------------------------------------------------------
-    !! Smooth an array (written for wind but will work for anything)
-    !!
-    !! Only smooths over the first (x) and second (y or z) or third (y or z) dimension
-    !! ydim can be specified to allow working with (x,y,z) data or (x,z,y) data
-    !! WARNING: this is a moderately complex setup to be efficient for the ydim=3 (typically large arrays, SLOW) case
-    !! be careful when editing.
-    !! For the complex case it pre-computes the sum of all columns for a given row,
-    !! then to move from one column to the next it just has add the next column from the sums and subtracts the last one
-    !! similarly, moving to the next row just means adding the next row to the sums, and subtracting the last one.
-    !! Each point also has to be divided by N, but this decreases the compution from O(windowsize^2) to O(constant)
-    !! Where O(constant) = 2 additions, 2 subtractions, and 1 divide regardless of windowsize!
-    !!
-    !! @param wind          3D array to be smoothed
-    !! @param windowsize    size to smooth in both directions (i.e. the full window is this * 2 + 1)
-    !! @param ysim          axis the y dimension is on (2 or 3) in the wind array
-    !!
-    !!------------------------------------------------------------
-    subroutine smooth_wind(wind,windowsize,ydim)
-        implicit none
-        real, intent(inout), dimension(:,:,:):: wind    !> 3 dimensional wind field to be smoothed
-        integer,intent(in)::windowsize                  !> halfwidth-1/2 of window to smooth over
-                                                        ! Specified in grid cells, (+/- windowsize)
-        integer,intent(in)::ydim                        !> the dimension to use for the y coordinate
-                                                        ! It can be 2, or 3 (but not 1)
-        real,allocatable,dimension(:,:,:)::inputwind    !> temporary array to store the input data in
-        integer::i,j,k,nx,ny,nz,startx,endx,starty,endy ! various array indices/bounds
-        ! intermediate sums to speed up the computation
-        real,allocatable,dimension(:) :: rowsums,rowmeans
-        real :: cursum
-        integer :: cur_n,curcol,ncols,nrows
-
-        ncols=windowsize*2+1
-        nx=size(wind,1)
-        ny=size(wind,2) !note, this is Z for the high-res domain (ydim=3)
-        nz=size(wind,3) !note, this could be the Y or Z dimension depending on ydim
-        ! this is ~20MB that has to be allocated deallocated every call...
-        allocate(inputwind(nx,ny,nz)) ! Can't be module level because nx,ny,nz could change between calls,
-                                      ! could be part of a "smoothable" object to avoid allocate-deallocating constantly
-!       nx=nx-1
-!       if (ydim==3) then
-!           nz=nz-1
-!       endif
-        inputwind=wind !make a copy so we always use the unsmoothed data when computing the smoothed data
-        if (((windowsize*2+1)>nx).and.(ydim==3)) then
-            write(*,*) "WARNING can not operate if windowsize*2+1 is larger than nx"
-            write(*,*) "NX         = ", nx
-            write(*,*) "windowsize = ", windowsize
-            stop
-        endif
-
-        !parallelize over a slower dimension (not the slowest because it is MUCH easier this way)
-        ! as long as the inner loops (the array operations) are over the fastest dimension we are mostly OK
-        !$omp parallel firstprivate(windowsize,nx,ny,nz,ydim), &
-        !$omp private(i,j,k,startx,endx,starty,endy, rowsums,rowmeans,nrows,ncols,cursum), &
-        !$omp shared(wind,inputwind)
-        allocate(rowsums(nx)) !this is only used when ydim=3, so nz is really ny
-        allocate(rowmeans(nx)) !this is only used when ydim=3, so nz is really ny
-        nrows=windowsize*2+1
-        ncols=windowsize*2+1
-        !$omp do schedule(static)
-        do j=1,ny
-
-            ! so we pre-compute the sum over rows for each column in the current window
-            if (ydim==3) then
-                rowsums=inputwind(1:nx,j,1)*(windowsize+1)
-                do i=1,windowsize
-                    rowsums=rowsums+inputwind(1:nx,j,i)
-                enddo
-            endif
-            ! don't parallelize over this loop because it is much more efficient to be able to assume
-            ! that you ran the previous row in serial for the slow (ydim=3) case
-            do k=1,nz ! note this is y for ydim=3
-                ! ydim=3 for the main model grid which is large and takes a long time
-                if (ydim==3) then
-                    ! if we are pinned to the top edge
-                    if ((k-windowsize)<=1) then
-                        starty=1
-                        endy  =k+windowsize
-                        rowsums=rowsums-inputwind(1:nx,j,starty)+inputwind(1:nx,j,endy)
-                    ! if we are pinned to the bottom edge
-                    else if ((k+windowsize)>nz) then
-                        starty=k-windowsize
-                        endy  =nz
-                        rowsums=rowsums-inputwind(1:nx,j,starty-1)+inputwind(1:nx,j,endy)
-                    ! if we are in the middle (this is the most common)
-                    else
-                        starty=k-windowsize
-                        endy  =k+windowsize
-                        rowsums=rowsums-inputwind(1:nx,j,starty-1)+inputwind(:,j,endy)
-                    endif
-                    rowmeans=rowsums/nrows
-                    cursum=sum(rowmeans(1:windowsize))+rowmeans(1)*(windowsize+1)
-                endif
-
-                do i=1,nx
-                    if (ydim==3) then
-                        ! if we are pinned to the left edge
-                        if ((i-windowsize)<=1) then
-                            startx=1
-                            endx  =i+windowsize
-                            cursum=cursum-rowmeans(startx)+rowmeans(endx)
-                        ! if we are pinned to the right edge
-                        else if ((i+windowsize)>nx) then
-                            startx=i-windowsize
-                            endx  =nx
-                            cursum=cursum-rowmeans(startx-1)+rowmeans(endx)
-                        ! if we are in the middle (this is the most common)
-                        else
-                            startx=i-windowsize
-                            endx  =i+windowsize
-                            cursum=cursum-rowmeans(startx-1)+rowmeans(endx)
-                        endif
-
-                        wind(i,j,k)=cursum/ncols
-
-                        ! old slower way, also creates artifacts windowsize distance from the borders
-!                       startx=max(1, i-windowsize)
-!                       endx  =min(nx,i+windowsize)
-!                       starty=max(1, k-windowsize)
-!                       endy  =min(nz,k+windowsize)
-!                       wind(i,j,k)=sum(inputwind(startx:endx,j,starty:endy)) &
-!                                   / ((endx-startx+1)*(endy-starty+1))
-                    else ! ydim==2
-                        ! ydim=2 for the input data which is a small grid, thus cheap so we still use the slow method
-                        !first find the current window bounds
-                        startx=max(1, i-windowsize)
-                        endx  =min(nx,i+windowsize)
-                        starty=max(1, j-windowsize)
-                        endy  =min(ny,j+windowsize)
-                        ! then compute the mean within that window (sum/n)
-                        ! note, artifacts near the borders (mentioned in ydim==3) don't affect this
-                        ! because the borders *should* be well away from the domain
-                        ! if the forcing data are not much larger than the model domain this *could* create issues
-                        wind(i,j,k)=sum(inputwind(startx:endx,starty:endy,k)) &
-                                    / ((endx-startx+1)*(endy-starty+1))
-                    endif
-                enddo
-            enddo
-        enddo
-        !$omp end do
-        deallocate(rowmeans,rowsums)
-        !$omp end parallel
-
-        deallocate(inputwind)
-    end subroutine smooth_wind
 
     !>------------------------------------------------------------
     !!  Generic routine to read a forcing variable (varname) from a netcdf file (filename) at a time step (curstep)
@@ -354,7 +209,7 @@ contains
         ! Variable specific options
         ! For wind variables run a first pass of smoothing over the low res data
         if (((varname==options%vvar).or.(varname==options%uvar)).and.(.not.options%ideal)) then
-            call smooth_wind(inputdata,1,2)
+            call smooth_array(inputdata,1,2)
 
         ! For Temperature, we may need to add an offset
         elseif ((varname==options%tvar).and.(options%t_offset/=0)) then
@@ -578,7 +433,7 @@ contains
         nx=size(extra_data,1)
         ny=size(extra_data,2)
         nz=size(extra_data,3)
-        call smooth_wind(extra_data,1,2)
+        call smooth_array(extra_data,1,2)
         bc%u(1:nx,1:nz,1:ny)=reshape(extra_data,[nx,nz,ny],order=[1,3,2])
         deallocate(extra_data)
 
@@ -587,7 +442,7 @@ contains
         nx=size(extra_data,1)
         ny=size(extra_data,2)
         nz=size(extra_data,3)
-        call smooth_wind(extra_data,1,2)
+        call smooth_array(extra_data,1,2)
         bc%v(1:nx,1:nz,1:ny)=reshape(extra_data,[nx,nz,ny],order=[1,3,2])
         deallocate(extra_data)
 
@@ -986,8 +841,8 @@ contains
             if (options%lt_options%remove_lowres_linear) then
                 ! remove the low-res linear wind perturbation field
                 call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
-                call smooth_wind(domain%u,smoothing_window,3)
-                call smooth_wind(domain%v,smoothing_window,3)
+                call smooth_array(domain%u,smoothing_window,3)
+                call smooth_array(domain%v,smoothing_window,3)
             elseif (options%mean_winds) then
                 call mean_winds(domain,file_list(curfile),curstep,options)
             else
@@ -997,8 +852,8 @@ contains
                 call read_var(domain%v, file_list(curfile),options%vvar,  &
                                 bc%v_geo%geolut,bc%v_geo%vert_lut,curstep,boundary_value, &
                                 options)
-                call smooth_wind(domain%u,smoothing_window,3)
-                call smooth_wind(domain%v,smoothing_window,3)
+                call smooth_array(domain%u,smoothing_window,3)
+                call smooth_array(domain%v,smoothing_window,3)
             endif
             domain%pii=(domain%p/100000.0)**(Rd/cp)
             domain%rho=domain%p/(Rd*domain%th*domain%pii) ! kg/m^3
@@ -1013,7 +868,12 @@ contains
             call output_init(domain,options)
             call write_domain(domain, options, options%restart_time, "last_restart_file.nc")
         else
-            call read_bc_time(domain%model_time, file_list(curfile), options%time_var, curstep)
+            if (options%time_var=="") then
+                domain%model_time = options%start_time
+            else
+                call read_bc_time(domain%model_time, file_list(curfile), options%time_var, curstep)
+            endif
+            bc%next_domain%model_time = domain%model_time
 
 !           else load data from the first Boundary conditions file
             boundary_value=.False.
@@ -1024,8 +884,8 @@ contains
             if (options%lt_options%remove_lowres_linear) then
                 ! remove the low-res linear wind perturbation field
                 call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
-                call smooth_wind(domain%u,smoothing_window,3)
-                call smooth_wind(domain%v,smoothing_window,3)
+                call smooth_array(domain%u,smoothing_window,3)
+                call smooth_array(domain%v,smoothing_window,3)
             elseif (options%mean_winds) then
                 call mean_winds(domain,file_list(curfile),curstep,options)
             else
@@ -1035,8 +895,8 @@ contains
                 call read_var(domain%v, file_list(curfile),options%vvar,  &
                                 bc%v_geo%geolut,bc%v_geo%vert_lut,curstep,boundary_value, &
                                 options)
-                call smooth_wind(domain%u,smoothing_window,3)
-                call smooth_wind(domain%v,smoothing_window,3)
+                call smooth_array(domain%u,smoothing_window,3)
+                call smooth_array(domain%v,smoothing_window,3)
             endif
             call read_var(domain%p,    file_list(curfile),   options%pvar,   &
                             bc%geolut, bc%vert_lut, curstep, boundary_value, &
@@ -1052,7 +912,7 @@ contains
                                 bc%geolut, bc%vert_lut, curstep, boundary_value, &
                                 options)
             else
-                if (options%debug) print*, "No Cloud water content specified"
+                if (options%debug) write(*,*) "No Cloud water content specified"
                 domain%cloud=0
             endif
             if (trim(options%qivar)/="") then
@@ -1060,7 +920,7 @@ contains
                                 bc%geolut, bc%vert_lut, curstep, boundary_value, &
                                 options)
             else
-                if (options%debug) print*, "No Cloud ice specified"
+                if (options%debug) write(*,*) "No Cloud ice specified"
                 domain%ice=0
             endif
 
@@ -1381,7 +1241,11 @@ contains
         use_interior=.False. ! this is passed to the use_boundary flag in geo_interp
         use_boundary=.True.
 
-        call read_bc_time(bc%next_domain%model_time, file_list(curfile), options%time_var, curstep)
+        if (options%time_var=="") then
+            bc%next_domain%model_time = bc%next_domain%model_time + options%input_dt
+        else
+            call read_bc_time(bc%next_domain%model_time, file_list(curfile), options%time_var, curstep)
+        endif
         bc%dt = bc%next_domain%model_time - domain%model_time
 
         if (options%time_varying_z) then
@@ -1426,8 +1290,8 @@ contains
             ! call update_ext_winds(bc,options)
         if (options%lt_options%remove_lowres_linear) then
             call remove_linear_winds(bc%next_domain,bc,options,file_list(curfile),curstep)
-            call smooth_wind(bc%next_domain%u,smoothing_window,3)
-            call smooth_wind(bc%next_domain%v,smoothing_window,3)
+            call smooth_array(bc%next_domain%u,smoothing_window,3)
+            call smooth_array(bc%next_domain%v,smoothing_window,3)
         elseif (options%mean_winds) then
             call mean_winds(bc%next_domain,file_list(curfile),curstep,options)
         else
@@ -1438,8 +1302,8 @@ contains
             call read_var(bc%next_domain%v,  file_list(curfile), options%vvar, &
                           bc%v_geo%geolut,   bc%v_geo%vert_lut,  curstep,      &
                           use_interior, options, time_varying_zlut=newbc%vert_lut)
-            call smooth_wind(bc%next_domain%u,smoothing_window,3)
-            call smooth_wind(bc%next_domain%v,smoothing_window,3)
+            call smooth_array(bc%next_domain%u,smoothing_window,3)
+            call smooth_array(bc%next_domain%v,smoothing_window,3)
         endif
 
         ! now read in remaining variables

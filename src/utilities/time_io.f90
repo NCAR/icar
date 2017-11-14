@@ -151,10 +151,10 @@ contains
         double precision :: calendar_gain
 
         ! first read the time variable (presumebly a 1D double precision array)
-        call io_read(filename, varname, temp_times)
+        call io_read(trim(filename), trim(varname), temp_times)
 
         ! attempt to read the calendar attribute from the time variable
-        call io_read_attribute(filename,"calendar", calendar, var_name=varname, error=error)
+        call io_read_attribute(trim(filename),"calendar", calendar, var_name=trim(varname), error=error)
         ! if time attribute it not present, set calendar to one specified in the config file
         if (error/=0) then
             print*, "WARNING: assuming standard/gregorian calendar for file "//trim(filename)
@@ -162,7 +162,7 @@ contains
         endif
 
         ! attempt to read the units for this time variable
-        call io_read_attribute(filename, "units", units, var_name=varname, error=error)
+        call io_read_attribute(trim(filename), "units", units, var_name=trim(varname), error=error)
 
         ! if units attribute was present, then read information from it.
         if (error==0) then

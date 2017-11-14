@@ -468,7 +468,7 @@ contains
         integer :: name_unit
 
         real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance
-        real    :: rotation_scale_height, cfl_reduction_factor
+        real    :: cfl_reduction_factor
         integer :: ntimesteps
         type(time_delta_t) :: dt
         integer :: nz, n_ext_winds,buffer, warning_level, cfl_strictness
@@ -488,7 +488,7 @@ contains
                               dx,dxlow,ideal,readz,readdz,nz,t_offset,debug, interactive, &
                               external_winds,buffer,n_ext_winds,advect_density,smooth_wind_distance, &
                               mean_winds,mean_fields,restart, z_is_geopotential, z_is_on_interface,&
-                              date, calendar, high_res_soil_state,rotation_scale_height,warning_level, &
+                              date, calendar, high_res_soil_state,warning_level, &
                               use_agl_height, start_date, forcing_start_date, end_date, time_varying_z, &
                               cfl_reduction_factor, cfl_strictness,         &
                               mp_options_filename,      use_mp_options,     &
@@ -521,7 +521,6 @@ contains
         smooth_wind_distance=-9999
         calendar="gregorian"
         high_res_soil_state=.False.
-        rotation_scale_height=2000.0
         use_agl_height=.False.
         start_date=""
         forcing_start_date=""
@@ -529,6 +528,8 @@ contains
         time_varying_z=.False.
         cfl_reduction_factor = 0.9
         cfl_strictness = 3
+        inputinterval = 3600
+        outputinterval = 3600
 
         ! flag set to read specific parameterization options
         use_mp_options=.False.
@@ -587,6 +588,7 @@ contains
         options%smooth_wind_distance = smooth_wind_distance
 
         options%in_dt      = inputinterval
+        call options%input_dt%set(seconds=inputinterval)
         options%out_dt     = outputinterval
         call options%output_dt%set(seconds=outputinterval)
         ! if outputing at half-day or longer intervals, create monthly files
@@ -634,7 +636,6 @@ contains
         options%debug = debug
         options%interactive = interactive
         options%warning_level = warning_level
-        options%rotation_scale_height = rotation_scale_height
         options%use_agl_height = use_agl_height
         options%z_is_geopotential = z_is_geopotential
         options%z_is_on_interface = z_is_on_interface
@@ -1036,18 +1037,18 @@ contains
             if (ice_category==-1)   ice_category = 24
             if (water_category==-1) water_category = 16
             ! also note, lakes_category = 28
-            print*, "WARNING: not handling lake category (28)"
+            write(*,*) "WARNING: not handling lake category (28)"
         elseif (trim(LU_Categories)=="MODI-RUC") then
             if (urban_category==-1) urban_category = 13
             if (ice_category==-1)   ice_category = 15
             if (water_category==-1) water_category = 17
             ! also note, lakes_category = 21
-            print*, "WARNING: not handling lake category (21)"
+            write(*,*) "WARNING: not handling lake category (21)"
         elseif (trim(LU_Categories)=="NLCD40") then
             if (urban_category==-1) urban_category = 13
             if (ice_category==-1)   ice_category = 15 ! and 22?
             if (water_category==-1) water_category = 17 ! and 21
-            print*, "WARNING: not handling all varients of categories (e.g. permanent_snow=15 is, but permanent_snow_ice=22 is not)"
+            write(*,*) "WARNING: not handling all varients of categories (e.g. permanent_snow=15 is, but permanent_snow_ice=22 is not)"
         endif
 
     end subroutine set_default_LU_categories
