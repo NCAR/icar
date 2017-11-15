@@ -10,7 +10,6 @@ addons:
       - ubuntu-toolchain-r-test
     packages:
       - libfftw3-dev
-      - libnetcdf-dev
       - gfortran-6
 
 before_install:
