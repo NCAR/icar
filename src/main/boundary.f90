@@ -134,11 +134,13 @@ contains
 
             enddo
         else
+            steps_in_file = get_n_timesteps(file_list(curfile), options%pvar)
 
             error=1
+            curfile=0
             do while ( (error/=0) .and. (curfile <= size(file_list)) )
-                curstep = find_timestep_in_file(file_list(curfile), options%time_var, time, error=error)
                 curfile = curfile + 1
+                curstep = find_timestep_in_file(file_list(curfile), options%time_var, time, error=error)
             enddo
             if (error==1) then
                 stop "Ran out of files to process while searching for matching time variable!"
@@ -1223,19 +1225,15 @@ contains
         ! MODULE variables : curstep, curfile, nfiles, steps_in_file, file_list
 
         if (.not.options%ideal) then
-            curstep=curstep+1
-            do while (curstep>steps_in_file)
-                curfile=curfile+1
+            curstep = curstep + 1
+            do while (curstep > steps_in_file)
+                print*, curstep, steps_in_file
+                curfile = curfile + 1
                 if (curfile>nfiles) then
                     stop "Ran out of files to process!"
                 endif
-                curstep=curstep-steps_in_file !instead of setting=1, this way we can set an arbitrary starting point multiple files in
-                call io_getdims(file_list(curfile),options%pvar, dims)
-                if (dims(1)==3) then
-                    steps_in_file=1
-                else
-                    steps_in_file=dims(dims(1)+1) !dims(1) = ndims; dims(ndims+1)=ntimesteps
-                endif
+                curstep = curstep - steps_in_file
+                steps_in_file = get_n_timesteps(file_list(curfile), options%pvar)
             enddo
         endif
         use_interior=.False. ! this is passed to the use_boundary flag in geo_interp
