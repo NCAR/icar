@@ -178,6 +178,8 @@ contains
         this%calendar = NOCALENDAR
 
         select case (trim(calendar_name))
+            case("proleptic_gregorian")
+                this%calendar = GREGORIAN
             case("gregorian")
                 this%calendar = GREGORIAN
             case("standard")
@@ -195,6 +197,8 @@ contains
         if (this%calendar==NOCALENDAR) then
             ! in case there are odd characters tacked on the end (as seems to happen with some netcdf files?)
             select case (trim(calendar_name(1:5)))
+                case("prole")
+                    this%calendar = GREGORIAN
                 case("grego")
                     this%calendar = GREGORIAN
                 case("stand")
