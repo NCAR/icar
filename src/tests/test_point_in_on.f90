@@ -251,7 +251,7 @@ contains
         logical,    intent(in) :: expected
         logical :: passed
 
-        if (point_in_poly(x,y,poly) == expected) then
+        if (point_in_poly(x,y,poly) .eqv. expected) then
             passed=.True.
         else
             passed=.False.
