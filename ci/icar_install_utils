@@ -71,19 +71,18 @@ function icar_before_install {
     ls -l /usr/local/lib/
     ls -l /usr/
     ls -l /usr/local
-    gfortran --version
-    gfortran-6 --version
     /usr/bin/gfortran-6 --version
+    gfortran-6 --version
     # Install szip (used by hdf5)
-    # install_szip
+    install_szip
     # Install HDF5
-    # install_hdf5
+    install_hdf5
     # Install NetCDF-C
-    # install_netcdf_c
+    install_netcdf_c
     # Install NetCDF fortran
-    # install_netcdf_fortran
+    install_netcdf_fortran
     # put installed bin directory in PATH
-    # export PATH=${INSTALLDIR}/bin:$PATH
+    export PATH=${INSTALLDIR}/bin:$PATH
 
 }
 
