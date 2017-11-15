@@ -3,8 +3,7 @@
 set -e
 set -x
 
-export CC=/usr/bin/gcc-6
-export FC=/usr/bin/gfortran-6
+export FC=gfortran-6
 export FFTW=/usr
 export NETCDF=/usr
 
@@ -68,6 +67,13 @@ function install_netcdf_fortran {
 
 function icar_before_install {
     echo icar_before_install
+    ls -l /usr/lib/
+    ls -l /usr/local/lib/
+    ls -l /usr/
+    ls -l /usr/local
+    gfortran --version
+    gfortran-6 --version
+    /usr/bin/gfortran-6 --version
     # Install szip (used by hdf5)
     # install_szip
     # Install HDF5

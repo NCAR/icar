@@ -15,7 +15,7 @@ addons:
 
 before_install:
   - source ci/icar_install_utils
- # - icar_before_install
+  - icar_before_install
 install:
    - icar_install
 script:
