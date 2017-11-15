@@ -69,15 +69,15 @@ function install_netcdf_fortran {
 function icar_before_install {
     echo icar_before_install
     # Install szip (used by hdf5)
-    install_szip
+    # install_szip
     # Install HDF5
-    install_hdf5
+    # install_hdf5
     # Install NetCDF-C
-    install_netcdf_c
+    # install_netcdf_c
     # Install NetCDF fortran
-    install_netcdf_fortran
+    # install_netcdf_fortran
     # put installed bin directory in PATH
-    export PATH=${INSTALLDIR}/bin:$PATH
+    # export PATH=${INSTALLDIR}/bin:$PATH
 
 }
 
@@ -85,10 +85,11 @@ function icar_install {
     echo icar_install
     cd ${TRAVIS_BUILD_DIR}
 
-    export NETCDF=${INSTALLDIR}
-    export FFTW=/usr
-    # sed -i "s|NCDF_PATH = /usr/local|NCDF_PATH = ${INSTALLDIR}|" src/makefile
-    # sed -i "s|FFTW_PATH = /usr/local|FFTW_PATH = /usr|" src/makefile
+    # export NETCDF=/usr
+    # export NETCDF=${INSTALLDIR}
+    # export FFTW=/usr
+    sed -i "s|NETCDF=/usr/local|NETCDF=/usr|" src/makefile
+    sed -i "s|FFTW=/usr/local|FFTW=/usr|" src/makefile
     make -C src clean; make -C src -j4 test
     make -C src clean; make -C src -j4 MODE=debugslow
     make -C src clean; make -C src -j4 MODE=debug

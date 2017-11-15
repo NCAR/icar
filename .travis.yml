@@ -3,7 +3,7 @@ language: fortran
 
 compiler: gfortran-6
 os: linux
-env: TESTID='gard_linux'
+env: TESTID='icar_linux'
 addons:
   apt:
     sources:
