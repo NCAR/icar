@@ -16,6 +16,7 @@ script:
   - export FC=gfortran
   - export FFTW=/usr
   - export NETCDF=/usr
+  - cd src
   - make test -j4 # test parallel compile
   - make -j4
   - make clean # test serial compile
