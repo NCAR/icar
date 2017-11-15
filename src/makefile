@@ -88,10 +88,6 @@ INCNETCDF = -I$(NCDF_PATH)/include
 ########################################################################################
 NODENAME := $(shell uname -n)
 
-# as specified on travis...
-# ifeq ($(F90),/usr/bin/gfortran-6)
-# 	COMPILER=gnu
-# endif
 ifeq ($(F90),gfortran-6)
 	COMPILER=gnu
 endif

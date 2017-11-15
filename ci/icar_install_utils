@@ -4,8 +4,6 @@ set -e
 set -x
 
 export FC=gfortran-6
-export FFTW=/usr
-export NETCDF=/usr
 
 if [ -z "$WORKDIR" ]; then
     export WORKDIR=$HOME/workdir
@@ -67,8 +65,7 @@ function install_netcdf_fortran {
 
 function icar_before_install {
     echo icar_before_install
-    /usr/bin/gfortran-6 --version
-    gfortran-6 --version
+
     # Install szip (used by hdf5)
     install_szip
     # Install HDF5
@@ -77,26 +74,23 @@ function icar_before_install {
     install_netcdf_c
     # Install NetCDF fortran
     install_netcdf_fortran
+
     # put installed bin directory in PATH
     export PATH=${INSTALLDIR}/bin:$PATH
-
-    ls -l /usr/lib/
-    ls -l /usr/local/lib/
-    ls -l /usr/
-    ls -l /usr/local
-
 }
 
 function icar_install {
     echo icar_install
     cd ${TRAVIS_BUILD_DIR}
 
-    # export NETCDF=/usr
+    export FC=gfortran-6
     export NETCDF=${INSTALLDIR}
     export FFTW=/usr
-    sed -i "s|NETCDF=/usr/local|NETCDF=/usr|" src/makefile
-    sed -i "s|FFTW=/usr/local|FFTW=/usr|" src/makefile
+
     make -C src clean; make -C src -j4 test
+    # test serial build
+    make -C src clean; make -C src MODE=debugslow
+    # test parallel builds with different compile settings
     make -C src clean; make -C src -j4 MODE=debugslow
     make -C src clean; make -C src -j4 MODE=debug
     make -C src clean; make -C src -j4 MODE=debugompslow
@@ -112,10 +106,10 @@ function icar_script {
     cd ./src
     # ./icar --version
     # ./icar -h
-    # ./test_calendar
-    # ./test_random
-    # ./test_regression
-    # ./test_config ../run/downscale_options.txt
+    ./icar
+    for i in *_test; do
+        ./${i}
+    done
     cd ../
     echo "icar script succeeded"
 }
