@@ -37,49 +37,55 @@ module time_delta_object
 contains
     ! below this is the definition of the time delta object methods
 
-    subroutine set_time_delta_d(self, days, hours, minutes, seconds)
+    subroutine set_time_delta_d(self, seconds, days, hours, minutes)
         implicit none
         class(time_delta_t) :: self
-        double precision, intent(in), optional :: days, hours, minutes, seconds
+        double precision, intent(in) :: seconds
+        double precision, intent(in), optional :: days, hours, minutes
         double precision :: dt
 
         dt=0
         if (present(days)) dt = dt + days
         if (present(hours)) dt = dt + hours / 24.0
         if (present(minutes)) dt = dt + minutes / 1440.0
-        if (present(seconds)) dt = dt + seconds / 86400.0
+
+        dt = dt + seconds / 86400.0
 
         self%delta = dt
 
     end subroutine set_time_delta_d
 
-    subroutine set_time_delta_f(self, days, hours, minutes, seconds)
+    subroutine set_time_delta_f(self, seconds, days, hours, minutes)
         implicit none
         class(time_delta_t) :: self
-        real, intent(in), optional :: days, hours, minutes, seconds
+        real, intent(in) :: seconds
+        real, intent(in), optional :: days, hours, minutes
         double precision :: dt
 
         dt=0
         if (present(days)) dt = dt + days
         if (present(hours)) dt = dt + hours / 24.0
         if (present(minutes)) dt = dt + minutes / 1440.0
-        if (present(seconds)) dt = dt + seconds / 86400.0
+
+        dt = dt + seconds / 86400.0
 
         self%delta = dt
 
     end subroutine set_time_delta_f
 
-    subroutine set_time_delta_i(self, days, hours, minutes, seconds)
+    subroutine set_time_delta_i(self, seconds, days, hours, minutes)
         implicit none
         class(time_delta_t) :: self
-        integer, intent(in), optional :: days, hours, minutes, seconds
+        integer, intent(in) :: seconds
+        integer, intent(in), optional :: days, hours, minutes
         double precision :: dt
 
         dt=0
         if (present(days)) dt = dt + days
         if (present(hours)) dt = dt + hours / 24.0
         if (present(minutes)) dt = dt + minutes / 1440.0
-        if (present(seconds)) dt = dt + seconds / 86400.0
+
+        dt = dt + seconds / 86400.0
 
         self%delta = dt
 
