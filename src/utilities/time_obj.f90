@@ -785,7 +785,7 @@ contains
         if (((t1%calendar == t2%calendar).and.(t1%year_zero == t2%year_zero)) &
             .and.((t1%month_zero == t2%month_zero).and.(t1%day_zero == t2%day_zero))) then
 
-            call dt%set(days=t1%mjd() - t2%mjd())
+            call dt%set(seconds=(t1%mjd() - t2%mjd()) * 86400.0D0)
         else
             ! if the two time object reference calendars don't match
             ! create a new time object with the same referecnce as t1
@@ -794,7 +794,7 @@ contains
             call t1%date(year, month, day, hour, minute, second)
             call temp_time%set(year, month, day, hour, minute, second)
 
-            call dt%set(days=t1%mjd() - temp_time%mjd())
+            call dt%set(seconds=(t1%mjd() - temp_time%mjd()) * 86400.0D0)
         endif
 
     end function difference
