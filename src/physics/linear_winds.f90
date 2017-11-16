@@ -1081,8 +1081,6 @@ contains
                             ! smooth the winds vertically first
                             u = u1d(i)
                             v = v1d(i)
-                            ! u = domain%u(i,j,uk)
-                            ! v = domain%v(vi,j,k)
                             ! WARNING for now domain%u,v are updated inside the loop, so the code below will end
                             ! up using u and v values that have had the linear theory applied already (not good)
                             ! eventually this should be pulled out and only the pertubration should be updated in the
@@ -1114,7 +1112,7 @@ contains
 
                         ! Calculate the Brunt-Vaisalla frequency of the current grid cell
                         !   Then compute the mean in log space
-                        curnsq = sum(domain%nsquared(i,bottom:top,k)) / (top - bottom + 1)
+                        curnsq = sum(domain%nsquared(vi,bottom:top,uk)) / (top - bottom + 1)
                         !   and find the corresponding position in the Look up Table
                         npos = 1
                         do step=1, n_nsq_values
