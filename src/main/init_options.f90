@@ -245,7 +245,7 @@ contains
             write(*,*) " ------------------ "
             write(*,*) "RESTART INFORMATION"
             write(*,*) "mjd",         restart_time%mjd()
-            write(*,*) "date:",       restart_time%as_string()
+            write(*,*) "date:",       trim(restart_time%as_string())
             write(*,*) "date",        restart_date
             write(*,*) "file",   trim(restart_file)
             write(*,*) "forcing step",restart_step
