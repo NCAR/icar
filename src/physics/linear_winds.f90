@@ -42,7 +42,7 @@ module linear_theory_winds
     use string,                    only : str
     use linear_theory_lut_disk_io, only : read_LUT, write_LUT
     use mod_atm_utilities
-    use array_utilities,           only : calc_weight, linear_space
+    use array_utilities,           only : smooth_array, calc_weight, linear_space
 
     implicit none
 
@@ -948,11 +948,11 @@ contains
         real :: dweight, nweight, sweight, curspd, curdir, curnsq, wind_first, wind_second
         real :: blocked
 
-        nx=size(domain%lat,1)
-        ny=size(domain%lat,2)
-        nz=size(domain%u,2)
-        nxu=size(domain%u,1)
-        nyv=size(domain%v,3)
+        nx  = size(domain%lat,1)
+        ny  = size(domain%lat,2)
+        nz  = size(domain%u,2)
+        nxu = size(domain%u,1)
+        nyv = size(domain%v,3)
 
         if (reverse) then
             u_LUT=>rev_u_LUT
@@ -975,7 +975,6 @@ contains
         !$omp shared(u_perturbation, v_perturbation, linear_update_fraction, linear_contribution, nsq_calibration), &
         !$omp shared(min_stability, max_stability, n_dir_values, n_spd_values, n_nsq_values, smooth_nsq)
 
-        allocate(u1d(nxu), v1d(nxu))
         !$omp do
         do k=1,ny
             do j=1,nz
@@ -993,7 +992,9 @@ contains
                                                                 domain%qv(i,bottom,k), domain%qv(i,top,k),  &
                                                                 domain%cloud(i,j,k)+domain%ice(i,j,k)       &
                                                                 +domain%qrain(i,j,k)+domain%qsnow(i,j,k))
-                        domain%nsquared(i,j,k) = max(min(domain%nsquared(i,j,k) * nsq_calibration(i,k), max_stability), min_stability)
+
+                        domain%nsquared(i,j,k) = max(min_stability, min(max_stability, &
+                                                domain%nsquared(i,j,k) * nsq_calibration(i,k)))
                     else
                         ! Low-res boundary condition variables will be in a different array format.  It should be
                         ! easy enough to call calc_stability after e.g. transposing z and y dimension, but some
@@ -1001,6 +1002,8 @@ contains
                         domain%nsquared(i,j,k) = 3e-6
                     endif
                 end do
+                ! look up table is computed in log space
+                domain%nsquared(:,j,k) = log(domain%nsquared(:,j,k))
             end do
 
             if (smooth_nsq) then
@@ -1020,7 +1023,21 @@ contains
             endif
         end do
         !$omp end do
-        !$omp barrier
+        !$omp end parallel
+
+        ! smooth array has it's own parallelization, so this probably can't go in a critical section
+        if (smooth_nsq) then
+            call smooth_array(domain%nsquared, winsz, ydim=3)
+        endif
+
+        !$omp parallel firstprivate(nx,nxu,ny,nyv,nz, reverse, vsmooth, winsz, using_blocked_flow), default(none), &
+        !$omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom, u1d, v1d), &
+        !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, smoothz, u, v, blocked), &
+        !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
+        !$omp shared(domain, spd_values, dir_values, nsq_values, u_LUT, v_LUT, linear_mask), &
+        !$omp shared(u_perturbation, v_perturbation, linear_update_fraction, linear_contribution, nsq_calibration), &
+        !$omp shared(min_stability, max_stability, n_dir_values, n_spd_values, n_nsq_values, smooth_nsq)
+        allocate(u1d(nxu), v1d(nxu))
         !$omp do
         do k=1, nyv
 
@@ -1064,8 +1081,6 @@ contains
                             ! smooth the winds vertically first
                             u = u1d(i)
                             v = v1d(i)
-                            ! u = domain%u(i,j,uk)
-                            ! v = domain%v(vi,j,k)
                             ! WARNING for now domain%u,v are updated inside the loop, so the code below will end
                             ! up using u and v values that have had the linear theory applied already (not good)
                             ! eventually this should be pulled out and only the pertubration should be updated in the
@@ -1097,8 +1112,7 @@ contains
 
                         ! Calculate the Brunt-Vaisalla frequency of the current grid cell
                         !   Then compute the mean in log space
-                        curnsq = sum(log( domain%nsquared(west:east, bottom:top, south:north) ))
-                        curnsq = curnsq / n
+                        curnsq = sum(domain%nsquared(vi,bottom:top,uk)) / (top - bottom + 1)
                         !   and find the corresponding position in the Look up Table
                         npos = 1
                         do step=1, n_nsq_values
