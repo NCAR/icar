@@ -609,7 +609,7 @@ contains
         write(*,*) "Reading atmospheric restart data"
         write(*,*) "   timestep:",trim(str(timeslice))," from file:",trim(restart_file)
 
-        call read_bc_time(domain%model_time,restart_file,"time",curstep)
+        call read_bc_time(domain%model_time,restart_file,"time",timeslice)
 
         ! The first variables here are required. If they do not exist, ICAR *should* exit with a netCDF error
         call io_read(restart_file,"qv",inputdata_3d,timeslice)
