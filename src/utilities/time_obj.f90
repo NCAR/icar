@@ -178,6 +178,8 @@ contains
         this%calendar = NOCALENDAR
 
         select case (trim(calendar_name))
+            case("proleptic_gregorian")
+                this%calendar = GREGORIAN
             case("gregorian")
                 this%calendar = GREGORIAN
             case("standard")
@@ -195,6 +197,8 @@ contains
         if (this%calendar==NOCALENDAR) then
             ! in case there are odd characters tacked on the end (as seems to happen with some netcdf files?)
             select case (trim(calendar_name(1:5)))
+                case("prole")
+                    this%calendar = GREGORIAN
                 case("grego")
                     this%calendar = GREGORIAN
                 case("stand")
@@ -791,10 +795,10 @@ contains
             ! create a new time object with the same referecnce as t1
             ! then copy the date/time data into it from t2 before computing the time delta
             call temp_time%init(t1%calendar,t1%year_zero,t1%month_zero,t1%day_zero)
-            call t1%date(year, month, day, hour, minute, second)
+            call t2%date(year, month, day, hour, minute, second)
             call temp_time%set(year, month, day, hour, minute, second)
 
-            call dt%set(seconds=(t1%mjd() - temp_time%mjd()) * 86400.0D0)
+            call dt%set(seconds=((t1%mjd() - temp_time%mjd()) * 86400.0D0))
         endif
 
     end function difference

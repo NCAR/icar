@@ -115,7 +115,7 @@ contains
 
         since_loc = index(units,"since")
 
-        month_loc = index(units(since_loc:)," ") + 4
+        month_loc = index(units(since_loc:)," ") + 5
         month_loc = month_loc + since_loc
 
         month = get_integer(units(month_loc:month_loc+1))
@@ -131,7 +131,7 @@ contains
 
         since_loc = index(units,"since")
 
-        day_loc = index(units(since_loc:)," ") + 7
+        day_loc = index(units(since_loc:)," ") + 8
         day_loc = day_loc + since_loc
 
         day = get_integer(units(day_loc:day_loc+1))
@@ -141,7 +141,7 @@ contains
     subroutine read_times(filename, varname, times, timezone_offset)
         implicit none
         character(len=*),   intent(in) :: filename, varname
-        type(Time_type),    intent(inout), dimension(:) :: times
+        type(Time_type),    intent(inout), allocatable, dimension(:) :: times
         double precision, optional :: timezone_offset
 
         double precision, allocatable, dimension(:) :: temp_times
@@ -157,7 +157,7 @@ contains
         call io_read_attribute(trim(filename),"calendar", calendar, var_name=trim(varname), error=error)
         ! if time attribute it not present, set calendar to one specified in the config file
         if (error/=0) then
-            print*, "WARNING: assuming standard/gregorian calendar for file "//trim(filename)
+            write(*,*) "WARNING: assuming standard/gregorian calendar for file "//trim(filename)
             calendar = "standard"
         endif
 
@@ -181,6 +181,9 @@ contains
         if (present(timezone_offset)) then
             temp_times = temp_times + timezone_offset / 24.0
         endif
+
+        if (allocated(times)) deallocate(times)
+        allocate(times(size(temp_times)))
 
         do time_idx = 1, size(temp_times,1)
 

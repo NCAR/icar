@@ -1061,7 +1061,7 @@ contains
         if (present(error)) then
             error = internal_error
         else
-            call check(error, att_name)
+            call check(internal_error, att_name)
         endif
 
         call check( nf90_close(ncid), "closing:"//trim(filename))
@@ -1106,7 +1106,7 @@ contains
         if (present(error)) then
             error = internal_error
         else
-            call check(error, att_name)
+            call check(internal_error, att_name)
         endif
 
         call check( nf90_close(ncid), "closing:"//trim(filename))
@@ -1151,7 +1151,7 @@ contains
         if (present(error)) then
             error = internal_error
         else
-            call check(error, att_name)
+            call check(internal_error, att_name)
         endif
 
         call check( nf90_close(ncid), "closing:"//trim(filename))
@@ -1299,13 +1299,15 @@ contains
         ! check for errors
         if(status /= nf90_noerr) then
             ! print a useful message
-            print *, trim(nf90_strerror(status))
+            !$omp critical (print_lock)
+            write(*,*) trim(nf90_strerror(status))
             if(present(extra)) then
                 ! print any optionally provided context
                 write(*,*) trim(extra)
             endif
             ! STOP the program execution
             stop "Stopped"
+            !$omp end critical (print_lock)
         end if
     end subroutine check
 

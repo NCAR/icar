@@ -133,18 +133,18 @@ contains
         class(time_delta_t), intent(in) :: self
         character(len=MAXSTRINGLENGTH)  :: pretty_string
 
-        if (self%seconds() < 1) then
-            write(pretty_string,"(F6.4,A)") self%seconds(), " seconds"
-        elseif (self%seconds() <= 60) then
-            write(pretty_string,"(F5.2,A)") self%seconds(), " seconds"
-        elseif (self%minutes() <= 60) then
-            write(pretty_string,"(F5.2,A)") self%minutes(), " minutes"
-        elseif (self%hours() <= 24) then
-            write(pretty_string,"(F5.2,A)") self%hours(), " hours"
-        elseif (self%days() <= 365) then
-            write(pretty_string,"(F9.2,A)") self%days(), " days"
+        if (abs(self%seconds()) < 1) then
+            write(pretty_string,"(F8.4,A)") self%seconds(), " seconds"
+        elseif (abs(self%seconds()) <= 60) then
+            write(pretty_string,"(F6.2,A)") self%seconds(), " seconds"
+        elseif (abs(self%minutes()) <= 60) then
+            write(pretty_string,"(F6.2,A)") self%minutes(), " minutes"
+        elseif (abs(self%hours()) <= 24) then
+            write(pretty_string,"(F6.2,A)") self%hours(), " hours"
+        elseif (abs(self%days()) <= 365) then
+            write(pretty_string,"(F10.2,A)") self%days(), " days"
         else
-            write(pretty_string,"(F9.2,A,F5.1,A)") self%days(), " days (roughly ",self%days()/365.25, " years)"
+            write(pretty_string,"(F10.2,A,F6.1,A)") self%days(), " days (roughly ",self%days()/365.25, " years)"
         endif
 
     end function as_string

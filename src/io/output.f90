@@ -116,9 +116,10 @@ contains
     !! @param options   model wide options so the correct output can be created
     !!
     !!------------------------------------------------------------
-    subroutine create_file(filename,options)
+    subroutine create_file(filename, options, time)
         character(len=255), intent(in) :: filename
         type(options_type), intent(in) :: options
+        type(Time_type),    intent(in) :: time
 
         ! store real (not model) timestamp
         character(len=19) :: todays_date_time
@@ -262,7 +263,7 @@ contains
 
         call check( nf90_def_var(ncid, "time", NF90_DOUBLE, t_id, time_id), trim(err)//"time" )
         call check( nf90_put_att(ncid,time_id,"standard_name","time"))
-        call check( nf90_put_att(ncid,time_id,"units",options%start_time%units()))
+        call check( nf90_put_att(ncid,time_id,"units",time%units()))
         call check( nf90_put_att(ncid,time_id,"UTCoffset","0"))
 
         call check( nf90_def_var(ncid, "lev", NF90_REAL, dimids(3), lev_id), trim(err)//"lev" )
@@ -272,14 +273,11 @@ contains
         call check( nf90_put_att(ncid,lev_id,"positive","up"))
         call check( nf90_put_att(ncid,lev_id,"units","m"))
 
-        if (calendar==GREGORIAN) then
-            call check( nf90_put_att(ncid,time_id,"long_name","modified Julian Day"))
+        if (time%calendar==GREGORIAN) then
             call check( nf90_put_att(ncid,time_id,"calendar","gregorian"))
-        elseif (calendar==NOLEAP) then
-            call check( nf90_put_att(ncid,time_id,"long_name","Time"))
+        elseif (time%calendar==NOLEAP) then
             call check( nf90_put_att(ncid,time_id,"calendar","noleap"))
-        elseif (calendar==THREESIXTY) then
-            call check( nf90_put_att(ncid,time_id,"long_name","Time"))
+        elseif (time%calendar==THREESIXTY) then
             call check( nf90_put_att(ncid,time_id,"calendar","360-day"))
         endif
 
@@ -973,7 +971,7 @@ contains
             call setup_varids(ncid,options)
         else
             ! otherwise, create a new file
-            call create_file(filename,options)
+            call create_file(filename, options, domain%model_time)
             ! and write constant (in time) variables
             call check( nf90_put_var(ncid, lat_id,    domain%lat), trim(filename)//":Latitude" )
             call check( nf90_put_var(ncid, lon_id,    domain%lon), trim(filename)//":Longitude" )

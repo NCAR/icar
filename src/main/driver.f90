@@ -67,6 +67,7 @@ program icar
 
         ! update boundary conditions (dXdt variables) so we can integrate to the next step
         call bc_update(domain, boundary, options)
+        write(*,*) "  Next input = ", trim(boundary%next_domain%model_time%as_string())
 
         ! this is the meat of the model physics, run all the physics for the current time step looping over internal timesteps
         call step(domain, options, boundary, next_output)

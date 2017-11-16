@@ -454,8 +454,8 @@ contains
             call dt%set(seconds=min(dt%seconds(),120.0D0)) !better min=180?
             if (options%interactive) then
                 progress_dt  = (bc%next_domain%model_time - domain%model_time)
-                time_percent = progress_dt%seconds() / bc%dt%seconds()  * 100
-                write(*,"(A,f5.1,A,f5.1,A,A$)") char(13), 100-max(0.0,time_percent)," %  dt=",dt%as_string()
+                time_percent = 100 - progress_dt%seconds() / bc%dt%seconds()  * 100
+                write(*,"(A,f5.1,A,A$)") char(13), max(0.0,time_percent)," %  dt=",trim(dt%as_string())
             endif
             ! Make sure we don't over step the forcing period
             if ((domain%model_time + dt) > bc%next_domain%model_time) then
@@ -495,6 +495,7 @@ contains
 
             progress_dt = domain%model_time - next_output
             if ((abs(progress_dt%seconds()) < 1e-1).or.(domain%model_time > next_output)) then
+                write(*,*) " "
                 call write_domain(domain, options, next_output)
                 ! Note that over a long simulation, this can build up errors.
                 ! Need to add some checks with respect to model initial time...
