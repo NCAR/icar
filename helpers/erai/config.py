@@ -26,8 +26,17 @@ def set_bounds(info):
 
     # print(lon, info.lon[0])
     lon[lon<-180]+=360
-    info.xmin=np.where(lon>=info.lon[0])[0][0]
-    info.xmax=np.where(lon<=info.lon[1])[0][-1]+1
+    info.xmin = max(0,np.argmin(np.abs(lon-info.lon[0]))-1)
+    info.xmax = min(lon.size-1,np.argmin(np.abs(lon-info.lon[1]))+1)
+    if (info.xmax < info.xmin):
+        print("ERROR: attempting to wrap around the ERAi boundary lon="+str(lon[0])+str(lon[-1]))
+        print("  Requested East lon = "+str(info.lon[0]))
+        print("  Requested West lon = "+str(info.lon[1]))
+        print("Requires Custom Solution!")
+        raise IndexError
+
+    # info.xmin = max(0,np.where(lon >= info.lon[0])[0][0]-1)
+    # info.xmax = min(lon.size-1, np.where(lon[info.xmin:] >= info.lon[1])[0][0] + info.xmin + 1)
     #note lat is inverted from "expected"
     info.ymin=np.where(lat<=info.lat[1])[0][0]
     info.ymax=np.where(lat>=info.lat[0])[0][-1]+1

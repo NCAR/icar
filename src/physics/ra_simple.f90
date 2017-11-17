@@ -44,6 +44,7 @@
 !!
 !!----------------------------------------------------------
 module module_ra_simple
+    use time_object, only : Time_type
     use data_structures
     use time
     implicit none
@@ -70,9 +71,6 @@ contains
         nrad_layers = 5
 
     end subroutine ra_simple_init
-
-!   day_of_year=calc_day_of_year(date)
-!   time_of_day=calc_time_of_day(date)
 
 
     function relative_humidity(t,qv,p,nx)
@@ -155,22 +153,27 @@ contains
     function calc_solar_elevation(date,lon,j,nx,day_frac)
         implicit none
         real, dimension(nx) :: calc_solar_elevation
-        double precision, intent(in) :: date
-        real, dimension(:,:), intent(in) :: lon
-        integer,intent(in) :: j, nx
-        real, dimension(:), intent(out) :: day_frac
+        type(Time_type),        intent(in) :: date
+        real, dimension(:,:),   intent(in) :: lon
+        integer,                intent(in) :: j, nx
+        real, dimension(:),     intent(out) :: day_frac
 
         integer :: i
         real, dimension(nx) :: declination,day_of_year,hour_angle
 
         do i=1,nx
-            day_of_year(i) = floor(calc_day_of_year(date + lon(i,j)/360.0))
-            hour_angle(i) = 2*pi* mod(date+0.5 + lon(i,j)/360.0,1.0)
+            day_of_year(i) = date%day_of_year(lon=lon(i,j))
+
+            ! hour angle is 0 at noon
+            hour_angle(i) = 2*pi* mod(day_of_year(i)+0.5, 1.0)
+
+            day_frac(i) = date%year_fraction(lon=lon(i,j))
         end do
-        day_frac=day_of_year/365.25
+
 
         ! fast approximation see : http://en.wikipedia.org/wiki/Position_of_the_Sun
         declination = (-0.4091) * cos(2.0*pi/365.0*(day_of_year+10))
+
         calc_solar_elevation = sin_lat_m(:,j) * sin(declination) + &
                                cos_lat_m(:,j) * cos(declination) * cos(hour_angle)
 
@@ -189,13 +192,13 @@ contains
 
     subroutine ra_simple(theta,pii,qv,qc,qs,qr,p,swdown,lwdown,cloud_cover,lat,lon,date,options,dt)
         implicit none
-        real,dimension(:,:,:), intent(inout) :: theta
-        real,dimension(:,:,:), intent(in) :: pii,qv,qc,qs,qr,p
-        real,dimension(:,:), intent(out) :: swdown,lwdown,cloud_cover
-        real,dimension(:,:), intent(in) :: lat,lon
-        double precision, intent(in) :: date
-        type(options_type),intent(in)    :: options
-        real, intent(in) :: dt
+        real,dimension(:,:,:), intent(inout):: theta
+        real,dimension(:,:,:), intent(in)   :: pii,qv,qc,qs,qr,p
+        real,dimension(:,:),   intent(out)  :: swdown,lwdown,cloud_cover
+        real,dimension(:,:),   intent(in)   :: lat,lon
+        type(Time_type),       intent(in)   :: date
+        type(options_type),    intent(in)   :: options
+        real,                  intent(in)   :: dt
         real :: coolingrate
         integer :: nx,ny,j,k,nz
         real, allocatable, dimension(:) :: rh,T_air,solar_elevation, hydrometeors,day_frac
@@ -214,8 +217,7 @@ contains
         allocate(day_frac(nx))
 
         ! 1.5K/day radiative cooling rate (300 = W/m^2 at 270K)
-        coolingrate=1.5*(dt/86400.0) *stefan_boltzmann / 300.0
-
+        coolingrate = 1.5 * (dt / 86400.0) * stefan_boltzmann / 300.0
 
         !$omp do
         do j=2,ny-1
@@ -235,18 +237,18 @@ contains
             end do
             where(hydrometeors<0) hydrometeors = 0
 
-            solar_elevation  = calc_solar_elevation(date,lon,j,nx,day_frac)
+            solar_elevation  = calc_solar_elevation(date, lon, j, nx, day_frac)
 
-            cloud_cover(:,j) = cloudfrac(rh,hydrometeors,nx)
-            swdown(:,j)      = shortwave(day_frac,cloud_cover(:,j),solar_elevation,nx)
-            lwdown(:,j)      = longwave(T_air,cloud_cover(:,j),nx)
+            cloud_cover(:,j) = cloudfrac(rh, hydrometeors, nx)
+            swdown(:,j)      = shortwave(day_frac, cloud_cover(:,j), solar_elevation, nx)
+            lwdown(:,j)      = longwave(T_air, cloud_cover(:,j), nx)
             ! apply a simple radiative cooling to the atmosphere
-            theta(2:nx-1,:,j)=theta(2:nx-1,:,j) - (((theta(2:nx-1,:,j)*pii(2:nx-1,:,j))**4) * coolingrate)
+            theta(2:nx-1,:,j)=theta(2:nx-1,:,j) - (((theta(2:nx-1,:,j) * pii(2:nx-1,:,j)) ** 4) * coolingrate)
 
         end do
         !$omp end do
 
-        deallocate(rh,T_air,solar_elevation, hydrometeors, day_frac)
+        deallocate(rh,T_air, solar_elevation, hydrometeors, day_frac)
         !$omp end parallel
 
     end subroutine ra_simple

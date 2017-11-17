@@ -553,12 +553,16 @@ contains
         ! default return value assumes no error
         error = 0
 
-        call io_read_attribute(filename, value_name, test_value)
-        if (abs(default_value - test_value)>1e-20) then
-            error = 1
-            write(*,*) "WARNING parameter option: "//trim(value_name)//"  "//trim(str(default_value)), &
-                       " did not match file value: ",trim(str(test_value))
-            ! default_value = test_value
+        call io_read_attribute(filename, value_name, test_value, error=error)
+        if (error/=NF90_NOERR) then
+            error=1
+            write(*,*) "WARNING: Error reading attribute: ",trim(value_name)," from: ",trim(filename)
+        else
+            if (default_value/=test_value) then
+                error = 1
+                write(*,*) "WARNING parameter option: "//trim(value_name)//"  "//trim(str(default_value)), &
+                           " did not match file value: ",trim(str(test_value))
+            endif
         endif
         ! returns any error
     end function check_attribute_r
@@ -589,12 +593,16 @@ contains
         ! default return value assumes no error
         error = 0
 
-        call io_read_attribute(filename, value_name, test_value)
-        if (default_value/=test_value) then
-            error = 1
-            write(*,*) "WARNING parameter option: "//trim(value_name)//"  "//trim(str(default_value)), &
-                       " did not match file value: ",trim(str(test_value))
-            ! default_value = test_value
+        call io_read_attribute(filename, value_name, test_value, error=error)
+        if (error/=NF90_NOERR) then
+            error=1
+            write(*,*) "WARNING: Error reading attribute: ",trim(value_name)," from: ",trim(filename)
+        else
+            if (default_value/=test_value) then
+                error = 1
+                write(*,*) "WARNING parameter option: "//trim(value_name)//"  "//trim(str(default_value)), &
+                           " did not match file value: ",trim(str(test_value))
+            endif
         endif
         ! returns any error
     end function check_attribute_i
@@ -625,12 +633,16 @@ contains
         ! default return value assumes no error
         error = 0
 
-        call io_read_attribute(filename, value_name, test_value)
-        if (trim(default_value)/=trim(test_value)) then
-            error = 1
-            write(*,*) "WARNING parameter option: "//trim(value_name)//"  "//trim(default_value), &
-                       " did not match file value: ",trim(test_value)
-            ! default_value = test_value
+        call io_read_attribute(filename, value_name, test_value, error=error)
+        if (error/=NF90_NOERR) then
+            error=1
+            write(*,*) "WARNING: Error reading attribute: ",trim(value_name)," from: ",trim(filename)
+        else
+            if (default_value/=test_value) then
+                error = 1
+                write(*,*) "WARNING parameter option: "//trim(value_name)//"  "//trim(default_value), &
+                           " did not match file value: ",trim(test_value)
+            endif
         endif
         ! returns any error
     end function check_attribute_c
