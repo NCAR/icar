@@ -34,7 +34,6 @@ module microphysics
     use module_mp_simple,           only: mp_simple_driver
     use mod_wrf_constants !,          only: rhoair0, rhowater, rhosnow, cliq, cpv
     use time_object,                only: Time_type
-    use time,                       only: calc_year_fraction
     implicit none
 
     ! permit the microphysics to update on a longer time step than the advection
@@ -147,7 +146,7 @@ contains
 
     subroutine apply_rain_fraction(current_date, rain_fraction, current_precip, last_precip, precip_delta)
         implicit none
-        double precision                        :: current_date
+        type(Time_type),        intent(in)      :: current_date
         real, dimension(:,:,:), intent(in)      :: rain_fraction
         real, dimension(:,:),   intent(inout)   :: current_precip, last_precip
         logical,                intent(in)      :: precip_delta
@@ -162,7 +161,7 @@ contains
         ny=size(current_precip,2)
 
         n_correction_points = size(rain_fraction,3)
-        year_fraction = calc_year_fraction(current_date)
+        year_fraction = current_date%year_fraction()
         correction_step = min(  floor(n_correction_points * year_fraction)+1, &
                                 n_correction_points)
 
@@ -351,8 +350,8 @@ contains
             endif
 
             if (options%use_bias_correction) then
-                call apply_rain_fraction(domain%model_time%mjd(), domain%rain_fraction, domain%rain, last_rain, precip_delta)
-                call apply_rain_fraction(domain%model_time%mjd(), domain%rain_fraction, domain%snow, last_snow, precip_delta)
+                call apply_rain_fraction(domain%model_time, domain%rain_fraction, domain%rain, last_rain, precip_delta)
+                call apply_rain_fraction(domain%model_time, domain%rain_fraction, domain%snow, last_snow, precip_delta)
             endif
 
             if (options%mp_options%local_precip_fraction<1) then

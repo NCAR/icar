@@ -53,9 +53,9 @@ contains
         real, intent(in) :: dt
 
         if (options%physics%radiation==kRA_SIMPLE) then
-            call ra_simple(domain%th,domain%pii,domain%qv,domain%cloud+domain%ice,domain%qsnow,&
-                        domain%qrain,domain%p,domain%swdown,domain%lwdown,domain%cloudfrac,&
-                        domain%lat,domain%lon,domain%model_time%mjd(),options,dt)
+            call ra_simple(domain%th,   domain%pii, domain%qv,      domain%cloud + domain%ice,  domain%qsnow,       &
+                        domain%qrain,   domain%p,   domain%swdown,  domain%lwdown,              domain%cloudfrac,   &
+                        domain%lat,     domain%lon, domain%model_time,  options, dt)
         endif
 
     end subroutine rad

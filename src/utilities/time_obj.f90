@@ -42,6 +42,7 @@ module time_object
         procedure, public  :: mjd         => get_mjd
         procedure, public  :: seconds     => get_seconds
         procedure, public  :: day_of_year => calc_day_of_year
+        procedure, public  :: year_fraction=>calc_year_fraction
         procedure, public  :: date_to_mjd => date_to_mjd
         procedure, public  :: as_string   => as_string
         procedure, public  :: equals      => equals_with_precision
@@ -402,28 +403,85 @@ contains
     !!  Calculate the day of the year from a "modified julian day" or other days since date
     !!
     !!------------------------------------------------------------
-    function calc_day_of_year(this)
+    function calc_day_of_year(this, lon)
         implicit none
-        class(Time_type) :: this
-        real :: calc_day_of_year
+        real                        :: calc_day_of_year
+        class(Time_type)            :: this
+        real, intent(in), optional  :: lon
+
+        real :: offset
+        integer :: year, month, day, hour, minute, second
+
+        offset = 0
+        if (present(lon)) then
+            if (lon>180) then
+                offset = (lon-360) / 360.0
+            else
+                offset = lon / 360.0
+            endif
+        endif
+
+        call this%date(year, month, day, hour, minute, second)
+
+        calc_day_of_year = this%current_date_time - this%date_to_mjd(year, 1,1,0,0,0) + offset
+
+    end function calc_day_of_year
+
+
+    !>------------------------------------------------------------
+    !!  Return the fractional way through the year corresponding to the current date_time
+    !!
+    !!  "Jan  1, 00:00" is 0
+    !!  "Dec 31, 24:00" is 1.0
+    !!
+    !!------------------------------------------------------------
+    function calc_year_fraction(this, lon)
+        implicit none
+        real                        :: calc_year_fraction
+        class(Time_type)            :: this
+        real, intent(in), optional  :: lon
+
+        real :: offset
+        double precision :: year_start
 
         integer :: year, month, day, hour, minute, second
 
-        select case (this%calendar)
-            ! a gregorian calendar requires a call to get the current year start date_time
-            ! (could probably be done more efficiently...)
-            case (GREGORIAN)
-                call this%date(year, month, day, hour, minute, second)
-                calc_day_of_year = this%current_date_time - this%date_to_mjd(year, 1,1,0,0,0)
+        offset = 0
 
-            !! other calendars are easy, just mod by the number of days in a year
-            case (NOLEAP)
-                calc_day_of_year = mod(this%current_date_time,365.0)
-            case (THREESIXTY)
-                calc_day_of_year = mod(this%current_date_time,360.0)
-        end select
+        if (this%calendar==GREGORIAN) then
+            call this%date(year, month, day, hour, minute, second)
+            year_start = this%date_to_mjd(year, 1,1,0,0,0)
 
-    end function calc_day_of_year
+            if (present(lon)) then
+                if (lon>180) then
+                    offset = (lon-360) / 360.0
+                else
+                    offset = lon / 360.0
+                endif
+            endif
+
+            calc_year_fraction = (this%mjd() + offset - year_start) / (this%date_to_mjd(year+1, 1,1,0,0,0) - year_start)
+
+        else if (this%calendar==NOLEAP) then
+            if (present(lon)) then
+                calc_year_fraction = this%day_of_year(lon) / 365.0
+            else
+                calc_year_fraction = this%day_of_year() / 365.0
+            endif
+        else if (this%calendar==THREESIXTY) then
+            if (present(lon)) then
+                calc_year_fraction = this%day_of_year(lon) / 360.0
+            else
+                calc_year_fraction = this%day_of_year() / 360.0
+            endif
+        endif
+
+        ! necessary in case lon is between 0 and 180
+        calc_year_fraction = mod(calc_year_fraction, 1.0)
+
+    end function calc_year_fraction
+
+
 
     !>------------------------------------------------------------
     !!  Set the current date based on an input string
