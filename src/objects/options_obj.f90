@@ -1,63 +1,88 @@
-!> ----------------------------------------------------------------------------
-!!  Read model options from namelist structures
-!!  Also checks commandline arguments to an options filename
-!!
-!!  Entry point is init_options, everything else follows
-!!
-!!
-!!  @author
-!!  Ethan Gutmann (gutmann@ucar.edu)
-!!  Trude Eidhammer added the ability to read microphysics parameters
-!!
-!! ----------------------------------------------------------------------------
-module initialize_options
-    use data_structures
+submodule(options_interface) options_implementation
+
+    use icar_constants
+    use options_types,              only : parameter_options_type, physics_type, mp_options_type, lt_options_type, &
+                                           block_options_type, adv_options_type, lsm_options_type, bias_options_type
     use io_routines,                only : io_newunit
-    use model_tracking,             only : print_model_diffs
-    use time,                       only : time_init
     use time_io,                    only : find_timestep_in_file
-    use time_object,                only : Time_type
     use time_delta_object,          only : time_delta_t
+    use time_object,                only : Time_type
     use string,                     only : str
+    use model_tracking,             only : print_model_diffs
+    ! use co_routines, only : broadcast
 
     implicit none
 
-    private
-    public :: init_options
+
 contains
+    module subroutine init(this)
+        implicit none
+        class(options_t),   intent(inout)  :: this
 
-
-    subroutine init_options(options)
 !       reads a series of options from a namelist file and stores them in the
 !       options data structure
-        implicit none
-        type(options_type), intent(inout) :: options
         character(len=MAXFILELENGTH) :: options_filename
+        integer :: i
 
-        options_filename=get_options_file()
-        write(*,*) "Using options file = ", trim(options_filename)
+        this%comment = "This is a test"
 
-        call version_check(         options_filename,   options)
-        call physics_namelist(      options_filename,   options)
-        call var_namelist(          options_filename,   options)
-        call parameters_namelist(   options_filename,   options)
-        call model_levels_namelist( options_filename,   options)
+        allocate(this%parameters[*])
+        allocate(this%physics[*])
+        allocate(this%mp_options[*])
+        allocate(this%lt_options[*])
+        allocate(this%block_options[*])
+        allocate(this%adv_options[*])
+        allocate(this%lsm_options[*])
+        allocate(this%bias_options[*])
 
-        call lt_parameters_namelist(    options%lt_options_filename,    options)
-        call block_parameters_namelist( options%block_options_filename, options)
-        call mp_parameters_namelist(    options%mp_options_filename,    options)
-        call adv_parameters_namelist(   options%adv_options_filename,   options)
-        call lsm_parameters_namelist(   options%lsm_options_filename,   options)
-        call bias_parameters_namelist(  options%bias_options_filename,  options)
 
-        if (options%restart) then
-            call init_restart_options(options_filename,options)
+        if (this_image()==1) then
+            options_filename=get_options_file()
+            write(*,*) "Using options file = ", trim(options_filename)
+
+            call version_check(         options_filename,   this%parameters)
+            call physics_namelist(      options_filename,   this)
+            call var_namelist(          options_filename,   this%parameters)
+            call parameters_namelist(   options_filename,   this%parameters)
+            call model_levels_namelist( options_filename,   this%parameters)
+
+            call lt_parameters_namelist(    this%parameters%lt_options_filename,    this)
+            call block_parameters_namelist( this%parameters%block_options_filename, this)
+            call mp_parameters_namelist(    this%parameters%mp_options_filename,    this)
+            call adv_parameters_namelist(   this%parameters%adv_options_filename,   this)
+            call lsm_parameters_namelist(   this%parameters%lsm_options_filename,   this)
+            call bias_parameters_namelist(  this%parameters%bias_options_filename,  this)
+
+            if (this%parameters%restart) then
+                call init_restart_options(options_filename, this%parameters)
+            endif
+
+            call filename_namelist(options_filename, this%parameters)
+            ! check for any inconsistencies in the options requested
+            call options_check(this)
+
         endif
 
-        call filename_namelist(options_filename, options)
-        ! check for any inconsistencies in the options requested
-        call options_check(options)
-    end subroutine init_options
+        sync all
+
+        ! Note, this is a really inefficient broadcast mechanism, should move to a more efficient form at some point
+        ! unfortunately, this slows down noticeably on just 36 images, so needs to be taken care of before scaling much higher
+        ! also note that looping like this is MUCH faster than just letting all processes grab data
+        do i=2,num_images()
+            if (this_image()==i) then
+                this%parameters     = this%parameters[1]
+                this%physics        = this%physics[1]
+                this%mp_options     = this%mp_options[1]
+                this%lt_options     = this%lt_options[1]
+                this%block_options  = this%block_options[1]
+                this%adv_options    = this%adv_options[1]
+                this%lsm_options    = this%lsm_options[1]
+                this%bias_options   = this%bias_options[1]
+            endif
+            syncall
+        end do
+
+    end subroutine init
 
 
     function get_options_file() result(options_file)
@@ -91,18 +116,23 @@ contains
 ! if the namelist version doesn't match, print the differences between that version and this
 ! and STOP execution
     subroutine version_check(filename,options)
-        character(len=*),intent(in) :: filename
-        type(options_type),intent(inout)::options
+        character(len=*),            intent(in)     :: filename
+        type(parameter_options_type),intent(inout)  :: options
+
         character(len=MAXVARLENGTH) :: version,comment
-        integer:: name_unit
+        integer                     :: name_unit
 
         namelist /model_version/ version,comment
+
+
         !default comment:
         comment="Model testing"
+
         ! read namelists
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=model_version)
         close(name_unit)
+
         if (version.ne.kVERSION_STRING) then
             write(*,*) "Model version does not match namelist version"
             write(*,*) "  Model version: ",kVERSION_STRING
@@ -110,82 +140,86 @@ contains
             call print_model_diffs(version)
             stop
         endif
-        options%version=version
-        options%comment=comment
+        options%version = version
+        options%comment = comment
+
         write(*,*) "  Model version: ",trim(version)
+
     end subroutine version_check
 
     subroutine options_check(options)
         ! Minimal error checking on option settings
         implicit none
-        type(options_type), intent(inout)::options
+        type(options_t), intent(inout)::options
 
-        if (options%t_offset.eq.(-9999)) then
-            if (options%warning_level>0) then
+        if (options%parameters%t_offset.eq.(-9999)) then
+            if (options%parameters%warning_level>0) then
                 write(*,*) "WARNING, WARNING, WARNING"
                 write(*,*) "WARNING, Using default t_offset=0"
                 write(*,*) "WARNING, WARNING, WARNING"
             endif
-            options%t_offset = 0
+            options%parameters%t_offset = 0
         endif
 
 
         ! convection can modify wind field, and ideal doesn't rebalance winds every timestep
-        if ((options%physics%convection.ne.0).and.(options%ideal)) then
-            if (options%warning_level>3) then
+        if ((options%physics%convection.ne.0).and.(options%parameters%ideal)) then
+            if (options%parameters%warning_level>3) then
                 write(*,*) ""
                 write(*,*) "WARNING WARNING WARNING"
                 write(*,*) "WARNING, Running convection in ideal mode may be bad..."
                 write(*,*) "WARNING WARNING WARNING"
             endif
-            if (options%warning_level==10) then
+            if (options%parameters%warning_level==10) then
                 write(*,*) "Set warning_level<10 to continue"
                 stop
             endif
         endif
         ! if using a real LSM, feedback will probably keep hot-air from getting even hotter, so not likely a problem
         if ((options%physics%landsurface>1).and.(options%physics%boundarylayer==0)) then
-            if (options%warning_level>2) then
+            if (options%parameters%warning_level>2) then
                 write(*,*) ""
                 write(*,*) "WARNING WARNING WARNING"
                 write(*,*) "WARNING, Running LSM without PBL may overheat the surface and CRASH the model. "
                 write(*,*) "WARNING WARNING WARNING"
             endif
-            if (options%warning_level>=7) then
+            if (options%parameters%warning_level>=7) then
                 write(*,*) "Set warning_level<7 to continue"
                 stop
             endif
         endif
         ! if using perscribed LSM fluxes, no feedbacks are present, so the surface layer is likely to overheat.
         if ((options%physics%landsurface==1).and.(options%physics%boundarylayer==0)) then
-            if (options%warning_level>0) then
+            if (options%parameters%warning_level>0) then
                 write(*,*) ""
                 write(*,*) "WARNING WARNING WARNING"
                 write(*,*) "WARNING, Prescribed LSM fluxes without a PBL may overheat the surface and CRASH. "
                 write(*,*) "WARNING WARNING WARNING"
             endif
-            if (options%warning_level>=5) then
+            if (options%parameters%warning_level>=5) then
                 write(*,*) "Set warning_level<5 to continue"
                 stop
             endif
         endif
 
         ! prior to v 0.9.3 this was assumed, so throw a warning now just in case.
-        if ((options%z_is_geopotential .eqv. .False.).and.(options%zvar=="PH")) then
-            if (options%warning_level>1) then
+        if ((options%parameters%z_is_geopotential .eqv. .False.).and. &
+            (options%parameters%zvar=="PH")) then
+            if (options%parameters%warning_level>1) then
                 write(*,*) ""
                 write(*,*) "WARNING WARNING WARNING"
                 write(*,*) "WARNING z variable is not assumed to be geopotential height when it is 'PH'."
                 write(*,*) "WARNING If z is geopotential, set z_is_geopotential=True in the namelist."
                 write(*,*) "WARNING WARNING WARNING"
             endif
-            if (options%warning_level>=7) then
+            if (options%parameters%warning_level>=7) then
                 write(*,*) "Set warning_level<7 to continue"
                 stop
             endif
         endif
-        if ((options%z_is_geopotential .eqv. .True.).and.(options%z_is_on_interface .eqv. .False.)) then
-            if (options%warning_level>1) then
+        if ((options%parameters%z_is_geopotential .eqv. .True.).and. &
+            (options%parameters%z_is_on_interface .eqv. .False.)) then
+            if (options%parameters%warning_level>1) then
                 write(*,*) ""
                 write(*,*) "WARNING WARNING WARNING"
                 write(*,*) "WARNING geopotential height is no longer assumed to be on model interface levels."
@@ -199,8 +233,8 @@ contains
     subroutine init_restart_options(filename, options)
         ! initialize the restart specifications
         ! read in the namelist, and calculate the restart_step if appropriate
-        character(len=*),  intent(in)    :: filename    ! name of the file containing the restart namelist
-        type(options_type),intent(inout) :: options     ! options data structure to store output
+        character(len=*),               intent(in)    :: filename    ! name of the file containing the restart namelist
+        type(parameter_options_type),   intent(inout) :: options     ! options data structure to store output
 
         ! Local variables
         character(len=MAXFILELENGTH) :: restart_file    ! file name to read restart data from
@@ -266,14 +300,15 @@ contains
 !   read physics options to use from a namelist file
     subroutine physics_namelist(filename,options)
         implicit none
-        character(len=*),intent(in) :: filename
-        type(options_type), intent(inout) :: options
-        integer :: name_unit
+        character(len=*),intent(in)     :: filename
+        type(options_t), intent(inout)  :: options
 
+        integer :: name_unit
 !       variables to be used in the namelist
-        integer::pbl,lsm,water,mp,rad,conv,adv,wind
+        integer :: pbl, lsm, water, mp, rad, conv, adv, wind
+
 !       define the namelist
-        namelist /physics/ pbl,lsm,water,mp,rad,conv,adv,wind
+        namelist /physics/ pbl, lsm, water, mp, rad, conv, adv, wind
 
 !       default values for physics options (advection+linear winds+simple_microphysics)
         pbl = 0 ! 0 = no PBL,
@@ -286,13 +321,15 @@ contains
                 ! 2 = simple LSM, (not complete)
                 ! 3 = Noah LSM
 
-        water = 0 ! 0 = no open water fluxes,
+        water =0! 0 = no open water fluxes,
                 ! 1 = Fluxes from GCM, (needs lsm=1)
                 ! 2 = Simple fluxes (needs SST in forcing data)
 
         mp  = 1 ! 0 = no MP,
                 ! 1 = Thompson et al (2008),
                 ! 2 = "Linear" microphysics
+                ! 3 = Morrison
+                ! 4 = WSM5
 
         rad = 0 ! 0 = no RAD,
                 ! 1 = Surface fluxes from GCM, (radiative cooling ~1K/day in LSM=1 module),
@@ -315,21 +352,21 @@ contains
         close(name_unit)
 
 !       store options
-        options%physics%boundarylayer=pbl
-        options%physics%convection=conv
-        options%physics%advection=adv
-        options%physics%landsurface=lsm
-        options%physics%watersurface=water
-        options%physics%microphysics=mp
-        options%physics%radiation=rad
-        options%physics%windtype=wind
+        options%physics%boundarylayer = pbl
+        options%physics%convection    = conv
+        options%physics%advection     = adv
+        options%physics%landsurface   = lsm
+        options%physics%watersurface  = water
+        options%physics%microphysics  = mp
+        options%physics%radiation     = rad
+        options%physics%windtype      = wind
 
     end subroutine physics_namelist
 
     subroutine var_namelist(filename,options)
         implicit none
-        character(len=*),intent(in) :: filename
-        type(options_type), intent(inout) :: options
+        character(len=*),             intent(in)    :: filename
+        type(parameter_options_type), intent(inout) :: options
         integer :: name_unit
         character(len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar,  &
                                         hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
@@ -463,14 +500,15 @@ contains
 
     subroutine parameters_namelist(filename,options)
         implicit none
-        character(len=*),intent(in) :: filename
-        type(options_type), intent(inout) :: options
-        integer :: name_unit
+        character(len=*),             intent(in)    :: filename
+        type(parameter_options_type), intent(inout) :: options
 
+        integer :: name_unit
+        type(time_delta_t) :: dt
+        ! parameters to read
         real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance
         real    :: cfl_reduction_factor
         integer :: ntimesteps
-        type(time_delta_t) :: dt
         integer :: nz, n_ext_winds,buffer, warning_level, cfl_strictness
         logical :: ideal, readz, readdz, interactive, debug, external_winds, surface_io_only, &
                    mean_winds, mean_fields, restart, advect_density, z_is_geopotential, z_is_on_interface,&
@@ -484,13 +522,14 @@ contains
                                         adv_options_filename, lsm_options_filename, &
                                         bias_options_filename, block_options_filename
 
-        namelist /parameters/ ntimesteps,outputinterval,inputinterval, surface_io_only, &
-                              dx,dxlow,ideal,readz,readdz,nz,t_offset,debug, interactive, &
-                              external_winds,buffer,n_ext_winds,advect_density,smooth_wind_distance, &
-                              mean_winds,mean_fields,restart, z_is_geopotential, z_is_on_interface,&
-                              date, calendar, high_res_soil_state,warning_level, &
-                              use_agl_height, start_date, forcing_start_date, end_date, time_varying_z, &
-                              cfl_reduction_factor, cfl_strictness,         &
+        namelist /parameters/ ntimesteps, outputinterval, inputinterval, surface_io_only,                &
+                              dx, dxlow, ideal, readz, readdz, nz, t_offset,                             &
+                              debug, warning_level, interactive, restart,                                &
+                              external_winds, buffer, n_ext_winds, advect_density, smooth_wind_distance, &
+                              mean_winds, mean_fields, z_is_geopotential, z_is_on_interface,             &
+                              date, calendar, high_res_soil_state,                                       &
+                              use_agl_height, start_date, forcing_start_date, end_date, time_varying_z,  &
+                              cfl_reduction_factor,     cfl_strictness,     &
                               mp_options_filename,      use_mp_options,     &
                               block_options_filename,   use_block_options,  &
                               lt_options_filename,      use_lt_options,     &
@@ -499,37 +538,37 @@ contains
                               bias_options_filename,    use_bias_correction
 
 !       default parameters
-        surface_io_only=.False.
-        mean_fields=.False.
-        mean_winds=.False.
-        external_winds=.False.
-        n_ext_winds=1
-        t_offset=(-9999)
-        buffer=0
-        advect_density=.False.
-        z_is_geopotential=.False.
-        z_is_on_interface=.False.
-        dxlow=100000
-        restart=.False.
-        ideal=.False.
-        debug=.False.
-        interactive=.False.
-        warning_level=-9999
-        readz=.False.
-        readdz=.True.
-        nz  = MAXLEVELS
-        smooth_wind_distance=-9999
-        calendar="gregorian"
-        high_res_soil_state=.False.
-        use_agl_height=.False.
-        start_date=""
-        forcing_start_date=""
-        end_date=""
-        time_varying_z=.False.
-        cfl_reduction_factor = 0.9
-        cfl_strictness = 3
-        inputinterval = 3600
-        outputinterval = 3600
+        surface_io_only     = .False.
+        mean_fields         = .False.
+        mean_winds          = .False.
+        external_winds      = .False.
+        n_ext_winds         = 1
+        t_offset            = (-9999)
+        buffer              = 0
+        advect_density      = .False.
+        z_is_geopotential   = .False.
+        z_is_on_interface   = .False.
+        dxlow               = 100000
+        restart             = .False.
+        ideal               = .False.
+        debug               = .False.
+        interactive         = .False.
+        warning_level       = -9999
+        readz               = .False.
+        readdz              = .True.
+        nz                  =  MAXLEVELS
+        smooth_wind_distance= -9999
+        calendar            = "gregorian"
+        high_res_soil_state = .False.
+        use_agl_height      = .False.
+        start_date          = ""
+        forcing_start_date  = ""
+        end_date            = ""
+        time_varying_z      = .False.
+        cfl_reduction_factor=  0.9
+        cfl_strictness      =  3
+        inputinterval       =  3600
+        outputinterval      =  3600
 
         ! flag set to read specific parameterization options
         use_mp_options=.False.
@@ -553,6 +592,10 @@ contains
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=parameters)
         close(name_unit)
+
+        if (ideal) then
+            write(*,*) " Running Idealized simulation (time step does not advance)"
+        endif
 
         if (trim(forcing_start_date)=="") then
             if (trim(date)/="") then
@@ -603,9 +646,8 @@ contains
         endif
         options%surface_io_only = surface_io_only
 
-
         options%calendar=calendar
-        call time_init(calendar)
+
         call options%initial_time%init(calendar)
         call options%initial_time%set(date)
         if (start_date=="") then
@@ -621,24 +663,22 @@ contains
             call dt%set(seconds=ntimesteps * inputinterval)
             options%end_time = options%start_time + dt
         endif
-        options%dx = dx
-        options%dxlow = dxlow
-        options%ideal = ideal
-        if (ideal) then
-            write(*,*) " Running Idealized simulation (time step does not advance)"
-        endif
-        options%readz = readz
-        options%readdz = readdz
-        options%buffer = buffer
-        options%mean_winds = mean_winds
-        options%mean_fields = mean_fields
-        options%advect_density = advect_density
-        options%debug = debug
-        options%interactive = interactive
-        options%warning_level = warning_level
-        options%use_agl_height = use_agl_height
-        options%z_is_geopotential = z_is_geopotential
-        options%z_is_on_interface = z_is_on_interface
+
+        options%dx               = dx
+        options%dxlow            = dxlow
+        options%ideal            = ideal
+        options%readz            = readz
+        options%readdz           = readdz
+        options%buffer           = buffer
+        options%mean_winds       = mean_winds
+        options%mean_fields      = mean_fields
+        options%advect_density   = advect_density
+        options%debug            = debug
+        options%interactive      = interactive
+        options%warning_level    = warning_level
+        options%use_agl_height   = use_agl_height
+        options%z_is_geopotential= z_is_geopotential
+        options%z_is_on_interface= z_is_on_interface
 
         options%external_winds = external_winds
         options%ext_winds_nfiles = n_ext_winds
@@ -652,47 +692,50 @@ contains
         options%cfl_strictness = cfl_strictness
 
 
-        options%use_mp_options = use_mp_options
-        options%mp_options_filename  = mp_options_filename   ! trude added
+        options%use_mp_options      = use_mp_options
+        options%mp_options_filename = mp_options_filename
 
-        options%use_lt_options = use_lt_options
-        options%lt_options_filename  = lt_options_filename
+        options%use_lt_options      = use_lt_options
+        options%lt_options_filename = lt_options_filename
 
-        options%use_adv_options = use_adv_options
-        options%adv_options_filename  = adv_options_filename
+        options%use_adv_options     = use_adv_options
+        options%adv_options_filename= adv_options_filename
 
-        options%use_lsm_options = use_lsm_options
-        options%lsm_options_filename  = lsm_options_filename
+        options%use_lsm_options     = use_lsm_options
+        options%lsm_options_filename= lsm_options_filename
 
-        options%use_bias_correction = use_bias_correction
-        options%bias_options_filename  = bias_options_filename
+        options%use_bias_correction  = use_bias_correction
+        options%bias_options_filename= bias_options_filename
 
-        options%use_block_options = use_block_options
-        options%block_options_filename  = block_options_filename
+        options%use_block_options     = use_block_options
+        options%block_options_filename= block_options_filename
 
         ! options are updated when complete
     end subroutine parameters_namelist
 
     subroutine mp_parameters_namelist(mp_filename,options)
         implicit none
-        character(len=*),intent(in) :: mp_filename
-        type(options_type), intent(inout) :: options
+        character(len=*),   intent(in)    :: mp_filename
+        type(options_t),    intent(inout) :: options
         integer :: name_unit
 
-        real :: Nt_c, TNO, am_s,rho_g,av_s,bv_s,fv_s,av_g,bv_g,av_i,Ef_si,Ef_rs,Ef_rg,Ef_ri
-        real :: C_cubes, C_sqrd, mu_r, t_adjust
+        real    :: Nt_c, TNO, am_s, rho_g, av_s, bv_s, fv_s, av_g, bv_g, av_i
+        real    :: Ef_si, Ef_rs, Ef_rg, Ef_ri
+        real    :: C_cubes, C_sqrd, mu_r, t_adjust
         logical :: Ef_rw_l, EF_sw_l
         integer :: top_mp_level
-        real :: local_precip_fraction
+        real    :: local_precip_fraction
         integer :: update_interval
 
-        namelist /mp_parameters/ Nt_c,TNO, am_s, rho_g, av_s,bv_s,fv_s,av_g,bv_g,av_i,Ef_si,Ef_rs,Ef_rg,Ef_ri,&     ! trude added Nt_c, TNO
-                              C_cubes,C_sqrd, mu_r, Ef_rw_l, Ef_sw_l, t_adjust, top_mp_level, local_precip_fraction, update_interval
+        namelist /mp_parameters/ Nt_c, TNO, am_s, rho_g, av_s, bv_s, fv_s, av_g, bv_g, av_i,    &   ! thompson microphysics parameters
+                                Ef_si, Ef_rs, Ef_rg, Ef_ri,                                     &   ! thompson microphysics parameters
+                                C_cubes, C_sqrd, mu_r, Ef_rw_l, Ef_sw_l, t_adjust,              &   ! thompson microphysics parameters
+                                top_mp_level, local_precip_fraction, update_interval
 
-        ! because mp_options could be in a separate file (shoudl probably set all namelists up to have this option)
-        if (options%use_mp_options) then
+        ! because mp_options could be in a separate file (should probably set all namelists up to have this option)
+        if (options%parameters%use_mp_options) then
             if (trim(mp_filename)/=trim(get_options_file())) then
-                call version_check(mp_filename,options)
+                call version_check(mp_filename, options%parameters)
             endif
         endif
 
@@ -720,49 +763,52 @@ contains
         Ef_rw_l = .False.   ! True sets ef_rw = 1, insted of max 0.95
         Ef_sw_l = .False.   ! True sets ef_rw = 1, insted of max 0.95
 
-        update_interval = 0 ! update every time step
-        top_mp_level = 0    ! if <=0 just use the actual model top
+        update_interval       = 0 ! update every time step
+        top_mp_level          = 0 ! if <=0 just use the actual model top
         local_precip_fraction = 1 ! if <1: the remaining fraction (e.g. 1-x) of precip gets distributed to the surrounding grid cells
+
         ! read in the namelist
-        if (options%use_mp_options) then
+        if (options%parameters%use_mp_options) then
             open(io_newunit(name_unit), file=mp_filename)
-            read(name_unit,nml=mp_parameters)
+            read(name_unit, nml=mp_parameters)
             close(name_unit)
         endif
 
         ! store the data back into the mp_options datastructure
-        options%mp_options%Nt_c = Nt_c
-        options%mp_options%TNO = TNO
-        options%mp_options%am_s = am_s
-        options%mp_options%rho_g = rho_g
-        options%mp_options%av_s = av_s
-        options%mp_options%bv_s = bv_s
-        options%mp_options%fv_s = fv_s
-        options%mp_options%av_g = av_g
-        options%mp_options%bv_g = bv_g
-        options%mp_options%av_i = av_i
-        options%mp_options%Ef_si = Ef_si
-        options%mp_options%Ef_rs = Ef_rs
-        options%mp_options%Ef_rg = Ef_rg
-        options%mp_options%Ef_ri = Ef_ri
-        options%mp_options%mu_r = mu_r
+        options%mp_options%Nt_c     = Nt_c
+        options%mp_options%TNO      = TNO
+        options%mp_options%am_s     = am_s
+        options%mp_options%rho_g    = rho_g
+        options%mp_options%av_s     = av_s
+        options%mp_options%bv_s     = bv_s
+        options%mp_options%fv_s     = fv_s
+        options%mp_options%av_g     = av_g
+        options%mp_options%bv_g     = bv_g
+        options%mp_options%av_i     = av_i
+        options%mp_options%Ef_si    = Ef_si
+        options%mp_options%Ef_rs    = Ef_rs
+        options%mp_options%Ef_rg    = Ef_rg
+        options%mp_options%Ef_ri    = Ef_ri
+        options%mp_options%mu_r     = mu_r
         options%mp_options%t_adjust = t_adjust
-        options%mp_options%C_cubes = C_cubes
-        options%mp_options%C_sqrd = C_sqrd
-        options%mp_options%Ef_rw_l = Ef_rw_l
-        options%mp_options%Ef_sw_l = Ef_sw_l
+        options%mp_options%C_cubes  = C_cubes
+        options%mp_options%C_sqrd   = C_sqrd
+        options%mp_options%Ef_rw_l  = Ef_rw_l
+        options%mp_options%Ef_sw_l  = Ef_sw_l
 
-        options%mp_options%update_interval = update_interval
-        if (top_mp_level < 0) top_mp_level = options%nz + top_mp_level
-        options%mp_options%top_mp_level = top_mp_level
-        options%mp_options%local_precip_fraction = local_precip_fraction
+        if (top_mp_level < 0) top_mp_level = options%parameters%nz + top_mp_level
+
+        options%mp_options%update_interval      = update_interval
+        options%mp_options%top_mp_level         = top_mp_level
+        options%mp_options%local_precip_fraction= local_precip_fraction
+
     end subroutine mp_parameters_namelist
 
     subroutine block_parameters_namelist(filename, options)
         implicit none
 
         character(len=*),   intent(in)   :: filename
-        type(options_type), intent(inout):: options
+        type(options_t),    intent(inout):: options
 
         integer :: name_unit
 
@@ -783,9 +829,9 @@ contains
                                     block_flow
 
         ! because block_options could be in a separate file
-        if (options%use_block_options) then
+        if (options%parameters%use_block_options) then
             if (trim(filename)/=trim(get_options_file())) then
-                call version_check(filename,options)
+                call version_check(filename,options%parameters)
             endif
         endif
 
@@ -798,7 +844,7 @@ contains
         block_flow              = .False.
 
         ! read the namelist options
-        if (options%use_block_options) then
+        if (options%parameters%use_block_options) then
             open(io_newunit(name_unit), file=filename)
             read(name_unit,nml=block_parameters)
             close(name_unit)
@@ -820,7 +866,7 @@ contains
     subroutine lt_parameters_namelist(filename, options)
         implicit none
         character(len=*),   intent(in)   :: filename
-        type(options_type), intent(inout):: options
+        type(options_t),    intent(inout):: options
 
         integer :: name_unit
 
@@ -865,9 +911,9 @@ contains
                                  read_LUT, write_LUT, u_LUT_Filename, v_LUT_Filename, overwrite_lt_lut, LUT_Filename
 
          ! because lt_options could be in a separate file
-         if (options%use_lt_options) then
+         if (options%parameters%use_lt_options) then
              if (trim(filename)/=trim(get_options_file())) then
-                 call version_check(filename,options)
+                 call version_check(filename,options%parameters)
              endif
          endif
 
@@ -912,7 +958,7 @@ contains
         overwrite_lt_lut = .True.
 
         ! read the namelist options
-        if (options%use_lt_options) then
+        if (options%parameters%use_lt_options) then
             open(io_newunit(name_unit), file=filename)
             read(name_unit,nml=lt_parameters)
             close(name_unit)
@@ -974,10 +1020,10 @@ contains
 
     subroutine adv_parameters_namelist(filename, options)
         implicit none
-        character(len=*), intent(in) :: filename
-        type(options_type), intent(inout)::options
-        type(adv_options_type)::adv_options
+        character(len=*),   intent(in)   :: filename
+        type(options_t),    intent(inout):: options
 
+        type(adv_options_type)::adv_options
         integer :: name_unit
 
         logical :: boundary_buffer          ! apply some smoothing to the x and y boundaries in MPDATA
@@ -988,9 +1034,9 @@ contains
         namelist /adv_parameters/ boundary_buffer, flux_corrected_transport, mpdata_order
 
          ! because adv_options could be in a separate file
-         if (options%use_adv_options) then
+         if (options%parameters%use_adv_options) then
              if (trim(filename)/=trim(get_options_file())) then
-                 call version_check(filename,options)
+                 call version_check(filename,options%parameters)
              endif
          endif
 
@@ -1001,7 +1047,7 @@ contains
         mpdata_order = 2
 
         ! read the namelist options
-        if (options%use_adv_options) then
+        if (options%parameters%use_adv_options) then
             open(io_newunit(name_unit), file=filename)
             read(name_unit,nml=adv_parameters)
             close(name_unit)
@@ -1057,10 +1103,9 @@ contains
     subroutine bias_parameters_namelist(filename, options)
         implicit none
         character(len=*),   intent(in)   :: filename
-        type(options_type), intent(inout):: options
+        type(options_t),    intent(inout):: options
 
         type(bias_options_type)     ::  bias_options
-
         integer :: name_unit
 
         character(len=MAXFILELENGTH):: bias_correction_filename ! file containing bias correction data
@@ -1070,19 +1115,19 @@ contains
         namelist /bias_parameters/ bias_correction_filename, rain_fraction_var
 
          ! because adv_options could be in a separate file
-         if (options%use_bias_correction) then
+         if (options%parameters%use_bias_correction) then
              if (trim(filename)/=trim(get_options_file())) then
-                 call version_check(filename,options)
+                 call version_check(filename,options%parameters)
              endif
          endif
 
 
         ! set default values
-        bias_correction_filename = options%init_conditions_file
+        bias_correction_filename = options%parameters%init_conditions_file
         rain_fraction_var        = "rain_fraction"
 
         ! read the namelist options
-        if (options%use_bias_correction) then
+        if (options%parameters%use_bias_correction) then
             open(io_newunit(name_unit), file=filename)
             read(name_unit,nml=bias_parameters)
             close(name_unit)
@@ -1099,10 +1144,10 @@ contains
 
     subroutine lsm_parameters_namelist(filename, options)
         implicit none
-        character(len=*), intent(in) :: filename
-        type(options_type), intent(inout)::options
-        type(lsm_options_type)::lsm_options
+        character(len=*),   intent(in)   :: filename
+        type(options_t),    intent(inout)::options
 
+        type(lsm_options_type) :: lsm_options
         integer :: name_unit
 
         character(len=MAXVARLENGTH) :: LU_Categories ! Category definitions (e.g. USGS, MODIFIED_IGBP_MODIS_NOAH)
@@ -1117,9 +1162,9 @@ contains
                                   urban_category, ice_category, water_category
 
          ! because adv_options could be in a separate file
-         if (options%use_lsm_options) then
+         if (options%parameters%use_lsm_options) then
              if (trim(filename)/=trim(get_options_file())) then
-                 call version_check(filename,options)
+                 call version_check(filename,options%parameters)
              endif
          endif
 
@@ -1135,7 +1180,7 @@ contains
         water_category  = -1
 
         ! read the namelist options
-        if (options%use_lsm_options) then
+        if (options%parameters%use_lsm_options) then
             open(io_newunit(name_unit), file=filename)
             read(name_unit,nml=lsm_parameters)
             close(name_unit)
@@ -1159,8 +1204,8 @@ contains
     ! set up model levels, either read from a namelist, or from a default set of values
     subroutine model_levels_namelist(filename,options)
         implicit none
-        character(len=*), intent(in) :: filename
-        type(options_type), intent(inout) :: options
+        character(len=*),             intent(in)    :: filename
+        type(parameter_options_type), intent(inout) :: options
 
         integer :: name_unit, this_level
         real, allocatable, dimension(:) :: dz_levels
@@ -1189,8 +1234,9 @@ contains
                 end do
                 options%nz=this_level
             endif
-            allocate(options%dz_levels(options%nz))
 
+            ! allocate(options%dz_levels(options%nz))
+            options%dz_levels = -1
             options%dz_levels(1:options%nz)=dz_levels(1:options%nz)
             deallocate(dz_levels)
         else
@@ -1203,8 +1249,9 @@ contains
            if (options%nz>45) then
                options%nz=45
            endif
-            allocate(options%dz_levels(options%nz))
-            options%dz_levels=fulldz(1:options%nz)
+            ! allocate(options%dz_levels(options%nz))
+            options%dz_levels = -1
+            options%dz_levels(1:options%nz) = fulldz(1:options%nz)
         endif
 
     end subroutine model_levels_namelist
@@ -1259,8 +1306,8 @@ contains
         ! ext_wind_files       = list of files to read wind data on the high-res grid (optional)
         ! linear_mask_file     = file to read a high-res fractional mask for the linear perturbation
         implicit none
-        character(len=*), intent(in) :: filename
-        type(options_type), intent(inout) :: options
+        character(len=*),             intent(in)    :: filename
+        type(parameter_options_type), intent(inout) :: options
 
         character(len=MAXFILELENGTH) :: init_conditions_file, output_file, forcing_file_list, &
                                         linear_mask_file, nsq_calibration_file
@@ -1297,8 +1344,8 @@ contains
             endif
         endif
 
-        allocate(options%boundary_files(nfiles))
-        options%boundary_files=boundary_files(1:nfiles)
+        ! allocate(options%boundary_files(nfiles))
+        options%boundary_files(1:nfiles) = boundary_files(1:nfiles)
         deallocate(boundary_files)
 
         options%output_file=output_file
@@ -1318,10 +1365,11 @@ contains
             read(name_unit,nml=ext_winds_info)
             close(name_unit)
 
-            allocate(options%ext_wind_files(options%ext_winds_nfiles))
-            options%ext_wind_files=ext_wind_files
+            ! allocate(options%ext_wind_files(options%ext_winds_nfiles))
+            options%ext_wind_files(1:options%ext_winds_nfiles) = ext_wind_files(1:options%ext_winds_nfiles)
             deallocate(ext_wind_files)
         endif
     end subroutine filename_namelist
 
-end module initialize_options
+
+end submodule

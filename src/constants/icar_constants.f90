@@ -1,16 +1,17 @@
 module icar_constants
 
     implicit none
-    character(len=5) :: kVERSION_STRING = "0.9.5"
+    character(len=5) :: kVERSION_STRING = "1.5"
 
 ! ------------------------------------------------
 ! Model constants (string lengths)
 ! ------------------------------------------------
-    integer,parameter :: MAXFILELENGTH    =1024   ! maximum file name length
-    integer,parameter :: MAXVARLENGTH     =1024   ! maximum variable name length
-    integer,parameter :: MAXLEVELS        = 500   ! maximum number of vertical layers (should typically be ~10-20)
-    integer,parameter :: MAX_NUMBER_FILES = 50000 ! maximum number of permitted input files (probably a bit extreme)
-    integer,parameter :: MAXSTRINGLENGTH  = 1024  ! maximum length of other strings (e.g. netcdf attributes)
+    integer,parameter :: MAXFILELENGTH      =   1024  ! maximum file name length
+    integer,parameter :: MAXVARLENGTH       =   1024  ! maximum variable name length
+    integer,parameter :: MAXLEVELS          =    500  ! maximum number of vertical layers (should typically be ~10-20)
+    integer,parameter :: MAX_NUMBER_FILES   =   5000  ! maximum number of permitted input files (probably a bit extreme)
+    integer,parameter :: MAXSTRINGLENGTH    =   1024  ! maximum length of other strings (e.g. netcdf attributes)
+    integer,parameter :: kMAX_STRING_LENGTH =   1024  ! maximum length of other strings (e.g. netcdf attributes)
 
 
 ! ------------------------------------------------

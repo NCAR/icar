@@ -97,9 +97,6 @@ endif
 ifeq ($(F90),ifort)
 	COMPILER=intel
 endif
-ifeq ($(F90),pgf90)
-	COMPILER=pgi
-endif
 ifeq ($(F90),ftn)
 	COMPILER=cray
 endif
@@ -128,13 +125,6 @@ ifeq ($(COMPILER), intel)
 	PREPROC=-fpp
 	MODOUTPUT=-module $(BUILD)
 endif
-# PGI fortran
-ifeq ($(COMPILER), pgi)
-	COMP=-O2 -mp -c -Mdclchk #-fast -O3 -mp -c -Mdclchk
-	LINK=-mp
-	PREPROC=-Mpreprocess
-	MODOUTPUT=-module $(BUILD)
-endif
 
 # Cray fortran
 ifeq ($(COMPILER), cray)
@@ -155,10 +145,6 @@ ifeq ($(MODE), debugslow)
 		COMP= -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK=
 	endif
-	ifeq ($(COMPILER), pgi)
-		COMP= -c -g -Mbounds -Mlist -Minfo  -Mdclchk
-		LINK=
-	endif
 	ifeq ($(COMPILER), cray)
 		COMP=-h noomp -c -g -m 0 -R abcsp
 		LINK=-h noomp
@@ -173,10 +159,6 @@ ifeq ($(MODE), debug)
 	endif
 	ifeq ($(COMPILER), gnu)
 		COMP= -c -O1 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
-		LINK=
-	endif
-	ifeq ($(COMPILER), pgi)
-		COMP= -c -gopt -O1 -Mbounds -Mlist -Minfo  -Mdclchk
 		LINK=
 	endif
 	ifeq ($(COMPILER), cray)
@@ -196,10 +178,6 @@ ifeq ($(MODE), debugompslow)
 		COMP= -fopenmp -lgomp -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK= -fopenmp -lgomp
 	endif
-	ifeq ($(COMPILER), pgi)
-		COMP= -c -g -Mbounds -Mlist -Minfo -mp -Mdclchk
-		LINK= -mp
-	endif
 	ifeq ($(COMPILER), cray)
 		COMP=-c -g -m 0 -R abcsp
 		LINK=
@@ -215,10 +193,6 @@ ifeq ($(MODE), debugomp)
 	ifeq ($(COMPILER), gnu)
 		COMP= -fopenmp -lgomp -c -O1 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK= -fopenmp -lgomp
-	endif
-	ifeq ($(COMPILER), pgi)
-		COMP= -c -g -O1 -Mbounds -Mlist -Minfo -mp -Mdclchk
-		LINK= -mp
 	endif
 	ifeq ($(COMPILER), cray)
 		COMP=-O1 -c -g
@@ -255,6 +229,16 @@ endif
 LFLAGS=$(LINK) $(PROF) ${LIBNETCDF} ${LIBFFT}
 FFLAGS=$(COMP) $(PROF) ${INCNETCDF} ${INCFFT} ${MODOUTPUT}
 
+ifeq ($(COMPILER), gnu)
+	LFLAGS=$(LINK) $(PROF) ${LIBNETCDF} ${LIBFFT} -fcoarray=lib
+	FFLAGS=$(COMP) $(PROF) ${INCNETCDF} ${INCFFT} ${MODOUTPUT} -fcoarray=lib
+	F90=caf
+endif
+# Intel fortran
+ifeq ($(COMPILER), intel)
+	LFLAGS=$(LINK) $(PROF) ${LIBNETCDF} ${LIBFFT} -coarray
+	FFLAGS=$(COMP) $(PROF) ${INCNETCDF} ${INCFFT} ${MODOUTPUT} -coarray
+endif
 
 $(info $$NODENAME    = ${NODENAME})
 $(info $$FC          = ${F90})
@@ -385,6 +369,11 @@ blocking_test: $(BUILD)test_blocking.o $(BUILD)io_routines.o $(BUILD)winds_block
 array_util_test: $(BUILD)test_array_utilities.o $(BUILD)array_utilities.o
 	${F90} $^ -o $@ ${LFLAGS}
 
+options_test: $(BUILD)test_options.o $(BUILD)options_h.o $(BUILD)options_obj.o \
+				$(BUILD)icar_constants.o $(BUILD)io_routines.o $(BUILD)time_io.o \
+				$(BUILD)string.o $(BUILD)time_delta_obj.o $(BUILD)time_obj.o \
+				$(BUILD)model_tracking.o
+	${F90} $^ -o $@ ${LFLAGS}
 
 
 ###################################################################
@@ -395,6 +384,25 @@ $(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)data_structures.o $(BUILD)init.o $(BU
 					$(BUILD)output.o $(BUILD)boundary.o $(BUILD)time.o $(BUILD)string.o
 	${F90} ${FFLAGS} $(MAIN)driver.f90 -o $(BUILD)driver.o
 
+
+###################################################################
+#	Options Object
+###################################################################
+$(BUILD)test_options.o: tests/test_options.f90 $(BUILD)options_h.o
+
+$(BUILD)opt_types.o: objects/opt_types.f90 $(BUILD)icar_constants.o $(BUILD)time_obj.o $(BUILD)time_delta_obj.o
+
+$(BUILD)options_h.o: objects/options_h.f90 $(BUILD)icar_constants.o $(BUILD)opt_types.o
+
+$(BUILD)options_obj.o: objects/options_obj.f90 $(BUILD)options_h.o $(BUILD)time_obj.o \
+						$(BUILD)time_delta_obj.o $(BUILD)io_routines.o $(BUILD)opt_types.o \
+						$(BUILD)time_io.o $(BUILD)string.o $(BUILD)model_tracking.o
+
+$(BUILD)%.o:objects/%.f90
+	${F90} ${FFLAGS} $< -o $@
+
+$(BUILD)%.o:tests/%.f90
+	${F90} ${FFLAGS} $< -o $@
 
 ###################################################################
 #	Core initial and boundary condition and time steping
