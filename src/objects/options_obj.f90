@@ -36,6 +36,8 @@ contains
         allocate(this%bias_options[*])
 
 
+        ! Uses just the first image to read the options files from the disk to avoid potentially having
+        ! thousands of images hit the disk simultaneously
         if (this_image()==1) then
             options_filename=get_options_file()
             write(*,*) "Using options file = ", trim(options_filename)
@@ -66,8 +68,8 @@ contains
         sync all
 
         ! Note, this is a really inefficient broadcast mechanism, should move to a more efficient form at some point
-        ! unfortunately, this slows down noticeably on just 36 images, so needs to be taken care of before scaling much higher
-        ! also note that looping like this is MUCH faster than just letting all processes grab data
+        ! unfortunately, this slows down on large numbers of images
+        ! Note that looping like this is MUCH faster than just letting all processes grab data
         do i=2,num_images()
             if (this_image()==i) then
                 this%parameters     = this%parameters[1]

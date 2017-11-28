@@ -83,6 +83,13 @@ NCDF_PATH = ${NETCDF}
 LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 INCNETCDF = -I$(NCDF_PATH)/include
 
+USE_ASSERTIONS:=.false.
+
+ifeq ($(ASSERTIONS),)
+  USE_ASSERTIONS:=.true.
+endif
+
+
 ########################################################################################
 # Try to find the machine information
 ########################################################################################
@@ -217,6 +224,26 @@ ifeq ($(MODE), fast) # WARNING -ipo (included in -fast) takes forever for very l
 		COMP=-c -u -openmp -liomp5 -fast -ftz #-fast-transcendentals # not available in ifort <13: -align array64byte
 	endif
 endif
+
+ifeq ($(COMPILER), gnu)
+	ifeq ($(CAF_MODE), single)
+		CAF_FLAG=-fcoarray=single
+	else
+		CAF_FLAG=-fcoarray=lib
+		F90=caf
+	endif
+endif
+# Intel fortran
+ifeq ($(COMPILER), intel)
+	ifeq ($(CAF_MODE), single)
+		CAF_FLAG=-coarray -coarray-num-images=1
+	else
+		CAF_FLAG=-coarray
+	endif
+endif
+
+ASSERT=-DUSE_ASSERTIONS=$(USE_ASSERTIONS)
+
 ###################################################################
 ###################################################################
 #
@@ -226,19 +253,8 @@ endif
 ###################################################################
 # copy required libraries into a directory accessible on compute nodes and set LD_RUN_PATH e.g.
 # export LD_RUN_PATH=$LD_RUN_PATH:/path/to/netcdf/libraries/lib:/path/to/fftw/libraries/lib
-LFLAGS=$(LINK) $(PROF) ${LIBNETCDF} ${LIBFFT}
-FFLAGS=$(COMP) $(PROF) ${INCNETCDF} ${INCFFT} ${MODOUTPUT}
-
-ifeq ($(COMPILER), gnu)
-	LFLAGS=$(LINK) $(PROF) ${LIBNETCDF} ${LIBFFT} -fcoarray=lib
-	FFLAGS=$(COMP) $(PROF) ${INCNETCDF} ${INCFFT} ${MODOUTPUT} -fcoarray=lib
-	F90=caf
-endif
-# Intel fortran
-ifeq ($(COMPILER), intel)
-	LFLAGS=$(LINK) $(PROF) ${LIBNETCDF} ${LIBFFT} -coarray
-	FFLAGS=$(COMP) $(PROF) ${INCNETCDF} ${INCFFT} ${MODOUTPUT} -coarray
-endif
+LFLAGS=$(LINK) $(PROF) $(CAF_FLAG) $(LIBNETCDF) $(LIBFFT)
+FFLAGS=$(COMP) $(PROF) $(CAF_FLAG) $(PREPROC) $(INCNETCDF) $(INCFFT) $(MODOUTPUT) $(ASSERT)
 
 $(info $$NODENAME    = ${NODENAME})
 $(info $$FC          = ${F90})
@@ -322,6 +338,8 @@ TEST_EXECUTABLES= 	fftshift_test	\
 #	User facing rules
 ###################################################################
 
+caf_tests:caf_options_test caf_init_test
+
 icar:${OBJS}
 	${F90} -o icar ${OBJS} ${LFLAGS}
 
@@ -369,11 +387,28 @@ blocking_test: $(BUILD)test_blocking.o $(BUILD)io_routines.o $(BUILD)winds_block
 array_util_test: $(BUILD)test_array_utilities.o $(BUILD)array_utilities.o
 	${F90} $^ -o $@ ${LFLAGS}
 
-options_test: $(BUILD)test_options.o $(BUILD)options_h.o $(BUILD)options_obj.o \
-				$(BUILD)icar_constants.o $(BUILD)io_routines.o $(BUILD)time_io.o \
-				$(BUILD)string.o $(BUILD)time_delta_obj.o $(BUILD)time_obj.o \
-				$(BUILD)model_tracking.o
+caf_options_test: $(BUILD)test_caf_options.o				   \
+				$(BUILD)options_h.o      $(BUILD)options_obj.o \
+				$(BUILD)icar_constants.o $(BUILD)string.o      \
+				$(BUILD)io_routines.o    $(BUILD)time_io.o     \
+				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o    \
+				$(BUILD)model_tracking.o $(BUILD)opt_types.o
 	${F90} $^ -o $@ ${LFLAGS}
+
+caf_init_test: $(BUILD)test_caf_init.o                              \
+				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
+				$(BUILD)model_tracking.o $(BUILD)string.o           \
+				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o         \
+				$(BUILD)opt_types.o      $(BUILD)time_io.o          \
+				$(BUILD)options_h.o      $(BUILD)options_obj.o      \
+				$(BUILD)meta_data_h.o    $(BUILD)meta_data_obj.o    \
+				$(BUILD)variable_h.o     $(BUILD)variable_obj.o     \
+				$(BUILD)grid_h.o         $(BUILD)grid_obj.o         \
+				$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
+				$(BUILD)domain_h.o       $(BUILD)domain_obj.o		\
+				$(BUILD)assertions.o
+	${F90} $^ -o $@ ${LFLAGS}
+
 
 
 ###################################################################
@@ -388,7 +423,7 @@ $(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)data_structures.o $(BUILD)init.o $(BU
 ###################################################################
 #	Options Object
 ###################################################################
-$(BUILD)test_options.o: tests/test_options.f90 $(BUILD)options_h.o
+$(BUILD)test_caf_options.o: tests/test_caf_options.f90 $(BUILD)options_h.o
 
 $(BUILD)opt_types.o: objects/opt_types.f90 $(BUILD)icar_constants.o $(BUILD)time_obj.o $(BUILD)time_delta_obj.o
 
@@ -398,10 +433,47 @@ $(BUILD)options_obj.o: objects/options_obj.f90 $(BUILD)options_h.o $(BUILD)time_
 						$(BUILD)time_delta_obj.o $(BUILD)io_routines.o $(BUILD)opt_types.o \
 						$(BUILD)time_io.o $(BUILD)string.o $(BUILD)model_tracking.o
 
-$(BUILD)%.o:objects/%.f90
+###################################################################
+#	Primary Data Objects
+###################################################################
+$(BUILD)test_caf_init.o: $(BUILD)domain_h.o $(BUILD)options_h.o
+
+$(BUILD)meta_data_obj.o: objects/meta_data_obj.f90 $(BUILD)meta_data_h.o
+
+$(BUILD)meta_data_h.o: objects/meta_data_h.f90 $(BUILD)icar_constants.o
+
+$(BUILD)variable_obj.o: objects/variable_obj.f90 $(BUILD)variable_h.o
+
+$(BUILD)variable_h.o: objects/variable_h.f90 $(BUILD)meta_data_h.o  $(BUILD)icar_constants.o
+
+$(BUILD)grid_obj.o: objects/grid_obj.f90 $(BUILD)grid_h.o $(BUILD)assertions.o
+
+$(BUILD)exchangeable_obj.o: objects/exchangeable_obj.f90 $(BUILD)exchangeable_h.o $(BUILD)assertions.o
+
+$(BUILD)exchangeable_h.o: objects/exchangeable_h.f90 $(BUILD)grid_h.o $(BUILD)variable_h.o
+
+$(BUILD)domain_obj.o: objects/domain_obj.f90 $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)grid_h.o \
+					$(BUILD)string.o $(BUILD)io_routines.o $(BUILD)assertions.o
+
+$(BUILD)domain_h.o: objects/domain_h.f90 $(BUILD)options_h.o $(BUILD)exchangeable_h.o \
+					$(BUILD)grid_h.o $(BUILD)meta_data_h.o $(BUILD)variable_h.o
+
+$(BUILD)assertions.o: utilities/assertions.f90
 	${F90} ${FFLAGS} $< -o $@
 
-$(BUILD)%.o:tests/%.f90
+$(BUILD)%.o: utilities/%.f90
+	${F90} ${FFLAGS} $< -o $@
+
+$(BUILD)%.o: constants/%.f90
+	${F90} ${FFLAGS} $< -o $@
+
+$(BUILD)%.o: io/%.f90
+	${F90} ${FFLAGS} $< -o $@
+
+$(BUILD)%.o: objects/%.f90
+	${F90} ${FFLAGS} $< -o $@
+
+$(BUILD)%.o: tests/%.f90
 	${F90} ${FFLAGS} $< -o $@
 
 ###################################################################
