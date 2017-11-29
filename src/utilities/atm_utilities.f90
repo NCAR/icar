@@ -23,6 +23,36 @@ module mod_atm_utilities
 
 contains
 
+
+    !>----------------------------------------------------------
+    !! Convert relative humidity, temperature, and pressure to water vapor mixing ratio
+    !!
+    !! Input temperature is real temperature in Kelvin  [K]
+    !! Input relative humidity is fractional            [0-1]
+    !! Input pressure s in Pascals                      [Pa]
+    !! Output mixing ratio is in kg / kg                [kg/kg]
+    !!
+    !!----------------------------------------------------------
+    pure elemental function rh_to_mr(input_rh, t, p) result(mr)
+        implicit none
+        real, intent(in) :: input_rh, t, p
+        real :: mr
+        real :: es, e, rh
+
+        rh = min(1.0, max(0.0, input_rh))
+
+        ! saturated vapor pressure
+        ! convert temperature to saturated vapor pressure (in Pa)
+        es = 611.2 * exp(17.67 * (t - 273.15) / (t - 29.65))
+
+        ! convert relative humidity to vapor pressure
+        e = rh / es
+
+        ! finally convert vapor pressure to mixing ratio
+        mr = 0.62197 * e / (p - e)
+    end function
+
+
     !>----------------------------------------------------------
     !! Calculate direction [0-2*pi) from u and v wind speeds
     !!
@@ -54,7 +84,7 @@ contains
     !! Calculate the strength of the u wind field given a direction [0-2*pi] and magnitude
     !!
     !!----------------------------------------------------------
-    pure function calc_speed(u, v) result(speed)
+    pure elemental function calc_speed(u, v) result(speed)
         implicit none
         real, intent(in) :: u,v
         real :: speed
@@ -66,7 +96,7 @@ contains
     !! Calculate the strength of the u wind field given a direction [0-2*pi] and magnitude
     !!
     !!----------------------------------------------------------
-    pure function calc_u(direction, magnitude) result(u)
+    pure elemental function calc_u(direction, magnitude) result(u)
         implicit none
         real, intent(in) :: direction, magnitude
         real :: u
@@ -78,7 +108,7 @@ contains
     !! Calculate the strength of the v wind field given a direction [0-2*pi] and magnitude
     !!
     !!----------------------------------------------------------
-    pure function calc_v(direction, magnitude) result(v)
+    pure elemental function calc_v(direction, magnitude) result(v)
         implicit none
         real, intent(in) :: direction, magnitude
         real :: v
@@ -94,7 +124,7 @@ contains
     !! from http://glossary.ametsoc.org/wiki/Saturation-adiabatic_lapse_rate
     !!
     !!----------------------------------------------------------
-    pure function calc_sat_lapse_rate(T,mr) result(sat_lapse)
+    pure elemental function calc_sat_lapse_rate(T,mr) result(sat_lapse)
         implicit none
         real, intent(in) :: T,mr  ! inputs T in K and mr in kg/kg
         real :: L
@@ -110,7 +140,7 @@ contains
     !! formula from Durran and Klemp, 1982 after Lalas and Einaudi 1974
     !!
     !!----------------------------------------------------------
-    pure function calc_moist_stability(t_top, t_bot, z_top, z_bot, qv_top, qv_bot, qc) result(BV_freq)
+    pure elemental function calc_moist_stability(t_top, t_bot, z_top, z_bot, qv_top, qv_bot, qc) result(BV_freq)
         implicit none
         real, intent(in) :: t_top, t_bot, z_top, z_bot, qv_top, qv_bot, qc
         real :: t,qv, dz, sat_lapse
@@ -129,7 +159,7 @@ contains
     !! Calculate the dry brunt vaisala frequency (Nd^2)
     !!
     !!----------------------------------------------------------
-    pure function calc_dry_stability(th_top, th_bot, z_top, z_bot) result(BV_freq)
+    pure elemental function calc_dry_stability(th_top, th_bot, z_top, z_bot) result(BV_freq)
         implicit none
         real, intent(in) :: th_top, th_bot, z_top, z_bot
         real :: BV_freq

@@ -81,7 +81,7 @@ contains
         integer,intent(in) :: nx
         real,               dimension(nx) :: mr, e, es
 
-        ! convert sensible humidity to mixing ratio
+        ! convert specific humidity to mixing ratio
         mr = qv / (1-qv)
         ! convert mixing ratio to vapor pressure
         e = mr * p / (0.62197+mr)
