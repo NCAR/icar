@@ -44,15 +44,17 @@
 !!
 !!----------------------------------------------------------
 module module_ra_simple
-    use time_object, only : Time_type
+    use time_object,        only : Time_type
+    use mod_atm_utilities,  only : relative_humidity
     use data_structures
     use time
+
     implicit none
+
     real, allocatable, dimension(:,:) :: cos_lat_m,sin_lat_m
     integer :: nrad_layers
     real, parameter :: So=1367.0 ! Solar "constant" W/m^2
     real, parameter :: qcmin=1e-5 ! arbitrarily selected minimum "cloud" water content to affect radiation
-    real, parameter :: MINIMUM_RH=1e-10 ! bounds on relative humidity = [min_rh to 1-min_rh]
 contains
     subroutine ra_simple_init(domain,options)
         implicit none
@@ -72,28 +74,6 @@ contains
 
     end subroutine ra_simple_init
 
-
-    function relative_humidity(t,qv,p,nx)
-        implicit none
-        real,               dimension(nx) :: relative_humidity
-        real,   intent(in), dimension(nx) :: t
-        real,   intent(in), dimension(nx)  :: qv, p
-        integer,intent(in) :: nx
-        real,               dimension(nx) :: mr, e, es
-
-        ! convert specific humidity to mixing ratio
-        mr = qv / (1-qv)
-        ! convert mixing ratio to vapor pressure
-        e = mr * p / (0.62197+mr)
-        ! convert temperature to saturated vapor pressure
-        es = 611.2 * exp(17.67 * (t - 273.15) / (t - 29.65))
-        ! finally return relative humidity
-        relative_humidity = e / es
-        ! because it is an approximation things could go awry and rh outside or reasonable bounds could break something else.
-        ! alternatively air could be supersaturated (esp. on boundary cells) but cloud fraction calculations will break.
-        where(relative_humidity > (1-MINIMUM_RH))   relative_humidity = 1 - MINIMUM_RH
-        where(relative_humidity < MINIMUM_RH)       relative_humidity = MINIMUM_RH
-    end function relative_humidity
 
     function shortwave(day_frac, cloud_cover, solar_elevation,nx)
 !       compute shortwave down at the surface based on solar elevation, fractional day of the year, and cloud fraction
@@ -226,7 +206,7 @@ contains
             rh=0
             do k=1,nrad_layers
                 T_air = T_air + (theta(:,k,j)*pii(:,k,j))
-                rh    = rh    + relative_humidity((theta(:,k,j)*pii(:,k,j)),qv(:,k,j),p(:,k,j),nx)
+                rh    = rh    + relative_humidity((theta(:,k,j)*pii(:,k,j)),qv(:,k,j),p(:,k,j))
             enddo
             T_air = T_air / nrad_layers
             rh    = rh    / nrad_layers

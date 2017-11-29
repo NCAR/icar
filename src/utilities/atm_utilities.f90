@@ -54,6 +54,39 @@ contains
 
 
     !>----------------------------------------------------------
+    !! Convert temperature, specific humidity, and pressure to relative humidity
+    !!
+    !! Input temperature is real temperature in Kelvin  [K]
+    !! Input specific humidity is in kg / kg            [kg/kg]
+    !! Input pressure s in Pascals                      [Pa]
+    !! Output relative humidity is fractional           [0-1]
+    !!
+    !!----------------------------------------------------------
+    pure elemental function relative_humidity(t,qv,p)
+        implicit none
+        real               :: relative_humidity
+        real,   intent(in) :: t
+        real,   intent(in) :: qv, p
+        real               :: mr, e, es
+
+        ! convert specific humidity to mixing ratio
+        mr = qv / (1-qv)
+        ! convert mixing ratio to vapor pressure
+        e = mr * p / (0.62197+mr)
+        ! convert temperature to saturated vapor pressure
+        es = 611.2 * exp(17.67 * (t - 273.15) / (t - 29.65))
+        ! finally return relative humidity
+        relative_humidity = e / es
+
+        ! because it is an approximation things could go awry and rh outside or reasonable bounds could break something else.
+        ! alternatively air could be supersaturated (esp. on boundary cells) but cloud fraction calculations will break.
+        relative_humidity = min(1.0, max(0.0, relative_humidity))
+
+    end function relative_humidity
+
+
+
+    !>----------------------------------------------------------
     !! Calculate direction [0-2*pi) from u and v wind speeds
     !!
     !!----------------------------------------------------------

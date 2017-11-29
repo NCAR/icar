@@ -510,7 +510,7 @@ $(BUILD)cu_kf.o:$(PHYS)cu_kf.f90
 $(BUILD)ra_driver.o:$(PHYS)ra_driver.f90 $(BUILD)ra_simple.o $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)ra_driver.f90 -o $(BUILD)ra_driver.o
 
-$(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o $(BUILD)time.o
+$(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o $(BUILD)time.o $(BUILD)atm_utilities.o
 	${F90} ${FFLAGS} $(PHYS)ra_simple.f90 -o $(BUILD)ra_simple.o
 
 ###################################################################
