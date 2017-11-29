@@ -1,4 +1,5 @@
 module exchangeable_interface
+  use assertions_mod,       only : assert, assertions
   use grid_interface, only : grid_t
   use variable_interface, only : variable_t
   implicit none
@@ -23,6 +24,7 @@ module exchangeable_interface
   contains
     private
     procedure, public :: const
+    procedure, public :: set_neighbors
     procedure, public :: send
     procedure, public :: retrieve
     procedure, public :: exchange
@@ -43,12 +45,17 @@ module exchangeable_interface
 
   interface
 
-    module subroutine const(this, grid, halo_width, metadata)
+    module subroutine const(this, grid, metadata)
       implicit none
       class(exchangeable_t), intent(inout)  :: this
       type(grid_t),          intent(in)     :: grid
-      integer,               intent(in), optional :: halo_width
       class(variable_t),     intent(in), optional :: metadata
+    end subroutine
+
+    module subroutine set_neighbors(this, grid)
+        implicit none
+        class(exchangeable_t), intent(inout) :: this
+        type(grid_t),          intent(in)    :: grid
     end subroutine
 
     module subroutine set_outputdata(this, metadata)

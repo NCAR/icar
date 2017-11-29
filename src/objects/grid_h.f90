@@ -1,4 +1,8 @@
 module grid_interface
+
+    use icar_constants, only : kDEFAULT_HALO_SIZE
+    use assertions_mod, only : assert, assertions
+
     implicit none
 
     private
@@ -10,7 +14,7 @@ module grid_interface
         integer :: ims, ime
         integer :: jms, jme
         integer :: kms, kme
-        integer :: ns_halo_nx, ew_halo_ny, halo_nz
+        integer :: ns_halo_nx, ew_halo_ny, halo_nz, halo_size
         integer :: nx_global, ny_global
         integer :: nx, ny, nz
 
@@ -38,11 +42,11 @@ interface
         real,           intent(in), optional :: ratio
     end subroutine
 
-    module subroutine get_grid_dimensions(this, nx, ny, nz, nx_extra, ny_extra)
+    module subroutine get_grid_dimensions(this, nx, ny, nz, nx_extra, ny_extra, halo_width)
         implicit none
         class(grid_t),   intent(inout) :: this
         integer,         intent(in)    :: nx, ny, nz
-        integer,         intent(in), optional :: nx_extra, ny_extra
+        integer,         intent(in), optional :: nx_extra, ny_extra, halo_width
     end subroutine
 end interface
 end module

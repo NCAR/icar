@@ -1,53 +1,35 @@
 submodule(exchangeable_interface) exchangeable_implementation
-    use assertions_mod,       only : assert, assertions
 
   implicit none
 
-  integer, parameter :: default_halo_size=1
-  integer, save, allocatable :: neighbors(:)
-  integer, save :: north_neighbor, south_neighbor, halo_size
+  ! these are all global for a given image, so we save them in the module instead of in the individual objects
+  integer, save :: halo_size
+  integer, save :: north_neighbor, south_neighbor
   integer, save :: east_neighbor, west_neighbor
+  integer, save, allocatable :: neighbors(:)
 
 contains
 
-  module subroutine const(this, grid, halo_width, metadata)
+  module subroutine const(this, grid, metadata)
     class(exchangeable_t), intent(inout) :: this
     type(grid_t),          intent(in)    :: grid
-    integer,               intent(in), optional :: halo_width
     class(variable_t),     intent(in), optional :: metadata
 
-    integer :: n_neighbors, current
-    integer :: ims,ime,kms,kme,jms,jme
+    halo_size = grid%halo_size
 
-    if (present(halo_width)) then
-        halo_size = halo_width
-    else
-        halo_size = default_halo_size
-    end if
-
-    if (associated(this%local)) then
-        deallocate(this%local)
-        nullify(this%local)
-    endif
     this%north_boundary = (grid%yimg == grid%yimages)
     this%south_boundary = (grid%yimg == 1)
     this%east_boundary  = (grid%ximg == grid%ximages)
     this%west_boundary  = (grid%ximg == 1)
 
+    if (associated(this%local)) then
+        deallocate(this%local)
+        nullify(this%local)
+    endif
 
-    associate( halo_south => merge(0,halo_size,this%south_boundary), &
-               halo_north => merge(0,halo_size,this%north_boundary), &
-               halo_east  => merge(0,halo_size,this%east_boundary), &
-               halo_west  => merge(0,halo_size,this%west_boundary))
-      ims = grid%ims - halo_east
-      ime = grid%ime + halo_west
-      jms = grid%jms - halo_south
-      jme = grid%jme + halo_north
-      kms = grid%kms
-      kme = grid%kme
-
-      allocate(this%local(ims:ime,kms:kme,jms:jme))
-    end associate
+    allocate(this%local(grid%ims:grid%ime, &
+                        grid%kms:grid%kme, &
+                        grid%jms:grid%jme))
 
     allocate( this%halo_south_in( grid%ns_halo_nx+halo_size*2, grid%halo_nz,   halo_size    )[*])
     allocate( this%halo_north_in( grid%ns_halo_nx+halo_size*2, grid%halo_nz,   halo_size    )[*])
@@ -55,48 +37,57 @@ contains
     allocate( this%halo_west_in(    halo_size,     grid%halo_nz, grid%ew_halo_ny+halo_size*2)[*])
 
 
-    ! set up the neighbors array so we can sync with our neighbors when needed
-    if (.not.allocated(neighbors)) then
-      associate(me=>this_image())
-        south_neighbor = me - grid%ximages
-        north_neighbor = me + grid%ximages
-        east_neighbor  = me + 1
-        west_neighbor  = me - 1
-
-        n_neighbors = merge(0,1,this%south_boundary)  &
-                     +merge(0,1,this%north_boundary)  &
-                     +merge(0,1,this%east_boundary)   &
-                     +merge(0,1,this%west_boundary)
-        n_neighbors = max(1, n_neighbors)
-
-        allocate(neighbors(n_neighbors))
-
-        current = 1
-        if (.not. this%south_boundary) then
-            neighbors(current) = south_neighbor
-            current = current+1
-        endif
-        if (.not. this%north_boundary) then
-            neighbors(current) = north_neighbor
-            current = current+1
-        endif
-        if (.not. this%east_boundary) then
-            neighbors(current) = east_neighbor
-            current = current+1
-        endif
-        if (.not. this%west_boundary) then
-            neighbors(current) = west_neighbor
-            current = current+1
-        endif
-        ! if current = 1 then all of the boundaries were set, just store ourself as our "neighbor"
-        if (current == 1) then
-            neighbors(current) = me
-        endif
-
-      end associate
-    endif
+    if (.not.allocated(neighbors)) call this%set_neighbors(grid)
 
     if (present(metadata)) call this%set_outputdata(metadata)
+
+  end subroutine
+
+  module subroutine set_neighbors(this, grid)
+      class(exchangeable_t), intent(inout) :: this
+      type(grid_t),          intent(in)    :: grid
+      integer :: n_neighbors, current
+
+      ! set up the neighbors array so we can sync with our neighbors when needed
+      if (.not.allocated(neighbors)) then
+        associate(me=>this_image())
+          south_neighbor = me - grid%ximages
+          north_neighbor = me + grid%ximages
+          east_neighbor  = me + 1
+          west_neighbor  = me - 1
+
+          n_neighbors = merge(0,1,this%south_boundary)  &
+                       +merge(0,1,this%north_boundary)  &
+                       +merge(0,1,this%east_boundary)   &
+                       +merge(0,1,this%west_boundary)
+          n_neighbors = max(1, n_neighbors)
+
+          allocate(neighbors(n_neighbors))
+
+          current = 1
+          if (.not. this%south_boundary) then
+              neighbors(current) = south_neighbor
+              current = current+1
+          endif
+          if (.not. this%north_boundary) then
+              neighbors(current) = north_neighbor
+              current = current+1
+          endif
+          if (.not. this%east_boundary) then
+              neighbors(current) = east_neighbor
+              current = current+1
+          endif
+          if (.not. this%west_boundary) then
+              neighbors(current) = west_neighbor
+              current = current+1
+          endif
+          ! if current = 1 then all of the boundaries were set, just store ourself as our "neighbor"
+          if (current == 1) then
+              neighbors(current) = me
+          endif
+
+        end associate
+      endif
 
   end subroutine
 

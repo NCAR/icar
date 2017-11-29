@@ -59,6 +59,8 @@ contains
           enddo
 
           this%exner             = exner_function(this%pressure)
+
+          print*, shape(this%exner), shape(this%potential_temperature%local)
           this%temperature       = this%exner * this%potential_temperature%local
           this%water_vapor%local = sat_mr(this%temperature,this%pressure)
       end associate
@@ -104,6 +106,9 @@ contains
 
       integer :: nx_global, ny_global, nz_global
       ! read input file...
+      nx_global=100
+      ny_global=200
+      nz_global=30
 
       call this%grid%get_grid_dimensions(nx_global, ny_global, nz_global)
       call this%u_grid%get_grid_dimensions(nx_global, ny_global, nz_global, nx_extra = 1)

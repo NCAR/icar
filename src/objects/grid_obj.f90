@@ -1,7 +1,5 @@
 submodule(grid_interface) grid_implementation
-    use assertions_mod,       only : assert, assertions
     implicit none
-
 
 contains
 
@@ -117,12 +115,18 @@ contains
     end function my_start
 
     ! Generate the domain decomposition mapping and compute the indicies for local memory
-    module subroutine get_grid_dimensions(this, nx, ny, nz, nx_extra, ny_extra)
+    module subroutine get_grid_dimensions(this, nx, ny, nz, nx_extra, ny_extra, halo_width)
       class(grid_t),   intent(inout) :: this
       integer,         intent(in)    :: nx, ny, nz
-      integer,         intent(in), optional :: nx_extra, ny_extra
+      integer,         intent(in), optional :: nx_extra, ny_extra, halo_width
 
-      integer :: nx_e, ny_e
+      integer :: nx_e, ny_e, halo_size
+
+      if (present(halo_width)) then
+          halo_size = halo_width
+      else
+          halo_size = kDEFAULT_HALO_SIZE
+      end if
 
       nx_e = 0
       ny_e = 0
@@ -164,11 +168,39 @@ contains
       this%kde = this%nz
 
       ! define the halo needed to manage communications between images
-      this%ns_halo_nx = this%nx_global / this%ximages + 1 + nx_e  ! number of grid cells in x in the ns halo
-      this%ew_halo_ny = this%ny_global / this%yimages + 1 + ny_e  ! number of grid cells in y in the ew halo
+      ! perhaps this should be defined in exchangeable instead though?
+      this%ns_halo_nx = this%nx_global / this%ximages + halo_size + nx_e  ! number of grid cells in x in the ns halo
+      this%ew_halo_ny = this%ny_global / this%yimages + halo_size + ny_e  ! number of grid cells in y in the ew halo
       this%halo_nz    = this%nz
 
+      this%halo_size = halo_size
+
+      call update_with_halos(this, halo_size)
+
   end subroutine
+
+  subroutine update_with_halos(grid, halo_size)
+      type(grid_t), intent(inout)   :: grid
+      integer,      intent(in)      :: halo_size
+
+      logical :: north_boundary, south_boundary, &
+                 east_boundary,  west_boundary
+
+      north_boundary = (grid%yimg == grid%yimages)
+      south_boundary = (grid%yimg == 1)
+      east_boundary  = (grid%ximg == grid%ximages)
+      west_boundary  = (grid%ximg == 1)
+
+      grid%ims = grid%ims - merge(0, halo_size, east_boundary)
+      grid%ime = grid%ime + merge(0, halo_size, west_boundary)
+      grid%jms = grid%jms - merge(0, halo_size, south_boundary)
+      grid%jme = grid%jme + merge(0, halo_size, north_boundary)
+      grid%kms = grid%kms
+      grid%kme = grid%kme
+
+  end subroutine
+
+
 
 
 end submodule

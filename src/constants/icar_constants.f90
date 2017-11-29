@@ -28,6 +28,11 @@ module icar_constants
 
 
 ! ------------------------------------------------
+!  Default width of coarray halos, ideally might be physics dependant (e.g. based on advection spatial order)
+! ------------------------------------------------
+    integer,parameter :: kDEFAULT_HALO_SIZE = 1
+
+! ------------------------------------------------
 ! Value to accept for difference between real numbers should be as a fraction but then have to test for non-zero...
 ! ------------------------------------------------
     real,   parameter :: kSMALL_VALUE = 1e-6

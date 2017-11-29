@@ -444,9 +444,11 @@ $(BUILD)meta_data_h.o: objects/meta_data_h.f90 $(BUILD)icar_constants.o
 
 $(BUILD)variable_obj.o: objects/variable_obj.f90 $(BUILD)variable_h.o
 
-$(BUILD)variable_h.o: objects/variable_h.f90 $(BUILD)meta_data_h.o  $(BUILD)icar_constants.o
+$(BUILD)variable_h.o: objects/variable_h.f90 $(BUILD)meta_data_h.o $(BUILD)icar_constants.o
 
-$(BUILD)grid_obj.o: objects/grid_obj.f90 $(BUILD)grid_h.o $(BUILD)assertions.o
+$(BUILD)grid_obj.o: objects/grid_obj.f90 $(BUILD)grid_h.o
+
+$(BUILD)grid_h.o: objects/grid_h.f90 $(BUILD)icar_constants.o $(BUILD)assertions.o $(BUILD)assertions.o
 
 $(BUILD)exchangeable_obj.o: objects/exchangeable_obj.f90 $(BUILD)exchangeable_h.o $(BUILD)assertions.o
 
@@ -523,7 +525,7 @@ $(BUILD)string.o:$(UTIL)string.f90
 $(BUILD)array_utilities.o:$(UTIL)array_utilities.f90
 	${F90} ${FFLAGS} $(UTIL)array_utilities.f90 -o $(BUILD)array_utilities.o
 
-$(BUILD)atm_utilities.o:$(UTIL)atm_utilities.f90 $(BUILD)icar_constants.o $(BUILD)data_structures.o
+$(BUILD)atm_utilities.o:$(UTIL)atm_utilities.f90 $(BUILD)icar_constants.o $(BUILD)data_structures.o $(BUILD)options_h.o
 	${F90} ${FFLAGS} $(UTIL)atm_utilities.f90 -o $(BUILD)atm_utilities.o
 
 
