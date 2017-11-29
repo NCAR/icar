@@ -908,7 +908,6 @@ contains
             call read_var(domain%th,   file_list(curfile),   options%tvar,   &
                             bc%geolut, bc%vert_lut, curstep, boundary_value, &
                             options)
-
             if (.not.options%t_is_potential) then
                 domain%pii = (domain%p/100000.0)**(Rd/cp)
                 domain%th = domain%th / domain%pii
@@ -917,6 +916,10 @@ contains
             call read_var(domain%qv,   file_list(curfile),   options%qvvar,  &
                             bc%geolut, bc%vert_lut, curstep, boundary_value, &
                             options)
+            if (options%qv_is_spec_humidity) then
+                bc%next_domain%qv = bc%next_domain%qv / (1 - bc%next_domain%qv)
+            endif
+
             if (trim(options%qcvar)/="") then
                 call read_var(domain%cloud,file_list(curfile),   options%qcvar,  &
                                 bc%geolut, bc%vert_lut, curstep, boundary_value, &
@@ -1338,10 +1341,13 @@ contains
             bc%next_domain%th = bc%next_domain%th / bc%next_domain%pii
         endif
 
-
         call read_var(bc%next_domain%qv,      file_list(curfile), options%qvvar,  &
                       bc%geolut, bc%vert_lut, curstep, use_boundary,              &
                       options, time_varying_zlut=newbc%vert_lut)
+
+        if (options%qv_is_spec_humidity) then
+            bc%next_domain%qv = bc%next_domain%qv / (1 - bc%next_domain%qv)
+        endif
 
         if (trim(options%qcvar)/="") then
             call read_var(bc%next_domain%cloud,   file_list(curfile), options%qcvar,  &

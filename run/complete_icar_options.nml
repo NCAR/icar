@@ -127,6 +127,9 @@
     !   If the temperature field in the forcing data is not potential temperature, then set this flag to False
     ! t_is_potential = .True.
 
+    !   If the water vapor field in the forcing data is specific humidity instead of mixing ratio, then set this flag to true.
+    ! qv_is_spec_humidity = .False.
+
     !   Distance to smooth winds over [m] ~100000 is reasonable
     !   larger values result in less large scale convergence/divergence in the flow field
     !   smaller value result in more and can destroy orographic precip and result in odd spatial coherence
