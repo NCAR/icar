@@ -20,10 +20,10 @@
 !!  [longwave->]
 !!
 !! High level routine descriptions / purpose
-!!   ra_simple          - loops over X,Y grid cells, calls cloudfrac, shortwave,longwave on columns
+!!   ra_simple           - loops over X,Y grid cells, calls cloudfrac, shortwave,longwave on columns
 !!   cloudfrac           - calculates the cloud fraction following Xu and Randall (1996)
 !!   shortwave           - calculates shortwave at the surface following Reiff et al (1984)
-!!   longwave               - calculates longwave at the surface following Idso and Jackson (1969)
+!!   longwave            - calculates longwave at the surface following Idso and Jackson (1969)
 !!
 !! Driver inputs: p,th,pii,rho,qv,qc,qr,qs,rain,snow,dt,dz,nx,ny,nz
 !!   p   = pressure                      - 3D - input  - Pa     - (nx,nz,ny)
@@ -34,8 +34,8 @@
 !!   qc  = cloud water content           - 3D - input  - kg/kg  - (nx,nz,ny)
 !!   qr  = rain water content            - 3D - input  - kg/kg  - (nx,nz,ny)
 !!   qs  = snow water content            - 3D - input  - kg/kg  - (nx,nz,ny)
-!!   swdown = shortwave down at surface - 2D - output - W/m^2   - (nx,ny)
-!!   lwdown = longwave down at surface  - 2D - output - W/m^2   - (nx,ny)
+!!   swdown = shortwave down at surface  - 2D - output - W/m^2  - (nx,ny)
+!!   lwdown = longwave down at surface   - 2D - output - W/m^2  - (nx,ny)
 !!   dt = time step                      - 0D - input  - seconds    - scalar
 !! </pre>
 !!
