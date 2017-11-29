@@ -39,7 +39,7 @@ module assertions_mod
     logical, parameter :: assertions=USE_ASSERTIONS
 
 contains
-    elemental impure module subroutine assert(assertion,description,success)
+    elemental impure subroutine assert(assertion,description,success)
         use iso_fortran_env, only : error_unit
         !! Report on the truth of an assertion or error-terminate on assertion failure
         implicit none

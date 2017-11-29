@@ -12,6 +12,7 @@ module domain_interface
 
   type domain_t
     type(meta_data_t)    :: info
+    type(grid_t)         :: grid, u_grid, v_grid
 
     ! core model species to be advected
     type(exchangeable_t) :: water_vapor
@@ -68,17 +69,12 @@ module domain_interface
 
   contains
     procedure :: init
-    procedure :: get_grid_dimensions
-    procedure :: initialize_from_file
-    procedure :: advect
+
     procedure :: halo_send
     procedure :: halo_retrieve
     procedure :: halo_exchange
     procedure :: enforce_limits
-    procedure :: domain_decomposition
-   !generic :: read(formatted)=>initialize_from_file
-   !procedure, private :: initialize_with_configuration
-   !procedure :: update_boundary
+
   end type
 
   integer, parameter :: space_dimension=3
@@ -90,13 +86,6 @@ module domain_interface
       implicit none
       class(domain_t), intent(inout) :: this
       class(options_t),intent(in)    :: options
-    end subroutine
-
-    ! MPDATA algorithm
-    module subroutine advect(this, dt)
-      implicit none
-      class(domain_t), intent(inout) :: this
-      real,            intent(in)    :: dt
     end subroutine
 
 
@@ -121,28 +110,6 @@ module domain_interface
     module subroutine enforce_limits(this)
       implicit none
       class(domain_t), intent(inout) :: this
-    end subroutine
-
-    module subroutine domain_decomposition(this, nx, ny, nimages, ratio)
-      implicit none
-      class(domain_t), intent(inout) :: this
-      integer,         intent(in)    :: nx, ny, nimages
-      real,            intent(in), optional :: ratio
-    end subroutine
-
-    ! Return x, y, z dimensions of grid
-    module function get_grid_dimensions(this, nx_extra, ny_extra) result(grid)
-      implicit none
-      class(domain_t), intent(in) :: this
-      integer,         intent(in), optional :: nx_extra, ny_extra
-      type(grid_t) :: grid
-    end function
-
-    ! Input domain_t object from file
-    module subroutine initialize_from_file(this,file_name)
-      implicit none
-      class(domain_t), intent(inout) :: this
-      character(len=*), intent(in) :: file_name
     end subroutine
 
   end interface

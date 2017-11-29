@@ -1,6 +1,6 @@
 submodule(exchangeable_interface) exchangeable_implementation
     use assertions_mod,       only : assert, assertions
-    
+
   implicit none
 
   integer, parameter :: default_halo_size=1
@@ -10,10 +10,9 @@ submodule(exchangeable_interface) exchangeable_implementation
 
 contains
 
-  module subroutine const(this,grid,initial_value,halo_width, metadata)
+  module subroutine const(this, grid, halo_width, metadata)
     class(exchangeable_t), intent(inout) :: this
     type(grid_t),          intent(in)    :: grid
-    real,                  intent(in)    :: initial_value
     integer,               intent(in), optional :: halo_width
     class(variable_t),     intent(in), optional :: metadata
 
@@ -47,13 +46,13 @@ contains
       kms = grid%kms
       kme = grid%kme
 
-      allocate(this%local(ims:ime,kms:kme,jms:jme), source=initial_value)
+      allocate(this%local(ims:ime,kms:kme,jms:jme))
     end associate
 
-    allocate( this%halo_south_in( grid%ns_halo_nx+halo_size*2, grid%halo_nz,   halo_size    )[*], source=initial_value)
-    allocate( this%halo_north_in( grid%ns_halo_nx+halo_size*2, grid%halo_nz,   halo_size    )[*], source=initial_value)
-    allocate( this%halo_east_in(    halo_size,     grid%halo_nz, grid%ew_halo_ny+halo_size*2)[*], source=initial_value)
-    allocate( this%halo_west_in(    halo_size,     grid%halo_nz, grid%ew_halo_ny+halo_size*2)[*], source=initial_value)
+    allocate( this%halo_south_in( grid%ns_halo_nx+halo_size*2, grid%halo_nz,   halo_size    )[*])
+    allocate( this%halo_north_in( grid%ns_halo_nx+halo_size*2, grid%halo_nz,   halo_size    )[*])
+    allocate( this%halo_east_in(    halo_size,     grid%halo_nz, grid%ew_halo_ny+halo_size*2)[*])
+    allocate( this%halo_west_in(    halo_size,     grid%halo_nz, grid%ew_halo_ny+halo_size*2)[*])
 
 
     ! set up the neighbors array so we can sync with our neighbors when needed

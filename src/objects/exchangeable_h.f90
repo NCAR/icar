@@ -43,11 +43,10 @@ module exchangeable_interface
 
   interface
 
-    module subroutine const(this, grid, initial_value, halo_width, metadata)
+    module subroutine const(this, grid, halo_width, metadata)
       implicit none
       class(exchangeable_t), intent(inout)  :: this
       type(grid_t),          intent(in)     :: grid
-      real,                  intent(in)     :: initial_value
       integer,               intent(in), optional :: halo_width
       class(variable_t),     intent(in), optional :: metadata
     end subroutine

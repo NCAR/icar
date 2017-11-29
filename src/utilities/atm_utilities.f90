@@ -12,8 +12,9 @@
 !!----------------------------------------------------------
 module mod_atm_utilities
 
-    use icar_constants, only : pi, gravity, Rd, Rw, cp, LH_vaporization
-    use data_structures
+    use icar_constants,           only : pi, gravity, Rd, Rw, cp, LH_vaporization
+    ! use data_structures
+    use options_interface,        only : options_t
 
     implicit none
 
@@ -201,9 +202,94 @@ contains
     end function blocking_fraction
 
 
+    !>----------------------------------------------------------
+    !!  Calculate the saturated mixing ratio for a given temperature and pressure
+    !!
+    !!  If temperature > 0C: returns the saturated mixing ratio with respect to liquid
+    !!  If temperature < 0C: returns the saturated mixing ratio with respect to ice
+    !!
+    !!  @param temperature  Air Temperature [K]
+    !!  @param pressure     Air Pressure [Pa]
+    !!  @retval sat_mr      Saturated water vapor mixing ratio [kg/kg]
+    !!
+    !!  @see http://www.dtic.mil/dtic/tr/fulltext/u2/778316.pdf
+    !!   Lowe, P.R. and J.M. Ficke., 1974: The Computation of Saturation Vapor Pressure
+    !!   Environmental Prediction Research Facility, Technical Paper No. 4-74
+    !!
+    !!----------------------------------------------------------
+    elemental function sat_mr(temperature,pressure)
+    ! Calculate the saturated mixing ratio at a temperature (K), pressure (Pa)
+        implicit none
+        real,intent(in) :: temperature,pressure
+        real :: e_s,a,b
+        real :: sat_mr
+
+        ! from http://www.dtic.mil/dtic/tr/fulltext/u2/778316.pdf
+        !   Lowe, P.R. and J.M. Ficke., 1974: THE COMPUTATION OF SATURATION VAPOR PRESSURE
+        !       Environmental Prediction Research Facility, Technical Paper No. 4-74
+        ! which references:
+        !   Murray, F. W., 1967: On the computation of saturation vapor pressure.
+        !       Journal of Applied Meteorology, Vol. 6, pp. 203-204.
+        ! Also notes a 6th order polynomial and look up table as viable options.
+        if (temperature < 273.15) then
+            a = 21.8745584
+            b = 7.66
+        else
+            a = 17.2693882
+            b = 35.86
+        endif
+
+        e_s = 610.78 * exp(a * (temperature - 273.16) / (temperature - b)) !(Pa)
+
+        ! alternate formulations
+        ! Polynomial:
+        ! e_s = ao + t*(a1+t*(a2+t*(a3+t*(a4+t*(a5+a6*t))))) a0-6 defined separately for water and ice
+        ! e_s = 611.2*exp(17.67*(t-273.15)/(t-29.65)) ! (Pa)
+        ! from : http://www.srh.noaa.gov/images/epz/wxcalc/vaporPressure.pdf
+        ! e_s = 611.0*10.0**(7.5*(t-273.15)/(t-35.45))
+
+
+        if ((pressure - e_s) <= 0) then
+            e_s = pressure * 0.99999
+        endif
+        ! from : http://www.srh.noaa.gov/images/epz/wxcalc/mixingRatio.pdf
+        sat_mr = 0.6219907 * e_s / (pressure - e_s) !(kg/kg)
+    end function sat_mr
+
+    !> -------------------------------
+    !!
+    !! Convert p [Pa] at shifting it to a given elevatiom [m]
+    !!
+    !! -------------------------------
+    elemental function pressure_at_elevation(sealevel_pressure, elevation) result(pressure)
+        implicit none
+        real, intent(in) :: sealevel_pressure, elevation
+        real :: pressure
+
+        pressure = sealevel_pressure * (1 - 2.25577E-5 * elevation)**5.25588
+
+    end function
+
+    !> -------------------------------
+    !!
+    !! Compute exner function to convert potential_temperature to temperature
+    !!
+    !! -------------------------------
+    elemental function exner_function(pressure) result(exner)
+        implicit none
+        real, intent(in) :: pressure
+        real :: exner
+
+        associate(po=>100000, Rd=>287.058, cp=>1003.5)
+            exner = (pressure / po) ** (Rd/cp)
+
+        end associate
+    end function
+
+
     subroutine init_atm_utilities(options)
         implicit none
-        type(options_type) :: options
+        type(options_t) :: options
 
         N_squared   = options%lt_options%N_squared
         variable_N  = options%lt_options%variable_N
