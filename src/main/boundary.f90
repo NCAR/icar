@@ -38,6 +38,7 @@ module boundary_conditions
     use output,                 only : write_domain, output_init
     use string,                 only : str
     use array_utilities,        only : smooth_array
+    use mod_atm_utilities,      only : rh_to_mr
 
     implicit none
     private
@@ -917,7 +918,11 @@ contains
                             bc%geolut, bc%vert_lut, curstep, boundary_value, &
                             options)
             if (options%qv_is_spec_humidity) then
-                bc%next_domain%qv = bc%next_domain%qv / (1 - bc%next_domain%qv)
+                domain%qv = domain%qv / (1 - domain%qv)
+            endif
+
+            if (options%qv_is_relative_humidity) then
+                domain%qv = rh_to_mr(domain%qv, domain%th * domain%pii, domain%p)
             endif
 
             if (trim(options%qcvar)/="") then
@@ -1348,6 +1353,10 @@ contains
         if (options%qv_is_spec_humidity) then
             bc%next_domain%qv = bc%next_domain%qv / (1 - bc%next_domain%qv)
         endif
+        if (options%qv_is_relative_humidity) then
+            bc%next_domain%qv = rh_to_mr(bc%next_domain%qv, bc%next_domain%th * bc%next_domain%pii, bc%next_domain%p)
+        endif
+
 
         if (trim(options%qcvar)/="") then
             call read_var(bc%next_domain%cloud,   file_list(curfile), options%qcvar,  &
