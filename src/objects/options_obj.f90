@@ -167,7 +167,7 @@ contains
 
         ierr=0
         if (present(var_idx)) then
-            call add_to_varlist(this%vars_to_restart,[var_idx], ierr)
+            call add_to_varlist(this%vars_for_restart,[var_idx], ierr)
         endif
 
         if (present(input_vars)) then
