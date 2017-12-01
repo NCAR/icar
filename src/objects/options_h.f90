@@ -1,6 +1,6 @@
 module options_interface
 
-    use icar_constants,             only : kMAX_STRING_LENGTH
+    use icar_constants,             only : kMAX_STRING_LENGTH, kMAX_STORAGE_VARS
     use options_types,              only : parameter_options_type, physics_type, mp_options_type, lt_options_type, &
                                            block_options_type, adv_options_type, lsm_options_type, bias_options_type
 
@@ -11,6 +11,10 @@ module options_interface
 
     type :: options_t
         character(len=kMAX_STRING_LENGTH) :: comment
+
+        integer :: vars_to_advect(   kMAX_STORAGE_VARS ) = 0
+        integer :: vars_to_allocate( kMAX_STORAGE_VARS ) = 0
+        integer :: vars_for_restart( kMAX_STORAGE_VARS ) = 0
 
         type(parameter_options_type),   allocatable :: parameters[:]
 

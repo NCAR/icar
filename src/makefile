@@ -406,7 +406,8 @@ caf_init_test: $(BUILD)test_caf_init.o                              \
 				$(BUILD)grid_h.o         $(BUILD)grid_obj.o         \
 				$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
 				$(BUILD)domain_h.o       $(BUILD)domain_obj.o		\
-				$(BUILD)assertions.o	 $(BUILD)atm_utilities.o
+				$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
+				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 
@@ -455,7 +456,7 @@ $(BUILD)exchangeable_obj.o: objects/exchangeable_obj.f90 $(BUILD)exchangeable_h.
 $(BUILD)exchangeable_h.o: objects/exchangeable_h.f90 $(BUILD)grid_h.o $(BUILD)variable_h.o
 
 $(BUILD)domain_obj.o: objects/domain_obj.f90 $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)grid_h.o \
-					$(BUILD)string.o $(BUILD)io_routines.o $(BUILD)assertions.o $(BUILD)atm_utilities.o
+					$(BUILD)string.o $(BUILD)mp_driver.o $(BUILD)io_routines.o $(BUILD)assertions.o $(BUILD)atm_utilities.o
 
 $(BUILD)domain_h.o: objects/domain_h.f90 $(BUILD)options_h.o $(BUILD)exchangeable_h.o \
 					$(BUILD)grid_h.o $(BUILD)meta_data_h.o $(BUILD)variable_h.o
@@ -556,10 +557,13 @@ $(BUILD)vinterp.o: $(UTIL)vinterp.f90 $(BUILD)data_structures.o
 ###################################################################
 #	Microphysics code
 ###################################################################
-
-$(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_thompson.o $(BUILD)mp_simple.o \
-					$(BUILD)mp_morrison.o $(BUILD)data_structures.o $(BUILD)mp_wsm6.o $(BUILD)time.o
+$(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_simple.o \
+					$(BUILD)data_structures.o $(BUILD)time.o
 	${F90} ${FFLAGS} $(PHYS)mp_driver.f90 -o $(BUILD)mp_driver.o
+
+# $(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_thompson.o $(BUILD)mp_simple.o \
+# 					$(BUILD)mp_morrison.o $(BUILD)data_structures.o $(BUILD)mp_wsm6.o $(BUILD)time.o
+# 	${F90} ${FFLAGS} $(PHYS)mp_driver.f90 -o $(BUILD)mp_driver.o
 
 $(BUILD)mp_morrison.o:$(PHYS)mp_morrison.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)mp_morrison.f90 -o $(BUILD)mp_morrison.o

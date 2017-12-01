@@ -9,6 +9,56 @@ module icar_constants
     integer, parameter :: kMAX_NAME_LENGTH = 1024
     integer, parameter :: kMAX_ATTR_LENGTH = 1024
 
+    type var_constants_type
+        SEQUENCE
+        integer :: u
+        integer :: v
+        integer :: w
+        integer :: pressure
+        integer :: pressure_interface
+        integer :: potential_temperature
+        integer :: temperature
+        integer :: water_vapor
+        integer :: cloud_water
+        integer :: cloud_number_concentration
+        integer :: cloud_ice
+        integer :: ice_number_concentration
+        integer :: rain_in_air
+        integer :: rain_number_concentration
+        integer :: snow_in_air
+        integer :: snow_number_concentration
+        integer :: graupel_in_air
+        integer :: graupel_number_concentration
+        integer :: precipitation
+        integer :: snowfall
+        integer :: graupel
+        integer :: exner
+        integer :: density
+        integer :: z
+        integer :: z_interface
+        integer :: dz
+        integer :: dz_interface
+        integer :: shortwave
+        integer :: longwave
+        integer :: vegetation_fraction
+        integer :: land_cover
+        integer :: lai
+        integer :: canopy_water
+        integer :: snow_water_equivalent
+        integer :: soil_water_content
+        integer :: soil_temperature
+        integer :: skin_temperature
+    end type var_constants_type
+
+    type(var_constants_type) :: kVARS = var_constants_type( 1,  2,  3,  4,  5,  6,  7,  8,  9, 10,  &
+                                                           11, 12, 13, 14, 15, 16, 17, 18, 19, 20,  &
+                                                           21, 22, 23, 24, 25, 26, 27, 28, 29, 30,  &
+                                                           31, 32, 33, 34, 35, 36, 37  )
+
+    integer, parameter :: kINTEGER_BITS = storage_size(kINTEGER_BITS)
+
+    integer, parameter :: kMAX_STORAGE_VARS = storage_size(kVARS) / kINTEGER_BITS
+
     ! Initial number of output variables for which pointers are created
     integer, parameter :: kINITIAL_VAR_SIZE= 1024
 
