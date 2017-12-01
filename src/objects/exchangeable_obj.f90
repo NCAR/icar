@@ -22,12 +22,12 @@ contains
     this%east_boundary  = (grid%ximg == grid%ximages)
     this%west_boundary  = (grid%ximg == 1)
 
-    if (associated(this%local)) then
-        deallocate(this%local)
-        nullify(this%local)
+    if (associated(this%data_3d)) then
+        deallocate(this%data_3d)
+        nullify(this%data_3d)
     endif
 
-    allocate(this%local(grid%ims:grid%ime, &
+    allocate(this%data_3d(grid%ims:grid%ime, &
                         grid%kms:grid%kme, &
                         grid%jms:grid%jme))
 
@@ -98,13 +98,13 @@ contains
 
     this%meta_data = metadata
 
-    this%meta_data%data_3d => this%local
+    this%meta_data%data_3d => this%data_3d
     this%meta_data%three_d = .True.
 
     if (.not.allocated(this%meta_data%dim_len)) allocate(this%meta_data%dim_len(3))
-    this%meta_data%dim_len(1) = size(this%local,1)
-    this%meta_data%dim_len(2) = size(this%local,2)
-    this%meta_data%dim_len(3) = size(this%local,3)
+    this%meta_data%dim_len(1) = size(this%data_3d,1)
+    this%meta_data%dim_len(2) = size(this%data_3d,2)
+    this%meta_data%dim_len(3) = size(this%data_3d,3)
 
   end subroutine
 
@@ -153,110 +153,110 @@ contains
   module subroutine put_north(this)
       class(exchangeable_t), intent(inout) :: this
       integer :: n, nx
-      n = ubound(this%local,3)
-      nx = size(this%local,1)
+      n = ubound(this%data_3d,3)
+      nx = size(this%data_3d,1)
 
       if (assertions) then
         !! gfortran 6.3.0 doesn't check coarray shape conformity with -fcheck=all so we verify with an assertion
         call assert( shape(this%halo_south_in(:nx,:,1:halo_size)[north_neighbor]) &
-                     == shape(this%local(:,:,n-halo_size+1:n)),         &
+                     == shape(this%data_3d(:,:,n-halo_size+1:n)),         &
                      "put_north: conformable halo_south_in and local " )
       end if
 
       !dir$ pgas defer_sync
-      this%halo_south_in(1:nx,:,1:halo_size)[north_neighbor] = this%local(:,:,n-halo_size*2+1:n-halo_size)
+      this%halo_south_in(1:nx,:,1:halo_size)[north_neighbor] = this%data_3d(:,:,n-halo_size*2+1:n-halo_size)
   end subroutine
 
   module subroutine put_south(this)
       class(exchangeable_t), intent(inout) :: this
 
       integer :: start, nx
-      start = lbound(this%local,3)
-      nx = size(this%local,1)
+      start = lbound(this%data_3d,3)
+      nx = size(this%data_3d,1)
 
       if (assertions) then
         !! gfortran 6.3.0 doesn't check coarray shape conformity with -fcheck=all so we verify with an assertion
         call assert( shape(this%halo_north_in(:nx,:,1:halo_size)[south_neighbor]) &
-                     == shape(this%local(:,:,start:start+halo_size-1)), &
+                     == shape(this%data_3d(:,:,start:start+halo_size-1)), &
                      "put_south: conformable halo_north_in and local " )
       end if
       !dir$ pgas defer_sync
-      this%halo_north_in(1:nx,:,1:halo_size)[south_neighbor] = this%local(:,:,start+halo_size:start+halo_size*2-1)
+      this%halo_north_in(1:nx,:,1:halo_size)[south_neighbor] = this%data_3d(:,:,start+halo_size:start+halo_size*2-1)
   end subroutine
 
   module subroutine retrieve_north_halo(this)
       class(exchangeable_t), intent(inout) :: this
 
       integer :: n, nx
-      n = ubound(this%local,3)
-      nx = size(this%local,1)
+      n = ubound(this%data_3d,3)
+      nx = size(this%data_3d,1)
 
-      this%local(:,:,n-halo_size+1:n) = this%halo_north_in(:nx,:,1:halo_size)
+      this%data_3d(:,:,n-halo_size+1:n) = this%halo_north_in(:nx,:,1:halo_size)
   end subroutine
 
   module subroutine retrieve_south_halo(this)
       class(exchangeable_t), intent(inout) :: this
 
       integer :: start, nx
-      start = lbound(this%local,3)
-      nx = size(this%local,1)
+      start = lbound(this%data_3d,3)
+      nx = size(this%data_3d,1)
 
-      this%local(:,:,start:start+halo_size-1) = this%halo_south_in(:nx,:,1:halo_size)
+      this%data_3d(:,:,start:start+halo_size-1) = this%halo_south_in(:nx,:,1:halo_size)
   end subroutine
 
   module subroutine put_east(this)
       class(exchangeable_t), intent(inout) :: this
       integer :: n, ny
-      n = ubound(this%local,1)
-      ny = size(this%local,3)
+      n = ubound(this%data_3d,1)
+      ny = size(this%data_3d,3)
 
       if (assertions) then
         !! gfortran 6.3.0 doesn't check coarray shape conformity with -fcheck=all so we verify with an assertion
         call assert( shape(this%halo_west_in(1:halo_size,:,:ny)[east_neighbor])       &
-                     == shape(this%local(n-halo_size*2+1:n-halo_size,:,:)), &
+                     == shape(this%data_3d(n-halo_size*2+1:n-halo_size,:,:)), &
                      "put_east: conformable halo_west_in and local " )
       end if
 
       !dir$ pgas defer_sync
-      this%halo_west_in(1:halo_size,:,1:ny)[east_neighbor] = this%local(n-halo_size*2+1:n-halo_size,:,:)
+      this%halo_west_in(1:halo_size,:,1:ny)[east_neighbor] = this%data_3d(n-halo_size*2+1:n-halo_size,:,:)
   end subroutine
 
   module subroutine put_west(this)
       class(exchangeable_t), intent(inout) :: this
 
       integer :: start, ny
-      start = lbound(this%local,1)
-      ny = size(this%local,3)
+      start = lbound(this%data_3d,1)
+      ny = size(this%data_3d,3)
 
       if (assertions) then
         !! gfortran 6.3.0 doesn't check coarray shape conformity with -fcheck=all so we verify with an assertion
         call assert( shape(this%halo_east_in(1:halo_size,:,:ny)[west_neighbor])               &
-                     == shape(this%local(start+halo_size:start+halo_size*2-1,:,:)), &
+                     == shape(this%data_3d(start+halo_size:start+halo_size*2-1,:,:)), &
                      "put_west: conformable halo_east_in and local " )
       end if
 
       !dir$ pgas defer_sync
-      this%halo_east_in(1:halo_size,:,1:ny)[west_neighbor] = this%local(start+halo_size:start+halo_size*2-1,:,:)
+      this%halo_east_in(1:halo_size,:,1:ny)[west_neighbor] = this%data_3d(start+halo_size:start+halo_size*2-1,:,:)
   end subroutine
 
   module subroutine retrieve_east_halo(this)
       class(exchangeable_t), intent(inout) :: this
 
       integer :: n, ny
-      n = ubound(this%local,1)
-      ny = size(this%local,3)
+      n = ubound(this%data_3d,1)
+      ny = size(this%data_3d,3)
 
-      this%local(n-halo_size+1:n,:,:) = this%halo_east_in(1:halo_size,:,1:ny)
+      this%data_3d(n-halo_size+1:n,:,:) = this%halo_east_in(1:halo_size,:,1:ny)
   end subroutine
 
   module subroutine retrieve_west_halo(this)
       class(exchangeable_t), intent(inout) :: this
 
       integer :: start, ny
-      start = lbound(this%local,1)
-      ny = size(this%local,3)
+      start = lbound(this%data_3d,1)
+      ny = size(this%data_3d,3)
 
-      this%local(start:start+halo_size-1,:,:) = this%halo_west_in(1:halo_size,:,1:ny)
+      this%data_3d(start:start+halo_size-1,:,:) = this%halo_west_in(1:halo_size,:,1:ny)
   end subroutine
 
 end submodule

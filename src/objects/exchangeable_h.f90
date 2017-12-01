@@ -9,7 +9,8 @@ module exchangeable_interface
 
   type :: exchangeable_t
     private
-    real, pointer,     public :: local(:,:,:) => null()
+    ! real, pointer,     public :: local(:,:,:)   => null()
+    real, pointer,     public :: data_3d(:,:,:) => null() ! provide the local data
     type(variable_t),  public :: meta_data
     real, allocatable :: halo_south_in(:,:,:)[:]
     real, allocatable :: halo_north_in(:,:,:)[:]

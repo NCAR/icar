@@ -350,13 +350,13 @@ contains
             elseif (options%physics%microphysics==kMP_SB04) then
                 ! call the simple microphysics routine of SB04
                 call mp_simple_driver(domain%pressure,                  &
-                                      domain%potential_temperature%local,&
+                                      domain%potential_temperature%data_3d,&
                                       domain%exner,                     &
                                       domain%density,                   &
-                                      domain%water_vapor%local,         &
-                                      domain%cloud_water_mass%local,    &
-                                      domain%rain_mass%local,           &
-                                      domain%snow_mass%local,           &
+                                      domain%water_vapor%data_3d,         &
+                                      domain%cloud_water_mass%data_3d,    &
+                                      domain%rain_mass%data_3d,           &
+                                      domain%snow_mass%data_3d,           &
                                       domain%accumulated_precipitation, &
                                       domain%accumulated_snowfall,      &
                                       mp_dt,                            &

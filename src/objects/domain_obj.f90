@@ -104,7 +104,7 @@ contains
         this%z_interface(:,i,:) = this%z_interface(:,i-1,:) + this%dz_interface(:,i,:)
 
         this%exner             = exner_function(this%pressure)
-        this%temperature       = this%exner * this%potential_temperature%local
+        this%temperature       = this%exner * this%potential_temperature%data_3d
 
     end subroutine initialize_variables
 
@@ -211,15 +211,15 @@ contains
     !! -------------------------------
     module subroutine enforce_limits(this)
       class(domain_t), intent(inout) :: this
-      if (associated(this%water_vapor%local)           ) where(this%water_vapor%local < 0)             this%water_vapor%local = 0
-      if (associated(this%potential_temperature%local) ) where(this%potential_temperature%local < 0)   this%potential_temperature%local = 0
-      if (associated(this%cloud_water_mass%local)      ) where(this%cloud_water_mass%local < 0)        this%cloud_water_mass%local = 0
-      if (associated(this%cloud_ice_mass%local)        ) where(this%cloud_ice_mass%local < 0)          this%cloud_ice_mass%local = 0
-      if (associated(this%cloud_ice_number%local)      ) where(this%cloud_ice_number%local < 0)        this%cloud_ice_number%local = 0
-      if (associated(this%rain_mass%local)             ) where(this%rain_mass%local < 0)               this%rain_mass%local = 0
-      if (associated(this%rain_number%local)           ) where(this%rain_number%local < 0)             this%rain_number%local = 0
-      if (associated(this%snow_mass%local)             ) where(this%snow_mass%local < 0)               this%snow_mass%local = 0
-      if (associated(this%graupel_mass%local)          ) where(this%graupel_mass%local < 0)            this%graupel_mass%local = 0
+      if (associated(this%water_vapor%data_3d)           ) where(this%water_vapor%data_3d < 0)             this%water_vapor%data_3d = 0
+      if (associated(this%potential_temperature%data_3d) ) where(this%potential_temperature%data_3d < 0)   this%potential_temperature%data_3d = 0
+      if (associated(this%cloud_water_mass%data_3d)      ) where(this%cloud_water_mass%data_3d < 0)        this%cloud_water_mass%data_3d = 0
+      if (associated(this%cloud_ice_mass%data_3d)        ) where(this%cloud_ice_mass%data_3d < 0)          this%cloud_ice_mass%data_3d = 0
+      if (associated(this%cloud_ice_number%data_3d)      ) where(this%cloud_ice_number%data_3d < 0)        this%cloud_ice_number%data_3d = 0
+      if (associated(this%rain_mass%data_3d)             ) where(this%rain_mass%data_3d < 0)               this%rain_mass%data_3d = 0
+      if (associated(this%rain_number%data_3d)           ) where(this%rain_number%data_3d < 0)             this%rain_number%data_3d = 0
+      if (associated(this%snow_mass%data_3d)             ) where(this%snow_mass%data_3d < 0)               this%snow_mass%data_3d = 0
+      if (associated(this%graupel_mass%data_3d)          ) where(this%graupel_mass%data_3d < 0)            this%graupel_mass%data_3d = 0
 
     end subroutine
 
