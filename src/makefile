@@ -331,7 +331,9 @@ TEST_EXECUTABLES= 	fftshift_test	\
 	  				fftw_test		\
 	  				blocking_test	\
 					point_in_on_test\
-	  				array_util_test
+	  				array_util_test \
+					caf_init_test	\
+					caf_options_test
 
 
 ###################################################################
@@ -558,7 +560,7 @@ $(BUILD)vinterp.o: $(UTIL)vinterp.f90 $(BUILD)data_structures.o
 #	Microphysics code
 ###################################################################
 $(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_simple.o \
-					$(BUILD)data_structures.o $(BUILD)time.o
+					$(BUILD)data_structures.o $(BUILD)time.o $(BUILD)domain_h.o
 	${F90} ${FFLAGS} $(PHYS)mp_driver.f90 -o $(BUILD)mp_driver.o
 
 # $(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_thompson.o $(BUILD)mp_simple.o \

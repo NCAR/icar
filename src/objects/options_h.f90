@@ -37,6 +37,9 @@ module options_interface
     contains
 
         procedure, public  :: init
+        procedure, public  :: alloc_vars
+        procedure, public  :: restart_vars
+        procedure, public  :: advect_vars
     end type
 
 
@@ -45,7 +48,30 @@ interface
     module subroutine init(this)
         implicit none
         class(options_t),   intent(inout)  :: this
+    end subroutine
 
+    module subroutine alloc_vars(this, input_vars, var_idx, error)
+        implicit none
+        class(options_t), intent(inout):: this
+        integer, optional, intent(in)  :: input_vars(:)
+        integer, optional, intent(in)  :: var_idx
+        integer, optional, intent(out) :: error
+    end subroutine
+
+    module subroutine restart_vars(this, input_vars, var_idx, error)
+        implicit none
+        class(options_t), intent(inout):: this
+        integer, optional, intent(in)  :: input_vars(:)
+        integer, optional, intent(in)  :: var_idx
+        integer, optional, intent(out) :: error
+    end subroutine
+
+    module subroutine advect_vars(this, input_vars, var_idx, error)
+        implicit none
+        class(options_t), intent(inout):: this
+        integer, optional, intent(in)  :: input_vars(:)
+        integer, optional, intent(in)  :: var_idx
+        integer, optional, intent(out) :: error
     end subroutine
 
 end interface

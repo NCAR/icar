@@ -9,8 +9,13 @@ module icar_constants
     integer, parameter :: kMAX_NAME_LENGTH = 1024
     integer, parameter :: kMAX_ATTR_LENGTH = 1024
 
+    ! --------------------------------------------
+    ! list of integer constants to be used when accessing various arrays that track variable allocation, usage, etc. requests
+    !
+    ! NOTE: IF YOU ADD TO THIS LIST BE SURE TO ADD AN INTEGER TO THE kVARS STRUCTURE CONSTRUCTOR BELOW IT!
+    ! --------------------------------------------
     type var_constants_type
-        SEQUENCE
+        SEQUENCE    ! technically SEQUENCE just requires the compiler leave them in order, but it can also keep compilers (e.g. ifort) from padding for alignment
         integer :: u
         integer :: v
         integer :: w
@@ -48,15 +53,23 @@ module icar_constants
         integer :: soil_water_content
         integer :: soil_temperature
         integer :: skin_temperature
+        integer :: land_mask
+        integer :: terrain
+        integer :: latitude
+        integer :: longitude
+        integer :: u_latitude
+        integer :: u_longitude
+        integer :: v_latitude
+        integer :: v_longitude
     end type var_constants_type
 
     type(var_constants_type) :: kVARS = var_constants_type( 1,  2,  3,  4,  5,  6,  7,  8,  9, 10,  &
                                                            11, 12, 13, 14, 15, 16, 17, 18, 19, 20,  &
                                                            21, 22, 23, 24, 25, 26, 27, 28, 29, 30,  &
-                                                           31, 32, 33, 34, 35, 36, 37  )
+                                                           31, 32, 33, 34, 35, 36, 37, 38, 39, 40,  &
+                                                           41, 42, 43, 44, 45  )
 
-    integer, parameter :: kINTEGER_BITS = storage_size(kINTEGER_BITS)
-
+    integer, parameter :: kINTEGER_BITS     = storage_size(kINTEGER_BITS)
     integer, parameter :: kMAX_STORAGE_VARS = storage_size(kVARS) / kINTEGER_BITS
 
     ! Initial number of output variables for which pointers are created
@@ -67,7 +80,7 @@ module icar_constants
     integer, parameter :: kMAX_DIMENSIONS  = 1024
 
 ! ------------------------------------------------
-! Model constants (string lengths)
+! Model constants (mostly string lengths)
 ! ------------------------------------------------
     integer,parameter :: MAXFILELENGTH      =   1024  ! maximum file name length
     integer,parameter :: MAXVARLENGTH       =   1024  ! maximum variable name length
@@ -84,6 +97,7 @@ module icar_constants
 
 ! ------------------------------------------------
 ! Value to accept for difference between real numbers should be as a fraction but then have to test for non-zero...
+! For some variables (cloud ice) 1e-6 is not that small, for others (pressure) it might be below precision...
 ! ------------------------------------------------
     real,   parameter :: kSMALL_VALUE = 1e-6
 
@@ -127,6 +141,7 @@ module icar_constants
     ! mm of accumulated precip before "tipping" into the bucket
     ! only performed on output operations
     integer, parameter :: kPRECIP_BUCKET_SIZE=100
+
 ! ------------------------------------------------
 ! Physical Constants
 ! ------------------------------------------------

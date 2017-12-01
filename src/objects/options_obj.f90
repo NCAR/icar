@@ -15,6 +15,13 @@ submodule(options_interface) options_implementation
 
 
 contains
+
+    !> -------------------------------
+    !! Initialize an options object
+    !!
+    !! Allocated coarray options types, reads namelists on image 1, and distributes data to all images
+    !!
+    !! -------------------------------
     module subroutine init(this)
         implicit none
         class(options_t),   intent(inout)  :: this
@@ -86,7 +93,127 @@ contains
 
     end subroutine init
 
+    !> -------------------------------
+    !! Add list of new variables to a list of variables
+    !!
+    !! Adds one to the associated index of the list and returns an error
+    !! Sets Error/=0 if any of the variables suggested are outside the bounds of the list
+    !!
+    !! -------------------------------
+    subroutine add_to_varlist(varlist, varids, error)
+        implicit none
+        integer, intent(inout)  :: varlist(:)
+        integer, intent(in)     :: varids(:)
+        integer, intent(out), optional  :: error
 
+        integer :: i, ierr
+
+        ierr=0
+        do i=1,size(varids)
+            if (varids(i) <= size(varlist)) then
+                varlist( varids(i) ) = varlist( varids(i) ) + 1
+            else
+                write(*,*) "WARNING: trying to add var outside of permitted list:",varids(i), size(varlist)
+                ierr=1
+            endif
+        enddo
+
+        if (present(error)) error=ierr
+
+    end subroutine add_to_varlist
+
+
+    !> -------------------------------
+    !! Add a set of variable(s) to the internal list of variables to be allocated
+    !!
+    !! Sets error /= 0 if an error occurs in add_to_varlist
+    !!
+    !! -------------------------------
+    module subroutine alloc_vars(this, input_vars, var_idx, error)
+        class(options_t), intent(inout):: this
+        integer, optional, intent(in)  :: input_vars(:)
+        integer, optional, intent(in)  :: var_idx
+        integer, optional, intent(out) :: error
+
+        integer :: ierr
+
+        ierr=0
+        if (present(var_idx)) then
+            call add_to_varlist(this%vars_to_allocate,[var_idx], ierr)
+        endif
+
+        if (present(input_vars)) then
+            call add_to_varlist(this%vars_to_allocate,input_vars, ierr)
+        endif
+
+        if (present(error)) error=ierr
+
+    end subroutine alloc_vars
+
+
+    !> -------------------------------
+    !! Add a set of variable(s) to the internal list of variables to be output in a restart file
+    !!
+    !! Sets error /= 0 if an error occurs in add_to_varlist
+    !!
+    !! -------------------------------
+    module subroutine restart_vars(this, input_vars, var_idx, error)
+        class(options_t), intent(inout):: this
+        integer, optional, intent(in)  :: input_vars(:)
+        integer, optional, intent(in)  :: var_idx
+        integer, optional, intent(out) :: error
+
+        integer :: ierr
+
+        ierr=0
+        if (present(var_idx)) then
+            call add_to_varlist(this%vars_to_restart,[var_idx], ierr)
+        endif
+
+        if (present(input_vars)) then
+            call add_to_varlist(this%vars_for_restart,input_vars, ierr)
+        endif
+
+        if (present(error)) error=ierr
+
+    end subroutine
+
+
+    !> -------------------------------
+    !! Add a set of variable(s) to the internal list of variables to be advected
+    !!
+    !! Sets error /= 0 if an error occurs in add_to_varlist
+    !!
+    !! -------------------------------
+    module subroutine advect_vars(this, input_vars, var_idx, error)
+        class(options_t), intent(inout):: this
+        integer, optional, intent(in)  :: input_vars(:)
+        integer, optional, intent(in)  :: var_idx
+        integer, optional, intent(out) :: error
+
+        integer :: ierr
+
+        ierr=0
+        if (present(var_idx)) then
+            call add_to_varlist(this%vars_to_advect,[var_idx], ierr)
+        endif
+
+        if (present(input_vars)) then
+            call add_to_varlist(this%vars_to_advect,input_vars, ierr)
+        endif
+
+        if (present(error)) error=ierr
+
+    end subroutine
+
+
+
+    !> -------------------------------
+    !! Reads the name of the options file from the commandline
+    !!
+    !! If no options file was specified, defaults to icar_options.nml
+    !!
+    !! -------------------------------
     function get_options_file() result(options_file)
         implicit none
         character(len=MAXFILELENGTH) ::options_file
@@ -114,9 +241,13 @@ contains
 
 
 
-! check the version number in the namelist file and compare to the current model version
-! if the namelist version doesn't match, print the differences between that version and this
-! and STOP execution
+    !> -------------------------------
+    !! Check the version number in the namelist file and compare to the current model version
+    !!
+    !! If the namelist version doesn't match, print the differences between that version and this
+    !! and STOP execution
+    !!
+    !! -------------------------------
     subroutine version_check(filename,options)
         character(len=*),            intent(in)     :: filename
         type(parameter_options_type),intent(inout)  :: options
@@ -149,6 +280,12 @@ contains
 
     end subroutine version_check
 
+    !> -------------------------------
+    !! Checks options in the options data structure for consistency
+    !!
+    !! Stops or prints a large warning depending on warning level requested and error found
+    !!
+    !! -------------------------------
     subroutine options_check(options)
         ! Minimal error checking on option settings
         implicit none
@@ -232,6 +369,12 @@ contains
 
     end subroutine options_check
 
+    !> -------------------------------
+    !! Initialize the restart options
+    !!
+    !! Reads the restart namelist if this is a restart run
+    !!
+    !! -------------------------------
     subroutine init_restart_options(filename, options)
         ! initialize the restart specifications
         ! read in the namelist, and calculate the restart_step if appropriate
@@ -299,7 +442,10 @@ contains
     end subroutine init_restart_options
 
 
-!   read physics options to use from a namelist file
+    !> -------------------------------
+    !! Read physics options to use from a namelist file
+    !!
+    !! -------------------------------
     subroutine physics_namelist(filename,options)
         implicit none
         character(len=*),intent(in)     :: filename
@@ -365,6 +511,12 @@ contains
 
     end subroutine physics_namelist
 
+    !> -------------------------------
+    !! Initialize the variable names to be read
+    !!
+    !! Reads the var_list namelist
+    !!
+    !! -------------------------------
     subroutine var_namelist(filename,options)
         implicit none
         character(len=*),             intent(in)    :: filename
@@ -500,6 +652,14 @@ contains
         options%nsq_calibration_var = nsq_calibration_var
     end subroutine var_namelist
 
+
+    !> -------------------------------
+    !! Initialize the main parameter options
+    !!
+    !! Reads parameters for the ICAR simulation
+    !! These include setting flags that request other namelists be read
+    !!
+    !! -------------------------------
     subroutine parameters_namelist(filename,options)
         implicit none
         character(len=*),             intent(in)    :: filename
@@ -724,6 +884,12 @@ contains
         ! options are updated when complete
     end subroutine parameters_namelist
 
+    !> -------------------------------
+    !! Initialize the microphysics options
+    !!
+    !! Reads the mp_parameters namelist or sets default values
+    !!
+    !! -------------------------------
     subroutine mp_parameters_namelist(mp_filename,options)
         implicit none
         character(len=*),   intent(in)    :: mp_filename
@@ -815,6 +981,12 @@ contains
 
     end subroutine mp_parameters_namelist
 
+    !> -------------------------------
+    !! Initialize the blocking options
+    !!
+    !! Reads the block_parameters namelist or sets default values
+    !!
+    !! -------------------------------
     subroutine block_parameters_namelist(filename, options)
         implicit none
 
@@ -874,6 +1046,12 @@ contains
     end subroutine block_parameters_namelist
 
 
+    !> -------------------------------
+    !! Initialize the Linear Theory options
+    !!
+    !! Reads the lt_parameters namelist or sets default values
+    !!
+    !! -------------------------------
     subroutine lt_parameters_namelist(filename, options)
         implicit none
         character(len=*),   intent(in)   :: filename
@@ -1029,6 +1207,12 @@ contains
     end subroutine lt_parameters_namelist
 
 
+    !> -------------------------------
+    !! Initialize the advection options
+    !!
+    !! Reads the adv_parameters namelist or sets default values
+    !!
+    !! -------------------------------
     subroutine adv_parameters_namelist(filename, options)
         implicit none
         character(len=*),   intent(in)   :: filename
@@ -1074,6 +1258,10 @@ contains
     end subroutine adv_parameters_namelist
 
 
+    !> -------------------------------
+    !! Sets the default value for each of three land use categories depending on the LU_Categories input
+    !!
+    !! -------------------------------
     subroutine set_default_LU_categories(urban_category, ice_category, water_category, LU_Categories)
         ! if various LU categories were not defined in the namelist (i.e. they == -1) then attempt
         ! to define default values for them based on the LU_Categories variable supplied.
@@ -1111,6 +1299,12 @@ contains
     end subroutine set_default_LU_categories
 
 
+    !> -------------------------------
+    !! Initialize the bias correction options
+    !!
+    !! Reads the bias_parameters namelist or sets default values
+    !!
+    !! -------------------------------
     subroutine bias_parameters_namelist(filename, options)
         implicit none
         character(len=*),   intent(in)   :: filename
@@ -1153,6 +1347,12 @@ contains
     end subroutine bias_parameters_namelist
 
 
+    !> -------------------------------
+    !! Initialize the land surface model options
+    !!
+    !! Reads the lsm_parameters namelist or sets default values
+    !!
+    !! -------------------------------
     subroutine lsm_parameters_namelist(filename, options)
         implicit none
         character(len=*),   intent(in)   :: filename
@@ -1212,7 +1412,12 @@ contains
     end subroutine lsm_parameters_namelist
 
 
-    ! set up model levels, either read from a namelist, or from a default set of values
+    !> -------------------------------
+    !! Set up model levels, either read from a namelist, or from a default set of values
+    !!
+    !! Reads the z_info namelist or sets default values
+    !!
+    !! -------------------------------
     subroutine model_levels_namelist(filename,options)
         implicit none
         character(len=*),             intent(in)    :: filename
@@ -1310,6 +1515,12 @@ contains
 
     end function read_forcing_file_names
 
+    !> -------------------------------
+    !! Initialize the list of input files
+    !!
+    !! Reads the file_list namelist or sets default values
+    !!
+    !! -------------------------------
     subroutine filename_namelist(filename, options)
         ! read in filenames from up to two namelists
         ! init_conditions_file = high res grid data

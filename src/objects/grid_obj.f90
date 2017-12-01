@@ -3,13 +3,25 @@ submodule(grid_interface) grid_implementation
 
 contains
 
+    !> -------------------------------
+    !! Return the dimensions of this grid as an n element array
+    !!
+    !! -------------------------------
     module function get_dims(this) result(dims)
-        class(grid_t) :: this
-        integer :: dims(3)
+        class(grid_t), intent(in) :: this
+        integer, allocatable :: dims(:)
 
-        dims(1) = this%ime - this%ims + 1
-        dims(2) = this%kme - this%kms + 1
-        dims(3) = this%jme - this%jms + 1
+        if (this%is2d) then
+            allocate(dims(2))
+            dims(1) = this%ime - this%ims + 1
+            dims(3) = this%jme - this%jms + 1
+        endif
+        if (this%is3d) then
+            allocate(dims(3))
+            dims(1) = this%ime - this%ims + 1
+            dims(2) = this%kme - this%kms + 1
+            dims(3) = this%jme - this%jms + 1
+        endif
     end function
 
     !> -------------------------------
@@ -102,6 +114,10 @@ contains
        n_local = n_global / nimg + merge(1,0,me <= mod(n_global,nimg)  )
     end function
 
+    !> -------------------------------
+    !! Return the starting coordinate in the global domain coordinate system for a given image (me)
+    !!
+    !! -------------------------------
     function my_start(n_global, me, nimg) result(memory_start)
         implicit none
         integer, intent(in) :: n_global, me, nimg
@@ -114,8 +130,11 @@ contains
 
     end function my_start
 
-    ! Generate the domain decomposition mapping and compute the indicies for local memory
-    module subroutine get_grid_dimensions(this, nx, ny, nz, nx_extra, ny_extra, halo_width)
+    !> -------------------------------
+    !! Generate the domain decomposition mapping and compute the indicies for local memory
+    !!
+    !! -------------------------------
+    module subroutine set_grid_dimensions(this, nx, ny, nz, nx_extra, ny_extra, halo_width)
       class(grid_t),   intent(inout) :: this
       integer,         intent(in)    :: nx, ny, nz
       integer,         intent(in), optional :: nx_extra, ny_extra, halo_width
@@ -134,6 +153,14 @@ contains
       if (present(ny_extra)) ny_e = ny_extra ! used to add 1 to the v-field staggered grid
 
       call this%domain_decomposition(nx, ny, num_images())
+
+      if (nz<1) then
+          this%is2d = .True.
+          this%is3d = .False.
+      else
+          this%is2d = .False.
+          this%is3d = .True.
+      endif
 
       this%ny_global  = ny                                            ! global model domain grid size
       this%nx_global  = nx                                            ! global model domain grid size
@@ -179,6 +206,10 @@ contains
 
   end subroutine
 
+  !> -------------------------------
+  !! updates the grid memory dimensions with halo sizes if necessary
+  !!
+  !! -------------------------------
   subroutine update_with_halos(grid, halo_size)
       type(grid_t), intent(inout)   :: grid
       integer,      intent(in)      :: halo_size
@@ -191,16 +222,14 @@ contains
       east_boundary  = (grid%ximg == grid%ximages)
       west_boundary  = (grid%ximg == 1)
 
+      ! if this is on a given boundary, then add 0, if it is not a boundary than add/subtract halo_size
       grid%ims = grid%ims - merge(0, halo_size, east_boundary)
       grid%ime = grid%ime + merge(0, halo_size, west_boundary)
       grid%jms = grid%jms - merge(0, halo_size, south_boundary)
       grid%jme = grid%jme + merge(0, halo_size, north_boundary)
-      grid%kms = grid%kms
-      grid%kme = grid%kme
+      ! grid%kms = grid%kms
+      ! grid%kme = grid%kme
 
   end subroutine
-
-
-
 
 end submodule

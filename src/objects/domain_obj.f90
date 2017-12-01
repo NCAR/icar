@@ -13,6 +13,10 @@ submodule(domain_interface) domain_implementation
 contains
 
 
+    !> -------------------------------
+    !! Allocate and or initialize all domain variables if they have been requested
+    !!
+    !! -------------------------------
     subroutine create_variables(this, opt)
         class(domain_t), intent(inout)  :: this
         class(options_t),intent(in)     :: opt
@@ -75,12 +79,12 @@ contains
 
         end associate
 
-        print*, associated(this%graupel_number%local)
-        print*, associated(this%water_vapor%local)
-        print*, allocated(this%accumulated_precipitation)
-
     end subroutine
 
+    !> -------------------------------
+    !! Initialize various domain variables, mostly z, dz, etc.
+    !!
+    !! -------------------------------
     subroutine initialize_variables(this)
         implicit none
         class(domain_t) :: this
@@ -104,6 +108,10 @@ contains
 
     end subroutine initialize_variables
 
+    !> -------------------------------
+    !! Populare the metadata structure in the domain for later output
+    !!
+    !! -------------------------------
     subroutine setup_meta_data(this)
         implicit none
         class(domain_t), intent(inout) :: this
@@ -132,6 +140,36 @@ contains
     end subroutine setup_meta_data
 
 
+    !> -------------------------------
+    !! Add variables needed by all domains to the list of requested variables
+    !!
+    !! -------------------------------
+    module subroutine var_request(this, options)
+        class(domain_t), intent(inout) :: this
+        class(options_t),intent(inout) :: options
+
+        ! List the variables that are required to be allocated for any domain
+        call options%alloc_vars(                                                    &
+                     [kVARS%pressure,               kVARS%pressure_interface,       &
+                      kVARS%potential_temperature,  kVARS%temperature,              &
+                      kVARS%exner,                  kVARS%density,                  &
+                      kVARS%z,                      kVARS%dz_interface,             &
+                      kVARS%terrain,                                                &
+                      kVARS%latitude,               kVARS%longitude,                &
+                      kVARS%u_latitude,             kVARS%u_longitude,              &
+                      kVARS%v_latitude,             kVARS%v_longitude               ])
+
+        ! List the variables that are required for any restart
+        call options%restart_vars(                                                  &
+                     [kVARS%pressure,                                               &
+                      kVARS%potential_temperature,                                  &
+                      kVARS%z,                                                      &
+                      kVARS%terrain,                                                &
+                      kVARS%latitude,               kVARS%longitude,                &
+                      kVARS%u_latitude,             kVARS%u_longitude,              &
+                      kVARS%v_latitude,             kVARS%v_longitude               ])
+
+    end subroutine var_request
 
     !> -------------------------------
     !! Initialize the size of the domain using constant dimensions
@@ -147,11 +185,14 @@ contains
       ny_global=200
       nz_global=30
 
-      call this%grid%get_grid_dimensions(nx_global, ny_global, nz_global)
-      call this%u_grid%get_grid_dimensions(nx_global, ny_global, nz_global, nx_extra = 1)
-      call this%v_grid%get_grid_dimensions(nx_global, ny_global, nz_global, ny_extra = 1)
+      call this%grid%set_grid_dimensions(nx_global, ny_global, nz_global)
+      call this%grid2d%set_grid_dimensions(nx_global, ny_global, 0)
+      call this%u_grid%set_grid_dimensions(nx_global, ny_global, nz_global, nx_extra = 1)
+      call this%v_grid%set_grid_dimensions(nx_global, ny_global, nz_global, ny_extra = 1)
 
       call mp_simple_var_request(options)
+
+      call this%var_request(options)
 
       call create_variables(this, options)
 
@@ -162,20 +203,30 @@ contains
     end subroutine
 
 
+    !> -------------------------------
+    !! Check that a set of variables is within realistic bounds (i.e. >0)
+    !!
+    !! Need to add more variables to the list
+    !!
+    !! -------------------------------
     module subroutine enforce_limits(this)
       class(domain_t), intent(inout) :: this
-      where(this%water_vapor%local < 0)             this%water_vapor%local = 0
-      where(this%potential_temperature%local < 0)   this%potential_temperature%local = 0
-      where(this%cloud_water_mass%local < 0)        this%cloud_water_mass%local = 0
-      where(this%cloud_ice_mass%local < 0)          this%cloud_ice_mass%local = 0
-      where(this%cloud_ice_number%local < 0)        this%cloud_ice_number%local = 0
-      where(this%rain_mass%local < 0)               this%rain_mass%local = 0
-      where(this%rain_number%local < 0)             this%rain_number%local = 0
-      where(this%snow_mass%local < 0)               this%snow_mass%local = 0
-      where(this%graupel_mass%local < 0)            this%graupel_mass%local = 0
+      if (associated(this%water_vapor%local)           ) where(this%water_vapor%local < 0)             this%water_vapor%local = 0
+      if (associated(this%potential_temperature%local) ) where(this%potential_temperature%local < 0)   this%potential_temperature%local = 0
+      if (associated(this%cloud_water_mass%local)      ) where(this%cloud_water_mass%local < 0)        this%cloud_water_mass%local = 0
+      if (associated(this%cloud_ice_mass%local)        ) where(this%cloud_ice_mass%local < 0)          this%cloud_ice_mass%local = 0
+      if (associated(this%cloud_ice_number%local)      ) where(this%cloud_ice_number%local < 0)        this%cloud_ice_number%local = 0
+      if (associated(this%rain_mass%local)             ) where(this%rain_mass%local < 0)               this%rain_mass%local = 0
+      if (associated(this%rain_number%local)           ) where(this%rain_number%local < 0)             this%rain_number%local = 0
+      if (associated(this%snow_mass%local)             ) where(this%snow_mass%local < 0)               this%snow_mass%local = 0
+      if (associated(this%graupel_mass%local)          ) where(this%graupel_mass%local < 0)            this%graupel_mass%local = 0
 
     end subroutine
 
+    !> -------------------------------
+    !! Send the halos from all exchangable objects to their neighbors
+    !!
+    !! -------------------------------
     module subroutine halo_send(this)
       class(domain_t), intent(inout) :: this
       call this%water_vapor%send()
@@ -189,9 +240,13 @@ contains
       call this%graupel_mass%send()
     end subroutine
 
+    !> -------------------------------
+    !! Get the halos from all exchangable objects from their neighbors
+    !!
+    !! -------------------------------
     module subroutine halo_retrieve(this)
       class(domain_t), intent(inout) :: this
-      call this%water_vapor%retrieve()
+      call this%water_vapor%retrieve() ! the retrieve call will sync all
       call this%potential_temperature%retrieve(no_sync=.True.)
       call this%cloud_water_mass%retrieve(no_sync=.True.)
       call this%cloud_ice_mass%retrieve(no_sync=.True.)
@@ -202,6 +257,10 @@ contains
       call this%graupel_mass%retrieve(no_sync=.True.)
     end subroutine
 
+    !> -------------------------------
+    !! Send and get the halos from all exchangable objects to/from their neighbors
+    !!
+    !! -------------------------------
     module subroutine halo_exchange(this)
       class(domain_t), intent(inout) :: this
       call this%water_vapor%send()
@@ -214,7 +273,7 @@ contains
       call this%snow_mass%send()
       call this%graupel_mass%send()
 
-      call this%water_vapor%retrieve()
+      call this%water_vapor%retrieve() ! the retrieve call will sync all
       call this%potential_temperature%retrieve(no_sync=.True.)
       call this%cloud_water_mass%retrieve(no_sync=.True.)
       call this%cloud_ice_mass%retrieve(no_sync=.True.)

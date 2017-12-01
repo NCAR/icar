@@ -98,36 +98,22 @@ contains
         implicit none
         type(options_t), intent(inout) :: options
 
-        integer :: i
-        integer :: alloc_vars(11)
-        integer :: advect_vars(5)
-        integer :: restart_vars(11)
-
         ! List the variables that are required to be allocated for the simple microphysics
-        alloc_vars = [kVARS%pressure,    kVARS%potential_temperature,   kVARS%exner,        kVARS%density,      &
+        call options%alloc_vars( &
+                     [kVARS%pressure,    kVARS%potential_temperature,   kVARS%exner,        kVARS%density,      &
                       kVARS%water_vapor, kVARS%cloud_water,             kVARS%rain_in_air,  kVARS%snow_in_air,  &
-                      kVARS%precipitation, kVARS%snowfall,              kVARS%dz_interface]
-
-        do i=1,size(alloc_vars)
-            options%vars_to_allocate( alloc_vars(i) ) = options%vars_to_allocate( alloc_vars(i) ) + 1
-        enddo
+                      kVARS%precipitation, kVARS%snowfall,              kVARS%dz_interface])
 
         ! List the variables that are required to be advected for the simple microphysics
-        advect_vars = [kVARS%potential_temperature, kVARS%water_vapor, kVARS%cloud_water,   &
-                       kVARS%rain_in_air,           kVARS%snow_in_air   ]
-
-        do i=1,size(advect_vars)
-            options%vars_to_advect( advect_vars(i) ) = options%vars_to_advect( advect_vars(i) ) + 1
-        enddo
+        call options%advect_vars( &
+                      [kVARS%potential_temperature, kVARS%water_vapor, kVARS%cloud_water,   &
+                       kVARS%rain_in_air,           kVARS%snow_in_air   ] )
 
         ! List the variables that are required to be allocated for the simple microphysics
-        restart_vars = [kVARS%pressure,     kVARS%potential_temperature,    kVARS%exner,        kVARS%density,      &
-                        kVARS%water_vapor,  kVARS%cloud_water,              kVARS%rain_in_air,  kVARS%snow_in_air,  &
-                        kVARS%precipitation,kVARS%snowfall,                 kVARS%dz_interface]
-
-        do i=1,size(restart_vars)
-            options%vars_for_restart( restart_vars(i) ) = options%vars_for_restart( restart_vars(i) ) + 1
-        enddo
+        call options%restart_vars( &
+                       [kVARS%pressure,     kVARS%potential_temperature,    kVARS%water_vapor,  &
+                        kVARS%cloud_water,  kVARS%rain_in_air,              kVARS%snow_in_air,  &
+                        kVARS%precipitation,kVARS%snowfall,                 kVARS%dz_interface] )
 
     end subroutine mp_simple_var_request
 

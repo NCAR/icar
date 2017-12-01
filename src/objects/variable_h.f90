@@ -1,5 +1,6 @@
 module variable_interface
-    use icar_constants
+    use icar_constants,      only : kMAX_DIM_LENGTH
+    use grid_interface,      only : grid_t
     use meta_data_interface, only : meta_data_t
 
     implicit none
@@ -27,23 +28,23 @@ module variable_interface
         ! so the parent type is required to...
         ! integer, allocatable :: dummy[:]
 
-    ! contains
+    contains
+        procedure, public :: initialize
+    ! inherited from mete_data
     !     procedure, public : add_attribute
-    !     procedure, public : set_attribute
-    !     procedure, public : get_attribute
     !
     !     procedure, public : set_dimension
     !     procedure, public : get_dimension
 
     end type variable_t
 
-    ! interface
-    !     module subroutine add_attribute(this, attr_name, attr_value)
-    !         implicit none
-    !         type(variable_t), intent(inout) :: this
-    !         character(len=kMAX_ATTR_LENGTH), intent(in) :: attr_name
-    !         character(len=kMAX_ATTR_LENGTH), intent(in) :: attr_value
-    !     end subroutine
+    interface
+        module subroutine initialize(this, grid)
+            implicit none
+            class(variable_t),  intent(inout) :: this
+            type(grid_t),       intent(in)    :: grid
+        end subroutine
+    end interface
     !
     !
     !     module subroutine set_dimension(this, dim, name, length)

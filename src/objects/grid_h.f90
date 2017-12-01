@@ -1,6 +1,6 @@
 module grid_interface
 
-    use icar_constants, only : kDEFAULT_HALO_SIZE
+    use icar_constants, only : kDEFAULT_HALO_SIZE, kMAX_DIM_LENGTH
     use assertions_mod, only : assert, assertions
 
     implicit none
@@ -21,18 +21,21 @@ module grid_interface
         integer ::  ids,ide, jds,jde, kds,kde, & ! for the entire model domain    (d)
                     its,ite, jts,jte, kts,kte    ! for the data tile to process   (t)
 
+        logical :: is2d, is3d
+        character(len=kMAX_DIM_LENGTH), allocatable :: dimensions(:)
+
     contains
         procedure :: get_dims
         procedure :: domain_decomposition
-        procedure :: get_grid_dimensions
+        procedure :: set_grid_dimensions
 
     end type
 
 interface
     module function get_dims(this) result(dims)
         implicit none
-        class(grid_t) :: this
-        integer :: dims(3)
+        class(grid_t), intent(in) :: this
+        integer, allocatable :: dims(:)
     end function
 
     module subroutine domain_decomposition(this, nx, ny, nimages, ratio)
@@ -42,7 +45,7 @@ interface
         real,           intent(in), optional :: ratio
     end subroutine
 
-    module subroutine get_grid_dimensions(this, nx, ny, nz, nx_extra, ny_extra, halo_width)
+    module subroutine set_grid_dimensions(this, nx, ny, nz, nx_extra, ny_extra, halo_width)
         implicit none
         class(grid_t),   intent(inout) :: this
         integer,         intent(in)    :: nx, ny, nz

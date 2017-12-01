@@ -13,7 +13,7 @@ module domain_interface
 
   type domain_t
     type(meta_data_t)    :: info
-    type(grid_t)         :: grid, u_grid, v_grid
+    type(grid_t)         :: grid, u_grid, v_grid, grid2d
 
     type(Time_type) :: model_time
 
@@ -49,17 +49,13 @@ module domain_interface
     real,   allocatable :: dz_interface         (:,:,:)
     real,   allocatable :: z_interface          (:,:,:)
     real,   allocatable :: dz_mass              (:,:,:)
-
-    real,   allocatable :: graupel              (:,:)
+    real,   allocatable :: graupel                  (:,:)
     real,   allocatable :: accumulated_precipitation(:,:)
     integer,allocatable :: precipitation_bucket     (:,:)
     real,   allocatable :: accumulated_snowfall     (:,:)
     integer,allocatable :: snowfall_bucket          (:,:)
-    integer             :: bucket_size = 100
-
     real,   allocatable :: longwave             (:,:)
     real,   allocatable :: shortwave            (:,:)
-
     real,   allocatable :: terrain              (:,:)
     integer,allocatable :: land_cover_type      (:,:)
     real,   allocatable :: vegetation_fraction  (:,:,:)
@@ -69,6 +65,14 @@ module domain_interface
     real,   allocatable :: skin_temperature     (:,:)
     real,   allocatable :: soil_water_content   (:,:,:)
     real,   allocatable :: soil_temperature     (:,:,:)
+    integer,allocatable :: land_mask            (:,:)
+    real,   allocatable :: latitude             (:,:)
+    real,   allocatable :: longitude            (:,:)
+    real,   allocatable :: u_latitude           (:,:)
+    real,   allocatable :: u_longitude          (:,:)
+    real,   allocatable :: v_latitude           (:,:)
+    real,   allocatable :: v_longitude          (:,:)
+
 
     ! these coarrays are used to send all data to/from a master image for IO... ?
     ! For now this will be taken care of in the boundary conditions object
@@ -89,6 +93,7 @@ module domain_interface
 
   contains
     procedure :: init
+    procedure :: var_request
 
     procedure :: halo_send
     procedure :: halo_retrieve
@@ -108,6 +113,11 @@ module domain_interface
       class(options_t),intent(inout) :: options
     end subroutine
 
+    module subroutine var_request(this, options)
+        implicit none
+        class(domain_t), intent(inout) :: this
+        class(options_t),intent(inout) :: options
+    end subroutine
 
     module subroutine halo_send(this)
       implicit none
