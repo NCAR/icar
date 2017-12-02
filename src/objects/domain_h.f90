@@ -13,7 +13,7 @@ module domain_interface
 
   type domain_t
     type(meta_data_t)    :: info
-    type(grid_t)         :: grid, u_grid, v_grid, grid2d
+    type(grid_t)         :: grid, u_grid, v_grid, grid2d, grid_monthly, grid_soil
 
     type(Time_type) :: model_time
 
@@ -40,38 +40,38 @@ module domain_interface
     type(exchangeable_t) :: graupel_number
 
     ! other model variables (not advected)
-    real,   allocatable :: exner                (:,:,:)
-    real,   allocatable :: density              (:,:,:)
-    real,   allocatable :: pressure             (:,:,:)
-    real,   allocatable :: pressure_interface   (:,:,:)
-    real,   allocatable :: temperature          (:,:,:)
-    real,   allocatable :: z                    (:,:,:)
-    real,   allocatable :: dz_interface         (:,:,:)
-    real,   allocatable :: z_interface          (:,:,:)
-    real,   allocatable :: dz_mass              (:,:,:)
-    real,   allocatable :: graupel                  (:,:)
-    real,   allocatable :: accumulated_precipitation(:,:)
+    type(variable_t) :: exner
+    type(variable_t) :: density
+    type(variable_t) :: pressure
+    type(variable_t) :: pressure_interface
+    type(variable_t) :: temperature
+    type(variable_t) :: z
+    type(variable_t) :: dz_interface
+    type(variable_t) :: z_interface
+    type(variable_t) :: dz_mass
+    type(variable_t) :: graupel
+    type(variable_t) :: accumulated_precipitation
     integer,allocatable :: precipitation_bucket     (:,:)
-    real,   allocatable :: accumulated_snowfall     (:,:)
+    type(variable_t) :: accumulated_snowfall
     integer,allocatable :: snowfall_bucket          (:,:)
-    real,   allocatable :: longwave             (:,:)
-    real,   allocatable :: shortwave            (:,:)
-    real,   allocatable :: terrain              (:,:)
+    type(variable_t) :: longwave
+    type(variable_t) :: shortwave
+    type(variable_t) :: terrain
     integer,allocatable :: land_cover_type      (:,:)
-    real,   allocatable :: vegetation_fraction  (:,:,:)
-    real,   allocatable :: lai                  (:,:)
-    real,   allocatable :: canopy_water         (:,:)
-    real,   allocatable :: snow_water_equivalent(:,:)
-    real,   allocatable :: skin_temperature     (:,:)
-    real,   allocatable :: soil_water_content   (:,:,:)
-    real,   allocatable :: soil_temperature     (:,:,:)
+    type(variable_t) :: vegetation_fraction
+    type(variable_t) :: lai
+    type(variable_t) :: canopy_water
+    type(variable_t) :: snow_water_equivalent
+    type(variable_t) :: skin_temperature
+    type(variable_t) :: soil_water_content
+    type(variable_t) :: soil_temperature
     integer,allocatable :: land_mask            (:,:)
-    real,   allocatable :: latitude             (:,:)
-    real,   allocatable :: longitude            (:,:)
-    real,   allocatable :: u_latitude           (:,:)
-    real,   allocatable :: u_longitude          (:,:)
-    real,   allocatable :: v_latitude           (:,:)
-    real,   allocatable :: v_longitude          (:,:)
+    type(variable_t) :: latitude
+    type(variable_t) :: longitude
+    type(variable_t) :: u_latitude
+    type(variable_t) :: u_longitude
+    type(variable_t) :: v_latitude
+    type(variable_t) :: v_longitude
 
 
     ! these coarrays are used to send all data to/from a master image for IO... ?

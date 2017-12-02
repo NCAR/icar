@@ -22,7 +22,14 @@ contains
         class(options_t),intent(in)     :: opt
         integer :: i,j
 
-        if (this_image()==1) print *,"Initializing variables"
+        integer :: ims, ime, jms, jme
+
+        ims = this%grid%ims
+        ime = this%grid%ime
+        jms = this%grid%jms
+        jme = this%grid%jme
+        
+                if (this_image()==1) print *,"Initializing variables"
         if (0<opt%vars_to_allocate( kVARS%u) )                          call this%u%                    initialize( this%u_grid )
         if (0<opt%vars_to_allocate( kVARS%v) )                          call this%v%                    initialize( this%v_grid )
         if (0<opt%vars_to_allocate( kVARS%w) )                          call this%w%                    initialize( this%grid )
@@ -40,44 +47,31 @@ contains
         if (0<opt%vars_to_allocate( kVARS%graupel_number_concentration))call this%graupel_number%       initialize( this%grid )
 
 
-        associate(ims  => this%grid%ims,   &
-                  ime  => this%grid%ime,   &
-                  jms  => this%grid%jms,   &
-                  jme  => this%grid%jme,   &
-                  kms  => this%grid%kms,   &
-                  kme  => this%grid%kme,   &
-                  nsoil=> 4)
-            ! used to send data from IO images to all other images
-            ! allocate(this%transfer_2d(ims:ime, jms:jme)[*])
-            ! allocate(this%transfer_3d(ims:ime, kms:kme, jms:jme)[*])
+        if (0<opt%vars_to_allocate( kVARS%precipitation) ) call this%accumulated_precipitation%     initialize( this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%precipitation) ) allocate(this%precipitation_bucket     (ims:ime, jms:jme),          source=0)
+        if (0<opt%vars_to_allocate( kVARS%snowfall) )      call this%accumulated_snowfall%          initialize( this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%snowfall) )      allocate(this%snowfall_bucket          (ims:ime, jms:jme),          source=0)
+        if (0<opt%vars_to_allocate( kVARS%pressure) )      call this%pressure%                      initialize(this%grid)
+        if (0<opt%vars_to_allocate( kVARS%temperature) )   call this%temperature%                   initialize(this%grid)
+        if (0<opt%vars_to_allocate( kVARS%exner) )         call this%exner%                         initialize(this%grid)
+        if (0<opt%vars_to_allocate( kVARS%z) )             call this%z%                             initialize(this%grid)
+        if (0<opt%vars_to_allocate( kVARS%dz_interface) )  call this%dz_interface%                  initialize(this%grid)
+        if (0<opt%vars_to_allocate( kVARS%z_interface) )   call this%z_interface%                   initialize(this%grid)
+        if (0<opt%vars_to_allocate( kVARS%dz) )            call this%dz_mass%                       initialize(this%grid)
+        if (0<opt%vars_to_allocate( kVARS%density) )       call this%density%                       initialize(this%grid)
 
-            if (0<opt%vars_to_allocate( kVARS%precipitation) ) allocate(this%accumulated_precipitation(ims:ime, jms:jme),          source=0.0)
-            if (0<opt%vars_to_allocate( kVARS%precipitation) ) allocate(this%precipitation_bucket     (ims:ime, jms:jme),          source=0)
-            if (0<opt%vars_to_allocate( kVARS%snowfall) )      allocate(this%accumulated_snowfall     (ims:ime, jms:jme),          source=0.0)
-            if (0<opt%vars_to_allocate( kVARS%snowfall) )      allocate(this%snowfall_bucket          (ims:ime, jms:jme),          source=0)
-            if (0<opt%vars_to_allocate( kVARS%pressure) )      allocate(this%pressure                 (ims:ime, kms:kme, jms:jme), source=0.0)
-            if (0<opt%vars_to_allocate( kVARS%temperature) )   allocate(this%temperature              (ims:ime, kms:kme, jms:jme), source=0.0)
-            if (0<opt%vars_to_allocate( kVARS%exner) )         allocate(this%exner                    (ims:ime, kms:kme, jms:jme), source=0.0)
-            if (0<opt%vars_to_allocate( kVARS%z) )             allocate(this%z                        (ims:ime, kms:kme, jms:jme), source=0.0)
-            if (0<opt%vars_to_allocate( kVARS%dz_interface) )  allocate(this%dz_interface             (ims:ime, kms:kme+1,jms:jme),source=0.0)
-            if (0<opt%vars_to_allocate( kVARS%z_interface) )   allocate(this%z_interface              (ims:ime, kms:kme+1,jms:jme),source=0.0)
-            if (0<opt%vars_to_allocate( kVARS%dz) )            allocate(this%dz_mass                  (ims:ime, kms:kme, jms:jme), source=0.0)
-            if (0<opt%vars_to_allocate( kVARS%density) )       allocate(this%density                  (ims:ime, kms:kme, jms:jme), source=0.0 )
-
-            if (0<opt%vars_to_allocate( kVARS%pressure_interface) )       allocate(this%pressure_interface       (ims:ime, kms:kme, jms:jme), source=0.0 )
-            if (0<opt%vars_to_allocate( kVARS%graupel) )                  allocate(this%graupel                  (ims:ime, jms:jme)         , source=0.0 )
-            if (0<opt%vars_to_allocate( kVARS%shortwave) )                allocate(this%shortwave                (ims:ime, jms:jme)         , source=0.0 )
-            if (0<opt%vars_to_allocate( kVARS%longwave) )                 allocate(this%longwave                 (ims:ime, jms:jme)         , source=0.0 )
-            if (0<opt%vars_to_allocate( kVARS%land_cover) )               allocate(this%land_cover_type          (ims:ime, jms:jme)         , source=0 )
-            if (0<opt%vars_to_allocate( kVARS%vegetation_fraction) )      allocate(this%vegetation_fraction      (ims:ime, 12, jms:jme)     , source=0.0 ) ! veg fraction could be monthly
-            if (0<opt%vars_to_allocate( kVARS%lai) )                      allocate(this%lai                      (ims:ime, jms:jme)         , source=0.0 )
-            if (0<opt%vars_to_allocate( kVARS%canopy_water) )             allocate(this%canopy_water             (ims:ime, jms:jme)         , source=0.0 )
-            if (0<opt%vars_to_allocate( kVARS%snow_water_equivalent) )    allocate(this%snow_water_equivalent    (ims:ime, jms:jme)         , source=0.0 )
-            if (0<opt%vars_to_allocate( kVARS%skin_temperature) )         allocate(this%skin_temperature         (ims:ime, jms:jme)         , source=0.0 )
-            if (0<opt%vars_to_allocate( kVARS%soil_water_content) )       allocate(this%soil_water_content       (ims:ime, 1:nsoil, jms:jme), source=0.0 )
-            if (0<opt%vars_to_allocate( kVARS%soil_temperature) )         allocate(this%soil_temperature         (ims:ime, 1:nsoil, jms:jme), source=0.0 )
-
-        end associate
+        if (0<opt%vars_to_allocate( kVARS%pressure_interface) )       call this%pressure_interface%    initialize(this%grid)
+        if (0<opt%vars_to_allocate( kVARS%graupel) )                  call this%graupel%               initialize(this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%shortwave) )                call this%shortwave%             initialize(this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%longwave) )                 call this%longwave%              initialize(this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%land_cover) )               allocate(this%land_cover_type          (ims:ime, jms:jme)         , source=0 )
+        if (0<opt%vars_to_allocate( kVARS%vegetation_fraction) )      call this%vegetation_fraction%   initialize(this%grid_monthly)
+        if (0<opt%vars_to_allocate( kVARS%lai) )                      call this%lai%                   initialize(this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%canopy_water) )             call this%canopy_water%          initialize(this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%snow_water_equivalent) )    call this%snow_water_equivalent% initialize(this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%skin_temperature) )         call this%skin_temperature%      initialize(this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%soil_water_content) )       call this%soil_water_content%    initialize(this%grid_soil)
+        if (0<opt%vars_to_allocate( kVARS%soil_temperature) )         call this%soil_temperature%      initialize(this%grid_soil)
 
     end subroutine
 
@@ -91,20 +85,31 @@ contains
 
         integer :: i
 
-        i = this%grid%kms
-        this%z(:,i,:) = this%terrain + this%dz_mass(:,i,:)
-        this%z_interface(:,i,:) = this%terrain
+        associate(z                     => this%z%data_3d,                      &
+                  z_interface           => this%z_interface%data_3d,            &
+                  dz_mass               => this%dz_mass%data_3d,                &
+                  dz_interface          => this%dz_interface%data_3d,           &
+                  exner                 => this%exner%data_3d,                  &
+                  pressure              => this%pressure%data_3d,               &
+                  temperature           => this%temperature%data_3d,            &
+                  potential_temperature => this%potential_temperature%data_3d,  &
+                  terrain               => this%terrain%data_2d)
 
-        do i = this%grid%kms+1, this%grid%kme
-            this%z(:,i,:)           = this%z(:,i-1,:)           + this%dz_mass(:,i,:)
-            this%z_interface(:,i,:) = this%z_interface(:,i-1,:) + this%dz_interface(:,i,:)
-        enddo
-        ! note interface elements need to be specified at an additional level
-        i = this%grid%kme + 1
-        this%z_interface(:,i,:) = this%z_interface(:,i-1,:) + this%dz_interface(:,i,:)
+            i = this%grid%kms
+            z(:,i,:) = terrain + dz_mass(:,i,:)
+            z_interface(:,i,:) = terrain
 
-        this%exner             = exner_function(this%pressure)
-        this%temperature       = this%exner * this%potential_temperature%data_3d
+            do i = this%grid%kms+1, this%grid%kme
+                z(:,i,:)           = z(:,i-1,:)           + dz_mass(:,i,:)
+                z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i,:)
+            enddo
+            ! note interface elements need to be specified at an additional level
+            i = this%grid%kme + 1
+            z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i,:)
+
+            exner             = exner_function(pressure)
+            temperature       = exner * potential_temperature
+        end associate
 
     end subroutine initialize_variables
 
@@ -189,6 +194,9 @@ contains
       call this%grid2d%set_grid_dimensions(nx_global, ny_global, 0)
       call this%u_grid%set_grid_dimensions(nx_global, ny_global, nz_global, nx_extra = 1)
       call this%v_grid%set_grid_dimensions(nx_global, ny_global, nz_global, ny_extra = 1)
+
+      call this%grid_soil%set_grid_dimensions(nx_global, ny_global, 4)
+      call this%grid_monthly%set_grid_dimensions(nx_global, ny_global, 12)
 
       call mp_simple_var_request(options)
 

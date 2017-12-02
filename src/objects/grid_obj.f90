@@ -14,7 +14,7 @@ contains
         if (this%is2d) then
             allocate(dims(2))
             dims(1) = this%ime - this%ims + 1
-            dims(3) = this%jme - this%jms + 1
+            dims(2) = this%jme - this%jms + 1
         endif
         if (this%is3d) then
             allocate(dims(3))
@@ -157,9 +157,16 @@ contains
       if (nz<1) then
           this%is2d = .True.
           this%is3d = .False.
+          allocate(this%dimensions(2))
+          this%dimensions(1) = "lat"
+          this%dimensions(2) = "lon"
       else
           this%is2d = .False.
           this%is3d = .True.
+          allocate(this%dimensions(3))
+          this%dimensions(1) = "lat"
+          this%dimensions(2) = "height"
+          this%dimensions(3) = "lon"
       endif
 
       this%ny_global  = ny                                            ! global model domain grid size

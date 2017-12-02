@@ -314,8 +314,8 @@ contains
             ! If we are going to distribute the current precip over a few grid cells, we need to keep track of
             ! the last_precip so we know how much fell
             if ((options%mp_options%local_precip_fraction<1).or.(options%parameters%use_bias_correction)) then
-                last_rain = domain%accumulated_precipitation
-                last_snow = domain%accumulated_snowfall
+                last_rain = domain%accumulated_precipitation%data_2d
+                last_snow = domain%accumulated_snowfall%data_2d
             endif
 
             kts=kds
@@ -349,18 +349,18 @@ contains
 
             elseif (options%physics%microphysics==kMP_SB04) then
                 ! call the simple microphysics routine of SB04
-                call mp_simple_driver(domain%pressure,                  &
-                                      domain%potential_temperature%data_3d,&
-                                      domain%exner,                     &
-                                      domain%density,                   &
-                                      domain%water_vapor%data_3d,         &
-                                      domain%cloud_water_mass%data_3d,    &
-                                      domain%rain_mass%data_3d,           &
-                                      domain%snow_mass%data_3d,           &
-                                      domain%accumulated_precipitation, &
-                                      domain%accumulated_snowfall,      &
-                                      mp_dt,                            &
-                                      domain%dz_interface,              &
+                call mp_simple_driver(domain%pressure%data_3d,                  &
+                                      domain%potential_temperature%data_3d,     &
+                                      domain%exner%data_3d,                     &
+                                      domain%density%data_3d,                   &
+                                      domain%water_vapor%data_3d,               &
+                                      domain%cloud_water_mass%data_3d,          &
+                                      domain%rain_mass%data_3d,                 &
+                                      domain%snow_mass%data_3d,                 &
+                                      domain%accumulated_precipitation%data_2d, &
+                                      domain%accumulated_snowfall%data_2d,      &
+                                      mp_dt,                                    &
+                                      domain%dz_interface%data_3d,              &
                                       ide, jde, kde)
             ! elseif (options%physics%microphysics==kMP_MORRISON) then
             !     call MP_MORR_TWO_MOMENT(itimestep,                         &
