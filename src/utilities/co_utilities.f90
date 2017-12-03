@@ -6,10 +6,22 @@ module co_util
 
     implicit none
 
+    !>------------------------------------------------------------
+    !! Generic interface to various broadcast routines
+    !!------------------------------------------------------------
+    interface broadcast
+        module procedure co_bcast_4dd, co_bcast_3dd, co_bcast_2dd, co_bcast_1dd, &
+                         co_bcast_4dr, co_bcast_3dr, co_bcast_2dr, co_bcast_1dr, &
+                            bcast_4dr,    bcast_3dr,    bcast_2dr,    bcast_1dr
+                            ! bcast_4dd,    bcast_3dd,    bcast_2dd,    bcast_1dd, &
+    end interface
+
 contains
-    recursive subroutine co_bcast(coarray, source_image, first_image, last_image)
+    ! Note, this first routine is included completely, all variants of this are almost identical routines based on include files
+    ! the only parts left in are the parts that differ between routines
+    recursive subroutine co_bcast_4dr(coarray, source_image, first_image, last_image)
         implicit none
-        real(kind=8), intent(inout) :: coarray(:,:,:,:)[*]
+        real, intent(inout) :: coarray(:,:,:,:)[*]
         integer, intent(in) :: source_image, first_image, last_image
         integer :: dest_image
 
@@ -29,9 +41,9 @@ contains
             endif
 
             if (this_image()<source_image) then
-                call co_bcast(coarray, dest_image, dest_image, source_image-1)
+                call broadcast(coarray, dest_image, dest_image, source_image-1)
             else
-                call co_bcast(coarray, source_image, source_image, last_image)
+                call broadcast(coarray, source_image, source_image, last_image)
             endif
         else
             dest_image = ((last_image-first_image)+1)/2 + first_image
@@ -47,13 +59,179 @@ contains
             endif
 
             if (this_image()<dest_image) then
-                call co_bcast(coarray, source_image, first_image, dest_image-1)
+                call broadcast(coarray, source_image, first_image, dest_image-1)
             else
-                call co_bcast(coarray, dest_image, dest_image, last_image)
+                call broadcast(coarray, dest_image, dest_image, last_image)
             endif
         endif
 
-    end subroutine co_bcast
+    end subroutine
+
+    recursive subroutine co_bcast_3dr(coarray, source_image, first_image, last_image)
+        implicit none
+        real, intent(inout) :: coarray(:,:,:)[*]
+        INCLUDE 'broadcast_core/bcast_part1.inc'
+                coarray = coarray(:,:,:)[source_image]
+        INCLUDE 'broadcast_core/bcast_part2.inc'
+                coarray = coarray(:,:,:)[source_image]
+        INCLUDE 'broadcast_core/bcast_part3.inc'
+    end subroutine
+
+    recursive subroutine co_bcast_2dr(coarray, source_image, first_image, last_image)
+        implicit none
+        real, intent(inout) :: coarray(:,:)[*]
+        INCLUDE 'broadcast_core/bcast_part1.inc'
+                coarray = coarray(:,:)[source_image]
+        INCLUDE 'broadcast_core/bcast_part2.inc'
+                coarray = coarray(:,:)[source_image]
+        INCLUDE 'broadcast_core/bcast_part3.inc'
+    end subroutine
+
+    recursive subroutine co_bcast_1dr(coarray, source_image, first_image, last_image)
+        implicit none
+        real, intent(inout) :: coarray(:)[*]
+        INCLUDE 'broadcast_core/bcast_part1.inc'
+                coarray = coarray(:)[source_image]
+        INCLUDE 'broadcast_core/bcast_part2.inc'
+                coarray = coarray(:)[source_image]
+        INCLUDE 'broadcast_core/bcast_part3.inc'
+    end subroutine
+
+
+
+    recursive subroutine co_bcast_4dd(coarray, source_image, first_image, last_image)
+        implicit none
+        real(kind=8), intent(inout) :: coarray(:,:,:,:)[*]
+        INCLUDE 'broadcast_core/bcast_part1.inc'
+                coarray = coarray(:,:,:,:)[source_image]
+        INCLUDE 'broadcast_core/bcast_part2.inc'
+                coarray = coarray(:,:,:,:)[source_image]
+        INCLUDE 'broadcast_core/bcast_part3.inc'
+    end subroutine
+
+    recursive subroutine co_bcast_3dd(coarray, source_image, first_image, last_image)
+        implicit none
+        real(kind=8), intent(inout) :: coarray(:,:,:)[*]
+        INCLUDE 'broadcast_core/bcast_part1.inc'
+                coarray = coarray(:,:,:)[source_image]
+        INCLUDE 'broadcast_core/bcast_part2.inc'
+                coarray = coarray(:,:,:)[source_image]
+        INCLUDE 'broadcast_core/bcast_part3.inc'
+    end subroutine
+
+    recursive subroutine co_bcast_2dd(coarray, source_image, first_image, last_image)
+        implicit none
+        real(kind=8), intent(inout) :: coarray(:,:)[*]
+        INCLUDE 'broadcast_core/bcast_part1.inc'
+                coarray = coarray(:,:)[source_image]
+        INCLUDE 'broadcast_core/bcast_part2.inc'
+                coarray = coarray(:,:)[source_image]
+        INCLUDE 'broadcast_core/bcast_part3.inc'
+    end subroutine
+
+    recursive subroutine co_bcast_1dd(coarray, source_image, first_image, last_image)
+        implicit none
+        real(kind=8), intent(inout) :: coarray(:)[*]
+        INCLUDE 'broadcast_core/bcast_part1.inc'
+                coarray = coarray(:)[source_image]
+        INCLUDE 'broadcast_core/bcast_part2.inc'
+                coarray = coarray(:)[source_image]
+        INCLUDE 'broadcast_core/bcast_part3.inc'
+    end subroutine
+
+
+    subroutine bcast_4dr(data_array, source_image, first_image, last_image, create_co_array)
+        implicit none
+        real,         intent(inout) :: data_array(:,:,:,:)
+        integer,      intent(in)    :: source_image, first_image, last_image
+        logical,      intent(in)    :: create_co_array
+
+        real, allocatable   :: coarray(:,:,:,:)[:]
+        integer :: n1,n2,n3,n4
+
+        n1 = size(data_array, 1)
+        n2 = size(data_array, 2)
+        n3 = size(data_array, 3)
+        n4 = size(data_array, 4)
+
+        allocate(coarray(n1,n2,n3,n4)[*], source=data_array)
+
+        call broadcast(coarray, source_image, first_image, last_image)
+
+        data_array=coarray
+
+        deallocate(coarray)
+
+    end subroutine
+
+
+    subroutine bcast_3dr(data_array, source_image, first_image, last_image, create_co_array)
+        implicit none
+        real,         intent(inout) :: data_array(:,:,:)
+        integer,      intent(in)    :: source_image, first_image, last_image
+        logical,      intent(in)    :: create_co_array
+
+        real, allocatable   :: coarray(:,:,:)[:]
+        integer :: n1,n2,n3
+
+        n1 = size(data_array, 1)
+        n2 = size(data_array, 2)
+        n3 = size(data_array, 3)
+
+        allocate(coarray(n1,n2,n3)[*], source=data_array)
+
+        call broadcast(coarray, source_image, first_image, last_image)
+
+        data_array=coarray
+
+        deallocate(coarray)
+
+    end subroutine
+
+
+    subroutine bcast_2dr(data_array, source_image, first_image, last_image, create_co_array)
+        implicit none
+        real,         intent(inout) :: data_array(:,:)
+        integer,      intent(in)    :: source_image, first_image, last_image
+        logical,      intent(in)    :: create_co_array
+
+        real, allocatable   :: coarray(:,:)[:]
+        integer :: n1,n2
+
+        n1 = size(data_array, 1)
+        n2 = size(data_array, 2)
+
+        allocate(coarray(n1,n2)[*], source=data_array)
+
+        call broadcast(coarray, source_image, first_image, last_image)
+
+        data_array=coarray
+
+        deallocate(coarray)
+
+    end subroutine
+
+    subroutine bcast_1dr(data_array, source_image, first_image, last_image, create_co_array)
+        implicit none
+        real,         intent(inout) :: data_array(:)
+        integer,      intent(in)    :: source_image, first_image, last_image
+        logical,      intent(in)    :: create_co_array
+
+        real, allocatable   :: coarray(:)[:]
+        integer :: n1
+
+        n1 = size(data_array, 1)
+
+        allocate(coarray(n1)[*], source=data_array)
+
+        call broadcast(coarray, source_image, first_image, last_image)
+
+        data_array=coarray
+
+        deallocate(coarray)
+
+    end subroutine
+
 
     subroutine print_in_image_order(input)
         implicit none

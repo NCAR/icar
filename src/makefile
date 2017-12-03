@@ -340,7 +340,7 @@ TEST_EXECUTABLES= 	fftshift_test	\
 #	User facing rules
 ###################################################################
 
-caf_tests:caf_options_test caf_init_test
+caf_tests:caf_options_test caf_init_test caf_bcast_test
 
 icar:${OBJS}
 	${F90} -o icar ${OBJS} ${LFLAGS}
@@ -409,9 +409,13 @@ caf_init_test: $(BUILD)test_caf_init.o                              \
 				$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
 				$(BUILD)domain_h.o       $(BUILD)domain_obj.o		\
 				$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
-				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o
+				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
+				$(BUILD)io_routines.o
 	${F90} $^ -o $@ ${LFLAGS}
 
+caf_bcast_test: $(BUILD)test_caf_bcast.o	\
+				$(BUILD)co_utilities.o
+	${F90} $^ -o $@ ${LFLAGS}
 
 
 ###################################################################
@@ -426,8 +430,6 @@ $(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)data_structures.o $(BUILD)init.o $(BU
 ###################################################################
 #	Options Object
 ###################################################################
-$(BUILD)test_caf_options.o: tests/test_caf_options.f90 $(BUILD)options_h.o
-
 $(BUILD)opt_types.o: objects/opt_types.f90 $(BUILD)icar_constants.o $(BUILD)time_obj.o $(BUILD)time_delta_obj.o
 
 $(BUILD)options_h.o: objects/options_h.f90 $(BUILD)icar_constants.o $(BUILD)opt_types.o
@@ -439,7 +441,6 @@ $(BUILD)options_obj.o: objects/options_obj.f90 $(BUILD)options_h.o $(BUILD)time_
 ###################################################################
 #	Primary Data Objects
 ###################################################################
-$(BUILD)test_caf_init.o: $(BUILD)domain_h.o $(BUILD)options_h.o
 
 $(BUILD)meta_data_obj.o: objects/meta_data_obj.f90 $(BUILD)meta_data_h.o
 
@@ -458,13 +459,16 @@ $(BUILD)exchangeable_obj.o: objects/exchangeable_obj.f90 $(BUILD)exchangeable_h.
 $(BUILD)exchangeable_h.o: objects/exchangeable_h.f90 $(BUILD)grid_h.o $(BUILD)variable_h.o
 
 $(BUILD)domain_obj.o: objects/domain_obj.f90 $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)grid_h.o \
-					$(BUILD)string.o $(BUILD)mp_driver.o $(BUILD)io_routines.o $(BUILD)assertions.o $(BUILD)atm_utilities.o
+					$(BUILD)string.o $(BUILD)mp_driver.o $(BUILD)io_routines.o $(BUILD)assertions.o  \
+					$(BUILD)atm_utilities.o $(BUILD)io_routines.o
 
 $(BUILD)domain_h.o: objects/domain_h.f90 $(BUILD)options_h.o $(BUILD)exchangeable_h.o \
 					$(BUILD)grid_h.o $(BUILD)meta_data_h.o $(BUILD)variable_h.o
 
-$(BUILD)assertions.o: utilities/assertions.f90
-	${F90} ${FFLAGS} $< -o $@
+# $(BUILD)co_utilities.o
+
+# $(BUILD)assertions.o: utilities/assertions.f90
+# 	${F90} ${FFLAGS} $< -o $@
 
 $(BUILD)%.o: utilities/%.f90
 	${F90} ${FFLAGS} $< -o $@
@@ -704,6 +708,13 @@ $(BUILD)debug_utils.o:$(UTIL)debug_utils.f90 $(BUILD)data_structures.o $(BUILD)s
 ###################################################################
 #	Unit tests
 ###################################################################
+
+$(BUILD)test_caf_init.o: tests/test_caf_init.f90 $(BUILD)domain_h.o $(BUILD)options_h.o
+
+$(BUILD)test_caf_bcast.o: tests/test_caf_bcast.f90 $(BUILD)co_utilities.o
+
+$(BUILD)test_caf_options.o: tests/test_caf_options.f90 $(BUILD)options_h.o
+
 $(BUILD)test_fftw.o: tests/test_fftw.f90 $(BUILD)fftw.o
 	${F90} ${FFLAGS} tests/test_fftw.f90 -o $(BUILD)test_fftw.o
 
