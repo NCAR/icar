@@ -28,8 +28,8 @@ contains
     endif
 
     allocate(this%data_3d(grid%ims:grid%ime, &
-                        grid%kms:grid%kme, &
-                        grid%jms:grid%jme))
+                          grid%kms:grid%kme, &
+                          grid%jms:grid%jme))
 
     allocate( this%halo_south_in( grid%ns_halo_nx+halo_size*2, grid%halo_nz,   halo_size    )[*])
     allocate( this%halo_north_in( grid%ns_halo_nx+halo_size*2, grid%halo_nz,   halo_size    )[*])

@@ -13,7 +13,9 @@ module domain_interface
 
   type domain_t
     type(meta_data_t)    :: info
-    type(grid_t)         :: grid, u_grid, v_grid, grid2d, grid_monthly, grid_soil
+    type(grid_t)         :: grid,   u_grid,   v_grid
+    type(grid_t)         :: grid2d, u_grid2d, v_grid2d
+    type(grid_t)         :: grid_monthly, grid_soil
 
     type(Time_type) :: model_time
 

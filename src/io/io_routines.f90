@@ -201,7 +201,10 @@ contains
 
         ! Read the dimension lengths
         call io_getdims(filename,varname,diminfo)
+
+        if (allocated(data_in)) deallocate(data_in)
         allocate(data_in(diminfo(2),diminfo(3),diminfo(4),diminfo(5),diminfo(6),diminfo(7)))
+
         ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to the file.
         call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
         ! Get the varid of the data_in variable, based on its name.
@@ -259,7 +262,10 @@ contains
 
         ! Read the dimension lengths
         call io_getdims(filename,varname,diminfo)
+
+        if (allocated(data_in)) deallocate(data_in)
         allocate(data_in(diminfo(2),diminfo(3),diminfo(4),diminfo(5),diminfo(6)))
+
         ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
         ! the file.
         call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
@@ -325,7 +331,10 @@ contains
 
         ! Read the dimension lengths
         call io_getdims(filename,varname,diminfo)
+
+        if (allocated(data_in)) deallocate(data_in)
         allocate(data_in(diminfo(2),diminfo(3),diminfo(4)))
+
         ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
         ! the file.
         call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
@@ -392,7 +401,10 @@ contains
         diminfo = 1
         ! Read the dimension lengths
         call io_getdims(filename,varname,diminfo)
+
+        if (allocated(data_in)) deallocate(data_in)
         allocate(data_in(diminfo(2),diminfo(3)))
+
         ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
         ! the file.
         call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
@@ -460,7 +472,10 @@ contains
 
         ! Read the dimension lengths
         call io_getdims(filename,varname,diminfo)
+
+        if (allocated(data_in)) deallocate(data_in)
         allocate(data_in(diminfo(2),diminfo(3)))
+
         ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
         ! the file.
         call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
@@ -519,7 +534,10 @@ contains
 
         ! Read the dimension lengths
         call io_getdims(filename,varname,diminfo)
+
+        if (allocated(data_in)) deallocate(data_in)
         allocate(data_in(diminfo(2)))
+
         ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
         ! the file.
         call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
@@ -580,7 +598,10 @@ contains
         ! Read the dimension lengths
         diminfo = 1
         call io_getdims(filename,varname,diminfo)
+
+        if (allocated(data_in)) deallocate(data_in)
         allocate(data_in(diminfo(2)))
+
         ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
         ! the file.
         call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)

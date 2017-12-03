@@ -6,7 +6,9 @@ submodule(domain_interface) domain_implementation
   use mod_atm_utilities,    only : exner_function, sat_mr, pressure_at_elevation
   use icar_constants,       only : kVARS
   use string,               only : str
-  use microphysics, only : mp_simple_var_request
+  use microphysics,         only : mp_simple_var_request
+  use co_util,              only : broadcast
+  use io_routines,          only : io_read
 
   implicit none
 
@@ -28,7 +30,7 @@ contains
         ime = this%grid%ime
         jms = this%grid%jms
         jme = this%grid%jme
-        
+
                 if (this_image()==1) print *,"Initializing variables"
         if (0<opt%vars_to_allocate( kVARS%u) )                          call this%u%                    initialize( this%u_grid )
         if (0<opt%vars_to_allocate( kVARS%v) )                          call this%v%                    initialize( this%v_grid )
@@ -47,46 +49,131 @@ contains
         if (0<opt%vars_to_allocate( kVARS%graupel_number_concentration))call this%graupel_number%       initialize( this%grid )
 
 
-        if (0<opt%vars_to_allocate( kVARS%precipitation) ) call this%accumulated_precipitation%     initialize( this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%precipitation) ) allocate(this%precipitation_bucket     (ims:ime, jms:jme),          source=0)
-        if (0<opt%vars_to_allocate( kVARS%snowfall) )      call this%accumulated_snowfall%          initialize( this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%snowfall) )      allocate(this%snowfall_bucket          (ims:ime, jms:jme),          source=0)
-        if (0<opt%vars_to_allocate( kVARS%pressure) )      call this%pressure%                      initialize(this%grid)
-        if (0<opt%vars_to_allocate( kVARS%temperature) )   call this%temperature%                   initialize(this%grid)
-        if (0<opt%vars_to_allocate( kVARS%exner) )         call this%exner%                         initialize(this%grid)
-        if (0<opt%vars_to_allocate( kVARS%z) )             call this%z%                             initialize(this%grid)
-        if (0<opt%vars_to_allocate( kVARS%dz_interface) )  call this%dz_interface%                  initialize(this%grid)
-        if (0<opt%vars_to_allocate( kVARS%z_interface) )   call this%z_interface%                   initialize(this%grid)
-        if (0<opt%vars_to_allocate( kVARS%dz) )            call this%dz_mass%                       initialize(this%grid)
-        if (0<opt%vars_to_allocate( kVARS%density) )       call this%density%                       initialize(this%grid)
+        if (0<opt%vars_to_allocate( kVARS%land_cover) )    allocate(this%land_cover_type          (ims:ime, jms:jme),          source=0 )
 
-        if (0<opt%vars_to_allocate( kVARS%pressure_interface) )       call this%pressure_interface%    initialize(this%grid)
-        if (0<opt%vars_to_allocate( kVARS%graupel) )                  call this%graupel%               initialize(this%grid2d)
-        if (0<opt%vars_to_allocate( kVARS%shortwave) )                call this%shortwave%             initialize(this%grid2d)
-        if (0<opt%vars_to_allocate( kVARS%longwave) )                 call this%longwave%              initialize(this%grid2d)
-        if (0<opt%vars_to_allocate( kVARS%land_cover) )               allocate(this%land_cover_type          (ims:ime, jms:jme)         , source=0 )
-        if (0<opt%vars_to_allocate( kVARS%vegetation_fraction) )      call this%vegetation_fraction%   initialize(this%grid_monthly)
-        if (0<opt%vars_to_allocate( kVARS%lai) )                      call this%lai%                   initialize(this%grid2d)
-        if (0<opt%vars_to_allocate( kVARS%canopy_water) )             call this%canopy_water%          initialize(this%grid2d)
-        if (0<opt%vars_to_allocate( kVARS%snow_water_equivalent) )    call this%snow_water_equivalent% initialize(this%grid2d)
-        if (0<opt%vars_to_allocate( kVARS%skin_temperature) )         call this%skin_temperature%      initialize(this%grid2d)
-        if (0<opt%vars_to_allocate( kVARS%soil_water_content) )       call this%soil_water_content%    initialize(this%grid_soil)
-        if (0<opt%vars_to_allocate( kVARS%soil_temperature) )         call this%soil_temperature%      initialize(this%grid_soil)
+        if (0<opt%vars_to_allocate( kVARS%precipitation) ) call this%accumulated_precipitation%     initialize( this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%snowfall) )      call this%accumulated_snowfall%          initialize( this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%pressure) )      call this%pressure%                      initialize( this%grid )
+        if (0<opt%vars_to_allocate( kVARS%temperature) )   call this%temperature%                   initialize( this%grid )
+        if (0<opt%vars_to_allocate( kVARS%exner) )         call this%exner%                         initialize( this%grid )
+        if (0<opt%vars_to_allocate( kVARS%z) )             call this%z%                             initialize( this%grid )
+        if (0<opt%vars_to_allocate( kVARS%dz_interface) )  call this%dz_interface%                  initialize( this%grid )
+        if (0<opt%vars_to_allocate( kVARS%z_interface) )   call this%z_interface%                   initialize( this%grid )
+        if (0<opt%vars_to_allocate( kVARS%dz) )            call this%dz_mass%                       initialize( this%grid )
+        if (0<opt%vars_to_allocate( kVARS%density) )       call this%density%                       initialize( this%grid )
+
+        if (0<opt%vars_to_allocate( kVARS%pressure_interface) )       call this%pressure_interface%    initialize( this%grid )
+        if (0<opt%vars_to_allocate( kVARS%graupel) )                  call this%graupel%               initialize( this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%shortwave) )                call this%shortwave%             initialize( this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%longwave) )                 call this%longwave%              initialize( this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%vegetation_fraction) )      call this%vegetation_fraction%   initialize( this%grid_monthly )
+        if (0<opt%vars_to_allocate( kVARS%lai) )                      call this%lai%                   initialize( this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%canopy_water) )             call this%canopy_water%          initialize( this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%snow_water_equivalent) )    call this%snow_water_equivalent% initialize( this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%skin_temperature) )         call this%skin_temperature%      initialize( this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%soil_water_content) )       call this%soil_water_content%    initialize( this%grid_soil )
+        if (0<opt%vars_to_allocate( kVARS%soil_temperature) )         call this%soil_temperature%      initialize( this%grid_soil )
+
+        if (0<opt%vars_to_allocate( kVARS%latitude) )                 call this%latitude%              initialize( this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%longitude) )                call this%longitude%             initialize( this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%u_latitude) )               call this%u_latitude%            initialize( this%u_grid2d )
+        if (0<opt%vars_to_allocate( kVARS%u_longitude) )              call this%u_longitude%           initialize( this%u_grid2d )
+        if (0<opt%vars_to_allocate( kVARS%v_latitude) )               call this%v_latitude%            initialize( this%v_grid2d )
+        if (0<opt%vars_to_allocate( kVARS%v_longitude) )              call this%v_longitude%           initialize( this%v_grid2d )
+        if (0<opt%vars_to_allocate( kVARS%terrain) )                  call this%terrain%               initialize( this%grid2d )
+
+
 
     end subroutine
+
+    subroutine read_core_variables(this, options)
+        implicit none
+        class(domain_t), intent(inout)  :: this
+        class(options_t),intent(in)     :: options
+        real, allocatable :: temporary_data(:,:)
+
+        print*, this_image(), this%grid%ims, this%grid%jms
+        print*, this_image(), this%grid2d%ims, this%grid2d%jms
+        if (this_image()==1) then
+            call io_read(options%parameters%init_conditions_file,   &
+                         options%parameters%hgt_hi,                 &
+                         temporary_data)
+            print*, this%grid%ims,this%grid%ime, this%grid%jms,this%grid%jme
+            print*, shape(this%terrain%data_2d), lbound(this%terrain%data_2d,1), ubound(this%terrain%data_2d,1)
+            this%terrain%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+
+            call io_read(options%parameters%init_conditions_file,   &
+                         options%parameters%lat_hi,                 &
+                         temporary_data)
+            this%latitude%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+
+            call io_read(options%parameters%init_conditions_file,   &
+                         options%parameters%lon_hi,                 &
+                         temporary_data)
+            this%longitude%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+
+            ! stop "Would prefer a more elegant way to handle ulat,ulon,..."
+            if (options%parameters%ulon_hi /= "") then
+                call io_read(options%parameters%init_conditions_file,   &
+                             options%parameters%ulon_hi,                 &
+                             temporary_data)
+                this%u_longitude%data_2d = temporary_data(this%u_grid%ims:this%u_grid%ime, this%u_grid%jms:this%u_grid%jme)
+            else
+                associate(ulon => this%u_longitude%data_2d, lon=>this%longitude%data_2d, nx=>this%grid%nx)
+                    ulon(1,:)    = (1.5*lon(1,:)  - 0.5*lon(2,:))    ! extrapolate past the end
+                    ulon(2:nx,:) = (lon(1:nx-1,:) + lon(2:nx,:)) / 2 ! interpolate between points
+                    ulon(nx+1,:) = (1.5*lon(nx,:) - 0.5*lon(nx-1,:)) ! extrapolate past the end
+                end associate
+            endif
+            if (options%parameters%ulat_hi /= "") then
+                call io_read(options%parameters%init_conditions_file,   &
+                             options%parameters%ulat_hi,                 &
+                             temporary_data)
+                this%u_latitude%data_2d = temporary_data(this%u_grid%ims:this%u_grid%ime, this%u_grid%jms:this%u_grid%jme)
+            endif
+
+            if (options%parameters%vlon_hi /= "") then
+                call io_read(options%parameters%init_conditions_file,   &
+                             options%parameters%vlon_hi,                 &
+                             temporary_data)
+                this%v_longitude%data_2d = temporary_data(this%v_grid%ims:this%v_grid%ime, this%v_grid%jms:this%v_grid%jme)
+            endif
+            if (options%parameters%vlat_hi /= "") then
+                call io_read(options%parameters%init_conditions_file,   &
+                             options%parameters%vlat_hi,                 &
+                             temporary_data)
+                this%v_latitude%data_2d = temporary_data(this%v_grid%ims:this%v_grid%ime, this%v_grid%jms:this%v_grid%jme)
+            endif
+        endif
+
+        call broadcast(this%terrain     %data_2d, 1, 1, num_images(), .true.)
+        call broadcast(this%latitude    %data_2d, 1, 1, num_images(), .true.)
+        call broadcast(this%longitude   %data_2d, 1, 1, num_images(), .true.)
+        call broadcast(this%u_latitude  %data_2d, 1, 1, num_images(), .true.)
+        call broadcast(this%u_longitude %data_2d, 1, 1, num_images(), .true.)
+        call broadcast(this%v_latitude  %data_2d, 1, 1, num_images(), .true.)
+        call broadcast(this%v_longitude %data_2d, 1, 1, num_images(), .true.)
+
+    end subroutine read_core_variables
 
     !> -------------------------------
     !! Initialize various domain variables, mostly z, dz, etc.
     !!
     !! -------------------------------
-    subroutine initialize_variables(this)
+    subroutine initialize_variables(this, options)
         implicit none
-        class(domain_t) :: this
+        class(domain_t), intent(inout)  :: this
+        class(options_t),intent(in)     :: options
 
         integer :: i
 
+        call read_core_variables(this, options)
+
         associate(z                     => this%z%data_3d,                      &
                   z_interface           => this%z_interface%data_3d,            &
+                  dz                    => options%parameters%dz_levels,        &
                   dz_mass               => this%dz_mass%data_3d,                &
                   dz_interface          => this%dz_interface%data_3d,           &
                   exner                 => this%exner%data_3d,                  &
@@ -96,16 +183,25 @@ contains
                   terrain               => this%terrain%data_2d)
 
             i = this%grid%kms
+            ! print*, shape(dz_mass)
+            ! print*, shape(dz)
+            ! print*, shape(dz_interface)
+            ! print*, shape(z_interface)
+            ! print*, shape(z)
+            dz_mass(:,i,:) = dz(1) / 2
             z(:,i,:) = terrain + dz_mass(:,i,:)
             z_interface(:,i,:) = terrain
 
+            ! stop "need to think about dz indexing here"
             do i = this%grid%kms+1, this%grid%kme
+                dz_mass(:,i,:)     = (dz(i-this%grid%kms+1) + dz(i-this%grid%kms)) / 2
+                dz_interface(:,i,:)= dz(i-this%grid%kms+1)
                 z(:,i,:)           = z(:,i-1,:)           + dz_mass(:,i,:)
                 z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i,:)
             enddo
             ! note interface elements need to be specified at an additional level
-            i = this%grid%kme + 1
-            z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i,:)
+            ! i = this%grid%kme + 1
+            ! z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i,:)
 
             exner             = exner_function(pressure)
             temperature       = exner * potential_temperature
@@ -158,7 +254,8 @@ contains
                      [kVARS%pressure,               kVARS%pressure_interface,       &
                       kVARS%potential_temperature,  kVARS%temperature,              &
                       kVARS%exner,                  kVARS%density,                  &
-                      kVARS%z,                      kVARS%dz_interface,             &
+                      kVARS%z,                      kVARS%z_interface,              &
+                      kVARS%dz,                     kVARS%dz_interface,             &
                       kVARS%terrain,                                                &
                       kVARS%latitude,               kVARS%longitude,                &
                       kVARS%u_latitude,             kVARS%u_longitude,              &
@@ -176,6 +273,37 @@ contains
 
     end subroutine var_request
 
+    subroutine read_domain_shape(this, options)
+        implicit none
+        class(domain_t), intent(inout)  :: this
+        class(options_t),intent(in)     :: options
+
+        real, allocatable :: temporary_data(:,:)
+        integer :: nx_global, ny_global, nz_global
+
+        call io_read(options%parameters%init_conditions_file,   &
+                     options%parameters%hgt_hi,                 &
+                     temporary_data)
+
+        nx_global = size(temporary_data,1)
+        ny_global = size(temporary_data,2)
+        nz_global = options%parameters%nz
+
+        call this%grid%set_grid_dimensions(         nx_global, ny_global, nz_global)
+        call this%u_grid%set_grid_dimensions(       nx_global, ny_global, nz_global, nx_extra = 1)
+        call this%v_grid%set_grid_dimensions(       nx_global, ny_global, nz_global, ny_extra = 1)
+
+        call this%grid2d%set_grid_dimensions(       nx_global, ny_global, 0)
+        call this%u_grid2d%set_grid_dimensions(     nx_global, ny_global, 0, nx_extra = 1)
+        call this%v_grid2d%set_grid_dimensions(     nx_global, ny_global, 0, ny_extra = 1)
+
+        call this%grid_soil%set_grid_dimensions(    nx_global, 4,   ny_global)
+        call this%grid_monthly%set_grid_dimensions( nx_global, 12,  ny_global)
+
+        deallocate(temporary_data)
+
+    end subroutine
+
     !> -------------------------------
     !! Initialize the size of the domain using constant dimensions
     !!
@@ -184,19 +312,7 @@ contains
       class(domain_t), intent(inout) :: this
       class(options_t),intent(inout) :: options
 
-      integer :: nx_global, ny_global, nz_global
-      ! read input file...
-      nx_global=100
-      ny_global=200
-      nz_global=30
-
-      call this%grid%set_grid_dimensions(nx_global, ny_global, nz_global)
-      call this%grid2d%set_grid_dimensions(nx_global, ny_global, 0)
-      call this%u_grid%set_grid_dimensions(nx_global, ny_global, nz_global, nx_extra = 1)
-      call this%v_grid%set_grid_dimensions(nx_global, ny_global, nz_global, ny_extra = 1)
-
-      call this%grid_soil%set_grid_dimensions(nx_global, ny_global, 4)
-      call this%grid_monthly%set_grid_dimensions(nx_global, ny_global, 12)
+      call read_domain_shape(this, options)
 
       call mp_simple_var_request(options)
 
@@ -204,7 +320,7 @@ contains
 
       call create_variables(this, options)
 
-      ! call initialize_variables(this, options)
+      call initialize_variables(this, options)
 
       call setup_meta_data(this)
 

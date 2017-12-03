@@ -410,7 +410,7 @@ caf_init_test: $(BUILD)test_caf_init.o                              \
 				$(BUILD)domain_h.o       $(BUILD)domain_obj.o		\
 				$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
 				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
-				$(BUILD)io_routines.o
+				$(BUILD)io_routines.o	 $(BUILD)co_utilities.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_bcast_test: $(BUILD)test_caf_bcast.o	\
@@ -459,8 +459,8 @@ $(BUILD)exchangeable_obj.o: objects/exchangeable_obj.f90 $(BUILD)exchangeable_h.
 $(BUILD)exchangeable_h.o: objects/exchangeable_h.f90 $(BUILD)grid_h.o $(BUILD)variable_h.o
 
 $(BUILD)domain_obj.o: objects/domain_obj.f90 $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)grid_h.o \
-					$(BUILD)string.o $(BUILD)mp_driver.o $(BUILD)io_routines.o $(BUILD)assertions.o  \
-					$(BUILD)atm_utilities.o $(BUILD)io_routines.o
+					$(BUILD)string.o $(BUILD)mp_driver.o $(BUILD)assertions.o  					\
+					$(BUILD)atm_utilities.o $(BUILD)io_routines.o $(BUILD)co_utilities.o
 
 $(BUILD)domain_h.o: objects/domain_h.f90 $(BUILD)options_h.o $(BUILD)exchangeable_h.o \
 					$(BUILD)grid_h.o $(BUILD)meta_data_h.o $(BUILD)variable_h.o
