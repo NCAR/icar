@@ -6,13 +6,19 @@ module meta_data_interface
     private
     public :: meta_data_t
 
+
+    type attribute
+        character(len=kMAX_NAME_LENGTH) :: name
+        character(len=kMAX_ATTR_LENGTH) :: value
+    end type attribute
+
+
     type meta_data_t
     !   private
         character(len=kMAX_NAME_LENGTH) :: name
         integer :: n_attrs = 0
-        character(len=kMAX_ATTR_LENGTH), allocatable :: attribute_names(:)
-        character(len=kMAX_ATTR_LENGTH), allocatable :: attribute_values(:)
 
+        type(attribute), allocatable :: attributes(:)
     contains
 
         procedure, public  :: add_attribute

@@ -1,7 +1,7 @@
 module output_interface
-  use constants
   use netcdf
 
+  use icar_constants
   use variable_interface, only : variable_t
   use domain_interface,   only : domain_t
   use meta_data_interface,only : meta_data_t

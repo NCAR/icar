@@ -12,7 +12,7 @@ contains
         if (.not.this%is_initialized) call this%init()
 
         do i=1,domain%info%n_attrs
-            call this%add_attribute(domain%info%attribute_names(i), domain%info%attribute_values(i))
+            call this%add_attribute(domain%info%attributes(i)%name, domain%info%attributes(i)%value)
         enddo
 
     end subroutine
@@ -75,9 +75,9 @@ contains
             do i=1,this%n_attrs
                 call check( nf90_put_att(   this%ncfile_id,             &
                                             NF90_GLOBAL,                &
-                                            trim(this%attribute_names(i)),    &
-                                            trim(this%attribute_values(i))),  &
-                                            "global attr:"//trim(this%attribute_names(i)))
+                                            trim(this%attributes(i)%name),    &
+                                            trim(this%attributes(i)%value)),  &
+                                            "global attr:"//trim(this%attributes(i)%name))
             enddo
         endif
 
@@ -176,12 +176,12 @@ contains
             endif
 
             ! setup attributes
-            do i=1,size(var%attribute_names)
+            do i=1,size(var%attributes)
                 call check( nf90_put_att(this%ncfile_id,                &
                                          var%var_id,                    &
-                                         trim(var%attribute_names(i)),        &
-                                         trim(var%attribute_values(i))),      &
-                            "saving attribute"//trim(var%attribute_names(i)))
+                                         trim(var%attributes(i)%name),        &
+                                         trim(var%attributes(i)%value)),      &
+                            "saving attribute"//trim(var%attributes(i)%name))
             enddo
         endif
 
