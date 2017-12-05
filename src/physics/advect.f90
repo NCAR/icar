@@ -50,7 +50,7 @@ contains
         real, dimension(:, :, :),  intent(in)      :: rho
         real, dimension(:, :, :),  intent(in)      :: dz
         integer,                            intent(in)      :: ny, nz, nx
-        type(options_type), intent(in)::options
+        type(options_t), intent(in)::options
 
         ! interal parameters
         integer                         :: err, i
@@ -89,7 +89,7 @@ contains
             f5= ((w(2:nx-1,1:nz-1,i) + ABS(w(2:nx-1,1:nz-1,i))) * qin(2:nx-1,1:nz-1,i) + &
                  (w(2:nx-1,1:nz-1,i) - ABS(w(2:nx-1,1:nz-1,i))) * qin(2:nx-1,2:nz,i))  / 2
 
-           if (options%advect_density) then
+           if (options%parameters%advect_density) then
                ! perform horizontal advection
                q(2:nx-1,:,i)      = q(2:nx-1,:,i)      - ((f1(2:nx-1,:) - f1(1:nx-2,:)) + (f3 - f4)) &
                                     / rho(2:nx-1,:,i) / dz(2:nx-1,:,i)
@@ -120,126 +120,126 @@ contains
         !$omp end parallel
     end subroutine advect3d
 
-    subroutine setup_cu_winds(domain, options, dt)
-        implicit none
-        type(domain_type),  intent(in) :: domain
-        type(options_type), intent(in) :: options
-        real,               intent(in) :: dt
+    ! subroutine setup_cu_winds(domain, options, dt)
+    !     implicit none
+    !     type(domain_type),  intent(in) :: domain
+    !     type(options_type), intent(in) :: options
+    !     real,               intent(in) :: dt
+    !
+    !     real    :: dx
+    !     integer :: nx,nz,ny
+    !
+    !     dx = domain%dx
+    !     nx = size(domain%dz,1)
+    !     nz = size(domain%dz,2)
+    !     ny = size(domain%dz,3)
+    !
+    !     if (.not.allocated(U_4cu_u)) then
+    !         allocate(U_4cu_u(nx,  nz, ny))
+    !         U_4cu_u = 0
+    !         allocate(V_4cu_u(nx+1,nz, ny-1))
+    !         V_4cu_u = 0
+    !         allocate(W_4cu_u(nx+1,nz, ny))
+    !         W_4cu_u = 0
+    !
+    !         allocate(U_4cu_v(nx-1,nz, ny+1))
+    !         U_4cu_v = 0
+    !         allocate(V_4cu_v(nx,  nz, ny))
+    !         V_4cu_v = 0
+    !         allocate(W_4cu_v(nx,  nz, ny+1))
+    !         W_4cu_v = 0
+    !     endif
+    !
+    !     U_4cu_u           =  (dt/dx) * (domain%u(1:nx,:,:)      + domain%u(2:nx+1,:,:)) / 2
+    !     V_4cu_u(2:nx,:,:) =  (dt/dx) * (domain%v(1:nx-1,:,2:ny) + domain%v(2:nx,:,2:ny)) / 2
+    !     W_4cu_u(2:nx,:,:) =  (dt/dx) * (domain%w(1:nx-1,:,:)    + domain%w(2:nx,:,:)) / 2
+    !     call rebalance_cu_winds(U_4cu_u, V_4cu_u, W_4cu_u)
+    !
+    !     U_4cu_v(:,:,2:ny) =  (dt/dx) * (domain%u(2:nx,:,1:ny-1) + domain%u(2:nx,:,2:ny)) / 2
+    !     V_4cu_v           =  (dt/dx) * (domain%v(:,:,1:ny)      + domain%v(:,:,2:ny+1)) / 2
+    !     W_4cu_v(:,:,2:ny) =  (dt/dx) * (domain%w(:,:,1:ny-1)    + domain%w(:,:,2:ny)) / 2
+    !     call rebalance_cu_winds(U_4cu_v, V_4cu_v, W_4cu_v)
+    !
+    ! end subroutine setup_cu_winds
 
-        real    :: dx
-        integer :: nx,nz,ny
-
-        dx = domain%dx
-        nx = size(domain%dz,1)
-        nz = size(domain%dz,2)
-        ny = size(domain%dz,3)
-
-        if (.not.allocated(U_4cu_u)) then
-            allocate(U_4cu_u(nx,  nz, ny))
-            U_4cu_u = 0
-            allocate(V_4cu_u(nx+1,nz, ny-1))
-            V_4cu_u = 0
-            allocate(W_4cu_u(nx+1,nz, ny))
-            W_4cu_u = 0
-
-            allocate(U_4cu_v(nx-1,nz, ny+1))
-            U_4cu_v = 0
-            allocate(V_4cu_v(nx,  nz, ny))
-            V_4cu_v = 0
-            allocate(W_4cu_v(nx,  nz, ny+1))
-            W_4cu_v = 0
-        endif
-
-        U_4cu_u           =  (dt/dx) * (domain%u(1:nx,:,:)      + domain%u(2:nx+1,:,:)) / 2
-        V_4cu_u(2:nx,:,:) =  (dt/dx) * (domain%v(1:nx-1,:,2:ny) + domain%v(2:nx,:,2:ny)) / 2
-        W_4cu_u(2:nx,:,:) =  (dt/dx) * (domain%w(1:nx-1,:,:)    + domain%w(2:nx,:,:)) / 2
-        call rebalance_cu_winds(U_4cu_u, V_4cu_u, W_4cu_u)
-
-        U_4cu_v(:,:,2:ny) =  (dt/dx) * (domain%u(2:nx,:,1:ny-1) + domain%u(2:nx,:,2:ny)) / 2
-        V_4cu_v           =  (dt/dx) * (domain%v(:,:,1:ny)      + domain%v(:,:,2:ny+1)) / 2
-        W_4cu_v(:,:,2:ny) =  (dt/dx) * (domain%w(:,:,1:ny-1)    + domain%w(:,:,2:ny)) / 2
-        call rebalance_cu_winds(U_4cu_v, V_4cu_v, W_4cu_v)
-
-    end subroutine setup_cu_winds
-
-    subroutine rebalance_cu_winds(u,v,w)
-        implicit none
-        ! u, v, w 3D east-west, south-north, and up-down winds repsectively
-        ! note for this code, u is [nx-1,nz,ny] and v is [nx,nz,ny-1]
-        real, dimension(:,:,:), intent(inout) :: u, v, w
-
-        real, allocatable, dimension(:,:) :: divergence, du, dv
-        integer :: i,nx,ny,nz
-
-        nx = size(w,1)
-        nz = size(w,2)
-        ny = size(w,3)
-
-        allocate(divergence(nx-2,ny-2))
-        allocate(du(nx-2,ny-2))
-        allocate(dv(nx-2,ny-2))
-
-        do i=1,nz
-            ! calculate horizontal divergence
-            dv = v(2:nx-1,i,2:ny-1) - v(2:nx-1,i,1:ny-2)
-            du = u(2:nx-1,i,2:ny-1) - u(1:nx-2,i,2:ny-1)
-            divergence = du + dv
-            ! Then calculate w to balance
-            if (i==1) then
-                ! if this is the first model level start from 0 at the ground
-                w(2:nx-1,i,2:ny-1) = 0 - divergence
-            else
-                ! else calculate w as a change from w at the level below
-                w(2:nx-1,i,2:ny-1) = w(2:nx-1,i-1,2:ny-1) - divergence
-            endif
-        enddo
-
-    end subroutine rebalance_cu_winds
-
-    subroutine advect_cu_winds(domain, options, dt)
-        implicit none
-        type(domain_type),  intent(inout) :: domain
-        type(options_type), intent(in)    :: options
-        real,               intent(in)    :: dt
-
-        integer :: nx,nz,ny
-
-        nx = size(domain%dz,1)
-        nz = size(domain%dz,2)
-        ny = size(domain%dz,3)
-
-        ! first put the background u,v,w winds on a staggered grid with respect to the u grid
-        ! then advect the u winds
-        if (options%advect_density) then
-            print*, "ERROR: Density advection not enabled when using convective winds"
-            print*, "   Requires update to wind.f90 balance_uvw and advect.f90 (at least)"
-            stop
-        endif
-
-        call setup_cu_winds(domain, options, dt)
-
-        ! set the top boundary condition for CU winds to 0 to prevent artifacts coming in from the "top"
-        domain%u_cu(:,nz,:) = 0
-        domain%v_cu(:,nz,:) = 0
-
-        call advect3d(domain%u_cu, U_4cu_u,V_4cu_u,W_4cu_u, domain%rho, domain%dz_inter, nx+1,nz,ny, options)
-        call advect3d(domain%v_cu, U_4cu_v,V_4cu_v,W_4cu_v, domain%rho, domain%dz_inter, nx,nz,ny+1, options)
-
-    end subroutine advect_cu_winds
+    ! subroutine rebalance_cu_winds(u,v,w)
+    !     implicit none
+    !     ! u, v, w 3D east-west, south-north, and up-down winds repsectively
+    !     ! note for this code, u is [nx-1,nz,ny] and v is [nx,nz,ny-1]
+    !     real, dimension(:,:,:), intent(inout) :: u, v, w
+    !
+    !     real, allocatable, dimension(:,:) :: divergence, du, dv
+    !     integer :: i,nx,ny,nz
+    !
+    !     nx = size(w,1)
+    !     nz = size(w,2)
+    !     ny = size(w,3)
+    !
+    !     allocate(divergence(nx-2,ny-2))
+    !     allocate(du(nx-2,ny-2))
+    !     allocate(dv(nx-2,ny-2))
+    !
+    !     do i=1,nz
+    !         ! calculate horizontal divergence
+    !         dv = v(2:nx-1,i,2:ny-1) - v(2:nx-1,i,1:ny-2)
+    !         du = u(2:nx-1,i,2:ny-1) - u(1:nx-2,i,2:ny-1)
+    !         divergence = du + dv
+    !         ! Then calculate w to balance
+    !         if (i==1) then
+    !             ! if this is the first model level start from 0 at the ground
+    !             w(2:nx-1,i,2:ny-1) = 0 - divergence
+    !         else
+    !             ! else calculate w as a change from w at the level below
+    !             w(2:nx-1,i,2:ny-1) = w(2:nx-1,i-1,2:ny-1) - divergence
+    !         endif
+    !     enddo
+    !
+    ! end subroutine rebalance_cu_winds
+    !
+    ! subroutine advect_cu_winds(domain, options, dt)
+    !     implicit none
+    !     type(domain_type),  intent(inout) :: domain
+    !     type(options_type), intent(in)    :: options
+    !     real,               intent(in)    :: dt
+    !
+    !     integer :: nx,nz,ny
+    !
+    !     nx = size(domain%dz,1)
+    !     nz = size(domain%dz,2)
+    !     ny = size(domain%dz,3)
+    !
+    !     ! first put the background u,v,w winds on a staggered grid with respect to the u grid
+    !     ! then advect the u winds
+    !     if (options%advect_density) then
+    !         print*, "ERROR: Density advection not enabled when using convective winds"
+    !         print*, "   Requires update to wind.f90 balance_uvw and advect.f90 (at least)"
+    !         stop
+    !     endif
+    !
+    !     call setup_cu_winds(domain, options, dt)
+    !
+    !     ! set the top boundary condition for CU winds to 0 to prevent artifacts coming in from the "top"
+    !     domain%u_cu(:,nz,:) = 0
+    !     domain%v_cu(:,nz,:) = 0
+    !
+    !     call advect3d(domain%u_cu, U_4cu_u,V_4cu_u,W_4cu_u, domain%rho, domain%dz_inter, nx+1,nz,ny, options)
+    !     call advect3d(domain%v_cu, U_4cu_v,V_4cu_v,W_4cu_v, domain%rho, domain%dz_inter, nx,nz,ny+1, options)
+    !
+    ! end subroutine advect_cu_winds
 
     subroutine setup_module_winds(domain, options, dt)
         implicit none
-        type(domain_type),  intent(in)  :: domain
-        type(options_type), intent(in)  :: options
+        type(domain_t),     intent(in)  :: domain
+        type(options_t),    intent(in)  :: options
         real,               intent(in)  :: dt
 
         real    :: dx
         integer :: nx, nz, ny, i
 
         dx = domain%dx
-        nx = size(domain%dz,1)
-        nz = size(domain%dz,2)
-        ny = size(domain%dz,3)
+        nx = domain%grid%nx
+        nz = domain%grid%nz
+        ny = domain%grid%ny
 
         ! if this if the first time we are called, we need to allocate the module level arrays
         ! Could/should be put in an init procedure
@@ -251,73 +251,65 @@ contains
         endif
 
         ! calculate U,V,W normalized for dt/dx (dx**2 for density advection so we can skip a /dx in the actual advection code)
-        if (options%advect_density) then
-            U_m = domain%ur(2:nx,:,:) * (dt/dx**2)
-            V_m = domain%vr(:,:,2:ny) * (dt/dx**2)
-            W_m = domain%wr           * (dt/dx**2)
-        else
+        ! if (options%parameters%advect_density) then
+        !     U_m = domain%ur(2:nx,:,:) * (dt/dx**2)
+        !     V_m = domain%vr(:,:,2:ny) * (dt/dx**2)
+        !     W_m = domain%wr           * (dt/dx**2)
+        ! else
             if (options%physics%convection > 0) then
-                U_m = (domain%u_cu(2:nx,:,:) + domain%u(2:nx,:,:)) * (dt/dx)
-                V_m = (domain%v_cu(:,:,2:ny) + domain%v(:,:,2:ny)) * (dt/dx)
-                W_m = (domain%w_cu + domain%w)                     * (dt/dx)
-                call rebalance_cu_winds(U_m,V_m,W_m)
+                print*, "Advection of convective winds not enabled in ICAR 1.5 yet"
+                ! stop
+                ! U_m = (domain%u_cu(2:nx,:,:) + domain%u(2:nx,:,:)) * (dt/dx)
+                ! V_m = (domain%v_cu(:,:,2:ny) + domain%v(:,:,2:ny)) * (dt/dx)
+                ! W_m = (domain%w_cu + domain%w)                     * (dt/dx)
+                ! call rebalance_cu_winds(U_m,V_m,W_m)
             else
-                U_m = domain%u(2:nx,:,:) * (dt/dx)
-                V_m = domain%v(:,:,2:ny) * (dt/dx)
+                U_m = domain%u%data_3d(2:nx,:,:) * (dt/dx)
+                V_m = domain%v%data_3d(:,:,2:ny) * (dt/dx)
                 ! note, even though dz!=dx, W is computed from the divergence in U/V so it is scaled by dx/dz already
-                W_m = domain%w           * (dt/dx)
+                W_m = domain%w%data_3d   * (dt/dx)
             endif
-        endif
+        ! endif
 
     end subroutine setup_module_winds
 
     ! primary entry point, advect all scalars in domain
     subroutine upwind(domain,options,dt)
         implicit none
-        type(domain_type),  intent(inout) :: domain
-        type(options_type), intent(in)    :: options
-        real,               intent(in)    :: dt
+        type(domain_t),  intent(inout) :: domain
+        type(options_t), intent(in)    :: options
+        real,            intent(in)    :: dt
 
         real    :: dx
         integer :: nx, nz, ny, i
 
-        nx = size(domain%dz,1)
-        nz = size(domain%dz,2)
-        ny = size(domain%dz,3)
+        nx = domain%grid%nx
+        nz = domain%grid%nz
+        ny = domain%grid%ny
 
         ! calculate U,V,W normalized for dt/dx (dx**2 for density advection so we can skip a /dx in the actual advection code)
         call setup_module_winds(domain, options, dt)
 
-        lastqv_m=domain%qv
+        ! lastqv_m=domain%qv
 
-        call advect3d(domain%qv,          U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-        call advect3d(domain%cloud,       U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-        call advect3d(domain%qrain,       U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-        call advect3d(domain%qsnow,       U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-        call advect3d(domain%th,          U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-        if (options%physics%microphysics == kMP_THOMPSON) then
-            call advect3d(domain%ice,     U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-            call advect3d(domain%qgrau,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-            call advect3d(domain%nice,    U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-            call advect3d(domain%nrain,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-        elseif (options%physics%microphysics == kMP_MORRISON) then
-            call advect3d(domain%ice,     U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-            call advect3d(domain%qgrau,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-            call advect3d(domain%nice,    U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-            call advect3d(domain%nrain,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-            call advect3d(domain%nsnow,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-            call advect3d(domain%ngraupel,U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-        elseif (options%physics%microphysics == kMP_WSM6) then
-            call advect3d(domain%ice,     U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-            call advect3d(domain%qgrau,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-        endif
+        if (options%vars_to_advect(kVARS%water_vapor)>0)                  call advect3d(domain%qv%data_3d,       U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%cloud_water)>0)                  call advect3d(domain%cloud%data_3d,    U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%rain_in_air)>0)                  call advect3d(domain%qrain%data_3d,    U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%snow_in_air)>0)                  call advect3d(domain%qsnow%data_3d,    U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%potential_temperature)>0)        call advect3d(domain%th%data_3d,       U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%cloud_ice)>0)                    call advect3d(domain%ice%data_3d,      U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%graupel_in_air)>0)               call advect3d(domain%qgrau%data_3d,    U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%ice_number_concentration)>0)     call advect3d(domain%nice%data_3d,     U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%rain_number_concentration)>0)    call advect3d(domain%nrain%data_3d,    U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%snow_number_concentration)>0)    call advect3d(domain%nsnow%data_3d,    U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%graupel_number_concentration)>0) call advect3d(domain%ngraupel%data_3d, U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
 
         ! if (options%physics%convection > 0) then
         !     call advect_cu_winds(domain, options, dt)
         ! endif
 
         ! used in some physics routines
-        domain%tend%qv_adv = (domain%qv - lastqv_m) / dt
+        ! domain%tend%qv_adv = (domain%qv - lastqv_m) / dt
     end subroutine upwind
 
 end module adv_upwind
