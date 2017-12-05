@@ -8,7 +8,7 @@ submodule(domain_interface) domain_implementation
   use string,               only : str
   use microphysics,         only : mp_simple_var_request
   use co_util,              only : broadcast
-  use io_routines,          only : io_read
+  use io_routines,          only : io_read, io_write
 
   implicit none
 
@@ -88,73 +88,121 @@ contains
 
     end subroutine
 
+    !> ---------------------------------
+    !! Load the data in varname from filename into data_array
+    !!
+    !! The first / master image reads the file from the disk
+    !! Other images get the data broadcast from the master image
+    !!
+    !! ---------------------------------
+    subroutine load_data(filename, varname, data_array, grid)
+        implicit none
+        character(len=*),  intent(in)   :: filename, varname
+        real, allocatable, intent(inout):: data_array(:,:)
+        type(grid_t),      intent(in)   :: grid
+
+        if (this_image()==1) then
+            call io_read(filename, varname, data_array)
+        else
+            if (allocated(data_array)) deallocate(data_array)
+            allocate(data_array(grid%nx_global, grid%ny_global))
+        endif
+
+        call broadcast(data_array, 1, 1, num_images(), .true.)
+
+    end subroutine
+
+
+    !> ---------------------------------
+    !! Read the core model variables from disk
+    !!
+    !! Reads Terrain, lat, lon and u/v lat/lon on the high-res domain grid
+    !! Passing data between images and disk is handled by load_data
+    !!
+    !! ---------------------------------
     subroutine read_core_variables(this, options)
         implicit none
         class(domain_t), intent(inout)  :: this
         class(options_t),intent(in)     :: options
         real, allocatable :: temporary_data(:,:)
 
-        print*, this_image(), this%grid%ims, this%grid%jms
-        print*, this_image(), this%grid2d%ims, this%grid2d%jms
-        if (this_image()==1) then
-            call io_read(options%parameters%init_conditions_file,   &
-                         options%parameters%hgt_hi,                 &
-                         temporary_data)
-            print*, this%grid%ims,this%grid%ime, this%grid%jms,this%grid%jme
-            print*, shape(this%terrain%data_2d), lbound(this%terrain%data_2d,1), ubound(this%terrain%data_2d,1)
-            this%terrain%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+        ! Read the terrain data
+        call load_data(options%parameters%init_conditions_file,   &
+                       options%parameters%hgt_hi,                 &
+                       temporary_data, this%grid)
+        this%terrain%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
 
-            call io_read(options%parameters%init_conditions_file,   &
-                         options%parameters%lat_hi,                 &
-                         temporary_data)
-            this%latitude%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+        ! Read the latitude data
+        call load_data(options%parameters%init_conditions_file,   &
+                       options%parameters%lat_hi,                 &
+                       temporary_data, this%grid)
+        this%latitude%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
 
-            call io_read(options%parameters%init_conditions_file,   &
-                         options%parameters%lon_hi,                 &
-                         temporary_data)
-            this%longitude%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+        ! Read the longitude data
+        call load_data(options%parameters%init_conditions_file,   &
+                       options%parameters%lon_hi,                 &
+                       temporary_data, this%grid)
+        this%longitude%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
 
-            ! stop "Would prefer a more elegant way to handle ulat,ulon,..."
-            if (options%parameters%ulon_hi /= "") then
-                call io_read(options%parameters%init_conditions_file,   &
-                             options%parameters%ulon_hi,                 &
-                             temporary_data)
-                this%u_longitude%data_2d = temporary_data(this%u_grid%ims:this%u_grid%ime, this%u_grid%jms:this%u_grid%jme)
-            else
-                associate(ulon => this%u_longitude%data_2d, lon=>this%longitude%data_2d, nx=>this%grid%nx)
-                    ulon(1,:)    = (1.5*lon(1,:)  - 0.5*lon(2,:))    ! extrapolate past the end
-                    ulon(2:nx,:) = (lon(1:nx-1,:) + lon(2:nx,:)) / 2 ! interpolate between points
-                    ulon(nx+1,:) = (1.5*lon(nx,:) - 0.5*lon(nx-1,:)) ! extrapolate past the end
-                end associate
-            endif
-            if (options%parameters%ulat_hi /= "") then
-                call io_read(options%parameters%init_conditions_file,   &
-                             options%parameters%ulat_hi,                 &
-                             temporary_data)
-                this%u_latitude%data_2d = temporary_data(this%u_grid%ims:this%u_grid%ime, this%u_grid%jms:this%u_grid%jme)
-            endif
-
-            if (options%parameters%vlon_hi /= "") then
-                call io_read(options%parameters%init_conditions_file,   &
-                             options%parameters%vlon_hi,                 &
-                             temporary_data)
-                this%v_longitude%data_2d = temporary_data(this%v_grid%ims:this%v_grid%ime, this%v_grid%jms:this%v_grid%jme)
-            endif
-            if (options%parameters%vlat_hi /= "") then
-                call io_read(options%parameters%init_conditions_file,   &
-                             options%parameters%vlat_hi,                 &
-                             temporary_data)
-                this%v_latitude%data_2d = temporary_data(this%v_grid%ims:this%v_grid%ime, this%v_grid%jms:this%v_grid%jme)
-            endif
+        ! Read the u-grid longitude data if specified, other wise interpolate from mass grid
+        if (options%parameters%ulon_hi /= "") then
+            call load_data(options%parameters%init_conditions_file,   &
+                           options%parameters%ulon_hi,                &
+                           temporary_data, this%grid)
+            this%u_longitude%data_2d = temporary_data(this%u_grid%ims:this%u_grid%ime, this%u_grid%jms:this%u_grid%jme)
+        else
+            associate(ulon => this%u_longitude%data_2d, lon=>this%longitude%data_2d, nx=>this%grid%nx)
+                ulon(1,:)    = (1.5 * lon(1,:)  - 0.5 * lon(2,:))    ! extrapolate past the end
+                ulon(2:nx,:) = (lon(1:nx-1,:) + lon(2:nx,:)) / 2     ! interpolate between points
+                ulon(nx+1,:) = (1.5 * lon(nx,:) - 0.5 * lon(nx-1,:)) ! extrapolate past the end
+            end associate
         endif
 
-        call broadcast(this%terrain     %data_2d, 1, 1, num_images(), .true.)
-        call broadcast(this%latitude    %data_2d, 1, 1, num_images(), .true.)
-        call broadcast(this%longitude   %data_2d, 1, 1, num_images(), .true.)
-        call broadcast(this%u_latitude  %data_2d, 1, 1, num_images(), .true.)
-        call broadcast(this%u_longitude %data_2d, 1, 1, num_images(), .true.)
-        call broadcast(this%v_latitude  %data_2d, 1, 1, num_images(), .true.)
-        call broadcast(this%v_longitude %data_2d, 1, 1, num_images(), .true.)
+        ! Read the u-grid latitude data if specified, other wise interpolate from mass grid
+        if (options%parameters%ulat_hi /= "") then
+            call load_data(options%parameters%init_conditions_file,   &
+                           options%parameters%ulat_hi,                &
+                           temporary_data, this%grid)
+            this%u_latitude%data_2d = temporary_data(this%u_grid%ims:this%u_grid%ime, this%u_grid%jms:this%u_grid%jme)
+
+        else
+            associate(ulat => this%u_latitude%data_2d, lat=>this%latitude%data_2d, nx=>this%grid%nx)
+                ulat(1,:)    = (1.5 * lat(1,:)  - 0.5 * lat(2,:))    ! extrapolate past the end
+                ulat(2:nx,:) = (lat(1:nx-1,:) + lat(2:nx,:)) / 2     ! interpolate between points
+                ulat(nx+1,:) = (1.5 * lat(nx,:) - 0.5 * lat(nx-1,:)) ! extrapolate past the end
+            end associate
+
+        endif
+
+        ! Read the v-grid longitude data if specified, other wise interpolate from mass grid
+        if (options%parameters%vlon_hi /= "") then
+            call load_data(options%parameters%init_conditions_file,   &
+                           options%parameters%vlon_hi,                &
+                           temporary_data, this%grid)
+            this%v_longitude%data_2d = temporary_data(this%v_grid%ims:this%v_grid%ime, this%v_grid%jms:this%v_grid%jme)
+
+        else
+            associate(vlon => this%v_longitude%data_2d, lon=>this%longitude%data_2d, ny=>this%grid%ny)
+                vlon(:,1)    = (1.5 * lon(:,1)  - 0.5 * lon(:,2))  ! extrapolate past the end
+                vlon(:,2:ny) = (lon(:,1:ny-1) + lon(:,2:ny)) / 2   ! interpolate between points
+                vlon(:,ny+1) = (1.5 * lon(:,ny) - 0.5 * lon(:,ny-1)) ! extrapolate past the end
+            end associate
+        endif
+
+        ! Read the v-grid latitude data if specified, other wise interpolate from mass grid
+        if (options%parameters%vlat_hi /= "") then
+            call load_data(options%parameters%init_conditions_file,   &
+                           options%parameters%vlat_hi,                &
+                           temporary_data, this%grid)
+            this%v_latitude%data_2d = temporary_data(this%v_grid%ims:this%v_grid%ime, this%v_grid%jms:this%v_grid%jme)
+
+        else
+            associate(vlat => this%v_latitude%data_2d, lat=>this%latitude%data_2d, ny=>this%grid%ny)
+                vlat(:,1)    = (1.5 * lat(:,1)  - 0.5 * lat(:,2))   ! extrapolate past the end
+                vlat(:,2:ny) = (lat(:,1:ny-1) + lat(:,2:ny)) / 2    ! interpolate between points
+                vlat(:,ny+1) = (1.5 * lat(:,ny) - 0.5 * lat(:,ny-1))  ! extrapolate past the end
+            end associate
+        endif
 
     end subroutine read_core_variables
 
@@ -183,28 +231,17 @@ contains
                   terrain               => this%terrain%data_2d)
 
             i = this%grid%kms
-            ! print*, shape(dz_mass)
-            ! print*, shape(dz)
-            ! print*, shape(dz_interface)
-            ! print*, shape(z_interface)
-            ! print*, shape(z)
-            dz_mass(:,i,:) = dz(1) / 2
-            z(:,i,:) = terrain + dz_mass(:,i,:)
-            z_interface(:,i,:) = terrain
+            dz_mass(:,i,:)      = dz(i) / 2
+            z(:,i,:)            = terrain + dz_mass(:,i,:)
+            z_interface(:,i,:)  = terrain
 
-            ! stop "need to think about dz indexing here"
             do i = this%grid%kms+1, this%grid%kme
-                dz_mass(:,i,:)     = (dz(i-this%grid%kms+1) + dz(i-this%grid%kms)) / 2
-                dz_interface(:,i,:)= dz(i-this%grid%kms+1)
+                dz_mass(:,i,:)     = (dz(i) + dz(i-1)) / 2
+                dz_interface(:,i,:)= dz(i)
                 z(:,i,:)           = z(:,i-1,:)           + dz_mass(:,i,:)
                 z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i,:)
             enddo
-            ! note interface elements need to be specified at an additional level
-            ! i = this%grid%kme + 1
-            ! z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i,:)
 
-            exner             = exner_function(pressure)
-            temperature       = exner * potential_temperature
         end associate
 
     end subroutine initialize_variables
@@ -251,10 +288,7 @@ contains
 
         ! List the variables that are required to be allocated for any domain
         call options%alloc_vars(                                                    &
-                     [kVARS%pressure,               kVARS%pressure_interface,       &
-                      kVARS%potential_temperature,  kVARS%temperature,              &
-                      kVARS%exner,                  kVARS%density,                  &
-                      kVARS%z,                      kVARS%z_interface,              &
+                     [kVARS%z,                      kVARS%z_interface,              &
                       kVARS%dz,                     kVARS%dz_interface,             &
                       kVARS%terrain,                                                &
                       kVARS%latitude,               kVARS%longitude,                &
@@ -263,9 +297,7 @@ contains
 
         ! List the variables that are required for any restart
         call options%restart_vars(                                                  &
-                     [kVARS%pressure,                                               &
-                      kVARS%potential_temperature,                                  &
-                      kVARS%z,                                                      &
+                     [kVARS%z,                                                      &
                       kVARS%terrain,                                                &
                       kVARS%latitude,               kVARS%longitude,                &
                       kVARS%u_latitude,             kVARS%u_longitude,              &
@@ -297,8 +329,8 @@ contains
         call this%u_grid2d%set_grid_dimensions(     nx_global, ny_global, 0, nx_extra = 1)
         call this%v_grid2d%set_grid_dimensions(     nx_global, ny_global, 0, ny_extra = 1)
 
-        call this%grid_soil%set_grid_dimensions(    nx_global, 4,   ny_global)
-        call this%grid_monthly%set_grid_dimensions( nx_global, 12,  ny_global)
+        call this%grid_soil%set_grid_dimensions(    nx_global, ny_global, 4)
+        call this%grid_monthly%set_grid_dimensions( nx_global, ny_global, 12)
 
         deallocate(temporary_data)
 
@@ -312,11 +344,11 @@ contains
       class(domain_t), intent(inout) :: this
       class(options_t),intent(inout) :: options
 
-      call read_domain_shape(this, options)
-
       call mp_simple_var_request(options)
 
       call this%var_request(options)
+
+      call read_domain_shape(this, options)
 
       call create_variables(this, options)
 
