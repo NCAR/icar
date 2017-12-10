@@ -33,7 +33,7 @@ contains
     subroutine increase_holding_capacity(this)
         implicit none
         class(meta_data_t),   intent(inout)  :: this
-        type(attribute), allocatable :: attributes(:)
+        type(attribute_t), allocatable :: attributes(:)
 
         ! assert allocated(this%attributes)
         allocate(attributes,  source=this%attributes)

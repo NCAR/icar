@@ -71,6 +71,35 @@ contains
         class(output_t), intent(inout)  :: this
         integer :: i
 
+        character(len=19)       :: todays_date_time
+        integer,dimension(8)    :: date_time
+        character(len=49)       :: date_format
+        character(len=5)        :: UTCoffset
+        character(len=64)       :: err
+
+
+        err="Creating global attributes"
+        call check( nf90_put_att(ncid,NF90_GLOBAL,"Conventions","CF-1.6"), trim(err))
+        call check( nf90_put_att(ncid,NF90_GLOBAL,"title","Intermediate Complexity Atmospheric Research Model output"), trim(err))
+        call check( nf90_put_att(ncid,NF90_GLOBAL,"institution","National Center for Atmospheric Research"), trim(err))
+        call check( nf90_put_att(ncid,NF90_GLOBAL,"source","Intermediate Complexity Atmospheric Model version:"//trim(options%version)), trim(err))
+        call check( nf90_put_att(ncid,NF90_GLOBAL,"history","Created:"//todays_date_time//UTCoffset), trim(err))
+        call check( nf90_put_att(ncid,NF90_GLOBAL,"references", &
+                    "Gutmann et al. 2016: The Intermediate Complexity Atmospheric Model (ICAR). J.Hydrometeor. doi:10.1175/JHM-D-15-0155.1, 2016."), trim(err))
+        ! call check( nf90_put_att(ncid,NF90_GLOBAL,"comment",trim(options%parameters%comment)), trim(err))
+        call check( nf90_put_att(ncid,NF90_GLOBAL,"contact","Ethan Gutmann : gutmann@ucar.edu"), trim(err))
+        call check( nf90_put_att(ncid,NF90_GLOBAL,"git",VERSION), trim(err))
+
+        ! general physics options
+        ! call check( nf90_put_att(ncid,NF90_GLOBAL,"microphysics",  options%physics%microphysics),   trim(err))
+        ! call check( nf90_put_att(ncid,NF90_GLOBAL,"advection",     options%physics%advection),      trim(err))
+        ! call check( nf90_put_att(ncid,NF90_GLOBAL,"boundarylayer", options%physics%boundarylayer),  trim(err))
+        ! call check( nf90_put_att(ncid,NF90_GLOBAL,"watersurface",  options%physics%watersurface),   trim(err))
+        ! call check( nf90_put_att(ncid,NF90_GLOBAL,"landsurface",   options%physics%landsurface),    trim(err))
+        ! call check( nf90_put_att(ncid,NF90_GLOBAL,"radiation",     options%physics%radiation),      trim(err))
+        ! call check( nf90_put_att(ncid,NF90_GLOBAL,"convection",    options%physics%convection),     trim(err))
+        ! call check( nf90_put_att(ncid,NF90_GLOBAL,"windtype",      options%physics%windtype),       trim(err))
+
         if (this%n_attrs > 0) then
             do i=1,this%n_attrs
                 call check( nf90_put_att(   this%ncfile_id,             &
@@ -81,6 +110,11 @@ contains
             enddo
         endif
 
+        call date_and_time(values=date_time,zone=UTCoffset)
+        date_format='(I4,"/",I2.2,"/",I2.2," ",I2.2,":",I2.2,":",I2.2)'
+        write(todays_date_time,date_format) date_time(1:3),date_time(5:7)
+
+        call check(nf90_put_att(this%ncfile_id, NF90_GLOBAL,"history","Created:"//todays_date_time//UTCoffset), "global attr")
         call check(nf90_put_att(this%ncfile_id, NF90_GLOBAL, "image", this_image()))
 
     end subroutine add_global_attributes

@@ -5,12 +5,12 @@ module meta_data_interface
 
     private
     public :: meta_data_t
+    public :: attribute_t
 
-
-    type attribute
+    type attribute_t
         character(len=kMAX_NAME_LENGTH) :: name
         character(len=kMAX_ATTR_LENGTH) :: value
-    end type attribute
+    end type
 
 
     type meta_data_t
@@ -18,7 +18,7 @@ module meta_data_interface
         character(len=kMAX_NAME_LENGTH) :: name
         integer :: n_attrs = 0
 
-        type(attribute), allocatable :: attributes(:)
+        type(attribute_t), allocatable :: attributes(:)
     contains
 
         procedure, public  :: add_attribute
