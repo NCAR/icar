@@ -406,6 +406,25 @@ caf_output_test: $(BUILD)test_caf_output.o						\
 				$(BUILD)assertions.o
 	${F90} $^ -o $@ ${LFLAGS}
 
+caf_no_input_test: $(BUILD)test_caf_no_input.o							\
+	 				$(BUILD)domain_h.o		 $(BUILD)domain_obj.o		\
+					$(BUILD)options_h.o		 $(BUILD)options_obj.o		\
+					$(BUILD)opt_types.o      $(BUILD)time_io.o          \
+					$(BUILD)grid_h.o		 $(BUILD)grid_obj.o			\
+					$(BUILD)output_h.o		 $(BUILD)output_obj.o		\
+					$(BUILD)meta_data_h.o    $(BUILD)meta_data_obj.o	\
+					$(BUILD)variable_h.o	 $(BUILD)variable_obj.o		\
+					$(BUILD)time_delta_obj.o $(BUILD)time_obj.o    		\
+					$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
+					$(BUILD)icar_constants.o $(BUILD)io_routines.o		\
+					$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
+					$(BUILD)model_tracking.o $(BUILD)string.o           \
+					$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
+					$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
+					$(BUILD)co_utilities.o
+	${F90} $^ -o $@ ${LFLAGS}
+
+
 caf_init_test: $(BUILD)test_caf_init.o                              \
 				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
 				$(BUILD)model_tracking.o $(BUILD)string.o           \
@@ -723,6 +742,9 @@ $(BUILD)debug_utils.o:$(UTIL)debug_utils.f90 $(BUILD)data_structures.o $(BUILD)s
 ###################################################################
 
 $(BUILD)test_caf_init.o: tests/test_caf_init.f90 $(BUILD)domain_h.o $(BUILD)options_h.o
+
+$(BUILD)test_caf_no_input.o: tests/test_caf_no_input.f90 $(BUILD)domain_h.o $(BUILD)options_h.o \
+							$(BUILD)grid_h.o $(BUILD)output_h.o $(BUILD)atm_utilities.o
 
 $(BUILD)test_caf_output.o: tests/test_caf_output.f90 $(BUILD)output_h.o $(BUILD)variable_h.o
 
