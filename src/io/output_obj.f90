@@ -1,6 +1,6 @@
 submodule(output_interface) output_implementation
+  use output_metadata, only : get_metadata
   implicit none
-
 
 contains
 
@@ -64,6 +64,57 @@ contains
 
         ! close file
         call check(nf90_close(this%ncfile_id), "Closing file "//trim(filename))
+    end subroutine
+
+    module subroutine add_variables(this, var_list, domain)
+        class(output_t), intent(inout)  :: this
+        integer,         intent(in)     :: var_list(:)
+        class(domain_t), intent(in)     :: domain
+
+        if (0<var_list( kVARS%u) )                          call this%add_to_output( get_metadata( kVARS%u                            , domain%u%data_3d))
+        if (0<var_list( kVARS%v) )                          call this%add_to_output( get_metadata( kVARS%v                            , domain%v%data_3d))
+        if (0<var_list( kVARS%w) )                          call this%add_to_output( get_metadata( kVARS%w                            , domain%w%data_3d))
+        if (0<var_list( kVARS%water_vapor) )                call this%add_to_output( get_metadata( kVARS%water_vapor                  , domain%water_vapor%data_3d))
+        if (0<var_list( kVARS%potential_temperature) )      call this%add_to_output( get_metadata( kVARS%potential_temperature        , domain%potential_temperature%data_3d))
+        if (0<var_list( kVARS%cloud_water) )                call this%add_to_output( get_metadata( kVARS%cloud_water                  , domain%cloud_water_mass%data_3d))
+        if (0<var_list( kVARS%cloud_number_concentration))  call this%add_to_output( get_metadata( kVARS%cloud_number_concentration   , domain%cloud_number%data_3d))
+        if (0<var_list( kVARS%cloud_ice) )                  call this%add_to_output( get_metadata( kVARS%cloud_ice                    , domain%cloud_ice_mass%data_3d))
+        if (0<var_list( kVARS%ice_number_concentration))    call this%add_to_output( get_metadata( kVARS%ice_number_concentration     , domain%cloud_ice_number%data_3d))
+        if (0<var_list( kVARS%rain_in_air) )                call this%add_to_output( get_metadata( kVARS%rain_in_air                  , domain%rain_mass%data_3d))
+        if (0<var_list( kVARS%rain_number_concentration))   call this%add_to_output( get_metadata( kVARS%rain_number_concentration    , domain%rain_number%data_3d))
+        if (0<var_list( kVARS%snow_in_air) )                call this%add_to_output( get_metadata( kVARS%snow_in_air                  , domain%snow_mass%data_3d))
+        if (0<var_list( kVARS%snow_number_concentration) )  call this%add_to_output( get_metadata( kVARS%snow_number_concentration    , domain%snow_number%data_3d))
+        if (0<var_list( kVARS%graupel_in_air) )             call this%add_to_output( get_metadata( kVARS%graupel_in_air               , domain%graupel_mass%data_3d))
+        if (0<var_list( kVARS%graupel_number_concentration))call this%add_to_output( get_metadata( kVARS%graupel_number_concentration , domain%graupel_number%data_3d))
+        if (0<var_list( kVARS%precipitation) )              call this%add_to_output( get_metadata( kVARS%precipitation                , domain%accumulated_precipitation%data_2d))
+        if (0<var_list( kVARS%snowfall) )                   call this%add_to_output( get_metadata( kVARS%snowfall                     , domain%accumulated_snowfall%data_2d))
+        if (0<var_list( kVARS%pressure) )                   call this%add_to_output( get_metadata( kVARS%pressure                     , domain%pressure%data_3d))
+        if (0<var_list( kVARS%temperature) )                call this%add_to_output( get_metadata( kVARS%temperature                  , domain%temperature%data_3d))
+        if (0<var_list( kVARS%exner) )                      call this%add_to_output( get_metadata( kVARS%exner                        , domain%exner%data_3d))
+        if (0<var_list( kVARS%z) )                          call this%add_to_output( get_metadata( kVARS%z                            , domain%z%data_3d))
+        if (0<var_list( kVARS%dz_interface) )               call this%add_to_output( get_metadata( kVARS%dz_interface                 , domain%dz_interface%data_3d))
+        if (0<var_list( kVARS%z_interface) )                call this%add_to_output( get_metadata( kVARS%z_interface                  , domain%z_interface%data_3d))
+        if (0<var_list( kVARS%dz) )                         call this%add_to_output( get_metadata( kVARS%dz                           , domain%dz_mass%data_3d))
+        if (0<var_list( kVARS%density) )                    call this%add_to_output( get_metadata( kVARS%density                      , domain%density%data_3d))
+        if (0<var_list( kVARS%pressure_interface) )         call this%add_to_output( get_metadata( kVARS%pressure_interface           , domain%pressure_interface%data_3d))
+        if (0<var_list( kVARS%graupel) )                    call this%add_to_output( get_metadata( kVARS%graupel                      , domain%graupel%data_2d))
+        if (0<var_list( kVARS%shortwave) )                  call this%add_to_output( get_metadata( kVARS%shortwave                    , domain%shortwave%data_2d))
+        if (0<var_list( kVARS%longwave) )                   call this%add_to_output( get_metadata( kVARS%longwave                     , domain%longwave%data_2d))
+        if (0<var_list( kVARS%vegetation_fraction) )        call this%add_to_output( get_metadata( kVARS%vegetation_fraction          , domain%vegetation_fraction%data_3d))
+        if (0<var_list( kVARS%lai) )                        call this%add_to_output( get_metadata( kVARS%lai                          , domain%lai%data_2d))
+        if (0<var_list( kVARS%canopy_water) )               call this%add_to_output( get_metadata( kVARS%canopy_water                 , domain%canopy_water%data_2d))
+        if (0<var_list( kVARS%snow_water_equivalent) )      call this%add_to_output( get_metadata( kVARS%snow_water_equivalent        , domain%snow_water_equivalent%data_2d))
+        if (0<var_list( kVARS%skin_temperature) )           call this%add_to_output( get_metadata( kVARS%skin_temperature             , domain%skin_temperature%data_2d))
+        if (0<var_list( kVARS%soil_water_content) )         call this%add_to_output( get_metadata( kVARS%soil_water_content           , domain%soil_water_content%data_3d))
+        if (0<var_list( kVARS%soil_temperature) )           call this%add_to_output( get_metadata( kVARS%soil_temperature             , domain%soil_temperature%data_3d))
+        if (0<var_list( kVARS%latitude) )                   call this%add_to_output( get_metadata( kVARS%latitude                     , domain%latitude%data_2d))
+        if (0<var_list( kVARS%longitude) )                  call this%add_to_output( get_metadata( kVARS%longitude                    , domain%longitude%data_2d))
+        if (0<var_list( kVARS%u_latitude) )                 call this%add_to_output( get_metadata( kVARS%u_latitude                   , domain%u_latitude%data_2d))
+        if (0<var_list( kVARS%u_longitude) )                call this%add_to_output( get_metadata( kVARS%u_longitude                  , domain%u_longitude%data_2d))
+        if (0<var_list( kVARS%v_latitude) )                 call this%add_to_output( get_metadata( kVARS%v_latitude                   , domain%v_latitude%data_2d))
+        if (0<var_list( kVARS%v_longitude) )                call this%add_to_output( get_metadata( kVARS%v_longitude                  , domain%v_longitude%data_2d))
+        if (0<var_list( kVARS%terrain) )                    call this%add_to_output( get_metadata( kVARS%terrain                      , domain%terrain%data_2d))
+
     end subroutine
 
     subroutine add_global_attributes(this)

@@ -29,8 +29,9 @@ module output_interface
   contains
 
       procedure, public  :: add_to_output
-      procedure, public  :: save_file
+      procedure, public  :: add_variables
       procedure, public  :: set_domain
+      procedure, public  :: save_file
 
       procedure, private :: init
       procedure, private :: increase_var_capacity
@@ -58,6 +59,13 @@ module output_interface
           implicit none
           class(output_t),   intent(inout)  :: this
           class(variable_t), intent(in)     :: variable
+      end subroutine
+
+      module subroutine add_variables(this, var_list, domain)
+          implicit none
+          class(output_t), intent(inout)  :: this
+          integer,         intent(in)     :: var_list(:)
+          class(domain_t), intent(in)     :: domain
       end subroutine
 
       module subroutine save_file(this, filename)

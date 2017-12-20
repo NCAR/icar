@@ -14,16 +14,29 @@ program test_caf_ideal
     character(len=128) :: file_name
     integer :: i
 
+    print*, "Reading Options Files"
+    sync all
     call options%init()
 
+    print*, "Initializing Domain"
+    sync all
     call domain%init(options)
 
+    print*, "Adding domain to output dataset"
+    sync all
     call dataset%set_domain(domain)
 
+    print*, "Adding variables to output dataset"
+    sync all
+    call dataset%add_variables(options%vars_for_restart, domain)
+
+    print*, "Initializing domain with ideal values"
+    sync all
     call initialize_ideal_domain(domain)
 
+    print*, "Writing sample output file"
+    sync all
     write(file_name, '("Initial_output_",I3.3,".nc")') this_image()
-
     call dataset%save_file(file_name)
 
 
@@ -54,18 +67,18 @@ contains
             snow_mass_test_val              => 0.0,             &
             graupel_mass_test_val           => 0.0)
 
-            domain%u%data_3d = u_test_val
-            domain%v%data_3d = v_test_val
-            domain%w%data_3d = w_test_val
+            ! domain%u%data_3d = u_test_val
+            ! domain%v%data_3d = v_test_val
+            ! domain%w%data_3d = w_test_val
             domain%water_vapor%data_3d = water_vapor_test_val
             domain%potential_temperature%data_3d = potential_temperature_test_val
             domain%cloud_water_mass%data_3d = cloud_water_mass_test_val
-            domain%cloud_ice_mass%data_3d = cloud_ice_mass_test_val
-            domain%cloud_ice_number%data_3d = cloud_ice_number_test_val
+            ! domain%cloud_ice_mass%data_3d = cloud_ice_mass_test_val
+            ! domain%cloud_ice_number%data_3d = cloud_ice_number_test_val
             domain%rain_mass%data_3d = rain_mass_test_val
-            domain%rain_number%data_3d = rain_number_test_val
+            ! domain%rain_number%data_3d = rain_number_test_val
             domain%snow_mass%data_3d = snow_mass_test_val
-            domain%graupel_mass%data_3d = graupel_mass_test_val
+            ! domain%graupel_mass%data_3d = graupel_mass_test_val
 
         end associate
 
@@ -80,18 +93,18 @@ contains
             water_vapor => domain%water_vapor%data_3d,  &
             z           => domain%z%data_3d)
 
-            domain%accumulated_precipitation%data_3d = 0
-            domain%accumulated_snowfall%data_3d      = 0
+            domain%accumulated_precipitation%data_2d = 0
+            domain%accumulated_snowfall%data_2d      = 0
             pressure                  = 0
-            temperature               = 0
-            exner                     = 0
-
+            ! temperature               = 0
+            ! exner                     = 0
+            ! water_vapor               = 0.015
             do i=kms,kme
                 pressure(:,i,:)    = pressure_at_elevation(sealevel_pressure, z(:,i,:))
             enddo
             exner       = exner_function(pressure)
-            temperature = exner * potential_temperature
-            water_vapor = sat_mr(temperature,pressure)
+            ! temperature = exner * potential_temperature
+            ! water_vapor = sat_mr(temperature,pressure)
         end associate
 
     end subroutine

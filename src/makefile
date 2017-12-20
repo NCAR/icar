@@ -421,7 +421,7 @@ caf_no_input_test: $(BUILD)test_caf_no_input.o							\
 					$(BUILD)model_tracking.o $(BUILD)string.o           \
 					$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
 					$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
-					$(BUILD)co_utilities.o
+					$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 
@@ -507,6 +507,8 @@ $(BUILD)exchangeable_obj.o: objects/exchangeable_obj.f90 $(BUILD)exchangeable_h.
 $(BUILD)exchangeable_h.o: objects/exchangeable_h.f90 $(BUILD)grid_h.o $(BUILD)variable_h.o
 
 $(BUILD)default_output_metadata.o: io/default_output_metadata.f90 $(BUILD)icar_constants.o $(BUILD)variable_h.o $(BUILD)meta_data_h.o
+
+$(BUILD)output_obj.o: io/output_obj.f90 $(BUILD)default_output_metadata.o
 
 $(BUILD)output_h.o: io/output_h.f90 $(BUILD)icar_constants.o $(BUILD)variable_h.o $(BUILD)grid_h.o $(BUILD)meta_data_h.o $(BUILD)domain_h.o
 

@@ -169,29 +169,25 @@ contains
           this%dimensions(3) = "lon"
       endif
 
-      this%ny_global  = ny                                            ! global model domain grid size
-      this%nx_global  = nx                                            ! global model domain grid size
+      this%ny_global  = ny + ny_e                                     ! global model domain grid size
+      this%nx_global  = nx + nx_e                                     ! global model domain grid size
       this%nz         = nz                                            ! note nz is both global and local
-      this%nx         = my_n(this%nx_global, this%ximg, this%ximages) ! local grid size
-      this%ny         = my_n(this%ny_global, this%yimg, this%yimages) ! local grid size
+      this%nx         = my_n(this%nx_global-nx_e, this%ximg, this%ximages) ! local grid size
+      this%ny         = my_n(this%ny_global-ny_e, this%yimg, this%yimages) ! local grid size
 
       ! define the bounds needed for memory to store the data local to this image
-      this%ims        = my_start(this%nx_global, this%ximg, this%ximages)
+      this%ims        = my_start(this%nx_global-nx_e, this%ximg, this%ximages)
       this%ime        = this%ims + this%nx + nx_e - 1
 
-      this%jms        = my_start(this%ny_global, this%yimg, this%yimages)
+      this%jms        = my_start(this%ny_global-ny_e, this%yimg, this%yimages)
       this%jme        = this%jms + this%ny + ny_e - 1
 
       this%kms        = 1
       this%kme        = this%nz
 
       ! Now define the tile of data to process in physics routines
-      this%its = this%ims + 1
-      this%jts = this%jms + 1
       this%kts = this%kms
-      this%ite = this%ime
-      this%jte = this%jme - 1
-      this%kte = this%kme - 1
+      this%kte = this%kme
 
       ! The entire model domain begins at 1 and ends at nx,y,z
       this%ids = 1
@@ -230,12 +226,15 @@ contains
       west_boundary  = (grid%ximg == 1)
 
       ! if this is on a given boundary, then add 0, if it is not a boundary than add/subtract halo_size
-      grid%ims = grid%ims - merge(0, halo_size, east_boundary)
-      grid%ime = grid%ime + merge(0, halo_size, west_boundary)
+      grid%ims = grid%ims - merge(0, halo_size, west_boundary)
+      grid%ime = grid%ime + merge(0, halo_size, east_boundary)
       grid%jms = grid%jms - merge(0, halo_size, south_boundary)
       grid%jme = grid%jme + merge(0, halo_size, north_boundary)
-      ! grid%kms = grid%kms
-      ! grid%kme = grid%kme
+
+      grid%its = grid%ims + merge(0, halo_size, west_boundary)
+      grid%ite = grid%ime - merge(0, halo_size, east_boundary)
+      grid%jts = grid%jms + merge(0, halo_size, south_boundary)
+      grid%jte = grid%jme - merge(0, halo_size, north_boundary)
 
   end subroutine
 
