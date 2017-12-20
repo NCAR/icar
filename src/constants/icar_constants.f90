@@ -1,6 +1,7 @@
 module icar_constants
 
     implicit none
+
     character(len=5) :: kVERSION_STRING = "1.5"
 
     ! string lengths
@@ -16,6 +17,7 @@ module icar_constants
     ! --------------------------------------------
     type var_constants_type
         SEQUENCE    ! technically SEQUENCE just requires the compiler leave them in order, but it can also keep compilers (e.g. ifort) from padding for alignment
+
         integer :: u
         integer :: v
         integer :: w
@@ -53,6 +55,14 @@ module icar_constants
         integer :: soil_water_content
         integer :: soil_temperature
         integer :: skin_temperature
+        integer :: air2m_temperature
+        integer :: air2m_humidity
+        integer :: u10m
+        integer :: v10m
+        integer :: sensible_heat
+        integer :: latent_heat
+        integer :: ground_heat_flux
+        integer :: longwave_up
         integer :: land_mask
         integer :: terrain
         integer :: latitude
@@ -61,19 +71,21 @@ module icar_constants
         integer :: u_longitude
         integer :: v_latitude
         integer :: v_longitude
+        integer :: last_var
     end type var_constants_type
 
     type(var_constants_type) :: kVARS = var_constants_type( 1,  2,  3,  4,  5,  6,  7,  8,  9, 10,  &
                                                            11, 12, 13, 14, 15, 16, 17, 18, 19, 20,  &
                                                            21, 22, 23, 24, 25, 26, 27, 28, 29, 30,  &
                                                            31, 32, 33, 34, 35, 36, 37, 38, 39, 40,  &
-                                                           41, 42, 43, 44, 45  )
+                                                           41, 42, 43, 44, 45, 46, 47, 48, 49, 50,  &
+                                                           51, 52, 53, 54  )
 
     integer, parameter :: kINTEGER_BITS     = storage_size(kINTEGER_BITS)
     integer, parameter :: kMAX_STORAGE_VARS = storage_size(kVARS) / kINTEGER_BITS
 
     ! Initial number of output variables for which pointers are created
-    integer, parameter :: kINITIAL_VAR_SIZE= 1024
+    integer, parameter :: kINITIAL_VAR_SIZE= 128
 
     ! Maximum number of dimensions
     ! Note this is defined in NetCDF, though not enforced (a file can have more than 1024 dimensions)

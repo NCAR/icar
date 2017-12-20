@@ -6,7 +6,7 @@ contains
 
     module subroutine set_domain(this, domain)
         class(output_t),  intent(inout)  :: this
-        type(domain_t),   intent(in)     :: domain
+        class(domain_t),  intent(in)     :: domain
         integer :: i
 
         if (.not.this%is_initialized) call this%init()
@@ -20,7 +20,7 @@ contains
 
     module subroutine add_to_output(this, variable)
         class(output_t),   intent(inout)  :: this
-        type(variable_t),  intent(in)     :: variable
+        class(variable_t), intent(in)     :: variable
 
         if (.not.this%is_initialized) call this%init()
 
@@ -92,16 +92,6 @@ contains
         call check( nf90_put_att(ncid,NF90_GLOBAL,"contact","Ethan Gutmann : gutmann@ucar.edu"), trim(err))
         ! call check( nf90_put_att(ncid,NF90_GLOBAL,"git",VERSION), trim(err))
 
-        ! general physics options
-        ! call check( nf90_put_att(ncid,NF90_GLOBAL,"microphysics",  options%physics%microphysics),   trim(err))
-        ! call check( nf90_put_att(ncid,NF90_GLOBAL,"advection",     options%physics%advection),      trim(err))
-        ! call check( nf90_put_att(ncid,NF90_GLOBAL,"boundarylayer", options%physics%boundarylayer),  trim(err))
-        ! call check( nf90_put_att(ncid,NF90_GLOBAL,"watersurface",  options%physics%watersurface),   trim(err))
-        ! call check( nf90_put_att(ncid,NF90_GLOBAL,"landsurface",   options%physics%landsurface),    trim(err))
-        ! call check( nf90_put_att(ncid,NF90_GLOBAL,"radiation",     options%physics%radiation),      trim(err))
-        ! call check( nf90_put_att(ncid,NF90_GLOBAL,"convection",    options%physics%convection),     trim(err))
-        ! call check( nf90_put_att(ncid,NF90_GLOBAL,"windtype",      options%physics%windtype),       trim(err))
-
         if (this%n_attrs > 0) then
             do i=1,this%n_attrs
                 call check( nf90_put_att(   this%ncfile_id,             &
@@ -141,11 +131,13 @@ contains
         implicit none
         class(output_t), intent(in) :: this
         integer :: i
+        integer :: dim_3d(3)
 
         do i=1,this%n_variables
             associate(var => this%variables(i))
                 if (var%three_d) then
-                    call check( nf90_put_var(this%ncfile_id, var%var_id,  var%data_3d),   &
+                    dim_3d = var%dim_len
+                    call check( nf90_put_var(this%ncfile_id, var%var_id,  reshape(var%data_3d, shape=dim_3d, order=[1,3,2]) ),   &
                                 "saving:"//trim(var%name) )
                 elseif (var%two_d) then
                     call check( nf90_put_var(this%ncfile_id, var%var_id,  var%data_2d),   &
@@ -203,13 +195,8 @@ contains
 
         ! if the variable was not found in the netcdf file then we will define it.
         if (err /= NF90_NOERR) then
-            if (var%unlimited_dim) then
-                call check( nf90_def_var(this%ncfile_id, var%name, NF90_REAL, var%dim_ids, var%var_id), &
-                            "Defining variable:"//trim(var%name) )
-            else
-                call check( nf90_def_var(this%ncfile_id, var%name, NF90_REAL, var%dim_ids(1:3), var%var_id), &
-                            "Defining variable:"//trim(var%name) )
-            endif
+            call check( nf90_def_var(this%ncfile_id, var%name, NF90_REAL, var%dim_ids, var%var_id), &
+                        "Defining variable:"//trim(var%name) )
 
             ! setup attributes
             do i=1,size(var%attributes)

@@ -403,7 +403,7 @@ caf_output_test: $(BUILD)test_caf_output.o						\
 				$(BUILD)grid_h.o 		$(BUILD)grid_obj.o  	\
 				$(BUILD)meta_data_h.o 	$(BUILD)meta_data_obj.o \
 				$(BUILD)icar_constants.o $(BUILD)io_routines.o  \
-				$(BUILD)assertions.o
+				$(BUILD)assertions.o	$(BUILD)default_output_metadata.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_no_input_test: $(BUILD)test_caf_no_input.o							\
@@ -505,6 +505,8 @@ $(BUILD)grid_h.o: objects/grid_h.f90 $(BUILD)icar_constants.o $(BUILD)assertions
 $(BUILD)exchangeable_obj.o: objects/exchangeable_obj.f90 $(BUILD)exchangeable_h.o $(BUILD)assertions.o
 
 $(BUILD)exchangeable_h.o: objects/exchangeable_h.f90 $(BUILD)grid_h.o $(BUILD)variable_h.o
+
+$(BUILD)default_output_metadata.o: io/default_output_metadata.f90 $(BUILD)icar_constants.o $(BUILD)variable_h.o $(BUILD)meta_data_h.o
 
 $(BUILD)output_h.o: io/output_h.f90 $(BUILD)icar_constants.o $(BUILD)variable_h.o $(BUILD)grid_h.o $(BUILD)meta_data_h.o $(BUILD)domain_h.o
 
@@ -746,7 +748,8 @@ $(BUILD)test_caf_init.o: tests/test_caf_init.f90 $(BUILD)domain_h.o $(BUILD)opti
 $(BUILD)test_caf_no_input.o: tests/test_caf_no_input.f90 $(BUILD)domain_h.o $(BUILD)options_h.o \
 							$(BUILD)grid_h.o $(BUILD)output_h.o $(BUILD)atm_utilities.o
 
-$(BUILD)test_caf_output.o: tests/test_caf_output.f90 $(BUILD)output_h.o $(BUILD)variable_h.o
+$(BUILD)test_caf_output.o: tests/test_caf_output.f90 $(BUILD)output_h.o $(BUILD)variable_h.o  \
+							$(BUILD)default_output_metadata.o $(BUILD)icar_constants.o
 
 $(BUILD)test_caf_bcast.o: tests/test_caf_bcast.f90 $(BUILD)co_utilities.o
 

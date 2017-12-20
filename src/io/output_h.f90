@@ -51,13 +51,13 @@ module output_interface
       module subroutine set_domain(this, domain)
           implicit none
           class(output_t),  intent(inout)  :: this
-          type(domain_t),   intent(in)     :: domain
+          class(domain_t),  intent(in)     :: domain
       end subroutine
 
       module subroutine add_to_output(this, variable)
           implicit none
           class(output_t),   intent(inout)  :: this
-          type(variable_t),  intent(in)     :: variable
+          class(variable_t), intent(in)     :: variable
       end subroutine
 
       module subroutine save_file(this, filename)
