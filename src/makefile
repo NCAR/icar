@@ -508,7 +508,7 @@ $(BUILD)exchangeable_h.o: objects/exchangeable_h.f90 $(BUILD)grid_h.o $(BUILD)va
 
 $(BUILD)default_output_metadata.o: io/default_output_metadata.f90 $(BUILD)icar_constants.o $(BUILD)variable_h.o $(BUILD)meta_data_h.o
 
-$(BUILD)output_obj.o: io/output_obj.f90 $(BUILD)default_output_metadata.o
+$(BUILD)output_obj.o: io/output_obj.f90 $(BUILD)default_output_metadata.o $(BUILD)output_h.o
 
 $(BUILD)output_h.o: io/output_h.f90 $(BUILD)icar_constants.o $(BUILD)variable_h.o $(BUILD)grid_h.o $(BUILD)meta_data_h.o $(BUILD)domain_h.o
 
