@@ -408,7 +408,7 @@ caf_output_test: $(BUILD)test_caf_output.o						\
 				$(BUILD)assertions.o	$(BUILD)default_output_metadata.o
 	${F90} $^ -o $@ ${LFLAGS}
 
-caf_no_input_test: $(BUILD)test_caf_no_input.o							\
+caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
 	 				$(BUILD)domain_h.o		 $(BUILD)domain_obj.o		\
 					$(BUILD)options_h.o		 $(BUILD)options_obj.o		\
 					$(BUILD)opt_types.o      $(BUILD)time_io.o          \
@@ -749,7 +749,7 @@ $(BUILD)debug_utils.o:$(UTIL)debug_utils.f90 $(BUILD)data_structures.o $(BUILD)s
 
 $(BUILD)test_caf_init.o: $(TESTS)test_caf_init.f90 $(BUILD)domain_h.o $(BUILD)options_h.o
 
-$(BUILD)test_caf_no_input.o: $(TESTS)test_caf_no_input.f90 $(BUILD)domain_h.o $(BUILD)options_h.o \
+$(BUILD)test_caf_no_forcing.o: $(TESTS)test_caf_no_forcing.f90 $(BUILD)domain_h.o $(BUILD)options_h.o \
 							$(BUILD)grid_h.o $(BUILD)output_h.o $(BUILD)atm_utilities.o
 
 $(BUILD)test_caf_output.o: $(TESTS)test_caf_output.f90 $(BUILD)output_h.o $(BUILD)variable_h.o  \
