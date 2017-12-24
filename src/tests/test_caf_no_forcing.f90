@@ -15,30 +15,33 @@ program test_caf_no_forcing
     integer :: i
 
     print*, "Reading Options Files"
-    sync all
     call options%init()
+    sync all
 
     print*, "Initializing Domain"
-    sync all
     call domain%init(options)
+    sync all
 
     print*, "Adding domain to output dataset"
-    sync all
     call dataset%set_domain(domain)
+    sync all
 
     print*, "Adding variables to output dataset"
-    sync all
     call dataset%add_variables(options%vars_for_restart, domain)
+    sync all
 
     print*, "Initializing domain with ideal values"
-    sync all
     call initialize_ideal_domain(domain)
+    sync all
 
     print*, "Writing sample output file"
-    sync all
     write(file_name, '("Initial_output_",I3.3,".nc")') this_image()
     call dataset%save_file(file_name)
+    sync all
 
+    print*, ""
+    print*, "Test Completed"
+    print*, ""
 
 contains
 
