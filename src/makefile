@@ -273,6 +273,8 @@ IO=io/
 MAIN=main/
 UTIL=utilities/
 CONST=constants/
+OBJECTS=objects/
+TESTS=tests/
 
 OBJS=	$(BUILD)driver.o 			\
 		$(BUILD)init.o 				\
@@ -450,19 +452,19 @@ caf_bcast_test: $(BUILD)test_caf_bcast.o	\
 #	Generic compilation rules
 ###################################################################
 
-$(BUILD)%.o: utilities/%.f90
+$(BUILD)%.o: $(UTIL)%.f90
 	${F90} ${FFLAGS} $< -o $@
 
-$(BUILD)%.o: constants/%.f90
+$(BUILD)%.o: $(CONST)%.f90
 	${F90} ${FFLAGS} $< -o $@
 
-$(BUILD)%.o: io/%.f90
+$(BUILD)%.o: $(IO)%.f90
 	${F90} ${FFLAGS} $< -o $@
 
-$(BUILD)%.o: objects/%.f90
+$(BUILD)%.o: $(OBJECTS)%.f90
 	${F90} ${FFLAGS} $< -o $@
 
-$(BUILD)%.o: tests/%.f90
+$(BUILD)%.o: $(TESTS)%.f90
 	${F90} ${FFLAGS} $< -o $@
 
 
@@ -478,11 +480,11 @@ $(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)data_structures.o $(BUILD)init.o $(BU
 ###################################################################
 #	Options Object
 ###################################################################
-$(BUILD)opt_types.o: objects/opt_types.f90 $(BUILD)icar_constants.o $(BUILD)time_obj.o $(BUILD)time_delta_obj.o
+$(BUILD)opt_types.o: $(OBJECTS)opt_types.f90 $(BUILD)icar_constants.o $(BUILD)time_obj.o $(BUILD)time_delta_obj.o
 
-$(BUILD)options_h.o: objects/options_h.f90 $(BUILD)icar_constants.o $(BUILD)opt_types.o
+$(BUILD)options_h.o: $(OBJECTS)options_h.f90 $(BUILD)icar_constants.o $(BUILD)opt_types.o
 
-$(BUILD)options_obj.o: objects/options_obj.f90 $(BUILD)options_h.o $(BUILD)time_obj.o \
+$(BUILD)options_obj.o: $(OBJECTS)options_obj.f90 $(BUILD)options_h.o $(BUILD)time_obj.o \
 						$(BUILD)time_delta_obj.o $(BUILD)io_routines.o $(BUILD)opt_types.o \
 						$(BUILD)time_io.o $(BUILD)string.o $(BUILD)model_tracking.o
 
@@ -490,33 +492,33 @@ $(BUILD)options_obj.o: objects/options_obj.f90 $(BUILD)options_h.o $(BUILD)time_
 #	Primary Data Objects
 ###################################################################
 
-$(BUILD)meta_data_obj.o: objects/meta_data_obj.f90 $(BUILD)meta_data_h.o
+$(BUILD)meta_data_obj.o: $(OBJECTS)meta_data_obj.f90 $(BUILD)meta_data_h.o
 
-$(BUILD)meta_data_h.o: objects/meta_data_h.f90 $(BUILD)icar_constants.o
+$(BUILD)meta_data_h.o: $(OBJECTS)meta_data_h.f90 $(BUILD)icar_constants.o
 
-$(BUILD)variable_obj.o: objects/variable_obj.f90 $(BUILD)variable_h.o
+$(BUILD)variable_obj.o: $(OBJECTS)variable_obj.f90 $(BUILD)variable_h.o
 
-$(BUILD)variable_h.o: objects/variable_h.f90 $(BUILD)meta_data_h.o $(BUILD)icar_constants.o $(BUILD)grid_h.o
+$(BUILD)variable_h.o: $(OBJECTS)variable_h.f90 $(BUILD)meta_data_h.o $(BUILD)icar_constants.o $(BUILD)grid_h.o
 
-$(BUILD)grid_obj.o: objects/grid_obj.f90 $(BUILD)grid_h.o
+$(BUILD)grid_obj.o: $(OBJECTS)grid_obj.f90 $(BUILD)grid_h.o
 
-$(BUILD)grid_h.o: objects/grid_h.f90 $(BUILD)icar_constants.o $(BUILD)assertions.o $(BUILD)assertions.o
+$(BUILD)grid_h.o: $(OBJECTS)grid_h.f90 $(BUILD)icar_constants.o $(BUILD)assertions.o $(BUILD)assertions.o
 
-$(BUILD)exchangeable_obj.o: objects/exchangeable_obj.f90 $(BUILD)exchangeable_h.o $(BUILD)assertions.o
+$(BUILD)exchangeable_obj.o: $(OBJECTS)exchangeable_obj.f90 $(BUILD)exchangeable_h.o $(BUILD)assertions.o
 
-$(BUILD)exchangeable_h.o: objects/exchangeable_h.f90 $(BUILD)grid_h.o $(BUILD)variable_h.o
+$(BUILD)exchangeable_h.o: $(OBJECTS)exchangeable_h.f90 $(BUILD)grid_h.o $(BUILD)variable_h.o
 
-$(BUILD)default_output_metadata.o: io/default_output_metadata.f90 $(BUILD)icar_constants.o $(BUILD)variable_h.o $(BUILD)meta_data_h.o
+$(BUILD)default_output_metadata.o: $(IO)default_output_metadata.f90 $(BUILD)icar_constants.o $(BUILD)variable_h.o $(BUILD)meta_data_h.o
 
-$(BUILD)output_obj.o: io/output_obj.f90 $(BUILD)default_output_metadata.o $(BUILD)output_h.o
+$(BUILD)output_obj.o: $(IO)output_obj.f90 $(BUILD)default_output_metadata.o $(BUILD)output_h.o
 
-$(BUILD)output_h.o: io/output_h.f90 $(BUILD)icar_constants.o $(BUILD)variable_h.o $(BUILD)grid_h.o $(BUILD)meta_data_h.o $(BUILD)domain_h.o
+$(BUILD)output_h.o: $(IO)output_h.f90 $(BUILD)icar_constants.o $(BUILD)variable_h.o $(BUILD)grid_h.o $(BUILD)meta_data_h.o $(BUILD)domain_h.o
 
-$(BUILD)domain_obj.o: objects/domain_obj.f90 $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)grid_h.o \
+$(BUILD)domain_obj.o: $(OBJECTS)domain_obj.f90 $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)grid_h.o \
 					$(BUILD)string.o $(BUILD)mp_driver.o $(BUILD)assertions.o  					\
 					$(BUILD)atm_utilities.o $(BUILD)io_routines.o $(BUILD)co_utilities.o
 
-$(BUILD)domain_h.o: objects/domain_h.f90 $(BUILD)options_h.o $(BUILD)exchangeable_h.o \
+$(BUILD)domain_h.o: $(OBJECTS)domain_h.f90 $(BUILD)options_h.o $(BUILD)exchangeable_h.o \
 					$(BUILD)grid_h.o $(BUILD)meta_data_h.o $(BUILD)variable_h.o $(BUILD)io_routines.o
 
 # $(BUILD)co_utilities.o
@@ -745,36 +747,36 @@ $(BUILD)debug_utils.o:$(UTIL)debug_utils.f90 $(BUILD)data_structures.o $(BUILD)s
 #	Unit tests
 ###################################################################
 
-$(BUILD)test_caf_init.o: tests/test_caf_init.f90 $(BUILD)domain_h.o $(BUILD)options_h.o
+$(BUILD)test_caf_init.o: $(TESTS)test_caf_init.f90 $(BUILD)domain_h.o $(BUILD)options_h.o
 
-$(BUILD)test_caf_no_input.o: tests/test_caf_no_input.f90 $(BUILD)domain_h.o $(BUILD)options_h.o \
+$(BUILD)test_caf_no_input.o: $(TESTS)test_caf_no_input.f90 $(BUILD)domain_h.o $(BUILD)options_h.o \
 							$(BUILD)grid_h.o $(BUILD)output_h.o $(BUILD)atm_utilities.o
 
-$(BUILD)test_caf_output.o: tests/test_caf_output.f90 $(BUILD)output_h.o $(BUILD)variable_h.o  \
+$(BUILD)test_caf_output.o: $(TESTS)test_caf_output.f90 $(BUILD)output_h.o $(BUILD)variable_h.o  \
 							$(BUILD)default_output_metadata.o $(BUILD)icar_constants.o
 
-$(BUILD)test_caf_bcast.o: tests/test_caf_bcast.f90 $(BUILD)co_utilities.o
+$(BUILD)test_caf_bcast.o: $(TESTS)test_caf_bcast.f90 $(BUILD)co_utilities.o
 
-$(BUILD)test_caf_options.o: tests/test_caf_options.f90 $(BUILD)options_h.o
+$(BUILD)test_caf_options.o: $(TESTS)test_caf_options.f90 $(BUILD)options_h.o
 
-$(BUILD)test_fftw.o: tests/test_fftw.f90 $(BUILD)fftw.o
-	${F90} ${FFLAGS} tests/test_fftw.f90 -o $(BUILD)test_fftw.o
+$(BUILD)test_fftw.o: $(TESTS)test_fftw.f90 $(BUILD)fftw.o
+	${F90} ${FFLAGS} $(TESTS)test_fftw.f90 -o $(BUILD)test_fftw.o
 
-$(BUILD)test_fftshift.o:$(BUILD)fftshift.o tests/test_fftshift.f90
-	${F90} ${FFLAGS} tests/test_fftshift.f90 -o $(BUILD)test_fftshift.o
+$(BUILD)test_fftshift.o:$(BUILD)fftshift.o $(TESTS)test_fftshift.f90
+	${F90} ${FFLAGS} $(TESTS)test_fftshift.f90 -o $(BUILD)test_fftshift.o
 
-$(BUILD)test_calendar.o:$(BUILD)time.o tests/test_calendar.f90
-	${F90} ${FFLAGS} tests/test_calendar.f90 -o $(BUILD)test_calendar.o
+$(BUILD)test_calendar.o:$(BUILD)time.o $(TESTS)test_calendar.f90
+	${F90} ${FFLAGS} $(TESTS)test_calendar.f90 -o $(BUILD)test_calendar.o
 
-$(BUILD)test_point_in_on.o:$(BUILD)geo_reader.o tests/test_point_in_on.f90
-	${F90} ${FFLAGS} tests/test_point_in_on.f90 -o $(BUILD)test_point_in_on.o
+$(BUILD)test_point_in_on.o:$(BUILD)geo_reader.o $(TESTS)test_point_in_on.f90
+	${F90} ${FFLAGS} $(TESTS)test_point_in_on.f90 -o $(BUILD)test_point_in_on.o
 
-$(BUILD)test_mpdata.o:$(BUILD)adv_mpdata.o tests/test_mpdata.f90
-	${F90} ${FFLAGS} tests/test_mpdata.f90 -o $(BUILD)test_mpdata.o
+$(BUILD)test_mpdata.o:$(BUILD)adv_mpdata.o $(TESTS)test_mpdata.f90
+	${F90} ${FFLAGS} $(TESTS)test_mpdata.f90 -o $(BUILD)test_mpdata.o
 
-$(BUILD)test_blocking.o:tests/test_blocking.f90 $(BUILD)winds_blocking.o $(BUILD)linear_winds.o \
+$(BUILD)test_blocking.o:$(TESTS)test_blocking.f90 $(BUILD)winds_blocking.o $(BUILD)linear_winds.o \
 						$(BUILD)data_structures.o $(BUILD)icar_constants.o $(BUILD)io_routines.o
-	${F90} ${FFLAGS} tests/test_blocking.f90 -o $(BUILD)test_blocking.o
+	${F90} ${FFLAGS} $(TESTS)test_blocking.f90 -o $(BUILD)test_blocking.o
 
-$(BUILD)test_array_utilities.o:tests/test_array_utilities.f90 $(BUILD)array_utilities.o
-	${F90} ${FFLAGS} tests/test_array_utilities.f90 -o $(BUILD)test_array_utilities.o
+$(BUILD)test_array_utilities.o:$(TESTS)test_array_utilities.f90 $(BUILD)array_utilities.o
+	${F90} ${FFLAGS} $(TESTS)test_array_utilities.f90 -o $(BUILD)test_array_utilities.o
