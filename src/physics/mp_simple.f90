@@ -53,9 +53,12 @@
 !!
 !!----------------------------------------------------------
 module module_mp_simple
+    use options_interface, only : options_t
+    use data_structures
+
     implicit none
     private
-    public::mp_simple_driver
+    public::mp_simple_driver, mp_simple_var_request
 
     real, parameter :: LH_vapor = 2.26E6 ! J/kg
     real, parameter :: dLHvdt   = 2400! APPROXIMATE increase in latent heat with a decrease in temperature (below 373.15K)
@@ -79,7 +82,7 @@ module module_mp_simple
     real,parameter :: rain_fall_rate=10.0                ! [m/s]   for a water vapor scale height of 3750m corresponds to tau_f = 375
     real,parameter :: snow_cloud_init=0.0001            ! [kg/kg] cloud ice content before snow will start to form
     real,parameter :: rain_cloud_init=0.0001            ! [kg/kg] cloud water content before rain will start to form
-    
+
 !   these are recalculated every call because they are a function of dt
 !   conversion "time" = exp( -1 * time_constant * dt)
     real :: rain_evap = 0.999
@@ -89,7 +92,33 @@ module module_mp_simple
     real :: cloud2snow = 0.999
     !$omp threadprivate(cloud2rain,cloud2snow,snow_melt,snow_evap,rain_evap)
 
-    contains
+contains
+
+    subroutine mp_simple_var_request(options)
+        implicit none
+        type(options_t), intent(inout) :: options
+
+        ! List the variables that are required to be allocated for the simple microphysics
+        call options%alloc_vars( &
+                     [kVARS%pressure,    kVARS%potential_temperature,   kVARS%exner,        kVARS%density,      &
+                      kVARS%water_vapor, kVARS%cloud_water,             kVARS%rain_in_air,  kVARS%snow_in_air,  &
+                      kVARS%precipitation, kVARS%snowfall,              kVARS%dz_interface])
+
+        ! List the variables that are required to be advected for the simple microphysics
+        call options%advect_vars( &
+                      [kVARS%potential_temperature, kVARS%water_vapor, kVARS%cloud_water,   &
+                       kVARS%rain_in_air,           kVARS%snow_in_air   ] )
+
+        ! List the variables that are required to be allocated for the simple microphysics
+        call options%restart_vars( &
+                       [kVARS%pressure,     kVARS%potential_temperature,    kVARS%water_vapor,  &
+                        kVARS%cloud_water,  kVARS%rain_in_air,              kVARS%snow_in_air,  &
+                        kVARS%precipitation,kVARS%snowfall,                 kVARS%dz_interface] )
+
+    end subroutine mp_simple_var_request
+
+
+
 
     !>----------------------------------------------------------
     !!  Calculate the saturated mixing ratio for a given temperature and pressure
@@ -451,7 +480,7 @@ module module_mp_simple
 !           qv(i) = qv(i)/(1-qv(i))
             call mp_conversions(pressure(i),temperature(i),qv(i),qc(i),qr(i),qs(i),dt)
         enddo
-        
+
         ! SEDIMENTATION for rain
         if (maxval(qr)>SMALL_VALUE) then
             fall_rate = rain_fall_rate

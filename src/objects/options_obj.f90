@@ -9,7 +9,9 @@ submodule(options_interface) options_implementation
     use time_object,                only : Time_type
     use string,                     only : str
     use model_tracking,             only : print_model_diffs
-    ! use co_routines, only : broadcast
+
+    use microphysics,               only : mp_var_request
+    use advection,                  only : adv_var_request
 
     implicit none
 
@@ -91,7 +93,17 @@ contains
             syncall
         end do
 
+        call collect_physics_requests(this)
+
     end subroutine init
+
+    subroutine collect_physics_requests(options)
+        type(options_t) :: options
+
+        call mp_var_request(options)
+        call adv_var_request(options)
+
+    end subroutine
 
     !> -------------------------------
     !! Add list of new variables to a list of variables

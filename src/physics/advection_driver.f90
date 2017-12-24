@@ -8,7 +8,7 @@
 module advection
     use data_structures
     use icar_constants
-    use adv_upwind,                 only : upwind
+    use adv_upwind,                 only : upwind, upwind_init, upwind_var_request
     ! use adv_mpdata,                 only : mpdata, mpdata_init
     ! use debug_module,               only : domain_fix
     use options_interface,          only: options_t
@@ -16,36 +16,33 @@ module advection
 
     implicit none
     private
-    public::advect,adv_init
+    public :: advect, adv_init, adv_var_request
 contains
 
     subroutine adv_init(domain,options)
         implicit none
-        type(domain_t), intent(inout) :: domain
+        type(domain_t), intent(in) :: domain
         type(options_t),intent(in) :: options
 
         if (options%physics%advection==kADV_UPWIND) then
-            call upwind_request_vars(options)
-!             call upwind(domain,options,dt)
-        ! if(options%physics%advection==kADV_MPDATA) then
-        !     call mpdata_init(domain,options)
+            call upwind_init(domain,options)
+        elseif(options%physics%advection==kADV_MPDATA) then
+            ! call mpdata_init(domain,options)
         endif
 
     end subroutine adv_init
 
-    subroutine upwind_request_vars(options)
+    subroutine adv_var_request(options)
         implicit none
-        type(options_t), intent(inout) :: options
+        type(options_t),intent(inout) :: options
 
-        ! List the variables that are required to be allocated for upwind advection
-        call options%alloc_vars( &
-                        [kVARS%u,    kVARS%v,   kVARS%w,     kVARS%dz_interface])
+        if (options%physics%advection==kADV_UPWIND) then
+            call upwind_var_request(options)
+        ! if(options%physics%advection==kADV_MPDATA) then
+        !     call mpdata_var_request(domain,options)
+        endif
 
-        ! List the variables that are required for restarts with upwind advection
-        call options%restart_vars( &
-                        [kVARS%u,    kVARS%v,   kVARS%w,     kVARS%dz_interface])
-
-    end subroutine upwind_request_vars
+    end subroutine
 
     subroutine advect(domain,options,dt)
         implicit none

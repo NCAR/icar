@@ -392,12 +392,16 @@ blocking_test: $(BUILD)test_blocking.o $(BUILD)io_routines.o $(BUILD)winds_block
 array_util_test: $(BUILD)test_array_utilities.o $(BUILD)array_utilities.o
 	${F90} $^ -o $@ ${LFLAGS}
 
-caf_options_test: $(BUILD)test_caf_options.o				   \
-				$(BUILD)options_h.o      $(BUILD)options_obj.o \
-				$(BUILD)icar_constants.o $(BUILD)string.o      \
-				$(BUILD)io_routines.o    $(BUILD)time_io.o     \
-				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o    \
-				$(BUILD)model_tracking.o $(BUILD)opt_types.o
+caf_options_test: $(BUILD)test_caf_options.o				  	\
+				$(BUILD)options_h.o      $(BUILD)options_obj.o	\
+				$(BUILD)icar_constants.o $(BUILD)string.o     	\
+				$(BUILD)io_routines.o    $(BUILD)time_io.o  	\
+				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o 	\
+				$(BUILD)model_tracking.o $(BUILD)opt_types.o	\
+				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
+				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o	\
+				$(BUILD)advection_driver.o						\
+				$(BUILD)advect.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_output_test: $(BUILD)test_caf_output.o						\
@@ -423,8 +427,10 @@ caf_write_domain_test: $(BUILD)test_caf_write_domain.o					\
 					$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 					$(BUILD)model_tracking.o $(BUILD)string.o           \
 					$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
+					$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o\
 					$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
-					$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o
+					$(BUILD)advection_driver.o							\
+					$(BUILD)advect.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
@@ -441,8 +447,10 @@ caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
 					$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 					$(BUILD)model_tracking.o $(BUILD)string.o           \
 					$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
+					$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
 					$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
-					$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o
+					$(BUILD)advection_driver.o							\
+					$(BUILD)advect.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 
@@ -458,7 +466,10 @@ caf_init_test: $(BUILD)test_caf_init.o                              \
 				$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
 				$(BUILD)domain_h.o       $(BUILD)domain_obj.o		\
 				$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
+				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
 				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
+				$(BUILD)advection_driver.o							\
+				$(BUILD)advect.o									\
 				$(BUILD)io_routines.o	 $(BUILD)co_utilities.o
 	${F90} $^ -o $@ ${LFLAGS}
 
@@ -503,9 +514,10 @@ $(BUILD)opt_types.o: $(OBJECTS)opt_types.f90 $(BUILD)icar_constants.o $(BUILD)ti
 
 $(BUILD)options_h.o: $(OBJECTS)options_h.f90 $(BUILD)icar_constants.o $(BUILD)opt_types.o
 
-$(BUILD)options_obj.o: $(OBJECTS)options_obj.f90 $(BUILD)options_h.o $(BUILD)time_obj.o \
-						$(BUILD)time_delta_obj.o $(BUILD)io_routines.o $(BUILD)opt_types.o \
-						$(BUILD)time_io.o $(BUILD)string.o $(BUILD)model_tracking.o
+$(BUILD)options_obj.o: $(OBJECTS)options_obj.f90 $(BUILD)options_h.o $(BUILD)time_obj.o		\
+						$(BUILD)time_delta_obj.o $(BUILD)io_routines.o $(BUILD)opt_types.o	\
+						$(BUILD)time_io.o $(BUILD)string.o $(BUILD)model_tracking.o			\
+						$(BUILD)mp_driver.o $(BUILD)advection_driver.o
 
 ###################################################################
 #	Primary Data Objects
@@ -529,9 +541,9 @@ $(BUILD)exchangeable_h.o: $(OBJECTS)exchangeable_h.f90 $(BUILD)grid_h.o $(BUILD)
 
 $(BUILD)default_output_metadata.o: $(IO)default_output_metadata.f90 $(BUILD)icar_constants.o $(BUILD)variable_h.o $(BUILD)meta_data_h.o
 
-$(BUILD)output_obj.o: $(IO)output_obj.f90 $(BUILD)default_output_metadata.o $(BUILD)output_h.o
-
 $(BUILD)output_h.o: $(IO)output_h.f90 $(BUILD)icar_constants.o $(BUILD)variable_h.o $(BUILD)grid_h.o $(BUILD)meta_data_h.o $(BUILD)domain_h.o
+
+$(BUILD)output_obj.o: $(IO)output_obj.f90 $(BUILD)output_h.o $(BUILD)default_output_metadata.o
 
 $(BUILD)domain_obj.o: $(OBJECTS)domain_obj.f90 $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)grid_h.o \
 					$(BUILD)string.o $(BUILD)mp_driver.o $(BUILD)assertions.o  					\
@@ -637,7 +649,7 @@ $(BUILD)mp_wsm6.o:$(PHYS)mp_wsm6.f90 $(BUILD)wrf_constants.o
 $(BUILD)mp_thompson.o:$(PHYS)mp_thompson.f90 $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)mp_thompson.f90 -o $(BUILD)mp_thompson.o
 
-$(BUILD)mp_simple.o:$(PHYS)mp_simple.f90 $(BUILD)data_structures.o
+$(BUILD)mp_simple.o:$(PHYS)mp_simple.f90 $(BUILD)data_structures.o $(BUILD)options_h.o
 	${F90} ${FFLAGS} $(PHYS)mp_simple.f90 -o $(BUILD)mp_simple.o
 
 ###################################################################
@@ -702,11 +714,11 @@ $(BUILD)pbl_ysu.o: $(PHYS)pbl_ysu.f90
 ###################################################################
 #	Advection related code
 ###################################################################
-$(BUILD)advection_driver.o:$(PHYS)advection_driver.f90 $(BUILD)data_structures.o $(BUILD)advect.o $(BUILD)adv_mpdata.o \
-							$(BUILD)debug_utils.o
+$(BUILD)advection_driver.o:$(PHYS)advection_driver.f90 $(BUILD)data_structures.o $(BUILD)advect.o \
+							$(BUILD)debug_utils.o $(BUILD)options_h.o $(BUILD)domain_h.o # $(BUILD)adv_mpdata.o
 	${F90} ${FFLAGS} $(PHYS)advection_driver.f90 -o $(BUILD)advection_driver.o
 
-$(BUILD)advect.o:$(PHYS)advect.f90 $(BUILD)data_structures.o
+$(BUILD)advect.o:$(PHYS)advect.f90 $(BUILD)data_structures.o $(BUILD)options_h.o $(BUILD)domain_h.o
 	${F90} ${FFLAGS} $(PHYS)advect.f90 -o $(BUILD)advect.o
 
 $(BUILD)adv_mpdata.o:$(PHYS)adv_mpdata.f90 $(PHYS)adv_mpdata_FCT_core.f90 $(BUILD)data_structures.o

@@ -75,6 +75,7 @@ module domain_interface
     type(variable_t) :: v_latitude
     type(variable_t) :: v_longitude
 
+    real :: dx
 
     ! these coarrays are used to send all data to/from a master image for IO... ?
     ! For now this will be taken care of in the boundary conditions object

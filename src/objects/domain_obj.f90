@@ -345,7 +345,7 @@ contains
       class(domain_t), intent(inout) :: this
       class(options_t),intent(inout) :: options
 
-      call mp_simple_var_request(options)
+      this%dx = options%parameters%dx
 
       call this%var_request(options)
 

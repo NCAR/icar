@@ -7,16 +7,75 @@
 !! ----------------------------------------------------------------------------
 module adv_upwind
     use data_structures
+    use options_interface, only: options_t
+    use domain_interface,  only: domain_t
 
     implicit none
     private
     real,dimension(:,:,:),allocatable :: U_m, V_m, W_m, lastqv_m
-    real,dimension(:,:,:),allocatable :: U_4cu_u, V_4cu_u, W_4cu_u
-    real,dimension(:,:,:),allocatable :: U_4cu_v, V_4cu_v, W_4cu_v
-    real,dimension(:,:,:),allocatable :: Uc_m, Vc_m
-    public::upwind
+
+    ! For use advecting a (convective?) wind field
+    ! real,dimension(:,:,:),allocatable :: U_4cu_u, V_4cu_u, W_4cu_u
+    ! real,dimension(:,:,:),allocatable :: U_4cu_v, V_4cu_v, W_4cu_v
+
+    public :: upwind, upwind_init, upwind_var_request
 
 contains
+
+    subroutine upwind_init(domain,options)
+        implicit none
+        type(domain_t), intent(in) :: domain
+        type(options_t),intent(in) :: options
+
+        integer :: nx, nz, ny
+
+        nx = domain%grid%nx
+        nz = domain%grid%nz
+        ny = domain%grid%ny
+
+        ! if module level arrays are already allocated for some reason, deallocate them first
+        if (allocated(U_m)) deallocate(U_m)
+        if (allocated(V_m)) deallocate(V_m)
+        if (allocated(W_m)) deallocate(W_m)
+        if (allocated(lastqv_m)) deallocate(lastqv_m)
+
+        ! allocate the module level arrays
+        allocate(U_m     (nx-1,nz,ny  ))
+        allocate(V_m     (nx,  nz,ny-1))
+        allocate(W_m     (nx,  nz,ny  ))
+        allocate(lastqv_m(nx,  nz,ny  ))
+
+        !     if (.not.allocated(U_4cu_u)) then
+        !         allocate(U_4cu_u(nx,  nz, ny))
+        !         U_4cu_u = 0
+        !         allocate(V_4cu_u(nx+1,nz, ny-1))
+        !         V_4cu_u = 0
+        !         allocate(W_4cu_u(nx+1,nz, ny))
+        !         W_4cu_u = 0
+        !
+        !         allocate(U_4cu_v(nx-1,nz, ny+1))
+        !         U_4cu_v = 0
+        !         allocate(V_4cu_v(nx,  nz, ny))
+        !         V_4cu_v = 0
+        !         allocate(W_4cu_v(nx,  nz, ny+1))
+        !         W_4cu_v = 0
+        !     endif
+    end subroutine
+
+    subroutine upwind_var_request(options)
+        implicit none
+        type(options_t), intent(inout) :: options
+
+        ! List the variables that are required to be allocated for upwind advection
+        call options%alloc_vars( &
+                        [kVARS%u,    kVARS%v,   kVARS%w,     kVARS%dz_interface])
+
+        ! List the variables that are required for restarts with upwind advection
+        call options%restart_vars( &
+                        [kVARS%u,    kVARS%v,   kVARS%w,     kVARS%dz_interface])
+
+    end subroutine
+
 !     Note this routine has been manually inlined because the compiler didn't seem to optimize it well and made the array copies
 !     the routine is left in for documentation.
 !     subroutine flux2(l,r,U,nx,nz,ny,f)
@@ -134,21 +193,6 @@ contains
     !     nz = size(domain%dz,2)
     !     ny = size(domain%dz,3)
     !
-    !     if (.not.allocated(U_4cu_u)) then
-    !         allocate(U_4cu_u(nx,  nz, ny))
-    !         U_4cu_u = 0
-    !         allocate(V_4cu_u(nx+1,nz, ny-1))
-    !         V_4cu_u = 0
-    !         allocate(W_4cu_u(nx+1,nz, ny))
-    !         W_4cu_u = 0
-    !
-    !         allocate(U_4cu_v(nx-1,nz, ny+1))
-    !         U_4cu_v = 0
-    !         allocate(V_4cu_v(nx,  nz, ny))
-    !         V_4cu_v = 0
-    !         allocate(W_4cu_v(nx,  nz, ny+1))
-    !         W_4cu_v = 0
-    !     endif
     !
     !     U_4cu_u           =  (dt/dx) * (domain%u(1:nx,:,:)      + domain%u(2:nx+1,:,:)) / 2
     !     V_4cu_u(2:nx,:,:) =  (dt/dx) * (domain%v(1:nx-1,:,2:ny) + domain%v(2:nx,:,2:ny)) / 2
@@ -257,7 +301,7 @@ contains
         !     W_m = domain%wr           * (dt/dx**2)
         ! else
             if (options%physics%convection > 0) then
-                print*, "Advection of convective winds not enabled in ICAR 1.5 yet"
+                print*, "Advection of convective winds not enabled in ICAR >=1.5 yet"
                 ! stop
                 ! U_m = (domain%u_cu(2:nx,:,:) + domain%u(2:nx,:,:)) * (dt/dx)
                 ! V_m = (domain%v_cu(:,:,2:ny) + domain%v(:,:,2:ny)) * (dt/dx)
@@ -292,17 +336,17 @@ contains
 
         ! lastqv_m=domain%qv
 
-        if (options%vars_to_advect(kVARS%water_vapor)>0)                  call advect3d(domain%qv%data_3d,       U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
-        if (options%vars_to_advect(kVARS%cloud_water)>0)                  call advect3d(domain%cloud%data_3d,    U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
-        if (options%vars_to_advect(kVARS%rain_in_air)>0)                  call advect3d(domain%qrain%data_3d,    U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
-        if (options%vars_to_advect(kVARS%snow_in_air)>0)                  call advect3d(domain%qsnow%data_3d,    U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
-        if (options%vars_to_advect(kVARS%potential_temperature)>0)        call advect3d(domain%th%data_3d,       U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
-        if (options%vars_to_advect(kVARS%cloud_ice)>0)                    call advect3d(domain%ice%data_3d,      U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
-        if (options%vars_to_advect(kVARS%graupel_in_air)>0)               call advect3d(domain%qgrau%data_3d,    U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
-        if (options%vars_to_advect(kVARS%ice_number_concentration)>0)     call advect3d(domain%nice%data_3d,     U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
-        if (options%vars_to_advect(kVARS%rain_number_concentration)>0)    call advect3d(domain%nrain%data_3d,    U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
-        if (options%vars_to_advect(kVARS%snow_number_concentration)>0)    call advect3d(domain%nsnow%data_3d,    U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
-        if (options%vars_to_advect(kVARS%graupel_number_concentration)>0) call advect3d(domain%ngraupel%data_3d, U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%water_vapor)>0)                  call advect3d(domain%water_vapor%data_3d,             U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%cloud_water)>0)                  call advect3d(domain%cloud_water_mass%data_3d,        U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%rain_in_air)>0)                  call advect3d(domain%rain_mass%data_3d,               U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%snow_in_air)>0)                  call advect3d(domain%snow_mass%data_3d,               U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%potential_temperature)>0)        call advect3d(domain%potential_temperature%data_3d,   U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%cloud_ice)>0)                    call advect3d(domain%cloud_ice_mass%data_3d,          U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%graupel_in_air)>0)               call advect3d(domain%graupel_mass%data_3d,            U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%ice_number_concentration)>0)     call advect3d(domain%cloud_ice_number%data_3d,        U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%rain_number_concentration)>0)    call advect3d(domain%rain_number%data_3d,             U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%snow_number_concentration)>0)    call advect3d(domain%snow_number%data_3d,             U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%graupel_number_concentration)>0) call advect3d(domain%graupel_number%data_3d,          U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, nx,nz,ny, options)
 
         ! if (options%physics%convection > 0) then
         !     call advect_cu_winds(domain, options, dt)

@@ -32,10 +32,11 @@ module microphysics
     ! use module_mp_thompson,         only: mp_gt_driver, thompson_init
     ! use module_mp_morr_two_moment,  only: MORR_TWO_MOMENT_INIT, MP_MORR_TWO_MOMENT
     ! use module_mp_wsm6,             only: wsm6, wsm6init
-    use module_mp_simple,           only: mp_simple_driver
+    use module_mp_simple,           only: mp_simple_driver, mp_simple_var_request
     use time_object,                only: Time_type
     use options_interface,          only: options_t
     use domain_interface,           only: domain_t
+
     implicit none
 
     ! permit the microphysics to update on a longer time step than the advection
@@ -54,6 +55,8 @@ module microphysics
     real,    dimension(npoints) :: dist_fraction = [ 0.1,0.15,0.1, 0.15,0.15, 0.1,0.15,0.1]
     integer, dimension(npoints) :: x_list = [ -1,0,1, -1,1, -1,0,1]
     integer, dimension(npoints) :: y_list = [ 1,1,1, 0,0, -1,-1,-1]
+
+    public :: mp, mp_var_request
 contains
 
 
@@ -79,7 +82,6 @@ contains
         elseif (options%physics%microphysics == kMP_SB04) then
             write(*,*) "    Simple Microphysics"
             precip_delta=.True.
-            call mp_simple_var_request(options)
         ! elseif (options%physics%microphysics==kMP_MORRISON) then
         !     write(*,*) "    Morrison Microphysics"
         !     call MORR_TWO_MOMENT_INIT(hail_opt=0)
@@ -94,28 +96,23 @@ contains
 
     end subroutine mp_init
 
-    subroutine mp_simple_var_request(options)
+
+    subroutine mp_var_request(options)
         implicit none
         type(options_t), intent(inout) :: options
 
-        ! List the variables that are required to be allocated for the simple microphysics
-        call options%alloc_vars( &
-                     [kVARS%pressure,    kVARS%potential_temperature,   kVARS%exner,        kVARS%density,      &
-                      kVARS%water_vapor, kVARS%cloud_water,             kVARS%rain_in_air,  kVARS%snow_in_air,  &
-                      kVARS%precipitation, kVARS%snowfall,              kVARS%dz_interface])
+        if (options%physics%microphysics    == kMP_THOMPSON) then
+            stop "Thompson physics not re-implemented yet"
+        elseif (options%physics%microphysics == kMP_SB04) then
+            call mp_simple_var_request(options)
 
-        ! List the variables that are required to be advected for the simple microphysics
-        call options%advect_vars( &
-                      [kVARS%potential_temperature, kVARS%water_vapor, kVARS%cloud_water,   &
-                       kVARS%rain_in_air,           kVARS%snow_in_air   ] )
+        elseif (options%physics%microphysics==kMP_MORRISON) then
+            stop "Morrison physics not re-implemented yet"
+        elseif (options%physics%microphysics==kMP_WSM6) then
+            stop "WSM6 physics not re-implemented yet"
+        endif
 
-        ! List the variables that are required to be allocated for the simple microphysics
-        call options%restart_vars( &
-                       [kVARS%pressure,     kVARS%potential_temperature,    kVARS%water_vapor,  &
-                        kVARS%cloud_water,  kVARS%rain_in_air,              kVARS%snow_in_air,  &
-                        kVARS%precipitation,kVARS%snowfall,                 kVARS%dz_interface] )
-
-    end subroutine mp_simple_var_request
+    end subroutine mp_var_request
 
 
     subroutine allocate_module_variables(nx, ny, nz)
