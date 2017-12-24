@@ -335,14 +335,15 @@ TEST_EXECUTABLES= 	fftshift_test	\
 					point_in_on_test\
 	  				array_util_test \
 					caf_init_test	\
-					caf_options_test
+					caf_options_test\
+					caf_write_domain_test
 
 
 ###################################################################
 #	User facing rules
 ###################################################################
 
-caf_tests:caf_options_test caf_init_test caf_bcast_test
+caf_tests:caf_options_test caf_init_test caf_bcast_test test_caf_write_domain caf_options_test
 
 icar:${OBJS}
 	${F90} -o icar ${OBJS} ${LFLAGS}
@@ -406,6 +407,24 @@ caf_output_test: $(BUILD)test_caf_output.o						\
 				$(BUILD)meta_data_h.o 	$(BUILD)meta_data_obj.o \
 				$(BUILD)icar_constants.o $(BUILD)io_routines.o  \
 				$(BUILD)assertions.o	$(BUILD)default_output_metadata.o
+	${F90} $^ -o $@ ${LFLAGS}
+
+caf_write_domain_test: $(BUILD)test_caf_write_domain.o					\
+	 				$(BUILD)domain_h.o		 $(BUILD)domain_obj.o		\
+					$(BUILD)options_h.o		 $(BUILD)options_obj.o		\
+					$(BUILD)opt_types.o      $(BUILD)time_io.o          \
+					$(BUILD)grid_h.o		 $(BUILD)grid_obj.o			\
+					$(BUILD)output_h.o		 $(BUILD)output_obj.o		\
+					$(BUILD)meta_data_h.o    $(BUILD)meta_data_obj.o	\
+					$(BUILD)variable_h.o	 $(BUILD)variable_obj.o		\
+					$(BUILD)time_delta_obj.o $(BUILD)time_obj.o    		\
+					$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
+					$(BUILD)icar_constants.o $(BUILD)io_routines.o		\
+					$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
+					$(BUILD)model_tracking.o $(BUILD)string.o           \
+					$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
+					$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
+					$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
@@ -748,6 +767,9 @@ $(BUILD)debug_utils.o:$(UTIL)debug_utils.f90 $(BUILD)data_structures.o $(BUILD)s
 ###################################################################
 
 $(BUILD)test_caf_init.o: $(TESTS)test_caf_init.f90 $(BUILD)domain_h.o $(BUILD)options_h.o
+
+$(BUILD)test_caf_write_domain.o: $(TESTS)test_caf_write_domain.f90 $(BUILD)domain_h.o $(BUILD)options_h.o \
+							$(BUILD)grid_h.o $(BUILD)output_h.o $(BUILD)atm_utilities.o
 
 $(BUILD)test_caf_no_forcing.o: $(TESTS)test_caf_no_forcing.f90 $(BUILD)domain_h.o $(BUILD)options_h.o \
 							$(BUILD)grid_h.o $(BUILD)output_h.o $(BUILD)atm_utilities.o
