@@ -110,6 +110,7 @@ contains
         real,intent(in)::yi,y(4),xi,x(4)
         real::x0,y0
         real, dimension(4) ::tri_weights
+        real :: test_poly(2,3)
 
         real :: w1,w2,w3,denom
 
@@ -148,6 +149,10 @@ contains
             write(*,*) x2, y2
             write(*,*) x3, y3
             write(*,*) w1, w2, w3
+            test_poly(:,1) = [x1,y1]
+            test_poly(:,2) = [x2,y2]
+            test_poly(:,3) = [x3,y3]
+            write(*,*) "Point in poly returns:",point_in_poly(xi, yi, test_poly)
             stop "Triangulation is broken"
         endif
         w1=max(0.,w1); w2=max(0.,w2); w3=max(0.,w3);
@@ -608,7 +613,7 @@ contains
         real :: x0,y0,x1,y1
         double precision :: slope, x_line
 
-        internal_precision = 1e-5
+        internal_precision = 1e-7
         if (present(precision)) internal_precision = precision
         n = size(poly,2)
 
