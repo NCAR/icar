@@ -600,7 +600,7 @@ contains
         if (outputinterval>=43200) then
             options%output_file_frequency="monthly"
         ! if outputing at half-hour or longer intervals, create daily files
-        else if (outputinterval>=1800) then
+        else if (outputinterval>=300) then
             options%output_file_frequency="daily"
         ! otherwise create a new output file every timestep
         else
