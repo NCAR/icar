@@ -38,6 +38,7 @@ module boundary_conditions
     use output,                 only : write_domain, output_init
     use string,                 only : str
     use array_utilities,        only : smooth_array
+    use mod_atm_utilities,      only : rh_to_mr
 
     implicit none
     private
@@ -900,15 +901,30 @@ contains
                 call smooth_array(domain%u,smoothing_window,3)
                 call smooth_array(domain%v,smoothing_window,3)
             endif
+
             call read_var(domain%p,    file_list(curfile),   options%pvar,   &
                             bc%geolut, bc%vert_lut, curstep, boundary_value, &
                             options,   bc%lowres_z,domain%z, interp_vertical=.True.)
+
             call read_var(domain%th,   file_list(curfile),   options%tvar,   &
                             bc%geolut, bc%vert_lut, curstep, boundary_value, &
                             options)
+            if (.not.options%t_is_potential) then
+                domain%pii = (domain%p/100000.0)**(Rd/cp)
+                domain%th = domain%th / domain%pii
+            endif
+
             call read_var(domain%qv,   file_list(curfile),   options%qvvar,  &
                             bc%geolut, bc%vert_lut, curstep, boundary_value, &
                             options)
+            if (options%qv_is_spec_humidity) then
+                domain%qv = domain%qv / (1 - domain%qv)
+            endif
+
+            if (options%qv_is_relative_humidity) then
+                domain%qv = rh_to_mr(domain%qv, domain%th * domain%pii, domain%p)
+            endif
+
             if (trim(options%qcvar)/="") then
                 call read_var(domain%cloud,file_list(curfile),   options%qcvar,  &
                                 bc%geolut, bc%vert_lut, curstep, boundary_value, &
@@ -1315,7 +1331,6 @@ contains
                       bc%geolut, bc%vert_lut, curstep, use_interior,              &
                       options, time_varying_zlut=newbc%vert_lut, interp_vertical=.True. )
         ! for pressure update we need real temperature, not potential t to compute an exner function
-        ! bc%next_domain%pii=(bc%next_domain%p/100000.0)**(Rd/cp)
         ! now update pressure using the high res T field
         call update_pressure(bc%next_domain%p,bc%lowres_z,domain%z)!,  &
                             !  lowresT = bc%next_domain%th * bc%next_domain%pii, &
@@ -1326,9 +1341,22 @@ contains
                       bc%geolut, bc%vert_lut, curstep, use_boundary,              &
                       options, time_varying_zlut=newbc%vert_lut)
 
+        if (.not.options%t_is_potential) then
+            bc%next_domain%pii = (bc%next_domain%p/100000.0)**(Rd/cp)
+            bc%next_domain%th = bc%next_domain%th / bc%next_domain%pii
+        endif
+
         call read_var(bc%next_domain%qv,      file_list(curfile), options%qvvar,  &
                       bc%geolut, bc%vert_lut, curstep, use_boundary,              &
                       options, time_varying_zlut=newbc%vert_lut)
+
+        if (options%qv_is_spec_humidity) then
+            bc%next_domain%qv = bc%next_domain%qv / (1 - bc%next_domain%qv)
+        endif
+        if (options%qv_is_relative_humidity) then
+            bc%next_domain%qv = rh_to_mr(bc%next_domain%qv, bc%next_domain%th * bc%next_domain%pii, bc%next_domain%p)
+        endif
+
 
         if (trim(options%qcvar)/="") then
             call read_var(bc%next_domain%cloud,   file_list(curfile), options%qcvar,  &
@@ -1392,8 +1420,8 @@ contains
         bc%next_domain%cloud=domain%cloud + domain%ice + domain%qrain + domain%qsnow
 
         ! these are required by update_winds for most options
-        bc%next_domain%pii=(bc%next_domain%p/100000.0)**(Rd/cp)
-        bc%next_domain%rho=bc%next_domain%p/(Rd*domain%th*bc%next_domain%pii) ! kg/m^3
+        bc%next_domain%pii = (bc%next_domain%p / 100000.0)** (Rd / cp)
+        bc%next_domain%rho = bc%next_domain%p / (Rd * domain%th * bc%next_domain%pii) ! kg/m^3
 
 
         call update_winds(bc%next_domain,options)

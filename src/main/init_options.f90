@@ -474,7 +474,8 @@ contains
         integer :: nz, n_ext_winds,buffer, warning_level, cfl_strictness
         logical :: ideal, readz, readdz, interactive, debug, external_winds, surface_io_only, &
                    mean_winds, mean_fields, restart, advect_density, z_is_geopotential, z_is_on_interface,&
-                   high_res_soil_state, use_agl_height, time_varying_z, &
+                   high_res_soil_state, use_agl_height, time_varying_z, t_is_potential, qv_is_spec_humidity, &
+                   qv_is_relative_humidity, &
                    use_mp_options, use_lt_options, use_adv_options, use_lsm_options, use_bias_correction, &
                    use_block_options
 
@@ -488,7 +489,8 @@ contains
                               dx,dxlow,ideal,readz,readdz,nz,t_offset,debug, interactive, &
                               external_winds,buffer,n_ext_winds,advect_density,smooth_wind_distance, &
                               mean_winds,mean_fields,restart, z_is_geopotential, z_is_on_interface,&
-                              date, calendar, high_res_soil_state,warning_level, &
+                              date, calendar, high_res_soil_state,warning_level, t_is_potential,  &
+                              qv_is_relative_humidity, qv_is_spec_humidity,  &
                               use_agl_height, start_date, forcing_start_date, end_date, time_varying_z, &
                               cfl_reduction_factor, cfl_strictness,         &
                               mp_options_filename,      use_mp_options,     &
@@ -507,6 +509,9 @@ contains
         t_offset=(-9999)
         buffer=0
         advect_density=.False.
+        t_is_potential=.True.
+        qv_is_spec_humidity=.False.
+        qv_is_relative_humidity=.False.
         z_is_geopotential=.False.
         z_is_on_interface=.False.
         dxlow=100000
@@ -595,7 +600,7 @@ contains
         if (outputinterval>=43200) then
             options%output_file_frequency="monthly"
         ! if outputing at half-hour or longer intervals, create daily files
-        else if (outputinterval>=1800) then
+        else if (outputinterval>=300) then
             options%output_file_frequency="daily"
         ! otherwise create a new output file every timestep
         else
@@ -637,6 +642,9 @@ contains
         options%interactive = interactive
         options%warning_level = warning_level
         options%use_agl_height = use_agl_height
+        options%t_is_potential = t_is_potential
+        options%qv_is_relative_humidity = qv_is_relative_humidity
+        options%qv_is_spec_humidity = qv_is_spec_humidity
         options%z_is_geopotential = z_is_geopotential
         options%z_is_on_interface = z_is_on_interface
 
@@ -1192,6 +1200,12 @@ contains
             allocate(options%dz_levels(options%nz))
 
             options%dz_levels(1:options%nz)=dz_levels(1:options%nz)
+
+            if (minval(options%dz_levels)<1) then
+                print*, "NB: gfortran doesn't read namelist arrays on multiple lines (check dz_levels)"
+                stop "ERROR: model levels must be > 1m vertical"
+            endif
+
             deallocate(dz_levels)
         else
         ! if we are not reading dz from the namelist, use default values from a WRF run
@@ -1204,7 +1218,7 @@ contains
                options%nz=45
            endif
             allocate(options%dz_levels(options%nz))
-            options%dz_levels=fulldz(1:options%nz)
+            options%dz_levels = fulldz(1:options%nz)
         endif
 
     end subroutine model_levels_namelist

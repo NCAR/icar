@@ -100,6 +100,7 @@
     !   if it is supplied it must be less than or equal to the number of levels specified below
     !   but it can be used to subset the number of levels used.
     nz = 15, ! []
+
     !   Set this to true of the zvar in the input data is actually in units of geopotential height (m/s^2)
     z_is_geopotential = False,
     !   Set this to true of the zvar in the input data is specified on model interfaces (as WRF geopotential height is)
@@ -122,6 +123,14 @@
     !   If the forcing data come from WRF, the temperature data probably have an offset applied
     !   t_offset will be added to the forcing temperature data.  Defaults to 0
     ! t_offset = 300, ! [K]
+
+    !   If the temperature field in the forcing data is not potential temperature, then set this flag to False
+    ! t_is_potential = .True.
+
+    !   If the water vapor field in the forcing data is specific humidity instead of mixing ratio, then set this flag to true.
+    ! qv_is_spec_humidity = .False.
+    !   If the water vapor field in the forcing data is relative humidity instead of mixing ratio, then set this flag to true.
+    ! qv_is_relative_humidity = .False.
 
     !   Distance to smooth winds over [m] ~100000 is reasonable
     !   larger values result in less large scale convergence/divergence in the flow field
