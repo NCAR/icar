@@ -5,6 +5,7 @@ program test_caf_write_domain
     use output_interface,   only : output_t
     use grid_interface,     only : grid_t
     use mod_atm_utilities,  only : exner_function, pressure_at_elevation, sat_mr
+    use icar_constants,     only : kVARS
 
     implicit none
 
@@ -17,6 +18,9 @@ program test_caf_write_domain
     print*, "Reading Options Files"
     call options%init()
     sync all
+
+    call options%alloc_vars([kVARS%temperature])
+
 
     print*, "Initializing Domain"
     call domain%init(options)
@@ -86,28 +90,32 @@ contains
         end associate
 
 
-        associate(                                      &
-            sealevel_pressure    => 100000.0,           &   ! pressure at sea level              [Pa]
-            kms=>domain%grid%kms, kme=>domain%grid%kme, &
-            pressure    => domain%pressure%data_3d,     &
-            exner       => domain%exner%data_3d,        &
-            temperature => domain%temperature%data_3d,  &
+        associate(                                                &
+            kms=>domain%grid%kms, kme=>domain%grid%kme,           &
+            sealevel_pressure     => 100000.0,                    &
+            pressure              => domain%pressure%data_3d,     &
+            exner                 => domain%exner%data_3d,        &
+            temperature           => domain%temperature%data_3d,  &
             potential_temperature => domain%potential_temperature%data_3d,   &
-            water_vapor => domain%water_vapor%data_3d,  &
-            z           => domain%z%data_3d)
+            water_vapor           => domain%water_vapor%data_3d,  &
+            z                     => domain%z%data_3d,            &
+            dz                    => domain%dz_mass%data_3d )
 
             domain%accumulated_precipitation%data_2d = 0
             domain%accumulated_snowfall%data_2d      = 0
-            pressure                  = 0
-            ! temperature               = 0
-            ! exner                     = 0
-            ! water_vapor               = 0.015
+
+            z(:,kms,:) = domain%terrain%data_2d + dz(:,kms,:)/2
             do i=kms,kme
+                if (i>kms) then
+                    z(:,i,:) = z(:,i-1,:) + dz(:,i-1,:)/2 + dz(:,i,:)/2
+                endif
+
                 pressure(:,i,:)    = pressure_at_elevation(sealevel_pressure, z(:,i,:))
             enddo
+
             exner       = exner_function(pressure)
-            ! temperature = exner * potential_temperature
-            ! water_vapor = sat_mr(temperature,pressure)
+            temperature = exner * potential_temperature
+            water_vapor = sat_mr(temperature,pressure)
         end associate
 
     end subroutine
