@@ -343,7 +343,11 @@ TEST_EXECUTABLES= 	fftshift_test	\
 #	User facing rules
 ###################################################################
 
-caf_tests:caf_options_test caf_init_test caf_bcast_test test_caf_write_domain caf_options_test
+caf_tests:	caf_options_test 		\
+			caf_init_test 			\
+			caf_bcast_test			\
+			caf_write_domain_test	\
+			caf_options_test
 
 icar:${OBJS}
 	${F90} -o icar ${OBJS} ${LFLAGS}
