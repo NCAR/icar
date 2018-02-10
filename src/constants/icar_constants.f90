@@ -1,3 +1,7 @@
+!>------------------------------------------------
+!! Defines model constants (e.g. gravity, and MAXFILELENGTH)
+!!
+!!------------------------------------------------
 module icar_constants
 
     implicit none

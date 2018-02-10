@@ -334,6 +334,7 @@ TEST_EXECUTABLES= 	fftshift_test	\
 	  				blocking_test	\
 					point_in_on_test\
 	  				array_util_test \
+					variable_dict_test \
 					caf_init_test	\
 					caf_options_test\
 					caf_write_domain_test
@@ -396,6 +397,16 @@ blocking_test: $(BUILD)test_blocking.o $(BUILD)io_routines.o $(BUILD)winds_block
 
 array_util_test: $(BUILD)test_array_utilities.o $(BUILD)array_utilities.o
 	${F90} $^ -o $@ ${LFLAGS}
+
+variable_dict_test: $(BUILD)test_variable_dict.o 							\
+					$(BUILD)variable_dict_h.o	$(BUILD)variable_dict_obj.o	\
+					$(BUILD)variable_h.o		$(BUILD)variable_obj.o		\
+					$(BUILD)grid_h.o			$(BUILD)grid_obj.o			\
+					$(BUILD)meta_data_h.o 		$(BUILD)meta_data_obj.o 	\
+					$(BUILD)icar_constants.o	$(BUILD)assertions.o
+	${F90} $^ -o $@ ${LFLAGS}
+
+
 
 caf_options_test: $(BUILD)test_caf_options.o				  	\
 				$(BUILD)options_h.o      $(BUILD)options_obj.o	\
@@ -526,15 +537,16 @@ $(BUILD)%.o: $(OBJECTS)%.f90
 $(BUILD)%.o: $(TESTS)%.f90
 	${F90} ${FFLAGS} $< -o $@
 
+$(BUILD)%.o: $(MAIN)%.f90
+	${F90} ${FFLAGS} $< -o $@
+
 
 ###################################################################
-#	driver code for
+#	driver code for original version of ICAR
 ###################################################################
 
 $(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)data_structures.o $(BUILD)init.o $(BUILD)time_step.o \
 					$(BUILD)output.o $(BUILD)boundary.o $(BUILD)time.o $(BUILD)string.o
-	${F90} ${FFLAGS} $(MAIN)driver.f90 -o $(BUILD)driver.o
-
 
 ###################################################################
 #	Options Object
@@ -560,6 +572,10 @@ $(BUILD)variable_obj.o: $(OBJECTS)variable_obj.f90 $(BUILD)variable_h.o
 
 $(BUILD)variable_h.o: $(OBJECTS)variable_h.f90 $(BUILD)meta_data_h.o $(BUILD)icar_constants.o $(BUILD)grid_h.o
 
+$(BUILD)variable_dict_h.o: $(OBJECTS)variable_dict_h.f90 $(BUILD)variable_h.o $(BUILD)icar_constants.o
+
+$(BUILD)variable_dict_obj.o: $(OBJECTS)variable_dict_obj.f90 $(BUILD)variable_dict_h.o
+
 $(BUILD)grid_obj.o: $(OBJECTS)grid_obj.f90 $(BUILD)grid_h.o
 
 $(BUILD)grid_h.o: $(OBJECTS)grid_h.f90 $(BUILD)icar_constants.o $(BUILD)assertions.o $(BUILD)assertions.o
@@ -577,7 +593,8 @@ $(BUILD)output_obj.o: $(IO)output_obj.f90 $(BUILD)output_h.o $(BUILD)default_out
 
 $(BUILD)boundary_h.o: $(OBJECTS)boundary_h.f90 $(BUILD)options_h.o				\
 					$(BUILD)grid_h.o $(BUILD)meta_data_h.o $(BUILD)time_obj.o 	\
-					$(BUILD)data_structures.o $(BUILD)time_delta_obj.o
+					$(BUILD)data_structures.o $(BUILD)time_delta_obj.o			\
+					$(BUILD)variable_dict_h.o
 
 $(BUILD)boundary_obj.o: $(OBJECTS)boundary_obj.f90 $(BUILD)boundary_h.o			\
 					$(BUILD)string.o $(BUILD)atm_utilities.o $(BUILD)time_io.o	\
@@ -604,38 +621,31 @@ $(BUILD)init.o:$(MAIN)init.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $
 					$(BUILD)mp_driver.o $(BUILD)cu_driver.o $(BUILD)pbl_driver.o $(BUILD)wind.o \
 					$(BUILD)ra_driver.o $(BUILD)lsm_driver.o $(BUILD)init_options.o $(BUILD)advection_driver.o \
 					$(BUILD)atm_utilities.o
-	${F90} ${FFLAGS} $(MAIN)init.f90 -o $(BUILD)init.o
 
 $(BUILD)boundary.o:$(MAIN)boundary.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)wind.o $(BUILD)geo_reader.o \
 					$(BUILD)vinterp.o $(BUILD)output.o $(BUILD)linear_winds.o $(BUILD)time_io.o
-	${F90} ${FFLAGS} $(MAIN)boundary.f90 -o $(BUILD)boundary.o
 
 $(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.o $(BUILD)output.o \
 					$(BUILD)advection_driver.o $(BUILD)ra_driver.o $(BUILD)lsm_driver.o $(BUILD)cu_driver.o \
 					$(BUILD)pbl_driver.o $(BUILD)mp_driver.o $(BUILD)boundary.o $(BUILD)debug_utils.o
-	${F90} ${FFLAGS} $(MAIN)time_step.f90 -o $(BUILD)time_step.o
 
 $(BUILD)init_options.o:$(MAIN)init_options.f90 $(BUILD)data_structures.o  $(BUILD)io_routines.o \
 					$(BUILD)model_tracking.o $(BUILD)time.o $(BUILD)time_io.o
-	${F90} ${FFLAGS} $(MAIN)init_options.f90 -o $(BUILD)init_options.o
 
 
 ###################################################################
 #	Utility Routines
 ###################################################################
 
-$(BUILD)time.o:$(UTIL)time.f90
-	${F90} ${FFLAGS} $(UTIL)time.f90 -o $(BUILD)time.o
+# $(BUILD)time.o:$(UTIL)time.f90
+# 	${F90} ${FFLAGS} $(UTIL)time.f90 -o $(BUILD)time.o
 
 $(BUILD)time_delta_obj.o:$(UTIL)time_delta_obj.f90 $(BUILD)icar_constants.o
-	${F90} ${FFLAGS} $(UTIL)time_delta_obj.f90 -o $(BUILD)time_delta_obj.o
 
 $(BUILD)time_obj.o:$(UTIL)time_obj.f90 $(BUILD)time_delta_obj.o
-	${F90} ${FFLAGS} $(UTIL)time_obj.f90 -o $(BUILD)time_obj.o
 
 $(BUILD)time_io.o:$(UTIL)time_io.f90 $(BUILD)time_obj.o $(BUILD)data_structures.o \
 					$(BUILD)icar_constants.o $(BUILD)string.o $(BUILD)io_routines.o
-	${F90} ${FFLAGS} $(UTIL)time_io.f90 -o $(BUILD)time_io.o
 
 $(BUILD)string.o:$(UTIL)string.f90
 	${F90} ${FFLAGS} $(UTIL)string.f90 -o $(BUILD)string.o
@@ -834,6 +844,9 @@ $(BUILD)test_caf_output.o: $(TESTS)test_caf_output.f90 $(BUILD)output_h.o $(BUIL
 							$(BUILD)default_output_metadata.o $(BUILD)icar_constants.o
 
 $(BUILD)test_caf_bcast.o: $(TESTS)test_caf_bcast.f90 $(BUILD)co_utilities.o
+
+$(BUILD)test_variable_dict.o: $(TESTS)test_variable_dict.f90 $(BUILD)grid_h.o \
+						$(BUILD)variable_h.o $(BUILD)variable_dict_h.o
 
 $(BUILD)test_caf_options.o: $(TESTS)test_caf_options.f90 $(BUILD)options_h.o
 

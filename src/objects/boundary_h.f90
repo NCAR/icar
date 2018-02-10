@@ -1,95 +1,92 @@
 module boundary_interface
-  use data_structures,          only : linearizable_type, domain_type
-  use options_interface,        only : options_t
-  ! use exchangeable_interface,   only : exchangeable_t
-  use grid_interface,           only : grid_t
-  ! use variable_interface,       only : variable_t
-  use meta_data_interface,      only : meta_data_t
-  use time_object,              only : Time_type
-  use time_delta_object,        only : time_delta_t
+    use options_interface,        only : options_t
+    use variable_dict_interface,  only : var_dict_t
+    use variable_interface,       only : variable_t
+    use meta_data_interface,      only : meta_data_t
+    use time_object,              only : Time_type
+    use time_delta_object,        only : time_delta_t
+    use icar_constants
 
-  implicit none
+    implicit none
 
-  private
-  public :: boundary_t
+    private
+    public :: boundary_t
 
-  ! ------------------------------------------------
-  ! boundary conditions type, must be linearizable so we can remove low res linear wind field
-  ! ------------------------------------------------
-  type, extends(linearizable_type) :: boundary_t
-      type(meta_data_t)    :: info
-      type(grid_t)         :: grid
-      type(grid_t)         :: grid2d
+    ! ------------------------------------------------
+    ! boundary conditions type, must be linearizable so we can remove low res linear wind field
+    ! ------------------------------------------------
+    type :: boundary_t
+        type(meta_data_t)    :: info
 
-      ! store the full high-res 3D grid for the next time step to compute dXdt fields
-      ! includes high res versions of low res terrain and z
-      ! type(domain_t) :: next_domain
-      ! temporarily use old style domain type so it doesn't store coarrays... have to think about this
-      type(domain_type) :: next_domain
-      type(domain_type) :: current_domain
+        ! list of input files
+        character (len=255), dimension(:), allocatable :: file_list
+        !   manage file pointer and position in file for boundary conditions
+        integer :: curfile
+        integer :: curstep
 
+        type(Time_type)                   :: current_time   ! the date/time of the forcing data in memory
+        type(time_delta_t)                :: forcing_dt     ! the time step in between two forcing steps
+        character(len=kMAX_STRING_LENGTH) :: time_var       ! the name of the input time variable [optional]
 
-      ! store the timestep to the next input
-      type(time_delta_t) :: dt
+        type(var_dict_t)                  :: variables      ! a dictionary with pointers to all forcing data
+        type(variable_t), allocatable     :: var_list(:)    ! the array that actually stores the forcing data
 
-      type(Time_type) :: forcing_time
+        ! boundary data coordinate system
+        real, dimension(:,:),   allocatable :: lat, lon
+        real, dimension(:,:,:), allocatable :: z
 
-      ! dX_dt variables are the change in variable X between two forcing time steps
-      ! wind and pressure dX_dt fields applied to full 3d grid, others applied only to boundaries
-      real, allocatable, dimension(:,:,:) :: du_dt, dv_dt, dp_dt, dth_dt, dqv_dt, dqc_dt
+    contains
 
-      real, allocatable, dimension(:,:)   :: drain_dt
-      ! change in shortwave and longwave at surface if read from forcing
-      real, allocatable, dimension(:,:)   :: dsw_dt, dlw_dt
-      ! change in sst if read from forcing file
-      real, allocatable, dimension(:,:)   :: dsst_dt
+        procedure :: init
 
-      ! store the low resolution version of terrain and atmospheric elevations
-      ! real,allocatable,dimension(:,:)     :: lowres_terrain
-      real,allocatable,dimension(:,:,:)   :: lowres_z
+        procedure :: update_forcing
 
-      ! contains the size of the domain (or the local tile?)
-      integer :: nx, ny, nz, nx_global, ny_global
-      integer :: ximg, ximages, yimg, yimages
+        procedure :: distribute_update
+        procedure :: distribute_initial_conditions
 
-      ! store the start (s) and end (e) for the i,j,k dimensions
-      integer ::  ids,ide, jds,jde, kds,kde, & ! for the entire model domain    (d)
-                  ims,ime, jms,jme, kms,kme, & ! for the memory in these arrays (m)
-                  its,ite, jts,jte, kts,kte    ! for the data tile to process   (t)
+        ! procedure :: find_start_time
+        procedure :: init_local
 
-  contains
-    procedure :: init
+    end type
 
-    procedure :: update_forcing
-
-    procedure :: distribute_update
-    procedure :: distribute_initial_conditions
-
-  end type boundary_t
-
-  interface
+    interface
 
     ! Set default component values
     module subroutine init(this, options)
-      implicit none
-      class(boundary_t), intent(inout) :: this
-      class(options_t),  intent(inout) :: options
-    end subroutine
-
-    module subroutine update_forcing(this, options)
         implicit none
         class(boundary_t), intent(inout) :: this
         class(options_t),  intent(inout) :: options
     end subroutine
 
+    module subroutine init_local(this, file_list, var_list, start_time, &
+                                 lat_var, lon_var, z_var,               &
+                                 time_var, forcing_start, forcing_dt)
+        implicit none
+        class(boundary_t),               intent(inout)  :: this
+        character(len=kMAX_NAME_LENGTH), intent(in)     :: file_list(:)
+        character(len=kMAX_NAME_LENGTH), intent(in)     :: var_list (:)
+        type(Time_type),                 intent(in)     :: start_time
+        character(len=kMAX_NAME_LENGTH), intent(in)     :: lat_var
+        character(len=kMAX_NAME_LENGTH), intent(in)     :: lon_var
+        character(len=kMAX_NAME_LENGTH), intent(in)     :: z_var
+        character(len=kMAX_NAME_LENGTH), intent(in),    optional :: time_var
+        type(Time_type),                 intent(in),    optional :: forcing_start
+        type(time_delta_t),              intent(in),    optional :: forcing_dt
+    end subroutine
+
+    module subroutine update_forcing(this)
+        implicit none
+        class(boundary_t), intent(inout) :: this
+    end subroutine
+
     module subroutine distribute_update(this)
-      implicit none
-      class(boundary_t), intent(inout) :: this
+        implicit none
+        class(boundary_t), intent(inout) :: this
     end subroutine
 
     module subroutine distribute_initial_conditions(this)
-      implicit none
-      class(boundary_t), intent(inout) :: this
+        implicit none
+        class(boundary_t), intent(inout) :: this
     end subroutine
 
   end interface

@@ -13,8 +13,6 @@ program test_caf_boundary
 
     call options%init()
 
-    call domain%init(options)
-
     call boundary%init(options)
     !
     ! call boundary%bc_update(options)
