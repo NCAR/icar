@@ -91,7 +91,7 @@ contains
         y = (ny/float(ys))
 
         if (assertions) call assert((xs*ys) == nimages, "Number of tiles does not sum to number of images")
-        if (this_image()==1) print*, "ximgs=",xs, "yimgs=",ys
+        ! if (this_image()==1) print*, "ximgs=",xs, "yimgs=",ys
 
     end subroutine domain_decomposition
 
@@ -157,12 +157,14 @@ contains
       if (nz<1) then
           this%is2d = .True.
           this%is3d = .False.
+          if (allocated(this%dimensions)) deallocate(this%dimensions)
           allocate(this%dimensions(2))
           this%dimensions(1) = "lat"
           this%dimensions(2) = "lon"
       else
           this%is2d = .False.
           this%is3d = .True.
+          if (allocated(this%dimensions)) deallocate(this%dimensions)
           allocate(this%dimensions(3))
           this%dimensions(1) = "lat"
           this%dimensions(2) = "height"
