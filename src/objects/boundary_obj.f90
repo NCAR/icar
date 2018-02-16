@@ -20,21 +20,89 @@ contains
         class(boundary_t), intent(inout) :: this
         class(options_t),  intent(inout) :: options
 
+        this%file_list = options%parameters%boundary_files
+
+        ! Read through forcing variable names stored in "options"
+        ! needs to read each one to find the grid information for it
+        ! then create grid and initialize a variable...
+        ! also need to explicitly save lat and lon data
+        if (this_image() == 1) then
+            call this%init_local(this%file_list,     &
+                                 options%parameters%vars_to_read,       &
+                                 options%parameters%start_time,         &
+                                 options%parameters%latvar,             &
+                                 options%parameters%lonvar,             &
+                                 options%parameters%zvar,               &
+                                 options%parameters%time_var)
+        endif
+
+        call this%distribute_initial_conditions()
+
     end subroutine
 
-    module subroutine init_local(this, file_list, var_list, start_time, &
-                                 lat_var, lon_var, z_var,               &
-                                 time_var, forcing_start, forcing_dt)
+    module subroutine init_local(this, file_list, var_list, dim_list, start_time, &
+                                 lat_var, lon_var, z_var, time_var)
         class(boundary_t),               intent(inout)  :: this
         character(len=kMAX_NAME_LENGTH), intent(in)     :: file_list(:)
         character(len=kMAX_NAME_LENGTH), intent(in)     :: var_list (:)
+        integer,                         intent(in)     :: dim_list (:)
         type(Time_type),                 intent(in)     :: start_time
         character(len=kMAX_NAME_LENGTH), intent(in)     :: lat_var
         character(len=kMAX_NAME_LENGTH), intent(in)     :: lon_var
         character(len=kMAX_NAME_LENGTH), intent(in)     :: z_var
-        character(len=kMAX_NAME_LENGTH), intent(in),    optional :: time_var
-        type(Time_type),                 intent(in),    optional :: forcing_start
-        type(time_delta_t),              intent(in),    optional :: forcing_dt
+        character(len=kMAX_NAME_LENGTH), intent(in)     :: time_var
+
+        integer :: i
+
+        ! figure out while file and timestep contains the requested start_time
+        call set_curfile_curstep(this, start_time, file_list, time_var)
+
+        !  read in latitude and longitude coordinate data
+        call io_read(file_list(this%curfile), lat_var, this%lat, this%curstep)
+        call io_read(file_list(this%curfile), lon_var, this%lon, this%curstep)
+
+        ! read in the height coordinate of the input data
+        call io_read(file_list(this%curfile), z_var,   this%z,   this%curstep)
+
+        do i=1, size(var_list)
+            call add_var_to_dict(this%variables, file_list(this%curfile), var_list(i), dim_list(i), this%curstep)
+        end do
+
+    end subroutine
+
+    subroutine add_var_to_dict(var_dict, file_name, var_name, ndims, timestep)
+        implicit none
+        type(var_dict_t), intent(inout) :: var_dict
+        character(len=*), intent(in)    :: file_name
+        character(len=*), intent(in)    :: var_name
+        integer,          intent(in)    :: ndims
+        integer,          intent(in)    :: timestep
+
+        real, allocatable :: temp_2d_data(:,:)
+        real, allocatable :: temp_3d_data(:,:,:)
+        type(variable_t)  :: new_variable
+
+        if (ndims==2) then
+            call io_read(file_name, var_name, temp_2d_data, timestep)
+
+            call new_variable%initialize( shape( temp_2d_data ) )
+            new_variable%data_2d = temp_2d_data
+
+            call var_dict%add_var(var_name, new_variable)
+
+            deallocate(new_variable%data_2d)
+
+        elseif (ndims==3) then
+            call io_read(file_name, var_name, temp_3d_data, timestep)
+
+            call new_variable%initialize( shape( temp_3d_data ) )
+            new_variable%data_3d = temp_3d_data
+
+            call var_dict%add_var(var_name, new_variable)
+
+            deallocate(new_variable%data_3d)
+        endif
+
     end subroutine
 
     module subroutine update_forcing(this)
@@ -101,50 +169,31 @@ contains
     end function get_n_timesteps
 
 
-    ! subroutine set_curfile_curstep(options, time)
-    !     implicit none
-    !     type(options_t), intent(in) :: options
-    !     type(Time_type),    intent(in) :: time
-    !
-    !     integer :: error
-    !
-    !     ! these are module variables that should be correctly set when the subroutine returns
-    !     curfile=1
-    !     curstep=1
-    !     if (trim(options%parameters%time_var)=="") then
-    !
-    !         curstep = bc_find_step(options)
-    !         steps_in_file = get_n_timesteps(file_list(curfile), options%parameters%pvar)
-    !
-    !         do while (curstep > steps_in_file)
-    !             curfile = curfile + 1
-    !             curstep = curstep - steps_in_file
-    !
-    !             if (curfile > nfiles) then
-    !                 stop "Ran out of files to process while searching for next time step!"
-    !             endif
-    !
-    !             steps_in_file = get_n_timesteps(file_list(curfile), options%parameters%pvar)
-    !
-    !         enddo
-    !     else
-    !         steps_in_file = get_n_timesteps(file_list(curfile), options%parameters%pvar)
-    !
-    !         error=1
-    !         curfile=0
-    !         do while ( (error/=0) .and. (curfile <= size(file_list)) )
-    !             curfile = curfile + 1
-    !             curstep = find_timestep_in_file(file_list(curfile), options%parameters%time_var, time, error=error)
-    !         enddo
-    !         if (error==1) then
-    !             stop "Ran out of files to process while searching for matching time variable!"
-    !         endif
-    !     endif
-    !
-    !     if (options%parameters%debug) write(*,*) "set_curfile_curstep: First forcing time step = ",trim(str(curstep)),&
-    !                                   " in file: ",trim(file_list(curfile))
-    !
-    ! end subroutine set_curfile_curstep
+    subroutine set_curfile_curstep(bc, time, file_list, time_var)
+        implicit none
+        type(boundary_t),   intent(inout) :: bc
+        type(Time_type),    intent(in) :: time
+        character(len=*),   intent(in) :: file_list(:)
+        character(len=*),   intent(in) :: time_var
+
+
+        integer :: error
+
+        ! these are module variables that should be correctly set when the subroutine returns
+        bc%curfile = 1
+        bc%curstep = 1
+        error=1
+        bc%curfile=0
+        do while ( (error/=0) .and. (bc%curfile <= size(file_list)) )
+            bc%curfile = bc%curfile + 1
+            bc%curstep = find_timestep_in_file(file_list(bc%curfile), time_var, time, error=error)
+        enddo
+
+        if (error==1) then
+            stop "Ran out of files to process while searching for matching time variable!"
+        endif
+
+    end subroutine set_curfile_curstep
 
 
 

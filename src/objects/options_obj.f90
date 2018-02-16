@@ -662,6 +662,8 @@ contains
         ! optional calibration variables for linear wind solution
         options%linear_mask_var     = linear_mask_var
         options%nsq_calibration_var = nsq_calibration_var
+
+        
     end subroutine var_namelist
 
 

@@ -1,4 +1,5 @@
 module boundary_interface
+    use icar_constants
     use options_interface,        only : options_t
     use variable_dict_interface,  only : var_dict_t
     use variable_interface,       only : variable_t
@@ -19,7 +20,7 @@ module boundary_interface
         type(meta_data_t)    :: info
 
         ! list of input files
-        character (len=255), dimension(:), allocatable :: file_list
+        character (len=kMAX_FILE_LENGTH), allocatable :: file_list(:)
         !   manage file pointer and position in file for boundary conditions
         integer :: curfile
         integer :: curstep
@@ -28,8 +29,7 @@ module boundary_interface
         type(time_delta_t)                :: forcing_dt     ! the time step in between two forcing steps
         character(len=kMAX_STRING_LENGTH) :: time_var       ! the name of the input time variable [optional]
 
-        type(var_dict_t)                  :: variables      ! a dictionary with pointers to all forcing data
-        type(variable_t), allocatable     :: var_list(:)    ! the array that actually stores the forcing data
+        type(var_dict_t)                  :: variables      ! a dictionary with all forcing data
 
         ! boundary data coordinate system
         real, dimension(:,:),   allocatable :: lat, lon
@@ -58,20 +58,18 @@ module boundary_interface
         class(options_t),  intent(inout) :: options
     end subroutine
 
-    module subroutine init_local(this, file_list, var_list, start_time, &
-                                 lat_var, lon_var, z_var,               &
-                                 time_var, forcing_start, forcing_dt)
+    module subroutine init_local(this, file_list, var_list, dim_list, start_time, &
+                                 lat_var, lon_var, z_var, time_var)
         implicit none
         class(boundary_t),               intent(inout)  :: this
         character(len=kMAX_NAME_LENGTH), intent(in)     :: file_list(:)
         character(len=kMAX_NAME_LENGTH), intent(in)     :: var_list (:)
+        integer,                         intent(in)     :: dim_list (:)
         type(Time_type),                 intent(in)     :: start_time
         character(len=kMAX_NAME_LENGTH), intent(in)     :: lat_var
         character(len=kMAX_NAME_LENGTH), intent(in)     :: lon_var
         character(len=kMAX_NAME_LENGTH), intent(in)     :: z_var
-        character(len=kMAX_NAME_LENGTH), intent(in),    optional :: time_var
-        type(Time_type),                 intent(in),    optional :: forcing_start
-        type(time_delta_t),              intent(in),    optional :: forcing_dt
+        character(len=kMAX_NAME_LENGTH), intent(in)     :: time_var
     end subroutine
 
     module subroutine update_forcing(this)

@@ -24,57 +24,30 @@ module variable_interface
         integer, allocatable    :: dim_ids(:)
         integer                 :: var_id = -1
 
-        ! Note this dummy coarray is only here because types that inherit from variable_t have coarrays
-        ! so the parent type is required to...
-        ! integer, allocatable :: dummy[:]
-
     contains
-        procedure, public :: initialize
-    ! inherited from mete_data
-    !     procedure, public : add_attribute
-    !
-    !     procedure, public : set_dimension
-    !     procedure, public : get_dimension
+        procedure, public  :: init_grid
+        procedure, public  :: init_dims
+        generic,   public  :: initialize => init_grid
+        generic,   public  :: initialize => init_dims
 
-    end type variable_t
+    ! inherited from meta_data
+    !     procedure, public : add_attribute
+
+    end type
 
     interface
-        module subroutine initialize(this, grid)
+        module subroutine init_grid(this, grid)
             implicit none
             class(variable_t),  intent(inout) :: this
             type(grid_t),       intent(in)    :: grid
         end subroutine
+
+        module subroutine init_dims(this, dims)
+            implicit none
+            class(variable_t),  intent(inout) :: this
+            integer,            intent(in)    :: dims(:)
+        end subroutine
+
     end interface
-    !
-    !
-    !     module subroutine set_dimension(this, dim, name, length)
-    !         implicit none
-    !         type(variable_t), intent(inout) :: this
-    !         character(len=kMAX_ATTR_LENGTH), intent(in) :: attr_name
-    !         character(len=kMAX_ATTR_LENGTH), intent(in) :: attr_value
-    !     end subroutine
-    !
-    ! end interface
-    !  complains that new_variable procedure doesn't exist
-    ! interface variable_t
-    !     module procedure new_variable
-    ! end interface
-    !
-    ! interface
-    !     module function new_variable(name)
-    !         implicit none
-    !         character(len=kMAX_NAME_LENGTH), intent(in) :: name
-    !         type(variable_t) :: new_variable
-    !     end function
-    ! end interface
-    !
-    ! complains that it can't have a coarray in the output
-    ! interface variable_t
-    !     module function new_variable(name)
-    !         implicit none
-    !         character(len=kMAX_NAME_LENGTH), intent(in) :: name
-    !         type(variable_t) :: new_variable
-    !     end function
-    ! end interface
 
 end module

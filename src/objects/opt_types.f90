@@ -147,6 +147,7 @@ module options_types
                                         swdown_var, lwdown_var, &
                                         sst_var, rain_var, time_var
 
+        character(len=MAXVARLENGTH), allocatable :: vars_to_read(:)
         ! Filenames for files to read various physics options from
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, adv_options_filename, &
                                         lsm_options_filename, bias_options_filename, block_options_filename
