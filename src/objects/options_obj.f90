@@ -533,7 +533,7 @@ contains
         implicit none
         character(len=*),             intent(in)    :: filename
         type(parameter_options_type), intent(inout) :: options
-        integer :: name_unit
+        integer :: name_unit, i
         character(len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar,  &
                                         hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,   &
@@ -595,50 +595,52 @@ contains
         read(name_unit,nml=var_list)
         close(name_unit)
 
+        options%vars_to_read(:) = ""
+        i=1
         ! 2D geometry variable names (for coarse model)
-        options%hgtvar      = hgtvar
-        options%latvar      = latvar
-        options%lonvar      = lonvar
-        options%time_var    = time_var
+        options%hgtvar      = hgtvar    ; options%vars_to_read(i) = hgtvar;     options%dim_list(i) = 2;    i = i + 1
+        options%latvar      = latvar    ! these variables are read explicitly so not added to vars_to_read list
+        options%lonvar      = lonvar    ! these variables are read explicitly so not added to vars_to_read list
+        options%time_var    = time_var  ! these variables are read explicitly so not added to vars_to_read list
 
         ! U varname and associated lat/lon var names
-        options%uvar        = uvar
+        options%uvar        = uvar      ; options%vars_to_read(i) = uvar;       options%dim_list(i) = 3;    i = i + 1
         if (ulat=="") ulat=latvar
         if (ulon=="") ulon=lonvar
-        options%ulat        = ulat
-        options%ulon        = ulon
+        options%ulat        = ulat      ; options%vars_to_read(i) = ulat;       options%dim_list(i) = 2;    i = i + 1
+        options%ulon        = ulon      ; options%vars_to_read(i) = ulon;       options%dim_list(i) = 2;    i = i + 1
 
         ! V varname and associated lat/lon var names
-        options%vvar        = vvar
+        options%vvar        = vvar      ; options%vars_to_read(i) = vvar;       options%dim_list(i) = 3;    i = i + 1
         if (vlat=="") vlat=latvar
         if (vlon=="") vlon=lonvar
-        options%vlat        = vlat
-        options%vlon        = vlon
+        options%vlat        = vlat      ; options%vars_to_read(i) = vlat;       options%dim_list(i) = 2;    i = i + 1
+        options%vlon        = vlon      ; options%vars_to_read(i) = vlon;       options%dim_list(i) = 2;    i = i + 1
 
         ! Primary model variable names
-        options%pbvar       = pbvar
-        options%pvar        = pvar
-        options%tvar        = tvar
-        options%qvvar       = qvvar
-        options%qcvar       = qcvar
-        options%qivar       = qivar
+        options%pbvar       = pbvar     ; options%vars_to_read(i) = pbvar;      options%dim_list(i) = 3;    i = i + 1
+        options%pvar        = pvar      ; options%vars_to_read(i) = pvar;       options%dim_list(i) = 3;    i = i + 1
+        options%tvar        = tvar      ; options%vars_to_read(i) = tvar;       options%dim_list(i) = 3;    i = i + 1
+        options%qvvar       = qvvar     ; options%vars_to_read(i) = qvvar;      options%dim_list(i) = 3;    i = i + 1
+        options%qcvar       = qcvar     ; options%vars_to_read(i) = qcvar;      options%dim_list(i) = 3;    i = i + 1
+        options%qivar       = qivar     ; options%vars_to_read(i) = qivar;      options%dim_list(i) = 3;    i = i + 1
 
         ! vertical coordinate
-        options%zvar        = zvar
-        options%zbvar       = zbvar
+        options%zvar        = zvar      ! these variables are read explicitly so not added to vars_to_read list
+        options%zbvar       = zbvar     ; options%vars_to_read(i) = zbvar;      options%dim_list(i) = 3;    i = i + 1
 
         ! 2D model variables (e.g. Land surface and PBL height)
-        options%shvar       = shvar
-        options%lhvar       = lhvar
-        options%pblhvar     = pblhvar
+        options%shvar       = shvar     ; options%vars_to_read(i) = shvar;      options%dim_list(i) = 2;    i = i + 1
+        options%lhvar       = lhvar     ; options%vars_to_read(i) = lhvar;      options%dim_list(i) = 2;    i = i + 1
+        options%pblhvar     = pblhvar   ; options%vars_to_read(i) = pblhvar;    options%dim_list(i) = 2;    i = i + 1
 
         ! Shortwave and longwave down at the surface
-        options%swdown_var  = swdown_var
-        options%lwdown_var  = lwdown_var
+        options%swdown_var  = swdown_var; options%vars_to_read(i) = swdown_var; options%dim_list(i) = 2;    i = i + 1
+        options%lwdown_var  = lwdown_var; options%vars_to_read(i) = lwdown_var; options%dim_list(i) = 2;    i = i + 1
 
         ! Sea surface temperature
-        options%sst_var     = sst_var
-        options%rain_var    = rain_var
+        options%sst_var     = sst_var   ; options%vars_to_read(i) = sst_var;    options%dim_list(i) = 2;    i = i + 1
+        options%rain_var    = rain_var  ; options%vars_to_read(i) = rain_var;   options%dim_list(i) = 2;    i = i + 1
 
         !------------------------------------------------------
         ! variable names for the high resolution domain
@@ -663,7 +665,7 @@ contains
         options%linear_mask_var     = linear_mask_var
         options%nsq_calibration_var = nsq_calibration_var
 
-        
+
     end subroutine var_namelist
 
 

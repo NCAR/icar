@@ -38,6 +38,12 @@ contains
 
     end subroutine
 
+    !> -------------------------------
+    !! Initialize a variable object from a given array of dimension sizes
+    !!
+    !! Allocates 2d/3d data structure as appropriate
+    !!
+    !! -------------------------------
     module subroutine init_dims(this, dims)
         implicit none
         class(variable_t),  intent(inout) :: this

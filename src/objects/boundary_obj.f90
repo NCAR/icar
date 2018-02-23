@@ -20,7 +20,14 @@ contains
         class(boundary_t), intent(inout) :: this
         class(options_t),  intent(inout) :: options
 
+        character(len=kMAX_NAME_LENGTH), allocatable :: vars_to_read(:)
+        integer,                         allocatable :: var_dimensions(:)
+
         this%file_list = options%parameters%boundary_files
+
+        ! the parameters option type can't contain allocatable arrays because it is a coarray
+        ! so we need to allocate the vars_to_read and var_dimensions outside of the options type
+        call setup_variable_lists(options%parameters%vars_to_read, options%parameters%dim_list, vars_to_read, var_dimensions)
 
         ! Read through forcing variable names stored in "options"
         ! needs to read each one to find the grid information for it
@@ -28,12 +35,13 @@ contains
         ! also need to explicitly save lat and lon data
         if (this_image() == 1) then
             call this%init_local(this%file_list,     &
-                                 options%parameters%vars_to_read,       &
+                                 vars_to_read, var_dimensions,          &
                                  options%parameters%start_time,         &
                                  options%parameters%latvar,             &
                                  options%parameters%lonvar,             &
                                  options%parameters%zvar,               &
                                  options%parameters%time_var)
+
         endif
 
         call this%distribute_initial_conditions()
@@ -52,6 +60,9 @@ contains
         character(len=kMAX_NAME_LENGTH), intent(in)     :: z_var
         character(len=kMAX_NAME_LENGTH), intent(in)     :: time_var
 
+        type(variable_t)  :: test_variable
+
+
         integer :: i
 
         ! figure out while file and timestep contains the requested start_time
@@ -64,11 +75,17 @@ contains
         ! read in the height coordinate of the input data
         call io_read(file_list(this%curfile), z_var,   this%z,   this%curstep)
 
+        ! call assert(size(var_list) == size(dim_list), "list of variable dimensions must match list of variables")
+
         do i=1, size(var_list)
+
             call add_var_to_dict(this%variables, file_list(this%curfile), var_list(i), dim_list(i), this%curstep)
+
         end do
 
     end subroutine
+
+
 
     subroutine add_var_to_dict(var_dict, file_name, var_name, ndims, timestep)
         implicit none
@@ -90,7 +107,8 @@ contains
 
             call var_dict%add_var(var_name, new_variable)
 
-            deallocate(new_variable%data_2d)
+            ! do not deallocate data arrays because they are pointed to inside the var_dict now
+            ! deallocate(new_variable%data_2d)
 
         elseif (ndims==3) then
             call io_read(file_name, var_name, temp_3d_data, timestep)
@@ -100,7 +118,8 @@ contains
 
             call var_dict%add_var(var_name, new_variable)
 
-            deallocate(new_variable%data_3d)
+            ! do not deallocate data arrays because they are pointed to inside the var_dict now
+            ! deallocate(new_variable%data_3d)
         endif
 
     end subroutine
@@ -118,6 +137,40 @@ contains
     module subroutine distribute_initial_conditions(this)
       class(boundary_t), intent(inout) :: this
 
+    end subroutine
+
+
+    ! count the number of variables specified, then allocate and store those variables in a list just their size.
+    subroutine setup_variable_lists(master_var_list, master_dim_list, vars_to_read, var_dimensions)
+        implicit none
+        character(len=kMAX_NAME_LENGTH), intent(in)                 :: master_var_list(:)
+        integer,                         intent(in)                 :: master_dim_list(:)
+        character(len=kMAX_NAME_LENGTH), intent(inout), allocatable :: vars_to_read(:)
+        integer,                         intent(inout), allocatable :: var_dimensions(:)
+
+        integer :: n_valid_vars
+        integer :: i, curvar, err
+
+        do i=1, size(master_var_list)
+            if (trim(master_var_list(i)) /= '') then
+                n_valid_vars = n_valid_vars + 1
+            endif
+        enddo
+
+        allocate(vars_to_read(  n_valid_vars), stat=err)
+        if (err /= 0) stop "vars_to_read: Allocation request denied"
+
+        allocate(var_dimensions(  n_valid_vars), stat=err)
+        if (err /= 0) stop "var_dimensions: Allocation request denied"
+
+        curvar = 1
+        do i=1, size(master_var_list)
+            if (trim(master_var_list(i)) /= '') then
+                vars_to_read(curvar) = master_var_list(i)
+                var_dimensions(curvar) = master_dim_list(i)
+                curvar = curvar + 1
+            endif
+        enddo
     end subroutine
 
     !>------------------------------------------------------------

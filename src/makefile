@@ -501,6 +501,7 @@ caf_boundary_test: $(BUILD)test_caf_boundary.o						\
 				$(BUILD)options_h.o      $(BUILD)options_obj.o      \
 				$(BUILD)meta_data_h.o    $(BUILD)meta_data_obj.o    \
 				$(BUILD)variable_h.o     $(BUILD)variable_obj.o     \
+				$(BUILD)variable_dict_h.o $(BUILD)variable_dict_obj.o\
 				$(BUILD)grid_h.o         $(BUILD)grid_obj.o         \
 				$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
 				$(BUILD)domain_h.o       $(BUILD)domain_obj.o		\

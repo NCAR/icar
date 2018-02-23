@@ -74,12 +74,13 @@ interface
         type(variable_t)                :: var_data
     end function
 
-    module subroutine add_var(this, varname, var_data, domain_var)
+    module subroutine add_var(this, varname, var_data, domain_var, err)
         implicit none
         class(var_dict_t),   intent(inout)  :: this
         character(len=*),    intent(in)     :: varname
         type(variable_t),    intent(in)     :: var_data
         type(variable_t),    intent(in), optional :: domain_var
+        integer,             intent(out),   optional :: err
     end subroutine
 
     module function get_domain_var(this, varname) result(var_data)

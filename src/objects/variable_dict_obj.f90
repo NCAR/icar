@@ -129,7 +129,23 @@ contains
 
         this%n_vars = this%n_vars + 1
         this%var_list(this%n_vars)%name = varname
+
+        ! warning, this copies all information directly from the var_data into the dict, including the POINTER to the data
         this%var_list(this%n_vars)%var  = var_data
+
+        ! alternatively, if we want to assume that the data arrays may be deallocated outside of the dict, we can do this...
+        !
+        ! call this%var_list(this%n_vars)%var%initialize(var_data%dim_len)
+        !   or this:
+        ! this%var_list(this%n_vars)%var  = var_data
+        ! followed by nullifying and allocating the data pointers?
+        !
+        ! then we can copy the data from the original data directly into this location...
+        ! if (var_data%two_d) then
+        !     this%var_list(this%n_vars)%var%data_2d(:,:)  = var_data%data_2d(:,:)
+        ! else
+        !     this%var_list(this%n_vars)%var%data_3d(:,:,:)  = var_data%data_3d(:,:,:)
+        ! endif
 
         if (present(domain_var)) then
             this%var_list(this%n_vars)%domain_var  = domain_var

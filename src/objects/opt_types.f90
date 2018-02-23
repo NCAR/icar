@@ -1,6 +1,6 @@
 module options_types
 
-    use icar_constants,             only : kMAX_STRING_LENGTH, MAXLEVELS, MAXFILELENGTH, MAX_NUMBER_FILES, MAXVARLENGTH
+    use icar_constants,             only : kMAX_STRING_LENGTH, MAXLEVELS, MAXFILELENGTH, MAX_NUMBER_FILES, MAXVARLENGTH, kMAX_STORAGE_VARS
     use time_object,                only : Time_type
     use time_delta_object,          only : time_delta_t
 
@@ -147,7 +147,8 @@ module options_types
                                         swdown_var, lwdown_var, &
                                         sst_var, rain_var, time_var
 
-        character(len=MAXVARLENGTH), allocatable :: vars_to_read(:)
+        character(len=MAXVARLENGTH) :: vars_to_read(kMAX_STORAGE_VARS)
+        integer                     :: dim_list(    kMAX_STORAGE_VARS)
         ! Filenames for files to read various physics options from
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, adv_options_filename, &
                                         lsm_options_filename, bias_options_filename, block_options_filename
