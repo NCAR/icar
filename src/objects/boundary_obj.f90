@@ -9,13 +9,20 @@ submodule(boundary_interface) boundary_implementation
 
     use io_routines,            only : io_getdims, io_read, io_maxDims, io_variable_is_present
     use time_io,                only : read_times, find_timestep_in_file
+    use co_util,                only : broadcast
     use string,                 only : str
     use mod_atm_utilities,      only : rh_to_mr
 
     implicit none
 contains
 
-    ! Set default component values
+    !>------------------------------------------------------------
+    !! Set default component values
+    !! Reads initial conditions from the forcing file into image 1
+    !!
+    !! Distributes initial conditions to all other images
+    !!
+    !!------------------------------------------------------------
     module subroutine init(this, options)
         class(boundary_t), intent(inout) :: this
         class(options_t),  intent(inout) :: options
@@ -48,6 +55,11 @@ contains
 
     end subroutine
 
+    !>------------------------------------------------------------
+    !! Set default component values
+    !! Reads initial conditions from the forcing file
+    !!
+    !!------------------------------------------------------------
     module subroutine init_local(this, file_list, var_list, dim_list, start_time, &
                                  lat_var, lon_var, z_var, time_var)
         class(boundary_t),               intent(inout)  :: this
@@ -87,6 +99,15 @@ contains
 
 
 
+    !>------------------------------------------------------------
+    !! Reads and adds a variable into the variable dictionary
+    !!
+    !! Given a filename, varname, number of dimensions (2,3) and timestep
+    !! Read the timestep of varname from filename and stores the result in a variable structure
+    !!
+    !! Variable is then added to a master variable dictionary
+    !!
+    !!------------------------------------------------------------
     subroutine add_var_to_dict(var_dict, file_name, var_name, ndims, timestep)
         implicit none
         type(var_dict_t), intent(inout) :: var_dict
@@ -124,18 +145,64 @@ contains
 
     end subroutine
 
+    !>------------------------------------------------------------
+    !! Reads a new set of forcing data for the next time step
+    !!
+    !!------------------------------------------------------------
     module subroutine update_forcing(this)
         class(boundary_t), intent(inout) :: this
 
     end subroutine
 
+    !>------------------------------------------------------------
+    !! Sends the udpated forcing data to all other images
+    !!
+    !!------------------------------------------------------------
     module subroutine distribute_update(this)
       class(boundary_t), intent(inout) :: this
 
     end subroutine
 
+    !>------------------------------------------------------------
+    !! Distribute the initial conditions from image 1 into all other images
+    !!
+    !!------------------------------------------------------------
     module subroutine distribute_initial_conditions(this)
       class(boundary_t), intent(inout) :: this
+
+      integer                         :: number_of_variables
+      type(variable_t)                :: temp_variable
+      integer                         :: i
+      character(len=kMAX_NAME_LENGTH) :: name
+
+      ! needs to distribute lat, lon, time and all vars in var_dict
+      ! broadcast(variable, from:image, to: first_image, last_image)
+      call broadcast(this%lat, 1, 1, num_images(), create_co_array=.True.)
+      call broadcast(this%lon, 1, 1, num_images(), create_co_array=.True.)
+      call broadcast(this%z,   1, 1, num_images(), create_co_array=.True.)
+
+      if (this_image() == 1) then
+          call this%variables%reset_iterator()
+          number_of_variables = this%variables%n_vars
+      endif
+
+      call broadcast(number_of_variables, 1, 1, num_images(), create_co_array=.True.)
+
+      do i=1, number_of_variables
+          ! if we are the sending image,
+          if (this_image() == 1) then
+              temp_variable = this%variables%next(name)
+          endif
+
+          ! broadcasting is handled within the variable_t object (though it calls broadcast on its components)
+          ! we can't make a coarray of a variable_t because it has a pointer to data in it.
+          call temp_variable%broadcast(1, 1, num_images())
+          call broadcast(name, 1, 1, num_images(), create_co_array=.True.)
+
+          if (this_image() /= 1) then
+              call this%variables%add_var(name, temp_variable)
+          endif
+      enddo
 
     end subroutine
 

@@ -25,6 +25,7 @@ module variable_interface
         integer                 :: var_id = -1
 
     contains
+        procedure, public  :: broadcast
         procedure, public  :: init_grid
         procedure, public  :: init_dims
         generic,   public  :: initialize => init_grid
@@ -36,6 +37,14 @@ module variable_interface
     end type
 
     interface
+
+        module subroutine broadcast(this, source, start, end)
+            implicit none
+            class(variable_t),  intent(inout) :: this
+            integer,            intent(in)    :: source, start, end
+        end subroutine
+
+
         module subroutine init_grid(this, grid)
             implicit none
             class(variable_t),  intent(inout) :: this
