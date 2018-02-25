@@ -13,16 +13,15 @@ program test_variable_dict
 
     ! define a grid for a test variable
     call grid%set_grid_dimensions(nx=10,ny=10,nz=5)
-    ! initialize the test variable with that grid
+    ! initialize a test variable with that grid
     call var1%initialize(grid)
 
     call grid%set_grid_dimensions(nx=2,ny=15,nz=5)
-    ! initialize the test variable with that grid
+    ! initialize a test variable with that grid
     call var2%initialize(grid)
 
-    call grid%set_grid_dimensions(nx=4,ny=8, nz=1)
-    ! initialize the test variable with that grid
-    call var3%initialize(grid)
+    ! initialize a test variable with a shape spec instead of a grid spec
+    call var3%initialize( [2,5] )
 
     ! add the test variable to the dictionary for the key "data"
     call var_collection%add_var("data_first",var1)
