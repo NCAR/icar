@@ -4,6 +4,8 @@ module co_util
     ! puts have potential to run faster than gets because they can operate more asynchronously
     ! It does not matter for some or all of these routines as they are already doing a sync before continuing.
 
+    use icar_constants, only : kMAX_STRING_LENGTH
+
     implicit none
 
     !>------------------------------------------------------------
@@ -12,7 +14,9 @@ module co_util
     interface broadcast
         module procedure co_bcast_4dd, co_bcast_3dd, co_bcast_2dd, co_bcast_1dd, &
                          co_bcast_4dr, co_bcast_3dr, co_bcast_2dr, co_bcast_1dr, &
-                            bcast_4dr,    bcast_3dr,    bcast_2dr,    bcast_1dr
+                            bcast_4dr,    bcast_3dr,    bcast_2dr,    bcast_1dr, &
+                         co_bcast_i,      bcast_i,   co_bcast_r,      bcast_r,   &
+                         co_bcast_c,      bcast_c
                             ! bcast_4dd,    bcast_3dd,    bcast_2dd,    bcast_1dd, &
     end interface
 
@@ -140,6 +144,36 @@ contains
     end subroutine
 
 
+    recursive subroutine co_bcast_r(coarray, source_image, first_image, last_image)
+        implicit none
+        real, intent(inout) :: coarray[*]
+        INCLUDE 'broadcast_core/bcast_part1.inc'
+                coarray = coarray[source_image]
+        INCLUDE 'broadcast_core/bcast_part2.inc'
+                coarray = coarray[source_image]
+        INCLUDE 'broadcast_core/bcast_part3.inc'
+    end subroutine
+
+    recursive subroutine co_bcast_i(coarray, source_image, first_image, last_image)
+        implicit none
+        integer, intent(inout) :: coarray[*]
+        INCLUDE 'broadcast_core/bcast_part1.inc'
+                coarray = coarray[source_image]
+        INCLUDE 'broadcast_core/bcast_part2.inc'
+                coarray = coarray[source_image]
+        INCLUDE 'broadcast_core/bcast_part3.inc'
+    end subroutine
+
+    recursive subroutine co_bcast_c(coarray, source_image, first_image, last_image)
+        implicit none
+        character(len=*), intent(inout) :: coarray[*]
+        INCLUDE 'broadcast_core/bcast_part1.inc'
+                coarray = coarray[source_image]
+        INCLUDE 'broadcast_core/bcast_part2.inc'
+                coarray = coarray[source_image]
+        INCLUDE 'broadcast_core/bcast_part3.inc'
+    end subroutine
+
     subroutine bcast_4dr(data_array, source_image, first_image, last_image, create_co_array)
         implicit none
         real,         intent(inout) :: data_array(:,:,:,:)
@@ -232,6 +266,58 @@ contains
 
     end subroutine
 
+    subroutine bcast_r(scalar, source_image, first_image, last_image, create_co_array)
+        implicit none
+        real,         intent(inout) :: scalar
+        integer,      intent(in)    :: source_image, first_image, last_image
+        logical,      intent(in)    :: create_co_array
+
+        real, allocatable :: coscalar[:]
+
+        allocate(coscalar[*])
+        coscalar = scalar
+
+        call broadcast(coscalar, source_image, first_image, last_image)
+
+        scalar = coscalar
+        deallocate(coscalar)
+
+    end subroutine
+
+    subroutine bcast_i(scalar, source_image, first_image, last_image, create_co_array)
+        implicit none
+        integer,      intent(inout) :: scalar
+        integer,      intent(in)    :: source_image, first_image, last_image
+        logical,      intent(in)    :: create_co_array
+
+        integer, allocatable :: coscalar[:]
+
+        allocate(coscalar[*])
+        coscalar = scalar
+
+        call broadcast(coscalar, source_image, first_image, last_image)
+
+        scalar = coscalar
+        deallocate(coscalar)
+    end subroutine
+
+
+    subroutine bcast_c(scalar, source_image, first_image, last_image, create_co_array)
+        implicit none
+        character(len=*), intent(inout) :: scalar
+        integer,          intent(in)    :: source_image, first_image, last_image
+        logical,          intent(in)    :: create_co_array
+
+        character(len=kMAX_STRING_LENGTH), allocatable :: coscalar[:]
+
+        allocate(coscalar[*])
+        coscalar = scalar
+
+        call broadcast(coscalar, source_image, first_image, last_image)
+
+        scalar = coscalar
+        deallocate(coscalar)
+    end subroutine
 
     subroutine print_in_image_order(input)
         implicit none
