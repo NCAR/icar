@@ -196,4 +196,76 @@ contains
 
     end subroutine
 
+
+    !>------------------------------------------------
+    !! Reset the iteration sequence in the dictionary
+    !!
+    !!------------------------------------------------
+    module subroutine reset_iterator(this)
+        implicit none
+        class(var_dict_t),   intent(inout)  :: this
+
+        this%current_variable = 1
+    end subroutine
+
+    !>------------------------------------------------
+    !! Test to see if there are more values in the iteration sequence
+    !!
+    !! @result boolean      returns true of there are values left to iterate over
+    !!
+    !!------------------------------------------------
+    module function has_more_elements(this) result(boolean)
+        implicit none
+        class(var_dict_t),   intent(in) :: this
+        logical :: boolean
+
+        boolean = this%current_variable <= this%n_vars
+    end function
+
+    !>------------------------------------------------
+    !! Get the next variable in the iteration
+    !!
+    !! @param name     optional, returns the name associated with the variable
+    !! @param err      optional, returns an error if there are no variables left to iterate
+    !!
+    !!------------------------------------------------
+    module function next(this, name, err) result(var_data)
+        implicit none
+        class(var_dict_t),   intent(inout)  :: this
+        character(len=*),    intent(out),   optional :: name
+        integer,             intent(out),   optional :: err
+        type(variable_t)                    :: var_data
+
+        if (present(err)) err = 0
+
+        if (this%has_more_elements()) then
+            ! get the variable data to return
+            var_data = this%var_list(this%current_variable)%var
+
+            ! if requested, get the variable name too
+            if (present(name)) name = this%var_list(this%current_variable)%name
+
+            ! step the iterator forward
+            this%current_variable = this%current_variable + 1
+        else
+            if (present(err)) then
+                err = 1
+            else
+                stop "Attempt to iterate past the end of the dictionary"
+            endif
+        endif
+
+    end function
+
+    module subroutine broadcast(this, source, start, end)
+        implicit none
+        class(variable_t),  intent(inout) :: this
+        integer,            intent(in)    :: source, start, end
+
+        
+
+    end subroutine
+
+
+
 end submodule

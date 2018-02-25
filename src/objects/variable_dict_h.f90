@@ -37,6 +37,9 @@ module variable_dict_interface
         ! this is the primary data structure that holds the dictionary data
         type(var_dict_element), allocatable :: var_list(:)
 
+        ! used to iterate through variables in dictionary
+        integer :: current_variable
+
         ! keep track of how many variables we have stored
         integer :: n_vars = 0
         ! keep track of how many variables we are able to store (== size(var_list))
@@ -46,6 +49,9 @@ module variable_dict_interface
         logical :: initialized
 
     contains
+        procedure :: reset_iterator     ! reset internal counters to make it possible to iterate over elements
+        procedure :: has_more_elements  ! test if there are more elements to iterate over still
+        procedure :: next               ! continue iterating through array elements
         procedure :: get_var            ! get a variable for a given key
         procedure :: add_var            ! store a variable with a given key
         procedure :: get_domain_var     ! get the associated domain variable for a key
@@ -66,6 +72,35 @@ interface
         class(var_dict_t),   intent(inout)  :: this
     end subroutine
 
+
+    !>-------------------------
+    !! Module subroutines for managing the dictionary as an iterator
+    !!
+    !!-------------------------
+    module subroutine reset_iterator(this)
+        implicit none
+        class(var_dict_t),   intent(inout)  :: this
+    end subroutine
+
+    module function has_more_elements(this) result(boolean)
+        implicit none
+        class(var_dict_t),   intent(in) :: this
+        logical :: boolean
+    end function
+
+    module function next(this, name, err) result(var_data)
+        implicit none
+        class(var_dict_t),   intent(inout)  :: this
+        character(len=*),    intent(out),   optional :: name
+        integer,             intent(out),   optional :: err
+        type(variable_t)                    :: var_data
+    end function
+
+
+    !>-------------------------
+    !! Primary subroutines to add and retrieve elements
+    !!
+    !!-------------------------
     module function get_var(this, varname, err) result(var_data)
         implicit none
         class(var_dict_t),   intent(in) :: this
