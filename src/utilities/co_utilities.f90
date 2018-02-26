@@ -12,12 +12,13 @@ module co_util
     !! Generic interface to various broadcast routines
     !!------------------------------------------------------------
     interface broadcast
-        module procedure co_bcast_4dd, co_bcast_3dd, co_bcast_2dd, co_bcast_1dd, &
-                         co_bcast_4dr, co_bcast_3dr, co_bcast_2dr, co_bcast_1dr, &
-                            bcast_4dr,    bcast_3dr,    bcast_2dr,    bcast_1dr, &
-                         co_bcast_i,      bcast_i,   co_bcast_r,      bcast_r,   &
-                         co_bcast_c,      bcast_c
-                            ! bcast_4dd,    bcast_3dd,    bcast_2dd,    bcast_1dd, &
+        module procedure co_bcast_4dd, co_bcast_3dd, co_bcast_2dd, co_bcast_1dd, & ! double co-arrays
+                         co_bcast_4dr, co_bcast_3dr, co_bcast_2dr, co_bcast_1dr, & ! real co-arrays
+                            bcast_4dr,    bcast_3dr,    bcast_2dr,    bcast_1dr, & ! real arrays
+                         co_bcast_i,      bcast_i,   co_bcast_1di,    bcast_1di, & ! int scalars and 1d arrays and co-arrays
+                         co_bcast_r,      bcast_r, & ! 1dr is taken care of above with multi-dim reals
+                         co_bcast_c,      bcast_c,   co_bcast_1dc,    bcast_1dc, & ! character scalars and 1d arrays and co-arrays
+                         co_bcast_l,      bcast_l                                  ! logical scalars and co-array (scalars)
     end interface
 
 contains
@@ -143,6 +144,47 @@ contains
         INCLUDE 'broadcast_core/bcast_part3.inc'
     end subroutine
 
+    recursive subroutine co_bcast_1di(coarray, source_image, first_image, last_image)
+        implicit none
+        integer, intent(inout) :: coarray(:)[*]
+        INCLUDE 'broadcast_core/bcast_part1.inc'
+                coarray = coarray(:)[source_image]
+        INCLUDE 'broadcast_core/bcast_part2.inc'
+                coarray = coarray(:)[source_image]
+        INCLUDE 'broadcast_core/bcast_part3.inc'
+    end subroutine
+
+
+    recursive subroutine co_bcast_1dc(coarray, source_image, first_image, last_image)
+        implicit none
+        character(len=*), intent(inout) :: coarray(:)[*]
+        INCLUDE 'broadcast_core/bcast_part1.inc'
+                coarray = coarray(:)[source_image]
+        INCLUDE 'broadcast_core/bcast_part2.inc'
+                coarray = coarray(:)[source_image]
+        INCLUDE 'broadcast_core/bcast_part3.inc'
+    end subroutine
+
+
+    recursive subroutine co_bcast_c(coarray, source_image, first_image, last_image)
+        implicit none
+        character(len=*), intent(inout) :: coarray[*]
+        INCLUDE 'broadcast_core/bcast_part1.inc'
+                coarray = coarray[source_image]
+        INCLUDE 'broadcast_core/bcast_part2.inc'
+                coarray = coarray[source_image]
+        INCLUDE 'broadcast_core/bcast_part3.inc'
+    end subroutine
+
+    recursive subroutine co_bcast_l(coarray, source_image, first_image, last_image)
+        implicit none
+        logical, intent(inout) :: coarray[*]
+        INCLUDE 'broadcast_core/bcast_part1.inc'
+                coarray = coarray[source_image]
+        INCLUDE 'broadcast_core/bcast_part2.inc'
+                coarray = coarray[source_image]
+        INCLUDE 'broadcast_core/bcast_part3.inc'
+    end subroutine
 
     recursive subroutine co_bcast_r(coarray, source_image, first_image, last_image)
         implicit none
@@ -164,15 +206,6 @@ contains
         INCLUDE 'broadcast_core/bcast_part3.inc'
     end subroutine
 
-    recursive subroutine co_bcast_c(coarray, source_image, first_image, last_image)
-        implicit none
-        character(len=*), intent(inout) :: coarray[*]
-        INCLUDE 'broadcast_core/bcast_part1.inc'
-                coarray = coarray[source_image]
-        INCLUDE 'broadcast_core/bcast_part2.inc'
-                coarray = coarray[source_image]
-        INCLUDE 'broadcast_core/bcast_part3.inc'
-    end subroutine
 
     subroutine bcast_4dr(data_array, source_image, first_image, last_image, create_co_array)
         implicit none
@@ -266,6 +299,48 @@ contains
 
     end subroutine
 
+    subroutine bcast_1di(data_array, source_image, first_image, last_image, create_co_array)
+        implicit none
+        integer,      intent(inout) :: data_array(:)
+        integer,      intent(in)    :: source_image, first_image, last_image
+        logical,      intent(in)    :: create_co_array
+
+        integer, allocatable   :: coarray(:)[:]
+        integer :: n1
+
+        n1 = size(data_array, 1)
+
+        allocate(coarray(n1)[*], source=data_array)
+
+        call broadcast(coarray, source_image, first_image, last_image)
+
+        data_array=coarray
+
+        deallocate(coarray)
+
+    end subroutine
+
+    subroutine bcast_1dc(data_array, source_image, first_image, last_image, create_co_array)
+        implicit none
+        character(len=*),   intent(inout) :: data_array(:)
+        integer,            intent(in)    :: source_image, first_image, last_image
+        logical,            intent(in)    :: create_co_array
+
+        character(len=kMAX_STRING_LENGTH), allocatable   :: coarray(:)[:]
+        integer :: n1
+
+        n1 = size(data_array, 1)
+
+        allocate(coarray(n1)[*], source=data_array)
+
+        call broadcast(coarray, source_image, first_image, last_image)
+
+        data_array=coarray
+
+        deallocate(coarray)
+
+    end subroutine
+
     subroutine bcast_r(scalar, source_image, first_image, last_image, create_co_array)
         implicit none
         real,         intent(inout) :: scalar
@@ -291,6 +366,24 @@ contains
         logical,      intent(in)    :: create_co_array
 
         integer, allocatable :: coscalar[:]
+
+        allocate(coscalar[*])
+        coscalar = scalar
+
+        call broadcast(coscalar, source_image, first_image, last_image)
+
+        scalar = coscalar
+        deallocate(coscalar)
+    end subroutine
+
+
+    subroutine bcast_l(scalar, source_image, first_image, last_image, create_co_array)
+        implicit none
+        logical, intent(inout) :: scalar
+        integer, intent(in)    :: source_image, first_image, last_image
+        logical, intent(in)    :: create_co_array
+
+        logical, allocatable :: coscalar[:]
 
         allocate(coscalar[*])
         coscalar = scalar

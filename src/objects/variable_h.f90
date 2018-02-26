@@ -1,5 +1,5 @@
 module variable_interface
-    use icar_constants,      only : kMAX_DIM_LENGTH
+    use icar_constants,      only : kMAX_DIM_LENGTH, kMAX_STRING_LENGTH
     use grid_interface,      only : grid_t
     use meta_data_interface, only : meta_data_t
 
@@ -25,9 +25,10 @@ module variable_interface
         integer                 :: var_id = -1
 
     contains
-        procedure, public  :: broadcast
+        procedure, public  :: bcast_var
         procedure, public  :: init_grid
         procedure, public  :: init_dims
+        generic,   public  :: broadcast  => bcast_var
         generic,   public  :: initialize => init_grid
         generic,   public  :: initialize => init_dims
 
@@ -38,10 +39,11 @@ module variable_interface
 
     interface
 
-        module subroutine broadcast(this, source, start, end)
+        module subroutine bcast_var(this, source, start_img, end_img)
             implicit none
             class(variable_t),  intent(inout) :: this
-            integer,            intent(in)    :: source, start, end
+            integer,            intent(in)    :: source
+            integer,            intent(in),   optional :: start_img, end_img
         end subroutine
 
 

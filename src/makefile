@@ -569,7 +569,7 @@ $(BUILD)meta_data_obj.o: $(OBJECTS)meta_data_obj.f90 $(BUILD)meta_data_h.o
 
 $(BUILD)meta_data_h.o: $(OBJECTS)meta_data_h.f90 $(BUILD)icar_constants.o
 
-$(BUILD)variable_obj.o: $(OBJECTS)variable_obj.f90 $(BUILD)variable_h.o
+$(BUILD)variable_obj.o: $(OBJECTS)variable_obj.f90 $(BUILD)variable_h.o $(BUILD)co_utilities.o
 
 $(BUILD)variable_h.o: $(OBJECTS)variable_h.f90 $(BUILD)meta_data_h.o $(BUILD)icar_constants.o $(BUILD)grid_h.o
 
@@ -597,9 +597,9 @@ $(BUILD)boundary_h.o: $(OBJECTS)boundary_h.f90 $(BUILD)options_h.o				\
 					$(BUILD)data_structures.o $(BUILD)time_delta_obj.o			\
 					$(BUILD)variable_dict_h.o
 
-$(BUILD)boundary_obj.o: $(OBJECTS)boundary_obj.f90 $(BUILD)boundary_h.o			\
-					$(BUILD)string.o $(BUILD)atm_utilities.o $(BUILD)time_io.o	\
-					$(BUILD)io_routines.o $(BUILD)geo_reader.o	\
+$(BUILD)boundary_obj.o: $(OBJECTS)boundary_obj.f90 $(BUILD)boundary_h.o					\
+					$(BUILD)string.o $(BUILD)atm_utilities.o $(BUILD)time_io.o			\
+					$(BUILD)io_routines.o $(BUILD)geo_reader.o  $(BUILD)co_utilities.o	\
 					$(BUILD)vinterp.o $(BUILD)array_utilities.o $(BUILD)icar_constants.o
 
 
