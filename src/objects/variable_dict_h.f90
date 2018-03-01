@@ -46,7 +46,7 @@ module variable_dict_interface
         integer :: max_vars = 0
 
         ! keep track of wheather or not this dictionary has been initialized yet or not
-        logical :: initialized
+        logical :: initialized = .False.
 
     contains
         procedure :: reset_iterator     ! reset internal counters to make it possible to iterate over elements
@@ -109,13 +109,14 @@ interface
         type(variable_t)                :: var_data
     end function
 
-    module subroutine add_var(this, varname, var_data, domain_var, err)
+    module subroutine add_var(this, varname, var_data, domain_var, save_state, err)
         implicit none
         class(var_dict_t),   intent(inout)  :: this
         character(len=*),    intent(in)     :: varname
         type(variable_t),    intent(in)     :: var_data
         type(variable_t),    intent(in), optional :: domain_var
-        integer,             intent(out),   optional :: err
+        logical,             intent(in), optional :: save_state
+        integer,             intent(out),optional :: err
     end subroutine
 
     module function get_domain_var(this, varname) result(var_data)

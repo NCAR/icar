@@ -104,16 +104,23 @@ contains
     !! @param varname       key to store for the var_data supplied
     !! @param var_data      variable to store associated with key
     !! @param domain_var    optional additional variable to associated with key
+    !! @param save_state    optional store the input array data in a locally allocated array instead of just pointing to it
     !! @param err           optional value to store an error code in so execution doesn't have to stop
     !!
     !!------------------------------------------------
-    module subroutine add_var(this, varname, var_data, domain_var, err)
+    module subroutine add_var(this, varname, var_data, domain_var, save_state, err)
         implicit none
         class(var_dict_t),   intent(inout)  :: this
         character(len=*),    intent(in)     :: varname
         type(variable_t),    intent(in)     :: var_data
         type(variable_t),    intent(in), optional :: domain_var
+        logical,             intent(in), optional :: save_state
         integer,             intent(out),optional :: err
+
+        logical :: save_data
+
+        save_data = .False.
+        if (present(save_state)) save_data=save_state
 
         if (.not.this%initialized) then
             call this%init()
@@ -124,6 +131,7 @@ contains
                 err = 3
                 return
             endif
+            write(*,*) this_image(), this%n_vars, this%max_vars
             stop "Ran out of space in var_dict"
         endif
 
@@ -133,19 +141,26 @@ contains
         ! warning, this copies all information directly from the var_data into the dict, including the POINTER to the data
         this%var_list(this%n_vars)%var  = var_data
 
-        ! alternatively, if we want to assume that the data arrays may be deallocated outside of the dict, we can do this...
-        !
-        ! call this%var_list(this%n_vars)%var%initialize(var_data%dim_len)
-        !   or this:
-        ! this%var_list(this%n_vars)%var  = var_data
-        ! followed by nullifying and allocating the data pointers?
-        !
-        ! then we can copy the data from the original data directly into this location...
-        ! if (var_data%two_d) then
-        !     this%var_list(this%n_vars)%var%data_2d(:,:)  = var_data%data_2d(:,:)
-        ! else
-        !     this%var_list(this%n_vars)%var%data_3d(:,:,:)  = var_data%data_3d(:,:,:)
-        ! endif
+        ! If we want to assume that the data arrays may be deallocated outside of the dict, we can do this...
+        if (save_data) then
+            ! call this%var_list(this%n_vars)%var%initialize(var_data%dim_len)
+            !   or this:
+            ! this%var_list(this%n_vars)%var  = var_data
+            ! followed by nullifying and allocating the data pointers?
+            !
+            ! then we can copy the data from the original data directly into this location...
+            if (var_data%two_d) then
+                nullify( this%var_list(this%n_vars)%var%data_2d)
+                allocate(this%var_list(this%n_vars)%var%data_2d(var_data%dim_len(1),var_data%dim_len(2)))
+                this%var_list(this%n_vars)%var%data_2d(:,:)  = var_data%data_2d(:,:)
+            else
+                nullify( this%var_list(this%n_vars)%var%data_3d)
+                allocate(this%var_list(this%n_vars)%var%data_3d(var_data%dim_len(1),var_data%dim_len(2),var_data%dim_len(3)))
+                this%var_list(this%n_vars)%var%data_3d(:,:,:)  = var_data%data_3d(:,:,:)
+            endif
+
+        else
+        endif
 
         if (present(domain_var)) then
             this%var_list(this%n_vars)%domain_var  = domain_var
@@ -262,7 +277,7 @@ contains
         class(variable_t),  intent(inout) :: this
         integer,            intent(in)    :: source, start, end
 
-        
+
 
     end subroutine
 

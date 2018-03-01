@@ -103,19 +103,30 @@ contains
         ! these attributes are inherited from meta_data parent class and must be broadcast too
         call broadcast(this%name,          source, first, last, create_co_array=.True.)
         call broadcast(this%n_attrs,       source, first, last, create_co_array=.True.)
+
+        ! we have to figure out how big the attribute array is as n_attrs is the number stored in it, not the memory allocated for it
+        if (this_image()==source) then
+            if (allocated(this%attributes)) then
+                attr_array_size = size(this%attributes)
+            else
+                attr_array_size = 1
+                allocate( this%attributes( attr_array_size ) )
+            endif
+        endif
+
+        call broadcast(attr_array_size,    source, first, last, create_co_array=.True.)
+
         if (.not.allocated(this%attributes)) allocate(this%attributes(attr_array_size))
         do i=1, this%n_attrs
             call broadcast(this%attributes(i)%name,  source, first, last, create_co_array=.True.)
             call broadcast(this%attributes(i)%value, source, first, last, create_co_array=.True.)
         enddo
 
-        ! we have to figure out how big the attribute array is as n_attrs is the number stored in it, not the memory allocated for it
-        if (this_image()==source) attr_array_size = size(this%attributes)
-        call broadcast(attr_array_size,    source, first, last, create_co_array=.True.)
 
         ! Handle anything that potentially has 2 or 3 dimensions separately
         ! First handle the if 3D case
         if (this%three_d) then
+            if (size(this%dim_len) /= 3) deallocate(this%dim_len)
             if (.not.allocated(this%dim_len))       allocate(this%dim_len(3))
             call broadcast(this%dim_len, source, first, last, create_co_array=.True.)
 
@@ -133,6 +144,7 @@ contains
 
         ! Then handle the if 2D case
         else if (this%two_d) then
+            if (allocated(this%dim_len) .and. (size(this%dim_len) /= 2)) deallocate(this%dim_len)
             if (.not.allocated(this%dim_len))       allocate(this%dim_len(2))
             call broadcast(this%dim_len, source, first, last, create_co_array=.True.)
 

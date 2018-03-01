@@ -72,9 +72,10 @@ module boundary_interface
         character(len=kMAX_NAME_LENGTH), intent(in)     :: time_var
     end subroutine
 
-    module subroutine update_forcing(this)
+    module subroutine update_forcing(this, options)
         implicit none
         class(boundary_t), intent(inout) :: this
+        class(options_t),  intent(inout) :: options
     end subroutine
 
     module subroutine distribute_update(this)

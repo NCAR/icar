@@ -349,7 +349,8 @@ caf_tests:	caf_options_test 		\
 			caf_bcast_test			\
 			caf_write_domain_test	\
 			caf_options_test		\
-			caf_boundary_test
+			caf_boundary_test		\
+			caf_boundary_init_test
 
 icar:${OBJS}
 	${F90} -o icar ${OBJS} ${LFLAGS}
@@ -504,7 +505,6 @@ caf_boundary_test: $(BUILD)test_caf_boundary.o						\
 				$(BUILD)variable_dict_h.o $(BUILD)variable_dict_obj.o\
 				$(BUILD)grid_h.o         $(BUILD)grid_obj.o         \
 				$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
-				$(BUILD)domain_h.o       $(BUILD)domain_obj.o		\
 				$(BUILD)boundary_h.o     $(BUILD)boundary_obj.o		\
 				$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
 				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
@@ -516,6 +516,27 @@ caf_boundary_test: $(BUILD)test_caf_boundary.o						\
 				$(BUILD)vinterp.o $(BUILD)array_utilities.o
 	${F90} $^ -o $@ ${LFLAGS}
 
+caf_boundary_init_test: $(BUILD)test_caf_boundary_init.o				    \
+				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
+				$(BUILD)model_tracking.o $(BUILD)string.o           \
+				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o         \
+				$(BUILD)opt_types.o      $(BUILD)time_io.o          \
+				$(BUILD)options_h.o      $(BUILD)options_obj.o      \
+				$(BUILD)meta_data_h.o    $(BUILD)meta_data_obj.o    \
+				$(BUILD)variable_h.o     $(BUILD)variable_obj.o     \
+				$(BUILD)variable_dict_h.o $(BUILD)variable_dict_obj.o\
+				$(BUILD)grid_h.o         $(BUILD)grid_obj.o         \
+				$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
+				$(BUILD)boundary_h.o     $(BUILD)boundary_obj.o		\
+				$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
+				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
+				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
+				$(BUILD)advection_driver.o							\
+				$(BUILD)advect.o									\
+				$(BUILD)io_routines.o	 $(BUILD)co_utilities.o		\
+				$(BUILD)data_structures.o $(BUILD)geo_reader.o		\
+				$(BUILD)vinterp.o 		 $(BUILD)array_utilities.o
+	${F90} $^ -o $@ ${LFLAGS}
 
 
 
@@ -832,6 +853,8 @@ $(BUILD)debug_utils.o:$(UTIL)debug_utils.f90 $(BUILD)data_structures.o $(BUILD)s
 ###################################################################
 
 $(BUILD)test_caf_init.o: $(TESTS)test_caf_init.f90 $(BUILD)domain_h.o $(BUILD)options_h.o
+
+$(BUILD)test_caf_boundary_init.o: $(TESTS)test_caf_boundary_init.f90 $(BUILD)boundary_h.o $(BUILD)options_h.o $(BUILD)variable_h.o
 
 $(BUILD)test_caf_boundary.o: $(TESTS)test_caf_boundary.f90 $(BUILD)domain_h.o $(BUILD)boundary_h.o
 

@@ -90,6 +90,7 @@ contains
         ! call assert(size(var_list) == size(dim_list), "list of variable dimensions must match list of variables")
 
         do i=1, size(var_list)
+            print*, trim(file_list(this%curfile)), "  ", trim(var_list(i))
 
             call add_var_to_dict(this%variables, file_list(this%curfile), var_list(i), dim_list(i), this%curstep)
 
@@ -149,8 +150,40 @@ contains
     !! Reads a new set of forcing data for the next time step
     !!
     !!------------------------------------------------------------
-    module subroutine update_forcing(this)
+    module subroutine update_forcing(this, options)
         class(boundary_t), intent(inout) :: this
+        class(options_t),  intent(inout) :: options
+
+        real, allocatable :: data3d(:,:,:), data2d(:,:)
+        type(variable_t)  :: var
+        character(len=kMAX_NAME_LENGTH) :: name
+
+
+        if (this_image()==1) then
+            call update_forcing_step(this, this%file_list, options%parameters%time_var)
+            associate(list => this%variables)
+
+            call list%reset_iterator()
+            do while (list%has_more_elements())
+                ! get the next variable in the structure
+                var = list%next(name)
+
+                ! because the data arrays are pointers, this should update the data stored in this%variables
+                if (var%three_d) then
+                    call io_read(this%file_list(this%curfile), name, data3d, this%curstep)
+                    var%data_3d(:,:,:) = data3d(:,:,:)
+
+                else if (var%two_d) then
+                    call io_read(this%file_list(this%curfile), name, data2d, this%curstep)
+                    var%data_2d(:,:) = data2d(:,:)
+                endif
+
+            end do
+
+            end associate
+        endif
+
+        call this%distribute_update()
 
     end subroutine
 
@@ -159,7 +192,68 @@ contains
     !!
     !!------------------------------------------------------------
     module subroutine distribute_update(this)
-      class(boundary_t), intent(inout) :: this
+        class(boundary_t), intent(inout) :: this
+
+        type(variable_t)  :: var
+
+        associate(list => this%variables)
+
+        call list%reset_iterator()
+        do while (list%has_more_elements())
+            ! get the next variable in the structure
+            var = list%next()
+
+            if (var%three_d) then
+                call broadcast(var%data_3d, 1, 1, num_images(), create_co_array = .True.)
+
+            else if (var%two_d) then
+                call broadcast(var%data_2d, 1, 1, num_images(), create_co_array = .True.)
+            endif
+
+        enddo
+
+        end associate
+
+    end subroutine
+
+
+    subroutine distribute_2d_array(arr, source, first, last)
+        implicit none
+        real, allocatable, intent(inout) :: arr(:,:)
+        integer,           intent(in)    :: source, first, last
+
+        integer :: dims(2)
+
+        ! because this array is probably not allocated, and may not be the correct shape if it is, we have to
+        ! broadcast the shape of the array first.
+        if (this_image()==source) dims = shape(arr)
+        call broadcast(dims, source, first, last, create_co_array=.True.)
+
+        if (allocated(arr)) then
+            if (any(dims /= shape(arr))) deallocate(arr)
+        endif
+        if (.not.allocated(arr)) allocate( arr( dims(1), dims(2) ) )
+        call broadcast(arr, source, first, last, create_co_array=.True.)
+
+    end subroutine
+
+    subroutine distribute_3d_array(arr, source, first, last)
+        implicit none
+        real, allocatable, intent(inout) :: arr(:,:,:)
+        integer,           intent(in)    :: source, first, last
+
+        integer :: dims(3)
+
+        ! because this array is probably not allocated, and may not be the correct shape if it is, we have to
+        ! broadcast the shape of the array first.
+        if (this_image()==source) dims = shape(arr)
+        call broadcast(dims, source, first, last, create_co_array=.True.)
+
+        if (allocated(arr)) then
+            if (any(dims /= shape(arr))) deallocate(arr)
+        endif
+        if (.not.allocated(arr)) allocate( arr( dims(1), dims(2), dims(3) ) )
+        call broadcast(arr, source, first, last, create_co_array=.True.)
 
     end subroutine
 
@@ -177,9 +271,9 @@ contains
 
       ! needs to distribute lat, lon, time and all vars in var_dict
       ! broadcast(variable, from:image, to: first_image, last_image)
-      call broadcast(this%lat, 1, 1, num_images(), create_co_array=.True.)
-      call broadcast(this%lon, 1, 1, num_images(), create_co_array=.True.)
-      call broadcast(this%z,   1, 1, num_images(), create_co_array=.True.)
+      call distribute_2d_array(this%lat, 1, 1, num_images())
+      call distribute_2d_array(this%lon, 1, 1, num_images())
+      call distribute_3d_array(this%z,   1, 1, num_images())
 
       if (this_image() == 1) then
           call this%variables%reset_iterator()
@@ -200,7 +294,7 @@ contains
           call broadcast(name, 1, 1, num_images(), create_co_array=.True.)
 
           if (this_image() /= 1) then
-              call this%variables%add_var(name, temp_variable)
+              call this%variables%add_var(name, temp_variable, save_state=.True.)
           endif
       enddo
 
@@ -314,6 +408,35 @@ contains
         endif
 
     end subroutine set_curfile_curstep
+
+
+    subroutine update_forcing_step(bc, file_list, time_var)
+        implicit none
+        type(boundary_t),   intent(inout) :: bc
+        character(len=*),   intent(in) :: file_list(:)
+        character(len=*),   intent(in) :: time_var
+
+
+        integer :: error, steps_in_file
+
+        error=1
+        bc%curstep = bc%curstep + 1 ! this may be all we have to do most of the time
+
+        ! check that we haven't stepped passed the end of the current file
+        steps_in_file = get_n_timesteps(file_list(bc%curfile), time_var, 0)
+        if (steps_in_file < bc%curstep) then
+            ! if we have, use the next file
+            bc%curfile = bc%curfile + 1
+            ! and the first timestep in the next file
+            bc%curstep = 1
+
+            ! if we have run out of input files, stop with an error message
+            if (bc%curfile <= size(file_list)) then
+                stop "Ran out of files to process while searching for matching time variable!"
+            endif
+
+        endif
+    end subroutine update_forcing_step
 
 
 

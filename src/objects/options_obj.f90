@@ -607,15 +607,15 @@ contains
         options%uvar        = uvar      ; options%vars_to_read(i) = uvar;       options%dim_list(i) = 3;    i = i + 1
         if (ulat=="") ulat=latvar
         if (ulon=="") ulon=lonvar
-        options%ulat        = ulat      ; options%vars_to_read(i) = ulat;       options%dim_list(i) = 2;    i = i + 1
-        options%ulon        = ulon      ; options%vars_to_read(i) = ulon;       options%dim_list(i) = 2;    i = i + 1
+        options%ulat        = ulat      !; options%vars_to_read(i) = ulat;       options%dim_list(i) = 2;    i = i + 1
+        options%ulon        = ulon      !; options%vars_to_read(i) = ulon;       options%dim_list(i) = 2;    i = i + 1
 
         ! V varname and associated lat/lon var names
         options%vvar        = vvar      ; options%vars_to_read(i) = vvar;       options%dim_list(i) = 3;    i = i + 1
         if (vlat=="") vlat=latvar
         if (vlon=="") vlon=lonvar
-        options%vlat        = vlat      ; options%vars_to_read(i) = vlat;       options%dim_list(i) = 2;    i = i + 1
-        options%vlon        = vlon      ; options%vars_to_read(i) = vlon;       options%dim_list(i) = 2;    i = i + 1
+        options%vlat        = vlat      !; options%vars_to_read(i) = vlat;       options%dim_list(i) = 2;    i = i + 1
+        options%vlon        = vlon      !; options%vars_to_read(i) = vlon;       options%dim_list(i) = 2;    i = i + 1
 
         ! Primary model variable names
         options%pbvar       = pbvar     ; options%vars_to_read(i) = pbvar;      options%dim_list(i) = 3;    i = i + 1
