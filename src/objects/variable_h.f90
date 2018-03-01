@@ -1,5 +1,5 @@
 module variable_interface
-    use icar_constants,      only : kMAX_DIM_LENGTH, kMAX_STRING_LENGTH
+    use icar_constants,      only : kMAX_DIM_LENGTH, kMAX_STRING_LENGTH, kMAX_NAME_LENGTH
     use grid_interface,      only : grid_t
     use meta_data_interface, only : meta_data_t
 
@@ -15,6 +15,7 @@ module variable_interface
         logical                         :: unlimited_dim = .False.
         logical                         :: three_d = .False.
         logical                         :: two_d = .False.
+        character(len=kMAX_NAME_LENGTH) :: forcing_var = ""
 
         integer :: n_dimensions
         integer,                        allocatable :: dim_len(:)
@@ -47,16 +48,18 @@ module variable_interface
         end subroutine
 
 
-        module subroutine init_grid(this, grid)
+        module subroutine init_grid(this, grid, forcing_var)
             implicit none
             class(variable_t),  intent(inout) :: this
             type(grid_t),       intent(in)    :: grid
+            character(len=kMAX_NAME_LENGTH), intent(in), optional :: forcing_var
         end subroutine
 
-        module subroutine init_dims(this, dims)
+        module subroutine init_dims(this, dims, forcing_var)
             implicit none
             class(variable_t),  intent(inout) :: this
             integer,            intent(in)    :: dims(:)
+            character(len=kMAX_NAME_LENGTH), intent(in), optional :: forcing_var
         end subroutine
 
     end interface

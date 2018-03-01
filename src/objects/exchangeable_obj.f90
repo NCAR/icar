@@ -10,10 +10,11 @@ submodule(exchangeable_interface) exchangeable_implementation
 
 contains
 
-  module subroutine const(this, grid, metadata)
+  module subroutine const(this, grid, metadata, forcing_var)
     class(exchangeable_t), intent(inout) :: this
     type(grid_t),          intent(in)    :: grid
     class(variable_t),     intent(in), optional :: metadata
+    character(len=kMAX_NAME_LENGTH), intent(in), optional :: forcing_var
 
     halo_size = grid%halo_size
 
@@ -40,6 +41,7 @@ contains
     if (.not.allocated(neighbors)) call this%set_neighbors(grid)
 
     if (present(metadata)) call this%set_outputdata(metadata)
+    if (present(forcing_var)) this%meta_data%forcing_var = forcing_var
 
   end subroutine
 

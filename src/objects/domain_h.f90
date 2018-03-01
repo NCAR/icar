@@ -1,5 +1,6 @@
 module domain_interface
   use options_interface,        only : options_t
+  use boundary_interface,       only : boundary_t
   use exchangeable_interface,   only : exchangeable_t
   use grid_interface,           only : grid_t
   use variable_interface,       only : variable_t
@@ -103,6 +104,8 @@ module domain_interface
     procedure :: halo_exchange
     procedure :: enforce_limits
 
+    procedure :: get_initial_conditions
+
   end type
 
   integer, parameter :: space_dimension=3
@@ -114,6 +117,14 @@ module domain_interface
       implicit none
       class(domain_t), intent(inout) :: this
       class(options_t),intent(inout) :: options
+    end subroutine
+
+    ! read initial atmospheric conditions from forcing data
+    module subroutine get_initial_conditions(this, forcing, options)
+      implicit none
+      class(domain_t),  intent(inout) :: this
+      class(boundary_t),intent(in)    :: forcing
+      class(options_t), intent(inout) :: options
     end subroutine
 
     module subroutine var_request(this, options)

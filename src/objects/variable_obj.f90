@@ -11,10 +11,11 @@ contains
     !! Allocates 2d/3d data structure as appropriate
     !!
     !! -------------------------------
-    module subroutine init_grid(this, grid)
+    module subroutine init_grid(this, grid, forcing_var)
         implicit none
         class(variable_t),  intent(inout) :: this
         type(grid_t),       intent(in)    :: grid
+        character(len=kMAX_NAME_LENGTH), intent(in), optional :: forcing_var
         integer :: err
 
         this%dimensions = grid%dimensions
@@ -22,6 +23,9 @@ contains
 
         this%two_d   = grid%is2d
         this%three_d = grid%is3d
+        if (present(forcing_var)) then
+            this%forcing_var = forcing_var
+        endif
 
         if (grid%is2d) then
             this%n_dimensions = 2
@@ -48,10 +52,12 @@ contains
     !! Allocates 2d/3d data structure as appropriate
     !!
     !! -------------------------------
-    module subroutine init_dims(this, dims)
+    module subroutine init_dims(this, dims, forcing_var)
         implicit none
         class(variable_t),  intent(inout) :: this
         integer,            intent(in)    :: dims(:)
+        character(len=kMAX_NAME_LENGTH), intent(in), optional :: forcing_var
+
 
         integer :: err
 
@@ -59,6 +65,10 @@ contains
 
         this%two_d   = size(dims) == 2
         this%three_d = size(dims) == 3
+
+        if (present(forcing_var)) then
+            this%forcing_var = forcing_var
+        endif
 
         if (this%two_d) then
             this%n_dimensions = 2
@@ -99,6 +109,7 @@ contains
         call broadcast(this%n_dimensions,  source, first, last, create_co_array=.True.)
         call broadcast(this%three_d,       source, first, last, create_co_array=.True.)
         call broadcast(this%two_d,         source, first, last, create_co_array=.True.)
+        call broadcast(this%forcing_var,   source, first, last, create_co_array=.True.)
 
         ! these attributes are inherited from meta_data parent class and must be broadcast too
         call broadcast(this%name,          source, first, last, create_co_array=.True.)
