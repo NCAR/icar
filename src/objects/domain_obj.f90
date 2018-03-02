@@ -277,7 +277,24 @@ contains
 
         if (this_image()==1) print*, "Finished reading core domain variables"
 
+        call setup_domain_geo(this)
+
     end subroutine read_core_variables
+
+    subroutine setup_domain_geo(this)
+        implicit none
+        type(domain_t), intent(inout) :: this
+
+        if (allocated(this%geo%lat)) deallocate(this%geo%lat)
+        allocate( this%geo%lat, source=this%latitude%data_2d)
+
+        if (allocated(this%geo%lon)) deallocate(this%geo%lon)
+        allocate( this%geo%lon, source=this%longitude%data_2d)
+
+        if (allocated(this%geo%z)) deallocate(this%geo%z)
+        allocate( this%geo%z, source=this%z%data_3d)
+
+    end subroutine setup_domain_geo
 
     !> -------------------------------
     !! Initialize various domain variables, mostly z, dz, etc.

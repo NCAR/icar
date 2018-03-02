@@ -96,6 +96,23 @@ contains
 
         end do
 
+        call setup_boundary_geo(this)
+
+    end subroutine
+
+    subroutine setup_boundary_geo(this)
+        implicit none
+        type(boundary_t), intent(inout) :: this
+
+        if (allocated(this%geo%lat)) deallocate(this%geo%lat)
+        allocate( this%geo%lat, source=this%lat)
+
+        if (allocated(this%geo%lon)) deallocate(this%geo%lon)
+        allocate( this%geo%lon, source=this%lon)
+
+        if (allocated(this%geo%z)) deallocate(this%geo%z)
+        allocate( this%geo%z, source=this%z)
+
     end subroutine
 
 
