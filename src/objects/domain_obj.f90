@@ -9,10 +9,40 @@ submodule(domain_interface) domain_implementation
   use microphysics,         only : mp_simple_var_request
   use co_util,              only : broadcast
   use io_routines,          only : io_read, io_write
+  use geo,                  only : geo_lut, geo_interp, geo_interp2d
 
   implicit none
 
+  interface setup
+      module procedure setup_var, setup_exch
+  end interface
+
 contains
+
+
+    !> -------------------------------
+    !! Initialize the size of the domain
+    !!
+    !! -------------------------------
+    module subroutine init(this, options)
+      class(domain_t), intent(inout) :: this
+      class(options_t),intent(inout) :: options
+
+      this%dx = options%parameters%dx
+
+      call this%var_request(options)
+
+      call read_domain_shape(this, options)
+
+      call create_variables(this, options)
+
+      call initialize_variables(this, options)
+
+      call setup_meta_data(this)
+
+    end subroutine
+
+
 
 
     !> -------------------------------
@@ -33,49 +63,49 @@ contains
 
         if (this_image()==1) print *,"Initializing variables"
 
-        if (0<opt%vars_to_allocate( kVARS%u) )                          call this%u%                        initialize( this%u_grid,    forcing_var=opt%parameters%uvar )
-        if (0<opt%vars_to_allocate( kVARS%v) )                          call this%v%                        initialize( this%v_grid,    forcing_var=opt%parameters%vvar )
-        if (0<opt%vars_to_allocate( kVARS%w) )                          call this%w%                        initialize( this%grid )
-        if (0<opt%vars_to_allocate( kVARS%water_vapor) )                call this%water_vapor%              initialize( this%grid,      forcing_var=opt%parameters%qvvar )
-        if (0<opt%vars_to_allocate( kVARS%potential_temperature) )      call this%potential_temperature%    initialize( this%grid,      forcing_var=opt%parameters%tvar )
-        if (0<opt%vars_to_allocate( kVARS%cloud_water) )                call this%cloud_water_mass%         initialize( this%grid,      forcing_var=opt%parameters%qcvar )
-        if (0<opt%vars_to_allocate( kVARS%cloud_number_concentration))  call this%cloud_number%             initialize( this%grid )
-        if (0<opt%vars_to_allocate( kVARS%cloud_ice) )                  call this%cloud_ice_mass%           initialize( this%grid,      forcing_var=opt%parameters%qivar )
-        if (0<opt%vars_to_allocate( kVARS%ice_number_concentration))    call this%cloud_ice_number%         initialize( this%grid )
-        if (0<opt%vars_to_allocate( kVARS%rain_in_air) )                call this%rain_mass%                initialize( this%grid,      forcing_var=opt%parameters%qrvar )
-        if (0<opt%vars_to_allocate( kVARS%rain_number_concentration))   call this%rain_number%              initialize( this%grid )
-        if (0<opt%vars_to_allocate( kVARS%snow_in_air) )                call this%snow_mass%                initialize( this%grid,      forcing_var=opt%parameters%qsvar )
-        if (0<opt%vars_to_allocate( kVARS%snow_number_concentration) )  call this%snow_number%              initialize( this%grid )
-        if (0<opt%vars_to_allocate( kVARS%graupel_in_air) )             call this%graupel_mass%             initialize( this%grid,      forcing_var=opt%parameters%qgvar )
-        if (0<opt%vars_to_allocate( kVARS%graupel_number_concentration))call this%graupel_number%           initialize( this%grid )
-        if (0<opt%vars_to_allocate( kVARS%precipitation) )              call this%accumulated_precipitation%initialize( this%grid2d )
-        if (0<opt%vars_to_allocate( kVARS%snowfall) )                   call this%accumulated_snowfall%     initialize( this%grid2d )
-        if (0<opt%vars_to_allocate( kVARS%pressure) )                   call this%pressure%                 initialize( this%grid,      forcing_var=opt%parameters%pvar )
-        if (0<opt%vars_to_allocate( kVARS%temperature) )                call this%temperature%              initialize( this%grid )
-        if (0<opt%vars_to_allocate( kVARS%exner) )                      call this%exner%                    initialize( this%grid )
-        if (0<opt%vars_to_allocate( kVARS%z) )                          call this%z%                        initialize( this%grid )
-        if (0<opt%vars_to_allocate( kVARS%dz_interface) )               call this%dz_interface%             initialize( this%grid )
-        if (0<opt%vars_to_allocate( kVARS%z_interface) )                call this%z_interface%              initialize( this%grid )
-        if (0<opt%vars_to_allocate( kVARS%dz) )                         call this%dz_mass%                  initialize( this%grid )
-        if (0<opt%vars_to_allocate( kVARS%density) )                    call this%density%                  initialize( this%grid )
-        if (0<opt%vars_to_allocate( kVARS%pressure_interface) )         call this%pressure_interface%       initialize( this%grid )
-        if (0<opt%vars_to_allocate( kVARS%graupel) )                    call this%graupel%                  initialize( this%grid2d )
-        if (0<opt%vars_to_allocate( kVARS%shortwave) )                  call this%shortwave%                initialize( this%grid2d,    forcing_var=opt%parameters%swdown_var )
-        if (0<opt%vars_to_allocate( kVARS%longwave) )                   call this%longwave%                 initialize( this%grid2d,    forcing_var=opt%parameters%lwdown_var )
-        if (0<opt%vars_to_allocate( kVARS%vegetation_fraction) )        call this%vegetation_fraction%      initialize( this%grid_monthly )
-        if (0<opt%vars_to_allocate( kVARS%lai) )                        call this%lai%                      initialize( this%grid2d )
-        if (0<opt%vars_to_allocate( kVARS%canopy_water) )               call this%canopy_water%             initialize( this%grid2d )
-        if (0<opt%vars_to_allocate( kVARS%snow_water_equivalent) )      call this%snow_water_equivalent%    initialize( this%grid2d )
-        if (0<opt%vars_to_allocate( kVARS%skin_temperature) )           call this%skin_temperature%         initialize( this%grid2d,    forcing_var=opt%parameters%sst_var )
-        if (0<opt%vars_to_allocate( kVARS%soil_water_content) )         call this%soil_water_content%       initialize( this%grid_soil, forcing_var=opt%parameters%soil_t_var )
-        if (0<opt%vars_to_allocate( kVARS%soil_temperature) )           call this%soil_temperature%         initialize( this%grid_soil, forcing_var=opt%parameters%soil_vwc_var )
-        if (0<opt%vars_to_allocate( kVARS%latitude) )                   call this%latitude%                 initialize( this%grid2d)
-        if (0<opt%vars_to_allocate( kVARS%longitude) )                  call this%longitude%                initialize( this%grid2d)
-        ! if (0<opt%vars_to_allocate( kVARS%u_latitude) )                 call this%u_latitude%               initialize( this%u_grid2d )
-        ! if (0<opt%vars_to_allocate( kVARS%u_longitude) )                call this%u_longitude%              initialize( this%u_grid2d )
-        ! if (0<opt%vars_to_allocate( kVARS%v_latitude) )                 call this%v_latitude%               initialize( this%v_grid2d )
-        ! if (0<opt%vars_to_allocate( kVARS%v_longitude) )                call this%v_longitude%              initialize( this%v_grid2d )
-        if (0<opt%vars_to_allocate( kVARS%terrain) )                    call this%terrain%                  initialize( this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%u) )                          call setup(this%u,                        this%u_grid,   forcing_var=opt%parameters%uvar, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%v) )                          call setup(this%v,                        this%v_grid,   forcing_var=opt%parameters%vvar, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%w) )                          call setup(this%w,                        this%grid )
+        if (0<opt%vars_to_allocate( kVARS%water_vapor) )                call setup(this%water_vapor,              this%grid,     forcing_var=opt%parameters%qvvar, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%potential_temperature) )      call setup(this%potential_temperature,    this%grid,     forcing_var=opt%parameters%tvar, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%cloud_water) )                call setup(this%cloud_water_mass,         this%grid,     forcing_var=opt%parameters%qcvar, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%cloud_number_concentration))  call setup(this%cloud_number,             this%grid )
+        if (0<opt%vars_to_allocate( kVARS%cloud_ice) )                  call setup(this%cloud_ice_mass,           this%grid,     forcing_var=opt%parameters%qivar, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%ice_number_concentration))    call setup(this%cloud_ice_number,         this%grid )
+        if (0<opt%vars_to_allocate( kVARS%rain_in_air) )                call setup(this%rain_mass,                this%grid,     forcing_var=opt%parameters%qrvar, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%rain_number_concentration))   call setup(this%rain_number,              this%grid )
+        if (0<opt%vars_to_allocate( kVARS%snow_in_air) )                call setup(this%snow_mass,                this%grid,     forcing_var=opt%parameters%qsvar, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%snow_number_concentration) )  call setup(this%snow_number,              this%grid )
+        if (0<opt%vars_to_allocate( kVARS%graupel_in_air) )             call setup(this%graupel_mass,             this%grid,     forcing_var=opt%parameters%qgvar, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%graupel_number_concentration))call setup(this%graupel_number,           this%grid )
+        if (0<opt%vars_to_allocate( kVARS%precipitation) )              call setup(this%accumulated_precipitation,this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%snowfall) )                   call setup(this%accumulated_snowfall,     this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%pressure) )                   call setup(this%pressure,                 this%grid,     forcing_var=opt%parameters%pvar, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%temperature) )                call setup(this%temperature,              this%grid )
+        if (0<opt%vars_to_allocate( kVARS%exner) )                      call setup(this%exner,                    this%grid )
+        if (0<opt%vars_to_allocate( kVARS%z) )                          call setup(this%z,                        this%grid )
+        if (0<opt%vars_to_allocate( kVARS%dz_interface) )               call setup(this%dz_interface,             this%grid )
+        if (0<opt%vars_to_allocate( kVARS%z_interface) )                call setup(this%z_interface,              this%grid )
+        if (0<opt%vars_to_allocate( kVARS%dz) )                         call setup(this%dz_mass,                  this%grid )
+        if (0<opt%vars_to_allocate( kVARS%density) )                    call setup(this%density,                  this%grid )
+        if (0<opt%vars_to_allocate( kVARS%pressure_interface) )         call setup(this%pressure_interface,       this%grid )
+        if (0<opt%vars_to_allocate( kVARS%graupel) )                    call setup(this%graupel,                  this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%shortwave) )                  call setup(this%shortwave,                this%grid2d,   forcing_var=opt%parameters%swdown_var, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%longwave) )                   call setup(this%longwave,                 this%grid2d,   forcing_var=opt%parameters%lwdown_var, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%vegetation_fraction) )        call setup(this%vegetation_fraction,      this%grid_monthly )
+        if (0<opt%vars_to_allocate( kVARS%lai) )                        call setup(this%lai,                      this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%canopy_water) )               call setup(this%canopy_water,             this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%snow_water_equivalent) )      call setup(this%snow_water_equivalent,    this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%skin_temperature) )           call setup(this%skin_temperature,         this%grid2d,   forcing_var=opt%parameters%sst_var, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%soil_water_content) )         call setup(this%soil_water_content,       this%grid_soil,forcing_var=opt%parameters%soil_t_var, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%soil_temperature) )           call setup(this%soil_temperature,         this%grid_soil,forcing_var=opt%parameters%soil_vwc_var, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%latitude) )                   call setup(this%latitude,                 this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%longitude) )                  call setup(this%longitude,                this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%u_latitude) )                 call setup(this%u_latitude,               this%u_grid2d )
+        if (0<opt%vars_to_allocate( kVARS%u_longitude) )                call setup(this%u_longitude,              this%u_grid2d )
+        if (0<opt%vars_to_allocate( kVARS%v_latitude) )                 call setup(this%v_latitude,               this%v_grid2d )
+        if (0<opt%vars_to_allocate( kVARS%v_longitude) )                call setup(this%v_longitude,              this%v_grid2d )
+        if (0<opt%vars_to_allocate( kVARS%terrain) )                    call setup(this%terrain,                  this%grid2d )
 
         ! integer variable_t types aren't available yet...
         if (0<opt%vars_to_allocate( kVARS%precipitation) ) allocate(this%precipitation_bucket     (ims:ime, jms:jme),          source=0)
@@ -84,6 +114,48 @@ contains
 
         sync all
         if (this_image()==1) print *,"Variable Initialization Complete"
+
+        ! call setup_forcing_variable
+
+    end subroutine
+
+    subroutine setup_var(var, grid, forcing_var, list)
+        implicit none
+        type(variable_t),   intent(inout) :: var
+        type(grid_t),       intent(in)    :: grid
+        character(len=*),   intent(in),   optional :: forcing_var
+        type(var_dict_t),   intent(inout),optional :: list
+
+        if (present(forcing_var)) then
+            call var%initialize(grid, forcing_var=forcing_var)
+
+            if (present(list)) then
+                if (trim(forcing_var) /= "") call list%add_var(forcing_var, var)
+            endif
+        else
+
+            call var%initialize(grid)
+        endif
+
+    end subroutine
+
+    subroutine setup_exch(var, grid, forcing_var, list)
+        implicit none
+        type(exchangeable_t),   intent(inout) :: var
+        type(grid_t),           intent(in)    :: grid
+        character(len=*),       intent(in),   optional :: forcing_var
+        type(var_dict_t),       intent(inout),optional :: list
+
+        if (present(forcing_var)) then
+            call var%initialize(grid, forcing_var=forcing_var)
+
+            if (present(list)) then
+                if (trim(forcing_var) /= "") call list%add_var(forcing_var, var%meta_data)
+            endif
+        else
+
+            call var%initialize(grid)
+        endif
 
     end subroutine
 
@@ -339,29 +411,6 @@ contains
     end subroutine
 
     !> -------------------------------
-    !! Initialize the size of the domain using constant dimensions
-    !!
-    !! -------------------------------
-    module subroutine init(this, options)
-      class(domain_t), intent(inout) :: this
-      class(options_t),intent(inout) :: options
-
-      this%dx = options%parameters%dx
-
-      call this%var_request(options)
-
-      call read_domain_shape(this, options)
-
-      call create_variables(this, options)
-
-      call initialize_variables(this, options)
-
-      call setup_meta_data(this)
-
-    end subroutine
-
-
-    !> -------------------------------
     !! Check that a set of variables is within realistic bounds (i.e. >0)
     !!
     !! Need to add more variables to the list
@@ -429,15 +478,73 @@ contains
     module subroutine get_initial_conditions(this, forcing, options)
       implicit none
       class(domain_t),  intent(inout) :: this
-      class(boundary_t),intent(in)    :: forcing
-      class(options_t), intent(inout) :: options
+      class(boundary_t),intent(inout) :: forcing
+      class(options_t), intent(in)    :: options
 
       ! create geographic lookup table for domain
+      call setup_geo_interpolation(this, forcing)
 
       ! for all variables with a forcing_var /= "", get forcing, interpolate to local domain
+      call interpolate_datasets(this, forcing)
 
       ! with options...? potential temperature, relative humidity, etc.
 
     end subroutine
+
+
+    subroutine setup_geo_interpolation(this, forcing)
+        implicit none
+        class(domain_t),  intent(inout) :: this
+        class(boundary_t),intent(inout) :: forcing
+
+        ! this%geo and forcing%geo have to be of class interpolable
+        ! which means they must contain lat, lon, z, geolut, and vLUT components
+        call geo_LUT(this%geo, forcing%geo)
+
+    end subroutine
+
+    subroutine interpolate_datasets(this, forcing)
+        implicit none
+        class(domain_t),  intent(inout) :: this
+        class(boundary_t),intent(in)    :: forcing
+
+        type(variable_t) :: var_to_interpolate
+
+        call this%variables_to_force%reset_iterator()
+
+        do while (this%variables_to_force%has_more_elements())
+            var_to_interpolate = this%variables_to_force%next()
+            call interpolate_variable(var_to_interpolate, forcing)
+        enddo
+
+    end subroutine
+
+    subroutine interpolate_variable(var, forcing)
+        implicit none
+        class(variable_t), intent(inout) :: var
+        class(boundary_t), intent(in)    :: forcing
+
+        type(variable_t) :: input_data
+
+        input_data = forcing%variables%get_var(var%forcing_var)
+
+        if (var%two_d) then
+            call geo_interp2d(var%data_2d, input_data%data_2d, forcing%geo%geolut)
+        else if (var%three_d) then
+            call geo_interp(var%data_3d, input_data%data_3d, forcing%geo%geolut)
+        endif
+
+    end subroutine
+
+    subroutine interpolate_exchangeable(var, forcing)
+        implicit none
+        class(exchangeable_t), intent(inout) :: var
+        class(boundary_t),     intent(in)    :: forcing
+
+        ! exchangeables all have a meta_data variable_t component with a pointer to the 3D local data
+        call interpolate_variable(var%meta_data, forcing)
+
+    end subroutine
+
 
 end submodule

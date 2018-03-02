@@ -1,7 +1,7 @@
 module variable_interface
-    use icar_constants,      only : kMAX_DIM_LENGTH, kMAX_STRING_LENGTH, kMAX_NAME_LENGTH
-    use grid_interface,      only : grid_t
-    use meta_data_interface, only : meta_data_t
+    use icar_constants,          only : kMAX_DIM_LENGTH, kMAX_STRING_LENGTH, kMAX_NAME_LENGTH
+    use grid_interface,          only : grid_t
+    use meta_data_interface,     only : meta_data_t
 
     implicit none
 

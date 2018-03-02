@@ -6,6 +6,7 @@ module boundary_interface
     use meta_data_interface,      only : meta_data_t
     use time_object,              only : Time_type
     use time_delta_object,        only : time_delta_t
+    use data_structures,          only : interpolable_type
     use icar_constants
 
     implicit none
@@ -34,6 +35,8 @@ module boundary_interface
         ! boundary data coordinate system
         real, dimension(:,:),   allocatable :: lat, lon
         real, dimension(:,:,:), allocatable :: z
+
+        type(interpolable_type) :: geo
 
     contains
 

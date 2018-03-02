@@ -532,6 +532,19 @@ contains
 
     end function
 
+    !>------------------------------------------------------------
+    !! Determine if a point intersected a vertex
+    !!
+    !! y is the real point location
+    !! y0 defines one end of a line
+    !! y1 defines the other end of the line
+    !!
+    !! precision optionally defines the tolerance permitted to consider around the line
+    !!
+    !! sets top_vertex, bottom_vertex to True if the point intersected the top or bottom ends of the line (which might be the same)
+    !! Flips the inside/outside boolean if it intersected one or both verticies
+    !!
+    !!------------------------------------------------------------
     subroutine check_vertex_hits(y, y0, y1, inside, top_vertex, bottom_vertex, precision)
         implicit none
         real,    intent(in)    :: y, y0, y1
@@ -948,12 +961,14 @@ contains
     !!------------------------------------------------------------
     subroutine geo_interp(fieldout,fieldin,geolut,boundary_only)
         implicit none
-        real,intent(inout)::fieldout(:,:,:)
-        real,intent(in)::fieldin(:,:,:)
-        type(geo_look_up_table),intent(in)::geolut
-        logical,intent(in)::boundary_only
+        real,                   intent(inout) :: fieldout(:,:,:)
+        real,                   intent(in)    :: fieldin(:,:,:)
+        type(geo_look_up_table),intent(in)    :: geolut
+        logical,                intent(in),   optional :: boundary_only
+
         integer::nx,nz,ny
         integer:: i,j,k,l,localx,localy
+        logical :: boundaries
         real::localw
         real :: local_center
 
@@ -961,9 +976,12 @@ contains
         nz=size(fieldout,2)
         ny=size(fieldout,3)
 
+        boundaries = .False.
+        if (present(boundary_only)) boundaries = boundary_only
+
         ! if we are only processing the boundary, then make x and y increments be the size of the array
         ! so we only hit the edges of the array
-        if (boundary_only) then
+        if (boundaries) then
             call boundary_interpolate(fieldout, fieldin, geolut)
         else
         ! use the geographic lookup table generated earlier to
@@ -1003,9 +1021,10 @@ contains
     !!------------------------------------------------------------
     subroutine geo_interp2d(fieldout, fieldin, geolut)
         implicit none
-        real, dimension(:,:),intent(inout) :: fieldout
-        real, dimension(:,:),intent(in) :: fieldin
-        type(geo_look_up_table),intent(in)::geolut
+        real, dimension(:,:),   intent(inout) :: fieldout
+        real, dimension(:,:),   intent(in)    :: fieldin
+        type(geo_look_up_table),intent(in)    :: geolut
+
         integer::i,k,l,ny,nx,localx,localy
         real::localw
         real :: local_center

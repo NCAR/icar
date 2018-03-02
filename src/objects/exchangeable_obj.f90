@@ -11,10 +11,10 @@ submodule(exchangeable_interface) exchangeable_implementation
 contains
 
   module subroutine const(this, grid, metadata, forcing_var)
-    class(exchangeable_t), intent(inout) :: this
-    type(grid_t),          intent(in)    :: grid
-    class(variable_t),     intent(in), optional :: metadata
-    character(len=kMAX_NAME_LENGTH), intent(in), optional :: forcing_var
+    class(exchangeable_t),           intent(inout) :: this
+    type(grid_t),                    intent(in)    :: grid
+    class(variable_t),               intent(in),    optional :: metadata
+    character(len=kMAX_NAME_LENGTH), intent(in),    optional :: forcing_var
 
     halo_size = grid%halo_size
 
@@ -40,7 +40,12 @@ contains
 
     if (.not.allocated(neighbors)) call this%set_neighbors(grid)
 
-    if (present(metadata)) call this%set_outputdata(metadata)
+    if (present(metadata)) then
+        call this%set_outputdata(metadata)
+    else
+        call this%set_outputdata()
+    endif
+
     if (present(forcing_var)) this%meta_data%forcing_var = forcing_var
 
   end subroutine
@@ -96,9 +101,11 @@ contains
   module subroutine set_outputdata(this, metadata)
     implicit none
     class(exchangeable_t), intent(inout)  :: this
-    class(variable_t),     intent(in)     :: metadata
+    class(variable_t),     intent(in),    optional :: metadata
 
-    this%meta_data = metadata
+    if (present(metadata)) then
+        this%meta_data = metadata
+    endif
 
     this%meta_data%data_3d => this%data_3d
     this%meta_data%three_d = .True.

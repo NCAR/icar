@@ -451,7 +451,8 @@ caf_write_domain_test: $(BUILD)test_caf_write_domain.o					\
 					$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o\
 					$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 					$(BUILD)advection_driver.o							\
-					$(BUILD)advect.o
+					$(BUILD)advect.o		$(BUILD)data_structures.o	\
+					$(BUILD)geo_reader.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
@@ -473,7 +474,7 @@ caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
 					$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
 					$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 					$(BUILD)advection_driver.o							\
-					$(BUILD)advect.o
+					$(BUILD)advect.o		$(BUILD)data_structures.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_domain_init_test: $(BUILD)test_caf_domain_init.o                \
@@ -494,7 +495,8 @@ caf_domain_init_test: $(BUILD)test_caf_domain_init.o                \
 				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 				$(BUILD)advection_driver.o							\
 				$(BUILD)advect.o									\
-				$(BUILD)io_routines.o	 $(BUILD)co_utilities.o
+				$(BUILD)io_routines.o	 $(BUILD)data_structures.o	\
+				$(BUILD)geo_reader.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_init_test: $(BUILD)test_caf_init.o                              \
@@ -515,7 +517,8 @@ caf_init_test: $(BUILD)test_caf_init.o                              \
 				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 				$(BUILD)advection_driver.o							\
 				$(BUILD)advect.o									\
-				$(BUILD)io_routines.o	 $(BUILD)co_utilities.o
+				$(BUILD)data_structures.o $(BUILD)geo_reader.o		\
+				$(BUILD)io_routines.o	$(BUILD)data_structures.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_bcast_test: $(BUILD)test_caf_bcast.o	\
@@ -539,9 +542,8 @@ caf_boundary_test: $(BUILD)test_caf_boundary.o						\
 				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 				$(BUILD)advection_driver.o							\
 				$(BUILD)advect.o									\
-				$(BUILD)io_routines.o	 $(BUILD)co_utilities.o		\
-				$(BUILD)data_structures.o $(BUILD)geo_reader.o		\
-				$(BUILD)vinterp.o $(BUILD)array_utilities.o
+				$(BUILD)io_routines.o	 $(BUILD)data_structures.o	\
+				$(BUILD)vinterp.o 		 $(BUILD)array_utilities.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_boundary_init_test: $(BUILD)test_caf_boundary_init.o				    \
@@ -561,7 +563,7 @@ caf_boundary_init_test: $(BUILD)test_caf_boundary_init.o				    \
 				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 				$(BUILD)advection_driver.o							\
 				$(BUILD)advect.o									\
-				$(BUILD)io_routines.o	 $(BUILD)co_utilities.o		\
+				$(BUILD)io_routines.o	$(BUILD)data_structures.o	\
 				$(BUILD)data_structures.o $(BUILD)geo_reader.o		\
 				$(BUILD)vinterp.o 		 $(BUILD)array_utilities.o
 	${F90} $^ -o $@ ${LFLAGS}
@@ -644,7 +646,7 @@ $(BUILD)output_obj.o: $(IO)output_obj.f90 $(BUILD)output_h.o $(BUILD)default_out
 $(BUILD)boundary_h.o: $(OBJECTS)boundary_h.f90 $(BUILD)options_h.o				\
 					$(BUILD)grid_h.o $(BUILD)meta_data_h.o $(BUILD)time_obj.o 	\
 					$(BUILD)data_structures.o $(BUILD)time_delta_obj.o			\
-					$(BUILD)variable_dict_h.o
+					$(BUILD)variable_dict_h.o $(BUILD)data_structures.o
 
 $(BUILD)boundary_obj.o: $(OBJECTS)boundary_obj.f90 $(BUILD)boundary_h.o					\
 					$(BUILD)string.o $(BUILD)atm_utilities.o $(BUILD)time_io.o			\
@@ -653,9 +655,9 @@ $(BUILD)boundary_obj.o: $(OBJECTS)boundary_obj.f90 $(BUILD)boundary_h.o					\
 
 
 $(BUILD)domain_h.o: $(OBJECTS)domain_h.f90 $(BUILD)options_h.o $(BUILD)exchangeable_h.o \
-					$(BUILD)grid_h.o 	$(BUILD)meta_data_h.o 	 						\
+					$(BUILD)grid_h.o 	$(BUILD)meta_data_h.o $(BUILD)data_structures.o	\
 					$(BUILD)time_obj.o 	$(BUILD)boundary_h.o	 						\
-					$(BUILD)time_io.o 	$(BUILD)io_routines.o
+					$(BUILD)time_io.o 	$(BUILD)io_routines.o $(BUILD)geo_reader.o
 
 $(BUILD)domain_obj.o: $(OBJECTS)domain_obj.f90 $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)grid_h.o \
 					$(BUILD)string.o $(BUILD)mp_driver.o $(BUILD)assertions.o  					\
@@ -687,6 +689,8 @@ $(BUILD)init_options.o:$(MAIN)init_options.f90 $(BUILD)data_structures.o  $(BUIL
 
 # $(BUILD)time.o:$(UTIL)time.f90
 # 	${F90} ${FFLAGS} $(UTIL)time.f90 -o $(BUILD)time.o
+
+$(BUILD)co_utilities.o:$(UTIL)co_utilities.f90 $(BUILD)icar_constants.o
 
 $(BUILD)time_delta_obj.o:$(UTIL)time_delta_obj.f90 $(BUILD)icar_constants.o
 

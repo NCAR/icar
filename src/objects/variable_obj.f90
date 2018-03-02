@@ -23,9 +23,7 @@ contains
 
         this%two_d   = grid%is2d
         this%three_d = grid%is3d
-        if (present(forcing_var)) then
-            this%forcing_var = forcing_var
-        endif
+
 
         if (grid%is2d) then
             this%n_dimensions = 2
@@ -44,6 +42,8 @@ contains
             if (err /= 0) stop "variable:grid:3d: Allocation request denied"
         endif
 
+        if (present(forcing_var)) this%forcing_var = forcing_var
+
     end subroutine
 
     !> -------------------------------
@@ -58,17 +58,12 @@ contains
         integer,            intent(in)    :: dims(:)
         character(len=kMAX_NAME_LENGTH), intent(in), optional :: forcing_var
 
-
         integer :: err
 
         this%dim_len    = dims
 
         this%two_d   = size(dims) == 2
         this%three_d = size(dims) == 3
-
-        if (present(forcing_var)) then
-            this%forcing_var = forcing_var
-        endif
 
         if (this%two_d) then
             this%n_dimensions = 2
@@ -85,6 +80,8 @@ contains
             allocate(this%data_3d(dims(1), dims(2), dims(3)), stat=err)
             if (err /= 0) stop "variable:dims:3d: Allocation request denied"
         endif
+
+        if (present(forcing_var)) this%forcing_var = forcing_var
 
     end subroutine
 
