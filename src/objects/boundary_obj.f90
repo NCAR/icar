@@ -53,6 +53,8 @@ contains
 
         call this%distribute_initial_conditions()
 
+        call setup_boundary_geo(this)
+
     end subroutine
 
     !>------------------------------------------------------------
@@ -96,8 +98,6 @@ contains
 
         end do
 
-        call setup_boundary_geo(this)
-
     end subroutine
 
     subroutine setup_boundary_geo(this)
@@ -112,6 +112,9 @@ contains
 
         if (allocated(this%geo%z)) deallocate(this%geo%z)
         allocate( this%geo%z, source=this%z)
+
+        this%geo_u = this%geo
+        this%geo_v = this%geo
 
     end subroutine
 

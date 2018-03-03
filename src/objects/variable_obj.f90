@@ -42,6 +42,7 @@ contains
             if (err /= 0) stop "variable:grid:3d: Allocation request denied"
         endif
 
+        this%forcing_var = ""
         if (present(forcing_var)) this%forcing_var = forcing_var
 
     end subroutine
@@ -81,6 +82,7 @@ contains
             if (err /= 0) stop "variable:dims:3d: Allocation request denied"
         endif
 
+        this%forcing_var = ""
         if (present(forcing_var)) this%forcing_var = forcing_var
 
     end subroutine

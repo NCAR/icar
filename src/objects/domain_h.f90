@@ -81,6 +81,8 @@ module domain_interface
     type(var_dict_t) :: variables_to_force
 
     type(interpolable_type) :: geo
+    type(interpolable_type) :: geo_u
+    type(interpolable_type) :: geo_v
 
     real :: dx
 

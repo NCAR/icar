@@ -37,6 +37,8 @@ module boundary_interface
         real, dimension(:,:,:), allocatable :: z
 
         type(interpolable_type) :: geo
+        type(interpolable_type) :: geo_u
+        type(interpolable_type) :: geo_v
 
     contains
 

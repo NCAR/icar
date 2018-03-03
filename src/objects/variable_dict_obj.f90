@@ -118,6 +118,7 @@ contains
         integer,             intent(out),optional :: err
 
         logical :: save_data
+        integer :: ims,ime, jms,jme, kms,kme
 
         save_data = .False.
         if (present(save_state)) save_data=save_state
@@ -143,19 +144,26 @@ contains
 
         ! If we want to assume that the data arrays may be deallocated outside of the dict, we can do this...
         if (save_data) then
-            ! call this%var_list(this%n_vars)%var%initialize(var_data%dim_len)
-            !   or this:
-            ! this%var_list(this%n_vars)%var  = var_data
-            ! followed by nullifying and allocating the data pointers?
-            !
-            ! then we can copy the data from the original data directly into this location...
+
             if (var_data%two_d) then
+                ims = lbound(var_data%data_2d,1)
+                ime = ubound(var_data%data_2d,1)
+                jms = lbound(var_data%data_2d,2)
+                jme = ubound(var_data%data_2d,2)
+
                 nullify( this%var_list(this%n_vars)%var%data_2d)
-                allocate(this%var_list(this%n_vars)%var%data_2d(var_data%dim_len(1),var_data%dim_len(2)))
+                allocate(this%var_list(this%n_vars)%var%data_2d(ims:ime, jms:jme))
                 this%var_list(this%n_vars)%var%data_2d(:,:)  = var_data%data_2d(:,:)
             else
+                ims = lbound(var_data%data_3d,1)
+                ime = ubound(var_data%data_3d,1)
+                jms = lbound(var_data%data_3d,2)
+                jme = ubound(var_data%data_3d,2)
+                kms = lbound(var_data%data_3d,3)
+                kme = ubound(var_data%data_3d,3)
+
                 nullify( this%var_list(this%n_vars)%var%data_3d)
-                allocate(this%var_list(this%n_vars)%var%data_3d(var_data%dim_len(1),var_data%dim_len(2),var_data%dim_len(3)))
+                allocate(this%var_list(this%n_vars)%var%data_3d(ims:ime, jms:jme, kms:kme))
                 this%var_list(this%n_vars)%var%data_3d(:,:,:)  = var_data%data_3d(:,:,:)
             endif
 
@@ -271,16 +279,6 @@ contains
         endif
 
     end function
-
-    module subroutine broadcast(this, source, start, end)
-        implicit none
-        class(variable_t),  intent(inout) :: this
-        integer,            intent(in)    :: source, start, end
-
-
-
-    end subroutine
-
 
 
 end submodule

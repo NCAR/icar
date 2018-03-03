@@ -536,12 +536,12 @@ contains
         integer :: name_unit, i
         character(len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar,  &
                                         hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
-                                        pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,   &
+                                        pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qgvar,qsvar,hgtvar,shvar,lhvar,pblhvar,   &
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
                                         swdown_var, lwdown_var, sst_var, rain_var, time_var
 
-        namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,   &
+        namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qgvar,hgtvar,shvar,lhvar,pblhvar,   &
                             landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar, &
                             hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
                             soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
@@ -565,6 +565,9 @@ contains
         qvvar=""
         qcvar=""
         qivar=""
+        qrvar=""
+        qsvar=""
+        qgvar=""
         zvar=""
         zbvar=""
         shvar=""
@@ -624,6 +627,9 @@ contains
         options%qvvar       = qvvar     ; options%vars_to_read(i) = qvvar;      options%dim_list(i) = 3;    i = i + 1
         options%qcvar       = qcvar     ; options%vars_to_read(i) = qcvar;      options%dim_list(i) = 3;    i = i + 1
         options%qivar       = qivar     ; options%vars_to_read(i) = qivar;      options%dim_list(i) = 3;    i = i + 1
+        options%qrvar       = qrvar     ; options%vars_to_read(i) = qrvar;      options%dim_list(i) = 3;    i = i + 1
+        options%qsvar       = qsvar     ; options%vars_to_read(i) = qsvar;      options%dim_list(i) = 3;    i = i + 1
+        options%qgvar       = qgvar     ; options%vars_to_read(i) = qgvar;      options%dim_list(i) = 3;    i = i + 1
 
         ! vertical coordinate
         options%zvar        = zvar      ! these variables are read explicitly so not added to vars_to_read list

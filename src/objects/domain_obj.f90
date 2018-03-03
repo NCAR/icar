@@ -9,7 +9,7 @@ submodule(domain_interface) domain_implementation
   use microphysics,         only : mp_simple_var_request
   use co_util,              only : broadcast
   use io_routines,          only : io_read, io_write
-  use geo,                  only : geo_lut, geo_interp, geo_interp2d
+  use geo,                  only : geo_lut, geo_interp, geo_interp2d, standardize_coordinates
 
   implicit none
 
@@ -63,24 +63,24 @@ contains
 
         if (this_image()==1) print *,"Initializing variables"
 
-        if (0<opt%vars_to_allocate( kVARS%u) )                          call setup(this%u,                        this%u_grid,   forcing_var=opt%parameters%uvar, list=this%variables_to_force)
-        if (0<opt%vars_to_allocate( kVARS%v) )                          call setup(this%v,                        this%v_grid,   forcing_var=opt%parameters%vvar, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%u) )                          call setup(this%u,                        this%u_grid,   forcing_var=opt%parameters%uvar,       list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%v) )                          call setup(this%v,                        this%v_grid,   forcing_var=opt%parameters%vvar,       list=this%variables_to_force)
         if (0<opt%vars_to_allocate( kVARS%w) )                          call setup(this%w,                        this%grid )
-        if (0<opt%vars_to_allocate( kVARS%water_vapor) )                call setup(this%water_vapor,              this%grid,     forcing_var=opt%parameters%qvvar, list=this%variables_to_force)
-        if (0<opt%vars_to_allocate( kVARS%potential_temperature) )      call setup(this%potential_temperature,    this%grid,     forcing_var=opt%parameters%tvar, list=this%variables_to_force)
-        if (0<opt%vars_to_allocate( kVARS%cloud_water) )                call setup(this%cloud_water_mass,         this%grid,     forcing_var=opt%parameters%qcvar, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%water_vapor) )                call setup(this%water_vapor,              this%grid,     forcing_var=opt%parameters%qvvar,      list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%potential_temperature) )      call setup(this%potential_temperature,    this%grid,     forcing_var=opt%parameters%tvar,       list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%cloud_water) )                call setup(this%cloud_water_mass,         this%grid,     forcing_var=opt%parameters%qcvar,      list=this%variables_to_force)
         if (0<opt%vars_to_allocate( kVARS%cloud_number_concentration))  call setup(this%cloud_number,             this%grid )
-        if (0<opt%vars_to_allocate( kVARS%cloud_ice) )                  call setup(this%cloud_ice_mass,           this%grid,     forcing_var=opt%parameters%qivar, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%cloud_ice) )                  call setup(this%cloud_ice_mass,           this%grid,     forcing_var=opt%parameters%qivar,      list=this%variables_to_force)
         if (0<opt%vars_to_allocate( kVARS%ice_number_concentration))    call setup(this%cloud_ice_number,         this%grid )
-        if (0<opt%vars_to_allocate( kVARS%rain_in_air) )                call setup(this%rain_mass,                this%grid,     forcing_var=opt%parameters%qrvar, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%rain_in_air) )                call setup(this%rain_mass,                this%grid,     forcing_var=opt%parameters%qrvar,      list=this%variables_to_force)
         if (0<opt%vars_to_allocate( kVARS%rain_number_concentration))   call setup(this%rain_number,              this%grid )
-        if (0<opt%vars_to_allocate( kVARS%snow_in_air) )                call setup(this%snow_mass,                this%grid,     forcing_var=opt%parameters%qsvar, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%snow_in_air) )                call setup(this%snow_mass,                this%grid,     forcing_var=opt%parameters%qsvar,      list=this%variables_to_force)
         if (0<opt%vars_to_allocate( kVARS%snow_number_concentration) )  call setup(this%snow_number,              this%grid )
-        if (0<opt%vars_to_allocate( kVARS%graupel_in_air) )             call setup(this%graupel_mass,             this%grid,     forcing_var=opt%parameters%qgvar, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%graupel_in_air) )             call setup(this%graupel_mass,             this%grid,     forcing_var=opt%parameters%qgvar,      list=this%variables_to_force)
         if (0<opt%vars_to_allocate( kVARS%graupel_number_concentration))call setup(this%graupel_number,           this%grid )
         if (0<opt%vars_to_allocate( kVARS%precipitation) )              call setup(this%accumulated_precipitation,this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%snowfall) )                   call setup(this%accumulated_snowfall,     this%grid2d )
-        if (0<opt%vars_to_allocate( kVARS%pressure) )                   call setup(this%pressure,                 this%grid,     forcing_var=opt%parameters%pvar, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%pressure) )                   call setup(this%pressure,                 this%grid,     forcing_var=opt%parameters%pvar,       list=this%variables_to_force)
         if (0<opt%vars_to_allocate( kVARS%temperature) )                call setup(this%temperature,              this%grid )
         if (0<opt%vars_to_allocate( kVARS%exner) )                      call setup(this%exner,                    this%grid )
         if (0<opt%vars_to_allocate( kVARS%z) )                          call setup(this%z,                        this%grid )
@@ -90,15 +90,15 @@ contains
         if (0<opt%vars_to_allocate( kVARS%density) )                    call setup(this%density,                  this%grid )
         if (0<opt%vars_to_allocate( kVARS%pressure_interface) )         call setup(this%pressure_interface,       this%grid )
         if (0<opt%vars_to_allocate( kVARS%graupel) )                    call setup(this%graupel,                  this%grid2d )
-        if (0<opt%vars_to_allocate( kVARS%shortwave) )                  call setup(this%shortwave,                this%grid2d,   forcing_var=opt%parameters%swdown_var, list=this%variables_to_force)
-        if (0<opt%vars_to_allocate( kVARS%longwave) )                   call setup(this%longwave,                 this%grid2d,   forcing_var=opt%parameters%lwdown_var, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%shortwave) )                  call setup(this%shortwave,                this%grid2d,   forcing_var=opt%parameters%swdown_var,  list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%longwave) )                   call setup(this%longwave,                 this%grid2d,   forcing_var=opt%parameters%lwdown_var,  list=this%variables_to_force)
         if (0<opt%vars_to_allocate( kVARS%vegetation_fraction) )        call setup(this%vegetation_fraction,      this%grid_monthly )
         if (0<opt%vars_to_allocate( kVARS%lai) )                        call setup(this%lai,                      this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%canopy_water) )               call setup(this%canopy_water,             this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%snow_water_equivalent) )      call setup(this%snow_water_equivalent,    this%grid2d )
-        if (0<opt%vars_to_allocate( kVARS%skin_temperature) )           call setup(this%skin_temperature,         this%grid2d,   forcing_var=opt%parameters%sst_var, list=this%variables_to_force)
-        if (0<opt%vars_to_allocate( kVARS%soil_water_content) )         call setup(this%soil_water_content,       this%grid_soil,forcing_var=opt%parameters%soil_t_var, list=this%variables_to_force)
-        if (0<opt%vars_to_allocate( kVARS%soil_temperature) )           call setup(this%soil_temperature,         this%grid_soil,forcing_var=opt%parameters%soil_vwc_var, list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%skin_temperature) )           call setup(this%skin_temperature,         this%grid2d,   forcing_var=opt%parameters%sst_var,     list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%soil_water_content) )         call setup(this%soil_water_content,       this%grid_soil,forcing_var=opt%parameters%soil_t_var,  list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%soil_temperature) )           call setup(this%soil_temperature,         this%grid_soil,forcing_var=opt%parameters%soil_vwc_var,list=this%variables_to_force)
         if (0<opt%vars_to_allocate( kVARS%latitude) )                   call setup(this%latitude,                 this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%longitude) )                  call setup(this%longitude,                this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%u_latitude) )                 call setup(this%u_latitude,               this%u_grid2d )
@@ -119,6 +119,15 @@ contains
 
     end subroutine
 
+    !> -------------------------------
+    !! Setup a regular variable.
+    !!
+    !! Initializes the variable
+    !! including the forcing_variable if it was set
+    !! and adds that variable to the list of variables that has forcing data if the list is supplied
+    !! and the forcing_var is both present and not blank ("")
+    !!
+    !! -------------------------------
     subroutine setup_var(var, grid, forcing_var, list)
         implicit none
         type(variable_t),   intent(inout) :: var
@@ -130,7 +139,9 @@ contains
             call var%initialize(grid, forcing_var=forcing_var)
 
             if (present(list)) then
-                if (trim(forcing_var) /= "") call list%add_var(forcing_var, var)
+                if (Len(Trim(forcing_var)) /= 0) then
+                    call list%add_var(forcing_var, var)
+                endif
             endif
         else
 
@@ -139,6 +150,15 @@ contains
 
     end subroutine
 
+    !> -------------------------------
+    !! Setup an exchangeable variable.
+    !!
+    !! Initializes the variable
+    !! including the forcing_variable if it was set
+    !! and adds that variable to the list of variables that has forcing data if the list is supplied
+    !! and the forcing_var is both present and not blank ("")
+    !!
+    !! -------------------------------
     subroutine setup_exch(var, grid, forcing_var, list)
         implicit none
         type(exchangeable_t),   intent(inout) :: var
@@ -148,9 +168,10 @@ contains
 
         if (present(forcing_var)) then
             call var%initialize(grid, forcing_var=forcing_var)
-
             if (present(list)) then
-                if (trim(forcing_var) /= "") call list%add_var(forcing_var, var%meta_data)
+                if (Len(Trim(forcing_var)) /= 0) then
+                    call list%add_var(forcing_var, var%meta_data)
+                endif
             endif
         else
 
@@ -281,18 +302,50 @@ contains
 
     end subroutine read_core_variables
 
+    !> -------------------------------
+    !! Setup a single Geographic structure given a latitude, longitude, and z array
+    !!
+    !! -------------------------------
+    subroutine setup_geo(geo, latitude, longitude, z)
+        implicit none
+        class(interpolable_type), intent(inout) :: geo
+        real,                     intent(in)    :: latitude(:,:)
+        real,                     intent(in)    :: longitude(:,:)
+        real,                     intent(in)    :: z(:,:,:)
+
+        if (allocated(geo%lat)) deallocate(geo%lat)
+        allocate( geo%lat, source=latitude)
+
+        if (allocated(geo%lon)) deallocate(geo%lon)
+        allocate( geo%lon, source=longitude)
+
+        if (allocated(geo%z)) deallocate(geo%z)
+        allocate( geo%z, source=z)
+
+        ! This makes 2D variables out of lat/lon if they come in as 1D variables
+        ! This also puts the longitudes onto a 0-360 if they are -180-180 (important for Alaska)
+        ! Though if working in Europe the -180-180 grid is better ideally the optimal value should be checked.
+        ! and good luck if you want to work over the poles...
+        call standardize_coordinates(geo)
+
+    end subroutine
+
+    !> -------------------------------
+    !! Setup the Geographic structures for all relevant grids in the domain
+    !!
+    !! -------------------------------
     subroutine setup_domain_geo(this)
         implicit none
         type(domain_t), intent(inout) :: this
 
-        if (allocated(this%geo%lat)) deallocate(this%geo%lat)
-        allocate( this%geo%lat, source=this%latitude%data_2d)
-
-        if (allocated(this%geo%lon)) deallocate(this%geo%lon)
-        allocate( this%geo%lon, source=this%longitude%data_2d)
-
-        if (allocated(this%geo%z)) deallocate(this%geo%z)
-        allocate( this%geo%z, source=this%z%data_3d)
+        call setup_geo(this%geo,   this%latitude%data_2d,   this%longitude%data_2d,   this%z%data_3d)
+        if (this_image()==1) then
+            print*, "WARNING WARNING WARNING"
+            print*, "z variable passed to geo_u and geo_v is incorrect"
+            print*, "WARNING WARNING WARNING"
+        endif
+        call setup_geo(this%geo_u, this%u_latitude%data_2d, this%u_longitude%data_2d, this%z%data_3d)
+        call setup_geo(this%geo_v, this%v_latitude%data_2d, this%v_longitude%data_2d, this%z%data_3d)
 
     end subroutine setup_domain_geo
 
@@ -396,6 +449,10 @@ contains
 
     end subroutine var_request
 
+    !> -------------------------------
+    !! Read in the shape of the domain required and setup the grid objects
+    !!
+    !! -------------------------------
     subroutine read_domain_shape(this, options)
         implicit none
         class(domain_t), intent(inout)  :: this
@@ -404,6 +461,8 @@ contains
         real, allocatable :: temporary_data(:,:)
         integer :: nx_global, ny_global, nz_global
 
+        ! This doesn't need to read in this variable, it could just request the dimensions
+        ! but this is not a performance sensitive part of the code (for now)
         call io_read(options%parameters%init_conditions_file,   &
                      options%parameters%hgt_hi,                 &
                      temporary_data)
@@ -492,6 +551,13 @@ contains
       call this%halo_retrieve()
     end subroutine
 
+    !> -------------------------------
+    !! Set up the initial conditions for the domain
+    !!
+    !! This includes setting up all of the geographic interpolation now that we have the forcing grid
+    !! and interpolating the first time step of forcing data on to the high res domain grids
+    !!
+    !! -------------------------------
     module subroutine get_initial_conditions(this, forcing, options)
       implicit none
       class(domain_t),  intent(inout) :: this
@@ -504,11 +570,15 @@ contains
       ! for all variables with a forcing_var /= "", get forcing, interpolate to local domain
       call interpolate_datasets(this, forcing)
 
+      ! This would be a good place to apply additional options
       ! with options...? potential temperature, relative humidity, etc.
 
     end subroutine
 
-
+    !> -------------------------------
+    !! Setup the Geographic look up tables for interpolating a given forcing data set to each of the grids
+    !!
+    !! -------------------------------
     subroutine setup_geo_interpolation(this, forcing)
         implicit none
         class(domain_t),  intent(inout) :: this
@@ -517,42 +587,79 @@ contains
         ! this%geo and forcing%geo have to be of class interpolable
         ! which means they must contain lat, lon, z, geolut, and vLUT components
         call geo_LUT(this%geo, forcing%geo)
+        call geo_LUT(this%geo_u, forcing%geo_u)
+        call geo_LUT(this%geo_v, forcing%geo_v)
 
     end subroutine
 
+    !> -------------------------------
+    !! Loop through all variables for which forcing data have been supplied and interpolate the forcing data to the domain
+    !!
+    !! -------------------------------
     subroutine interpolate_datasets(this, forcing)
         implicit none
         class(domain_t),  intent(inout) :: this
         class(boundary_t),intent(in)    :: forcing
 
+        ! temporary to hold the variable to be interpolated
         type(variable_t) :: var_to_interpolate
 
+        ! make sure the dictionary is reset to point to the first variable
         call this%variables_to_force%reset_iterator()
 
+        ! No iterate through the dictionary as long as there are more elements present
         do while (this%variables_to_force%has_more_elements())
+            ! get the next variable
             var_to_interpolate = this%variables_to_force%next()
+            ! interpolate
             call interpolate_variable(var_to_interpolate, forcing)
         enddo
 
     end subroutine
 
+    !> -------------------------------
+    !! Interpolate one variable by requesting the forcing data from the boundary data structure then
+    !! calling the appropriate interpolation routine (2D vs 3D) with the appropriate grid (mass, u, v)
+    !!
+    !! -------------------------------
     subroutine interpolate_variable(var, forcing)
         implicit none
         class(variable_t), intent(inout) :: var
         class(boundary_t), intent(in)    :: forcing
 
         type(variable_t) :: input_data
+        integer :: ims,ime,jms,jme,kms,kme
 
         input_data = forcing%variables%get_var(var%forcing_var)
 
+
         if (var%two_d) then
             call geo_interp2d(var%data_2d, input_data%data_2d, forcing%geo%geolut)
+
         else if (var%three_d) then
-            call geo_interp(var%data_3d, input_data%data_3d, forcing%geo%geolut)
+            ! Sequence of if statements to test if this variable needs to be interpolated onto the staggared grids
+
+            ! Interpolate to the Mass grid
+            if ((size(var%data_3d,1) == size(forcing%geo%geolut%x,2)).and.(size(var%data_3d,3) == size(forcing%geo%geolut%x,3))) then
+                call geo_interp(var%data_3d, input_data%data_3d, forcing%geo%geolut)
+            ! Interpolate to the u staggared grid
+            else if ((size(var%data_3d,1) == size(forcing%geo_u%geolut%x,2)).and.(size(var%data_3d,3) == size(forcing%geo_u%geolut%x,3))) then
+                call geo_interp(var%data_3d, input_data%data_3d, forcing%geo_u%geolut)
+            ! Interpolate to the v staggared grid
+            else if ((size(var%data_3d,1) == size(forcing%geo_v%geolut%x,2)).and.(size(var%data_3d,3) == size(forcing%geo_v%geolut%x,3))) then
+                call geo_interp(var%data_3d, input_data%data_3d, forcing%geo_v%geolut)
+            endif
+
         endif
 
     end subroutine
 
+    !> -------------------------------
+    !! Used to interpolate an exchangeable type, just gets the meta_data structure from it and uses interpolate_variable
+    !!
+    !! This is not used presently since the meta_data structures are added directly to the variables_to_force dictionary
+    !!
+    !! -------------------------------
     subroutine interpolate_exchangeable(var, forcing)
         implicit none
         class(exchangeable_t), intent(inout) :: var
