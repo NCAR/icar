@@ -650,17 +650,17 @@ $(BUILD)boundary_h.o: $(OBJECTS)boundary_h.f90 $(BUILD)options_h.o				\
 
 $(BUILD)boundary_obj.o: $(OBJECTS)boundary_obj.f90 $(BUILD)boundary_h.o					\
 					$(BUILD)string.o $(BUILD)atm_utilities.o $(BUILD)time_io.o			\
-					$(BUILD)io_routines.o $(BUILD)geo_reader.o  $(BUILD)co_utilities.o	\
+					$(BUILD)io_routines.o $(BUILD)co_utilities.o						\
 					$(BUILD)vinterp.o $(BUILD)array_utilities.o $(BUILD)icar_constants.o
 
 
 $(BUILD)domain_h.o: $(OBJECTS)domain_h.f90 $(BUILD)options_h.o $(BUILD)exchangeable_h.o \
 					$(BUILD)grid_h.o 	$(BUILD)meta_data_h.o $(BUILD)data_structures.o	\
 					$(BUILD)time_obj.o 	$(BUILD)boundary_h.o	 						\
-					$(BUILD)time_io.o 	$(BUILD)io_routines.o $(BUILD)geo_reader.o
+					$(BUILD)time_io.o 	$(BUILD)io_routines.o
 
-$(BUILD)domain_obj.o: $(OBJECTS)domain_obj.f90 $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)grid_h.o \
-					$(BUILD)string.o $(BUILD)mp_driver.o $(BUILD)assertions.o  					\
+$(BUILD)domain_obj.o: $(OBJECTS)domain_obj.f90 $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)grid_h.o 	\
+					$(BUILD)string.o $(BUILD)mp_driver.o $(BUILD)assertions.o $(BUILD)geo_reader.o 		\
 					$(BUILD)atm_utilities.o $(BUILD)io_routines.o $(BUILD)co_utilities.o
 
 ###################################################################
