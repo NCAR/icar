@@ -112,7 +112,7 @@ contains
             var%attributes  = [attribute_t("standard_name", "grid_eastward_wind"),              &
                                attribute_t("long_name",     "Grid relative eastward wind"),     &
                                attribute_t("units",         "m s-1"),                           &
-                               attribute_t("coordinates",   "lat u_lon")]
+                               attribute_t("coordinates",   "u_lat u_lon")]
         end associate
         associate(var=>var_meta(kVARS%v))
             var%name        = "v"
@@ -120,7 +120,7 @@ contains
             var%attributes  = [attribute_t("standard_name", "grid_northward_wind"),             &
                                attribute_t("long_name",     "Grid relative northward wind"),    &
                                attribute_t("units",         "m s-1"),                           &
-                               attribute_t("coordinates",   "v_lat lon")]
+                               attribute_t("coordinates",   "v_lat v_lon")]
         end associate
         associate(var=>var_meta(kVARS%w))
             var%name        = "w"
