@@ -12,8 +12,13 @@ module options_interface
     type :: options_t
         character(len=kMAX_STRING_LENGTH) :: comment
 
+        ! master list of variables for different processes... not sure if this is the best place to store this information
+
+        ! these are the variables that the advection code should process
         integer :: vars_to_advect(   kMAX_STORAGE_VARS ) = 0
+        ! these are the variables that need to be allocated for the model to run given the physics options requested
         integer :: vars_to_allocate( kMAX_STORAGE_VARS ) = 0
+        ! these are the variables that need to be written and read from disk for a model restart run
         integer :: vars_for_restart( kMAX_STORAGE_VARS ) = 0
 
         type(parameter_options_type),   allocatable :: parameters[:]

@@ -473,7 +473,7 @@ caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
 					$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
 					$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
 					$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
-					$(BUILD)advection_driver.o							\
+					$(BUILD)advection_driver.o $(BUILD)geo_reader.o		\
 					$(BUILD)advect.o		$(BUILD)data_structures.o
 	${F90} $^ -o $@ ${LFLAGS}
 
@@ -521,6 +521,29 @@ caf_init_test: $(BUILD)test_caf_init.o                              \
 				$(BUILD)io_routines.o	$(BUILD)data_structures.o
 	${F90} $^ -o $@ ${LFLAGS}
 
+caf_init-write_test: $(BUILD)test_caf_init-write.o                  \
+				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
+				$(BUILD)model_tracking.o $(BUILD)string.o           \
+				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o         \
+				$(BUILD)opt_types.o      $(BUILD)time_io.o          \
+				$(BUILD)options_h.o      $(BUILD)options_obj.o      \
+				$(BUILD)meta_data_h.o    $(BUILD)meta_data_obj.o    \
+				$(BUILD)variable_h.o     $(BUILD)variable_obj.o     \
+				$(BUILD)variable_dict_h.o $(BUILD)variable_dict_obj.o	\
+				$(BUILD)grid_h.o         $(BUILD)grid_obj.o         \
+				$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
+				$(BUILD)domain_h.o       $(BUILD)domain_obj.o		\
+				$(BUILD)boundary_h.o	 $(BUILD)boundary_obj.o		\
+				$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
+				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
+				$(BUILD)output_h.o		 $(BUILD)output_obj.o		\
+				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
+				$(BUILD)advection_driver.o							\
+				$(BUILD)advect.o									\
+				$(BUILD)data_structures.o $(BUILD)geo_reader.o		\
+				$(BUILD)io_routines.o	$(BUILD)data_structures.o
+	${F90} $^ -o $@ ${LFLAGS}
+
 caf_bcast_test: $(BUILD)test_caf_bcast.o	\
 				$(BUILD)co_utilities.o
 	${F90} $^ -o $@ ${LFLAGS}
@@ -541,7 +564,7 @@ caf_boundary_test: $(BUILD)test_caf_boundary.o						\
 				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
 				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 				$(BUILD)advection_driver.o							\
-				$(BUILD)advect.o									\
+				$(BUILD)advect.o		 $(BUILD)geo_reader.o		\
 				$(BUILD)io_routines.o	 $(BUILD)data_structures.o	\
 				$(BUILD)vinterp.o 		 $(BUILD)array_utilities.o
 	${F90} $^ -o $@ ${LFLAGS}
@@ -562,8 +585,8 @@ caf_boundary_init_test: $(BUILD)test_caf_boundary_init.o				    \
 				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
 				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 				$(BUILD)advection_driver.o							\
-				$(BUILD)advect.o									\
-				$(BUILD)io_routines.o	$(BUILD)data_structures.o	\
+				$(BUILD)advect.o		 $(BUILD)geo_reader.o		\
+				$(BUILD)io_routines.o	 $(BUILD)data_structures.o	\
 				$(BUILD)data_structures.o $(BUILD)geo_reader.o		\
 				$(BUILD)vinterp.o 		 $(BUILD)array_utilities.o
 	${F90} $^ -o $@ ${LFLAGS}
@@ -650,7 +673,7 @@ $(BUILD)boundary_h.o: $(OBJECTS)boundary_h.f90 $(BUILD)options_h.o				\
 
 $(BUILD)boundary_obj.o: $(OBJECTS)boundary_obj.f90 $(BUILD)boundary_h.o					\
 					$(BUILD)string.o $(BUILD)atm_utilities.o $(BUILD)time_io.o			\
-					$(BUILD)io_routines.o $(BUILD)co_utilities.o						\
+					$(BUILD)io_routines.o $(BUILD)co_utilities.o $(BUILD)geo_reader.o	\
 					$(BUILD)vinterp.o $(BUILD)array_utilities.o $(BUILD)icar_constants.o
 
 
@@ -885,6 +908,8 @@ $(BUILD)debug_utils.o:$(UTIL)debug_utils.f90 $(BUILD)data_structures.o $(BUILD)s
 $(BUILD)test_caf_domain_init.o: $(TESTS)test_caf_domain_init.f90 $(BUILD)domain_h.o $(BUILD)options_h.o
 
 $(BUILD)test_caf_init.o: $(TESTS)test_caf_init.f90 $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)boundary_h.o
+
+$(BUILD)test_caf_init-write.o: $(TESTS)test_caf_init-write.f90 $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)boundary_h.o $(BUILD)output_h.o
 
 $(BUILD)test_caf_boundary_init.o: $(TESTS)test_caf_boundary_init.f90 $(BUILD)boundary_h.o $(BUILD)options_h.o $(BUILD)variable_h.o
 

@@ -12,6 +12,7 @@ submodule(boundary_interface) boundary_implementation
     use co_util,                only : broadcast
     use string,                 only : str
     use mod_atm_utilities,      only : rh_to_mr
+    use geo,                    only : standardize_coordinates
 
     implicit none
 contains
@@ -112,6 +113,8 @@ contains
 
         if (allocated(this%geo%z)) deallocate(this%geo%z)
         allocate( this%geo%z, source=this%z)
+
+        call standardize_coordinates(this%geo)
 
         this%geo_u = this%geo
         this%geo_v = this%geo
