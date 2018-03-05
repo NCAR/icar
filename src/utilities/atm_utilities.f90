@@ -333,6 +333,106 @@ contains
 
     end function
 
+    !>------------------------------------------------------------
+    !!  Adjust the pressure field for the vertical shift between the low and high-res domains
+    !!
+    !!  Ideally this should include temperature... but it isn't entirely clear
+    !!  what it would mean to do that, what temperature do you use? Current time-step even though you are adjusting future time-step P?
+    !!  Alternatively, could adjust input pressure to SLP with future T then adjust back to elevation with current T?
+    !!  Currently if T is supplied, it uses the mean of the high and low-res T to split the difference.
+    !!  Equations from : http://www.wmo.int/pages/prog/www/IMOP/meetings/SI/ET-Stand-1/Doc-10_Pressure-red.pdf
+    !!  excerpt from CIMO Guide, Part I, Chapter 3 (Edition 2008, Updated in 2010) equation 3.2
+    !!  http://www.meteormetrics.com/correctiontosealevel.htm
+    !!
+    !! @param pressure  The pressure field to be adjusted
+    !! @param z_lo      The 3D vertical coordinate of the input pressures
+    !! @param z_hi      The 3D vertical coordinate of the computed/adjusted pressures
+    !! @param lowresT   OPTIONAL 3D temperature field of the input pressures
+    !! @param lowresT   OPTIONAL 3D temperature field of the computed/adjusted pressures
+    !! @retval pressure The pressure field after adjustment
+    !!
+    !!------------------------------------------------------------
+    subroutine update_pressure(pressure,z_lo,z_hi, lowresT, hiresT)
+        implicit none
+        real,dimension(:,:,:), intent(inout) :: pressure
+        real,dimension(:,:,:), intent(in) :: z_lo,z_hi
+        real,dimension(:,:,:), intent(in), optional :: lowresT, hiresT
+
+        ! local variables 1D arrays operate on a complete x row at a time
+        real,dimension(:),allocatable::slp !sea level pressure [Pa]
+        ! vapor pressure, change in height, change in temperature with height and mean temperature
+        real,dimension(:),allocatable:: dz, tmean !, e, dTdz
+        integer :: nx, ny, nz, i, j
+        nx = size(pressure,1)
+        nz = size(pressure,2)
+        ny = size(pressure,3)
+
+        if (present(lowresT)) then
+            ! OpenMP parallelization directives
+            !$omp parallel shared(pressure, z_lo,z_hi, lowresT, hiresT) &
+            !$omp private(i,j, dz, tmean) firstprivate(nx,ny,nz)  !! private(e, dTdz)
+
+            ! create the temporary variables needed internally (must be inside the parallel region)
+            allocate(dz(nx))
+            allocate(tmean(nx))
+
+            !$omp do
+            do j=1,ny
+                ! is an additional loop over z more cache friendly?
+                do i=1,nz
+                    ! vapor pressure
+!                     e = qv(:,:,j) * pressure(:,:,j) / (0.62197+qv(:,:,j))
+
+                    ! change in elevation (note reverse direction from "expected" because the formula is an SLP reduction)
+                    dz   = (z_lo(:,i,j) - z_hi(:,i,j))
+
+                    ! lapse rate (not sure if this should be positive or negative)
+                    ! dTdz = (loresT(:,:,j) - hiresT(:,:,j)) / dz
+                    ! mean temperature between levels
+                    if (present(hiresT)) then
+                        tmean= (hiresT(:,i,j) + lowresT(:,i,j)) / 2
+                    else
+                        tmean= lowresT(:,i,j)
+                    endif
+
+                    ! Actual pressure adjustment
+                    ! slp= ps*np.exp(((g/R)*Hp) / (ts - a*Hp/2.0 + e*Ch))
+                    pressure(:,i,j) = pressure(:,i,j) * exp( ((gravity/Rd) * dz) / tmean )   !&
+                    !                     (tmean + (e * 0.12) ) ) ! alternative
+
+                    ! alternative formulation M=0.029, R=8.314?
+                    ! p= p0*(t0/(t0+dtdz*z))**((g*M)/(R*dtdz))
+                    ! do i=1,nz
+                    !     pressure(:,i,j) = pressure(:,i,j)*(t0/(tmean(:,i)+dTdz(:,i)*z))**((g*M)/(R*dtdz))
+                    ! enddo
+                enddo
+            enddo
+            !$omp end do
+
+            deallocate(dz, tmean)
+            !$omp end parallel
+        else
+
+            ! OpenMP parallelization directives
+            !$omp parallel shared(pressure, z_lo,z_hi) &
+            !$omp private(slp,i,j) firstprivate(nx,ny,nz)
+
+            ! allocate thread local data
+            allocate(slp(nx))
+            !$omp do
+            do j=1,ny
+                do i=1,nz
+                    ! slp = pressure(:,i,j) / (1 - 2.25577E-5 * z_lo(:,i,j))**5.25588
+                    pressure(:,i,j) = pressure(:,i,j) * (1 - 2.25577e-5 * (z_hi(:,i,j)-z_lo(:,i,j)))**5.25588
+                enddo
+            enddo
+            !$omp end do
+            deallocate(slp)
+            !$omp end parallel
+        endif
+    end subroutine update_pressure
+
+
     !> -------------------------------
     !!
     !! Compute exner function to convert potential_temperature to temperature
