@@ -1,24 +1,24 @@
 submodule(domain_interface) domain_implementation
-  use assertions_mod,       only : assert, assertions
-  use iso_fortran_env,      only : error_unit
-  use grid_interface,       only : grid_t
-  use options_interface,    only : options_t
-  use mod_atm_utilities,    only : exner_function, sat_mr, pressure_at_elevation
-  use icar_constants,       only : kVARS
-  use string,               only : str
-  use microphysics,         only : mp_simple_var_request
-  use co_util,              only : broadcast
-  use io_routines,          only : io_read, io_write
-  use geo,                  only : geo_lut, geo_interp, geo_interp2d, standardize_coordinates
-  use array_utilities,      only : array_offset_x, array_offset_y
-  use vertical_interpolation,only : vinterp, vLUT
+    use assertions_mod,       only : assert, assertions
+    use grid_interface,       only : grid_t
+    use options_interface,    only : options_t
+    use mod_atm_utilities,    only : exner_function, update_pressure
+    use icar_constants,       only : kVARS
+    use string,               only : str
+    use microphysics,         only : mp_simple_var_request
+    use co_util,              only : broadcast
+    use io_routines,          only : io_read, io_write
+    use geo,                  only : geo_lut, geo_interp, geo_interp2d, standardize_coordinates
+    use array_utilities,      only : array_offset_x, array_offset_y, smooth_array
+    use vertical_interpolation,only : vinterp, vLUT
 
-  implicit none
+    implicit none
 
-  interface setup
-      module procedure setup_var, setup_exch
-  end interface
+    interface setup
+        module procedure setup_var, setup_exch
+    end interface
 
+    ! primary public routines : init, get_initial_conditions, halo_send, halo_retrieve, or halo_exchange
 contains
 
 
@@ -45,6 +45,72 @@ contains
     end subroutine
 
 
+    !> -------------------------------
+    !! Set up the initial conditions for the domain
+    !!
+    !! This includes setting up all of the geographic interpolation now that we have the forcing grid
+    !! and interpolating the first time step of forcing data on to the high res domain grids
+    !!
+    !! -------------------------------
+    module subroutine get_initial_conditions(this, forcing, options)
+      implicit none
+      class(domain_t),  intent(inout) :: this
+      class(boundary_t),intent(inout) :: forcing
+      class(options_t), intent(in)    :: options
+
+      ! create geographic lookup table for domain
+      call setup_geo_interpolation(this, forcing)
+
+      ! for all variables with a forcing_var /= "", get forcing, interpolate to local domain
+      call interpolate_datasets(this, forcing)
+
+    end subroutine
+
+
+    !> -------------------------------
+    !! Send the halos from all exchangable objects to their neighbors
+    !!
+    !! -------------------------------
+    module subroutine halo_send(this)
+      class(domain_t), intent(inout) :: this
+      call this%water_vapor%send()
+      call this%potential_temperature%send()
+      call this%cloud_water_mass%send()
+      call this%cloud_ice_mass%send()
+      call this%cloud_ice_number%send()
+      call this%rain_mass%send()
+      call this%rain_number%send()
+      call this%snow_mass%send()
+      call this%graupel_mass%send()
+    end subroutine
+
+    !> -------------------------------
+    !! Get the halos from all exchangable objects from their neighbors
+    !!
+    !! -------------------------------
+    module subroutine halo_retrieve(this)
+      class(domain_t), intent(inout) :: this
+      call this%water_vapor%retrieve() ! the retrieve call will sync all
+      call this%potential_temperature%retrieve(no_sync=.True.)
+      call this%cloud_water_mass%retrieve(no_sync=.True.)
+      call this%cloud_ice_mass%retrieve(no_sync=.True.)
+      call this%cloud_ice_number%retrieve(no_sync=.True.)
+      call this%rain_mass%retrieve(no_sync=.True.)
+      call this%rain_number%retrieve(no_sync=.True.)
+      call this%snow_mass%retrieve(no_sync=.True.)
+      call this%graupel_mass%retrieve(no_sync=.True.)
+    end subroutine
+
+    !> -------------------------------
+    !! Send and get the halos from all exchangable objects to/from their neighbors
+    !!
+    !! -------------------------------
+    module subroutine halo_exchange(this)
+      class(domain_t), intent(inout) :: this
+      call this%halo_send()
+
+      call this%halo_retrieve()
+    end subroutine
 
 
     !> -------------------------------
@@ -63,7 +129,7 @@ contains
         jms = this%grid%jms
         jme = this%grid%jme
 
-        if (this_image()==1) print *,"Initializing variables"
+        if (this_image()==1) print *,"  Initializing variables"
 
         if (0<opt%vars_to_allocate( kVARS%u) )                          call setup(this%u,                        this%u_grid,   forcing_var=opt%parameters%uvar,       list=this%variables_to_force)
         if (0<opt%vars_to_allocate( kVARS%v) )                          call setup(this%v,                        this%v_grid,   forcing_var=opt%parameters%vvar,       list=this%variables_to_force)
@@ -113,9 +179,6 @@ contains
         if (0<opt%vars_to_allocate( kVARS%precipitation) ) allocate(this%precipitation_bucket     (ims:ime, jms:jme),          source=0)
         if (0<opt%vars_to_allocate( kVARS%snowfall) )      allocate(this%snowfall_bucket          (ims:ime, jms:jme),          source=0)
         if (0<opt%vars_to_allocate( kVARS%land_cover) )    allocate(this%land_cover_type          (ims:ime, jms:jme),          source=0 )
-
-        sync all
-        if (this_image()==1) print *,"Variable Initialization Complete"
 
         ! call setup_forcing_variable
 
@@ -298,7 +361,7 @@ contains
             end associate
         endif
 
-        if (this_image()==1) print*, "Finished reading core domain variables"
+        if (this_image()==1) print*, "  Finished reading core domain variables"
 
     end subroutine
 
@@ -508,71 +571,6 @@ contains
 
     end subroutine
 
-    !> -------------------------------
-    !! Send the halos from all exchangable objects to their neighbors
-    !!
-    !! -------------------------------
-    module subroutine halo_send(this)
-      class(domain_t), intent(inout) :: this
-      call this%water_vapor%send()
-      call this%potential_temperature%send()
-      call this%cloud_water_mass%send()
-      call this%cloud_ice_mass%send()
-      call this%cloud_ice_number%send()
-      call this%rain_mass%send()
-      call this%rain_number%send()
-      call this%snow_mass%send()
-      call this%graupel_mass%send()
-    end subroutine
-
-    !> -------------------------------
-    !! Get the halos from all exchangable objects from their neighbors
-    !!
-    !! -------------------------------
-    module subroutine halo_retrieve(this)
-      class(domain_t), intent(inout) :: this
-      call this%water_vapor%retrieve() ! the retrieve call will sync all
-      call this%potential_temperature%retrieve(no_sync=.True.)
-      call this%cloud_water_mass%retrieve(no_sync=.True.)
-      call this%cloud_ice_mass%retrieve(no_sync=.True.)
-      call this%cloud_ice_number%retrieve(no_sync=.True.)
-      call this%rain_mass%retrieve(no_sync=.True.)
-      call this%rain_number%retrieve(no_sync=.True.)
-      call this%snow_mass%retrieve(no_sync=.True.)
-      call this%graupel_mass%retrieve(no_sync=.True.)
-    end subroutine
-
-    !> -------------------------------
-    !! Send and get the halos from all exchangable objects to/from their neighbors
-    !!
-    !! -------------------------------
-    module subroutine halo_exchange(this)
-      class(domain_t), intent(inout) :: this
-      call this%halo_send()
-
-      call this%halo_retrieve()
-    end subroutine
-
-    !> -------------------------------
-    !! Set up the initial conditions for the domain
-    !!
-    !! This includes setting up all of the geographic interpolation now that we have the forcing grid
-    !! and interpolating the first time step of forcing data on to the high res domain grids
-    !!
-    !! -------------------------------
-    module subroutine get_initial_conditions(this, forcing, options)
-      implicit none
-      class(domain_t),  intent(inout) :: this
-      class(boundary_t),intent(inout) :: forcing
-      class(options_t), intent(in)    :: options
-
-      ! create geographic lookup table for domain
-      call setup_geo_interpolation(this, forcing)
-
-      ! for all variables with a forcing_var /= "", get forcing, interpolate to local domain
-      call interpolate_datasets(this, forcing)
-
-    end subroutine
 
     !> -------------------------------
     !! Setup the Geographic look up tables for interpolating a given forcing data set to each of the grids
@@ -620,6 +618,7 @@ contains
 
         ! temporary to hold the variable to be interpolated
         type(variable_t) :: var_to_interpolate
+        integer :: nz
 
         ! make sure the dictionary is reset to point to the first variable
         call this%variables_to_force%reset_iterator()
@@ -630,9 +629,13 @@ contains
             var_to_interpolate = this%variables_to_force%next()
 
             ! interpolate
-            call interpolate_variable(var_to_interpolate, forcing)
+            call interpolate_variable(var_to_interpolate, forcing, &
+                                      vert_interp= (trim(var_to_interpolate%forcing_var) /= trim(this%pressure%forcing_var)) )
 
         enddo
+
+        nz = size(this%pressure%data_3d,2)
+        call update_pressure(this%pressure%data_3d, forcing%geo%z(:,:nz,:), this%geo%z)
 
     end subroutine
 
@@ -641,15 +644,21 @@ contains
     !! calling the appropriate interpolation routine (2D vs 3D) with the appropriate grid (mass, u, v)
     !!
     !! -------------------------------
-    subroutine interpolate_variable(var, forcing)
+    subroutine interpolate_variable(var, forcing, vert_interp)
         implicit none
         class(variable_t), intent(inout) :: var
         class(boundary_t), intent(in)    :: forcing
+        logical,           intent(in),   optional :: vert_interp
 
         type(variable_t) :: input_data
         ! note that 3D variables have a different number of vertical levels, so they have to first be interpolated
         ! to the high res horizontal grid, then vertically interpolated to the actual icar domain
         real, allocatable :: temp_3d(:,:,:)
+        logical :: interpolate_vertically
+        integer :: nz
+
+        interpolate_vertically=.True.
+        if (present(vert_interp)) interpolate_vertically = vert_interp
 
         input_data = forcing%variables%get_var(var%forcing_var)
 
@@ -665,15 +674,27 @@ contains
             ! Interpolate to the Mass grid
             if ((size(var%data_3d,1) == size(forcing%geo%geolut%x,2)).and.(size(var%data_3d,3) == size(forcing%geo%geolut%x,3))) then
                 call geo_interp(temp_3d, input_data%data_3d, forcing%geo%geolut)
-                call vinterp(var%data_3d, temp_3d, forcing%geo%vert_lut)
-            ! Interpolate to the u staggared grid
+
+                ! note that pressure (and possibly other variables?) should not be interpolated, it will be adjusted later
+                ! really, it whould be interpolated, and the bottom layers (below the forcing model) should be adjusted separately...
+                if (interpolate_vertically) then
+                    call vinterp(var%data_3d, temp_3d, forcing%geo%vert_lut)
+                else
+                    nz = size(var%data_3d,2)
+                    var%data_3d = temp_3d(:,:nz,:)
+                endif
+
+            ! Interpolate to the u staggered grid
             else if ((size(var%data_3d,1) == size(forcing%geo_u%geolut%x,2)).and.(size(var%data_3d,3) == size(forcing%geo_u%geolut%x,3))) then
                 call geo_interp(temp_3d, input_data%data_3d, forcing%geo_u%geolut)
                 call vinterp(var%data_3d, temp_3d, forcing%geo_u%vert_lut)
-            ! Interpolate to the v staggared grid
+                call smooth_array(var%data_3d, windowsize=10, ydim=3)
+
+            ! Interpolate to the v staggered grid
             else if ((size(var%data_3d,1) == size(forcing%geo_v%geolut%x,2)).and.(size(var%data_3d,3) == size(forcing%geo_v%geolut%x,3))) then
                 call geo_interp(temp_3d, input_data%data_3d, forcing%geo_v%geolut)
                 call vinterp(var%data_3d, temp_3d, forcing%geo_v%vert_lut)
+                call smooth_array(var%data_3d, windowsize=10, ydim=3)
             endif
 
         else
