@@ -352,7 +352,8 @@ caf_tests:	caf_options_test 		\
 			caf_write_domain_test	\
 			caf_options_test		\
 			caf_boundary_test		\
-			caf_boundary_init_test
+			caf_boundary_init_test	\
+			caf_init-write_test
 
 icar:${OBJS}
 	${F90} -o icar ${OBJS} ${LFLAGS}
@@ -452,7 +453,8 @@ caf_write_domain_test: $(BUILD)test_caf_write_domain.o					\
 					$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 					$(BUILD)advection_driver.o							\
 					$(BUILD)advect.o		$(BUILD)data_structures.o	\
-					$(BUILD)geo_reader.o
+					$(BUILD)geo_reader.o	$(BUILD)array_utilities.o	\
+					$(BUILD)vinterp.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
@@ -474,7 +476,8 @@ caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
 					$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
 					$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 					$(BUILD)advection_driver.o $(BUILD)geo_reader.o		\
-					$(BUILD)advect.o		$(BUILD)data_structures.o
+					$(BUILD)advect.o		 $(BUILD)data_structures.o	\
+					$(BUILD)vinterp.o		 $(BUILD)array_utilities.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_domain_init_test: $(BUILD)test_caf_domain_init.o                \
@@ -496,7 +499,8 @@ caf_domain_init_test: $(BUILD)test_caf_domain_init.o                \
 				$(BUILD)advection_driver.o							\
 				$(BUILD)advect.o									\
 				$(BUILD)io_routines.o	 $(BUILD)data_structures.o	\
-				$(BUILD)geo_reader.o
+				$(BUILD)geo_reader.o	 $(BUILD)array_utilities.o	\
+				$(BUILD)vinterp.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_init_test: $(BUILD)test_caf_init.o                              \
@@ -518,7 +522,8 @@ caf_init_test: $(BUILD)test_caf_init.o                              \
 				$(BUILD)advection_driver.o							\
 				$(BUILD)advect.o									\
 				$(BUILD)data_structures.o $(BUILD)geo_reader.o		\
-				$(BUILD)io_routines.o	$(BUILD)data_structures.o
+				$(BUILD)io_routines.o	 $(BUILD)data_structures.o	\
+				$(BUILD)vinterp.o		 $(BUILD)array_utilities.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_init-write_test: $(BUILD)test_caf_init-write.o                  \
@@ -541,7 +546,8 @@ caf_init-write_test: $(BUILD)test_caf_init-write.o                  \
 				$(BUILD)advection_driver.o							\
 				$(BUILD)advect.o									\
 				$(BUILD)data_structures.o $(BUILD)geo_reader.o		\
-				$(BUILD)io_routines.o	$(BUILD)data_structures.o
+				$(BUILD)io_routines.o	 $(BUILD)data_structures.o	\
+				$(BUILD)vinterp.o		 $(BUILD)array_utilities.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_bcast_test: $(BUILD)test_caf_bcast.o	\
@@ -684,7 +690,8 @@ $(BUILD)domain_h.o: $(OBJECTS)domain_h.f90 $(BUILD)options_h.o $(BUILD)exchangea
 
 $(BUILD)domain_obj.o: $(OBJECTS)domain_obj.f90 $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)grid_h.o 	\
 					$(BUILD)string.o $(BUILD)mp_driver.o $(BUILD)assertions.o $(BUILD)geo_reader.o 		\
-					$(BUILD)atm_utilities.o $(BUILD)io_routines.o $(BUILD)co_utilities.o
+					$(BUILD)atm_utilities.o $(BUILD)io_routines.o $(BUILD)co_utilities.o 				\
+					$(BUILD)array_utilities.o $(BUILD)vinterp.o
 
 ###################################################################
 #	Core initial and boundary condition and time steping

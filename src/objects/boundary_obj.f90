@@ -76,9 +76,10 @@ contains
         character(len=kMAX_NAME_LENGTH), intent(in)     :: time_var
 
         type(variable_t)  :: test_variable
+        real, allocatable :: temp_z(:,:,:)
 
 
-        integer :: i
+        integer :: i, nx, ny, nz
 
         ! figure out while file and timestep contains the requested start_time
         call set_curfile_curstep(this, start_time, file_list, time_var)
@@ -88,12 +89,18 @@ contains
         call io_read(file_list(this%curfile), lon_var, this%lon, this%curstep)
 
         ! read in the height coordinate of the input data
-        call io_read(file_list(this%curfile), z_var,   this%z,   this%curstep)
+        call io_read(file_list(this%curfile), z_var,   temp_z,   this%curstep)
+        nx = size(temp_z,1)
+        ny = size(temp_z,2)
+        nz = size(temp_z,3)
+        if (allocated(this%z)) deallocate(this%z)
+        allocate(this%z(nx,nz,ny))
+        this%z = reshape(temp_z, shape=[nx,nz,ny], order=[1,3,2])
+
 
         ! call assert(size(var_list) == size(dim_list), "list of variable dimensions must match list of variables")
 
         do i=1, size(var_list)
-            print*, trim(file_list(this%curfile)), "  ", trim(var_list(i))
 
             call add_var_to_dict(this%variables, file_list(this%curfile), var_list(i), dim_list(i), this%curstep)
 
@@ -111,8 +118,9 @@ contains
         if (allocated(this%geo%lon)) deallocate(this%geo%lon)
         allocate( this%geo%lon, source=this%lon)
 
-        if (allocated(this%geo%z)) deallocate(this%geo%z)
-        allocate( this%geo%z, source=this%z)
+        ! geo%z needs to be interpolated from this%z to the high-res grids for vinterp
+        ! if (allocated(this%geo%z)) deallocate(this%geo%z)
+        ! allocate( this%geo%z, source=this%z)
 
         call standardize_coordinates(this%geo)
 
@@ -143,6 +151,7 @@ contains
         real, allocatable :: temp_2d_data(:,:)
         real, allocatable :: temp_3d_data(:,:,:)
         type(variable_t)  :: new_variable
+        integer           :: nx,ny,nz
 
         if (ndims==2) then
             call io_read(file_name, var_name, temp_2d_data, timestep)
@@ -158,8 +167,13 @@ contains
         elseif (ndims==3) then
             call io_read(file_name, var_name, temp_3d_data, timestep)
 
-            call new_variable%initialize( shape( temp_3d_data ) )
-            new_variable%data_3d = temp_3d_data
+            nx = size(temp_3d_data, 1)
+            ny = size(temp_3d_data, 2)
+            nz = size(temp_3d_data, 3)
+
+
+            call new_variable%initialize( [nx,nz,ny] )
+            new_variable%data_3d = reshape(temp_3d_data, shape=[nx,nz,ny], order=[1,3,2])
 
             call var_dict%add_var(var_name, new_variable)
 
@@ -180,6 +194,7 @@ contains
         real, allocatable :: data3d(:,:,:), data2d(:,:)
         type(variable_t)  :: var
         character(len=kMAX_NAME_LENGTH) :: name
+        integer :: nx, ny, nz
 
 
         if (this_image()==1) then
@@ -194,7 +209,14 @@ contains
                 ! because the data arrays are pointers, this should update the data stored in this%variables
                 if (var%three_d) then
                     call io_read(this%file_list(this%curfile), name, data3d, this%curstep)
-                    var%data_3d(:,:,:) = data3d(:,:,:)
+
+                    nx = size(data3d, 1)
+                    ny = size(data3d, 2)
+                    nz = size(data3d, 3)
+
+                    ! need to vinterp this dataset to the original vertical levels (if necessary)
+
+                    var%data_3d(:,:,:) = reshape(data3d, shape=[nx,nz,ny], order=[1,3,2])
 
                 else if (var%two_d) then
                     call io_read(this%file_list(this%curfile), name, data2d, this%curstep)

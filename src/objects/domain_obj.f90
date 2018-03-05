@@ -10,6 +10,8 @@ submodule(domain_interface) domain_implementation
   use co_util,              only : broadcast
   use io_routines,          only : io_read, io_write
   use geo,                  only : geo_lut, geo_interp, geo_interp2d, standardize_coordinates
+  use array_utilities,      only : array_offset_x, array_offset_y
+  use vertical_interpolation,only : vinterp, vLUT
 
   implicit none
 
@@ -25,20 +27,20 @@ contains
     !!
     !! -------------------------------
     module subroutine init(this, options)
-      class(domain_t), intent(inout) :: this
-      class(options_t),intent(inout) :: options
+        class(domain_t), intent(inout) :: this
+        class(options_t),intent(inout) :: options
 
-      this%dx = options%parameters%dx
+        this%dx = options%parameters%dx
 
-      call this%var_request(options)
+        call this%var_request(options)
 
-      call read_domain_shape(this, options)
+        call read_domain_shape(this, options)
 
-      call create_variables(this, options)
+        call create_variables(this, options)
 
-      call initialize_variables(this, options)
+        call initialize_variables(this, options)
 
-      call setup_meta_data(this)
+        call setup_meta_data(this)
 
     end subroutine
 
@@ -298,9 +300,7 @@ contains
 
         if (this_image()==1) print*, "Finished reading core domain variables"
 
-        call setup_domain_geo(this)
-
-    end subroutine read_core_variables
+    end subroutine
 
     !> -------------------------------
     !! Setup a single Geographic structure given a latitude, longitude, and z array
@@ -338,15 +338,15 @@ contains
         implicit none
         type(domain_t), intent(inout) :: this
 
-        call setup_geo(this%geo,   this%latitude%data_2d,   this%longitude%data_2d,   this%z%data_3d)
-        if (this_image()==1) then
-            print*, "WARNING WARNING WARNING"
-            print*, "z variable passed to geo_u and geo_v is incorrect"
-            print*, "WARNING WARNING WARNING"
-        endif
-        call setup_geo(this%geo_u, this%u_latitude%data_2d, this%u_longitude%data_2d, this%z%data_3d)
-        call setup_geo(this%geo_v, this%v_latitude%data_2d, this%v_longitude%data_2d, this%z%data_3d)
+        real, allocatable :: temp_z(:,:,:)
 
+        call setup_geo(this%geo,   this%latitude%data_2d,   this%longitude%data_2d,   this%z%data_3d)
+        call array_offset_x(this%z%data_3d, temp_z)
+        call setup_geo(this%geo_u, this%u_latitude%data_2d, this%u_longitude%data_2d, temp_z)
+        call array_offset_y(this%z%data_3d, temp_z)
+        call setup_geo(this%geo_v, this%v_latitude%data_2d, this%v_longitude%data_2d, temp_z)
+
+        if (allocated(temp_z)) deallocate(temp_z)
     end subroutine setup_domain_geo
 
     !> -------------------------------
@@ -386,6 +386,8 @@ contains
             enddo
 
         end associate
+
+        call setup_domain_geo(this)
 
     end subroutine initialize_variables
 
@@ -570,9 +572,6 @@ contains
       ! for all variables with a forcing_var /= "", get forcing, interpolate to local domain
       call interpolate_datasets(this, forcing)
 
-      ! This would be a good place to apply additional options
-      ! with options...? potential temperature, relative humidity, etc.
-
     end subroutine
 
     !> -------------------------------
@@ -584,11 +583,29 @@ contains
         class(domain_t),  intent(inout) :: this
         class(boundary_t),intent(inout) :: forcing
 
+        integer :: nx, ny, nz
+
         ! this%geo and forcing%geo have to be of class interpolable
         ! which means they must contain lat, lon, z, geolut, and vLUT components
-        call geo_LUT(this%geo, forcing%geo)
+        call geo_LUT(this%geo,   forcing%geo)
         call geo_LUT(this%geo_u, forcing%geo_u)
         call geo_LUT(this%geo_v, forcing%geo_v)
+
+        nx = size(this%geo%z, 1)
+        nz = size(forcing%z,  2)
+        ny = size(this%geo%z, 3)
+
+        allocate(forcing%geo%z(nx, nz, ny))
+        call geo_interp(forcing%geo%z, forcing%z, forcing%geo%geolut)
+        call vLUT(this%geo,   forcing%geo)
+
+        allocate(forcing%geo_u%z(nx+1, nz, ny))
+        call geo_interp(forcing%geo_u%z, forcing%z, forcing%geo_u%geolut)
+        call vLUT(this%geo_u, forcing%geo_u)
+
+        allocate(forcing%geo_v%z(nx, nz, ny+1))
+        call geo_interp(forcing%geo_v%z, forcing%z, forcing%geo_v%geolut)
+        call vLUT(this%geo_v, forcing%geo_v)
 
     end subroutine
 
@@ -611,8 +628,10 @@ contains
         do while (this%variables_to_force%has_more_elements())
             ! get the next variable
             var_to_interpolate = this%variables_to_force%next()
+
             ! interpolate
             call interpolate_variable(var_to_interpolate, forcing)
+
         enddo
 
     end subroutine
@@ -628,10 +647,11 @@ contains
         class(boundary_t), intent(in)    :: forcing
 
         type(variable_t) :: input_data
-        integer :: ims,ime,jms,jme,kms,kme
+        ! note that 3D variables have a different number of vertical levels, so they have to first be interpolated
+        ! to the high res horizontal grid, then vertically interpolated to the actual icar domain
+        real, allocatable :: temp_3d(:,:,:)
 
         input_data = forcing%variables%get_var(var%forcing_var)
-
 
         if (var%two_d) then
             call geo_interp2d(var%data_2d, input_data%data_2d, forcing%geo%geolut)
@@ -639,17 +659,25 @@ contains
         else if (var%three_d) then
             ! Sequence of if statements to test if this variable needs to be interpolated onto the staggared grids
 
+            ! allocate a temporary variable to hold the horizontally interpolated data before vertical interpolation
+            allocate(temp_3d(size(var%data_3d,1), size(input_data%data_3d,2), size(var%data_3d,3) ))
+
             ! Interpolate to the Mass grid
             if ((size(var%data_3d,1) == size(forcing%geo%geolut%x,2)).and.(size(var%data_3d,3) == size(forcing%geo%geolut%x,3))) then
-                call geo_interp(var%data_3d, input_data%data_3d, forcing%geo%geolut)
+                call geo_interp(temp_3d, input_data%data_3d, forcing%geo%geolut)
+                call vinterp(var%data_3d, temp_3d, forcing%geo%vert_lut)
             ! Interpolate to the u staggared grid
             else if ((size(var%data_3d,1) == size(forcing%geo_u%geolut%x,2)).and.(size(var%data_3d,3) == size(forcing%geo_u%geolut%x,3))) then
-                call geo_interp(var%data_3d, input_data%data_3d, forcing%geo_u%geolut)
+                call geo_interp(temp_3d, input_data%data_3d, forcing%geo_u%geolut)
+                call vinterp(var%data_3d, temp_3d, forcing%geo_u%vert_lut)
             ! Interpolate to the v staggared grid
             else if ((size(var%data_3d,1) == size(forcing%geo_v%geolut%x,2)).and.(size(var%data_3d,3) == size(forcing%geo_v%geolut%x,3))) then
-                call geo_interp(var%data_3d, input_data%data_3d, forcing%geo_v%geolut)
+                call geo_interp(temp_3d, input_data%data_3d, forcing%geo_v%geolut)
+                call vinterp(var%data_3d, temp_3d, forcing%geo_v%vert_lut)
             endif
 
+        else
+            print*, "ERROR: unknown variable dimensions in domain variable for forcing:", trim(var%forcing_var)
         endif
 
     end subroutine
