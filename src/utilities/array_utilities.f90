@@ -7,6 +7,46 @@ module array_utilities
     end interface
 
 contains
+
+    subroutine array_offset_x(input_array, output_array)
+        implicit none
+        real,              intent(in)    :: input_array(:,:,:)
+        real, allocatable, intent(inout) :: output_array(:,:,:)
+
+        integer :: nx,nz,ny
+
+        nx = size(input_array,1)
+        nz = size(input_array,2)
+        ny = size(input_array,3)
+
+        if (allocated(output_array)) deallocate(output_array)
+        allocate(output_array(nx+1, nz, ny))
+
+        output_array(1,:,:)    = (1.5 * input_array(1,:,:)  - 0.5 * input_array(2,:,:))    ! extrapolate past the end
+        output_array(2:nx,:,:) = (input_array(1:nx-1,:,:) + input_array(2:nx,:,:) ) / 2    ! interpolate between points
+        output_array(nx+1,:,:) = (1.5 * input_array(nx,:,:)  - 0.5 * input_array(nx-1,:,:))! extrapolate past the end
+
+    end subroutine
+
+    subroutine array_offset_y(input_array, output_array)
+        implicit none
+        real,              intent(in)    :: input_array(:,:,:)
+        real, allocatable, intent(inout) :: output_array(:,:,:)
+
+        integer :: nx,nz,ny
+
+        nx = size(input_array,1)
+        nz = size(input_array,2)
+        ny = size(input_array,3)
+
+        if (allocated(output_array)) deallocate(output_array)
+        allocate(output_array(nx, nz, ny+1))
+
+        output_array(:,:,1)    = (1.5 * input_array(:,:,1)  - 0.5 * input_array(:,:,2))    ! extrapolate past the end
+        output_array(:,:,2:ny) = (input_array(:,:,1:ny-1) + input_array(:,:,2:ny) ) / 2    ! interpolate between points
+        output_array(:,:,ny+1) = (1.5 * input_array(:,:,ny)  - 0.5 * input_array(:,:,ny-1))! extrapolate past the end
+
+    end subroutine
     !>----------------------------------------------------------
     !! Generate an array with n_values elements spanning the range min to max
     !!
@@ -45,30 +85,11 @@ contains
 
         passed = .True.
 
-        if (size(input_array,1)/=d1) then
-            passed = .False.
-            return
-        endif
-
-        if (size(input_array,2)/=d2) then
-            passed = .False.
-            return
-        endif
-
-        if (size(input_array,3)/=d3) then
-            passed = .False.
-            return
-        endif
-
-        if (size(input_array,4)/=d4) then
-            passed = .False.
-            return
-        endif
-
-        if (size(input_array,5)/=d5) then
-            passed = .False.
-            return
-        endif
+        if (size(input_array,1)/=d1) passed = .False.
+        if (size(input_array,2)/=d2) passed = .False.
+        if (size(input_array,3)/=d3) passed = .False.
+        if (size(input_array,4)/=d4) passed = .False.
+        if (size(input_array,5)/=d5) passed = .False.
 
     end function check_array_dims
 
