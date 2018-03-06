@@ -12,6 +12,7 @@
 !!------------------------------------------------------------
 module time_object
     use time_delta_object, only : time_delta_t
+    use co_util,           only : broadcast
     implicit none
     private
 
@@ -47,6 +48,7 @@ module time_object
         procedure, public  :: as_string   => as_string
         procedure, public  :: equals      => equals_with_precision
         procedure, public  :: units       => units
+        procedure, public  :: broadcast   => bcast
 
         generic,   public  :: init        => time_init_c
         generic,   public  :: init        => time_init_i
@@ -578,6 +580,38 @@ contains
                 this%year_zero,this%month_zero,this%day_zero
 
     end function units
+
+    subroutine bcast(this, source, first_image, last_image)
+        implicit none
+        class(Time_type), intent(inout) :: this
+        integer,          intent(in)    :: source
+        integer,          intent(in)    :: first_image
+        integer,          intent(in)    :: last_image
+
+        integer, allocatable :: as_array(:)[:]
+        allocate(as_array(10)[*])
+
+        as_array(1) = this%year_zero
+        as_array(2) = this%month_zero
+        as_array(3) = this%day_zero
+        as_array(4) = this%calendar
+        as_array(5) = this%year
+        as_array(6) = this%month
+        as_array(7) = this%day
+        as_array(8) = this%hour
+        as_array(9) = this%minute
+        as_array(10)= this%second
+
+        call broadcast(as_array, source, first_image, last_image)
+
+        if (this_image() /= source) then
+            call this%init(as_array(4), as_array(1), as_array(2), as_array(3))
+
+            call this%set_from_date(as_array(5), as_array(6), as_array(7), as_array(8), as_array(9), as_array(10))
+        endif
+
+    end subroutine
+
 
     !>------------------------------------------------------------
     !!  Convert the date object into a string in the 0-filled format : "YYYY/MM/DD hh:mm:ss"
