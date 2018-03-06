@@ -24,7 +24,7 @@ program test_caf_init_write
     if (this_image()==1) print*, "Initializing boundary condition data structure"
     call boundary%init(options)
 
-    if (this_image()==1) print*, "Reading Initial conditions from boundary files"
+    if (this_image()==1) print*, "Reading Initial conditions from boundary dataset"
     call domain%get_initial_conditions(boundary, options)
 
     if (this_image()==1) print*, "Adding domain to output dataset"
@@ -37,6 +37,6 @@ program test_caf_init_write
     write(file_name, '("icar_restart_output_",I3.3,".nc")') this_image()
     call dataset%save_file(file_name)
 
-
+    if (this_image()==1) print*, "Model time = ", trim(domain%model_time%as_string())
 
 end program
