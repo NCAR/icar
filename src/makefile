@@ -228,7 +228,6 @@ endif
 ifeq ($(COMPILER), gnu)
 	ifeq ($(CAF_MODE), single)
 		CAF_FLAG=-fcoarray=single
-		F90=gfortran
 	else
 		CAF_FLAG=-fcoarray=lib
 		F90=caf
