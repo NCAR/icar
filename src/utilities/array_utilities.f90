@@ -342,4 +342,55 @@ contains
     end subroutine smooth_array_2d
 
 
+    !>------------------------------------------------------------
+    !! Check that two model grids have the same shape
+    !!
+    !! If the size of all dimensions in data1 and data2 are not exactly the same the model will stop
+    !!
+    !! @param data1     First 3D array to check dimension sizes
+    !! @param data2     Second 3D array to check dimension sizes
+    !!
+    !!------------------------------------------------------------
+    subroutine check_shapes_3d(data1,data2)
+        implicit none
+        real,dimension(:,:,:),intent(in)::data1,data2
+        integer :: i
+        do i=1,3
+            if (size(data1,i).ne.size(data2,i)) then
+                write(*,*) "Restart file 3D dimensions don't match domain"
+                write(*,*) shape(data1)
+                write(*,*) shape(data2)
+                stop
+            endif
+        enddo
+    end subroutine check_shapes_3d
+
+
+    !>------------------------------------------------------------
+    !! Swap the last two dimensions of an array
+    !!
+    !! Call reshape after finding the nx,ny,nz values
+    !!
+    !! @param data     3D array to be reshaped
+    !!
+    !!------------------------------------------------------------
+    subroutine swap_y_z_dimensions(data)
+        implicit none
+        real,dimension(:,:,:),intent(inout),allocatable :: data
+        real,dimension(:,:,:), allocatable :: temporary_data
+        integer :: nx,ny,nz
+
+        nx=size(data,1)
+        ny=size(data,2)
+        nz=size(data,3)
+        allocate(temporary_data(nx,nz,ny))
+        temporary_data = reshape(data, [nx,nz,ny], order=[1,3,2])
+
+        deallocate(data)
+        allocate(data(nx,nz,ny))
+        data=temporary_data
+
+    end subroutine swap_y_z_dimensions
+
+
 end module array_utilities
