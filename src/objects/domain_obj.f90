@@ -75,15 +75,15 @@ contains
     !! -------------------------------
     module subroutine halo_send(this)
       class(domain_t), intent(inout) :: this
-      call this%water_vapor%send()
-      call this%potential_temperature%send()
-      call this%cloud_water_mass%send()
-      ! call this%cloud_ice_mass%send()
-      ! call this%cloud_ice_number%send()
-      call this%rain_mass%send()
-      ! call this%rain_number%send()
-      call this%snow_mass%send()
-      ! call this%graupel_mass%send()
+      if (associated(this%water_vapor%data_3d))           call this%water_vapor%send()
+      if (associated(this%potential_temperature%data_3d)) call this%potential_temperature%send()
+      if (associated(this%cloud_water_mass%data_3d))      call this%cloud_water_mass%send()
+      if (associated(this%cloud_ice_mass%data_3d))        call this%cloud_ice_mass%send()
+      if (associated(this%cloud_ice_number%data_3d))      call this%cloud_ice_number%send()
+      if (associated(this%rain_mass%data_3d))             call this%rain_mass%send()
+      if (associated(this%rain_number%data_3d))           call this%rain_number%send()
+      if (associated(this%snow_mass%data_3d))             call this%snow_mass%send()
+      if (associated(this%graupel_mass%data_3d))          call this%graupel_mass%send()
     end subroutine
 
     !> -------------------------------
@@ -92,15 +92,15 @@ contains
     !! -------------------------------
     module subroutine halo_retrieve(this)
       class(domain_t), intent(inout) :: this
-      call this%water_vapor%retrieve() ! the retrieve call will sync all
-      call this%potential_temperature%retrieve(no_sync=.True.)
-      call this%cloud_water_mass%retrieve(no_sync=.True.)
-      ! call this%cloud_ice_mass%retrieve(no_sync=.True.)
-      ! call this%cloud_ice_number%retrieve(no_sync=.True.)
-      call this%rain_mass%retrieve(no_sync=.True.)
-      ! call this%rain_number%retrieve(no_sync=.True.)
-      call this%snow_mass%retrieve(no_sync=.True.)
-      ! call this%graupel_mass%retrieve(no_sync=.True.)
+      if (associated(this%water_vapor%data_3d))           call this%water_vapor%retrieve() ! the retrieve call will sync all
+      if (associated(this%potential_temperature%data_3d)) call this%potential_temperature%retrieve(no_sync=.True.)
+      if (associated(this%cloud_water_mass%data_3d))      call this%cloud_water_mass%retrieve(no_sync=.True.)
+      if (associated(this%cloud_ice_mass%data_3d))        call this%cloud_ice_mass%retrieve(no_sync=.True.)
+      if (associated(this%cloud_ice_number%data_3d))      call this%cloud_ice_number%retrieve(no_sync=.True.)
+      if (associated(this%rain_mass%data_3d))             call this%rain_mass%retrieve(no_sync=.True.)
+      if (associated(this%rain_number%data_3d))           call this%rain_number%retrieve(no_sync=.True.)
+      if (associated(this%snow_mass%data_3d))             call this%snow_mass%retrieve(no_sync=.True.)
+      if (associated(this%graupel_mass%data_3d))          call this%graupel_mass%retrieve(no_sync=.True.)
     end subroutine
 
     !> -------------------------------
@@ -363,7 +363,7 @@ contains
             end associate
         endif
 
-        if (this_image()==1) print*, "  Finished reading core domain variables"
+        if (this_image()==1) write(*,*) "  Finished reading core domain variables"
 
     end subroutine
 
@@ -501,7 +501,8 @@ contains
         call options%alloc_vars(                                                    &
                      [kVARS%z,                      kVARS%z_interface,              &
                       kVARS%dz,                     kVARS%dz_interface,             &
-                      kVARS%terrain,                                                &
+                      kVARS%terrain,                kVARS%pressure,                 &
+                      kVARS%exner,                  kVARS%potential_temperature,    &
                       kVARS%latitude,               kVARS%longitude,                &
                       kVARS%u_latitude,             kVARS%u_longitude,              &
                       kVARS%v_latitude,             kVARS%v_longitude               ])
@@ -636,7 +637,7 @@ contains
 
         enddo
 
-        nz = size(this%pressure%data_3d,2)
+        nz = size(this%geo%z, 2)
         call update_pressure(this%pressure%data_3d, forcing%geo%z(:,:nz,:), this%geo%z)
 
     end subroutine
@@ -700,7 +701,7 @@ contains
             endif
 
         else
-            print*, "ERROR: unknown variable dimensions in domain variable for forcing:", trim(var%forcing_var)
+            write(*,*) "ERROR: unknown variable dimensions in domain variable for forcing:", trim(var%forcing_var)
         endif
 
     end subroutine
