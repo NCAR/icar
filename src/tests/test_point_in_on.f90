@@ -4,8 +4,9 @@ program test_point_in_on
     implicit none
 
     real :: x,y
-    real :: poly(2,4), large_poly(2,8)
+    real :: poly(2,4), large_poly(2,8), triangle(2,3)
     real :: x0,y0,x1,y1
+    integer :: i,j
 
     logical :: passing
     passing=.True.
@@ -28,6 +29,27 @@ program test_point_in_on
     endif
 
 
+    x = 35.4495850
+    y = 34.0271034
+    print*, "Testing problem grid cell from a simulation."
+    print*, "[",x,",", y,"]"
+    print*, ""
+
+    ! These are the coordinates of the bounding box of grid cells for which find_surrounding was failing before
+    ! poly(1,:) = [35.40149, 35.46729, 35.40778, 35.47363]
+    ! poly(2,:) = [33.99421, 33.98899, 34.04877, 34.04354]
+
+    triangle(1,:) = [35.4077759, 35.4736328, 35.4375458]
+    triangle(2,:) = [34.0487747, 34.0435371, 34.0188789]
+
+    passing = passing.and.test_poly(x,y,triangle,.True.)
+
+    ! Note that this will actually fail because the precision is "too" high,
+    ! but if the points are in a different order it will fail for the other viable set as well! 1e-7 is too high a precision for lat/lon as single precision reals
+    !
+    ! print*, point_in_poly(x,y,triangle, precision=1e-7)
+    ! result = .False. ^^^^
+
     poly(1,:) = [0,0,1,1]
     poly(2,:) = [0,1,1,0]
 
@@ -36,7 +58,6 @@ program test_point_in_on
 
     x=1.01; y=0.5
     passing = passing.and.test_poly(x,y,poly,.False.)
-
 
     poly(1,:) = [0.5,0.0,0.5,1.0]
     poly(2,:) = [0.0,0.5,1.0,0.5]
