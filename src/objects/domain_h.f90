@@ -86,6 +86,9 @@ module domain_interface
 
     real :: dx
 
+    real, allocatable :: costheta(:,:)
+    real, allocatable :: sintheta(:,:)
+
     ! these coarrays are used to send all data to/from a master image for IO... ?
     ! For now this will be taken care of in the boundary conditions object
     ! real, allocatable :: transfer_3d(:,:,:)[:]
