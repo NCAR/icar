@@ -271,19 +271,20 @@ contains
     !
     ! end subroutine advect_cu_winds
 
-    subroutine setup_module_winds(domain, options, dt)
+    subroutine setup_module_winds(u,v,w, dx, options, dt)
         implicit none
-        type(domain_t),     intent(in)  :: domain
+        real,               intent(in)  :: u(:,:,:)
+        real,               intent(in)  :: v(:,:,:)
+        real,               intent(in)  :: w(:,:,:)
+        real,               intent(in)  :: dx
         type(options_t),    intent(in)  :: options
         real,               intent(in)  :: dt
 
-        real    :: dx
         integer :: nx, nz, ny, i
 
-        dx = domain%dx
-        nx = domain%grid%nx
-        nz = domain%grid%nz
-        ny = domain%grid%ny
+        nx = size(w,1)
+        nz = size(w,2)
+        ny = size(w,3)
 
         ! if this if the first time we are called, we need to allocate the module level arrays
         ! Could/should be put in an init procedure
@@ -308,10 +309,10 @@ contains
                 ! W_m = (domain%w_cu + domain%w)                     * (dt/dx)
                 ! call rebalance_cu_winds(U_m,V_m,W_m)
             else
-                U_m = domain%u%data_3d(2:nx,:,:) * (dt/dx)
-                V_m = domain%v%data_3d(:,:,2:ny) * (dt/dx)
+                U_m = u(2:nx,:,:) * (dt/dx)
+                V_m = v(:,:,2:ny) * (dt/dx)
                 ! note, even though dz!=dx, W is computed from the divergence in U/V so it is scaled by dx/dz already
-                W_m = domain%w%data_3d   * (dt/dx)
+                W_m = w   * (dt/dx)
             endif
         ! endif
 
@@ -332,7 +333,7 @@ contains
         ny = domain%grid%ny
 
         ! calculate U,V,W normalized for dt/dx (dx**2 for density advection so we can skip a /dx in the actual advection code)
-        call setup_module_winds(domain, options, dt)
+        call setup_module_winds(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%dx, options, dt)
 
         ! lastqv_m=domain%qv
 

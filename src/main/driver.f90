@@ -17,66 +17,72 @@
 !!
 !!-----------------------------------------
 program icar
-    use time_object,        only : Time_type
-    use init,               only : init_model, init_physics           ! Initialize model (not initial conditions)
-    use boundary_conditions,only : bc_init,bc_update                  ! Boundary and initial conditions
-    use data_structures          ! *_type datatypes                   ! Data-types and physical "constants"
-    use output,             only : write_domain, output_init          ! Used to output initial model state
+
+    use options_interface,  only : options_t
+    use domain_interface,   only : domain_t
+    use boundary_interface, only : boundary_t
+    use output_interface,   only : output_t
     use time_step,          only : step                               ! Advance the model forward in time
 
     implicit none
-    type(options_type) :: options
-    type(domain_type)  :: domain
-    type(bc_type)      :: boundary
-    type(Time_type)    :: next_output
 
-!-----------------------------------------
-!  Model Initialization
-!
-!   initialize model including options, terrain, lat, lon data.
-    call init_model(options,domain,boundary)
+    type(options_t) :: options
+    type(domain_t)  :: domain
+    type(boundary_t):: boundary
+    type(output_t)  :: dataset
 
-    ! read initial conditions from the boundary file
-    write(*,*) "Initializing Boundary conditions"
-    call bc_init(domain, boundary, options)
+    character(len=1024) :: file_name
+    integer :: i
 
-    next_output= domain%model_time + options%output_dt
+    !-----------------------------------------
+    !  Model Initialization
+    !
+    if (this_image()==1) print*, "Reading options"
+    call options%init()
 
-    write(*,*) "Initializing Physics packages"
-    call init_physics(options, domain)
+    if (this_image()==1) print*, "Initializing Domain"
+    call domain%init(options)
 
-    ! initialize the output module
-    ! this can't be called until after bc_init, so that rain accumulations can be initialized in a restart
-    call output_init(domain, options)
+    if (this_image()==1) print*, "Initializing boundary condition data structure"
+    call boundary%init(options)
 
-    ! write the initial state of the model (primarily useful for debugging)
-    if (.not.options%restart) then
-        call write_domain(domain, options, domain%model_time)
-    endif
-!
-!-----------------------------------------
-!-----------------------------------------
-!  Time Loop
-!
-!   note that a timestep here is a forcing input timestep O(1-3hr), not a physics timestep O(20-100s)
-    do while (domain%model_time < options%end_time)
-        write(*,*) ""
-        write(*,*) " ----------------------------------------------------------------------"
-        write(*,*) "  Model time = ", trim(domain%model_time%as_string())
-        write(*,*) "   End  time = ", trim(options%end_time%as_string())
+    if (this_image()==1) print*, "Reading Initial conditions from boundary dataset"
+    call domain%get_initial_conditions(boundary, options)
 
-        ! update boundary conditions (dXdt variables) so we can integrate to the next step
-        call bc_update(domain, boundary, options)
-        write(*,*) "  Next input = ", trim(boundary%next_domain%model_time%as_string())
+    if (this_image()==1) print*, "Setting up output files"
+    ! should be combined into a single setup_output call
+    call dataset%set_domain(domain)
+    call dataset%add_variables(options%vars_for_restart, domain)
 
-        ! this is the meat of the model physics, run all the physics for the current time step looping over internal timesteps
-        call step(domain, options, boundary, next_output)
 
-    end do
-!
-!-----------------------------------------
+    !-----------------------------------------
+    !-----------------------------------------
+    !  Time Loop
+    !
+    !   note that a timestep here is a forcing input timestep O(1-3hr), not a physics timestep O(20-100s)
+        do while (domain%model_time < options%parameters%end_time)
+            if (this_image()==1) write(*,*) ""
+            if (this_image()==1) write(*,*) " ----------------------------------------------------------------------"
+            if (this_image()==1) write(*,*) "  Model time = ", trim(domain%model_time%as_string())
+            if (this_image()==1) write(*,*) "   End  time = ", trim(options%parameters%end_time%as_string())
 
-end program icar
+            ! update boundary conditions (dXdt variables) so we can integrate to the next step
+            ! call bc_update(domain, boundary, options)
+            ! write(*,*) "  Next input = ", trim(boundary%next_domain%model_time%as_string())
+
+            ! this is the meat of the model physics, run all the physics for the current time step looping over internal timesteps
+            call step(domain, options%parameters%end_time, options)
+
+        end do
+    !
+    !-----------------------------------------
+
+
+    if (this_image()==1) print*, "Writing output file"
+    write(file_name, '("icar_restart_output_",I3.3,".nc")') this_image()
+    call dataset%save_file(file_name)
+
+end program
 
 ! This is the Doxygen mainpage documentation.  This should be moved to another file at some point.
 

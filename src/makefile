@@ -276,55 +276,99 @@ CONST=constants/
 OBJECTS=objects/
 TESTS=tests/
 
-OBJS=	$(BUILD)driver.o 			\
-		$(BUILD)init.o 				\
-		$(BUILD)init_options.o 		\
-		$(BUILD)model_tracking.o 	\
-		$(BUILD)boundary.o 			\
-		$(BUILD)time_step.o 		\
-		$(BUILD)output.o 			\
-		$(BUILD)io_routines.o 		\
-		$(BUILD)lt_lut_io.o 		\
-		$(BUILD)mp_driver.o 		\
-		$(BUILD)mp_wsm6.o 			\
-		$(BUILD)mp_thompson.o 		\
-		$(BUILD)mp_simple.o 		\
-		$(BUILD)mp_morrison.o 		\
-		$(BUILD)cu_driver.o 		\
-		$(BUILD)cu_tiedtke.o 		\
-		$(BUILD)cu_kf.o 			\
-		$(BUILD)ra_driver.o 		\
-		$(BUILD)ra_simple.o 		\
-		$(BUILD)lsm_driver.o 		\
-		$(BUILD)lsm_simple.o 		\
-		$(BUILD)lsm_basic.o 		\
-		$(BUILD)lsm_noahdrv.o 		\
-		$(BUILD)lsm_noahlsm.o 		\
-		$(BUILD)water_simple.o 		\
-		$(BUILD)pbl_driver.o 		\
-		$(BUILD)pbl_simple.o 		\
-		$(BUILD)pbl_ysu.o 			\
-		$(BUILD)advection_driver.o 	\
-		$(BUILD)adv_mpdata.o 		\
-		$(BUILD)advect.o 			\
-		$(BUILD)wind.o 				\
-		$(BUILD)linear_winds.o 		\
-		$(BUILD)winds_blocking.o	\
-		$(BUILD)fftw.o 				\
-		$(BUILD)fftshift.o 			\
-		$(BUILD)geo_reader.o 		\
-		$(BUILD)vinterp.o 			\
-		$(BUILD)atm_utilities.o 	\
-		$(BUILD)time_obj.o 			\
-		$(BUILD)time_delta_obj.o 	\
-		$(BUILD)time_io.o 			\
-		$(BUILD)time.o 				\
-		$(BUILD)data_structures.o 	\
+
+OBJS=	$(BUILD)driver.o            \
+		$(BUILD)time_step.o			\
 		$(BUILD)icar_constants.o	\
-		$(BUILD)wrf_constants.o 	\
-		$(BUILD)string.o 			\
-		$(BUILD)array_utilities.o 	\
-		$(BUILD)debug_utils.o
+		$(BUILD)model_tracking.o	\
+		$(BUILD)string.o        	\
+		$(BUILD)time_delta_obj.o	\
+		$(BUILD)time_obj.o      	\
+		$(BUILD)opt_types.o			\
+		$(BUILD)time_io.o       	\
+		$(BUILD)options_h.o			\
+		$(BUILD)options_obj.o   	\
+		$(BUILD)meta_data_h.o		\
+		$(BUILD)meta_data_obj.o 	\
+		$(BUILD)variable_h.o		\
+		$(BUILD)variable_obj.o  	\
+		$(BUILD)variable_dict_h.o	\
+		$(BUILD)variable_dict_obj.o	\
+		$(BUILD)grid_h.o			\
+		$(BUILD)grid_obj.o			\
+		$(BUILD)exchangeable_h.o	\
+		$(BUILD)exchangeable_obj.o	\
+		$(BUILD)domain_h.o			\
+		$(BUILD)domain_obj.o		\
+		$(BUILD)boundary_h.o		\
+		$(BUILD)boundary_obj.o		\
+		$(BUILD)assertions.o		\
+		$(BUILD)atm_utilities.o		\
+		$(BUILD)co_utilities.o		\
+		$(BUILD)default_output_metadata.o\
+		$(BUILD)output_h.o			\
+		$(BUILD)output_obj.o		\
+		$(BUILD)wind.o				\
+		$(BUILD)mp_driver.o			\
+		$(BUILD)mp_simple.o			\
+		$(BUILD)advection_driver.o	\
+		$(BUILD)advect.o			\
+		$(BUILD)data_structures.o	\
+		$(BUILD)geo_reader.o		\
+		$(BUILD)io_routines.o		\
+		$(BUILD)data_structures.o	\
+		$(BUILD)vinterp.o			\
+		$(BUILD)array_utilities.o
+
+# OBJS=	$(BUILD)driver.o 			\
+# 		$(BUILD)init.o 				\
+# 		$(BUILD)init_options.o 		\
+# 		$(BUILD)model_tracking.o 	\
+# 		$(BUILD)boundary.o 			\
+# 		$(BUILD)time_step.o 		\
+# 		$(BUILD)output.o 			\
+# 		$(BUILD)io_routines.o 		\
+# 		$(BUILD)lt_lut_io.o 		\
+# 		$(BUILD)mp_driver.o 		\
+# 		$(BUILD)mp_wsm6.o 			\
+# 		$(BUILD)mp_thompson.o 		\
+# 		$(BUILD)mp_simple.o 		\
+# 		$(BUILD)mp_morrison.o 		\
+# 		$(BUILD)cu_driver.o 		\
+# 		$(BUILD)cu_tiedtke.o 		\
+# 		$(BUILD)cu_kf.o 			\
+# 		$(BUILD)ra_driver.o 		\
+# 		$(BUILD)ra_simple.o 		\
+# 		$(BUILD)lsm_driver.o 		\
+# 		$(BUILD)lsm_simple.o 		\
+# 		$(BUILD)lsm_basic.o 		\
+# 		$(BUILD)lsm_noahdrv.o 		\
+# 		$(BUILD)lsm_noahlsm.o 		\
+# 		$(BUILD)water_simple.o 		\
+# 		$(BUILD)pbl_driver.o 		\
+# 		$(BUILD)pbl_simple.o 		\
+# 		$(BUILD)pbl_ysu.o 			\
+# 		$(BUILD)advection_driver.o 	\
+# 		$(BUILD)adv_mpdata.o 		\
+# 		$(BUILD)advect.o 			\
+# 		$(BUILD)wind.o 				\
+# 		$(BUILD)linear_winds.o 		\
+# 		$(BUILD)winds_blocking.o	\
+# 		$(BUILD)fftw.o 				\
+# 		$(BUILD)fftshift.o 			\
+# 		$(BUILD)geo_reader.o 		\
+# 		$(BUILD)vinterp.o 			\
+# 		$(BUILD)atm_utilities.o 	\
+# 		$(BUILD)time_obj.o 			\
+# 		$(BUILD)time_delta_obj.o 	\
+# 		$(BUILD)time_io.o 			\
+# 		$(BUILD)time.o 				\
+# 		$(BUILD)data_structures.o 	\
+# 		$(BUILD)icar_constants.o	\
+# 		$(BUILD)wrf_constants.o 	\
+# 		$(BUILD)string.o 			\
+# 		$(BUILD)array_utilities.o 	\
+# 		$(BUILD)debug_utils.o
 
 
 TEST_EXECUTABLES= 	fftshift_test			\
@@ -615,6 +659,10 @@ $(BUILD)%.o: $(IO)%.f90
 $(BUILD)%.o: $(OBJECTS)%.f90
 	${F90} ${FFLAGS} $< -o $@
 
+$(BUILD)%.o: $(PHYS)%.f90
+	${F90} ${FFLAGS} $< -o $@
+
+
 $(BUILD)%.o: $(TESTS)%.f90
 	${F90} ${FFLAGS} $< -o $@
 
@@ -626,8 +674,8 @@ $(BUILD)%.o: $(MAIN)%.f90
 #	driver code for original version of ICAR
 ###################################################################
 
-$(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)data_structures.o $(BUILD)init.o $(BUILD)time_step.o \
-					$(BUILD)output.o $(BUILD)boundary.o $(BUILD)time.o $(BUILD)string.o
+$(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)time_step.o $(BUILD)domain_h.o \
+					$(BUILD)output_h.o $(BUILD)boundary_h.o
 
 ###################################################################
 #	Options Object
@@ -705,9 +753,11 @@ $(BUILD)init.o:$(MAIN)init.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $
 $(BUILD)boundary.o:$(MAIN)boundary.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)wind.o $(BUILD)geo_reader.o \
 					$(BUILD)vinterp.o $(BUILD)output.o $(BUILD)linear_winds.o $(BUILD)time_io.o
 
-$(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.o $(BUILD)output.o \
-					$(BUILD)advection_driver.o $(BUILD)ra_driver.o $(BUILD)lsm_driver.o $(BUILD)cu_driver.o \
-					$(BUILD)pbl_driver.o $(BUILD)mp_driver.o $(BUILD)boundary.o $(BUILD)debug_utils.o
+$(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.o			\
+					$(BUILD)advection_driver.o $(BUILD)mp_driver.o $(BUILD)domain_h.o $(BUILD)options_h.o
+
+# $(BUILD)advection_driver.o $(BUILD)ra_driver.o $(BUILD)lsm_driver.o $(BUILD)cu_driver.o \
+# $(BUILD)pbl_driver.o $(BUILD)mp_driver.o $(BUILD)boundary.o $(BUILD)debug_utils.o
 
 $(BUILD)init_options.o:$(MAIN)init_options.f90 $(BUILD)data_structures.o  $(BUILD)io_routines.o \
 					$(BUILD)model_tracking.o $(BUILD)time.o $(BUILD)time_io.o
@@ -724,7 +774,7 @@ $(BUILD)co_utilities.o:$(UTIL)co_utilities.f90 $(BUILD)icar_constants.o
 
 $(BUILD)time_delta_obj.o:$(UTIL)time_delta_obj.f90 $(BUILD)icar_constants.o
 
-$(BUILD)time_obj.o:$(UTIL)time_obj.f90 $(BUILD)time_delta_obj.o
+$(BUILD)time_obj.o:$(UTIL)time_obj.f90 $(BUILD)time_delta_obj.o $(BUILD)co_utilities.o
 
 $(BUILD)time_io.o:$(UTIL)time_io.f90 $(BUILD)time_obj.o $(BUILD)data_structures.o \
 					$(BUILD)icar_constants.o $(BUILD)string.o $(BUILD)io_routines.o
@@ -849,7 +899,7 @@ $(BUILD)pbl_ysu.o: $(PHYS)pbl_ysu.f90
 #	Advection related code
 ###################################################################
 $(BUILD)advection_driver.o:$(PHYS)advection_driver.f90 $(BUILD)data_structures.o $(BUILD)advect.o \
-							$(BUILD)debug_utils.o $(BUILD)options_h.o $(BUILD)domain_h.o # $(BUILD)adv_mpdata.o
+							$(BUILD)debug_utils.o $(BUILD)options_h.o $(BUILD)domain_h.o
 	${F90} ${FFLAGS} $(PHYS)advection_driver.f90 -o $(BUILD)advection_driver.o
 
 $(BUILD)advect.o:$(PHYS)advect.f90 $(BUILD)data_structures.o $(BUILD)options_h.o $(BUILD)domain_h.o
@@ -863,8 +913,12 @@ $(BUILD)adv_mpdata.o:$(PHYS)adv_mpdata.f90 $(PHYS)adv_mpdata_FCT_core.f90 $(BUIL
 #	Wind related code
 ###################################################################
 $(BUILD)wind.o:$(PHYS)wind.f90 $(BUILD)data_structures.o \
-				$(BUILD)winds_blocking.o $(BUILD)linear_winds.o
-	${F90} ${FFLAGS} $(PHYS)wind.f90 -o $(BUILD)wind.o
+				$(BUILD)domain_h.o $(BUILD)options_h.o
+
+#########################
+# $(BUILD)winds_blocking.o $(BUILD)linear_winds.o
+# ${F90} ${FFLAGS} $(PHYS)wind.f90 -o $(BUILD)wind.o
+#########################
 
 $(BUILD)linear_winds.o:$(PHYS)linear_winds.f90 $(BUILD)io_routines.o $(BUILD)data_structures.o \
 	 				   $(BUILD)fftshift.o $(BUILD)lt_lut_io.o $(BUILD)string.o $(BUILD)fftw.o  \
