@@ -165,12 +165,12 @@ contains
       n = ubound(this%data_3d,3)
       nx = size(this%data_3d,1)
 
-      if (assertions) then
-        !! gfortran 6.3.0 doesn't check coarray shape conformity with -fcheck=all so we verify with an assertion
-        call assert( shape(this%halo_south_in(:nx,:,1:halo_size)[north_neighbor]) &
-                     == shape(this%data_3d(:,:,n-halo_size+1:n)),         &
-                     "put_north: conformable halo_south_in and local " )
-      end if
+      ! if (assertions) then
+      !   !! gfortran 6.3.0 doesn't check coarray shape conformity with -fcheck=all so we verify with an assertion
+      !   call assert( shape(this%halo_south_in(:nx,:,1:halo_size)[north_neighbor]) &
+      !                == shape(this%data_3d(:,:,n-halo_size+1:n)),         &
+      !                "put_north: conformable halo_south_in and local " )
+      ! end if
 
       !dir$ pgas defer_sync
       this%halo_south_in(1:nx,:,1:halo_size)[north_neighbor] = this%data_3d(:,:,n-halo_size*2+1:n-halo_size)
@@ -183,12 +183,12 @@ contains
       start = lbound(this%data_3d,3)
       nx = size(this%data_3d,1)
 
-      if (assertions) then
-        !! gfortran 6.3.0 doesn't check coarray shape conformity with -fcheck=all so we verify with an assertion
-        call assert( shape(this%halo_north_in(:nx,:,1:halo_size)[south_neighbor]) &
-                     == shape(this%data_3d(:,:,start:start+halo_size-1)), &
-                     "put_south: conformable halo_north_in and local " )
-      end if
+      ! if (assertions) then
+      !   ! gfortran 6.3.0 doesn't check coarray shape conformity with -fcheck=all so we verify with an assertion
+      !   call assert( shape(this%halo_north_in(:nx,:,1:halo_size)[south_neighbor]) &
+      !                == shape(this%data_3d(:,:,start:start+halo_size-1)), &
+      !                "put_south: conformable halo_north_in and local " )
+      ! end if
       !dir$ pgas defer_sync
       this%halo_north_in(1:nx,:,1:halo_size)[south_neighbor] = this%data_3d(:,:,start+halo_size:start+halo_size*2-1)
   end subroutine
@@ -219,12 +219,12 @@ contains
       n = ubound(this%data_3d,1)
       ny = size(this%data_3d,3)
 
-      if (assertions) then
-        !! gfortran 6.3.0 doesn't check coarray shape conformity with -fcheck=all so we verify with an assertion
-        call assert( shape(this%halo_west_in(1:halo_size,:,:ny)[east_neighbor])       &
-                     == shape(this%data_3d(n-halo_size*2+1:n-halo_size,:,:)), &
-                     "put_east: conformable halo_west_in and local " )
-      end if
+      ! if (assertions) then
+      !   !! gfortran 6.3.0 doesn't check coarray shape conformity with -fcheck=all so we verify with an assertion
+      !   call assert( shape(this%halo_west_in(1:halo_size,:,:ny)[east_neighbor])       &
+      !                == shape(this%data_3d(n-halo_size*2+1:n-halo_size,:,:)), &
+      !                "put_east: conformable halo_west_in and local " )
+      ! end if
 
       !dir$ pgas defer_sync
       this%halo_west_in(1:halo_size,:,1:ny)[east_neighbor] = this%data_3d(n-halo_size*2+1:n-halo_size,:,:)
@@ -237,12 +237,12 @@ contains
       start = lbound(this%data_3d,1)
       ny = size(this%data_3d,3)
 
-      if (assertions) then
-        !! gfortran 6.3.0 doesn't check coarray shape conformity with -fcheck=all so we verify with an assertion
-        call assert( shape(this%halo_east_in(1:halo_size,:,:ny)[west_neighbor])               &
-                     == shape(this%data_3d(start+halo_size:start+halo_size*2-1,:,:)), &
-                     "put_west: conformable halo_east_in and local " )
-      end if
+      ! if (assertions) then
+      !   !! gfortran 6.3.0 doesn't check coarray shape conformity with -fcheck=all so we verify with an assertion
+      !   call assert( shape(this%halo_east_in(1:halo_size,:,:ny)[west_neighbor])               &
+      !                == shape(this%data_3d(start+halo_size:start+halo_size*2-1,:,:)), &
+      !                "put_west: conformable halo_east_in and local " )
+      ! end if
 
       !dir$ pgas defer_sync
       this%halo_east_in(1:halo_size,:,1:ny)[west_neighbor] = this%data_3d(start+halo_size:start+halo_size*2-1,:,:)
