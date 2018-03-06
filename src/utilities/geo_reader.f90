@@ -141,7 +141,7 @@ contains
 
         w3 = 1 - w1 - w2
 
-        if (minval([w1,w2,w3]) < -1e-4) then
+        if (minval([w1,w2,w3]) < -1e-3) then
             write(*,*) "ERROR: Point not located in bounding triangle"
             write(*,*) xi, yi
             write(*,*) "Triangle vertices"
@@ -157,7 +157,7 @@ contains
         endif
         w1=max(0.,w1); w2=max(0.,w2); w3=max(0.,w3);
 
-        if (abs((w1+w2+w3)-1)>1e-4) then
+        if (abs((w1+w2+w3)-1)>1e-3) then
             write(*,*) "Error, w1+w2+w3 != 1"
             write(*,*) w1,w2,w3
             write(*,*) "Point"
@@ -511,7 +511,7 @@ contains
         real :: internal_precision
         double precision :: slope, offset
 
-        internal_precision = 1e-7
+        internal_precision = 1e-5
         if (present(precision)) internal_precision = precision
 
         online=.False.
@@ -613,7 +613,7 @@ contains
         real :: x0,y0,x1,y1
         double precision :: slope, x_line
 
-        internal_precision = 1e-7
+        internal_precision = 1e-5
         if (present(precision)) internal_precision = precision
         n = size(poly,2)
 
