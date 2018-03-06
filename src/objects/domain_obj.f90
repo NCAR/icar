@@ -64,6 +64,8 @@ contains
       ! for all variables with a forcing_var /= "", get forcing, interpolate to local domain
       call interpolate_datasets(this, forcing)
 
+      this%model_time = forcing%current_time
+
     end subroutine
 
 
@@ -76,12 +78,12 @@ contains
       call this%water_vapor%send()
       call this%potential_temperature%send()
       call this%cloud_water_mass%send()
-      call this%cloud_ice_mass%send()
-      call this%cloud_ice_number%send()
+      ! call this%cloud_ice_mass%send()
+      ! call this%cloud_ice_number%send()
       call this%rain_mass%send()
-      call this%rain_number%send()
+      ! call this%rain_number%send()
       call this%snow_mass%send()
-      call this%graupel_mass%send()
+      ! call this%graupel_mass%send()
     end subroutine
 
     !> -------------------------------
@@ -93,12 +95,12 @@ contains
       call this%water_vapor%retrieve() ! the retrieve call will sync all
       call this%potential_temperature%retrieve(no_sync=.True.)
       call this%cloud_water_mass%retrieve(no_sync=.True.)
-      call this%cloud_ice_mass%retrieve(no_sync=.True.)
-      call this%cloud_ice_number%retrieve(no_sync=.True.)
+      ! call this%cloud_ice_mass%retrieve(no_sync=.True.)
+      ! call this%cloud_ice_number%retrieve(no_sync=.True.)
       call this%rain_mass%retrieve(no_sync=.True.)
-      call this%rain_number%retrieve(no_sync=.True.)
+      ! call this%rain_number%retrieve(no_sync=.True.)
       call this%snow_mass%retrieve(no_sync=.True.)
-      call this%graupel_mass%retrieve(no_sync=.True.)
+      ! call this%graupel_mass%retrieve(no_sync=.True.)
     end subroutine
 
     !> -------------------------------

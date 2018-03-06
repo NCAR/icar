@@ -83,6 +83,7 @@ contains
 
         ! figure out while file and timestep contains the requested start_time
         call set_curfile_curstep(this, start_time, file_list, time_var)
+        call read_bc_time(this%current_time, file_list(this%curfile), time_var, this%curstep)
 
         !  read in latitude and longitude coordinate data
         call io_read(file_list(this%curfile), lat_var, this%lat, this%curstep)
@@ -199,6 +200,9 @@ contains
 
         if (this_image()==1) then
             call update_forcing_step(this, this%file_list, options%parameters%time_var)
+
+            call read_bc_time(this%current_time, this%file_list(this%curfile), options%parameters%time_var, this%curstep)
+
             associate(list => this%variables)
 
             call list%reset_iterator()
@@ -343,6 +347,8 @@ contains
           endif
       enddo
 
+      call this%current_time%broadcast(1, 1, num_images())
+
     end subroutine
 
 
@@ -391,18 +397,6 @@ contains
     !! @retval step     integer number of steps into the forcing sequence
     !!
     !!------------------------------------------------------------
-    ! function bc_find_step(options) result(step)
-    !     implicit none
-    !     type(options_t), intent(in) :: options
-    !     integer :: step
-    !     type(time_delta_t) :: dt
-    !
-    !     dt = (options%parameters%start_time - options%parameters%initial_time)
-    !     step = dt%seconds() / options%parameters%in_dt + 1
-    !
-    !     if (options%parameters%debug) write(*,*) "bc_find_step: First forcing time step = ",trim(str(step))
-    !
-    ! end function bc_find_step
 
 
     function get_n_timesteps(filename, varname, var_space_dims) result(steps_in_file)
@@ -425,7 +419,7 @@ contains
             steps_in_file = dims(dims(1)+1)
         endif
 
-    end function get_n_timesteps
+    end function
 
 
     subroutine set_curfile_curstep(bc, time, file_list, time_var)
@@ -452,7 +446,7 @@ contains
             stop "Ran out of files to process while searching for matching time variable!"
         endif
 
-    end subroutine set_curfile_curstep
+    end subroutine
 
 
     subroutine update_forcing_step(bc, file_list, time_var)
@@ -481,7 +475,7 @@ contains
             endif
 
         endif
-    end subroutine update_forcing_step
+    end subroutine
 
 
 
@@ -647,63 +641,12 @@ contains
 
         type(Time_type), dimension(:), allocatable :: times
 
-        if (time_var/="") then
-            call read_times(filename, time_var, times)
-            model_time = times(curstep)
-            deallocate(times)
-        endif
+        call read_times(filename, time_var, times)
+        model_time = times(curstep)
+        deallocate(times)
+
     end subroutine read_bc_time
 
-
-
-    !>------------------------------------------------------------
-    !! Check that two model grids have the same shape
-    !!
-    !! If the size of all dimensions in data1 and data2 are not exactly the same the model will stop
-    !!
-    !! @param data1     First 3D array to check dimension sizes
-    !! @param data2     Second 3D array to check dimension sizes
-    !!
-    !!------------------------------------------------------------
-    subroutine check_shapes_3d(data1,data2)
-        implicit none
-        real,dimension(:,:,:),intent(in)::data1,data2
-        integer :: i
-        do i=1,3
-            if (size(data1,i).ne.size(data2,i)) then
-                write(*,*) "Restart file 3D dimensions don't match domain"
-                write(*,*) shape(data1)
-                write(*,*) shape(data2)
-                stop
-            endif
-        enddo
-    end subroutine check_shapes_3d
-
-    !>------------------------------------------------------------
-    !! Swap the last two dimensions of an array
-    !!
-    !! Call reshape after finding the nx,ny,nz values
-    !!
-    !! @param data     3D array to be reshaped
-    !!
-    !!------------------------------------------------------------
-    subroutine swap_y_z_dimensions(data)
-        implicit none
-        real,dimension(:,:,:),intent(inout),allocatable :: data
-        real,dimension(:,:,:), allocatable :: temporary_data
-        integer :: nx,ny,nz
-
-        nx=size(data,1)
-        ny=size(data,2)
-        nz=size(data,3)
-        allocate(temporary_data(nx,nz,ny))
-        temporary_data = reshape(data, [nx,nz,ny], order=[1,3,2])
-
-        deallocate(data)
-        allocate(data(nx,nz,ny))
-        data=temporary_data
-
-    end subroutine swap_y_z_dimensions
 
 
     !>------------------------------------------------------------
@@ -739,96 +682,5 @@ contains
         enddo
     end subroutine update_edges
 
-
-
-    !>------------------------------------------------------------
-    !!  Adjust the pressure field for the vertical shift between the low and high-res domains
-    !!
-    !!  Ideally this should include temperature... but it isn't entirely clear
-    !!  what it would mean to do that, what temperature do you use? Current even though you are adjusting future P?
-    !!  Alternatively, could adjust input pressure to SLP with future T then adjust back to elevation with current T?
-    !!  Currently if T is supplied, it uses the mean of the high and low-res T to split the difference.
-    !!  Equations from : http://www.wmo.int/pages/prog/www/IMOP/meetings/SI/ET-Stand-1/Doc-10_Pressure-red.pdf
-    !!  excerpt from CIMO Guide, Part I, Chapter 3 (Edition 2008, Updated in 2010) equation 3.2
-    !!  http://www.meteormetrics.com/correctiontosealevel.htm
-    !!
-    !! @param pressure  The pressure field to be adjusted
-    !! @param z_lo      The 3D vertical coordinate of the input pressures
-    !! @param z_hi      The 3D vertical coordinate of the computed/adjusted pressures
-    !! @param lowresT   OPTIONAL 3D temperature field of the input pressures
-    !! @param lowresT   OPTIONAL 3D temperature field of the computed/adjusted pressures
-    !! @retval pressure The pressure field after adjustment
-    !!
-    !!------------------------------------------------------------
-    subroutine update_pressure(pressure,z_lo,z_hi, lowresT, hiresT)
-        implicit none
-        real,dimension(:,:,:), intent(inout) :: pressure
-        real,dimension(:,:,:), intent(in) :: z_lo,z_hi
-        real,dimension(:,:,:), intent(in), optional :: lowresT, hiresT
-        ! local variables
-        real,dimension(:),allocatable::slp !sea level pressure [Pa]
-        ! vapor pressure, change in height, change in temperature with height and mean temperature
-        real,dimension(:),allocatable:: dz, tmean !, e, dTdz
-        integer :: nx,ny,nz,i,j
-        nx=size(pressure,1)
-        nz=size(pressure,2)
-        ny=size(pressure,3)
-
-        if (present(lowresT)) then
-            !$omp parallel shared(pressure, z_lo,z_hi, lowresT, hiresT) &
-            !$omp private(i,j, dz, tmean) firstprivate(nx,ny,nz)  !! private(e, dTdz)
-            allocate(dz(nx))
-            allocate(tmean(nx))
-            ! allocate(e(nx))
-            ! allocate(dTdz(nx))
-            !$omp do
-            do j=1,ny
-                ! is an additional loop over z more cache friendly?
-                do i=1,nz
-                    ! vapor pressure
-!                     e = qv(:,:,j) * pressure(:,:,j) / (0.62197+qv(:,:,j))
-                    ! change in elevation (note reverse direction from "expected" because the formula is an SLP reduction)
-                    dz   = (z_lo(:,i,j) - z_hi(:,i,j))
-                    ! lapse rate (not sure if this should be positive or negative)
-                    ! dTdz = (loresT(:,:,j) - hiresT(:,:,j)) / dz
-                    ! mean temperature between levels
-                    if (present(hiresT)) then
-                        tmean= (hiresT(:,i,j) + lowresT(:,i,j)) / 2
-                    else
-                        tmean= lowresT(:,i,j)
-                    endif
-                    ! slp= ps*np.exp(((g/R)*Hp) / (ts - a*Hp/2.0 + e*Ch))
-                    pressure(:,i,j) = pressure(:,i,j) * exp( ((gravity/Rd) * dz) / tmean )   !&
-!                                         (tmean + (e * 0.12) ) )
-                    ! alternative formulation M=0.029, R=8.314?
-                    ! p= p0*(t0/(t0+dtdz*z))**((g*M)/(R*dtdz))
-                    ! do i=1,nz
-                    !     pressure(:,i,j) = pressure(:,i,j)*(t0/(tmean(:,i)+dTdz(:,i)*z))**((g*M)/(R*dtdz))
-                    ! enddo
-                enddo
-            enddo
-            !$omp end do
-            deallocate(dz, tmean)
-            ! deallocate(e, dTdz)
-            !$omp end parallel
-        else
-            ! this is pretty foolish to convert to sea level pressure and back... should be done in one step
-            ! just need to test that the relationship can work that way h=(zhi-zlo)
-            ! this doesn't get used much though (only from bc_init) so it doesnt seem worth the time...
-            !$omp parallel shared(pressure, z_lo,z_hi) &
-            !$omp private(slp,i,j) firstprivate(nx,ny,nz)
-            allocate(slp(nx))
-            !$omp do
-            do j=1,ny
-                do i=1,nz
-                    ! slp = pressure(:,i,j) / (1 - 2.25577E-5 * z_lo(:,i,j))**5.25588
-                    pressure(:,i,j) = pressure(:,i,j) * (1 - 2.25577e-5 * (z_hi(:,i,j)-z_lo(:,i,j)))**5.25588
-                enddo
-            enddo
-            !$omp end do
-            deallocate(slp)
-            !$omp end parallel
-        endif
-    end subroutine update_pressure
 
 end submodule
