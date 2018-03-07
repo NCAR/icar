@@ -426,7 +426,7 @@ contains
         type(Time_type),    intent(in)      :: end_time
         type(options_t),    intent(in)      :: options
 
-        real :: time_percent
+        real :: time_percent, last_time
         double precision :: seconds
         type(time_delta_t) :: dt, progress_dt, time_step_size
 
@@ -441,6 +441,7 @@ contains
         ! call diagnostic_update(domain, options)
 
         ! now just loop over internal timesteps computing all physics in order (operator splitting...)
+        last_time = 0.0
         do while (domain%model_time < end_time)
 
             ! compute internal timestep dt to maintain stability
@@ -452,6 +453,7 @@ contains
                 !                 use_density=.True.))
 
             else
+                ! compute the dt to meet the CFL criteria specified given dx, u, v, w, dz
                 call dt%set(seconds=compute_dt(domain%dx, domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%density%data_3d, domain%dz_interface%data_3d, &
                                 options%parameters%cfl_reduction_factor, cfl_strictness=options%parameters%cfl_strictness,                 &
                                 use_density=.False.))
@@ -459,16 +461,26 @@ contains
 
             ! set an upper bound on dt to keep microphysics and convection stable (?)
             seconds = dt%seconds()
-
-            sync all
+            ! perform a reduction across all images to find the minimum time step required
+            sync all ! not sure if this is required before the co_min call
             call co_min(seconds)
+            ! store this back in the dt time_delta data structure
             call dt%set(seconds=min(seconds,120.0D0))
 
 
+            ! if an interactive run was requested than print status updates everytime at least 5% of the progress has been made
             if (options%parameters%interactive .and. (this_image()==1)) then
+
+                ! first compute the current time until reaching the end
                 progress_dt  = (end_time - domain%model_time)
+                ! convert that to a percentage of the total time required
                 time_percent = 100 - progress_dt%seconds() / time_step_size%seconds()  * 100
-                write(*,"(A,f5.1,A,A$)") char(13), max(0.0,time_percent)," %  dt=",trim(dt%as_string())
+                ! finally if it has been at least 5% of the time since the last time we printed output, print output
+                if (time_percent > (last_time + 5.0)) then
+                    last_time = last_time + 5.0
+                    ! this used to just use the nice $ (or advance="NO") trick, but at least with some mpi implementations, it buffers this output until it crashes
+                    write(*,"(A,f5.1,A,A)") char(13), max(0.0,time_percent)," %  dt=",trim(dt%as_string())
+                endif
             endif
 
             ! Make sure we don't over step the forcing period
