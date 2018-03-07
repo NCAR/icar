@@ -238,6 +238,9 @@ contains
       grid%jts = grid%jms + merge(0, halo_size, south_boundary)
       grid%jte = grid%jme - merge(0, halo_size, north_boundary)
 
+      grid%nx = grid%ime - grid%ims + 1
+      grid%ny = grid%jme - grid%jms + 1
+
   end subroutine
 
 end submodule
