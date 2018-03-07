@@ -510,10 +510,12 @@ contains
         ! List the variables that are required for any restart
         call options%restart_vars(                                                  &
                      [kVARS%z,                                                      &
-                      kVARS%terrain,                                                &
+                      kVARS%terrain,                kVARS%potential_temperature,    &
                       kVARS%latitude,               kVARS%longitude,                &
                       kVARS%u_latitude,             kVARS%u_longitude,              &
                       kVARS%v_latitude,             kVARS%v_longitude               ])
+
+        call options%advect_vars([kVARS%potential_temperature])
 
     end subroutine var_request
 
