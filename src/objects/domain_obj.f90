@@ -658,7 +658,7 @@ contains
         type(variable_t) :: input_data
         ! note that 3D variables have a different number of vertical levels, so they have to first be interpolated
         ! to the high res horizontal grid, then vertically interpolated to the actual icar domain
-        real, allocatable :: temp_3d(:,:,:)
+        real, allocatable :: temp_3d(:,:,:), pre_smooth(:,:,:)
         logical :: interpolate_vertically
         integer :: nz
 
@@ -673,11 +673,11 @@ contains
         else if (var%three_d) then
             ! Sequence of if statements to test if this variable needs to be interpolated onto the staggared grids
 
-            ! allocate a temporary variable to hold the horizontally interpolated data before vertical interpolation
-            allocate(temp_3d(size(var%data_3d,1), size(input_data%data_3d,2), size(var%data_3d,3) ))
-
             ! Interpolate to the Mass grid
             if ((size(var%data_3d,1) == size(forcing%geo%geolut%x,2)).and.(size(var%data_3d,3) == size(forcing%geo%geolut%x,3))) then
+                ! allocate a temporary variable to hold the horizontally interpolated data before vertical interpolation
+                allocate(temp_3d(size(var%data_3d,1), size(input_data%data_3d,2), size(var%data_3d,3) ))
+
                 call geo_interp(temp_3d, input_data%data_3d, forcing%geo%geolut)
 
                 ! note that pressure (and possibly other variables?) should not be interpolated, it will be adjusted later
@@ -691,12 +691,27 @@ contains
 
             ! Interpolate to the u staggered grid
             else if ((size(var%data_3d,1) == size(forcing%geo_u%geolut%x,2)).and.(size(var%data_3d,3) == size(forcing%geo_u%geolut%x,3))) then
+
+                ! allocate a temporary variable to hold the horizontally interpolated data before vertical interpolation
+                allocate(temp_3d(size(var%data_3d,1), size(input_data%data_3d,2), size(var%data_3d,3) ))
+
+                ! use the alternate allocate below to vertically interpolate to this first, then smooth, then subset to the actual variable
+                ! allocate(temp_3d(size(forcing%geo_u%geolut%x,2), size(var%data_3d,2), size(forcing%geo_u%geolut%x,3)))
+                ! allocate(pre_smooth(size(forcing%geo_u%geolut%x,2), size(input_data%data_3d,2), size(forcing%geo_u%geolut%x,3) ))
+
                 call geo_interp(temp_3d, input_data%data_3d, forcing%geo_u%geolut)
                 call vinterp(var%data_3d, temp_3d, forcing%geo_u%vert_lut)
                 call smooth_array(var%data_3d, windowsize=10, ydim=3)
 
             ! Interpolate to the v staggered grid
             else if ((size(var%data_3d,1) == size(forcing%geo_v%geolut%x,2)).and.(size(var%data_3d,3) == size(forcing%geo_v%geolut%x,3))) then
+                ! allocate a temporary variable to hold the horizontally interpolated data before vertical interpolation
+                allocate(temp_3d(size(var%data_3d,1), size(input_data%data_3d,2), size(var%data_3d,3) ))
+
+                ! use the alternate allocate below to vertically interpolate to this first, then smooth, then subset to the actual variable
+                ! allocate(temp_3d(size(forcing%geo_v%geolut%x,2), size(var%data_3d,2), size(forcing%geo_v%geolut%x,3)))
+                ! allocate(pre_smooth(size(forcing%geo_v%geolut%x,2), size(input_data%data_3d,2), size(forcing%geo_v%geolut%x,3) ))
+
                 call geo_interp(temp_3d, input_data%data_3d, forcing%geo_v%geolut)
                 call vinterp(var%data_3d, temp_3d, forcing%geo_v%vert_lut)
                 call smooth_array(var%data_3d, windowsize=10, ydim=3)
