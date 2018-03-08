@@ -161,15 +161,15 @@ ifeq ($(MODE), debugslow)
 endif
 ifeq ($(MODE), debug)
 	ifeq ($(COMPILER), intel)
-		COMP= -debug -c -O1 -u -check all -check noarg_temp_created -traceback -fpe0 -fast-transcendentals -xhost
+		COMP= -debug -c -O2 -u -check all -check noarg_temp_created -traceback -fpe0 -fast-transcendentals -xhost
 		LINK=
 	endif
 	ifeq ($(COMPILER), gnu)
-		COMP= -c -O1 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
+		COMP= -c -O2 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK=
 	endif
 	ifeq ($(COMPILER), cray)
-		COMP=-O1 -h noomp -c -g
+		COMP=-O2 -h noomp -c -g
 		LINK=-h noomp
 		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
