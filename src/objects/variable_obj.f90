@@ -24,6 +24,8 @@ contains
         this%two_d   = grid%is2d
         this%three_d = grid%is3d
 
+        this%forcing_var = ""
+        if (present(forcing_var)) this%forcing_var = forcing_var
 
         if (grid%is2d) then
             this%n_dimensions = 2
@@ -31,6 +33,13 @@ contains
             allocate(this%data_2d(grid%ims:grid%ime,    &
                                   grid%jms:grid%jme), stat=err)
             if (err /= 0) stop "variable:grid:2d: Allocation request denied"
+
+            if (trim(this%forcing_var) /= "") then
+                allocate(this%dqdt_2d(grid%ims:grid%ime,    &
+                                      grid%jms:grid%jme), stat=err)
+                if (err /= 0) stop "variable:grid:dqdt_2d: Allocation request denied"
+            endif
+
         endif
 
         if (grid%is3d) then
@@ -40,10 +49,15 @@ contains
                                   grid%kms:grid%kme,    &
                                   grid%jms:grid%jme), stat=err)
             if (err /= 0) stop "variable:grid:3d: Allocation request denied"
-        endif
 
-        this%forcing_var = ""
-        if (present(forcing_var)) this%forcing_var = forcing_var
+            if (trim(this%forcing_var) /= "") then
+                allocate(this%dqdt_3d(grid%ims:grid%ime,    &
+                                      grid%kms:grid%kme,    &
+                                      grid%jms:grid%jme), stat=err)
+                if (err /= 0) stop "variable:grid:dqdt_3d: Allocation request denied"
+            endif
+
+        endif
 
     end subroutine
 
@@ -66,12 +80,21 @@ contains
         this%two_d   = size(dims) == 2
         this%three_d = size(dims) == 3
 
+        this%forcing_var = ""
+        if (present(forcing_var)) this%forcing_var = forcing_var
+
         if (this%two_d) then
             this%n_dimensions = 2
             this%dimensions = ['x','y']
             if (associated(this%data_2d)) deallocate(this%data_2d)
             allocate(this%data_2d(dims(1), dims(2)), stat=err)
             if (err /= 0) stop "variable:dims:2d: Allocation request denied"
+
+            if (trim(this%forcing_var) /= "") then
+                if (allocated(this%dqdt_2d)) deallocate(this%dqdt_2d)
+                allocate(this%dqdt_2d(dims(1), dims(2)), stat=err)
+                if (err /= 0) stop "variable:dims:dqdt_2d: Allocation request denied"
+            endif
         endif
 
         if (this%three_d) then
@@ -80,10 +103,13 @@ contains
             if (associated(this%data_3d)) deallocate(this%data_3d)
             allocate(this%data_3d(dims(1), dims(2), dims(3)), stat=err)
             if (err /= 0) stop "variable:dims:3d: Allocation request denied"
-        endif
 
-        this%forcing_var = ""
-        if (present(forcing_var)) this%forcing_var = forcing_var
+            if (trim(this%forcing_var) /= "") then
+                if (allocated(this%dqdt_3d)) deallocate(this%dqdt_3d)
+                allocate(this%dqdt_3d(dims(1), dims(2), dims(3)), stat=err)
+                if (err /= 0) stop "variable:dims:dqdt_3d: Allocation request denied"
+            endif
+        endif
 
     end subroutine
 

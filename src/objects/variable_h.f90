@@ -12,6 +12,9 @@ module variable_interface
         real, pointer :: data_3d(:,:,:) => null()
         real, pointer :: data_2d(:,:)   => null()
 
+        real, allocatable :: dqdt_3d(:,:,:)
+        real, allocatable :: dqdt_2d(:,:)
+
         logical                         :: unlimited_dim = .False.
         logical                         :: three_d = .False.
         logical                         :: two_d = .False.
