@@ -23,6 +23,7 @@ program icar
     use boundary_interface, only : boundary_t
     use output_interface,   only : output_t
     use time_step,          only : step                               ! Advance the model forward in time
+    use wind,               only : update_winds
 
     implicit none
 
@@ -49,18 +50,18 @@ program icar
     if (this_image()==1) print*, "Reading Initial conditions from boundary dataset"
     call domain%get_initial_conditions(boundary, options)
 
+    call update_winds(domain, options)
+
     if (this_image()==1) print*, "Setting up output files"
     ! should be combined into a single setup_output call
     call dataset%set_domain(domain)
     call dataset%add_variables(options%vars_for_restart, domain)
-
 
     !-----------------------------------------
     !-----------------------------------------
     !  Time Loop
     !
     !   note that a timestep here is a forcing input timestep O(1-3hr), not a physics timestep O(20-100s)
-    !i = 1   ! note this is just used to count time steps so we output files with new names, ultimately this should go away!
     do while (domain%model_time < options%parameters%end_time)
 
         call boundary%update_forcing(options)
@@ -72,12 +73,10 @@ program icar
         if (this_image()==1) write(*,*) "   End  time = ", trim(options%parameters%end_time%as_string())
         if (this_image()==1) write(*,*) "  Input time = ", trim(boundary%current_time%as_string())
 
-        ! update boundary conditions (dXdt variables) so we can integrate to the next step
-        ! call bc_update(domain, boundary, options)
-        ! write(*,*) "  Next input = ", trim(boundary%next_domain%model_time%as_string())
 
         ! this is the meat of the model physics, run all the physics for the current time step looping over internal timesteps
         call step(domain, boundary%current_time, options)
+
 
         ! This is an ugly hack until the output object is set up better to handle multiple time steps per file
         ! (that may just need "unlimited" specified in variables?)

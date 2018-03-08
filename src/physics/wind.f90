@@ -28,18 +28,18 @@ contains
     !! Starts by setting w out of the ground=0 then works through layers
     !!
     !!------------------------------------------------------------
-    subroutine balance_uvw(domain, options)
+    subroutine balance_uvw(u,v,w, options)
         implicit none
-        type(domain_t),  intent(inout) :: domain
-        type(options_t), intent(in)    :: options
+        real,           intent(inout) :: u(:,:,:), v(:,:,:), w(:,:,:)
+        type(options_t),intent(in)    :: options
 
         real, allocatable, dimension(:,:) :: du, dv, divergence, rhou, rhov,rhow
 
         integer :: k, ims, ime, jms, jme, kms, kme
 
-        associate(u => domain%u%data_3d,  &
-                  v => domain%v%data_3d,  &
-                  w => domain%w%data_3d  )
+        ! associate(u => domain%u%data_3d,  &
+        !           v => domain%v%data_3d,  &
+        !           w => domain%w%data_3d  )
 
         ims = lbound(w,1)
         ime = ubound(w,1)
@@ -115,7 +115,7 @@ contains
             ! endif
 
         enddo
-        end associate
+        ! end associate
 
     end subroutine balance_uvw
 
@@ -125,16 +125,13 @@ contains
     !! Assumes forcing winds are EW, NS relative, not grid relative.
     !!
     !!------------------------------------------------------------
-    subroutine make_winds_grid_relative(domain)
-        type(domain_t), intent(inout) :: domain
+    subroutine make_winds_grid_relative(u, v, w, sintheta, costheta)
+        real, intent(inout) :: u(:,:,:), v(:,:,:), w(:,:,:)
+        real, intent(in)    :: sintheta(:,:), costheta(:,:)
 
         real, dimension(:), allocatable :: u_local,v_local
 
         integer :: k, j, ims, ime, jms, jme, kms, kme
-
-        associate(u => domain%u%data_3d,  &
-                  v => domain%v%data_3d,  &
-                  w => domain%w%data_3d  )
 
         ims = lbound(w,1)
         ime = ubound(w,1)
@@ -152,8 +149,8 @@ contains
         do j = jms, jme
             do k = kms, kme
                 ! rotate wind field to the real grid
-                u_local = u(ims:ime,k,j) * domain%costheta(:,j) + v(ims:ime,k,j)*domain%sintheta(ims:ime,j)
-                v_local = v(ims:ime,k,j) * domain%costheta(:,j) + u(ims:ime,k,j)*domain%sintheta(ims:ime,j)
+                u_local = u(ims:ime,k,j) * costheta(:,j) + v(ims:ime,k,j) * sintheta(ims:ime,j)
+                v_local = v(ims:ime,k,j) * costheta(:,j) + u(ims:ime,k,j) * sintheta(ims:ime,j)
                 u(:ime,k,j) = u_local
                 v(:ime,k,j) = v_local
             enddo
@@ -169,8 +166,6 @@ contains
         v(:,:,jms+1:jme) =  (v(:,:,jms:jme-1) + v(:,:,jms+1:jme))/2
         v(:,:,jms)       = 2*v(:,:,jms)       - v(:,:,jms+1)
         v(:,:,jme+1)     = 2*v(:,:,jme)       - v(:,:,jme-1)
-
-        end associate
 
     end subroutine
 
@@ -190,26 +185,35 @@ contains
         real, allocatable, dimension(:,:,:) :: temparray
         integer :: nx, ny, nz, i, j
 
-        if (.not.allocated(domain%sintheta)) call init_winds(domain, options)
+        if (.not.allocated(domain%sintheta)) then
+            call init_winds(domain, options)
 
-        ! rotate winds from cardinal directions to grid orientation (e.g. u is grid relative not truly E-W)
-        if (.not.options%parameters%ideal) then
-            call make_winds_grid_relative(domain)
+            ! rotate winds from cardinal directions to grid orientation (e.g. u is grid relative not truly E-W)
+            call make_winds_grid_relative(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%sintheta, domain%costheta)
+
+            ! flow blocking parameterization
+            ! if (options%block_options%block_flow) then
+            !     call add_blocked_flow(domain, options)
+            ! endif
+
+            ! linear winds
+            ! if (options%physics%windtype==kWIND_LINEAR) then
+            !     call linear_perturb(domain,options,options%lt_options%vert_smooth,.False.,options%advect_density)
+            ! endif
+            ! else assumes even flow over the mountains
+
+            ! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
+            call balance_uvw(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, options)
+
+        else
+
+            ! rotate winds from cardinal directions to grid orientation (e.g. u is grid relative not truly E-W)
+            call make_winds_grid_relative(domain%u%meta_data%dqdt_3d, domain%v%meta_data%dqdt_3d, domain%w%meta_data%dqdt_3d, domain%sintheta, domain%costheta)
+
+            ! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
+            call balance_uvw(domain%u%meta_data%dqdt_3d, domain%v%meta_data%dqdt_3d, domain%w%meta_data%dqdt_3d, options)
         endif
 
-        ! flow blocking parameterization
-        ! if (options%block_options%block_flow) then
-        !     call add_blocked_flow(domain, options)
-        ! endif
-
-        ! linear winds
-        ! if (options%physics%windtype==kWIND_LINEAR) then
-        !     call linear_perturb(domain,options,options%lt_options%vert_smooth,.False.,options%advect_density)
-        ! endif
-        ! else assumes even flow over the mountains
-
-        ! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
-        call balance_uvw(domain,options)
 
     end subroutine update_winds
 
@@ -221,7 +225,7 @@ contains
         type(domain_t),  intent(inout) :: domain
         type(options_t), intent(in)    :: options
 
-        integer :: i, j, ims, ime, jms, jme, starti, endi
+        integer :: i, j, ims, ime, jms, jme, kms, kme, starti, endi
         real    :: dist, dlat, dlon
 
         call allocate_winds(domain)
@@ -286,18 +290,27 @@ contains
     !!------------------------------------------------------------
     subroutine allocate_winds(domain)
         type(domain_t), intent(inout) :: domain
-        integer :: ims, ime, jms, jme
+        integer :: ims, ime, jms, jme, kms, kme
 
-        ims = lbound(domain%latitude%data_2d,1)
-        ime = ubound(domain%latitude%data_2d,1)
-        jms = lbound(domain%latitude%data_2d,2)
-        jme = ubound(domain%latitude%data_2d,2)
+        ims = lbound(domain%latitude%data_2d, 1)
+        ime = ubound(domain%latitude%data_2d, 1)
+        jms = lbound(domain%latitude%data_2d, 2)
+        jme = ubound(domain%latitude%data_2d, 2)
+        kms = lbound(domain%w%data_3d, 2)
+        kme = ubound(domain%w%data_3d, 2)
 
         if (.not.allocated(domain%sintheta)) then
             allocate(domain%sintheta(ims:ime, jms:jme))
+            domain%sintheta = 0
         endif
         if (.not.allocated(domain%costheta)) then
             allocate(domain%costheta(ims:ime, jms:jme))
+            domain%costheta = 0
+        endif
+
+        if (.not.allocated(domain%w%meta_data%dqdt_3d)) then
+            allocate(domain%w%meta_data%dqdt_3d(ims:ime,kms:kme,jms:jme))
+            domain%w%meta_data%dqdt_3d = 0
         endif
 
         ! if (.not.allocated(domain%dzdx)) then

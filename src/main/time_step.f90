@@ -27,7 +27,7 @@ module time_step
     private
     public :: step
 
-    real, dimension(:,:), allocatable :: lastw, currw, uw, vw !> temporaries used to compute diagnostic w_real field
+    ! real, dimension(:,:), allocatable :: lastw, currw, uw, vw !> temporaries used to compute diagnostic w_real field
 contains
 
     !>------------------------------------------------------------
@@ -434,7 +434,7 @@ contains
 
         time_step_size = end_time - domain%model_time
         ! Make the boundary condition dXdt values into units of [X]/s
-        ! call apply_dt(bc, bc%dt%seconds(), options)
+        call domain%update_delta_fields(time_step_size)
 
         ! ensure internal model consistency (should only need to be called here when the model starts...)
         ! e.g. for potential temperature and temperature

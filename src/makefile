@@ -236,7 +236,7 @@ endif
 # Intel fortran
 ifeq ($(COMPILER), intel)
 	ifeq ($(CAF_MODE), single)
-		CAF_FLAG=-coarray -coarray-num-images=1
+		CAF_FLAG=-coarray=single
 	else
 		CAF_FLAG=-coarray
 	endif

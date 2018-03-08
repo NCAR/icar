@@ -263,6 +263,8 @@ contains
 
         end associate
 
+        call this%current_time%broadcast(1, 1, num_images())
+
     end subroutine
 
 

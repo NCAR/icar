@@ -8,6 +8,7 @@ module domain_interface
   use meta_data_interface,      only : meta_data_t
   use io_routines,              only : io_read
   use time_object,              only : Time_type
+  use time_delta_object,        only : time_delta_t
   use data_structures,          only : interpolable_type
   implicit none
 
@@ -117,6 +118,7 @@ module domain_interface
 
     procedure :: get_initial_conditions
     procedure :: interpolate_forcing
+    procedure :: update_delta_fields
 
   end type
 
@@ -126,24 +128,24 @@ module domain_interface
 
     ! Set default component values
     module subroutine init(this, options)
-      implicit none
-      class(domain_t), intent(inout) :: this
-      class(options_t),intent(inout) :: options
+        implicit none
+        class(domain_t), intent(inout) :: this
+        class(options_t),intent(inout) :: options
     end subroutine
 
     ! read initial atmospheric conditions from forcing data
     module subroutine get_initial_conditions(this, forcing, options)
-      implicit none
-      class(domain_t),  intent(inout) :: this
-      class(boundary_t),intent(inout) :: forcing
-      class(options_t), intent(in)    :: options
+        implicit none
+        class(domain_t),  intent(inout) :: this
+        class(boundary_t),intent(inout) :: forcing
+        class(options_t), intent(in)    :: options
     end subroutine
 
     module subroutine interpolate_forcing(this, forcing, update)
-      implicit none
-      class(domain_t),  intent(inout) :: this
-      class(boundary_t),intent(in)    :: forcing
-      logical,          intent(in),   optional :: update
+        implicit none
+        class(domain_t),  intent(inout) :: this
+        class(boundary_t),intent(in)    :: forcing
+        logical,          intent(in),   optional :: update
     end subroutine
 
     module subroutine var_request(this, options)
@@ -153,28 +155,33 @@ module domain_interface
     end subroutine
 
     module subroutine halo_send(this)
-      implicit none
-      class(domain_t), intent(inout) :: this
+        implicit none
+        class(domain_t), intent(inout) :: this
     end subroutine
 
     module subroutine halo_retrieve(this)
-      implicit none
-      class(domain_t), intent(inout) :: this
+        implicit none
+        class(domain_t), intent(inout) :: this
     end subroutine
 
 
     ! Exchange subdomain boundary information
     module subroutine halo_exchange(this)
-      implicit none
-      class(domain_t), intent(inout) :: this
+        implicit none
+        class(domain_t), intent(inout) :: this
     end subroutine
 
     ! Make sure no hydrometeors are getting below 0
     module subroutine enforce_limits(this)
-      implicit none
-      class(domain_t), intent(inout) :: this
+        implicit none
+        class(domain_t), intent(inout) :: this
     end subroutine
 
+    module subroutine update_delta_fields(this, dt)
+        implicit none
+        class(domain_t),    intent(inout) :: this
+        class(time_delta_t),intent(in)    :: dt
+    end subroutine
   end interface
 
 end module

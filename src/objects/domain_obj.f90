@@ -612,6 +612,40 @@ contains
 
     end subroutine
 
+
+    module subroutine update_delta_fields(this, dt)
+        implicit none
+        class(domain_t),    intent(inout) :: this
+        class(time_delta_t),intent(in)    :: dt
+
+        ! temporary to hold the variable to be interpolated to
+        type(variable_t) :: var_to_update
+
+        ! make sure the dictionary is reset to point to the first variable
+        call this%variables_to_force%reset_iterator()
+
+        ! No iterate through the dictionary as long as there are more elements present
+        do while (this%variables_to_force%has_more_elements())
+            ! get the next variable
+            var_to_update = this%variables_to_force%next()
+
+            if (var_to_update%two_d) then
+                var_to_update%dqdt_2d = (var_to_update%dqdt_2d - var_to_update%data_2d) / dt%seconds()
+
+            else if (var_to_update%three_d) then
+                var_to_update%dqdt_3d = (var_to_update%dqdt_3d - var_to_update%data_3d) / dt%seconds()
+            endif
+
+        enddo
+
+        ! w has to be handled separately because it is the only variable that can be updated using the delta fields but is not
+        ! actually read from disk. Note that if we move to balancing winds every timestep, then it doesn't matter.
+        var_to_update = this%w%meta_data
+        var_to_update%dqdt_3d = (var_to_update%dqdt_3d - var_to_update%data_3d) / dt%seconds()
+
+
+    end subroutine
+
     !> -------------------------------
     !! Loop through all variables for which forcing data have been supplied and interpolate the forcing data to the domain
     !!
@@ -668,8 +702,6 @@ contains
                         call update_pressure(var_to_interpolate%dqdt_3d, forcing%geo%z(:,:nz,:), this%geo%z)
                     endif
 
-                    var_to_interpolate%dqdt_3d(:,:,:) = var_to_interpolate%dqdt_3d(:,:,:) - var_to_interpolate%data_3d(:,:,:)
-
                 else
                     call interpolate_variable(var_to_interpolate%data_3d, input_data, forcing, &
                                             vert_interp=var_is_not_pressure)
@@ -681,7 +713,6 @@ contains
 
             endif
         enddo
-
 
     end subroutine
 

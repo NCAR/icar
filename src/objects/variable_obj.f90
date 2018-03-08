@@ -189,7 +189,8 @@ contains
                 write(error_message, '(A,A,A,I6,A,3I5,A,3I5)') &
                         "ERROR: variable ", trim(this%name), " has the wrong shape on image: ", &
                         this_image(), " has:",shape(this%data_3d)," should have:",this%dim_len
-                stop trim(error_message)
+                write(*,*) trim(error_message)
+                stop
             endif
             call broadcast(this%data_3d, source, first, last, create_co_array=.True.)
 
@@ -207,7 +208,8 @@ contains
                 write(error_message, '(A,A,A,I6,A,2I5,A,2I5)') &
                         "ERROR: variable ", trim(this%name), " has the wrong shape on image: ", &
                         this_image(), " has:",shape(this%data_2d)," should have:",this%dim_len
-                stop trim(error_message)
+                write(*,*) trim(error_message)
+                stop
             endif
             call broadcast(this%data_2d, source, first, last, create_co_array=.True.)
         endif
