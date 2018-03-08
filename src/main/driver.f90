@@ -64,6 +64,7 @@ program icar
     do while (domain%model_time < options%parameters%end_time)
 
         call boundary%update_forcing(options)
+        call domain%interpolate_forcing(boundary, update=.True.)
 
         if (this_image()==1) write(*,*) ""
         if (this_image()==1) write(*,*) " ----------------------------------------------------------------------"

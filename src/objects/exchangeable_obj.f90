@@ -16,6 +16,8 @@ contains
     class(variable_t),               intent(in),    optional :: metadata
     character(len=kMAX_NAME_LENGTH), intent(in),    optional :: forcing_var
 
+    integer :: err
+
     halo_size = grid%halo_size
 
     this%north_boundary = (grid%yimg == grid%yimages)
@@ -30,7 +32,8 @@ contains
 
     allocate(this%data_3d(grid%ims:grid%ime, &
                           grid%kms:grid%kme, &
-                          grid%jms:grid%jme))
+                          grid%jms:grid%jme), stat=err)
+    if (err /= 0) stop "exchangeable:dqdt_3d: Allocation request failed"
 
     allocate( this%halo_south_in( grid%ns_halo_nx+halo_size*2, grid%halo_nz,   halo_size    )[*])
     allocate( this%halo_north_in( grid%ns_halo_nx+halo_size*2, grid%halo_nz,   halo_size    )[*])
@@ -47,6 +50,16 @@ contains
     endif
 
     if (present(forcing_var)) this%meta_data%forcing_var = forcing_var
+
+    if (trim(this%meta_data%forcing_var) /= "") then
+        allocate(this%meta_data%dqdt_3d(grid%ims:grid%ime,    &
+                                        grid%kms:grid%kme,    &
+                                        grid%jms:grid%jme), stat=err)
+        if (err /= 0) stop "exchangeable:dqdt_3d: Allocation request failed"
+
+        this%meta_data%dqdt_3d = 0
+    endif
+
 
   end subroutine
 

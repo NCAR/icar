@@ -116,6 +116,7 @@ module domain_interface
     procedure :: enforce_limits
 
     procedure :: get_initial_conditions
+    procedure :: interpolate_forcing
 
   end type
 
@@ -136,6 +137,13 @@ module domain_interface
       class(domain_t),  intent(inout) :: this
       class(boundary_t),intent(inout) :: forcing
       class(options_t), intent(in)    :: options
+    end subroutine
+
+    module subroutine interpolate_forcing(this, forcing, update)
+      implicit none
+      class(domain_t),  intent(inout) :: this
+      class(boundary_t),intent(in)    :: forcing
+      logical,          intent(in),   optional :: update
     end subroutine
 
     module subroutine var_request(this, options)

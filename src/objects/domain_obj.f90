@@ -62,7 +62,7 @@ contains
       call setup_geo_interpolation(this, forcing)
 
       ! for all variables with a forcing_var /= "", get forcing, interpolate to local domain
-      call interpolate_datasets(this, forcing)
+      call this%interpolate_forcing(forcing)
 
       this%model_time = forcing%current_time
 
@@ -616,14 +616,24 @@ contains
     !! Loop through all variables for which forcing data have been supplied and interpolate the forcing data to the domain
     !!
     !! -------------------------------
-    subroutine interpolate_datasets(this, forcing)
+    module subroutine interpolate_forcing(this, forcing, update)
         implicit none
         class(domain_t),  intent(inout) :: this
         class(boundary_t),intent(in)    :: forcing
+        logical,          intent(in),   optional :: update
 
-        ! temporary to hold the variable to be interpolated
+        ! internal field always present for value of optional "update"
+        logical :: update_only
+        logical :: var_is_not_pressure
+        ! temporary to hold the variable to be interpolated to
         type(variable_t) :: var_to_interpolate
+        ! temporary to hold the forcing variable to be interpolated from
+        type(variable_t) :: input_data
+        ! number of layers has to be used when subsetting for update_pressure (for now)
         integer :: nz
+
+        update_only = .False.
+        if (present(update)) update_only = update
 
         ! make sure the dictionary is reset to point to the first variable
         call this%variables_to_force%reset_iterator()
@@ -633,29 +643,61 @@ contains
             ! get the next variable
             var_to_interpolate = this%variables_to_force%next()
 
-            ! interpolate
-            call interpolate_variable(var_to_interpolate, forcing, &
-                                      vert_interp= (trim(var_to_interpolate%forcing_var) /= trim(this%pressure%forcing_var)) )
+            ! get the associated forcing data
+            input_data = forcing%variables%get_var(var_to_interpolate%forcing_var)
 
+            ! interpolate
+            if (var_to_interpolate%two_d) then
+                if (update_only) then
+                    call geo_interp2d(var_to_interpolate%dqdt_2d, input_data%data_2d, forcing%geo%geolut)
+                else
+                    call geo_interp2d(var_to_interpolate%data_2d, input_data%data_2d, forcing%geo%geolut)
+                endif
+
+            else
+                ! if this is the pressure variable, then don't perform vertical interpolation, adjust the pressure directly
+                var_is_not_pressure = (trim(var_to_interpolate%forcing_var) /= trim(this%pressure%forcing_var))
+
+                ! if just updating, use the dqdt variable otherwise use the 3D variable
+                if (update_only) then
+
+                    call interpolate_variable(var_to_interpolate%dqdt_3d, input_data, forcing, &
+                                      vert_interp=var_is_not_pressure)
+                    if (.not.var_is_not_pressure) then
+                        nz = size(this%geo%z, 2)
+                        call update_pressure(var_to_interpolate%dqdt_3d, forcing%geo%z(:,:nz,:), this%geo%z)
+                    endif
+
+                    var_to_interpolate%dqdt_3d(:,:,:) = var_to_interpolate%dqdt_3d(:,:,:) - var_to_interpolate%data_3d(:,:,:)
+
+                else
+                    call interpolate_variable(var_to_interpolate%data_3d, input_data, forcing, &
+                                            vert_interp=var_is_not_pressure)
+                    if (.not.var_is_not_pressure) then
+                        nz = size(this%geo%z, 2)
+                        call update_pressure(var_to_interpolate%data_3d, forcing%geo%z(:,:nz,:), this%geo%z)
+                    endif
+                endif
+
+            endif
         enddo
 
-        nz = size(this%geo%z, 2)
-        call update_pressure(this%pressure%data_3d, forcing%geo%z(:,:nz,:), this%geo%z)
 
     end subroutine
+
 
     !> -------------------------------
     !! Interpolate one variable by requesting the forcing data from the boundary data structure then
     !! calling the appropriate interpolation routine (2D vs 3D) with the appropriate grid (mass, u, v)
     !!
     !! -------------------------------
-    subroutine interpolate_variable(var, forcing, vert_interp)
+    subroutine interpolate_variable(var_data, input_data, forcing, vert_interp)
         implicit none
-        class(variable_t), intent(inout) :: var
-        class(boundary_t), intent(in)    :: forcing
-        logical,           intent(in),   optional :: vert_interp
+        real,               intent(inout) :: var_data(:,:,:)
+        class(variable_t),  intent(in)    :: input_data
+        class(boundary_t),  intent(in)    :: forcing
+        logical,            intent(in),   optional :: vert_interp
 
-        type(variable_t) :: input_data
         ! note that 3D variables have a different number of vertical levels, so they have to first be interpolated
         ! to the high res horizontal grid, then vertically interpolated to the actual icar domain
         real, allocatable :: temp_3d(:,:,:), pre_smooth(:,:,:)
@@ -665,60 +707,51 @@ contains
         interpolate_vertically=.True.
         if (present(vert_interp)) interpolate_vertically = vert_interp
 
-        input_data = forcing%variables%get_var(var%forcing_var)
 
-        if (var%two_d) then
-            call geo_interp2d(var%data_2d, input_data%data_2d, forcing%geo%geolut)
+        ! Sequence of if statements to test if this variable needs to be interpolated onto the staggared grids
 
-        else if (var%three_d) then
-            ! Sequence of if statements to test if this variable needs to be interpolated onto the staggared grids
+        ! Interpolate to the Mass grid
+        if ((size(var_data,1) == size(forcing%geo%geolut%x,2)).and.(size(var_data,3) == size(forcing%geo%geolut%x,3))) then
+            ! allocate a temporary variable to hold the horizontally interpolated data before vertical interpolation
+            allocate(temp_3d(size(var_data,1), size(input_data%data_3d,2), size(var_data,3) ))
 
-            ! Interpolate to the Mass grid
-            if ((size(var%data_3d,1) == size(forcing%geo%geolut%x,2)).and.(size(var%data_3d,3) == size(forcing%geo%geolut%x,3))) then
-                ! allocate a temporary variable to hold the horizontally interpolated data before vertical interpolation
-                allocate(temp_3d(size(var%data_3d,1), size(input_data%data_3d,2), size(var%data_3d,3) ))
+            call geo_interp(temp_3d, input_data%data_3d, forcing%geo%geolut)
 
-                call geo_interp(temp_3d, input_data%data_3d, forcing%geo%geolut)
-
-                ! note that pressure (and possibly other variables?) should not be interpolated, it will be adjusted later
-                ! really, it whould be interpolated, and the bottom layers (below the forcing model) should be adjusted separately...
-                if (interpolate_vertically) then
-                    call vinterp(var%data_3d, temp_3d, forcing%geo%vert_lut)
-                else
-                    nz = size(var%data_3d,2)
-                    var%data_3d = temp_3d(:,:nz,:)
-                endif
-
-            ! Interpolate to the u staggered grid
-            else if ((size(var%data_3d,1) == size(forcing%geo_u%geolut%x,2)).and.(size(var%data_3d,3) == size(forcing%geo_u%geolut%x,3))) then
-
-                ! allocate a temporary variable to hold the horizontally interpolated data before vertical interpolation
-                allocate(temp_3d(size(var%data_3d,1), size(input_data%data_3d,2), size(var%data_3d,3) ))
-
-                ! use the alternate allocate below to vertically interpolate to this first, then smooth, then subset to the actual variable
-                ! allocate(temp_3d(size(forcing%geo_u%geolut%x,2), size(var%data_3d,2), size(forcing%geo_u%geolut%x,3)))
-                ! allocate(pre_smooth(size(forcing%geo_u%geolut%x,2), size(input_data%data_3d,2), size(forcing%geo_u%geolut%x,3) ))
-
-                call geo_interp(temp_3d, input_data%data_3d, forcing%geo_u%geolut)
-                call vinterp(var%data_3d, temp_3d, forcing%geo_u%vert_lut)
-                call smooth_array(var%data_3d, windowsize=10, ydim=3)
-
-            ! Interpolate to the v staggered grid
-            else if ((size(var%data_3d,1) == size(forcing%geo_v%geolut%x,2)).and.(size(var%data_3d,3) == size(forcing%geo_v%geolut%x,3))) then
-                ! allocate a temporary variable to hold the horizontally interpolated data before vertical interpolation
-                allocate(temp_3d(size(var%data_3d,1), size(input_data%data_3d,2), size(var%data_3d,3) ))
-
-                ! use the alternate allocate below to vertically interpolate to this first, then smooth, then subset to the actual variable
-                ! allocate(temp_3d(size(forcing%geo_v%geolut%x,2), size(var%data_3d,2), size(forcing%geo_v%geolut%x,3)))
-                ! allocate(pre_smooth(size(forcing%geo_v%geolut%x,2), size(input_data%data_3d,2), size(forcing%geo_v%geolut%x,3) ))
-
-                call geo_interp(temp_3d, input_data%data_3d, forcing%geo_v%geolut)
-                call vinterp(var%data_3d, temp_3d, forcing%geo_v%vert_lut)
-                call smooth_array(var%data_3d, windowsize=10, ydim=3)
+            ! note that pressure (and possibly other variables?) should not be interpolated, it will be adjusted later
+            ! really, it whould be interpolated, and the bottom layers (below the forcing model) should be adjusted separately...
+            if (interpolate_vertically) then
+                call vinterp(var_data, temp_3d, forcing%geo%vert_lut)
+            else
+                nz = size(var_data,2)
+                var_data = temp_3d(:,:nz,:)
             endif
 
-        else
-            write(*,*) "ERROR: unknown variable dimensions in domain variable for forcing:", trim(var%forcing_var)
+        ! Interpolate to the u staggered grid
+        else if ((size(var_data,1) == size(forcing%geo_u%geolut%x,2)).and.(size(var_data,3) == size(forcing%geo_u%geolut%x,3))) then
+
+            ! allocate a temporary variable to hold the horizontally interpolated data before vertical interpolation
+            allocate(temp_3d(size(var_data,1), size(input_data%data_3d,2), size(var_data,3) ))
+
+            ! use the alternate allocate below to vertically interpolate to this first, then smooth, then subset to the actual variable
+            ! allocate(temp_3d(size(forcing%geo_u%geolut%x,2), size(var_data,2), size(forcing%geo_u%geolut%x,3)))
+            ! allocate(pre_smooth(size(forcing%geo_u%geolut%x,2), size(input_data%data_3d,2), size(forcing%geo_u%geolut%x,3) ))
+
+            call geo_interp(temp_3d, input_data%data_3d, forcing%geo_u%geolut)
+            call vinterp(var_data, temp_3d, forcing%geo_u%vert_lut)
+            call smooth_array(var_data, windowsize=10, ydim=3)
+
+        ! Interpolate to the v staggered grid
+        else if ((size(var_data,1) == size(forcing%geo_v%geolut%x,2)).and.(size(var_data,3) == size(forcing%geo_v%geolut%x,3))) then
+            ! allocate a temporary variable to hold the horizontally interpolated data before vertical interpolation
+            allocate(temp_3d(size(var_data,1), size(input_data%data_3d,2), size(var_data,3) ))
+
+            ! use the alternate allocate below to vertically interpolate to this first, then smooth, then subset to the actual variable
+            ! allocate(temp_3d(size(forcing%geo_v%geolut%x,2), size(var_data,2), size(forcing%geo_v%geolut%x,3)))
+            ! allocate(pre_smooth(size(forcing%geo_v%geolut%x,2), size(input_data%data_3d,2), size(forcing%geo_v%geolut%x,3) ))
+
+            call geo_interp(temp_3d, input_data%data_3d, forcing%geo_v%geolut)
+            call vinterp(var_data, temp_3d, forcing%geo_v%vert_lut)
+            call smooth_array(var_data, windowsize=10, ydim=3)
         endif
 
     end subroutine
@@ -734,8 +767,11 @@ contains
         class(exchangeable_t), intent(inout) :: var
         class(boundary_t),     intent(in)    :: forcing
 
+        type(variable_t) :: input_data
+
+        input_data = forcing%variables%get_var(var%meta_data%forcing_var)
         ! exchangeables all have a meta_data variable_t component with a pointer to the 3D local data
-        call interpolate_variable(var%meta_data, forcing)
+        call interpolate_variable(var%meta_data%data_3d, input_data, forcing)
 
     end subroutine
 

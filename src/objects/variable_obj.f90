@@ -32,15 +32,15 @@ contains
             if (associated(this%data_2d)) deallocate(this%data_2d)
             allocate(this%data_2d(grid%ims:grid%ime,    &
                                   grid%jms:grid%jme), stat=err)
-            if (err /= 0) stop "variable:grid:2d: Allocation request denied"
+            if (err /= 0) stop "variable:grid:2d: Allocation request failed"
 
             this%data_2d = 0
 
             if (trim(this%forcing_var) /= "") then
                 allocate(this%dqdt_2d(grid%ims:grid%ime,    &
                                       grid%jms:grid%jme), stat=err)
-                if (err /= 0) stop "variable:grid:dqdt_2d: Allocation request denied"
-                
+                if (err /= 0) stop "variable:grid:dqdt_2d: Allocation request failed"
+
                 this%dqdt_2d = 0
             endif
 
@@ -52,7 +52,7 @@ contains
             allocate(this%data_3d(grid%ims:grid%ime,    &
                                   grid%kms:grid%kme,    &
                                   grid%jms:grid%jme), stat=err)
-            if (err /= 0) stop "variable:grid:3d: Allocation request denied"
+            if (err /= 0) stop "variable:grid:3d: Allocation request failed"
 
             this%data_3d = 0
 
@@ -60,7 +60,7 @@ contains
                 allocate(this%dqdt_3d(grid%ims:grid%ime,    &
                                       grid%kms:grid%kme,    &
                                       grid%jms:grid%jme), stat=err)
-                if (err /= 0) stop "variable:grid:dqdt_3d: Allocation request denied"
+                if (err /= 0) stop "variable:grid:dqdt_3d: Allocation request failed"
 
                 this%dqdt_3d = 0
             endif
