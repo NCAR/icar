@@ -572,9 +572,6 @@ contains
         real,allocatable,dimension(:) :: temperature
         integer :: i,j
 
-        ! print*, "ccp",this_image(), minval(pressure), minval(th), maxval(th)
-        ! print*, "ccq",this_image(), maxval(qv), minval(qv), maxval(qc)
-        !
 !       calculate these once for every call because they are only a function of dt
         cloud2snow = exp(-1.0*snow_formation_time_const*dt)
         cloud2rain = exp(-1.0*rain_formation_time_const*dt)
