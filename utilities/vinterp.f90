@@ -1,12 +1,12 @@
 !>------------------------------------------------------------
-!!
 !!  Module to provide vertical interpolation
 !!  includes setting up a vertical Look Up Table (vLUT)
 !!  and performing vertical interpolation (vinterp)
 !!
 !!  Similar in concept to the geo module  
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!------------------------------------------------------------
 module vertical_interpolation
@@ -26,8 +26,13 @@ contains
         real, dimension(2) :: weights
         real :: zrange
         
-        weights(1)=(zin-zbot)/(ztop-zbot)
-        weights(2)=1-weights(1)
+        if (ztop==zbot) then
+            weights(1)=0.5
+            weights(2)=0.5
+        else
+            weights(1)=(zin-zbot)/(ztop-zbot)
+            weights(2)=1-weights(1)
+        endif
     end function weights
     
     ! Find the two points that border the input z in a column of z values
@@ -58,7 +63,12 @@ contains
             do while ((i>=endpt).and.(find_match(1)==-1))
                 if (z(i)<=zin) then
                     find_match(1)=i
-                    find_match(2)=i+1
+                    if (i==n) then
+                        ! should only happen if z(i)=zin
+                        find_match(2)=i
+                    else
+                        find_match(2)=i+1
+                    endif
                 endif
                 i=i-1
             end do
@@ -131,6 +141,7 @@ contains
                         write(*,*) lo%z(i,:,j)
                         stop
                     endif
+                        
                     lo%vert_lut%z(:,i,k,j)=curpos
                     lo%vert_lut%w(:,i,k,j)=curweights
                     guess=curpos(2)
@@ -144,6 +155,8 @@ contains
         ! identical to vLUT above, but for forcing data
         ! only change is that the vertical axis is the last axis
         ! instead of the middle axis
+        ! In addition, it provides extrapolation when matching above or below
+        ! the previous grid. 
         implicit none
         class(interpolable_type), intent(in)    :: hi
         class(interpolable_type), intent(inout) :: lo
@@ -172,15 +185,21 @@ contains
                         ! matched within the grid
                         curweights=weights(hi%z(i,k,j),lo%z(i,k,curpos(1)),lo%z(i,k,curpos(2)))  ! difference from vLUT
                     elseif (curpos(1)==-1) then
-                        ! matched below the grid
+                        ! matched below the grid so we must extrapolate downward.
                         curpos(1)=1
-                        curpos(2)=1
-                        curweights=0.5
+                        curpos(2)=2
+                        ! note that this will be > 1
+                        curweights(1) = (lo%z(i,k,curpos(2))-hi%z(i,k,j)) / (lo%z(i,k,curpos(2))-lo%z(i,k,curpos(1)))
+                        ! note that this will be < 0 providing a bilinear extrapolation
+                        curweights(2) = 1-curweights(1)
                     elseif (curpos(1)==-2) then
-                        ! matched above the grid
-                        curpos(1)=lo_nz
+                        ! matched above the grid so we must extrapolate upward.
+                        curpos(1)=lo_nz-1
                         curpos(2)=lo_nz
-                        curweights=0.5
+                        ! note that this will be > 1
+                        curweights(2) = (hi%z(i,k,j)-lo%z(i,k,curpos(1))) / (lo%z(i,k,curpos(2))-lo%z(i,k,curpos(1)))
+                        ! note that this will be < 0 providing a bilinear extrapolation
+                        curweights(1) = 1-curweights(2)
                     else
                         write(*,*) "find_match Failed to return appropriate position"
                         write(*,*) " at grid location:"

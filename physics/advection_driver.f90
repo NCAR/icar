@@ -1,15 +1,15 @@
 !> ----------------------------------------------------------------------------
-!!
 !!  Driver to call different advection schemes
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !! ----------------------------------------------------------------------------
 module advection
     use data_structures
-    use adv_upwind, only : upwind
-    use adv_mpdata, only : mpdata, mpdata_init
-
+    use adv_upwind,     only : upwind
+    use adv_mpdata,     only : mpdata, mpdata_init
+    use debug_module,   only : domain_fix
 
     implicit none
     private
@@ -52,6 +52,9 @@ contains
             call mpdata(domain,options,dt)
         endif
         
+        if (options%advect_density) then
+            call domain_fix(domain)
+        endif
     end subroutine advect
 
 end module advection

@@ -1,22 +1,22 @@
 !> ----------------------------------------------------------------------------
-!!
 !!  Driver to call different convection schemes
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !! ----------------------------------------------------------------------------
 module convection
     use data_structures
     use module_cu_tiedtke,  only: tiedtkeinit, CU_TIEDTKE
     use module_cu_kf,       only: kfinit, KFCPS
-    
+
     implicit none
     private
     public :: init_convection, convect
     logical,allocatable, dimension(:,:) :: CU_ACT_FLAG
     real,   allocatable, dimension(:,:) :: XLAND, RAINCV, PRATEC, NCA
     real,   allocatable, dimension(:,:,:):: W0AVG
-    
+
 contains
 
     subroutine init_convection(domain,options)
@@ -24,7 +24,7 @@ contains
         type(domain_type),  intent(inout) :: domain
         type(options_type), intent(in) :: options
         integer :: ids,ide,jds,jde,kds,kde
-        
+
         write(*,*) "Initializing Cumulus Scheme"
         ids=1
         ide=size(domain%qv,1)
@@ -50,17 +50,17 @@ contains
             domain%tend%u  = 0
             if (.not.allocated(domain%tend%v))  allocate(domain%tend%v(ids:ide,kds:kde,jds:jde))
             domain%tend%v  = 0
-        
+
             allocate(CU_ACT_FLAG(ids:ide,jds:jde))
             CU_ACT_FLAG=.True.
-        
+
             allocate(RAINCV(ids:ide,jds:jde))
             allocate(PRATEC(ids:ide,jds:jde))
-        
+
             RAINCV=0
             PRATEC=0
         endif
-        
+
         if (options%physics%convection==kCU_TIEDTKE) then
             write(*,*) "    Tiedtke Cumulus scheme"
             if (.not.allocated(domain%tend%qv_adv)) then
@@ -71,7 +71,7 @@ contains
                 allocate(domain%tend%qv_pbl(ids:ide,kds:kde,jds:jde))
                 domain%tend%qv_pbl=0
             endif
-            
+
             call tiedtkeinit(domain%tend%th,domain%tend%qv,   &
                              domain%tend%qc,domain%tend%qi,   &
                              domain%tend%u, domain%tend%v,    &
@@ -94,20 +94,20 @@ contains
                          ids, ide, jds, jde, kds, kde,  &
                          ids, ide, jds, jde, kds, kde,    &
                          ids, ide, jds, jde, kds, kde-1)
-             
+
          endif
-        
+
     end subroutine init_convection
-    
+
 subroutine convect(domain,options,dt_in)
     implicit none
     type(domain_type),  intent(inout) :: domain
     type(options_type), intent(in)    :: options
     real, intent(in) :: dt_in
-    
+
     integer :: ids,ide,jds,jde,kds,kde,j,itimestep,STEPCU
     real :: internal_dt
-    
+
     if (options%physics%convection==0) return
 
     itimestep=1
@@ -118,16 +118,16 @@ subroutine convect(domain,options,dt_in)
     kde=size(domain%qv,2)
     jds=1
     jde=size(domain%qv,3)
-    
+
     if (.not.allocated(XLAND)) then
-        ! if domain%landmask is defined before the call to init_convection, then this should be moved. 
+        ! if domain%landmask is defined before the call to init_convection, then this should be moved.
         allocate(XLAND(ids:ide,jds:jde))
         where(domain%landmask==1) XLAND=1 ! land
         where(domain%landmask==0) XLAND=2 ! ocean (using LANDMASK as input)
         where(domain%landmask==2) XLAND=2 ! ocean (using XLAND as input)
     endif
-    
-    
+
+
     !$omp parallel private(j) &
     !$omp firstprivate(ids,ide,jds,jde,kds,kde) &
     !$omp default(shared)
@@ -145,10 +145,9 @@ subroutine convect(domain,options,dt_in)
     enddo
     !$omp end do
     !$omp end parallel
-    
-    
-    if (options%physics%convection==kCU_TIEDTKE) then
 
+
+    if (options%physics%convection==kCU_TIEDTKE) then
 
         call CU_TIEDTKE(                                          &
                  dt_in,itimestep,STEPCU                           &
@@ -166,7 +165,7 @@ subroutine convect(domain,options,dt_in)
                 ,domain%tend%qi, domain%tend%u,  domain%tend%v    &
                 ,.True.,.True.,.True.,.True.,.True.               &
                 )
-    
+
     elseif (options%physics%convection==kCU_KAINFR) then
         call KFCPS(                                          &
                ids,ide, jds,jde, kds,kde                     & ! domain
@@ -174,7 +173,7 @@ subroutine convect(domain,options,dt_in)
               ,ids+1,ide-1, jds+1,jde-1, kds,kde             & ! tile
               ,dt_in,itimestep,domain%dx,dt_in,.false.       & ! dt KTAU, dx, cu_dt, adapt_step
               ,domain%rho                                    & ! rho
-              ,RAINCV,PRATEC,NCA                             & ! convective rain, convective rain rate, 
+              ,RAINCV,PRATEC,NCA                             & ! convective rain, convective rain rate,
               ,domain%Um,domain%Vm,domain%th,domain%t        &
               ,domain%w_real                                 &
               ,domain%qv,domain%dz_inter,domain%p,domain%pii &
@@ -189,12 +188,12 @@ subroutine convect(domain,options,dt_in)
               ,domain%tend%qr, domain%tend%qi                &
               ,domain%tend%qs, domain%tend%th)
     endif
-    
+
     ! add domain wide tendency terms
     ! use a separate dt to make it easier to apply on a different dt
     internal_dt=dt_in
 !     $omp firstprivate(ids,ide, jds,jde, dt_in, internal_dt) &
-    
+
     !$omp parallel private(j) &
     !$omp default(shared)
     !$omp do schedule(static)
@@ -207,20 +206,20 @@ subroutine convect(domain,options,dt_in)
             domain%qsnow(:,:,j) =domain%qsnow(:,:,j) + domain%tend%Qs(:,:,j)*internal_dt
             domain%qrain(:,:,j) =domain%qrain(:,:,j) + domain%tend%Qr(:,:,j)*internal_dt
         endif
-                
+
         domain%rain(:,j)   =domain%rain(:,j)  + RAINCV(:,j)
         domain%crain(:,j)  =domain%crain(:,j) + RAINCV(:,j)
-        
+
         if (options%physics%convection==kCU_TIEDTKE) then
-            domain%u(ids+1:ide,:,j) = domain%u(ids+1:ide,:,j) + (domain%tend%u(ids:ide-1,:,j)+domain%tend%u(ids+1:ide,:,j))/2 * internal_dt
+            domain%u_cu(ids+1:ide,:,j) = 0.999*domain%u_cu(ids+1:ide,:,j) + (domain%tend%u(ids:ide-1,:,j)+domain%tend%u(ids+1:ide,:,j))/2 * internal_dt
             if (j>jds) then
-                domain%v(:,:,j) = domain%v(:,:,j) + (domain%tend%v(:,:,j)+domain%tend%v(:,:,j-1))/2 * internal_dt
+                domain%v_cu(:,:,j) = 0.999*domain%v_cu(:,:,j) + (domain%tend%v(:,:,j)+domain%tend%v(:,:,j-1))/2 * internal_dt
             endif
         endif
     enddo
     !$omp end do
-    !$omp end parallel  
-    
-    
-end subroutine convect  
+    !$omp end parallel
+
+
+end subroutine convect
 end module convection

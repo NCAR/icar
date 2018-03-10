@@ -1,3 +1,10 @@
+!>------------------------------------------------------------
+!!  Test MPDATA advection code.  
+!! 
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!------------------------------------------------------------
 program test_mpdata
     use adv_mpdata
     use data_structures

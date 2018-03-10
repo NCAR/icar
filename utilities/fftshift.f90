@@ -1,25 +1,25 @@
 !>------------------------------------------------------------
-!!
 !! Supplies 1D and 2D FFT shift procedures ala matlab fftshift
-!! uses a generic interfacse so that procedures can be called with
+!!
+!! Uses a generic interface so that procedures can be called with
 !! any variation of complex, real, 1D or 2D arrays
 !! 2D can also be called with C_DOUBLE_COMPLEX variables
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!! fftshift swaps the left and right sides of an array.  For a 
+!!  2D array, the top and bottom halves are also swapped. 
+!!
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!------------------------------------------------------------
-module fft
-    use, intrinsic :: iso_c_binding
-    include 'fftw3.f03'
-end module fft
-
-
 module fftshifter
     use fft
     implicit none
+    !> Generic interface to 1D, 2D real, complex, and C-complex fftshift routines
     interface fftshift
         module procedure fftshift2cc, fftshift2c, fftshift2r, fftshift1c, fftshift1r
     end interface
+    !> Generic interface to 1D, 2D real, complex, and C-complex inverse fftshift routines
     interface ifftshift
         module procedure ifftshift2cc_z, ifftshift2cc, ifftshift2c, ifftshift2r, ifftshift1c, ifftshift1r
     end interface

@@ -1,5 +1,4 @@
 !>----------------------------------------------------------
-!!
 !! This module provides a wrapper to call various PBL models
 !! It sets up variables specific to the physics package to be used including both
 !!
@@ -10,18 +9,19 @@
 !!  pbl_init->[ external initialization routines]
 !!  pbl->[  external PBL routines]
 !!  pbl_finalize
-!! 
+!!
 !! High level routine descriptions / purpose
 !!   pbl_init           - initializes physics package
 !!   pbl                - sets up and calls main physics package
 !!   pbl_finalize       - permits physics package cleanup (close files, deallocate memory)
-!! 
+!!
 !! Inputs: domain, options, dt
 !!      domain,options  = as defined in data_structures
 !!      dt              = time step (seconds)
 !! </pre>
 !!
-!! Author : Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!----------------------------------------------------------
 module planetary_boundary_layer
@@ -29,14 +29,14 @@ module planetary_boundary_layer
     use pbl_simple,    only : simple_pbl, finalize_simple_pbl, init_simple_pbl
     use module_bl_ysu, only : ysuinit, ysu
     implicit none
-    
+
     private
     public :: pbl_init, pbl, pbl_finalize
-    
+
     integer :: ids, ide, jds, jde, kds, kde,  &
                ims, ime, jms, jme, kms, kme,  &
                its, ite, jts, jte, kts, kte
-               
+
     logical :: allowed_to_read, restart, flag_qi
 
 contains
@@ -44,7 +44,7 @@ contains
         implicit none
         type(domain_type),intent(inout)::domain
         type(options_type),intent(in)::options
-        
+
         ime=size(domain%p,1)
         kme=size(domain%p,2)
         jme=size(domain%p,3)
@@ -52,13 +52,13 @@ contains
         ids=ims; its=ims; ide=ime; ite=ime
         kds=kms; kts=kms; kde=kme; kte=kme
         jds=jms; jts=jms; jde=jme; jte=jme
-        
+
         allowed_to_read=.True.
         restart=.False.
         flag_qi=.true.
         if (.not.allocated(domain%tend%qv_pbl)) allocate(domain%tend%qv_pbl(ims:ime,kms:kme,jms:jme))
         domain%tend%qv_pbl=0
-        
+
         write(*,*) "Initializing PBL Scheme"
         if (options%physics%boundarylayer==kPBL_SIMPLE) then
             write(*,*) "    Simple PBL"
@@ -81,19 +81,19 @@ contains
                          its, ite, jts, jte, kts, kte)
         endif
     end subroutine pbl_init
-    
+
     subroutine pbl(domain,options,dt_in)
         implicit none
         type(domain_type),intent(inout)::domain
         type(options_type),intent(in)::options
         real,intent(in)::dt_in
-        
+
         if (options%physics%boundarylayer==kPBL_SIMPLE) then
             call simple_pbl(domain,dt_in)
         endif
-        
+
         if (options%physics%boundarylayer==kPBL_YSU) then
-            stop( "YSU PBL not implemented yet")
+            stop "YSU PBL not implemented yet"
 !             call ysu(domain%Um, domain%Vm,   domain%th, domain%t,               &
 !                      domain%qv, domain%cloud,domain%ice,                        &
 !                      domain%p,domain%p_inter,domain%pii,                        &
@@ -113,9 +113,9 @@ contains
 !                      ims,ime, jms,jme, kms,kme,                                 &
 !                      its,ite, jts,jte, kts,kte)
         endif
-                        
+
     end subroutine pbl
-    
+
     subroutine pbl_finalize(options)
         implicit none
         type(options_type),intent(in)::options

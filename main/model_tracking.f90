@@ -1,8 +1,8 @@
 !> ----------------------------------------------------------------------------
-!!
 !!  A tool to track model versions and print useful changes between model versions
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !! ----------------------------------------------------------------------------
 module model_tracking
@@ -11,51 +11,59 @@ module model_tracking
     implicit none
     character(len=1024),allocatable,dimension(:)::versionlist,deltas
 contains
-    
+
     subroutine init_model_diffs()
         implicit none
-        integer::n=13
-        
+        integer::n=16
+
         allocate(versionlist(n))
         allocate(deltas(n))
         versionlist=[character(len=1024) :: &
-                     "0.5.1","0.5.2","0.6","0.7","0.7.1","0.7.2","0.7.3","0.8","0.8.1","0.8.2","0.9","0.9.1","0.9.2"]
-        deltas=[ character(len=1024) :: & 
-        "Earliest version in record. ", &
-        "Added dxlow and variable name definitions pvar,tvar,qvvar,qcvar,qivar,"// &
-        "      U/V:lat/lon:high/low res. ", &
-        "Added variable name definitions for sensible(shvar)/latent(lhvar) heat"// &
-        "      fluxes and PBL height(pblhvar). ", &
-        "Added input interval vs output interval timestepping, ?? also removed dz"// &
-        "      and decrease_dz. ", &
-        "Added variable name definitions for zvar and landmask (landvar), added"// &
-        "      readz:boolean,x/y:min/max:integer. ", &
-        "Removed x/y:min/max, Added dz_levels and z_info namelist. ", &
-        "Added advect_density: boolean use. ", &
-        "Vertical interpolation requires zvar (can be PH / geopotential height)"// &
-        "      Also added smooth_wind_distance. ", &
-        "Added proper date tracking, requires date='yyyy/mm/dd hh:mm:ss' option"// &
-        "      in namelist.", &
-        "Added preliminary support for running the Noah LSM. ", &
-        "Removed add_low_topo from options... MAJOR changes elsewhere, lots of "// &
-        "      new options (mp_options, lt_options).", &
-        "Added MPDATA and adv_options", &
-        "Output file z-axis has been changed" &
+                     "0.5.1","0.5.2","0.6","0.7","0.7.1","0.7.2","0.7.3","0.8","0.8.1","0.8.2", &
+                     "0.9","0.9.1","0.9.2","0.9.3","0.9.4","0.9.5"]
+        deltas=[ character(len=1024) :: &
+        "Earliest version in git. ",                                                            &
+        "Added dxlow and variable name definitions pvar,tvar,qvvar,qcvar,qivar,"//              &
+        "      U/V:lat/lon:high/low res. ",                                                     &
+        "Added variable name definitions for sensible(shvar)/latent(lhvar) heat"//              &
+        "      fluxes and PBL height(pblhvar). ",                                               &
+        "Added input interval vs output interval timestepping, ?? also removed dz"//            &
+        "      and decrease_dz. ",                                                              &
+        "Added variable name definitions for zvar and landmask (landvar), added"//              &
+        "      readz:boolean,x/y:min/max:integer. ",                                            &
+        "Removed x/y:min/max, Added dz_levels and z_info namelist. ",                           &
+        "Added advect_density: boolean use. ",                                                  &
+        "Vertical interpolation requires zvar (can be PH / geopotential height)"//              &
+        "      Also added smooth_wind_distance. ",                                              &
+        "Added proper date tracking, requires date='yyyy/mm/dd hh:mm:ss' option"//              &
+        "      in namelist.",                                                                   &
+        "Added preliminary support for running the Noah LSM. ",                                 &
+        "Removed add_low_topo from options... MAJOR changes elsewhere, lots of "//              &
+        "      new options (mp_options, lt_options).",                                          &
+        "Added MPDATA and adv_options",                                                         &
+        "Output file z-axis has been changed",                                                  &
+        "Pre-1.0 release added end_date, date->forcing_start_date, forcing_file_list"   //      &
+        "      lt:LUT_filename, mp:update_interval, moved vert_smooth to lt_parameters,"//      &
+        "      added z_is_geopotential, and zbvar changed some defaults.",                      &
+        "Added Morrison and WSM6 microphysics, and the ability to remove the low "  //          &
+        "      resolution linear wind field.  Lots of smaller tweaks and bug fixes."//          &
+        "      Also added online bias correction option. ",                                     &
+        "Added convective wind advection and improved Linear wind LUT. "                        &
         ]
-        
+
     end subroutine init_model_diffs
-    
+
     subroutine print_model_diffs(version)
         implicit none
         character(len=*), intent(in) :: version
         integer :: i,j
         logical :: found_a_version=.false.
-        
+
         write(*,*) "Model changes:"
         if (.not.allocated(versionlist)) then
             call init_model_diffs()
         endif
-        
+
         do i=1,size(versionlist)
             if (version.eq.versionlist(i)) then
                 found_a_version=.true.
@@ -80,7 +88,7 @@ contains
             enddo
         endif
     end subroutine print_model_diffs
-    
+
     subroutine finalize_model_diffs()
         implicit none
         if (allocated(versionlist)) then
@@ -89,6 +97,6 @@ contains
         if (allocated(deltas)) then
             deallocate(deltas)
         endif
-        
+
     end subroutine finalize_model_diffs
 end module model_tracking

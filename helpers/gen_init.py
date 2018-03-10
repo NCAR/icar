@@ -4,7 +4,7 @@ import glob,os
 import numpy as np
 
 from bunch import Bunch
-from stat_down import myio as io
+import mygis as io
 import load_data
 
 def adjust_p(p,h,dz):
@@ -92,4 +92,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

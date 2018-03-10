@@ -4,8 +4,8 @@ import mygis
 from bunch import Bunch
 
 
-sfcvarlist=["SSHF_GDS4_SFC","SLHF_GDS4_SFC","Z_GDS4_SFC","BLH_GDS4_SFC"]
-icar_sfc_var=["sensible_heat","latent_heat","hgt_98","PBL_height"]
+sfcvarlist=["SSHF_GDS4_SFC","SLHF_GDS4_SFC","Z_GDS4_SFC","BLH_GDS4_SFC","SSRD_GDS4_SFC","STRD_GDS4_SFC", "SKT_GDS4_SFC"]
+icar_sfc_var=["sensible_heat","latent_heat","hgt_98","PBL_height","sw","lw", "tskin"]
 
 atmvarlist=["Z_GDS4_HYBL","T_GDS4_HYBL","Q_GDS4_HYBL","LNSP_GDS4_HYBL","CLWC_GDS4_HYBL","CIWC_GDS4_HYBL","lv_HYBL2_a","lv_HYBL2_b","P0"]
 icar_atm_var=["gph","t","qv","ln_p_sfc","cloud","ice","sigma_a","sigma_b","P0"]
@@ -20,8 +20,13 @@ def grib2nc(erai_file,varlist,output_dir):
     """convert a grib file to a netcdf file"""
     print("Converting: "+erai_file.split("/")[-1])
     # print("ncl_convert2nc "+erai_file+" -e grb -L -v "+",".join(varlist)+" -o "+output_dir)
-    os.system("ncl_convert2nc "+erai_file+" -e grb -L -v "+",".join(varlist)+" -o "+output_dir +"&> /dev/null")
     outputfile=output_dir+erai_file.split("/")[-1]+".nc"
+    if not os.path.isfile(outputfile):
+        try:
+            os.system("ncl_convert2nc "+erai_file+" -e grb -L -v "+",".join(varlist)+" -o "+output_dir +"&> /dev/null")
+        except:
+            print("ERROR: ncl_convert2nc is not available in your $PATH (?)")
+
     return outputfile
 
 def find_sfc_file(time,info):
@@ -65,9 +70,16 @@ def load_sfc(time,info):
     for s,v in zip(icar_sfc_var,sfcvarlist):
         nc_data=mygis.read_nc(nc_file,v,returnNCvar=True)
         input_data=nc_data.data[:,info.ymin:info.ymax,info.xmin:info.xmax]
-        if ((s=="latent_heat") or (s=="sensible_heat")):
-            if offset>0:
+        if ((s=="latent_heat") or (s=="sensible_heat") or (s=="sw") or (s=="lw")):
+            # if offset>=3:
+            #     input_data[offset,...]-=input_data[offset-3,...]
+            #     input_data[offset,...]/3.0
+            if offset>=2:
+                input_data[offset,...]-=input_data[offset-2,...]
+                input_data[offset,...]/2.0
+            elif offset>=1:
                 input_data[offset,...]-=input_data[offset-1,...]
+                
         outputdata[s]=input_data[int(offset),:,:]
         nc_data.ncfile.close()
     
@@ -89,16 +101,20 @@ def load_atm(time,info):
         nc_data.ncfile.close()
 
     for s,v in zip(icar_atm_var,atmvarlist):
-        nc_data=mygis.read_nc(scnc_file,v,returnNCvar=True)
-        if len(nc_data.data.shape)==3:
-            outputdata[s]=nc_data.data[:,info.ymin:info.ymax,info.xmin:info.xmax]
-        elif len(nc_data.data.shape)==2:
-            outputdata[s]=nc_data.data[info.ymin:info.ymax,info.xmin:info.xmax]
-        elif len(nc_data.data.shape)==1:
-            outputdata[s]=nc_data.data[:]
-        else:
-            outputdata[s]=nc_data.data.get_value()
+        nc_data = mygis.read_nc(scnc_file,v,returnNCvar=True)
         
+        if len(nc_data.data.shape)==3:
+            outputdata[s] = nc_data.data[:,info.ymin:info.ymax,info.xmin:info.xmax]
+        elif len(nc_data.data.shape)==2:
+            outputdata[s] = nc_data.data[info.ymin:info.ymax,info.xmin:info.xmax]
+        elif len(nc_data.data.shape)==1:
+            outputdata[s] = nc_data.data[:]
+        else:
+            try:
+                outputdata[s] = nc_data.data[:]
+            except:
+                outputdata[s] = nc_data.data.get_value()
+                
         nc_data.ncfile.close()
     
     return outputdata
@@ -109,5 +125,3 @@ def load_data(time,info):
     sfc=load_sfc(time,info)
     atm=load_atm(time,info)
     return Bunch(sfc=sfc,atm=atm)
-
-

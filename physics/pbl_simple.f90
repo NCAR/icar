@@ -1,6 +1,6 @@
 !>----------------------------------------------------------
+!!  Simple PBL diffusion package for ICAR
 !!
-!! simple PBL diffusion package for ICAR
 !!  Local-K diffusion type PBL as in Louis (1979) as documented in Hong and Pan (1996) = HP96
 !!  Hong and Pan used this for their free atmosphere diffusion, but noted differences
 !!  used in the "current operational model" notably the asymptotic length scale lambda 
@@ -15,7 +15,8 @@
 !!   q,U,V on full levels
 !! </pre>
 !!
-!!  Author: Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!----------------------------------------------------------
 module pbl_simple
@@ -96,7 +97,7 @@ contains
             enddo
             ! arbitrarily rescale diffusion to cut down on what seems to be excessive mixing
             Kq_m(:,:,j) = Kq_m(:,:,j)/diffusion_reduction
-            Kq_m(:,:,j)= Kq_m(:,:,j)* dt/((domain%dz(2:nx+1,2:,j+1)+domain%dz(2:nx+1,:nz-1,j+1))/2)
+            Kq_m(:,:,j)= Kq_m(:,:,j)* dt/((domain%dz(2:nx+1,2:,j+1)+domain%dz(2:nx+1,:nz,j+1))/2)
             call pbl_diffusion(domain,j)
             domain%tend%qv_pbl(:,:,j+1)=(domain%qv(:,:,j+1)-lastqv_m(:,:,j+1))/dt
         enddo
@@ -127,8 +128,8 @@ contains
         integer::i,nsubsteps,t
         real,dimension(nx,nz):: fluxes,rhomean,rho_dz
         
-        rhomean=(domain%rho(2:nx+1,1:nz,j+1)+domain%rho(2:nx+1,2:,j+1))/2
-        rho_dz=domain%dz(2:nx+1,2:nz,j+1)*domain%rho(2:nx+1,2:nz,j+1)
+        rhomean = (domain%rho(2:nx+1,1:nz,j+1)+domain%rho(2:nx+1,2:nz+1,j+1))/2
+        rho_dz  = domain%dz(2:nx+1,2:nz+1,j+1)*domain%rho(2:nx+1,2:nz+1,j+1)
         
         ! note Kq_m already has dt/dz embedded in it
         ! diffusion fluxes within the PBL
@@ -161,11 +162,12 @@ contains
         real,dimension(nx,nz+1)::centered_winds
         integer::last_wind,k
         
-        centered_winds(:,:)=sqrt( ((domain%u(1:nx,:,j+1)+domain%u(2:nx+1,:,j+1))/2)**2 &
-                                 +((domain%v(2:nx+1,:,j)+domain%v(2:nx+1,:,j+1))/2)**2)
+        centered_winds(:,:) = sqrt( ((domain%u(2:nx+1,:,j+1) + domain%u(3:nx+2,:,j+1)) / 2)**2 &
+                                   +((domain%v(2:nx+1,:,j)   + domain%v(2:nx+1,:,j+1)) / 2)**2)
         
-        shear_m(:,:,j)=abs(centered_winds(:,2:)-centered_winds(:,:nz-1))  &
-                      /((domain%dz(2:nx+1,:nz-1,j+1)+domain%dz(2:nx+1,2:,j+1))*0.5)
+        shear_m(:,:,j) = abs(centered_winds(:,2:nz+1) - centered_winds(:,1:nz))  &
+                         / ((domain%dz(2:nx+1,1:nz,j+1) + domain%dz(2:nx+1,2:nz+1,j+1)) * 0.5)
+                      
         where(shear_m(:,:,j)<1e-5) shear_m(:,:,j)=1e-5
     end subroutine calc_shear
 

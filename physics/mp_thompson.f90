@@ -1,34 +1,39 @@
-!+---+-----------------------------------------------------------------+
-!.. This subroutine computes the moisture tendencies of water vapor,
-!.. cloud droplets, rain, cloud ice (pristine), snow, and graupel.
-!.. Prior to WRFv2.2 this code was based on Reisner et al (1998), but
-!.. few of those pieces remain.  A complete description is now found in
-!.. Thompson, G., P. R. Field, R. M. Rasmussen, and W. D. Hall, 2008:
-!.. Explicit Forecasts of winter precipitation using an improved bulk
-!.. microphysics scheme. Part II: Implementation of a new snow
-!.. parameterization.  Mon. Wea. Rev., 136, 5095-5115.
-!.. Prior to WRFv3.1, this code was single-moment rain prediction as
-!.. described in the reference above, but in v3.1 and higher, the
-!.. scheme is two-moment rain (predicted rain number concentration).
-!..
-!.. Most importantly, users may wish to modify the prescribed number of
-!.. cloud droplets (Nt_c; see guidelines mentioned below).  Otherwise,
-!.. users may alter the rain and graupel size distribution parameters
-!.. to use exponential (Marshal-Palmer) or generalized gamma shape.
-!.. The snow field assumes a combination of two gamma functions (from
-!.. Field et al. 2005) and would require significant modifications
-!.. throughout the entire code to alter its shape as well as accretion
-!.. rates.  Users may also alter the constants used for density of rain,
-!.. graupel, ice, and snow, but the latter is not constant when using
-!.. Paul Field's snow distribution and moments methods.  Other values
-!.. users can modify include the constants for mass and/or velocity
-!.. power law relations and assumed capacitances used in deposition/
-!.. sublimation/evaporation/melting.
-!.. Remaining values should probably be left alone.
-!..
-!..Author: Greg Thompson, NCAR-RAL, gthompsn@ucar.edu, 303-497-2805
-!..Last modified: 27 Jul 2012
-!+---+-----------------------------------------------------------------+
+!>----------------------------------------------------------------------
+!!   This subroutine computes the moisture tendencies of water vapor,
+!!   cloud droplets, rain, cloud ice (pristine), snow, and graupel.
+!!
+!!   Prior to WRFv2.2 this code was based on Reisner et al (1998), but
+!!   few of those pieces remain.  A complete description is now found in
+!!   Thompson, G., P. R. Field, R. M. Rasmussen, and W. D. Hall, 2008:
+!!   Explicit Forecasts of winter precipitation using an improved bulk
+!!   microphysics scheme. Part II: Implementation of a new snow
+!!   parameterization.  Mon. Wea. Rev., 136, 5095-5115.
+!!   Prior to WRFv3.1, this code was single-moment rain prediction as
+!!   described in the reference above, but in v3.1 and higher, the
+!!   scheme is two-moment rain (predicted rain number concentration).
+!!  
+!!   Most importantly, users may wish to modify the prescribed number of
+!!   cloud droplets (Nt_c; see guidelines mentioned below).  Otherwise,
+!!   users may alter the rain and graupel size distribution parameters
+!!   to use exponential (Marshal-Palmer) or generalized gamma shape.
+!!   The snow field assumes a combination of two gamma functions (from
+!!   Field et al. 2005) and would require significant modifications
+!!   throughout the entire code to alter its shape as well as accretion
+!!   rates.  Users may also alter the constants used for density of rain,
+!!   graupel, ice, and snow, but the latter is not constant when using
+!!   Paul Field's snow distribution and moments methods.  Other values
+!!   users can modify include the constants for mass and/or velocity
+!!   power law relations and assumed capacitances used in deposition/
+!!   sublimation/evaporation/melting.
+!!   Remaining values should probably be left alone.
+!!  
+!!  Modifications for ICAR include OPENMP paralellization and the ability
+!!  to input many important parameters so they are no longer hard coded
+!!
+!!  @author Greg Thompson, NCAR-RAL, gthompsn@ucar.edu, 303-497-2805
+!!  Last modified: 27 Jul 2012
+!!
+!!--------------------------------------------------------------------
 !wrft:model_layer:physics
 !+---+-----------------------------------------------------------------+
 !
@@ -991,9 +996,13 @@
 !                         ' at i,j,k=', i,j,k
              ! CALL wrf_debug(150, mp_debug)
 !             endif
-            if (qv1d(k) .lt. 0.0) then
+            if (qv1d(k) .lt. 1.E-7) then
              if (k.lt.kte-2 .and. k.gt.kts+1) then
                 qv(i,k,j) = 0.5*(qv(i,k-1,j) + qv(i,k+1,j))
+                ! note, if qv(i,k+1,j) < 0 then qv(i,k,j) could still be < 0
+                if (qv1d(k) .lt. 1.E-7) then
+                    qv(i,k,j) = 1.E-7
+                endif
              else
                 qv(i,k,j) = 1.E-7
              endif

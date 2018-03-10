@@ -1,0 +1,24 @@
+sudo: false
+language: fortran
+compiler:
+  - gfortran
+os:
+  - linux
+addons:
+  apt:
+    source:
+      - ubuntu-toolchain-r-test
+    packages:
+      - gfortran
+      - libnetcdf-dev
+      - libfftw3-dev
+script:
+  - export FC=gfortran
+  - export FFTW=/usr
+  - export NETCDF=/usr
+  - make test -j4 # test parallel compile
+  - make -j4
+  - make clean # test serial compile
+  - make
+  - make clean # test parallel debug compile
+  - make MODE=debugslow -j4

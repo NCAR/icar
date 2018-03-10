@@ -1,35 +1,8 @@
 !>----------------------------------------------------------
-!! NOTE: CODE IS INCOMPLETE AND WILL NOT WORK
-!!
-!! Very simple land surface model code
+!!  Simple open water flux calculations
 !! 
-!! Rain is partitioned into infiltration and runoff
-!! Snow is accumulated on the surface, then melts, runsoff, or sublimates
-!! Soil moisture is permitted to be lost to ET or subsurface flow
-!! 
-!! ET, Sensible Heat Flux, and Longwave are partitioned using Penman Monteith.
-!!
-!! The entry point to the code is lsm_simple. 
-!!
-!! <pre>
-!! Call tree graph :
-!! lsm_simple->
-!!  [->],
-!!  [->],
-!!  [->]
-!! 
-!! High level routine descriptions / purpose
-!!   lsm_simple         - loops over X,Y grid cells, calls a, b, c
-!! 
-!! Driver inputs: p,th,pii,rho,qv,rain,snow,dt,dz
-!!   psfc= surface pressure              - 3D - input  - Pa     - (nx,ny)
-!!   t   = temperature                   - 3D - in/out - K      - (nx,nz,ny)
-!!   rho = air density                   - 3D - input  - kg/m^3 - (nx,nz,ny)
-!!   qv  = specific humidity             - 3D - in/out - kg/kg  - (nx,nz,ny)
-!!   wind= wind speed                    - 2D - input  - m/s    - (nx,ny)
-!! </pre>
-!!
-!! Author : Ethan Gutmann (gutmann@ucar.edu)
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!----------------------------------------------------------
 module module_water_simple
@@ -102,7 +75,7 @@ contains
         real :: z0
         
         ! approximately from Beljaars (1995?) in ECMWF model
-        z0 = 8e-6 / max(ustar,1e-10)
+        z0 = 8e-6 / max(ustar,1e-7)
     end function ocean_roughness
     
     subroutine water_simple(sst, psfc, wind, ustar, qv, temperature,  &
@@ -110,9 +83,9 @@ contains
                             z_atm, Z0, landmask, &
                             qv_surf, evap_flux, tskin)
         implicit none
-        real, dimension(:,:,:),intent(in)    :: qv, temperature, z_atm
+        real, dimension(:,:,:),intent(in)    :: qv, temperature
         real, dimension(:,:),  intent(inout) :: sensible_heat, latent_heat, Z0, qv_surf, evap_flux, tskin
-        real, dimension(:,:),  intent(in)    :: sst, psfc, wind, ustar, landmask
+        real, dimension(:,:),  intent(in)    :: sst, psfc, wind, ustar, landmask, z_atm
         
         integer :: nx, ny, i, j
         real :: base_exchange_term, lnz_atm_term, exchange_C, z
@@ -126,7 +99,7 @@ contains
                     qv_surf(i,j) = 0.98 * sat_mr(sst(i,j),psfc(i,j)) ! multiply by 0.98 to account for salinity
                     
                     Z0(i,j) = ocean_roughness(ustar(i,j))
-                    z=z_atm(i,1,j)
+                    z=z_atm(i,j)
                     lnz_atm_term = log((z+Z0(i,j))/Z0(i,j))
                     base_exchange_term=(75*karman**2 * sqrt((z+Z0(i,j))/Z0(i,j))) / (lnz_atm_term**2)
                     lnz_atm_term=(karman/lnz_atm_term)**2
