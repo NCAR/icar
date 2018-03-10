@@ -98,6 +98,7 @@ contains
         implicit none
         type(options_t), intent(inout) :: options
 
+
         ! List the variables that are required to be allocated for the simple microphysics
         call options%alloc_vars( &
                      [kVARS%pressure,    kVARS%potential_temperature,   kVARS%exner,        kVARS%density,      &
@@ -457,7 +458,7 @@ contains
     !!  @param debug      = debug mode (print and test)   - 0D - input  - T/F    - Boolean
     !!
     !!----------------------------------------------------------
-    subroutine mp_simple(pressure,temperature,rho,qv,qc,qr,qs,rain,snow,dt,dz,nz,debug)
+    subroutine mp_simple(pressure,temperature,rho,qv,qc,qr,qs,rain,snow,dt,dz,nz,debug, x, y)
         implicit none
         real,intent(inout),dimension(nz)::pressure,temperature,rho,qv,qc,qr,qs
         real,intent(inout)::rain,snow
@@ -465,6 +466,7 @@ contains
         real,intent(in)::dt
         integer,intent(in)::nz
         logical,intent(in)::debug
+        integer :: x, y
 
         real,dimension(nz)::fall_rate
         real::cfl,snowfall, qvsat
@@ -475,6 +477,7 @@ contains
         L_melt = -1*LH_liquid  ! J/kg (should change with temperature)
 
         if ((debug).and.(dt<1)) print*, "internal dt=",dt
+
         do i = 1,nz
             ! convert specific humidity to mixing ratio
 !           qv(i) = qv(i)/(1-qv(i))
@@ -560,8 +563,8 @@ contains
     !!----------------------------------------------------------
     subroutine mp_simple_driver(pressure,th,pii,rho,qv,qc,qr,qs,rain,snow,dt,dz,nx,ny,nz)
         implicit none
-        real,intent(inout),dimension(nx,nz,ny) :: pressure,th,pii,rho,qv,qc,qs,qr,dz
-        real,intent(inout),dimension(nx,ny)    :: rain,snow
+        real,intent(inout),dimension(:,:,:)  :: pressure,th,pii,rho,qv,qc,qs,qr,dz
+        real,intent(inout),dimension(:,:)    :: rain,snow
         real,intent(in)    :: dt
         integer,intent(in) :: nx,ny,nz
 
@@ -569,6 +572,9 @@ contains
         real,allocatable,dimension(:) :: temperature
         integer :: i,j
 
+        ! print*, "ccp",this_image(), minval(pressure), minval(th), maxval(th)
+        ! print*, "ccq",this_image(), maxval(qv), minval(qv), maxval(qc)
+        !
 !       calculate these once for every call because they are only a function of dt
         cloud2snow = exp(-1.0*snow_formation_time_const*dt)
         cloud2rain = exp(-1.0*rain_formation_time_const*dt)
@@ -585,7 +591,7 @@ contains
                 call mp_simple(pressure(i,:,j),temperature,rho(i,:,j),qv(i,:,j),&
                             qc(i,:,j),qr(i,:,j),qs(i,:,j),&
                             rain(i,j),snow(i,j),&
-                            dt,dz(i,:,j),nz,((i==(nx/2+20)).and.(j==2)))
+                            dt,dz(i,:,j),nz,((i==(nx/2+20)).and.(j==2)), i, j)
                 th(i,:,j) = temperature/pii(i,:,j)
 
             enddo

@@ -365,6 +365,7 @@ contains
         integer :: n_valid_vars
         integer :: i, curvar, err
 
+        n_valid_vars = 0
         do i=1, size(master_var_list)
             if (trim(master_var_list(i)) /= '') then
                 n_valid_vars = n_valid_vars + 1

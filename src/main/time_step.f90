@@ -9,9 +9,11 @@
 !! ----------------------------------------------------------------------------
 module time_step
     use data_structures             ! *_type  types and kCONSTANTS
+    use icar_constants,             only : Rd
     use microphysics,               only : mp
     use wind,                       only : balance_uvw, update_winds
     use advection,                  only : advect
+    use mod_atm_utilities,          only : exner_function
     ! use convection,                 only : convect
     ! use land_surface,               only : lsm
     ! use planetary_boundary_layer,   only : pbl
@@ -151,10 +153,16 @@ contains
     !! @param options   Model options (not used at present)
     !!
     !!------------------------------------------------------------
-    ! subroutine diagnostic_update(domain, options)
-    !     implicit none
-    !     type(domain_type),  intent(inout)   :: domain
-    !     type(options_type), intent(in)      :: options
+    subroutine diagnostic_update(domain, options)
+        implicit none
+        type(domain_t),  intent(inout)   :: domain
+        type(options_t), intent(in)      :: options
+
+        domain%exner%data_3d = exner_function(domain%pressure%data_3d)
+
+        domain%density%data_3d =  domain%pressure%data_3d / (Rd * domain%potential_temperature%data_3d * domain%exner%data_3d) ! kg/m^3
+
+
     !
     !     integer :: nx,ny,nz, y, z
     !
@@ -224,7 +232,7 @@ contains
     !         lastw=currw ! could avoid this memcopy cost using pointers or a single manual loop unroll
     !     end do
     !
-    ! end subroutine diagnostic_update
+    end subroutine diagnostic_update
 
 
     !>------------------------------------------------------------
@@ -436,13 +444,13 @@ contains
         ! Make the boundary condition dXdt values into units of [X]/s
         call domain%update_delta_fields(time_step_size)
 
-        ! ensure internal model consistency (should only need to be called here when the model starts...)
-        ! e.g. for potential temperature and temperature
-        ! call diagnostic_update(domain, options)
 
         ! now just loop over internal timesteps computing all physics in order (operator splitting...)
         last_time = 0.0
         do while (domain%model_time < end_time)
+
+            ! ensure internal model consistency
+            call diagnostic_update(domain, options)
 
             ! compute internal timestep dt to maintain stability
             ! courant condition for 3D advection. Note that w is normalized by dx/dz
@@ -491,9 +499,13 @@ contains
             ! this if is to avoid round off errors causing an additional physics call that won't really do anything
             if (dt%seconds() > 1e-3) then
 
+                ! print*, this_image(), "init",maxval(domain%cloud_water_mass%data_3d)
+
                 call advect(domain, options, real(dt%seconds()))
+                ! print*, this_image(), "adv",minval(domain%potential_temperature%data_3d)
 
                 call mp(domain, options, real(dt%seconds()))
+                ! print*, this_image(), "mp",minval(domain%potential_temperature%data_3d)
                 ! if (options%debug) call domain_check(domain,"After microphysics")
                 !
                 ! call rad(domain, options, real(dt%seconds()))
@@ -512,7 +524,12 @@ contains
                 ! call forcing_update(domain, bc, options, real(dt%seconds()))
                 ! if (options%debug) call domain_check(domain,"After Forcing update")
 
+                call domain%apply_forcing(dt)
+                ! print*, this_image(), "forced",minval(domain%potential_temperature%data_3d)
+
                 call domain%halo_exchange()
+                ! print*, this_image(), "exch",minval(domain%potential_temperature%data_3d)
+
             endif
 
             ! step model_time forward

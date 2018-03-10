@@ -34,7 +34,8 @@ contains
                           grid%kms:grid%kme, &
                           grid%jms:grid%jme), stat=err)
     if (err /= 0) stop "exchangeable:dqdt_3d: Allocation request failed"
-
+    this%data_3d = 0
+    
     allocate( this%halo_south_in( grid%ns_halo_nx+halo_size*2, grid%halo_nz,   halo_size    )[*])
     allocate( this%halo_north_in( grid%ns_halo_nx+halo_size*2, grid%halo_nz,   halo_size    )[*])
     allocate( this%halo_east_in(    halo_size,     grid%halo_nz, grid%ew_halo_ny+halo_size*2)[*])

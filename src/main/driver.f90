@@ -88,7 +88,7 @@ program icar
             if (file_name(i:i)=="/") file_name = file_name(:i-1)//"-"//file_name(i+1:)
             if (file_name(i:i)==":") file_name = file_name(:i-1)//"-"//file_name(i+1:)
         end do
-        print*, trim(file_name)
+        
         call dataset%save_file(file_name)
 
     end do

@@ -358,7 +358,7 @@ contains
                                       domain%accumulated_snowfall%data_2d,      &
                                       mp_dt,                                    &
                                       domain%dz_interface%data_3d,              &
-                                      ide, jde, kde)
+                                      ime-ims+1, jme-jms+1, kme-kms+1)
             ! elseif (options%physics%microphysics==kMP_MORRISON) then
             !     call MP_MORR_TWO_MOMENT(itimestep,                         &
             !                     domain%th, domain%qv, domain%cloud,     &

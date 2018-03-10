@@ -133,24 +133,24 @@ contains
 
         if (this_image()==1) print *,"  Initializing variables"
 
-        if (0<opt%vars_to_allocate( kVARS%u) )                          call setup(this%u,                        this%u_grid,   forcing_var=opt%parameters%uvar,       list=this%variables_to_force)
-        if (0<opt%vars_to_allocate( kVARS%v) )                          call setup(this%v,                        this%v_grid,   forcing_var=opt%parameters%vvar,       list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%u) )                          call setup(this%u,                        this%u_grid,   forcing_var=opt%parameters%uvar,       list=this%variables_to_force, force_boundaries=.False.)
+        if (0<opt%vars_to_allocate( kVARS%v) )                          call setup(this%v,                        this%v_grid,   forcing_var=opt%parameters%vvar,       list=this%variables_to_force, force_boundaries=.False.)
         if (0<opt%vars_to_allocate( kVARS%w) )                          call setup(this%w,                        this%grid )
-        if (0<opt%vars_to_allocate( kVARS%water_vapor) )                call setup(this%water_vapor,              this%grid,     forcing_var=opt%parameters%qvvar,      list=this%variables_to_force)
-        if (0<opt%vars_to_allocate( kVARS%potential_temperature) )      call setup(this%potential_temperature,    this%grid,     forcing_var=opt%parameters%tvar,       list=this%variables_to_force)
-        if (0<opt%vars_to_allocate( kVARS%cloud_water) )                call setup(this%cloud_water_mass,         this%grid,     forcing_var=opt%parameters%qcvar,      list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%water_vapor) )                call setup(this%water_vapor,              this%grid,     forcing_var=opt%parameters%qvvar,      list=this%variables_to_force, force_boundaries=.True.)
+        if (0<opt%vars_to_allocate( kVARS%potential_temperature) )      call setup(this%potential_temperature,    this%grid,     forcing_var=opt%parameters%tvar,       list=this%variables_to_force, force_boundaries=.True.)
+        if (0<opt%vars_to_allocate( kVARS%cloud_water) )                call setup(this%cloud_water_mass,         this%grid,     forcing_var=opt%parameters%qcvar,      list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%cloud_number_concentration))  call setup(this%cloud_number,             this%grid )
-        if (0<opt%vars_to_allocate( kVARS%cloud_ice) )                  call setup(this%cloud_ice_mass,           this%grid,     forcing_var=opt%parameters%qivar,      list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%cloud_ice) )                  call setup(this%cloud_ice_mass,           this%grid,     forcing_var=opt%parameters%qivar,      list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%ice_number_concentration))    call setup(this%cloud_ice_number,         this%grid )
-        if (0<opt%vars_to_allocate( kVARS%rain_in_air) )                call setup(this%rain_mass,                this%grid,     forcing_var=opt%parameters%qrvar,      list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%rain_in_air) )                call setup(this%rain_mass,                this%grid,     forcing_var=opt%parameters%qrvar,      list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%rain_number_concentration))   call setup(this%rain_number,              this%grid )
-        if (0<opt%vars_to_allocate( kVARS%snow_in_air) )                call setup(this%snow_mass,                this%grid,     forcing_var=opt%parameters%qsvar,      list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%snow_in_air) )                call setup(this%snow_mass,                this%grid,     forcing_var=opt%parameters%qsvar,      list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%snow_number_concentration) )  call setup(this%snow_number,              this%grid )
-        if (0<opt%vars_to_allocate( kVARS%graupel_in_air) )             call setup(this%graupel_mass,             this%grid,     forcing_var=opt%parameters%qgvar,      list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%graupel_in_air) )             call setup(this%graupel_mass,             this%grid,     forcing_var=opt%parameters%qgvar,      list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%graupel_number_concentration))call setup(this%graupel_number,           this%grid )
         if (0<opt%vars_to_allocate( kVARS%precipitation) )              call setup(this%accumulated_precipitation,this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%snowfall) )                   call setup(this%accumulated_snowfall,     this%grid2d )
-        if (0<opt%vars_to_allocate( kVARS%pressure) )                   call setup(this%pressure,                 this%grid,     forcing_var=opt%parameters%pvar,       list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%pressure) )                   call setup(this%pressure,                 this%grid,     forcing_var=opt%parameters%pvar,       list=this%variables_to_force, force_boundaries=.False.)
         if (0<opt%vars_to_allocate( kVARS%temperature) )                call setup(this%temperature,              this%grid )
         if (0<opt%vars_to_allocate( kVARS%exner) )                      call setup(this%exner,                    this%grid )
         if (0<opt%vars_to_allocate( kVARS%z) )                          call setup(this%z,                        this%grid )
@@ -195,18 +195,20 @@ contains
     !! and the forcing_var is both present and not blank ("")
     !!
     !! -------------------------------
-    subroutine setup_var(var, grid, forcing_var, list)
+    subroutine setup_var(var, grid, forcing_var, list, force_boundaries)
         implicit none
         type(variable_t),   intent(inout) :: var
         type(grid_t),       intent(in)    :: grid
         character(len=*),   intent(in),   optional :: forcing_var
         type(var_dict_t),   intent(inout),optional :: list
+        logical,            intent(in),   optional :: force_boundaries
 
         if (present(forcing_var)) then
             call var%initialize(grid, forcing_var=forcing_var)
 
             if (present(list)) then
                 if (Len(Trim(forcing_var)) /= 0) then
+                    if (present(force_boundaries)) var%force_boundaries = force_boundaries
                     call list%add_var(forcing_var, var)
                 endif
             endif
@@ -226,17 +228,20 @@ contains
     !! and the forcing_var is both present and not blank ("")
     !!
     !! -------------------------------
-    subroutine setup_exch(var, grid, forcing_var, list)
+    subroutine setup_exch(var, grid, forcing_var, list, force_boundaries)
         implicit none
         type(exchangeable_t),   intent(inout) :: var
         type(grid_t),           intent(in)    :: grid
         character(len=*),       intent(in),   optional :: forcing_var
         type(var_dict_t),       intent(inout),optional :: list
+        logical,                intent(in),   optional :: force_boundaries
 
         if (present(forcing_var)) then
             call var%initialize(grid, forcing_var=forcing_var)
+
             if (present(list)) then
                 if (Len(Trim(forcing_var)) /= 0) then
+                    if (present(force_boundaries)) var%meta_data%force_boundaries = force_boundaries
                     call list%add_var(forcing_var, var%meta_data)
                 endif
             endif
@@ -438,6 +443,8 @@ contains
                   potential_temperature => this%potential_temperature%data_3d,  &
                   terrain               => this%terrain%data_2d)
 
+            exner = exner_function(pressure)
+
             i = this%grid%kms
             dz_mass(:,i,:)      = dz(i) / 2
             z(:,i,:)            = terrain + dz_mass(:,i,:)
@@ -613,6 +620,14 @@ contains
     end subroutine
 
 
+    !> -------------------------------
+    !! Update the dQdt fields for all forced variables
+    !!
+    !! This routine is the partner of apply_forcing below.
+    !! update_delta_fields normalizes the difference by the time step of that difference field
+    !! apply_forcing multiplies that /second value and multiplies it by the current time step before adding it
+    !!
+    !! -------------------------------
     module subroutine update_delta_fields(this, dt)
         implicit none
         class(domain_t),    intent(inout) :: this
@@ -645,6 +660,64 @@ contains
 
 
     end subroutine
+
+
+    !> -------------------------------
+    !! Add the forcing update to boundaries and internal diagnosed fields
+    !!
+    !! This routine is the partner of update_delta_fields above.
+    !! update_delta_fields normalizes the difference by the time step of that difference field
+    !! apply forcing multiplies that /second value and multiplies it by the current time step before adding it
+    !!
+    !! -------------------------------
+    module subroutine apply_forcing(this, dt)
+        implicit none
+        class(domain_t),    intent(inout) :: this
+        class(time_delta_t),intent(in)    :: dt
+        integer :: ims, ime, jms, jme
+
+        ! temporary to hold the variable to be interpolated to
+        type(variable_t) :: var_to_update
+
+        ! make sure the dictionary is reset to point to the first variable
+        call this%variables_to_force%reset_iterator()
+
+        ! No iterate through the dictionary as long as there are more elements present
+        do while (this%variables_to_force%has_more_elements())
+            ! get the next variable
+            var_to_update = this%variables_to_force%next()
+
+            if (var_to_update%two_d) then
+                ! apply forcing throughout the domain for 2D diagnosed variables (e.g. SST, SW)
+                var_to_update%data_2d = var_to_update%data_2d + (var_to_update%dqdt_2d * dt%seconds())
+
+            else if (var_to_update%three_d) then
+                ! only apply forcing data on the boundaries for advected scalars (e.g. temperature, humidity)
+                if (var_to_update%force_boundaries) then
+                    ims = lbound(var_to_update%data_3d, 1)
+                    ime = ubound(var_to_update%data_3d, 1)
+                    jms = lbound(var_to_update%data_3d, 3)
+                    jme = ubound(var_to_update%data_3d, 3)
+                    var_to_update%data_3d(ims,:,:) = var_to_update%data_3d(ims,:,:) + (var_to_update%dqdt_3d(ims,:,:) * dt%seconds())
+                    var_to_update%data_3d(ime,:,:) = var_to_update%data_3d(ime,:,:) + (var_to_update%dqdt_3d(ime,:,:) * dt%seconds())
+                    var_to_update%data_3d(:,:,jms) = var_to_update%data_3d(:,:,jms) + (var_to_update%dqdt_3d(:,:,jms) * dt%seconds())
+                    var_to_update%data_3d(:,:,jme) = var_to_update%data_3d(:,:,jme) + (var_to_update%dqdt_3d(:,:,jme) * dt%seconds())
+
+                ! apply forcing throughout the domain for diagnosed variables (e.g. pressure, wind)
+                else
+                    var_to_update%data_3d = var_to_update%data_3d + (var_to_update%dqdt_3d * dt%seconds())
+                endif
+            endif
+
+        enddo
+
+        ! w has to be handled separately because it is the only variable that can be updated using the delta fields but is not
+        ! actually read from disk. Note that if we move to balancing winds every timestep, then it doesn't matter.
+        var_to_update = this%w%meta_data
+        var_to_update%data_3d = var_to_update%data_3d + (var_to_update%dqdt_3d * dt%seconds())
+
+    end subroutine
+
 
     !> -------------------------------
     !! Loop through all variables for which forcing data have been supplied and interpolate the forcing data to the domain

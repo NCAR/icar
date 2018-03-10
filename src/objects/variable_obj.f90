@@ -11,11 +11,13 @@ contains
     !! Allocates 2d/3d data structure as appropriate
     !!
     !! -------------------------------
-    module subroutine init_grid(this, grid, forcing_var)
+    module subroutine init_grid(this, grid, forcing_var, force_boundaries)
         implicit none
         class(variable_t),  intent(inout) :: this
         type(grid_t),       intent(in)    :: grid
-        character(len=kMAX_NAME_LENGTH), intent(in), optional :: forcing_var
+        character(len=*),   intent(in), optional :: forcing_var
+        logical,            intent(in), optional :: force_boundaries
+
         integer :: err
 
         this%dimensions = grid%dimensions
@@ -26,6 +28,9 @@ contains
 
         this%forcing_var = ""
         if (present(forcing_var)) this%forcing_var = forcing_var
+
+        this%force_boundaries = .True.
+        if (present(force_boundaries)) this%force_boundaries = force_boundaries
 
         if (grid%is2d) then
             this%n_dimensions = 2
@@ -75,11 +80,12 @@ contains
     !! Allocates 2d/3d data structure as appropriate
     !!
     !! -------------------------------
-    module subroutine init_dims(this, dims, forcing_var)
+    module subroutine init_dims(this, dims, forcing_var, force_boundaries)
         implicit none
         class(variable_t),  intent(inout) :: this
         integer,            intent(in)    :: dims(:)
-        character(len=kMAX_NAME_LENGTH), intent(in), optional :: forcing_var
+        character(len=*),   intent(in), optional :: forcing_var
+        logical,            intent(in), optional :: force_boundaries
 
         integer :: err
 
@@ -90,6 +96,9 @@ contains
 
         this%forcing_var = ""
         if (present(forcing_var)) this%forcing_var = forcing_var
+
+        this%force_boundaries = .True.
+        if (present(force_boundaries)) this%force_boundaries = force_boundaries
 
         if (this%two_d) then
             this%n_dimensions = 2

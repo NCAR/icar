@@ -18,6 +18,7 @@ module variable_interface
         logical                         :: unlimited_dim = .False.
         logical                         :: three_d = .False.
         logical                         :: two_d = .False.
+        logical                         :: force_boundaries = .True.
         character(len=kMAX_NAME_LENGTH) :: forcing_var = ""
 
         integer :: n_dimensions
@@ -51,18 +52,21 @@ module variable_interface
         end subroutine
 
 
-        module subroutine init_grid(this, grid, forcing_var)
+        module subroutine init_grid(this, grid, forcing_var, force_boundaries)
             implicit none
             class(variable_t),  intent(inout) :: this
             type(grid_t),       intent(in)    :: grid
-            character(len=kMAX_NAME_LENGTH), intent(in), optional :: forcing_var
+            character(len=*),   intent(in), optional :: forcing_var
+            logical,            intent(in), optional :: force_boundaries
+
         end subroutine
 
-        module subroutine init_dims(this, dims, forcing_var)
+        module subroutine init_dims(this, dims, forcing_var, force_boundaries)
             implicit none
             class(variable_t),  intent(inout) :: this
             integer,            intent(in)    :: dims(:)
-            character(len=kMAX_NAME_LENGTH), intent(in), optional :: forcing_var
+            character(len=*),   intent(in), optional :: forcing_var
+            logical,            intent(in), optional :: force_boundaries
         end subroutine
 
     end interface

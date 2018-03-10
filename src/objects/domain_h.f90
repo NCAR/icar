@@ -119,6 +119,7 @@ module domain_interface
     procedure :: get_initial_conditions
     procedure :: interpolate_forcing
     procedure :: update_delta_fields
+    procedure :: apply_forcing
 
   end type
 
@@ -182,6 +183,14 @@ module domain_interface
         class(domain_t),    intent(inout) :: this
         class(time_delta_t),intent(in)    :: dt
     end subroutine
+
+    module subroutine apply_forcing(this, dt)
+        implicit none
+        class(domain_t),    intent(inout) :: this
+        class(time_delta_t),intent(in)    :: dt
+    end subroutine
+
+
   end interface
 
 end module
