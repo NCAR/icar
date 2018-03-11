@@ -29,6 +29,7 @@ module microphysics
     ! use data_structures
     use icar_constants
     ! use mod_wrf_constants
+    use module_mp_thompson_aer,     only: mp_gt_driver_aer, thompson_aer_init
     ! use module_mp_thompson,         only: mp_gt_driver, thompson_init
     ! use module_mp_morr_two_moment,  only: MORR_TWO_MOMENT_INIT, MP_MORR_TWO_MOMENT
     ! use module_mp_wsm6,             only: wsm6, wsm6init
@@ -76,9 +77,10 @@ contains
         write(*,*) "Initializing Microphysics"
         if (options%physics%microphysics    == kMP_THOMPSON) then
             write(*,*) "    Thompson Microphysics"
-            stop "Thompson physics not implemented yet"
+            call thompson_aer_init()
             ! call thompson_init(options%mp_options)
             precip_delta=.True.
+
         elseif (options%physics%microphysics == kMP_SB04) then
             write(*,*) "    Simple Microphysics"
             precip_delta=.True.
@@ -97,12 +99,41 @@ contains
     end subroutine mp_init
 
 
+    subroutine mp_thompson_aer_var_request(options)
+        implicit none
+        type(options_t), intent(inout) :: options
+
+        ! List the variables that are required to be allocated for the simple microphysics
+        call options%alloc_vars( &
+                     [kVARS%pressure,    kVARS%potential_temperature,   kVARS%exner,        kVARS%density,      &
+                      kVARS%water_vapor, kVARS%cloud_water,             kVARS%rain_in_air,  kVARS%rain_number_concentration, &
+                      kVARS%snow_in_air, kVARS%cloud_ice,               kVARS%w,            kVARS%ice_number_concentration,      &
+                      kVARS%snowfall,    kVARS%precipitation,           kVARS%graupel,      kVARS%graupel_in_air,     &
+                      kVARS%dz_interface ])
+
+        ! List the variables that are required to be advected for the simple microphysics
+        call options%advect_vars( &
+                      [kVARS%potential_temperature, kVARS%water_vapor, kVARS%cloud_water,  kVARS%rain_number_concentration, &
+                       kVARS%snow_in_air,           kVARS%cloud_ice,   &
+                       kVARS%rain_in_air,           kVARS%ice_number_concentration, kVARS%graupel_in_air   ] )
+
+        ! List the variables that are required to be allocated for the simple microphysics
+        call options%restart_vars( &
+                       [kVARS%pressure,     kVARS%potential_temperature,    kVARS%water_vapor,   &
+                        kVARS%cloud_water,  kVARS%rain_in_air,              kVARS%snow_in_air,   &
+                        kVARS%precipitation,kVARS%snowfall,                 kVARS%dz_interface,  &
+                        kVARS%snow_in_air,  kVARS%cloud_ice,                kVARS%rain_number_concentration, &
+                        kVARS%rain_in_air,  kVARS%ice_number_concentration, kVARS%graupel_in_air ] )
+
+
+    end subroutine
+
     subroutine mp_var_request(options)
         implicit none
         type(options_t), intent(inout) :: options
 
         if (options%physics%microphysics    == kMP_THOMPSON) then
-            stop "Thompson physics not re-implemented yet"
+            call mp_thompson_aer_var_request(options)
         elseif (options%physics%microphysics == kMP_SB04) then
             call mp_simple_var_request(options)
 
@@ -332,17 +363,32 @@ contains
             ! run the thompson microphysics
             if (options%physics%microphysics==kMP_THOMPSON) then
                 ! call the thompson microphysics
-                stop "Thompson physics not implemented yet"
-                ! call mp_gt_driver(domain%qv, domain%cloud, domain%qrain, domain%ice, &
-                !                 domain%qsnow, domain%qgrau, domain%nice, domain%nrain, &
-                !                 domain%th, domain%pii, domain%p, domain%dz_inter, mp_dt, itimestep, &
-                !                 domain%rain, last_rain, &       ! last_rain is not used in thompson
-                !                 domain%snow, last_snow, &       ! last_snow is not used in thompson
-                !                 domain%graupel, this_precip, &  ! this_precip is not used in thompson
-                !                 SR, &
-                !                 ids,ide, jds,jde, kds,kde, &    ! domain dims
-                !                 ids,ide, jds,jde, kds,kde, &    ! memory dims
-                !                 its,ite, jts,jte, kts,kte)      ! tile dims
+                call mp_gt_driver_aer(qv = domain%water_vapor%data_3d,                      &
+                                      th = domain%potential_temperature%data_3d,            &
+                                      qc = domain%cloud_water_mass%data_3d,                 &
+                                      qi = domain%cloud_ice_mass%data_3d,                   &
+                                      ni = domain%cloud_ice_number%data_3d,                 &
+                                      qr = domain%rain_mass%data_3d,                        &
+                                      nr = domain%rain_number%data_3d,                      &
+                                      qs = domain%snow_mass%data_3d,                        &
+                                      qg = domain%graupel_mass%data_3d,                     &
+                                      pii = domain%exner%data_3d,                           &
+                                      p = domain%pressure%data_3d,                          &
+                                      w = domain%w%data_3d,                                 &
+                                      dz = domain%dz_mass%data_3d,                          &
+                                      dt_in = mp_dt,                                           &
+                                      RAINNC = domain%accumulated_precipitation%data_2d,    &
+                                      SNOWNC = domain%accumulated_snowfall%data_2d,         &
+                                      has_reqc=0, has_reqi=0, has_reqs=0,                   &
+                                      ids = domain%ids, ide = domain%ide,                   & ! domain dims
+                                      jds = domain%jds, jde = domain%jde,                   &
+                                      kds = domain%kds, kde = domain%kde,                   &
+                                      ims = domain%ims, ime = domain%ime,                   & ! memory dims
+                                      jms = domain%jms, jme = domain%jme,                   &
+                                      kms = domain%kms, kme = domain%kme,                   &
+                                      its = domain%its, ite = domain%ite,                   & ! tile dims
+                                      jts = domain%jts, jte = domain%jte,                   &
+                                      kts = domain%kts, kte = domain%kte)
 
             elseif (options%physics%microphysics==kMP_SB04) then
                 ! call the simple microphysics routine of SB04
