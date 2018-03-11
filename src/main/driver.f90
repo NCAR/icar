@@ -34,11 +34,16 @@ program icar
 
     character(len=1024) :: file_name
     integer :: i
+    integer :: omp_get_max_threads
 
     !-----------------------------------------
     !  Model Initialization
     !
-    if (this_image()==1) print*, "Reading options"
+    if (this_image()==1) then
+        print*, "Number of coarray image:",num_images()
+        print*, "Max number of OpenMP Threads:",omp_get_max_threads()
+        print*, "Reading options"
+    endif
     call options%init()
 
     if (this_image()==1) print*, "Initializing Domain"
