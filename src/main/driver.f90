@@ -67,6 +67,14 @@ program icar
     !  Time Loop
     !
     !   note that a timestep here is a forcing input timestep O(1-3hr), not a physics timestep O(20-100s)
+    write(file_name, '("icar_restart_output_",I3.3,"_",A,".nc")') this_image(), trim(domain%model_time%as_string())
+
+    do i=1,len_trim(file_name)
+        if (file_name(i:i)==" ") file_name = file_name(:i-1)//"_"//file_name(i+1:)
+        if (file_name(i:i)=="/") file_name = file_name(:i-1)//"-"//file_name(i+1:)
+        if (file_name(i:i)==":") file_name = file_name(:i-1)//"-"//file_name(i+1:)
+    end do
+    i=1
     do while (domain%model_time < options%parameters%end_time)
 
         call boundary%update_forcing(options)
@@ -82,19 +90,22 @@ program icar
         ! this is the meat of the model physics, run all the physics for the current time step looping over internal timesteps
         call step(domain, boundary%current_time, options)
 
-
         ! This is an ugly hack until the output object is set up better to handle multiple time steps per file
         ! (that may just need "unlimited" specified in variables?)
         if (this_image()==1) print*, "Writing output file"
-        write(file_name, '("icar_restart_output_",I3.3,"_",A,".nc")') this_image(), trim(domain%model_time%as_string())
+        if (i>24) then
+            write(file_name, '("icar_restart_output_",I3.3,"_",A,".nc")') this_image(), trim(domain%model_time%as_string())
 
-        do i=1,len_trim(file_name)
-            if (file_name(i:i)==" ") file_name = file_name(:i-1)//"_"//file_name(i+1:)
-            if (file_name(i:i)=="/") file_name = file_name(:i-1)//"-"//file_name(i+1:)
-            if (file_name(i:i)==":") file_name = file_name(:i-1)//"-"//file_name(i+1:)
-        end do
+            do i=1,len_trim(file_name)
+                if (file_name(i:i)==" ") file_name = file_name(:i-1)//"_"//file_name(i+1:)
+                if (file_name(i:i)=="/") file_name = file_name(:i-1)//"-"//file_name(i+1:)
+                if (file_name(i:i)==":") file_name = file_name(:i-1)//"-"//file_name(i+1:)
+            end do
+            i = 1
+        endif
 
-        call dataset%save_file("output/"//trim(file_name))
+        call dataset%save_file("output/"//trim(file_name), i, domain%model_time)
+        i = i + 1
 
     end do
     !
