@@ -74,15 +74,15 @@ contains
         implicit none
         type(options_t), intent(inout) :: options
 
-        write(*,*) "Initializing Microphysics"
+        if (this_image()==1) write(*,*) "Initializing Microphysics"
         if (options%physics%microphysics    == kMP_THOMPSON) then
-            write(*,*) "    Thompson Microphysics"
+            if (this_image()==1) write(*,*) "    Thompson Microphysics"
             call thompson_aer_init()
             ! call thompson_init(options%mp_options)
             precip_delta=.True.
 
         elseif (options%physics%microphysics == kMP_SB04) then
-            write(*,*) "    Simple Microphysics"
+            if (this_image()==1) write(*,*) "    Simple Microphysics"
             precip_delta=.True.
         ! elseif (options%physics%microphysics==kMP_MORRISON) then
         !     write(*,*) "    Morrison Microphysics"
@@ -334,8 +334,10 @@ contains
 
         ! only run the microphysics if the next time step would put it over the update_interval time
         if (((domain%model_time%seconds() + dt_in)-last_model_time)>=update_interval) then
+
             ! calculate the actual time step for the microphysics
             mp_dt = domain%model_time%seconds()-last_model_time
+
             ! reset the counter so we know that *this* is the last time we've run the microphysics
             last_model_time = domain%model_time%seconds()
 
@@ -405,6 +407,7 @@ contains
                                       mp_dt,                                    &
                                       domain%dz_interface%data_3d,              &
                                       ime-ims+1, jme-jms+1, kme-kms+1)
+
             ! elseif (options%physics%microphysics==kMP_MORRISON) then
             !     call MP_MORR_TWO_MOMENT(itimestep,                         &
             !                     domain%th, domain%qv, domain%cloud,     &

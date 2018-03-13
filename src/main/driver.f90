@@ -23,7 +23,7 @@ program icar
     use boundary_interface, only : boundary_t
     use output_interface,   only : output_t
     use time_step,          only : step                               ! Advance the model forward in time
-    use wind,               only : update_winds
+    use initialization,     only : init_model
 
     implicit none
 
@@ -34,28 +34,12 @@ program icar
 
     character(len=1024) :: file_name
     integer :: i
-    integer :: omp_get_max_threads
 
     !-----------------------------------------
     !  Model Initialization
     !
-    if (this_image()==1) then
-        print*, "Number of coarray image:",num_images()
-        print*, "Max number of OpenMP Threads:",omp_get_max_threads()
-        print*, "Reading options"
-    endif
-    call options%init()
-
-    if (this_image()==1) print*, "Initializing Domain"
-    call domain%init(options)
-
-    if (this_image()==1) print*, "Initializing boundary condition data structure"
-    call boundary%init(options)
-
-    if (this_image()==1) print*, "Reading Initial conditions from boundary dataset"
-    call domain%get_initial_conditions(boundary, options)
-
-    call update_winds(domain, options)
+    ! Reads config options and initializes domain and boundary conditions
+    call init_model(options, domain, boundary)
 
     if (this_image()==1) print*, "Setting up output files"
     ! should be combined into a single setup_output call
