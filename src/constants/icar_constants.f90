@@ -18,9 +18,15 @@ module icar_constants
     ! list of integer constants to be used when accessing various arrays that track variable allocation, usage, etc. requests
     !
     ! NOTE: IF YOU ADD TO THIS LIST BE SURE TO ADD AN INTEGER TO THE kVARS STRUCTURE CONSTRUCTOR BELOW IT!
+    ! This should be transitioned to an enum... but then one can't just "use, only:kVARS"...
+    ! enum, bind(C)
+    !   enumerator ::  u, v, w,...
+    ! end enum
     ! --------------------------------------------
     type var_constants_type
-        SEQUENCE    ! technically SEQUENCE just requires the compiler leave them in order, but it can also keep compilers (e.g. ifort) from padding for alignment
+        SEQUENCE    ! technically SEQUENCE just requires the compiler leave them in order,
+                    ! but it can also keep compilers (e.g. ifort) from padding for alignment,
+                    ! as long as there is no padding we can test last_var = sizeof(kVARS)
 
         integer :: u
         integer :: v
@@ -98,12 +104,12 @@ module icar_constants
 ! ------------------------------------------------
 ! Model constants (mostly string lengths)
 ! ------------------------------------------------
-    integer,parameter :: MAXFILELENGTH      =   1024  ! maximum file name length
-    integer,parameter :: MAXVARLENGTH       =   1024  ! maximum variable name length
-    integer,parameter :: MAXLEVELS          =    500  ! maximum number of vertical layers (should typically be ~10-20)
-    integer,parameter :: MAX_NUMBER_FILES   =   5000  ! maximum number of permitted input files (probably a bit extreme)
-    integer,parameter :: MAXSTRINGLENGTH    =   1024  ! maximum length of other strings (e.g. netcdf attributes)
-    integer,parameter :: kMAX_STRING_LENGTH =   1024  ! maximum length of other strings (e.g. netcdf attributes)
+    integer, parameter :: MAXFILELENGTH      =   1024  ! maximum file name length
+    integer, parameter :: MAXVARLENGTH       =   1024  ! maximum variable name length
+    integer, parameter :: MAXLEVELS          =    500  ! maximum number of vertical layers (should typically be ~10-20)
+    integer, parameter :: MAX_NUMBER_FILES   =   5000  ! maximum number of permitted input files (probably a bit extreme)
+    integer, parameter :: MAXSTRINGLENGTH    =   1024  ! maximum length of other strings (e.g. netcdf attributes)
+    integer, parameter :: kMAX_STRING_LENGTH =   1024  ! maximum length of other strings (e.g. netcdf attributes)
 
 
 ! ------------------------------------------------
@@ -122,6 +128,7 @@ module icar_constants
 !
 ! NB: BASIC typically means "use the data from the low res model"
 !     SIMPLE typically means a relatively simple formulation written for ICAR
+! These could all be switched to enums too, but this makes it easy to see what number each has for the options file...
 ! ------------------------------------------------
     integer, parameter :: kCU_TIEDTKE    = 1
     integer, parameter :: kCU_SIMPLE     = 2
