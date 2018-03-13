@@ -109,7 +109,7 @@ contains
                       kVARS%water_vapor, kVARS%cloud_water,             kVARS%rain_in_air,  kVARS%rain_number_concentration, &
                       kVARS%snow_in_air, kVARS%cloud_ice,               kVARS%w,            kVARS%ice_number_concentration,      &
                       kVARS%snowfall,    kVARS%precipitation,           kVARS%graupel,      kVARS%graupel_in_air,     &
-                      kVARS%dz_interface ])
+                      kVARS%dz ])
 
         ! List the variables that are required to be advected for the simple microphysics
         call options%advect_vars( &
@@ -121,7 +121,7 @@ contains
         call options%restart_vars( &
                        [kVARS%pressure,     kVARS%potential_temperature,    kVARS%water_vapor,   &
                         kVARS%cloud_water,  kVARS%rain_in_air,              kVARS%snow_in_air,   &
-                        kVARS%precipitation,kVARS%snowfall,                 kVARS%dz_interface,  &
+                        kVARS%precipitation,kVARS%snowfall,                 kVARS%dz,            &
                         kVARS%snow_in_air,  kVARS%cloud_ice,                kVARS%rain_number_concentration, &
                         kVARS%rain_in_air,  kVARS%ice_number_concentration, kVARS%graupel_in_air ] )
 
@@ -405,7 +405,7 @@ contains
                                       domain%accumulated_precipitation%data_2d, &
                                       domain%accumulated_snowfall%data_2d,      &
                                       mp_dt,                                    &
-                                      domain%dz_interface%data_3d,              &
+                                      domain%dz_mass%data_3d,                   &
                                       ime-ims+1, jme-jms+1, kme-kms+1)
 
             ! elseif (options%physics%microphysics==kMP_MORRISON) then

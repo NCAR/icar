@@ -447,6 +447,7 @@ contains
 
             i = this%grid%kms
             dz_mass(:,i,:)      = dz(i) / 2
+            dz_interface(:,i,:)      = dz(i)
             z(:,i,:)            = terrain + dz_mass(:,i,:)
             z_interface(:,i,:)  = terrain
 

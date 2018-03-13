@@ -103,7 +103,7 @@ contains
         call options%alloc_vars( &
                      [kVARS%pressure,    kVARS%potential_temperature,   kVARS%exner,        kVARS%density,      &
                       kVARS%water_vapor, kVARS%cloud_water,             kVARS%rain_in_air,  kVARS%snow_in_air,  &
-                      kVARS%precipitation, kVARS%snowfall,              kVARS%dz_interface])
+                      kVARS%precipitation, kVARS%snowfall,              kVARS%dz])
 
         ! List the variables that are required to be advected for the simple microphysics
         call options%advect_vars( &
@@ -114,7 +114,7 @@ contains
         call options%restart_vars( &
                        [kVARS%pressure,     kVARS%potential_temperature,    kVARS%water_vapor,  &
                         kVARS%cloud_water,  kVARS%rain_in_air,              kVARS%snow_in_air,  &
-                        kVARS%precipitation,kVARS%snowfall,                 kVARS%dz_interface] )
+                        kVARS%precipitation,kVARS%snowfall,                 kVARS%dz] )
 
     end subroutine mp_simple_var_request
 
@@ -512,6 +512,7 @@ contains
             fall_rate = snow_fall_rate
             cfl = ceiling(maxval(dt/dz*fall_rate))
             fall_rate = dt*fall_rate/cfl
+
             ! substepping to satisfy CFL criteria
             do cfl_step = 1,nint(cfl)
                 snowfall = sediment(qs,fall_rate,rho,dz,nz)
