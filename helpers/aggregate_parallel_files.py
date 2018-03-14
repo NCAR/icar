@@ -53,7 +53,7 @@ def set_up_dataset(d):
     data_vars = dict()
 
     for v in d.variables:
-        coords = d[v].coords
+        coords = [c for c in d[v].coords]
         dims   = d[v].dims
         name   = d[v].name
         attrs  = d[v].attrs
@@ -72,10 +72,12 @@ def set_up_dataset(d):
             data = np.zeros((nt, nz, ny + y_off, nx + x_off))
 
         # print(name, data.shape, dims, attrs)
-        data_vars[v] = xr.DataArray(data, dims=dims, name=name, attrs=attrs)
+        data_vars[v] = xr.DataArray(data, dims=dims, name=name, attrs=attrs)#, coords=coords)
 
-    return xr.Dataset(data_vars, attrs=d.attrs)
-
+    ds = xr.Dataset(data_vars, attrs=d.attrs)
+    ds.encoding = d.encoding
+    ds["time"] = d["time"]
+    return ds.set_coords([c for c in d.coords])
 
 
 def agg_file(first_file):
