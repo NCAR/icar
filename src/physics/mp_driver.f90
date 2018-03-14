@@ -348,20 +348,11 @@ contains
                 last_snow = domain%accumulated_snowfall%data_2d
             endif
 
-            kts=kds
-            kte=kde
             ! set the current tile to the top layer to process microphysics for
             if (options%mp_options%top_mp_level>0) then
                 kte=min(kte, options%mp_options%top_mp_level)
             endif
-            if (options%parameters%ideal) then
-                ! for ideal runs process the boundaries as well to be consistent with WRF
-                its=ids;ite=ide
-                jts=jds;jte=jde
-            else
-                its=ids+1;ite=ide-1
-                jts=jds+1;jte=jde-1
-            endif
+
             ! run the thompson microphysics
             if (options%physics%microphysics==kMP_THOMPSON) then
                 ! call the thompson microphysics
@@ -382,15 +373,15 @@ contains
                                       RAINNC = domain%accumulated_precipitation%data_2d,    &
                                       SNOWNC = domain%accumulated_snowfall%data_2d,         &
                                       has_reqc=0, has_reqi=0, has_reqs=0,                   &
-                                      ids = domain%ids, ide = domain%ide,                   & ! domain dims
-                                      jds = domain%jds, jde = domain%jde,                   &
-                                      kds = domain%kds, kde = domain%kde,                   &
-                                      ims = domain%ims, ime = domain%ime,                   & ! memory dims
-                                      jms = domain%jms, jme = domain%jme,                   &
-                                      kms = domain%kms, kme = domain%kme,                   &
-                                      its = domain%its, ite = domain%ite,                   & ! tile dims
-                                      jts = domain%jts, jte = domain%jte,                   &
-                                      kts = domain%kts, kte = domain%kte)
+                                      ids = ids, ide = ide,                   & ! domain dims
+                                      jds = jds, jde = jde,                   &
+                                      kds = kds, kde = kde,                   &
+                                      ims = ims, ime = ime,                   & ! memory dims
+                                      jms = jms, jme = jme,                   &
+                                      kms = kms, kme = kme,                   &
+                                      its = its, ite = ite,                   & ! tile dims
+                                      jts = jts, jte = jte,                   &
+                                      kts = kts, kte = kte)
 
             elseif (options%physics%microphysics==kMP_SB04) then
                 ! call the simple microphysics routine of SB04
