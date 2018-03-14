@@ -482,7 +482,7 @@ contains
             var%name        = "land_mask"
             var%dimensions  = two_d_dimensions
             var%attributes  = [attribute_t("non_standard_name", "land_water_mask"),                 &
-                               attribute_t("coordinates",          "lat lon")]
+                               attribute_t("coordinates",       "lat lon")]
         end associate
         associate(var=>var_meta(kVARS%terrain))
             var%name        = "terrain"
