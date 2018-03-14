@@ -1146,7 +1146,6 @@
 
       !$omp do schedule(guided)
       j_loop:  do j = j_start, j_end
-        !   print*, this_image(), j-j_start, omp_get_thread_num(), omp_get_num_threads()
       i_loop:  do i = i_start, i_end
 
          pptrain = 0.
@@ -1203,14 +1202,11 @@
          pcp_ic(i,j) = pptice
          IF ( PRESENT (RAINNCV) )RAINNCV(i,j) = pptrain + pptsnow + pptgraul + pptice
          RAINNC(i,j) = RAINNC(i,j) + pptrain + pptsnow + pptgraul + pptice
-         IF ( PRESENT(snowncv) .AND. PRESENT(snownc) ) THEN
-            SNOWNCV(i,j) = pptsnow + pptice
-            SNOWNC(i,j) = SNOWNC(i,j) + pptsnow + pptice
-         ENDIF
-         IF ( PRESENT(graupelncv) .AND. PRESENT(graupelnc) ) THEN
-            GRAUPELNCV(i,j) = pptgraul
-            GRAUPELNC(i,j) = GRAUPELNC(i,j) + pptgraul
-         ENDIF
+         IF ( PRESENT(snowncv)) SNOWNCV(i,j) = pptsnow + pptice
+         IF ( PRESENT(snownc) ) SNOWNC(i,j) = SNOWNC(i,j) + pptsnow + pptice
+
+         IF ( PRESENT(graupelncv)) GRAUPELNCV(i,j) = pptgraul
+         IF ( PRESENT(graupelnc) ) GRAUPELNC(i,j) = GRAUPELNC(i,j) + pptgraul
          IF ( PRESENT(SR) )SR(i,j) = (pptsnow + pptgraul + pptice)/(pptrain + pptsnow + pptgraul + pptice+1.e-12)
 
 
