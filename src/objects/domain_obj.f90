@@ -397,11 +397,12 @@ contains
     !! are extrapolated outside of that subset region
     !!
     !! ---------------------------------
-    subroutine subset_array(input, output, grid)
+    subroutine extend_array(input, output, grid, extrapolate)
         implicit none
-        real,         intent(in)    :: input(:,:)
-        real,         intent(inout) :: output(:,:)
+        real,         intent(in)    :: input(:,:,:)
+        real,         intent(inout) :: output(:,:,:)
         type(grid_t), intent(in)    :: grid
+        logical,      intent(in),   optional :: extrapolate
 
         ! loop counter
         integer :: i
@@ -414,6 +415,136 @@ contains
         ! these will hold the actual indexes into the two arrays
         integer :: xs_in, xs_out, ys_in, ys_out
         integer :: xe_in, xe_out, ye_in, ye_out
+
+        logical :: do_extrapolate
+
+        do_extrapolate = .True.
+        if (present(extrapolate)) do_extrapolate = extrapolate
+
+        ! Ideally, and most of the time, this is all it is doing
+        ! output = input(grid%ims:grid%ime, grid%jms:grid%jme)
+        ! However, it is possible that input does not cover the requested memory bounds of this data
+        ! so we have to test.  If outside of bounds, extrapolate out from the boundary
+
+        nx = size(input,1)
+        ny = size(input,2)
+
+        nxo = size(output,1)
+        nyo = size(output,2)
+
+        if (grid%ims < 1) then
+            xs_out = 1 - grid%ims + 1
+            xs_in  = 1
+        else
+            xs_out = 1
+            xs_in  = grid%ims
+        endif
+
+        if (grid%ime > nx) then
+            xe_out = nxo - (grid%ime - nx)
+            xe_in  = nx
+        else
+            xe_out = nxo
+            xe_in  = grid%ime
+        endif
+
+        if (grid%jms < 1) then
+            ys_out = 1 - grid%jms + 1
+            ys_in  = 1
+        else
+            ys_out = 1
+            ys_in  = grid%jms
+        endif
+
+        if (grid%jme > ny) then
+            ye_out = nyo - (grid%jme - ny)
+            ye_in  = ny
+        else
+            ye_out = nyo
+            ye_in  = grid%jme
+        endif
+
+        !----------------------------------------------------
+        ! This is the area of overlap
+        ! Note that this is the main and likely only assignment
+        !----------------------------------------------------
+        output(xs_out:xe_out, :, ys_out:ye_out) = input(xs_in:xe_in, :, ys_in:ye_in)
+
+        ! outside of that overlap, extrapolate out from the boundary
+        ! this should only be necessary for border images
+        if (grid%ims < 1) then
+            do i=1,xs_out-1
+                if (do_extrapolate) then
+                    output(i,:,:) = output(xs_out,:,:) + (output(xs_out,:,:) - output(xs_out+1,:,:)) * (xs_out - i)
+                else
+                    output(i,:,:) = output(xs_out,:,:)
+                endif
+            enddo
+        endif
+
+        if (grid%ime > nx) then
+            do i=xe_out+1,nxo
+                if (do_extrapolate) then
+                    output(i,:,:) = output(xe_out,:,:) + (output(xe_out,:,:) - output(xe_out-1,:,:)) * (i - xe_out)
+                else
+                    output(i,:,:) = output(xe_out,:,:)
+                endif
+            enddo
+        endif
+
+        if (grid%jms < 1) then
+            do i=1,ys_out-1
+                if (do_extrapolate) then
+                    output(:,:,i) = output(:,:,ys_out) + (output(:,:,ys_out) - output(:,:,ys_out+1)) * (ys_out - i)
+                else
+                    output(:,:,i) = output(:,:,ys_out)
+                endif
+            enddo
+        endif
+
+        if (grid%jme > ny) then
+            do i=ye_out+1,nyo
+                if (do_extrapolate) then
+                    output(:,:,i) = output(:,:,ye_out) + (output(:,:,ye_out) - output(:,:,ye_out-1)) * (i - ye_out)
+                else
+                    output(:,:,i) = output(:,:,ye_out)
+                endif
+            enddo
+        endif
+
+    end subroutine extend_array
+
+
+    !> ---------------------------------
+    !! Subset one array to the memory bounds defined by the grid
+    !!
+    !! If the input grid does not cover the entire subset, values
+    !! are extrapolated outside of that subset region
+    !!
+    !! ---------------------------------
+    subroutine subset_array(input, output, grid, extrapolate)
+        implicit none
+        real,         intent(in)    :: input(:,:)
+        real,         intent(inout) :: output(:,:)
+        type(grid_t), intent(in)    :: grid
+        logical,      intent(in),   optional :: extrapolate
+
+        ! loop counter
+        integer :: i
+
+        ! input array dimensions
+        integer :: nx, ny
+        ! output array dimensions
+        integer :: nxo, nyo
+
+        ! these will hold the actual indexes into the two arrays
+        integer :: xs_in, xs_out, ys_in, ys_out
+        integer :: xe_in, xe_out, ye_in, ye_out
+
+        logical :: do_extrapolate
+
+        do_extrapolate = .True.
+        if (present(extrapolate)) do_extrapolate = extrapolate
 
         ! Ideally, and most of the time, this is all it is doing
         ! output = input(grid%ims:grid%ime, grid%jms:grid%jme)
@@ -468,25 +599,41 @@ contains
         ! this should only be necessary for border images
         if (grid%ims < 1) then
             do i=1,xs_out-1
-                output(i,:) = output(xs_out,:) + (output(xs_out,:) - output(xs_out+1,:)) * (xs_out - i)
+                if (do_extrapolate) then
+                    output(i,:) = output(xs_out,:) + (output(xs_out,:) - output(xs_out+1,:)) * (xs_out - i)
+                else
+                    output(i,:) = output(xs_out,:)
+                endif
             enddo
         endif
 
         if (grid%ime > nx) then
             do i=xe_out+1,nxo
-                output(i,:) = output(xe_out,:) + (output(xe_out,:) - output(xe_out-1,:)) * (i - xe_out)
+                if (do_extrapolate) then
+                    output(i,:) = output(xe_out,:) + (output(xe_out,:) - output(xe_out-1,:)) * (i - xe_out)
+                else
+                    output(i,:) = output(xe_out,:)
+                endif
             enddo
         endif
 
         if (grid%jms < 1) then
             do i=1,ys_out-1
-                output(:,i) = output(:,ys_out) + (output(:,ys_out) - output(:,ys_out+1)) * (ys_out - i)
+                if (do_extrapolate) then
+                    output(:,i) = output(:,ys_out) + (output(:,ys_out) - output(:,ys_out+1)) * (ys_out - i)
+                else
+                    output(:,i) = output(:,ys_out)
+                endif
             enddo
         endif
 
         if (grid%jme > ny) then
             do i=ye_out+1,nyo
-                output(:,i) = output(:,ye_out) + (output(:,ye_out) - output(:,ye_out-1)) * (i - ye_out)
+                if (do_extrapolate) then
+                    output(:,i) = output(:,ye_out) + (output(:,ye_out) - output(:,ye_out-1)) * (i - ye_out)
+                else
+                    output(:,i) = output(:,ye_out)
+                endif
             enddo
         endif
 
@@ -528,13 +675,24 @@ contains
         implicit none
         type(domain_t), intent(inout) :: this
 
-        real, allocatable :: temp_z(:,:,:)
+        real, allocatable :: temp_z(:,:,:), temp_z_extended(:,:,:)
 
         call setup_geo(this%geo,   this%latitude%data_2d,   this%longitude%data_2d,   this%z%data_3d)
+
         call array_offset_x(this%z%data_3d, temp_z)
+        allocate(temp_z_extended(this%u_grid2d%ims:this%u_grid2d%ims, &
+                                 this%u_grid2d%kms:this%u_grid2d%kme, &
+                                 this%u_grid2d%jms:this%u_grid2d%jms))
+        call extend_array(temp_z, temp_z_extended, this%u_grid2d, extrapolate=.False.)
         call setup_geo(this%geo_u, this%u_latitude%data_2d, this%u_longitude%data_2d, temp_z)
+        deallocate(temp_z_extended)
+
         call array_offset_y(this%z%data_3d, temp_z)
-        call setup_geo(this%geo_v, this%v_latitude%data_2d, this%v_longitude%data_2d, temp_z)
+        allocate(temp_z_extended(this%v_grid2d%ims:this%v_grid2d%ims, &
+                                 this%v_grid2d%kms:this%v_grid2d%kme, &
+                                 this%v_grid2d%jms:this%v_grid2d%jms))
+        call extend_array(temp_z, temp_z_extended, this%v_grid2d, extrapolate=.False.)
+        call setup_geo(this%geo_v, this%v_latitude%data_2d, this%v_longitude%data_2d, temp_z_extended)
 
         if (allocated(temp_z)) deallocate(temp_z)
     end subroutine setup_domain_geo
@@ -677,6 +835,7 @@ contains
         call this%v_grid%set_grid_dimensions(       nx_global, ny_global, nz_global, ny_extra = 1)
 
         call this%grid2d%set_grid_dimensions(       nx_global, ny_global, 0)
+
         call this%u_grid2d%set_grid_dimensions(     nx_global, ny_global, 0, nx_extra = 1)
         this%u_grid2d%ims = this%u_grid2d%ims - nsmooth
         this%u_grid2d%ime = this%u_grid2d%ime + nsmooth
