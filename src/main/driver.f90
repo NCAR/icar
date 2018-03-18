@@ -61,11 +61,13 @@ program icar
     i=1
     do while (domain%model_time < options%parameters%end_time)
 
+        if (this_image()==1) write(*,*) ""
+        if (this_image()==1) write(*,*) " ----------------------------------------------------------------------"
+        if (this_image()==1) print*, "Updating Boundary conditions"
         call boundary%update_forcing(options)
         call domain%interpolate_forcing(boundary, update=.True.)
 
-        if (this_image()==1) write(*,*) ""
-        if (this_image()==1) write(*,*) " ----------------------------------------------------------------------"
+        if (this_image()==1) print*, "Running Physics"
         if (this_image()==1) write(*,*) "  Model time = ", trim(domain%model_time%as_string())
         if (this_image()==1) write(*,*) "   End  time = ", trim(options%parameters%end_time%as_string())
         if (this_image()==1) write(*,*) "  Input time = ", trim(boundary%current_time%as_string())
