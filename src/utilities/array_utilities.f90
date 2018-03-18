@@ -6,9 +6,18 @@ module array_utilities
         module procedure smooth_array_2d, smooth_array_3d
     end interface
 
+    interface array_offset_x
+        module procedure array_offset_x_2d, array_offset_x_3d
+    end interface
+
+    interface array_offset_y
+        module procedure array_offset_y_2d, array_offset_y_3d
+    end interface
+
+
 contains
 
-    subroutine array_offset_x(input_array, output_array)
+    subroutine array_offset_x_3d(input_array, output_array)
         implicit none
         real,              intent(in)    :: input_array(:,:,:)
         real, allocatable, intent(inout) :: output_array(:,:,:)
@@ -28,7 +37,45 @@ contains
 
     end subroutine
 
-    subroutine array_offset_y(input_array, output_array)
+    subroutine array_offset_x_2d(input_array, output_array)
+        implicit none
+        real,              intent(in)    :: input_array(:,:)
+        real, allocatable, intent(inout) :: output_array(:,:)
+
+        integer :: nx,ny
+
+        nx = size(input_array,1)
+        ny = size(input_array,2)
+
+        if (allocated(output_array)) deallocate(output_array)
+        allocate(output_array(nx+1, ny))
+
+        output_array(1,:)    = (1.5 * input_array(1,:)  - 0.5 * input_array(2,:))    ! extrapolate past the end
+        output_array(2:nx,:) = (input_array(1:nx-1,:) + input_array(2:nx,:) ) / 2    ! interpolate between points
+        output_array(nx+1,:) = (1.5 * input_array(nx,:)  - 0.5 * input_array(nx-1,:))! extrapolate past the end
+
+    end subroutine
+
+    subroutine array_offset_y_2d(input_array, output_array)
+        implicit none
+        real,              intent(in)    :: input_array(:,:)
+        real, allocatable, intent(inout) :: output_array(:,:)
+
+        integer :: nx,nz,ny
+
+        nx = size(input_array,1)
+        ny = size(input_array,2)
+
+        if (allocated(output_array)) deallocate(output_array)
+        allocate(output_array(nx, ny+1))
+
+        output_array(:,1)    = (1.5 * input_array(:,1)  - 0.5 * input_array(:,2))    ! extrapolate past the end
+        output_array(:,2:ny) = (input_array(:,1:ny-1) + input_array(:,2:ny) ) / 2    ! interpolate between points
+        output_array(:,ny+1) = (1.5 * input_array(:,ny)  - 0.5 * input_array(:,ny-1))! extrapolate past the end
+
+    end subroutine
+
+    subroutine array_offset_y_3d(input_array, output_array)
         implicit none
         real,              intent(in)    :: input_array(:,:,:)
         real, allocatable, intent(inout) :: output_array(:,:,:)
