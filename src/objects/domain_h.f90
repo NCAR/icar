@@ -86,6 +86,7 @@ module domain_interface
     type(interpolable_type) :: geo_v
 
     real :: dx
+    integer :: nsmooth
 
     real, allocatable :: costheta(:,:)
     real, allocatable :: sintheta(:,:)

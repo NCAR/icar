@@ -684,7 +684,7 @@ contains
                                  this%u_grid%kms  :this%u_grid%kme,   &
                                  this%u_grid2d%jms:this%u_grid2d%jme))
         call extend_array(temp_z, temp_z_extended, this%u_grid2d, extrapolate=.False.)
-        call setup_geo(this%geo_u, this%u_latitude%data_2d, this%u_longitude%data_2d, temp_z)
+        call setup_geo(this%geo_u, this%u_latitude%data_2d, this%u_longitude%data_2d, temp_z_extended)
         deallocate(temp_z_extended)
 
         call array_offset_y(this%z%data_3d, temp_z)
@@ -819,6 +819,7 @@ contains
 
         nsmooth = nint(options%parameters%smooth_wind_distance / options%parameters%dx)
         print*, "nsmooth=",nsmooth
+        this%nsmooth = nsmooth
 
         ! This doesn't need to read in this variable, it could just request the dimensions
         ! but this is not a performance sensitive part of the code (for now)
@@ -902,12 +903,16 @@ contains
         call geo_interp(forcing%geo%z, forcing%z, forcing%geo%geolut)
         call vLUT(this%geo,   forcing%geo)
 
-        allocate(forcing%geo_u%z(nx+1, nz, ny))
+        allocate(forcing%geo_u%z(nx+1+this%nsmooth*2, nz, ny+this%nsmooth*2))
         call geo_interp(forcing%geo_u%z, forcing%z, forcing%geo_u%geolut)
+        print*, shape(forcing%geo_u%z)
+        print*, shape(this%geo_u%z)
         call vLUT(this%geo_u, forcing%geo_u)
 
-        allocate(forcing%geo_v%z(nx, nz, ny+1))
+        allocate(forcing%geo_v%z(nx+this%nsmooth*2, nz, ny+1+this%nsmooth*2))
         call geo_interp(forcing%geo_v%z, forcing%z, forcing%geo_v%geolut)
+        print*, shape(forcing%geo_v%z)
+        print*, shape(this%geo_v%z)
         call vLUT(this%geo_v, forcing%geo_v)
 
     end subroutine
