@@ -320,17 +320,16 @@ contains
             call load_data(options%parameters%init_conditions_file,   &
                            options%parameters%ulon_hi,                &
                            temporary_data, this%u_grid)
-            this%u_longitude%data_2d = temporary_data(this%u_grid%ims:this%u_grid%ime, this%u_grid%jms:this%u_grid%jme)
+
+            call subset_array(temporary_data, this%u_longitude%data_2d, this%u_grid2d)
         else
             ! load the mass grid data again to get the full grid
             call load_data(options%parameters%init_conditions_file,   &
                            options%parameters%lon_hi,                 &
                            temporary_data, this%grid)
 
-            associate(ulon => this%u_longitude%data_2d, grid => this%u_grid)
-                call array_offset_x(temporary_data, temp_offset)
-                ulon = temp_offset(grid%ims:grid%ime, grid%jms:grid%jme)
-            end associate
+            call array_offset_x(temporary_data, temp_offset)
+            call subset_array(temp_offset, this%u_longitude%data_2d, this%u_grid2d)
         endif
 
         ! Read the u-grid latitude data if specified, other wise interpolate from mass grid
@@ -338,18 +337,16 @@ contains
             call load_data(options%parameters%init_conditions_file,   &
                            options%parameters%ulat_hi,                &
                            temporary_data, this%u_grid)
-            this%u_latitude%data_2d = temporary_data(this%u_grid%ims:this%u_grid%ime, this%u_grid%jms:this%u_grid%jme)
 
+            call subset_array(temporary_data, this%u_latitude%data_2d, this%u_grid2d)
         else
             ! load the mass grid data again to get the full grid
             call load_data(options%parameters%init_conditions_file,   &
                            options%parameters%lat_hi,                 &
                            temporary_data, this%grid)
 
-            associate(ulat => this%u_latitude%data_2d, grid => this%u_grid)
-                call array_offset_x(temporary_data, temp_offset)
-                ulat = temp_offset(grid%ims:grid%ime, grid%jms:grid%jme)
-            end associate
+            call array_offset_x(temporary_data, temp_offset)
+            call subset_array(temp_offset, this%u_latitude%data_2d, this%u_grid2d)
 
         endif
 
@@ -358,19 +355,16 @@ contains
             call load_data(options%parameters%init_conditions_file,   &
                            options%parameters%vlon_hi,                &
                            temporary_data, this%v_grid)
-            this%v_longitude%data_2d = temporary_data(this%v_grid%ims:this%v_grid%ime, this%v_grid%jms:this%v_grid%jme)
 
+            call subset_array(temporary_data, this%v_longitude%data_2d, this%v_grid2d)
         else
             ! load the mass grid data again to get the full grid
             call load_data(options%parameters%init_conditions_file,   &
                            options%parameters%lon_hi,                 &
                            temporary_data, this%grid)
 
-            associate(vlon => this%v_longitude%data_2d, grid=>this%v_grid)
-
-                call array_offset_y(temporary_data, temp_offset)
-                vlon = temp_offset(grid%ims:grid%ime, grid%jms:grid%jme)
-            end associate
+            call array_offset_y(temporary_data, temp_offset)
+            call subset_array(temp_offset, this%v_longitude%data_2d, this%v_grid2d)
         endif
 
         ! Read the v-grid latitude data if specified, other wise interpolate from mass grid
@@ -378,7 +372,8 @@ contains
             call load_data(options%parameters%init_conditions_file,   &
                            options%parameters%vlat_hi,                &
                            temporary_data, this%v_grid)
-            this%v_latitude%data_2d = temporary_data(this%v_grid%ims:this%v_grid%ime, this%v_grid%jms:this%v_grid%jme)
+
+            call subset_array(temporary_data, this%v_latitude%data_2d, this%v_grid2d)
 
         else
             ! load the mass grid data again to get the full grid
@@ -386,16 +381,116 @@ contains
                            options%parameters%lat_hi,                 &
                            temporary_data, this%grid)
 
-            associate(vlat => this%v_latitude%data_2d, grid => this%v_grid)
-
-                call array_offset_y(temporary_data, temp_offset)
-                vlat = temp_offset(grid%ims:grid%ime, grid%jms:grid%jme)
-            end associate
+            call array_offset_y(temporary_data, temp_offset)
+            call subset_array(temp_offset, this%v_latitude%data_2d, this%v_grid2d)
         endif
 
         if (this_image()==1) write(*,*) "  Finished reading core domain variables"
 
     end subroutine
+
+
+    !> ---------------------------------
+    !! Subset one array to the memory bounds defined by the grid
+    !!
+    !! If the input grid does not cover the entire subset, values
+    !! are extrapolated outside of that subset region
+    !!
+    !! ---------------------------------
+    subroutine subset_array(input, output, grid)
+        implicit none
+        real,         intent(in)    :: input(:,:)
+        real,         intent(inout) :: output(:,:)
+        type(grid_t), intent(in)    :: grid
+
+        ! loop counter
+        integer :: i
+
+        ! input array dimensions
+        integer :: nx, ny
+        ! output array dimensions
+        integer :: nxo, nyo
+
+        ! these will hold the actual indexes into the two arrays
+        integer :: xs_in, xs_out, ys_in, ys_out
+        integer :: xe_in, xe_out, ye_in, ye_out
+
+        ! Ideally, and most of the time, this is all it is doing
+        ! output = input(grid%ims:grid%ime, grid%jms:grid%jme)
+        ! However, it is possible that input does not cover the requested memory bounds of this data
+        ! so we have to test.  If outside of bounds, extrapolate out from the boundary
+
+        nx = size(input,1)
+        ny = size(input,2)
+
+        nxo = size(output,1)
+        nyo = size(output,2)
+
+        if (grid%ims < 1) then
+            xs_out = 1 - grid%ims + 1
+            xs_in  = 1
+        else
+            xs_out = 1
+            xs_in  = grid%ims
+        endif
+
+        if (grid%ime > nx) then
+            xe_out = nxo - (grid%ime - nx)
+            xe_in  = nx
+        else
+            xe_out = nxo
+            xe_in  = grid%ime
+        endif
+
+        if (grid%jms < 1) then
+            ys_out = 1 - grid%jms + 1
+            ys_in  = 1
+        else
+            ys_out = 1
+            ys_in  = grid%jms
+        endif
+
+        if (grid%jme > ny) then
+            ye_out = nyo - (grid%jme - ny)
+            ye_in  = ny
+        else
+            ye_out = nyo
+            ye_in  = grid%jme
+        endif
+
+        !----------------------------------------------------
+        ! This is the area of overlap
+        ! Note that this is the main and likely only assignment
+        !----------------------------------------------------
+        output(xs_out:xe_out, ys_out:ye_out) = input(xs_in:xe_in, ys_in:ye_in)
+
+        ! outside of that overlap, extrapolate out from the boundary
+        ! this should only be necessary for border images
+        if (grid%ims < 1) then
+            do i=1,xs_out-1
+                output(i,:) = output(xs_out,:) + (output(xs_out,:) - output(xs_out+1,:)) * (xs_out - i)
+            enddo
+        endif
+
+        if (grid%ime > nx) then
+            do i=xe_out+1,nxo
+                output(i,:) = output(xe_out,:) + (output(xe_out,:) - output(xe_out-1,:)) * (i - xe_out)
+            enddo
+        endif
+
+        if (grid%jms < 1) then
+            do i=1,ys_out-1
+                output(:,i) = output(:,ys_out) + (output(:,ys_out) - output(:,ys_out+1)) * (ys_out - i)
+            enddo
+        endif
+
+        if (grid%jme > ny) then
+            do i=ye_out+1,nyo
+                output(:,i) = output(:,ye_out) + (output(:,ye_out) - output(:,ye_out-1)) * (i - ye_out)
+            enddo
+        endif
+
+    end subroutine subset_array
 
     !> -------------------------------
     !! Setup a single Geographic structure given a latitude, longitude, and z array
@@ -562,7 +657,10 @@ contains
         class(options_t),intent(in)     :: options
 
         real, allocatable :: temporary_data(:,:)
-        integer :: nx_global, ny_global, nz_global
+        integer :: nx_global, ny_global, nz_global, nsmooth
+
+        nsmooth = nint(options%parameters%smooth_wind_distance / options%parameters%dx)
+        print*, "nsmooth=",nsmooth
 
         ! This doesn't need to read in this variable, it could just request the dimensions
         ! but this is not a performance sensitive part of the code (for now)
@@ -579,8 +677,8 @@ contains
         call this%v_grid%set_grid_dimensions(       nx_global, ny_global, nz_global, ny_extra = 1)
 
         call this%grid2d%set_grid_dimensions(       nx_global, ny_global, 0)
-        call this%u_grid2d%set_grid_dimensions(     nx_global, ny_global, 0, nx_extra = 1)
-        call this%v_grid2d%set_grid_dimensions(     nx_global, ny_global, 0, ny_extra = 1)
+        call this%u_grid2d%set_grid_dimensions(     nx_global, ny_global, 0, nx_extra = 1 + nsmooth)
+        call this%v_grid2d%set_grid_dimensions(     nx_global, ny_global, 0, ny_extra = 1 + nsmooth)
 
         call this%grid_soil%set_grid_dimensions(    nx_global, ny_global, 4)
         call this%grid_monthly%set_grid_dimensions( nx_global, ny_global, 12)
@@ -874,6 +972,7 @@ contains
             allocate(pre_smooth(size(forcing%geo_u%geolut%x,2), size(input_data%data_3d,2), size(forcing%geo_u%geolut%x,3) ))
 
             windowsize = (size(forcing%geo_u%geolut%x,2) - size(var_data,1)) / 2
+            print*, "windowsize=",windowsize
             nx = size(forcing%geo_u%geolut%x,2)
             ny = size(forcing%geo_u%geolut%x,3)
 
