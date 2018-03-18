@@ -35,7 +35,7 @@ program test_caf_init_write
 
     if (this_image()==1) print*, "Writing sample output file"
     write(file_name, '("icar_restart_output_",I3.3,".nc")') this_image()
-    call dataset%save_file(file_name)
+    call dataset%save_file(file_name, 1, domain%model_time)
 
     if (this_image()==1) print*, "Model time = ", trim(domain%model_time%as_string())
 

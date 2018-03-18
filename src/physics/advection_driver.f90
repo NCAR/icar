@@ -24,9 +24,13 @@ contains
         type(domain_t), intent(in) :: domain
         type(options_t),intent(in) :: options
 
+        if (this_image()==1) write(*,*) "Initializing Microphysics"
         if (options%physics%advection==kADV_UPWIND) then
+            if (this_image()==1) write(*,*) "    Upwind"
             call upwind_init(domain,options)
         elseif(options%physics%advection==kADV_MPDATA) then
+            if (this_image()==1) write(*,*) "    MP-DATA"
+            stop "MP-DATA not supported yet for ICAR 2.0"
             ! call mpdata_init(domain,options)
         endif
 

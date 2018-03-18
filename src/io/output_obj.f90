@@ -1,5 +1,6 @@
 submodule(output_interface) output_implementation
-  use output_metadata, only : get_metadata
+  use output_metadata,          only : get_metadata
+  use time_object,              only : Time_type
   implicit none
 
 contains
@@ -32,9 +33,11 @@ contains
     end subroutine
 
 
-    module subroutine save_file(this, filename)
-        class(output_t), intent(inout)  :: this
-        character(len=*), intent(in) :: filename
+    module subroutine save_file(this, filename, current_step, time)
+        class(output_t),  intent(inout) :: this
+        character(len=*), intent(in)    :: filename
+        integer,          intent(in)    :: current_step
+        type(Time_type),  intent(in)    :: time
         integer :: err
 
         if (.not.this%is_initialized) call this%init()
@@ -48,19 +51,19 @@ contains
         endif
 
         ! define variables or find variable IDs (and dimensions)
-        call setup_variables(this)
-
-        ! add global attributes such as the image number
-        call add_global_attributes(this)
+        call setup_variables(this, time)
 
         if (this%creating) then
+            ! add global attributes such as the image number, domain dimension, creation time
+            call add_global_attributes(this)
+
             ! End define mode. This tells netCDF we are done defining metadata.
             call check( nf90_enddef(this%ncfile_id), "end define mode" )
             this%creating=.false.
         endif
 
         ! store output
-        call save_data(this)
+        call save_data(this, current_step, time)
 
         ! close file
         call check(nf90_close(this%ncfile_id), "Closing file "//trim(filename))
@@ -162,9 +165,10 @@ contains
 
     end subroutine add_global_attributes
 
-    subroutine setup_variables(this)
+    subroutine setup_variables(this, time)
         implicit none
         class(output_t), intent(inout) :: this
+        type(Time_type), intent(in)    :: time
         integer :: i
 
         ! iterate through variables creating or setting up variable IDs if they exist, also dimensions
@@ -175,27 +179,88 @@ contains
             call setup_variable(this, this%variables(i))
         end do
 
+        call setup_time_variable(this, time)
+
     end subroutine setup_variables
 
+    subroutine setup_time_variable(this, time)
+        implicit none
+        class(output_t), intent(inout) :: this
+        type(Time_type), intent(in)    :: time
+        integer :: err
 
-    subroutine save_data(this)
+        associate(var => this%time)
+
+        err = nf90_inq_varid(this%ncfile_id, var%name, var%var_id)
+
+        ! if the variable was not found in the netcdf file then we will define it.
+        if (err /= NF90_NOERR) then
+
+            if (allocated(var%dim_ids)) deallocate(var%dim_ids)
+            allocate(var%dim_ids(1))
+            var%dimensions = [ "time" ]
+            var%n_dimensions = 1
+            var%name = "time"
+
+            ! Try to find the dimension ID if it exists already.
+            err = nf90_inq_dimid(this%ncfile_id, trim(var%dimensions(1)), var%dim_ids(1))
+
+            ! if the dimension doesn't exist in the file, create it.
+            if (err/=NF90_NOERR) then
+                call check( nf90_def_dim(this%ncfile_id, trim(var%dimensions(1)), NF90_UNLIMITED, &
+                            var%dim_ids(1) ), "def_dim"//var%dimensions(1) )
+            endif
+
+            call check( nf90_def_var(this%ncfile_id, var%name, NF90_DOUBLE, var%dim_ids(1), var%var_id), "Defining time" )
+            call check( nf90_put_att(this%ncfile_id, var%var_id,"standard_name","time"))
+            call check( nf90_put_att(this%ncfile_id, var%var_id,"units",time%units()))
+            call check( nf90_put_att(this%ncfile_id, var%var_id,"UTCoffset","0"))
+
+        endif
+        end associate
+
+    end subroutine setup_time_variable
+
+
+    subroutine save_data(this, current_step, time)
         implicit none
         class(output_t), intent(in) :: this
+        integer,         intent(in) :: current_step
+        type(Time_type), intent(in) :: time
         integer :: i
         integer :: dim_3d(3)
+
+        integer :: start_three_D_t(4) = [1,1,1,1]
+        integer :: start_two_D_t(3)  = [1,1,1]
+        start_three_D_t(4) = current_step
+        start_two_D_t(3)   = current_step
 
         do i=1,this%n_variables
             associate(var => this%variables(i))
                 if (var%three_d) then
                     dim_3d = var%dim_len
-                    call check( nf90_put_var(this%ncfile_id, var%var_id,  reshape(var%data_3d, shape=dim_3d, order=[1,3,2]) ),   &
-                                "saving:"//trim(var%name) )
+                    if (var%unlimited_dim) then
+                        call check( nf90_put_var(this%ncfile_id, var%var_id,  reshape(var%data_3d, shape=dim_3d, order=[1,3,2]), start_three_D_t),   &
+                                    "saving:"//trim(var%name) )
+                    else
+                        call check( nf90_put_var(this%ncfile_id, var%var_id,  reshape(var%data_3d, shape=dim_3d, order=[1,3,2]) ),   &
+                                    "saving:"//trim(var%name) )
+                    endif
                 elseif (var%two_d) then
-                    call check( nf90_put_var(this%ncfile_id, var%var_id,  var%data_2d),   &
+                    if (var%unlimited_dim) then
+                        call check( nf90_put_var(this%ncfile_id, var%var_id,  var%data_2d, start_two_D_t),   &
                                 "saving:"//trim(var%name) )
+                    else
+                        call check( nf90_put_var(this%ncfile_id, var%var_id,  var%data_2d),   &
+                                "saving:"//trim(var%name) )
+                    endif
                 endif
             end associate
         end do
+
+        call check( nf90_put_var(this%ncfile_id, this%time%var_id, time%mjd(), [current_step] ),   &
+                    "saving:"//trim(this%time%name) )
+
 
     end subroutine save_data
 
@@ -207,11 +272,7 @@ contains
 
         if (allocated(var%dim_ids)) deallocate(var%dim_ids)
 
-        if (var%three_d) then
-            allocate(var%dim_ids(3))
-        elseif (var%two_d) then
-            allocate(var%dim_ids(2))
-        endif
+        allocate(var%dim_ids(var%n_dimensions))
 
         do i = 1, size(var%dim_ids)
 
@@ -221,12 +282,10 @@ contains
             ! probably the dimension doesn't exist in the file, so we will create it.
             if (err/=NF90_NOERR) then
 
-                ! 4d = time dimension, only write if it has one
-                if (i == 4) then
-                    if (var%unlimited_dim) then
-                        call check( nf90_def_dim(this%ncfile_id, trim(var%dimensions(i)), NF90_UNLIMITED, &
-                                    var%dim_ids(i) ), "def_dim"//var%dimensions(i) )
-                    endif
+                ! assume that the last dimension should be the unlimited dimension (generally a good idea...)
+                if (var%unlimited_dim .and. (i==size(var%dim_ids))) then
+                    call check( nf90_def_dim(this%ncfile_id, trim(var%dimensions(i)), NF90_UNLIMITED, &
+                                var%dim_ids(i) ), "def_dim"//var%dimensions(i) )
                 else
                     call check( nf90_def_dim(this%ncfile_id, var%dimensions(i), var%dim_len(i),       &
                                 var%dim_ids(i) ), "def_dim"//var%dimensions(i) )

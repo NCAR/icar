@@ -12,8 +12,8 @@ module variable_interface
         real, pointer :: data_3d(:,:,:) => null()
         real, pointer :: data_2d(:,:)   => null()
 
-        real, allocatable :: dqdt_3d(:,:,:)
-        real, allocatable :: dqdt_2d(:,:)
+        real, pointer :: dqdt_3d(:,:,:) => null()   ! Note these have to be pointers so they get referenced when variable_t is passed around(?)
+        real, pointer :: dqdt_2d(:,:)   => null()   ! Note these have to be pointers so they get referenced when variable_t is passed around(?)
 
         logical                         :: unlimited_dim = .False.
         logical                         :: three_d = .False.

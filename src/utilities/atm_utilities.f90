@@ -443,13 +443,18 @@ contains
         real, intent(in) :: pressure
         real :: exner
 
-        associate(po=>100000, Rd=>287.058, cp=>1003.5)
+        associate(po=>100000) !, Rd=>287.058, cp=>1003.5)
             exner = (pressure / po) ** (Rd/cp)
 
         end associate
     end function
 
 
+    !> -------------------------------
+    !!
+    !! Initialize module level variables with configuration options
+    !!
+    !! -------------------------------
     subroutine init_atm_utilities(options)
         implicit none
         type(options_t) :: options

@@ -109,7 +109,7 @@ contains
             this%data_2d = 0
 
             if (trim(this%forcing_var) /= "") then
-                if (allocated(this%dqdt_2d)) deallocate(this%dqdt_2d)
+                if (associated(this%dqdt_2d)) deallocate(this%dqdt_2d)
                 allocate(this%dqdt_2d(dims(1), dims(2)), stat=err)
                 if (err /= 0) stop "variable:dims:dqdt_2d: Allocation request denied"
 
@@ -127,7 +127,7 @@ contains
             this%data_3d = 0
 
             if (trim(this%forcing_var) /= "") then
-                if (allocated(this%dqdt_3d)) deallocate(this%dqdt_3d)
+                if (associated(this%dqdt_3d)) deallocate(this%dqdt_3d)
                 allocate(this%dqdt_3d(dims(1), dims(2), dims(3)), stat=err)
                 if (err /= 0) stop "variable:dims:dqdt_3d: Allocation request denied"
 
@@ -223,10 +223,6 @@ contains
             call broadcast(this%data_2d, source, first, last, create_co_array=.True.)
         endif
 
-
-        ! ! note these are used for netcdf output and shouldn't be broadcast(?)
-        ! integer, allocatable    :: dim_ids(:)
-        ! integer                 :: var_id = -1
     end subroutine
 
 

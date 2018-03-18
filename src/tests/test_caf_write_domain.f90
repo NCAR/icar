@@ -40,7 +40,7 @@ program test_caf_write_domain
 
     print*, "Writing sample output file"
     write(file_name, '("Initial_output_",I3.3,".nc")') this_image()
-    call dataset%save_file(file_name)
+    call dataset%save_file(file_name, 1, domain%model_time)
     sync all
 
     print*, ""

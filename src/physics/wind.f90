@@ -308,7 +308,8 @@ contains
             domain%costheta = 0
         endif
 
-        if (.not.allocated(domain%w%meta_data%dqdt_3d)) then
+        ! note w is special cased because it does not have a forcing variable, so it is not necessarily allocated automatically
+        if (.not.associated(domain%w%meta_data%dqdt_3d)) then
             allocate(domain%w%meta_data%dqdt_3d(ims:ime,kms:kme,jms:jme))
             domain%w%meta_data%dqdt_3d = 0
         endif

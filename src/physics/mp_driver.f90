@@ -74,15 +74,15 @@ contains
         implicit none
         type(options_t), intent(inout) :: options
 
-        write(*,*) "Initializing Microphysics"
+        if (this_image()==1) write(*,*) "Initializing Microphysics"
         if (options%physics%microphysics    == kMP_THOMPSON) then
-            write(*,*) "    Thompson Microphysics"
+            if (this_image()==1) write(*,*) "    Thompson Microphysics"
             call thompson_aer_init()
             ! call thompson_init(options%mp_options)
             precip_delta=.True.
 
         elseif (options%physics%microphysics == kMP_SB04) then
-            write(*,*) "    Simple Microphysics"
+            if (this_image()==1) write(*,*) "    Simple Microphysics"
             precip_delta=.True.
         ! elseif (options%physics%microphysics==kMP_MORRISON) then
         !     write(*,*) "    Morrison Microphysics"
@@ -109,7 +109,7 @@ contains
                       kVARS%water_vapor, kVARS%cloud_water,             kVARS%rain_in_air,  kVARS%rain_number_concentration, &
                       kVARS%snow_in_air, kVARS%cloud_ice,               kVARS%w,            kVARS%ice_number_concentration,      &
                       kVARS%snowfall,    kVARS%precipitation,           kVARS%graupel,      kVARS%graupel_in_air,     &
-                      kVARS%dz_interface ])
+                      kVARS%dz ])
 
         ! List the variables that are required to be advected for the simple microphysics
         call options%advect_vars( &
@@ -121,7 +121,7 @@ contains
         call options%restart_vars( &
                        [kVARS%pressure,     kVARS%potential_temperature,    kVARS%water_vapor,   &
                         kVARS%cloud_water,  kVARS%rain_in_air,              kVARS%snow_in_air,   &
-                        kVARS%precipitation,kVARS%snowfall,                 kVARS%dz_interface,  &
+                        kVARS%precipitation,kVARS%snowfall,                 kVARS%dz,            &
                         kVARS%snow_in_air,  kVARS%cloud_ice,                kVARS%rain_number_concentration, &
                         kVARS%rain_in_air,  kVARS%ice_number_concentration, kVARS%graupel_in_air ] )
 
@@ -334,8 +334,10 @@ contains
 
         ! only run the microphysics if the next time step would put it over the update_interval time
         if (((domain%model_time%seconds() + dt_in)-last_model_time)>=update_interval) then
+
             ! calculate the actual time step for the microphysics
             mp_dt = domain%model_time%seconds()-last_model_time
+
             ! reset the counter so we know that *this* is the last time we've run the microphysics
             last_model_time = domain%model_time%seconds()
 
@@ -346,20 +348,11 @@ contains
                 last_snow = domain%accumulated_snowfall%data_2d
             endif
 
-            kts=kds
-            kte=kde
             ! set the current tile to the top layer to process microphysics for
             if (options%mp_options%top_mp_level>0) then
                 kte=min(kte, options%mp_options%top_mp_level)
             endif
-            if (options%parameters%ideal) then
-                ! for ideal runs process the boundaries as well to be consistent with WRF
-                its=ids;ite=ide
-                jts=jds;jte=jde
-            else
-                its=ids+1;ite=ide-1
-                jts=jds+1;jte=jde-1
-            endif
+
             ! run the thompson microphysics
             if (options%physics%microphysics==kMP_THOMPSON) then
                 ! call the thompson microphysics
@@ -380,15 +373,15 @@ contains
                                       RAINNC = domain%accumulated_precipitation%data_2d,    &
                                       SNOWNC = domain%accumulated_snowfall%data_2d,         &
                                       has_reqc=0, has_reqi=0, has_reqs=0,                   &
-                                      ids = domain%ids, ide = domain%ide,                   & ! domain dims
-                                      jds = domain%jds, jde = domain%jde,                   &
-                                      kds = domain%kds, kde = domain%kde,                   &
-                                      ims = domain%ims, ime = domain%ime,                   & ! memory dims
-                                      jms = domain%jms, jme = domain%jme,                   &
-                                      kms = domain%kms, kme = domain%kme,                   &
-                                      its = domain%its, ite = domain%ite,                   & ! tile dims
-                                      jts = domain%jts, jte = domain%jte,                   &
-                                      kts = domain%kts, kte = domain%kte)
+                                      ids = ids, ide = ide,                   & ! domain dims
+                                      jds = jds, jde = jde,                   &
+                                      kds = kds, kde = kde,                   &
+                                      ims = ims, ime = ime,                   & ! memory dims
+                                      jms = jms, jme = jme,                   &
+                                      kms = kms, kme = kme,                   &
+                                      its = its, ite = ite,                   & ! tile dims
+                                      jts = jts, jte = jte,                   &
+                                      kts = kts, kte = kte)
 
             elseif (options%physics%microphysics==kMP_SB04) then
                 ! call the simple microphysics routine of SB04
@@ -403,8 +396,9 @@ contains
                                       domain%accumulated_precipitation%data_2d, &
                                       domain%accumulated_snowfall%data_2d,      &
                                       mp_dt,                                    &
-                                      domain%dz_interface%data_3d,              &
+                                      domain%dz_mass%data_3d,                   &
                                       ime-ims+1, jme-jms+1, kme-kms+1)
+
             ! elseif (options%physics%microphysics==kMP_MORRISON) then
             !     call MP_MORR_TWO_MOMENT(itimestep,                         &
             !                     domain%th, domain%qv, domain%cloud,     &

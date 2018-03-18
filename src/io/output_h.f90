@@ -5,6 +5,7 @@ module output_interface
   use variable_interface, only : variable_t
   use domain_interface,   only : domain_t
   use meta_data_interface,only : meta_data_t
+  use time_object,        only : Time_type
 
   implicit none
 
@@ -18,6 +19,7 @@ module output_interface
 
       integer :: n_variables = 0
       type(variable_t), allocatable :: variables(:)
+      type(variable_t) :: time
 
       character(len=kMAX_FILE_LENGTH) :: filename
       integer :: ncfile_id
@@ -68,10 +70,12 @@ module output_interface
           class(domain_t), intent(in)     :: domain
       end subroutine
 
-      module subroutine save_file(this, filename)
+      module subroutine save_file(this, filename, current_step, time)
           implicit none
-          class(output_t),   intent(inout)     :: this
-          character(len=*),  intent(in) :: filename
+          class(output_t),  intent(inout) :: this
+          character(len=*), intent(in)    :: filename
+          integer,          intent(in)    :: current_step
+          type(Time_type),  intent(in)    :: time
       end subroutine
 
   end interface

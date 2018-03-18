@@ -11,7 +11,7 @@ import xarray as xr
 file_search = "icar_restart_output_{ens}_*"
 
 # number of processors to parallelize reading the files over
-n_processors = 10
+n_processors = 1
 
 def load_file(file_name):
     '''Load a netcdf dataset into memory'''
@@ -53,13 +53,15 @@ def set_up_dataset(d):
     data_vars = dict()
 
     for v in d.variables:
-        coords = d[v].coords
+        coords = [c for c in d[v].coords]
         dims   = d[v].dims
         name   = d[v].name
         attrs  = d[v].attrs
 
         x_off, y_off = get_dim_offset(dims)
 
+        if len(dims) == 1:
+            data = np.zeros((nt))
         if len(dims) == 2:
             data = np.zeros((ny + y_off, nx + x_off))
         if len(dims) == 3:
@@ -69,11 +71,13 @@ def set_up_dataset(d):
             nz = d.dims[dims[1]]
             data = np.zeros((nt, nz, ny + y_off, nx + x_off))
 
-        # print(data.shape, dims, name, attrs)
-        data_vars[v] = xr.DataArray(data, dims=dims, name=name, attrs=attrs)
+        # print(name, data.shape, dims, attrs)
+        data_vars[v] = xr.DataArray(data, dims=dims, name=name, attrs=attrs)#, coords=coords)
 
-    return xr.Dataset(data_vars, attrs=d.attrs)
-
+    ds = xr.Dataset(data_vars, attrs=d.attrs)
+    ds.encoding = d.encoding
+    ds["time"] = d["time"]
+    return ds.set_coords([c for c in d.coords])
 
 
 def agg_file(first_file):

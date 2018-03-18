@@ -1108,6 +1108,15 @@ contains
     end subroutine
 
 
+    !> ----------------------------------------------------------------------------
+    !!  Conver longitudes into a common format for geographic interpolation
+    !!
+    !!  First convert longitudes that may be -180-180 into 0-360 range first.
+    !!  If data straddle the 0 degree longitude, convert back to -180-180 so interpolation will be smooth
+    !!
+    !!  @param[inout]   long_data  2D array of longitudes (either -180 - 180 or 0 - 360)
+    !!
+    !! ----------------------------------------------------------------------------
     subroutine standardize_coordinates(domain)
         implicit none
         class(interpolable_type), intent(inout) :: domain
