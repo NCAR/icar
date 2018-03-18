@@ -288,7 +288,7 @@ contains
         implicit none
         class(domain_t), intent(inout)  :: this
         class(options_t),intent(in)     :: options
-        real, allocatable :: temporary_data(:,:)
+        real, allocatable :: temporary_data(:,:), temp_offset(:,:)
 
         ! Read the terrain data
         call load_data(options%parameters%init_conditions_file,   &
@@ -308,6 +308,13 @@ contains
                        temporary_data, this%grid)
         this%longitude%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
 
+
+        !-----------------------------------------
+        !
+        ! Handle staggered lat/lon grids, straightfoward if ulat/ulon are supplied
+        ! If not, then read in mass grid lat/lon and stagger them
+        !
+        !-----------------------------------------
         ! Read the u-grid longitude data if specified, other wise interpolate from mass grid
         if (options%parameters%ulon_hi /= "") then
             call load_data(options%parameters%init_conditions_file,   &
@@ -315,10 +322,14 @@ contains
                            temporary_data, this%u_grid)
             this%u_longitude%data_2d = temporary_data(this%u_grid%ims:this%u_grid%ime, this%u_grid%jms:this%u_grid%jme)
         else
-            associate(ulon => this%u_longitude%data_2d, lon=>this%longitude%data_2d, nx=>this%grid%nx)
-                ulon(1,:)    = (1.5 * lon(1,:)  - 0.5 * lon(2,:))    ! extrapolate past the end
-                ulon(2:nx,:) = (lon(1:nx-1,:) + lon(2:nx,:)) / 2     ! interpolate between points
-                ulon(nx+1,:) = (1.5 * lon(nx,:) - 0.5 * lon(nx-1,:)) ! extrapolate past the end
+            ! load the mass grid data again to get the full grid
+            call load_data(options%parameters%init_conditions_file,   &
+                           options%parameters%lon_hi,                 &
+                           temporary_data, this%grid)
+
+            associate(ulon => this%u_longitude%data_2d, grid => this%u_grid)
+                call array_offset_x(temporary_data, temp_offset)
+                ulon = temp_offset(grid%ims:grid%ime, grid%jms:grid%jme)
             end associate
         endif
 
@@ -330,10 +341,14 @@ contains
             this%u_latitude%data_2d = temporary_data(this%u_grid%ims:this%u_grid%ime, this%u_grid%jms:this%u_grid%jme)
 
         else
-            associate(ulat => this%u_latitude%data_2d, lat=>this%latitude%data_2d, nx=>this%grid%nx)
-                ulat(1,:)    = (1.5 * lat(1,:)  - 0.5 * lat(2,:))    ! extrapolate past the end
-                ulat(2:nx,:) = (lat(1:nx-1,:) + lat(2:nx,:)) / 2     ! interpolate between points
-                ulat(nx+1,:) = (1.5 * lat(nx,:) - 0.5 * lat(nx-1,:)) ! extrapolate past the end
+            ! load the mass grid data again to get the full grid
+            call load_data(options%parameters%init_conditions_file,   &
+                           options%parameters%lat_hi,                 &
+                           temporary_data, this%grid)
+
+            associate(ulat => this%u_latitude%data_2d, grid => this%u_grid)
+                call array_offset_x(temporary_data, temp_offset)
+                ulat = temp_offset(grid%ims:grid%ime, grid%jms:grid%jme)
             end associate
 
         endif
@@ -346,10 +361,15 @@ contains
             this%v_longitude%data_2d = temporary_data(this%v_grid%ims:this%v_grid%ime, this%v_grid%jms:this%v_grid%jme)
 
         else
-            associate(vlon => this%v_longitude%data_2d, lon=>this%longitude%data_2d, ny=>this%grid%ny)
-                vlon(:,1)    = (1.5 * lon(:,1)  - 0.5 * lon(:,2))  ! extrapolate past the end
-                vlon(:,2:ny) = (lon(:,1:ny-1) + lon(:,2:ny)) / 2   ! interpolate between points
-                vlon(:,ny+1) = (1.5 * lon(:,ny) - 0.5 * lon(:,ny-1)) ! extrapolate past the end
+            ! load the mass grid data again to get the full grid
+            call load_data(options%parameters%init_conditions_file,   &
+                           options%parameters%lon_hi,                 &
+                           temporary_data, this%grid)
+
+            associate(vlon => this%v_longitude%data_2d, grid=>this%v_grid)
+
+                call array_offset_y(temporary_data, temp_offset)
+                vlon = temp_offset(grid%ims:grid%ime, grid%jms:grid%jme)
             end associate
         endif
 
@@ -361,10 +381,15 @@ contains
             this%v_latitude%data_2d = temporary_data(this%v_grid%ims:this%v_grid%ime, this%v_grid%jms:this%v_grid%jme)
 
         else
-            associate(vlat => this%v_latitude%data_2d, lat=>this%latitude%data_2d, ny=>this%grid%ny)
-                vlat(:,1)    = (1.5 * lat(:,1)  - 0.5 * lat(:,2))   ! extrapolate past the end
-                vlat(:,2:ny) = (lat(:,1:ny-1) + lat(:,2:ny)) / 2    ! interpolate between points
-                vlat(:,ny+1) = (1.5 * lat(:,ny) - 0.5 * lat(:,ny-1))  ! extrapolate past the end
+            ! load the mass grid data again to get the full grid
+            call load_data(options%parameters%init_conditions_file,   &
+                           options%parameters%lat_hi,                 &
+                           temporary_data, this%grid)
+
+            associate(vlat => this%v_latitude%data_2d, grid => this%v_grid)
+
+                call array_offset_y(temporary_data, temp_offset)
+                vlat = temp_offset(grid%ims:grid%ime, grid%jms:grid%jme)
             end associate
         endif
 
@@ -447,7 +472,7 @@ contains
 
             i = this%grid%kms
             dz_mass(:,i,:)      = dz(i) / 2
-            dz_interface(:,i,:)      = dz(i)
+            dz_interface(:,i,:) = dz(i)
             z(:,i,:)            = terrain + dz_mass(:,i,:)
             z_interface(:,i,:)  = terrain
 
@@ -739,6 +764,7 @@ contains
         type(variable_t) :: input_data
         ! number of layers has to be used when subsetting for update_pressure (for now)
         integer :: nz
+        logical :: var_is_u, var_is_v
 
         update_only = .False.
         if (present(update)) update_only = update
@@ -766,11 +792,14 @@ contains
                 ! if this is the pressure variable, then don't perform vertical interpolation, adjust the pressure directly
                 var_is_not_pressure = (trim(var_to_interpolate%forcing_var) /= trim(this%pressure%forcing_var))
 
+                var_is_u = (trim(var_to_interpolate%forcing_var) == trim(this%u%meta_data%forcing_var))
+                var_is_v = (trim(var_to_interpolate%forcing_var) == trim(this%v%meta_data%forcing_var))
+
                 ! if just updating, use the dqdt variable otherwise use the 3D variable
                 if (update_only) then
 
                     call interpolate_variable(var_to_interpolate%dqdt_3d, input_data, forcing, &
-                                      vert_interp=var_is_not_pressure)
+                                    vert_interp=var_is_not_pressure, var_is_u=var_is_u, var_is_v=var_is_v)
                     if (.not.var_is_not_pressure) then
                         nz = size(this%geo%z, 2)
                         call update_pressure(var_to_interpolate%dqdt_3d, forcing%geo%z(:,:nz,:), this%geo%z)
@@ -778,7 +807,7 @@ contains
 
                 else
                     call interpolate_variable(var_to_interpolate%data_3d, input_data, forcing, &
-                                            vert_interp=var_is_not_pressure)
+                                    vert_interp=var_is_not_pressure, var_is_u=var_is_u, var_is_v=var_is_v)
                     if (.not.var_is_not_pressure) then
                         nz = size(this%geo%z, 2)
                         call update_pressure(var_to_interpolate%data_3d, forcing%geo%z(:,:nz,:), this%geo%z)
@@ -796,24 +825,30 @@ contains
     !! calling the appropriate interpolation routine (2D vs 3D) with the appropriate grid (mass, u, v)
     !!
     !! -------------------------------
-    subroutine interpolate_variable(var_data, input_data, forcing, vert_interp)
+    subroutine interpolate_variable(var_data, input_data, forcing, vert_interp, var_is_u, var_is_v)
         implicit none
         real,               intent(inout) :: var_data(:,:,:)
         class(variable_t),  intent(in)    :: input_data
         class(boundary_t),  intent(in)    :: forcing
         logical,            intent(in),   optional :: vert_interp
+        logical,            intent(in),   optional :: var_is_u, var_is_v
 
         ! note that 3D variables have a different number of vertical levels, so they have to first be interpolated
         ! to the high res horizontal grid, then vertically interpolated to the actual icar domain
         real, allocatable :: temp_3d(:,:,:), pre_smooth(:,:,:)
-        logical :: interpolate_vertically
-        integer :: nz
+        logical :: interpolate_vertically, uvar, vvar
+        integer :: nx, ny, nz, windowsize
 
         interpolate_vertically=.True.
         if (present(vert_interp)) interpolate_vertically = vert_interp
+        uvar = .False.
+        if (present(var_is_u)) uvar = var_is_u
+        vvar = .False.
+        if (present(var_is_v)) vvar = var_is_v
 
 
         ! Sequence of if statements to test if this variable needs to be interpolated onto the staggared grids
+        ! This could all be combined by passing in the geo data to use, along with a smoothing flag.
 
         ! Interpolate to the Mass grid
         if ((size(var_data,1) == size(forcing%geo%geolut%x,2)).and.(size(var_data,3) == size(forcing%geo%geolut%x,3))) then
@@ -832,31 +867,38 @@ contains
             endif
 
         ! Interpolate to the u staggered grid
-        else if ((size(var_data,1) == size(forcing%geo_u%geolut%x,2)).and.(size(var_data,3) == size(forcing%geo_u%geolut%x,3))) then
-
-            ! allocate a temporary variable to hold the horizontally interpolated data before vertical interpolation
-            allocate(temp_3d(size(var_data,1), size(input_data%data_3d,2), size(var_data,3) ))
+        else if (uvar) then
 
             ! use the alternate allocate below to vertically interpolate to this first, then smooth, then subset to the actual variable
-            ! allocate(temp_3d(size(forcing%geo_u%geolut%x,2), size(var_data,2), size(forcing%geo_u%geolut%x,3)))
-            ! allocate(pre_smooth(size(forcing%geo_u%geolut%x,2), size(input_data%data_3d,2), size(forcing%geo_u%geolut%x,3) ))
+            allocate(temp_3d(size(forcing%geo_u%geolut%x,2), size(var_data,2), size(forcing%geo_u%geolut%x,3)))
+            allocate(pre_smooth(size(forcing%geo_u%geolut%x,2), size(input_data%data_3d,2), size(forcing%geo_u%geolut%x,3) ))
 
-            call geo_interp(temp_3d, input_data%data_3d, forcing%geo_u%geolut)
-            call vinterp(var_data, temp_3d, forcing%geo_u%vert_lut)
-            call smooth_array(var_data, windowsize=10, ydim=3)
+            windowsize = (size(forcing%geo_u%geolut%x,2) - size(var_data,1)) / 2
+            nx = size(forcing%geo_u%geolut%x,2)
+            ny = size(forcing%geo_u%geolut%x,3)
+
+            call geo_interp(pre_smooth, input_data%data_3d, forcing%geo_u%geolut)
+            call vinterp(temp_3d, pre_smooth, forcing%geo_u%vert_lut)
+            call smooth_array(temp_3d, windowsize=windowsize, ydim=3)
+
+            var_data = temp_3d(windowsize+1:nx-windowsize,:,windowsize+1:ny-windowsize)
 
         ! Interpolate to the v staggered grid
-        else if ((size(var_data,1) == size(forcing%geo_v%geolut%x,2)).and.(size(var_data,3) == size(forcing%geo_v%geolut%x,3))) then
-            ! allocate a temporary variable to hold the horizontally interpolated data before vertical interpolation
-            allocate(temp_3d(size(var_data,1), size(input_data%data_3d,2), size(var_data,3) ))
+        else if (vvar) then
 
             ! use the alternate allocate below to vertically interpolate to this first, then smooth, then subset to the actual variable
-            ! allocate(temp_3d(size(forcing%geo_v%geolut%x,2), size(var_data,2), size(forcing%geo_v%geolut%x,3)))
-            ! allocate(pre_smooth(size(forcing%geo_v%geolut%x,2), size(input_data%data_3d,2), size(forcing%geo_v%geolut%x,3) ))
+            allocate(temp_3d(size(forcing%geo_v%geolut%x,2), size(var_data,2), size(forcing%geo_v%geolut%x,3)))
+            allocate(pre_smooth(size(forcing%geo_v%geolut%x,2), size(input_data%data_3d,2), size(forcing%geo_v%geolut%x,3) ))
 
-            call geo_interp(temp_3d, input_data%data_3d, forcing%geo_v%geolut)
-            call vinterp(var_data, temp_3d, forcing%geo_v%vert_lut)
-            call smooth_array(var_data, windowsize=10, ydim=3)
+            windowsize = (size(forcing%geo_v%geolut%x,2) - size(var_data,1)) / 2
+            nx = size(forcing%geo_v%geolut%x,2)
+            ny = size(forcing%geo_v%geolut%x,3)
+
+            call geo_interp(pre_smooth, input_data%data_3d, forcing%geo_v%geolut)
+            call vinterp(temp_3d, pre_smooth, forcing%geo_v%vert_lut)
+            call smooth_array(temp_3d, windowsize=windowsize, ydim=3)
+
+            var_data = temp_3d(windowsize+1:nx-windowsize,:,windowsize+1:ny-windowsize)
         endif
 
     end subroutine
