@@ -427,10 +427,10 @@ contains
         ! so we have to test.  If outside of bounds, extrapolate out from the boundary
 
         nx = size(input,1)
-        ny = size(input,2)
+        ny = size(input,3)
 
         nxo = size(output,1)
-        nyo = size(output,2)
+        nyo = size(output,3)
 
         if (grid%ims < 1) then
             xs_out = 1 - grid%ims + 1
@@ -680,17 +680,17 @@ contains
         call setup_geo(this%geo,   this%latitude%data_2d,   this%longitude%data_2d,   this%z%data_3d)
 
         call array_offset_x(this%z%data_3d, temp_z)
-        allocate(temp_z_extended(this%u_grid2d%ims:this%u_grid2d%ims, &
-                                 this%u_grid2d%kms:this%u_grid2d%kme, &
-                                 this%u_grid2d%jms:this%u_grid2d%jms))
+        allocate(temp_z_extended(this%u_grid2d%ims:this%u_grid2d%ime, &
+                                 this%u_grid%kms  :this%u_grid%kme,   &
+                                 this%u_grid2d%jms:this%u_grid2d%jme))
         call extend_array(temp_z, temp_z_extended, this%u_grid2d, extrapolate=.False.)
         call setup_geo(this%geo_u, this%u_latitude%data_2d, this%u_longitude%data_2d, temp_z)
         deallocate(temp_z_extended)
 
         call array_offset_y(this%z%data_3d, temp_z)
-        allocate(temp_z_extended(this%v_grid2d%ims:this%v_grid2d%ims, &
-                                 this%v_grid2d%kms:this%v_grid2d%kme, &
-                                 this%v_grid2d%jms:this%v_grid2d%jms))
+        allocate(temp_z_extended(this%v_grid2d%ims:this%v_grid2d%ime, &
+                                 this%u_grid%kms  :this%u_grid%kme,   &
+                                 this%v_grid2d%jms:this%v_grid2d%jme))
         call extend_array(temp_z, temp_z_extended, this%v_grid2d, extrapolate=.False.)
         call setup_geo(this%geo_v, this%v_latitude%data_2d, this%v_longitude%data_2d, temp_z_extended)
 
