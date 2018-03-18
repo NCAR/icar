@@ -677,8 +677,18 @@ contains
         call this%v_grid%set_grid_dimensions(       nx_global, ny_global, nz_global, ny_extra = 1)
 
         call this%grid2d%set_grid_dimensions(       nx_global, ny_global, 0)
-        call this%u_grid2d%set_grid_dimensions(     nx_global, ny_global, 0, nx_extra = 1 + nsmooth)
-        call this%v_grid2d%set_grid_dimensions(     nx_global, ny_global, 0, ny_extra = 1 + nsmooth)
+        call this%u_grid2d%set_grid_dimensions(     nx_global, ny_global, 0, nx_extra = 1)
+        this%u_grid2d%ims = this%u_grid2d%ims - nsmooth
+        this%u_grid2d%ime = this%u_grid2d%ime + nsmooth
+        this%u_grid2d%jms = this%u_grid2d%jms - nsmooth
+        this%u_grid2d%jme = this%u_grid2d%jme + nsmooth
+
+        call this%v_grid2d%set_grid_dimensions(     nx_global, ny_global, 0, ny_extra = 1)
+        this%v_grid2d%ims = this%v_grid2d%ims - nsmooth
+        this%v_grid2d%ime = this%v_grid2d%ime + nsmooth
+        this%v_grid2d%jms = this%v_grid2d%jms - nsmooth
+        this%v_grid2d%jme = this%v_grid2d%jme + nsmooth
+
 
         call this%grid_soil%set_grid_dimensions(    nx_global, ny_global, 4)
         call this%grid_monthly%set_grid_dimensions( nx_global, ny_global, 12)
