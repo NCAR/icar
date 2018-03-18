@@ -98,8 +98,8 @@ contains
         character(len=16) :: three_d_interface_dimensions(3)= [character(len=16) :: "lon_x","lat_y","level_i"]
         character(len=16) :: two_d_dimensions(2)            = [character(len=16) :: "lon_x","lat_y"]
         character(len=16) :: two_d_t_dimensions(3)          = [character(len=16) :: "lon_x","lat_y","time"]
-        character(len=16) :: two_d_u_dimensions(2)          = [character(len=16) :: "lon_u","lat_y"]
-        character(len=16) :: two_d_v_dimensions(2)          = [character(len=16) :: "lon_x","lat_v"]
+        character(len=16) :: two_d_u_dimensions(2)          = [character(len=16) :: "lon_u2","lat_y2"]
+        character(len=16) :: two_d_v_dimensions(2)          = [character(len=16) :: "lon_x2","lat_v2"]
         character(len=16) :: three_d_soil_dimensions(3)     = [character(len=16) :: "lon_x","lat_y","nsoil"]
 
         if (allocated(var_meta)) deallocate(var_meta)
