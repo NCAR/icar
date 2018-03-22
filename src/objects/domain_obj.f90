@@ -171,11 +171,11 @@ contains
         if (0<opt%vars_to_allocate( kVARS%soil_temperature) )           call setup(this%soil_temperature,         this%grid_soil,forcing_var=opt%parameters%soil_vwc_var,list=this%variables_to_force)
         if (0<opt%vars_to_allocate( kVARS%latitude) )                   call setup(this%latitude,                 this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%longitude) )                  call setup(this%longitude,                this%grid2d)
-        if (0<opt%vars_to_allocate( kVARS%u_latitude) )                 call setup(this%u_latitude,               this%u_grid2d )
-        if (0<opt%vars_to_allocate( kVARS%u_longitude) )                call setup(this%u_longitude,              this%u_grid2d )
-        if (0<opt%vars_to_allocate( kVARS%v_latitude) )                 call setup(this%v_latitude,               this%v_grid2d )
-        if (0<opt%vars_to_allocate( kVARS%v_longitude) )                call setup(this%v_longitude,              this%v_grid2d )
-        if (0<opt%vars_to_allocate( kVARS%terrain) )                    call setup(this%terrain,                  this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%u_latitude) )                 call setup(this%u_latitude,               this%u_grid2d)
+        if (0<opt%vars_to_allocate( kVARS%u_longitude) )                call setup(this%u_longitude,              this%u_grid2d)
+        if (0<opt%vars_to_allocate( kVARS%v_latitude) )                 call setup(this%v_latitude,               this%v_grid2d)
+        if (0<opt%vars_to_allocate( kVARS%v_longitude) )                call setup(this%v_longitude,              this%v_grid2d)
+        if (0<opt%vars_to_allocate( kVARS%terrain) )                    call setup(this%terrain,                  this%grid2d)
 
         ! integer variable_t types aren't available yet...
         if (0<opt%vars_to_allocate( kVARS%precipitation) ) allocate(this%precipitation_bucket     (ims:ime, jms:jme),          source=0)
@@ -296,6 +296,21 @@ contains
                        temporary_data, this%grid)
         this%terrain%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
 
+        associate(g => this%u_grid2d_ext, geo => this%geo_u)
+            call array_offset_x(temporary_data, temp_offset)
+            if (allocated(geo%z)) deallocate(geo%z)
+            allocate(geo%z(1:g%ime-g%ims+1, 1:this%u_grid%kme-this%u_grid%kms+1, 1:g%jme-g%jms+1))
+            geo%z(:,1,:) = temp_offset(g%ims:g%ime, g%jms:g%jme)
+        end associate
+
+        associate(g => this%v_grid2d_ext, geo => this%geo_v)
+            call array_offset_y(temporary_data, temp_offset)
+            if (allocated(geo%z)) deallocate(geo%z)
+            allocate(geo%z(1:g%ime-g%ims+1, 1:this%u_grid%kme-this%u_grid%kms+1, 1:g%jme-g%jms+1))
+            geo%z(:,1,:) = temp_offset(g%ims:g%ime, g%jms:g%jme)
+        end associate
+
+
         ! Read the latitude data
         call load_data(options%parameters%init_conditions_file,   &
                        options%parameters%lat_hi,                 &
@@ -321,7 +336,12 @@ contains
                            options%parameters%ulon_hi,                &
                            temporary_data, this%u_grid)
 
-            call subset_array(temporary_data, this%u_longitude%data_2d, this%u_grid2d)
+            call subset_array(temporary_data, this%u_longitude%data_2d, this%u_grid)
+
+            associate(g=>this%u_grid2d_ext, var=>this%geo_u%lon)
+                allocate(this%geo_u%lon(1:g%ime-g%ims+1, 1:g%jme-g%jms+1))
+                call subset_array(temporary_data, this%geo_u%lon, g)
+            end associate
         else
             ! load the mass grid data again to get the full grid
             call load_data(options%parameters%init_conditions_file,   &
@@ -329,7 +349,11 @@ contains
                            temporary_data, this%grid)
 
             call array_offset_x(temporary_data, temp_offset)
-            call subset_array(temp_offset, this%u_longitude%data_2d, this%u_grid2d)
+            call subset_array(temp_offset, this%u_longitude%data_2d, this%u_grid)
+            associate(g=>this%u_grid2d_ext, var=>this%geo_u%lon)
+                allocate(this%geo_u%lon(1:g%ime-g%ims+1, 1:g%jme-g%jms+1))
+                call subset_array(temp_offset, this%geo_u%lon, g)
+            end associate
         endif
 
         ! Read the u-grid latitude data if specified, other wise interpolate from mass grid
@@ -338,7 +362,11 @@ contains
                            options%parameters%ulat_hi,                &
                            temporary_data, this%u_grid)
 
-            call subset_array(temporary_data, this%u_latitude%data_2d, this%u_grid2d)
+            call subset_array(temporary_data, this%u_latitude%data_2d, this%u_grid)
+            associate(g=>this%u_grid2d_ext, var=>this%geo_u%lat)
+                allocate(this%geo_u%lat(1:g%ime-g%ims+1, 1:g%jme-g%jms+1))
+                call subset_array(temporary_data, this%geo_u%lat, g)
+            end associate
         else
             ! load the mass grid data again to get the full grid
             call load_data(options%parameters%init_conditions_file,   &
@@ -346,7 +374,11 @@ contains
                            temporary_data, this%grid)
 
             call array_offset_x(temporary_data, temp_offset)
-            call subset_array(temp_offset, this%u_latitude%data_2d, this%u_grid2d)
+            call subset_array(temp_offset, this%u_latitude%data_2d, this%u_grid)
+            associate(g=>this%u_grid2d_ext, var=>this%geo_u%lat)
+                allocate(this%geo_u%lat(1:g%ime-g%ims+1, 1:g%jme-g%jms+1))
+                call subset_array(temp_offset, this%geo_u%lat, g)
+            end associate
 
         endif
 
@@ -356,7 +388,11 @@ contains
                            options%parameters%vlon_hi,                &
                            temporary_data, this%v_grid)
 
-            call subset_array(temporary_data, this%v_longitude%data_2d, this%v_grid2d)
+            call subset_array(temporary_data, this%v_longitude%data_2d, this%v_grid)
+            associate(g=>this%v_grid2d_ext, var=>this%geo_v%lon)
+                allocate(this%geo_v%lon(1:g%ime-g%ims+1, 1:g%jme-g%jms+1))
+                call subset_array(temporary_data, this%geo_v%lon, g)
+            end associate
         else
             ! load the mass grid data again to get the full grid
             call load_data(options%parameters%init_conditions_file,   &
@@ -364,7 +400,11 @@ contains
                            temporary_data, this%grid)
 
             call array_offset_y(temporary_data, temp_offset)
-            call subset_array(temp_offset, this%v_longitude%data_2d, this%v_grid2d)
+            call subset_array(temp_offset, this%v_longitude%data_2d, this%v_grid)
+            associate(g=>this%v_grid2d_ext, var=>this%geo_v%lon)
+                allocate(this%geo_v%lon(1:g%ime-g%ims+1, 1:g%jme-g%jms+1))
+                call subset_array(temp_offset, this%geo_v%lon, g)
+            end associate
         endif
 
         ! Read the v-grid latitude data if specified, other wise interpolate from mass grid
@@ -373,7 +413,11 @@ contains
                            options%parameters%vlat_hi,                &
                            temporary_data, this%v_grid)
 
-            call subset_array(temporary_data, this%v_latitude%data_2d, this%v_grid2d)
+            call subset_array(temporary_data, this%v_latitude%data_2d, this%v_grid)
+            associate(g=>this%v_grid2d_ext, var=>this%geo_v%lat)
+                allocate(this%geo_v%lat(1:g%ime-g%ims+1, 1:g%jme-g%jms+1))
+                call subset_array(temporary_data, this%geo_v%lat, g)
+            end associate
 
         else
             ! load the mass grid data again to get the full grid
@@ -382,7 +426,11 @@ contains
                            temporary_data, this%grid)
 
             call array_offset_y(temporary_data, temp_offset)
-            call subset_array(temp_offset, this%v_latitude%data_2d, this%v_grid2d)
+            call subset_array(temp_offset, this%v_latitude%data_2d, this%v_grid)
+            associate(g=>this%v_grid2d_ext, var=>this%geo_v%lat)
+                allocate(this%geo_v%lat(1:g%ime-g%ims+1, 1:g%jme-g%jms+1))
+                call subset_array(temp_offset, this%geo_v%lat, g)
+            end associate
         endif
 
         if (this_image()==1) write(*,*) "  Finished reading core domain variables"
@@ -415,6 +463,7 @@ contains
         ! these will hold the actual indexes into the two arrays
         integer :: xs_in, xs_out, ys_in, ys_out
         integer :: xe_in, xe_out, ye_in, ye_out
+        integer :: i_delta, j_delta ! offsets in x and y to store in case ims or jms is < 1
 
         logical :: do_extrapolate
 
@@ -432,38 +481,58 @@ contains
         nxo = size(output,1)
         nyo = size(output,3)
 
-        if (grid%ims < 1) then
-            xs_out = 1 - grid%ims + 1
-            xs_in  = 1
-        else
-            xs_out = 1
-            xs_in  = grid%ims
+        i_delta = (nxo - nx) / 2
+        j_delta = (nyo - ny) / 2
+
+        xs_in = 1
+        xe_in = nx
+        ys_in = 1
+        ye_in = ny
+
+        if (i_delta > 0) then
+            xs_out = i_delta
+            xe_out = nx + i_delta - 1
         endif
 
-        if (grid%ime > nx) then
-            xe_out = nxo - (grid%ime - nx)
-            xe_in  = nx
-        else
-            xe_out = nxo
-            xe_in  = grid%ime
+        if (j_delta > 0) then
+            ys_out = j_delta
+            ye_out = ny + j_delta - 1
         endif
 
-        if (grid%jms < 1) then
-            ys_out = 1 - grid%jms + 1
-            ys_in  = 1
-        else
-            ys_out = 1
-            ys_in  = grid%jms
-        endif
-
-        if (grid%jme > ny) then
-            ye_out = nyo - (grid%jme - ny)
-            ye_in  = ny
-        else
-            ye_out = nyo
-            ye_in  = grid%jme
-        endif
-
+        ! if (grid%ims < 1) then
+        !     xs_out = 1 - grid%ims + 1
+        !     xs_in  = 1
+        !     i_delta = 1 - grid%ims
+        ! else
+        !     xs_out = 1
+        !     xs_in  = grid%ims
+        ! endif
+        !
+        ! if (grid%ime > nx) then
+        !     xe_out = nx + i_delta
+        !     xe_in  = nx
+        ! else
+        !     xe_out = grid%ime + i_delta
+        !     xe_in  = grid%ime
+        ! endif
+        !
+        ! if (grid%jms < 1) then
+        !     ys_out = 1 - grid%jms + 1
+        !     ys_in  = 1
+        !     j_delta = 1 - grid%jms
+        ! else
+        !     ys_out = 1
+        !     ys_in  = grid%jms
+        ! endif
+        !
+        ! if (grid%jme > ny) then
+        !     ye_out = ny + j_delta
+        !     ye_in  = ny
+        ! else
+        !     ye_out = grid%jme + j_delta
+        !     ye_in  = grid%jme
+        ! endif
+        !
         !----------------------------------------------------
         ! This is the area of overlap
         ! Note that this is the main and likely only assignment
@@ -524,10 +593,10 @@ contains
     !! ---------------------------------
     subroutine subset_array(input, output, grid, extrapolate)
         implicit none
-        real,         intent(in)    :: input(:,:)
-        real,         intent(inout) :: output(:,:)
-        type(grid_t), intent(in)    :: grid
-        logical,      intent(in),   optional :: extrapolate
+        real,           intent(in)    :: input(:,:)
+        real,           intent(inout) :: output(:,:)
+        type(grid_t),   intent(in)    :: grid
+        logical,        intent(in),   optional :: extrapolate
 
         ! loop counter
         integer :: i
@@ -557,42 +626,48 @@ contains
         nxo = size(output,1)
         nyo = size(output,2)
 
-        if (grid%ims < 1) then
-            xs_out = 1 - grid%ims + 1
-            xs_in  = 1
-        else
-            xs_out = 1
-            xs_in  = grid%ims
-        endif
+        xs_in=grid%ims; xs_out=1
+        ys_in=grid%jms; ys_out=1
+        xe_in=grid%ime; xe_out=nxo
+        ye_in=grid%jme; ye_out=nyo
 
-        if (grid%ime > nx) then
-            xe_out = nxo - (grid%ime - nx)
-            xe_in  = nx
-        else
-            xe_out = nxo
-            xe_in  = grid%ime
-        endif
-
-        if (grid%jms < 1) then
-            ys_out = 1 - grid%jms + 1
-            ys_in  = 1
-        else
-            ys_out = 1
-            ys_in  = grid%jms
-        endif
-
-        if (grid%jme > ny) then
-            ye_out = nyo - (grid%jme - ny)
-            ye_in  = ny
-        else
-            ye_out = nyo
-            ye_in  = grid%jme
-        endif
-
+        ! if (grid%ims < 1) then
+        !     xs_out = 1 - grid%ims + 1
+        !     xs_in  = 1
+        ! else
+        !     xs_out = 1
+        !     xs_in  = grid%ims
+        ! endif
+        !
+        ! if (grid%ime > nx) then
+        !     xe_out = nxo - (grid%ime - nx)
+        !     xe_in  = nx
+        ! else
+        !     xe_out = nxo
+        !     xe_in  = grid%ime
+        ! endif
+        !
+        ! if (grid%jms < 1) then
+        !     ys_out = 1 - grid%jms + 1
+        !     ys_in  = 1
+        ! else
+        !     ys_out = 1
+        !     ys_in  = grid%jms
+        ! endif
+        !
+        ! if (grid%jme > ny) then
+        !     ye_out = nyo - (grid%jme - ny)
+        !     ye_in  = ny
+        ! else
+        !     ye_out = nyo
+        !     ye_in  = grid%jme
+        ! endif
+        !
         !----------------------------------------------------
         ! This is the area of overlap
         ! Note that this is the main and likely only assignment
         !----------------------------------------------------
+
         output(xs_out:xe_out, ys_out:ye_out) = input(xs_in:xe_in, ys_in:ye_in)
 
         ! outside of that overlap, extrapolate out from the boundary
@@ -667,35 +742,6 @@ contains
 
     end subroutine
 
-    !> -------------------------------
-    !! Setup the Geographic structures for all relevant grids in the domain
-    !!
-    !! -------------------------------
-    subroutine setup_domain_geo(this)
-        implicit none
-        type(domain_t), intent(inout) :: this
-
-        real, allocatable :: temp_z(:,:,:), temp_z_extended(:,:,:)
-
-        call setup_geo(this%geo,   this%latitude%data_2d,   this%longitude%data_2d,   this%z%data_3d)
-
-        call array_offset_x(this%z%data_3d, temp_z)
-        allocate(temp_z_extended(this%u_grid2d%ims:this%u_grid2d%ime, &
-                                 this%u_grid%kms  :this%u_grid%kme,   &
-                                 this%u_grid2d%jms:this%u_grid2d%jme))
-        call extend_array(temp_z, temp_z_extended, this%u_grid2d, extrapolate=.False.)
-        call setup_geo(this%geo_u, this%u_latitude%data_2d, this%u_longitude%data_2d, temp_z_extended)
-        deallocate(temp_z_extended)
-
-        call array_offset_y(this%z%data_3d, temp_z)
-        allocate(temp_z_extended(this%v_grid2d%ims:this%v_grid2d%ime, &
-                                 this%u_grid%kms  :this%u_grid%kme,   &
-                                 this%v_grid2d%jms:this%v_grid2d%jme))
-        call extend_array(temp_z, temp_z_extended, this%v_grid2d, extrapolate=.False.)
-        call setup_geo(this%geo_v, this%v_latitude%data_2d, this%v_longitude%data_2d, temp_z_extended)
-
-        if (allocated(temp_z)) deallocate(temp_z)
-    end subroutine setup_domain_geo
 
     !> -------------------------------
     !! Initialize various domain variables, mostly z, dz, etc.
@@ -711,6 +757,8 @@ contains
         call read_core_variables(this, options)
 
         associate(z                     => this%z%data_3d,                      &
+                  z_u                   => this%geo_u%z,                        &
+                  z_v                   => this%geo_v%z,                        &
                   z_interface           => this%z_interface%data_3d,            &
                   dz                    => options%parameters%dz_levels,        &
                   dz_mass               => this%dz_mass%data_3d,                &
@@ -729,16 +777,25 @@ contains
             z(:,i,:)            = terrain + dz_mass(:,i,:)
             z_interface(:,i,:)  = terrain
 
+            ! for the u and v grids, z(1) was already initialized with terrain.
+            ! but the first level needs to be offset, and the rest of the levels need to be created
+            z_u(:,i,:)          = z_u(:,i,:) + dz(i) / 2
+            z_v(:,i,:)          = z_v(:,i,:) + dz(i) / 2
+
             do i = this%grid%kms+1, this%grid%kme
                 dz_mass(:,i,:)     = (dz(i) + dz(i-1)) / 2
                 dz_interface(:,i,:)= dz(i)
                 z(:,i,:)           = z(:,i-1,:)           + dz_mass(:,i,:)
                 z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i,:)
+
+                z_u(:,i,:)         = z_u(:,i-1,:)         + ((dz(i) + dz(i-1)) / 2)
+                z_v(:,i,:)         = z_v(:,i-1,:)         + ((dz(i) + dz(i-1)) / 2)
+
             enddo
 
         end associate
 
-        call setup_domain_geo(this)
+        call setup_geo(this%geo,   this%latitude%data_2d,   this%longitude%data_2d,   this%z%data_3d)
 
     end subroutine initialize_variables
 
@@ -834,19 +891,28 @@ contains
         call this%u_grid%set_grid_dimensions(       nx_global, ny_global, nz_global, nx_extra = 1)
         call this%v_grid%set_grid_dimensions(       nx_global, ny_global, nz_global, ny_extra = 1)
 
+        ! for 2D mass variables
         call this%grid2d%set_grid_dimensions(       nx_global, ny_global, 0)
 
+        ! setup a 2D lat/lon grid extended by nsmooth grid cells so that smoothing can take place "across" images
+        ! This just sets up the fields to interpolate u and v to so that the input data are handled on an extended
+        ! grid.  They are then subset to the u_grid and v_grids above before actual use.
         call this%u_grid2d%set_grid_dimensions(     nx_global, ny_global, 0, nx_extra = 1)
-        this%u_grid2d%ims = this%u_grid2d%ims - nsmooth
-        this%u_grid2d%ime = this%u_grid2d%ime + nsmooth
-        this%u_grid2d%jms = this%u_grid2d%jms - nsmooth
-        this%u_grid2d%jme = this%u_grid2d%jme + nsmooth
+        call this%u_grid2d_ext%set_grid_dimensions( nx_global, ny_global, 0, nx_extra = 1)
+        ! extend by nsmooth, but bound to the domain grid
+        this%u_grid2d_ext%ims = max(this%u_grid2d%ims - nsmooth, this%u_grid2d%ids)
+        this%u_grid2d_ext%ime = min(this%u_grid2d%ime + nsmooth, this%u_grid2d%ide)
+        this%u_grid2d_ext%jms = max(this%u_grid2d%jms - nsmooth, this%u_grid2d%jds)
+        this%u_grid2d_ext%jme = min(this%u_grid2d%jme + nsmooth, this%u_grid2d%jde)
 
+        ! handle the v-grid too
         call this%v_grid2d%set_grid_dimensions(     nx_global, ny_global, 0, ny_extra = 1)
-        this%v_grid2d%ims = this%v_grid2d%ims - nsmooth
-        this%v_grid2d%ime = this%v_grid2d%ime + nsmooth
-        this%v_grid2d%jms = this%v_grid2d%jms - nsmooth
-        this%v_grid2d%jme = this%v_grid2d%jme + nsmooth
+        call this%v_grid2d_ext%set_grid_dimensions( nx_global, ny_global, 0, ny_extra = 1)
+        ! extend by nsmooth, but bound to the domain grid
+        this%v_grid2d_ext%ims = max(this%v_grid2d%ims - nsmooth, this%v_grid2d%ids)
+        this%v_grid2d_ext%ime = min(this%v_grid2d%ime + nsmooth, this%v_grid2d%ide)
+        this%v_grid2d_ext%jms = max(this%v_grid2d%jms - nsmooth, this%v_grid2d%jds)
+        this%v_grid2d_ext%jme = min(this%v_grid2d%jme + nsmooth, this%v_grid2d%jde)
 
 
         call this%grid_soil%set_grid_dimensions(    nx_global, ny_global, 4)
@@ -902,11 +968,11 @@ contains
         call geo_interp(forcing%geo%z, forcing%z, forcing%geo%geolut)
         call vLUT(this%geo,   forcing%geo)
 
-        allocate(forcing%geo_u%z(nx+1+this%nsmooth*2, nz, ny+this%nsmooth*2))
+        allocate(forcing%geo_u%z, mold=this%geo_u%z)
         call geo_interp(forcing%geo_u%z, forcing%z, forcing%geo_u%geolut)
         call vLUT(this%geo_u, forcing%geo_u)
 
-        allocate(forcing%geo_v%z(nx+this%nsmooth*2, nz, ny+1+this%nsmooth*2))
+        allocate(forcing%geo_v%z, mold=this%geo_v%z)
         call geo_interp(forcing%geo_v%z, forcing%z, forcing%geo_v%geolut)
         call vLUT(this%geo_v, forcing%geo_v)
 
@@ -1065,16 +1131,16 @@ contains
                 ! if just updating, use the dqdt variable otherwise use the 3D variable
                 if (update_only) then
 
-                    call interpolate_variable(var_to_interpolate%dqdt_3d, input_data, forcing, &
-                                    vert_interp=var_is_not_pressure, var_is_u=var_is_u, var_is_v=var_is_v)
+                    call interpolate_variable(var_to_interpolate%dqdt_3d, input_data, forcing, this, &
+                                    vert_interp=var_is_not_pressure, var_is_u=var_is_u, var_is_v=var_is_v, nsmooth=this%nsmooth)
                     if (.not.var_is_not_pressure) then
                         nz = size(this%geo%z, 2)
                         call update_pressure(var_to_interpolate%dqdt_3d, forcing%geo%z(:,:nz,:), this%geo%z)
                     endif
 
                 else
-                    call interpolate_variable(var_to_interpolate%data_3d, input_data, forcing, &
-                                    vert_interp=var_is_not_pressure, var_is_u=var_is_u, var_is_v=var_is_v)
+                    call interpolate_variable(var_to_interpolate%data_3d, input_data, forcing, this, &
+                                    vert_interp=var_is_not_pressure, var_is_u=var_is_u, var_is_v=var_is_v, nsmooth=this%nsmooth)
                     if (.not.var_is_not_pressure) then
                         nz = size(this%geo%z, 2)
                         call update_pressure(var_to_interpolate%data_3d, forcing%geo%z(:,:nz,:), this%geo%z)
@@ -1092,13 +1158,15 @@ contains
     !! calling the appropriate interpolation routine (2D vs 3D) with the appropriate grid (mass, u, v)
     !!
     !! -------------------------------
-    subroutine interpolate_variable(var_data, input_data, forcing, vert_interp, var_is_u, var_is_v)
+    subroutine interpolate_variable(var_data, input_data, forcing, dom, vert_interp, var_is_u, var_is_v, nsmooth)
         implicit none
         real,               intent(inout) :: var_data(:,:,:)
         class(variable_t),  intent(in)    :: input_data
         class(boundary_t),  intent(in)    :: forcing
+        class(domain_t),    intent(in)    :: dom
         logical,            intent(in),   optional :: vert_interp
         logical,            intent(in),   optional :: var_is_u, var_is_v
+        integer,            intent(in),   optional :: nsmooth
 
         ! note that 3D variables have a different number of vertical levels, so they have to first be interpolated
         ! to the high res horizontal grid, then vertically interpolated to the actual icar domain
@@ -1112,6 +1180,8 @@ contains
         if (present(var_is_u)) uvar = var_is_u
         vvar = .False.
         if (present(var_is_v)) vvar = var_is_v
+        windowsize = 0
+        if (present(nsmooth)) windowsize = nsmooth
 
 
         ! Sequence of if statements to test if this variable needs to be interpolated onto the staggared grids
@@ -1140,7 +1210,6 @@ contains
             allocate(temp_3d(size(forcing%geo_u%geolut%x,2), size(var_data,2), size(forcing%geo_u%geolut%x,3)))
             allocate(pre_smooth(size(forcing%geo_u%geolut%x,2), size(input_data%data_3d,2), size(forcing%geo_u%geolut%x,3) ))
 
-            windowsize = (size(forcing%geo_u%geolut%x,2) - size(var_data,1)) / 2
             nx = size(forcing%geo_u%geolut%x,2)
             ny = size(forcing%geo_u%geolut%x,3)
 
@@ -1148,7 +1217,9 @@ contains
             call vinterp(temp_3d, pre_smooth, forcing%geo_u%vert_lut)
             call smooth_array(temp_3d, windowsize=windowsize, ydim=3)
 
-            var_data = temp_3d(windowsize+1:nx-windowsize,:,windowsize+1:ny-windowsize)
+            var_data = temp_3d(dom%u_grid%ims-dom%u_grid2d_ext%ims+1 : dom%u_grid%ime-dom%u_grid2d_ext%ims+1,    &
+                                :,   &
+                               dom%u_grid%jms-dom%u_grid2d_ext%jms+1 : dom%u_grid%jme-dom%u_grid2d_ext%jms+1)
 
         ! Interpolate to the v staggered grid
         else if (vvar) then
@@ -1165,7 +1236,9 @@ contains
             call vinterp(temp_3d, pre_smooth, forcing%geo_v%vert_lut)
             call smooth_array(temp_3d, windowsize=windowsize, ydim=3)
 
-            var_data = temp_3d(windowsize+1:nx-windowsize,:,windowsize+1:ny-windowsize)
+            var_data = temp_3d(dom%v_grid%ims-dom%u_grid2d_ext%ims+1 : dom%v_grid%ime-dom%u_grid2d_ext%ims+1,    &
+                                :,   &
+                               dom%v_grid%jms-dom%u_grid2d_ext%jms+1 : dom%v_grid%jme-dom%u_grid2d_ext%jms+1)
         endif
 
     end subroutine
@@ -1176,18 +1249,18 @@ contains
     !! This is not used presently since the meta_data structures are added directly to the variables_to_force dictionary
     !!
     !! -------------------------------
-    subroutine interpolate_exchangeable(var, forcing)
-        implicit none
-        class(exchangeable_t), intent(inout) :: var
-        class(boundary_t),     intent(in)    :: forcing
-
-        type(variable_t) :: input_data
-
-        input_data = forcing%variables%get_var(var%meta_data%forcing_var)
-        ! exchangeables all have a meta_data variable_t component with a pointer to the 3D local data
-        call interpolate_variable(var%meta_data%data_3d, input_data, forcing)
-
-    end subroutine
+    ! subroutine interpolate_exchangeable(var, forcing)
+    !     implicit none
+    !     class(exchangeable_t), intent(inout) :: var
+    !     class(boundary_t),     intent(in)    :: forcing
+    !
+    !     type(variable_t) :: input_data
+    !
+    !     input_data = forcing%variables%get_var(var%meta_data%forcing_var)
+    !     ! exchangeables all have a meta_data variable_t component with a pointer to the 3D local data
+    !     ! call interpolate_variable(var%meta_data%data_3d, input_data, forcing)
+    !
+    ! end subroutine
 
 
 end submodule
