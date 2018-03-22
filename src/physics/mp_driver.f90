@@ -74,6 +74,7 @@ contains
         implicit none
         type(options_t), intent(inout) :: options
 
+        if (this_image()==1) write(*,*) ""
         if (this_image()==1) write(*,*) "Initializing Microphysics"
         if (options%physics%microphysics    == kMP_THOMPSON) then
             if (this_image()==1) write(*,*) "    Thompson Microphysics"
