@@ -1,6 +1,6 @@
 module output_metadata
 
-    use icar_constants
+    use icar_constants,         only : kMAX_STORAGE_VARS
     use variable_interface,     only : variable_t
     use meta_data_interface,    only : attribute_t
     implicit none
@@ -17,30 +17,42 @@ module output_metadata
 
 contains
 
+    !>------------------------------------------------------------
+    !! Get generic metadata for a no-data object
+    !!------------------------------------------------------------
     function get_metadata_nod(var_idx) result(meta_data)
         implicit none
         integer, intent(in) :: var_idx
         type(variable_t) :: meta_data
 
-        if (var_idx>kMAX_STORAGE_VARS) then
+        if (var_idx > kMAX_STORAGE_VARS) then
             stop "Invalid variable metadata requested"
         endif
 
+        ! initialize the module level var_meta data
         if (.not.allocated(var_meta)) call init_var_meta()
 
+        ! get the var_idx index into var_meta to return
         meta_data = var_meta(var_idx)
 
+        ! set the dimensionality to false
         meta_data%two_d     = .False.
         meta_data%three_d   = .False.
 
     end function get_metadata_nod
 
+    !>------------------------------------------------------------
+    !! Get generic metadata for a two-dimensional variable
+    !!
+    !! Sets the internal data pointer to point to the input data provided
+    !!------------------------------------------------------------
     function get_metadata_2d(var_idx, input_data) result(meta_data)
         implicit none
-        integer, intent(in) :: var_idx
+        integer, intent(in)          :: var_idx
         real,    intent(in), pointer :: input_data(:,:)
-        type(variable_t) :: meta_data
-        integer :: local_shape(2)
+
+        type(variable_t) :: meta_data       ! function result
+        integer          :: local_shape(2)  ! store the shape of the input data array
 
         if (var_idx>kMAX_STORAGE_VARS) then
             stop "Invalid variable metadata requested"
@@ -60,17 +72,24 @@ contains
 
     end function get_metadata_2d
 
+    !>------------------------------------------------------------
+    !! Get generic metadata for a three-dimensional variable
+    !!
+    !! Sets the internal data pointer to point to the input data provided
+    !!------------------------------------------------------------
     function get_metadata_3d(var_idx, input_data) result(meta_data)
         implicit none
-        integer, intent(in) :: var_idx
+        integer, intent(in)          :: var_idx
         real,    intent(in), pointer :: input_data(:,:,:)
-        type(variable_t) :: meta_data
-        integer :: local_shape(3)
+
+        type(variable_t) :: meta_data       ! function result
+        integer          :: local_shape(3)  ! store the shape of the input data array
 
         if (var_idx>kMAX_STORAGE_VARS) then
             stop "Invalid variable metadata requested"
         endif
 
+        ! initialize the module level constant data structure
         if (.not.allocated(var_meta)) call init_var_meta()
 
         meta_data = var_meta(var_idx)
@@ -87,6 +106,10 @@ contains
     end function get_metadata_3d
 
 
+    !>------------------------------------------------------------
+    !! Initialize the module level master data structure
+    !!
+    !!------------------------------------------------------------
     subroutine init_var_meta()
         implicit none
         integer :: i
@@ -98,8 +121,8 @@ contains
         character(len=16) :: three_d_interface_dimensions(3)= [character(len=16) :: "lon_x","lat_y","level_i"]
         character(len=16) :: two_d_dimensions(2)            = [character(len=16) :: "lon_x","lat_y"]
         character(len=16) :: two_d_t_dimensions(3)          = [character(len=16) :: "lon_x","lat_y","time"]
-        character(len=16) :: two_d_u_dimensions(2)          = [character(len=16) :: "lon_u2","lat_y2"]
-        character(len=16) :: two_d_v_dimensions(2)          = [character(len=16) :: "lon_x2","lat_v2"]
+        character(len=16) :: two_d_u_dimensions(2)          = [character(len=16) :: "lon_u","lat_y"]
+        character(len=16) :: two_d_v_dimensions(2)          = [character(len=16) :: "lon_x","lat_v"]
         character(len=16) :: three_d_soil_dimensions(3)     = [character(len=16) :: "lon_x","lat_y","nsoil"]
 
         if (allocated(var_meta)) deallocate(var_meta)
@@ -107,8 +130,13 @@ contains
         if (kVARS%last_var/=kMAX_STORAGE_VARS) then
             stop "ERROR: variable indicies not correctly initialized"
         endif
+        ! allocate the actual data structure to be used
         allocate(var_meta(kMAX_STORAGE_VARS))
 
+
+        !>------------------------------------------------------------
+        !!  U  East West Winds
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%u))
             var%name        = "u"
             var%dimensions  = three_d_u_t_dimensions
@@ -118,6 +146,9 @@ contains
                                attribute_t("units",         "m s-1"),                           &
                                attribute_t("coordinates",   "u_lat u_lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  V  North South Winds
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%v))
             var%name        = "v"
             var%dimensions  = three_d_v_t_dimensions
@@ -127,6 +158,9 @@ contains
                                attribute_t("units",         "m s-1"),                           &
                                attribute_t("coordinates",   "v_lat v_lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  W  Vertical Winds
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%w))
             var%name        = "w"
             var%dimensions  = three_d_t_dimensions
@@ -136,6 +170,9 @@ contains
                                attribute_t("units",         "m s-1"),                           &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Air Pressure
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%pressure))
             var%name        = "pressure"
             var%dimensions  = three_d_t_dimensions
@@ -145,6 +182,9 @@ contains
                                attribute_t("units",         "Pa"),                              &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Air Pressure on interfaces between mass levels
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%pressure_interface))
             var%name        = "pressure_i"
             var%dimensions  = three_d_interface_dimensions
@@ -153,6 +193,9 @@ contains
                                attribute_t("units",         "Pa"),                              &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Potential Air Temperature
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%potential_temperature))
             var%name        = "potential_temperature"
             var%dimensions  = three_d_t_dimensions
@@ -162,6 +205,9 @@ contains
                                attribute_t("units",         "K"),                               &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Real Air Temperature
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%temperature))
             var%name        = "temperature"
             var%dimensions  = three_d_t_dimensions
@@ -171,6 +217,9 @@ contains
                                attribute_t("units",         "K"),                               &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Water Vapor Mixing Ratio
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%water_vapor))
             var%name        = "qv"
             var%dimensions  = three_d_t_dimensions
@@ -180,6 +229,9 @@ contains
                                attribute_t("units",         "kg kg-1"),                             &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Cloud water (liquid) mixing ratio
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%cloud_water))
             var%name        = "qc"
             var%dimensions  = three_d_t_dimensions
@@ -188,6 +240,9 @@ contains
                                attribute_t("units",         "kg kg-1"),                             &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Cloud water (liquid) number concentration
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%cloud_number_concentration))
             var%name        = "nc"
             var%dimensions  = three_d_t_dimensions
@@ -196,6 +251,9 @@ contains
                                attribute_t("units",         "cm-3"),                                              &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Cloud ice mixing ratio
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%cloud_ice))
             var%name        = "qi"
             var%dimensions  = three_d_t_dimensions
@@ -204,6 +262,9 @@ contains
                                attribute_t("units",         "kg kg-1"),                             &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Cloud ice number concentration
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%ice_number_concentration))
             var%name        = "ni"
             var%dimensions  = three_d_t_dimensions
@@ -212,6 +273,9 @@ contains
                                attribute_t("units",         "cm-3"),                                            &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Rain water mixing ratio
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%rain_in_air))
             var%name        = "qr"
             var%dimensions  = three_d_t_dimensions
@@ -220,6 +284,9 @@ contains
                                attribute_t("units",         "kg kg-1"),                             &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Rain water number concentration
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%rain_number_concentration))
             var%name        = "nr"
             var%dimensions  = three_d_t_dimensions
@@ -228,6 +295,9 @@ contains
                                attribute_t("units",         "cm-3"),                                              &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Snow in air mixing ratio
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%snow_in_air))
             var%name        = "qs"
             var%dimensions  = three_d_t_dimensions
@@ -236,6 +306,9 @@ contains
                                attribute_t("units",         "kg kg-1"),                             &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Snow in air number concentration
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%snow_number_concentration))
             var%name        = "ns"
             var%dimensions  = three_d_t_dimensions
@@ -244,6 +317,9 @@ contains
                                attribute_t("units",         "cm-3"),                                              &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Graupel mixing ratio
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%graupel_in_air))
             var%name        = "qg"
             var%dimensions  = three_d_t_dimensions
@@ -252,6 +328,9 @@ contains
                                attribute_t("units",         "kg kg-1"),                             &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Graupel number concentration
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%graupel_number_concentration))
             var%name        = "ng"
             var%dimensions  = three_d_t_dimensions
@@ -268,6 +347,9 @@ contains
         !                        attribute_t("units",           "kg m-2 s-1"),              &
         !                        attribute_t("coordinates",     "lat lon")]
         ! end associate
+        !>------------------------------------------------------------
+        !!  Accumulated precipitation at the surface
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%precipitation))
             var%name        = "precipitation"
             var%dimensions  = two_d_t_dimensions
@@ -276,6 +358,9 @@ contains
                                attribute_t("units",         "kg m-2"),                              &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Accumulated snowfall at the surface
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%snowfall))
             var%name        = "snowfall"
             var%dimensions  = two_d_t_dimensions
@@ -284,6 +369,9 @@ contains
                                attribute_t("units",         "kg m-2"),                              &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Accumulated Graupel at the surface
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%graupel))
             var%name        = "graupel"
             var%dimensions  = two_d_t_dimensions
@@ -292,6 +380,9 @@ contains
                                attribute_t("units",         "kg m-2"),                              &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Exner function
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%exner))
             var%name        = "exner"
             var%dimensions  = three_d_t_dimensions
@@ -300,6 +391,9 @@ contains
                                attribute_t("units",         "K K-1"),                               &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Air Density
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%density))
             var%name        = "density"
             var%dimensions  = three_d_t_dimensions
@@ -308,6 +402,9 @@ contains
                                attribute_t("units",         "kg m-3"),                              &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Vertical coordinate
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%z))
             var%name        = "z"
             var%dimensions  = three_d_dimensions
@@ -315,6 +412,9 @@ contains
                                attribute_t("units",         "m"),                                   &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Vertical coordinate on the interface between mass levels
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%z_interface))
             var%name        = "z_i"
             var%dimensions  = three_d_interface_dimensions
@@ -322,6 +422,9 @@ contains
                                attribute_t("units",         "m"),                                   &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Vertical layer thickness
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%dz))
             var%name        = "dz"
             var%dimensions  = three_d_dimensions
@@ -329,6 +432,9 @@ contains
                                attribute_t("units",         "m"),                                   &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Thickness of layers between interfaces
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%dz_interface))
             var%name        = "dz_i"
             var%dimensions  = three_d_interface_dimensions
@@ -336,6 +442,9 @@ contains
                                attribute_t("units",         "m"),                                   &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Downward Shortwave Radiation at the Surface (positive down)
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%shortwave))
             var%name        = "rsds"
             var%dimensions  = two_d_t_dimensions
@@ -344,6 +453,9 @@ contains
                                attribute_t("units",         "W m-2"),                                     &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Downward Longwave Radiation at the Surface (positive down)
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%longwave))
             var%name        = "rlds"
             var%dimensions  = two_d_t_dimensions
@@ -352,6 +464,9 @@ contains
                                attribute_t("units",         "W m-2"),                                    &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Upward Longwave Radiation at the Surface (positive up)
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%longwave_up))
             var%name        = "rlus"
             var%dimensions  = two_d_t_dimensions
@@ -360,6 +475,9 @@ contains
                                attribute_t("units",         "W m-2"),                                    &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Ground Heat Flux (positive down)
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%ground_heat_flux))
             var%name        = "hfgs"
             var%dimensions  = two_d_t_dimensions
@@ -368,6 +486,9 @@ contains
                                attribute_t("units",         "W m-2"),                                    &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Vegetation fraction
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%vegetation_fraction))
             var%name        = "vegetation_fraction"
             var%dimensions  = two_d_t_dimensions
@@ -376,6 +497,9 @@ contains
                                attribute_t("units",         "m2 m-2"),                              &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Land cover type
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%land_cover))
             var%name        = "land_cover"
             var%dimensions  = two_d_dimensions
@@ -383,6 +507,9 @@ contains
                                attribute_t("units",      ""),                                       &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Leaf Area Index
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%lai))
             var%name        = "lai"
             var%dimensions  = two_d_t_dimensions
@@ -391,6 +518,9 @@ contains
                                attribute_t("units",         "m2 m-2"),                              &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Canopy Water Content
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%canopy_water))
             var%name        = "canopy_water"
             var%dimensions  = two_d_t_dimensions
@@ -399,6 +529,9 @@ contains
                                attribute_t("units",         "kg m-2"),                              &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Snow water equivalent on the surface
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%snow_water_equivalent))
             var%name        = "swe"
             var%dimensions  = two_d_t_dimensions
@@ -407,6 +540,9 @@ contains
                                attribute_t("units",         "kg m-2"),                              &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Soil water content
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%soil_water_content))
             var%name        = "soil_water_content"
             var%dimensions  = three_d_soil_dimensions
@@ -414,6 +550,9 @@ contains
                                attribute_t("units",         "kg m-2"),                              &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Soil Temperature
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%soil_temperature))
             var%name        = "soil_temperature"
             var%dimensions  = three_d_soil_dimensions
@@ -421,6 +560,9 @@ contains
                                attribute_t("units",         "K"),                                   &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  2 meter air temperture
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%air2m_temperature))
             var%name        = "ta2m"
             var%dimensions  = two_d_t_dimensions
@@ -430,6 +572,9 @@ contains
                                attribute_t("units",         "K"),                                   &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  2 meter specific humidity
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%air2m_humidity))
             var%name        = "hus2m"
             var%dimensions  = two_d_t_dimensions
@@ -438,6 +583,9 @@ contains
                                attribute_t("units",         "kg kg-2"),                             &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  10 meter height V component of wind field
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%v10m))
             var%name        = "v10m"
             var%dimensions  = two_d_t_dimensions
@@ -446,6 +594,9 @@ contains
                                attribute_t("units",         "m s-1"),                               &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  10 meter height U component of the wind field
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%u10m))
             var%name        = "u10m"
             var%dimensions  = two_d_t_dimensions
@@ -454,6 +605,9 @@ contains
                                attribute_t("units",         "m s-1"),                               &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Land surface radiative skin temperature
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%skin_temperature))
             var%name        = "ts"
             var%dimensions  = two_d_t_dimensions
@@ -462,6 +616,9 @@ contains
                                attribute_t("units",         "K"),                                   &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Sensible heat flux from the surface (positive up)
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%sensible_heat))
             var%name        = "hfss"
             var%dimensions  = two_d_t_dimensions
@@ -470,6 +627,9 @@ contains
                                attribute_t("units",         "W m-2"),                               &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Latent heat flux from the surface (positive up)
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%latent_heat))
             var%name        = "hfls"
             var%dimensions  = two_d_t_dimensions
@@ -478,12 +638,18 @@ contains
                                attribute_t("units",         "W m-2"),                               &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Binary land mask (water vs land)
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%land_mask))
             var%name        = "land_mask"
             var%dimensions  = two_d_dimensions
             var%attributes  = [attribute_t("non_standard_name", "land_water_mask"),                 &
                                attribute_t("coordinates",       "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Height of the terrain
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%terrain))
             var%name        = "terrain"
             var%dimensions  = two_d_dimensions
@@ -491,6 +657,9 @@ contains
                                attribute_t("units",         "m"),                                   &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Latitude y coordinate
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%latitude))
             var%name        = "lat"
             var%dimensions  = two_d_dimensions
@@ -498,6 +667,9 @@ contains
                                attribute_t("units",         "degrees_north"),                       &
                                attribute_t("axis","Y")]
         end associate
+        !>------------------------------------------------------------
+        !!  Longitude x coordinate
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%longitude))
             var%name        = "lon"
             var%dimensions  = two_d_dimensions
@@ -505,24 +677,36 @@ contains
                                attribute_t("units",         "degrees_east"),                        &
                                attribute_t("axis","X")]
         end associate
+        !>------------------------------------------------------------
+        !!  Latitude y coordinate on the U-grid
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%u_latitude))
             var%name        = "u_lat"
             var%dimensions  = two_d_u_dimensions
             var%attributes  = [attribute_t("non_standard_name", "latitude_on_u_grid"),              &
                                attribute_t("units",         "degrees_north")]
         end associate
+        !>------------------------------------------------------------
+        !!  Longitude x coordinate on the U-grid
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%u_longitude))
             var%name        = "u_lon"
             var%dimensions  = two_d_u_dimensions
             var%attributes  = [attribute_t("non_standard_name", "longitude_on_u_grid"),             &
                                attribute_t("units",         "degrees_east")]
         end associate
+        !>------------------------------------------------------------
+        !!  Latitude y coordinate on the V-grid
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%v_latitude))
             var%name        = "v_lat"
             var%dimensions  = two_d_v_dimensions
             var%attributes  = [attribute_t("non_standard_name", "latitude_on_v_grid"),              &
                                attribute_t("units",         "degrees_north")]
         end associate
+        !>------------------------------------------------------------
+        !!  Longitude x coordinate on the V-grid
+        !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%v_longitude))
             var%name        = "v_lon"
             var%dimensions  = two_d_v_dimensions
@@ -530,7 +714,7 @@ contains
                                attribute_t("units",         "degrees_east")]
         end associate
 
-
+        ! loop through entire array setting n_dimensions and n_attrs based on the data that were supplied
         do i=1,size(var_meta)
             var_meta(i)%n_dimensions = size(var_meta(i)%dimensions)
             var_meta(i)%n_attrs      = size(var_meta(i)%attributes)
