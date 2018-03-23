@@ -321,84 +321,31 @@ OBJS=	$(BUILD)driver.o            \
 		$(BUILD)vinterp.o			\
 		$(BUILD)array_utilities.o
 
-# OBJS=	$(BUILD)driver.o 			\
-# 		$(BUILD)init.o 				\
-# 		$(BUILD)init_options.o 		\
-# 		$(BUILD)model_tracking.o 	\
-# 		$(BUILD)boundary.o 			\
-# 		$(BUILD)time_step.o 		\
-# 		$(BUILD)output.o 			\
-# 		$(BUILD)io_routines.o 		\
-# 		$(BUILD)lt_lut_io.o 		\
-# 		$(BUILD)mp_driver.o 		\
-# 		$(BUILD)mp_wsm6.o 			\
-# 		$(BUILD)mp_thompson.o 		\
-# 		$(BUILD)mp_simple.o 		\
-# 		$(BUILD)mp_morrison.o 		\
-# 		$(BUILD)cu_driver.o 		\
-# 		$(BUILD)cu_tiedtke.o 		\
-# 		$(BUILD)cu_kf.o 			\
-# 		$(BUILD)ra_driver.o 		\
-# 		$(BUILD)ra_simple.o 		\
-# 		$(BUILD)lsm_driver.o 		\
-# 		$(BUILD)lsm_simple.o 		\
-# 		$(BUILD)lsm_basic.o 		\
-# 		$(BUILD)lsm_noahdrv.o 		\
-# 		$(BUILD)lsm_noahlsm.o 		\
-# 		$(BUILD)water_simple.o 		\
-# 		$(BUILD)pbl_driver.o 		\
-# 		$(BUILD)pbl_simple.o 		\
-# 		$(BUILD)pbl_ysu.o 			\
-# 		$(BUILD)advection_driver.o 	\
-# 		$(BUILD)adv_mpdata.o 		\
-# 		$(BUILD)advect.o 			\
-# 		$(BUILD)wind.o 				\
-# 		$(BUILD)linear_winds.o 		\
-# 		$(BUILD)winds_blocking.o	\
-# 		$(BUILD)fftw.o 				\
-# 		$(BUILD)fftshift.o 			\
-# 		$(BUILD)geo_reader.o 		\
-# 		$(BUILD)vinterp.o 			\
-# 		$(BUILD)atm_utilities.o 	\
-# 		$(BUILD)time_obj.o 			\
-# 		$(BUILD)time_delta_obj.o 	\
-# 		$(BUILD)time_io.o 			\
-# 		$(BUILD)time.o 				\
-# 		$(BUILD)data_structures.o 	\
-# 		$(BUILD)icar_constants.o	\
-# 		$(BUILD)wrf_constants.o 	\
-# 		$(BUILD)string.o 			\
-# 		$(BUILD)array_utilities.o 	\
-# 		$(BUILD)debug_utils.o
-
 
 TEST_EXECUTABLES= 	fftshift_test			\
 	  				calendar_test			\
-	  				mpdata_test				\
 	  				fftw_test				\
-	  				blocking_test			\
 					point_in_on_test		\
 	  				array_util_test 		\
 					variable_dict_test		\
-					caf_init_test			\
+					caf_options_test 		\
+					caf_init_test 			\
 					caf_domain_init_test	\
+					caf_bcast_test			\
+					caf_write_domain_test	\
 					caf_options_test		\
-					caf_write_domain_test
+					caf_boundary_test		\
+					caf_boundary_init_test	\
+					caf_init-write_test
+
+# Pre-Coarray Tests that we may want to re-implement
+# mpdata_test			\	(should be easy)
+# blocking_test			\	(may be easy once linear winds is re-implemented)
 
 
 ###################################################################
 #	User facing rules
 ###################################################################
-
-caf_tests:	caf_options_test 		\
-			caf_init_test 			\
-			caf_domain_init_test	\
-			caf_bcast_test			\
-			caf_write_domain_test	\
-			caf_options_test		\
-			caf_boundary_test		\
-			caf_boundary_init_test	\
-			caf_init-write_test
 
 icar:${OBJS}
 	${F90} -o icar ${OBJS} ${LFLAGS}
@@ -417,6 +364,16 @@ cleanall: clean
 	${RM} icar $(TEST_EXECUTABLES) 2>/dev/null ||:
 
 test: $(TEST_EXECUTABLES)
+
+caf_tests:	caf_options_test 		\
+			caf_init_test 			\
+			caf_domain_init_test	\
+			caf_bcast_test			\
+			caf_write_domain_test	\
+			caf_options_test		\
+			caf_boundary_test		\
+			caf_boundary_init_test	\
+			caf_init-write_test
 
 doc:
 	doxygen docs/doxygenConfig
@@ -447,7 +404,7 @@ blocking_test: $(BUILD)test_blocking.o $(BUILD)io_routines.o $(BUILD)winds_block
 array_util_test: $(BUILD)test_array_utilities.o $(BUILD)array_utilities.o
 	${F90} $^ -o $@ ${LFLAGS}
 
-variable_dict_test: $(BUILD)test_variable_dict.o 							\
+variable_dict_test: $(BUILD)test_variable_dict.o $(BUILD)co_utilities.o	 	\
 					$(BUILD)variable_dict_h.o	$(BUILD)variable_dict_obj.o	\
 					$(BUILD)variable_h.o		$(BUILD)variable_obj.o		\
 					$(BUILD)grid_h.o			$(BUILD)grid_obj.o			\
