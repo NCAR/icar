@@ -1,6 +1,6 @@
 module output_metadata
 
-    use icar_constants,         only : kMAX_STORAGE_VARS
+    use icar_constants
     use variable_interface,     only : variable_t
     use meta_data_interface,    only : attribute_t
     implicit none
