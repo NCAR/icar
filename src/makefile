@@ -719,7 +719,8 @@ $(BUILD)init.o:$(MAIN)init.f90 $(BUILD)data_structures.o $(BUILD)options_h.o $(B
 # 					$(BUILD)vinterp.o $(BUILD)output.o $(BUILD)linear_winds.o $(BUILD)time_io.o
 
 $(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.o			\
-					$(BUILD)advection_driver.o $(BUILD)mp_driver.o $(BUILD)domain_h.o $(BUILD)options_h.o
+					$(BUILD)advection_driver.o $(BUILD)mp_driver.o $(BUILD)domain_h.o 		\
+					$(BUILD)options_h.o $(BUILD)atm_utilities.o
 
 # $(BUILD)advection_driver.o $(BUILD)ra_driver.o $(BUILD)lsm_driver.o $(BUILD)cu_driver.o \
 # $(BUILD)pbl_driver.o $(BUILD)mp_driver.o $(BUILD)boundary.o $(BUILD)debug_utils.o
@@ -748,7 +749,8 @@ $(BUILD)string.o:$(UTIL)string.f90
 
 $(BUILD)array_utilities.o:$(UTIL)array_utilities.f90
 
-$(BUILD)atm_utilities.o:$(UTIL)atm_utilities.f90 $(BUILD)icar_constants.o $(BUILD)data_structures.o $(BUILD)options_h.o
+$(BUILD)atm_utilities.o:$(UTIL)atm_utilities.f90 $(BUILD)icar_constants.o 	\
+					$(BUILD)data_structures.o $(BUILD)options_h.o
 
 
 ###################################################################
