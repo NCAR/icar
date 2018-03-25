@@ -1,3 +1,12 @@
+!>------------------------------------------------------------
+!!  Implementation of domain object
+!!
+!!  implements all domain type bound procedures
+!!
+!!  @author
+!!  Ethan Gutmann (gutmann@ucar.edu)
+!!
+!!------------------------------------------------------------
 submodule(domain_interface) domain_implementation
     use assertions_mod,       only : assert, assertions
     use grid_interface,       only : grid_t
@@ -437,151 +446,6 @@ contains
 
     end subroutine
 
-
-    !> ---------------------------------
-    !! Subset one array to the memory bounds defined by the grid
-    !!
-    !! If the input grid does not cover the entire subset, values
-    !! are extrapolated outside of that subset region
-    !!
-    !! ---------------------------------
-    subroutine extend_array(input, output, grid, extrapolate)
-        implicit none
-        real,         intent(in)    :: input(:,:,:)
-        real,         intent(inout) :: output(:,:,:)
-        type(grid_t), intent(in)    :: grid
-        logical,      intent(in),   optional :: extrapolate
-
-        ! loop counter
-        integer :: i
-
-        ! input array dimensions
-        integer :: nx, ny
-        ! output array dimensions
-        integer :: nxo, nyo
-
-        ! these will hold the actual indexes into the two arrays
-        integer :: xs_in, xs_out, ys_in, ys_out
-        integer :: xe_in, xe_out, ye_in, ye_out
-        integer :: i_delta, j_delta ! offsets in x and y to store in case ims or jms is < 1
-
-        logical :: do_extrapolate
-
-        do_extrapolate = .True.
-        if (present(extrapolate)) do_extrapolate = extrapolate
-
-        ! Ideally, and most of the time, this is all it is doing
-        ! output = input(grid%ims:grid%ime, grid%jms:grid%jme)
-        ! However, it is possible that input does not cover the requested memory bounds of this data
-        ! so we have to test.  If outside of bounds, extrapolate out from the boundary
-
-        nx = size(input,1)
-        ny = size(input,3)
-
-        nxo = size(output,1)
-        nyo = size(output,3)
-
-        i_delta = (nxo - nx) / 2
-        j_delta = (nyo - ny) / 2
-
-        xs_in = 1
-        xe_in = nx
-        ys_in = 1
-        ye_in = ny
-
-        if (i_delta > 0) then
-            xs_out = i_delta
-            xe_out = nx + i_delta - 1
-        endif
-
-        if (j_delta > 0) then
-            ys_out = j_delta
-            ye_out = ny + j_delta - 1
-        endif
-
-        ! if (grid%ims < 1) then
-        !     xs_out = 1 - grid%ims + 1
-        !     xs_in  = 1
-        !     i_delta = 1 - grid%ims
-        ! else
-        !     xs_out = 1
-        !     xs_in  = grid%ims
-        ! endif
-        !
-        ! if (grid%ime > nx) then
-        !     xe_out = nx + i_delta
-        !     xe_in  = nx
-        ! else
-        !     xe_out = grid%ime + i_delta
-        !     xe_in  = grid%ime
-        ! endif
-        !
-        ! if (grid%jms < 1) then
-        !     ys_out = 1 - grid%jms + 1
-        !     ys_in  = 1
-        !     j_delta = 1 - grid%jms
-        ! else
-        !     ys_out = 1
-        !     ys_in  = grid%jms
-        ! endif
-        !
-        ! if (grid%jme > ny) then
-        !     ye_out = ny + j_delta
-        !     ye_in  = ny
-        ! else
-        !     ye_out = grid%jme + j_delta
-        !     ye_in  = grid%jme
-        ! endif
-        !
-        !----------------------------------------------------
-        ! This is the area of overlap
-        ! Note that this is the main and likely only assignment
-        !----------------------------------------------------
-        output(xs_out:xe_out, :, ys_out:ye_out) = input(xs_in:xe_in, :, ys_in:ye_in)
-
-        ! outside of that overlap, extrapolate out from the boundary
-        ! this should only be necessary for border images
-        if (grid%ims < 1) then
-            do i=1,xs_out-1
-                if (do_extrapolate) then
-                    output(i,:,:) = output(xs_out,:,:) + (output(xs_out,:,:) - output(xs_out+1,:,:)) * (xs_out - i)
-                else
-                    output(i,:,:) = output(xs_out,:,:)
-                endif
-            enddo
-        endif
-
-        if (grid%ime > nx) then
-            do i=xe_out+1,nxo
-                if (do_extrapolate) then
-                    output(i,:,:) = output(xe_out,:,:) + (output(xe_out,:,:) - output(xe_out-1,:,:)) * (i - xe_out)
-                else
-                    output(i,:,:) = output(xe_out,:,:)
-                endif
-            enddo
-        endif
-
-        if (grid%jms < 1) then
-            do i=1,ys_out-1
-                if (do_extrapolate) then
-                    output(:,:,i) = output(:,:,ys_out) + (output(:,:,ys_out) - output(:,:,ys_out+1)) * (ys_out - i)
-                else
-                    output(:,:,i) = output(:,:,ys_out)
-                endif
-            enddo
-        endif
-
-        if (grid%jme > ny) then
-            do i=ye_out+1,nyo
-                if (do_extrapolate) then
-                    output(:,:,i) = output(:,:,ye_out) + (output(:,:,ye_out) - output(:,:,ye_out-1)) * (i - ye_out)
-                else
-                    output(:,:,i) = output(:,:,ye_out)
-                endif
-            enddo
-        endif
-
-    end subroutine extend_array
 
 
     !> ---------------------------------
