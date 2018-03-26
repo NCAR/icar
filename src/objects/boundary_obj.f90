@@ -109,6 +109,10 @@ contains
 
     end subroutine
 
+    !>------------------------------------------------------------
+    !! Setup the main geo structure in the boundary structure
+    !!
+    !!------------------------------------------------------------
     subroutine setup_boundary_geo(this)
         implicit none
         type(boundary_t), intent(inout) :: this
@@ -268,6 +272,11 @@ contains
     end subroutine
 
 
+    !>------------------------------------------------------------
+    !! broadcast a 2d array that may need to be allocated on remote images
+    !!
+    !! (this needs to be moved to co_util)
+    !!------------------------------------------------------------
     subroutine distribute_2d_array(arr, source, first, last)
         implicit none
         real, allocatable, intent(inout) :: arr(:,:)
@@ -288,6 +297,11 @@ contains
 
     end subroutine
 
+    !>------------------------------------------------------------
+    !! broadcast a 3d array that may need to be allocated on remote images
+    !!
+    !! (this needs to be moved to co_util)
+    !!------------------------------------------------------------
     subroutine distribute_3d_array(arr, source, first, last)
         implicit none
         real, allocatable, intent(inout) :: arr(:,:,:)
@@ -354,7 +368,12 @@ contains
     end subroutine
 
 
-    ! count the number of variables specified, then allocate and store those variables in a list just their size.
+    !>------------------------------------------------------------
+    !! Setup the vars_to_read and var_dimensions arrays given a master set of variables
+    !!
+    !! Count the number of variables specified, then allocate and store those variables in a list just their size.
+    !! The master list will have all variables, but not all will be set
+    !!------------------------------------------------------------
     subroutine setup_variable_lists(master_var_list, master_dim_list, vars_to_read, var_dimensions)
         implicit none
         character(len=kMAX_NAME_LENGTH), intent(in)                 :: master_var_list(:)
@@ -402,6 +421,11 @@ contains
     !!------------------------------------------------------------
 
 
+    !>------------------------------------------------------------
+    !! Figure out how many time steps are in a file based on a specified variable
+    !!
+    !! By default assumes that the variable has three dimensions.  If not, var_space_dims must be set
+    !!------------------------------------------------------------
     function get_n_timesteps(filename, varname, var_space_dims) result(steps_in_file)
         implicit none
         character(len=*), intent(in) :: filename, varname
@@ -425,6 +449,11 @@ contains
     end function
 
 
+    !>------------------------------------------------------------
+    !! Set the boundary data structure to the correct time step / file in the list of files
+    !!
+    !! Reads the time_var from each file successively until it finds a timestep that matches time
+    !!------------------------------------------------------------
     subroutine set_curfile_curstep(bc, time, file_list, time_var)
         implicit none
         type(boundary_t),   intent(inout) :: bc
@@ -452,6 +481,10 @@ contains
     end subroutine
 
 
+    !>------------------------------------------------------------
+    !! Update the curstep and curfile (increments curstep and curfile if necessary)
+    !!
+    !!------------------------------------------------------------
     subroutine update_forcing_step(bc, file_list, time_var)
         implicit none
         type(boundary_t),   intent(inout) :: bc
@@ -459,9 +492,8 @@ contains
         character(len=*),   intent(in) :: time_var
 
 
-        integer :: error, steps_in_file
+        integer :: steps_in_file
 
-        error=1
         bc%curstep = bc%curstep + 1 ! this may be all we have to do most of the time
 
         ! check that we haven't stepped passed the end of the current file
@@ -480,148 +512,6 @@ contains
         endif
     end subroutine
 
-
-
-    !>------------------------------------------------------------
-    !!  Generic routine to read a forcing variable (varname) from a netcdf file (filename) at a time step (curstep)
-    !!
-    !!  Data are interpolated to the high res grid either in 3D or at the boundaries only (boundary_only)
-    !!  Applies modifications specificaly for U,V,T, and P variables
-    !!
-    !! @param highres       Allocated input array to store the result.
-    !! @param filename      Name of the NetCDF file to read.
-    !! @param varname       Name of the variable to read from <filename>.
-    !! @param geolut        Geographic Look Up Table that defines the 2D horizontal interpolation.
-    !! @param vlut          Vertical Look Up table that defines the vertical interpolation.
-    !! @param curstep       The time step in <filename> to read.
-    !! @param boundary_only Logical:interpolate to all points or just to boundaries
-    !! @param options       Model options structure
-    !! @param z_lo          Low-resolution (input) 3D vertical coordinate for pressure adjustment. [meters]
-    !! @param z_hi          High-resolution (output) 3D vertical coordinate for pressure adjustment. [meters]
-    !! @param time_varying_zlut Logical: if true, first adjust the low-resolution data to a common vertical coordinate
-    !! @param interp_vertical Logical: if true, perform vertical interpolation (false for pressure)
-    !!
-    !!------------------------------------------------------------
-    ! subroutine read_var(highres, filename, varname, geolut, vlut, curstep, boundary_only, options, &
-    !                     z_lo, z_hi, time_varying_zlut, interp_vertical)
-    !     implicit none
-    !     real,dimension(:,:,:),   intent(inout):: highres
-    !     character(len=*),        intent(in)   :: filename,varname
-    !     type(geo_look_up_table), intent(in)   :: geolut
-    !     type(vert_look_up_table),intent(in)   :: vlut
-    !     integer,                 intent(in)   :: curstep
-    !     logical,                 intent(in)   :: boundary_only
-    !     type(options_t),      intent(in)   :: options
-    !     real,dimension(:,:,:),   intent(in), optional :: z_lo, z_hi
-    !     type(vert_look_up_table),intent(in), optional :: time_varying_zlut
-    !     logical,                 intent(in), optional :: interp_vertical
-    !
-    !     ! local variables
-    !     real,dimension(:,:,:),allocatable :: inputdata,extra_data
-    !     integer :: nx,ny,nz,i
-    !     logical :: apply_vertical_interpolation
-    !
-    !     ! the special case is to skip vertical interpolation (pressure and one pass of temperature)
-    !     if (present(interp_vertical)) then
-    !         apply_vertical_interpolation=interp_vertical
-    !     else
-    !         ! so default to applying interpolation
-    !         apply_vertical_interpolation=.True.
-    !     endif
-    !
-    !     ! Read the data in, should be relatively fast because we are reading a low resolution forcing file
-    !     call io_read(filename,varname,inputdata,curstep)
-    !
-    !     nx=size(inputdata,1)
-    !     ny=size(inputdata,2)
-    !     nz=size(inputdata,3)
-    !
-    !     ! Variable specific options
-    !     ! For wind variables run a first pass of smoothing over the low res data
-    !     if (((varname==options%parameters%vvar).or.(varname==options%parameters%uvar)).and.(.not.options%parameters%ideal)) then
-    !         call smooth_array(inputdata,1,2)
-    !
-    !     ! For Temperature, we may need to add an offset
-    !     elseif ((varname==options%parameters%tvar).and.(options%parameters%t_offset/=0)) then
-    !         inputdata=inputdata+options%parameters%t_offset
-    !
-    !     ! For pressure, we may need to add a base pressure offset read from pbvar
-    !     else if ((varname==options%parameters%pvar).and.(options%parameters%pbvar/='')) then
-    !         call io_read(filename,options%parameters%pbvar,extra_data,curstep)
-    !         inputdata=inputdata+extra_data
-    !         deallocate(extra_data)
-    !     endif
-    !
-    !     ! if the z-axis of the input data varies over time, we need to first interpolate
-    !     ! to the "standard" z-axis so that the hi-res vlut doesn't need to change
-    !     if ((options%parameters%time_varying_z).and.present(time_varying_zlut)) then
-    !         allocate(extra_data(nx,ny,nz))
-    !         extra_data=inputdata
-    !         call vinterp(inputdata, extra_data, time_varying_zlut, axis=3)
-    !         deallocate(extra_data)
-    !     endif
-    !
-    !
-    !     ! just read the low res version with out interpolating for e.g. external wind data
-    !     if ( (nx==size(highres,1)).and.(ny==size(highres,3)).and.(nz==size(highres,2)) ) then
-    !         highres=reshape(inputdata,[nx,nz,ny],order=[1,3,2])
-    !         deallocate(inputdata)
-    !     else
-    !         ! interpolate data onto the high resolution grid after re-arranging the dimensions.
-    !         allocate(extra_data(nx,nz,ny))
-    !         extra_data=reshape(inputdata,[nx,nz,ny],order=[1,3,2])
-    !
-    !         ! first interpolate to a high res grid (temporarily stored in inputdata)
-    !         deallocate(inputdata)
-    !         allocate(inputdata(size(highres,1),nz,size(highres,3)))
-    !         call geo_interp(inputdata, &
-    !                         extra_data, &
-    !                         geolut,boundary_only)
-    !         ! Then apply vertical interpolation on that grid
-    !         if (apply_vertical_interpolation) then
-    !             call vinterp(highres, inputdata, &
-    !                          vlut,boundary_only)
-    !         else
-    !             ! if we aren't interpolating, just copy over the output
-    !             highres=inputdata(:,:size(highres,2),:)
-    !         endif
-    !         deallocate(extra_data)
-    !         deallocate(inputdata)
-    !     endif
-    !
-    !     ! highres is the useful output of the subroutine
-    ! end subroutine read_var
-
-    !>------------------------------------------------------------
-    !!  Same as read_var but for 2-dimensional data
-    !!
-    !!  Data are read and horizontally interpolated. This routine is simpler because it is used For
-    !!  a more limited set of variables, and they are simpler 2D instead of 3D.
-    !!  Primarily used for surface variables: Sensible and latent heat fluxes, PBL height, skin temperature, radiation
-    !!
-    !! @param highres       Allocated input array to store the result.
-    !! @param filename      Name of the NetCDF file to read.
-    !! @param varname       Name of the variable to read from <filename>.
-    !! @param geolut        Geographic Look Up Table that defines the 2D horizontal interpolation.
-    !! @param curstep       The time step in <filename> to read.
-    !!
-    !!------------------------------------------------------------
-!     subroutine read_2dvar(highres,filename,varname,geolut,curstep)
-!         implicit none
-!         real,dimension(:,:),intent(inout)::highres
-!         character(len=*),intent(in) :: filename,varname
-!         type(geo_look_up_table),intent(in) :: geolut
-!         integer,intent(in)::curstep
-!
-!         real,dimension(:,:),allocatable :: inputdata
-!
-! !       Read the data in
-!         call io_read(filename,varname,inputdata,curstep)
-! !       interpolate data onto the high resolution grid
-!         call geo_interp2d(highres,inputdata,geolut)
-!         deallocate(inputdata)
-!
-!     end subroutine read_2dvar
 
     !>------------------------------------------------------------
     !!  Read in the time step from a boundary conditions file if available

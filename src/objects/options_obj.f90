@@ -18,6 +18,16 @@ submodule(options_interface) options_implementation
 
 contains
 
+
+    !> ----------------------------------------------------------------------------
+    !!  Read all namelists from the options file specified on the command line
+    !!
+    !!  Reads the commandline (or uses default icar_options.nml filename)
+    !!  Checks that the version of the options file matches the version of the code
+    !!  Reads each namelist successively, all options are stored in supplied options object
+    !!
+    !! ----------------------------------------------------------------------------
+
     !> -------------------------------
     !! Initialize an options object
     !!
@@ -90,13 +100,20 @@ contains
                 this%lsm_options    = this%lsm_options[1]
                 this%bias_options   = this%bias_options[1]
             endif
-            syncall
+            sync all
         end do
 
         call collect_physics_requests(this)
 
     end subroutine init
 
+    !> -------------------------------
+    !! Call all physics driver var_request routines
+    !!
+    !! var_request routines allow physics modules to requested
+    !! which variables they need to have allocated, advected, and written in restart files
+    !!
+    !! -------------------------------
     subroutine collect_physics_requests(options)
         type(options_t) :: options
 
@@ -220,31 +237,47 @@ contains
 
 
 
-    !> -------------------------------
-    !! Reads the name of the options file from the commandline
+    !> ----------------------------------------------------------------------------
+    !!  Read in the name of the options files from the command line
     !!
-    !! If no options file was specified, defaults to icar_options.nml
+    !!  @retval     options_file    The name of the options parameter file to use.
+    !!                              Default = icar_options.nml
     !!
-    !! -------------------------------
+    !! ----------------------------------------------------------------------------
     function get_options_file() result(options_file)
         implicit none
-        character(len=MAXFILELENGTH) ::options_file
+        character(len=MAXFILELENGTH) :: options_file
+
+        ! Internal variables
         integer :: error
         logical :: file_exists
+        ! default options filename
+        character(len=*), parameter :: default_options_file = "icar_options.nml"
 
+        ! if a commandline argument was supplied, read the options filename from there
         if (command_argument_count()>0) then
-            call get_command_argument(1,options_file, status=error)
-            if (error>0) then
-                options_file="icar_options.nml"
-            elseif (error==-1) then
+            ! read the commandline argument
+            call get_command_argument(1, options_file, status=error)
+            ! if there was any problem revert to the default filename
+            if (error > 0) then
+                options_file = default_options_file
+
+            ! error -1 means the filename supplied was too long
+            elseif (error == -1) then
                 write(*,*) "Options filename = ", trim(options_file), " ...<cutoff>"
                 write(*,*) "Maximum filename length = ", MAXFILELENGTH
                 stop "ERROR: options filename too long"
             endif
+
+        ! If not arguments were supplied use the default filename
         else
-            options_file="icar_options.nml"
+            options_file = default_options_file
         endif
+
+        ! Check that the options file actually exists
         INQUIRE(file=trim(options_file), exist=file_exists)
+
+        ! if options file does not exist, print an error and quit
         if (.not.file_exists) then
             write(*,*) "Using options file = ", trim(options_file)
             stop "Options file does not exist. "
@@ -1295,22 +1328,26 @@ contains
             if (urban_category==-1) urban_category = 13
             if (ice_category==-1)   ice_category = 15
             if (water_category==-1) water_category = 17
+
         elseif (trim(LU_Categories)=="USGS") then
             if (urban_category==-1) urban_category = 1
             if (ice_category==-1)   ice_category = -1
             if (water_category==-1) water_category = 16
+
         elseif (trim(LU_Categories)=="USGS-RUC") then
             if (urban_category==-1) urban_category = 1
             if (ice_category==-1)   ice_category = 24
             if (water_category==-1) water_category = 16
             ! also note, lakes_category = 28
             write(*,*) "WARNING: not handling lake category (28)"
+
         elseif (trim(LU_Categories)=="MODI-RUC") then
             if (urban_category==-1) urban_category = 13
             if (ice_category==-1)   ice_category = 15
             if (water_category==-1) water_category = 17
             ! also note, lakes_category = 21
             write(*,*) "WARNING: not handling lake category (21)"
+
         elseif (trim(LU_Categories)=="NLCD40") then
             if (urban_category==-1) urban_category = 13
             if (ice_category==-1)   ice_category = 15 ! and 22?

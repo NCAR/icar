@@ -363,7 +363,6 @@ contains
 
     end subroutine io_read3d
 
-
     !>------------------------------------------------------------
     !! Same as io_read3d but for 2-dimensional data
     !!
@@ -561,7 +560,6 @@ contains
 
     end subroutine io_read1d
 
-
     !>------------------------------------------------------------
     !! Same as io_read1d but for double precision data
     !!
@@ -625,6 +623,17 @@ contains
 
     end subroutine io_read1dd
 
+    !>------------------------------------------------------------
+    !! Read a double precision scalar
+    !!
+    !! Reads in a scalar variable from a netcdf file (primarily time).
+    !!
+    !! @param   filename    Name of NetCDF file to look at
+    !! @param   varname     Name of the NetCDF variable to read
+    !! @param[out] result   double precision scalar to store the data in
+    !! @param   step        specify the position to read from a 1D array
+    !!
+    !!------------------------------------------------------------
     subroutine io_read_scalar_d(filename, varname, result, step)
         implicit none
         ! This is the name of the data_in file and variable we will read.

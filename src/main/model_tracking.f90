@@ -12,15 +12,19 @@ module model_tracking
     character(len=1024),allocatable,dimension(:)::versionlist,deltas
 contains
 
+    !> ----------------------------------------------------------------------------
+    !! Initialize the model version data structures
+    !!
+    !! ----------------------------------------------------------------------------
     subroutine init_model_diffs()
         implicit none
-        integer::n=16
+        integer::n=18
 
         allocate(versionlist(n))
         allocate(deltas(n))
         versionlist=[character(len=1024) :: &
                      "0.5.1","0.5.2","0.6","0.7","0.7.1","0.7.2","0.7.3","0.8","0.8.1","0.8.2", &
-                     "0.9","0.9.1","0.9.2","0.9.3","0.9.4","0.9.5"]
+                     "0.9","0.9.1","0.9.2","0.9.3","0.9.4","0.9.5","1.0","2.0"]
         deltas=[ character(len=1024) :: &
         "Earliest version in git. ",                                                            &
         "Added dxlow and variable name definitions pvar,tvar,qvvar,qcvar,qivar,"//              &
@@ -48,11 +52,18 @@ contains
         "Added Morrison and WSM6 microphysics, and the ability to remove the low "  //          &
         "      resolution linear wind field.  Lots of smaller tweaks and bug fixes."//          &
         "      Also added online bias correction option. ",                                     &
-        "Added convective wind advection and improved Linear wind LUT. "                        &
+        "Added convective wind advection and improved Linear wind LUT. ",                       &
+        "Minor cleanup and bug fixes.",                                                         &
+        "Added coarray fortran support, massive overhaul internally, lots of features."//       &
+        "      Temporarily removed. "                                                           &
         ]
 
     end subroutine init_model_diffs
 
+    !> ----------------------------------------------------------------------------
+    !!  Print all changes to the model since the version specified
+    !!
+    !! ----------------------------------------------------------------------------
     subroutine print_model_diffs(version)
         implicit none
         character(len=*), intent(in) :: version
@@ -89,6 +100,10 @@ contains
         endif
     end subroutine print_model_diffs
 
+    !> ----------------------------------------------------------------------------
+    !! Deallocate module data structures
+    !!
+    !! ----------------------------------------------------------------------------
     subroutine finalize_model_diffs()
         implicit none
         if (allocated(versionlist)) then

@@ -14,11 +14,11 @@ module icar_constants
     integer, parameter :: kMAX_NAME_LENGTH = 1024
     integer, parameter :: kMAX_ATTR_LENGTH = 1024
 
-    ! --------------------------------------------
+    !>--------------------------------------------
     ! list of integer constants to be used when accessing various arrays that track variable allocation, usage, etc. requests
     !
     ! NOTE: IF YOU ADD TO THIS LIST BE SURE TO ADD AN INTEGER TO THE kVARS STRUCTURE CONSTRUCTOR BELOW IT!
-    ! This should be transitioned to an enum... but then one can't just "use, only:kVARS"...
+    ! This could be transitioned to an enum... but then one can't just "use, only:kVARS"...
     ! enum, bind(C)
     !   enumerator ::  u, v, w,...
     ! end enum
@@ -101,9 +101,9 @@ module icar_constants
     ! Note this is defined in NetCDF, though not enforced (a file can have more than 1024 dimensions)
     integer, parameter :: kMAX_DIMENSIONS  = 1024
 
-! ------------------------------------------------
-! Model constants (mostly string lengths)
-! ------------------------------------------------
+!>------------------------------------------------
+!! Model constants (mostly string lengths)
+!! ------------------------------------------------
     integer, parameter :: MAXFILELENGTH      =   1024  ! maximum file name length
     integer, parameter :: MAXVARLENGTH       =   1024  ! maximum variable name length
     integer, parameter :: MAXLEVELS          =    500  ! maximum number of vertical layers (should typically be ~10-20)
@@ -112,15 +112,15 @@ module icar_constants
     integer, parameter :: kMAX_STRING_LENGTH =   1024  ! maximum length of other strings (e.g. netcdf attributes)
 
 
-! ------------------------------------------------
-!  Default width of coarray halos, ideally might be physics dependant (e.g. based on advection spatial order)
-! ------------------------------------------------
+!>------------------------------------------------
+!!  Default width of coarray halos, ideally might be physics dependant (e.g. based on advection spatial order)
+!! ------------------------------------------------
     integer,parameter :: kDEFAULT_HALO_SIZE = 1
 
-! ------------------------------------------------
-! Value to accept for difference between real numbers should be as a fraction but then have to test for non-zero...
-! For some variables (cloud ice) 1e-6 is not that small, for others (pressure) it might be below precision...
-! ------------------------------------------------
+!>------------------------------------------------
+!! Value to accept for difference between real numbers should be as a fraction but then have to test for non-zero...
+!! For some variables (cloud ice) 1e-6 is not that small, for others (pressure) it might be below precision...
+!! ------------------------------------------------
     real,   parameter :: kSMALL_VALUE = 1e-6
 
 ! ------------------------------------------------
