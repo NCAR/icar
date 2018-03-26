@@ -51,13 +51,18 @@ contains
         type(domain_t),  intent(inout) :: domain
         type(boundary_t),intent(inout) :: boundary
 
-        integer :: omp_get_max_threads
+        integer :: omp_get_max_threads, num_threads
 
+#if defined(_OPENMP)
+        num_threads = omp_get_max_threads()
+#else
+        num_threads = 1
+#endif
         if (this_image()==1) call welcome_message()
 
         if (this_image()==1) then
             print*, "  Number of coarray image:",num_images()
-            print*, "  Max number of OpenMP Threads:",omp_get_max_threads()
+            print*, "  Max number of OpenMP Threads:",num_threads
         endif
 
         ! read in options file
