@@ -374,12 +374,10 @@ OBJS=	$(BUILD)driver.o            \
 
 TEST_EXECUTABLES= 	fftshift_test			\
 	  				calendar_test			\
-	  				mpdata_test				\
 	  				fftw_test				\
-	  				blocking_test			\
 					point_in_on_test		\
 	  				array_util_test 		\
-					variable_dict_test		\
+					variable_dict_test\
 					caf_init_test			\
 					caf_domain_init_test	\
 					caf_options_test		\
@@ -447,7 +445,7 @@ blocking_test: $(BUILD)test_blocking.o $(BUILD)io_routines.o $(BUILD)winds_block
 array_util_test: $(BUILD)test_array_utilities.o $(BUILD)array_utilities.o
 	${F90} $^ -o $@ ${LFLAGS}
 
-variable_dict_test: $(BUILD)test_variable_dict.o 							\
+variable_dict_test: $(BUILD)test_variable_dict.o 	$(BUILD)co_utilities.o						\
 					$(BUILD)variable_dict_h.o	$(BUILD)variable_dict_obj.o	\
 					$(BUILD)variable_h.o		$(BUILD)variable_obj.o		\
 					$(BUILD)grid_h.o			$(BUILD)grid_obj.o			\
