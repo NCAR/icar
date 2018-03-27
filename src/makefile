@@ -285,6 +285,7 @@ OBJS=	$(BUILD)driver.o            \
 		$(BUILD)string.o        	\
 		$(BUILD)time_delta_obj.o	\
 		$(BUILD)time_obj.o      	\
+		$(BUILD)time_h.o			\
 		$(BUILD)opt_types.o			\
 		$(BUILD)time_io.o       	\
 		$(BUILD)options_h.o			\
@@ -420,6 +421,7 @@ caf_options_test: $(BUILD)test_caf_options.o				  	\
 				$(BUILD)icar_constants.o $(BUILD)string.o     	\
 				$(BUILD)io_routines.o    $(BUILD)time_io.o  	\
 				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o 	\
+				$(BUILD)time_h.o	\
 				$(BUILD)model_tracking.o $(BUILD)opt_types.o	\
 				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
 				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o	\
@@ -434,6 +436,7 @@ caf_output_test: $(BUILD)test_caf_output.o						\
 				$(BUILD)grid_h.o 		$(BUILD)grid_obj.o  	\
 				$(BUILD)meta_data_h.o 	$(BUILD)meta_data_obj.o \
 				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o     \
+				$(BUILD)time_h.o	\
 				$(BUILD)icar_constants.o $(BUILD)io_routines.o  \
 				$(BUILD)assertions.o	$(BUILD)default_output_metadata.o
 	${F90} $^ -o $@ ${LFLAGS}
@@ -449,6 +452,7 @@ caf_write_domain_test: $(BUILD)test_caf_write_domain.o					\
 					$(BUILD)variable_h.o	 $(BUILD)variable_obj.o		\
 					$(BUILD)variable_dict_h.o $(BUILD)variable_dict_obj.o	\
 					$(BUILD)time_delta_obj.o $(BUILD)time_obj.o    		\
+					$(BUILD)time_h.o	\
 					$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
 					$(BUILD)icar_constants.o $(BUILD)io_routines.o		\
 					$(BUILD)model_tracking.o $(BUILD)string.o           \
@@ -473,6 +477,7 @@ caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
 					$(BUILD)variable_h.o	 $(BUILD)variable_obj.o		\
 					$(BUILD)variable_dict_h.o $(BUILD)variable_dict_obj.o	\
 					$(BUILD)time_delta_obj.o $(BUILD)time_obj.o    		\
+					$(BUILD)time_h.o	\
 					$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
 					$(BUILD)icar_constants.o $(BUILD)io_routines.o		\
 					$(BUILD)model_tracking.o $(BUILD)string.o           \
@@ -489,6 +494,7 @@ caf_domain_init_test: $(BUILD)test_caf_domain_init.o                \
 				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
 				$(BUILD)model_tracking.o $(BUILD)string.o           \
 				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o         \
+				$(BUILD)time_h.o	\
 				$(BUILD)opt_types.o      $(BUILD)time_io.o          \
 				$(BUILD)options_h.o      $(BUILD)options_obj.o      \
 				$(BUILD)meta_data_h.o    $(BUILD)meta_data_obj.o    \
@@ -513,6 +519,7 @@ caf_init_test: $(BUILD)test_caf_init.o                              \
 				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
 				$(BUILD)model_tracking.o $(BUILD)string.o           \
 				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o         \
+				$(BUILD)time_h.o	\
 				$(BUILD)opt_types.o      $(BUILD)time_io.o          \
 				$(BUILD)options_h.o      $(BUILD)options_obj.o      \
 				$(BUILD)meta_data_h.o    $(BUILD)meta_data_obj.o    \
@@ -536,6 +543,7 @@ caf_init-write_test: $(BUILD)test_caf_init-write.o                  \
 				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
 				$(BUILD)model_tracking.o $(BUILD)string.o           \
 				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o         \
+				$(BUILD)time_h.o	\
 				$(BUILD)opt_types.o      $(BUILD)time_io.o          \
 				$(BUILD)options_h.o      $(BUILD)options_obj.o      \
 				$(BUILD)meta_data_h.o    $(BUILD)meta_data_obj.o    \
@@ -564,6 +572,7 @@ caf_boundary_test: $(BUILD)test_caf_boundary.o						\
 				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
 				$(BUILD)model_tracking.o $(BUILD)string.o           \
 				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o         \
+				$(BUILD)time_h.o	\
 				$(BUILD)opt_types.o      $(BUILD)time_io.o          \
 				$(BUILD)options_h.o      $(BUILD)options_obj.o      \
 				$(BUILD)meta_data_h.o    $(BUILD)meta_data_obj.o    \
@@ -586,6 +595,7 @@ caf_boundary_init_test: $(BUILD)test_caf_boundary_init.o				    \
 				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
 				$(BUILD)model_tracking.o $(BUILD)string.o           \
 				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o         \
+				$(BUILD)time_h.o	\
 				$(BUILD)opt_types.o      $(BUILD)time_io.o          \
 				$(BUILD)options_h.o      $(BUILD)options_obj.o      \
 				$(BUILD)meta_data_h.o    $(BUILD)meta_data_obj.o    \
@@ -606,7 +616,7 @@ caf_boundary_init_test: $(BUILD)test_caf_boundary_init.o				    \
 
 caf_threads_test: $(BUILD)test_caf_threads.o
 	${F90} $^ -o $@ ${LFLAGS}
-	
+
 ###################################################################
 #	Generic compilation rules
 ###################################################################
@@ -644,11 +654,11 @@ $(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)time_step.o $(BUILD)domain_h.o \
 ###################################################################
 #	Options Object
 ###################################################################
-$(BUILD)opt_types.o: $(OBJECTS)opt_types.f90 $(BUILD)icar_constants.o $(BUILD)time_obj.o $(BUILD)time_delta_obj.o
+$(BUILD)opt_types.o: $(OBJECTS)opt_types.f90 $(BUILD)icar_constants.o $(BUILD)time_h.o $(BUILD)time_delta_obj.o
 
 $(BUILD)options_h.o: $(OBJECTS)options_h.f90 $(BUILD)icar_constants.o $(BUILD)opt_types.o
 
-$(BUILD)options_obj.o: $(OBJECTS)options_obj.f90 $(BUILD)options_h.o $(BUILD)time_obj.o		\
+$(BUILD)options_obj.o: $(OBJECTS)options_obj.f90 $(BUILD)options_h.o $(BUILD)time_h.o		\
 						$(BUILD)time_delta_obj.o $(BUILD)io_routines.o $(BUILD)opt_types.o	\
 						$(BUILD)time_io.o $(BUILD)string.o $(BUILD)model_tracking.o			\
 						$(BUILD)mp_driver.o $(BUILD)advection_driver.o
@@ -681,11 +691,11 @@ $(BUILD)default_output_metadata.o: $(IO)default_output_metadata.f90 $(BUILD)icar
 
 $(BUILD)output_h.o: $(IO)output_h.f90 $(BUILD)icar_constants.o $(BUILD)variable_h.o $(BUILD)grid_h.o $(BUILD)meta_data_h.o $(BUILD)domain_h.o
 
-$(BUILD)output_obj.o: $(IO)output_obj.f90 $(BUILD)output_h.o $(BUILD)default_output_metadata.o $(BUILD)time_obj.o
+$(BUILD)output_obj.o: $(IO)output_obj.f90 $(BUILD)output_h.o $(BUILD)default_output_metadata.o $(BUILD)time_h.o
 
 
 $(BUILD)boundary_h.o: $(OBJECTS)boundary_h.f90 $(BUILD)options_h.o				\
-					$(BUILD)grid_h.o $(BUILD)meta_data_h.o $(BUILD)time_obj.o 	\
+					$(BUILD)grid_h.o $(BUILD)meta_data_h.o $(BUILD)time_h.o 	\
 					$(BUILD)data_structures.o $(BUILD)time_delta_obj.o			\
 					$(BUILD)variable_dict_h.o
 
@@ -697,7 +707,7 @@ $(BUILD)boundary_obj.o: $(OBJECTS)boundary_obj.f90 $(BUILD)boundary_h.o					\
 
 $(BUILD)domain_h.o: $(OBJECTS)domain_h.f90 $(BUILD)options_h.o $(BUILD)exchangeable_h.o \
 					$(BUILD)grid_h.o 	$(BUILD)meta_data_h.o $(BUILD)data_structures.o	\
-					$(BUILD)time_obj.o 	$(BUILD)boundary_h.o	 						\
+					$(BUILD)time_h.o 	$(BUILD)boundary_h.o	 						\
 					$(BUILD)time_io.o 	$(BUILD)io_routines.o
 
 $(BUILD)domain_obj.o: $(OBJECTS)domain_obj.f90 $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)grid_h.o 	\
@@ -742,9 +752,11 @@ $(BUILD)co_utilities.o:$(UTIL)co_utilities.f90 $(BUILD)icar_constants.o
 
 $(BUILD)time_delta_obj.o:$(UTIL)time_delta_obj.f90 $(BUILD)icar_constants.o
 
-$(BUILD)time_obj.o:$(UTIL)time_obj.f90 $(BUILD)time_delta_obj.o $(BUILD)co_utilities.o
+$(BUILD)time_h.o:$(UTIL)time_h.f90 $(BUILD)time_delta_obj.o
 
-$(BUILD)time_io.o:$(UTIL)time_io.f90 $(BUILD)time_obj.o $(BUILD)data_structures.o \
+$(BUILD)time_obj.o:$(UTIL)time_obj.f90 $(BUILD)time_h.o $(BUILD)co_utilities.o
+
+$(BUILD)time_io.o:$(UTIL)time_io.f90 $(BUILD)time_h.o $(BUILD)data_structures.o \
 					$(BUILD)icar_constants.o $(BUILD)string.o $(BUILD)io_routines.o
 
 $(BUILD)string.o:$(UTIL)string.f90
@@ -892,7 +904,7 @@ $(BUILD)fftshift.o:$(UTIL)fftshift.f90 $(BUILD)fftw.o
 ###################################################################
 #	Generic data structures, used by almost everything
 ###################################################################
-$(BUILD)data_structures.o:$(MAIN)data_structures.f90 $(BUILD)icar_constants.o $(BUILD)time_obj.o
+$(BUILD)data_structures.o:$(MAIN)data_structures.f90 $(BUILD)icar_constants.o $(BUILD)time_h.o
 	${F90} ${FFLAGS} $(MAIN)data_structures.f90 -o $(BUILD)data_structures.o
 
 $(BUILD)wrf_constants.o:$(CONST)wrf_constants.f90
