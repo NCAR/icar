@@ -442,6 +442,9 @@ contains
             end associate
         endif
 
+        call standardize_coordinates(this%geo_u)
+        call standardize_coordinates(this%geo_v)
+
         if (this_image()==1) write(*,*) "  Finished reading core domain variables"
 
     end subroutine
