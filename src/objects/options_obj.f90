@@ -569,7 +569,7 @@ contains
         character(len=*), intent(in) :: var_name
 
         if (trim(inputvar)=="") then
-            write(*,*), "Variable: ",trim(var_name), " is required."
+            if (this_image()==1) write(*,*) "Variable: ",trim(var_name), " is required."
             stop
         endif
 
