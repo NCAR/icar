@@ -8,7 +8,7 @@ import xarray as xr
 
 # This should be an input, this is the search string that is assumed to match
 # the output files to be aggregated.
-file_search = "icar_restart_output_{ens}_*"
+file_search = "icar_out_{ens}_*"
 
 # number of processors to parallelize reading the files over
 n_processors = 1
@@ -91,7 +91,7 @@ def agg_file(first_file):
     Result: aggregated dataset is written to a netcdf file'''
 
     print(first_file)
-    date_search = first_file.replace("_001_","*")
+    date_search = first_file.replace("_0001_","*")
     this_date_files = glob.glob(date_search)
     this_date_files.sort()
 
@@ -134,10 +134,10 @@ def agg_file(first_file):
             if len(dims) == 4:
                 data_set[v].values[:,zs:ze, ys:ye+y_off, xs:xe+x_off] = d[v].values[:,zts:zte, yts:yte+y_off, xts:xte+x_off]
 
-    data_set.to_netcdf(first_file.replace("_001_","_"))
+    data_set.to_netcdf(first_file.replace("_0001_","_"))
 
 def main():
-    first_files = glob.glob(file_search.format(ens="001"))
+    first_files = glob.glob(file_search.format(ens="0001"))
     first_files.sort()
 
     # For some reason running the parallelization this far out seems to have far worse performance...
