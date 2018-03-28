@@ -24,6 +24,7 @@ program icar
     use output_interface,   only : output_t
     use time_step,          only : step                               ! Advance the model forward in time
     use initialization,     only : init_model
+    use timer_interface,    only : timer_t
 
     implicit none
 
@@ -31,10 +32,13 @@ program icar
     type(domain_t)  :: domain
     type(boundary_t):: boundary
     type(output_t)  :: dataset
+    type(timer_t)   :: initialization_timer, total_timer, input_timer, output_timer, physics_timer
 
     character(len=1024) :: file_name
     integer :: i
 
+    call total_timer%start()
+    call initialization_timer%start()
     !-----------------------------------------
     !  Model Initialization
     !
@@ -51,21 +55,27 @@ program icar
     !  Time Loop
     !
     !   note that a timestep here is a forcing input timestep O(1-3hr), not a physics timestep O(20-100s)
-    write(file_name, '("icar_restart_output_",I3.3,"_",A,".nc")') this_image(), trim(domain%model_time%as_string())
+    write(file_name, '(I4.4,"_",A,".nc")') this_image(), trim(domain%model_time%as_string())
 
     do i=1,len_trim(file_name)
         if (file_name(i:i)==" ") file_name = file_name(:i-1)//"_"//file_name(i+1:)
         if (file_name(i:i)=="/") file_name = file_name(:i-1)//"-"//file_name(i+1:)
         if (file_name(i:i)==":") file_name = file_name(:i-1)//"-"//file_name(i+1:)
     end do
+    file_name = trim(options%parameters%output_file)//trim(file_name)
     i=1
+
+    call initialization_timer%stop()
+
     do while (domain%model_time < options%parameters%end_time)
 
         if (this_image()==1) write(*,*) ""
         if (this_image()==1) write(*,*) " ----------------------------------------------------------------------"
         if (this_image()==1) print*, "Updating Boundary conditions"
+        call input_timer%start()
         call boundary%update_forcing(options)
         call domain%interpolate_forcing(boundary, update=.True.)
+        call input_timer%stop()
 
         if (this_image()==1) print*, "Running Physics"
         if (this_image()==1) write(*,*) "  Model time = ", trim(domain%model_time%as_string())
@@ -74,28 +84,56 @@ program icar
 
 
         ! this is the meat of the model physics, run all the physics for the current time step looping over internal timesteps
+        call physics_timer%start()
         call step(domain, boundary%current_time, options)
+        call physics_timer%stop()
 
         ! This is an ugly hack until the output object is set up better to handle multiple time steps per file
         ! (that may just need "unlimited" specified in variables?)
         if (this_image()==1) print*, "Writing output file"
         if (i>24) then
-            write(file_name, '("icar_restart_output_",I3.3,"_",A,".nc")') this_image(), trim(domain%model_time%as_string())
+            write(file_name, '(I4.4,"_",A,".nc")') this_image(), trim(domain%model_time%as_string())
 
             do i=1,len_trim(file_name)
                 if (file_name(i:i)==" ") file_name = file_name(:i-1)//"_"//file_name(i+1:)
                 if (file_name(i:i)=="/") file_name = file_name(:i-1)//"-"//file_name(i+1:)
                 if (file_name(i:i)==":") file_name = file_name(:i-1)//"-"//file_name(i+1:)
             end do
+            file_name = trim(options%parameters%output_file)//trim(file_name)
             i = 1
         endif
 
-        call dataset%save_file("output/"//trim(file_name), i, domain%model_time)
+        if (this_image()==1) print*, trim(file_name)
+        call output_timer%start()
+        call dataset%save_file(trim(file_name), i, domain%model_time)
+        call output_timer%stop()
         i = i + 1
 
     end do
     !
     !-----------------------------------------
+    call total_timer%stop()
+
+    if (this_image()==1) then
+        print*, "First image timing:"
+        print*, trim(total_timer%as_string())
+        print*, trim(initialization_timer%as_string())
+        print*, trim(input_timer%as_string())
+        print*, trim(output_timer%as_string())
+        print*, trim(physics_timer%as_string())
+    endif
+
+    sync all
+
+    if (this_image()==num_images()) then
+        print*, ""
+        print*, "Last image timing:"
+        print*, trim(total_timer%as_string())
+        print*, trim(initialization_timer%as_string())
+        print*, trim(input_timer%as_string())
+        print*, trim(output_timer%as_string())
+        print*, trim(physics_timer%as_string())
+    endif
 
 end program
 

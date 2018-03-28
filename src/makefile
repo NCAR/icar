@@ -120,7 +120,7 @@ GIT_VERSION := $(shell git describe --long --dirty --all --always | sed -e's/hea
 
 # GNU fortran
 ifeq ($(COMPILER), gnu)
-	COMP=-fopenmp -lgomp -O3 -c -ffree-line-length-none -ftree-vectorize -fimplicit-none -funroll-loops -march=native  -fno-protect-parens # -ffast-math #-flto #
+	COMP=-fopenmp -lgomp -O2 -c -ffree-line-length-none -ftree-vectorize -fimplicit-none -funroll-loops -march=native  -fno-protect-parens # -ffast-math #-flto #
 	LINK=-fopenmp -lgomp
 	PREPROC=-cpp
 	MODOUTPUT=-J $(BUILD)
@@ -198,8 +198,9 @@ ifeq ($(MODE), debugomp)
 		LINK= -qopenmp -liomp5
 	endif
 	ifeq ($(COMPILER), gnu)
-		COMP= -fopenmp -lgomp -c -O1 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
+		COMP= -fopenmp -lgomp -c -O2 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none -fimplicit-none # -ftree-vectorize -funroll-loops -march=native  -fno-protect-parens
 		LINK= -fopenmp -lgomp
+		 # -Wall -Wno-unused-variable -Wno-unused-dummy-argument
 	endif
 	ifeq ($(COMPILER), cray)
 		COMP=-O1 -c -g
@@ -286,6 +287,8 @@ OBJS=	$(BUILD)driver.o            \
 		$(BUILD)time_delta_obj.o	\
 		$(BUILD)time_obj.o      	\
 		$(BUILD)time_h.o			\
+		$(BUILD)timer_h.o			\
+		$(BUILD)timer_obj.o			\
 		$(BUILD)opt_types.o			\
 		$(BUILD)time_io.o       	\
 		$(BUILD)options_h.o			\
@@ -648,7 +651,7 @@ $(BUILD)%.o: $(MAIN)%.f90
 #	driver code for original version of ICAR
 ###################################################################
 
-$(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)time_step.o $(BUILD)domain_h.o \
+$(BUILD)driver.o:$(MAIN)driver.f90 $(BUILD)time_step.o $(BUILD)domain_h.o $(BUILD)timer_h.o \
 					$(BUILD)output_h.o $(BUILD)boundary_h.o $(BUILD)init.o $(BUILD)options_h.o
 
 ###################################################################
@@ -751,6 +754,10 @@ $(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.
 $(BUILD)co_utilities.o:$(UTIL)co_utilities.f90 $(BUILD)icar_constants.o
 
 $(BUILD)time_delta_obj.o:$(UTIL)time_delta_obj.f90 $(BUILD)icar_constants.o
+
+$(BUILD)timer_h.o:$(OBJECTS)timer_h.f90
+
+$(BUILD)timer_obj.o:$(UTIL)time_obj.f90 $(BUILD)timer_h.o
 
 $(BUILD)time_h.o:$(UTIL)time_h.f90 $(BUILD)time_delta_obj.o
 
