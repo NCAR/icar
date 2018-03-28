@@ -214,11 +214,12 @@ contains
 
         allocate(inputwind(nx,ny,nz)) ! Can't be module level because nx,ny,nz could change between calls,
 
-        inputwind=wind !make a copy so we always use the unsmoothed data when computing the smoothed data
-        if (((windowsize*2+1)>nx).and.(ydim==3)) then
-            write(*,*) "WARNING can not operate if windowsize*2+1 is larger than nx"
+        inputwind = wind !make a copy so we always use the unsmoothed data when computing the smoothed data
+        if (((windowsize+1)>nx).and.(ydim==3)) then
+            write(*,*) "WARNING can not operate if windowsize+1 is larger than nx"
             write(*,*) "NX         = ", nx
             write(*,*) "windowsize = ", windowsize
+            print*, "Image = ",this_image()
             stop
         endif
 
@@ -227,20 +228,24 @@ contains
         !$omp parallel firstprivate(windowsize,nx,ny,nz,ydim), &
         !$omp private(i,j,k,startx,endx,starty,endy, rowsums,rowmeans,nrows,ncols,cursum), &
         !$omp shared(wind,inputwind)
+
         allocate(rowsums(nx)) !this is only used when ydim=3, so nz is really ny
         allocate(rowmeans(nx)) !this is only used when ydim=3, so nz is really ny
-        nrows=windowsize*2+1
-        ncols=windowsize*2+1
+        nrows = windowsize * 2 + 1
+        ncols = windowsize * 2 + 1
+
         !$omp do schedule(static)
         do j=1,ny
 
             ! so we pre-compute the sum over rows for each column in the current window
             if (ydim==3) then
-                rowsums=inputwind(1:nx,j,1)*(windowsize+1)
-                do i=1,windowsize
-                    rowsums=rowsums+inputwind(1:nx,j,i)
+                ! start by adding the outer row n+1 times
+                rowsums = inputwind(1:nx,j,1) * (windowsize+1)
+                do i=1, windowsize
+                    rowsums = rowsums + inputwind(1:nx, j, i)
                 enddo
             endif
+
             ! don't parallelize over this loop because it is much more efficient to be able to assume
             ! that you ran the previous row in serial for the slow (ydim=3) case
             do k=1,nz ! note this is y for ydim=3
@@ -248,58 +253,60 @@ contains
                 if (ydim==3) then
                     ! if we are pinned to the top edge
                     if ((k-windowsize)<=1) then
-                        starty=1
-                        endy  =k+windowsize
-                        rowsums=rowsums-inputwind(1:nx,j,starty)+inputwind(1:nx,j,endy)
+                        starty  = 1
+                        endy    = min(nz, k+windowsize)
+                        rowsums = rowsums - inputwind(1:nx, j, starty) + inputwind(1:nx,j,endy)
+
                     ! if we are pinned to the bottom edge
                     else if ((k+windowsize)>nz) then
-                        starty=k-windowsize
-                        endy  =nz
-                        rowsums=rowsums-inputwind(1:nx,j,starty-1)+inputwind(1:nx,j,endy)
+                        starty  = max(1, k-windowsize)
+                        endy    = nz
+                        rowsums = rowsums - inputwind(1:nx, j, starty-1) + inputwind(1:nx, j, endy)
+
                     ! if we are in the middle (this is the most common)
                     else
-                        starty=k-windowsize
-                        endy  =k+windowsize
-                        rowsums=rowsums-inputwind(1:nx,j,starty-1)+inputwind(:,j,endy)
+                        starty  = max(1, k - windowsize)
+                        endy    = min(nz, k + windowsize)
+                        rowsums = rowsums - inputwind(1:nx, j, starty-1) + inputwind(1:nx, j, endy)
                     endif
-                    rowmeans=rowsums/nrows
-                    cursum=sum(rowmeans(1:windowsize))+rowmeans(1)*(windowsize+1)
+                    rowmeans = rowsums / nrows
+                    cursum = sum(rowmeans(1:windowsize)) + rowmeans(1) * (windowsize+1)
                 endif
 
                 do i=1,nx
                     if (ydim==3) then
                         ! if we are pinned to the left edge
                         if ((i-windowsize)<=1) then
-                            startx=1
-                            endx  =i+windowsize
-                            cursum=cursum-rowmeans(startx)+rowmeans(endx)
+                            startx = 1
+                            endx   = min(nx, i + windowsize)
+                            cursum = cursum - rowmeans(startx) + rowmeans(endx)
                         ! if we are pinned to the right edge
                         else if ((i+windowsize)>nx) then
-                            startx=i-windowsize
-                            endx  =nx
-                            cursum=cursum-rowmeans(startx-1)+rowmeans(endx)
+                            startx = max(2, i - windowsize)
+                            endx   = nx
+                            cursum = cursum - rowmeans(startx-1) + rowmeans(endx)
                         ! if we are in the middle (this is the most common)
                         else
-                            startx=i-windowsize
-                            endx  =i+windowsize
-                            cursum=cursum-rowmeans(startx-1)+rowmeans(endx)
+                            startx = max(2, i - windowsize)
+                            endx   = min(nx, i + windowsize)
+                            cursum = cursum - rowmeans(startx-1) + rowmeans(endx)
                         endif
 
-                        wind(i,j,k)=cursum/ncols
+                        wind(i,j,k) = cursum / ncols
 
                     else ! ydim==2
                         ! ydim=2 for the input data which is a small grid, thus cheap so we still use the slow method
                         !first find the current window bounds
-                        startx=max(1, i-windowsize)
-                        endx  =min(nx,i+windowsize)
-                        starty=max(1, j-windowsize)
-                        endy  =min(ny,j+windowsize)
+                        startx=max(1, i - windowsize)
+                        endx  =min(nx,i + windowsize)
+                        starty=max(1, j - windowsize)
+                        endy  =min(ny,j + windowsize)
                         ! then compute the mean within that window (sum/n)
                         ! note, artifacts near the borders (mentioned in ydim==3) don't affect this
                         ! because the borders *should* be well away from the domain
                         ! if the forcing data are not much larger than the model domain this *could* create issues
-                        wind(i,j,k)=sum(inputwind(startx:endx,starty:endy,k)) &
-                                    / ((endx-startx+1)*(endy-starty+1))
+                        wind(i,j,k) = sum(inputwind(startx:endx,starty:endy,k)) &
+                                       / ((endx-startx+1)*(endy-starty+1))
                     endif
                 enddo
             enddo
@@ -329,12 +336,12 @@ contains
         allocate(inputtemp(nx,ny))
 
         inputtemp = input !make a copy so we always use the unsmoothed data when computing the smoothed data
-        if ((windowsize*2+1)>nx) then
-            write(*,*) "WARNING can not operate if windowsize*2+1 is larger than nx"
-            write(*,*) "NX         = ", nx
-            write(*,*) "windowsize = ", windowsize
-            stop
-        endif
+        ! if ((windowsize*2+1)>nx) then
+        !     write(*,*) "WARNING can not operate if windowsize*2+1 is larger than nx"
+        !     write(*,*) "NX         = ", nx
+        !     write(*,*) "windowsize = ", windowsize
+        !     stop
+        ! endif
 
         !parallelize over a slower dimension (not the slowest because it is MUCH easier this way)
         ! as long as the inner loops (the array operations) are over the fastest dimension we are mostly OK
@@ -343,8 +350,8 @@ contains
         !$omp shared(input,inputtemp)
         allocate(rowsums(nx))
         allocate(rowmeans(nx))
-        nrows = windowsize * 2 + 1
-        ncols = windowsize * 2 + 1
+        nrows = min(nx,windowsize * 2 + 1)
+        ncols = min(ny,windowsize * 2 + 1)
         !$omp do schedule(static)
         do j=1,ny
 
