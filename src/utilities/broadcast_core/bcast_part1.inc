@@ -1,6 +1,9 @@
         integer, intent(in) :: source_image, first_image, last_image
         integer :: dest_image
 
+        !call co_broadcast(coarray, source_image)
+        !return
+
         if (first_image==last_image) return
 
         if (source_image/=first_image) then

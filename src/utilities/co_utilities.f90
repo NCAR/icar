@@ -30,6 +30,9 @@ contains
         integer, intent(in) :: source_image, first_image, last_image
         integer :: dest_image
 
+        !call co_broadcast(coarray,source_image)
+        !return
+
         if (first_image==last_image) return
 
         if (source_image/=first_image) then
@@ -216,6 +219,9 @@ contains
         real, allocatable   :: coarray(:,:,:,:)[:]
         integer :: n1,n2,n3,n4
 
+        !call co_broadcast(data_array, source_image)
+        !return
+
         n1 = size(data_array, 1)
         n2 = size(data_array, 2)
         n3 = size(data_array, 3)
@@ -241,6 +247,9 @@ contains
         real, allocatable   :: coarray(:,:,:)[:]
         integer :: n1,n2,n3
 
+        !call co_broadcast(data_array, source_image)
+        !return
+
         n1 = size(data_array, 1)
         n2 = size(data_array, 2)
         n3 = size(data_array, 3)
@@ -265,6 +274,9 @@ contains
         real, allocatable   :: coarray(:,:)[:]
         integer :: n1,n2
 
+        !call co_broadcast(data_array, source_image)
+        !return
+
         n1 = size(data_array, 1)
         n2 = size(data_array, 2)
 
@@ -287,6 +299,9 @@ contains
         real, allocatable   :: coarray(:)[:]
         integer :: n1
 
+        !call co_broadcast(data_array, source_image)
+        !return
+
         n1 = size(data_array, 1)
 
         allocate(coarray(n1)[*], source=data_array)
@@ -308,6 +323,9 @@ contains
         integer, allocatable   :: coarray(:)[:]
         integer :: n1
 
+        !call co_broadcast(data_array, source_image)
+        !return
+
         n1 = size(data_array, 1)
 
         allocate(coarray(n1)[*], source=data_array)
@@ -328,6 +346,9 @@ contains
 
         character(len=kMAX_STRING_LENGTH), allocatable   :: coarray(:)[:]
         integer :: n1
+
+        !call co_broadcast(data_array, source_image)
+        !return
 
         n1 = size(data_array, 1)
 
@@ -352,6 +373,9 @@ contains
         allocate(coscalar[*])
         coscalar = scalar
 
+        !call co_broadcast(coscalar, source_image)
+        !return
+
         call broadcast(coscalar, source_image, first_image, last_image)
 
         scalar = coscalar
@@ -369,6 +393,9 @@ contains
 
         allocate(coscalar[*])
         coscalar = scalar
+
+        !call co_broadcast(coscalar, source_image)
+        !return
 
         call broadcast(coscalar, source_image, first_image, last_image)
 
@@ -388,6 +415,9 @@ contains
         allocate(coscalar[*])
         coscalar = scalar
 
+        !call co_broadcast(coscalar, source_image)
+        !return
+
         call broadcast(coscalar, source_image, first_image, last_image)
 
         scalar = coscalar
@@ -405,6 +435,9 @@ contains
 
         allocate(coscalar[*])
         coscalar = scalar
+
+        !call co_broadcast(coscalar, source_image)
+        !return
 
         call broadcast(coscalar, source_image, first_image, last_image)
 
