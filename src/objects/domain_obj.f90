@@ -274,14 +274,14 @@ contains
         real, allocatable, intent(inout):: data_array(:,:)
         type(grid_t),      intent(in)   :: grid
 
-        if (this_image()==1) then
+        ! if (this_image()==1) then
             call io_read(filename, varname, data_array)
-        else
-            if (allocated(data_array)) deallocate(data_array)
-            allocate(data_array(grid%nx_global, grid%ny_global))
-        endif
-
-        call broadcast(data_array, 1, 1, num_images(), .true.)
+        ! else
+        !     if (allocated(data_array)) deallocate(data_array)
+        !     allocate(data_array(grid%nx_global, grid%ny_global))
+        ! endif
+        !
+        ! call broadcast(data_array, 1, 1, num_images(), .true.)
 
     end subroutine
 

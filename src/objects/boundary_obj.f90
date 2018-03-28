@@ -41,7 +41,7 @@ contains
         ! needs to read each one to find the grid information for it
         ! then create grid and initialize a variable...
         ! also need to explicitly save lat and lon data
-        if (this_image() == 1) then
+        ! if (this_image() == 1) then
             call this%init_local(this%file_list,     &
                                  vars_to_read, var_dimensions,          &
                                  options%parameters%start_time,         &
@@ -50,9 +50,9 @@ contains
                                  options%parameters%zvar,               &
                                  options%parameters%time_var)
 
-        endif
+        ! endif
 
-        call this%distribute_initial_conditions()
+        ! call this%distribute_initial_conditions()
 
         call setup_boundary_geo(this)
 
@@ -202,7 +202,7 @@ contains
         integer :: nx, ny, nz
 
 
-        if (this_image()==1) then
+        ! if (this_image()==1) then
             call update_forcing_step(this, this%file_list, options%parameters%time_var)
 
             call read_bc_time(this%current_time, this%file_list(this%curfile), options%parameters%time_var, this%curstep)
@@ -234,9 +234,9 @@ contains
             end do
 
             end associate
-        endif
+        ! endif
 
-        call this%distribute_update()
+        ! call this%distribute_update()
 
     end subroutine
 

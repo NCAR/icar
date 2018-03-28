@@ -1072,11 +1072,11 @@
       REAL:: dt, pptrain, pptsnow, pptgraul, pptice
       REAL:: qc_max, qr_max, qs_max, qi_max, qg_max, ni_max, nr_max
       REAL:: nwfa1
-      INTEGER:: i, j, k
+      INTEGER:: i, j, k, ij
       INTEGER:: imax_qc,imax_qr,imax_qi,imax_qs,imax_qg,imax_ni,imax_nr
       INTEGER:: jmax_qc,jmax_qr,jmax_qi,jmax_qs,jmax_qg,jmax_ni,jmax_nr
       INTEGER:: kmax_qc,kmax_qr,kmax_qi,kmax_qs,kmax_qg,kmax_ni,kmax_nr
-      INTEGER:: i_start, j_start, i_end, j_end
+      INTEGER:: i_start, j_start, i_end, j_end, n_i, n_j, ij_start, ij_end
       LOGICAL, OPTIONAL, INTENT(IN) :: diagflag
       INTEGER, OPTIONAL, INTENT(IN) :: do_radar_ref
       CHARACTER*256:: mp_debug
@@ -1094,6 +1094,11 @@
       j_start = jts
       i_end   = MIN(ite, ide-1)
       j_end   = MIN(jte, jde-1)
+
+      n_i = i_end - i_start + 1
+      n_j = j_end - j_start + 1
+      ij_start = 0
+      ij_end = n_i * n_j - 1
 
 !..For idealized testing by developer.
 !     if ( (ide-ids+1).gt.4 .and. (jde-jds+1).lt.4 .and.                &
@@ -1145,8 +1150,11 @@
       endif
 
       !$omp do schedule(guided)
-      j_loop:  do j = j_start, j_end
-      i_loop:  do i = i_start, i_end
+      ij_loop: do ij = ij_start, ij_end
+      ! j_loop:  do j = j_start, j_end
+      ! i_loop:  do i = i_start, i_end
+          i = mod(ij,n_i) + i_start
+          j = (ij / n_i) + j_start
 
          pptrain = 0.
          pptsnow = 0.
@@ -1349,8 +1357,9 @@
           enddo
          ENDIF
 
-      enddo i_loop
-      enddo j_loop
+      ! enddo i_loop
+      ! enddo j_loop
+      enddo ij_loop
       !$omp end do
       !$omp end parallel
 
@@ -3609,10 +3618,10 @@
     !   CALL nl_get_write_thompson_tables(1,write_thompson_tables)
 
       good = 0
-      if (this_image()==1) then
+      ! if (this_image()==1) then
           INQUIRE(FILE="qr_acr_qg.dat",EXIST=lexist)
           IF ( lexist ) THEN
-            print *, "ThompMP: read qr_acr_qg.dat instead of computing"
+            if (this_image()==1) print *, "ThompMP: read qr_acr_qg.dat instead of computing"
             OPEN(63,file="qr_acr_qg.dat",form="unformatted",err=1234)
             READ(63,err=1234) tcg_racg
             READ(63,err=1234) tmr_racg
@@ -3628,27 +3637,27 @@
             ENDIF
 
             ! broadcast the data to all images
-            do i=2,num_images()
-                good[i]     = good
+            ! do i=2,num_images()
+            !     good[i]     = good
             !     tcg_racg(:,:,:,:)[i] = tcg_racg(:,:,:,:)
             !     tmr_racg(:,:,:,:)[i] = tmr_racg(:,:,:,:)
             !     tcr_gacr(:,:,:,:)[i] = tcr_gacr(:,:,:,:)
             !     tmg_gacr(:,:,:,:)[i] = tmg_gacr(:,:,:,:)
             !     tnr_racg(:,:,:,:)[i] = tnr_racg(:,:,:,:)
             !     tnr_gacr(:,:,:,:)[i] = tnr_gacr(:,:,:,:)
-            enddo
+            ! enddo
           ENDIF
-      endif
+      ! endif
 
-      sync all
-      if (good.eq.1) then
-          call broadcast(tcg_racg, 1, 1, num_images())
-          call broadcast(tmr_racg, 1, 1, num_images())
-          call broadcast(tcr_gacr, 1, 1, num_images())
-          call broadcast(tmg_gacr, 1, 1, num_images())
-          call broadcast(tnr_racg, 1, 1, num_images())
-          call broadcast(tnr_gacr, 1, 1, num_images())
-      endif
+      ! sync all
+      ! if (good.eq.1) then
+      !     call broadcast(tcg_racg, 1, 1, num_images())
+      !     call broadcast(tmr_racg, 1, 1, num_images())
+      !     call broadcast(tcr_gacr, 1, 1, num_images())
+      !     call broadcast(tmg_gacr, 1, 1, num_images())
+      !     call broadcast(tnr_racg, 1, 1, num_images())
+      !     call broadcast(tnr_gacr, 1, 1, num_images())
+      ! endif
 
       IF ( good .NE. 1 ) THEN
         if (this_image()==1) print *, "ThompMP: computing qr_acr_qg"
@@ -3792,10 +3801,10 @@
     !   CALL nl_get_write_thompson_tables(1,write_thompson_tables)
 
       good = 0
-      IF ( this_image() == 1 ) THEN
+      ! IF ( this_image() == 1 ) THEN
         INQUIRE(FILE="qr_acr_qs.dat",EXIST=lexist)
         IF ( lexist ) THEN
-          print *, "ThompMP: read qr_acr_qs.dat instead of computing"
+          IF ( this_image() == 1 ) print *, "ThompMP: read qr_acr_qs.dat instead of computing"
           OPEN(63,file="qr_acr_qs.dat",form="unformatted",err=1234)
           READ(63,err=1234)tcs_racs1
           READ(63,err=1234)tmr_racs1
@@ -3815,8 +3824,8 @@
           IF (lopen) THEN
             CLOSE(63)
           ENDIF
-          do i=2,num_images()
-              good[i]     = good
+          ! do i=2,num_images()
+          !     good[i]     = good
             !   tcs_racs1(:,:,:,:)[i] = tcs_racs1(:,:,:,:)
             !   tmr_racs1(:,:,:,:)[i] = tmr_racs1(:,:,:,:)
             !   tcs_racs2(:,:,:,:)[i] = tcs_racs2(:,:,:,:)
@@ -3829,25 +3838,25 @@
             !   tnr_racs2(:,:,:,:)[i] = tnr_racs2(:,:,:,:)
             !   tnr_sacr1(:,:,:,:)[i] = tnr_sacr1(:,:,:,:)
             !   tnr_sacr2(:,:,:,:)[i] = tnr_sacr2(:,:,:,:)
-          enddo
+          ! enddo
         ENDIF
-      endif
+      ! endif
 
-      sync all
-      if (good.eq.1) then
-          call broadcast(tcs_racs1, 1, 1, num_images())
-          call broadcast(tmr_racs1, 1, 1, num_images())
-          call broadcast(tcs_racs2, 1, 1, num_images())
-          call broadcast(tmr_racs2, 1, 1, num_images())
-          call broadcast(tcr_sacr1, 1, 1, num_images())
-          call broadcast(tms_sacr1, 1, 1, num_images())
-          call broadcast(tcr_sacr2, 1, 1, num_images())
-          call broadcast(tms_sacr2, 1, 1, num_images())
-          call broadcast(tnr_racs1, 1, 1, num_images())
-          call broadcast(tnr_racs2, 1, 1, num_images())
-          call broadcast(tnr_sacr1, 1, 1, num_images())
-          call broadcast(tnr_sacr2, 1, 1, num_images())
-      endif
+      ! sync all
+      ! if (good.eq.1) then
+      !     call broadcast(tcs_racs1, 1, 1, num_images())
+      !     call broadcast(tmr_racs1, 1, 1, num_images())
+      !     call broadcast(tcs_racs2, 1, 1, num_images())
+      !     call broadcast(tmr_racs2, 1, 1, num_images())
+      !     call broadcast(tcr_sacr1, 1, 1, num_images())
+      !     call broadcast(tms_sacr1, 1, 1, num_images())
+      !     call broadcast(tcr_sacr2, 1, 1, num_images())
+      !     call broadcast(tms_sacr2, 1, 1, num_images())
+      !     call broadcast(tnr_racs1, 1, 1, num_images())
+      !     call broadcast(tnr_racs2, 1, 1, num_images())
+      !     call broadcast(tnr_sacr1, 1, 1, num_images())
+      !     call broadcast(tnr_sacr2, 1, 1, num_images())
+      ! endif
 
       IF ( good .NE. 1 ) THEN
         if (this_image()==1) print *, "ThompMP: computing qr_acr_qs"
@@ -4073,10 +4082,10 @@
     !   CALL nl_get_write_thompson_tables(1,write_thompson_tables)
 
       good = 0
-      IF ( this_image() == 1 ) THEN
+      ! IF ( this_image() == 1 ) THEN
         INQUIRE(FILE="freezeH2O.dat",EXIST=lexist)
         IF ( lexist ) THEN
-          print *, "ThompMP: read freezeH2O.dat instead of computing"
+          IF ( this_image() == 1 ) print *, "ThompMP: read freezeH2O.dat instead of computing"
           OPEN(63,file="freezeH2O.dat",form="unformatted",err=1234)
           READ(63,err=1234)tpi_qrfz
           READ(63,err=1234)tni_qrfz
@@ -4090,27 +4099,27 @@
           IF (lopen) THEN
             CLOSE(63)
           endif
-          do i=2,num_images()
-              good[i]     = good
+          ! do i=2,num_images()
+          !     good[i]     = good
             !   tpi_qrfz(:,:,:,:)[i] = tpi_qrfz(:,:,:,:)
             !   tni_qrfz(:,:,:,:)[i] = tni_qrfz(:,:,:,:)
             !   tpg_qrfz(:,:,:,:)[i] = tpg_qrfz(:,:,:,:)
             !   tnr_qrfz(:,:,:,:)[i] = tnr_qrfz(:,:,:,:)
             !   tpi_qcfz(:,:,:,:)[i] = tpi_qcfz(:,:,:,:)
             !   tni_qcfz(:,:,:,:)[i] = tni_qcfz(:,:,:,:)
-          enddo
+          ! enddo
         ENDIF
-      ENDIF
+      ! ENDIF
 
-      sync all
-      if (good.eq.1) then
-          call broadcast(tpi_qrfz, 1, 1, num_images())
-          call broadcast(tni_qrfz, 1, 1, num_images())
-          call broadcast(tpg_qrfz, 1, 1, num_images())
-          call broadcast(tnr_qrfz, 1, 1, num_images())
-          call broadcast(tpi_qcfz, 1, 1, num_images())
-          call broadcast(tni_qcfz, 1, 1, num_images())
-      endif
+      ! sync all
+      ! if (good.eq.1) then
+      !     call broadcast(tpi_qrfz, 1, 1, num_images())
+      !     call broadcast(tni_qrfz, 1, 1, num_images())
+      !     call broadcast(tpg_qrfz, 1, 1, num_images())
+      !     call broadcast(tnr_qrfz, 1, 1, num_images())
+      !     call broadcast(tpi_qcfz, 1, 1, num_images())
+      !     call broadcast(tni_qcfz, 1, 1, num_images())
+      ! endif
 
 
       IF ( good .NE. 1 ) THEN
