@@ -556,6 +556,25 @@ contains
 
     end subroutine physics_namelist
 
+
+    !> -------------------------------
+    !! Check that a required input variable is present
+    !!
+    !! If not present, halt the program
+    !!
+    !! -------------------------------
+    subroutine require_var(inputvar, var_name)
+        implicit none
+        character(len=*), intent(in) :: inputvar
+        character(len=*), intent(in) :: var_name
+
+        if (trim(inputvar)=="") then
+            write(*,*), "Variable: ",trim(var_name), " is required."
+            stop
+        endif
+
+    end subroutine require_var
+
     !> -------------------------------
     !! Initialize the variable names to be read
     !!
@@ -630,6 +649,14 @@ contains
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=var_list)
         close(name_unit)
+
+        call require_var(lonvar, "Longitude")
+        call require_var(latvar, "Latitude")
+        call require_var(lat_hi, "High-res Lat")
+        call require_var(lon_hi, "High-res Lon")
+        call require_var(hgt_hi, "High-res HGT")
+        call require_var(time_var, "Time")
+
 
         options%vars_to_read(:) = ""
         i=1
