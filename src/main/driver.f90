@@ -115,12 +115,18 @@ program icar
     call total_timer%stop()
 
     if (this_image()==1) then
+        print*, ""
+        print*, "Model run from : ",trim(options%parameters%start_time%as_string())
+        print*, "           to  : ",trim(options%parameters%end_time%as_string())
+        print*, "Domain : ",trim(options%parameters%init_conditions_file)
+        print*, "Number of images:",num_images()
+        print*, ""
         print*, "First image timing:"
-        print*, trim(total_timer%as_string())
-        print*, trim(initialization_timer%as_string())
-        print*, trim(input_timer%as_string())
-        print*, trim(output_timer%as_string())
-        print*, trim(physics_timer%as_string())
+        print*, "total   : ", trim(total_timer%as_string())
+        print*, "init    : ", trim(initialization_timer%as_string())
+        print*, "input   : ", trim(input_timer%as_string())
+        print*, "output  : ", trim(output_timer%as_string())
+        print*, "physics : ", trim(physics_timer%as_string())
     endif
 
     sync all
@@ -128,11 +134,11 @@ program icar
     if (this_image()==num_images()) then
         print*, ""
         print*, "Last image timing:"
-        print*, trim(total_timer%as_string())
-        print*, trim(initialization_timer%as_string())
-        print*, trim(input_timer%as_string())
-        print*, trim(output_timer%as_string())
-        print*, trim(physics_timer%as_string())
+        print*, "total   : ", trim(total_timer%as_string())
+        print*, "init    : ", trim(initialization_timer%as_string())
+        print*, "input   : ", trim(input_timer%as_string())
+        print*, "output  : ", trim(output_timer%as_string())
+        print*, "physics : ", trim(physics_timer%as_string())
     endif
 
 end program
