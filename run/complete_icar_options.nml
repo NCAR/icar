@@ -203,13 +203,9 @@
 
     ! variables on the ew staggered (U) grid
     uvar    = "U",          ! East-West wind speed      [m/s]
-    ulat    = "XLAT_U",     ! latitude                  [degrees]
-    ulon    = "XLONG_U",    ! longitude                 [degrees]
 
     ! variables on the NS staggered (V) grid
     vvar    = "V",          ! North-South wind speed    [m/s]
-    vlat    = "XLAT_V",     ! latitude                  [degrees]
-    vlon    = "XLONG_V",    ! longitude                 [degrees]
 
     ! these are only used with lsm=1 (pbl should also be >0)
     ! shvar = "HFX",        ! sensible heat flux        [W/m^2]
@@ -233,6 +229,11 @@
     vlat_hi = "XLAT_V",     ! latitude  (ns-staggered grid) [degrees]
     vlon_hi = "XLONG_V",    ! longitude (ns-staggered grid) [degrees]
     hgt_hi  = "HGT_M"       ! surface elevation             [m]
+
+    ! used to rotate E-W/N-S wind fields into the ICAR high-res domain
+    sinalpha_var="SINALPHA"
+    cosalpha_var="COSALPHA"
+
 
     ! to use the Noah LSM the following fields should also be specified on the high-res grid
     ! vegtype_var    = "IVGTYP",    ! vegetation type index (classification to match VEGPARM.TBL file)

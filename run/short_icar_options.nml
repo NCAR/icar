@@ -133,18 +133,24 @@
 
     ! variables on the ew staggered (U) grid
     uvar    = "U",          ! East-West wind speed      [m/s]
-    ulat    = "XLAT_U",     ! latitude                  [degrees]
-    ulon    = "XLONG_U",    ! longitude                 [degrees]
 
     ! variables on the NS staggered (V) grid
     vvar    = "V",          ! North-South wind speed    [m/s]
-    vlat    = "XLAT_V",     ! latitude                  [degrees]
-    vlon    = "XLONG_V",    ! longitude                 [degrees]
+
+    ! Used to rotate the a NS / EW wind field into the ICAR domain
+    sinalpha_var="SINALPHA"
+    cosalpha_var="COSALPHA"
 
     ! NOTE, these variables should be in the high-resolution initial conditions netcdf file
     lat_hi  = "XLAT_M",     ! latitude (mass grid)      [degrees]
     lon_hi  = "XLONG_M",    ! longitude (mass grid)     [degrees]
     hgt_hi  = "HGT_M"       ! surface elevation         [m]
+
+    ! specified with staggered U and V grids on the high-res domain
+    ulat_hi = "XLAT_U",     ! latitude  (ew-staggered grid) [degrees]
+    ulon_hi = "XLONG_U",    ! longitude (ew-staggered grid) [degrees]
+    vlat_hi = "XLAT_V",     ! latitude  (ns-staggered grid) [degrees]
+    vlon_hi = "XLONG_V",    ! longitude (ns-staggered grid) [degrees]
 
     ! only required for some physics code (Noah LSM, water, Tiedke, KF(?))
     landvar = "LANDMASK",   ! land-water mask (as in WRF) 1=land, 0 or 2=water

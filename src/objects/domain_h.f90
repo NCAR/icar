@@ -89,8 +89,8 @@ module domain_interface
     real :: dx
     integer :: nsmooth
 
-    real, allocatable :: costheta(:,:)
-    real, allocatable :: sintheta(:,:)
+    double precision, allocatable :: costheta(:,:)
+    double precision, allocatable :: sintheta(:,:)
 
     ! these coarrays are used to send all data to/from a master image for IO... ?
     ! For now this will be taken care of in the boundary conditions object

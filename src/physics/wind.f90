@@ -15,6 +15,8 @@ module wind
     use domain_interface,  only : domain_t
     use options_interface, only : options_t
 
+    use io_routines, only : io_read
+
     implicit none
     private
     public::update_winds, balance_uvw, init_winds
@@ -127,7 +129,7 @@ contains
     !!------------------------------------------------------------
     subroutine make_winds_grid_relative(u, v, w, sintheta, costheta)
         real, intent(inout) :: u(:,:,:), v(:,:,:), w(:,:,:)
-        real, intent(in)    :: sintheta(:,:), costheta(:,:)
+        double precision, intent(in)    :: sintheta(:,:), costheta(:,:)
 
         real, dimension(:), allocatable :: u_local,v_local
 
@@ -146,6 +148,7 @@ contains
         ! destagger to a centered grid (the mass grid)
         u(:ime,:,:) = (u(:ime,:,:) + u(ims+1:,:,:))/2
         v(:,:,:jme) = (v(:,:,:jme) + v(:,:,jms+1:))/2
+
         do j = jms, jme
             do k = kms, kme
                 ! rotate wind field to the real grid
@@ -225,47 +228,60 @@ contains
         type(domain_t),  intent(inout) :: domain
         type(options_t), intent(in)    :: options
 
-        integer :: i, j, ims, ime, jms, jme, kms, kme, starti, endi
-        real    :: dist, dlat, dlon
+        integer :: i, j, ims, ime, jms, jme, kms, kme
+        integer :: starti, endi
+        double precision :: dist, dlat, dlon
+
+        real, allocatable :: temporary_2d(:,:)
 
         call allocate_winds(domain)
 
-        associate(lat => domain%latitude%data_2d,  &
-                  lon => domain%longitude%data_2d  )
+        if (options%parameters%sinalpha_var /= "") then
+            ims = lbound(domain%latitude%data_2d, 1)
+            ime = ubound(domain%latitude%data_2d, 1)
+            jms = lbound(domain%latitude%data_2d, 2)
+            jme = ubound(domain%latitude%data_2d, 2)
 
-        ims = lbound(lat,1)
-        ime = ubound(lat,1)
-        jms = lbound(lat,2)
-        jme = ubound(lat,2)
-        do j = jms, jme
-            do i = ims, ime
-                ! in case we are in the first or last grid, reset boundaries
-                if (i==ims) then
-                    starti = i
-                    endi   = i + 1
-                elseif (i==ime) then
-                    starti = i - 1
-                    endi   = i
-                else
-                    starti = i - 1
-                    endi   = i + 1
-                endif
+            print*, "Reading Sinalph/cosalpha"
 
-                ! change in latitude
-                dlat = lat(endi,j) - lat(starti,j)
+            call io_read(options%parameters%init_conditions_file, options%parameters%sinalpha_var, temporary_2d)
+            domain%sintheta = temporary_2d(ims:ime, jms:jme)
 
-                ! change in longitude
-                dlon = (lon(endi,j) - lon(starti,j)) * cos(deg2rad*lat(i,j))
+            call io_read(options%parameters%init_conditions_file, options%parameters%cosalpha_var, temporary_2d)
+            domain%costheta = temporary_2d(ims:ime, jms:jme)
 
-                ! distance between two points
-                dist = sqrt(dlat**2 + dlon**2)
+            deallocate(temporary_2d)
+        else
 
-                ! sin/cos of angles for use in rotating fields later
-                domain%sintheta(i, j) = (-1) * dlat / dist
-                domain%costheta(i, j) = abs(dlon / dist)
+            associate(lat => domain%latitude%data_2d,  &
+                      lon => domain%longitude%data_2d  )
+
+            ims = lbound(lat,1)
+            ime = ubound(lat,1)
+            jms = lbound(lat,2)
+            jme = ubound(lat,2)
+            do j = jms, jme
+                do i = ims, ime
+                    ! in case we are in the first or last grid, reset boundaries
+                    starti = max(ims, i-2)
+                    endi   = min(ime, i+2)
+
+                    ! change in latitude
+                    dlat = DBLE(lat(endi,j)) - lat(starti,j)
+                    ! change in longitude
+                    dlon = DBLE(lon(endi,j) - lon(starti,j)) * cos(deg2rad*DBLE(lat(i,j)))
+                    ! distance between two points
+                    dist = sqrt(DBLE(dlat)**2 + DBLE(dlon)**2)
+
+                    ! sin/cos of angles for use in rotating fields later
+                    domain%costheta(i, j) = abs(dlon / dist)
+                    domain%sintheta(i, j) = (-1) * dlat / dist
+
+                enddo
             enddo
-        enddo
 
+            end associate
+        endif
         if (options%parameters%debug .and.(this_image()==1)) then
             print*, ""
             print*, "Domain Geometry"
@@ -276,11 +292,6 @@ contains
             print*, ""
         endif
 
-        end associate
-
-        ! dzdx/y used to add the effect of terrain following grid on W component of wind field
-        ! domain%dzdx = (domain%terrain(2:nx,:) - domain%terrain(1:nx-1,:)) / domain%dx
-        ! domain%dzdy = (domain%terrain(:,2:ny) - domain%terrain(:,1:ny-1)) / domain%dx
 
     end subroutine init_winds
 

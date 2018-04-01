@@ -145,7 +145,7 @@ module options_types
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
                                         swdown_var, lwdown_var, &
-                                        sst_var, rain_var, time_var
+                                        sst_var, rain_var, time_var, sinalpha_var, cosalpha_var
 
         character(len=MAXVARLENGTH) :: vars_to_read(kMAX_STORAGE_VARS)
         integer                     :: dim_list(    kMAX_STORAGE_VARS)
