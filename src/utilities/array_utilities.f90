@@ -202,15 +202,18 @@ contains
                                                         ! It can be 2, or 3 (but not 1)
         real,allocatable,dimension(:,:,:)::inputwind    !> temporary array to store the input data in
         integer::i,j,k,nx,ny,nz,startx,endx,starty,endy ! various array indices/bounds
-        ! intermediate sums to speed up the computation
-        real,allocatable,dimension(:) :: rowsums,rowmeans
-        real :: cursum
-        integer :: cur_n,curcol,ncols,nrows
 
-        ncols=windowsize*2+1
-        nx=size(wind,1)
-        ny=size(wind,2) !note, this is Z for the high-res domain (ydim=3)
-        nz=size(wind,3) !note, this could be the Y or Z dimension depending on ydim
+        ! Intermediate sums to speed up the computation
+        ! Because these are accumulating values over the domain, use double precision
+        ! in practice this doesn't seem to matter.
+        double precision,allocatable,dimension(:) :: rowsums,rowmeans
+        double precision :: cursum
+        integer :: cur_n, curcol, ncols, nrows
+
+        ncols = windowsize * 2 + 1
+        nx = size(wind, 1)
+        ny = size(wind, 2) !note, this is Z for the high-res domain (ydim=3)
+        nz = size(wind, 3) !note, this could be the Y or Z dimension depending on ydim
 
         allocate(inputwind(nx,ny,nz)) ! Can't be module level because nx,ny,nz could change between calls,
 
@@ -239,9 +242,11 @@ contains
 
             ! so we pre-compute the sum over rows for each column in the current window
             if (ydim==3) then
-                ! start by adding the outer row n+1 times
-                rowsums = inputwind(1:nx,j,1) * (windowsize+1)
-                do i=1, windowsize
+                ! start by adding the outer row n+2 times
+                ! effectively assumes it was set up for the grid cell before the first grid cell
+                ! the first time through the loop will remove one iteration of outer row grid cells
+                rowsums = inputwind(1:nx,j,1) * (windowsize+2)
+                do i=2, windowsize
                     rowsums = rowsums + inputwind(1:nx, j, i)
                 enddo
             endif
@@ -251,46 +256,22 @@ contains
             do k=1,nz ! note this is y for ydim=3
                 ! ydim=3 for the main model grid which is large and takes a long time
                 if (ydim==3) then
-                    ! if we are pinned to the top edge
-                    if ((k-windowsize)<=1) then
-                        starty  = 1
-                        endy    = min(nz, k+windowsize)
-                        rowsums = rowsums - inputwind(1:nx, j, starty) + inputwind(1:nx,j,endy)
+                    starty  = max(2, k - windowsize)
+                    endy    = min(nz, k + windowsize)
+                    rowsums = rowsums - inputwind(1:nx, j, starty-1) + inputwind(1:nx, j, endy)
 
-                    ! if we are pinned to the bottom edge
-                    else if ((k+windowsize)>nz) then
-                        starty  = max(1, k-windowsize)
-                        endy    = nz
-                        rowsums = rowsums - inputwind(1:nx, j, starty-1) + inputwind(1:nx, j, endy)
-
-                    ! if we are in the middle (this is the most common)
-                    else
-                        starty  = max(1, k - windowsize)
-                        endy    = min(nz, k + windowsize)
-                        rowsums = rowsums - inputwind(1:nx, j, starty-1) + inputwind(1:nx, j, endy)
-                    endif
+                    ! start by adding the outer row n+2 times
+                    ! effectively assumes it was set up for the grid cell before the first grid cell
+                    ! the first time through the loop will remove one iteration of outer row grid cells
                     rowmeans = rowsums / nrows
-                    cursum = sum(rowmeans(1:windowsize)) + rowmeans(1) * (windowsize+1)
+                    cursum = sum(rowmeans(2:windowsize)) + rowmeans(1) * (windowsize+2)
                 endif
 
                 do i=1,nx
                     if (ydim==3) then
-                        ! if we are pinned to the left edge
-                        if ((i-windowsize)<=1) then
-                            startx = 1
-                            endx   = min(nx, i + windowsize)
-                            cursum = cursum - rowmeans(startx) + rowmeans(endx)
-                        ! if we are pinned to the right edge
-                        else if ((i+windowsize)>nx) then
-                            startx = max(2, i - windowsize)
-                            endx   = nx
-                            cursum = cursum - rowmeans(startx-1) + rowmeans(endx)
-                        ! if we are in the middle (this is the most common)
-                        else
-                            startx = max(2, i - windowsize)
-                            endx   = min(nx, i + windowsize)
-                            cursum = cursum - rowmeans(startx-1) + rowmeans(endx)
-                        endif
+                        startx = max(2, i - windowsize)
+                        endx   = min(nx, i + windowsize)
+                        cursum = cursum - rowmeans(startx-1) + rowmeans(endx)
 
                         wind(i,j,k) = cursum / ncols
 
