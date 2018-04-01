@@ -67,6 +67,11 @@ program icar
 
     call initialization_timer%stop()
 
+    call output_timer%start()
+    call dataset%save_file(trim(file_name), i, domain%model_time)
+    call output_timer%stop()
+    i = i + 1
+
     do while (domain%model_time < options%parameters%end_time)
 
         if (this_image()==1) write(*,*) ""
