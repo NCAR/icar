@@ -1,4 +1,6 @@
 submodule(grid_interface) grid_implementation
+    use assertions_mod, only : assert, assertions
+
     implicit none
 
 contains
@@ -34,16 +36,21 @@ contains
     !! return the split that provides the closest match between the number of x and y grid cells
     !!
     !! -------------------------------
-    module subroutine domain_decomposition(this, nx, ny, nimages, ratio)
+    module subroutine domain_decomposition(this, nx, ny, nimages, ratio, for_image)
         class(grid_t),  intent(inout) :: this
         integer,        intent(in)    :: nx, ny, nimages
         real,           intent(in), optional :: ratio
+        integer,        intent(in), optional :: for_image
         real    :: multiplier
         integer :: ysplit, xsplit, xs, ys, i
         real    :: best, current, x, y
+        integer :: image
 
         multiplier=1
         if (present(ratio)) multiplier = ratio
+
+        image = this_image()
+        if (present(for_image)) image = for_image
 
         xsplit = 1
         ysplit = nimages
@@ -84,14 +91,14 @@ contains
         this%ximages = xs
         this%yimages = ys
 
-        this%ximg = mod(this_image()-1,  this%ximages)+1
-        this%yimg = floor(real(this_image()-1) / this%ximages)+1
+        this%ximg = mod(image-1,  this%ximages)+1
+        this%yimg = floor(real(image-1) / this%ximages)+1
 
         x = (nx/float(xs))
         y = (ny/float(ys))
 
         if (assertions) call assert((xs*ys) == nimages, "Number of tiles does not sum to number of images")
-        ! if (this_image()==1) print*, "ximgs=",xs, "yimgs=",ys
+        ! if (image==1) print*, "ximgs=",xs, "yimgs=",ys
 
     end subroutine domain_decomposition
 
@@ -134,25 +141,26 @@ contains
     !! Generate the domain decomposition mapping and compute the indicies for local memory
     !!
     !! -------------------------------
-    module subroutine set_grid_dimensions(this, nx, ny, nz, nx_extra, ny_extra, halo_width)
+    module subroutine set_grid_dimensions(this, nx, ny, nz, nx_extra, ny_extra, halo_width, for_image)
       class(grid_t),   intent(inout) :: this
       integer,         intent(in)    :: nx, ny, nz
-      integer,         intent(in), optional :: nx_extra, ny_extra, halo_width
+      integer,         intent(in), optional :: nx_extra, ny_extra, halo_width, for_image
 
       integer :: nx_e, ny_e, halo_size
+      integer :: image
 
-      if (present(halo_width)) then
-          halo_size = halo_width
-      else
-          halo_size = kDEFAULT_HALO_SIZE
-      end if
+      halo_size = kDEFAULT_HALO_SIZE
+      if (present(halo_width)) halo_size = halo_width
+
+      image = this_image()
+      if (present(for_image)) image = for_image
 
       nx_e = 0
       ny_e = 0
       if (present(nx_extra)) nx_e = nx_extra ! used to add 1 to the u-field staggered grid
       if (present(ny_extra)) ny_e = ny_extra ! used to add 1 to the v-field staggered grid
 
-      call this%domain_decomposition(nx, ny, num_images())
+      call this%domain_decomposition(nx, ny, num_images(), for_image=image)
 
       if (nz<1) then
           this%is2d = .True.

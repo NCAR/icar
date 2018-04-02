@@ -325,6 +325,17 @@ OBJS=	$(BUILD)driver.o            \
 		$(BUILD)vinterp.o			\
 		$(BUILD)array_utilities.o
 
+CAF_TEST_EXECUTABLES = 	caf_options_test 		\
+						caf_init_test 			\
+						caf_domain_init_test	\
+						caf_bcast_test			\
+						caf_write_domain_test	\
+						caf_options_test		\
+						caf_boundary_test		\
+						caf_boundary_init_test	\
+						caf_init-write_test		\
+						caf_other_image_grids_test\
+						caf_one_d_decomposition_test
 
 TEST_EXECUTABLES= 	fftshift_test			\
 	  				calendar_test			\
@@ -341,7 +352,8 @@ TEST_EXECUTABLES= 	fftshift_test			\
 					caf_boundary_test		\
 					caf_boundary_init_test	\
 					caf_init-write_test		\
-					caf_threads_test
+					caf_threads_test		\
+					$(CAF_TEST_EXECUTABLES)
 
 # Pre-Coarray Tests that we may want to re-implement
 # mpdata_test			\	(should be easy)
@@ -370,15 +382,7 @@ cleanall: clean
 
 test: $(TEST_EXECUTABLES)
 
-caf_tests:	caf_options_test 		\
-			caf_init_test 			\
-			caf_domain_init_test	\
-			caf_bcast_test			\
-			caf_write_domain_test	\
-			caf_options_test		\
-			caf_boundary_test		\
-			caf_boundary_init_test	\
-			caf_init-write_test
+caf_tests:	$(CAF_TEST_EXECUTABLES)
 
 doc:
 	doxygen docs/doxygenConfig
@@ -617,6 +621,15 @@ caf_boundary_init_test: $(BUILD)test_caf_boundary_init.o				    \
 				$(BUILD)vinterp.o 		 $(BUILD)array_utilities.o
 	${F90} $^ -o $@ ${LFLAGS}
 
+caf_other_image_grids_test: $(BUILD)test_caf_other_image_grids.o	\
+				$(BUILD)grid_obj.o 			$(BUILD)grid_h.o		\
+				$(BUILD)icar_constants.o 	$(BUILD)assertions.o
+	${F90} $^ -o $@ ${LFLAGS}
+
+caf_one_d_decomposition_test: $(BUILD)test_caf_one_d_decomposition.o
+	${F90} $^ -o $@ ${LFLAGS}
+
+
 caf_threads_test: $(BUILD)test_caf_threads.o
 	${F90} $^ -o $@ ${LFLAGS}
 
@@ -638,7 +651,6 @@ $(BUILD)%.o: $(OBJECTS)%.f90
 
 $(BUILD)%.o: $(PHYS)%.f90
 	${F90} ${FFLAGS} $< -o $@
-
 
 $(BUILD)%.o: $(TESTS)%.f90
 	${F90} ${FFLAGS} $< -o $@
@@ -682,9 +694,9 @@ $(BUILD)variable_dict_h.o: $(OBJECTS)variable_dict_h.f90 $(BUILD)variable_h.o $(
 
 $(BUILD)variable_dict_obj.o: $(OBJECTS)variable_dict_obj.f90 $(BUILD)variable_dict_h.o
 
-$(BUILD)grid_obj.o: $(OBJECTS)grid_obj.f90 $(BUILD)grid_h.o
+$(BUILD)grid_obj.o: $(OBJECTS)grid_obj.f90 $(BUILD)grid_h.o $(BUILD)assertions.o
 
-$(BUILD)grid_h.o: $(OBJECTS)grid_h.f90 $(BUILD)icar_constants.o $(BUILD)assertions.o $(BUILD)assertions.o
+$(BUILD)grid_h.o: $(OBJECTS)grid_h.f90 $(BUILD)icar_constants.o
 
 $(BUILD)exchangeable_obj.o: $(OBJECTS)exchangeable_obj.f90 $(BUILD)exchangeable_h.o $(BUILD)assertions.o
 
@@ -749,7 +761,6 @@ $(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.
 ###################################################################
 
 # $(BUILD)time.o:$(UTIL)time.f90
-# 	${F90} ${FFLAGS} $(UTIL)time.f90 -o $(BUILD)time.o
 
 $(BUILD)co_utilities.o:$(UTIL)co_utilities.f90 $(BUILD)icar_constants.o
 
@@ -853,13 +864,10 @@ $(BUILD)lsm_noahlsm.o: $(PHYS)lsm_noahlsm.f90
 #	Planetary Boundary Layer code
 ###################################################################
 $(BUILD)pbl_driver.o: $(PHYS)pbl_driver.f90 $(BUILD)pbl_simple.o $(BUILD)pbl_ysu.o $(BUILD)data_structures.o
-	${F90} ${FFLAGS} $(PHYS)pbl_driver.f90 -o $(BUILD)pbl_driver.o
 
 $(BUILD)pbl_simple.o: $(PHYS)pbl_simple.f90 $(BUILD)data_structures.o
-	${F90} ${FFLAGS} $(PHYS)pbl_simple.f90 -o $(BUILD)pbl_simple.o
 
 $(BUILD)pbl_ysu.o: $(PHYS)pbl_ysu.f90
-	${F90} ${FFLAGS} $(PHYS)pbl_ysu.f90 -o $(BUILD)pbl_ysu.o
 
 
 ###################################################################
@@ -867,13 +875,10 @@ $(BUILD)pbl_ysu.o: $(PHYS)pbl_ysu.f90
 ###################################################################
 $(BUILD)advection_driver.o:$(PHYS)advection_driver.f90 $(BUILD)data_structures.o $(BUILD)advect.o \
 							$(BUILD)debug_utils.o $(BUILD)options_h.o $(BUILD)domain_h.o
-	${F90} ${FFLAGS} $(PHYS)advection_driver.f90 -o $(BUILD)advection_driver.o
 
 $(BUILD)advect.o:$(PHYS)advect.f90 $(BUILD)data_structures.o $(BUILD)options_h.o $(BUILD)domain_h.o
-	${F90} ${FFLAGS} $(PHYS)advect.f90 -o $(BUILD)advect.o
 
 $(BUILD)adv_mpdata.o:$(PHYS)adv_mpdata.f90 $(PHYS)adv_mpdata_FCT_core.f90 $(BUILD)data_structures.o
-	${F90} ${FFLAGS} $(PHYS)adv_mpdata.f90 -o $(BUILD)adv_mpdata.o
 
 
 ###################################################################
@@ -890,48 +895,41 @@ $(BUILD)wind.o:$(PHYS)wind.f90 $(BUILD)data_structures.o \
 $(BUILD)linear_winds.o:$(PHYS)linear_winds.f90 $(BUILD)io_routines.o $(BUILD)data_structures.o \
 	 				   $(BUILD)fftshift.o $(BUILD)lt_lut_io.o $(BUILD)string.o $(BUILD)fftw.o  \
 					   $(BUILD)atm_utilities.o $(BUILD)array_utilities.o
-	${F90} ${FFLAGS} $(PHYS)linear_winds.f90 -o $(BUILD)linear_winds.o
 
 $(BUILD)winds_blocking.o:$(PHYS)winds_blocking.f90 $(BUILD)linear_winds.o 	\
 	 					$(BUILD)fftshift.o $(BUILD)fftw.o $(BUILD)array_utilities.o \
 						$(BUILD)data_structures.o $(BUILD)atm_utilities.o $(BUILD)string.o
-	${F90} ${FFLAGS} $(PHYS)winds_blocking.f90 -o $(BUILD)winds_blocking.o
 
 ###################################################################
 #	FFT code
 ###################################################################
 
 $(BUILD)fftw.o:$(UTIL)fftw.f90
-	${F90} ${FFLAGS} $(UTIL)fftw.f90 -o $(BUILD)fftw.o
 
 $(BUILD)fftshift.o:$(UTIL)fftshift.f90 $(BUILD)fftw.o
-	${F90} ${FFLAGS} $(UTIL)fftshift.f90 -o $(BUILD)fftshift.o
 
 
 ###################################################################
 #	Generic data structures, used by almost everything
 ###################################################################
 $(BUILD)data_structures.o:$(MAIN)data_structures.f90 $(BUILD)icar_constants.o $(BUILD)time_h.o
-	${F90} ${FFLAGS} $(MAIN)data_structures.f90 -o $(BUILD)data_structures.o
 
 $(BUILD)wrf_constants.o:$(CONST)wrf_constants.f90
-	${F90} ${FFLAGS} $(CONST)wrf_constants.f90 -o $(BUILD)wrf_constants.o
 
 $(BUILD)icar_constants.o:$(CONST)icar_constants.f90
-	${F90} ${FFLAGS} $(CONST)icar_constants.f90 -o $(BUILD)icar_constants.o
 
 ###################################################################
 #	Keep track of model versions for user information
 ###################################################################
 $(BUILD)model_tracking.o:$(MAIN)model_tracking.f90
-	${F90} ${FFLAGS} $(MAIN)model_tracking.f90 -o $(BUILD)model_tracking.o
 
 $(BUILD)debug_utils.o:$(UTIL)debug_utils.f90 $(BUILD)data_structures.o $(BUILD)string.o
-	${F90} ${FFLAGS} $(UTIL)debug_utils.f90 -o $(BUILD)debug_utils.o
 
 ###################################################################
 #	Unit tests
 ###################################################################
+
+$(BUILD)test_caf_other_image_grids.o: $(TESTS)test_caf_other_image_grids.f90 $(BUILD)grid_h.o
 
 $(BUILD)test_caf_domain_init.o: $(TESTS)test_caf_domain_init.f90 $(BUILD)domain_h.o $(BUILD)options_h.o
 
@@ -962,23 +960,16 @@ $(BUILD)test_caf_options.o: $(TESTS)test_caf_options.f90 $(BUILD)options_h.o
 $(BUILD)test_caf_threads.o: $(TESTS)test_caf_threads.f90
 
 $(BUILD)test_fftw.o: $(TESTS)test_fftw.f90 $(BUILD)fftw.o
-	${F90} ${FFLAGS} $(TESTS)test_fftw.f90 -o $(BUILD)test_fftw.o
 
-$(BUILD)test_fftshift.o:$(BUILD)fftshift.o $(TESTS)test_fftshift.f90
-	${F90} ${FFLAGS} $(TESTS)test_fftshift.f90 -o $(BUILD)test_fftshift.o
+$(BUILD)test_fftshift.o:$(TESTS)test_fftshift.f90 $(BUILD)fftshift.o
 
-$(BUILD)test_calendar.o:$(BUILD)time.o $(TESTS)test_calendar.f90
-	${F90} ${FFLAGS} $(TESTS)test_calendar.f90 -o $(BUILD)test_calendar.o
+$(BUILD)test_calendar.o:$(TESTS)test_calendar.f90 $(BUILD)time.o
 
-$(BUILD)test_point_in_on.o:$(BUILD)geo_reader.o $(TESTS)test_point_in_on.f90
-	${F90} ${FFLAGS} $(TESTS)test_point_in_on.f90 -o $(BUILD)test_point_in_on.o
+$(BUILD)test_point_in_on.o:$(TESTS)test_point_in_on.f90 $(BUILD)geo_reader.o
 
-$(BUILD)test_mpdata.o:$(BUILD)adv_mpdata.o $(TESTS)test_mpdata.f90
-	${F90} ${FFLAGS} $(TESTS)test_mpdata.f90 -o $(BUILD)test_mpdata.o
+$(BUILD)test_mpdata.o:$(TESTS)test_mpdata.f90 $(BUILD)adv_mpdata.o
 
 $(BUILD)test_blocking.o:$(TESTS)test_blocking.f90 $(BUILD)winds_blocking.o $(BUILD)linear_winds.o \
 						$(BUILD)data_structures.o $(BUILD)icar_constants.o $(BUILD)io_routines.o
-	${F90} ${FFLAGS} $(TESTS)test_blocking.f90 -o $(BUILD)test_blocking.o
 
 $(BUILD)test_array_utilities.o:$(TESTS)test_array_utilities.f90 $(BUILD)array_utilities.o
-	${F90} ${FFLAGS} $(TESTS)test_array_utilities.f90 -o $(BUILD)test_array_utilities.o
