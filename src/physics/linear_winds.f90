@@ -36,12 +36,14 @@
 !!----------------------------------------------------------
 module linear_theory_winds
     use iso_c_binding
-    use fft,                        only: fftw_execute_dft, fftw_alloc_complex, fftw_plan_dft_2d, &
+    use fft,                        only: fftw_execute_dft,                      &
+                                            fftw_alloc_complex, fftw_free,       &
+                                            fftw_plan_dft_2d, fftw_destroy_plan, &
                                             FFTW_FORWARD, FFTW_MEASURE, FFTW_BACKWARD, FFTW_ESTIMATE ! note fft module is defined in fftshift.f90
     use fftshifter,                 only: ifftshift, fftshift
     use data_structures
     use domain_interface,           only: domain_t
-    use io_routines,                only: io_read
+    use io_routines,                only: io_read, io_write
     use string,                     only: str
     use grid_interface,             only: grid_t
     ! use linear_theory_lut_disk_io,  only : read_LUT, write_LUT
@@ -792,7 +794,7 @@ contains
 
     subroutine copy_data_remote_data(wind, grids, LUT, i,j,k, z)
         implicit none
-        real,           intent(in)  :: wind(:,:)
+        real,           intent(in)  :: wind(:,:,:)
         type(grid_t),   intent(in)  :: grids(:)
         real,           intent(inout):: LUT(:,:,:,:,:,:)[*]
         integer,        intent(in)  :: i,j,k, z
@@ -800,13 +802,14 @@ contains
         integer :: img
 
         do img = 1, num_images()
-            associate(ims => grids(i)%ims, &
-                      ime => grids(i)%ime, &
-                      jms => grids(i)%jms, &
-                      jme => grids(i)%jme  &
+            associate(ims => grids(img)%ims, &
+                      ime => grids(img)%ime, &
+                      jms => grids(img)%jms, &
+                      jme => grids(img)%jme  &
                 )
             !$omp critical
-            LUT(k,i,j, 1:ime-ims+1, z, 1:jme-jms+1)[i] = wind(ims:ime,jms:jme)
+            if (this_image()==1) print*, "What does it mean that ime,jme are -1 here... this needs thought"
+            LUT(k,i,j, 1:ime-ims, z, 1:jme-jms)[img] = wind(ims:ime-1,jms:jme-1,z)
             !$omp end critical
 
             end associate
@@ -831,9 +834,13 @@ contains
         integer, dimension(3,2) :: LUT_dims
         integer :: loops_completed ! this is just used to measure progress in the LUT creation
         integer :: total_LUT_entries, ijk, start_pos, stop_pos
-        real, allocatable :: temporary_u(:,:), temporary_v(:,:)
+        integer :: ims, jms
+        real, allocatable :: temporary_u(:,:,:), temporary_v(:,:,:)
 
         type(grid_t), allocatable :: u_grids(:), v_grids(:)
+
+        ims = lbound(domain%z%data_3d,1)
+        jms = lbound(domain%z%data_3d,3)
 
         ! the domain to work over
         nz = size(domain%u%data_3d,  2)
@@ -862,13 +869,14 @@ contains
         LUT_dims(:,1) = [nxu,nz,ny]
         LUT_dims(:,2) = [nx,nz,nyv]
 
-        start_pos = nint((real(this_image()-1) / num_images()) * total_LUT_entries) + 1
-        if (this_image()==num_images()) then
-            stop_pos = total_LUT_entries
-        else
-            stop_pos  = nint((real(this_image()) / num_images()) * total_LUT_entries)
-        endif
+        total_LUT_entries = n_dir_values * n_spd_values * n_nsq_values
 
+        start_pos = nint((real(this_image()-1) / num_images()) * total_LUT_entries)
+        if (this_image()==num_images()) then
+            stop_pos = total_LUT_entries - 1
+        else
+            stop_pos  = nint((real(this_image()) / num_images()) * total_LUT_entries) - 1
+        endif
 
         ! create the array of spd, dir, and nsq values to create LUTs for
         ! generates the values for each look up table dimension
@@ -881,20 +889,20 @@ contains
 
         ! Allocate the (LARGE) look up tables for both U and V
         if (.not.options%lt_options%read_LUT) then
-            allocate(hi_u_LUT(n_spd_values, n_dir_values, n_nsq_values, nxu, nz, ny)[*])
-            allocate(hi_v_LUT(n_spd_values, n_dir_values, n_nsq_values, nx,  nz, nyv)[*])
+            allocate(hi_u_LUT(n_spd_values, n_dir_values, n_nsq_values, nxu, nz, ny)[*], source=0.0)
+            allocate(hi_v_LUT(n_spd_values, n_dir_values, n_nsq_values, nx,  nz, nyv)[*], source=0.0)
             error=0
         else
-            print*, "    Reading LUT from file: ", trim(options%lt_options%u_LUT_Filename)
+            if (this_image()==1) write(*,*) "    Reading LUT from file: ", trim(options%lt_options%u_LUT_Filename)
             error=1
             ! error = read_LUT(options%lt_options%u_LUT_Filename//str(this_image())//".nc", hi_u_LUT, hi_v_LUT, options%parameters%dz_levels, LUT_dims, options%lt_options)
             if (error/=0) then
                 if (this_image()==1) write(*,*) "WARNING: LUT on disk does not match that specified in the namelist or does not exist."
                 if (this_image()==1) write(*,*) "    LUT will be recreated"
                 if (allocated(hi_u_LUT)) deallocate(hi_u_LUT)
-                allocate(hi_u_LUT(n_spd_values, n_dir_values, n_nsq_values, nxu, nz, ny)[*])
+                allocate(hi_u_LUT(n_spd_values, n_dir_values, n_nsq_values, nxu, nz, ny)[*], source=0.0)
                 if (allocated(hi_v_LUT)) deallocate(hi_v_LUT)
-                allocate(hi_v_LUT(n_spd_values, n_dir_values, n_nsq_values, nx,  nz, nyv)[*])
+                allocate(hi_v_LUT(n_spd_values, n_dir_values, n_nsq_values, nx,  nz, nyv)[*], source=0.0)
             endif
         endif
 
@@ -904,23 +912,25 @@ contains
             if (this_image()==1) write(*,*) "Stabilities:",exp(nsq_values)
         endif
 
+
         if (reverse.or.(.not.((options%lt_options%read_LUT).and.(error==0)))) then
             ! loop over combinations of U, V, and Nsq values
             loops_completed = 0
             if (this_image()==1) write(*,*) "Percent Completed:"
-            !$omp parallel default(shared) &
-            !$omp private(i,j,k,ik,z, u,v, layer_height, layer_height_bottom, layer_height_top, temporary_u, temporary_v) &
-            !$omp firstprivate(minimum_layer_size, n_dir_values, n_spd_values, n_nsq_values, nz,nx,ny,nxu,nyv,fftnx,fftny)
+            ! $omp parallel default(shared) &
+            ! $omp private(i,j,k,ik,ijk, z, u,v, layer_height, layer_height_bottom, layer_height_top, temporary_u, temporary_v) &
+            ! $omp firstprivate(minimum_layer_size, n_dir_values, n_spd_values, n_nsq_values, nz,nx,ny,nxu,nyv,fftnx,fftny) &
+            ! $omp firstprivate(start_pos, stop_pos, total_LUT_entries)
             ! $omp threadprivate(lt_data_m) declared at the top of the module
 
             ! initialization has to happen in each thread so each thread has its own copy
             ! lt_data_m is a threadprivate variable, within initialization, there are omp critical sections for fftw calls
             call initialize_linear_theory_data(lt_data_m, fftnx, fftny, domain%dx)
-            allocate(temporary_u(fftnx - buffer*2, fftny - buffer*2))
-            allocate(temporary_v(fftnx - buffer*2, fftny - buffer*2))
-            !$omp do
-            do ijk = start_pos, stop_pos
+            allocate(temporary_u(fftnx - buffer*2, fftny - buffer*2, nz), source=0.0)
+            allocate(temporary_v(fftnx - buffer*2, fftny - buffer*2, nz), source=0.0)
 
+            ! $omp do
+            do ijk = start_pos, stop_pos
             ! do ik=0, n_dir_values*n_spd_values*n_nsq_values-1
                 ik = ijk / n_nsq_values ! no +1 yet because this still needs to go through another div / mod iteration to compute i and k
                 j = mod(ijk,n_nsq_values) + 1
@@ -931,26 +941,27 @@ contains
                 i = ik/n_spd_values + 1
                 k = mod(ik,n_spd_values) + 1
 
+                print*, this_image(), ijk, i, j, k
                 ! do k=1, n_spd_values
 
                     ! print the current status if this is being run "interactively"
-                    if (options%parameters%interactive.and.(this_image()==1)) then
-                        !$omp critical (print_lock)
-                        write(*,"(A,f5.1,A$)") char(13), loops_completed/real(stop_pos-start_pos+1)*100," %"
-                        !$omp end critical (print_lock)
-                    endif
                     ! do j=1, n_nsq_values
                         u = calc_u( dir_values(i), spd_values(k) )
                         v = calc_v( dir_values(i), spd_values(k) )
 
                         ! calculate the linear wind field for the current u and v values
                         do z=1,nz
+                            if (options%parameters%interactive) then !.and.(this_image()==1)) then
+                                !$omp critical (print_lock)
+                                write(*,"(I5,f5.1,A)") this_image(), loops_completed/real(nz*(stop_pos-start_pos+1))*100," %"
+                                !$omp end critical (print_lock)
+                            endif
                             ! if (reverse) then
                             !     layer_height        = domain%z(1,1,z) - domain%terrain%data_2d(1,1)
                             !     layer_height_bottom = layer_height - (options%parameters%dz_levels(z) / 2)
                             !     layer_height_top    = layer_height + (options%parameters%dz_levels(z) / 2)
                             ! else
-                                layer_height = domain%z%data_3d(1,z,1) - domain%terrain%data_2d(1,1)
+                                layer_height = domain%z%data_3d(ims,z,jms) - domain%terrain%data_2d(ims,jms)
                                 layer_height_bottom = layer_height - (options%parameters%dz_levels(z) / 2)
                                 layer_height_top    = layer_height + (options%parameters%dz_levels(z) / 2)
                             ! endif
@@ -961,11 +972,11 @@ contains
 
                             ! need to handle stagger (nxu /= nx) and the buffer around edges of the domain
                             if (nxu /= nx) then
-                                temporary_u(2:fftnx-2*buffer-1,:) = real( real(                                              &
+                                temporary_u(1:fftnx-2*buffer-1,:,z) = real( real(                                              &
                                         ( lt_data_m%u_perturb(1+buffer:fftnx-buffer-1,   1+buffer:fftny-buffer)           &
                                         + lt_data_m%u_perturb(2+buffer:fftnx-buffer,     1+buffer:fftny-buffer)) )) / 2
 
-                                temporary_v(:,2:fftny-2*buffer-1) = real( real(                                              &
+                                temporary_v(:,1:fftny-2*buffer-1,z) = real( real(                                              &
                                         ( lt_data_m%v_perturb(1+buffer:fftnx-buffer,     1+buffer:fftny-buffer-1)         &
                                         + lt_data_m%v_perturb(1+buffer:fftnx-buffer,     2+buffer:fftny-buffer)) )) / 2
 
@@ -980,27 +991,36 @@ contains
                                 ! hi_v_LUT(k,i,j,:,z,:) = real( real(                                                    &
                                 !         lt_data_m%v_perturb(1+buffer:fftnx-buffer,     1+buffer:fftny-buffer) ))
                             endif
-                            !$omp critical
-                            sync all
-                            !$omp end critical
+
+                            !$omp critical (print_lock)
+                            loops_completed = loops_completed+1
+                            !$omp end critical (print_lock)
                         enddo
+                        !$omp critical
+                        sync all
+                        !$omp end critical
 
                     ! end do
-                    !$omp critical (print_lock)
-                    loops_completed = loops_completed+1
-                    !$omp end critical (print_lock)
                 ! end do
 
             end do
-            !$omp end do
+            ! $omp end do
             ! memory needs to be freed so this structure can be used again when removing linear winds
             call destroy_linear_theory_data(lt_data_m)
-            !$omp end parallel
-            if (this_image()==1) write(*,"(A,f5.1,A$)") char(13), loops_completed/real(n_dir_values*n_spd_values)*100," %"
+            ! $omp end parallel
+
+            sync all
+
+            if (this_image()==1) write(*,"(f5.1,A)") loops_completed/real(z*(stop_pos-start_pos+1))*100," %"
             if (this_image()==1) write(*,*) char(10),"--------  Linear wind look up table generation complete ---------"
         endif
 
         if (this_image()==1) print*, "    Not writing Linear Theory LUT to file, not implemented yet"
+
+        print*, this_image(), maxval(hi_u_LUT), maxval(hi_v_LUT)
+
+        call io_write("u_"//trim(options%lt_options%u_LUT_Filename)//trim(str(this_image()))//".nc","ulut",hi_u_LUT)
+        call io_write("v_"//trim(options%lt_options%u_LUT_Filename)//trim(str(this_image()))//".nc","vlut",hi_v_LUT)
         ! if ((options%lt_options%write_LUT).and.(.not.reverse)) then
         !     if ((options%lt_options%read_LUT) .and. (error == 0)) then
         !         print*, "    Not writing Linear Theory LUT to file because LUT was read from file"
