@@ -304,6 +304,7 @@ contains
                        options%parameters%hgt_hi,                 &
                        temporary_data, this%grid)
         this%terrain%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+        this%global_terrain = temporary_data ! save the global terrain map for the linear wind solution
 
         associate(g => this%u_grid2d_ext, geo => this%geo_u)
             call array_offset_x(temporary_data, temp_offset)
