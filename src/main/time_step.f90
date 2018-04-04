@@ -242,6 +242,13 @@ contains
         ! internal variables
         integer :: j, ny, nx
 
+        ! if the time step is less than 1/100 s, then probably the forcing data had a repeat (or a step back) in time,
+        ! so this timestep will just return and these forcing data can be ignored
+        if (dt < 0.01) then
+            write(*,*) "WARNING, forcing dt is ~0 seconds, assuming forcing data were repeated and will be skipped. dt=", dt
+            return ! return to avoid a potential divide by 0
+        endif
+
         ny=size(bc%du_dt,3)
         nx=size(bc%du_dt,1)
 
