@@ -78,6 +78,7 @@ contains
         if (this_image()==1) write(*,*) "Reading Initial conditions from boundary dataset"
         call domain%get_initial_conditions(boundary, options)
 
+        if (this_image()==1) write(*,*) "Updating initial winds"
         call update_winds(domain, options)
 
         ! initialize the atmospheric helper utilities
