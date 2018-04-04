@@ -20,6 +20,7 @@ module linear_theory_lut_disk_io
     use io_routines,    only: file_exists, io_read, check, &
                               io_read_attribute, io_add_attribute, &
                               io_maxDims, io_getdims
+    use options_types,  only: lt_options_type
     implicit none
 
     private
@@ -523,7 +524,7 @@ contains
 
             if (dim_length/=n) then
                 error = 1
-                write(*,*) "Dim setup error: ", dimname, dimid, dim_length,"!=",n
+                write(*,*) "Dim setup error: ", trim(dimname), dimid, dim_length,"!=",n
             endif
         endif
         ! return error

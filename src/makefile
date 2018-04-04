@@ -644,7 +644,8 @@ caf_linear_winds_setup_test: $(BUILD)test_caf_linear_winds_setup.o	\
 				$(BUILD)data_structures.o							\
 				$(BUILD)geo_reader.o	 $(BUILD)array_utilities.o	\
 				$(BUILD)fftshift.o 		 $(BUILD)fftw.o  			\
-				$(BUILD)vinterp.o		 $(BUILD)linear_winds.o
+				$(BUILD)vinterp.o		 $(BUILD)linear_winds.o		\
+				$(BUILD)lt_lut_io.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 
@@ -821,7 +822,8 @@ $(BUILD)output.o:$(IO)output.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o
 
 $(BUILD)io_routines.o:$(IO)io_routines.f90 $(BUILD)data_structures.o
 
-$(BUILD)lt_lut_io.o: $(IO)lt_lut_io.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)string.o
+$(BUILD)lt_lut_io.o: $(IO)lt_lut_io.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o \
+				$(BUILD)string.o $(BUILD)opt_types.o $(BUILD)icar_constants.o
 
 
 ###################################################################
@@ -919,10 +921,9 @@ $(BUILD)wind.o:$(PHYS)wind.f90 $(BUILD)data_structures.o \
 # ${F90} ${FFLAGS} $(PHYS)wind.f90 -o $(BUILD)wind.o
 #########################
 
-# $(BUILD)lt_lut_io.o
-$(BUILD)linear_winds.o:$(PHYS)linear_winds.f90 $(BUILD)io_routines.o $(BUILD)data_structures.o \
-	 				   $(BUILD)fftshift.o $(BUILD)string.o $(BUILD)fftw.o	\
-					   $(BUILD)atm_utilities.o $(BUILD)array_utilities.o 	\
+$(BUILD)linear_winds.o:$(PHYS)linear_winds.f90 $(BUILD)io_routines.o $(BUILD)data_structures.o 	\
+	 				   $(BUILD)fftshift.o $(BUILD)string.o $(BUILD)fftw.o						\
+					   $(BUILD)atm_utilities.o $(BUILD)array_utilities.o $(BUILD)lt_lut_io.o	\
 					   $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)grid_h.o
 
 $(BUILD)winds_blocking.o:$(PHYS)winds_blocking.f90 $(BUILD)linear_winds.o 	\

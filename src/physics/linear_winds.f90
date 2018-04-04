@@ -46,9 +46,10 @@ module linear_theory_winds
     use io_routines,                only: io_read, io_write
     use string,                     only: str
     use grid_interface,             only: grid_t
-    ! use linear_theory_lut_disk_io,  only : read_LUT, write_LUT
+    use linear_theory_lut_disk_io,  only : read_LUT, write_LUT
     use mod_atm_utilities
     use array_utilities,            only: smooth_array, calc_weight, linear_space
+    use icar_constants,             only: kMAX_FILE_LENGTH
 
     implicit none
 
@@ -808,7 +809,6 @@ contains
                       jme => grids(img)%jme  &
                 )
             !$omp critical
-            ! if (this_image()==1) print*, "What does it mean that ime,jme are -1 here... this needs thought"
             LUT(k,i,j, 1:ime-ims+1, z, 1:jme-jms+1)[img] = wind(ims:ime,jms:jme,z)
             !$omp end critical
 
@@ -836,18 +836,17 @@ contains
         integer :: total_LUT_entries, ijk, start_pos, stop_pos
         integer :: ims, jms
         real, allocatable :: temporary_u(:,:,:), temporary_v(:,:,:)
+        character(len=kMAX_FILE_LENGTH) :: LUT_file
 
         type(grid_t), allocatable :: u_grids(:), v_grids(:)
+
+        LUT_file = trim(options%lt_options%u_LUT_Filename)//trim(str(this_image()))//".nc"
 
         ims = lbound(domain%z%data_3d,1)
         jms = lbound(domain%z%data_3d,3)
 
         ! the domain to work over
         nz = size(domain%u%data_3d,  2)
-        ! nx = size(domain%lat%data_2d,1)
-        ! ny = size(domain%lat%data_2d,2)
-        ! nxu = size(domain%u%data_3d, 1)
-        ! nyv = size(domain%v%data_3d, 3)
 
         call setup_remote_grids(u_grids, v_grids, domain%global_terrain, nz)
 
@@ -893,9 +892,9 @@ contains
             allocate(hi_v_LUT(n_spd_values, n_dir_values, n_nsq_values, nx,  nz, nyv)[*], source=0.0)
             error=0
         else
-            if (this_image()==1) write(*,*) "    Reading LUT from file: ", trim(options%lt_options%u_LUT_Filename)
+            if (this_image()==1) write(*,*) "    Reading LUT from file: ", trim(LUT_file)
             error=1
-            ! error = read_LUT(options%lt_options%u_LUT_Filename//str(this_image())//".nc", hi_u_LUT, hi_v_LUT, options%parameters%dz_levels, LUT_dims, options%lt_options)
+            error = read_LUT(LUT_file, hi_u_LUT, hi_v_LUT, options%parameters%dz_levels(:nz), LUT_dims, options%lt_options)
             if (error/=0) then
                 if (this_image()==1) write(*,*) "WARNING: LUT on disk does not match that specified in the namelist or does not exist."
                 if (this_image()==1) write(*,*) "    LUT will be recreated"
@@ -916,7 +915,7 @@ contains
         if (reverse.or.(.not.((options%lt_options%read_LUT).and.(error==0)))) then
             ! loop over combinations of U, V, and Nsq values
             loops_completed = 0
-            if (this_image()==1) write(*,*) "Percent Completed:"
+            if (this_image()==1) write(*,*) "    Initializing linear theory"
             ! $omp parallel default(shared) &
             ! $omp private(i,j,k,ik,ijk, z, u,v, layer_height, layer_height_bottom, layer_height_top, temporary_u, temporary_v) &
             ! $omp firstprivate(minimum_layer_size, n_dir_values, n_spd_values, n_nsq_values, nz,nx,ny,nxu,nyv,fftnx,fftny) &
@@ -931,76 +930,75 @@ contains
 
             ! $omp do
             do ijk = start_pos, stop_pos
-            ! do ik=0, n_dir_values*n_spd_values*n_nsq_values-1
+                ! loop over the combined ijk space to improve parallelization (more granular parallelization)
+                ! because it is one combined loop, we have to calculate the i,k indicies from the combined ik variable
+
+                ! do ik=0, n_dir_values*n_spd_values*n_nsq_values-1
                 ik = ijk / n_nsq_values ! no +1 yet because this still needs to go through another div / mod iteration to compute i and k
+
+                ! do j=1, n_nsq_values
                 j = mod(ijk,n_nsq_values) + 1
 
-                ! set the domain wide U and V values to the current u and v values
-                ! loop over the combined ik space to improve parallelization (more granular parallelization)
-                ! because it is one combined loop, we have to calculate the i,k indicies from the combined ik variable
+                ! do i=1, n_spd_values
                 i = ik/n_spd_values + 1
+                ! do k=1, n_spd_values
                 k = mod(ik,n_spd_values) + 1
 
-                ! do k=1, n_spd_values
+                ! set the domain wide U and V values to the current u and v values
+                u = calc_u( dir_values(i), spd_values(k) )
+                v = calc_v( dir_values(i), spd_values(k) )
 
+                ! calculate the linear wind field for the current u and v values
+                do z=1,nz
                     ! print the current status if this is being run "interactively"
-                    ! do j=1, n_nsq_values
-                        u = calc_u( dir_values(i), spd_values(k) )
-                        v = calc_v( dir_values(i), spd_values(k) )
+                    if (options%parameters%interactive) then
+                        !$omp critical (print_lock)
+                        write(*,"(A,I6,f5.1,A)") "Image number: ",this_image(), loops_completed/real(nz*(stop_pos-start_pos+1))*100," %"
+                        !$omp end critical (print_lock)
+                    endif
+                    ! if (reverse) then
+                    !     layer_height        = domain%z(1,1,z) - domain%terrain%data_2d(1,1)
+                    !     layer_height_bottom = layer_height - (options%parameters%dz_levels(z) / 2)
+                    !     layer_height_top    = layer_height + (options%parameters%dz_levels(z) / 2)
+                    ! else
+                        layer_height = domain%z%data_3d(ims,z,jms) - domain%terrain%data_2d(ims,jms)
+                        layer_height_bottom = layer_height - (options%parameters%dz_levels(z) / 2)
+                        layer_height_top    = layer_height + (options%parameters%dz_levels(z) / 2)
+                    ! endif
 
-                        ! calculate the linear wind field for the current u and v values
-                        do z=1,nz
-                            if (options%parameters%interactive) then !.and.(this_image()==1)) then
-                                !$omp critical (print_lock)
-                                write(*,"(I5,f5.1,A)") this_image(), loops_completed/real(nz*(stop_pos-start_pos+1))*100," %"
-                                !$omp end critical (print_lock)
-                            endif
-                            ! if (reverse) then
-                            !     layer_height        = domain%z(1,1,z) - domain%terrain%data_2d(1,1)
-                            !     layer_height_bottom = layer_height - (options%parameters%dz_levels(z) / 2)
-                            !     layer_height_top    = layer_height + (options%parameters%dz_levels(z) / 2)
-                            ! else
-                                layer_height = domain%z%data_3d(ims,z,jms) - domain%terrain%data_2d(ims,jms)
-                                layer_height_bottom = layer_height - (options%parameters%dz_levels(z) / 2)
-                                layer_height_top    = layer_height + (options%parameters%dz_levels(z) / 2)
-                            ! endif
+                    call linear_perturbation(u, v, exp(nsq_values(j)),                                  &
+                                             layer_height_bottom, layer_height_top, minimum_layer_size, &
+                                             domain%terrain_frequency, lt_data_m)
 
-                            call linear_perturbation(u, v, exp(nsq_values(j)),                                  &
-                                                     layer_height_bottom, layer_height_top, minimum_layer_size, &
-                                                     domain%terrain_frequency, lt_data_m)
+                    ! need to handle stagger (nxu /= nx) and the buffer around edges of the domain
+                    if (nxu /= nx) then
+                        temporary_u(:,:,z) = real( real(                                              &
+                                ( lt_data_m%u_perturb(buffer:fftnx-buffer,     1+buffer:fftny-buffer)           &
+                                + lt_data_m%u_perturb(1+buffer:fftnx-buffer+1,     1+buffer:fftny-buffer)) )) / 2
 
-                            ! need to handle stagger (nxu /= nx) and the buffer around edges of the domain
-                            if (nxu /= nx) then
-                                temporary_u(:,:,z) = real( real(                                              &
-                                        ( lt_data_m%u_perturb(buffer:fftnx-buffer,     1+buffer:fftny-buffer)           &
-                                        + lt_data_m%u_perturb(1+buffer:fftnx-buffer+1,     1+buffer:fftny-buffer)) )) / 2
+                        temporary_v(:,:,z) = real( real(                                              &
+                                ( lt_data_m%v_perturb(1+buffer:fftnx-buffer,     buffer:fftny-buffer)         &
+                                + lt_data_m%v_perturb(1+buffer:fftnx-buffer,     1+buffer:fftny-buffer+1)) )) / 2
 
-                                temporary_v(:,:,z) = real( real(                                              &
-                                        ( lt_data_m%v_perturb(1+buffer:fftnx-buffer,     buffer:fftny-buffer)         &
-                                        + lt_data_m%v_perturb(1+buffer:fftnx-buffer,     1+buffer:fftny-buffer+1)) )) / 2
+                        call copy_data_to_remote(temporary_u, u_grids, hi_u_LUT, i,j,k, z)
+                        call copy_data_to_remote(temporary_v, v_grids, hi_v_LUT, i,j,k, z)
 
-                                call copy_data_to_remote(temporary_u, u_grids, hi_u_LUT, i,j,k, z)
-                                call copy_data_to_remote(temporary_v, v_grids, hi_v_LUT, i,j,k, z)
+                    else
+                        stop "ERROR: linear wind LUT creation not set up for non-staggered grids yet"
+                        ! hi_u_LUT(k,i,j,:,z,:) = real( real(                                                    &
+                        !         lt_data_m%u_perturb(1+buffer:fftnx-buffer,     1+buffer:fftny-buffer) ))
+                        !
+                        ! hi_v_LUT(k,i,j,:,z,:) = real( real(                                                    &
+                        !         lt_data_m%v_perturb(1+buffer:fftnx-buffer,     1+buffer:fftny-buffer) ))
+                    endif
 
-                            else
-                                stop "ERROR: linear wind LUT creation not set up for non-staggered grids yet"
-                                ! hi_u_LUT(k,i,j,:,z,:) = real( real(                                                    &
-                                !         lt_data_m%u_perturb(1+buffer:fftnx-buffer,     1+buffer:fftny-buffer) ))
-                                !
-                                ! hi_v_LUT(k,i,j,:,z,:) = real( real(                                                    &
-                                !         lt_data_m%v_perturb(1+buffer:fftnx-buffer,     1+buffer:fftny-buffer) ))
-                            endif
-
-                            !$omp critical (print_lock)
-                            loops_completed = loops_completed+1
-                            !$omp end critical (print_lock)
-                        enddo
-                        !$omp critical
-                        sync all
-                        !$omp end critical
-
-                    ! end do
-                ! end do
+                    !$omp critical (print_lock)
+                    loops_completed = loops_completed+1
+                    !$omp end critical (print_lock)
+                enddo
+                !$omp critical
+                sync all
+                !$omp end critical
 
             end do
             ! $omp end do
@@ -1010,22 +1008,18 @@ contains
 
             sync all
 
-            if (this_image()==1) write(*,"(f5.1,A)") loops_completed/real(z*(stop_pos-start_pos+1))*100," %"
+            if (this_image()==1) write(*,*) "All images: 100 % Complete"
             if (this_image()==1) write(*,*) char(10),"--------  Linear wind look up table generation complete ---------"
         endif
 
-        if (this_image()==1) print*, "    Not writing Linear Theory LUT to file, not implemented yet"
-
-        call io_write("u_"//trim(options%lt_options%u_LUT_Filename)//trim(str(this_image()))//".nc","ulut",hi_u_LUT)
-        call io_write("v_"//trim(options%lt_options%u_LUT_Filename)//trim(str(this_image()))//".nc","vlut",hi_v_LUT)
-        ! if ((options%lt_options%write_LUT).and.(.not.reverse)) then
-        !     if ((options%lt_options%read_LUT) .and. (error == 0)) then
-        !         print*, "    Not writing Linear Theory LUT to file because LUT was read from file"
-        !     else
-        !         print*, "    Writing Linear Theory LUT to file: ", trim(options%lt_options%u_LUT_Filename)
-        !         error = write_LUT(options%lt_options%u_LUT_Filename//str(this_image())//".nc", hi_u_LUT, hi_v_LUT, options%parameters%dz_levels, options%lt_options)
-        !     endif
-        ! endif
+        if ((options%lt_options%write_LUT).and.(.not.reverse)) then
+            if ((options%lt_options%read_LUT) .and. (error == 0)) then
+                if (this_image()==1) write(*,*) "    Not writing Linear Theory LUT to file because LUT was read from file"
+            else
+                if (this_image()==1) write(*,*) "    Writing Linear Theory LUT to file: ", trim(LUT_file)
+                error = write_LUT(LUT_file, hi_u_LUT, hi_v_LUT, options%parameters%dz_levels(:nz), options%lt_options)
+            endif
+        endif
 
     end subroutine initialize_spatial_winds
 
