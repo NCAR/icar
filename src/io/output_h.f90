@@ -46,6 +46,7 @@ module output_interface
 
       ! The filename of the netcdf file to write
       character(len=kMAX_FILE_LENGTH) :: filename
+
       ! the netcdf ID for an open file
       integer :: ncfile_id
 

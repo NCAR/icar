@@ -49,7 +49,7 @@ contains
 
         call initialize_variables(this, options)
 
-        call setup_meta_data(this)
+        call setup_meta_data(this, options)
 
     end subroutine
 
@@ -671,9 +671,13 @@ contains
     !! Populare the metadata structure in the domain for later output
     !!
     !! -------------------------------
-    subroutine setup_meta_data(this)
+    subroutine setup_meta_data(this, options)
         implicit none
         class(domain_t), intent(inout) :: this
+        class(options_t),intent(in)    :: options
+
+        call this%info%add_attribute("comment",options%parameters%comment)
+        call this%info%add_attribute("source","ICAR version:"//trim(options%parameters%version))
 
         call this%info%add_attribute("ids",str(this%grid%ids))
         call this%info%add_attribute("ide",str(this%grid%ide))
@@ -695,7 +699,6 @@ contains
         call this%info%add_attribute("jte",str(this%grid%jte))
         call this%info%add_attribute("kts",str(this%grid%kts))
         call this%info%add_attribute("kte",str(this%grid%kte))
-
 
     end subroutine setup_meta_data
 
