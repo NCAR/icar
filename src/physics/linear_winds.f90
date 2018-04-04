@@ -792,7 +792,7 @@ contains
 
     end subroutine setup_remote_grids
 
-    subroutine copy_data_remote_data(wind, grids, LUT, i,j,k, z)
+    subroutine copy_data_to_remote(wind, grids, LUT, i,j,k, z)
         implicit none
         real,           intent(in)  :: wind(:,:,:)
         type(grid_t),   intent(in)  :: grids(:)
@@ -808,14 +808,14 @@ contains
                       jme => grids(img)%jme  &
                 )
             !$omp critical
-            if (this_image()==1) print*, "What does it mean that ime,jme are -1 here... this needs thought"
-            LUT(k,i,j, 1:ime-ims, z, 1:jme-jms)[img] = wind(ims:ime-1,jms:jme-1,z)
+            ! if (this_image()==1) print*, "What does it mean that ime,jme are -1 here... this needs thought"
+            LUT(k,i,j, 1:ime-ims+1, z, 1:jme-jms+1)[img] = wind(ims:ime,jms:jme,z)
             !$omp end critical
 
             end associate
         enddo
 
-    end subroutine copy_data_remote_data
+    end subroutine copy_data_to_remote
 
     !>----------------------------------------------------------
     !! Compute look up tables for all combinations of U, V, and Nsq
@@ -926,8 +926,8 @@ contains
             ! initialization has to happen in each thread so each thread has its own copy
             ! lt_data_m is a threadprivate variable, within initialization, there are omp critical sections for fftw calls
             call initialize_linear_theory_data(lt_data_m, fftnx, fftny, domain%dx)
-            allocate(temporary_u(fftnx - buffer*2, fftny - buffer*2, nz), source=0.0)
-            allocate(temporary_v(fftnx - buffer*2, fftny - buffer*2, nz), source=0.0)
+            allocate(temporary_u(fftnx - buffer*2+1, fftny - buffer*2,   nz), source=0.0)
+            allocate(temporary_v(fftnx - buffer*2,   fftny - buffer*2+1, nz), source=0.0)
 
             ! $omp do
             do ijk = start_pos, stop_pos
@@ -972,16 +972,16 @@ contains
 
                             ! need to handle stagger (nxu /= nx) and the buffer around edges of the domain
                             if (nxu /= nx) then
-                                temporary_u(1:fftnx-2*buffer-1,:,z) = real( real(                                              &
-                                        ( lt_data_m%u_perturb(1+buffer:fftnx-buffer-1,   1+buffer:fftny-buffer)           &
-                                        + lt_data_m%u_perturb(2+buffer:fftnx-buffer,     1+buffer:fftny-buffer)) )) / 2
+                                temporary_u(:,:,z) = real( real(                                              &
+                                        ( lt_data_m%u_perturb(buffer:fftnx-buffer,     1+buffer:fftny-buffer)           &
+                                        + lt_data_m%u_perturb(1+buffer:fftnx-buffer+1,     1+buffer:fftny-buffer)) )) / 2
 
-                                temporary_v(:,1:fftny-2*buffer-1,z) = real( real(                                              &
-                                        ( lt_data_m%v_perturb(1+buffer:fftnx-buffer,     1+buffer:fftny-buffer-1)         &
-                                        + lt_data_m%v_perturb(1+buffer:fftnx-buffer,     2+buffer:fftny-buffer)) )) / 2
+                                temporary_v(:,:,z) = real( real(                                              &
+                                        ( lt_data_m%v_perturb(1+buffer:fftnx-buffer,     buffer:fftny-buffer)         &
+                                        + lt_data_m%v_perturb(1+buffer:fftnx-buffer,     1+buffer:fftny-buffer+1)) )) / 2
 
-                                call copy_data_remote_data(temporary_u, u_grids, hi_u_LUT, i,j,k, z)
-                                call copy_data_remote_data(temporary_v, v_grids, hi_v_LUT, i,j,k, z)
+                                call copy_data_to_remote(temporary_u, u_grids, hi_u_LUT, i,j,k, z)
+                                call copy_data_to_remote(temporary_v, v_grids, hi_v_LUT, i,j,k, z)
 
                             else
                                 stop "ERROR: linear wind LUT creation not set up for non-staggered grids yet"
