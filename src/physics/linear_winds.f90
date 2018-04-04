@@ -795,7 +795,7 @@ contains
 
     subroutine copy_data_to_remote(wind, grids, LUT, i,j,k, z)
         implicit none
-        real,           intent(in)  :: wind(:,:,:)
+        real,           intent(in)  :: wind(:,:)
         type(grid_t),   intent(in)  :: grids(:)
         real,           intent(inout):: LUT(:,:,:,:,:,:)[*]
         integer,        intent(in)  :: i,j,k, z
@@ -809,7 +809,7 @@ contains
                       jme => grids(img)%jme  &
                 )
             !$omp critical
-            LUT(k,i,j, 1:ime-ims+1, z, 1:jme-jms+1)[img] = wind(ims:ime,jms:jme,z)
+            LUT(k,i,j, 1:ime-ims+1, z, 1:jme-jms+1)[img] = wind(ims:ime,jms:jme)
             !$omp end critical
 
             end associate
@@ -834,8 +834,8 @@ contains
         integer, dimension(3,2) :: LUT_dims
         integer :: loops_completed ! this is just used to measure progress in the LUT creation
         integer :: total_LUT_entries, ijk, start_pos, stop_pos
-        integer :: ims, jms
-        real, allocatable :: temporary_u(:,:,:), temporary_v(:,:,:)
+        integer :: ims, jms, this_n
+        real, allocatable :: temporary_u(:,:), temporary_v(:,:)
         character(len=kMAX_FILE_LENGTH) :: LUT_file
 
         type(grid_t), allocatable :: u_grids(:), v_grids(:)
@@ -906,6 +906,7 @@ contains
         endif
 
         if (options%parameters%debug) then
+            if (this_image()==1) write(*,*) "Local Look up Table size:", 4*product(shape(hi_u_LUT))/real(2**20), "MB"
             if (this_image()==1) write(*,*) "Wind Speeds:",spd_values
             if (this_image()==1) write(*,*) "Directions:",360*dir_values/(2*pi)
             if (this_image()==1) write(*,*) "Stabilities:",exp(nsq_values)
@@ -925,9 +926,9 @@ contains
             ! initialization has to happen in each thread so each thread has its own copy
             ! lt_data_m is a threadprivate variable, within initialization, there are omp critical sections for fftw calls
             call initialize_linear_theory_data(lt_data_m, fftnx, fftny, domain%dx)
-            allocate(temporary_u(fftnx - buffer*2+1, fftny - buffer*2,   nz), source=0.0)
-            allocate(temporary_v(fftnx - buffer*2,   fftny - buffer*2+1, nz), source=0.0)
-
+            allocate(temporary_u(fftnx - buffer*2+1, fftny - buffer*2  ), source=0.0)
+            allocate(temporary_v(fftnx - buffer*2,   fftny - buffer*2+1), source=0.0)
+            this_n = stop_pos-start_pos+1
             ! $omp do
             do ijk = start_pos, stop_pos
                 ! loop over the combined ijk space to improve parallelization (more granular parallelization)
@@ -972,11 +973,11 @@ contains
 
                     ! need to handle stagger (nxu /= nx) and the buffer around edges of the domain
                     if (nxu /= nx) then
-                        temporary_u(:,:,z) = real( real(                                              &
+                        temporary_u(:,:) = real( real(                                              &
                                 ( lt_data_m%u_perturb(buffer:fftnx-buffer,     1+buffer:fftny-buffer)           &
                                 + lt_data_m%u_perturb(1+buffer:fftnx-buffer+1,     1+buffer:fftny-buffer)) )) / 2
 
-                        temporary_v(:,:,z) = real( real(                                              &
+                        temporary_v(:,:) = real( real(                                              &
                                 ( lt_data_m%v_perturb(1+buffer:fftnx-buffer,     buffer:fftny-buffer)         &
                                 + lt_data_m%v_perturb(1+buffer:fftnx-buffer,     1+buffer:fftny-buffer+1)) )) / 2
 
@@ -995,13 +996,27 @@ contains
                     !$omp critical (print_lock)
                     loops_completed = loops_completed+1
                     !$omp end critical (print_lock)
+
+                    ! for now sync all has to be inside the z loop to conserve memory for large domains
+                    !$omp critical
+                    sync all
+                    !$omp end critical
                 enddo
-                !$omp critical
-                sync all
-                !$omp end critical
 
             end do
             ! $omp end do
+
+            ! If this image doesn't have as many steps to run as some other images might,
+            ! then it has to run additional ghost step(s) so that it syncs with the others correctly
+            do i=1, (total_LUT_entries/num_images()+1) - this_n
+                ! the syncs should be outside of the z loop, but this is a little more forgiving with memory requirements
+                do z=1,nz
+                    !$omp critical
+                    sync all
+                    !$omp end critical
+                enddo
+            enddo
+
             ! memory needs to be freed so this structure can be used again when removing linear winds
             call destroy_linear_theory_data(lt_data_m)
             ! $omp end parallel
@@ -1031,12 +1046,13 @@ contains
     !! then bilinearly interpolate the nearest LUT values for that points linear wind field
     !!
     !!----------------------------------------------------------
-    subroutine spatial_winds(domain,reverse, vsmooth, winsz)
+    subroutine spatial_winds(domain,reverse, vsmooth, winsz, update)
         implicit none
         class(domain_t),intent(inout)::domain
         logical, intent(in) :: reverse
         integer, intent(in) :: vsmooth
         integer, intent(in) :: winsz
+        logical, intent(in) :: update
 
         integer :: nx,nxu, ny,nyv, nz, i,j,k, smoothz
         integer :: uk, vi !store a separate value of i for v and of k for u to we can handle nx+1, ny+1
@@ -1044,14 +1060,37 @@ contains
         integer :: north, south, east, west, top, bottom, n
         real :: u, v
         real,allocatable :: u1d(:),v1d(:)
+        integer :: ims, ime, jms, jme, ims_u, ime_u, jms_v, jme_v
         real :: dweight, nweight, sweight, curspd, curdir, curnsq, wind_first, wind_second
         real :: blocked
 
+        ! pointers to the u/v data to be updated so they can point to different places depending on the update flag
+        real, pointer :: u3d(:,:,:), v3d(:,:,:)
+
+
+        if (update) then
+            u3d => domain%u%meta_data%dqdt_3d
+            v3d => domain%v%meta_data%dqdt_3d
+        else
+            u3d => domain%u%data_3d
+            v3d => domain%v%data_3d
+        endif
+
+        ims_u = lbound(u3d,1)
+        ime_u = ubound(u3d,1)
+        jms = lbound(u3d,3)
+        jme = ubound(u3d,3)
+
+        ims = lbound(v3d,1)
+        ime = ubound(v3d,1)
+        jms_v = lbound(v3d,3)
+        jme_v = ubound(v3d,3)
+
         nx  = size(domain%latitude%data_2d,1)
         ny  = size(domain%latitude%data_2d,2)
-        nz  = size(domain%u%data_3d,2)
-        nxu = size(domain%u%data_3d,1)
-        nyv = size(domain%v%data_3d,3)
+        nz  = size(u3d,2)
+        nxu = size(u3d,1)
+        nyv = size(v3d,3)
 
         if (reverse) then
             ! u_LUT=>rev_u_LUT
@@ -1070,7 +1109,7 @@ contains
         ! !$omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom, u1d, v1d), &
         ! !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, smoothz, u, v, blocked), &
         ! !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
-        ! !$omp shared(domain, spd_values, dir_values, nsq_values, u_LUT, v_LUT, linear_mask), &
+        ! !$omp shared(domain, u3d,v3d, spd_values, dir_values, nsq_values, u_LUT, v_LUT, linear_mask), &
         ! !$omp shared(u_perturbation, v_perturbation, linear_update_fraction, linear_contribution, nsq_calibration), &
         ! !$omp shared(min_stability, max_stability, n_dir_values, n_spd_values, n_nsq_values, smooth_nsq)
         !
@@ -1130,11 +1169,11 @@ contains
         !     call smooth_array(domain%nsquared, winsz, ydim=3)
         ! endif
 
-        !$omp parallel firstprivate(nx,nxu,ny,nyv,nz, reverse, vsmooth, winsz, using_blocked_flow), default(none), &
+        !$omp parallel firstprivate(ims, ime, jms, jme, ims_u, ime_u, jms_v, jme_v, nx,nxu,ny,nyv,nz, reverse, vsmooth, winsz, using_blocked_flow), default(none), &
         !$omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom, u1d, v1d), &
         !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, smoothz, u, v, blocked), &
         !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
-        !$omp shared(domain, spd_values, dir_values, nsq_values, hi_u_LUT, hi_v_LUT, linear_mask), &
+        !$omp shared(domain, u3d,v3d, spd_values, dir_values, nsq_values, hi_u_LUT, hi_v_LUT, linear_mask), &
         !$omp shared(u_perturbation, v_perturbation, linear_update_fraction, linear_contribution, nsq_calibration), &
         !$omp shared(min_stability, max_stability, n_dir_values, n_spd_values, n_nsq_values, smooth_nsq)
         allocate(u1d(nxu), v1d(nxu))
@@ -1144,8 +1183,8 @@ contains
             uk = min(k,ny)
             do i=1,nxu
                 vi = min(i,nx)
-                u1d(i)  = sum(domain%u%data_3d(i,:,uk)) / nz
-                v1d(i)  = sum(domain%v%data_3d(vi,:,k)) / nz
+                u1d(i)  = sum(u3d(i+ims_u-1,:,uk+jms-1)) / nz
+                v1d(i)  = sum(v3d(vi+ims-1, :,k+jms_v-1)) / nz
             enddo
 
 
@@ -1172,8 +1211,8 @@ contains
 
                         n = (((east-west)+1) * ((north-south)+1))
                         if (reverse) then
-                            u = domain%u%data_3d(i,j,uk)
-                            v = domain%v%data_3d(vi,j,k)
+                            u = u3d(i+ims_u-1,j,uk+jms-1 ) ! u3d(i,j,uk)
+                            v = v3d(vi+ims-1, j,k+jms_v-1) ! v3d(vi,j,k)
                             ! WARNING: see below for why this does not work (yet)
                             ! u = sum( domain%u(west:east,j,south:north) ) / n
                             ! v = sum( domain%v(west:east,j,south:north) ) / n
@@ -1212,7 +1251,7 @@ contains
 
                         ! Calculate the Brunt-Vaisalla frequency of the current grid cell
                         !   Then compute the mean in log space
-                        curnsq = 3e-5 !sum(domain%nsquared(vi,bottom:top,uk)) / (top - bottom + 1)
+                        curnsq = log(3e-5) !sum(domain%nsquared(vi,bottom:top,uk)) / (top - bottom + 1)
                         !   and find the corresponding position in the Look up Table
                         npos = 1
                         do step=1, n_nsq_values
@@ -1238,11 +1277,11 @@ contains
                             u_perturbation(i,j,k) = u_perturbation(i,j,k) * (1-linear_update_fraction) &
                                         + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
 
-                            if (reverse) then
-                                domain%u%data_3d(i,j,k) = domain%u%data_3d(i,j,k) - u_perturbation(i,j,k) * linear_contribution
-                            else
-                                domain%u%data_3d(i,j,k) = domain%u%data_3d(i,j,k) + u_perturbation(i,j,k) * linear_mask(min(nx,i),min(ny,k)) * (1-blocked)
-                            endif
+                            ! if (reverse) then
+                            !     u3d(i,j,k) = u3d(i,j,k) - u_perturbation(i,j,k) * linear_contribution
+                            ! else
+                                u3d(i+ims_u-1,j,k+jms-1) = u3d(i+ims_u-1,j,k+jms-1) + u_perturbation(i,j,k) * linear_mask(min(nx,i),min(ny,k)) * (1-blocked)
+                            ! endif
                         endif
                         if (i<=nx) then
                             wind_first =      nweight  * (dweight * hi_v_LUT(spos, dpos,npos, i,j,k) + (1-dweight) * hi_v_LUT(spos, nextd,npos, i,j,k))    &
@@ -1254,12 +1293,12 @@ contains
                             v_perturbation(i,j,k) = v_perturbation(i,j,k) * (1-linear_update_fraction) &
                                         + linear_update_fraction * (sweight*wind_first + (1-sweight)*wind_second)
 
-                            if (reverse) then
-                                domain%v%data_3d(i,j,k) = domain%v%data_3d(i,j,k) - v_perturbation(i,j,k) * linear_contribution
-                            else
+                            ! if (reverse) then
+                            !     v3d(i,j,k) = v3d(i,j,k) - v_perturbation(i,j,k) * linear_contribution
+                            ! else
                                 ! for the high res domain, linear_mask should incorporate linear_contribution
-                                domain%v%data_3d(i,j,k) = domain%v%data_3d(i,j,k) + v_perturbation(i,j,k) * linear_mask(min(nx,i),min(ny,k)) * (1-blocked)
-                            endif
+                                v3d(i+ims-1,j,k+jms_v-1) = v3d(i+ims-1,j,k+jms_v-1) + v_perturbation(i,j,k) * linear_mask(min(nx,i),min(ny,k)) * (1-blocked)
+                            ! endif
                         endif
                     endif
                 end do
@@ -1459,14 +1498,14 @@ contains
     !! Called from ICAR to update the U and V wind fields based on linear theory (W is calculated to balance U/V)
     !!
     !!----------------------------------------------------------
-    subroutine linear_perturb(domain,options,vsmooth,reverse,useDensity)
+    subroutine linear_perturb(domain,options,vsmooth,reverse,useDensity, update)
         implicit none
         class(domain_t),    intent(inout):: domain
         type(options_t),    intent(in)   :: options
         integer,            intent(in)   :: vsmooth
-        logical,            intent(in),  optional :: reverse, useDensity
+        logical,            intent(in),  optional :: reverse, useDensity, update
 
-        logical :: rev, useD
+        logical :: rev, useD, updt
         ! logical, save :: debug=.True.
         real :: stability
 
@@ -1476,6 +1515,9 @@ contains
 
         useD = .False.
         if (present(useDensity)) useD=useDensity
+
+        updt = .False.
+        if (present(update)) updt = update
 
         ! this is a little trickier, because it does have to be domain dependant... could at least be stored in the domain though...
         if (rev) then
@@ -1495,7 +1537,7 @@ contains
         ! if we are reverseing the effects, that means we are in the low-res domain
         ! that domain does not have a spatial LUT calculated, so it can not be performed
         ! if (use_spatial_linear_fields)then
-            call spatial_winds(domain,rev, vsmooth, stability_window_size)
+            call spatial_winds(domain,rev, vsmooth, stability_window_size, update=updt)
         ! else
         !     ! Nsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability
         !     stability = calc_domain_stability(domain)

@@ -8,10 +8,9 @@
 !!
 !!------------------------------------------------------------
 module wind
-    ! use linear_theory_winds, only : linear_perturb
+    use linear_theory_winds, only : linear_perturb
     ! use mod_blocking,        only : add_blocked_flow
     use data_structures
-!   use output, only: write_domain
     use domain_interface,  only : domain_t
     use options_interface, only : options_t
 
@@ -200,9 +199,9 @@ contains
             ! endif
 
             ! linear winds
-            ! if (options%physics%windtype==kWIND_LINEAR) then
-            !     call linear_perturb(domain,options,options%lt_options%vert_smooth,.False.,options%advect_density)
-            ! endif
+            if (options%physics%windtype==kWIND_LINEAR) then
+                call linear_perturb(domain,options,options%lt_options%vert_smooth,.False.,options%parameters%advect_density)
+            endif
             ! else assumes even flow over the mountains
 
             ! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
@@ -213,6 +212,10 @@ contains
             ! rotate winds from cardinal directions to grid orientation (e.g. u is grid relative not truly E-W)
             call make_winds_grid_relative(domain%u%meta_data%dqdt_3d, domain%v%meta_data%dqdt_3d, domain%w%meta_data%dqdt_3d, domain%sintheta, domain%costheta)
 
+            ! linear winds
+            if (options%physics%windtype==kWIND_LINEAR) then
+                call linear_perturb(domain,options,options%lt_options%vert_smooth,.False.,options%parameters%advect_density, update=.True.)
+            endif
             ! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
             call balance_uvw(domain%u%meta_data%dqdt_3d, domain%v%meta_data%dqdt_3d, domain%w%meta_data%dqdt_3d, options)
         endif
