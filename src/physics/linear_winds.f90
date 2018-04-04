@@ -941,7 +941,6 @@ contains
                 i = ik/n_spd_values + 1
                 k = mod(ik,n_spd_values) + 1
 
-                print*, this_image(), ijk, i, j, k
                 ! do k=1, n_spd_values
 
                     ! print the current status if this is being run "interactively"
@@ -1016,8 +1015,6 @@ contains
         endif
 
         if (this_image()==1) print*, "    Not writing Linear Theory LUT to file, not implemented yet"
-
-        print*, this_image(), maxval(hi_u_LUT), maxval(hi_v_LUT)
 
         call io_write("u_"//trim(options%lt_options%u_LUT_Filename)//trim(str(this_image()))//".nc","ulut",hi_u_LUT)
         call io_write("v_"//trim(options%lt_options%u_LUT_Filename)//trim(str(this_image()))//".nc","vlut",hi_v_LUT)
