@@ -255,7 +255,7 @@ ASSERT=-DUSE_ASSERTIONS=$(USE_ASSERTIONS)
 # copy required libraries into a directory accessible on compute nodes and set LD_RUN_PATH e.g.
 # export LD_RUN_PATH=$LD_RUN_PATH:/path/to/netcdf/libraries/lib:/path/to/fftw/libraries/lib
 LFLAGS=$(LINK) $(PROF) $(CAF_FLAG) $(LIBNETCDF) $(LIBFFT)
-FFLAGS=$(COMP) $(PROF) $(CAF_FLAG) $(PREPROC) $(INCNETCDF) $(INCFFT) $(MODOUTPUT) $(ASSERT)
+FFLAGS=$(COMP) $(PROF) $(CAF_FLAG) $(PREPROC) -DVERSION=\"$(GIT_VERSION)\" $(INCNETCDF) $(INCFFT) $(MODOUTPUT) $(ASSERT)
 
 $(info $$NODENAME    = ${NODENAME})
 $(info $$FC          = ${F90})
@@ -314,6 +314,10 @@ OBJS=	$(BUILD)driver.o            \
 		$(BUILD)output_h.o			\
 		$(BUILD)output_obj.o		\
 		$(BUILD)wind.o				\
+		$(BUILD)linear_winds.o		\
+		$(BUILD)fftshift.o			\
+		$(BUILD)fftw.o				\
+		$(BUILD)lt_lut_io.o			\
 		$(BUILD)mp_driver.o			\
 		$(BUILD)mp_simple.o			\
 		$(BUILD)mp_thompson_aer.o	\
@@ -728,7 +732,7 @@ $(BUILD)grid_h.o: $(OBJECTS)grid_h.f90 $(BUILD)icar_constants.o
 
 $(BUILD)exchangeable_obj.o: $(OBJECTS)exchangeable_obj.f90 $(BUILD)exchangeable_h.o $(BUILD)assertions.o
 
-$(BUILD)exchangeable_h.o: $(OBJECTS)exchangeable_h.f90 $(BUILD)grid_h.o $(BUILD)variable_h.o
+$(BUILD)exchangeable_h.o: $(OBJECTS)exchangeable_h.f90 $(BUILD)grid_h.o $(BUILD)variable_h.o $(BUILD)assertions.o
 
 $(BUILD)default_output_metadata.o: $(IO)default_output_metadata.f90 $(BUILD)icar_constants.o $(BUILD)variable_h.o $(BUILD)meta_data_h.o
 
@@ -763,15 +767,7 @@ $(BUILD)domain_obj.o: $(OBJECTS)domain_obj.f90 $(BUILD)domain_h.o $(BUILD)option
 ###################################################################
 
 $(BUILD)init.o:$(MAIN)init.f90 $(BUILD)data_structures.o $(BUILD)options_h.o $(BUILD)domain_h.o $(BUILD)boundary_h.o \
-	 				$(BUILD)mp_driver.o $(BUILD)advection_driver.o $(BUILD)atm_utilities.o
-
-# $(BUILD)io_routines.o $(BUILD)geo_reader.o $(BUILD)vinterp.o \
-# 			 $(BUILD)cu_driver.o $(BUILD)pbl_driver.o $(BUILD)wind.o \
-# 			$(BUILD)ra_driver.o $(BUILD)lsm_driver.o
-#
-
-# $(BUILD)boundary.o:$(MAIN)boundary.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)wind.o $(BUILD)geo_reader.o \
-# 					$(BUILD)vinterp.o $(BUILD)output.o $(BUILD)linear_winds.o $(BUILD)time_io.o
+	 				$(BUILD)mp_driver.o $(BUILD)advection_driver.o $(BUILD)atm_utilities.o $(BUILD)wind.o
 
 $(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.o			\
 					$(BUILD)advection_driver.o $(BUILD)mp_driver.o $(BUILD)domain_h.o 		\
@@ -818,7 +814,6 @@ $(BUILD)atm_utilities.o:$(UTIL)atm_utilities.f90 $(BUILD)icar_constants.o 	\
 ###################################################################
 
 $(BUILD)output.o:$(IO)output.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)time.o $(BUILD)string.o
-	${F90} ${FFLAGS} ${PREPROC} -DVERSION=\"$(GIT_VERSION)\" $(IO)output.f90 -o $(BUILD)output.o
 
 $(BUILD)io_routines.o:$(IO)io_routines.f90 $(BUILD)data_structures.o
 
@@ -914,7 +909,7 @@ $(BUILD)adv_mpdata.o:$(PHYS)adv_mpdata.f90 $(PHYS)adv_mpdata_FCT_core.f90 $(BUIL
 #	Wind related code
 ###################################################################
 $(BUILD)wind.o:$(PHYS)wind.f90 $(BUILD)data_structures.o \
-				$(BUILD)domain_h.o $(BUILD)options_h.o
+				$(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)linear_winds.o
 
 #########################
 # $(BUILD)winds_blocking.o $(BUILD)linear_winds.o
