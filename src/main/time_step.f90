@@ -400,10 +400,21 @@ contains
 
                 ! print*, this_image(), "init",maxval(domain%cloud_water_mass%data_3d)
 
+                ! first process the halo section of the domain (currently hard coded at 1)
+
+                ! print *,"Microphysics"
+                call mp(domain, options, real(dt%seconds()), halo=1)
+
+                call domain%halo_send()
+
+                call mp(domain, options, real(dt%seconds()), subset=1)
+
+                call domain%halo_retrieve()
+
                 call advect(domain, options, real(dt%seconds()))
                 ! print*, this_image(), "adv",minval(domain%potential_temperature%data_3d)
 
-                call mp(domain, options, real(dt%seconds()))
+                ! call mp(domain, options, real(dt%seconds()))
                 ! print*, this_image(), "mp",minval(domain%potential_temperature%data_3d)
                 ! if (options%debug) call domain_check(domain,"After microphysics")
                 !
@@ -426,7 +437,7 @@ contains
                 call domain%apply_forcing(dt)
                 ! print*, this_image(), "forced",minval(domain%potential_temperature%data_3d)
 
-                call domain%halo_exchange()
+                ! call domain%halo_exchange()
                 ! print*, this_image(), "exch",minval(domain%potential_temperature%data_3d)
 
             endif
