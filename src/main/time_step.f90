@@ -404,41 +404,29 @@ contains
 
                 ! print *,"Microphysics"
                 call mp(domain, options, real(dt%seconds()), halo=1)
+                ! call rad(domain, options, real(dt%seconds()), halo=1)
+                ! call lsm(domain, options, real(dt%seconds()), halo=1)
+                ! call pbl(domain, options, real(dt%seconds()), halo=1)
+                ! call convect(domain, options, real(dt%seconds()), halo=1)
 
                 call domain%halo_send()
 
                 call mp(domain, options, real(dt%seconds()), subset=1)
+                ! call rad(domain, options, real(dt%seconds()), subset=1)
+                ! call lsm(domain, options, real(dt%seconds()), subset=1)
+                ! call pbl(domain, options, real(dt%seconds()), subset=1)
+                ! call convect(domain, options, real(dt%seconds()), subset=1)
 
                 call domain%halo_retrieve()
 
                 call advect(domain, options, real(dt%seconds()))
-                ! print*, this_image(), "adv",minval(domain%potential_temperature%data_3d)
 
-                ! call mp(domain, options, real(dt%seconds()))
-                ! print*, this_image(), "mp",minval(domain%potential_temperature%data_3d)
-                ! if (options%debug) call domain_check(domain,"After microphysics")
-                !
-                ! call rad(domain, options, real(dt%seconds()))
-                ! if (options%debug) call domain_check(domain,"After radiation")
-                !
-                ! call lsm(domain, options, real(dt%seconds()))
-                ! if (options%debug) call domain_check(domain,"After LSM")
-                !
-                ! call pbl(domain, options, real(dt%seconds()))
-                ! if (options%debug) call domain_check(domain,"After PBL")
-                !
-                ! call convect(domain, options, real(dt%seconds()))
                 ! if (options%debug) call domain_check(domain,"After Convection")
                 !
                 ! ! apply/update boundary conditions including internal wind and pressure changes.
-                ! call forcing_update(domain, bc, options, real(dt%seconds()))
-                ! if (options%debug) call domain_check(domain,"After Forcing update")
-
                 call domain%apply_forcing(dt)
-                ! print*, this_image(), "forced",minval(domain%potential_temperature%data_3d)
 
                 ! call domain%halo_exchange()
-                ! print*, this_image(), "exch",minval(domain%potential_temperature%data_3d)
 
             endif
 
