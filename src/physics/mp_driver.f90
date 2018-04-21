@@ -353,20 +353,24 @@ contains
 
         elseif (options%physics%microphysics==kMP_SB04) then
             ! call the simple microphysics routine of SB04
-            stop "Simple microphysics not updated for halo, pre-processing yet"
-            ! call mp_simple_driver(domain%pressure%data_3d,                  &
-            !                       domain%potential_temperature%data_3d,     &
-            !                       domain%exner%data_3d,                     &
-            !                       domain%density%data_3d,                   &
-            !                       domain%water_vapor%data_3d,               &
-            !                       domain%cloud_water_mass%data_3d,          &
-            !                       domain%rain_mass%data_3d,                 &
-            !                       domain%snow_mass%data_3d,                 &
-            !                       domain%accumulated_precipitation%data_2d, &
-            !                       domain%accumulated_snowfall%data_2d,      &
-            !                       mp_dt,                                    &
-            !                       domain%dz_mass%data_3d,                   &
-            !                       ime-ims+1, jme-jms+1, kme-kms+1)
+            call mp_simple_driver(domain%pressure%data_3d,                  &
+                                  domain%potential_temperature%data_3d,     &
+                                  domain%exner%data_3d,                     &
+                                  domain%density%data_3d,                   &
+                                  domain%water_vapor%data_3d,               &
+                                  domain%cloud_water_mass%data_3d,          &
+                                  domain%rain_mass%data_3d,                 &
+                                  domain%snow_mass%data_3d,                 &
+                                  domain%accumulated_precipitation%data_2d, &
+                                  domain%accumulated_snowfall%data_2d,      &
+                                  dt,                                       &
+                                  domain%dz_mass%data_3d,                   &
+                                  ims = ims, ime = ime,                   & ! memory dims
+                                  jms = jms, jme = jme,                   &
+                                  kms = kms, kme = kme,                   &
+                                  its = its, ite = ite,                   & ! tile dims
+                                  jts = jts, jte = jte,                   &
+                                  kts = kts, kte = kte)
 
         ! elseif (options%physics%microphysics==kMP_MORRISON) then
         !     call MP_MORR_TWO_MOMENT(itimestep,                         &
