@@ -840,7 +840,8 @@ contains
 
         type(grid_t), allocatable :: u_grids(:), v_grids(:)
 
-        LUT_file = trim(options%lt_options%u_LUT_Filename)//trim(str(this_image()))//".nc"
+        ! append total number of images and the current image number to the LUT filename
+        LUT_file = trim(options%lt_options%u_LUT_Filename) // "_" // trim(str(num_images())) // "_" // trim(str(this_image())) // ".nc"
 
         ims = lbound(domain%z%data_3d,1)
         jms = lbound(domain%z%data_3d,3)
