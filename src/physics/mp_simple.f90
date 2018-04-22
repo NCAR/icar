@@ -76,6 +76,8 @@ module module_mp_simple
 ! arbitrary calibratable timescales default values as used in the linear model
 ! these should be pulled out to a parameter file for calibration purposes
 ! but this is approximately how they are implemented in SB04
+    real, parameter :: snow_evap_time_const      = 1 / 2000.0   ! [1/s]
+    real, parameter :: rain_evap_time_const      = 1 / 500.0    ! [1/s]
     real, parameter :: snow_formation_time_const = 1 / 2000.0   ! [1/s]
     real, parameter :: rain_formation_time_const = 1 / 500.0    ! [1/s]
     real, parameter :: freezing_threshold        = 273.15       ! [K]
@@ -200,8 +202,9 @@ contains
         real    :: vapor2temp,excess,deltat,pre_qc,pre_qv,pre_t,lastqv
         integer :: iteration
         real    :: maxerr
+        real :: qv_iters(15), t_iters(15)
 
-        maxerr = 1e-6
+        maxerr = 1e-4
         iteration = 0
         lastqv = qv + maxerr * 2
         vapor2temp = (LH_vapor + (373.15 - temperature) * dLHvdt) / heat_capacity
@@ -218,14 +221,14 @@ contains
             qvsat = sat_mr(temperature,pressure)
             ! if saturated create clouds
             if (qv>qvsat) then
-                excess = (qv-qvsat)*0.95
+                excess = (qv-qvsat)*0.5
                 ! temperature change if all vapor is converted
                 temperature = temperature+(excess*vapor2temp)
                 qv = qv-excess
                 qc = qc+excess
             ! if unsaturated and clouds exist, evaporate clouds
             else if (qc>0) then
-                excess = (qvsat-qv)*0.95
+                excess = (qvsat-qv)*0.5
                 if (excess<qc) then
                     temperature = temperature-(excess*vapor2temp)
                     qv = qv+excess
@@ -238,11 +241,14 @@ contains
                 endif
                 excess = excess*(-1) !DEBUG
             endif
+            ! qv_iters(iteration) = qv
+            ! t_iters(iteration) = temperature
         enddo
+        ! print*, iteration
         if (iteration==15) then
-            !$omp critical (print_lock)
-            print*, "qv_simple failed to converge", pre_t, pressure, qv
-            !$omp end critical (print_lock)
+            ! !$omp critical (print_lock)
+            ! print*, "qv_simple failed to converge", pre_t, t_iters(1:6)!pre_t, temperature, pressure, qv, lastqv, pre_qv, qvsat, abs(lastqv-qv)
+            ! !$omp end critical (print_lock)
             qv = sat_mr(pre_t,pressure)
             temperature = pre_t
             qc = pre_qc
@@ -598,12 +604,12 @@ contains
         real, intent(inout) :: qc       (ims:ime,kms:kme,jms:jme)
         real, intent(inout) :: qs       (ims:ime,kms:kme,jms:jme)
         real, intent(inout) :: qr       (ims:ime,kms:kme,jms:jme)
-        real, intent(inout) :: dz       (ims:ime,kms:kme,jms:jme)
         real, intent(inout) :: rain     (ims:ime,jms:jme)
         real, intent(inout) :: snow     (ims:ime,jms:jme)
-        real,intent(in)    :: dt
-        integer,intent(in) :: ims, ime, jms, jme, kms, kme
-        integer,intent(in) :: its, ite, jts, jte, kts, kte
+        real, intent(in)    :: dt
+        real, intent(in)    :: dz       (ims:ime,kms:kme,jms:jme)
+        integer,intent(in)  :: ims, ime, jms, jme, kms, kme
+        integer,intent(in)  :: its, ite, jts, jte, kts, kte
 
         ! local variables
         real,allocatable,dimension(:) :: temperature
@@ -612,12 +618,15 @@ contains
 !       calculate these once for every call because they are only a function of dt
         cloud2snow = exp(-1.0*snow_formation_time_const*dt)
         cloud2rain = exp(-1.0*rain_formation_time_const*dt)
+        snow_evap  = exp(-1.0*snow_evap_time_const*dt)
+        rain_evap  = exp(-1.0*rain_evap_time_const*dt)
+
         !$omp parallel private(i,j,temperature), &
         !$omp copyin(cloud2rain,cloud2snow,snow_melt,snow_evap,rain_evap),&
         !$omp shared(pressure,th,pii,qv,qc,qs,qr,rain,snow,dz),&
         !$omp firstprivate(dt,ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
         allocate(temperature(kts:kte))
-        if (dt<1e-10) print*, dt ! for some reason this seems to fix an issue with ifort -O(anything) not copying dt in to the parallel region(?)
+        if (dt<1e-10) print*, "dt=",dt ! for some reason this seems to fix an issue with ifort -O(anything) not copying dt in to the parallel region(?)
         !$omp do
         do j = jts,jte
             do i = its, ite
