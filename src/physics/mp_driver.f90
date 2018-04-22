@@ -523,7 +523,10 @@ contains
             mp_dt = domain%model_time%seconds()-last_model_time
 
             ! reset the counter so we know that *this* is the last time we've run the microphysics
-            last_model_time = domain%model_time%seconds()
+            ! NOTE, ONLY reset this when running the inner subset... ideally probably need a separate counter for the halo and subset
+            if (.not.present(halo)) then
+                last_model_time = domain%model_time%seconds()
+            endif
 
             ! If we are going to distribute the current precip over a few grid cells, we need to keep track of
             ! the last_precip so we know how much fell
