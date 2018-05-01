@@ -14,7 +14,6 @@ submodule(domain_interface) domain_implementation
     use mod_atm_utilities,    only : exner_function, update_pressure
     use icar_constants,       only : kVARS
     use string,               only : str
-    use microphysics,         only : mp_simple_var_request
     use co_util,              only : broadcast
     use io_routines,          only : io_read, io_write
     use geo,                  only : geo_lut, geo_interp, geo_interp2d, standardize_coordinates

@@ -17,7 +17,7 @@ module time_step
     ! use convection,                 only : convect
     ! use land_surface,               only : lsm
     ! use planetary_boundary_layer,   only : pbl
-    ! use radiation,                  only : rad
+    use radiation,                  only : rad
 
     use domain_interface,           only : domain_t
     use options_interface,          only : options_t
@@ -404,7 +404,7 @@ contains
 
                 ! print *,"Microphysics"
                 call mp(domain, options, real(dt%seconds()), halo=1)
-                ! call rad(domain, options, real(dt%seconds()), halo=1)
+                call rad(domain, options, real(dt%seconds()), halo=1)
                 ! call lsm(domain, options, real(dt%seconds()), halo=1)
                 ! call pbl(domain, options, real(dt%seconds()), halo=1)
                 ! call convect(domain, options, real(dt%seconds()), halo=1)
