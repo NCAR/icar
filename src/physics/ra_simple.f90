@@ -112,6 +112,7 @@ contains
         real :: effective_emissivity(its:ite)
 
         effective_emissivity = 1 - 0.261 * exp((-7.77e-4) * (273.16-T_air(its:ite))**2)
+
         longwave(its:ite) = effective_emissivity * stefan_boltzmann * T_air(its:ite)**4
 
         longwave(its:ite) = min(longwave(its:ite) * (1 + 0.2 * cloud_cover(its:ite)), 600.0)
@@ -128,6 +129,8 @@ contains
 
         real :: temporary(its:ite)
 
+        cloudfrac = 0
+
         temporary = ((1 - rh(its:ite)) * qc(its:ite))**0.25
         where(temporary > 1) temporary=1
         where(temporary < 0.0001) temporary=0.0001
@@ -136,6 +139,7 @@ contains
         where(cloudfrac < 0) cloudfrac = 0
 
         cloudfrac(its:ite) = (rh(its:ite)**0.25) * (1-exp((-2000*(cloudfrac(its:ite))) / temporary))
+
         where(cloudfrac < 0) cloudfrac = 0
         where(cloudfrac > 1) cloudfrac = 1
 
@@ -206,16 +210,13 @@ contains
         integer,            intent(in) :: its, ite, jts, jte, kts, kte
 
         real :: coolingrate
-        integer :: nx, ny, j, k, nz
+        integer :: j, k
         real, allocatable, dimension(:) :: rh, T_air, solar_elevation, hydrometeors, day_frac
 
 
-        !$omp parallel private(nx,ny,nz,j,rh,T_air,solar_elevation,hydrometeors,day_frac,coolingrate) &
+        !$omp parallel private(j,k,rh,T_air,solar_elevation,hydrometeors,day_frac,coolingrate) &
         !$omp shared(theta,pii,qv,p,qc,qs,qr,date,lon,cloud_cover,swdown,lwdown)                      &
         !$omp firstprivate(ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
-        nx = ime - ims + 1
-        ny = jme - jms + 1
-        nz = kme - kms + 1
 
         allocate(rh             (ims:ime))
         allocate(T_air          (ims:ime))
@@ -231,12 +232,13 @@ contains
 
             T_air = 0
             rh = 0
-            do k = kts, kts + nrad_layers
+            do k = kts, kts + nrad_layers - 1
                 T_air = T_air + (theta(:,k,j)*pii(:,k,j))
                 rh    = rh    + relative_humidity((theta(:,k,j)*pii(:,k,j)), qv(:,k,j), p(:,k,j))
             enddo
             T_air = T_air / nrad_layers
             rh    = rh    / nrad_layers
+            where(rh > 1) rh = 1
 
             hydrometeors = qc(:,kts,j) + qs(:,kts,j) + qr(:,kts,j)
             do k = kts+1, kte
