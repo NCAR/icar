@@ -435,7 +435,7 @@ caf_options_test: $(BUILD)test_caf_options.o				  	\
 				$(BUILD)icar_constants.o $(BUILD)string.o     	\
 				$(BUILD)io_routines.o    $(BUILD)time_io.o  	\
 				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o 	\
-				$(BUILD)time_h.o	\
+				$(BUILD)time_h.o		 $(BUILD)atm_utilities.o\
 				$(BUILD)model_tracking.o $(BUILD)opt_types.o	\
 				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
 				$(BUILD)ra_driver.o      $(BUILD)ra_simple.o	\
