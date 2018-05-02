@@ -101,6 +101,7 @@ contains
         if (0<var_list( kVARS%density) )                    call this%add_to_output( get_metadata( kVARS%density                      , domain%density%data_3d))
         if (0<var_list( kVARS%pressure_interface) )         call this%add_to_output( get_metadata( kVARS%pressure_interface           , domain%pressure_interface%data_3d))
         if (0<var_list( kVARS%graupel) )                    call this%add_to_output( get_metadata( kVARS%graupel                      , domain%graupel%data_2d))
+        if (0<var_list( kVARS%cloud_fraction) )             call this%add_to_output( get_metadata( kVARS%cloud_fraction               , domain%cloud_fraction%data_2d))
         if (0<var_list( kVARS%shortwave) )                  call this%add_to_output( get_metadata( kVARS%shortwave                    , domain%shortwave%data_2d))
         if (0<var_list( kVARS%longwave) )                   call this%add_to_output( get_metadata( kVARS%longwave                     , domain%longwave%data_2d))
         if (0<var_list( kVARS%vegetation_fraction) )        call this%add_to_output( get_metadata( kVARS%vegetation_fraction          , domain%vegetation_fraction%data_3d))
