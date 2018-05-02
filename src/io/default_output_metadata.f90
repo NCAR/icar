@@ -443,6 +443,17 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
+        !!  Cloud cover fraction
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%cloud_fraction))
+            var%name        = "clt"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "cloud_area_fraction"),                 &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
         !!  Downward Shortwave Radiation at the Surface (positive down)
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%shortwave))
@@ -504,7 +515,7 @@ contains
             var%name        = "land_cover"
             var%dimensions  = two_d_dimensions
             var%attributes  = [attribute_t("non_standard_name", "land_cover_type"),                 &
-                               attribute_t("units",      ""),                                       &
+                               attribute_t("units",      "1"),                                      &
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------

@@ -70,10 +70,10 @@ contains
 
 
         ! List the variables that are required to be allocated for the simple radiation code
-        ! call options%alloc_vars( &
-        !              [kVARS%pressure,    kVARS%potential_temperature,   kVARS%exner,                            &
-        !               kVARS%water_vapor, kVARS%cloud_water,             kVARS%rain_in_air,  kVARS%snow_in_air,  &
-        !               cloud_fraction, shortwavedown, longwavedown, ice, graupel?])
+        call options%alloc_vars( &
+                     [kVARS%pressure,    kVARS%potential_temperature,   kVARS%exner,        kVARS%cloud_fraction,   &
+                      kVARS%water_vapor, kVARS%cloud_water,             kVARS%rain_in_air,  kVARS%snow_in_air,      &
+                      kVARS%shortwave,   kVARS%longwave,                kVARS%cloud_ice,    kVARS%graupel_in_air])
 
         ! List the variables that are required to be advected for the simple radiation code
         call options%advect_vars( &
