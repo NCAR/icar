@@ -36,13 +36,13 @@ contains
         type(domain_t), intent(in) :: domain
         type(options_t),intent(in) :: options
 
-        write(*,*) "Initializing Radiation"
+        if (this_image()==1) write(*,*) "Initializing Radiation"
 
         if (options%physics%radiation==kRA_BASIC) then
-            write(*,*) "    Basic Radiation"
+            if (this_image()==1) write(*,*) "    Basic Radiation"
         endif
         if (options%physics%radiation==kRA_SIMPLE) then
-            write(*,*) "    Simple Radiation"
+            if (this_image()==1) write(*,*) "    Simple Radiation"
             call ra_simple_init(domain, options)
         endif
 
@@ -81,7 +81,7 @@ contains
 
         ! List the variables that are required when restarting for the simple radiation code
         call options%restart_vars( &
-                       [kVARS%pressure,     kVARS%potential_temperature] )
+                       [kVARS%pressure,     kVARS%potential_temperature, kVARS%shortwave,   kVARS%longwave, kVARS%cloud_fraction] )
 
     end subroutine ra_simple_var_request
 
