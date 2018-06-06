@@ -59,21 +59,25 @@ module icar_constants
         integer :: shortwave
         integer :: longwave
         integer :: vegetation_fraction
-        integer :: land_cover
+        integer :: veg_type
         integer :: lai
         integer :: canopy_water
+        integer :: sensible_heat
+        integer :: latent_heat
+        integer :: u_10m
+        integer :: v_10m
+        integer :: temperature_2m
+        integer :: humidity_2m
+        integer :: surface_pressure
+        integer :: longwave_up
+        integer :: ground_heat_flux
+        integer :: soil_totalmoisture
+        integer :: soil_deep_temperature
+        integer :: roughness_0
         integer :: snow_water_equivalent
         integer :: soil_water_content
         integer :: soil_temperature
         integer :: skin_temperature
-        integer :: air2m_temperature
-        integer :: air2m_humidity
-        integer :: u10m
-        integer :: v10m
-        integer :: sensible_heat
-        integer :: latent_heat
-        integer :: ground_heat_flux
-        integer :: longwave_up
         integer :: land_mask
         integer :: terrain
         integer :: latitude
@@ -90,7 +94,7 @@ module icar_constants
                                                            21, 22, 23, 24, 25, 26, 27, 28, 29, 30,  &
                                                            31, 32, 33, 34, 35, 36, 37, 38, 39, 40,  &
                                                            41, 42, 43, 44, 45, 46, 47, 48, 49, 50,  &
-                                                           51, 52, 53, 54, 55  )
+                                                           51, 52, 53, 54, 55, 56, 57, 58, 59  )
 
     integer, parameter :: kINTEGER_BITS     = storage_size(kINTEGER_BITS)
     integer, parameter :: kMAX_STORAGE_VARS = storage_size(kVARS) / kINTEGER_BITS

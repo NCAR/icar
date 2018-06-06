@@ -15,7 +15,7 @@ module time_step
     use advection,                  only : advect
     use mod_atm_utilities,          only : exner_function
     ! use convection,                 only : convect
-    ! use land_surface,               only : lsm
+    use land_surface,               only : lsm
     ! use planetary_boundary_layer,   only : pbl
     use radiation,                  only : rad
 
@@ -400,22 +400,20 @@ contains
 
                 ! print*, this_image(), "init",maxval(domain%cloud_water_mass%data_3d)
 
-                ! first process the halo section of the domain (currently hard coded at 1)
-
-                ! print *,"Microphysics"
-                call mp(domain, options, real(dt%seconds()), halo=1)
-                call rad(domain, options, real(dt%seconds()), halo=1)
-                ! call lsm(domain, options, real(dt%seconds()), halo=1)
+                ! first process the halo section of the domain (currently hard coded at 1 should come from domain?)
+                call rad(domain, options, real(dt%seconds()))
+                call lsm(domain, options, real(dt%seconds()))
                 ! call pbl(domain, options, real(dt%seconds()), halo=1)
                 ! call convect(domain, options, real(dt%seconds()), halo=1)
+                call mp(domain, options, real(dt%seconds()), halo=1)
 
                 call domain%halo_send()
 
-                call mp(domain, options, real(dt%seconds()), subset=1)
                 ! call rad(domain, options, real(dt%seconds()), subset=1)
                 ! call lsm(domain, options, real(dt%seconds()), subset=1)
                 ! call pbl(domain, options, real(dt%seconds()), subset=1)
                 ! call convect(domain, options, real(dt%seconds()), subset=1)
+                call mp(domain, options, real(dt%seconds()), subset=1)
 
                 call domain%halo_retrieve()
 

@@ -66,7 +66,18 @@ module domain_interface
     type(variable_t) :: longwave
     type(variable_t) :: shortwave
     type(variable_t) :: terrain
-    integer,allocatable :: land_cover_type(:,:)
+    type(variable_t) :: u_10m
+    type(variable_t) :: v_10m
+    type(variable_t) :: temperature_2m
+    type(variable_t) :: humidity_2m
+    type(variable_t) :: surface_pressure
+    type(variable_t) :: longwave_up
+    type(variable_t) :: ground_heat_flux
+    type(variable_t) :: sensible_heat
+    type(variable_t) :: latent_heat
+    integer,allocatable :: veg_type(:,:)
+    integer,allocatable :: soil_type(:,:)
+    type(variable_t) :: roughness_0
     type(variable_t) :: vegetation_fraction
     type(variable_t) :: lai
     type(variable_t) :: canopy_water
@@ -74,6 +85,8 @@ module domain_interface
     type(variable_t) :: skin_temperature
     type(variable_t) :: soil_water_content
     type(variable_t) :: soil_temperature
+    type(variable_t) :: soil_totalmoisture
+    type(variable_t) :: soil_deep_temperature
     integer,allocatable :: land_mask(:,:)
     type(variable_t) :: latitude
     type(variable_t) :: longitude

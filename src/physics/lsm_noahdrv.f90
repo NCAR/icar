@@ -1,6 +1,6 @@
 !>------------------------------------------------------------
 !!  Noah Land Surface Model online driver code (from WRF)
-!!  
+!!
 !!  @author
 !!  various (see Chen and Dudhia 2001)
 !!
@@ -43,7 +43,7 @@ CONTAINS
                   CHS,CHS2,CQS2,CPM,ROVCP,SR,chklowq,lai,qz0,   & !H
                   myj,frpcpn,                                   &
                   SH2O,SNOWH,                                   & !H
-                  U_PHY,V_PHY,                                  & !I
+                  ! U_PHY,V_PHY,                                  & !I
                   SNOALB,SHDMIN,SHDMAX,                         & !I
                   SNOTIME,                                      & !?
                   ACSNOM,ACSNOW,                                & !O
@@ -417,8 +417,8 @@ CONTAINS
 !      REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(IN) :: COSZ_URB2D
 !      REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(IN) :: OMG_URB2D
 !      REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(IN) :: XLAT_URB2D
-     REAL, OPTIONAL, DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(IN) :: U_PHY
-     REAL, OPTIONAL, DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(IN) :: V_PHY
+     ! REAL, OPTIONAL, DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(IN) :: U_PHY
+     ! REAL, OPTIONAL, DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(IN) :: V_PHY
 !      REAL, OPTIONAL, DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(IN) :: TH_PHY
 !      REAL, OPTIONAL, DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(IN) :: P_PHY
 !      REAL, OPTIONAL, DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(IN) :: RHO
@@ -590,7 +590,7 @@ CONTAINS
 !    REAL :: r1,r2,r3
 !    REAL :: CMR_URB, CHR_URB, CMC_URB, CHC_URB
 !    REAL :: frc_urb,lb_urb
-   REAL :: check 
+   REAL :: check
 ! ----------------------------------------------------------------------
 ! DECLARATIONS END - urban
 ! ----------------------------------------------------------------------
@@ -865,7 +865,7 @@ CONTAINS
                  EC,EDIR,ET,ETT,ESNOW,DRIP,DEW,                   &    !O
                  BETA,ETP,SSOIL,                                  &    !O
                  FLX1,FLX2,FLX3,                                  &    !O
-		 FLX4,FVB,FBUR,FGSN,UA_PHYS,                      &    !UA 
+		 FLX4,FVB,FBUR,FGSN,UA_PHYS,                      &    !UA
                  SNOMLT,SNCOVR,                                   &    !O
                  RUNOFF1,RUNOFF2,RUNOFF3,                         &    !O
                  RC,PC,RSMIN,XLAI,RCS,RCT,RCQ,RCSOIL,             &    !O
@@ -1080,7 +1080,7 @@ CONTAINS
 
 ! initialize three Noah LSM related tables
    IF ( allowed_to_read ) THEN
-     write(*,*) 'INITIALIZE THREE Noah LSM RELATED TABLES' 
+     write(*,*) 'INITIALIZE THREE Noah LSM RELATED TABLES'
      CALL  SOIL_VEG_GEN_PARM( MMINLU, MMINSL )
    ENDIF
 
@@ -1105,7 +1105,7 @@ CONTAINS
    ENDDO
    IF ( errflag .EQ. 1 ) THEN
       WRITE(*,*) "module_sf_noahlsm.F: lsminit: out of range value "// &
-                            "of ISLTYP. Is this field in the input?" 
+                            "of ISLTYP. Is this field in the input?"
       STOP
    ENDIF
 
@@ -1164,7 +1164,7 @@ CONTAINS
 
         IF(.NOT.FNDSNOWH)THEN
 ! If no SNOWH do the following
-          write(*,*) 'SNOW HEIGHT NOT FOUND - VALUE DEFINED IN LSMINIT' 
+          write(*,*) 'SNOW HEIGHT NOT FOUND - VALUE DEFINED IN LSMINIT'
           DO J = jts,jtf
           DO I = its,itf
             SNOWH(I,J)=SNOW(I,J)*0.005               ! SNOW in mm and SNOWH in m
@@ -1235,7 +1235,7 @@ CONTAINS
         IF(ierr .NE. OPEN_OK ) THEN
           WRITE(message,FMT='(A)') &
           'module_sf_noahlsm.F: soil_veg_gen_parm: failure opening VEGPARM.TBL'
-          write(*,*) message 
+          write(*,*) message
         END IF
 
 
@@ -1251,7 +1251,7 @@ CONTAINS
               write(*,*) mess
               LUMATCH=1
            ELSE
-              write(*,*) "Skipping over LUTYPE = " // TRIM ( LUTYPE ) 
+              write(*,*) "Skipping over LUTYPE = " // TRIM ( LUTYPE )
               DO LC = 1, LUCATS+12
                  read(19,*)
               ENDDO
@@ -1319,11 +1319,11 @@ CONTAINS
         IF(ierr .NE. OPEN_OK ) THEN
           WRITE(message,FMT='(A)') &
           'module_sf_noahlsm.F: soil_veg_gen_parm: failure opening SOILPARM.TBL'
-          write(*,*) message 
+          write(*,*) message
         END IF
 
         WRITE(mess,*) 'INPUT SOIL TEXTURE CLASSIFICATION = ', TRIM ( MMINSL )
-        write(*,*) mess 
+        write(*,*) mess
 
         LUMATCH=0
 
@@ -1334,7 +1334,7 @@ CONTAINS
         IF(SLTYPE.EQ.MMINSL)THEN
             WRITE( mess , * ) 'SOIL TEXTURE CLASSIFICATION = ', TRIM ( SLTYPE ) , ' FOUND', &
                   SLCATS,' CATEGORIES'
-            write(*,*) mess 
+            write(*,*) mess
           LUMATCH=1
         ENDIF
 ! prevent possible array overwrite, Bill Bovermann, IBM, May 6, 2008
@@ -1364,8 +1364,8 @@ CONTAINS
         CLOSE (19)
 
       IF(LUMATCH.EQ.0)THEN
-          write(*,*) 'SOIl TEXTURE IN INPUT FILE DOES NOT ' 
-          write(*,*) 'MATCH SOILPARM TABLE'                 
+          write(*,*) 'SOIl TEXTURE IN INPUT FILE DOES NOT '
+          write(*,*) 'MATCH SOILPARM TABLE'
           write(*,*) 'INCONSISTENT OR MISSING SOILPARM FILE'
 		  stop
       ENDIF
@@ -1377,7 +1377,7 @@ CONTAINS
         IF(ierr .NE. OPEN_OK ) THEN
           WRITE(message,FMT='(A)') &
           'module_sf_noahlsm.F: soil_veg_gen_parm: failure opening GENPARM.TBL'
-          write(*,*) message 
+          write(*,*) message
         END IF
 
         READ (19,*)

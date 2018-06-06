@@ -12,7 +12,7 @@ submodule(domain_interface) domain_implementation
     use grid_interface,       only : grid_t
     use options_interface,    only : options_t
     use mod_atm_utilities,    only : exner_function, update_pressure
-    use icar_constants,       only : kVARS
+    use icar_constants,       only : kVARS, kLC_LAND
     use string,               only : str
     use co_util,              only : broadcast
     use io_routines,          only : io_read, io_write
@@ -185,13 +185,24 @@ contains
         if (0<opt%vars_to_allocate( kVARS%v_latitude) )                 call setup(this%v_latitude,               this%v_grid2d)
         if (0<opt%vars_to_allocate( kVARS%v_longitude) )                call setup(this%v_longitude,              this%v_grid2d)
         if (0<opt%vars_to_allocate( kVARS%terrain) )                    call setup(this%terrain,                  this%grid2d)
-
-        ! integer variable_t types aren't available yet...
+        if (0<opt%vars_to_allocate( kVARS%sensible_heat) )              call setup(this%sensible_heat,            this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%latent_heat) )                call setup(this%latent_heat,              this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%u_10m) )                      call setup(this%u_10m,                    this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%v_10m) )                      call setup(this%v_10m,                    this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%temperature_2m) )             call setup(this%temperature_2m,           this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%humidity_2m) )                call setup(this%humidity_2m,              this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%surface_pressure) )           call setup(this%surface_pressure,         this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%longwave_up) )                call setup(this%longwave_up,              this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%ground_heat_flux) )           call setup(this%ground_heat_flux,         this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%soil_totalmoisture) )         call setup(this%soil_totalmoisture,       this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%soil_deep_temperature) )      call setup(this%soil_deep_temperature,    this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%roughness_0) )                call setup(this%roughness_0,              this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%precipitation) ) allocate(this%precipitation_bucket     (ims:ime, jms:jme),          source=0)
         if (0<opt%vars_to_allocate( kVARS%snowfall) )      allocate(this%snowfall_bucket          (ims:ime, jms:jme),          source=0)
-        if (0<opt%vars_to_allocate( kVARS%land_cover) )    allocate(this%land_cover_type          (ims:ime, jms:jme),          source=0 )
-
-        ! call setup_forcing_variable
+        if (0<opt%vars_to_allocate( kVARS%veg_type) )      allocate(this%veg_type                 (ims:ime, jms:jme),          source=7)
+        if (0<opt%vars_to_allocate( kVARS%soil_type) )     allocate(this%soil_type                (ims:ime, jms:jme),          source=3)
+        if (0<opt%vars_to_allocate( kVARS%land_mask) )     allocate(this%land_mask                (ims:ime, jms:jme),          source=kLC_LAND)
+        ! integer variable_t types aren't available yet...
 
     end subroutine
 
@@ -442,6 +453,13 @@ contains
                 call subset_array(temp_offset, this%geo_v%lat, g)
             end associate
         endif
+
+        if (this_image()==1) print*, "WARNING Soil variables not properly initialized"
+        this%soil_water_content%data_3d = 0.2
+        this%soil_totalmoisture%data_2d = 0.2 * 2
+        this%soil_temperature%data_3d = 280
+        this%soil_deep_temperature%data_2d = 280
+        this%roughness_0%data_2d = 0.001
 
         call standardize_coordinates(this%geo_u)
         call standardize_coordinates(this%geo_v)

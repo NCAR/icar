@@ -194,6 +194,17 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
+        !!  Air Pressure on interfaces between mass levels
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%surface_pressure))
+            var%name        = "psfc"
+            var%dimensions  = two_d_t_dimensions
+            var%attributes  = [attribute_t("standard_name", "surface_air_pressure"),            &
+                               attribute_t("long_name",     "Surface Pressure"),                &
+                               attribute_t("units",         "Pa"),                              &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
         !!  Potential Air Temperature
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%potential_temperature))
@@ -574,7 +585,7 @@ contains
         !>------------------------------------------------------------
         !!  2 meter air temperture
         !!------------------------------------------------------------
-        associate(var=>var_meta(kVARS%air2m_temperature))
+        associate(var=>var_meta(kVARS%temperature_2m))
             var%name        = "ta2m"
             var%dimensions  = two_d_t_dimensions
             var%unlimited_dim=.True.
@@ -586,7 +597,7 @@ contains
         !>------------------------------------------------------------
         !!  2 meter specific humidity
         !!------------------------------------------------------------
-        associate(var=>var_meta(kVARS%air2m_humidity))
+        associate(var=>var_meta(kVARS%humidity_2m))
             var%name        = "hus2m"
             var%dimensions  = two_d_t_dimensions
             var%unlimited_dim=.True.
@@ -597,7 +608,7 @@ contains
         !>------------------------------------------------------------
         !!  10 meter height V component of wind field
         !!------------------------------------------------------------
-        associate(var=>var_meta(kVARS%v10m))
+        associate(var=>var_meta(kVARS%v_10m))
             var%name        = "v10m"
             var%dimensions  = two_d_t_dimensions
             var%unlimited_dim=.True.
@@ -608,7 +619,7 @@ contains
         !>------------------------------------------------------------
         !!  10 meter height U component of the wind field
         !!------------------------------------------------------------
-        associate(var=>var_meta(kVARS%u10m))
+        associate(var=>var_meta(kVARS%u_10m))
             var%name        = "u10m"
             var%dimensions  = two_d_t_dimensions
             var%unlimited_dim=.True.
