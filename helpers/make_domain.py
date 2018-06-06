@@ -29,7 +29,7 @@ LICENSE
 
 VERSION
 
-    
+
 """
 from __future__ import print_function
 import sys
@@ -72,7 +72,7 @@ def load_topo_data(latmin,latmax,lonmin,lonmax):
     data = Dataset(topo_dataset)
     lons = data.variables["X"][:]
     lats = data.variables["Y"][:]
-    
+
     left  = np.where(lons<lonmin)[0][-1]
     right = np.where(lons>lonmax)[0][0]
 
@@ -80,20 +80,20 @@ def load_topo_data(latmin,latmax,lonmin,lonmax):
     # e.g. 90N would be at position 0, not -1
     bottom = np.where(lats<latmin)[0][0]
     top    = np.where(lats>latmax)[0][-1]
-    
+
     print("Reading topo data")
     topoin = data.variables["topo"][bottom:top-1:-1,left:right+1]
-    
+
     lat=lats[bottom:top-1:-1]
     lon=lons[left:right+1]
-    
+
     lon,lat=np.meshgrid(lon,lat)
-    
+
     if type(topoin)==np.ma.core.MaskedArray:
         mask=topoin.mask.copy()
         topoin.mask[:]=False
         topoin[mask]=0.0
-        
+
     return Bunch(data=topoin,lon=lon,lat=lat)
 
 
@@ -102,7 +102,7 @@ def setup_grid(lat,lon,width,height,dx,m):
     x,y = m(lon,lat)
     xll = x-width/2
     yll = y-height/2
-    
+
     allx = np.arange(xll, xll+width+dx, dx)
     ally = np.arange(yll, yll+height+dx, dx)
     nx=len(allx)
@@ -114,7 +114,7 @@ def setup_grid(lat,lon,width,height,dx,m):
     ulon=np.zeros((ny,nx+1))
     vlat=np.zeros((ny+1,nx))
     vlon=np.zeros((ny+1,nx))
-    
+
     for i,y in enumerate(ally):
         for j,x in enumerate(allx):
            longrid[i,j],latgrid[i,j] = m(x,y,inverse=True)
@@ -122,19 +122,19 @@ def setup_grid(lat,lon,width,height,dx,m):
            vlon[i,j],vlat[i,j] = m(x,y-dx/2,inverse=True)
            if i==0:
                vlon[ny,j],vlat[ny,j] = m(x,ally[-1]+dx/2,inverse=True)
-           
+
         ulon[i,nx],ulat[i,nx] = m(x+dx/2,y,inverse=True)
-        
-    
+
+
     return latgrid,longrid,ulat,ulon,vlat,vlon
-    
+
 
 def topo2grid(topo,lat,lon):
     """convert a topodata set to match a set of lat,lon grids"""
-    
+
     output_data=np.zeros(lat.shape)
     output_n=np.zeros(lat.shape)
-    
+
     max_dlat=np.max(lat[1:,:]-lat[:-1,:])/2.0
     max_dlon=np.max(lon[:,1:]-lon[:,:-1])/2.0
 
@@ -142,7 +142,7 @@ def topo2grid(topo,lat,lon):
     hi_dlon=np.max(topo.lon[:,1:]-topo.lon[:,:-1])/2.0
     ratio=max(hi_dlat/max_dlat, hi_dlon/max_dlon)
     window=max(2,2*int(np.floor(ratio)))
-    
+
     ny,nx=topo.data.shape
     nyl,nxl=lat.shape
 
@@ -161,23 +161,24 @@ def topo2grid(topo,lat,lon):
             xmax=min(nxl,curx+window)
             ymin=max(0,cury-window)
             ymax=max(nyl,cury+window)
-            
+
             dists=(lat[ymin:ymax,xmin:xmax]-topo.lat[i,j])**2 + (lon[ymin:ymax,xmin:xmax]-topo.lon[i,j])**2
             cury,curx=np.unravel_index(np.argmin(dists),dists.shape)
             cury+=ymin
             curx+=xmin
-            if ((np.abs(lat[cury,curx]-topo.lat[i,j]) < max_dlat) 
+            if ((np.abs(lat[cury,curx]-topo.lat[i,j]) < max_dlat)
                 and (np.abs(lon[cury,curx]-topo.lon[i,j]) < max_dlon)) :
-                
+
                 output_data[cury,curx]+=topo.data[i,j]
                 output_n[cury,curx]+=1
-            
-    
+
+
     output_n[output_n==0]=1
-    
+
     print("  Finished")
+    print(output_n.min(), output_n.max())
     return Bunch(topo=output_data/output_n, lat=lat, lon=lon)
-    
+
 
 def write_outputfile(filename,dataset,mapset,dx):
     """docstring for write_outputfile"""
@@ -186,7 +187,7 @@ def write_outputfile(filename,dataset,mapset,dx):
     globalatts.pop("y_0")
     globalatts.pop("units")
     globalatts["dx"]=dx
-    
+
     latvar=Bunch(data=dataset.lat,name="lat",dims=('lat','lon'),dtype='f',attributes=Bunch(long_name="latitude",units="degrees"))
     lonvar=Bunch(data=dataset.lon,name="lon",dims=('lat','lon'),dtype='f',attributes=Bunch(long_name="longitude",units="degrees"))
     ulatvar=Bunch(data=dataset.ulat,name="lat_u",dims=('lat','lon_u'),dtype='f',attributes=Bunch(long_name="latitude_ugrid",units="degrees"))
@@ -196,29 +197,29 @@ def write_outputfile(filename,dataset,mapset,dx):
     landvar=Bunch(data=dataset.xland,name="xland",dims=('lat','lon'),dtype='i',attributes=Bunch(long_name="land-sea-mask",units="[0,1]"))
     evars=[latvar,lonvar,ulatvar,ulonvar,vlatvar,vlonvar,landvar]
     # evars=[latvar,lonvar]
-    
+
     print("Writing: "+filename)
     mygis.write(filename,
                 dataset.topo,varname="HGT",dims=('lat','lon'),dtype='f', attributes=Bunch(long_name="topography",units="m"),
                 extravars=evars, global_attributes=globalatts, history="data from make_domain.py")
-    
+
 
 def main (lat, lon, width, height, dx, outputfile):
 
     m = create_mapset(lat, lon, width, height)
-    
+
     latgrid,longrid,ulat,ulon,vlat,vlon = setup_grid(lat, lon, width*km, height*km, dx, m)
-    
+
     latmin,latmax,lonmin,lonmax = latgrid.min(),latgrid.max(), longrid.min(), longrid.max()
     topo = load_topo_data(latmin,latmax,lonmin,lonmax)
-    
+
     topo=topo2grid(topo,latgrid,longrid)
     topo.ulat=ulat
     topo.ulon=ulon
     topo.vlat=vlat
     topo.vlon=vlon
     topo.xland=np.ones(latgrid.shape)
-    
+
     write_outputfile(outputfile, topo, m, dx)
 
 if __name__ == '__main__':
@@ -243,9 +244,9 @@ if __name__ == '__main__':
         parser.add_argument ('--verbose', action='store_true',
                 default=False, help='verbose output', dest='verbose')
         args = parser.parse_args()
-        
+
         topo_dataset = args.dem
-        
+
         exit_code = main(args.center_lat,args.center_lon,args.width,args.height,args.dx,args.outputfile)
         if exit_code is None:
             exit_code = 0
