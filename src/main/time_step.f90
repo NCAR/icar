@@ -15,7 +15,7 @@ module time_step
     use advection,                  only : advect
     use mod_atm_utilities,          only : exner_function
     ! use convection,                 only : convect
-    use land_surface,               only : lsm
+    ! use land_surface,               only : lsm
     ! use planetary_boundary_layer,   only : pbl
     use radiation,                  only : rad
 
@@ -402,7 +402,7 @@ contains
 
                 ! first process the halo section of the domain (currently hard coded at 1 should come from domain?)
                 call rad(domain, options, real(dt%seconds()))
-                call lsm(domain, options, real(dt%seconds()))
+                ! call lsm(domain, options, real(dt%seconds()))
                 ! call pbl(domain, options, real(dt%seconds()), halo=1)
                 ! call convect(domain, options, real(dt%seconds()), halo=1)
                 call mp(domain, options, real(dt%seconds()), halo=1)

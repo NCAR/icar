@@ -522,10 +522,10 @@ contains
         !>------------------------------------------------------------
         !!  Land cover type
         !!------------------------------------------------------------
-        associate(var=>var_meta(kVARS%land_cover))
-            var%name        = "land_cover"
+        associate(var=>var_meta(kVARS%veg_type))
+            var%name        = "veg_type"
             var%dimensions  = two_d_dimensions
-            var%attributes  = [attribute_t("non_standard_name", "land_cover_type"),                 &
+            var%attributes  = [attribute_t("non_standard_name", "vegetation_type"),                 &
                                attribute_t("units",      "1"),                                      &
                                attribute_t("coordinates",   "lat lon")]
         end associate
