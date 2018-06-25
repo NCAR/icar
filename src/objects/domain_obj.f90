@@ -792,6 +792,12 @@ contains
 
         deallocate(temporary_data)
 
+
+        this%north_boundary = (this%grid%yimg == this%grid%yimages)
+        this%south_boundary = (this%grid%yimg == 1)
+        this%east_boundary  = (this%grid%ximg == this%grid%ximages)
+        this%west_boundary  = (this%grid%ximg == 1)
+
     end subroutine
 
     !> -------------------------------
@@ -879,7 +885,9 @@ contains
                 var_to_update%dqdt_2d = (var_to_update%dqdt_2d - var_to_update%data_2d) / dt%seconds()
 
             else if (var_to_update%three_d) then
+
                 var_to_update%dqdt_3d = (var_to_update%dqdt_3d - var_to_update%data_3d) / dt%seconds()
+
             endif
 
         enddo
@@ -929,10 +937,19 @@ contains
                     ime = ubound(var_to_update%data_3d, 1)
                     jms = lbound(var_to_update%data_3d, 3)
                     jme = ubound(var_to_update%data_3d, 3)
-                    var_to_update%data_3d(ims,:,:) = var_to_update%data_3d(ims,:,:) + (var_to_update%dqdt_3d(ims,:,:) * dt%seconds())
-                    var_to_update%data_3d(ime,:,:) = var_to_update%data_3d(ime,:,:) + (var_to_update%dqdt_3d(ime,:,:) * dt%seconds())
-                    var_to_update%data_3d(:,:,jms) = var_to_update%data_3d(:,:,jms) + (var_to_update%dqdt_3d(:,:,jms) * dt%seconds())
-                    var_to_update%data_3d(:,:,jme) = var_to_update%data_3d(:,:,jme) + (var_to_update%dqdt_3d(:,:,jme) * dt%seconds())
+
+                    if (this%west_boundary) then
+                        var_to_update%data_3d(ims,:,jms+1:jme-1) = var_to_update%data_3d(ims,:,jms+1:jme-1) + (var_to_update%dqdt_3d(ims,:,jms+1:jme-1) * dt%seconds())
+                    endif
+                    if (this%east_boundary) then
+                        var_to_update%data_3d(ime,:,jms+1:jme-1) = var_to_update%data_3d(ime,:,jms+1:jme-1) + (var_to_update%dqdt_3d(ime,:,jms+1:jme-1) * dt%seconds())
+                    endif
+                    if (this%south_boundary) then
+                        var_to_update%data_3d(:,:,jms) = var_to_update%data_3d(:,:,jms) + (var_to_update%dqdt_3d(:,:,jms) * dt%seconds())
+                    endif
+                    if (this%north_boundary) then
+                        var_to_update%data_3d(:,:,jme) = var_to_update%data_3d(:,:,jme) + (var_to_update%dqdt_3d(:,:,jme) * dt%seconds())
+                    endif
 
                 ! apply forcing throughout the domain for diagnosed variables (e.g. pressure, wind)
                 else
@@ -1006,15 +1023,16 @@ contains
                     call interpolate_variable(var_to_interpolate%dqdt_3d, input_data, forcing, this, &
                                     vert_interp=var_is_not_pressure, var_is_u=var_is_u, var_is_v=var_is_v, nsmooth=this%nsmooth)
                     if (.not.var_is_not_pressure) then
-                        nz = size(this%geo%z, 2)
+                        nz = min(size(this%geo%z, 2), size(forcing%geo%z, 2))
                         call update_pressure(var_to_interpolate%dqdt_3d, forcing%geo%z(:,:nz,:), this%geo%z)
                     endif
 
                 else
                     call interpolate_variable(var_to_interpolate%data_3d, input_data, forcing, this, &
                                     vert_interp=var_is_not_pressure, var_is_u=var_is_u, var_is_v=var_is_v, nsmooth=this%nsmooth)
+
                     if (.not.var_is_not_pressure) then
-                        nz = size(this%geo%z, 2)
+                        nz = min(size(this%geo%z, 2), size(forcing%geo%z, 2))
                         call update_pressure(var_to_interpolate%data_3d, forcing%geo%z(:,:nz,:), this%geo%z)
                     endif
                 endif
@@ -1044,7 +1062,8 @@ contains
         ! to the high res horizontal grid, then vertically interpolated to the actual icar domain
         real, allocatable :: temp_3d(:,:,:), pre_smooth(:,:,:)
         logical :: interpolate_vertically, uvar, vvar
-        integer :: nx, ny, nz, windowsize
+        integer :: nx, ny, nz
+        integer :: windowsize, z
 
         interpolate_vertically=.True.
         if (present(vert_interp)) interpolate_vertically = vert_interp
@@ -1072,7 +1091,15 @@ contains
                 call vinterp(var_data, temp_3d, forcing%geo%vert_lut)
             else
                 nz = size(var_data,2)
-                var_data = temp_3d(:,:nz,:)
+                if (size(temp_3d,2) >=nz) then
+                    var_data = temp_3d(:,:nz,:)
+                else
+
+                    var_data(:,:size(temp_3d,2),:) = temp_3d
+                    do z=size(temp_3d,2), nz
+                        var_data(:,z,:) = temp_3d(:,size(temp_3d,2),:)
+                    enddo
+                endif
             endif
 
         ! Interpolate to the u staggered grid

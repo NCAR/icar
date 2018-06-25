@@ -108,6 +108,11 @@ module domain_interface
     integer :: nx, ny, nz, nx_global, ny_global
     integer :: ximg, ximages, yimg, yimages
 
+    logical :: north_boundary = .True.
+    logical :: south_boundary = .True.
+    logical :: east_boundary = .True.
+    logical :: west_boundary = .True.
+
     ! store the start (s) and end (e) for the i,j,k dimensions
     integer ::  ids,ide, jds,jde, kds,kde, & ! for the entire model domain    (d)
                 ims,ime, jms,jme, kms,kme, & ! for the memory in these arrays (m)
