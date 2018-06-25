@@ -10,8 +10,6 @@ import xarray as xr
 # the output files to be aggregated.
 file_search = "icar_out_{ens}_*"
 
-# number of processors to parallelize reading the files over
-n_processors = 1
 
 def load_file(file_name):
     '''Load a netcdf dataset into memory'''
@@ -147,8 +145,10 @@ def main():
     for f in first_files:
         agg_file(f)
 
-
+# number of processors to parallelize reading the files over
+n_processors = 1
 pool = mp.Pool(n_processors)
+
 
 if __name__ == '__main__':
     main()
