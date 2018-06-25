@@ -558,22 +558,22 @@ contains
     !! @retval dx_dt This field is updated along the boundaries to be (d1-d2)
     !!
     !!------------------------------------------------------------
-    subroutine update_edges(dx_dt, d1, d2)
-        implicit none
-        real,dimension(:,:,:), intent(inout) :: dx_dt
-        real,dimension(:,:,:), intent(in)    :: d1, d2
-        integer :: nx, nz, ny, i
-
-        nx = size(d1, 1)
-        nz = size(d1, 2)
-        ny = size(d1, 3)
-        do i=1,nz
-            dx_dt(i,:ny,1) = d1(1,i,:)  - d2(1,i,:)
-            dx_dt(i,:ny,2) = d1(nx,i,:) - d2(nx,i,:)
-            dx_dt(i,:nx,3) = d1(:,i,1)  - d2(:,i,1)
-            dx_dt(i,:nx,4) = d1(:,i,ny) - d2(:,i,ny)
-        enddo
-    end subroutine update_edges
+    ! subroutine update_edges(dx_dt, d1, d2)
+    !     implicit none
+    !     real,dimension(:,:,:), intent(inout) :: dx_dt
+    !     real,dimension(:,:,:), intent(in)    :: d1, d2
+    !     integer :: nx, nz, ny, i
+    !
+    !     nx = size(d1, 1)
+    !     nz = size(d1, 2)
+    !     ny = size(d1, 3)
+    !     do i=1,nz
+    !         dx_dt(i,:ny,1) = d1(1,i,:)  - d2(1,i,:)
+    !         dx_dt(i,:ny,2) = d1(nx,i,:) - d2(nx,i,:)
+    !         dx_dt(i,:nx,3) = d1(:,i,1)  - d2(:,i,1)
+    !         dx_dt(i,:nx,4) = d1(:,i,ny) - d2(:,i,ny)
+    !     enddo
+    ! end subroutine update_edges
 
 
 end submodule
