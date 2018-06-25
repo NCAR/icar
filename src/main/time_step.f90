@@ -21,6 +21,8 @@ module time_step
 
     use domain_interface,           only : domain_t
     use options_interface,          only : options_t
+    use debug_module,               only : domain_check
+    use string,                     only : str
 
     implicit none
     private
@@ -338,14 +340,10 @@ contains
         ! perform a reduction across all images to find the minimum time step required
         call co_min(seconds)
 
+        seconds = seconds/1.25
         ! set an upper bound on dt to keep microphysics and convection stable (?)
         ! store this back in the dt time_delta data structure
         call dt%set(seconds=min(seconds,120.0D0))
-
-        ! Make sure we don't over step the forcing period
-        if ((domain%model_time + dt) > end_time) then
-            dt = end_time - domain%model_time
-        endif
 
     end subroutine update_dt
 
@@ -372,59 +370,125 @@ contains
 
         real :: last_print_time
         type(time_delta_t) :: dt, time_step_size
+        integer :: ims, jms, kms
+        integer :: test_x, test_y, test_z, test_image
+
+        test_x = 87
+        test_z = 3
+        test_y = 198
+        test_image = 33
 
         call update_winds(domain, options)
+
+        ims = domain%grid%ims
+        jms = domain%grid%jms
+        kms = domain%grid%kms
 
         last_print_time = 0.0
         time_step_size = end_time - domain%model_time
 
-        ! Make the boundary condition dXdt values into units of [X]/s
-        call domain%update_delta_fields(time_step_size)
 
+        call update_dt(dt, options, domain, end_time)
+
+        ! print*, this_image(), domain%z%data_3d(ims+10, 7:13, jms+10)
+        ! print*, this_image(), domain%pressure%data_3d(ims+10, 7:13, jms+10)
+        ! error stop
 
         ! now just loop over internal timesteps computing all physics in order (operator splitting...)
         do while (domain%model_time < end_time)
+            ! Make sure we don't over step the forcing or output period
+            if ((domain%model_time + dt) > end_time) then
+                dt = end_time - domain%model_time
+            endif
 
             ! ensure internal model consistency
             call diagnostic_update(domain, options)
 
-            call update_dt(dt, options, domain, end_time)
 
             ! if an interactive run was requested than print status updates everytime at least 5% of the progress has been made
             if (options%parameters%interactive .and. (this_image()==1)) then
                 call print_progress(domain%model_time, end_time, time_step_size, dt, last_print_time)
             endif
+            ! if (this_image()==1) print*, trim(domain%model_time%as_string())
 
             ! this if is to avoid round off errors causing an additional physics call that won't really do anything
             if (dt%seconds() > 1e-3) then
 
-                ! print*, this_image(), "init",maxval(domain%cloud_water_mass%data_3d)
+                ! print*, this_image(), "init",maxval(domain%cloud_water_mass%data_3d) test_x, test_z, test_y
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" init")
+                !if (this_image()==test_image) print*, "init", domain%water_vapor%data_3d( test_x, test_z, test_y), domain%potential_temperature%data_3d( test_x, test_z, test_y)!, (domain%water_vapor%dqdt_3d(149, 11, 1) * dt%seconds())
+                    ! print*, trim("img:"),this_image(),trim("1 Temp"), domain%potential_temperature%data_3d(ims,kms,jms), domain%exner%data_3d(ims,kms,jms),
+                ! first process the halo section of the domain (currently hard coded at 1 should come from domain?)
+                call rad(domain, options, real(dt%seconds()))
+                !if (this_image()==test_image) print*, "rad", domain%water_vapor%data_3d( test_x, test_z, test_y), domain%potential_temperature%data_3d( test_x, test_z, test_y)!, (domain%water_vapor%dqdt_3d(149, 11, 1) * dt%seconds())
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" rad(domain")
 
-                ! first process the halo section of the domain (currently hard coded at 1)
-
-                ! print *,"Microphysics"
-                call mp(domain, options, real(dt%seconds()), halo=1)
-                call rad(domain, options, real(dt%seconds()), halo=1)
                 ! call lsm(domain, options, real(dt%seconds()), halo=1)
                 ! call pbl(domain, options, real(dt%seconds()), halo=1)
                 ! call convect(domain, options, real(dt%seconds()), halo=1)
+                call mp(domain, options, real(dt%seconds()), halo=1)
+                !! if (this_image()==test_image) print*, "mp", domain%water_vapor%data_3d( test_x, test_z-1:test_z+1, test_y), domain%potential_temperature%data_3d( test_x, test_z-1:test_z+1, test_y), &
+                !                                     domain%cloud_water_mass%data_3d( test_x, test_z-1:test_z+1, test_y), domain%cloud_ice_mass%data_3d( test_x, test_z-1:test_z+1, test_y), &
+                !                                     domain%rain_mass%data_3d( test_x, test_z-1:test_z+1, test_y), domain%snow_mass%data_3d( test_x, test_z-1:test_z+1, test_y), &
+                !                                     domain%cloud_ice_number%data_3d( test_x, test_z-1:test_z+1, test_y), domain%rain_number%data_3d( test_x, test_z-1:test_z+1, test_y), &
+                !                                     domain%pressure%data_3d( test_x, test_z-1:test_z+1, test_y), domain%exner%data_3d( test_x, test_z-1:test_z+1, test_y)
+                !if (this_image()==test_image) print*, "mp", domain%water_vapor%data_3d( test_x, test_z:test_z, test_y), domain%potential_temperature%data_3d( test_x, test_z:test_z, test_y)!, (domain%water_vapor%dqdt_3d(149, 11, 1) * dt%seconds())
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" mp_halo")
 
                 call domain%halo_send()
+                !if (this_image()==test_image) print*, "halo_send", test_x-ims,test_y-jms,domain%water_vapor%data_3d( test_x, test_z-1:test_z+1, test_y), domain%potential_temperature%data_3d( test_x, test_z-1:test_z+1, test_y)!, (domain%water_vapor%dqdt_3d(149, 11, 1) * dt%seconds())
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" domain%halo_send")
 
-                call mp(domain, options, real(dt%seconds()), subset=1)
                 ! call rad(domain, options, real(dt%seconds()), subset=1)
                 ! call lsm(domain, options, real(dt%seconds()), subset=1)
                 ! call pbl(domain, options, real(dt%seconds()), subset=1)
                 ! call convect(domain, options, real(dt%seconds()), subset=1)
+                call mp(domain, options, real(dt%seconds()), subset=1)
+                !if (this_image()==test_image) print*, "mp", domain%water_vapor%data_3d( test_x, test_z:test_z, test_y), domain%potential_temperature%data_3d( test_x, test_z:test_z, test_y)!, (domain%water_vapor%dqdt_3d(149, 11, 1) * dt%seconds())
+                !! if (this_image()==test_image) print*, "mp", domain%water_vapor%data_3d( test_x, test_z-1:test_z+1, test_y), domain%potential_temperature%data_3d( test_x, test_z-1:test_z+1, test_y), &
+                !                                     domain%cloud_water_mass%data_3d( test_x, test_z-1:test_z+1, test_y), domain%cloud_ice_mass%data_3d( test_x, test_z-1:test_z+1, test_y), &
+                !                                     domain%rain_mass%data_3d( test_x, test_z-1:test_z+1, test_y), domain%snow_mass%data_3d( test_x, test_z-1:test_z+1, test_y), &
+                !                                     domain%cloud_ice_number%data_3d( test_x, test_z-1:test_z+1, test_y), domain%rain_number%data_3d( test_x, test_z-1:test_z+1, test_y), &
+                !                                     domain%pressure%data_3d( test_x, test_z-1:test_z+1, test_y), domain%exner%data_3d( test_x, test_z-1:test_z+1, test_y)
+
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" mp(domain")
+
+                if (maxval(domain%snow_mass%data_3d) > 0.1) then
+                    block
+                        integer :: i,j,k
+                        do j=domain%grid%jms, domain%grid%jme
+                            do k=domain%grid%kms, domain%grid%kme
+                                do i=domain%grid%ims, domain%grid%ime
+                                    if (domain%snow_mass%data_3d(i,k,j)>0.1) then
+                                        print*, this_image(), i,k,j, domain%snow_mass%data_3d(i,k,j)
+                                        print*, domain%pressure%data_3d(i,max(domain%grid%kms,k-3):min(domain%grid%kme,k+3),j)
+                                        print*, domain%density%data_3d(i,max(domain%grid%kms,k-3):min(domain%grid%kme,k+3),j)
+                                        print*, domain%snow_mass%data_3d(i,max(domain%grid%kms,k-3):min(domain%grid%kme,k+3),j)
+                                        print*, domain%water_vapor%data_3d(i,max(domain%grid%kms,k-3):min(domain%grid%kme,k+3),j)
+                                        print*, domain%potential_temperature%data_3d(i,max(domain%grid%kms,k-3):min(domain%grid%kme,k+3),j)
+                                    endif
+                                enddo
+                            enddo
+                        enddo
+                    endblock
+                endif
+                ! where(domain%cloud_ice_number%data_3d > 20000) domain%cloud_ice_number%data_3d = 20000
+                ! where(domain%rain_number%data_3d > 20000) domain%rain_number%data_3d = 20000
 
                 call domain%halo_retrieve()
+                !if (this_image()==test_image) print*, "halo_retrieve", domain%water_vapor%data_3d( test_x, test_z, test_y), domain%potential_temperature%data_3d( test_x, test_z, test_y)!, (domain%water_vapor%dqdt_3d(149, 11, 1) * dt%seconds())
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" domain%halo_retrieve")
 
                 call advect(domain, options, real(dt%seconds()))
+                !if (this_image()==test_image) print*, "advect", domain%water_vapor%data_3d( test_x, test_z, test_y), domain%potential_temperature%data_3d( test_x, test_z, test_y)!, (domain%water_vapor%dqdt_3d(149, 11, 1) * dt%seconds())
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" advect(domain")
 
-                ! if (options%debug) call domain_check(domain,"After Convection")
+                ! if (options%parameters%debug) call domain_check(domain,"After Convection")
                 !
                 ! ! apply/update boundary conditions including internal wind and pressure changes.
                 call domain%apply_forcing(dt)
+                !if (this_image()==test_image) print*, "domain", domain%water_vapor%data_3d( test_x, test_z, test_y), domain%potential_temperature%data_3d( test_x, test_z, test_y)!, (domain%water_vapor%dqdt_3d(149, 11, 1) * dt%seconds())
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" domain%apply_forcing")
 
                 ! call domain%halo_exchange()
 
