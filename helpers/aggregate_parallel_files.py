@@ -6,6 +6,8 @@ import multiprocessing as mp
 import numpy as np
 import xarray as xr
 
+# pool = None
+
 # This should be an input, this is the search string that is assumed to match
 # the output files to be aggregated.
 file_search = "icar_out_{ens}_*"
@@ -98,8 +100,13 @@ def agg_file(first_file):
     # for f in this_date_files:
     #     all_data.append(load_file(f))
 
-    results = pool.map_async(load_file, this_date_files)
-    all_data = results.get()
+    if pool is None:
+        all_data = []
+        for f in this_date_files:
+            all_data.append(load_file(f))
+    else:
+        results = pool.map_async(load_file, this_date_files)
+        all_data = results.get()
 
 
     data_set = set_up_dataset(all_data[0])
