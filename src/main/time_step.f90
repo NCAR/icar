@@ -378,8 +378,6 @@ contains
         test_y = 198
         test_image = 33
 
-        call update_winds(domain, options)
-
         ims = domain%grid%ims
         jms = domain%grid%jms
         kms = domain%grid%kms
@@ -414,7 +412,7 @@ contains
             ! this if is to avoid round off errors causing an additional physics call that won't really do anything
             if (dt%seconds() > 1e-3) then
 
-                ! print*, this_image(), "init",maxval(domain%cloud_water_mass%data_3d) test_x, test_z, test_y
+                ! if (this_image()==1) print*, this_image(), "  ", trim(domain%model_time%as_string()), "  init",minval(domain%water_vapor%data_3d)
                 if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" init")
                 !if (this_image()==test_image) print*, "init", domain%water_vapor%data_3d( test_x, test_z, test_y), domain%potential_temperature%data_3d( test_x, test_z, test_y)!, (domain%water_vapor%dqdt_3d(149, 11, 1) * dt%seconds())
                     ! print*, trim("img:"),this_image(),trim("1 Temp"), domain%potential_temperature%data_3d(ims,kms,jms), domain%exner%data_3d(ims,kms,jms),
