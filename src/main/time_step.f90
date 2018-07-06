@@ -21,6 +21,8 @@ module time_step
 
     use domain_interface,           only : domain_t
     use options_interface,          only : options_t
+    use debug_module,               only : domain_check
+    use string,                     only : str
 
     implicit none
     private
@@ -338,14 +340,10 @@ contains
         ! perform a reduction across all images to find the minimum time step required
         call co_min(seconds)
 
+        seconds = seconds/1.25
         ! set an upper bound on dt to keep microphysics and convection stable (?)
         ! store this back in the dt time_delta data structure
         call dt%set(seconds=min(seconds,120.0D0))
-
-        ! Make sure we don't over step the forcing period
-        if ((domain%model_time + dt) > end_time) then
-            dt = end_time - domain%model_time
-        endif
 
     end subroutine update_dt
 
@@ -372,23 +370,34 @@ contains
 
         real :: last_print_time
         type(time_delta_t) :: dt, time_step_size
+        integer :: ims, jms, kms
+        integer :: test_x, test_y, test_z, test_image
 
-        call update_winds(domain, options)
+        test_x = 87
+        test_z = 3
+        test_y = 198
+        test_image = 33
+
+        ims = domain%grid%ims
+        jms = domain%grid%jms
+        kms = domain%grid%kms
 
         last_print_time = 0.0
         time_step_size = end_time - domain%model_time
 
-        ! Make the boundary condition dXdt values into units of [X]/s
-        call domain%update_delta_fields(time_step_size)
 
+        call update_dt(dt, options, domain, end_time)
 
         ! now just loop over internal timesteps computing all physics in order (operator splitting...)
         do while (domain%model_time < end_time)
+            ! Make sure we don't over step the forcing or output period
+            if ((domain%model_time + dt) > end_time) then
+                dt = end_time - domain%model_time
+            endif
 
             ! ensure internal model consistency
             call diagnostic_update(domain, options)
 
-            call update_dt(dt, options, domain, end_time)
 
             ! if an interactive run was requested than print status updates everytime at least 5% of the progress has been made
             if (options%parameters%interactive .and. (this_image()==1)) then
@@ -398,33 +407,40 @@ contains
             ! this if is to avoid round off errors causing an additional physics call that won't really do anything
             if (dt%seconds() > 1e-3) then
 
-                ! print*, this_image(), "init",maxval(domain%cloud_water_mass%data_3d)
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" init")
 
                 ! first process the halo section of the domain (currently hard coded at 1 should come from domain?)
                 call rad(domain, options, real(dt%seconds()))
-                ! call lsm(domain, options, real(dt%seconds()))
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" rad(domain")
+
+                ! call lsm(domain, options, real(dt%seconds()), halo=1)
                 ! call pbl(domain, options, real(dt%seconds()), halo=1)
                 ! call convect(domain, options, real(dt%seconds()), halo=1)
+
                 call mp(domain, options, real(dt%seconds()), halo=1)
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" mp_halo")
 
                 call domain%halo_send()
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" domain%halo_send")
 
                 ! call rad(domain, options, real(dt%seconds()), subset=1)
                 ! call lsm(domain, options, real(dt%seconds()), subset=1)
                 ! call pbl(domain, options, real(dt%seconds()), subset=1)
                 ! call convect(domain, options, real(dt%seconds()), subset=1)
+
                 call mp(domain, options, real(dt%seconds()), subset=1)
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" mp(domain")
 
                 call domain%halo_retrieve()
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" domain%halo_retrieve")
 
                 call advect(domain, options, real(dt%seconds()))
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" advect(domain")
 
-                ! if (options%debug) call domain_check(domain,"After Convection")
-                !
+
                 ! ! apply/update boundary conditions including internal wind and pressure changes.
                 call domain%apply_forcing(dt)
-
-                ! call domain%halo_exchange()
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" domain%apply_forcing")
 
             endif
 

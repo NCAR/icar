@@ -900,6 +900,7 @@ contains
         else
             options%output_file_frequency="every step"
         endif
+
         options%surface_io_only = surface_io_only
 
         options%calendar=calendar
@@ -1545,6 +1546,11 @@ contains
             endif
 
             ! allocate(options%dz_levels(options%nz))
+            if (minval(dz_levels(1:options%nz)) < 0) then
+                if (this_image()==1) print*, "WARNING: dz seems to be less than 0, this is not physical and is probably an error in the namelist"
+                if (this_image()==1) print*, "Note that the gfortran compiler will not read dz_levels spread across multiple lines. "
+                error stop
+            endif
             options%dz_levels = -1
             options%dz_levels(1:options%nz)=dz_levels(1:options%nz)
             deallocate(dz_levels)

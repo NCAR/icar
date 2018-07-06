@@ -992,7 +992,7 @@ contains
         logical,                intent(in),   optional :: boundary_only
 
         integer :: ims,ime, jms,jme, kms,kme
-        integer:: i,j,k,l, localx,localy
+        integer:: i,j,k,l, localx,localy, nz_input
         logical :: boundaries
         real :: localw
         real :: local_center
@@ -1004,6 +1004,8 @@ contains
         jme = ubound(fieldout,2)
         kms = lbound(fieldout,3)
         kme = ubound(fieldout,3)
+
+        nz_input = size(fieldin,2)
 
         boundaries = .False.
         if (present(boundary_only)) boundaries = boundary_only
@@ -1026,11 +1028,12 @@ contains
                         do l=1,4
                             localx=geolut%x(l,i,k)
                             localy=geolut%y(l,i,k)
-                            local_center = local_center + fieldin(localx,j,localy)
+                            local_center = local_center + fieldin(localx, min(j,nz_input), localy)
                             ! This is the actual interpolation adding the value from the two raw grid points
                             if (l < 3) then
+
                                 localw=geolut%w(l,i,k)
-                                fieldout(i,j,k) = fieldout(i,j,k) + fieldin(localx,j,localy) * localw
+                                fieldout(i,j,k) = fieldout(i,j,k) + fieldin(localx, min(j,nz_input), localy) * localw
                             endif
                         enddo
                         ! This is the actual interpolation adding the value from the center average of all four grid points

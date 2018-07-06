@@ -575,21 +575,11 @@ contains
             format = input_format
         else
             ! this is the default format string to generate "YYYY/MM/DD hh:mm:ss"
-            format = '(I4,A1,I2,A1,I2,A1,I2,A1,I2,A1,I2)'
+            format = '(I4,"/",I0.2,"/",I0.2," ",I0.2,":",I0.2,":",I0.2)'
         endif
 
         ! this and the format statement above are the important bits
-        write(pretty_string, format) year,'/',month,'/',day,'_',hour,':',minute,":",second
-
-        ! fill missing digits with '0'
-        do i=1,len_trim(pretty_string)
-            select case (pretty_string(i:i))
-                case (' ')
-                    pretty_string(i:i) = '0'
-                case ('_')
-                    pretty_string(i:i) = ' '
-            end select
-        end do
+        write(pretty_string, format) year, month, day, hour, minute, second
 
         end associate
 

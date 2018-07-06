@@ -157,7 +157,7 @@ contains
         call io_read_attribute(trim(filename),"calendar", calendar, var_name=trim(varname), error=error)
         ! if time attribute it not present, set calendar to one specified in the config file
         if (error/=0) then
-            write(*,*) "WARNING: assuming standard/gregorian calendar for file "//trim(filename)
+            if (this_image()==1) write(*,*) "WARNING: assuming standard/gregorian calendar for file "//trim(filename)
             calendar = "standard"
         endif
 

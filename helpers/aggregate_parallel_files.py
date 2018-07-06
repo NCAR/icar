@@ -6,12 +6,12 @@ import multiprocessing as mp
 import numpy as np
 import xarray as xr
 
+# pool = None
+
 # This should be an input, this is the search string that is assumed to match
 # the output files to be aggregated.
 file_search = "icar_out_{ens}_*"
 
-# number of processors to parallelize reading the files over
-n_processors = 1
 
 def load_file(file_name):
     '''Load a netcdf dataset into memory'''
@@ -100,8 +100,13 @@ def agg_file(first_file):
     # for f in this_date_files:
     #     all_data.append(load_file(f))
 
-    results = pool.map_async(load_file, this_date_files)
-    all_data = results.get()
+    if pool is None:
+        all_data = []
+        for f in this_date_files:
+            all_data.append(load_file(f))
+    else:
+        results = pool.map_async(load_file, this_date_files)
+        all_data = results.get()
 
 
     data_set = set_up_dataset(all_data[0])
@@ -147,8 +152,10 @@ def main():
     for f in first_files:
         agg_file(f)
 
-
+# number of processors to parallelize reading the files over
+n_processors = 1
 pool = mp.Pool(n_processors)
+
 
 if __name__ == '__main__':
     main()

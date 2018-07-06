@@ -25,6 +25,9 @@ program icar
     use time_step,          only : step                               ! Advance the model forward in time
     use initialization,     only : init_model
     use timer_interface,    only : timer_t
+    use time_object,        only : Time_type
+    use wind,               only : update_winds
+
 
     implicit none
 
@@ -33,8 +36,10 @@ program icar
     type(boundary_t):: boundary
     type(output_t)  :: dataset
     type(timer_t)   :: initialization_timer, total_timer, input_timer, output_timer, physics_timer
+    type(Time_type) :: next_output
 
     character(len=1024) :: file_name
+    character(len=49)   :: file_date_format = '(I4,"-",I0.2,"-",I0.2,"_",I0.2,"-",I0.2,"-",I0.2)'
     integer :: i
 
     call total_timer%start()
@@ -45,7 +50,7 @@ program icar
     ! Reads config options and initializes domain and boundary conditions
     call init_model(options, domain, boundary)
 
-    if (this_image()==1) print*, "Setting up output files"
+    if (this_image()==1) write(*,*) "Setting up output files"
     ! should be combined into a single setup_output call
     call dataset%set_domain(domain)
     call dataset%add_variables(options%vars_for_restart, domain)
@@ -69,50 +74,77 @@ program icar
 
     call output_timer%start()
     call dataset%save_file(trim(file_name), i, domain%model_time)
+    next_output = domain%model_time + options%parameters%output_dt
     call output_timer%stop()
     i = i + 1
 
     do while (domain%model_time < options%parameters%end_time)
 
-        if (this_image()==1) write(*,*) ""
-        if (this_image()==1) write(*,*) " ----------------------------------------------------------------------"
-        if (this_image()==1) print*, "Updating Boundary conditions"
+        ! -----------------------------------------------------
+        !
+        !  Read input data if necessary
+        !
+        ! -----------------------------------------------------
         call input_timer%start()
-        call boundary%update_forcing(options)
-        call domain%interpolate_forcing(boundary, update=.True.)
+        if (boundary%current_time <= domain%model_time ) then
+            if (this_image()==1) write(*,*) ""
+            if (this_image()==1) write(*,*) " ----------------------------------------------------------------------"
+            if (this_image()==1) write(*,*) "Updating Boundary conditions"
+            call boundary%update_forcing(options)
+            call domain%interpolate_forcing(boundary, update=.True.)
+            call update_winds(domain, options)
+
+            ! Make the boundary condition dXdt values into units of [X]/s
+            call domain%update_delta_fields(boundary%current_time - domain%model_time)
+        endif
         call input_timer%stop()
 
-        if (this_image()==1) print*, "Running Physics"
+
+
+        ! -----------------------------------------------------
+        !
+        !  Integrate physics forward in time
+        !
+        ! -----------------------------------------------------
+        if (this_image()==1) write(*,*) "Running Physics"
         if (this_image()==1) write(*,*) "  Model time = ", trim(domain%model_time%as_string())
         if (this_image()==1) write(*,*) "   End  time = ", trim(options%parameters%end_time%as_string())
-        if (this_image()==1) write(*,*) "  Input time = ", trim(boundary%current_time%as_string())
-
+        if (this_image()==1) write(*,*) "  Next Input = ", trim(boundary%current_time%as_string())
+        if (this_image()==1) write(*,*) "  Next Output= ", trim(next_output%as_string())
 
         ! this is the meat of the model physics, run all the physics for the current time step looping over internal timesteps
         call physics_timer%start()
-        call step(domain, boundary%current_time, options)
+        call step(domain, step_end(boundary%current_time, next_output), options)
         call physics_timer%stop()
 
-        ! This is an ugly hack until the output object is set up better to handle multiple time steps per file
-        ! (that may just need "unlimited" specified in variables?)
-        if (this_image()==1) print*, "Writing output file"
-        if (i>24) then
-            write(file_name, '(I4.4,"_",A,".nc")') this_image(), trim(domain%model_time%as_string())
 
-            do i=1,len_trim(file_name)
-                if (file_name(i:i)==" ") file_name = file_name(:i-1)//"_"//file_name(i+1:)
-                if (file_name(i:i)=="/") file_name = file_name(:i-1)//"-"//file_name(i+1:)
-                if (file_name(i:i)==":") file_name = file_name(:i-1)//"-"//file_name(i+1:)
-            end do
-            file_name = trim(options%parameters%output_file)//trim(file_name)
-            i = 1
+        ! -----------------------------------------------------
+        !
+        !  Write output data if it is time
+        !
+        ! -----------------------------------------------------
+        ! This is a bit of a hack until the output object is set up better to handle files with specified number of steps per file (or months or...)
+        ! ideally this will just become timer_start, save_file()...
+        ! the output object needs a pointer to model_time and will have to know how to create output file names
+        call output_timer%start()
+        if (domain%model_time >= next_output) then
+            if (this_image()==1) write(*,*) "Writing output file"
+            if (i>24) then
+                write(file_name, '(A,I4.4,"_",A,".nc")')    &
+                    trim(options%parameters%output_file),   &
+                    this_image(),                           &
+                    trim(domain%model_time%as_string(file_date_format))
+                i = 1
+            endif
+
+            call dataset%save_file(trim(file_name), i, next_output)
+
+            next_output = next_output + options%parameters%output_dt
+
+            i = i + 1
         endif
 
-        if (this_image()==1) print*, trim(file_name)
-        call output_timer%start()
-        call dataset%save_file(trim(file_name), i, domain%model_time)
         call output_timer%stop()
-        i = i + 1
 
     end do
     !
@@ -120,31 +152,35 @@ program icar
     call total_timer%stop()
 
     if (this_image()==1) then
-        print*, ""
-        print*, "Model run from : ",trim(options%parameters%start_time%as_string())
-        print*, "           to  : ",trim(options%parameters%end_time%as_string())
-        print*, "Domain : ",trim(options%parameters%init_conditions_file)
-        print*, "Number of images:",num_images()
-        print*, ""
-        print*, "First image timing:"
-        print*, "total   : ", trim(total_timer%as_string())
-        print*, "init    : ", trim(initialization_timer%as_string())
-        print*, "input   : ", trim(input_timer%as_string())
-        print*, "output  : ", trim(output_timer%as_string())
-        print*, "physics : ", trim(physics_timer%as_string())
+        write(*,*) ""
+        write(*,*) "Model run from : ",trim(options%parameters%start_time%as_string())
+        write(*,*) "           to  : ",trim(options%parameters%end_time%as_string())
+        write(*,*) "Domain : ",trim(options%parameters%init_conditions_file)
+        write(*,*) "Number of images:",num_images()
+        write(*,*) ""
+        write(*,*) "First image timing:"
+        write(*,*) "total   : ", trim(total_timer%as_string())
+        write(*,*) "init    : ", trim(initialization_timer%as_string())
+        write(*,*) "input   : ", trim(input_timer%as_string())
+        write(*,*) "output  : ", trim(output_timer%as_string())
+        write(*,*) "physics : ", trim(physics_timer%as_string())
     endif
 
-    sync all
+contains
 
-    if (this_image()==num_images()) then
-        print*, ""
-        print*, "Last image timing:"
-        print*, "total   : ", trim(total_timer%as_string())
-        print*, "init    : ", trim(initialization_timer%as_string())
-        print*, "input   : ", trim(input_timer%as_string())
-        print*, "output  : ", trim(output_timer%as_string())
-        print*, "physics : ", trim(physics_timer%as_string())
-    endif
+    function step_end(time1, time2) result(min_time)
+        implicit none
+        type(Time_type), intent(in) :: time1
+        type(Time_type), intent(in) :: time2
+        type(Time_type) :: min_time
+
+        if (time1 <= time2 ) then
+            min_time = time1
+        else
+            min_time = time2
+        endif
+
+    end function
 
 end program
 
