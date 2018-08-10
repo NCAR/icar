@@ -6,7 +6,7 @@ import multiprocessing as mp
 import numpy as np
 import xarray as xr
 
-# pool = None
+pool = None
 
 # This should be an input, this is the search string that is assumed to match
 # the output files to be aggregated.
@@ -153,8 +153,8 @@ def main():
         agg_file(f)
 
 # number of processors to parallelize reading the files over
-n_processors = 1
-pool = mp.Pool(n_processors)
+# n_processors = 1
+# pool = mp.Pool(n_processors)
 
 
 if __name__ == '__main__':
