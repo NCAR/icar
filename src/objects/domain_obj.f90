@@ -455,11 +455,11 @@ contains
         endif
 
         if (this_image()==1) print*, "WARNING Soil variables not properly initialized"
-        this%soil_water_content%data_3d = 0.2
-        this%soil_totalmoisture%data_2d = 0.2 * 2
-        this%soil_temperature%data_3d = 280
-        this%soil_deep_temperature%data_2d = 280
-        this%roughness_0%data_2d = 0.001
+        if (associated(this%soil_water_content%data_3d)) this%soil_water_content%data_3d = 0.2
+        if (associated(this%soil_totalmoisture%data_2d)) this%soil_totalmoisture%data_2d = 0.2 * 2
+        if (associated(this%soil_temperature%data_3d)) this%soil_temperature%data_3d = 280
+        if (associated(this%soil_deep_temperature%data_2d)) this%soil_deep_temperature%data_2d = 280
+        if (associated(this%roughness_0%data_2d)) this%roughness_0%data_2d = 0.001
 
         call standardize_coordinates(this%geo_u)
         call standardize_coordinates(this%geo_v)
