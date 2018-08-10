@@ -95,17 +95,19 @@ endif
 ########################################################################################
 NODENAME := $(shell uname -n)
 
-ifeq ($(F90),gfortran-6)
-	COMPILER=gnu
-endif
-ifeq ($(F90),gfortran)
-	COMPILER=gnu
-endif
-ifeq ($(F90),ifort)
-	COMPILER=intel
-endif
-ifeq ($(F90),ftn)
-	COMPILER=cray
+ifndef COMPILER
+	ifeq ($(F90),gfortran-6)
+		COMPILER=gnu
+	endif
+	ifeq ($(F90),gfortran)
+		COMPILER=gnu
+	endif
+	ifeq ($(F90),ifort)
+		COMPILER=intel
+	endif
+	ifeq ($(F90),ftn)
+		COMPILER=cray
+	endif
 endif
 
 # get GIT version info
@@ -128,6 +130,28 @@ ifeq ($(COMPILER), gnu)
 	PREPROC=-cpp
 	MODOUTPUT=-J $(BUILD)
 endif
+
+# GNU fortran using OpenSHMEM instead of MPI... experimental
+# Currently works with gcc 6.3 MPT 2.15f and a special version of opencoarrays 1.8.5 compiled in the library directory below
+ifeq ($(COMPILER),oshfort)
+  F90=oshfort
+  FC=$F90
+  # link := $(compile)
+  OSH_FLAGS := -fcoarray=lib -L/glade/u/home/gutmann/usr/local/opencoarrays/openshmem/ -lcaf_openshmem
+  COMP= -O2 -mfma -c -ffree-line-length-none -ftree-vectorize -fimplicit-none -funroll-loops -march=native  -fno-protect-parens $(OSH_FLAGS) # -ffast-math #-flto #
+  LINK= $(OSH_FLAGS)
+  PREPROC=-cpp
+  MODOUTPUT=-J $(BUILD)
+  # opt := -fcheck=all -Wall -fbacktrace -g -cpp -DUSE_ASSERTIONS=$(USE_ASSERTIONS) -DDEBUG_OUTPUT=$(DEBUG_OUTPUT) -J $(BUILD)/ $(OSH_FLAGS)
+  # link_flags := -fcheck=all -Wall -fbacktrace -g $(OSH_FLAGS)
+  ifeq ($(MODE),debug)
+	COMP= -g -c -ffree-line-length-none -fimplicit-none -fcheck=all -Wall -fbacktrace $(OSH_FLAGS) # -ffast-math #-flto #
+	#   opt := -Ofast -cpp -DUSE_ASSERTIONS=$(USE_ASSERTIONS) -DDEBUG_OUTPUT=$(DEBUG_OUTPUT) -J $(BUILD)/ $(OSH_FLAGS)
+	#   link_flags := -Ofast $(OSH_FLAGS)
+  endif
+endif
+
+
 # Intel fortran
 ifeq ($(COMPILER), intel)
 	COMP=-c -u -qopenmp -liomp5 -O3 -xHost -ftz -fpe0 # -check stack,bounds -fp-stack-check
