@@ -125,8 +125,8 @@ ifeq ($(COMPILER), gnu)
 	# to enable OpenMP use this line... OpenMP seems to hang with more than 1 thread, probably an OpenCoarrays (v1.9.1) issue with not supporting threading
 	# COMP=-fopenmp -lgomp -O2 -c -ffree-line-length-none -ftree-vectorize -fimplicit-none -funroll-loops -march=native  -fno-protect-parens # -ffast-math #-flto #
 	# LINK=-fopenmp -lgomp
-	COMP= -O2 -mfma -c -ffree-line-length-none -ftree-vectorize -fimplicit-none -funroll-loops -march=native  -fno-protect-parens # -ffast-math #-flto #
-	LINK=
+	COMP= -fopenmp -lgomp -O2 -mfma -c -ffree-line-length-none -ftree-vectorize -fimplicit-none -funroll-loops -march=native  -fno-protect-parens # -ffast-math #-flto #
+	LINK= -fopenmp -lgomp
 	PREPROC=-cpp
 	MODOUTPUT=-J $(BUILD)
 endif
@@ -353,6 +353,9 @@ OBJS=	$(BUILD)driver.o            \
 		$(BUILD)mp_thompson_aer.o	\
 		$(BUILD)advection_driver.o	\
 		$(BUILD)advect.o			\
+		$(BUILD)lsm_driver.o		\
+		$(BUILD)lsm_noahdrv.o		\
+		$(BUILD)lsm_noahlsm.o		\
 		$(BUILD)geo_reader.o		\
 		$(BUILD)io_routines.o		\
 		$(BUILD)data_structures.o	\
@@ -378,15 +381,6 @@ TEST_EXECUTABLES= 	fftshift_test			\
 					point_in_on_test		\
 	  				array_util_test 		\
 					variable_dict_test		\
-					caf_options_test 		\
-					caf_init_test 			\
-					caf_domain_init_test	\
-					caf_bcast_test			\
-					caf_write_domain_test	\
-					caf_options_test		\
-					caf_boundary_test		\
-					caf_boundary_init_test	\
-					caf_init-write_test		\
 					caf_threads_test		\
 					$(CAF_TEST_EXECUTABLES)
 
@@ -688,7 +682,7 @@ caf_linear_winds_setup_test: $(BUILD)test_caf_linear_winds_setup.o	\
 				$(BUILD)geo_reader.o	 $(BUILD)array_utilities.o	\
 				$(BUILD)fftshift.o 		 $(BUILD)fftw.o  			\
 				$(BUILD)vinterp.o		 $(BUILD)linear_winds.o		\
-				$(BUILD)lt_lut_io.o
+				$(BUILD)lt_lut_io.o		 $(BUILD)lsm_driver.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 
@@ -747,7 +741,8 @@ $(BUILD)options_h.o: $(OBJECTS)options_h.f90 $(BUILD)icar_constants.o $(BUILD)op
 $(BUILD)options_obj.o: $(OBJECTS)options_obj.f90 $(BUILD)options_h.o $(BUILD)time_h.o		\
 						$(BUILD)time_delta_obj.o $(BUILD)io_routines.o $(BUILD)opt_types.o	\
 						$(BUILD)time_io.o $(BUILD)string.o $(BUILD)model_tracking.o			\
-						$(BUILD)mp_driver.o $(BUILD)advection_driver.o $(BUILD)ra_driver.o
+						$(BUILD)mp_driver.o $(BUILD)advection_driver.o $(BUILD)ra_driver.o	\
+						$(BUILD)lsm_driver.o
 
 ###################################################################
 #	Primary Data Objects
@@ -810,7 +805,8 @@ $(BUILD)init.o:$(MAIN)init.f90 $(BUILD)data_structures.o $(BUILD)options_h.o $(B
 
 $(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.o $(BUILD)string.o 	\
 					$(BUILD)advection_driver.o $(BUILD)mp_driver.o $(BUILD)domain_h.o 				\
-					$(BUILD)options_h.o $(BUILD)atm_utilities.o $(BUILD)ra_driver.o $(BUILD)debug_utils.o
+					$(BUILD)options_h.o $(BUILD)atm_utilities.o $(BUILD)ra_driver.o $(BUILD)lsm_driver.o \
+					$(BUILD)debug_utils.o
 
 # $(BUILD)advection_driver.o $(BUILD)ra_driver.o $(BUILD)lsm_driver.o $(BUILD)cu_driver.o \
 # $(BUILD)pbl_driver.o $(BUILD)mp_driver.o $(BUILD)boundary.o $(BUILD)debug_utils.o
@@ -908,9 +904,12 @@ $(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o $(BUILD)time.
 ###################################################################
 #	Surface code
 ###################################################################
-$(BUILD)lsm_driver.o: $(PHYS)lsm_driver.f90 $(BUILD)data_structures.o $(BUILD)lsm_simple.o \
-						$(BUILD)lsm_basic.o $(BUILD)lsm_noahdrv.o $(BUILD)lsm_noahlsm.o \
-						$(BUILD)water_simple.o
+$(BUILD)lsm_driver.o: $(PHYS)lsm_driver.f90 $(BUILD)data_structures.o \
+						$(BUILD)lsm_noahdrv.o $(BUILD)lsm_noahlsm.o \
+						$(BUILD)water_simple.o $(BUILD)icar_constants.o \
+						$(BUILD)domain_h.o $(BUILD)options_h.o			\
+
+# $(BUILD)lsm_basic.o $(BUILD)lsm_simple.o
 
 $(BUILD)water_simple.o: $(PHYS)water_simple.f90 $(BUILD)data_structures.o
 

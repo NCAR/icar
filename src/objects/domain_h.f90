@@ -77,7 +77,7 @@ module domain_interface
     type(variable_t) :: latent_heat
     integer,allocatable :: veg_type(:,:)
     integer,allocatable :: soil_type(:,:)
-    type(variable_t) :: roughness_0
+    type(variable_t) :: roughness_z0
     type(variable_t) :: vegetation_fraction
     type(variable_t) :: lai
     type(variable_t) :: canopy_water

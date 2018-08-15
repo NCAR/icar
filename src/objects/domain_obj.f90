@@ -196,12 +196,14 @@ contains
         if (0<opt%vars_to_allocate( kVARS%ground_heat_flux) )           call setup(this%ground_heat_flux,         this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%soil_totalmoisture) )         call setup(this%soil_totalmoisture,       this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%soil_deep_temperature) )      call setup(this%soil_deep_temperature,    this%grid2d)
-        if (0<opt%vars_to_allocate( kVARS%roughness_0) )                call setup(this%roughness_0,              this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%roughness_z0) )               call setup(this%roughness_z0,             this%grid2d)
+
         if (0<opt%vars_to_allocate( kVARS%precipitation) ) allocate(this%precipitation_bucket     (ims:ime, jms:jme),          source=0)
         if (0<opt%vars_to_allocate( kVARS%snowfall) )      allocate(this%snowfall_bucket          (ims:ime, jms:jme),          source=0)
         if (0<opt%vars_to_allocate( kVARS%veg_type) )      allocate(this%veg_type                 (ims:ime, jms:jme),          source=7)
         if (0<opt%vars_to_allocate( kVARS%soil_type) )     allocate(this%soil_type                (ims:ime, jms:jme),          source=3)
         if (0<opt%vars_to_allocate( kVARS%land_mask) )     allocate(this%land_mask                (ims:ime, jms:jme),          source=kLC_LAND)
+
         ! integer variable_t types aren't available yet...
 
     end subroutine
@@ -455,11 +457,12 @@ contains
         endif
 
         if (this_image()==1) print*, "WARNING Soil variables not properly initialized"
+        if (associated(this%vegetation_fraction%data_3d)) this%vegetation_fraction%data_3d = 0.6
         if (associated(this%soil_water_content%data_3d)) this%soil_water_content%data_3d = 0.2
         if (associated(this%soil_totalmoisture%data_2d)) this%soil_totalmoisture%data_2d = 0.2 * 2
         if (associated(this%soil_temperature%data_3d)) this%soil_temperature%data_3d = 280
         if (associated(this%soil_deep_temperature%data_2d)) this%soil_deep_temperature%data_2d = 280
-        if (associated(this%roughness_0%data_2d)) this%roughness_0%data_2d = 0.001
+        if (associated(this%roughness_z0%data_2d)) this%roughness_z0%data_2d = 0.001
 
         call standardize_coordinates(this%geo_u)
         call standardize_coordinates(this%geo_v)
