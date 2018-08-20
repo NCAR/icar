@@ -211,7 +211,16 @@ contains
     end function idw_weights
 
     !>------------------------------------------------------------
-    !! Find the minimum x step
+    !! Find the minimum x
+    !! Takes a point (yi,xi) and a set of 4 surrounding points (y[4],x[4]) as input
+    !!
+    !! Example : xw = minxw(xw,lo%lon,xc,yc,lon)
+    !!
+    !! @param   real    yi  input y location to interpolate to.
+    !! @param   real    y   Array of surrounding y-locations to interpolate from.
+    !! @param   real    xi  input x location to interpolate to.
+    !! @param   real    x   Array of surrounding x-locations to interpolate from.
+    !! @retval  real    weights
     !!
     !!------------------------------------------------------------
     integer function minxw(xw,longrid,xpos,ypos,lon)
