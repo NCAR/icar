@@ -18,10 +18,13 @@
 !!------------------------------------------------------------
 module geo
     use data_structures
+
     implicit none
 
     private
 
+    public::point_in_poly
+    public::point_is_on_line
     public::geo_LUT      ! Create a geographic Look up table
     public::geo_interp   ! apply geoLUT to interpolate in 2d for a 3d grid
     public::geo_interp2d ! apply geoLUT to interpolate in 2d for a 2d grid
@@ -86,6 +89,124 @@ contains
     end function bilin_weights
 
     !>------------------------------------------------------------
+    !! Calculate the weights to use for triangular interpolation between surrounding points x, y
+    !!
+    !! Takes a point (yi,xi) and a set of 4 surrounding points (y[4],x[4]) as input
+    !! Of the four surrounding points, the first two should be verticies of the triangle
+    !! and the last vertex will be the average of all four points.
+    !!
+    !! Based on Barycentric coordinates: https://en.wikipedia.org/wiki/Barycentric_coordinate_system
+    !!  see also explanation here: https://codeplea.com/triangular-interpolation
+    !!
+    !! @param   real    yi  input y location to interpolate to.
+    !! @param   real    y   Array of surrounding y-locations to interpolate from.
+    !! @param   real    xi  input x location to interpolate to.
+    !! @param   real    x   Array of surrounding x-locations to interpolate from.
+    !! @retval  real    weights
+    !!
+    !!------------------------------------------------------------
+    function tri_weights(yi,y,xi,x)
+        implicit none
+        real,intent(in)::yi,y(4),xi,x(4)
+        real::x0,y0
+        real, dimension(4) ::tri_weights
+
+        real :: w1,w2,w3,denom
+
+        x0 = sum(x)/4
+        y0 = sum(y)/4
+
+        associate(y1 => y(1), y2 => (y(2)), y3 => y0, &
+                  x1 => x(1), x2 => (x(2)), x3 => x0)
+
+        denom = ((y2-y3) * (x1-x3) + (x3-x2) * (y1-y3))
+        if (denom==0) then
+            write(*,*) "ERROR: Triangular interpolation broken"
+            write(*,*) xi, yi
+            write(*,*) "Triangle vertices"
+            write(*,*) x1, y1
+            write(*,*) x2, y2
+            write(*,*) x3, y3
+            stop "Denominator in triangulation is broken"
+        endif
+
+        ! This is the core of the algorithm.
+        ! compute weights for each x,y point
+        w1 = ((y2-y3) * (xi-x3) + (x3-x2) * (yi-y3)) &
+                           / denom
+
+        w2 = ((y3-y1) * (xi-x3) + (x1-x3) * (yi-y3)) &
+                           / denom
+
+        w3 = 1 - w1 - w2
+
+        if (minval([w1,w2,w3]) < -1e-4) then
+            write(*,*) "ERROR: Point not located in bounding triangle"
+            write(*,*) xi, yi
+            write(*,*) "Triangle vertices"
+            write(*,*) x1, y1
+            write(*,*) x2, y2
+            write(*,*) x3, y3
+            write(*,*) w1, w2, w3
+            stop "Triangulation is broken"
+        endif
+        w1=max(0.,w1); w2=max(0.,w2); w3=max(0.,w3);
+
+        if (abs((w1+w2+w3)-1)>1e-4) then
+            write(*,*) "Error, w1+w2+w3 != 1"
+            write(*,*) w1,w2,w3
+            write(*,*) "Point"
+            write(*,*) xi, yi
+            write(*,*) "Triangle vertices"
+            write(*,*) x1, y1
+            write(*,*) x2, y2
+            write(*,*) x3, y3
+        endif
+        denom = 1.0 / (w1+w2+w3)
+        w1 = w1 * denom
+        w2 = w2 * denom
+        w3 = w3 * denom
+
+        end associate
+
+        tri_weights = [w1, w2, w3, 0.0]
+
+    end function tri_weights
+
+    !>------------------------------------------------------------
+    !! Calculate the weights to use for inverse distance interpolation between surrounding points x, y
+    !!
+    !! Takes a point (yi,xi) and a set of 4 surrounding points (y[4],x[4]) as input
+    !!
+    !! @param   real    yi  input y location to interpolate to.
+    !! @param   real    y   Array of surrounding y-locations to interpolate from.
+    !! @param   real    xi  input x location to interpolate to.
+    !! @param   real    x   Array of surrounding x-locations to interpolate from.
+    !! @retval  real    weights
+    !!
+    !!------------------------------------------------------------
+    function idw_weights(yi,y,xi,x)
+        implicit none
+        real,intent(in)::yi,y(:),xi,x(:)
+        real, allocatable, dimension(:) :: idw_weights
+
+        real, allocatable, dimension(:) :: distances
+        integer :: n
+        real    :: total_inverse_distance
+
+        n = size(x)
+        allocate(distances(n))
+        allocate(idw_weights(n))
+
+        distances = 1.0/sqrt((y-yi)**2 + (x-xi)**2)
+
+        total_inverse_distance = sum(distances)
+
+        idw_weights = distances / total_inverse_distance
+
+    end function idw_weights
+
+    !>------------------------------------------------------------
     !! Find the minimum x
     !! Takes a point (yi,xi) and a set of 4 surrounding points (y[4],x[4]) as input
     !!
@@ -119,6 +240,7 @@ contains
             endif
         endif
     end function minxw
+
     !>------------------------------------------------------------
     !!  Find the minimum next step size in the y direction
     !!  yw = minyw(yw,lo%lat,xc,yc,lat)
@@ -188,8 +310,8 @@ contains
         ! Handle weird edge case for WRF ideal simulations
         if (dx == 0) then
             if (.not.lo%dx_errors_printed) then
-                print*, "ERROR : geo_find_location : DX = 0 !  Check your inputfile Longitude data"
-                print*, "  Attempting to continue by assuming the grids are the same or can wrap arround"
+                write(*,*) "ERROR : geo_find_location : DX = 0 !  Check your inputfile Longitude data"
+                write(*,*) "  Attempting to continue by assuming the grids are the same or can wrap arround"
                 lo%dx_errors_printed=.True.
             endif
             find_location%x = -1
@@ -198,8 +320,8 @@ contains
         endif
         if (dy == 0) then
             if (.not.lo%dy_errors_printed) then
-                print*, "ERROR : geo_find_location : DY = 0 !  Check your inputfile Latitude data"
-                print*, "  Attempting to continue by assuming the grids are the same or can wrap arround"
+                write(*,*) "ERROR : geo_find_location : DY = 0 !  Check your inputfile Latitude data"
+                write(*,*) "  Attempting to continue by assuming the grids are the same or can wrap arround"
                 lo%dy_errors_printed=.True.
             endif
             find_location%x = -1
@@ -362,6 +484,253 @@ contains
         find_location%y = y
     end function find_location
 
+    !>------------------------------------------------------------
+    !! Determine if a point is on a line defined by two points
+    !!
+    !! WARNING: assumes y is between y0 and y1 and x < max(x0,x1)
+    !!
+    !! x,y are the real point location
+    !! x0,y0 defines one end of a line
+    !! x1,y1 defines the other end of the line
+    !!
+    !! precision optionally defines the tolerance permitted to consider around the line
+    !!
+    !!------------------------------------------------------------
+    function point_is_on_line(x,y,x0,y0,x1,y1, precision) result(online)
+        ! WARNING: assumes y is between y0 and y1 and x < max(x0,x1)
+        implicit none
+        real, intent(in) :: x,y,x0,y0,x1,y1
+        real, intent(in), optional :: precision
+        logical :: online
+
+        real :: internal_precision
+        double precision :: slope, offset
+
+        internal_precision = 1e-7
+        if (present(precision)) internal_precision = precision
+
+        online=.False.
+        ! can we abort testing whether we are actually on a border?
+        if (x >= min(x0,x1)) then
+            ! we COULD be on a border
+            if (x0/=x1) then
+                ! find the equation of the line and check if we are on it.
+                ! this is performed in double precision space to be as precise as possible
+                ! so that rounding errors are minimized
+                slope = (DBLE(y1)-y0) / (DBLE(x1)-x0)
+                offset = y0 - (slope * x0)
+                ! note that due to rounding errors we could be "close" but not on it...
+                if (abs( ((slope * x) + offset) - y) < internal_precision) then
+                    ! we are on a border, return true
+                    online=.True.
+                endif
+            else
+                ! if x0=x1 and x is between x0,x1 and y is between y0,y1 then
+                online=.True.
+            endif
+        endif
+
+    end function
+
+    subroutine check_vertex_hits(y, y0, y1, inside, top_vertex, bottom_vertex, precision)
+        implicit none
+        real,    intent(in)    :: y, y0, y1
+        logical, intent(inout) :: top_vertex, bottom_vertex, inside
+        real,    intent(in)    :: precision
+
+        ! if the segment just parallels the line, then don't reset top_vertex, bottom_vertex history
+        ! and don't flip inside/out
+        if (y0==y1) return
+
+        ! check if we hit the y0 vertex with our ray
+        if (abs(y-y0) < precision) then
+            ! if so, check if we are above or below the other vertex segment
+            if (y<=y1) then
+                ! we are below the other vertex
+                if (top_vertex) then
+                    ! if we already found the other vertex (from testing the previous segment)
+                    ! so reverse our inside outside to avoid double counting this vertex hit
+                    top_vertex=.False.
+                    inside = .not.inside
+                else
+                    ! otherwise, store the fact that we hit a bottom vertex for the next segment
+                    bottom_vertex=.True.
+                endif
+            else if (y>=y1) then
+                if (bottom_vertex) then
+                    bottom_vertex=.False.
+                    inside=.not.inside
+                else
+                    top_vertex=.True.
+                endif
+            endif
+        endif
+
+        if (abs(y-y1) < precision) then
+            if (y<=y0) then
+                if (top_vertex) then
+                    top_vertex=.False.
+                    inside = .not.inside
+                else
+                    bottom_vertex=.True.
+                endif
+            else if (y>=y0) then
+                if (bottom_vertex) then
+                    bottom_vertex=.False.
+                    inside=.not.inside
+                else
+                    top_vertex=.True.
+                endif
+            endif
+        endif
+    end subroutine check_vertex_hits
+
+    !>------------------------------------------------------------
+    !! Determine if a point is inside a given polygon or not
+    !!
+    !!   Polygon is a list of (x,y) pairs. This fuction returns True or False.
+    !!   The algorithm is called the Ray Casting Method.
+    !!
+    !! loosely based off: http://www.ariel.com.au/a/python-point-int-poly.html
+    !! Note additional discussion here: https://wrf.ecse.rpi.edu//Research/Short_Notes/pnpoly.html
+    !!
+    !!------------------------------------------------------------
+    function point_in_poly(x, y, poly, precision) result(inside)
+        implicit none
+        real, intent(in) :: x, y
+        real, intent(in) :: poly(:,:)
+        real, intent(in), optional :: precision
+        logical :: inside
+        logical :: top_vertex, bottom_vertex
+
+        real :: internal_precision
+        integer :: n, i
+        real :: x0,y0,x1,y1
+        double precision :: slope, x_line
+
+        internal_precision = 1e-5
+        if (present(precision)) internal_precision = precision
+        n = size(poly,2)
+
+        ! by default we assume we are not in the polygon
+        inside = .False.
+        top_vertex = .False.
+        bottom_vertex = .False.
+
+        ! check if point is a vertex
+        do i=1,n
+            ! check if the point is the next vertex
+            if ((x==poly(1,i)).and.(y==poly(2,i))) then
+                ! if the point is a vertex, we are inside the polygon, so return true
+                inside=.True.
+                return
+            endif
+        enddo
+
+        x0 = poly(1,1)
+        y0 = poly(2,1)
+        ! now step through all edges checking to see if the number of edges that have to be crossed is odd or even
+        do i=1,n
+            x1 = poly(1,mod(i,n)+1)
+            y1 = poly(2,mod(i,n)+1)
+            ! the first if statements test to see if we can abort early
+            if (y >= min(y0,y1)) then
+                if (y <= max(y0,y1)) then
+                    if (x <= max(x0,x1)) then
+
+                        if (point_is_on_line(x,y,x0,y0,x1,y1, internal_precision)) then
+                            inside=.True.
+                            return
+                        endif
+
+                        if (y0 /= y1) then
+                            ! note slope is reversed from "normal" because we are looking across x
+                            ! performed in double precision to match what is done in point_is_on_line (roughly)
+                            slope = (dble(x1)-x0)/(dble(y1)-y0)
+                            x_line = (y-dble(y0)) * slope + x0
+                        else
+                            x_line = -1e10 ! only inside if x0==x1
+                        endif
+                        ! if we cross one line then we are inside, but if we cross two we are outside, and so on
+                        if ((x0 == x1) .or. (dble(x) <= x_line)) then
+                            inside = .not. inside
+                            call check_vertex_hits(y,y0,y1,inside, top_vertex, bottom_vertex, internal_precision)
+                        else
+                            top_vertex = .False.
+                            bottom_vertex = .False.
+                        endif
+                    endif
+                endif
+            endif
+
+            x0 = x1
+            y0 = y1
+        enddo
+
+        ! inside will be set to the correct value
+    end function point_in_poly
+
+
+    function test_surrounding(lat,lon, lo, positions, nx, ny, n) result(surrounded)
+        implicit none
+        real,                    intent(in) :: lat, lon
+        class(interpolable_type),intent(in) :: lo
+        type(fourpos),           intent(inout) :: positions
+        integer,                 intent(in) :: nx, ny, n
+        logical :: surrounded
+        integer :: i
+
+        real :: polygon(2,n)
+
+        ! first enforce that all points passed in are within the bounds of the lat/lon arrays
+        do i=1,n
+            positions%x(i) = min(max(positions%x(i),1), nx)
+            positions%y(i) = min(max(positions%y(i),1), ny)
+        enddo
+
+        ! then setup a polygon containing the lat/lon data from the input
+        do i=1,n
+            polygon(1,i) = lo%lon( positions%x(i), positions%y(i))
+            polygon(2,i) = lo%lat( positions%x(i), positions%y(i))
+        enddo
+
+        ! finally test that the provided lat/lon point falls within this polygon
+        surrounded = point_in_poly(lon, lat, polygon)
+
+    end function test_surrounding
+
+    function test_triangle(lat,lon, lo, positions, nx, ny) result(surrounded)
+        implicit none
+        real,                    intent(in) :: lat, lon
+        class(interpolable_type),intent(in) :: lo
+        type(fourpos),           intent(inout) :: positions
+        integer,                 intent(in) :: nx, ny
+        logical :: surrounded
+        integer :: i
+
+        real :: polygon(2,3)
+
+        ! assumes all points passed in are within the bounds of the lat/lon arrays!
+        ! this is enforced in test_surrounding which should have passed by now
+        ! then setup a polygon containing the lat/lon data from the input
+        do i=1,2
+            polygon(1,i) = lo%lon( positions%x(i), positions%y(i))
+            polygon(2,i) = lo%lat( positions%x(i), positions%y(i))
+        enddo
+
+        ! set up the third point in the triangle as the average of all 4 surrounding points
+        polygon(:,3) = 0
+        do i=1,4
+            polygon(1,3) = polygon(1,3) + lo%lon( positions%x(i), positions%y(i))
+            polygon(2,3) = polygon(2,3) + lo%lat( positions%x(i), positions%y(i))
+        enddo
+        polygon(:,3) = polygon(:,3) / 4
+
+        ! finally test that the provided lat/lon point falls within this polygon
+        surrounded = point_in_poly(lon, lat, polygon)
+
+    end function test_triangle
+
 
     !>------------------------------------------------------------
     !!  Given a closest position, return the 4 points surrounding the lat/lon position in lo%lat/lon
@@ -373,25 +742,55 @@ contains
         real,intent(in)::lat,lon
         type(position),intent(in)::pos
         integer,intent(in) :: nx,ny
-        integer :: i
+        integer :: i, j
+        integer :: xdeltas(4), ydeltas(4), dx, dy
 
-        if ((lo%lat(pos%x,pos%y)-lat) > 0) then
-            find_surrounding%y = (/pos%y,pos%y,pos%y-1,pos%y-1/)
-        else
-            find_surrounding%y = (/pos%y,pos%y,pos%y+1,pos%y+1/)
-        endif
+        xdeltas=[-1,-1,1,1]
+        ydeltas=[-1,1,-1,1]
 
-        if ((lo%lon(pos%x,pos%y)-lon) > 0) then
-            find_surrounding%x = (/pos%x,pos%x-1,pos%x,pos%x-1/)
-        else
-            find_surrounding%x = (/pos%x,pos%x+1,pos%x,pos%x+1/)
-        endif
-
-        ! enforce that surround points fall within the bounds of the full domain
         do i=1,4
-            find_surrounding%x(i) = min(max(find_surrounding%x(i),1), nx)
-            find_surrounding%y(i) = min(max(find_surrounding%y(i),1), ny)
+            dx = xdeltas(i)
+            dy = ydeltas(i)
+            find_surrounding%x = [pos%x, pos%x+dx, pos%x+dx, pos%x  ]
+            find_surrounding%y = [pos%y, pos%y,   pos%y+dy, pos%y+dy]
+
+            if (test_surrounding(lat, lon, lo, find_surrounding, nx, ny, 4)) then
+                ! if it is not in this triangle, it must be in the other.
+
+                if (.not.test_triangle(lat, lon, lo, find_surrounding, nx, ny)) then
+                    find_surrounding%x = [pos%x, pos%x,   pos%x+dx, pos%x+dx ]
+                    find_surrounding%y = [pos%y, pos%y+dy, pos%y,   pos%y+dy]
+                    if (.not.test_triangle(lat, lon, lo, find_surrounding, nx, ny)) then
+                        find_surrounding%x = [pos%x+dx, pos%x,   pos%x+dx, pos%x]
+                        find_surrounding%y = [pos%y+dy, pos%y+dy, pos%y,   pos%y]
+                        if (.not.test_triangle(lat, lon, lo, find_surrounding, nx, ny)) then
+                            find_surrounding%x = [pos%x+dx, pos%x+dx,   pos%x, pos%x]
+                            find_surrounding%y = [pos%y+dy, pos%y,   pos%y+dy, pos%y]
+
+                            if (.not.test_triangle(lat, lon, lo, find_surrounding, nx, ny)) then
+
+                                write(*,*) "ERROR finding triangle"
+                                write(*,*) find_surrounding%x
+                                write(*,*) find_surrounding%y
+                                write(*,*) lat, lon
+                                do j=1,4
+                                    write(*,*) lo%lat(find_surrounding%x(j), find_surrounding%y(j)), &
+                                               lo%lon(find_surrounding%x(j), find_surrounding%y(j))
+                                enddo
+                            endif
+                        endif
+                    endif
+                endif
+                return
+            endif
         enddo
+
+        write(*,*) "ERROR: Failed to find point", lon, lat, " in a quadrant near:"
+        write(*,*) lo%lon(pos%x, pos%y), lo%lat(pos%x, pos%y)
+        write(*,*) pos
+        write(*,*) nx, ny
+        stop "Failed to find point"
+        ! enforce that surround points fall within the bounds of the full domain
 
     end function find_surrounding
 
@@ -434,6 +833,7 @@ contains
 
             do i=1, nx
                 curpos = find_location(lo, hi%lat(i,j), hi%lon(i,j), lastpos)
+
                 if (curpos%x<1) then
                     ! something broke, try assuming that the grids are the same possibly wrapping (for ideal)
                     write(*,*) "Error in Geographic interpolation, check input lat / lon grids", i,j
@@ -454,8 +854,11 @@ contains
                         lon(k) = lo%lon(xy%x(k), xy%y(k))
                     enddo
                     ! and calculate the weights to apply to each gridcell
-                    lo%geolut%w(:,i,j) = bilin_weights(hi%lat(i,j), lat, hi%lon(i,j), lon)
+                    lo%geolut%w(:,i,j) = tri_weights(hi%lat(i,j), lat, hi%lon(i,j), lon)
+                    ! lo%geolut%w(:,i,j) = idw_weights(hi%lat(i,j), lat, hi%lon(i,j), lon)
+                    ! lo%geolut%w(:,i,j) = bilin_weights(hi%lat(i,j), lat, hi%lon(i,j), lon)
                 endif
+
             enddo
         enddo
 
@@ -473,6 +876,7 @@ contains
         integer::nx,nz,ny
         integer:: i,j,k,l,localx,localy
         real::localw
+        real :: local_center
 
         nx=size(fieldout,1)
         nz=size(fieldout,2)
@@ -484,12 +888,25 @@ contains
             do j=1,nz
                 do i=1,nx
                     fieldout(i,j,k)=0
+                    local_center = 0
                     do l=1,4
                         localx=geolut%x(l,i,k)
                         localy=geolut%y(l,i,k)
-                        localw=geolut%w(l,i,k)
-                        fieldout(i,j,k)=fieldout(i,j,k)+fieldin(localx,j,localy)*localw
+                        local_center = local_center + fieldin(localx,j,localy)
+                        if (l < 3) then
+                            localw=geolut%w(l,i,k)
+                            fieldout(i,j,k) = fieldout(i,j,k) + fieldin(localx,j,localy) * localw
+                        endif
                     enddo
+                    localw = geolut%w(3,i,k)
+                    fieldout(i,j,k) = fieldout(i,j,k) + local_center/4 * localw
+                    ! fieldout(i,j,k)=0
+                    ! do l=1,4
+                    !     localx=geolut%x(l,i,k)
+                    !     localy=geolut%y(l,i,k)
+                    !     localw=geolut%w(l,i,k)
+                    !     fieldout(i,j,k)=fieldout(i,j,k)+fieldin(localx,j,localy)*localw
+                    ! enddo
                 enddo
             enddo
         enddo
@@ -498,12 +915,25 @@ contains
             do j=1,nz
                 do i=1,nx,nx-1
                     fieldout(i,j,k)=0
+                    local_center = 0
                     do l=1,4
                         localx=geolut%x(l,i,k)
                         localy=geolut%y(l,i,k)
-                        localw=geolut%w(l,i,k)
-                        fieldout(i,j,k)=fieldout(i,j,k)+fieldin(localx,j,localy)*localw
+                        local_center = local_center + fieldin(localx,j,localy)
+                        if (l < 3) then
+                            localw=geolut%w(l,i,k)
+                            fieldout(i,j,k) = fieldout(i,j,k) + fieldin(localx,j,localy) * localw
+                        endif
                     enddo
+                    localw = geolut%w(3,i,k)
+                    fieldout(i,j,k) = fieldout(i,j,k) + local_center/4 * localw
+                    ! fieldout(i,j,k)=0
+                    ! do l=1,4
+                    !     localx=geolut%x(l,i,k)
+                    !     localy=geolut%y(l,i,k)
+                    !     localw=geolut%w(l,i,k)
+                    !     fieldout(i,j,k)=fieldout(i,j,k)+fieldin(localx,j,localy)*localw
+                    ! enddo
                 enddo
             enddo
         enddo
@@ -525,6 +955,7 @@ contains
         integer::nx,nz,ny
         integer:: i,j,k,l,localx,localy
         real::localw
+        real :: local_center
 
         nx=size(fieldout,1)
         nz=size(fieldout,2)
@@ -542,12 +973,24 @@ contains
                 do j=1,nz
                     do i=1,nx
                         fieldout(i,j,k)=0
+                        local_center = 0
                         do l=1,4
                             localx=geolut%x(l,i,k)
                             localy=geolut%y(l,i,k)
-                            localw=geolut%w(l,i,k)
-                            fieldout(i,j,k)=fieldout(i,j,k)+fieldin(localx,j,localy)*localw
+                            local_center = local_center + fieldin(localx,j,localy)
+                            if (l < 3) then
+                                localw=geolut%w(l,i,k)
+                                fieldout(i,j,k) = fieldout(i,j,k) + fieldin(localx,j,localy) * localw
+                            endif
                         enddo
+                        localw = geolut%w(3,i,k)
+                        fieldout(i,j,k) = fieldout(i,j,k) + local_center/4 * localw
+                        ! do l=1,4
+                        !     localx=geolut%x(l,i,k)
+                        !     localy=geolut%y(l,i,k)
+                        !     localw=geolut%w(l,i,k)
+                        !     fieldout(i,j,k)=fieldout(i,j,k)+fieldin(localx,j,localy)*localw
+                        ! enddo
                     enddo
                 enddo
             enddo
@@ -565,6 +1008,7 @@ contains
         type(geo_look_up_table),intent(in)::geolut
         integer::i,k,l,ny,nx,localx,localy
         real::localw
+        real :: local_center
 
         nx=size(fieldout,1)
         ny=size(fieldout,2)
@@ -573,12 +1017,24 @@ contains
         do k=1,ny
             do i=1,nx
                 fieldout(i,k)=0
+                local_center = 0
                 do l=1,4
                     localx=geolut%x(l,i,k)
                     localy=geolut%y(l,i,k)
-                    localw=geolut%w(l,i,k)
-                    fieldout(i,k)=fieldout(i,k)+fieldin(localx,localy)*localw
+                    local_center = local_center + fieldin(localx,localy)
+                    if (l < 3) then
+                        localw=geolut%w(l,i,k)
+                        fieldout(i,k) = fieldout(i,k) + fieldin(localx,localy) * localw
+                    endif
                 enddo
+                localw = geolut%w(3,i,k)
+                fieldout(i,k) = fieldout(i,k) + local_center/4 * localw
+                ! do l=1,4
+                !     localx=geolut%x(l,i,k)
+                !     localy=geolut%y(l,i,k)
+                !     localw=geolut%w(l,i,k)
+                !     fieldout(i,k)=fieldout(i,k)+fieldin(localx,localy)*localw
+                ! enddo
             enddo
         enddo
 
