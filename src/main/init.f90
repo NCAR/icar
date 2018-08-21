@@ -652,7 +652,6 @@ contains
 
         ! if a 3d grid was also specified, then read those data in
         if ((options%readz).and.(options%ideal).and.(options%zvar.ne."")) then
-
             stop "Reading Z from an external file is not currently supported, use a fixed dz"
 
             call io_read(options%init_conditions_file,options%zvar, domain%z)
