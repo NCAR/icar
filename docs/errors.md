@@ -44,4 +44,7 @@ In both cases, the solution is to delete (or move) the existing output files, or
 6) **Memory Errors**
     For large domains, the linear wind Look up Table can take a lot of memory.  While this problem is alleviated slightly by running in distributed memory, it is still easy to run out of memory.
     Even with enough memory, ICAR often seems to crash (related to a memory problem) after it creates the LUT, when it is initializing the Thompson microphysics.  Sometimes this is solved by
-    simply letting ICAR write the LUT to disk, then restarting ICAR and reading the LUT.  The problem may be an issue in the opencoarrays library (tested w/ v1.9.1). 
+    simply letting ICAR write the LUT to disk, then restarting ICAR and reading the LUT.  The problem may be an issue in the opencoarrays library (tested w/ v1.9.1).
+
+7) **LSM errors**
+    When running with the Noah LSM turned on (LSM=3 in physics) the vegetation type specified in the initial conditions file must either use the WRF "IGBP_MODIS"
