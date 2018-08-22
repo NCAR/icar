@@ -47,4 +47,7 @@ In both cases, the solution is to delete (or move) the existing output files, or
     simply letting ICAR write the LUT to disk, then restarting ICAR and reading the LUT.  The problem may be an issue in the opencoarrays library (tested w/ v1.9.1).
 
 7) **LSM errors**
-    When running with the Noah LSM turned on (LSM=3 in physics) the vegetation type specified in the initial conditions file must either use the WRF "IGBP_MODIS"
+    When running with the Noah LSM turned on (LSM=3 in physics) the vegetation type specified in the initial conditions file must either use the WRF "MODIFIED_IGBP_MODIS_NOAH" Land Use classification, or the correct value must be specified in the VEGPARM.TBL and LU_Categories variable in the lsm_parameters namelist (see run/complete_icar_options.nml)
+
+8) **Changing namelist option does not change model simulation**
+    Note that many namelists are not read by ICAR by default. In particular, the adv, lt, mp, lsm, bias, and block namelists are not read by default to permit them to be absent in the namelist file and allow for shorter files.  To tell ICAR to read these files, set the use_X_options value to true in the primary parameters namelist.  See run/complete_icar_options.nml for example.
