@@ -15,6 +15,9 @@ module initialize_options
     use io_routines,                only : io_nearest_time_step, io_newunit
     use model_tracking,             only : print_model_diffs
     use time,                       only : date_to_mjd, parse_date, time_init
+    use time_io,                    only : find_timestep_in_file
+    use time_object,                only : Time_type
+    use time_delta_object,          only : time_delta_t
     use string,                     only : str
 
     implicit none
@@ -126,15 +129,6 @@ contains
             options%t_offset = 0
         endif
 
-        if ((options%initial_mjd + options%ntimesteps/(86400.0/options%in_dt)) < options%start_mjd) then
-            write(*,*) "ERROR: start date is more than ntimesteps past the forcing start"
-            write(*,*) "Initial Modified Julian Day:",options%initial_mjd
-            write(*,*) "Start date Modified Julian Day:",options%start_mjd
-            write(*,*) "number of time steps:",options%ntimesteps
-            write(*,*) "number of days to simulate:",options%ntimesteps/(86400.0/options%in_dt)
-            stop "Start time is past stop time."
-        endif
-
 
         ! convection can modify wind field, and ideal doesn't rebalance winds every timestep
         if ((options%physics%convection.ne.0).and.(options%ideal)) then
@@ -213,8 +207,8 @@ contains
         integer :: restart_step                         ! time step relative to the start of the restart file
         integer :: restart_date(6)                      ! date to restart
         integer :: name_unit                            ! logical unit number for namelist
-        double precision :: restart_mjd                 ! restart date as a modified julian day
-        real :: input_steps_per_day                     ! number of input time steps per day (for calculating restart_mjd)
+        type(Time_type) :: restart_time, time_at_step   ! restart date as a modified julian day
+        real :: input_steps_per_day                     ! number of input time steps per day (for calculating restart_time)
 
         namelist /restart_info/ restart_step, restart_file, restart_date
 
@@ -231,42 +225,39 @@ contains
         endif
 
         ! calculate the modified julian day for th restart date given
-        restart_mjd = date_to_mjd(restart_date(1), restart_date(2), restart_date(3), &
-                                  restart_date(4), restart_date(5), restart_date(6))
+        call restart_time%init(options%calendar)
+        call restart_time%set(restart_date(1), restart_date(2), restart_date(3), &
+                              restart_date(4), restart_date(5), restart_date(6))
+
+        ! find the time step that most closely matches the requested restart time (<=)
+        restart_step = find_timestep_in_file(restart_file, 'time', restart_time, time_at_step)
+
+        ! check to see if we actually udpated the restart date and print if in a more verbose mode
+        if (options%debug) then
+            if (restart_time /= time_at_step) then
+                write(*,*) " updated restart date: ", trim(time_at_step%as_string())
+            endif
+        endif
+
+        restart_time = time_at_step
 
         if (options%debug) then
             write(*,*) " ------------------ "
             write(*,*) "RESTART INFORMATION"
-            write(*,*) "mjd",         restart_mjd
+            write(*,*) "mjd",         restart_time%mjd()
+            write(*,*) "date:",       trim(restart_time%as_string())
             write(*,*) "date",        restart_date
             write(*,*) "file",   trim(restart_file)
             write(*,*) "forcing step",restart_step
             write(*,*) " ------------------ "
         endif
 
-        ! used in calculations below
-        input_steps_per_day = 86400.0/options%in_dt
-
-        ! if the user did not specify the restart_step (and they really shouldn't)
-        if (restart_step==-999) then
-            ! +1e-4 prevents floating point rounding error from setting it back one day/hour/minute etc
-            ! +1 because Fortran arrays are 1 based, so if restart-initial = 0 then we want the 1st array element
-            restart_step=FLOOR((restart_mjd - options%initial_mjd + 1e-4) * input_steps_per_day) + 1
-            if (options%debug) write(*,*) " updated forcing step",restart_step
-        endif
-
         ! save the parameters in the master options structure
-        options%restart_step=restart_step
-        options%restart_file=restart_file
-        options%restart_date=restart_date
+        options%restart_step_in_file = restart_step
+        options%restart_file         = restart_file
+        options%restart_date         = restart_date
+        options%restart_time         = restart_time
 
-        ! In case the supplied restart date doesn't line up with an input forcing step, recalculate
-        ! The restart date (mjd) based off the nearest input step
-        restart_mjd = options%initial_mjd + ((restart_step-1)/input_steps_per_day)
-        if (options%debug) write(*,*) " updated mjd",restart_mjd
-
-        ! now find the closest previous output step to the current restart date
-        options%restart_step_in_file = io_nearest_time_step(restart_file, restart_mjd)
         if (options%debug) write(*,*) " step in restart file",options%restart_step_in_file
 
     end subroutine init_restart_options
@@ -345,31 +336,33 @@ contains
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,   &
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
-                                        swdown_var, lwdown_var, sst_var, rain_var
+                                        swdown_var, lwdown_var, sst_var, rain_var, time_var
 
         namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,   &
                             landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar, &
                             hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
                             soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
                             vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
-                            swdown_var, lwdown_var, sst_var, rain_var
+                            swdown_var, lwdown_var, sst_var, rain_var, time_var
 
-        hgtvar="HGT"
-        latvar="XLAT"
-        lonvar="XLONG"
-        uvar="U"
+        ! no default values supplied for variable names
+        hgtvar=""
+        latvar=""
+        lonvar=""
+        time_var=""
+        uvar=""
         ulat=""
         ulon=""
-        vvar="V"
+        vvar=""
         vlat=""
         vlon=""
-        pvar="P"
+        pvar=""
         pbvar=""
-        tvar="T"
-        qvvar="QVAPOR"
+        tvar=""
+        qvvar=""
         qcvar=""
         qivar=""
-        zvar="Z"
+        zvar=""
         zbvar=""
         shvar=""
         lhvar=""
@@ -377,22 +370,22 @@ contains
         lwdown_var=""
         sst_var=""
         pblhvar=""
-        hgt_hi="HGT"
+        hgt_hi=""
         landvar=""
-        lat_hi="XLAT"
-        lon_hi="XLONG"
+        lat_hi=""
+        lon_hi=""
         ulat_hi=""
         ulon_hi=""
         vlat_hi=""
         vlon_hi=""
-        soiltype_var="" !"SOILTYPE"
-        soil_t_var="" !"TSOIL"
-        soil_vwc_var="" !"SOILSMC"
-        soil_deept_var="" !"DEEPT"
-        vegtype_var="" !"VEGTYPE"
-        vegfrac_var="" !"VEGFRAC"
-        linear_mask_var="data"
-        nsq_calibration_var="data"
+        soiltype_var=""
+        soil_t_var=""
+        soil_vwc_var=""
+        soil_deept_var=""
+        vegtype_var=""
+        vegfrac_var=""
+        linear_mask_var=""
+        nsq_calibration_var=""
         rain_var=""
 
         open(io_newunit(name_unit), file=filename)
@@ -400,62 +393,72 @@ contains
         close(name_unit)
 
         ! 2D geometry variable names (for coarse model)
-        options%hgtvar=hgtvar
-        options%latvar=latvar
-        options%lonvar=lonvar
+        options%hgtvar      = hgtvar
+        options%latvar      = latvar
+        options%lonvar      = lonvar
+        options%time_var    = time_var
+
         ! U varname and associated lat/lon var names
-        options%uvar=uvar
+        options%uvar        = uvar
         if (ulat=="") ulat=latvar
         if (ulon=="") ulon=lonvar
-        options%ulat=ulat
-        options%ulon=ulon
+        options%ulat        = ulat
+        options%ulon        = ulon
+
         ! V varname and associated lat/lon var names
-        options%vvar=vvar
+        options%vvar        = vvar
         if (vlat=="") vlat=latvar
         if (vlon=="") vlon=lonvar
-        options%vlat=vlat
-        options%vlon=vlon
-        ! Primary model variable names
-        options%pbvar=pbvar
-        options%pvar=pvar
-        options%tvar=tvar
-        options%qvvar=qvvar
-        options%qcvar=qcvar
-        options%qivar=qivar
-        ! vertical coordinate
-        options%zvar=zvar
-        options%zbvar=zbvar
-        ! 2D model variables (e.g. Land surface and PBL height)
-        options%shvar=shvar
-        options%lhvar=lhvar
-        options%pblhvar=pblhvar
-        ! Shortwave and longwave down at the surface
-        options%swdown_var=swdown_var
-        options%lwdown_var=lwdown_var
-        ! Sea surface temperature
-        options%sst_var = sst_var
-        options%rain_var = rain_var
+        options%vlat        = vlat
+        options%vlon        = vlon
 
-        ! separate variable names for the high resolution domain
-        options%hgt_hi=hgt_hi
-        options%landvar=landvar
-        options%lat_hi=lat_hi
-        options%lon_hi=lon_hi
-        options%ulat_hi=ulat_hi
-        options%ulon_hi=ulon_hi
-        options%vlat_hi=vlat_hi
-        options%vlon_hi=vlon_hi
+        ! Primary model variable names
+        options%pbvar       = pbvar
+        options%pvar        = pvar
+        options%tvar        = tvar
+        options%qvvar       = qvvar
+        options%qcvar       = qcvar
+        options%qivar       = qivar
+
+        ! vertical coordinate
+        options%zvar        = zvar
+        options%zbvar       = zbvar
+
+        ! 2D model variables (e.g. Land surface and PBL height)
+        options%shvar       = shvar
+        options%lhvar       = lhvar
+        options%pblhvar     = pblhvar
+
+        ! Shortwave and longwave down at the surface
+        options%swdown_var  = swdown_var
+        options%lwdown_var  = lwdown_var
+
+        ! Sea surface temperature
+        options%sst_var     = sst_var
+        options%rain_var    = rain_var
+
+        !------------------------------------------------------
+        ! variable names for the high resolution domain
+        options%hgt_hi          = hgt_hi
+        options%landvar         = landvar
+        options%lat_hi          = lat_hi
+        options%lon_hi          = lon_hi
+        options%ulat_hi         = ulat_hi
+        options%ulon_hi         = ulon_hi
+        options%vlat_hi         = vlat_hi
+        options%vlon_hi         = vlon_hi
 
         ! soil and vegetation parameters
-        options%soiltype_var=soiltype_var
-        options%soil_t_var=soil_t_var
-        options%soil_vwc_var=soil_vwc_var
-        options%soil_deept_var=soil_deept_var
-        options%vegtype_var=vegtype_var
-        options%vegfrac_var=vegfrac_var
+        options%soiltype_var    = soiltype_var
+        options%soil_t_var      = soil_t_var
+        options%soil_vwc_var    = soil_vwc_var
+        options%soil_deept_var  = soil_deept_var
+        options%vegtype_var     = vegtype_var
+        options%vegfrac_var     = vegfrac_var
 
-        options%linear_mask_var=linear_mask_var
-        options%nsq_calibration_var=nsq_calibration_var
+        ! optional calibration variables for linear wind solution
+        options%linear_mask_var     = linear_mask_var
+        options%nsq_calibration_var = nsq_calibration_var
     end subroutine var_namelist
 
     subroutine parameters_namelist(filename,options)
@@ -465,13 +468,14 @@ contains
         integer :: name_unit
 
         real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance
-        real    :: rotation_scale_height, cfl_reduction_factor
+        real    :: cfl_reduction_factor
         integer :: ntimesteps
-        double precision :: end_mjd
+        type(time_delta_t) :: dt
         integer :: nz, n_ext_winds,buffer, warning_level, cfl_strictness
         logical :: ideal, readz, readdz, interactive, debug, external_winds, surface_io_only, &
                    mean_winds, mean_fields, restart, advect_density, z_is_geopotential, z_is_on_interface,&
-                   high_res_soil_state, use_agl_height, time_varying_z, &
+                   high_res_soil_state, use_agl_height, time_varying_z, t_is_potential, qv_is_spec_humidity, &
+                   qv_is_relative_humidity, &
                    use_mp_options, use_lt_options, use_adv_options, use_lsm_options, use_bias_correction, &
                    use_block_options
 
@@ -485,7 +489,8 @@ contains
                               dx,dxlow,ideal,readz,readdz,nz,t_offset,debug, interactive, &
                               external_winds,buffer,n_ext_winds,advect_density,smooth_wind_distance, &
                               mean_winds,mean_fields,restart, z_is_geopotential, z_is_on_interface,&
-                              date, calendar, high_res_soil_state,rotation_scale_height,warning_level, &
+                              date, calendar, high_res_soil_state,warning_level, t_is_potential,  &
+                              qv_is_relative_humidity, qv_is_spec_humidity,  &
                               use_agl_height, start_date, forcing_start_date, end_date, time_varying_z, &
                               cfl_reduction_factor, cfl_strictness,         &
                               mp_options_filename,      use_mp_options,     &
@@ -504,6 +509,9 @@ contains
         t_offset=(-9999)
         buffer=0
         advect_density=.False.
+        t_is_potential=.True.
+        qv_is_spec_humidity=.False.
+        qv_is_relative_humidity=.False.
         z_is_geopotential=.False.
         z_is_on_interface=.False.
         dxlow=100000
@@ -518,7 +526,6 @@ contains
         smooth_wind_distance=-9999
         calendar="gregorian"
         high_res_soil_state=.False.
-        rotation_scale_height=2000.0
         use_agl_height=.False.
         start_date=""
         forcing_start_date=""
@@ -526,6 +533,8 @@ contains
         time_varying_z=.False.
         cfl_reduction_factor = 0.9
         cfl_strictness = 3
+        inputinterval = 3600
+        outputinterval = 3600
 
         ! flag set to read specific parameterization options
         use_mp_options=.False.
@@ -578,19 +587,20 @@ contains
             if (warning_level>4) then
                 stop
             else
-                smooth_wind_distance=dxlow*2
+                smooth_wind_distance = dxlow*2
             endif
         endif
-        options%smooth_wind_distance=smooth_wind_distance
+        options%smooth_wind_distance = smooth_wind_distance
 
-        options%ntimesteps=ntimesteps
-        options%in_dt=inputinterval
-        options%out_dt=outputinterval
+        options%in_dt      = inputinterval
+        call options%input_dt%set(seconds=inputinterval)
+        options%out_dt     = outputinterval
+        call options%output_dt%set(seconds=outputinterval)
         ! if outputing at half-day or longer intervals, create monthly files
         if (outputinterval>=43200) then
             options%output_file_frequency="monthly"
         ! if outputing at half-hour or longer intervals, create daily files
-        else if (outputinterval>=1800) then
+        else if (outputinterval>=300) then
             options%output_file_frequency="daily"
         ! otherwise create a new output file every timestep
         else
@@ -598,23 +608,24 @@ contains
         endif
         options%surface_io_only = surface_io_only
 
-        call parse_date(date, year, month, day, hour, minute, second)
+
         options%calendar=calendar
         call time_init(calendar)
-        options%initial_mjd=date_to_mjd(year, month, day, hour, minute, second)
+        call options%initial_time%init(calendar)
+        call options%initial_time%set(date)
         if (start_date=="") then
-            options%start_mjd=options%initial_mjd
+            options%start_time = options%initial_time
         else
-            call parse_date(start_date, year, month, day, hour, minute, second)
-            options%start_mjd=date_to_mjd(year, month, day, hour, minute, second)
+            call options%start_time%init(calendar)
+            call options%start_time%set(start_date)
         endif
         if (trim(end_date)/="") then
-            call parse_date(end_date, year, month, day, hour, minute, second)
-            end_mjd=date_to_mjd(year, month, day, hour, minute, second)
-            options%ntimesteps = (end_mjd-options%initial_mjd)*(86400.0/options%in_dt)
+            call options%end_time%init(calendar)
+            call options%end_time%set(end_date)
+        else
+            call dt%set(seconds=ntimesteps * inputinterval)
+            options%end_time = options%start_time + dt
         endif
-        options%time_step_zero = (options%start_mjd-options%initial_mjd)*(86400.0/options%in_dt)
-        options%time_zero = ((options%initial_mjd-50000) * 86400.0)
         options%dx = dx
         options%dxlow = dxlow
         options%ideal = ideal
@@ -630,8 +641,10 @@ contains
         options%debug = debug
         options%interactive = interactive
         options%warning_level = warning_level
-        options%rotation_scale_height = rotation_scale_height
         options%use_agl_height = use_agl_height
+        options%t_is_potential = t_is_potential
+        options%qv_is_relative_humidity = qv_is_relative_humidity
+        options%qv_is_spec_humidity = qv_is_spec_humidity
         options%z_is_geopotential = z_is_geopotential
         options%z_is_on_interface = z_is_on_interface
 
@@ -1032,18 +1045,18 @@ contains
             if (ice_category==-1)   ice_category = 24
             if (water_category==-1) water_category = 16
             ! also note, lakes_category = 28
-            print*, "WARNING: not handling lake category (28)"
+            write(*,*) "WARNING: not handling lake category (28)"
         elseif (trim(LU_Categories)=="MODI-RUC") then
             if (urban_category==-1) urban_category = 13
             if (ice_category==-1)   ice_category = 15
             if (water_category==-1) water_category = 17
             ! also note, lakes_category = 21
-            print*, "WARNING: not handling lake category (21)"
+            write(*,*) "WARNING: not handling lake category (21)"
         elseif (trim(LU_Categories)=="NLCD40") then
             if (urban_category==-1) urban_category = 13
             if (ice_category==-1)   ice_category = 15 ! and 22?
             if (water_category==-1) water_category = 17 ! and 21
-            print*, "WARNING: not handling all varients of categories (e.g. permanent_snow=15 is, but permanent_snow_ice=22 is not)"
+            write(*,*) "WARNING: not handling all varients of categories (e.g. permanent_snow=15 is, but permanent_snow_ice=22 is not)"
         endif
 
     end subroutine set_default_LU_categories
@@ -1187,6 +1200,12 @@ contains
             allocate(options%dz_levels(options%nz))
 
             options%dz_levels(1:options%nz)=dz_levels(1:options%nz)
+
+            if (minval(options%dz_levels)<1) then
+                print*, "NB: gfortran doesn't read namelist arrays on multiple lines (check dz_levels)"
+                stop "ERROR: model levels must be > 1m vertical"
+            endif
+
             deallocate(dz_levels)
         else
         ! if we are not reading dz from the namelist, use default values from a WRF run
@@ -1199,7 +1218,7 @@ contains
                options%nz=45
            endif
             allocate(options%dz_levels(options%nz))
-            options%dz_levels=fulldz(1:options%nz)
+            options%dz_levels = fulldz(1:options%nz)
         endif
 
     end subroutine model_levels_namelist

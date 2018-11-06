@@ -25,19 +25,20 @@
 !!
 !!------------------------------------------------------------
 module boundary_conditions
-! ----------------------------------------------------------------------------
-!   NOTE: This module attempts to be sufficiently general to work with a variety
-!       of possible input files; however it may be necessary to modify it.
-! ----------------------------------------------------------------------------
+
     use data_structures
-    use io_routines,            only : io_getdims, io_read3d, io_maxDims, io_read2d, io_variable_is_present, &
-                                       io_write
+    use io_routines,            only : io_getdims, io_read, io_maxDims, io_variable_is_present
+    use time_io,                only : read_times, find_timestep_in_file
+    use time_object,            only : Time_type
+    use time_delta_object,      only : time_delta_t
     use wind,                   only : update_winds,balance_uvw
     use linear_theory_winds,    only : linear_perturb
     use geo,                    only : geo_interp2d, geo_interp
     use vertical_interpolation, only : vinterp, vLUT_forcing
     use output,                 only : write_domain, output_init
     use string,                 only : str
+    use array_utilities,        only : smooth_array
+    use mod_atm_utilities,      only : rh_to_mr
 
     implicit none
     private
@@ -47,23 +48,22 @@ module boundary_conditions
     integer::curfile,curstep
     integer::steps_in_file,nfiles
 !   manage file pointer and position in file for external winds
-    character (len=255),dimension(:),allocatable :: ext_winds_file_list
-    integer::ext_winds_curfile,ext_winds_curstep
-    integer::ext_winds_steps_in_file,ext_winds_nfiles
+    ! character (len=255),dimension(:),allocatable :: ext_winds_file_list
+    ! integer::ext_winds_curfile,ext_winds_curstep
+    ! integer::ext_winds_steps_in_file,ext_winds_nfiles
 
     integer::smoothing_window=1 ! this will get updated in bc_init if it isn't an ideal run
 
     public :: bc_init
     public :: bc_update
-    public :: bc_find_step
     public :: update_pressure
 contains
 
     !>------------------------------------------------------------
     !! Find the time step in the input forcing to start the model on
     !!
-    !! The model start date (start_mjd) may not be the same as the first forcing
-    !! date (initial_mjd).  Convert the difference between the two into forcing
+    !! The model start date (start_time) may not be the same as the first forcing
+    !! date (initial_time).  Convert the difference between the two into forcing
     !! steps by dividing by the time delta between forcing steps (in_dt) after
     !! converting in_dt from seconds to days.
     !!
@@ -75,158 +75,85 @@ contains
         implicit none
         type(options_type), intent(in) :: options
         integer :: step
+        type(time_delta_t) :: dt
 
-        step = (options%start_mjd-options%initial_mjd)/(options%in_dt / 86400.0d+0)
+        dt = (options%start_time - options%initial_time)
+        step = dt%seconds() / options%in_dt + 1
+
         if (options%debug) write(*,*) "bc_find_step: First forcing time step = ",trim(str(step))
 
     end function bc_find_step
 
-    !>------------------------------------------------------------
-    !! Smooth an array (written for wind but will work for anything)
-    !!
-    !! Only smooths over the first (x) and second (y or z) or third (y or z) dimension
-    !! ydim can be specified to allow working with (x,y,z) data or (x,z,y) data
-    !! WARNING: this is a moderately complex setup to be efficient for the ydim=3 (typically large arrays, SLOW) case
-    !! be careful when editing.
-    !! For the complex case it pre-computes the sum of all columns for a given row,
-    !! then to move from one column to the next it just has add the next column from the sums and subtracts the last one
-    !! similarly, moving to the next row just means adding the next row to the sums, and subtracting the last one.
-    !! Each point also has to be divided by N, but this decreases the compution from O(windowsize^2) to O(constant)
-    !! Where O(constant) = 2 additions, 2 subtractions, and 1 divide regardless of windowsize!
-    !!
-    !! @param wind          3D array to be smoothed
-    !! @param windowsize    size to smooth in both directions (i.e. the full window is this * 2 + 1)
-    !! @param ysim          axis the y dimension is on (2 or 3) in the wind array
-    !!
-    !!------------------------------------------------------------
-    subroutine smooth_wind(wind,windowsize,ydim)
-        implicit none
-        real, intent(inout), dimension(:,:,:):: wind    !> 3 dimensional wind field to be smoothed
-        integer,intent(in)::windowsize                  !> halfwidth-1/2 of window to smooth over
-                                                        ! Specified in grid cells, (+/- windowsize)
-        integer,intent(in)::ydim                        !> the dimension to use for the y coordinate
-                                                        ! It can be 2, or 3 (but not 1)
-        real,allocatable,dimension(:,:,:)::inputwind    !> temporary array to store the input data in
-        integer::i,j,k,nx,ny,nz,startx,endx,starty,endy ! various array indices/bounds
-        ! intermediate sums to speed up the computation
-        real,allocatable,dimension(:) :: rowsums,rowmeans
-        real :: cursum
-        integer :: cur_n,curcol,ncols,nrows
 
-        ncols=windowsize*2+1
-        nx=size(wind,1)
-        ny=size(wind,2) !note, this is Z for the high-res domain (ydim=3)
-        nz=size(wind,3) !note, this could be the Y or Z dimension depending on ydim
-        ! this is ~20MB that has to be allocated deallocated every call...
-        allocate(inputwind(nx,ny,nz)) ! Can't be module level because nx,ny,nz could change between calls,
-                                      ! could be part of a "smoothable" object to avoid allocate-deallocating constantly
-!       nx=nx-1
-!       if (ydim==3) then
-!           nz=nz-1
-!       endif
-        inputwind=wind !make a copy so we always use the unsmoothed data when computing the smoothed data
-        if (((windowsize*2+1)>nx).and.(ydim==3)) then
-            write(*,*) "WARNING can not operate if windowsize*2+1 is larger than nx"
-            write(*,*) "NX         = ", nx
-            write(*,*) "windowsize = ", windowsize
-            stop
+    function get_n_timesteps(filename, varname, var_space_dims) result(steps_in_file)
+        implicit none
+        character(len=*), intent(in) :: filename, varname
+        integer,          intent(in), optional :: var_space_dims
+        integer :: steps_in_file
+
+        integer :: dims(io_maxDims)
+        integer :: space_dims
+
+        space_dims=3
+        if (present(var_space_dims)) space_dims = var_space_dims
+
+        call io_getdims(filename, varname, dims)
+
+        if (dims(1) == space_dims) then
+            steps_in_file = 1
+        else
+            steps_in_file = dims(dims(1)+1)
         endif
 
-        !parallelize over a slower dimension (not the slowest because it is MUCH easier this way)
-        ! as long as the inner loops (the array operations) are over the fastest dimension we are mostly OK
-        !$omp parallel firstprivate(windowsize,nx,ny,nz,ydim), &
-        !$omp private(i,j,k,startx,endx,starty,endy, rowsums,rowmeans,nrows,ncols,cursum), &
-        !$omp shared(wind,inputwind)
-        allocate(rowsums(nx)) !this is only used when ydim=3, so nz is really ny
-        allocate(rowmeans(nx)) !this is only used when ydim=3, so nz is really ny
-        nrows=windowsize*2+1
-        ncols=windowsize*2+1
-        !$omp do schedule(static)
-        do j=1,ny
+    end function get_n_timesteps
 
-            ! so we pre-compute the sum over rows for each column in the current window
-            if (ydim==3) then
-                rowsums=inputwind(1:nx,j,1)*(windowsize+1)
-                do i=1,windowsize
-                    rowsums=rowsums+inputwind(1:nx,j,i)
-                enddo
-            endif
-            ! don't parallelize over this loop because it is much more efficient to be able to assume
-            ! that you ran the previous row in serial for the slow (ydim=3) case
-            do k=1,nz ! note this is y for ydim=3
-                ! ydim=3 for the main model grid which is large and takes a long time
-                if (ydim==3) then
-                    ! if we are pinned to the top edge
-                    if ((k-windowsize)<=1) then
-                        starty=1
-                        endy  =k+windowsize
-                        rowsums=rowsums-inputwind(1:nx,j,starty)+inputwind(1:nx,j,endy)
-                    ! if we are pinned to the bottom edge
-                    else if ((k+windowsize)>nz) then
-                        starty=k-windowsize
-                        endy  =nz
-                        rowsums=rowsums-inputwind(1:nx,j,starty-1)+inputwind(1:nx,j,endy)
-                    ! if we are in the middle (this is the most common)
-                    else
-                        starty=k-windowsize
-                        endy  =k+windowsize
-                        rowsums=rowsums-inputwind(1:nx,j,starty-1)+inputwind(:,j,endy)
-                    endif
-                    rowmeans=rowsums/nrows
-                    cursum=sum(rowmeans(1:windowsize))+rowmeans(1)*(windowsize+1)
+
+    subroutine set_curfile_curstep(options, time)
+        implicit none
+        type(options_type), intent(in) :: options
+        type(Time_type),    intent(in) :: time
+
+        integer :: error
+
+        ! these are module variables that should be correctly set when the subroutine returns
+        curfile=1
+        curstep=1
+        if (trim(options%time_var)=="") then
+
+            curstep = bc_find_step(options)
+            steps_in_file = get_n_timesteps(file_list(curfile), options%pvar)
+
+            do while (curstep > steps_in_file)
+                curfile = curfile + 1
+                curstep = curstep - steps_in_file
+
+                if (curfile > nfiles) then
+                    stop "Ran out of files to process while searching for next time step!"
                 endif
 
-                do i=1,nx
-                    if (ydim==3) then
-                        ! if we are pinned to the left edge
-                        if ((i-windowsize)<=1) then
-                            startx=1
-                            endx  =i+windowsize
-                            cursum=cursum-rowmeans(startx)+rowmeans(endx)
-                        ! if we are pinned to the right edge
-                        else if ((i+windowsize)>nx) then
-                            startx=i-windowsize
-                            endx  =nx
-                            cursum=cursum-rowmeans(startx-1)+rowmeans(endx)
-                        ! if we are in the middle (this is the most common)
-                        else
-                            startx=i-windowsize
-                            endx  =i+windowsize
-                            cursum=cursum-rowmeans(startx-1)+rowmeans(endx)
-                        endif
+                steps_in_file = get_n_timesteps(file_list(curfile), options%pvar)
 
-                        wind(i,j,k)=cursum/ncols
-
-                        ! old slower way, also creates artifacts windowsize distance from the borders
-!                       startx=max(1, i-windowsize)
-!                       endx  =min(nx,i+windowsize)
-!                       starty=max(1, k-windowsize)
-!                       endy  =min(nz,k+windowsize)
-!                       wind(i,j,k)=sum(inputwind(startx:endx,j,starty:endy)) &
-!                                   / ((endx-startx+1)*(endy-starty+1))
-                    else ! ydim==2
-                        ! ydim=2 for the input data which is a small grid, thus cheap so we still use the slow method
-                        !first find the current window bounds
-                        startx=max(1, i-windowsize)
-                        endx  =min(nx,i+windowsize)
-                        starty=max(1, j-windowsize)
-                        endy  =min(ny,j+windowsize)
-                        ! then compute the mean within that window (sum/n)
-                        ! note, artifacts near the borders (mentioned in ydim==3) don't affect this
-                        ! because the borders *should* be well away from the domain
-                        ! if the forcing data are not much larger than the model domain this *could* create issues
-                        wind(i,j,k)=sum(inputwind(startx:endx,starty:endy,k)) &
-                                    / ((endx-startx+1)*(endy-starty+1))
-                    endif
-                enddo
             enddo
-        enddo
-        !$omp end do
-        deallocate(rowmeans,rowsums)
-        !$omp end parallel
+        else
+            steps_in_file = get_n_timesteps(file_list(curfile), options%pvar)
 
-        deallocate(inputwind)
-    end subroutine smooth_wind
+            error=1
+            curfile=0
+            do while ( (error/=0) .and. (curfile <= size(file_list)) )
+                curfile = curfile + 1
+                curstep = find_timestep_in_file(file_list(curfile), options%time_var, time, error=error)
+            enddo
+            if (error==1) then
+                stop "Ran out of files to process while searching for matching time variable!"
+            endif
+        endif
+
+        if (options%debug) write(*,*) "set_curfile_curstep: First forcing time step = ",trim(str(curstep)),&
+                                      " in file: ",trim(file_list(curfile))
+
+    end subroutine set_curfile_curstep
+
+
 
     !>------------------------------------------------------------
     !!  Generic routine to read a forcing variable (varname) from a netcdf file (filename) at a time step (curstep)
@@ -276,7 +203,7 @@ contains
         endif
 
         ! Read the data in, should be relatively fast because we are reading a low resolution forcing file
-        call io_read3d(filename,varname,inputdata,curstep)
+        call io_read(filename,varname,inputdata,curstep)
 
         nx=size(inputdata,1)
         ny=size(inputdata,2)
@@ -285,7 +212,7 @@ contains
         ! Variable specific options
         ! For wind variables run a first pass of smoothing over the low res data
         if (((varname==options%vvar).or.(varname==options%uvar)).and.(.not.options%ideal)) then
-            call smooth_wind(inputdata,1,2)
+            call smooth_array(inputdata,1,2)
 
         ! For Temperature, we may need to add an offset
         elseif ((varname==options%tvar).and.(options%t_offset/=0)) then
@@ -293,7 +220,7 @@ contains
 
         ! For pressure, we may need to add a base pressure offset read from pbvar
         else if ((varname==options%pvar).and.(options%pbvar/='')) then
-            call io_read3d(filename,options%pbvar,extra_data,curstep)
+            call io_read(filename,options%pbvar,extra_data,curstep)
             inputdata=inputdata+extra_data
             deallocate(extra_data)
         endif
@@ -362,12 +289,39 @@ contains
         real,dimension(:,:),allocatable :: inputdata
 
 !       Read the data in
-        call io_read2d(filename,varname,inputdata,curstep)
+        call io_read(filename,varname,inputdata,curstep)
 !       interpolate data onto the high resolution grid
         call geo_interp2d(highres,inputdata,geolut)
         deallocate(inputdata)
 
     end subroutine read_2dvar
+
+    !>------------------------------------------------------------
+    !!  Read in the time step from a boundary conditions file if available
+    !!
+    !!  if not time_var is specified, nothing happens
+    !!
+    !! @param model_time    Double Scalar to hold time data
+    !! @param filename      Name of the NetCDF file to read.
+    !! @param varname       Name of the time variable to read from <filename>.
+    !! @param curstep       The time step in <filename> to read.
+    !!
+    !!------------------------------------------------------------
+    subroutine read_bc_time(model_time, filename, time_var, curstep)
+        implicit none
+        type(Time_type),    intent(inout) :: model_time
+        character(len=*),   intent(in)    :: filename, time_var
+        integer,            intent(in)    :: curstep
+
+        type(Time_type), dimension(:), allocatable :: times
+
+        if (time_var/="") then
+            call read_times(filename, time_var, times)
+            model_time = times(curstep)
+            deallocate(times)
+        endif
+    end subroutine read_bc_time
+
 
 
     !>------------------------------------------------------------
@@ -380,21 +334,21 @@ contains
     !! @param ext_winds External wind data structure
     !!
     !!------------------------------------------------------------
-    subroutine rotate_ext_wind_field(domain,ext_winds)
-        implicit none
-        type(domain_type),intent(inout)::domain
-        type(wind_type),intent(inout)::ext_winds
-        integer :: nx,ny,nz,i
-
-        nx=size(domain%z,1)
-        nz=size(domain%z,2)
-        ny=size(domain%z,3)
-        do i=1,nz
-            domain%u(1:nx-1,i,:)=domain%u(1:nx-1,i,:)*ext_winds%dzdx
-            domain%v(:,i,1:ny-1)=domain%v(:,i,1:ny-1)*ext_winds%dzdy
-        end do
-
-    end subroutine rotate_ext_wind_field
+    ! subroutine rotate_ext_wind_field(domain,ext_winds)
+    !     implicit none
+    !     type(domain_type),intent(inout)::domain
+    !     type(wind_type),intent(inout)::ext_winds
+    !     integer :: nx,ny,nz,i
+    !
+    !     nx=size(domain%z,1)
+    !     nz=size(domain%z,2)
+    !     ny=size(domain%z,3)
+    !     do i=1,nz
+    !         domain%u(1:nx-1,i,:)=domain%u(1:nx-1,i,:)*ext_winds%dzdx
+    !         domain%v(:,i,1:ny-1)=domain%v(:,i,1:ny-1)*ext_winds%dzdy
+    !     end do
+    !
+    ! end subroutine rotate_ext_wind_field
 
 
     !>------------------------------------------------------------
@@ -405,52 +359,52 @@ contains
     !! @param options   Model Options structure
     !!
     !!------------------------------------------------------------
-    subroutine ext_winds_init(domain,bc,options)
-        implicit none
-        type(domain_type),intent(inout)::domain
-        type(bc_type),intent(inout)::bc
-        type(options_type),intent(in)::options
-        integer,dimension(io_maxDims)::dims !note, io_maxDims is included from io_routines.
-        ! MODULE variables : ext_winds_ curstep, curfile, nfiles, steps_in_file, file_list
-        ext_winds_curfile=1
-        if (options%restart) then
-            ext_winds_curstep=options%restart_step
-        else
-            ext_winds_curstep=1
-        endif
-        ext_winds_nfiles=options%ext_winds_nfiles
-        allocate(ext_winds_file_list(ext_winds_nfiles))
-        ext_winds_file_list=options%ext_wind_files
-        call io_getdims(ext_winds_file_list(ext_winds_curfile),options%uvar, dims)
-        if (dims(1)==3) then
-            ext_winds_steps_in_file=1
-        else
-            ext_winds_steps_in_file=dims(dims(1)+1) !dims(1) = ndims
-        endif
-
-        do while (ext_winds_curstep>ext_winds_steps_in_file)
-            ext_winds_curfile=ext_winds_curfile+1
-            if (ext_winds_curfile>ext_winds_nfiles) then
-                stop "Ran out of files to process!"
-            endif
-            ext_winds_curstep=ext_winds_curstep-ext_winds_steps_in_file
-            !instead of setting=1, this way we can set an arbitrary starting point multiple files in
-            call io_getdims(ext_winds_file_list(ext_winds_curfile),options%uvar, dims)
-            if (dims(1)==3) then
-                ext_winds_steps_in_file=1
-            else
-                ext_winds_steps_in_file=dims(dims(1)+1) !dims(1) = ndims; dims(ndims+1)=ntimesteps
-            endif
-        enddo
-
-        write(*,*) "Initial external wind file= ",ext_winds_curfile," : step= ",ext_winds_curstep
-        call read_var(domain%u, ext_winds_file_list(ext_winds_curfile), options%uvar,  &
-              bc%ext_winds%u_geo%geolut, bc%u_geo%vert_lut, ext_winds_curstep, .FALSE., options)
-
-        call read_var(domain%v,    ext_winds_file_list(ext_winds_curfile),  options%vvar,  &
-              bc%ext_winds%v_geo%geolut,bc%v_geo%vert_lut,ext_winds_curstep,.FALSE.,options)
-        call rotate_ext_wind_field(domain,bc%ext_winds)
-    end subroutine ext_winds_init
+    ! subroutine ext_winds_init(domain,bc,options)
+    !     implicit none
+    !     type(domain_type),intent(inout)::domain
+    !     type(bc_type),intent(inout)::bc
+    !     type(options_type),intent(in)::options
+    !     integer,dimension(io_maxDims)::dims !note, io_maxDims is included from io_routines.
+    !     ! MODULE variables : ext_winds_ curstep, curfile, nfiles, steps_in_file, file_list
+    !     ext_winds_curfile=1
+    !     if (options%restart) then
+    !         ext_winds_curstep=options%restart_step
+    !     else
+    !         ext_winds_curstep=1
+    !     endif
+    !     ext_winds_nfiles=options%ext_winds_nfiles
+    !     allocate(ext_winds_file_list(ext_winds_nfiles))
+    !     ext_winds_file_list=options%ext_wind_files
+    !     call io_getdims(ext_winds_file_list(ext_winds_curfile),options%uvar, dims)
+    !     if (dims(1)==3) then
+    !         ext_winds_steps_in_file=1
+    !     else
+    !         ext_winds_steps_in_file=dims(dims(1)+1) !dims(1) = ndims
+    !     endif
+    !
+    !     do while (ext_winds_curstep>ext_winds_steps_in_file)
+    !         ext_winds_curfile=ext_winds_curfile+1
+    !         if (ext_winds_curfile>ext_winds_nfiles) then
+    !             stop "Ran out of files to process!"
+    !         endif
+    !         ext_winds_curstep=ext_winds_curstep-ext_winds_steps_in_file
+    !         !instead of setting=1, this way we can set an arbitrary starting point multiple files in
+    !         call io_getdims(ext_winds_file_list(ext_winds_curfile),options%uvar, dims)
+    !         if (dims(1)==3) then
+    !             ext_winds_steps_in_file=1
+    !         else
+    !             ext_winds_steps_in_file=dims(dims(1)+1) !dims(1) = ndims; dims(ndims+1)=ntimesteps
+    !         endif
+    !     enddo
+    !
+    !     write(*,*) "Initial external wind file= ",ext_winds_curfile," : step= ",ext_winds_curstep
+    !     call read_var(domain%u, ext_winds_file_list(ext_winds_curfile), options%uvar,  &
+    !           bc%ext_winds%u_geo%geolut, bc%u_geo%vert_lut, ext_winds_curstep, .FALSE., options)
+    !
+    !     call read_var(domain%v,    ext_winds_file_list(ext_winds_curfile),  options%vvar,  &
+    !           bc%ext_winds%v_geo%geolut,bc%v_geo%vert_lut,ext_winds_curstep,.FALSE.,options)
+    !     call rotate_ext_wind_field(domain,bc%ext_winds)
+    ! end subroutine ext_winds_init
 
     !>------------------------------------------------------------
     !!  Remove linear theory topographic winds perturbations from the low resolution wind field.
@@ -478,20 +432,20 @@ contains
 
         ! first read in the low-res U and V data directly
         ! load low-res U data
-        call io_read3d(filename,options%uvar,extra_data,curstep)
+        call io_read(filename,options%uvar,extra_data,curstep)
         nx=size(extra_data,1)
         ny=size(extra_data,2)
         nz=size(extra_data,3)
-        call smooth_wind(extra_data,1,2)
+        call smooth_array(extra_data,1,2)
         bc%u(1:nx,1:nz,1:ny)=reshape(extra_data,[nx,nz,ny],order=[1,3,2])
         deallocate(extra_data)
 
         ! load low-res V data
-        call io_read3d(filename,options%vvar,extra_data,curstep)
+        call io_read(filename,options%vvar,extra_data,curstep)
         nx=size(extra_data,1)
         ny=size(extra_data,2)
         nz=size(extra_data,3)
-        call smooth_wind(extra_data,1,2)
+        call smooth_array(extra_data,1,2)
         bc%v(1:nx,1:nz,1:ny)=reshape(extra_data,[nx,nz,ny],order=[1,3,2])
         deallocate(extra_data)
 
@@ -567,12 +521,12 @@ contains
         nz=size(domain%u,2)
 
 !       load low-res U data
-        call io_read3d(filename,options%uvar,extra_data,curstep)
+        call io_read(filename,options%uvar,extra_data,curstep)
         domain%u=sum(extra_data(:,:,:nz))/size(extra_data(:,:,:nz))
         deallocate(extra_data)
 
 !       load low-res V data
-        call io_read3d(filename,options%vvar,extra_data,curstep)
+        call io_read(filename,options%vvar,extra_data,curstep)
         domain%v=sum(extra_data(:,:,:nz))/size(extra_data(:,:,:nz))
         deallocate(extra_data)
 
@@ -639,11 +593,12 @@ contains
     !!------------------------------------------------------------
     subroutine load_restart_file(domain,restart_file,time_step)
         implicit none
-        type(domain_type), intent(inout) :: domain
-        character(len=*),intent(in)::restart_file
-        integer,optional,intent(in) :: time_step
-        real,allocatable,dimension(:,:,:)::inputdata
-        real,allocatable,dimension(:,:)::inputdata_2d
+        type(domain_type),  intent(inout)   :: domain
+        character(len=*),   intent(in)      :: restart_file
+        integer, optional,  intent(in)      :: time_step
+
+        real, allocatable, dimension(:,:,:) :: inputdata_3d
+        real, allocatable, dimension(:,:)   :: inputdata_2d
         integer :: timeslice
 
         if (present(time_step)) then
@@ -655,151 +610,153 @@ contains
         write(*,*) "Reading atmospheric restart data"
         write(*,*) "   timestep:",trim(str(timeslice))," from file:",trim(restart_file)
 
+        call read_bc_time(domain%model_time,restart_file,"time",timeslice)
+
         ! The first variables here are required. If they do not exist, ICAR *should* exit with a netCDF error
-        call io_read3d(restart_file,"qv",inputdata,timeslice)
-        call swap_y_z_dimensions(inputdata)
-        call check_shapes_3d(inputdata,domain%qv)
-        domain%qv=inputdata
-        deallocate(inputdata)
+        call io_read(restart_file,"qv",inputdata_3d,timeslice)
+        call swap_y_z_dimensions(inputdata_3d)
+        call check_shapes_3d(inputdata_3d,domain%qv)
+        domain%qv=inputdata_3d
+        deallocate(inputdata_3d)
 
-        call io_read3d(restart_file,"qc",inputdata,timeslice)
-        call swap_y_z_dimensions(inputdata)
-        domain%cloud=inputdata
-        deallocate(inputdata)
+        call io_read(restart_file,"qc",inputdata_3d,timeslice)
+        call swap_y_z_dimensions(inputdata_3d)
+        domain%cloud=inputdata_3d
+        deallocate(inputdata_3d)
 
-        call io_read3d(restart_file,"qr",inputdata,timeslice)
-        call swap_y_z_dimensions(inputdata)
-        domain%qrain=inputdata
-        deallocate(inputdata)
+        call io_read(restart_file,"qr",inputdata_3d,timeslice)
+        call swap_y_z_dimensions(inputdata_3d)
+        domain%qrain=inputdata_3d
+        deallocate(inputdata_3d)
 
-        call io_read3d(restart_file,"p",inputdata,timeslice)
-        call swap_y_z_dimensions(inputdata)
-        domain%p=inputdata
-        deallocate(inputdata)
+        call io_read(restart_file,"p",inputdata_3d,timeslice)
+        call swap_y_z_dimensions(inputdata_3d)
+        domain%p=inputdata_3d
+        deallocate(inputdata_3d)
 
-        call io_read3d(restart_file,"th",inputdata,timeslice)
-        call swap_y_z_dimensions(inputdata)
-        domain%th=inputdata
-        deallocate(inputdata)
+        call io_read(restart_file,"th",inputdata_3d,timeslice)
+        call swap_y_z_dimensions(inputdata_3d)
+        domain%th=inputdata_3d
+        deallocate(inputdata_3d)
 
-        call io_read3d(restart_file,"rho",inputdata,timeslice)
-        call swap_y_z_dimensions(inputdata)
-        domain%rho=inputdata
-        deallocate(inputdata)
+        call io_read(restart_file,"rho",inputdata_3d,timeslice)
+        call swap_y_z_dimensions(inputdata_3d)
+        domain%rho=inputdata_3d
+        deallocate(inputdata_3d)
 
-        call io_read2d(restart_file,"rain",inputdata_2d,timeslice)
+        call io_read(restart_file,"rain",inputdata_2d,timeslice)
         domain%rain=inputdata_2d
         deallocate(inputdata_2d)
 
 
         ! The variables below are optional depending on the physics options used so test for their presence
         if (io_variable_is_present(restart_file,"qi")) then
-            call io_read3d(restart_file,"qi",inputdata,timeslice)
-            call swap_y_z_dimensions(inputdata)
-            domain%ice=inputdata
-            deallocate(inputdata)
+            call io_read(restart_file,"qi",inputdata_3d,timeslice)
+            call swap_y_z_dimensions(inputdata_3d)
+            domain%ice=inputdata_3d
+            deallocate(inputdata_3d)
         endif
         if (io_variable_is_present(restart_file,"qs")) then
-            call io_read3d(restart_file,"qs",inputdata,timeslice)
-            call swap_y_z_dimensions(inputdata)
-            domain%qsnow=inputdata
-            deallocate(inputdata)
+            call io_read(restart_file,"qs",inputdata_3d,timeslice)
+            call swap_y_z_dimensions(inputdata_3d)
+            domain%qsnow=inputdata_3d
+            deallocate(inputdata_3d)
         endif
         if (io_variable_is_present(restart_file,"qg")) then
-            call io_read3d(restart_file,"qg",inputdata,timeslice)
-            call swap_y_z_dimensions(inputdata)
-            domain%qgrau=inputdata
-            deallocate(inputdata)
+            call io_read(restart_file,"qg",inputdata_3d,timeslice)
+            call swap_y_z_dimensions(inputdata_3d)
+            domain%qgrau=inputdata_3d
+            deallocate(inputdata_3d)
         endif
         if (io_variable_is_present(restart_file,"nr")) then
-            call io_read3d(restart_file,"nr",inputdata,timeslice)
-            call swap_y_z_dimensions(inputdata)
-            domain%nrain=inputdata
-            deallocate(inputdata)
+            call io_read(restart_file,"nr",inputdata_3d,timeslice)
+            call swap_y_z_dimensions(inputdata_3d)
+            domain%nrain=inputdata_3d
+            deallocate(inputdata_3d)
         endif
         if (io_variable_is_present(restart_file,"ni")) then
-            call io_read3d(restart_file,"ni",inputdata,timeslice)
-            call swap_y_z_dimensions(inputdata)
-            domain%nice=inputdata
-            deallocate(inputdata)
+            call io_read(restart_file,"ni",inputdata_3d,timeslice)
+            call swap_y_z_dimensions(inputdata_3d)
+            domain%nice=inputdata_3d
+            deallocate(inputdata_3d)
         endif
         if (io_variable_is_present(restart_file,"ngraupel")) then
-            call io_read3d(restart_file,"ngraupel",inputdata,timeslice)
-            call swap_y_z_dimensions(inputdata)
-            domain%ngraupel=inputdata
-            deallocate(inputdata)
+            call io_read(restart_file,"ngraupel",inputdata_3d,timeslice)
+            call swap_y_z_dimensions(inputdata_3d)
+            domain%ngraupel=inputdata_3d
+            deallocate(inputdata_3d)
         endif
         if (io_variable_is_present(restart_file,"nsnow")) then
-            call io_read3d(restart_file,"nsnow",inputdata,timeslice)
-            call swap_y_z_dimensions(inputdata)
-            domain%nsnow=inputdata
-            deallocate(inputdata)
+            call io_read(restart_file,"nsnow",inputdata_3d,timeslice)
+            call swap_y_z_dimensions(inputdata_3d)
+            domain%nsnow=inputdata_3d
+            deallocate(inputdata_3d)
         endif
 
         if (io_variable_is_present(restart_file,"snow")) then
-            call io_read2d(restart_file,"snow",inputdata_2d,timeslice)
+            call io_read(restart_file,"snow",inputdata_2d,timeslice)
             domain%snow=inputdata_2d
             deallocate(inputdata_2d)
         endif
 
         if (io_variable_is_present(restart_file,"graupel")) then
-            call io_read2d(restart_file,"graupel",inputdata_2d,timeslice)
+            call io_read(restart_file,"graupel",inputdata_2d,timeslice)
             domain%graupel=inputdata_2d
             deallocate(inputdata_2d)
         endif
         if (io_variable_is_present(restart_file,"crain")) then
-            call io_read2d(restart_file,"crain",inputdata_2d,timeslice)
+            call io_read(restart_file,"crain",inputdata_2d,timeslice)
             domain%crain=inputdata_2d
             deallocate(inputdata_2d)
         endif
 
         if (io_variable_is_present(restart_file,"soil_t")) then
-            call io_read3d(restart_file,"soil_t",inputdata,timeslice)
-            call swap_y_z_dimensions(inputdata)
-            call check_shapes_3d(inputdata,domain%soil_t)
-            domain%soil_t=inputdata
-            deallocate(inputdata)
+            call io_read(restart_file,"soil_t",inputdata_3d,timeslice)
+            call swap_y_z_dimensions(inputdata_3d)
+            call check_shapes_3d(inputdata_3d,domain%soil_t)
+            domain%soil_t=inputdata_3d
+            deallocate(inputdata_3d)
         endif
         if (io_variable_is_present(restart_file, "soil_w")) then
-            call io_read3d(restart_file,"soil_w",inputdata,timeslice)
-            call swap_y_z_dimensions(inputdata)
-            domain%soil_vwc=inputdata
-            deallocate(inputdata)
+            call io_read(restart_file,"soil_w",inputdata_3d,timeslice)
+            call swap_y_z_dimensions(inputdata_3d)
+            domain%soil_vwc=inputdata_3d
+            deallocate(inputdata_3d)
         endif
 
         if (io_variable_is_present(restart_file, "hfgs")) then
-            call io_read2d(restart_file,"hfgs",inputdata_2d,timeslice)
+            call io_read(restart_file,"hfgs",inputdata_2d,timeslice)
             domain%ground_heat=inputdata_2d
             deallocate(inputdata_2d)
         endif
 
         if (io_variable_is_present(restart_file, "snw")) then
-            call io_read2d(restart_file,"snw",inputdata_2d,timeslice)
+            call io_read(restart_file,"snw",inputdata_2d,timeslice)
             domain%snow_swe=inputdata_2d
             deallocate(inputdata_2d)
         endif
 
         if (io_variable_is_present(restart_file, "canwat")) then
-            call io_read2d(restart_file,"canwat",inputdata_2d,timeslice)
+            call io_read(restart_file,"canwat",inputdata_2d,timeslice)
             domain%canopy_water=inputdata_2d
             deallocate(inputdata_2d)
         endif
 
         if (io_variable_is_present(restart_file, "ts")) then
-            call io_read2d(restart_file,"ts",inputdata_2d,timeslice)
+            call io_read(restart_file,"ts",inputdata_2d,timeslice)
             domain%skin_t=inputdata_2d
             domain%sst = inputdata_2d
             deallocate(inputdata_2d)
         endif
 
         if (io_variable_is_present(restart_file,"rsds")) then
-            call io_read2d(restart_file,"rsds",inputdata_2d,timeslice)
+            call io_read(restart_file,"rsds",inputdata_2d,timeslice)
             domain%swdown=inputdata_2d
             deallocate(inputdata_2d)
         endif
 
         if (io_variable_is_present(restart_file,"rlds")) then
-            call io_read2d(restart_file,"rlds",inputdata_2d,timeslice)
+            call io_read(restart_file,"rlds",inputdata_2d,timeslice)
             domain%lwdown=inputdata_2d
             deallocate(inputdata_2d)
         endif
@@ -853,49 +810,27 @@ contains
     !!------------------------------------------------------------
     subroutine bc_init(domain,bc,options)
         implicit none
-        type(domain_type),intent(inout)::domain
-        type(bc_type),intent(inout)::bc
-        type(options_type),intent(in)::options
-        integer,dimension(io_maxDims)::dims !note, io_maxDims is included from io_routines.
-        real,dimension(:,:,:),allocatable::inputdata
+        type(domain_type),  intent(inout)   :: domain
+        type(bc_type),      intent(inout)   :: bc
+        type(options_type), intent(in)      :: options
+
         logical :: boundary_value
-        integer::nx,ny,nz,i
-        real::domainsize
+        integer :: nx, ny, nz, i
+        real    :: domainsize
         ! MODULE variables : curstep, curfile, nfiles, steps_in_file, file_list
 
-!       in case we are using a restart file we have some trickery to do here to find the proper file to be reading from
-!       and set the current time step appropriately... should probably be moved to a subroutine.
-        curfile=1
-        if (options%restart) then
-            curstep=options%restart_step
-        else
-            curstep=bc_find_step(options)+1
-        endif
-        nfiles=size(options%boundary_files)
+        nfiles = size(options%boundary_files)
         allocate(file_list(nfiles))
-        file_list=options%boundary_files
-        call io_getdims(file_list(curfile),options%pvar, dims)
-        if (dims(1)==3) then
-            steps_in_file=1
+        file_list = options%boundary_files
+
+        if (options%restart) then
+            call set_curfile_curstep(options, options%restart_time)
         else
-            steps_in_file=dims(dims(1)+1) !dims(1) = ndims
+            call set_curfile_curstep(options, options%start_time)
         endif
+
 
         if (.not.options%ideal) then
-            do while (curstep>steps_in_file)
-                curfile=curfile+1
-                if (curfile>nfiles) then
-                    stop "Ran out of files to process!"
-                endif
-                curstep=curstep-steps_in_file !instead of setting=1, this way we can set an arbitrary starting point multiple files in
-                call io_getdims(file_list(curfile),options%pvar, dims)
-                if (dims(1)==3) then
-                    steps_in_file=1
-                else
-                    steps_in_file=dims(dims(1)+1) !dims(1) = ndims; dims(ndims+1)=ntimesteps
-                endif
-            enddo
-
             smoothing_window = min(max(int(options%smooth_wind_distance/domain%dx),1),size(domain%lat,1)/5)
             if (options%debug) write(*,*) "  Smoothing winds over ",trim(str(smoothing_window))," grid cells"
         endif
@@ -904,13 +839,13 @@ contains
             call load_restart_file(domain,options%restart_file,options%restart_step_in_file)
             write(*,*) "Reading winds"
             write(*,*) "  timestep:",trim(str(curstep)),"  from file:",trim(file_list(curfile))
-            if (options%external_winds) then
-                call ext_winds_init(domain,bc,options)
-            elseif (options%lt_options%remove_lowres_linear) then
+            ! if (options%external_winds) then
+                ! call ext_winds_init(domain,bc,options)
+            if (options%lt_options%remove_lowres_linear) then
                 ! remove the low-res linear wind perturbation field
                 call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
-                call smooth_wind(domain%u,smoothing_window,3)
-                call smooth_wind(domain%v,smoothing_window,3)
+                call smooth_array(domain%u,smoothing_window,3)
+                call smooth_array(domain%v,smoothing_window,3)
             elseif (options%mean_winds) then
                 call mean_winds(domain,file_list(curfile),curstep,options)
             else
@@ -920,8 +855,8 @@ contains
                 call read_var(domain%v, file_list(curfile),options%vvar,  &
                                 bc%v_geo%geolut,bc%v_geo%vert_lut,curstep,boundary_value, &
                                 options)
-                call smooth_wind(domain%u,smoothing_window,3)
-                call smooth_wind(domain%v,smoothing_window,3)
+                call smooth_array(domain%u,smoothing_window,3)
+                call smooth_array(domain%v,smoothing_window,3)
             endif
             domain%pii=(domain%p/100000.0)**(Rd/cp)
             domain%rho=domain%p/(Rd*domain%th*domain%pii) ! kg/m^3
@@ -934,21 +869,26 @@ contains
             !call balance_uvw(domain,options)
 
             call output_init(domain,options)
-            call write_domain(domain,options,-1)
+            call write_domain(domain, options, options%restart_time, "last_restart_file.nc")
         else
+            if (options%time_var=="") then
+                domain%model_time = options%start_time
+            else
+                call read_bc_time(domain%model_time, file_list(curfile), options%time_var, curstep)
+            endif
+            bc%next_domain%model_time = domain%model_time
+
 !           else load data from the first Boundary conditions file
             boundary_value=.False.
             nx=size(domain%p,1)
             ny=size(domain%p,3)
-            if (options%external_winds) then
-                call ext_winds_init(domain,bc,options)
-                ! call smooth_wind(domain%u,1,3)
-                ! call smooth_wind(domain%v,1,3)
-            elseif (options%lt_options%remove_lowres_linear) then
+            ! if (options%external_winds) then
+            !     call ext_winds_init(domain,bc,options)
+            if (options%lt_options%remove_lowres_linear) then
                 ! remove the low-res linear wind perturbation field
                 call remove_linear_winds(domain,bc,options,file_list(curfile),curstep)
-                call smooth_wind(domain%u,smoothing_window,3)
-                call smooth_wind(domain%v,smoothing_window,3)
+                call smooth_array(domain%u,smoothing_window,3)
+                call smooth_array(domain%v,smoothing_window,3)
             elseif (options%mean_winds) then
                 call mean_winds(domain,file_list(curfile),curstep,options)
             else
@@ -958,24 +898,39 @@ contains
                 call read_var(domain%v, file_list(curfile),options%vvar,  &
                                 bc%v_geo%geolut,bc%v_geo%vert_lut,curstep,boundary_value, &
                                 options)
-                call smooth_wind(domain%u,smoothing_window,3)
-                call smooth_wind(domain%v,smoothing_window,3)
+                call smooth_array(domain%u,smoothing_window,3)
+                call smooth_array(domain%v,smoothing_window,3)
             endif
+
             call read_var(domain%p,    file_list(curfile),   options%pvar,   &
                             bc%geolut, bc%vert_lut, curstep, boundary_value, &
                             options,   bc%lowres_z,domain%z, interp_vertical=.True.)
+
             call read_var(domain%th,   file_list(curfile),   options%tvar,   &
                             bc%geolut, bc%vert_lut, curstep, boundary_value, &
                             options)
+            if (.not.options%t_is_potential) then
+                domain%pii = (domain%p/100000.0)**(Rd/cp)
+                domain%th = domain%th / domain%pii
+            endif
+
             call read_var(domain%qv,   file_list(curfile),   options%qvvar,  &
                             bc%geolut, bc%vert_lut, curstep, boundary_value, &
                             options)
+            if (options%qv_is_spec_humidity) then
+                domain%qv = domain%qv / (1 - domain%qv)
+            endif
+
+            if (options%qv_is_relative_humidity) then
+                domain%qv = rh_to_mr(domain%qv, domain%th * domain%pii, domain%p)
+            endif
+
             if (trim(options%qcvar)/="") then
                 call read_var(domain%cloud,file_list(curfile),   options%qcvar,  &
                                 bc%geolut, bc%vert_lut, curstep, boundary_value, &
                                 options)
             else
-                if (options%debug) print*, "No Cloud water content specified"
+                if (options%debug) write(*,*) "No Cloud water content specified"
                 domain%cloud=0
             endif
             if (trim(options%qivar)/="") then
@@ -983,7 +938,7 @@ contains
                                 bc%geolut, bc%vert_lut, curstep, boundary_value, &
                                 options)
             else
-                if (options%debug) print*, "No Cloud ice specified"
+                if (options%debug) write(*,*) "No Cloud ice specified"
                 domain%ice=0
             endif
 
@@ -1008,29 +963,30 @@ contains
                     call read_2dvar(domain%lwdown,  file_list(curfile),options%lwdown_var,  bc%geolut,curstep)
                 endif
             endif
+
             if (trim(options%sst_var)/="") then
-                call read_2dvar(domain%sst,  file_list(curfile),options%sst_var,  bc%geolut,curstep)
+                call read_2dvar(domain%sst,  file_list(curfile), options%sst_var,  bc%geolut,curstep)
             endif
             if (trim(options%rain_var)/="") then
-                call read_2dvar(bc%drain_dt,  file_list(curfile),options%rain_var,  bc%geolut,curstep)
+                call read_2dvar(bc%drain_dt, file_list(curfile), options%rain_var, bc%geolut,curstep)
             endif
 
             call update_pressure(domain%p,bc%lowres_z,domain%z)
 
-            nz=size(domain%th,2)
-            domainsize=size(domain%th,1)*size(domain%th,3)
+            nz = size(domain%th,2)
+            domainsize = size(domain%th,1)*size(domain%th,3)
             if (options%mean_fields) then
                 do i=1,nz
-                    domain%th(:,i,:)=sum(domain%th(:,i,:))/domainsize
-                    domain%qv(:,i,:)=sum(domain%qv(:,i,:))/domainsize
-                    domain%cloud(:,i,:)=sum(domain%cloud(:,i,:))/domainsize
-                    domain%ice(:,i,:)=sum(domain%ice(:,i,:))/domainsize
+                    domain%th(:,i,:)    = sum(domain%th(:,i,:))    / domainsize
+                    domain%qv(:,i,:)    = sum(domain%qv(:,i,:))    / domainsize
+                    domain%cloud(:,i,:) = sum(domain%cloud(:,i,:)) / domainsize
+                    domain%ice(:,i,:)   = sum(domain%ice(:,i,:))   / domainsize
                 enddo
             endif
 
-            domain%pii=(domain%p/100000.0)**(Rd/cp)
-            domain%rho=domain%p/(Rd*domain%th*domain%pii) ! kg/m^3
-            call update_winds(domain,options)
+            domain%pii = (domain%p / 100000.0) ** (Rd / cp)
+            domain%rho = domain%p / (Rd * domain%th * domain%pii) ! kg/m^3
+            call update_winds(domain, options)
         endif
 
         ! calculate znu and znw from domain pressure variable now that we have it
@@ -1055,20 +1011,20 @@ contains
     !! @retval dx_dt This field is updated along the boundaries to be (d1-d2)
     !!
     !!------------------------------------------------------------
-    subroutine update_edges(dx_dt,d1,d2)
+    subroutine update_edges(dx_dt, d1, d2)
         implicit none
         real,dimension(:,:,:), intent(inout) :: dx_dt
-        real,dimension(:,:,:), intent(in) :: d1,d2
-        integer :: nx,nz,ny,i
+        real,dimension(:,:,:), intent(in)    :: d1, d2
+        integer :: nx, nz, ny, i
 
-        nx=size(d1,1)
-        nz=size(d1,2)
-        ny=size(d1,3)
+        nx = size(d1, 1)
+        nz = size(d1, 2)
+        ny = size(d1, 3)
         do i=1,nz
-            dx_dt(i,:ny,1)=d1(1,i,:) -d2(1,i,:)
-            dx_dt(i,:ny,2)=d1(nx,i,:)-d2(nx,i,:)
-            dx_dt(i,:nx,3)=d1(:,i,1) -d2(:,i,1)
-            dx_dt(i,:nx,4)=d1(:,i,ny)-d2(:,i,ny)
+            dx_dt(i,:ny,1) = d1(1,i,:)  - d2(1,i,:)
+            dx_dt(i,:ny,2) = d1(nx,i,:) - d2(nx,i,:)
+            dx_dt(i,:nx,3) = d1(:,i,1)  - d2(:,i,1)
+            dx_dt(i,:nx,4) = d1(:,i,ny) - d2(:,i,ny)
         enddo
     end subroutine update_edges
 
@@ -1224,38 +1180,38 @@ contains
 !! @param options   Model Options structure
 !!
 !!------------------------------------------------------------
-    subroutine update_ext_winds(bc,options)
-        implicit none
-        type(bc_type),intent(inout)::bc
-        type(options_type),intent(in)::options
-        integer,dimension(io_maxDims)::dims !note, io_maxDims is included from io_routines.
-        logical :: use_boundary,use_interior
-        ! MODULE variables : ext_winds_ curstep, curfile, nfiles, steps_in_file, file_list
-
-        ext_winds_curstep=ext_winds_curstep+1
-        if (ext_winds_curstep>ext_winds_steps_in_file) then
-            ext_winds_curfile=ext_winds_curfile+1
-            ext_winds_curstep=1
-            call io_getdims(ext_winds_file_list(ext_winds_curfile),options%uvar, dims)
-            if (dims(1)==3) then
-                ext_winds_steps_in_file=1
-            else
-                ext_winds_steps_in_file=dims(dims(1)+1) !dims(1) = ndims
-            endif
-        endif
-        if (ext_winds_curfile>ext_winds_nfiles) then
-            stop "Ran out of files to process!"
-        endif
-
-        use_interior=.False.
-        use_boundary=.True.
-        call read_var(bc%next_domain%u,    ext_winds_file_list(ext_winds_curfile),options%uvar, &
-                      bc%ext_winds%u_geo%geolut,bc%u_geo%vert_lut,ext_winds_curstep,use_interior,options)
-        call read_var(bc%next_domain%v,    ext_winds_file_list(ext_winds_curfile),options%vvar, &
-                      bc%ext_winds%v_geo%geolut,bc%v_geo%vert_lut,ext_winds_curstep,use_interior,options)
-        call rotate_ext_wind_field(bc%next_domain,bc%ext_winds)
-
-    end subroutine update_ext_winds
+    ! subroutine update_ext_winds(bc,options)
+    !     implicit none
+    !     type(bc_type),intent(inout)::bc
+    !     type(options_type),intent(in)::options
+    !     integer,dimension(io_maxDims)::dims !note, io_maxDims is included from io_routines.
+    !     logical :: use_boundary,use_interior
+    !     ! MODULE variables : ext_winds_ curstep, curfile, nfiles, steps_in_file, file_list
+    !
+    !     ext_winds_curstep=ext_winds_curstep+1
+    !     if (ext_winds_curstep>ext_winds_steps_in_file) then
+    !         ext_winds_curfile=ext_winds_curfile+1
+    !         ext_winds_curstep=1
+    !         call io_getdims(ext_winds_file_list(ext_winds_curfile),options%uvar, dims)
+    !         if (dims(1)==3) then
+    !             ext_winds_steps_in_file=1
+    !         else
+    !             ext_winds_steps_in_file=dims(dims(1)+1) !dims(1) = ndims
+    !         endif
+    !     endif
+    !     if (ext_winds_curfile>ext_winds_nfiles) then
+    !         stop "Ran out of files to process!"
+    !     endif
+    !
+    !     use_interior=.False.
+    !     use_boundary=.True.
+    !     call read_var(bc%next_domain%u,    ext_winds_file_list(ext_winds_curfile),options%uvar, &
+    !                   bc%ext_winds%u_geo%geolut,bc%u_geo%vert_lut,ext_winds_curstep,use_interior,options)
+    !     call read_var(bc%next_domain%v,    ext_winds_file_list(ext_winds_curfile),options%vvar, &
+    !                   bc%ext_winds%v_geo%geolut,bc%v_geo%vert_lut,ext_winds_curstep,use_interior,options)
+    !     call rotate_ext_wind_field(bc%next_domain,bc%ext_winds)
+    !
+    ! end subroutine update_ext_winds
 
     !>------------------------------------------------------------
     !!  Read in the next timestep of input data and apply to the dXdt grids as appropriate.
@@ -1285,33 +1241,36 @@ contains
         ! MODULE variables : curstep, curfile, nfiles, steps_in_file, file_list
 
         if (.not.options%ideal) then
-            curstep=curstep+1
-            do while (curstep>steps_in_file)
-                curfile=curfile+1
+            curstep = curstep + 1
+            do while (curstep > steps_in_file)
+                print*, curstep, steps_in_file
+                curfile = curfile + 1
                 if (curfile>nfiles) then
                     stop "Ran out of files to process!"
                 endif
-                curstep=curstep-steps_in_file !instead of setting=1, this way we can set an arbitrary starting point multiple files in
-                call io_getdims(file_list(curfile),options%pvar, dims)
-                if (dims(1)==3) then
-                    steps_in_file=1
-                else
-                    steps_in_file=dims(dims(1)+1) !dims(1) = ndims; dims(ndims+1)=ntimesteps
-                endif
+                curstep = curstep - steps_in_file
+                steps_in_file = get_n_timesteps(file_list(curfile), options%pvar)
             enddo
         endif
         use_interior=.False. ! this is passed to the use_boundary flag in geo_interp
         use_boundary=.True.
 
+        if (options%time_var=="") then
+            bc%next_domain%model_time = bc%next_domain%model_time + options%input_dt
+        else
+            call read_bc_time(bc%next_domain%model_time, file_list(curfile), options%time_var, curstep)
+        endif
+        bc%dt = bc%next_domain%model_time - domain%model_time
+
         if (options%time_varying_z) then
             ! read in the updated vertical coordinate
             if (allocated(newbc%z)) deallocate(newbc%z)
-            call io_read3d(file_list(curfile), options%zvar, newbc%z, curstep)
+            call io_read(file_list(curfile), options%zvar, newbc%z, curstep)
             nx=size(newbc%z,1)
             ny=size(newbc%z,2)
             nz=size(newbc%z,3)
             if (trim(options%zbvar)/="") then
-                call io_read3d(file_list(curfile),options%zbvar, zbase, curstep)
+                call io_read(file_list(curfile),options%zbvar, zbase, curstep)
                 newbc%z=newbc%z+zbase
                 deallocate(zbase)
             endif
@@ -1341,14 +1300,12 @@ contains
         endif
 
         ! first read in and handle winds
-        if (options%external_winds) then
-            call update_ext_winds(bc,options)
-!           call smooth_wind(bc%next_domain%u,1,3)
-!           call smooth_wind(bc%next_domain%v,1,3)
-        elseif (options%lt_options%remove_lowres_linear) then
+        ! if (options%external_winds) then
+            ! call update_ext_winds(bc,options)
+        if (options%lt_options%remove_lowres_linear) then
             call remove_linear_winds(bc%next_domain,bc,options,file_list(curfile),curstep)
-            call smooth_wind(bc%next_domain%u,smoothing_window,3)
-            call smooth_wind(bc%next_domain%v,smoothing_window,3)
+            call smooth_array(bc%next_domain%u,smoothing_window,3)
+            call smooth_array(bc%next_domain%v,smoothing_window,3)
         elseif (options%mean_winds) then
             call mean_winds(bc%next_domain,file_list(curfile),curstep,options)
         else
@@ -1359,8 +1316,8 @@ contains
             call read_var(bc%next_domain%v,  file_list(curfile), options%vvar, &
                           bc%v_geo%geolut,   bc%v_geo%vert_lut,  curstep,      &
                           use_interior, options, time_varying_zlut=newbc%vert_lut)
-            call smooth_wind(bc%next_domain%u,smoothing_window,3)
-            call smooth_wind(bc%next_domain%v,smoothing_window,3)
+            call smooth_array(bc%next_domain%u,smoothing_window,3)
+            call smooth_array(bc%next_domain%v,smoothing_window,3)
         endif
 
         ! now read in remaining variables
@@ -1374,7 +1331,6 @@ contains
                       bc%geolut, bc%vert_lut, curstep, use_interior,              &
                       options, time_varying_zlut=newbc%vert_lut, interp_vertical=.True. )
         ! for pressure update we need real temperature, not potential t to compute an exner function
-        ! bc%next_domain%pii=(bc%next_domain%p/100000.0)**(Rd/cp)
         ! now update pressure using the high res T field
         call update_pressure(bc%next_domain%p,bc%lowres_z,domain%z)!,  &
                             !  lowresT = bc%next_domain%th * bc%next_domain%pii, &
@@ -1385,9 +1341,22 @@ contains
                       bc%geolut, bc%vert_lut, curstep, use_boundary,              &
                       options, time_varying_zlut=newbc%vert_lut)
 
+        if (.not.options%t_is_potential) then
+            bc%next_domain%pii = (bc%next_domain%p/100000.0)**(Rd/cp)
+            bc%next_domain%th = bc%next_domain%th / bc%next_domain%pii
+        endif
+
         call read_var(bc%next_domain%qv,      file_list(curfile), options%qvvar,  &
                       bc%geolut, bc%vert_lut, curstep, use_boundary,              &
                       options, time_varying_zlut=newbc%vert_lut)
+
+        if (options%qv_is_spec_humidity) then
+            bc%next_domain%qv = bc%next_domain%qv / (1 - bc%next_domain%qv)
+        endif
+        if (options%qv_is_relative_humidity) then
+            bc%next_domain%qv = rh_to_mr(bc%next_domain%qv, bc%next_domain%th * bc%next_domain%pii, bc%next_domain%p)
+        endif
+
 
         if (trim(options%qcvar)/="") then
             call read_var(bc%next_domain%cloud,   file_list(curfile), options%qcvar,  &
@@ -1451,8 +1420,8 @@ contains
         bc%next_domain%cloud=domain%cloud + domain%ice + domain%qrain + domain%qsnow
 
         ! these are required by update_winds for most options
-        bc%next_domain%pii=(bc%next_domain%p/100000.0)**(Rd/cp)
-        bc%next_domain%rho=bc%next_domain%p/(Rd*domain%th*bc%next_domain%pii) ! kg/m^3
+        bc%next_domain%pii = (bc%next_domain%p / 100000.0)** (Rd / cp)
+        bc%next_domain%rho = bc%next_domain%p / (Rd * domain%th * bc%next_domain%pii) ! kg/m^3
 
 
         call update_winds(bc%next_domain,options)
