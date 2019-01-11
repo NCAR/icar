@@ -338,9 +338,10 @@ contains
         ! endif
 
         ! perform a reduction across all images to find the minimum time step required
-        !call co_min(seconds)
+        call co_min(seconds)
         seconds = seconds/1.25
-        seconds=20
+        ! seconds=60
+        ! print*, seconds
         ! set an upper bound on dt to keep microphysics and convection stable (?)
         ! store this back in the dt time_delta data structure
         call dt%set(seconds=min(seconds,120.0D0))
@@ -424,7 +425,7 @@ contains
                 if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" domain%halo_send")
 
                 ! call rad(domain, options, real(dt%seconds()), subset=1)
-                call lsm(domain, options, real(dt%seconds()))!, subset=1)
+                ! call lsm(domain, options, real(dt%seconds()))!, subset=1)
                 ! call pbl(domain, options, real(dt%seconds()), subset=1)
                 ! call convect(domain, options, real(dt%seconds()), subset=1)
 
