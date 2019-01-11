@@ -6,3 +6,4 @@ pages:
 - Developing: developing.md
 - Errors: errors.md
 theme: readthedocs
+google_analytics: ['UA-108421993-4', 'icar.readthedocs.org']
