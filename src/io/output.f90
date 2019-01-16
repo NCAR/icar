@@ -443,10 +443,10 @@ contains
 
             if (options%physics%windtype==kWIND_LINEAR) then
                 call check( nf90_def_var(ncid, "nsq", NF90_REAL, dimids, temp_id), trim(err)//"nsq" )
-                call check( nf90_put_att(ncid,temp_id,"standard_name","square_of_brunt_vaisala_frequency_in_air"))
-                call check( nf90_put_att(ncid,temp_id,"long_name","Brunt Vaisala Frequency (squared)"))
+                call check( nf90_put_att(ncid,temp_id,"standard_name","ln_of_square_of_brunt_vaisala_frequency_in_air"))
+                call check( nf90_put_att(ncid,temp_id,"long_name","Natural logarithm of the squared Brunt Vaisala Frequency"))
                 call check( nf90_put_att(ncid,temp_id,"description", "Frequency is the number of oscillations of a wave per unit time."))
-                call check( nf90_put_att(ncid,temp_id,"units","s-2"))
+                call check( nf90_put_att(ncid,temp_id,"units","ln(s-2)"))
                 call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
                 varid(33)=temp_id
             endif
