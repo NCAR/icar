@@ -133,9 +133,9 @@ contains
         ! because density changes with each time step, u/v/w have to be rebalanced as well.
         ! could avoid this by assuming density doesn't change... but would need to keep an "old" density around
         ! also, convection can modify u and v so it needs to rebalanced
-        call balance_uvw(domain,options)
+        call balance_uvw(domain, options)
 
-        call diagnostic_update(domain,options)
+        call diagnostic_update(domain, options)
     end subroutine forcing_update
 
     !>------------------------------------------------------------
@@ -147,7 +147,7 @@ contains
     !! @param options   Model options (not used at present)
     !!
     !!------------------------------------------------------------
-    subroutine diagnostic_update(domain,options)
+    subroutine diagnostic_update(domain, options)
         implicit none
         type(domain_type),  intent(inout)   :: domain
         type(options_type), intent(in)      :: options
@@ -237,10 +237,17 @@ contains
     subroutine apply_dt(bc, dt, options)
         implicit none
         type(bc_type),      intent(inout)   :: bc
-        real,               intent(in)      :: dt
+        double precision,   intent(in)      :: dt
         type(options_type), intent(in)      :: options
         ! internal variables
         integer :: j, ny, nx
+
+        ! if the time step is less than 1/100 s, then probably the forcing data had a repeat (or a step back) in time,
+        ! so this timestep will just return and these forcing data can be ignored
+        if (dt < 0.01) then
+            write(*,*) "WARNING, forcing dt is ~0 seconds, assuming forcing data were repeated and will be skipped. dt=", dt
+            return ! return to avoid a potential divide by 0
+        endif
 
         ny=size(bc%du_dt,3)
         nx=size(bc%du_dt,1)
@@ -413,92 +420,93 @@ contains
     !! @param domain    domain data structure containing model state
     !! @param options   model options structure
     !! @param bc        model boundary conditions data structure
-    !! @param model_time    Current internal model time (seconds since start of run)
     !! @param next_output   Next time to write an output file (in "model_time")
     !!
     !!------------------------------------------------------------
-    subroutine step(domain,options,bc,model_time,next_output)
+    subroutine step(domain, options, bc, next_output)
         implicit none
         type(domain_type),  intent(inout)   :: domain
         type(bc_type),      intent(inout)   :: bc
         type(options_type), intent(in)      :: options
-        real*8,             intent(inout)   :: model_time, next_output
+        type(Time_type),    intent(inout)   :: next_output
 
-        real*8  :: end_time
-        real    :: dt, CFL, cfl_reduction_factor
-
-        CFL = 1.0
-        cfl_reduction_factor = options%cfl_reduction_factor
-        CFL = CFL * cfl_reduction_factor
-
-        ! calculate the number of timesteps
-        end_time = model_time + options%in_dt
+        real :: time_percent
+        type(time_delta_t) :: dt, progress_dt
 
         ! Make the boundary condition dXdt values into units of [X]/s
-        call apply_dt(bc, options%in_dt, options)
+        call apply_dt(bc, bc%dt%seconds(), options)
 
         ! ensure internal model consistency (should only need to be called here when the model starts...)
         ! e.g. for potential temperature and temperature
-        call diagnostic_update(domain,options)
+        call diagnostic_update(domain, options)
 
         ! now just loop over internal timesteps computing all physics in order (operator splitting...)
-        do while (model_time < end_time)
+        do while (domain%model_time < bc%next_domain%model_time)
 
             ! compute internal timestep dt to maintain stability
             ! courant condition for 3D advection. Note that w is normalized by dx/dz
             ! pick the minimum dt from the begining or the end of the current timestep
             if (options%advect_density) then
-                dt = compute_dt(domain%dx, domain%ur, domain%vr, domain%wr, domain%rho, domain%dz_inter, &
-                                CFL, cfl_strictness=options%cfl_strictness, use_density=options%advect_density)
+                call dt%set(seconds=compute_dt(domain%dx, domain%ur, domain%vr, domain%wr, domain%rho, domain%dz_inter,&
+                                options%cfl_reduction_factor, cfl_strictness=options%cfl_strictness,                   &
+                                use_density=options%advect_density))
+
             else
-                dt = compute_dt(domain%dx, domain%u, domain%v, domain%w, domain%rho, domain%dz_inter, &
-                                CFL, cfl_strictness=options%cfl_strictness, use_density=options%advect_density)
+                call dt%set(seconds=compute_dt(domain%dx, domain%u, domain%v, domain%w, domain%rho, domain%dz_inter, &
+                                options%cfl_reduction_factor, cfl_strictness=options%cfl_strictness,                 &
+                                use_density=options%advect_density))
             endif
-            ! set an upper bound on dt to keep microphysics and convection stable (?) not sure what time is required here.
-            dt = min(dt,120.0) !better min=180?
+            ! set an upper bound on dt to keep microphysics and convection stable (?)
+            ! some sort of explicit stability check would be better, but is not possible at the moment
+            call dt%set(seconds=min(dt%seconds(),120.0D0)) !better min=180?
             if (options%interactive) then
-                write(*,"(A,f5.1,A,f5.1,A$)") char(13), 100-max(0.0,(end_time-model_time-dt)/options%in_dt*100)," %  dt=",dt,"s  "
+                progress_dt  = (bc%next_domain%model_time - domain%model_time)
+                time_percent = 100 - progress_dt%seconds() / bc%dt%seconds()  * 100
+                write(*,"(A,f5.1,A,A$)") char(13), max(0.0,time_percent)," %  dt=",trim(dt%as_string())
             endif
             ! Make sure we don't over step the forcing period
-            if ((model_time + dt) > end_time) then
-                dt = end_time - model_time
+            if ((domain%model_time + dt) > bc%next_domain%model_time) then
+                dt = bc%next_domain%model_time - domain%model_time
             endif
 
             ! this if is to avoid round off errors causing an additional physics call that won't really do anything
-            if (dt > 1e-5) then
+            if (dt%seconds() > 1e-3) then
                 if (options%debug) call domain_check(domain,"Time step loop start")
 
-                call advect(domain,options,dt)
+                call advect(domain, options, real(dt%seconds()))
                 if (options%debug) call domain_check(domain,"After advection")
 
-                call mp(domain,options,dt, model_time)
+                call mp(domain, options, real(dt%seconds()))
                 if (options%debug) call domain_check(domain,"After microphysics")
 
-                call rad(domain,options,model_time/86400.0+50000, dt)
+                call rad(domain, options, real(dt%seconds()))
                 if (options%debug) call domain_check(domain,"After radiation")
 
-                call lsm(domain,options,dt,model_time)
+                call lsm(domain, options, real(dt%seconds()))
                 if (options%debug) call domain_check(domain,"After LSM")
 
-                call pbl(domain,options,dt)
+                call pbl(domain, options, real(dt%seconds()))
                 if (options%debug) call domain_check(domain,"After PBL")
 
-                call convect(domain,options,dt)
+                call convect(domain, options, real(dt%seconds()))
                 if (options%debug) call domain_check(domain,"After Convection")
 
                 ! apply/update boundary conditions including internal wind and pressure changes.
-                call forcing_update(domain, bc, options, dt)
+                call forcing_update(domain, bc, options, real(dt%seconds()))
                 if (options%debug) call domain_check(domain,"After Forcing update")
 
             endif
 
             ! step model_time forward
-            model_time = model_time + dt
-            domain%model_time = model_time
+            domain%model_time = domain%model_time + dt
 
-            if ((abs(model_time-next_output)<1e-1).or.(model_time>next_output)) then
-                call write_domain(domain,options,nint((model_time-options%time_zero)/options%out_dt))
-                next_output = next_output + options%out_dt
+            progress_dt = domain%model_time - next_output
+            if ((abs(progress_dt%seconds()) < 1e-1).or.(domain%model_time > next_output)) then
+                write(*,*) " "
+                call write_domain(domain, options, next_output)
+                ! Note that over a long simulation, this can build up errors.
+                ! Need to add some checks with respect to model initial time...
+                next_output = next_output + options%output_dt
             endif
 
         enddo

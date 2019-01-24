@@ -81,7 +81,9 @@
 !>------------------------------------------------
 module data_structures
     use, intrinsic :: iso_c_binding ! needed for fftw compatible complex types
-    use :: icar_constants           ! Many constants including things like fixed string lengths
+    use time_object,        only : Time_type
+    use time_delta_object,  only : time_delta_t
+    use icar_constants           ! Many constants including things like fixed string lengths
     implicit none
 
 
@@ -272,10 +274,9 @@ module data_structures
         logical :: blocking_initialized                             ! flag to mark that the terrain_blocking field has been initialized
 
         ! current model time step length (should this be somewhere else?)
-        real::dt
+        real :: dt
         ! current model time (seconds from options%time_zero)
-        double precision :: model_time
-        integer :: current_month ! used to store the current month (should probably be fractional for interpolation...)
+        type(Time_type) :: model_time
 
         ! online bias correction data
         real, allocatable, dimension(:,:,:) :: rain_fraction        ! seasonally varying fraction to multiple rain  [-]
@@ -292,6 +293,13 @@ module data_structures
     ! boundary conditions type, must be linearizable so we can remove low res linear wind field
     ! ------------------------------------------------
     type, extends(linearizable_type) :: bc_type
+        ! store the full high-res 3D grid for the next time step to compute dXdt fields
+        ! includes high res versions of low res terrain and z
+        type(domain_type)::next_domain
+
+        ! store the timestep to the next input
+        type(time_delta_t) :: dt
+
         ! dX_dt variables are the change in variable X between two forcing time steps
         ! wind and pressure dX_dt fields applied to full 3d grid, others applied only to boundaries
         real, allocatable, dimension(:,:,:) :: du_dt,dv_dt,dp_dt,dth_dt,dqv_dt,dqc_dt
@@ -307,9 +315,7 @@ module data_structures
         ! store the low resolution versiof of terrain and atmospheric elevations
         real,allocatable,dimension(:,:)     :: lowres_terrain
         real,allocatable,dimension(:,:,:)   :: lowres_z
-        ! store the full high-res 3D grid for the next time step to compute dXdt fields
-        ! includes high res versions of low res terrain and z
-        type(domain_type)::next_domain
+
         ! if we are using an external wind field, store them here temporarily...
         ! does this need to be separate from next_domain other than the nfiles attribute?
         type(wind_type)::ext_winds
@@ -455,7 +461,7 @@ module data_structures
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
                                         swdown_var, lwdown_var, &
-                                        sst_var, rain_var
+                                        sst_var, rain_var, time_var
 
         ! Filenames for files to read various physics options from
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, adv_options_filename, &
@@ -473,6 +479,9 @@ module data_structures
         logical :: mean_winds           ! use only a mean wind field across the entire model domain
         logical :: mean_fields          ! use only a mean forcing field across the model boundaries
         logical :: restart              ! this is a restart run, read model conditions from a restart file
+        logical :: qv_is_relative_humidity! if true the input water vapor is assumed to be relative humidity instead of mixing ratio
+        logical :: qv_is_spec_humidity  ! if true the input water vapor is assumed to be specific humidity instead of mixing ratio
+        logical :: t_is_potential       ! if true the input temperature is interpreted as potential temperature
         logical :: z_is_geopotential    ! if true the z variable is interpreted as geopotential height
         logical :: z_is_on_interface    ! if true the z variable is interpreted as residing at model level interfaces
         logical :: advect_density       ! properly incorporate density into the advection calculations.
@@ -483,10 +492,10 @@ module data_structures
         integer :: buffer               ! buffer to remove from all sides of the high res grid supplied
         ! various integer parameters/options
         integer :: ntimesteps           ! total number of time steps to be simulated (from the first forcing data)
-        integer :: time_step_zero       ! the initial time step for the simulation (from the first forcing data)
         integer :: nz                   ! number of model vertical levels
         integer :: ext_winds_nfiles     ! number of extrenal wind filenames to read from namelist
-        integer :: restart_step         ! step in forcing data to begin running
+        type(Time_type) :: restart_time ! Date of the restart time step
+        ! integer :: restart_step         ! step in forcing data to begin running
         integer :: restart_date(6)      ! date to initialize from (y,m,d, h,m,s)
         integer :: restart_step_in_file ! step in restart file to initialize from
 
@@ -494,7 +503,9 @@ module data_structures
         real :: dx                      ! grid cell width [m]
         real :: dxlow                   ! forcing model grid cell width [m]
         real :: in_dt                   ! time step between forcing inputs [s]
+        type(time_delta_t) :: input_dt  ! store in_dt as a time delta object
         real :: out_dt                  ! time step between output [s]
+        type(time_delta_t) :: output_dt ! store out_dt as a time delta object
         real :: outputinterval          ! time steps per output
         real :: inputinterval           ! time steps per input
         real :: smooth_wind_distance    ! distance over which to smooth the forcing wind field (m)
@@ -503,13 +514,12 @@ module data_structures
         integer :: cfl_strictness       ! CFL method 1=3D from 1D*sqrt(3), 2=ave.3D wind*sqrt(3), 3=sum.3D wind, 4=opt3 * sqrt(3), 5 = sum(max.3d)
 
         ! date/time parameters
-        double precision :: initial_mjd ! Modified Julian Day of the first forcing time step [days]
-        double precision :: start_mjd   ! Modified Julian Day of the date to start running the model [days]
-        double precision :: time_zero   ! Starting model initial time step (mjd-50000)*3600 [s]
+        type(Time_type) :: initial_time ! Date of the first forcing time step
+        type(Time_type) :: start_time   ! Date to start running the model
+        type(Time_type) :: end_time     ! End point for the model simulation
 
         real :: t_offset                ! offset to temperature because WRF outputs potential temperature-300
         real, allocatable, dimension(:)::dz_levels ! model layer thicknesses to be read from namelist
-        real :: rotation_scale_height   ! height to minimize wind rotation into the terrain following grid below [m]
         logical :: use_agl_height       ! interpolate from forcing to model layers using Z above ground level, not sea level
 
         ! defines which physics package to be used.

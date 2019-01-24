@@ -652,7 +652,6 @@ contains
 
         ! if a 3d grid was also specified, then read those data in
         if ((options%readz).and.(options%ideal).and.(options%zvar.ne."")) then
-
             stop "Reading Z from an external file is not currently supported, use a fixed dz"
 
             call io_read(options%init_conditions_file,options%zvar, domain%z)
@@ -783,7 +782,12 @@ contains
         call io_read(options%boundary_files(1),options%vlat,boundary%v_geo%lat)
         call io_read(options%boundary_files(1),options%vlon,boundary%v_geo%lon)
         call standardize_coordinates(boundary%v_geo)
-        call io_read(options%boundary_files(1),options%hgtvar,boundary%terrain)
+        if (options%hgtvar/="") then
+            call io_read(options%boundary_files(1),options%hgtvar,boundary%terrain)
+        else
+            allocate(boundary%terrain(size(boundary%lat,1), size(boundary%lat,2)))
+            boundary%terrain = 0
+        endif
 
         ! read in the vertical coordinate
         call io_read(options%boundary_files(1),options%zvar,zbase)

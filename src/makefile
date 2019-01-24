@@ -65,7 +65,9 @@ DOXYGEN=doxygen
 ifndef FC
 	FC=gfortran
 endif
-F90=${FC}
+ifndef F90
+	F90=${FC}
+endif
 
 ifndef FFTW
 	FFTW=/usr/local
@@ -85,101 +87,21 @@ INCNETCDF = -I$(NCDF_PATH)/include
 # Try to find the machine information
 ########################################################################################
 NODENAME := $(shell uname -n)
-ifeq ($(NODENAME), Patthar.local)
-	NODENAME=Nomad.local
-endif
-ifeq ($(patsubst vpn%.ucar.edu,vpn.ucar.edu,$(NODENAME)), vpn.ucar.edu)
-	NODENAME=Nomad.local
-endif
-ifeq ($(patsubst hexagon%,hexagon,$(NODENAME)), hexagon)
-	NODENAME=hexagon
-endif
-ifeq ($(patsubst cheyenne%,cheyenne,$(NODENAME)), cheyenne)
-	NODENAME=cheyenne
-endif
 
-
-# on hexagon (uib computer)
-ifeq ($(NODENAME), hexagon)
-	F90=ftn
-	FFTW_PATH = /home/gfi/pbo003/Libraries/FFTW/fftw-3.3.4
-	LIBFFT = -L${FFTW_PATH}/lib -lm -lfftw3
-	INCFFT = -I${FFTW_PATH}/include
-	NCDF_PATH = /opt/cray/netcdf/default/cray/83
-	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
-	INCNETCDF = -I$(NCDF_PATH)/include
+ifeq ($(F90),gfortran-6)
+	COMPILER=gnu
 endif
-
-# traveling laptop / home computer
-# may want to add -Wl,-no_compact_unwind to suppress some warnings
-ifeq ($(NODENAME), Nomad.local)
-	F90=gfortran
-	LIBFFT=-L/Users/gutmann/usr/local/lib -lm -lfftw3
-	INCFFT=-I/Users/gutmann/usr/local/include
-	NCDF_PATH = /usr/local/
-	LIBNETCDF = -L/usr/local/gfortran/lib -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
-	INCNETCDF = -I$(NCDF_PATH)/include
+ifeq ($(F90),gfortran)
+	COMPILER=gnu
 endif
-ifeq ($(NODENAME), dablam.rap.ucar.edu)
-	F90=gfortran
-	LIBFFT=-L/usr/local/lib -lm -lfftw3
-	INCFFT=-I/usr/local/include
-	NCDF_PATH = /usr/local
-	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
-	INCNETCDF = -I$(NCDF_PATH)/include
+ifeq ($(F90),ifort)
+	COMPILER=intel
 endif
-# hydro-c1 cluster
-ifeq ($(NODENAME),hydro-c1)
-	F90=ifort
-	NCDF_PATH = /opt/netcdf4-intel
-
-	# F90=gfortran
-	# NCDF_PATH = /opt/netcdf4-gcc
-
-	LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
-	INCNETCDF = -I$(NCDF_PATH)/include
-
-	LIBFFT=-L/home/gutmann/.usr/local/lib -lm -lfftw3
-	INCFFT=-I/home/gutmann/.usr/local/include
+ifeq ($(F90),pgf90)
+	COMPILER=pgi
 endif
-# on yellowstone:
-ifeq ($(LMOD_FAMILY_COMPILER),gnu)
-	F90=gfortran
-	LIBFFT = -L/glade/u/home/gutmann/usr/local/lib -lm -lfftw3
-	INCFFT = -I/glade/u/home/gutmann/usr/local/include
-	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/gnu/4.8.2
-	# note this works for almost all versions of gfortran EXCEPT 4.8.2... the default version
-	NCDF_PATH=/glade/apps/opt/netcdf/4.3.3.1/gnu/$(GNU_MAJOR_VERSION).$(GNU_MINOR_VERSION)
-	# LIBNETCDF = $(LIB_NCAR) # when netcdf includes are setup by the yellowstone module system
-	# INCNETCDF = $(INC_NCAR)
-	LIBNETCDF = -Wl,-rpath,$(NCDF_PATH)/lib -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf # if using a compiler for which netcdf includes are
-	INCNETCDF = -I$(NCDF_PATH)/include # NOT setup correctly by the yellowstone module system
-endif
-ifeq ($(LMOD_FAMILY_COMPILER),intel)
-	F90=ifort
-	LIBFFT = -L/glade/u/home/gutmann/usr/local/lib -lm -lfftw3
-	INCFFT = -I/glade/u/home/gutmann/usr/local/include
-	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/intel/default
-	LIBNETCDF = $(LIB_NCAR) #-L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
-	INCNETCDF = $(INC_NCAR) #-I$(NCDF_PATH)/include # netcdf includes are setup by the yellowstone module system
-endif
-ifeq ($(LMOD_FAMILY_COMPILER),pgi)
-	F90=pgf90
-	LIBFFT = -L/glade/u/home/gutmann/usr/local/lib -lm -lfftw3
-	INCFFT = -I/glade/u/home/gutmann/usr/local/include
-	NCDF_PATH=/glade/apps/opt/netcdf/4.3.0/pgi/default
-	LIBNETCDF = -rpath $(NCDF_PATH)/lib -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf # if using a compiler for which netcdf includes are
-	INCNETCDF = -I$(NCDF_PATH)/include # NOT setup correctly by the yellowstone module system
-endif
-
-ifeq ($(NODENAME), cheyenne)
-	F90=$(FC)
-	FFTW_PATH = /glade/u/home/gutmann/usr/local
-	LIBFFT = -L$(FFTW_PATH)/lib -lm -lfftw3
-	INCFFT = -I$(FFTW_PATH)/include
-	NCDF_PATH = $(NETCDF)
-	LIBNETCDF = -L$(NETCDF)/lib -lnetcdff -lnetcdf
-	INCNETCDF = -I$(NETCDF)/include
+ifeq ($(F90),ftn)
+	COMPILER=cray
 endif
 
 # get GIT version info
@@ -193,21 +115,21 @@ GIT_VERSION := $(shell git describe --long --dirty --all --always | sed -e's/hea
 ########################################################################################
 
 # GNU fortran
-ifeq ($(F90), gfortran)
+ifeq ($(COMPILER), gnu)
 	COMP=-fopenmp -lgomp -O3 -c -ffree-line-length-none -ftree-vectorize -fimplicit-none -funroll-loops -march=native  -fno-protect-parens # -ffast-math #-flto #
 	LINK=-fopenmp -lgomp
 	PREPROC=-cpp
 	MODOUTPUT=-J $(BUILD)
 endif
 # Intel fortran
-ifeq ($(F90), ifort)
+ifeq ($(COMPILER), intel)
 	COMP=-c -u -qopenmp -liomp5 -O3 -xHost -ftz -fpe0 # -check stack,bounds -fp-stack-check
 	LINK= -qopenmp -liomp5
 	PREPROC=-fpp
 	MODOUTPUT=-module $(BUILD)
 endif
 # PGI fortran
-ifeq ($(F90), pgf90)
+ifeq ($(COMPILER), pgi)
 	COMP=-O2 -mp -c -Mdclchk #-fast -O3 -mp -c -Mdclchk
 	LINK=-mp
 	PREPROC=-Mpreprocess
@@ -215,7 +137,7 @@ ifeq ($(F90), pgf90)
 endif
 
 # Cray fortran
-ifeq ($(F90), ftn)
+ifeq ($(COMPILER), cray)
 	COMP= -h omp vector2 -O2 -c -eI
 	LINK= -fopenmp
 	PREPROC= -eZ
@@ -225,19 +147,19 @@ endif
 
 # Various compiling options.  Set the MODE variable with "make MODE=debugslow" etc.
 ifeq ($(MODE), debugslow)
-	ifeq ($(F90), ifort)
+	ifeq ($(COMPILER), intel)
 		COMP= -debug -debug-parameters all -traceback -ftrapuv -g -fpe0 -c -u -check all -check noarg_temp_created -CB
 		LINK=
 	endif
-	ifeq ($(F90), gfortran)
+	ifeq ($(COMPILER), gnu)
 		COMP= -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK=
 	endif
-	ifeq ($(F90), pgf90)
+	ifeq ($(COMPILER), pgi)
 		COMP= -c -g -Mbounds -Mlist -Minfo  -Mdclchk
 		LINK=
 	endif
-	ifeq ($(F90), ftn)
+	ifeq ($(COMPILER), cray)
 		COMP=-h noomp -c -g -m 0 -R abcsp
 		LINK=-h noomp
 		PREPROC=-eZ
@@ -245,19 +167,19 @@ ifeq ($(MODE), debugslow)
 	endif
 endif
 ifeq ($(MODE), debug)
-	ifeq ($(F90), ifort)
+	ifeq ($(COMPILER), intel)
 		COMP= -debug -c -O1 -u -check all -check noarg_temp_created -traceback -fpe0 -fast-transcendentals -xhost
 		LINK=
 	endif
-	ifeq ($(F90), gfortran)
+	ifeq ($(COMPILER), gnu)
 		COMP= -c -O1 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK=
 	endif
-	ifeq ($(F90), pgf90)
+	ifeq ($(COMPILER), pgi)
 		COMP= -c -gopt -O1 -Mbounds -Mlist -Minfo  -Mdclchk
 		LINK=
 	endif
-	ifeq ($(F90), ftn)
+	ifeq ($(COMPILER), cray)
 		COMP=-O1 -h noomp -c -g
 		LINK=-h noomp
 		PREPROC=-eZ
@@ -265,20 +187,20 @@ ifeq ($(MODE), debug)
 	endif
 endif
 ifeq ($(MODE), debugompslow)
-	ifeq ($(F90), ifort)
+	ifeq ($(COMPILER), intel)
 		# COMP= -openmp -liomp5 -debug -debug-parameters all -traceback -ftrapuv -g -fpe0 -c -u -check all -check noarg_temp_created -CB
 		COMP= -qopenmp -liomp5 -debug -c -u	-fpe0 -traceback -check all -check noarg_temp_created -fp-stack-check
 		LINK= -qopenmp -liomp5
 	endif
-	ifeq ($(F90), gfortran)
+	ifeq ($(COMPILER), gnu)
 		COMP= -fopenmp -lgomp -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK= -fopenmp -lgomp
 	endif
-	ifeq ($(F90), pgf90)
+	ifeq ($(COMPILER), pgi)
 		COMP= -c -g -Mbounds -Mlist -Minfo -mp -Mdclchk
 		LINK= -mp
 	endif
-	ifeq ($(F90), ftn)
+	ifeq ($(COMPILER), cray)
 		COMP=-c -g -m 0 -R abcsp
 		LINK=
 		PREPROC=-eZ
@@ -286,19 +208,19 @@ ifeq ($(MODE), debugompslow)
 	endif
 endif
 ifeq ($(MODE), debugomp)
-	ifeq ($(F90), ifort)
+	ifeq ($(COMPILER), intel)
 		COMP= -qopenmp -liomp5 -debug -c -O3 -u -traceback -fpe0 -ftz -xHost # -fast-transcendentals -check all -check noarg_temp_created -fpe0
 		LINK= -qopenmp -liomp5
 	endif
-	ifeq ($(F90), gfortran)
+	ifeq ($(COMPILER), gnu)
 		COMP= -fopenmp -lgomp -c -O1 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
 		LINK= -fopenmp -lgomp
 	endif
-	ifeq ($(F90), pgf90)
+	ifeq ($(COMPILER), pgi)
 		COMP= -c -g -O1 -Mbounds -Mlist -Minfo -mp -Mdclchk
 		LINK= -mp
 	endif
-	ifeq ($(F90), ftn)
+	ifeq ($(COMPILER), cray)
 		COMP=-O1 -c -g
 		LINK=
 		PREPROC=-eZ
@@ -391,6 +313,9 @@ OBJS=	$(BUILD)driver.o 			\
 		$(BUILD)geo_reader.o 		\
 		$(BUILD)vinterp.o 			\
 		$(BUILD)atm_utilities.o 	\
+		$(BUILD)time_obj.o 			\
+		$(BUILD)time_delta_obj.o 	\
+		$(BUILD)time_io.o 			\
 		$(BUILD)time.o 				\
 		$(BUILD)data_structures.o 	\
 		$(BUILD)icar_constants.o	\
@@ -482,7 +407,7 @@ $(BUILD)init.o:$(MAIN)init.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $
 	${F90} ${FFLAGS} $(MAIN)init.f90 -o $(BUILD)init.o
 
 $(BUILD)boundary.o:$(MAIN)boundary.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)wind.o $(BUILD)geo_reader.o \
-					$(BUILD)vinterp.o $(BUILD)output.o $(BUILD)linear_winds.o
+					$(BUILD)vinterp.o $(BUILD)output.o $(BUILD)linear_winds.o $(BUILD)time_io.o
 	${F90} ${FFLAGS} $(MAIN)boundary.f90 -o $(BUILD)boundary.o
 
 $(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.o $(BUILD)output.o \
@@ -491,7 +416,7 @@ $(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.
 	${F90} ${FFLAGS} $(MAIN)time_step.f90 -o $(BUILD)time_step.o
 
 $(BUILD)init_options.o:$(MAIN)init_options.f90 $(BUILD)data_structures.o  $(BUILD)io_routines.o \
-					$(BUILD)model_tracking.o $(BUILD)time.o
+					$(BUILD)model_tracking.o $(BUILD)time.o $(BUILD)time_io.o
 	${F90} ${FFLAGS} $(MAIN)init_options.f90 -o $(BUILD)init_options.o
 
 
@@ -501,6 +426,16 @@ $(BUILD)init_options.o:$(MAIN)init_options.f90 $(BUILD)data_structures.o  $(BUIL
 
 $(BUILD)time.o:$(UTIL)time.f90
 	${F90} ${FFLAGS} $(UTIL)time.f90 -o $(BUILD)time.o
+
+$(BUILD)time_delta_obj.o:$(UTIL)time_delta_obj.f90 $(BUILD)icar_constants.o
+	${F90} ${FFLAGS} $(UTIL)time_delta_obj.f90 -o $(BUILD)time_delta_obj.o
+
+$(BUILD)time_obj.o:$(UTIL)time_obj.f90 $(BUILD)time_delta_obj.o
+	${F90} ${FFLAGS} $(UTIL)time_obj.f90 -o $(BUILD)time_obj.o
+
+$(BUILD)time_io.o:$(UTIL)time_io.f90 $(BUILD)time_obj.o $(BUILD)data_structures.o \
+					$(BUILD)icar_constants.o $(BUILD)string.o $(BUILD)io_routines.o
+	${F90} ${FFLAGS} $(UTIL)time_io.f90 -o $(BUILD)time_io.o
 
 $(BUILD)string.o:$(UTIL)string.f90
 	${F90} ${FFLAGS} $(UTIL)string.f90 -o $(BUILD)string.o
@@ -575,7 +510,7 @@ $(BUILD)cu_kf.o:$(PHYS)cu_kf.f90
 $(BUILD)ra_driver.o:$(PHYS)ra_driver.f90 $(BUILD)ra_simple.o $(BUILD)data_structures.o
 	${F90} ${FFLAGS} $(PHYS)ra_driver.f90 -o $(BUILD)ra_driver.o
 
-$(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o $(BUILD)time.o
+$(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o $(BUILD)time.o $(BUILD)atm_utilities.o
 	${F90} ${FFLAGS} $(PHYS)ra_simple.f90 -o $(BUILD)ra_simple.o
 
 ###################################################################
@@ -660,7 +595,7 @@ $(BUILD)fftshift.o:$(UTIL)fftshift.f90 $(BUILD)fftw.o
 ###################################################################
 #	Generic data structures, used by almost everything
 ###################################################################
-$(BUILD)data_structures.o:$(MAIN)data_structures.f90 $(BUILD)icar_constants.o
+$(BUILD)data_structures.o:$(MAIN)data_structures.f90 $(BUILD)icar_constants.o $(BUILD)time_obj.o
 	${F90} ${FFLAGS} $(MAIN)data_structures.f90 -o $(BUILD)data_structures.o
 
 $(BUILD)wrf_constants.o:$(CONST)wrf_constants.f90

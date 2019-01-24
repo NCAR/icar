@@ -11,7 +11,8 @@
 !!------------------------------------------------------------
 module output
     use netcdf        ! nc_* routines
-    use time          ! calendar_date, calendar, YEAR_ZERO, GREGORIAN, NOLEAP, THREESIXTY
+    use time          ! calendar, YEAR_ZERO, GREGORIAN, NOLEAP, THREESIXTY
+    use time_object, only : Time_type
     use string        ! str
     use io_routines   ! io_* routines, file_exists, check
     use data_structures
@@ -115,9 +116,10 @@ contains
     !! @param options   model wide options so the correct output can be created
     !!
     !!------------------------------------------------------------
-    subroutine create_file(filename,options)
+    subroutine create_file(filename, options, time)
         character(len=255), intent(in) :: filename
         type(options_type), intent(in) :: options
+        type(Time_type),    intent(in) :: time
 
         ! store real (not model) timestamp
         character(len=19) :: todays_date_time
@@ -261,6 +263,7 @@ contains
 
         call check( nf90_def_var(ncid, "time", NF90_DOUBLE, t_id, time_id), trim(err)//"time" )
         call check( nf90_put_att(ncid,time_id,"standard_name","time"))
+        call check( nf90_put_att(ncid,time_id,"units",time%units()))
         call check( nf90_put_att(ncid,time_id,"UTCoffset","0"))
 
         call check( nf90_def_var(ncid, "lev", NF90_REAL, dimids(3), lev_id), trim(err)//"lev" )
@@ -270,17 +273,11 @@ contains
         call check( nf90_put_att(ncid,lev_id,"positive","up"))
         call check( nf90_put_att(ncid,lev_id,"units","m"))
 
-        if (calendar==GREGORIAN) then
-            call check( nf90_put_att(ncid,time_id,"long_name","modified Julian Day"))
-            call check( nf90_put_att(ncid,time_id,"units","days since 1858-11-17 00:00:00"))
+        if (time%calendar==GREGORIAN) then
             call check( nf90_put_att(ncid,time_id,"calendar","gregorian"))
-        elseif (calendar==NOLEAP) then
-            call check( nf90_put_att(ncid,time_id,"long_name","Time"))
-            call check( nf90_put_att(ncid,time_id,"units","days since "//trim(str(YEAR_ZERO))//"-01-01 00:00:00"))
+        elseif (time%calendar==NOLEAP) then
             call check( nf90_put_att(ncid,time_id,"calendar","noleap"))
-        elseif (calendar==THREESIXTY) then
-            call check( nf90_put_att(ncid,time_id,"long_name","Time"))
-            call check( nf90_put_att(ncid,time_id,"units","days since "//trim(str(YEAR_ZERO))//"-01-01 00:00:00"))
+        elseif (time%calendar==THREESIXTY) then
             call check( nf90_put_att(ncid,time_id,"calendar","360-day"))
         endif
 
@@ -446,10 +443,10 @@ contains
 
             if (options%physics%windtype==kWIND_LINEAR) then
                 call check( nf90_def_var(ncid, "nsq", NF90_REAL, dimids, temp_id), trim(err)//"nsq" )
-                call check( nf90_put_att(ncid,temp_id,"standard_name","square_of_brunt_vaisala_frequency_in_air"))
-                call check( nf90_put_att(ncid,temp_id,"long_name","Brunt Vaisala Frequency (squared)"))
+                call check( nf90_put_att(ncid,temp_id,"standard_name","ln_of_square_of_brunt_vaisala_frequency_in_air"))
+                call check( nf90_put_att(ncid,temp_id,"long_name","Natural logarithm of the squared Brunt Vaisala Frequency"))
                 call check( nf90_put_att(ncid,temp_id,"description", "Frequency is the number of oscillations of a wave per unit time."))
-                call check( nf90_put_att(ncid,temp_id,"units","s-2"))
+                call check( nf90_put_att(ncid,temp_id,"units","ln(s-2)"))
                 call check( nf90_put_att(ncid,temp_id,"coordinates","lon lat"))
                 varid(33)=temp_id
             endif
@@ -921,13 +918,14 @@ contains
     !! @param inputfilename OPTIONAL: specify the output filename (otherwise options%output_file + date_time)
     !!
     !!------------------------------------------------------------
-    subroutine write_domain(domain,options,timestep,inputfilename)
+    subroutine write_domain(domain, options, output_time, inputfilename)
         implicit none
         ! This is the name of the data file and variable we will read.
-        type(domain_type),intent(inout)::domain
-        type(options_type),intent(in)::options
-        integer,intent(in)::timestep
-        character(len=*),intent(in),optional :: inputfilename
+        type(domain_type), intent(inout):: domain
+        type(options_type),intent(in)   :: options
+        type(Time_type),   intent(in)   :: output_time
+        character(len=*),  intent(in),  optional :: inputfilename
+
         integer :: year, month, day, hour, minute, second
         integer :: output_shape(3), zlast(3)
         logical :: output_rain_rate
@@ -941,24 +939,24 @@ contains
         zlast = [1,3,2]
 
         current_step=1
-        if (present(inputfilename)) then
-            filename=inputfilename
-        else
-            if (timestep.eq.(-1)) then
-                write(filename,"(A,A)") trim(options%output_file),"restart.nc"
-            else
-                call calendar_date(domain%model_time/86400.0+50000,year, month, day, hour, minute, second)
-                if (output_frequency==DAILY_FREQUENCY) then
-                    write(filename,'(A,i4,"_",i2.2"_"i2.2"_"i2.2"-"i2.2".nc")') trim(options%output_file),year,month,day,0,0
-                    current_step=nint(((hour*60.0+minute)*60.0+second)/options%out_dt) + 1
-                elseif (output_frequency==MONTHLY_FREQUENCY) then
-                    write(filename,'(A,i4,"_",i2.2"_"i2.2"_"i2.2"-"i2.2".nc")') trim(options%output_file),year,month,1,0,0
-                    current_step=nint((((day*24 + hour)*60.0 + minute)*60.0 + second)/options%out_dt) + 1
-                else
-                    write(filename,'(A,i4,"_",i2.2"_"i2.2"_"i2.2"-"i2.2".nc")') trim(options%output_file),year,month,day,hour,minute
-                    current_step=1
-                endif
+        call output_time%date(year, month, day, hour, minute, second)
+        write(*,'(A,i4,"/",i2.2"/"i2.2" "i2.2":"i2.2)') "Output Date:",year,month,day,hour,minute
 
+        if (present(inputfilename)) then
+            filename = inputfilename
+        else
+
+            if (output_frequency == DAILY_FREQUENCY) then
+                write(filename,'(A,i4,"_",i2.2"_"i2.2"_"i2.2"-"i2.2".nc")') trim(options%output_file),year,month,day,0,0
+                current_step = nint(((hour*60.0+minute)*60.0+second)/options%out_dt) + 1
+
+            elseif (output_frequency == MONTHLY_FREQUENCY) then
+                write(filename,'(A,i4,"_",i2.2"_"i2.2"_"i2.2"-"i2.2".nc")') trim(options%output_file),year,month,1,0,0
+                current_step = nint((((day*24 + hour)*60.0 + minute)*60.0 + second)/options%out_dt) + 1
+
+            else
+                write(filename,'(A,i4,"_",i2.2"_"i2.2"_"i2.2"-"i2.2".nc")') trim(options%output_file),year,month,day,hour,minute
+                current_step=1
             endif
         endif
         ! this is the time position to write to in the file
@@ -966,9 +964,6 @@ contains
         start_two_D(3)   = current_step
         start_scalar(1)  = current_step
 
-
-        call calendar_date(domain%model_time/86400.0+50000,year, month, day, hour, minute, second)
-        write(*,'(A,i4,"/",i2.2"/"i2.2" "i2.2":"i2.2)') "Output Date:",year,month,day,hour,minute
         if (file_exists(filename)) then
             ! Open the file. NF90_WRITE tells netCDF we want write/append access to
             ! the file.
@@ -976,7 +971,7 @@ contains
             call setup_varids(ncid,options)
         else
             ! otherwise, create a new file
-            call create_file(filename,options)
+            call create_file(filename, options, domain%model_time)
             ! and write constant (in time) variables
             call check( nf90_put_var(ncid, lat_id,    domain%lat), trim(filename)//":Latitude" )
             call check( nf90_put_var(ncid, lon_id,    domain%lon), trim(filename)//":Longitude" )
@@ -990,7 +985,7 @@ contains
         endif
 
         ! write the actual data
-        call check( nf90_put_var(ncid, time_id,   domain%model_time/86400.0+50000, start_scalar ), trim(filename)//":Time" )
+        call check( nf90_put_var(ncid, time_id,   output_time%mjd(), start_scalar ), trim(filename)//":Time" )
 
         if (.not.surface_io_only) then
             call check( nf90_put_var(ncid, varid(1),  reshape(domain%qv,    output_shape, order=zlast), start_three_D),    trim(filename)//":qv" )

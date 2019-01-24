@@ -17,21 +17,18 @@
 !!
 !!-----------------------------------------
 program icar
-    use time,               only : calendar_date, date_to_mjd         ! Convert between date and modified Julian Day
+    use time_object,        only : Time_type
     use init,               only : init_model, init_physics           ! Initialize model (not initial conditions)
-    use boundary_conditions,only : bc_init,bc_update,bc_find_step     ! Boundary and initial conditions
+    use boundary_conditions,only : bc_init,bc_update                  ! Boundary and initial conditions
     use data_structures          ! *_type datatypes                   ! Data-types and physical "constants"
     use output,             only : write_domain, output_init          ! Used to output initial model state
     use time_step,          only : step                               ! Advance the model forward in time
-    use string,             only : str                                ! Convert real,integer,double to string
 
     implicit none
     type(options_type) :: options
     type(domain_type)  :: domain
     type(bc_type)      :: boundary
-    integer            :: i,nx,ny,start_point
-    integer            :: year, month, day, hour, minute, second
-    double precision   :: model_time,next_output
+    type(Time_type)    :: next_output
 
 !-----------------------------------------
 !  Model Initialization
@@ -39,26 +36,14 @@ program icar
 !   initialize model including options, terrain, lat, lon data.
     call init_model(options,domain,boundary)
 
-    ! set up the timeing for the model
-    if (options%restart) then
-        start_point=options%restart_step-1
-    else
-        start_point=bc_find_step(options)
-    endif
-
-    model_time=start_point * DBLE(options%in_dt) + options%time_zero
-    domain%model_time=model_time
-    next_output=model_time+options%out_dt
-
-    call calendar_date(model_time/86400.0D+0 + 50000, year, month, day, hour, minute, second)
-    domain%current_month=month
-
     ! read initial conditions from the boundary file
     write(*,*) "Initializing Boundary conditions"
     call bc_init(domain, boundary, options)
 
+    next_output= domain%model_time + options%output_dt
+
     write(*,*) "Initializing Physics packages"
-    call init_physics(options,domain)
+    call init_physics(options, domain)
 
     ! initialize the output module
     ! this can't be called until after bc_init, so that rain accumulations can be initialized in a restart
@@ -66,7 +51,7 @@ program icar
 
     ! write the initial state of the model (primarily useful for debugging)
     if (.not.options%restart) then
-        call write_domain(domain,options,nint((model_time-options%time_zero)/options%out_dt))
+        call write_domain(domain, options, domain%model_time)
     endif
 !
 !-----------------------------------------
@@ -74,20 +59,18 @@ program icar
 !  Time Loop
 !
 !   note that a timestep here is a forcing input timestep O(1-3hr), not a physics timestep O(20-100s)
-    do i=start_point,options%ntimesteps
+    do while (domain%model_time < options%end_time)
         write(*,*) ""
         write(*,*) " ----------------------------------------------------------------------"
-        write(*,'("Timestep: ",A," of ",A)') trim(str(i-options%time_step_zero)), trim(str(options%ntimesteps-options%time_step_zero))
-        write(*,*) "  Model time = ", trim(str((model_time-options%time_zero)/3600.0,fmt="(F10.2)")) ,"hrs"
-        call calendar_date(model_time/86400.0D+0 + 50000, year, month, day, hour, minute, second)
-        domain%current_month=month
-        write(*,'(A,i4,"/",i2.2"/"i2.2" "i2.2":"i2.2":"i2.2)') "   Date = ",year,month,day,hour,minute,second
+        write(*,*) "  Model time = ", trim(domain%model_time%as_string())
+        write(*,*) "   End  time = ", trim(options%end_time%as_string())
 
         ! update boundary conditions (dXdt variables) so we can integrate to the next step
-        call bc_update(domain,boundary,options)
+        call bc_update(domain, boundary, options)
+        write(*,*) "  Next input = ", trim(boundary%next_domain%model_time%as_string())
 
         ! this is the meat of the model physics, run all the physics for the current time step looping over internal timesteps
-        call step(domain,options,boundary,model_time,next_output)
+        call step(domain, options, boundary, next_output)
 
     end do
 !

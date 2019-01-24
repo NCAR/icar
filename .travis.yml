@@ -1,24 +1,25 @@
 sudo: false
 language: fortran
-compiler:
-  - gfortran
-os:
-  - linux
+
+compiler: gfortran-6
+os: linux
+env: TESTID='icar_linux'
 addons:
   apt:
-    source:
+    sources:
       - ubuntu-toolchain-r-test
     packages:
-      - gfortran
-      - libnetcdf-dev
       - libfftw3-dev
+      - gfortran-6
+
+before_install:
+  - source ci/icar_install_utils
+  - icar_before_install
+install:
+   - icar_install
 script:
-  - export FC=gfortran
-  - export FFTW=/usr
-  - export NETCDF=/usr
-  - make test -j4 # test parallel compile
-  - make -j4
-  - make clean # test serial compile
-  - make
-  - make clean # test parallel debug compile
-  - make MODE=debugslow -j4
+  - icar_script
+after_success:
+  - icar_after_success
+after_failure:
+  - icar_after_failure

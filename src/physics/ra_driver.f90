@@ -45,18 +45,17 @@ contains
 
     end subroutine radiation_init
 
-    subroutine rad(domain,options,date,dt)
+    subroutine rad(domain,options,dt)
         implicit none
 
         type(domain_type), intent(inout) :: domain
         type(options_type),intent(in)    :: options
-        double precision, intent(in) :: date
         real, intent(in) :: dt
 
         if (options%physics%radiation==kRA_SIMPLE) then
-            call ra_simple(domain%th,domain%pii,domain%qv,domain%cloud+domain%ice,domain%qsnow,&
-                        domain%qrain,domain%p,domain%swdown,domain%lwdown,domain%cloudfrac,&
-                        domain%lat,domain%lon,date,options,dt)
+            call ra_simple(domain%th,   domain%pii, domain%qv,      domain%cloud + domain%ice,  domain%qsnow,       &
+                        domain%qrain,   domain%p,   domain%swdown,  domain%lwdown,              domain%cloudfrac,   &
+                        domain%lat,     domain%lon, domain%model_time,  options, dt)
         endif
 
     end subroutine rad

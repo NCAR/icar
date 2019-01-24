@@ -34,6 +34,10 @@ contains
     !>------------------------------------------------------------
     !! Calculate the weights to use for bilinear interpolation between surrounding points x, y
     !!
+    !! Note that this routine should only be used when your input forcing grid is regular in lat / lon
+    !! If it is irregular (e.g. a lambert conformal conic projection) then use the triangulation routine
+    !! This routine will end up with points located incorrectly and can create artifacts in edge cases.
+    !!
     !! Takes a point (yi,xi) and a set of 4 surrounding points (y[4],x[4]) as input
     !!
     !! @param   real    yi  input y location to interpolate to.
@@ -140,7 +144,7 @@ contains
 
         w3 = 1 - w1 - w2
 
-        if (minval([w1,w2,w3]) < -1e-4) then
+        if (minval([w1,w2,w3]) < -1e-3) then
             write(*,*) "ERROR: Point not located in bounding triangle"
             write(*,*) xi, yi
             write(*,*) "Triangle vertices"
@@ -152,7 +156,7 @@ contains
         endif
         w1=max(0.,w1); w2=max(0.,w2); w3=max(0.,w3);
 
-        if (abs((w1+w2+w3)-1)>1e-4) then
+        if (abs((w1+w2+w3)-1)>1e-3) then
             write(*,*) "Error, w1+w2+w3 != 1"
             write(*,*) w1,w2,w3
             write(*,*) "Point"
@@ -187,9 +191,9 @@ contains
     !!------------------------------------------------------------
     function idw_weights(yi,y,xi,x)
         implicit none
-        real,intent(in)::yi,y(:),xi,x(:)
-        real, allocatable, dimension(:) :: idw_weights
+        real, intent(in)::yi, y(:), xi, x(:)
 
+        real, allocatable, dimension(:) :: idw_weights
         real, allocatable, dimension(:) :: distances
         integer :: n
         real    :: total_inverse_distance
@@ -221,22 +225,23 @@ contains
     !!------------------------------------------------------------
     integer function minxw(xw,longrid,xpos,ypos,lon)
         implicit none
-        integer, intent(in)::xw,xpos,ypos
-        real,intent(in)::longrid(:,:),lon
-        real::curdist,dx
-        integer::nx
+        integer, intent(in) :: xw, xpos, ypos
+        real,    intent(in) :: longrid(:,:), lon
+        real    :: curdist, dx
+        integer :: ime
 
-        nx=size(longrid,1)
-        curdist=abs(lon-longrid(xpos,ypos))
-        if (xpos<nx) then
-            dx=abs(longrid(xpos,ypos)-longrid(xpos+1,ypos))
+        ime = ubound(longrid,1)
+
+        curdist = abs(lon - longrid(xpos,ypos))
+        if (xpos < ime) then
+            dx = abs(longrid(xpos,ypos) - longrid(xpos+1,ypos))
         else
-            dx=abs(longrid(xpos,ypos)-longrid(xpos-1,ypos))
+            dx = abs(longrid(xpos,ypos) - longrid(xpos-1,ypos))
         endif
-        minxw=max(xw,ceiling(curdist/dx))
-        if (minxw>xw) then
-            if (minxw>4) then
-                minxw=ceiling(minxw*0.8)
+        minxw = max(xw, ceiling(curdist/dx))
+        if (minxw > xw) then
+            if (minxw > 4) then
+                minxw = ceiling(minxw*0.8)
             endif
         endif
     end function minxw
@@ -247,22 +252,23 @@ contains
     !!
     !!------------------------------------------------------------
     integer function minyw(yw,latgrid,xpos,ypos,lat)
-        integer, intent(in)::yw,xpos,ypos
-        real,intent(in)::latgrid(:,:),lat
-        real::curdist,dx
-        integer::ny
+        integer, intent(in) :: yw, xpos, ypos
+        real,    intent(in) :: latgrid(:,:), lat
+        real    :: curdist, dx
+        integer :: jme
 
-        ny=size(latgrid,2)
-        curdist=abs(lat-latgrid(xpos,ypos))
-        if (ypos<ny) then
-            dx=abs(latgrid(xpos,ypos)-latgrid(xpos,ypos+1))
+        jme = ubound(latgrid, 2)
+
+        curdist = abs(lat - latgrid(xpos,ypos))
+        if (ypos < jme) then
+            dx = abs(latgrid(xpos, ypos) - latgrid(xpos, ypos+1))
         else
-            dx=abs(latgrid(xpos,ypos)-latgrid(xpos,ypos-1))
+            dx = abs(latgrid(xpos,ypos)-latgrid(xpos,ypos-1))
         endif
-        minyw=max(yw,ceiling(curdist/dx))
-        if (minyw>yw) then
-            if (minyw>4) then
-                minyw=ceiling(minyw*0.8)
+        minyw = max(yw, ceiling(curdist/dx))
+        if (minyw > yw) then
+            if (minyw > 4) then
+                minyw = ceiling(minyw*0.8)
             endif
         endif
     end function minyw
@@ -300,12 +306,19 @@ contains
         ! locals
         real::mindist, curdist,dx,dy,xsign,ysign,x,y    ! temporary variables to use during the search
         integer::nx,ny,xc,yc,xw,yw,iterations,xstep,ystep   ! more temporary variables
+        integer :: ims,ime,jms,jme
 
         nx = size(lo%lat, 1)
         ny = size(lo%lat, 2)
+
+        ims = lbound(lo%lat,1)
+        ime = ubound(lo%lat,1)
+        jms = lbound(lo%lat,2)
+        jme = ubound(lo%lat,2)
+
         ! calcualte dx/dy at the middle of the grid
-        dx = lo%lon(2,1) - lo%lon(1,1)
-        dy = lo%lat(1,2) - lo%lat(1,1)
+        dx = lo%lon(ims+1,jms) - lo%lon(ims,jms)
+        dy = lo%lat(ims,jms+1) - lo%lat(ims,jms)
 
         ! Handle weird edge case for WRF ideal simulations
         if (dx == 0) then
@@ -334,14 +347,14 @@ contains
         xc = lastpos%x
         yc = lastpos%y
 
-        x = lo%lon(xc,yc)
-        y = lo%lat(xc,yc)
+        x = lo%lon(xc, yc)
+        y = lo%lat(xc, yc)
 
         ! steps to take = the difference the between the current point and the input point / dx
         xstep = (lon-x)/dx
         ystep = (lat-y)/dy
 
-        ! CASE 1 assume a quasi regular dx/dy and caluate new location
+        ! CASE 1 assume a quasi regular dx/dy and calculate new location
         !  while we need to step by more than one grid cell, iterate
         !  if the grid is highly regular, we will only iterate 1-2x, highly irregular might require more iterations
         !  in the diabolical case, this could fail?
@@ -351,8 +364,8 @@ contains
             iterations = iterations+1
             ! update the current x/y locations
             ! force it to be <nx-1 so we can calculate dx from (xc+1)-xc
-            xc = max(1,min(nx-1,xc+xstep))
-            yc = max(1,min(ny-1,yc+ystep))
+            xc = max(ims,min(ime-1,xc+xstep))
+            yc = max(jms,min(jme-1,yc+ystep))
             x = lo%lon(xc,yc)
             y = lo%lat(xc,yc)
             ! calculate a new dx/dy and x/y step
@@ -371,8 +384,8 @@ contains
         enddo
         ! because one or both steps could actually be 1...
         ! this is deliberate so we can find the edge of the array if necessary
-        xc = max(1, min(nx, xc+xstep ) )
-        yc = max(1, min(ny, yc+ystep ) )
+        xc = max(ims, min(ime, xc+xstep ) )
+        yc = max(jms, min(jme, yc+ystep ) )
 
         ! CASE 2 use a log(n search)
         ! in case we hit some pathologically varying dx case
@@ -386,16 +399,16 @@ contains
             xw = xc
             yw = yc
             ! use xsign and ysign in case lat/lon don't increase in a positive index direction
-            ysign = sign(1.0, lo%lat(1,2) - lo%lat(1,1) )
-            xsign = sign(1.0, lo%lon(2,1) - lo%lon(1,1) )
+            xsign = sign(1.0, lo%lon(ims+1,jms) - lo%lon(ims,jms))
+            ysign = sign(1.0, lo%lat(ims,jms+1) - lo%lat(ims,jms))
 
             ! use a O(log(n)) search instead of O(nxm)
             ! start at the halfway point and find the best direction to take in both directions
             iterations = 0
             do while ( (( xw > 2 ).or.( yw > 2 )).and.( iterations < 20) )
                 iterations = iterations+1
-                xc = min( max(xc, 1), nx)
-                yc = min( max(yc, 1), ny)
+                xc = min( max(xc, ims), ime)
+                yc = min( max(yc, jms), jme)
                 ! figure out which direction to step, then step half of the last step distance
                 if (lo%lat(xc,yc) > lat) then
                     if (yw == 2) then
@@ -405,7 +418,7 @@ contains
                     endif
                     yc = yc - ysign * yw
                 endif
-                yc = min( max(yc, 1), ny)
+                yc = min( max(yc, jms), jme)
                 if (lo%lat(xc,yc) < lat) then
                     if (yw == 2) then
                         yw = 1
@@ -414,7 +427,7 @@ contains
                     endif
                     yc = yc + ysign * yw
                 endif
-                yc = min( max(yc, 1), ny)
+                yc = min( max(yc, jms), jme)
                 ! in case lat is exactly equal to lat(xc,yc)
                 if (lo%lat(xc,yc) == lat) then
                     yw = 0
@@ -427,7 +440,7 @@ contains
                     endif
                     xc = xc - xsign * xw
                 endif
-                xc = min( max(xc, 1), nx)
+                xc = min( max(xc, ims), ime)
                 if (lo%lon(xc,yc) < lon) then
                     if (xw == 2) then
                         xw = 1
@@ -436,7 +449,7 @@ contains
                     endif
                     xc = xc + xsign * xw
                 endif
-                xc = min( max(xc, 1), nx)
+                xc = min( max(xc, ims), ime)
                 ! in case lon is exactly equal to lon(xc,yc)
                 if (lo%lon(xc,yc) == lon) then
                     xw = 0
@@ -449,8 +462,8 @@ contains
         ! once we have a "good" location we need to find the actual minimum (we could be above or below it by 1 or 2)
         if (iterations < 20) then
             mindist = 9999.9
-            do xw = max(1, xc-15), min(nx, xc+15)
-                do yw = max(1, yc-15), min(ny, yc+15)
+            do xw = max(ims, xc-15), min(ime, xc+15)
+                do yw = max(jms, yc-15), min(jme, yc+15)
                     curdist = sqrt( (lo%lat(xw,yw) - lat)**2 + (lo%lon(xw,yw) - lon)**2 )
                     if (curdist < mindist) then
                         mindist = curdist
@@ -467,13 +480,13 @@ contains
 !           write(*,*) lat,lon,lo%lat(xc,yc),lo%lon(xc,yc)
 !           write(*,*) xc,yc,nx,ny
             mindist=9999.9
-            do xw=1,nx
-                do yw=1,ny
-                    curdist=sqrt((lo%lat(xw,yw)-lat)**2 + (lo%lon(xw,yw)-lon)**2)
-                    if (curdist<mindist) then
-                        mindist=curdist
-                        x=xw
-                        y=yw
+            do xw = ims, ime
+                do yw = jms, jme
+                    curdist = sqrt((lo%lat(xw,yw) - lat)**2 + (lo%lon(xw,yw) - lon)**2)
+                    if (curdist < mindist) then
+                        mindist = curdist
+                        x = xw
+                        y = yw
                     endif
                 enddo
             enddo
@@ -506,7 +519,7 @@ contains
         real :: internal_precision
         double precision :: slope, offset
 
-        internal_precision = 1e-7
+        internal_precision = 1e-4
         if (present(precision)) internal_precision = precision
 
         online=.False.
@@ -532,6 +545,19 @@ contains
 
     end function
 
+    !>------------------------------------------------------------
+    !! Determine if a point intersected a vertex
+    !!
+    !! y is the real point location
+    !! y0 defines one end of a line
+    !! y1 defines the other end of the line
+    !!
+    !! precision optionally defines the tolerance permitted to consider around the line
+    !!
+    !! sets top_vertex, bottom_vertex to True if the point intersected the top or bottom ends of the line (which might be the same)
+    !! Flips the inside/outside boolean if it intersected one or both verticies
+    !!
+    !!------------------------------------------------------------
     subroutine check_vertex_hits(y, y0, y1, inside, top_vertex, bottom_vertex, precision)
         implicit none
         real,    intent(in)    :: y, y0, y1
@@ -608,7 +634,7 @@ contains
         real :: x0,y0,x1,y1
         double precision :: slope, x_line
 
-        internal_precision = 1e-5
+        internal_precision = 1e-4
         if (present(precision)) internal_precision = precision
         n = size(poly,2)
 
@@ -760,9 +786,11 @@ contains
                 if (.not.test_triangle(lat, lon, lo, find_surrounding, nx, ny)) then
                     find_surrounding%x = [pos%x, pos%x,   pos%x+dx, pos%x+dx ]
                     find_surrounding%y = [pos%y, pos%y+dy, pos%y,   pos%y+dy]
+
                     if (.not.test_triangle(lat, lon, lo, find_surrounding, nx, ny)) then
                         find_surrounding%x = [pos%x+dx, pos%x,   pos%x+dx, pos%x]
                         find_surrounding%y = [pos%y+dy, pos%y+dy, pos%y,   pos%y]
+
                         if (.not.test_triangle(lat, lon, lo, find_surrounding, nx, ny)) then
                             find_surrounding%x = [pos%x+dx, pos%x+dx,   pos%x, pos%x]
                             find_surrounding%y = [pos%y+dy, pos%y,   pos%y+dy, pos%y]
@@ -781,7 +809,9 @@ contains
                         endif
                     endif
                 endif
+
                 return
+
             endif
         enddo
 
@@ -805,6 +835,7 @@ contains
         type(fourpos) :: xy
         type(position) :: curpos, lastpos
         integer :: nx, ny, i, j, k, lo_nx, lo_ny
+        integer :: ims,ime,jms,jme
         real, dimension(4) :: lat, lon
 
         nx    = size(hi%lat,1)
@@ -812,26 +843,33 @@ contains
         lo_nx = size(lo%lat,1)
         lo_ny = size(lo%lat,2)
 
-        allocate(lo%geolut%x(4,nx,ny))
-        allocate(lo%geolut%y(4,nx,ny))
-        allocate(lo%geolut%w(4,nx,ny))
+        ims = lbound(hi%lat,1)
+        ime = ubound(hi%lat,1)
+        jms = lbound(hi%lat,2)
+        jme = ubound(hi%lat,2)
+
+        allocate(lo%geolut%x(4,ims:ime, jms:jme))
+        allocate(lo%geolut%y(4,ims:ime, jms:jme))
+        allocate(lo%geolut%w(4,ims:ime, jms:jme))
 
         curpos%x = 1
         curpos%y = 1
 
-        do j=1,ny
+        do j=jms,jme
             curpos%x = 1
+
             ! use a brute force approach to find a starting
-            lastpos  = find_location(lo, hi%lat(1,j), hi%lon(1,j), curpos)
-            if (lastpos%x<1) then
+            lastpos  = find_location(lo, hi%lat(ims,j), hi%lon(ims,j), curpos)
+            if (lastpos%x < 1) then
                 ! something broke, try assuming that the grids are the same
                 ! should put in some check here to make sure this doesn't happen in a real case
-                lastpos%x = 1
-                lastpos%y = j
-                write(*,*) "Error in Geographic interpolation, check input lat / lon grids", 1,j
+                ! lastpos%x = 1
+                ! lastpos%y = 1
+                write(*,*) "Error in Geographic interpolation, check input lat / lon grids", ims,j
+                stop
             endif
 
-            do i=1, nx
+            do i=ims, ime
                 curpos = find_location(lo, hi%lat(i,j), hi%lon(i,j), lastpos)
 
                 if (curpos%x<1) then
@@ -874,6 +912,7 @@ contains
         real,intent(in)::fieldin(:,:,:)
         type(geo_look_up_table),intent(in)::geolut
         integer::nx,nz,ny
+        integer :: ims,ime,jms,jme,kms,kme
         integer:: i,j,k,l,localx,localy
         real::localw
         real :: local_center
@@ -881,12 +920,20 @@ contains
         nx=size(fieldout,1)
         nz=size(fieldout,2)
         ny=size(fieldout,3)
+
+        ims = lbound(fieldout,1)
+        ime = ubound(fieldout,1)
+        jms = lbound(fieldout,2)
+        jme = ubound(fieldout,2)
+        kms = lbound(fieldout,3)
+        kme = ubound(fieldout,3)
+
         ! use the geographic lookup table generated earlier to
         ! compute a bilinear interpolation from lo to hi
         ! first loop over all x elements on the y ends
-        do k=1,ny,ny-1
-            do j=1,nz
-                do i=1,nx
+        do k=kms,kme,ny-1
+            do j=jms,jme
+                do i=ims,ime
                     fieldout(i,j,k)=0
                     local_center = 0
                     do l=1,4
@@ -911,9 +958,9 @@ contains
             enddo
         enddo
         ! then loop over all y elements on the x ends
-        do k=1,ny
-            do j=1,nz
-                do i=1,nx,nx-1
+        do k=kms,kme
+            do j=jms,jme
+                do i=ims,ime,nx-1
                     fieldout(i,j,k)=0
                     local_center = 0
                     do l=1,4
@@ -946,45 +993,63 @@ contains
     !!  loops over y,z,x but geolut is only defined over x,y (for now)
     !!
     !!------------------------------------------------------------
-    subroutine geo_interp(fieldout,fieldin,geolut,boundary_only)
+    subroutine geo_interp(fieldout, fieldin, geolut, boundary_only)
         implicit none
-        real,intent(inout)::fieldout(:,:,:)
-        real,intent(in)::fieldin(:,:,:)
-        type(geo_look_up_table),intent(in)::geolut
-        logical,intent(in)::boundary_only
-        integer::nx,nz,ny
-        integer:: i,j,k,l,localx,localy
-        real::localw
+        real,                   intent(inout) :: fieldout(:,:,:)
+        real,                   intent(in)    :: fieldin(:,:,:)
+        type(geo_look_up_table),intent(in)    :: geolut
+        logical,                intent(in),   optional :: boundary_only
+
+        integer :: ims,ime, jms,jme, kms,kme
+        integer:: i,j,k,l, localx,localy, nz_input
+        logical :: boundaries
+        real :: localw
         real :: local_center
 
-        nx=size(fieldout,1)
-        nz=size(fieldout,2)
-        ny=size(fieldout,3)
+        ! This can probably all be done on the 1-n assumption, but this keeps the code more flexible in the future
+        ims = lbound(fieldout,1)
+        ime = ubound(fieldout,1)
+        jms = lbound(fieldout,2)
+        jme = ubound(fieldout,2)
+        kms = lbound(fieldout,3)
+        kme = ubound(fieldout,3)
+
+        nz_input = size(fieldin,2)
+
+        boundaries = .False.
+        if (present(boundary_only)) boundaries = boundary_only
 
         ! if we are only processing the boundary, then make x and y increments be the size of the array
         ! so we only hit the edges of the array
-        if (boundary_only) then
+        if (boundaries) then
             call boundary_interpolate(fieldout, fieldin, geolut)
         else
         ! use the geographic lookup table generated earlier to
         ! compute a bilinear interpolation from lo to hi
         ! if we are doing the interior too, just iterate over all x and y
-            do k=1,ny
-                do j=1,nz
-                    do i=1,nx
+            do k=kms,kme
+                do j=jms,jme
+                    do i=ims,ime
                         fieldout(i,j,k)=0
                         local_center = 0
+                        ! This loop is used if doing a triangular bi-linear interpolation on the grid
+                        ! Need to see all 4 points to compute the "local_center" value for the triangulation
                         do l=1,4
                             localx=geolut%x(l,i,k)
                             localy=geolut%y(l,i,k)
-                            local_center = local_center + fieldin(localx,j,localy)
+                            local_center = local_center + fieldin(localx, min(j,nz_input), localy)
+                            ! This is the actual interpolation adding the value from the two raw grid points
                             if (l < 3) then
+
                                 localw=geolut%w(l,i,k)
-                                fieldout(i,j,k) = fieldout(i,j,k) + fieldin(localx,j,localy) * localw
+                                fieldout(i,j,k) = fieldout(i,j,k) + fieldin(localx, min(j,nz_input), localy) * localw
                             endif
                         enddo
+                        ! This is the actual interpolation adding the value from the center average of all four grid points
                         localw = geolut%w(3,i,k)
                         fieldout(i,j,k) = fieldout(i,j,k) + local_center/4 * localw
+
+                        ! This loop is used if doing a straight bi-linear interpolation on the grid
                         ! do l=1,4
                         !     localx=geolut%x(l,i,k)
                         !     localy=geolut%y(l,i,k)
@@ -1003,32 +1068,46 @@ contains
     !!------------------------------------------------------------
     subroutine geo_interp2d(fieldout, fieldin, geolut)
         implicit none
-        real, dimension(:,:),intent(inout) :: fieldout
-        real, dimension(:,:),intent(in) :: fieldin
-        type(geo_look_up_table),intent(in)::geolut
-        integer::i,k,l,ny,nx,localx,localy
-        real::localw
+        real, dimension(:,:),   intent(inout) :: fieldout
+        real, dimension(:,:),   intent(in)    :: fieldin
+        type(geo_look_up_table),intent(in)    :: geolut
+
+        integer :: i,k,l,ny,nx,localx,localy
+        integer :: ims,ime,jms,jme
+        real :: localw
         real :: local_center
 
-        nx=size(fieldout,1)
-        ny=size(fieldout,2)
+        nx = size(fieldout,1)
+        ny = size(fieldout,2)
+
+        ims = lbound(fieldout,1)
+        ime = ubound(fieldout,1)
+        jms = lbound(fieldout,2)
+        jme = ubound(fieldout,2)
+
         ! use the geographic lookup table generated earlier to
         ! compute a bilinear interpolation from lo to hi
-        do k=1,ny
-            do i=1,nx
+        do k = jms, jme
+            do i = ims, ime
                 fieldout(i,k)=0
                 local_center = 0
-                do l=1,4
-                    localx=geolut%x(l,i,k)
-                    localy=geolut%y(l,i,k)
+                ! This loop is used if doing a triangular bi-linear interpolation on the grid
+                ! Need to see all 4 points to compute the "local_center" value for the triangulation
+                do l = 1, 4
+                    localx = geolut%x(l,i,k)
+                    localy = geolut%y(l,i,k)
                     local_center = local_center + fieldin(localx,localy)
+                    ! This is the actual interpolation adding the value from the two raw grid points
                     if (l < 3) then
-                        localw=geolut%w(l,i,k)
+                        localw = geolut%w(l,i,k)
                         fieldout(i,k) = fieldout(i,k) + fieldin(localx,localy) * localw
                     endif
                 enddo
+                ! This is the actual interpolation adding the value from the center average of all four grid points
                 localw = geolut%w(3,i,k)
                 fieldout(i,k) = fieldout(i,k) + local_center/4 * localw
+
+                ! This loop is used if doing a straight bi-linear interpolation on the grid
                 ! do l=1,4
                 !     localx=geolut%x(l,i,k)
                 !     localy=geolut%y(l,i,k)
@@ -1038,34 +1117,50 @@ contains
             enddo
         enddo
 
-    end subroutine  geo_interp2d
+    end subroutine
 
 
+    !> ----------------------------------------------------------------------------
+    !!  Conver longitudes into a common format for geographic interpolation
+    !!
+    !!  First convert longitudes that may be -180-180 into 0-360 range first.
+    !!  If data straddle the 0 degree longitude, convert back to -180-180 so interpolation will be smooth
+    !!
+    !!  @param[inout]   long_data  2D array of longitudes (either -180 - 180 or 0 - 360)
+    !!
+    !! ----------------------------------------------------------------------------
     subroutine standardize_coordinates(domain)
         implicit none
         class(interpolable_type), intent(inout) :: domain
 
         real, dimension(:,:), allocatable :: temporary_geo_data
         integer :: nx, ny, i
+        integer :: ims,ime,jms,jme
 
         ! if the lat, lon data were given as 1D variables, we need to make them 2D for interpolability
         if (size(domain%lat,2)==1) then
             nx = size(domain%lon,1)
             ny = size(domain%lat,1)
 
-            allocate(temporary_geo_data(nx,ny))
-            do i = 1, ny
+            ims = lbound(domain%lon,1)
+            ime = ubound(domain%lon,1)
+            jms = lbound(domain%lat,1)
+            jme = ubound(domain%lat,1)
+
+            allocate(temporary_geo_data(ims:ime, jms:jme))
+            do i = jms,jme
                 temporary_geo_data(:,i) = domain%lon(:,1)
             end do
+
             deallocate(domain%lon)
-            allocate(domain%lon(nx,ny))
+            allocate(domain%lon(ims:ime, jms:jme))
             domain%lon = temporary_geo_data
 
-            do i = 1, nx
+            do i = ims, ime
                 temporary_geo_data(i,:) = domain%lat(:,1)
             end do
             deallocate(domain%lat)
-            allocate(domain%lat(nx,ny))
+            allocate(domain%lat(ims:ime, jms:jme))
             domain%lat = temporary_geo_data
 
         endif
