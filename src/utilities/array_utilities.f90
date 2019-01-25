@@ -156,14 +156,14 @@ contains
 
         !parallelize over a slower dimension (not the slowest because it is MUCH easier this way)
         ! as long as the inner loops (the array operations) are over the fastest dimension we are mostly OK
-        !$omp parallel firstprivate(windowsize,nx,ny,nz,ydim), &
-        !$omp private(i,j,k,startx,endx,starty,endy, rowsums,rowmeans,nrows,ncols,cursum), &
-        !$omp shared(wind,inputwind)
+        ! $omp parallel firstprivate(windowsize,nx,ny,nz,ydim), &
+        ! $omp private(i,j,k,startx,endx,starty,endy, rowsums,rowmeans,nrows,ncols,cursum), &
+        ! $omp shared(wind,inputwind)
         allocate(rowsums(nx)) !this is only used when ydim=3, so nz is really ny
         allocate(rowmeans(nx)) !this is only used when ydim=3, so nz is really ny
         nrows=windowsize*2+1
         ncols=windowsize*2+1
-        !$omp do schedule(static)
+        ! $omp do schedule(static)
         do j=1,ny
 
             ! so we pre-compute the sum over rows for each column in the current window
@@ -236,9 +236,9 @@ contains
                 enddo
             enddo
         enddo
-        !$omp end do
+        ! $omp end do
         deallocate(rowmeans,rowsums)
-        !$omp end parallel
+        ! $omp end parallel
 
         deallocate(inputwind)
     end subroutine smooth_array_3d
