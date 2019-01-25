@@ -6,6 +6,7 @@ docs/doxygen_sqlite3.db
 *.a
 *.so
 *.mod
+*.smod
 *.lst
 *~
 *.pyc
