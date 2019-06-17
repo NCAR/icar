@@ -568,6 +568,16 @@ contains
         associate(var=>var_meta(kVARS%soil_water_content))
             var%name        = "soil_water_content"
             var%dimensions  = three_d_soil_dimensions
+            var%attributes  = [attribute_t("standard_name", "moisture_content_of_soil_layer"),      &
+                               attribute_t("units",         "kg m-2"),                              &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Total Column Soil water content
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%soil_totalmoisture))
+            var%name        = "soil_column_total_water"
+            var%dimensions  = two_d_t_dimensions
             var%attributes  = [attribute_t("standard_name", "soil_moisture_content"),               &
                                attribute_t("units",         "kg m-2"),                              &
                                attribute_t("coordinates",   "lat lon")]
@@ -580,6 +590,28 @@ contains
             var%dimensions  = three_d_soil_dimensions
             var%attributes  = [attribute_t("standard_name", "soil_temperature"),                    &
                                attribute_t("units",         "K"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Deep Soil Temperature (time constant)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%soil_deep_temperature))
+            var%name        = "soil_deep_temperature"
+            var%dimensions  = two_d_t_dimensions
+            var%attributes  = [attribute_t("non_standard_name", "deep_soil_temperature"),           &
+                               attribute_t("units",         "K"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Surface roughness length z0
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%roughness_z0))
+            var%name        = "surface_roughness"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "surface_roughness_length"),            &
+                               attribute_t("long_name",     "Surface roughness length"),            &
+                               attribute_t("units",         "m"),                                   &
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------

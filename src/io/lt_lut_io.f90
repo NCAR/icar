@@ -59,7 +59,7 @@ contains
     function write_lut(filename, uLUT, vLUT, dz, options) result(error)
         implicit none
         character(len=*), intent(in) :: filename
-        real, dimension(:,:,:,:,:,:), intent(in) :: uLUT, vLUT
+        real, dimension(:,:,:,:,:,:), intent(in) :: uLUT[*], vLUT[*]
         real, dimension(:),           intent(in) :: dz
         type(lt_options_type),        intent(in) :: options
         integer :: error
@@ -134,7 +134,7 @@ contains
     function read_LUT(filename, uLUT, vLUT, dz, dims, options) result(error)
         implicit none
         character(len=*), intent(in) :: filename
-        real, allocatable, dimension(:,:,:,:,:,:), intent(inout) :: uLUT, vLUT
+        real, allocatable, dimension(:,:,:,:,:,:), intent(inout) :: uLUT[:], vLUT[:]
         real, dimension(:), intent(in) :: dz
         integer, dimension(3,2), intent(in) :: dims
         type(lt_options_type), intent(in) :: options

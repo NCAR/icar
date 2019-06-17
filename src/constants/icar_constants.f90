@@ -74,7 +74,7 @@ module icar_constants
         integer :: ground_heat_flux
         integer :: soil_totalmoisture
         integer :: soil_deep_temperature
-        integer :: roughness_0
+        integer :: roughness_z0
         integer :: snow_water_equivalent
         integer :: soil_water_content
         integer :: soil_temperature

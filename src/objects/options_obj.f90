@@ -10,6 +10,7 @@ submodule(options_interface) options_implementation
     use string,                     only : str
     use model_tracking,             only : print_model_diffs
 
+    use land_surface,               only : lsm_var_request
     use radiation,                  only : ra_var_request
     use microphysics,               only : mp_var_request
     use advection,                  only : adv_var_request
@@ -119,6 +120,7 @@ contains
         type(options_t) :: options
 
         call ra_var_request(options)
+        call lsm_var_request(options)
         call mp_var_request(options)
         call adv_var_request(options)
 

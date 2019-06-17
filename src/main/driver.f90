@@ -60,7 +60,7 @@ program icar
     !  Time Loop
     !
     !   note that a timestep here is a forcing input timestep O(1-3hr), not a physics timestep O(20-100s)
-    write(file_name, '(I4.4,"_",A,".nc")') this_image(), trim(domain%model_time%as_string())
+    write(file_name, '(I6.6,"_",A,".nc")') this_image(), trim(domain%model_time%as_string())
 
     do i=1,len_trim(file_name)
         if (file_name(i:i)==" ") file_name = file_name(:i-1)//"_"//file_name(i+1:)
@@ -130,7 +130,7 @@ program icar
         if (domain%model_time >= next_output) then
             if (this_image()==1) write(*,*) "Writing output file"
             if (i>24) then
-                write(file_name, '(A,I4.4,"_",A,".nc")')    &
+                write(file_name, '(A,I6.6,"_",A,".nc")')    &
                     trim(options%parameters%output_file),   &
                     this_image(),                           &
                     trim(domain%model_time%as_string(file_date_format))

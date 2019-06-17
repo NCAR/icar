@@ -118,8 +118,8 @@ contains
         if (0<var_list( kVARS%v_latitude) )                 call this%add_to_output( get_metadata( kVARS%v_latitude                   , domain%v_latitude%data_2d))
         if (0<var_list( kVARS%v_longitude) )                call this%add_to_output( get_metadata( kVARS%v_longitude                  , domain%v_longitude%data_2d))
         if (0<var_list( kVARS%terrain) )                    call this%add_to_output( get_metadata( kVARS%terrain                      , domain%terrain%data_2d))
-        if (0<var_list( kVARS%sensible_heat) )              call this%add_to_output( get_metadata( kVARS%sensible_heat                , domain%sensible_heat%data_3d))
-        if (0<var_list( kVARS%latent_heat) )                call this%add_to_output( get_metadata( kVARS%latent_heat                  , domain%latent_heat%data_3d))
+        if (0<var_list( kVARS%sensible_heat) )              call this%add_to_output( get_metadata( kVARS%sensible_heat                , domain%sensible_heat%data_2d))
+        if (0<var_list( kVARS%latent_heat) )                call this%add_to_output( get_metadata( kVARS%latent_heat                  , domain%latent_heat%data_2d))
         if (0<var_list( kVARS%u_10m) )                      call this%add_to_output( get_metadata( kVARS%u_10m                        , domain%u_10m%data_2d))
         if (0<var_list( kVARS%v_10m) )                      call this%add_to_output( get_metadata( kVARS%v_10m                        , domain%v_10m%data_2d))
         if (0<var_list( kVARS%temperature_2m) )             call this%add_to_output( get_metadata( kVARS%temperature_2m               , domain%temperature_2m%data_2d))
@@ -127,6 +127,9 @@ contains
         if (0<var_list( kVARS%surface_pressure) )           call this%add_to_output( get_metadata( kVARS%surface_pressure             , domain%surface_pressure%data_2d))
         if (0<var_list( kVARS%longwave_up) )                call this%add_to_output( get_metadata( kVARS%longwave_up                  , domain%longwave_up%data_2d))
         if (0<var_list( kVARS%ground_heat_flux) )           call this%add_to_output( get_metadata( kVARS%ground_heat_flux             , domain%ground_heat_flux%data_2d))
+        if (0<var_list( kVARS%soil_deep_temperature) )      call this%add_to_output( get_metadata( kVARS%soil_deep_temperature        , domain%soil_deep_temperature%data_2d))
+        if (0<var_list( kVARS%soil_totalmoisture) )         call this%add_to_output( get_metadata( kVARS%soil_totalmoisture           , domain%soil_totalmoisture%data_2d))
+        if (0<var_list( kVARS%roughness_z0) )               call this%add_to_output( get_metadata( kVARS%roughness_z0                 , domain%roughness_z0%data_2d))
 
 
     end subroutine

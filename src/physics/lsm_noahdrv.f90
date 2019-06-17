@@ -1080,7 +1080,7 @@ CONTAINS
 
 ! initialize three Noah LSM related tables
    IF ( allowed_to_read ) THEN
-     write(*,*) 'INITIALIZE THREE Noah LSM RELATED TABLES'
+     if (this_image()==1) write(*,*) 'INITIALIZE THREE Noah LSM RELATED TABLES'
      CALL  SOIL_VEG_GEN_PARM( MMINLU, MMINSL )
    ENDIF
 
@@ -1095,7 +1095,7 @@ CONTAINS
      DO i = its,itf
        IF ( ISLTYP( i,j ) .LT. 1 ) THEN
          errflag = 1
-         WRITE(*,*)"module_sf_noahlsm.F: lsminit: out of range ISLTYP ",i,j,ISLTYP( i,j )
+         if (this_image()==1) WRITE(*,*)"module_sf_noahlsm.F: lsminit: out of range ISLTYP ",i,j,ISLTYP( i,j )
 !          CALL wrf_message(err_message)
        ENDIF
        IF(.not.RDMAXALB) THEN
@@ -1164,7 +1164,7 @@ CONTAINS
 
         IF(.NOT.FNDSNOWH)THEN
 ! If no SNOWH do the following
-          write(*,*) 'SNOW HEIGHT NOT FOUND - VALUE DEFINED IN LSMINIT'
+          ! write(*,*) 'SNOW HEIGHT NOT FOUND - VALUE DEFINED IN LSMINIT'
           DO J = jts,jtf
           DO I = its,itf
             SNOWH(I,J)=SNOW(I,J)*0.005               ! SNOW in mm and SNOWH in m
@@ -1235,7 +1235,7 @@ CONTAINS
         IF(ierr .NE. OPEN_OK ) THEN
           WRITE(message,FMT='(A)') &
           'module_sf_noahlsm.F: soil_veg_gen_parm: failure opening VEGPARM.TBL'
-          write(*,*) message
+          if (this_image()==1) write(*,*) message
         END IF
 
 
@@ -1248,10 +1248,10 @@ CONTAINS
 
            IF(LUTYPE.EQ.MMINLU)THEN
               WRITE( mess , * ) 'LANDUSE TYPE = ' // TRIM ( LUTYPE ) // ' FOUND', LUCATS,' CATEGORIES'
-              write(*,*) mess
+              if (this_image()==1) write(*,*) mess
               LUMATCH=1
            ELSE
-              write(*,*) "Skipping over LUTYPE = " // TRIM ( LUTYPE )
+              if (this_image()==1) write(*,*) "Skipping over LUTYPE = " // TRIM ( LUTYPE )
               DO LC = 1, LUCATS+12
                  read(19,*)
               ENDDO
@@ -1275,7 +1275,7 @@ CONTAINS
              SIZE(ZBOTVTBL) < LUCATS .OR. &
              SIZE(EMISSMINTBL ) < LUCATS .OR. &
              SIZE(EMISSMAXTBL ) < LUCATS ) THEN
-           write(*,*) 'Table sizes too small for value of LUCATS in module_sf_noahdrv.F'
+           if (this_image()==1) write(*,*) 'Table sizes too small for value of LUCATS in module_sf_noahdrv.F'
 		   stop
         ENDIF
 
@@ -1308,7 +1308,7 @@ CONTAINS
 
         CLOSE (19)
         IF (LUMATCH == 0) then
-           write(*,*) "Land Use Dataset '"//MMINLU//"' not found in VEGPARM.TBL."
+           if (this_image()==1) write(*,*) "Land Use Dataset '"//MMINLU//"' not found in VEGPARM.TBL."
 		   stop
         ENDIF
 
@@ -1319,11 +1319,11 @@ CONTAINS
         IF(ierr .NE. OPEN_OK ) THEN
           WRITE(message,FMT='(A)') &
           'module_sf_noahlsm.F: soil_veg_gen_parm: failure opening SOILPARM.TBL'
-          write(*,*) message
+          if (this_image()==1) write(*,*) message
         END IF
 
         WRITE(mess,*) 'INPUT SOIL TEXTURE CLASSIFICATION = ', TRIM ( MMINSL )
-        write(*,*) mess
+        if (this_image()==1) write(*,*) mess
 
         LUMATCH=0
 
@@ -1334,7 +1334,7 @@ CONTAINS
         IF(SLTYPE.EQ.MMINSL)THEN
             WRITE( mess , * ) 'SOIL TEXTURE CLASSIFICATION = ', TRIM ( SLTYPE ) , ' FOUND', &
                   SLCATS,' CATEGORIES'
-            write(*,*) mess
+            if (this_image()==1) write(*,*) mess
           LUMATCH=1
         ENDIF
 ! prevent possible array overwrite, Bill Bovermann, IBM, May 6, 2008
@@ -1377,7 +1377,7 @@ CONTAINS
         IF(ierr .NE. OPEN_OK ) THEN
           WRITE(message,FMT='(A)') &
           'module_sf_noahlsm.F: soil_veg_gen_parm: failure opening GENPARM.TBL'
-          write(*,*) message
+          if (this_image()==1) write(*,*) message
         END IF
 
         READ (19,*)
