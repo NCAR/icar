@@ -70,7 +70,7 @@ ifndef F90
 endif
 
 ifndef FFTW
-	FFTW=/usr/local
+	FFTW=${HOME}/usr/local
 endif
 FFTW_PATH = ${FFTW}
 LIBFFT = -L${FFTW_PATH}/lib -lm -lfftw3
@@ -266,7 +266,7 @@ ifeq ($(COMPILER), intel)
 	ifeq ($(CAF_MODE), single)
 		CAF_FLAG=-coarray=single
 	else
-		CAF_FLAG=-coarray
+		CAF_FLAG=-coarray=distributed
 	endif
 endif
 
