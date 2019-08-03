@@ -451,7 +451,6 @@ variable_dict_test: $(BUILD)test_variable_dict.o $(BUILD)co_utilities.o	 	\
 	${F90} $^ -o $@ ${LFLAGS}
 
 
-
 caf_options_test: $(BUILD)test_caf_options.o				  	\
 				$(BUILD)options_h.o      $(BUILD)options_obj.o	\
 				$(BUILD)icar_constants.o $(BUILD)string.o     	\
@@ -464,7 +463,9 @@ caf_options_test: $(BUILD)test_caf_options.o				  	\
 				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o	\
 				$(BUILD)mp_thompson_aer.o							\
 				$(BUILD)advection_driver.o						\
-				$(BUILD)advect.o
+				$(BUILD)advect.o		 $(BUILD)lsm_driver.o	\
+				$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
+				$(BUILD)water_simple.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_output_test: $(BUILD)test_caf_output.o						\
@@ -501,7 +502,9 @@ caf_write_domain_test: $(BUILD)test_caf_write_domain.o					\
 					$(BUILD)advection_driver.o							\
 					$(BUILD)advect.o		$(BUILD)data_structures.o	\
 					$(BUILD)geo_reader.o	$(BUILD)array_utilities.o	\
-					$(BUILD)vinterp.o
+					$(BUILD)vinterp.o		$(BUILD)lsm_driver.o		\
+					$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
+					$(BUILD)water_simple.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
@@ -526,7 +529,10 @@ caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
 					$(BUILD)mp_thompson_aer.o							\
 					$(BUILD)advection_driver.o $(BUILD)geo_reader.o		\
 					$(BUILD)advect.o		 $(BUILD)data_structures.o	\
-					$(BUILD)vinterp.o		 $(BUILD)array_utilities.o
+					$(BUILD)vinterp.o		 $(BUILD)array_utilities.o	\
+					$(BUILD)lsm_driver.o	\
+					$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
+					$(BUILD)water_simple.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_domain_init_test: $(BUILD)test_caf_domain_init.o                \
@@ -549,10 +555,12 @@ caf_domain_init_test: $(BUILD)test_caf_domain_init.o                \
 				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 				$(BUILD)mp_thompson_aer.o							\
 				$(BUILD)advection_driver.o							\
-				$(BUILD)advect.o									\
+				$(BUILD)advect.o		 $(BUILD)lsm_driver.o		\
 				$(BUILD)io_routines.o	 $(BUILD)data_structures.o	\
 				$(BUILD)geo_reader.o	 $(BUILD)array_utilities.o	\
-				$(BUILD)vinterp.o
+				$(BUILD)vinterp.o	\
+				$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
+				$(BUILD)water_simple.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_init_test: $(BUILD)test_caf_init.o                              \
@@ -577,7 +585,10 @@ caf_init_test: $(BUILD)test_caf_init.o                              \
 				$(BUILD)advection_driver.o							\
 				$(BUILD)advect.o		 $(BUILD)geo_reader.o		\
 				$(BUILD)io_routines.o	 $(BUILD)data_structures.o	\
-				$(BUILD)vinterp.o		 $(BUILD)array_utilities.o
+				$(BUILD)vinterp.o		 $(BUILD)array_utilities.o	\
+				$(BUILD)lsm_driver.o	\
+				$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
+				$(BUILD)water_simple.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_init-write_test: $(BUILD)test_caf_init-write.o                  \
@@ -603,7 +614,10 @@ caf_init-write_test: $(BUILD)test_caf_init-write.o                  \
 				$(BUILD)advection_driver.o							\
 				$(BUILD)advect.o		 $(BUILD)geo_reader.o		\
 				$(BUILD)io_routines.o	 $(BUILD)data_structures.o	\
-				$(BUILD)vinterp.o		 $(BUILD)array_utilities.o
+				$(BUILD)vinterp.o		 $(BUILD)array_utilities.o	\
+				$(BUILD)lsm_driver.o	\
+				$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
+				$(BUILD)water_simple.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_bcast_test: $(BUILD)test_caf_bcast.o	\
@@ -631,7 +645,10 @@ caf_boundary_test: $(BUILD)test_caf_boundary.o						\
 				$(BUILD)advection_driver.o							\
 				$(BUILD)advect.o		 $(BUILD)geo_reader.o		\
 				$(BUILD)io_routines.o	 $(BUILD)data_structures.o	\
-				$(BUILD)vinterp.o 		 $(BUILD)array_utilities.o
+				$(BUILD)vinterp.o 		 $(BUILD)array_utilities.o	\
+				$(BUILD)lsm_driver.o								\
+				$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
+				$(BUILD)water_simple.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_boundary_init_test: $(BUILD)test_caf_boundary_init.o				    \
@@ -655,7 +672,10 @@ caf_boundary_init_test: $(BUILD)test_caf_boundary_init.o				    \
 				$(BUILD)advection_driver.o							\
 				$(BUILD)advect.o		 $(BUILD)geo_reader.o		\
 				$(BUILD)io_routines.o	 $(BUILD)data_structures.o	\
-				$(BUILD)vinterp.o 		 $(BUILD)array_utilities.o
+				$(BUILD)vinterp.o 		 $(BUILD)array_utilities.o	\
+				$(BUILD)lsm_driver.o								\
+				$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
+				$(BUILD)water_simple.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 caf_linear_winds_setup_test: $(BUILD)test_caf_linear_winds_setup.o	\
@@ -682,7 +702,9 @@ caf_linear_winds_setup_test: $(BUILD)test_caf_linear_winds_setup.o	\
 				$(BUILD)geo_reader.o	 $(BUILD)array_utilities.o	\
 				$(BUILD)fftshift.o 		 $(BUILD)fftw.o  			\
 				$(BUILD)vinterp.o		 $(BUILD)linear_winds.o		\
-				$(BUILD)lt_lut_io.o		 $(BUILD)lsm_driver.o
+				$(BUILD)lt_lut_io.o		 $(BUILD)lsm_driver.o		\
+				$(BUILD)lsm_noahdrv.o $(BUILD)lsm_noahlsm.o \
+				$(BUILD)water_simple.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 
