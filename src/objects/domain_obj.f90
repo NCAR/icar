@@ -661,24 +661,24 @@ contains
             exner = exner_function(pressure)
 
             i = this%grid%kms
-            dz_mass(:,i,:)      = dz(i) / 2
-            dz_interface(:,i,:) = dz(i)
+            dz_mass(:,i,:)      = options%parameters%dz_levels(i) / 2
+            dz_interface(:,i,:) = options%parameters%dz_levels(i)
             z(:,i,:)            = terrain + dz_mass(:,i,:)
             z_interface(:,i,:)  = terrain
 
             ! for the u and v grids, z(1) was already initialized with terrain.
             ! but the first level needs to be offset, and the rest of the levels need to be created
-            z_u(:,i,:)          = z_u(:,i,:) + dz(i) / 2
-            z_v(:,i,:)          = z_v(:,i,:) + dz(i) / 2
+            z_u(:,i,:)          = z_u(:,i,:) + options%parameters%dz_levels(i) / 2
+            z_v(:,i,:)          = z_v(:,i,:) + options%parameters%dz_levels(i) / 2
 
             do i = this%grid%kms+1, this%grid%kme
-                dz_mass(:,i,:)     = (dz(i) + dz(i-1)) / 2
-                dz_interface(:,i,:)= dz(i)
+                dz_mass(:,i,:)     = (options%parameters%dz_levels(i) + options%parameters%dz_levels(i-1)) / 2
+                dz_interface(:,i,:)= options%parameters%dz_levels(i)
                 z(:,i,:)           = z(:,i-1,:)           + dz_mass(:,i,:)
                 z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i,:)
 
-                z_u(:,i,:)         = z_u(:,i-1,:)         + ((dz(i) + dz(i-1)) / 2)
-                z_v(:,i,:)         = z_v(:,i-1,:)         + ((dz(i) + dz(i-1)) / 2)
+                z_u(:,i,:)         = z_u(:,i-1,:)         + ((options%parameters%dz_levels(i) + options%parameters%dz_levels(i-1)) / 2)
+                z_v(:,i,:)         = z_v(:,i-1,:)         + ((options%parameters%dz_levels(i) + options%parameters%dz_levels(i-1)) / 2)
 
             enddo
 
