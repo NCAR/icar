@@ -44,6 +44,10 @@ def set_bounds(info):
     info.lat_data=lat
     info.lon_data=lon
 
+    # important to remove this file so that if this temporary date overlaps the actual time period we want to run,
+    # later steps won't break when they try to use this temporary file by mistake
+    os.remove(ncfile)
+
 def make_timelist(info):
     hrs=6.0
     dt=datetime.timedelta(hrs/24)
