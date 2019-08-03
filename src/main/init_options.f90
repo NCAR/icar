@@ -600,7 +600,7 @@ contains
         if (outputinterval>=43200) then
             options%output_file_frequency="monthly"
         ! if outputing at half-hour or longer intervals, create daily files
-        else if (outputinterval>=1800) then
+        else if (outputinterval>=300) then
             options%output_file_frequency="daily"
         ! otherwise create a new output file every timestep
         else
@@ -1200,6 +1200,12 @@ contains
             allocate(options%dz_levels(options%nz))
 
             options%dz_levels(1:options%nz)=dz_levels(1:options%nz)
+
+            if (minval(options%dz_levels)<1) then
+                print*, "NB: gfortran doesn't read namelist arrays on multiple lines (check dz_levels)"
+                stop "ERROR: model levels must be > 1m vertical"
+            endif
+
             deallocate(dz_levels)
         else
         ! if we are not reading dz from the namelist, use default values from a WRF run
@@ -1212,7 +1218,7 @@ contains
                options%nz=45
            endif
             allocate(options%dz_levels(options%nz))
-            options%dz_levels=fulldz(1:options%nz)
+            options%dz_levels = fulldz(1:options%nz)
         endif
 
     end subroutine model_levels_namelist

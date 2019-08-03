@@ -43,10 +43,10 @@ module linear_theory_winds
     use fftshifter,                 only: ifftshift, fftshift
     use data_structures
     use domain_interface,           only: domain_t
-    use io_routines,                only: io_read, io_write
+    !use io_routines,                only: io_read, io_write
     use string,                     only: str
     use grid_interface,             only: grid_t
-    use linear_theory_lut_disk_io,  only : read_LUT, write_LUT
+    use linear_theory_lut_disk_io,  only: read_LUT, write_LUT
     use mod_atm_utilities
     use array_utilities,            only: smooth_array, calc_weight, linear_space
     use icar_constants,             only: kMAX_FILE_LENGTH
@@ -1165,6 +1165,7 @@ contains
         ! !$omp end do
         ! !$omp end parallel
 
+
         ! smooth array has it's own parallelization, so this probably can't go in a critical section
         ! if (smooth_nsq) then
         !     call smooth_array(domain%nsquared, winsz, ydim=3)
@@ -1301,11 +1302,13 @@ contains
                                 v3d(i+ims-1,j,k+jms_v-1) = v3d(i+ims-1,j,k+jms_v-1) + v_perturbation(i,j,k) * linear_mask(min(nx,i),min(ny,k)) * (1-blocked)
                             ! endif
                         endif
+
                     endif
                 end do
             end do
         end do
         !$omp end do
+
         deallocate(u1d, v1d)
         !$omp end parallel
     end subroutine spatial_winds

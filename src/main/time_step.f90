@@ -338,7 +338,9 @@ contains
         ! endif
 
         ! perform a reduction across all images to find the minimum time step required
+#ifndef __INTEL_COMPILER
         call co_min(seconds)
+#endif
         seconds = seconds/1.25
         ! seconds=60
         ! print*, seconds

@@ -47,7 +47,7 @@ contains
         es = 611.2 * exp(17.67 * (t - 273.15) / (t - 29.65))
 
         ! convert relative humidity to vapor pressure
-        e = rh / es
+        e = rh * es
 
         ! finally convert vapor pressure to mixing ratio
         mr = 0.62197 * e / (p - e)

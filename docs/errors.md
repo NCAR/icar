@@ -51,3 +51,15 @@ In both cases, the solution is to delete (or move) the existing output files, or
 
 8) **Changing namelist option does not change model simulation**
     Note that many namelists are not read by ICAR by default. In particular, the adv, lt, mp, lsm, bias, and block namelists are not read by default to permit them to be absent in the namelist file and allow for shorter files.  To tell ICAR to read these files, set the use_X_options value to true in the primary parameters namelist.  See run/complete_icar_options.nml for example.
+
+9) **NetCDF related build error**
+    If the NetCDF library supplied does not support the full NetCDF4 file format (based on HDF5) you will get the following error.  Note that using version 4 of the netcdf library does not imply full support for version 4 of the netcdf file format...
+
+    `Error: Symbol ‘nf90_netcdf4’ at (1) has no IMPLICIT type`
+
+    There are two options :
+        1) The better option is to recompile the netcdf library, being sure that you first compile HDF5 and link the netcdf library to it.  You should be able to run
+            `nc-config --has-nc4`
+            and have it output “yes”
+
+        2) You can edit the ICAR source code to not require netCDF4 support.  This might be easier, but it will mean that ICAR ca not save very large files (which is useful for the linear wind look up table).  To do this, simply change `or(NF90_CLOBBER,NF90_NETCDF4)` to `NF90_CLOBBER` in `io/lt_lut_io.f90`

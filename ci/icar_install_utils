@@ -31,7 +31,7 @@ function install_szip {
 function install_hdf5 {
     echo install_hdf5
     cd $WORKDIR
-    wget --no-check-certificate -q https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.5/src/hdf5-1.10.5.tar.gz
+    wget --no-check-certificate -q https://support.hdfgroup.org/ftp/HDF5/current/src/hdf5-1.10.5.tar.gz
     tar -xzf hdf5-1.10.5.tar.gz
     cd hdf5-1.10.5
     ./configure --prefix=$INSTALLDIR &> config.log
