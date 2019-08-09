@@ -56,7 +56,7 @@
 
       LOGICAL, PARAMETER, PRIVATE:: iiwarm = .false.
       LOGICAL, PRIVATE:: is_aerosol_aware = .false.
-      !$omp threadprivate(is_aerosol_aware)
+      ! $omp threadprivate(is_aerosol_aware)
       LOGICAL, PARAMETER, PRIVATE:: dustyIce = .true.
       LOGICAL, PARAMETER, PRIVATE:: homogIce = .true.
 
@@ -94,7 +94,7 @@
       REAL, PARAMETER, PRIVATE:: mu_g = 0.0
       REAL, PARAMETER, PRIVATE:: mu_i = 0.0
       REAL, PRIVATE:: mu_c
-      !$omp threadprivate(mu_c)
+      ! $omp threadprivate(mu_c)
 
 !..Sum of two gamma distrib for snow (Field et al. 2005).
 !.. N(D) = M2**4/M3**3 * [Kap0*exp(-M2*Lam0*D/M3)
@@ -172,7 +172,7 @@
 !..Schmidt number
       REAL, PARAMETER, PRIVATE:: Sc = 0.632
       REAL, PRIVATE:: Sc3
-      !$omp threadprivate(Sc3)
+      ! $omp threadprivate(Sc3)
 
 !..Homogeneous freezing temperature
       REAL, PARAMETER, PRIVATE:: HGFR = 235.16
@@ -205,7 +205,7 @@
       REAL, PARAMETER, PRIVATE:: D0s = 200.E-6
       REAL, PARAMETER, PRIVATE:: D0g = 250.E-6
       REAL, PRIVATE:: D0i, xm0s, xm0g
-      !$omp threadprivate(D0i, xm0s, xm0g)
+      ! $omp threadprivate(D0i, xm0s, xm0g)
 
 !..Lookup table dimensions
       INTEGER, PARAMETER, PRIVATE:: nbins = 100
@@ -224,7 +224,7 @@
       INTEGER, PARAMETER, PRIVATE:: ntb_i1 = 55
       INTEGER, PARAMETER, PRIVATE:: ntb_t = 9
       INTEGER, PRIVATE:: nic1, nic2, nii2, nii3, nir2, nir3, nis2, nig2, nig3
-      !$omp threadprivate(nic1, nic2, nii2, nii3, nir2, nir3, nis2, nig2, nig3)
+      ! $omp threadprivate(nic1, nic2, nii2, nii3, nir2, nir3, nis2, nig2, nig3)
       INTEGER, PARAMETER, PRIVATE:: ntb_arc = 7
       INTEGER, PARAMETER, PRIVATE:: ntb_arw = 9
       INTEGER, PARAMETER, PRIVATE:: ntb_art = 7
@@ -232,7 +232,7 @@
       INTEGER, PARAMETER, PRIVATE:: ntb_ark = 4
       INTEGER, PARAMETER, PRIVATE:: ntb_IN = 55
       INTEGER, PRIVATE:: niIN2
-      !$omp threadprivate(niIN2)
+      ! $omp threadprivate(niIN2)
 
       DOUBLE PRECISION, DIMENSION(nbins+1):: xDx
       DOUBLE PRECISION, DIMENSION(nbc):: Dc, dtc
