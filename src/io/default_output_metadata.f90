@@ -190,6 +190,7 @@ contains
         associate(var=>var_meta(kVARS%pressure_interface))
             var%name        = "pressure_i"
             var%dimensions  = three_d_t_interface_dimensions
+            var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "air_pressure"),                    &
                                attribute_t("long_name",     "Pressure"),                        &
                                attribute_t("units",         "Pa"),                              &
@@ -570,6 +571,7 @@ contains
         associate(var=>var_meta(kVARS%soil_water_content))
             var%name        = "soil_water_content"
             var%dimensions  = three_d_t_soil_dimensions
+            var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "moisture_content_of_soil_layer"),      &
                                attribute_t("units",         "kg m-2"),                              &
                                attribute_t("coordinates",   "lat lon")]
@@ -580,6 +582,7 @@ contains
         associate(var=>var_meta(kVARS%soil_totalmoisture))
             var%name        = "soil_column_total_water"
             var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "soil_moisture_content"),               &
                                attribute_t("units",         "kg m-2"),                              &
                                attribute_t("coordinates",   "lat lon")]
@@ -590,6 +593,7 @@ contains
         associate(var=>var_meta(kVARS%soil_temperature))
             var%name        = "soil_temperature"
             var%dimensions  = three_d_t_soil_dimensions
+            var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "soil_temperature"),                    &
                                attribute_t("units",         "K"),                                   &
                                attribute_t("coordinates",   "lat lon")]
