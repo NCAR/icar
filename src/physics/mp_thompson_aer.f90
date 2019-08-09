@@ -1083,12 +1083,40 @@
       integer :: OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
 
 !+---+
+    ! print*, ids, ide, jds, jde, kds, kde
+    ! print*, ims, ime, jms, jme, kms, kme
+    ! print*, its, ite, jts, jte, kts, kte
+    ! print*, dt_in, "dt_in"
+    ! print*, diagflag, "diagflag"
+    ! print*, has_reqc, "has_reqc"
+    ! print*, has_reqi, "has_reqi"
+    ! print*, has_reqs, "has_reqs"
+    !print*, minval(RAINNCV), maxval(RAINNCV), "RAINNCV"
+    ! print*, minval(RAINNC), maxval(RAINNC), "RAINNC"
+    !print*, minval(SNOWNCV), maxval(SNOWNCV), "SNOWNCV"
+    ! print*, minval(SNOWNC), maxval(SNOWNC), "SNOWNC"
+    !print*, minval(GRAUPELNCV), maxval(GRAUPELNCV), "GRAUPELNCV"
+    ! print*, minval(GRAUPELNC), maxval(GRAUPELNC), "GRAUPELNC"
+    ! print*, minval(SR), maxval(SR), "SR"
+    ! print*, minval(w), maxval(w), "w"
+    ! print*, minval(th), maxval(th), "th"
+    ! print*, minval(pii), maxval(pii), "pii"
+    ! print*, minval(p), maxval(p), "p"
+    ! print*, minval(dz), maxval(dz), "dz"
+    ! print*, minval(qv), maxval(qv), "qv"
+    ! print*, minval(qc), maxval(qc), "qc"
+
+    ! ,diagflag,has_reqc, has_reqi, has_reqs)   &
+
      !$OMP PARALLEL DEFAULT(PRIVATE) FIRSTPRIVATE(ids,ide,jds,jde,kds,kde,ims,ime,jms,jme,          &
-     !$OMP kms,kme,its,ite,jts,jte,kts,kte,dt_in,itimestep,diagflag,has_reqc, has_reqi, has_reqs)   &
-     !$omp shared(tcg_racg,tmr_racg,tcr_gacr,tmg_gacr,tnr_racg,tnr_gacr)            &
-     !$OMP SHARED(RAINNCV,RAINNC,SNOWNCV,SNOWNC,GRAUPELNCV,GRAUPELNC,SR,w,th,pii,p,dz,qv,qc,        &
+     !$OMP kms,kme,its,ite,jts,jte,kts,kte,dt_in)                                                   &
+     !$OMP SHARED(RAINNC,SNOWNC)                                                                    &          ! RAINNCV,SNOWNCV,GRAUPELNCV,GRAUPELNC,SR,)                           &
+     !$OMP SHARED(w,th,pii,p,dz,qv,qc,                                                              &
      !$OMP qi,qr,qs,qg,ni,nr,nc,nwfa,nifa,nwfa2d,refl_10cm,re_cloud,re_ice,re_snow)
+
      ! parameter list : Nt_c,TNO,rho_g,av_s,bv_s,fv_s,av_g,bv_g,EF_si,Ef_ri
+     ! module level look up tables should all default to being shared
+     ! $omp shared(tcg_racg,tmr_racg,tcr_gacr,tmg_gacr,tnr_racg,tnr_gacr)            &
 
       i_start = its
       j_start = jts
