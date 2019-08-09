@@ -205,7 +205,7 @@ endif
 ifeq ($(MODE), debugompslow)
 	ifeq ($(COMPILER), intel)
 		# COMP= -openmp -liomp5 -debug -debug-parameters all -traceback -ftrapuv -g -fpe0 -c -u -check all -check noarg_temp_created -CB
-		COMP= -qopenmp -liomp5 -debug -c -u	-fpe0 -traceback -check all -check noarg_temp_created -fp-stack-check
+		COMP= -qopenmp -liomp5 -debug -c -u	 -ftz -fpe0 -traceback -check all -check noarg_temp_created -fp-stack-check
 		LINK= -qopenmp -liomp5
 	endif
 	ifeq ($(COMPILER), gnu)
