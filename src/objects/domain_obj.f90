@@ -46,7 +46,7 @@ contains
 
         call create_variables(this, options)
 
-        call initialize_variables(this, options)
+        call initialize_core_variables(this, options)
 
         call setup_meta_data(this, options)
 
@@ -71,6 +71,8 @@ contains
 
       ! for all variables with a forcing_var /= "", get forcing, interpolate to local domain
       call this%interpolate_forcing(forcing)
+
+      call initialize_internal_variables(this, options)
 
       this%model_time = forcing%current_time
 
@@ -462,7 +464,18 @@ contains
         if (associated(this%soil_totalmoisture%data_2d)) this%soil_totalmoisture%data_2d = 0.2 * 2
         if (associated(this%soil_temperature%data_3d)) this%soil_temperature%data_3d = 280
         if (associated(this%soil_deep_temperature%data_2d)) this%soil_deep_temperature%data_2d = 280
+        if (associated(this%skin_temperature%data_2d)) this%skin_temperature%data_2d = 280
         if (associated(this%roughness_z0%data_2d)) this%roughness_z0%data_2d = 0.001
+        if (associated(this%sensible_heat%data_2d)) this%sensible_heat%data_2d=0
+        if (associated(this%latent_heat%data_2d)) this%latent_heat%data_2d=0
+        if (associated(this%u_10m%data_2d)) this%u_10m%data_2d=0
+        if (associated(this%v_10m%data_2d)) this%v_10m%data_2d=0
+        if (associated(this%temperature_2m%data_2d)) this%temperature_2m%data_2d=280
+        if (associated(this%humidity_2m%data_2d)) this%humidity_2m%data_2d=0.001
+        if (associated(this%surface_pressure%data_2d)) this%surface_pressure%data_2d=102000
+        if (associated(this%longwave_up%data_2d)) this%longwave_up%data_2d=0
+        if (associated(this%ground_heat_flux%data_2d)) this%ground_heat_flux%data_2d=0
+        if (associated(this%soil_totalmoisture%data_2d)) this%soil_totalmoisture%data_2d=0.5
 
         call standardize_coordinates(this%geo_u)
         call standardize_coordinates(this%geo_v)
@@ -636,7 +649,7 @@ contains
     !! Initialize various domain variables, mostly z, dz, etc.
     !!
     !! -------------------------------
-    subroutine initialize_variables(this, options)
+    subroutine initialize_core_variables(this, options)
         implicit none
         class(domain_t), intent(inout)  :: this
         class(options_t),intent(in)     :: options
@@ -652,13 +665,7 @@ contains
                   dz                    => options%parameters%dz_levels,        &
                   dz_mass               => this%dz_mass%data_3d,                &
                   dz_interface          => this%dz_interface%data_3d,           &
-                  exner                 => this%exner%data_3d,                  &
-                  pressure              => this%pressure%data_3d,               &
-                  temperature           => this%temperature%data_3d,            &
-                  potential_temperature => this%potential_temperature%data_3d,  &
                   terrain               => this%terrain%data_2d)
-
-            exner = exner_function(pressure)
 
             i = this%grid%kms
             dz_mass(:,i,:)      = options%parameters%dz_levels(i) / 2
@@ -686,7 +693,49 @@ contains
 
         call setup_geo(this%geo,   this%latitude%data_2d,   this%longitude%data_2d,   this%z%data_3d)
 
-    end subroutine initialize_variables
+    end subroutine initialize_core_variables
+
+    !> -------------------------------
+    !! Initialize various internal variables that need forcing data first, e.g. temperature, pressure on interface, exner, ...
+    !!
+    !! -------------------------------
+    subroutine initialize_internal_variables(this, options)
+        implicit none
+        class(domain_t), intent(inout)  :: this
+        class(options_t),intent(in)     :: options
+
+        integer :: i
+
+        associate(pressure              => this%pressure%data_3d,               &
+                  exner                 => this%exner%data_3d,                  &
+                  pressure_interface    => this%pressure_interface%data_3d,     &
+                  psfc                  => this%surface_pressure%data_2d,       &
+                  temperature           => this%temperature%data_3d,            &
+                  potential_temperature => this%potential_temperature%data_3d )
+
+                  exner = exner_function(pressure)
+
+                  if (associated(this%pressure_interface%data_3d)) then
+                      ! this isn't exactly correct, should be distance weighted...
+                      ! weight one = (dz2) / (dz1+dz2)
+                      ! weight two = (dz1) / (dz1+dz2)
+                      pressure_interface(:,1,:) = ( pressure(:,1,:) * 2 - pressure(:,2,:) )
+                      do i = 2, size(pressure_interface, 2)
+                          pressure_interface(:,i,:) = ( pressure(:,i-1,:) + pressure(:,i,:) ) / 2
+                      enddo
+
+                      if (associated(this%surface_pressure%data_2d)) then
+                          psfc = pressure_interface(:,1,:)
+                      endif
+                  endif
+
+                  if (associated(this%temperature%data_3d)) then
+                      temperature = potential_temperature * exner
+                  endif
+
+        end associate
+
+    end subroutine initialize_internal_variables
 
     !> -------------------------------
     !! Populare the metadata structure in the domain for later output
@@ -897,7 +946,7 @@ contains
         ! make sure the dictionary is reset to point to the first variable
         call this%variables_to_force%reset_iterator()
 
-        ! No iterate through the dictionary as long as there are more elements present
+        ! Now iterate through the dictionary as long as there are more elements present
         do while (this%variables_to_force%has_more_elements())
             ! get the next variable
             var_to_update = this%variables_to_force%next()
@@ -1015,7 +1064,7 @@ contains
         ! make sure the dictionary is reset to point to the first variable
         call this%variables_to_force%reset_iterator()
 
-        ! No iterate through the dictionary as long as there are more elements present
+        ! Now iterate through the dictionary as long as there are more elements present
         do while (this%variables_to_force%has_more_elements())
             ! get the next variable
             var_to_interpolate = this%variables_to_force%next()
