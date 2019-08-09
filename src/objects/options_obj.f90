@@ -819,6 +819,7 @@ contains
         calendar            = "gregorian"
         high_res_soil_state = .False.
         use_agl_height      = .False.
+        date                = ""
         start_date          = ""
         forcing_start_date  = ""
         end_date            = ""
@@ -854,6 +855,8 @@ contains
         if (ideal) then
             write(*,*) " Running Idealized simulation (time step does not advance)"
         endif
+
+        if ((trim(date)=="").and.(trim(start_date)/="")) date = start_date
 
         if (trim(forcing_start_date)=="") then
             if (trim(date)/="") then
