@@ -114,16 +114,18 @@ contains
         implicit none
         integer :: i
 
-        character(len=16) :: three_d_u_t_dimensions(4)      = [character(len=16) :: "lon_u","lat_y","level","time"]
-        character(len=16) :: three_d_v_t_dimensions(4)      = [character(len=16) :: "lon_x","lat_v","level","time"]
-        character(len=16) :: three_d_dimensions(3)          = [character(len=16) :: "lon_x","lat_y","level"]
-        character(len=16) :: three_d_t_dimensions(4)        = [character(len=16) :: "lon_x","lat_y","level","time"]
-        character(len=16) :: three_d_interface_dimensions(3)= [character(len=16) :: "lon_x","lat_y","level_i"]
-        character(len=16) :: two_d_dimensions(2)            = [character(len=16) :: "lon_x","lat_y"]
-        character(len=16) :: two_d_t_dimensions(3)          = [character(len=16) :: "lon_x","lat_y","time"]
-        character(len=16) :: two_d_u_dimensions(2)          = [character(len=16) :: "lon_u","lat_y"]
-        character(len=16) :: two_d_v_dimensions(2)          = [character(len=16) :: "lon_x","lat_v"]
-        character(len=16) :: three_d_soil_dimensions(3)     = [character(len=16) :: "lon_x","lat_y","nsoil"]
+        character(len=16) :: three_d_u_t_dimensions(4)          = [character(len=16) :: "lon_u","lat_y","level","time"]
+        character(len=16) :: three_d_v_t_dimensions(4)          = [character(len=16) :: "lon_x","lat_v","level","time"]
+        character(len=16) :: three_d_dimensions(3)              = [character(len=16) :: "lon_x","lat_y","level"]
+        character(len=16) :: three_d_t_dimensions(4)            = [character(len=16) :: "lon_x","lat_y","level","time"]
+        character(len=16) :: three_d_interface_dimensions(3)    = [character(len=16) :: "lon_x","lat_y","level_i"]
+        character(len=16) :: three_d_t_interface_dimensions(4)  = [character(len=16) :: "lon_x","lat_y","level_i","time"]
+        character(len=16) :: two_d_dimensions(2)                = [character(len=16) :: "lon_x","lat_y"]
+        character(len=16) :: two_d_t_dimensions(3)              = [character(len=16) :: "lon_x","lat_y","time"]
+        character(len=16) :: two_d_u_dimensions(2)              = [character(len=16) :: "lon_u","lat_y"]
+        character(len=16) :: two_d_v_dimensions(2)              = [character(len=16) :: "lon_x","lat_v"]
+        character(len=16) :: three_d_soil_dimensions(3)         = [character(len=16) :: "lon_x","lat_y","nsoil"]
+        character(len=16) :: three_d_t_soil_dimensions(4)       = [character(len=16) :: "lon_x","lat_y","nsoil","time"]
 
         if (allocated(var_meta)) deallocate(var_meta)
 
@@ -187,7 +189,7 @@ contains
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%pressure_interface))
             var%name        = "pressure_i"
-            var%dimensions  = three_d_interface_dimensions
+            var%dimensions  = three_d_t_interface_dimensions
             var%attributes  = [attribute_t("standard_name", "air_pressure"),                    &
                                attribute_t("long_name",     "Pressure"),                        &
                                attribute_t("units",         "Pa"),                              &
@@ -567,7 +569,7 @@ contains
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%soil_water_content))
             var%name        = "soil_water_content"
-            var%dimensions  = three_d_soil_dimensions
+            var%dimensions  = three_d_t_soil_dimensions
             var%attributes  = [attribute_t("standard_name", "moisture_content_of_soil_layer"),      &
                                attribute_t("units",         "kg m-2"),                              &
                                attribute_t("coordinates",   "lat lon")]
@@ -587,7 +589,7 @@ contains
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%soil_temperature))
             var%name        = "soil_temperature"
-            var%dimensions  = three_d_soil_dimensions
+            var%dimensions  = three_d_t_soil_dimensions
             var%attributes  = [attribute_t("standard_name", "soil_temperature"),                    &
                                attribute_t("units",         "K"),                                   &
                                attribute_t("coordinates",   "lat lon")]
