@@ -126,12 +126,13 @@ contains
         real,dimension(:,:),intent(inout) :: exchange_C
 
         ! Richardson number
-        where(wind==0) wind=1e-10
+        where(wind==0) wind=1e-5
+        exchange_C = 0
 
         Ri = gravity/airt(:,1,:) * (airt(:,1,:)-tskin)*z_atm/(wind**2)
 
-!         print*,"--------------------------------------------------"
-!         print*, "Surface Richardson number"
+        ! print*,"--------------------------------------------------"
+        ! print*, "Surface Richardson number"
         where(Ri<0)  exchange_C = lnz_atm_term * (1.0-(15.0*Ri)/(1.0+(base_exchange_term * sqrt((-1.0)*Ri))))
         where(Ri>=0) exchange_C = lnz_atm_term * 1.0/((1.0+15.0*Ri)*sqrt(1.0+5.0*Ri))
 
@@ -416,8 +417,8 @@ contains
 
 
         ! initial guesses (not needed?)
-        domain%temperature_2m%data_2d = domain%temperature%data_3d(:,1,:)
-        domain%humidity_2m%data_2d = domain%water_vapor%data_3d(:,1,:)
+        domain%temperature_2m%data_2d = 280
+        domain%humidity_2m%data_2d = 0.001  ! domain%water_vapor%data_3d(:,1,:)
 
         if (options%physics%landsurface==kLSM_SIMPLE) then
             write(*,*) "    Simple LSM (may not work?)"
@@ -520,6 +521,8 @@ contains
             lsm_dt = domain%model_time%seconds() - last_model_time
             last_model_time = domain%model_time%seconds()
 
+            domain%temperature%data_3d = domain%exner%data_3d * domain%potential_temperature%data_3d
+
             ! exchange coefficients
             windspd = sqrt(domain%u_10m%data_2d**2 + domain%v_10m%data_2d**2)
             if (exchange_term==1) then
@@ -527,7 +530,6 @@ contains
             elseif (exchange_term==2) then
                 call calc_mahrt_holtslag_exchange_coefficient(windspd,domain%skin_temperature%data_2d,domain%temperature%data_3d,domain%roughness_z0%data_2d,CHS)
             endif
-!             print*, CHS(128,103)
 
             ! --------------------------------------------------
             ! First handle the open water surface options
@@ -688,15 +690,15 @@ contains
 
             endif
 
-            ! accumulate soil moisture over the entire column
-            domain%soil_totalmoisture%data_2d = domain%soil_water_content%data_3d(:,1,:) * DZS(1) * 1000
-            do i = 2,num_soil_layers
-                domain%soil_totalmoisture%data_2d = domain%soil_totalmoisture%data_2d + domain%soil_water_content%data_3d(:,i,:) * DZS(i)
-            enddo
 
-
-            ! 2m Air T and Q are not well defined if Tskin is not coupled with the surface fluxes
             if (options%physics%landsurface > kLSM_BASIC) then
+                ! accumulate soil moisture over the entire column
+                domain%soil_totalmoisture%data_2d = domain%soil_water_content%data_3d(:,1,:) * DZS(1) * 1000
+                do i = 2,num_soil_layers
+                    domain%soil_totalmoisture%data_2d = domain%soil_totalmoisture%data_2d + domain%soil_water_content%data_3d(:,i,:) * DZS(i)
+                enddo
+
+                ! 2m Air T and Q are not well defined if Tskin is not coupled with the surface fluxes
                 call surface_diagnostics(domain%sensible_heat%data_2d,    &
                                          QFX,                             &
                                          domain%skin_temperature%data_2d, &
