@@ -209,7 +209,7 @@ ifeq ($(MODE), debugompslow)
 		LINK= -qopenmp -liomp5
 	endif
 	ifeq ($(COMPILER), gnu)
-		COMP= -fopenmp -lgomp -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
+		COMP= -fopenmp -lgomp -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none -ffpe-trap=invalid
 		LINK= -fopenmp -lgomp
 	endif
 	ifeq ($(COMPILER), cray)
