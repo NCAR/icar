@@ -158,6 +158,8 @@ contains
         integer :: i
         real, dimension(ims:ime) :: declination, day_of_year, hour_angle
 
+        calc_solar_elevation = 0
+
         do i = its, ite
             day_of_year(i) = date%day_of_year(lon=lon(i,j))
 
@@ -167,12 +169,11 @@ contains
             day_frac(i) = date%year_fraction(lon=lon(i,j))
         end do
 
-
         ! fast approximation see : http://en.wikipedia.org/wiki/Position_of_the_Sun
         declination = (-0.4091) * cos(2.0*pi/365.0*(day_of_year+10))
 
-        calc_solar_elevation = sin_lat_m(:,j) * sin(declination) + &
-                               cos_lat_m(:,j) * cos(declination) * cos(hour_angle)
+        calc_solar_elevation(its:ite) = sin_lat_m(its:ite,j) * sin(declination(its:ite)) + &
+                               cos_lat_m(its:ite,j) * cos(declination(its:ite)) * cos(hour_angle(its:ite))
 
         ! due to float precision errors, it is possible to exceed (-1 - 1) in which case asin will break
         where(calc_solar_elevation < -1)
