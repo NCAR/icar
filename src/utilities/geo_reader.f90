@@ -806,6 +806,7 @@ contains
         integer,intent(in) :: nx,ny
         integer :: i, j
         integer :: xdeltas(4), ydeltas(4), dx, dy
+        integer :: lowerx, upperx, lowery, uppery
         real :: best_err, current_err, tri1_err, tri2_err
         logical :: tri_1, tri_2
         type(fourpos) :: search_point
@@ -818,9 +819,20 @@ contains
         find_surrounding%x = -999
         find_surrounding%y = -999
 
-        do i=1,4
+        lowerx = lbound(lo%lat,1)
+        upperx = ubound(lo%lat,1)
+        lowery = lbound(lo%lat,2)
+        uppery = ubound(lo%lat,2)
+
+        do i = 1, 4
             dx = xdeltas(i)
             dy = ydeltas(i)
+
+            ! check that the current search box exists in the input data
+            if (((pos%x + dx) > upperx) .or. ((pos%x + dx) < lowerx) .or. ((pos%y + dy) > uppery) .or. ((pos%y + dy) < lowery)) then
+                cycle
+            endif
+
             search_point%x = [pos%x, pos%x+dx, pos%x+dx, pos%x  ]
             search_point%y = [pos%y, pos%y,   pos%y+dy, pos%y+dy]
 
@@ -923,10 +935,10 @@ contains
                 stop
             endif
 
-            do i=ims, ime
+            do i = ims, ime
                 curpos = find_location(lo, hi%lat(i,j), hi%lon(i,j), lastpos)
 
-                if (curpos%x<1) then
+                if (curpos%x < 1) then
                     ! something broke, try assuming that the grids are the same possibly wrapping (for ideal)
                     write(*,*) "Error in Geographic interpolation, check input lat / lon grids", i,j
                     curpos%x = mod(i-1, lo_nx) + 1
@@ -949,6 +961,7 @@ contains
                     lo%geolut%w(:,i,j) = tri_weights(hi%lat(i,j), lat, hi%lon(i,j), lon)
                     ! lo%geolut%w(:,i,j) = idw_weights(hi%lat(i,j), lat, hi%lon(i,j), lon)
                     ! lo%geolut%w(:,i,j) = bilin_weights(hi%lat(i,j), lat, hi%lon(i,j), lon)
+
                 endif
 
             enddo
@@ -1220,7 +1233,9 @@ contains
         endif
 
         ! also convert from a -180 to 180 coordinate system into a 0-360 coordinate system if necessary
-        where(domain%lon<0) domain%lon = 360+domain%lon
+        if ((minval(domain%lon) < -170) .and. (maxval(domain%lon) > 170)) then
+            where(domain%lon<0) domain%lon = 360+domain%lon
+        endif
 
     end subroutine standardize_coordinates
 
