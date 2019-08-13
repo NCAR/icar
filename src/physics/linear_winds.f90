@@ -1128,16 +1128,6 @@ contains
                         sweight = calc_weight(spd_values, spos, nexts, curspd)
                         nweight = calc_weight(nsq_values, npos, nextn, curnsq)
 
-                        ! if ((k==25) .and. (j==25) .and. (i>105) .and.(i<115)) then
-                        if ((k==25) .and. (i==120).and.(j<10)) then
-                            ! print*, "--------------------------------------------------------"
-                            print*, j, npos, curnsq, domain%nsquared(i,j,k)
-                            ! print*, dpos, spos, npos
-                            ! print*, dweight, sweight, nweight
-                            ! print*, " nsq=", domain%nsquared(i,j,k)
-                            ! print*, curdir, curspd, curnsq
-                        endif
-
                         ! perform linear interpolation between LUT values
                         if (k<=ny) then
                             wind_first =      nweight  * (dweight * u_LUT(spos, dpos,npos, i,j,k) + (1-dweight) * u_LUT(spos, nextd,npos, i,j,k))   &
@@ -1173,21 +1163,10 @@ contains
                             endif
                         endif
 
-                        ! if ((k==25) .and. (i>=110).and.(i<112)) then
-                        !     print*, domain%u(i-1,j,k), domain%u(i,j,k), domain%u(i,j,k)-domain%u(i-1,j,k)
-                        ! endif
-                        ! if ((k==25) .and. (j==25) .and. (i>105) .and.(i<115)) then
-                        !     print*, domain%u(i-1,j,k), domain%u(i,j,k), domain%u(i,j,k)-domain%u(i-1,j,k)
-                        !     print*, domain%v(i,j,k-1), domain%v(i,j,k), domain%v(i,j,k)-domain%v(i,j,k-1)
-                        !     ! print*, wind_first, wind_second, linear_update_fraction, 1-blocked, linear_mask(i,k)
-                        ! endif
-
                     endif
                 end do
             end do
         end do
-        call io_write("test_u_"//trim(str(nth_file))//".nc", "data", domain%u(:,:,25))
-        nth_file = nth_file + 1
 
         ! $omp end do
         deallocate(u1d, v1d)
