@@ -16,7 +16,7 @@ module time_step
     use mod_atm_utilities,          only : exner_function
     ! use convection,                 only : convect
     use land_surface,               only : lsm
-    ! use planetary_boundary_layer,   only : pbl
+    use planetary_boundary_layer,   only : pbl
     use radiation,                  only : rad
 
     use domain_interface,           only : domain_t
@@ -417,7 +417,7 @@ contains
                 if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" rad(domain")
 
                 ! call lsm(domain, options, real(dt%seconds()), halo=1)
-                ! call pbl(domain, options, real(dt%seconds()), halo=1)
+                call pbl(domain, options, real(dt%seconds()))!, halo=1)
                 ! call convect(domain, options, real(dt%seconds()), halo=1)
 
                 call mp(domain, options, real(dt%seconds()), halo=1)

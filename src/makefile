@@ -346,6 +346,8 @@ OBJS=	$(BUILD)driver.o            \
 		$(BUILD)fftshift.o			\
 		$(BUILD)fftw.o				\
 		$(BUILD)lt_lut_io.o			\
+		$(BUILD)pbl_driver.o		\
+		$(BUILD)pbl_simple.o		\
 		$(BUILD)ra_driver.o			\
 		$(BUILD)ra_simple.o			\
 		$(BUILD)mp_driver.o			\
@@ -460,6 +462,7 @@ caf_options_test: $(BUILD)test_caf_options.o				  	\
 				$(BUILD)model_tracking.o $(BUILD)opt_types.o	\
 				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
 				$(BUILD)ra_driver.o      $(BUILD)ra_simple.o	\
+				$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o	\
 				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o	\
 				$(BUILD)mp_thompson_aer.o							\
 				$(BUILD)advection_driver.o						\
@@ -497,6 +500,7 @@ caf_write_domain_test: $(BUILD)test_caf_write_domain.o					\
 					$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
 					$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o\
 					$(BUILD)ra_driver.o      $(BUILD)ra_simple.o		\
+					$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o		\
 					$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 					$(BUILD)mp_thompson_aer.o							\
 					$(BUILD)advection_driver.o							\
@@ -525,6 +529,7 @@ caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
 					$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
 					$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
 					$(BUILD)ra_driver.o      $(BUILD)ra_simple.o		\
+					$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o		\
 					$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 					$(BUILD)mp_thompson_aer.o							\
 					$(BUILD)advection_driver.o $(BUILD)geo_reader.o		\
@@ -552,6 +557,7 @@ caf_domain_init_test: $(BUILD)test_caf_domain_init.o                \
 				$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
 				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
 				$(BUILD)ra_driver.o      $(BUILD)ra_simple.o		\
+				$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o		\
 				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 				$(BUILD)mp_thompson_aer.o							\
 				$(BUILD)advection_driver.o							\
@@ -580,6 +586,7 @@ caf_init_test: $(BUILD)test_caf_init.o                              \
 				$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
 				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
 				$(BUILD)ra_driver.o      $(BUILD)ra_simple.o		\
+				$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o		\
 				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 				$(BUILD)mp_thompson_aer.o							\
 				$(BUILD)advection_driver.o							\
@@ -609,6 +616,7 @@ caf_init-write_test: $(BUILD)test_caf_init-write.o                  \
 				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
 				$(BUILD)output_h.o		 $(BUILD)output_obj.o		\
 				$(BUILD)ra_driver.o      $(BUILD)ra_simple.o		\
+				$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o		\
 				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 				$(BUILD)mp_thompson_aer.o							\
 				$(BUILD)advection_driver.o							\
@@ -640,6 +648,7 @@ caf_boundary_test: $(BUILD)test_caf_boundary.o						\
 				$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
 				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
 				$(BUILD)ra_driver.o      $(BUILD)ra_simple.o		\
+				$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o		\
 				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 				$(BUILD)mp_thompson_aer.o							\
 				$(BUILD)advection_driver.o							\
@@ -667,6 +676,7 @@ caf_boundary_init_test: $(BUILD)test_caf_boundary_init.o				    \
 				$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
 				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
 				$(BUILD)ra_driver.o      $(BUILD)ra_simple.o		\
+				$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o		\
 				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 				$(BUILD)mp_thompson_aer.o							\
 				$(BUILD)advection_driver.o							\
@@ -695,6 +705,7 @@ caf_linear_winds_setup_test: $(BUILD)test_caf_linear_winds_setup.o	\
 				$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
 				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
 				$(BUILD)ra_driver.o      $(BUILD)ra_simple.o		\
+				$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o		\
 				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 				$(BUILD)mp_thompson_aer.o							\
 				$(BUILD)advection_driver.o $(BUILD)advect.o			\
@@ -764,7 +775,7 @@ $(BUILD)options_obj.o: $(OBJECTS)options_obj.f90 $(BUILD)options_h.o $(BUILD)tim
 						$(BUILD)time_delta_obj.o $(BUILD)io_routines.o $(BUILD)opt_types.o	\
 						$(BUILD)time_io.o $(BUILD)string.o $(BUILD)model_tracking.o			\
 						$(BUILD)mp_driver.o $(BUILD)advection_driver.o $(BUILD)ra_driver.o	\
-						$(BUILD)lsm_driver.o
+						$(BUILD)lsm_driver.o $(BUILD)pbl_driver.o
 
 ###################################################################
 #	Primary Data Objects
@@ -823,15 +834,16 @@ $(BUILD)domain_obj.o: $(OBJECTS)domain_obj.f90 $(BUILD)domain_h.o $(BUILD)option
 ###################################################################
 
 $(BUILD)init.o:$(MAIN)init.f90 $(BUILD)data_structures.o $(BUILD)options_h.o $(BUILD)domain_h.o $(BUILD)boundary_h.o \
-	 				$(BUILD)mp_driver.o $(BUILD)advection_driver.o $(BUILD)atm_utilities.o $(BUILD)wind.o $(BUILD)ra_driver.o
+	 				$(BUILD)mp_driver.o $(BUILD)advection_driver.o $(BUILD)atm_utilities.o $(BUILD)wind.o $(BUILD)ra_driver.o \
+					$(BUILD)pbl_driver.o
 
 $(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.o $(BUILD)string.o 	\
 					$(BUILD)advection_driver.o $(BUILD)mp_driver.o $(BUILD)domain_h.o 				\
 					$(BUILD)options_h.o $(BUILD)atm_utilities.o $(BUILD)ra_driver.o $(BUILD)lsm_driver.o \
-					$(BUILD)debug_utils.o
+					$(BUILD)debug_utils.o $(BUILD)pbl_driver.o
 
 # $(BUILD)advection_driver.o $(BUILD)ra_driver.o $(BUILD)lsm_driver.o $(BUILD)cu_driver.o \
-# $(BUILD)pbl_driver.o $(BUILD)mp_driver.o $(BUILD)boundary.o $(BUILD)debug_utils.o
+# $(BUILD)mp_driver.o $(BUILD)boundary.o $(BUILD)debug_utils.o
 
 # $(BUILD)init_options.o:$(MAIN)init_options.f90 $(BUILD)data_structures.o  $(BUILD)io_routines.o \
 # 					$(BUILD)model_tracking.o $(BUILD)time.o $(BUILD)time_io.o
@@ -947,9 +959,9 @@ $(BUILD)lsm_noahlsm.o: $(PHYS)lsm_noahlsm.f90
 ###################################################################
 #	Planetary Boundary Layer code
 ###################################################################
-$(BUILD)pbl_driver.o: $(PHYS)pbl_driver.f90 $(BUILD)pbl_simple.o $(BUILD)pbl_ysu.o $(BUILD)data_structures.o
+$(BUILD)pbl_driver.o: $(PHYS)pbl_driver.f90 $(BUILD)pbl_simple.o $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)data_structures.o
 
-$(BUILD)pbl_simple.o: $(PHYS)pbl_simple.f90 $(BUILD)data_structures.o
+$(BUILD)pbl_simple.o: $(PHYS)pbl_simple.f90 $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)data_structures.o
 
 $(BUILD)pbl_ysu.o: $(PHYS)pbl_ysu.f90
 

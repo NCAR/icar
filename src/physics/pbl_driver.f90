@@ -26,8 +26,10 @@
 !!----------------------------------------------------------
 module planetary_boundary_layer
     use data_structures
+    use domain_interface,   only : domain_t
+    use options_interface,  only : options_t
     use pbl_simple,    only : simple_pbl, finalize_simple_pbl, init_simple_pbl
-    use module_bl_ysu, only : ysuinit, ysu
+    ! use module_bl_ysu, only : ysuinit, ysu
     implicit none
 
     private
@@ -42,54 +44,64 @@ module planetary_boundary_layer
 contains
     subroutine pbl_init(domain,options)
         implicit none
-        type(domain_type),intent(inout)::domain
-        type(options_type),intent(in)::options
+        type(domain_t),     intent(inout)   :: domain
+        type(options_t),    intent(in)      :: options
 
-        ime=size(domain%p,1)
-        kme=size(domain%p,2)
-        jme=size(domain%p,3)
-        ims=1; jms=1; kms=1
-        ids=ims; its=ims; ide=ime; ite=ime
-        kds=kms; kts=kms; kde=kme; kte=kme
-        jds=jms; jts=jms; jde=jme; jte=jme
+        ids = domain%ids ; ide = domain%ide ; jds = domain%jds ; jde = domain%jde ; kds = domain%kds ; kde = domain%kde
+        ims = domain%ims ; ime = domain%ime ; jms = domain%jms ; jme = domain%jme ; kms = domain%kms ; kme = domain%kme
+        its = domain%its ; ite = domain%ite ; jts = domain%jts ; jte = domain%jte ; kts = domain%kts ; kte = domain%kte
 
-        allowed_to_read=.True.
-        restart=.False.
-        flag_qi=.true.
-        if (.not.allocated(domain%tend%qv_pbl)) allocate(domain%tend%qv_pbl(ims:ime,kms:kme,jms:jme))
-        domain%tend%qv_pbl=0
+        allowed_to_read = .True.
+        restart = .False.
+        flag_qi = .true.
+        ! if (.not.allocated(domain%tend%qv_pbl)) allocate(domain%tend%qv_pbl(ims:ime,kms:kme,jms:jme))
+        ! domain%tend%qv_pbl=0
 
         write(*,*) "Initializing PBL Scheme"
         if (options%physics%boundarylayer==kPBL_SIMPLE) then
             write(*,*) "    Simple PBL"
-            call init_simple_pbl(domain,options)
+            call init_simple_pbl(domain, options)
         endif
-        if (options%physics%boundarylayer==kPBL_YSU) then
-            write(*,*) "    YSU PBL"
-            if (.not.allocated(domain%tend%th))     allocate(domain%tend%th(ims:ime,kms:kme,jms:jme))
-            if (.not.allocated(domain%tend%qc))     allocate(domain%tend%qc(ims:ime,kms:kme,jms:jme))
-            if (.not.allocated(domain%tend%qr))     allocate(domain%tend%qr(ims:ime,kms:kme,jms:jme))
-            if (.not.allocated(domain%tend%qi))     allocate(domain%tend%qi(ims:ime,kms:kme,jms:jme))
-            if (.not.allocated(domain%tend%u))      allocate(domain%tend%u(ims:ime,kms:kme,jms:jme))
-            if (.not.allocated(domain%tend%v))      allocate(domain%tend%v(ims:ime,kms:kme,jms:jme))
-            call ysuinit(domain%tend%u,domain%tend%v,       &
-                         domain%tend%th,domain%tend%qv_pbl, &
-                         domain%tend%qc,domain%tend%qi,1,1, &
-                         restart, allowed_to_read,          &
-                         ids, ide, jds, jde, kds, kde,      &
-                         ims, ime, jms, jme, kms, kme,      &
-                         its, ite, jts, jte, kts, kte)
-        endif
+        ! if (options%physics%boundarylayer==kPBL_YSU) then
+        !     write(*,*) "    YSU PBL"
+        !     if (.not.allocated(domain%tend%th))     allocate(domain%tend%th(ims:ime,kms:kme,jms:jme))
+        !     if (.not.allocated(domain%tend%qc))     allocate(domain%tend%qc(ims:ime,kms:kme,jms:jme))
+        !     if (.not.allocated(domain%tend%qr))     allocate(domain%tend%qr(ims:ime,kms:kme,jms:jme))
+        !     if (.not.allocated(domain%tend%qi))     allocate(domain%tend%qi(ims:ime,kms:kme,jms:jme))
+        !     if (.not.allocated(domain%tend%u))      allocate(domain%tend%u(ims:ime,kms:kme,jms:jme))
+        !     if (.not.allocated(domain%tend%v))      allocate(domain%tend%v(ims:ime,kms:kme,jms:jme))
+        !     call ysuinit(domain%tend%u,domain%tend%v,       &
+        !                  domain%tend%th,domain%tend%qv_pbl, &
+        !                  domain%tend%qc,domain%tend%qi,1,1, &
+        !                  restart, allowed_to_read,          &
+        !                  ids, ide, jds, jde, kds, kde,      &
+        !                  ims, ime, jms, jme, kms, kme,      &
+        !                  its, ite, jts, jte, kts, kte)
+        ! endif
     end subroutine pbl_init
 
     subroutine pbl(domain,options,dt_in)
         implicit none
-        type(domain_type),intent(inout)::domain
-        type(options_type),intent(in)::options
-        real,intent(in)::dt_in
+        type(domain_t),  intent(inout)  :: domain
+        type(options_t), intent(in)     :: options
+        real,            intent(in)     :: dt_in
 
         if (options%physics%boundarylayer==kPBL_SIMPLE) then
-            call simple_pbl(domain,dt_in)
+            call simple_pbl(domain%potential_temperature%data_3d,   &
+                            domain%water_vapor%data_3d,             &
+                            domain%cloud_water_mass%data_3d,        &
+                            domain%cloud_ice_number%data_3d,        &
+                            domain%rain_mass%data_3d,               &
+                            domain%snow_mass%data_3d,               &
+                            domain%u%data_3d,                       &
+                            domain%v%data_3d,                       &
+                            domain%exner%data_3d,                   &
+                            domain%density%data_3d,                 &
+                            domain%z%data_3d,                       &
+                            domain%dz_mass%data_3d,                 &
+                            domain%graupel%data_3d,                 &
+                            domain%terrain%data_2d,                 &
+                            dt_in)
         endif
 
         if (options%physics%boundarylayer==kPBL_YSU) then
@@ -118,9 +130,11 @@ contains
 
     subroutine pbl_finalize(options)
         implicit none
-        type(options_type),intent(in)::options
+        type(options_t), intent(in) :: options
+
         if (options%physics%boundarylayer==kPBL_SIMPLE) then
             call finalize_simple_pbl()
         endif
+
     end subroutine pbl_finalize
 end module planetary_boundary_layer
