@@ -45,15 +45,41 @@ contains
         type(domain_t),  intent(inout)   :: domain
         type(options_t), intent(in)      :: options
 
-        associate(exner                 => domain%exner%data_3d,    &
-                  pressure              => domain%pressure%data_3d, &
-                  density               => domain%density%data_3d,  &
-                  potential_temperature => domain%potential_temperature%data_3d)
+        associate(ims                   => domain%ims,                          &
+                  ime                   => domain%ime,                          &
+                  jms                   => domain%jms,                          &
+                  jme                   => domain%jme,                          &
+                  kms                   => domain%kms,                          &
+                  kme                   => domain%kme,                          &
+                  exner                 => domain%exner%data_3d,                &
+                  pressure              => domain%pressure%data_3d,             &
+                  pressure_i            => domain%pressure_interface%data_3d,   &
+                  psfc                  => domain%surface_pressure%data_2d,     &
+                  density               => domain%density%data_3d,              &
+                  temperature           => domain%temperature%data_3d,          &
+                  u                     => domain%u%data_3d,                    &
+                  v                     => domain%v%data_3d,                    &
+                  u_mass                => domain%u_mass%data_3d,               &
+                  v_mass                => domain%v_mass%data_3d,               &
+                  potential_temperature => domain%potential_temperature%data_3d )
 
         exner = exner_function(pressure)
 
+        ! domain%p_inter=domain%p
+        ! call update_pressure(domain%p_inter, domain%z, domain%z_inter, domain%t)
+        pressure_i(:,kms+1:kme, :) = (pressure(:,kms:kme-1, :) + pressure(:,kms+1:kme, :)) / 2
+        pressure_i(:, kms, :) = pressure(:, kms, :) + (pressure(:, kms, :) - pressure(:, kms+1, :)) / 2
+        ! this isn't correct, we should be using update_pressure or similar to solve this
+        ! domain%ptop = 2*domain%p(:,nz,:) - domain%p(:,nz-1,:)
+        psfc = pressure_i(:, kms, :)
+
+        temperature = potential_temperature * exner
+
         density =  pressure / &
-                    (Rd * potential_temperature * exner) ! kg/m^3
+                    (Rd * temperature) ! kg/m^3
+
+        u_mass = (u(ims:ime+1,:,:) + u(ims+1:ime,:,:)) / 2
+        v_mass = (v(:,:,jms:jme+1) + v(:,:,jms+1:jme)) / 2
 
         end associate
 
@@ -67,13 +93,10 @@ contains
     !     ny=size(domain%p,3)
     !
     !     ! update p_inter, psfc, ptop, Um, Vm, mut
-    !     domain%Um = 0.5*(domain%u(1:nx-1,:,:)+domain%u(2:nx,:,:))
-    !     domain%Vm = 0.5*(domain%v(:,:,1:ny-1)+domain%v(:,:,2:ny))
     !     if (options%physics%convection>0) then
     !         domain%Um = domain%Um + 0.5*(domain%u_cu(1:nx-1,:,:)+domain%u_cu(2:nx,:,:))
     !         domain%Vm = domain%Vm + 0.5*(domain%v_cu(:,:,1:ny-1)+domain%v_cu(:,:,2:ny))
     !     endif
-    !     domain%t  = domain%th * domain%pii
     !
     !     domain%p_inter=domain%p
     !     call update_pressure(domain%p_inter, domain%z, domain%z_inter, domain%t)

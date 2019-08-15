@@ -87,6 +87,7 @@ module domain_interface
     type(variable_t) :: soil_temperature
     type(variable_t) :: soil_totalmoisture
     type(variable_t) :: soil_deep_temperature
+
     integer,allocatable :: land_mask(:,:)
     type(variable_t) :: latitude
     type(variable_t) :: longitude
@@ -94,6 +95,10 @@ module domain_interface
     type(variable_t) :: u_longitude
     type(variable_t) :: v_latitude
     type(variable_t) :: v_longitude
+
+    type(variable_t) :: u_mass
+    type(variable_t) :: v_mass
+
 
     type(var_dict_t) :: variables_to_force
 

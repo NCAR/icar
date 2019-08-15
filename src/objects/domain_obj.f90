@@ -144,7 +144,9 @@ contains
         if (this_image()==1) print *,"  Initializing variables"
 
         if (0<opt%vars_to_allocate( kVARS%u) )                          call setup(this%u,                        this%u_grid,   forcing_var=opt%parameters%uvar,       list=this%variables_to_force, force_boundaries=.False.)
+        if (0<opt%vars_to_allocate( kVARS%u) )                          call setup(this%u_mass,                   this%grid)
         if (0<opt%vars_to_allocate( kVARS%v) )                          call setup(this%v,                        this%v_grid,   forcing_var=opt%parameters%vvar,       list=this%variables_to_force, force_boundaries=.False.)
+        if (0<opt%vars_to_allocate( kVARS%v) )                          call setup(this%v_mass,                   this%grid)
         if (0<opt%vars_to_allocate( kVARS%w) )                          call setup(this%w,                        this%grid )
         if (0<opt%vars_to_allocate( kVARS%water_vapor) )                call setup(this%water_vapor,              this%grid,     forcing_var=opt%parameters%qvvar,      list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%potential_temperature) )      call setup(this%potential_temperature,    this%grid,     forcing_var=opt%parameters%tvar,       list=this%variables_to_force, force_boundaries=.True.)
@@ -867,6 +869,13 @@ contains
         this%south_boundary = (this%grid%yimg == 1)
         this%east_boundary  = (this%grid%ximg == this%grid%ximages)
         this%west_boundary  = (this%grid%ximg == 1)
+
+        this%ims = this%grid%ims; this%its = this%grid%its; this%ids = this%grid%ids
+        this%ime = this%grid%ime; this%ite = this%grid%ite; this%ide = this%grid%ide
+        this%kms = this%grid%kms; this%kts = this%grid%kts; this%kds = this%grid%kds
+        this%kme = this%grid%kme; this%kte = this%grid%kte; this%kde = this%grid%kde
+        this%jms = this%grid%jms; this%jts = this%grid%jts; this%jds = this%grid%jds
+        this%jme = this%grid%jme; this%jte = this%grid%jte; this%jde = this%grid%jde
 
     end subroutine
 

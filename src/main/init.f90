@@ -25,7 +25,7 @@ module initialization
     use advection,                  only : adv_init
     use radiation,                  only : radiation_init
     ! use convection,                 only : init_convection
-    ! use planetary_boundary_layer,   only : pbl_init
+    use planetary_boundary_layer,   only : pbl_init
     use land_surface,               only : lsm_init
 
     use mod_atm_utilities,          only : init_atm_utilities
@@ -102,7 +102,7 @@ contains
 
         ! call init_convection(domain,options)
         !
-        ! call pbl_init(domain,options)
+        call pbl_init(domain,options)
 
         call radiation_init(domain,options)
 
