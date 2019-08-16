@@ -27,6 +27,8 @@ contains
         call check_var(domain%rain_number%data_3d,           name="nrain",   msg=error_msg, less_than    =0.0,   fix=fix_data)
         call check_var(domain%graupel_mass%data_3d,          name="qgrau",   msg=error_msg, less_than    =0.0,   fix=fix_data)
         call check_var(domain%graupel_number%data_3d,        name="ngrau",   msg=error_msg, less_than    =0.0,   fix=fix_data)
+        call check_var(domain%w%data_3d,                     name="w",       msg=error_msg, less_than    =-1e5,  fix=fix_data)
+        call check_var(domain%w%data_3d,                     name="w",       msg=error_msg, greater_than =1e5,   fix=fix_data)
 
     end subroutine domain_check
 

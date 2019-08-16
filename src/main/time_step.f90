@@ -78,8 +78,8 @@ contains
         density =  pressure / &
                     (Rd * temperature) ! kg/m^3
 
-        u_mass = (u(ims:ime+1,:,:) + u(ims+1:ime,:,:)) / 2
-        v_mass = (v(:,:,jms:jme+1) + v(:,:,jms+1:jme)) / 2
+        u_mass = (u(ims+1:ime+1,:,:) + u(ims:ime,:,:)) / 2
+        v_mass = (v(:,:,jms+1:jme+1) + v(:,:,jms:jme)) / 2
 
         end associate
 
@@ -364,8 +364,11 @@ contains
 #ifndef __INTEL_COMPILER
         call co_min(seconds)
 #endif
-        seconds = seconds/1.25
-        ! seconds=60
+#ifdef __INTEL_COMPILER
+        seconds = domain%dx / 100
+#endif
+        ! seconds = seconds/1.25
+
         ! print*, seconds
         ! set an upper bound on dt to keep microphysics and convection stable (?)
         ! store this back in the dt time_delta data structure
@@ -411,11 +414,11 @@ contains
         last_print_time = 0.0
         time_step_size = end_time - domain%model_time
 
-
         call update_dt(dt, options, domain, end_time)
 
         ! now just loop over internal timesteps computing all physics in order (operator splitting...)
         do while (domain%model_time < end_time)
+
             ! Make sure we don't over step the forcing or output period
             if ((domain%model_time + dt) > end_time) then
                 dt = end_time - domain%model_time
