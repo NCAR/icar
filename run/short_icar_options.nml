@@ -2,7 +2,7 @@
 !   Model and run meta-data
 !---------------------------------------------------------
 &model_version
-    version = "1.5",                      ! This must match the version of the compiled code
+    version = "2.0a1",                    ! This must match the version of the compiled code
     comment = "Add your comment here"     ! This will be stored in output files
 /
 
