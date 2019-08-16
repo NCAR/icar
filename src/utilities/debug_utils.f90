@@ -65,6 +65,9 @@ contains
                 write(*,*) trim(msg)
                 write(*,*) trim(name)//" is less than "//trim(str(less_than))//" : "//trim(str(vmin))
 
+                if ((vmin - less_than) < -1e-10) then
+                ! we only want to hard stop if there is a significant difference.
+                ! Numerical precision can mean that advecting hydrometeors ends up with -1e-30 type values which we can ignore
                 block
                     integer :: i,j,k,nx,ny,nz
 
@@ -82,6 +85,7 @@ contains
                         enddo
                     enddo
                 end block
+                endif
 
                 if (present(fix)) then
                     if (fix) then

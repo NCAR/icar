@@ -522,8 +522,8 @@ contains
             last_model_time = domain%model_time%seconds()
 
             domain%temperature%data_3d = domain%exner%data_3d * domain%potential_temperature%data_3d
-            domain%u_10m%data_2d = domain%u%data_3d(:,1,:)
-            domain%v_10m%data_2d = domain%v%data_3d(:,1,:)
+            domain%u_10m%data_2d = domain%u_mass%data_3d(:,1,:)
+            domain%v_10m%data_2d = domain%v_mass%data_3d(:,1,:)
 
             ! exchange coefficients
             windspd = sqrt(domain%u_10m%data_2d**2 + domain%v_10m%data_2d**2)
