@@ -138,6 +138,29 @@ contains
 
     end function day_from_units
 
+    function hour_from_units(units, error) result(hour)
+        implicit none
+        character(len=*), intent(in) :: units 
+        integer, intent(out), optional :: error
+        integer :: hour
+
+        integer :: since_loc, hour_loc
+        error = 0
+
+        since_loc = index(units,"since")
+
+        hour_loc = index(units(since_loc:)," ") + 11
+        hour_loc = hour_loc + since_loc
+
+        if( hour_loc+1 <= len(units) ) then
+           hour = get_integer(units(hour_loc:hour_loc+1))
+        else
+           error = 1
+           hour = 0
+        endif
+
+    end function hour_from_units
+
     subroutine read_times(filename, varname, times, timezone_offset)
         implicit none
         character(len=*),   intent(in) :: filename, varname
@@ -146,7 +169,7 @@ contains
 
         double precision, allocatable, dimension(:) :: temp_times
         integer :: time_idx, error
-        integer :: start_year, start_month, start_day
+        integer :: start_year, start_month, start_day, start_hour
         character(len=MAXSTRINGLENGTH) :: calendar, units
         double precision :: calendar_gain
 
@@ -169,6 +192,7 @@ contains
             start_year    = year_from_units(units)
             start_month   = month_from_units(units)
             start_day     = day_from_units(units)
+            start_hour    = hour_from_units(units)            
             ! based off of the string "Days since" (or "seconds" or...)
             calendar_gain = time_gain_from_units(units)
         else
@@ -187,7 +211,7 @@ contains
 
         do time_idx = 1, size(temp_times,1)
 
-            call times(time_idx)%init(calendar, start_year, start_month, start_day)
+            call times(time_idx)%init(calendar, start_year, start_month, start_day, start_hour)
             call times(time_idx)%set(days=temp_times(time_idx))
 
         end do

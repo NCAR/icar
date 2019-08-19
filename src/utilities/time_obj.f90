@@ -31,6 +31,7 @@ module time_object
         integer :: year_zero = 1800  ! reference date
         integer :: month_zero= 1
         integer :: day_zero  = 1
+        integer :: hour_zero = 0
         integer :: calendar
         integer, dimension(13) :: month_start
         integer :: year, month, day, hour, minute, second
@@ -128,11 +129,11 @@ contains
     !!  Set the object calendar and base year
     !!
     !!------------------------------------------------------------
-    subroutine time_init_i(this, calendar, year_zero, month_zero, day_zero)
+    subroutine time_init_i(this, calendar, year_zero, month_zero, day_zero, hour_zero)
         implicit none
         class(Time_type) :: this
         integer, intent(in) :: calendar
-        integer, intent(in), optional :: year_zero, month_zero, day_zero
+        integer, intent(in), optional :: year_zero, month_zero, day_zero, hour_zero
 
         integer :: i
 
@@ -158,7 +159,9 @@ contains
         if ( present(day_zero) ) then
             this%day_zero = day_zero
         endif
-
+        if ( present(hour_zero) ) then
+            this%hour_zero = hour_zero
+        endif
     end subroutine time_init_i
 
     !>------------------------------------------------------------
@@ -302,7 +305,7 @@ contains
         if (this%calendar==GREGORIAN) then
             date_to_mjd = gregorian_julian_day(year, month, day, hour, minute, second)
 
-            date_to_mjd = date_to_mjd - gregorian_julian_day(this%year_zero, this%month_zero, this%day_zero, 0, 0, 0)
+            date_to_mjd = date_to_mjd - gregorian_julian_day(this%year_zero, this%month_zero, this%day_zero, this%hour_zero, 0, 0)
 
         else if (this%calendar==NOLEAP) then
             date_to_mjd = (year-this%year_zero)*365 + this%month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0
@@ -337,7 +340,7 @@ contains
         !
         !------------------------------------------------------------
         if (this%calendar==GREGORIAN) then
-            jday = nint(mjd + gregorian_julian_day(this%year_zero, this%month_zero, this%day_zero, 0, 0, 0))
+            jday = nint(mjd + gregorian_julian_day(this%year_zero, this%month_zero, this%day_zero, this%hour_zero, 0, 0))
 
             f = jday+j+(((4*jday+B)/146097)*3)/4+C
             e = r*f+v
@@ -574,8 +577,8 @@ contains
         class(Time_type), intent(in)   :: this
         character(len=MAXSTRINGLENGTH) :: units
 
-        write(units, '("days since ",i4,"-",i2.2,"-",i2.2," 00:00:00")') &
-                this%year_zero,this%month_zero,this%day_zero
+        write(units, '("days since ",i4,"-",i2.2,"-",i2.2," ",i2.2,":00:00")') &
+                this%year_zero,this%month_zero,this%day_zero,this%hour_zero 
 
     end function units
 
@@ -693,7 +696,7 @@ contains
 
         ! note if calendars are the same, can just return mjd delta...
         if ((t1%calendar == t2%calendar).and.(t1%year_zero == t2%year_zero)) then
-            if ((t1%month_zero == t2%month_zero).and.(t1%day_zero == t2%day_zero)) then
+            if ((t1%month_zero == t2%month_zero).and.(t1%day_zero == t2%day_zero).and.(t1%hour_zero == t2%hour_zero))  then
                 greater_or_eq = (t1%current_date_time >= t2%current_date_time)
                 return
             endif
@@ -845,14 +848,14 @@ contains
         integer :: year, month, day, hour, minute, second
 
         if (((t1%calendar == t2%calendar).and.(t1%year_zero == t2%year_zero)) &
-            .and.((t1%month_zero == t2%month_zero).and.(t1%day_zero == t2%day_zero))) then
+            .and.((t1%month_zero == t2%month_zero).and.(t1%day_zero == t2%day_zero).and.(t1%hour_zero == t2%hour_zero))) then
 
             call dt%set(seconds=(t1%mjd() - t2%mjd()) * 86400.0D0)
         else
             ! if the two time object reference calendars don't match
             ! create a new time object with the same referecnce as t1
             ! then copy the date/time data into it from t2 before computing the time delta
-            call temp_time%init(t1%calendar,t1%year_zero,t1%month_zero,t1%day_zero)
+            call temp_time%init(t1%calendar,t1%year_zero,t1%month_zero,t1%day_zero, t1%hour_zero)
             call t2%date(year, month, day, hour, minute, second)
             call temp_time%set(year, month, day, hour, minute, second)
 
