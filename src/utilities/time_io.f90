@@ -140,26 +140,31 @@ contains
 
     function hour_from_units(units, error) result(hour)
         implicit none
-        character(len=*), intent(in) :: units 
+        character(len=*), intent(in) :: units
         integer, intent(out), optional :: error
         integer :: hour
-
+        
         integer :: since_loc, hour_loc
-        error = 0
+        if (present(error)) error = 0
 
         since_loc = index(units,"since")
 
         hour_loc = index(units(since_loc:)," ") + 11
         hour_loc = hour_loc + since_loc
 
+        ! default return value if hours can't be read from the units attribute (e.g. they aren't present)
+        hour = 0
+
         if( hour_loc+1 <= len(units) ) then
-           hour = get_integer(units(hour_loc:hour_loc+1))
+           if (trim(units(hour_loc:hour_loc+1)) /= "") then
+               hour = get_integer(units(hour_loc:hour_loc+1))
+           endif
         else
-           error = 1
-           hour = 0
+           if (present(error)) error = 1
         endif
 
     end function hour_from_units
+  
 
     subroutine read_times(filename, varname, times, timezone_offset)
         implicit none
@@ -175,7 +180,7 @@ contains
 
         ! first read the time variable (presumebly a 1D double precision array)
         call io_read(trim(filename), trim(varname), temp_times)
-
+         
         ! attempt to read the calendar attribute from the time variable
         call io_read_attribute(trim(filename),"calendar", calendar, var_name=trim(varname), error=error)
         ! if time attribute it not present, set calendar to one specified in the config file
@@ -202,6 +207,7 @@ contains
         ! converts the input units to "days since ..."
         ! in case it is in units of e.g. "hours since" or "seconds since"
         temp_times = temp_times / calendar_gain
+                
         if (present(timezone_offset)) then
             temp_times = temp_times + timezone_offset / 24.0
         endif
@@ -210,10 +216,8 @@ contains
         allocate(times(size(temp_times)))
 
         do time_idx = 1, size(temp_times,1)
-
             call times(time_idx)%init(calendar, start_year, start_month, start_day, start_hour)
             call times(time_idx)%set(days=temp_times(time_idx))
-
         end do
 
         deallocate(temp_times)
