@@ -253,12 +253,21 @@ ifeq ($(MODE), fast) # WARNING -ipo (included in -fast) takes forever for very l
 	endif
 endif
 
+LINKER=$(F90)
 ifeq ($(COMPILER), gnu)
 	ifeq ($(CAF_MODE), single)
 		CAF_FLAG=-fcoarray=single
 	else
-		CAF_FLAG=-fcoarray=lib
-		F90=caf
+		ifeq ($(F90), caf)
+			CAF_FLAG=-fcoarray=lib
+		else
+			ifndef CAF_DIR
+				CAF_DIR=${HOME}/usr/local
+			endif
+			CAF_FLAG=-fcoarray=lib
+			CAF_LINK=-L${CAF_DIR}/lib -lcaf_mpi
+			LINKER=mpif90
+		endif
 	endif
 endif
 # Intel fortran
@@ -267,6 +276,7 @@ ifeq ($(COMPILER), intel)
 		CAF_FLAG=-coarray=single
 	else
 		CAF_FLAG=-coarray=distributed
+		LINKER=mpif90
 	endif
 endif
 
@@ -281,7 +291,7 @@ ASSERT=-DUSE_ASSERTIONS=$(USE_ASSERTIONS)
 ###################################################################
 # copy required libraries into a directory accessible on compute nodes and set LD_RUN_PATH e.g.
 # export LD_RUN_PATH=$LD_RUN_PATH:/path/to/netcdf/libraries/lib:/path/to/fftw/libraries/lib
-LFLAGS=$(LINK) $(PROF) $(CAF_FLAG) $(LIBNETCDF) $(LIBFFT)
+LFLAGS=$(LINK) $(PROF) $(CAF_FLAG) $(CAF_LINK) $(LIBNETCDF) $(LIBFFT)
 FFLAGS=$(COMP) $(PROF) $(CAF_FLAG) $(PREPROC) -DVERSION=\"$(GIT_VERSION)\" $(INCNETCDF) $(INCFFT) $(MODOUTPUT) $(ASSERT)
 
 $(info $$NODENAME    = ${NODENAME})
@@ -396,7 +406,7 @@ TEST_EXECUTABLES= 	fftshift_test			\
 ###################################################################
 
 icar:${OBJS}
-	${F90} -o icar ${OBJS} ${LFLAGS}
+	${LINKER} -o icar ${OBJS} ${LFLAGS}
 
 all:icar test
 
@@ -404,7 +414,7 @@ install:icar
 	${CP} icar ${INSTALLDIR}
 
 clean:
-	${RM} $(BUILD)*.o $(BUILD)*.mod *.lst docs/doxygen_sqlite3.db 2>/dev/null ||:
+	${RM} $(BUILD)*.o $(BUILD)*.mod *.i *.lst docs/doxygen_sqlite3.db 2>/dev/null ||:
 
 allclean:cleanall
 
@@ -422,27 +432,27 @@ doc:
 #	test cases
 ###################################################################
 fftw_test: $(BUILD)test_fftw.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 fftshift_test: $(BUILD)test_fftshift.o $(BUILD)fftshift.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 calendar_test: $(BUILD)test_calendar.o $(BUILD)time.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 mpdata_test: $(BUILD)test_mpdata.o $(BUILD)adv_mpdata.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 point_in_on_test: $(BUILD)test_point_in_on.o $(BUILD)geo_reader.o $(BUILD)data_structures.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 blocking_test: $(BUILD)test_blocking.o $(BUILD)io_routines.o $(BUILD)winds_blocking.o \
 				$(BUILD)linear_winds.o $(BUILD)fftshift.o $(BUILD)string.o 		      \
 				$(BUILD)lt_lut_io.o $(BUILD)atm_utilities.o $(BUILD)array_utilities.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 array_util_test: $(BUILD)test_array_utilities.o $(BUILD)array_utilities.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 variable_dict_test: $(BUILD)test_variable_dict.o $(BUILD)co_utilities.o	 	\
 					$(BUILD)variable_dict_h.o	$(BUILD)variable_dict_obj.o	\
@@ -450,7 +460,7 @@ variable_dict_test: $(BUILD)test_variable_dict.o $(BUILD)co_utilities.o	 	\
 					$(BUILD)grid_h.o			$(BUILD)grid_obj.o			\
 					$(BUILD)meta_data_h.o 		$(BUILD)meta_data_obj.o 	\
 					$(BUILD)icar_constants.o	$(BUILD)assertions.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 
 caf_options_test: $(BUILD)test_caf_options.o				  	\
@@ -469,7 +479,7 @@ caf_options_test: $(BUILD)test_caf_options.o				  	\
 				$(BUILD)advect.o		 $(BUILD)lsm_driver.o	\
 				$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
 				$(BUILD)water_simple.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 caf_output_test: $(BUILD)test_caf_output.o						\
 				$(BUILD)output_h.o		$(BUILD)output_obj.o	\
@@ -480,7 +490,7 @@ caf_output_test: $(BUILD)test_caf_output.o						\
 				$(BUILD)time_h.o	\
 				$(BUILD)icar_constants.o $(BUILD)io_routines.o  \
 				$(BUILD)assertions.o	$(BUILD)default_output_metadata.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 caf_write_domain_test: $(BUILD)test_caf_write_domain.o					\
 	 				$(BUILD)domain_h.o		 $(BUILD)domain_obj.o		\
@@ -509,7 +519,7 @@ caf_write_domain_test: $(BUILD)test_caf_write_domain.o					\
 					$(BUILD)vinterp.o		$(BUILD)lsm_driver.o		\
 					$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
 					$(BUILD)water_simple.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
 	 				$(BUILD)domain_h.o		 $(BUILD)domain_obj.o		\
@@ -538,7 +548,7 @@ caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
 					$(BUILD)lsm_driver.o	\
 					$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
 					$(BUILD)water_simple.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 caf_domain_init_test: $(BUILD)test_caf_domain_init.o                \
 				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
@@ -567,7 +577,7 @@ caf_domain_init_test: $(BUILD)test_caf_domain_init.o                \
 				$(BUILD)vinterp.o	\
 				$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
 				$(BUILD)water_simple.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 caf_init_test: $(BUILD)test_caf_init.o                              \
 				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
@@ -596,7 +606,7 @@ caf_init_test: $(BUILD)test_caf_init.o                              \
 				$(BUILD)lsm_driver.o	\
 				$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
 				$(BUILD)water_simple.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 caf_init-write_test: $(BUILD)test_caf_init-write.o                  \
 				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
@@ -626,11 +636,11 @@ caf_init-write_test: $(BUILD)test_caf_init-write.o                  \
 				$(BUILD)lsm_driver.o	\
 				$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
 				$(BUILD)water_simple.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 caf_bcast_test: $(BUILD)test_caf_bcast.o	\
 				$(BUILD)co_utilities.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 caf_boundary_test: $(BUILD)test_caf_boundary.o						\
 				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
@@ -658,7 +668,7 @@ caf_boundary_test: $(BUILD)test_caf_boundary.o						\
 				$(BUILD)lsm_driver.o								\
 				$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
 				$(BUILD)water_simple.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 caf_boundary_init_test: $(BUILD)test_caf_boundary_init.o				    \
 				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
@@ -686,7 +696,7 @@ caf_boundary_init_test: $(BUILD)test_caf_boundary_init.o				    \
 				$(BUILD)lsm_driver.o								\
 				$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
 				$(BUILD)water_simple.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 caf_linear_winds_setup_test: $(BUILD)test_caf_linear_winds_setup.o	\
 				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
@@ -716,20 +726,20 @@ caf_linear_winds_setup_test: $(BUILD)test_caf_linear_winds_setup.o	\
 				$(BUILD)lt_lut_io.o		 $(BUILD)lsm_driver.o		\
 				$(BUILD)lsm_noahdrv.o $(BUILD)lsm_noahlsm.o \
 				$(BUILD)water_simple.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 
 caf_other_image_grids_test: $(BUILD)test_caf_other_image_grids.o	\
 				$(BUILD)grid_obj.o 			$(BUILD)grid_h.o		\
 				$(BUILD)icar_constants.o 	$(BUILD)assertions.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 caf_one_d_decomposition_test: $(BUILD)test_caf_one_d_decomposition.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 
 caf_threads_test: $(BUILD)test_caf_threads.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 ###################################################################
 #	Generic compilation rules
