@@ -699,6 +699,15 @@ contains
             nsoil = size(this%soil_temperature%data_3d, 2)
         endif
 
+        if (options%parameters%landvar /= "") then
+            call io_read(options%parameters%init_conditions_file,   &
+                           options%parameters%landvar,         &
+                           temporary_data)
+            if (allocated(this%land_mask)) then
+                this%land_mask = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+            endif
+        endif
+
 
         if (options%parameters%soiltype_var /= "") then
             call io_read(options%parameters%init_conditions_file,   &
