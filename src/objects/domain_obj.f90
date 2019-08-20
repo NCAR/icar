@@ -48,6 +48,8 @@ contains
 
         call initialize_core_variables(this, options)
 
+        call read_land_variables(this, options)
+
         call setup_meta_data(this, options)
 
     end subroutine
@@ -180,8 +182,8 @@ contains
         if (0<opt%vars_to_allocate( kVARS%canopy_water) )               call setup(this%canopy_water,             this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%snow_water_equivalent) )      call setup(this%snow_water_equivalent,    this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%skin_temperature) )           call setup(this%skin_temperature,         this%grid2d,   forcing_var=opt%parameters%sst_var,     list=this%variables_to_force)
-        if (0<opt%vars_to_allocate( kVARS%soil_water_content) )         call setup(this%soil_water_content,       this%grid_soil,forcing_var=opt%parameters%soil_t_var,  list=this%variables_to_force)
-        if (0<opt%vars_to_allocate( kVARS%soil_temperature) )           call setup(this%soil_temperature,         this%grid_soil,forcing_var=opt%parameters%soil_vwc_var,list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%soil_water_content) )         call setup(this%soil_water_content,       this%grid_soil)
+        if (0<opt%vars_to_allocate( kVARS%soil_temperature) )           call setup(this%soil_temperature,         this%grid_soil)
         if (0<opt%vars_to_allocate( kVARS%latitude) )                   call setup(this%latitude,                 this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%longitude) )                  call setup(this%longitude,                this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%u_latitude) )                 call setup(this%u_latitude,               this%u_grid2d)
@@ -460,25 +462,6 @@ contains
             end associate
         endif
 
-        if (this_image()==1) print*, "WARNING Soil variables not properly initialized"
-        if (associated(this%vegetation_fraction%data_3d)) this%vegetation_fraction%data_3d = 0.6
-        if (associated(this%soil_water_content%data_3d)) this%soil_water_content%data_3d = 0.2
-        if (associated(this%soil_totalmoisture%data_2d)) this%soil_totalmoisture%data_2d = 0.2 * 2
-        if (associated(this%soil_temperature%data_3d)) this%soil_temperature%data_3d = 280
-        if (associated(this%soil_deep_temperature%data_2d)) this%soil_deep_temperature%data_2d = 280
-        if (associated(this%skin_temperature%data_2d)) this%skin_temperature%data_2d = 280
-        if (associated(this%roughness_z0%data_2d)) this%roughness_z0%data_2d = 0.001
-        if (associated(this%sensible_heat%data_2d)) this%sensible_heat%data_2d=0
-        if (associated(this%latent_heat%data_2d)) this%latent_heat%data_2d=0
-        if (associated(this%u_10m%data_2d)) this%u_10m%data_2d=0
-        if (associated(this%v_10m%data_2d)) this%v_10m%data_2d=0
-        if (associated(this%temperature_2m%data_2d)) this%temperature_2m%data_2d=280
-        if (associated(this%humidity_2m%data_2d)) this%humidity_2m%data_2d=0.001
-        if (associated(this%surface_pressure%data_2d)) this%surface_pressure%data_2d=102000
-        if (associated(this%longwave_up%data_2d)) this%longwave_up%data_2d=0
-        if (associated(this%ground_heat_flux%data_2d)) this%ground_heat_flux%data_2d=0
-        if (associated(this%soil_totalmoisture%data_2d)) this%soil_totalmoisture%data_2d=0.5
-
         call standardize_coordinates(this%geo_u)
         call standardize_coordinates(this%geo_v)
 
@@ -696,6 +679,126 @@ contains
         call setup_geo(this%geo,   this%latitude%data_2d,   this%longitude%data_2d,   this%z%data_3d)
 
     end subroutine initialize_core_variables
+
+    subroutine read_land_variables(this, options)
+        implicit none
+        class(domain_t), intent(inout)  :: this
+        class(options_t),intent(in)     :: options
+
+        integer :: i, nsoil
+        real, allocatable :: temporary_data(:,:), temporary_data_3d(:,:,:)
+        real :: soil_thickness(20)
+
+        if (this_image()==1) print*, "Testing soil variable initialization"
+
+        soil_thickness = 1.0
+        soil_thickness(1:4) = [0.1, 0.2, 0.5, 1.0]
+        if (associated(this%soil_water_content%data_3d)) then
+            nsoil = size(this%soil_water_content%data_3d, 2)
+        elseif (associated(this%soil_temperature%data_3d)) then
+            nsoil = size(this%soil_temperature%data_3d, 2)
+        endif
+
+
+        if (options%parameters%soiltype_var /= "") then
+            call io_read(options%parameters%init_conditions_file,   &
+                           options%parameters%soiltype_var,         &
+                           temporary_data)
+            if (allocated(this%soil_type)) then
+                this%soil_type = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+            endif
+        endif
+
+        if (options%parameters%soil_deept_var /= "") then
+            call io_read(options%parameters%init_conditions_file,   &
+                           options%parameters%soil_deept_var,       &
+                           temporary_data)
+            if (associated(this%soil_deep_temperature%data_2d)) then
+                this%soil_deep_temperature%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+            endif
+
+        else
+             this%soil_deep_temperature%data_2d = 280
+        endif
+
+        if (options%parameters%soil_t_var /= "") then
+            call io_read(options%parameters%init_conditions_file,   &
+                           options%parameters%soil_t_var,           &
+                           temporary_data_3d)
+            if (associated(this%soil_temperature%data_3d)) then
+                do i=1,nsoil
+                    this%soil_temperature%data_3d(:,i,:) = temporary_data_3d(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme, i)
+                enddo
+                if (options%parameters%soil_deept_var == "") then
+                    this%soil_deep_temperature%data_2d = this%soil_temperature%data_3d(:,nsoil,:)
+                endif
+            endif
+
+        else
+            do i=1,nsoil
+                this%soil_temperature%data_3d(:,i,:) = this%soil_deep_temperature%data_2d
+            enddo
+        endif
+
+        if (options%parameters%soil_vwc_var /= "") then
+            call io_read(options%parameters%init_conditions_file,   &
+                           options%parameters%soil_vwc_var,         &
+                           temporary_data_3d)
+            if (associated(this%soil_water_content%data_3d)) then
+                do i=1,nsoil
+                    this%soil_water_content%data_3d(:,i,:) = temporary_data_3d(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme, i)
+                enddo
+            endif
+
+        else
+             this%soil_water_content%data_3d = 0.2
+        endif
+
+        if (options%parameters%vegtype_var /= "") then
+            call io_read(options%parameters%init_conditions_file,   &
+                           options%parameters%vegtype_var,          &
+                           temporary_data)
+            if (allocated(this%veg_type)) then
+                this%veg_type = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+            endif
+        endif
+
+        if (options%parameters%vegfrac_var /= "") then
+            call io_read(options%parameters%init_conditions_file,   &
+                           options%parameters%vegfrac_var,          &
+                           temporary_data)
+            if (associated(this%vegetation_fraction%data_3d)) then
+                do i=1,size(this%vegetation_fraction%data_3d, 2)
+                    this%vegetation_fraction%data_3d(:,i,:) = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+                enddo
+            endif
+
+        else
+             this%vegetation_fraction%data_3d = 0.6
+        endif
+
+        if (associated(this%soil_totalmoisture%data_2d)) then
+            this%soil_totalmoisture%data_2d = 0
+            do i=1, nsoil
+                this%soil_totalmoisture%data_2d = this%soil_totalmoisture%data_2d + this%soil_water_content%data_3d(:,i,:) * soil_thickness(i)
+            enddo
+        endif
+
+        ! these will all be udpated by either forcing data or the land model, but initialize to sensible values to avoid breaking other initialization routines
+        if (associated(this%skin_temperature%data_2d)) this%skin_temperature%data_2d = 280
+        if (associated(this%roughness_z0%data_2d)) this%roughness_z0%data_2d = 0.001
+        if (associated(this%sensible_heat%data_2d)) this%sensible_heat%data_2d=0
+        if (associated(this%latent_heat%data_2d)) this%latent_heat%data_2d=0
+        if (associated(this%u_10m%data_2d)) this%u_10m%data_2d=0
+        if (associated(this%v_10m%data_2d)) this%v_10m%data_2d=0
+        if (associated(this%temperature_2m%data_2d)) this%temperature_2m%data_2d=280
+        if (associated(this%humidity_2m%data_2d)) this%humidity_2m%data_2d=0.001
+        if (associated(this%surface_pressure%data_2d)) this%surface_pressure%data_2d=102000
+        if (associated(this%longwave_up%data_2d)) this%longwave_up%data_2d=0
+        if (associated(this%ground_heat_flux%data_2d)) this%ground_heat_flux%data_2d=0
+
+
+    end subroutine read_land_variables
 
     !> -------------------------------
     !! Initialize various internal variables that need forcing data first, e.g. temperature, pressure on interface, exner, ...
