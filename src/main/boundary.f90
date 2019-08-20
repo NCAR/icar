@@ -139,7 +139,7 @@ contains
 
             error=1
             curfile=0
-            do while ( (error/=0) .and. (curfile <= size(file_list)) )
+            do while ( (error/=0) .and. (curfile < size(file_list)) )
                 curfile = curfile + 1
                 curstep = find_timestep_in_file(file_list(curfile), options%time_var, time, error=error)
             enddo
