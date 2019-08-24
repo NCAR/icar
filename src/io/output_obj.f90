@@ -202,6 +202,9 @@ contains
         integer :: err
 
         associate(var => this%time)
+        var%name = "time"
+        var%dimensions = [ "time" ]
+        var%n_dimensions = 1
 
         err = nf90_inq_varid(this%ncfile_id, var%name, var%var_id)
 
@@ -210,9 +213,6 @@ contains
 
             if (allocated(var%dim_ids)) deallocate(var%dim_ids)
             allocate(var%dim_ids(1))
-            var%dimensions = [ "time" ]
-            var%n_dimensions = 1
-            var%name = "time"
 
             ! Try to find the dimension ID if it exists already.
             err = nf90_inq_dimid(this%ncfile_id, trim(var%dimensions(1)), var%dim_ids(1))

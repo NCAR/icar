@@ -30,19 +30,21 @@ module output_interface
   !!
   !!----------------------------------------------------------
   type, extends(meta_data_t) :: output_t
+
       ! all components are private and should only be modified through procedures
       private
-      ! store status of the object
-      logical :: is_initialized = .false.
-      logical :: creating = .false.
 
       ! Store the variables to be written
       ! Note n_variables may be smaller then size(variables) so that it doesn't
       ! have to keep reallocating variables whenever something is added or removed
-      integer :: n_variables = 0
-      type(variable_t), allocatable :: variables(:)
-      ! time variable is stored outside of the variable list... probably need to think about that some
+      integer, public :: n_variables = 0
+      type(variable_t), public, allocatable :: variables(:)
+      ! time variable , publicis stored outside of the variable list... probably need to think about that some
       type(variable_t) :: time
+
+      ! store status of the object
+      logical :: is_initialized = .false.
+      logical :: creating = .false.
 
       ! The filename of the netcdf file to write
       character(len=kMAX_FILE_LENGTH) :: filename
