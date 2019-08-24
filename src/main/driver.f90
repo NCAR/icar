@@ -27,6 +27,7 @@ program icar
     use timer_interface,    only : timer_t
     use time_object,        only : Time_type
     use wind,               only : update_winds
+    use restart_interface,  only : restart_model
 
 
     implicit none
@@ -55,19 +56,18 @@ program icar
     call dataset%set_domain(domain)
     call dataset%add_variables(options%vars_for_restart, domain)
 
+    if (options%parameters%restart) then
+        if (this_image()==1) write(*,*) "Reading restart data"
+        call restart_model(domain, dataset, options)
+    endif
+
     !-----------------------------------------
     !-----------------------------------------
     !  Time Loop
     !
     !   note that a timestep here is a forcing input timestep O(1-3hr), not a physics timestep O(20-100s)
-    write(file_name, '(I6.6,"_",A,".nc")') this_image(), trim(domain%model_time%as_string())
+    write(file_name, '(A,I6.6,"_",A,".nc")') trim(options%parameters%output_file), this_image(), trim(domain%model_time%as_string(file_date_format))
 
-    do i=1,len_trim(file_name)
-        if (file_name(i:i)==" ") file_name = file_name(:i-1)//"_"//file_name(i+1:)
-        if (file_name(i:i)=="/") file_name = file_name(:i-1)//"-"//file_name(i+1:)
-        if (file_name(i:i)==":") file_name = file_name(:i-1)//"-"//file_name(i+1:)
-    end do
-    file_name = trim(options%parameters%output_file)//trim(file_name)
     i=1
 
     call initialization_timer%stop()
