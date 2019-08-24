@@ -78,6 +78,7 @@ contains
 
             if (this%parameters%restart) then
                 call init_restart_options(options_filename, this%parameters)
+                this%parameters%start_time = this%parameters%restart_time
             endif
 
             call filename_namelist(options_filename, this%parameters)
