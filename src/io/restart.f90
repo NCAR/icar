@@ -44,17 +44,10 @@ subroutine read_restart_data(domain, dataset, filename, time_step)
 
     do i=1,dataset%n_variables
 
-        associate(var => dataset%variables(i), &
-            its => domain%its,  ite => domain%ite,  &
-            ims => domain%ims,  ime => domain%ime,  &
-            kts => domain%kts,  kte => domain%kte,  &
-            kms => domain%kms,  kme => domain%kme,  &
-            jts => domain%jts,  jte => domain%jte,  &
-            jms => domain%jms,  jme => domain%jme   &
-            )
+        associate(var => dataset%variables(i))
 
             if (var%three_d) then
-                dim_3d = [ite-its+1, kte-kts+1, jte-jts+1] ! var%dim_len
+
                 call io_read(filename, var%name, data_3d, extradim=time_step)
 
                 if (associated(var%data_3d)) then
@@ -62,8 +55,13 @@ subroutine read_restart_data(domain, dataset, filename, time_step)
                     if (size(var%data_3d) /= size(data_3d)) then
                         call restart_domain_error(var%name)
                     endif
-                    dim_3d(2) = size(data_3d,3)
-                    var%data_3d(its:ite,:,jts:jte) = reshape(data_3d(its-ims+1:ite-ims+1,jts-jms+1:jte-jms+1,:), shape=dim_3d, order=[1,3,2])
+
+                    dim_3d(1) = var%dim_len(1)
+                    dim_3d(2) = var%dim_len(3)
+                    dim_3d(3) = var%dim_len(2)
+
+                    var%data_3d = reshape(data_3d, shape=dim_3d, order=[1,3,2])
+
                 else
                     print*, "ERROR, variable not ready to be used:"//trim(var%name)
                 endif
@@ -74,7 +72,7 @@ subroutine read_restart_data(domain, dataset, filename, time_step)
                     if (size(var%data_2d) /= size(data_2d)) then
                         call restart_domain_error(var%name)
                     endif
-                    var%data_2d(its:ite,jts:jte) = data_2d(its-ims+1:ite-ims+1,jts-jms+1:jte-jms+1)
+                    var%data_2d = data_2d
                 else
                     print*, "ERROR, variable not ready to be used:"//trim(var%name)
                 endif
