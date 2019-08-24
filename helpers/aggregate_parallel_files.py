@@ -61,6 +61,7 @@ def set_up_dataset(d):
         x_off, y_off = get_dim_offset(dims)
 
         if len(dims) == 1:
+            nt = d.dims[dims[0]]
             data = np.zeros((nt))
         if len(dims) == 2:
             data = np.zeros((ny + y_off, nx + x_off))
