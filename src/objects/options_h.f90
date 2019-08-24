@@ -20,6 +20,9 @@ module options_interface
         integer :: vars_to_allocate( kMAX_STORAGE_VARS ) = 0
         ! these are the variables that need to be written and read from disk for a model restart run
         integer :: vars_for_restart( kMAX_STORAGE_VARS ) = 0
+        ! these are the variables that need to be written and read from disk as primary output
+        integer :: vars_for_output( kMAX_STORAGE_VARS ) = 0
+
 
         type(parameter_options_type),   allocatable :: parameters[:]
 
