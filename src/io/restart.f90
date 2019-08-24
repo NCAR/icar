@@ -37,23 +37,33 @@ subroutine read_restart_data(domain, dataset, filename, time_step)
     character(len=*), intent(in)    :: filename
     integer,          intent(in)    :: time_step
 
-    integer :: i
+    integer :: i, ii,jj
     integer :: dim_3d(3)
     real, allocatable :: data_3d(:,:,:)
     real, allocatable :: data_2d(:,:)
 
     do i=1,dataset%n_variables
 
-        associate(var => dataset%variables(i))
+        associate(var => dataset%variables(i), &
+            its => domain%its,  ite => domain%ite,  &
+            ims => domain%ims,  ime => domain%ime,  &
+            kts => domain%kts,  kte => domain%kte,  &
+            kms => domain%kms,  kme => domain%kme,  &
+            jts => domain%jts,  jte => domain%jte,  &
+            jms => domain%jms,  jme => domain%jme   &
+            )
 
             if (var%three_d) then
-                dim_3d = var%dim_len
+                dim_3d = [ite-its+1, kte-kts+1, jte-jts+1] ! var%dim_len
                 call io_read(filename, var%name, data_3d, extradim=time_step)
+
                 if (associated(var%data_3d)) then
+
                     if (size(var%data_3d) /= size(data_3d)) then
                         call restart_domain_error(var%name)
                     endif
-                    var%data_3d = reshape(data_3d, shape=dim_3d, order=[1,3,2])
+                    dim_3d(2) = size(data_3d,3)
+                    var%data_3d(its:ite,:,jts:jte) = reshape(data_3d(its-ims+1:ite-ims+1,jts-jms+1:jte-jms+1,:), shape=dim_3d, order=[1,3,2])
                 else
                     print*, "ERROR, variable not ready to be used:"//trim(var%name)
                 endif
@@ -64,17 +74,22 @@ subroutine read_restart_data(domain, dataset, filename, time_step)
                     if (size(var%data_2d) /= size(data_2d)) then
                         call restart_domain_error(var%name)
                     endif
-                    var%data_2d(:,:) = data_2d(:,:)
+                    var%data_2d(its:ite,jts:jte) = data_2d(its-ims+1:ite-ims+1,jts-jms+1:jte-jms+1)
                 else
                     print*, "ERROR, variable not ready to be used:"//trim(var%name)
                 endif
-
             endif
         end associate
     end do
 
 end subroutine read_restart_data
 
+
+!> ------------------
+!!  Determine the filename to be used for this particular image/process based on the output filename, restart time, and image number
+!!
+!!  Uses the same calculation that is used to get the output filename when writing, thus it doesn't really use the "restart_file" specified.
+!! -------------------
 function get_image_filename(image_number, initial_filename, restart_time) result(file_name)
     implicit none
     integer,            intent(in) :: image_number
@@ -93,6 +108,10 @@ function get_image_filename(image_number, initial_filename, restart_time) result
 
 end function get_image_filename
 
+
+!> ------------------
+!!  print a meaningful error message if the restart variable doesn't match the internal variable/domain
+!! -------------------
 subroutine restart_domain_error(varname)
     implicit none
     character(len=*), intent(in) :: varname

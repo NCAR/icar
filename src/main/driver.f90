@@ -68,10 +68,9 @@ program icar
     !   note that a timestep here is a forcing input timestep O(1-3hr), not a physics timestep O(20-100s)
     write(file_name, '(A,I6.6,"_",A,".nc")') trim(options%parameters%output_file), this_image(), trim(domain%model_time%as_string(file_date_format))
 
-    i=1
-
     call initialization_timer%stop()
 
+    i=1
     call output_timer%start()
     call dataset%save_file(trim(file_name), i, domain%model_time)
     next_output = domain%model_time + options%parameters%output_dt

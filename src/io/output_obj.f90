@@ -59,12 +59,12 @@ contains
 
             ! End define mode. This tells netCDF we are done defining metadata.
             call check( nf90_enddef(this%ncfile_id), "end define mode" )
-            this%creating=.false.
         endif
 
         ! store output
         call save_data(this, current_step, time)
 
+        this%creating = .false.
         ! close file
         call check(nf90_close(this%ncfile_id), "Closing file "//trim(filename))
     end subroutine
@@ -254,15 +254,16 @@ contains
                     if (var%unlimited_dim) then
                         call check( nf90_put_var(this%ncfile_id, var%var_id,  reshape(var%data_3d, shape=dim_3d, order=[1,3,2]), start_three_D_t),   &
                                     "saving:"//trim(var%name) )
-                    else
+                    elseif (this%creating) then
                         call check( nf90_put_var(this%ncfile_id, var%var_id,  reshape(var%data_3d, shape=dim_3d, order=[1,3,2]) ),   &
                                     "saving:"//trim(var%name) )
                     endif
+
                 elseif (var%two_d) then
                     if (var%unlimited_dim) then
                         call check( nf90_put_var(this%ncfile_id, var%var_id,  var%data_2d, start_two_D_t),   &
                                 "saving:"//trim(var%name) )
-                    else
+                    elseif (this%creating) then
                         call check( nf90_put_var(this%ncfile_id, var%var_id,  var%data_2d),   &
                                 "saving:"//trim(var%name) )
                     endif
