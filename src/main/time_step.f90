@@ -442,7 +442,7 @@ contains
                 call rad(domain, options, real(dt%seconds()))
                 if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" rad(domain")
 
-                ! call lsm(domain, options, real(dt%seconds()), halo=1)
+                call lsm(domain, options, real(dt%seconds()))!, halo=1)
                 call pbl(domain, options, real(dt%seconds()))!, halo=1)
                 ! call convect(domain, options, real(dt%seconds()), halo=1)
 
@@ -452,8 +452,8 @@ contains
                 call domain%halo_send()
                 if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" domain%halo_send")
 
-                call rad(domain, options, real(dt%seconds()), subset=1)
-                call lsm(domain, options, real(dt%seconds()))!, subset=1)
+                ! call rad(domain, options, real(dt%seconds()), subset=1)
+                ! call lsm(domain, options, real(dt%seconds()))!, subset=1)
                 ! call pbl(domain, options, real(dt%seconds()))!, subset=1)
                 ! call convect(domain, options, real(dt%seconds()), subset=1)
 
