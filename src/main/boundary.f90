@@ -942,6 +942,53 @@ contains
                 domain%ice=0
             endif
 
+            ! jh - added qr, qs, qg, ni and nr as optional fields BEGIN
+            if (trim(options%qrvar)/="") then
+                call read_var(domain%qrain,  file_list(curfile),   options%qrvar, &
+                                bc%geolut, bc%vert_lut, curstep, boundary_value,  &
+                                options)
+            else
+                if (options%debug) write(*,*) "No Rain specified"
+                domain%qrain=0
+            endif
+
+            if (trim(options%qsvar)/="") then
+                call read_var(domain%qsnow,  file_list(curfile),   options%qsvar, &
+                                bc%geolut, bc%vert_lut, curstep, boundary_value,  &
+                                options)
+            else
+                if (options%debug) write(*,*) "No Snow specified"
+                domain%qsnow=0
+            endif
+            
+            if (trim(options%qgvar)/="") then
+                call read_var(domain%qgrau,  file_list(curfile),   options%qgvar, &
+                                bc%geolut, bc%vert_lut, curstep, boundary_value,  &
+                                options)
+            else
+                if (options%debug) write(*,*) "No Graupel specified"
+                domain%qgrau=0
+            endif
+            
+            if (trim(options%qnivar)/="") then
+                call read_var(domain%nice,  file_list(curfile),   options%qnivar,  &
+                                bc%geolut, bc%vert_lut, curstep, boundary_value, &
+                                options)
+            else
+                if (options%debug) write(*,*) "No Ice number density specified"
+                domain%nice=0
+            endif
+            
+            if (trim(options%qnrvar)/="") then
+                call read_var(domain%nrain,  file_list(curfile),   options%qnrvar,  &
+                                bc%geolut, bc%vert_lut, curstep, boundary_value, &
+                                options)
+            else
+                if (options%debug) write(*,*) "No Rain number density specified"
+                domain%nrain=0
+            endif
+            ! jh - added qr, qs, qg, ni and nr as optional fields END
+
             if (options%physics%landsurface==kLSM_BASIC) then
                 call read_2dvar(domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep)
                 call read_2dvar(domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep)
@@ -1368,6 +1415,38 @@ contains
                           bc%geolut, bc%vert_lut, curstep, use_boundary,              &
                           options, time_varying_zlut=newbc%vert_lut)
         endif
+        
+        ! jh - added qr, qs, qg, ni and nr as optional fields BEGIN
+        if (trim(options%qrvar)/="") then
+            call read_var(bc%next_domain%qrain,  file_list(curfile),   options%qrvar, &
+                            bc%geolut, bc%vert_lut, curstep, use_boundary,  &
+                            options, time_varying_zlut=newbc%vert_lut)
+        endif
+
+        if (trim(options%qsvar)/="") then
+            call read_var(bc%next_domain%qsnow,  file_list(curfile),   options%qsvar, &
+                            bc%geolut, bc%vert_lut, curstep, use_boundary,  &
+                            options, time_varying_zlut=newbc%vert_lut)
+        endif
+        
+        if (trim(options%qgvar)/="") then
+            call read_var(bc%next_domain%qgrau,  file_list(curfile),   options%qgvar, &
+                            bc%geolut, bc%vert_lut, curstep, use_boundary,  &
+                            options, time_varying_zlut=newbc%vert_lut)
+        endif
+        
+        if (trim(options%qnivar)/="") then
+            call read_var(bc%next_domain%nice,  file_list(curfile),   options%qnivar,  &
+                            bc%geolut, bc%vert_lut, curstep, use_boundary, &
+                            options, time_varying_zlut=newbc%vert_lut)
+        endif
+        
+        if (trim(options%qnrvar)/="") then
+            call read_var(bc%next_domain%nrain,  file_list(curfile),   options%qnrvar,  &
+                            bc%geolut, bc%vert_lut, curstep, use_boundary, &
+                            options, time_varying_zlut=newbc%vert_lut)
+        endif
+        ! jh - added qr, qs, qg, ni and nr as optional fields END
 
         ! finally, if we need to read in land surface forcing read in those 2d variables as well.
         if (options%physics%landsurface==kLSM_BASIC) then
