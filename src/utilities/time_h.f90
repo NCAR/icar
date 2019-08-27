@@ -33,6 +33,7 @@ module time_object
         integer :: year_zero = 1800  ! reference date
         integer :: month_zero= 1
         integer :: day_zero  = 1
+        integer :: hour_zero = 0
         integer :: calendar
         integer, dimension(13) :: month_start
         integer :: year, month, day, hour, minute, second
@@ -92,11 +93,11 @@ interface
     !!  Set the object calendar and base year
     !!
     !!------------------------------------------------------------
-    module subroutine time_init_c(this, calendar_name, year_zero, month_zero, day_zero)
+    module subroutine time_init_c(this, calendar_name, year_zero, month_zero, day_zero, hour_zero)
         implicit none
         class(Time_type) :: this
         character(len=*), intent(in) :: calendar_name
-        integer, intent(in), optional :: year_zero, month_zero, day_zero
+        integer, intent(in), optional :: year_zero, month_zero, day_zero, hour_zero
 
     end subroutine time_init_c
 
@@ -106,11 +107,11 @@ interface
     !!  Set the object calendar and base year
     !!
     !!------------------------------------------------------------
-    module subroutine time_init_i(this, calendar, year_zero, month_zero, day_zero)
+    module subroutine time_init_i(this, calendar, year_zero, month_zero, day_zero, hour_zero)
         implicit none
         class(Time_type) :: this
         integer, intent(in) :: calendar
-        integer, intent(in), optional :: year_zero, month_zero, day_zero
+        integer, intent(in), optional :: year_zero, month_zero, day_zero, hour_zero
 
     end subroutine time_init_i
 

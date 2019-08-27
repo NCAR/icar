@@ -10,6 +10,10 @@
 !   Model levels specification (may be optional, but should be specified)
 !---------------------------------------------------------
 &z_info
+    ! use dz_levels as a guide but allow dz to vary in space so that z is constant in space at flat_z_height
+    space_varying = .False.
+    ! height at which the z coordinate value should be constant in space (if space_varying=True), if < 0 make the model top flat (computed as sum(dz_levels) + mean(terrain))
+    flat_z_height = -1
     !   Sample model level thickness [m]  Bottom levels could be thicker.
     !   NB: if using gfortran put all on one line
     dz_levels = 50.,   75.,  125.,  200.,  300.,  400.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,    ! 1-20

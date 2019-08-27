@@ -218,12 +218,13 @@ contains
         allocate(inputwind(nx,ny,nz)) ! Can't be module level because nx,ny,nz could change between calls,
 
         inputwind = wind !make a copy so we always use the unsmoothed data when computing the smoothed data
-        if (((windowsize+1)>nx).and.(ydim==3)) then
-            write(*,*) "WARNING can not operate if windowsize+1 is larger than nx"
-            write(*,*) "NX         = ", nx
-            write(*,*) "windowsize = ", windowsize
+        if (( ( (windowsize*2+1)>nz) .or. ((windowsize*2+1)>nx) ) .and. (ydim==3)) then
+            write(*,*) "WARNING smoothing windowsize*2+1 is larger than nx or ny."
+            write(*,*) "  This might lead to artifacts in the wind field especially near the borders."
+            write(*,*) "  NX         = ", nx
+            write(*,*) "  NY         = ", nz
+            write(*,*) "  windowsize = ", windowsize
             print*, "Image = ",this_image()
-            stop
         endif
 
         !parallelize over a slower dimension (not the slowest because it is MUCH easier this way)
@@ -246,9 +247,12 @@ contains
                 ! effectively assumes it was set up for the grid cell before the first grid cell
                 ! the first time through the loop will remove one iteration of outer row grid cells
                 rowsums = inputwind(1:nx,j,1) * (windowsize+2)
-                do i=2, windowsize
+                do i=2, min(windowsize,nz)
                     rowsums = rowsums + inputwind(1:nx, j, i)
                 enddo
+                if (windowsize > nz) then
+                    rowsums = rowsums + inputwind(1:nx,j,nz) * (windowsize-nz)
+                endif
             endif
 
             ! don't parallelize over this loop because it is much more efficient to be able to assume

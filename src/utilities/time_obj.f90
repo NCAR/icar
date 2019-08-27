@@ -15,8 +15,6 @@ submodule(time_object) time_implementation
 
     implicit none
 
-    ! private
-
     ! integer, parameter :: MAXSTRINGLENGTH = 1024
     ! integer, parameter, public :: GREGORIAN=0, NOLEAP=1, THREESIXTY=2, NOCALENDAR=-1
     ! integer, parameter, public :: NON_VALID_YEAR = -9999
@@ -29,11 +27,11 @@ contains
     !!  Set the object calendar and base year
     !!
     !!------------------------------------------------------------
-    module subroutine time_init_c(this, calendar_name, year_zero, month_zero, day_zero)
+    module subroutine time_init_c(this, calendar_name, year_zero, month_zero, day_zero, hour_zero)
         implicit none
         class(Time_type) :: this
         character(len=*), intent(in) :: calendar_name
-        integer, intent(in), optional :: year_zero, month_zero, day_zero
+        integer, intent(in), optional :: year_zero, month_zero, day_zero, hour_zero
 
         integer :: i
 
@@ -59,8 +57,12 @@ contains
         if ( present(day_zero) ) then
             this%day_zero = day_zero
         endif
+        if ( present(hour_zero) ) then
+            this%hour_zero = hour_zero
+        endif
 
     end subroutine time_init_c
+
 
     !>------------------------------------------------------------
     !!  Initialize the time object
@@ -68,11 +70,11 @@ contains
     !!  Set the object calendar and base year
     !!
     !!------------------------------------------------------------
-    module subroutine time_init_i(this, calendar, year_zero, month_zero, day_zero)
+    module subroutine time_init_i(this, calendar, year_zero, month_zero, day_zero, hour_zero)
         implicit none
         class(Time_type) :: this
         integer, intent(in) :: calendar
-        integer, intent(in), optional :: year_zero, month_zero, day_zero
+        integer, intent(in), optional :: year_zero, month_zero, day_zero, hour_zero
 
         integer :: i
 
@@ -98,7 +100,9 @@ contains
         if ( present(day_zero) ) then
             this%day_zero = day_zero
         endif
-
+        if ( present(hour_zero) ) then
+            this%hour_zero = hour_zero
+        endif
     end subroutine time_init_i
 
     !>------------------------------------------------------------
@@ -242,7 +246,7 @@ contains
         if (this%calendar==GREGORIAN) then
             date_to_mjd = gregorian_julian_day(year, month, day, hour, minute, second)
 
-            date_to_mjd = date_to_mjd - gregorian_julian_day(this%year_zero, this%month_zero, this%day_zero, 0, 0, 0)
+            date_to_mjd = date_to_mjd - gregorian_julian_day(this%year_zero, this%month_zero, this%day_zero, this%hour_zero, 0, 0)
 
         else if (this%calendar==NOLEAP) then
             date_to_mjd = (year-this%year_zero)*365 + this%month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0
@@ -277,7 +281,8 @@ contains
         !
         !------------------------------------------------------------
         if (this%calendar==GREGORIAN) then
-            jday = nint(mjd + gregorian_julian_day(this%year_zero, this%month_zero, this%day_zero, 0, 0, 0))
+            mjd = mjd + gregorian_julian_day(this%year_zero, this%month_zero, this%day_zero, this%hour_zero, 0, 0)
+            jday=nint(mjd)
 
             f = jday+j+(((4*jday+B)/146097)*3)/4+C
             e = r*f+v
@@ -286,7 +291,7 @@ contains
             day   = mod(h,s)/u+1
             month = mod(h/s+m,n)+1
             year  = e/p-y+(n+m-month)/n
-
+            mjd = mjd + 0.5
         !------------------------------------------------------------
         !
         ! Calculate the dates for a No leap Calendar
@@ -514,8 +519,8 @@ contains
         class(Time_type), intent(in)   :: this
         character(len=MAXSTRINGLENGTH) :: units
 
-        write(units, '("days since ",i4,"-",i2.2,"-",i2.2," 00:00:00")') &
-                this%year_zero,this%month_zero,this%day_zero
+        write(units, '("days since ",i4,"-",i2.2,"-",i2.2," ",i2.2,":00:00")') &
+                this%year_zero,this%month_zero,this%day_zero,this%hour_zero
 
     end function units
 
@@ -604,8 +609,10 @@ contains
 
         ! note if calendars are the same, can just return mjd delta...
         if ((t1%calendar == t2%calendar).and.(t1%year_zero == t2%year_zero)) then
-            greater_than = (t1%current_date_time > t2%current_date_time)
-            return
+            if ((t1%month_zero == t2%month_zero).and.(t1%day_zero == t2%day_zero).and.(t1%hour_zero == t2%hour_zero))  then
+                greater_than = (t1%current_date_time > t2%current_date_time)
+                return
+            endif
         endif
 
         if (t1%year > t2%year) then
@@ -655,7 +662,7 @@ contains
 
         ! note if calendars are the same, can just return mjd delta...
         if ((t1%calendar == t2%calendar).and.(t1%year_zero == t2%year_zero)) then
-            if ((t1%month_zero == t2%month_zero).and.(t1%day_zero == t2%day_zero)) then
+            if ((t1%month_zero == t2%month_zero).and.(t1%day_zero == t2%day_zero).and.(t1%hour_zero == t2%hour_zero))  then
                 greater_or_eq = (t1%current_date_time >= t2%current_date_time)
                 return
             endif
@@ -708,9 +715,10 @@ contains
 
         ! note if calendars are the same, can just return mjd delta...
         if ((t1%calendar == t2%calendar).and.(t1%year_zero == t2%year_zero)) then
-            ! if the time delta is < ~one second, then return true
-            equal = (abs(t1%current_date_time - t2%current_date_time) < 1.1575e-05)
-            return
+            if ((t1%month_zero == t2%month_zero).and.(t1%day_zero == t2%day_zero).and.(t1%hour_zero == t2%hour_zero))  then
+               equal = (abs(t1%current_date_time - t2%current_date_time) < 1.1575e-05)
+                return
+            endif
         endif
 
         if ((t1%year == t2%year).and.(t1%month == t2%month).and.(t1%day == t2%day)      &
@@ -807,14 +815,14 @@ contains
         integer :: year, month, day, hour, minute, second
 
         if (((t1%calendar == t2%calendar).and.(t1%year_zero == t2%year_zero)) &
-            .and.((t1%month_zero == t2%month_zero).and.(t1%day_zero == t2%day_zero))) then
+            .and.((t1%month_zero == t2%month_zero).and.(t1%day_zero == t2%day_zero).and.(t1%hour_zero == t2%hour_zero))) then
 
             call dt%set(seconds=(t1%mjd() - t2%mjd()) * 86400.0D0)
         else
             ! if the two time object reference calendars don't match
             ! create a new time object with the same referecnce as t1
             ! then copy the date/time data into it from t2 before computing the time delta
-            call temp_time%init(t1%calendar,t1%year_zero,t1%month_zero,t1%day_zero)
+            call temp_time%init(t1%calendar,t1%year_zero,t1%month_zero,t1%day_zero, t1%hour_zero)
             call t2%date(year, month, day, hour, minute, second)
             call temp_time%set(year, month, day, hour, minute, second)
 
