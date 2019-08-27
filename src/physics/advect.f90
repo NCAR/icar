@@ -148,22 +148,22 @@ contains
             f5= ((w(2:nx-1,1:nz-1,i) + ABS(w(2:nx-1,1:nz-1,i))) * qin(2:nx-1,1:nz-1,i) + &
                  (w(2:nx-1,1:nz-1,i) - ABS(w(2:nx-1,1:nz-1,i))) * qin(2:nx-1,2:nz,i))  / 2
 
-           if (options%parameters%advect_density) then
-               ! perform horizontal advection
-               q(2:nx-1,:,i)      = q(2:nx-1,:,i)      - ((f1(2:nx-1,:) - f1(1:nx-2,:)) + (f3 - f4)) &
-                                    / rho(2:nx-1,:,i) / dz(2:nx-1,:,i)
-               ! then vertical
-               ! (order doesn't matter because fluxes f1-6 are calculated before applying them)
-               ! add fluxes to middle layers
-               q(2:nx-1,2:nz-1,i) = q(2:nx-1,2:nz-1,i) - (f5(:,2:nz-1) - f5(:,1:nz-2))                       &
-                                    / rho(2:nx-1,2:nz-1,i) / dz(2:nx-1,2:nz-1,i)
-               ! add fluxes to bottom layer
-               q(2:nx-1,1,i)      = q(2:nx-1,1,i)      - f5(:,1)                                             &
-                                    / rho(2:nx-1,1,i) / dz(2:nx-1,1,i)
-               ! add fluxes to top layer
-               q(2:nx-1,nz,i)     = q(2:nx-1,nz,i)     - (qin(2:nx-1,nz,i) * w(2:nx-1,nz,i)-f5(:,nz-1))      &
-                                    / rho(2:nx-1,nz,i) / dz(2:nx-1,nz,i)
-           else
+           ! if (options%parameters%advect_density) then
+           !     ! perform horizontal advection
+           !     q(2:nx-1,:,i)      = q(2:nx-1,:,i)      - ((f1(2:nx-1,:) - f1(1:nx-2,:)) + (f3 - f4)) &
+           !                          / rho(2:nx-1,:,i) / dz(2:nx-1,:,i)
+           !     ! then vertical
+           !     ! (order doesn't matter because fluxes f1-6 are calculated before applying them)
+           !     ! add fluxes to middle layers
+           !     q(2:nx-1,2:nz-1,i) = q(2:nx-1,2:nz-1,i) - (f5(:,2:nz-1) - f5(:,1:nz-2))                       &
+           !                          / rho(2:nx-1,2:nz-1,i) / dz(2:nx-1,2:nz-1,i)
+           !     ! add fluxes to bottom layer
+           !     q(2:nx-1,1,i)      = q(2:nx-1,1,i)      - f5(:,1)                                             &
+           !                          / rho(2:nx-1,1,i) / dz(2:nx-1,1,i)
+           !     ! add fluxes to top layer
+           !     q(2:nx-1,nz,i)     = q(2:nx-1,nz,i)     - (qin(2:nx-1,nz,i) * w(2:nx-1,nz,i)-f5(:,nz-1))      &
+           !                          / rho(2:nx-1,nz,i) / dz(2:nx-1,nz,i)
+           ! else
                ! perform horizontal advection
                q(2:nx-1,:,i)      = q(2:nx-1,:,i)       - ((f1(2:nx-1,:) - f1(1:nx-2,:)) + (f3 - f4))
                ! then vertical (order doesn't matter because fluxes f1-6 are calculated before applying them)
@@ -173,7 +173,7 @@ contains
                q(2:nx-1,1,i)      = q(2:nx-1,1,i)       - f5(:,1)
                ! add fluxes to top layer
                q(2:nx-1,nz,i)     = q(2:nx-1,nz,i)      - (qin(2:nx-1,nz,i) * w(2:nx-1,nz,i) - f5(:,nz-1))
-           endif
+           ! endif
         enddo
         !$omp end do
         !$omp end parallel
