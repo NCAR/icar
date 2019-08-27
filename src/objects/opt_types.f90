@@ -208,6 +208,8 @@ module options_types
 
         ! note this can't be allocatable because gfortran does not support allocatable components inside derived type coarrays...
         real, dimension(MAXLEVELS)::dz_levels ! model layer thicknesses to be read from namelist
+        logical :: space_varying_dz     ! allow the vertical dimension to vary horizontally in space to permit smoothing at higher vertical levels
+        real    :: flat_z_height        ! height above mean ground level [m] above which z levels are flat in space
         logical :: use_agl_height       ! interpolate from forcing to model layers using Z above ground level, not sea level
 
         ! physics parameterization options

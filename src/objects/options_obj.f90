@@ -1526,9 +1526,14 @@ contains
         integer :: name_unit, this_level
         real, allocatable, dimension(:) :: dz_levels
         real, dimension(45) :: fulldz
+        logical :: space_varying
+        real :: flat_z_height
 
-        namelist /z_info/ dz_levels
+        namelist /z_info/ dz_levels, space_varying, flat_z_height
+
         this_level=1
+        space_varying = .False.
+        flat_z_height = -1
 
         ! read the z_info namelist if requested
         if (options%readdz) then
@@ -1557,6 +1562,7 @@ contains
                 if (this_image()==1) print*, "Note that the gfortran compiler will not read dz_levels spread across multiple lines. "
                 error stop
             endif
+
             options%dz_levels = -1
             options%dz_levels(1:options%nz)=dz_levels(1:options%nz)
             deallocate(dz_levels)
@@ -1574,6 +1580,9 @@ contains
             options%dz_levels = -1
             options%dz_levels(1:options%nz) = fulldz(1:options%nz)
         endif
+
+        options%space_varying_dz = space_varying
+        options%flat_z_height = flat_z_height
 
     end subroutine model_levels_namelist
 
