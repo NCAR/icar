@@ -211,6 +211,7 @@ module options_types
         logical :: space_varying_dz     ! allow the vertical dimension to vary horizontally in space to permit smoothing at higher vertical levels
         real    :: flat_z_height        ! height above mean ground level [m] above which z levels are flat in space
         logical :: use_agl_height       ! interpolate from forcing to model layers using Z above ground level, not sea level
+        logical :: fixed_dz_advection   ! with variable dz, allows thinner model levels to accelerate the wind (maybe this should be wind=2)
 
         ! physics parameterization options
         logical :: use_mp_options

@@ -1526,13 +1526,14 @@ contains
         integer :: name_unit, this_level
         real, allocatable, dimension(:) :: dz_levels
         real, dimension(45) :: fulldz
-        logical :: space_varying
+        logical :: space_varying, fixed_dz_advection
         real :: flat_z_height
 
-        namelist /z_info/ dz_levels, space_varying, flat_z_height
+        namelist /z_info/ dz_levels, space_varying, flat_z_height, fixed_dz_advection
 
         this_level=1
         space_varying = .False.
+        fixed_dz_advection = .False.
         flat_z_height = -1
 
         ! read the z_info namelist if requested
@@ -1583,6 +1584,7 @@ contains
 
         options%space_varying_dz = space_varying
         options%flat_z_height = flat_z_height
+        options%fixed_dz_advection = fixed_dz_advection
 
     end subroutine model_levels_namelist
 
