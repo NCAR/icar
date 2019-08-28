@@ -655,7 +655,6 @@ contains
                       this%v_grid%       kms : this%v_grid%       kme, &
                       this%v_grid2d_ext% jms : this%v_grid2d_ext% jme) )
 
-        max_level = (this%kme / 2)
 
         associate(z                     => this%z%data_3d,                      &
                   z_u                   => this%geo_u%z,                        &
@@ -668,11 +667,37 @@ contains
 
             i = this%grid%kms
 
-            smooth_height = sum(this%global_terrain) / size(this%global_terrain) + sum(dz(1:max_level))
-            z_level_ratio(:,i,:) = (smooth_height - terrain) / sum(dz(1:max_level))
 
-            zr_u(:,i,:) = (smooth_height - z_u(:,i,:)) / sum(dz(1:max_level))
-            zr_v(:,i,:) = (smooth_height - z_v(:,i,:)) / sum(dz(1:max_level))
+            if (options%parameters%space_varying_dz) then
+                if (options%parameters%flat_z_height > size(dz)) then
+                    block
+                        integer :: j
+                        real :: height
+                        height = 0
+                        do j=1, size(dz)
+                            if (height < options%parameters%flat_z_height) then
+                                height = height + dz(i)
+                                max_level = i
+                            endif
+                        enddo
+                    end block
+                elseif (options%parameters%flat_z_height <= 0) then
+                    max_level = this%kme + options%parameters%flat_z_height
+                else
+                    max_level = this%kme
+                endif
+
+                smooth_height = sum(this%global_terrain) / size(this%global_terrain) + sum(dz(1:max_level))
+
+                z_level_ratio(:,i,:) = (smooth_height - terrain) / sum(dz(1:max_level))
+
+                zr_u(:,i,:) = (smooth_height - z_u(:,i,:)) / sum(dz(1:max_level))
+                zr_v(:,i,:) = (smooth_height - z_v(:,i,:)) / sum(dz(1:max_level))
+            else
+                z_level_ratio = 1
+                zr_u = 1
+                zr_v = 1
+            endif
 
             dz_mass(:,i,:)      = dz(i) / 2 * z_level_ratio(:,i,:)
             dz_interface(:,i,:) = dz(i) * z_level_ratio(:,i,:)
