@@ -18,7 +18,7 @@ module wind
 
     implicit none
     private
-    public::update_winds, balance_uvw, init_winds
+    public::update_winds, init_winds !, balance_uvw
     real, parameter::deg2rad=0.017453293 !2*pi/360
 contains
 

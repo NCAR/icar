@@ -11,7 +11,7 @@ module time_step
     use data_structures             ! *_type  types and kCONSTANTS
     use icar_constants,             only : Rd
     use microphysics,               only : mp
-    use wind,                       only : balance_uvw, update_winds
+    ! use wind,                       only : update_winds
     use advection,                  only : advect
     use mod_atm_utilities,          only : exner_function
     ! use convection,                 only : convect
