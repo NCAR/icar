@@ -39,7 +39,7 @@ contains
         real, allocatable, dimension(:,:) :: du, dv, divergence, rhou, rhov,rhow
         real, allocatable, dimension(:,:,:) :: dzu, dzv
 
-        integer :: k, ims, ime, jms, jme, kms, kme
+        integer :: k, ims, ime, jms, jme, kms, kme, i,j
 
         ! associate(u => domain%u%data_3d,  &
         !           v => domain%v%data_3d,  &
@@ -78,6 +78,7 @@ contains
 
         ! If this becomes a bottle neck in the code it could be parallelized over y
         ! loop over domain levels
+
         do k = kms, kme
             !------------------------------------------------------------
             ! If we are incorporating density into the advection equation
@@ -245,7 +246,7 @@ contains
             ! else assumes even flow over the mountains
 
             ! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
-            call balance_uvw(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%dz_interface%data_3d, domain%dx, options)
+            call balance_uvw(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%advection_dz, domain%dx, options)
 
         else
 
@@ -260,7 +261,7 @@ contains
             call balance_uvw(domain% u %meta_data%dqdt_3d,      &
                              domain% v %meta_data%dqdt_3d,      &
                              domain% w %meta_data%dqdt_3d,      &
-                             domain% dz_interface %data_3d,     &
+                             domain% advection_dz,              &
                              domain% dx,                        &
                              options)
         endif
@@ -283,6 +284,16 @@ contains
         real, allocatable :: temporary_2d(:,:)
 
         call allocate_winds(domain)
+
+        if (options%parameters%fixed_dz_advection) then
+            do i=domain%grid%kms, domain%grid%kme
+                domain%advection_dz(:,i,:) = options%parameters%dz_levels(i)
+            enddo
+        else
+            domain%advection_dz = domain%dz_interface%data_3d
+        endif
+
+
 
         if (options%parameters%sinalpha_var /= "") then
             ims = lbound(domain%latitude%data_2d, 1)
@@ -365,6 +376,10 @@ contains
         if (.not.allocated(domain%costheta)) then
             allocate(domain%costheta(ims:ime, jms:jme))
             domain%costheta = 0
+        endif
+
+        if (.not.allocated(domain%advection_dz)) then
+            allocate(domain%advection_dz(ims:ime,kms:kme,jms:jme))
         endif
 
         ! note w is special cased because it does not have a forcing variable, so it is not necessarily allocated automatically

@@ -113,6 +113,7 @@ module domain_interface
     complex(C_DOUBLE_COMPLEX),  allocatable :: terrain_frequency(:,:) ! FFT(terrain)
     double precision,           allocatable :: costheta(:,:)
     double precision,           allocatable :: sintheta(:,:)
+    real,                       allocatable :: advection_dz(:,:,:)
 
     ! these coarrays are used to send all data to/from a master image for IO... ?
     ! For now this will be taken care of in the boundary conditions object

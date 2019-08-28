@@ -296,15 +296,6 @@ contains
         dzv(:,:,jms+1:jme) = (dz(:,:,jms+1:jme) + dz(:,:,jms:jme-1)) / 2
         dzu(ims+1:ime,:,:) = (dz(ims+1:ime,:,:) + dz(ims:ime-1,:,:)) / 2
 
-        ! if (this_image()==1) then
-        !     i=ims+1
-        !     j=jms+1
-        !     k=kms+1
-        !     print*, this_image(), "dv", v(i,k,j+1), dzv(i,k,j+1), v(i,k,j), dzv(i,k,j)
-        !     print*, this_image(), "du", u(i+1,k,j), dzu(i+1,k,j), u(i,k,j), dzu(i,k,j)
-        !     print*, this_image(), "dw", w(i,k-1,j), w(i,k,j)
-        ! endif
-
         do i=ims+1,ime-1
             do j=jms+1,jme-1
                 do k=kms+1,kme
@@ -369,6 +360,38 @@ contains
 
     end subroutine setup_module_winds
 
+    subroutine setup_advection_dz(domain, options, nx, ny, nz)
+        implicit none
+        type(domain_t),  intent(inout) :: domain
+        type(options_t), intent(in)    :: options
+        integer,         intent(in)    :: nx, ny, nz
+        integer :: i, ims, ime, jms, jme, kms, kme
+
+        ims = domain%grid%ims
+        ime = domain%grid%ime
+        jms = domain%grid%jms
+        jme = domain%grid%jme
+        kms = domain%grid%kms
+        kme = domain%grid%kme
+
+        if (.not.allocated(domain%advection_dz)) then
+            allocate(domain%advection_dz(ims:ime,kms:kme,jms:jme))
+        else
+            return
+        endif
+
+        if (options%parameters%fixed_dz_advection) then
+            do i = kms, kme
+                domain%advection_dz(:,i,:) = options%parameters%dz_levels(i)
+            enddo
+
+        else
+            domain%advection_dz = domain%dz_interface%data_3d
+        endif
+
+    end subroutine setup_advection_dz
+
+
     ! primary entry point, advect all scalars in domain
     subroutine upwind(domain,options,dt)
         implicit none
@@ -383,26 +406,28 @@ contains
         nz = domain%grid%nz
         ny = domain%grid%ny
 
+        call setup_advection_dz(domain, options, nx,ny,nz)
+
         ! calculate U,V,W normalized for dt/dx (dx**2 for density advection so we can skip a /dx in the actual advection code)
-        call setup_module_winds(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%dz_interface%data_3d, domain%dx, options, dt)
+        call setup_module_winds(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%advection_dz, domain%dx, options, dt)
 
         ! lastqv_m=domain%qv
 
         if (options%parameters%debug) then
-            call test_divergence(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%dz_interface%data_3d, domain%dx, domain%ims, domain%ime, domain%jms, domain%jme, domain%kms, domain%kme)
+            call test_divergence(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%advection_dz, domain%dx, domain%ims, domain%ime, domain%jms, domain%jme, domain%kms, domain%kme)
         endif
 
-        if (options%vars_to_advect(kVARS%water_vapor)>0)                  call advect3d(domain%water_vapor%data_3d,             U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, domain%dx, nx,nz,ny, options)
-        if (options%vars_to_advect(kVARS%cloud_water)>0)                  call advect3d(domain%cloud_water_mass%data_3d,        U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, domain%dx, nx,nz,ny, options)
-        if (options%vars_to_advect(kVARS%rain_in_air)>0)                  call advect3d(domain%rain_mass%data_3d,               U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, domain%dx, nx,nz,ny, options)
-        if (options%vars_to_advect(kVARS%snow_in_air)>0)                  call advect3d(domain%snow_mass%data_3d,               U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, domain%dx, nx,nz,ny, options)
-        if (options%vars_to_advect(kVARS%potential_temperature)>0)        call advect3d(domain%potential_temperature%data_3d,   U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, domain%dx, nx,nz,ny, options)
-        if (options%vars_to_advect(kVARS%cloud_ice)>0)                    call advect3d(domain%cloud_ice_mass%data_3d,          U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, domain%dx, nx,nz,ny, options)
-        if (options%vars_to_advect(kVARS%graupel_in_air)>0)               call advect3d(domain%graupel_mass%data_3d,            U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, domain%dx, nx,nz,ny, options)
-        if (options%vars_to_advect(kVARS%ice_number_concentration)>0)     call advect3d(domain%cloud_ice_number%data_3d,        U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, domain%dx, nx,nz,ny, options)
-        if (options%vars_to_advect(kVARS%rain_number_concentration)>0)    call advect3d(domain%rain_number%data_3d,             U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, domain%dx, nx,nz,ny, options)
-        if (options%vars_to_advect(kVARS%snow_number_concentration)>0)    call advect3d(domain%snow_number%data_3d,             U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, domain%dx, nx,nz,ny, options)
-        if (options%vars_to_advect(kVARS%graupel_number_concentration)>0) call advect3d(domain%graupel_number%data_3d,          U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, domain%dx, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%water_vapor)>0)                  call advect3d(domain%water_vapor%data_3d,             U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%cloud_water)>0)                  call advect3d(domain%cloud_water_mass%data_3d,        U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%rain_in_air)>0)                  call advect3d(domain%rain_mass%data_3d,               U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%snow_in_air)>0)                  call advect3d(domain%snow_mass%data_3d,               U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%potential_temperature)>0)        call advect3d(domain%potential_temperature%data_3d,   U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%cloud_ice)>0)                    call advect3d(domain%cloud_ice_mass%data_3d,          U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%graupel_in_air)>0)               call advect3d(domain%graupel_mass%data_3d,            U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%ice_number_concentration)>0)     call advect3d(domain%cloud_ice_number%data_3d,        U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%rain_number_concentration)>0)    call advect3d(domain%rain_number%data_3d,             U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%snow_number_concentration)>0)    call advect3d(domain%snow_number%data_3d,             U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, options)
+        if (options%vars_to_advect(kVARS%graupel_number_concentration)>0) call advect3d(domain%graupel_number%data_3d,          U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, options)
 
         ! if (options%physics%convection > 0) then
         !     call advect_cu_winds(domain, options, dt)
