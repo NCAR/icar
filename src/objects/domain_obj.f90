@@ -639,9 +639,23 @@ contains
         class(domain_t), intent(inout)  :: this
         class(options_t),intent(in)     :: options
 
-        integer :: i
+        real, allocatable, dimension(:,:,:) :: z_level_ratio, zr_u, zr_v
+        integer :: i, max_level
+        real :: smooth_height
 
         call read_core_variables(this, options)
+
+        allocate(z_level_ratio(this% ims : this% ime, &
+                               this% kms : this% kme, &
+                               this% jms : this% jme) )
+        allocate(zr_u(this%u_grid2d_ext% ims : this%u_grid2d_ext% ime, &
+                      this%u_grid%       kms : this%u_grid%       kme, &
+                      this%u_grid2d_ext% jms : this%u_grid2d_ext% jme) )
+        allocate(zr_v(this%v_grid2d_ext% ims : this%v_grid2d_ext% ime, &
+                      this%v_grid%       kms : this%v_grid%       kme, &
+                      this%v_grid2d_ext% jms : this%v_grid2d_ext% jme) )
+
+        max_level = (this%kme / 2)
 
         associate(z                     => this%z%data_3d,                      &
                   z_u                   => this%geo_u%z,                        &
@@ -653,24 +667,41 @@ contains
                   terrain               => this%terrain%data_2d)
 
             i = this%grid%kms
-            dz_mass(:,i,:)      = options%parameters%dz_levels(i) / 2
-            dz_interface(:,i,:) = options%parameters%dz_levels(i)
+
+            smooth_height = sum(this%global_terrain) / size(this%global_terrain) + sum(dz(1:max_level))
+            z_level_ratio(:,i,:) = (smooth_height - terrain) / sum(dz(1:max_level))
+
+            zr_u(:,i,:) = (smooth_height - z_u(:,i,:)) / sum(dz(1:max_level))
+            zr_v(:,i,:) = (smooth_height - z_v(:,i,:)) / sum(dz(1:max_level))
+
+            dz_mass(:,i,:)      = dz(i) / 2 * z_level_ratio(:,i,:)
+            dz_interface(:,i,:) = dz(i) * z_level_ratio(:,i,:)
             z(:,i,:)            = terrain + dz_mass(:,i,:)
             z_interface(:,i,:)  = terrain
 
             ! for the u and v grids, z(1) was already initialized with terrain.
             ! but the first level needs to be offset, and the rest of the levels need to be created
-            z_u(:,i,:)          = z_u(:,i,:) + options%parameters%dz_levels(i) / 2
-            z_v(:,i,:)          = z_v(:,i,:) + options%parameters%dz_levels(i) / 2
+            z_u(:,i,:)          = z_u(:,i,:) + dz(i) / 2 * zr_u(:,i,:)
+            z_v(:,i,:)          = z_v(:,i,:) + dz(i) / 2 * zr_v(:,i,:)
 
             do i = this%grid%kms+1, this%grid%kme
-                dz_mass(:,i,:)     = (options%parameters%dz_levels(i) + options%parameters%dz_levels(i-1)) / 2
-                dz_interface(:,i,:)= options%parameters%dz_levels(i)
+                if (i<=max_level) then
+                    z_level_ratio(:,i,:) = z_level_ratio(:,i-1,:)
+                    zr_u(:,i,:) = zr_u(:,i-1,:)
+                    zr_v(:,i,:) = zr_v(:,i-1,:)
+                else
+                    z_level_ratio(:,i,:) = 1
+                    zr_u(:,i,:) = 1
+                    zr_v(:,i,:) = 1
+                endif
+
+                dz_mass(:,i,:)     = (dz(i) * z_level_ratio(:,i,:) + dz(i-1) * z_level_ratio(:,i-1,:)) / 2
+                dz_interface(:,i,:)= dz(i) * z_level_ratio(:,i,:)
                 z(:,i,:)           = z(:,i-1,:)           + dz_mass(:,i,:)
                 z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i,:)
 
-                z_u(:,i,:)         = z_u(:,i-1,:)         + ((options%parameters%dz_levels(i) + options%parameters%dz_levels(i-1)) / 2)
-                z_v(:,i,:)         = z_v(:,i-1,:)         + ((options%parameters%dz_levels(i) + options%parameters%dz_levels(i-1)) / 2)
+                z_u(:,i,:)         = z_u(:,i-1,:)         + ((dz(i) * zr_u(:,i,:) + dz(i-1) * zr_u(:,i-1,:)) / 2)
+                z_v(:,i,:)         = z_v(:,i-1,:)         + ((dz(i) * zr_v(:,i,:) + dz(i-1) * zr_v(:,i-1,:)) / 2)
 
             enddo
 

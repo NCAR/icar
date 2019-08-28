@@ -272,6 +272,56 @@ contains
     !
     ! end subroutine advect_cu_winds
 
+
+    subroutine test_divergence(u, v, w, dz, dx, ims, ime, jms, jme, kms, kme)
+        implicit none
+        real, intent(in) :: u(ims:ime+1,kms:kme,jms:jme)
+        real, intent(in) :: v(ims:ime,kms:kme,jms:jme+1)
+        real, intent(in) :: w(ims:ime,kms:kme,jms:jme)
+        real, intent(in) :: dz(ims:ime,kms:kme,jms:jme)
+        real, intent(in) :: dx
+        integer, intent(in) :: ims, ime, jms, jme, kms, kme
+
+        real, allocatable :: du(:,:), dv(:,:), dzu(:,:,:), dzv(:,:,:)
+        integer :: i,j,k
+
+        allocate(du(ims+1:ime-1,jms+1:jme-1))
+        allocate(dv(ims+1:ime-1,jms+1:jme-1))
+        allocate(dzv(ims:ime,kms:kme,jms:jme))
+        allocate(dzu(ims:ime,kms:kme,jms:jme))
+
+        dzv = 0
+        dzu = 0
+
+        dzv(:,:,jms+1:jme) = (dz(:,:,jms+1:jme) + dz(:,:,jms:jme-1)) / 2
+        dzu(ims+1:ime,:,:) = (dz(ims+1:ime,:,:) + dz(ims:ime-1,:,:)) / 2
+
+        ! if (this_image()==1) then
+        !     i=ims+1
+        !     j=jms+1
+        !     k=kms+1
+        !     print*, this_image(), "dv", v(i,k,j+1), dzv(i,k,j+1), v(i,k,j), dzv(i,k,j)
+        !     print*, this_image(), "du", u(i+1,k,j), dzu(i+1,k,j), u(i,k,j), dzu(i,k,j)
+        !     print*, this_image(), "dw", w(i,k-1,j), w(i,k,j)
+        ! endif
+
+        do i=ims+1,ime-1
+            do j=jms+1,jme-1
+                do k=kms+1,kme
+                    dv(i,j) = v(i,k,j+1) * dzv(i,k,j+1) - v(i,k,j) * dzv(i,k,j)
+                    du(i,j) = u(i+1,k,j) * dzu(i+1,k,j) - u(i,k,j) * dzu(i,k,j)
+
+                    if (abs((dv(i,j) + du(i,j))/dx - (w(i,k-1,j)-w(i,k,j))) > 1e-3) then
+                        print*, this_image(), i,j,k, (dv(i,j) + du(i,j))/dx, w(i,k,j)-w(i,k-1,j)
+                        print*, "Winds are not balanced on entry to advect"
+                        error stop
+                    endif
+                enddo
+            enddo
+        enddo
+
+    end subroutine test_divergence
+
     subroutine setup_module_winds(u,v,w, dz, dx, options, dt)
         implicit none
         real,               intent(in)  :: u(:,:,:)
@@ -311,8 +361,8 @@ contains
                 ! W_m = (domain%w_cu + domain%w)                     * (dt/dx)
                 ! call rebalance_cu_winds(U_m,V_m,W_m)
             else
-                U_m = u(2:nx,:,:) * ((dz(1:nx-1,:,:)+dz(2:nx,:,:))/2 * dt/dx)
-                V_m = v(:,:,2:ny) * ((dz(:,:,1:ny-1)+dz(:,:,2:ny))/2 * dt/dx)
+                U_m = u(2:nx,:,:) * ((dz(1:nx-1,:,:)+dz(2:nx,:,:))/2 * dt)
+                V_m = v(:,:,2:ny) * ((dz(:,:,1:ny-1)+dz(:,:,2:ny))/2 * dt)
                 W_m = w * dt
             endif
         ! endif
@@ -337,6 +387,10 @@ contains
         call setup_module_winds(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%dz_interface%data_3d, domain%dx, options, dt)
 
         ! lastqv_m=domain%qv
+
+        if (options%parameters%debug) then
+            call test_divergence(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%dz_interface%data_3d, domain%dx, domain%ims, domain%ime, domain%jms, domain%jme, domain%kms, domain%kme)
+        endif
 
         if (options%vars_to_advect(kVARS%water_vapor)>0)                  call advect3d(domain%water_vapor%data_3d,             U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, domain%dx, nx,nz,ny, options)
         if (options%vars_to_advect(kVARS%cloud_water)>0)                  call advect3d(domain%cloud_water_mass%data_3d,        U_m,V_m,W_m, domain%density%data_3d, domain%dz_interface%data_3d, domain%dx, nx,nz,ny, options)

@@ -18,23 +18,26 @@ module wind
 
     implicit none
     private
-    public::update_winds, init_winds !, balance_uvw
+    public::update_winds, init_winds
     real, parameter::deg2rad=0.017453293 !2*pi/360
 contains
 
     !>------------------------------------------------------------
     !! Forces u,v, and w fields to balance
-    !!       du/dx+dv/dy = dw/dz
+    !!       du/dx + dv/dy = dw/dz
     !!
     !! Starts by setting w out of the ground=0 then works through layers
     !!
     !!------------------------------------------------------------
-    subroutine balance_uvw(u,v,w, options)
+    subroutine balance_uvw(u,v,w, dz, dx, options)
         implicit none
         real,           intent(inout) :: u(:,:,:), v(:,:,:), w(:,:,:)
+        real,           intent(in)    :: dz(:,:,:)
+        real,           intent(in)    :: dx
         type(options_t),intent(in)    :: options
 
         real, allocatable, dimension(:,:) :: du, dv, divergence, rhou, rhov,rhow
+        real, allocatable, dimension(:,:,:) :: dzu, dzv
 
         integer :: k, ims, ime, jms, jme, kms, kme
 
@@ -64,6 +67,14 @@ contains
         allocate(du(ims+1:ime-1,jms+1:jme-1))
         allocate(dv(ims+1:ime-1,jms+1:jme-1))
         allocate(divergence(ims+1:ime-1,jms+1:jme-1))
+        allocate(dzv(ims:ime,kms:kme,jms:jme))
+        allocate(dzu(ims:ime,kms:kme,jms:jme))
+
+        dzv = 0
+        dzu = 0
+
+        dzv(:,:,jms+1:jme) = (dz(:,:,jms+1:jme) + dz(:,:,jms:jme-1)) / 2
+        dzu(ims+1:ime,:,:) = (dz(ims+1:ime,:,:) + dz(ims:ime-1,:,:)) / 2
 
         ! If this becomes a bottle neck in the code it could be parallelized over y
         ! loop over domain levels
@@ -82,19 +93,22 @@ contains
             !------------------------------------------------------------
             ! calculate horizontal divergence
             !   in the North-South direction
-            dv = v(ims+1:ime-1, k, jms+2:jme) - v(ims+1:ime-1,k,jms+1:jme-1)
+            dv =  v(ims+1:ime-1, k, jms+2:jme)   * dzv(ims+1:ime-1, k, jms+2:jme)   &
+                - v(ims+1:ime-1, k, jms+1:jme-1) * dzv(ims+1:ime-1, k, jms+1:jme-1)
             !   in the East-West direction
-            du = u(ims+2:ime, k, jms+1:jme-1) - u(ims+1:ime-1,k,jms+1:jme-1)
+            du =  u(ims+2:ime, k, jms+1:jme-1)   * dzu(ims+2:ime, k, jms+1:jme-1)   &
+                - u(ims+1:ime-1, k, jms+1:jme-1) * dzu(ims+1:ime-1, k, jms+1:jme-1)
             !   in net
             divergence = du + dv
 
             ! Then calculate w to balance
             if (k==kms) then
                 ! if this is the first model level start from 0 at the ground
-                w(ims+1:ime-1,k,jms+1:jme-1) = 0 - divergence
+                ! note the are out for w is dx^2, but there is a dx in the divergence term that is dropped to balance
+                w(ims+1:ime-1,k,jms+1:jme-1) = 0 - divergence / dx
             else
                 ! else calculate w as a change from w at the level below
-                w(ims+1:ime-1,k,jms+1:jme-1) = w(ims+1:ime-1,k-1,jms+1:jme-1) - divergence
+                w(ims+1:ime-1,k,jms+1:jme-1) = w(ims+1:ime-1,k-1,jms+1:jme-1) - divergence / dx
             endif
 
             !------------------------------------------------------------
@@ -117,6 +131,32 @@ contains
 
         enddo
         ! end associate
+
+        ! do i=ims+1,ime-1
+        !     do j=jms+1,jme-1
+        !         do k=kms+1,kme
+        !             dv(i,j) = v(i,k,j+1) * dzv(i,k,j+1) - v(i,k,j) * dzv(i,k,j)
+        !             du(i,j) = u(i+1,k,j) * dzu(i+1,k,j) - u(i,k,j) * dzu(i,k,j)
+        !
+        !             if (abs((dv(i,j) + du(i,j))/dx - (w(i,k-1,j)-w(i,k,j))) > 1e-5) then
+        !                 print*, this_image(), i,j,k, (dv(i,j) + du(i,j))/dx, w(i,k,j)-w(i,k-1,j)
+        !             endif
+        !         enddo
+        !     enddo
+        ! enddo
+        !
+        ! block
+        !     integer :: i,j
+        !     if (this_image()==1) then
+        !         i=ims+1
+        !         j=jms+1
+        !         k=kms+1
+        !         print*, i,j,k
+        !         print*, this_image(), "dv", v(i,k,j+1), dzv(i,k,j+1), v(i,k,j), dzv(i,k,j)
+        !         print*, this_image(), "du", u(i+1,k,j), dzu(i+1,k,j), u(i,k,j), dzu(i,k,j)
+        !         print*, this_image(), "dw", w(i,k-1,j), w(i,k,j)
+        !     endif
+        ! endblock
 
     end subroutine balance_uvw
 
@@ -205,7 +245,7 @@ contains
             ! else assumes even flow over the mountains
 
             ! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
-            call balance_uvw(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, options)
+            call balance_uvw(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%dz_interface%data_3d, domain%dx, options)
 
         else
 
@@ -217,7 +257,12 @@ contains
                 call linear_perturb(domain,options,options%lt_options%vert_smooth,.False.,options%parameters%advect_density, update=.True.)
             endif
             ! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
-            call balance_uvw(domain%u%meta_data%dqdt_3d, domain%v%meta_data%dqdt_3d, domain%w%meta_data%dqdt_3d, options)
+            call balance_uvw(domain% u %meta_data%dqdt_3d,      &
+                             domain% v %meta_data%dqdt_3d,      &
+                             domain% w %meta_data%dqdt_3d,      &
+                             domain% dz_interface %data_3d,     &
+                             domain% dx,                        &
+                             options)
         endif
 
 
@@ -245,7 +290,7 @@ contains
             jms = lbound(domain%latitude%data_2d, 2)
             jme = ubound(domain%latitude%data_2d, 2)
 
-            print*, "Reading Sinalph/cosalpha"
+            if (this_image()==1) print*, "Reading Sinalph/cosalpha"
 
             call io_read(options%parameters%init_conditions_file, options%parameters%sinalpha_var, temporary_2d)
             domain%sintheta = temporary_2d(ims:ime, jms:jme)
