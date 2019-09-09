@@ -594,12 +594,14 @@ contains
         character(len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar,  &
                                         hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qgvar,qsvar,hgtvar,shvar,lhvar,pblhvar,   &
+                                        psvar, pslvar, &
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
                                         swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var
 
         namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qgvar,hgtvar,shvar,lhvar,pblhvar,   &
                             landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar, &
+                            psvar, pslvar, &
                             hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
                             soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
                             vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
@@ -616,6 +618,8 @@ contains
         vvar=""
         vlat=""
         vlon=""
+        pslvar=""
+        psvar=""
         pvar=""
         pbvar=""
         tvar=""
@@ -664,6 +668,24 @@ contains
         call require_var(hgt_hi, "High-res HGT")
         call require_var(time_var, "Time")
 
+        options%compute_p = .False.
+        if ((pvar=="") .and. ((pslvar/="") .or. (psvar/=""))) options%compute_p = .True.
+        if (options%compute_p) then
+            if ((pslvar == "").and.(hgtvar == "")) then
+                print*, "ERROR: if surface pressure is used to compute air pressure, then surface height must be specified"
+                error stop
+            endif
+        endif
+        if (zvar=="") then
+            if (pvar=="") then
+                print*, "ERROR: either pressure (pvar) or atmospheric level height (zvar) must be specified"
+                error stop
+            else
+                options%compute_z = .True.
+            endif
+
+        endif
+
 
         options%vars_to_read(:) = ""
         i=1
@@ -689,7 +711,14 @@ contains
 
         ! Primary model variable names
         options%pbvar       = pbvar     ; options%vars_to_read(i) = pbvar;      options%dim_list(i) = 3;    i = i + 1
-        options%pvar        = pvar      ; options%vars_to_read(i) = pvar;       options%dim_list(i) = 3;    i = i + 1
+        if (options%compute_p) then
+            pvar = "air_pressure_computed"
+            options%pvar        = pvar  ; options%vars_to_read(i) = pvar;       options%dim_list(i) = -3;   i = i + 1
+        else
+            options%pvar        = pvar  ; options%vars_to_read(i) = pvar;       options%dim_list(i) = 3;    i = i + 1
+        endif
+        options%psvar       = psvar     ; options%vars_to_read(i) = psvar;      options%dim_list(i) = 2;    i = i + 1
+        options%pslvar      = pslvar    ; options%vars_to_read(i) = pslvar;     options%dim_list(i) = 2;    i = i + 1
         options%tvar        = tvar      ; options%vars_to_read(i) = tvar;       options%dim_list(i) = 3;    i = i + 1
         options%qvvar       = qvvar     ; options%vars_to_read(i) = qvvar;      options%dim_list(i) = 3;    i = i + 1
         options%qcvar       = qcvar     ; options%vars_to_read(i) = qcvar;      options%dim_list(i) = 3;    i = i + 1
@@ -700,7 +729,10 @@ contains
 
         ! vertical coordinate
         options%zvar        = zvar      ! these variables are read explicitly so not added to vars_to_read list
-        options%zbvar       = zbvar     ; options%vars_to_read(i) = zbvar;      options%dim_list(i) = 3;    i = i + 1
+        if (options%time_varying_z) then
+            options%vars_to_read(i) = zvar;      options%dim_list(i) = 3;    i = i + 1
+        endif
+        options%zbvar       = zbvar     !; options%vars_to_read(i) = zbvar;      options%dim_list(i) = 3;    i = i + 1
 
         ! 2D model variables (e.g. Land surface and PBL height)
         options%shvar       = shvar     ; options%vars_to_read(i) = shvar;      options%dim_list(i) = 2;    i = i + 1

@@ -19,6 +19,7 @@ module variable_interface
         logical                         :: three_d = .False.
         logical                         :: two_d = .False.
         logical                         :: force_boundaries = .True.
+        logical                         :: computed = .False.
         character(len=kMAX_NAME_LENGTH) :: forcing_var = ""
 
         integer :: n_dimensions

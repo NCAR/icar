@@ -11,7 +11,7 @@ submodule(boundary_interface) boundary_implementation
     use time_io,                only : read_times, find_timestep_in_file
     use co_util,                only : broadcast
     use string,                 only : str
-    use mod_atm_utilities,      only : rh_to_mr
+    use mod_atm_utilities,      only : rh_to_mr, compute_3d_p
     use geo,                    only : standardize_coordinates
 
     implicit none
@@ -48,7 +48,10 @@ contains
                                  options%parameters%latvar,             &
                                  options%parameters%lonvar,             &
                                  options%parameters%zvar,               &
-                                 options%parameters%time_var)
+                                 options%parameters%time_var,           &
+                                 options%parameters%pvar,               &
+                                 options%parameters%psvar               &
+                                 )
 
         ! endif
 
@@ -64,7 +67,7 @@ contains
     !!
     !!------------------------------------------------------------
     module subroutine init_local(this, file_list, var_list, dim_list, start_time, &
-                                 lat_var, lon_var, z_var, time_var)
+                                 lat_var, lon_var, z_var, time_var, p_var, ps_var)
         class(boundary_t),               intent(inout)  :: this
         character(len=kMAX_NAME_LENGTH), intent(in)     :: file_list(:)
         character(len=kMAX_NAME_LENGTH), intent(in)     :: var_list (:)
@@ -74,6 +77,8 @@ contains
         character(len=kMAX_NAME_LENGTH), intent(in)     :: lon_var
         character(len=kMAX_NAME_LENGTH), intent(in)     :: z_var
         character(len=kMAX_NAME_LENGTH), intent(in)     :: time_var
+        character(len=kMAX_NAME_LENGTH), intent(in)     :: p_var
+        character(len=kMAX_NAME_LENGTH), intent(in)     :: ps_var
 
         type(variable_t)  :: test_variable
         real, allocatable :: temp_z(:,:,:)
@@ -90,20 +95,33 @@ contains
         call io_read(file_list(this%curfile), lon_var, this%lon, this%curstep)
 
         ! read in the height coordinate of the input data
-        call io_read(file_list(this%curfile), z_var,   temp_z,   this%curstep)
-        nx = size(temp_z,1)
-        ny = size(temp_z,2)
-        nz = size(temp_z,3)
-        if (allocated(this%z)) deallocate(this%z)
-        allocate(this%z(nx,nz,ny))
-        this%z = reshape(temp_z, shape=[nx,nz,ny], order=[1,3,2])
+        if (z_var /= "") then
+            call io_read(file_list(this%curfile), z_var,   temp_z,   this%curstep)
+            nx = size(temp_z,1)
+            ny = size(temp_z,2)
+            nz = size(temp_z,3)
+
+            if (allocated(this%z)) deallocate(this%z)
+            allocate(this%z(nx,nz,ny))
+
+            this%z = reshape(temp_z, shape=[nx,nz,ny], order=[1,3,2])
+        else
+            call io_read(file_list(this%curfile), p_var,   temp_z,   this%curstep)
+            nx = size(temp_z,1)
+            ny = size(temp_z,2)
+            nz = size(temp_z,3)
+
+            if (allocated(this%z)) deallocate(this%z)
+            allocate(this%z(nx,nz,ny))
+
+        endif
 
 
         ! call assert(size(var_list) == size(dim_list), "list of variable dimensions must match list of variables")
 
         do i=1, size(var_list)
 
-            call add_var_to_dict(this%variables, file_list(this%curfile), var_list(i), dim_list(i), this%curstep)
+            call add_var_to_dict(this%variables, file_list(this%curfile), var_list(i), dim_list(i), this%curstep, [nx, nz, ny])
 
         end do
 
@@ -145,13 +163,14 @@ contains
     !! Variable is then added to a master variable dictionary
     !!
     !!------------------------------------------------------------
-    subroutine add_var_to_dict(var_dict, file_name, var_name, ndims, timestep)
+    subroutine add_var_to_dict(var_dict, file_name, var_name, ndims, timestep, dims)
         implicit none
         type(var_dict_t), intent(inout) :: var_dict
         character(len=*), intent(in)    :: file_name
         character(len=*), intent(in)    :: var_name
         integer,          intent(in)    :: ndims
         integer,          intent(in)    :: timestep
+        integer,          intent(in)    :: dims(3)
 
         real, allocatable :: temp_2d_data(:,:)
         real, allocatable :: temp_3d_data(:,:,:)
@@ -184,6 +203,14 @@ contains
 
             ! do not deallocate data arrays because they are pointed to inside the var_dict now
             ! deallocate(new_variable%data_3d)
+
+        ! these variables are computed (e.g. pressure from height or height from pressure)
+        elseif (ndims==-3) then
+
+            call new_variable%initialize( dims )
+            new_variable%computed = .True.
+
+            call var_dict%add_var(var_name, new_variable)
         endif
 
     end subroutine
@@ -198,8 +225,9 @@ contains
 
         real, allocatable :: data3d(:,:,:), data2d(:,:)
         type(variable_t)  :: var
+        type(variable_t)  :: pvar, zvar, tvar, qvar
         character(len=kMAX_NAME_LENGTH) :: name
-        integer :: nx, ny, nz
+        integer :: nx, ny, nz, err
 
 
         ! if (this_image()==1) then
@@ -209,13 +237,17 @@ contains
 
             associate(list => this%variables)
 
+            ! loop through the list of variables that need to be read in
             call list%reset_iterator()
             do while (list%has_more_elements())
                 ! get the next variable in the structure
                 var = list%next(name)
 
-                ! because the data arrays are pointers, this should update the data stored in this%variables
-                if (var%three_d) then
+                ! note that pressure (and maybe z eventually?) can be computed from the other so they may not be read
+                if (var%computed) then
+                    cycle
+                elseif (var%three_d) then
+                    ! because the data arrays are pointers, this should update the data stored in this%variables
                     call io_read(this%file_list(this%curfile), name, data3d, this%curstep)
 
                     nx = size(data3d, 1)
@@ -231,6 +263,36 @@ contains
                     var%data_2d(:,:) = data2d(:,:)
                 endif
 
+            end do
+
+            ! loop through the list of variables that need to be read in
+            call list%reset_iterator()
+            do while (list%has_more_elements())
+
+                ! get the next variable in the structure
+                var = list%next()
+
+                if (var%computed) then
+                    if (var%name == options%parameters%pvar) then
+                        qvar = list%get_var(options%parameters%qvvar)
+                        tvar = list%get_var(options%parameters%tvar)
+
+                        pvar = list%get_var(options%parameters%pslvar, err)
+
+                        if (err == 0) then
+                            call compute_3d_p(var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d, zvar%data_2d)
+
+                        else
+                            pvar = list%get_var(options%parameters%psvar, err)
+                            if (err == 0) then
+                                call compute_3d_p(var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d)
+                            else
+                                print*, "ERROR reading surface pressure or sea level pressure, variables not found"
+                                error stop
+                            endif
+                        endif
+                    endif
+                endif
             end do
 
             end associate
@@ -539,41 +601,6 @@ contains
         deallocate(times)
 
     end subroutine read_bc_time
-
-
-
-    !>------------------------------------------------------------
-    !!  Same as update_dxdt but only for the edges of the domains
-    !!
-    !!  This is used for fields that are calculated/updated internally
-    !!  by the model physics (e.g. temperature and moisture)
-    !!  In the output dxdt variable, the first dimension is the z axis,
-    !!  The second dimension is either X or Y (which ever is specified)
-    !!  And the third dimension specifies the boundary it applies to
-    !!  1=left, 2=right, 3=bottom, 4=top
-    !!
-    !! @param dx_dt Change in variable X between time periods d1 and d2
-    !! @param d1    Value of field X at time period 1
-    !! @param d2    Value of field X at time period 2
-    !! @retval dx_dt This field is updated along the boundaries to be (d1-d2)
-    !!
-    !!------------------------------------------------------------
-    ! subroutine update_edges(dx_dt, d1, d2)
-    !     implicit none
-    !     real,dimension(:,:,:), intent(inout) :: dx_dt
-    !     real,dimension(:,:,:), intent(in)    :: d1, d2
-    !     integer :: nx, nz, ny, i
-    !
-    !     nx = size(d1, 1)
-    !     nz = size(d1, 2)
-    !     ny = size(d1, 3)
-    !     do i=1,nz
-    !         dx_dt(i,:ny,1) = d1(1,i,:)  - d2(1,i,:)
-    !         dx_dt(i,:ny,2) = d1(nx,i,:) - d2(nx,i,:)
-    !         dx_dt(i,:nx,3) = d1(:,i,1)  - d2(:,i,1)
-    !         dx_dt(i,:nx,4) = d1(:,i,ny) - d2(:,i,ny)
-    !     enddo
-    ! end subroutine update_edges
 
 
 end submodule

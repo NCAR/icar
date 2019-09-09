@@ -64,7 +64,7 @@ module boundary_interface
     end subroutine
 
     module subroutine init_local(this, file_list, var_list, dim_list, start_time, &
-                                 lat_var, lon_var, z_var, time_var)
+                                 lat_var, lon_var, z_var, time_var, p_var, ps_var)
         implicit none
         class(boundary_t),               intent(inout)  :: this
         character(len=kMAX_NAME_LENGTH), intent(in)     :: file_list(:)
@@ -75,6 +75,8 @@ module boundary_interface
         character(len=kMAX_NAME_LENGTH), intent(in)     :: lon_var
         character(len=kMAX_NAME_LENGTH), intent(in)     :: z_var
         character(len=kMAX_NAME_LENGTH), intent(in)     :: time_var
+        character(len=kMAX_NAME_LENGTH), intent(in)     :: p_var
+        character(len=kMAX_NAME_LENGTH), intent(in)     :: ps_var
     end subroutine
 
     module subroutine update_forcing(this, options)

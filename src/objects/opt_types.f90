@@ -141,6 +141,7 @@ module options_types
         character (len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
                                         hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi, &
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar,hgtvar, &
+                                        pslvar, psvar, &
                                         shvar,lhvar,pblhvar,zvar,zbvar,&
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
@@ -159,6 +160,8 @@ module options_types
         logical :: debug                ! outputs a little more information at runtime (not much at present)
         logical :: interactive          ! set to true if running at the commandline to see %complete printed
         logical :: ideal                ! this is an ideal simulation, forcing will be held constant
+        logical :: compute_p            ! flag that we need to compute p from z this is determined from the vars specified (not read)
+        logical :: compute_z            ! flag that we need to compute z from p this is determined from the vars specified (not read)
         logical :: readz                ! read atmospheric grid elevations from file
         logical :: readdz               ! read atm model layer thicknesses from namelist
         logical :: external_winds       ! read a high res 3d wind field from an external file (e.g. a high res WRF run)
