@@ -103,6 +103,7 @@ contains
         if ( present(hour_zero) ) then
             this%hour_zero = hour_zero
         endif
+
     end subroutine time_init_i
 
     !>------------------------------------------------------------
@@ -306,15 +307,15 @@ contains
         !
         !------------------------------------------------------------
         else if (this%calendar==NOLEAP) then
-            year=floor(mjd/365)
-            day_fraction=mjd - year*365+1
+            year = floor(mjd/365)
+            day_fraction = mjd - year*365+1 + (this%month_zero-1) * 30 + (this%day_zero-1) + this%hour_zero/24.0
             do f=1,12
-                if (day_fraction>this%month_start(f)) then
-                    month=f
+                if (day_fraction >this%month_start(f)) then
+                    month = f
                 endif
             end do
             day = floor(day_fraction - this%month_start(month))+1
-            year=year+this%year_zero
+            year = year + this%year_zero
 
         !------------------------------------------------------------
         !
@@ -322,15 +323,15 @@ contains
         !
         !------------------------------------------------------------
         else if (this%calendar==THREESIXTY) then
-            year=floor(mjd/360)
-            day_fraction=mjd - year*360+1
+            year = floor(mjd/360)
+            day_fraction = mjd - year * 360 + (this%month_zero-1) * 30 + (this%day_zero-1) + this%hour_zero/24.0
             do f=1,12
-                if (day_fraction>this%month_start(f)) then
-                    month=f
+                if (day_fraction > this%month_start(f)) then
+                    month = f
                 endif
             end do
-            day = floor(day_fraction - this%month_start(month))+1
-            year=year+this%year_zero
+            day = floor(day_fraction - this%month_start(month)) + 1
+            year = year + this%year_zero
         end if
 
         !------------------------------------------------------------
@@ -720,11 +721,10 @@ contains
         logical :: equal
 
         equal = .False.
-
         ! note if calendars are the same, can just return mjd delta...
         if ((t1%calendar == t2%calendar).and.(t1%year_zero == t2%year_zero)) then
             if ((t1%month_zero == t2%month_zero).and.(t1%day_zero == t2%day_zero).and.(t1%hour_zero == t2%hour_zero))  then
-               equal = (abs(t1%current_date_time - t2%current_date_time) < 1.1575e-05)
+                equal = (abs(t1%current_date_time - t2%current_date_time) < 1.1575e-05)
                 return
             endif
         endif
