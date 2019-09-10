@@ -24,23 +24,23 @@ module options_interface
         integer :: vars_for_output( kMAX_STORAGE_VARS ) = 0
 
 
-        type(parameter_options_type)    :: parameters           ! [:]
+        type(parameter_options_type)    :: parameters
 
         ! defines which physics package to be used.
-        type(physics_type)              :: physics          ! [:]
+        type(physics_type)              :: physics
 
         ! physics parameterization options
-        type(mp_options_type)           :: mp_options           ! [:]
+        type(mp_options_type)           :: mp_options
 
-        type(lt_options_type)           :: lt_options           ! [:]
+        type(lt_options_type)           :: lt_options
 
-        type(block_options_type)        :: block_options            ! [:]
+        type(block_options_type)        :: block_options
 
-        type(adv_options_type)          :: adv_options          ! [:]
+        type(adv_options_type)          :: adv_options
 
-        type(lsm_options_type)          :: lsm_options          ! [:]
+        type(lsm_options_type)          :: lsm_options
 
-        type(bias_options_type)         :: bias_options         ! [:]
+        type(bias_options_type)         :: bias_options
 
     contains
 
