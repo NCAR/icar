@@ -531,7 +531,7 @@ contains
         bc%curstep = 1
         error=1
         bc%curfile=0
-        do while ( (error/=0) .and. (bc%curfile <= size(file_list)) )
+        do while ( (error/=0) .and. (bc%curfile < size(file_list)) )
             bc%curfile = bc%curfile + 1
             bc%curstep = find_timestep_in_file(file_list(bc%curfile), time_var, time, error=error)
         enddo
