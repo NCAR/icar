@@ -131,9 +131,13 @@ contains
                 this%calendar = GREGORIAN
             case("365-day")
                 this%calendar = NOLEAP
+            case("365_day")
+                this%calendar = NOLEAP
             case("noleap")
                 this%calendar = NOLEAP
             case("360-day")
+                this%calendar = THREESIXTY
+            case("360_day")
                 this%calendar = THREESIXTY
             case default
                 this%calendar = NOCALENDAR
@@ -150,14 +154,18 @@ contains
                     this%calendar = GREGORIAN
                 case("365-d")
                     this%calendar = NOLEAP
+                case("365_d")
+                    this%calendar = NOLEAP
                 case("nolea")
                     this%calendar = NOLEAP
                 case("360-d")
                     this%calendar = THREESIXTY
+                case("360_d")
+                    this%calendar = THREESIXTY
                 case default
                     write(*,*) "Unknown Calendar: '", trim(calendar_name),"'"
                     write(*,*) "Acceptable names = "
-                    write(*,*) "  'gregorian', 'standard', '365-day', 'noleap', '360-day'"
+                    write(*,*) "  'gregorian', 'standard', '365-day', '365_day', 'noleap', '360-day', '360_day'"
                     write(*,*) " "
                     stop
             end select
