@@ -47,21 +47,20 @@ contains
 
         this%comment = "This is a test"
 
-        allocate(this%parameters[*])
-        allocate(this%physics[*])
-        allocate(this%mp_options[*])
-        allocate(this%lt_options[*])
-        allocate(this%block_options[*])
-        allocate(this%adv_options[*])
-        allocate(this%lsm_options[*])
-        allocate(this%bias_options[*])
-
+        ! allocate(this%parameters[*])
+        ! allocate(this%physics[*])
+        ! allocate(this%mp_options[*])
+        ! allocate(this%lt_options[*])
+        ! allocate(this%block_options[*])
+        ! allocate(this%adv_options[*])
+        ! allocate(this%lsm_options[*])
+        ! allocate(this%bias_options[*])
 
         ! Uses just the first image to read the options files from the disk to avoid potentially having
         ! thousands of images hit the disk simultaneously
-        if (this_image()==1) then
+        ! if (this_image()==1) then
             options_filename=get_options_file()
-            write(*,*) "Using options file = ", trim(options_filename)
+            if (this_image()==1) write(*,*) "Using options file = ", trim(options_filename)
 
             call version_check(         options_filename,   this%parameters)
             call physics_namelist(      options_filename,   this)
@@ -85,26 +84,26 @@ contains
             ! check for any inconsistencies in the options requested
             call options_check(this)
 
-        endif
+        ! endif
 
-        sync all
+        ! sync all
 
         ! Note, this is a really inefficient broadcast mechanism, should move to a more efficient form at some point
         ! unfortunately, this slows down on large numbers of images
         ! Note that looping like this is MUCH faster than just letting all processes grab data
-        do i=2,num_images()
-            if (this_image()==i) then
-                this%parameters     = this%parameters[1]
-                this%physics        = this%physics[1]
-                this%mp_options     = this%mp_options[1]
-                this%lt_options     = this%lt_options[1]
-                this%block_options  = this%block_options[1]
-                this%adv_options    = this%adv_options[1]
-                this%lsm_options    = this%lsm_options[1]
-                this%bias_options   = this%bias_options[1]
-            endif
-            sync all
-        end do
+        ! do i=2,num_images()
+        !     if (this_image()==i) then
+        !         this%parameters     = this%parameters[1]
+        !         this%physics        = this%physics[1]
+        !         this%mp_options     = this%mp_options[1]
+        !         this%lt_options     = this%lt_options[1]
+        !         this%block_options  = this%block_options[1]
+        !         this%adv_options    = this%adv_options[1]
+        !         this%lsm_options    = this%lsm_options[1]
+        !         this%bias_options   = this%bias_options[1]
+        !     endif
+        !     sync all
+        ! end do
 
         call collect_physics_requests(this)
 
@@ -1706,6 +1705,7 @@ contains
             i=i+1
         end do
         nfiles=i-1
+
         if ((nfiles==0).and.(trim(forcing_file_list)/="MISSING")) then
             nfiles = read_forcing_file_names(forcing_file_list, boundary_files)
         else
@@ -1714,7 +1714,7 @@ contains
             endif
         endif
 
-        ! allocate(options%boundary_files(nfiles))
+        allocate(options%boundary_files(nfiles))
         options%boundary_files(1:nfiles) = boundary_files(1:nfiles)
         deallocate(boundary_files)
 
@@ -1735,7 +1735,7 @@ contains
             read(name_unit,nml=ext_winds_info)
             close(name_unit)
 
-            ! allocate(options%ext_wind_files(options%ext_winds_nfiles))
+            allocate(options%ext_wind_files(options%ext_winds_nfiles))
             options%ext_wind_files(1:options%ext_winds_nfiles) = ext_wind_files(1:options%ext_winds_nfiles)
             deallocate(ext_wind_files)
         endif

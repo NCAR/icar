@@ -134,7 +134,7 @@ module options_types
 
         ! file names
         character (len=MAXFILELENGTH) :: init_conditions_file, linear_mask_file, nsq_calibration_file
-        character (len=MAXFILELENGTH), dimension(MAX_NUMBER_FILES) :: boundary_files,ext_wind_files ! note these can't be allocatable because gfortran does not support allocatable components inside derived type coarrays...
+        character (len=MAXFILELENGTH), dimension(:), allocatable :: boundary_files, ext_wind_files
         character (len=MAXFILELENGTH) :: output_file,restart_file,output_file_frequency
 
         ! variable names from init/BC/wind/... files
