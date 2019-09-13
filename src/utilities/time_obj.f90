@@ -307,8 +307,9 @@ contains
         !
         !------------------------------------------------------------
         else if (this%calendar==NOLEAP) then
-            year = floor(mjd/365)
-            day_fraction = mjd - year*365+1 + (this%month_zero-1) * 30 + (this%day_zero-1) + this%hour_zero/24.0
+            year = floor((mjd + (this%month_start(this%month_zero)-1) + (this%day_zero-1) + this%hour_zero/24.0) / 365)
+            day_fraction = mjd - year*365+1 + (this%month_start(this%month_zero)-1) * 30 + (this%day_zero-1) + this%hour_zero/24.0
+            month = 1
             do f=1,12
                 if (day_fraction >this%month_start(f)) then
                     month = f
@@ -323,15 +324,18 @@ contains
         !
         !------------------------------------------------------------
         else if (this%calendar==THREESIXTY) then
-            year = floor(mjd/360)
-            day_fraction = mjd - year * 360 + (this%month_zero-1) * 30 + (this%day_zero-1) + this%hour_zero/24.0
+            year = floor((mjd + (this%month_zero-1) * 30 + (this%day_zero-1) + this%hour_zero/24.0) / 360)
+            day_fraction = mjd - year*360+1 + (this%month_zero-1) * 30 + (this%day_zero-1) + this%hour_zero/24.0
+            month = 1
             do f=1,12
                 if (day_fraction > this%month_start(f)) then
                     month = f
                 endif
             end do
+
             day = floor(day_fraction - this%month_start(month)) + 1
             year = year + this%year_zero
+
         end if
 
         !------------------------------------------------------------

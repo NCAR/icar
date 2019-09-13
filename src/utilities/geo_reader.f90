@@ -1223,7 +1223,12 @@ contains
 
         endif
 
-        ! also convert from a -180 to 180 coordinate system into a 0-360 coordinate system if necessary
+        ! default to a -180 to 180 coordinate system
+        if (maxval(domain%lon) > 180) then
+            where(domain%lon > 180) domain%lon = domain%lon - 360
+        endif
+
+        ! if necessary, convert from a -180 to 180 coordinate system into a 0-360 coordinate system (if domain crosses the dateline)
         if ((minval(domain%lon) < -170) .and. (maxval(domain%lon) > 170)) then
             where(domain%lon<0) domain%lon = 360+domain%lon
         endif
