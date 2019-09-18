@@ -37,7 +37,7 @@ program icar
     type(domain_t)  :: domain
     type(boundary_t):: boundary
     type(output_t)  :: dataset
-    type(output_t)  :: surface_dataset
+    ! type(output_t)  :: surface_dataset
     type(timer_t)   :: initialization_timer, total_timer, input_timer, output_timer, physics_timer
     type(Time_type) :: next_output
 
@@ -63,8 +63,8 @@ program icar
     do i=1,size(output_vars)
         options%vars_for_output(output_vars)=1
     enddo
-    call surface_dataset%set_domain(domain)
-    call surface_dataset%add_variables(options%vars_for_output, domain)
+    ! call surface_dataset%set_domain(domain)
+    ! call surface_dataset%add_variables(options%vars_for_output, domain)
 
     if (options%parameters%restart) then
         if (this_image()==1) write(*,*) "Reading restart data"
@@ -86,7 +86,7 @@ program icar
     i=1
     call output_timer%start()
     call dataset%save_file(trim(file_name), i, domain%model_time)
-    call surface_dataset%save_file("surface_"//trim(file_name), i, domain%model_time)
+    ! call surface_dataset%save_file("surface_"//trim(file_name), i, domain%model_time)
     next_output = domain%model_time + options%parameters%output_dt
     call output_timer%stop()
     i = i + 1
@@ -151,7 +151,7 @@ program icar
             endif
 
             call dataset%save_file(trim(file_name), i, next_output)
-            call surface_dataset%save_file("surface_"//trim(file_name), i, domain%model_time)
+            ! call surface_dataset%save_file("surface_"//trim(file_name), i, domain%model_time)
 
             next_output = next_output + options%parameters%output_dt
 
