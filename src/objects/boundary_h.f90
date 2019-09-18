@@ -63,10 +63,11 @@ module boundary_interface
         class(options_t),  intent(inout) :: options
     end subroutine
 
-    module subroutine init_local(this, file_list, var_list, dim_list, start_time, &
+    module subroutine init_local(this, options, file_list, var_list, dim_list, start_time, &
                                  lat_var, lon_var, z_var, time_var, p_var, ps_var)
         implicit none
         class(boundary_t),               intent(inout)  :: this
+        class(options_t),                intent(inout)  :: options
         character(len=kMAX_NAME_LENGTH), intent(in)     :: file_list(:)
         character(len=kMAX_NAME_LENGTH), intent(in)     :: var_list (:)
         integer,                         intent(in)     :: dim_list (:)

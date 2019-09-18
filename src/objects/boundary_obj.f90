@@ -11,7 +11,7 @@ submodule(boundary_interface) boundary_implementation
     use time_io,                only : read_times, find_timestep_in_file
     use co_util,                only : broadcast
     use string,                 only : str
-    use mod_atm_utilities,      only : rh_to_mr, compute_3d_p
+    use mod_atm_utilities,      only : rh_to_mr, compute_3d_p, exner_function
     use geo,                    only : standardize_coordinates
 
     implicit none
@@ -42,15 +42,16 @@ contains
         ! then create grid and initialize a variable...
         ! also need to explicitly save lat and lon data
         ! if (this_image() == 1) then
-            call this%init_local(this%file_list,     &
-                                 vars_to_read, var_dimensions,          &
-                                 options%parameters%start_time,         &
-                                 options%parameters%latvar,             &
-                                 options%parameters%lonvar,             &
-                                 options%parameters%zvar,               &
-                                 options%parameters%time_var,           &
-                                 options%parameters%pvar,               &
-                                 options%parameters%psvar               &
+            call this%init_local(options,                           &
+                                 this%file_list,                    &
+                                 vars_to_read, var_dimensions,      &
+                                 options%parameters%start_time,     &
+                                 options%parameters%latvar,         &
+                                 options%parameters%lonvar,         &
+                                 options%parameters%zvar,           &
+                                 options%parameters%time_var,       &
+                                 options%parameters%pvar,           &
+                                 options%parameters%psvar           &
                                  )
 
         ! endif
@@ -66,9 +67,10 @@ contains
     !! Reads initial conditions from the forcing file
     !!
     !!------------------------------------------------------------
-    module subroutine init_local(this, file_list, var_list, dim_list, start_time, &
+    module subroutine init_local(this, options, file_list, var_list, dim_list, start_time, &
                                  lat_var, lon_var, z_var, time_var, p_var, ps_var)
         class(boundary_t),               intent(inout)  :: this
+        class(options_t),                intent(inout)  :: options
         character(len=kMAX_NAME_LENGTH), intent(in)     :: file_list(:)
         character(len=kMAX_NAME_LENGTH), intent(in)     :: var_list (:)
         integer,                         intent(in)     :: dim_list (:)
@@ -124,6 +126,8 @@ contains
             call add_var_to_dict(this%variables, file_list(this%curfile), var_list(i), dim_list(i), this%curstep, [nx, nz, ny])
 
         end do
+
+        call update_computed_vars(this, options)
 
     end subroutine
 
@@ -225,7 +229,7 @@ contains
 
         real, allocatable :: data3d(:,:,:), data2d(:,:)
         type(variable_t)  :: var
-        type(variable_t)  :: pvar, zvar, tvar, qvar
+        type(variable_t)  :: pvar, zvar, tvar
         character(len=kMAX_NAME_LENGTH) :: name
         integer :: nx, ny, nz, err
 
@@ -265,35 +269,7 @@ contains
 
             end do
 
-            ! loop through the list of variables that need to be read in
-            call list%reset_iterator()
-            do while (list%has_more_elements())
-
-                ! get the next variable in the structure
-                var = list%next()
-
-                if (var%computed) then
-                    if (var%name == options%parameters%pvar) then
-                        qvar = list%get_var(options%parameters%qvvar)
-                        tvar = list%get_var(options%parameters%tvar)
-
-                        pvar = list%get_var(options%parameters%pslvar, err)
-
-                        if (err == 0) then
-                            call compute_3d_p(var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d, zvar%data_2d)
-
-                        else
-                            pvar = list%get_var(options%parameters%psvar, err)
-                            if (err == 0) then
-                                call compute_3d_p(var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d)
-                            else
-                                print*, "ERROR reading surface pressure or sea level pressure, variables not found"
-                                error stop
-                            endif
-                        endif
-                    endif
-                endif
-            end do
+            call update_computed_vars(this, options)
 
             end associate
         ! endif
@@ -301,6 +277,62 @@ contains
         ! call this%distribute_update()
 
     end subroutine
+
+
+    subroutine update_computed_vars(this, options)
+        implicit none
+        class(boundary_t),   intent(inout)   :: this
+        class(options_t),    intent(in)      :: options
+
+        integer           :: err
+        type(variable_t)  :: var, pvar, zvar, tvar, qvar
+        character(len=kMAX_NAME_LENGTH) :: name
+
+
+        associate(list => this%variables)
+
+        ! loop through the list of variables that need to be read in
+        call list%reset_iterator()
+        do while (list%has_more_elements())
+
+            ! get the next variable in the structure
+            var = list%next(name)
+            if (var%computed) then
+                if (name == options%parameters%pvar) then
+                    qvar = list%get_var(options%parameters%qvvar)
+                    tvar = list%get_var(options%parameters%tvar)
+                    zvar = list%get_var(options%parameters%hgtvar)
+
+                    if (options%parameters%t_is_potential) stop "Need real air temperature to compute pressure"
+
+                    pvar = list%get_var(options%parameters%pslvar, err)
+
+                    if (err == 0) then
+                        call compute_3d_p(var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d, zvar%data_2d)
+
+                    else
+                        pvar = list%get_var(options%parameters%psvar, err)
+                        if (err == 0) then
+                            call compute_3d_p(var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d)
+                        else
+                            print*, "ERROR reading surface pressure or sea level pressure, variables not found"
+                            error stop
+                        endif
+                    endif
+                endif
+            endif
+        end do
+
+        if (.not.options%parameters%t_is_potential) then
+            tvar = list%get_var(options%parameters%tvar)
+            pvar = list%get_var(options%parameters%pvar)
+
+            tvar%data_3d = tvar%data_3d / exner_function(pvar%data_3d)
+        endif
+
+        end associate
+
+    end subroutine update_computed_vars
 
     !>------------------------------------------------------------
     !! Sends the udpated forcing data to all other images
