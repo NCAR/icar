@@ -63,6 +63,8 @@ contains
 
         integer :: i
 
+        if (present(err)) err = 0
+
         ! if this dictionary hasn't been initialized yet that is bad
         if (.not.this%initialized) then
 
@@ -141,6 +143,7 @@ contains
 
         ! warning, this copies all information directly from the var_data into the dict, including the POINTER to the data
         this%var_list(this%n_vars)%var  = var_data
+        this%var_list(this%n_vars)%var%name = varname
 
         ! If we want to assume that the data arrays may be deallocated outside of the dict, we can do this...
         if (save_data) then
