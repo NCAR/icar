@@ -46,10 +46,11 @@ contains
 
         integer :: i
 
+        i=1
         if (present(zs)) then
-            call compute_p_offset(p(:,1,:), ps, z(:,i,:)-zs, t(:,i,:), qv(:,i,:))
+            call compute_p_offset(p(:,i,:), ps, z(:,i,:)-zs, t(:,i,:), qv(:,i,:))
         else
-            call compute_p_offset(p(:,1,:), ps, z(:,i,:), t(:,i,:), qv(:,i,:))
+            call compute_p_offset(p(:,i,:), ps, z(:,i,:), t(:,i,:), qv(:,i,:))
         endif
 
         do i=2, size(p,2)
