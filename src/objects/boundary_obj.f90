@@ -561,8 +561,8 @@ contains
         ! these are module variables that should be correctly set when the subroutine returns
         bc%curfile = 1
         bc%curstep = 1
-        error=1
-        bc%curfile=0
+        error = 1
+        bc%curfile = 0
         do while ( (error/=0) .and. (bc%curfile < size(file_list)) )
             bc%curfile = bc%curfile + 1
             bc%curstep = find_timestep_in_file(file_list(bc%curfile), time_var, time, error=error)
@@ -592,6 +592,7 @@ contains
 
         ! check that we haven't stepped passed the end of the current file
         steps_in_file = get_n_timesteps(file_list(bc%curfile), time_var, 0)
+
         if (steps_in_file < bc%curstep) then
             ! if we have, use the next file
             bc%curfile = bc%curfile + 1
@@ -599,7 +600,7 @@ contains
             bc%curstep = 1
 
             ! if we have run out of input files, stop with an error message
-            if (bc%curfile <= size(file_list)) then
+            if (bc%curfile > size(file_list)) then
                 stop "Ran out of files to process while searching for matching time variable!"
             endif
 
