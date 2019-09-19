@@ -344,18 +344,18 @@ contains
         !     V_m = domain%vr(:,:,2:ny) * (dt/dx**2)
         !     W_m = domain%wr           * (dt/dx**2)
         ! else
-            if (options%physics%convection > 0) then
-                print*, "Advection of convective winds not enabled in ICAR >=1.5 yet"
+            ! if (options%physics%convection > 0) then
+                ! print*, "Advection of convective winds not enabled in ICAR >=1.5 yet"
                 ! stop
                 ! U_m = (domain%u_cu(2:nx,:,:) + domain%u(2:nx,:,:)) * (dt/dx)
                 ! V_m = (domain%v_cu(:,:,2:ny) + domain%v(:,:,2:ny)) * (dt/dx)
                 ! W_m = (domain%w_cu + domain%w)                     * (dt/dx)
                 ! call rebalance_cu_winds(U_m,V_m,W_m)
-            else
+            ! else
                 U_m = u(2:nx,:,:) * ((dz(1:nx-1,:,:)+dz(2:nx,:,:))/2 * dt)
                 V_m = v(:,:,2:ny) * ((dz(:,:,1:ny-1)+dz(:,:,2:ny))/2 * dt)
                 W_m = w * dt
-            endif
+            ! endif
         ! endif
 
     end subroutine setup_module_winds
