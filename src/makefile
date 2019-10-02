@@ -69,6 +69,11 @@ ifndef F90
 	F90=${FC}
 endif
 
+ifeq ($(PE_ENV),CRAY)
+	FC=ftn
+	F90=ftn
+endif
+
 ifndef FFTW
 	FFTW=${HOME}/usr/local
 endif
@@ -76,8 +81,19 @@ FFTW_PATH = ${FFTW}
 LIBFFT = -L${FFTW_PATH}/lib -lm -lfftw3
 INCFFT = -I${FFTW_PATH}/include
 
+ifdef FFTW_DIR
+	FFTW_PATH = ${FFTW_DIR}
+	LIBFFT = -L${FFTW_DIR} -lm -lfftw3
+endif
+ifdef FFTW_INC
+	INCFFT = -I${FFTW_INC}
+endif
+
 ifndef NETCDF
 	NETCDF=/usr/local
+	ifdef NETCDF_DIR
+		NETCDF=${NETCDF_DIR}
+	endif
 endif
 NCDF_PATH = ${NETCDF}
 LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
