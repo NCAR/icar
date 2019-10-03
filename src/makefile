@@ -278,11 +278,13 @@ ifeq ($(COMPILER), gnu)
 			CAF_FLAG=-fcoarray=lib
 		else
 			ifndef CAF_DIR
-				CAF_DIR=${HOME}/usr/local
+				CAF_DIR=${HOME}/usr/local/lib
 			endif
 			CAF_FLAG=-fcoarray=lib
-			CAF_LINK=-L${CAF_DIR}/lib -lcaf_mpi
-			LINKER=mpif90
+			CAF_LINK=-L${CAF_DIR} -lcaf_mpi
+			ifneq ($(F90), ftn)
+				LINKER=mpif90
+			endif
 		endif
 	endif
 endif
