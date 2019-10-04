@@ -212,6 +212,7 @@ module options_types
         ! note this can't be allocatable because gfortran does not support allocatable components inside derived type coarrays...
         real, dimension(MAXLEVELS)::dz_levels ! model layer thicknesses to be read from namelist
         logical :: space_varying_dz     ! allow the vertical dimension to vary horizontally in space to permit smoothing at higher vertical levels
+        logical :: dz_modifies_wind     ! use spatial variability in dz (relative to the base dz) speed up (or slow down) the horizontal wind component proportionatly, decreased dz = faster winds
         real    :: flat_z_height        ! height above mean ground level [m] above which z levels are flat in space
         logical :: use_agl_height       ! interpolate from forcing to model layers using Z above ground level, not sea level
         logical :: fixed_dz_advection   ! with variable dz, allows thinner model levels to accelerate the wind (maybe this should be wind=2)
