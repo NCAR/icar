@@ -67,7 +67,7 @@ TESTS=tests/
 # These are default parameters, also tries to load from environment variables
 # They are overwritten with machine specific options below if known
 ########################################################################################
-MV=/bin/mv
+ECHO_MOVE=/bin/echo
 RM=/bin/rm
 CP=/bin/cp
 # doxygen only required to enable "make doc"
@@ -83,6 +83,7 @@ endif
 ifeq ($(PE_ENV),CRAY)
 	FC=ftn
 	F90=ftn
+	ECHO_MOVE=/bin/mv
 endif
 
 ifndef FFTW
@@ -427,8 +428,8 @@ TEST_EXECUTABLES= 	fftshift_test			\
 ###################################################################
 
 icar:${OBJS}
-	${MV} *.i ${BUILD}
 	${LINKER} -o icar ${OBJS} ${LFLAGS}
+	${ECHO_MOVE} *.i ${BUILD}
 
 all:icar test
 
