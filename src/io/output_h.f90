@@ -107,7 +107,7 @@ module output_interface
       module subroutine add_to_output(this, variable)
           implicit none
           class(output_t),   intent(inout)  :: this
-          class(variable_t), intent(in)     :: variable
+          type(variable_t), intent(in)     :: variable
       end subroutine
 
       !>----------------------------------------------------------

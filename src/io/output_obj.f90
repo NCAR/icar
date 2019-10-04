@@ -20,8 +20,8 @@ contains
 
 
     module subroutine add_to_output(this, variable)
-        class(output_t),   intent(inout)  :: this
-        class(variable_t), intent(in)     :: variable
+        type(output_t),   intent(inout)  :: this
+        type(variable_t), intent(in)     :: variable
 
         if (.not.this%is_initialized) call this%init()
 

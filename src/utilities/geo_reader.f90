@@ -291,7 +291,7 @@ contains
     !!------------------------------------------------------------
     type(position) function find_location(lo,lat,lon,lastpos)
         implicit none
-        class(interpolable_type),intent(inout)::lo      ! input interpolable object to search
+        type(interpolable_type),intent(inout)::lo      ! input interpolable object to search
         real,intent(in)::lat,lon                        ! input position to find
         type(position),intent(in)::lastpos              ! position to start search from
         ! locals
@@ -715,7 +715,7 @@ contains
     function test_surrounding(lat,lon, lo, positions, nx, ny, n, error) result(surrounded)
         implicit none
         real,                    intent(in) :: lat, lon
-        class(interpolable_type),intent(in) :: lo
+        type(interpolable_type),intent(in) :: lo
         type(fourpos),           intent(inout) :: positions
         integer,                 intent(in) :: nx, ny, n
         real,                    intent(out), optional :: error
@@ -749,7 +749,7 @@ contains
     function test_triangle(lat,lon, lo, positions, nx, ny, error) result(surrounded)
         implicit none
         real,                    intent(in) :: lat, lon
-        class(interpolable_type),intent(in) :: lo
+        type(interpolable_type),intent(in) :: lo
         type(fourpos),           intent(inout) :: positions
         integer,                 intent(in) :: nx, ny
         real,                    intent(out), optional :: error
@@ -791,7 +791,7 @@ contains
     !!------------------------------------------------------------
     type(fourpos) function find_surrounding(lo,lat,lon,pos,nx,ny)
         implicit none
-        class(interpolable_type),intent(in)::lo
+        type(interpolable_type),intent(in)::lo
         real,intent(in)::lat,lon
         type(position),intent(in)::pos
         integer,intent(in) :: nx,ny
@@ -887,8 +887,8 @@ contains
     !!------------------------------------------------------------
     subroutine geo_LUT(hi, lo)
         implicit none
-        class(interpolable_type), intent(in)    :: hi
-        class(interpolable_type), intent(inout) :: lo
+        type(interpolable_type), intent(in)    :: hi
+        type(interpolable_type), intent(inout) :: lo
         type(fourpos) :: xy
         type(position) :: curpos, lastpos
         integer :: nx, ny, i, j, k, lo_nx, lo_ny
@@ -1189,7 +1189,7 @@ contains
     !! ----------------------------------------------------------------------------
     subroutine standardize_coordinates(domain)
         implicit none
-        class(interpolable_type), intent(inout) :: domain
+        type(interpolable_type), intent(inout) :: domain
 
         real, dimension(:,:), allocatable :: temporary_geo_data
         integer :: nx, ny, i

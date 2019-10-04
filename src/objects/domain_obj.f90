@@ -9,8 +9,6 @@
 !!------------------------------------------------------------
 submodule(domain_interface) domain_implementation
     use assertions_mod,       only : assert, assertions
-    use grid_interface,       only : grid_t
-    use options_interface,    only : options_t
     use mod_atm_utilities,    only : exner_function, update_pressure
     use icar_constants,       only : kVARS, kLC_LAND
     use string,               only : str
@@ -949,7 +947,7 @@ contains
     !! -------------------------------
     module subroutine var_request(this, options)
         class(domain_t), intent(inout) :: this
-        class(options_t),intent(inout) :: options
+        type(options_t), intent(inout) :: options
 
         ! List the variables that are required to be allocated for any domain
         call options%alloc_vars(                                                    &

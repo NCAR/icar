@@ -93,7 +93,7 @@ contains
 
     subroutine lsm_var_request(options)
         implicit none
-        class(options_t),intent(inout) :: options
+        type(options_t),intent(inout) :: options
 
         call options%alloc_vars( &
                      [kVARS%water_vapor, kVARS%potential_temperature, kVARS%precipitation, kVARS%temperature,       &

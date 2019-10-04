@@ -100,8 +100,8 @@ contains
     !
     subroutine vLUT(hi,lo)
         implicit none
-        class(interpolable_type), intent(in)    :: hi
-        class(interpolable_type), intent(inout) :: lo
+        type(interpolable_type), intent(in)    :: hi
+        type(interpolable_type), intent(inout) :: lo
         integer::nx,ny,nz,i,j,k,guess,lo_nz
         integer,dimension(2) :: curpos
         real,dimension(2) :: curweights
@@ -158,8 +158,8 @@ contains
         ! In addition, it provides extrapolation when matching above or below
         ! the previous grid.
         implicit none
-        class(interpolable_type), intent(in)    :: hi
-        class(interpolable_type), intent(inout) :: lo
+        type(interpolable_type), intent(in)    :: hi
+        type(interpolable_type), intent(inout) :: lo
         integer::nx,ny,nz,i,j,k,guess,lo_nz
         integer,dimension(2) :: curpos
         real,dimension(2) :: curweights
@@ -224,7 +224,7 @@ contains
         implicit none
         real,dimension(:,:,:), intent(inout) :: hi
         real,dimension(:,:,:), intent(in)    :: lo
-        class(vert_look_up_table),intent(in) :: vlut
+        type(vert_look_up_table),intent(in) :: vlut
         integer :: i,j,k,nx,ny,nz
 
         nx=size(hi,1)
@@ -263,7 +263,7 @@ contains
         implicit none
         real,dimension(:,:,:),    intent(inout) :: hi
         real,dimension(:,:,:),    intent(in)    :: lo
-        class(vert_look_up_table),intent(in)    :: vlut
+        type(vert_look_up_table),intent(in)    :: vlut
         logical, optional,        intent(in)    :: boundary_only
         integer, optional,        intent(in)    :: axis
         integer :: i,j,k, nx,ny,nz, zaxis

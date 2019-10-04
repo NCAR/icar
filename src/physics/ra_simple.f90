@@ -49,7 +49,7 @@ module module_ra_simple
     use options_interface,  only : options_t
     use domain_interface,   only : domain_t
     use data_structures
-    use time
+    ! use time
 
     implicit none
 
