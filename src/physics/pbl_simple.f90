@@ -65,7 +65,7 @@ module pbl_simple
 
 
 contains
-    subroutine simple_pbl(th, qv, cloud, ice, qrain, qsnow, um, vm, pii, rho, z, dz, tend_qv_pbl, terrain, its, ite, jts, jte, kts, kte_in, dt)
+    subroutine simple_pbl(th, qv, cloud, ice, qrain, qsnow, um, vm, pii, rho, z, dz, terrain, its, ite, jts, jte, kts, kte_in, dt, tend_qv_pbl)
         real,   intent(inout), dimension(ims:ime, kms:kme, jms:jme) :: th            ! potential temperature [K]
         real,   intent(inout), dimension(ims:ime, kms:kme, jms:jme) :: qv            ! water vapor mixing ratio [kg/kg]
         real,   intent(inout), dimension(ims:ime, kms:kme, jms:jme) :: cloud         ! cloud water mixing ratio [kg/kg]
@@ -79,9 +79,9 @@ contains
         real,   intent(in),    dimension(ims:ime, kms:kme, jms:jme) :: z             ! model level heights [m]
         real,   intent(in),    dimension(ims:ime, kms:kme, jms:jme) :: dz            ! model level thickness [m]
         real,   intent(in),    dimension(ims:ime, jms:jme)          :: terrain       ! terrain height above sea level [m]
-        real,   intent(inout),   dimension(ims:ime,kms:kme,jms:jme) :: tend_qv_pbl   ! output water vapor tendency [kg/kg/s] (for use in other physics)
         integer,intent(in) :: its, ite, jts, jte, kts, kte_in
         real,   intent(in) :: dt                                 ! time step [s]
+        real,   intent(inout), dimension(ims:ime,kms:kme,jms:jme), optional :: tend_qv_pbl   ! output water vapor tendency [kg/kg/s] (for use in other physics)
 
         ! local
         integer :: i,j,k, kte
@@ -89,7 +89,7 @@ contains
         ! don't process the top model level regardless, there shouldn't be any real pbl diffusion occuring there
         kte = min(kme-1, kte_in)
 !       OpenMP parallelization small static chunk size because we typically get a small area that takes most of the time (because of substepping)
-        !$omp parallel shared(th, qv, cloud, ice, qrain, qsnow, um, vm, pii, rho, z, dz, terrain, tend_qv_pbl)     &
+        !$omp parallel shared(th, qv, cloud, ice, qrain, qsnow, um, vm, pii, rho, z, dz, terrain) & !, tend_qv_pbl)     &
         !$omp shared(l_m, K_m, Kq_m, stability_m, prandtl_m, virt_pot_temp_zgradient_m, rig_m, shear_m, lastqv_m, ims, ime, jms, jme, kms, kme) &
         !$omp firstprivate(its, ite, jts, jte, kts, kte, dt) private(i, k, j)
 

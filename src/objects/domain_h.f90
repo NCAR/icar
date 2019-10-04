@@ -161,28 +161,28 @@ module domain_interface
     module subroutine init(this, options)
         implicit none
         class(domain_t), intent(inout) :: this
-        class(options_t),intent(inout) :: options
+        type(options_t), intent(inout) :: options
     end subroutine
 
     ! read initial atmospheric conditions from forcing data
     module subroutine get_initial_conditions(this, forcing, options)
         implicit none
         class(domain_t),  intent(inout) :: this
-        class(boundary_t),intent(inout) :: forcing
-        class(options_t), intent(in)    :: options
+        type(boundary_t), intent(inout) :: forcing
+        type(options_t),  intent(in)    :: options
     end subroutine
 
     module subroutine interpolate_forcing(this, forcing, update)
         implicit none
         class(domain_t),  intent(inout) :: this
-        class(boundary_t),intent(in)    :: forcing
+        type(boundary_t), intent(in)    :: forcing
         logical,          intent(in),   optional :: update
     end subroutine
 
     module subroutine var_request(this, options)
         implicit none
         class(domain_t), intent(inout) :: this
-        class(options_t),intent(inout) :: options
+        type(options_t), intent(inout)  :: options
     end subroutine
 
     module subroutine halo_send(this)
@@ -211,13 +211,13 @@ module domain_interface
     module subroutine update_delta_fields(this, dt)
         implicit none
         class(domain_t),    intent(inout) :: this
-        class(time_delta_t),intent(in)    :: dt
+        type(time_delta_t), intent(in)    :: dt
     end subroutine
 
     module subroutine apply_forcing(this, dt)
         implicit none
         class(domain_t),    intent(inout) :: this
-        class(time_delta_t),intent(in)    :: dt
+        type(time_delta_t), intent(in)    :: dt
     end subroutine
 
 

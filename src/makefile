@@ -45,6 +45,16 @@ ifndef INSTALLDIR
 	INSTALLDIR=~/bin/
 endif
 
+# Model directories
+BUILD=build/
+PHYS=physics/
+IO=io/
+MAIN=main/
+UTIL=utilities/
+CONST=constants/
+OBJECTS=objects/
+TESTS=tests/
+
 ###################################################################
 #	Various compiler specific flags, may need to edit
 ###################################################################
@@ -57,6 +67,7 @@ endif
 # These are default parameters, also tries to load from environment variables
 # They are overwritten with machine specific options below if known
 ########################################################################################
+MV=/bin/mv
 RM=/bin/rm
 CP=/bin/cp
 # doxygen only required to enable "make doc"
@@ -196,7 +207,7 @@ ifeq ($(MODE), debugslow)
 		LINK=
 	endif
 	ifeq ($(COMPILER), cray)
-		COMP=-h noomp -c -g -m 0 -R bcsp -M 399
+		COMP=-h noomp -c -g -h develop -m 0 -R bcsp -M 399
 		LINK=-h noomp
 		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
@@ -229,7 +240,7 @@ ifeq ($(MODE), debugompslow)
 		LINK= -fopenmp -lgomp
 	endif
 	ifeq ($(COMPILER), cray)
-		COMP=-c -g -m 0 -R bcsp -M 399
+		COMP=-c -g -m 0 -h develop -R bcsp -M 399
 		LINK=
 		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
@@ -321,16 +332,6 @@ $(info $$COMP        = ${COMP})
 $(info $$LINK        = ${LINK})
 $(info $$MODE        = ${MODE})
 
-
-# Model directories
-BUILD=build/
-PHYS=physics/
-IO=io/
-MAIN=main/
-UTIL=utilities/
-CONST=constants/
-OBJECTS=objects/
-TESTS=tests/
 
 
 OBJS=	$(BUILD)driver.o            \
@@ -426,6 +427,7 @@ TEST_EXECUTABLES= 	fftshift_test			\
 ###################################################################
 
 icar:${OBJS}
+	${MV} *.i ${BUILD}
 	${LINKER} -o icar ${OBJS} ${LFLAGS}
 
 all:icar test

@@ -13,7 +13,7 @@ contains
   module subroutine const(this, grid, metadata, forcing_var)
     class(exchangeable_t),           intent(inout) :: this
     type(grid_t),                    intent(in)    :: grid
-    class(variable_t),               intent(in),    optional :: metadata
+    type(variable_t),                intent(in),    optional :: metadata
     character(len=kMAX_NAME_LENGTH), intent(in),    optional :: forcing_var
 
     integer :: err
@@ -35,7 +35,7 @@ contains
                           grid%jms:grid%jme), stat=err)
     if (err /= 0) stop "exchangeable:dqdt_3d: Allocation request failed"
     this%data_3d = 0
-    
+
     allocate( this%halo_south_in( grid%ns_halo_nx+halo_size*2, grid%halo_nz,   halo_size    )[*])
     allocate( this%halo_north_in( grid%ns_halo_nx+halo_size*2, grid%halo_nz,   halo_size    )[*])
     allocate( this%halo_east_in(    halo_size,     grid%halo_nz, grid%ew_halo_ny+halo_size*2)[*])
@@ -115,7 +115,7 @@ contains
   module subroutine set_outputdata(this, metadata)
     implicit none
     class(exchangeable_t), intent(inout)  :: this
-    class(variable_t),     intent(in),    optional :: metadata
+    type(variable_t),      intent(in),    optional :: metadata
 
     if (present(metadata)) then
         this%meta_data = metadata

@@ -208,7 +208,7 @@ contains
     subroutine apply_fluxes(domain,dt)
         ! add sensible and latent heat fluxes to the first atm level
         implicit none
-        class(domain_t), intent(inout) :: domain
+        type(domain_t), intent(inout) :: domain
         real, intent(in) :: dt
 
         associate(density       => domain%density%data_3d,       &
@@ -340,8 +340,8 @@ contains
 
     subroutine lsm_init(domain,options)
         implicit none
-        class(domain_t), intent(inout) :: domain
-        class(options_t),intent(in)    :: options
+        type(domain_t), intent(inout) :: domain
+        type(options_t),intent(in)    :: options
         integer :: i
 
         if (this_image()==1) write(*,*) "Initializing LSM"
@@ -506,8 +506,8 @@ contains
     subroutine lsm(domain,options,dt)
         implicit none
 
-        class(domain_t), intent(inout) :: domain
-        class(options_t),intent(in)    :: options
+        type(domain_t), intent(inout) :: domain
+        type(options_t),intent(in)    :: options
         real, intent(in) :: dt
         real ::lsm_dt
         integer :: nx,ny,i,j

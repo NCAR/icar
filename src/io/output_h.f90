@@ -97,7 +97,7 @@ module output_interface
       module subroutine set_domain(this, domain)
           implicit none
           class(output_t),  intent(inout)  :: this
-          class(domain_t),  intent(in)     :: domain
+          type(domain_t),   intent(in)     :: domain
       end subroutine
 
       !>----------------------------------------------------------
@@ -107,7 +107,7 @@ module output_interface
       module subroutine add_to_output(this, variable)
           implicit none
           class(output_t),   intent(inout)  :: this
-          type(variable_t), intent(in)     :: variable
+          type(variable_t),  intent(in)     :: variable
       end subroutine
 
       !>----------------------------------------------------------
@@ -118,7 +118,7 @@ module output_interface
           implicit none
           class(output_t), intent(inout)  :: this
           integer,         intent(in)     :: var_list(:)
-          class(domain_t), intent(in)     :: domain
+          type(domain_t),  intent(in)     :: domain
       end subroutine
 
       !>----------------------------------------------------------

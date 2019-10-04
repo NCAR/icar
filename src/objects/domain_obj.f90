@@ -34,7 +34,7 @@ contains
     !! -------------------------------
     module subroutine init(this, options)
         class(domain_t), intent(inout) :: this
-        class(options_t),intent(inout) :: options
+        type(options_t), intent(inout) :: options
 
         this%dx = options%parameters%dx
 
@@ -63,8 +63,8 @@ contains
     module subroutine get_initial_conditions(this, forcing, options)
       implicit none
       class(domain_t),  intent(inout) :: this
-      class(boundary_t),intent(inout) :: forcing
-      class(options_t), intent(in)    :: options
+      type(boundary_t), intent(inout) :: forcing
+      type(options_t),  intent(in)    :: options
 
       ! create geographic lookup table for domain
       call setup_geo_interpolation(this, forcing)
@@ -131,7 +131,7 @@ contains
     !! -------------------------------
     subroutine create_variables(this, opt)
         class(domain_t), intent(inout)  :: this
-        class(options_t),intent(in)     :: opt
+        type(options_t), intent(in)     :: opt
         integer :: i,j
 
         integer :: ims, ime, jms, jme
@@ -313,7 +313,7 @@ contains
     subroutine read_core_variables(this, options)
         implicit none
         class(domain_t), intent(inout)  :: this
-        class(options_t),intent(in)     :: options
+        type(options_t), intent(in)     :: options
         real, allocatable :: temporary_data(:,:), temp_offset(:,:)
 
         ! Read the terrain data
@@ -516,38 +516,6 @@ contains
         xe_in=grid%ime; xe_out=nxo
         ye_in=grid%jme; ye_out=nyo
 
-        ! if (grid%ims < 1) then
-        !     xs_out = 1 - grid%ims + 1
-        !     xs_in  = 1
-        ! else
-        !     xs_out = 1
-        !     xs_in  = grid%ims
-        ! endif
-        !
-        ! if (grid%ime > nx) then
-        !     xe_out = nxo - (grid%ime - nx)
-        !     xe_in  = nx
-        ! else
-        !     xe_out = nxo
-        !     xe_in  = grid%ime
-        ! endif
-        !
-        ! if (grid%jms < 1) then
-        !     ys_out = 1 - grid%jms + 1
-        !     ys_in  = 1
-        ! else
-        !     ys_out = 1
-        !     ys_in  = grid%jms
-        ! endif
-        !
-        ! if (grid%jme > ny) then
-        !     ye_out = nyo - (grid%jme - ny)
-        !     ye_in  = ny
-        ! else
-        !     ye_out = nyo
-        !     ye_in  = grid%jme
-        ! endif
-        !
         !----------------------------------------------------
         ! This is the area of overlap
         ! Note that this is the main and likely only assignment
@@ -605,7 +573,7 @@ contains
     !! -------------------------------
     subroutine setup_geo(geo, latitude, longitude, z)
         implicit none
-        class(interpolable_type), intent(inout) :: geo
+        type(interpolable_type),  intent(inout) :: geo
         real,                     intent(in)    :: latitude(:,:)
         real,                     intent(in)    :: longitude(:,:)
         real,                     intent(in)    :: z(:,:,:)
@@ -635,7 +603,7 @@ contains
     subroutine initialize_core_variables(this, options)
         implicit none
         class(domain_t), intent(inout)  :: this
-        class(options_t),intent(in)     :: options
+        type(options_t), intent(in)     :: options
 
         real, allocatable, dimension(:,:,:) :: z_level_ratio, zr_u, zr_v
         integer :: i, max_level
@@ -737,7 +705,7 @@ contains
     subroutine read_land_variables(this, options)
         implicit none
         class(domain_t), intent(inout)  :: this
-        class(options_t),intent(in)     :: options
+        type(options_t), intent(in)     :: options
 
         integer :: i, nsoil
         real, allocatable :: temporary_data(:,:), temporary_data_3d(:,:,:)
@@ -870,7 +838,7 @@ contains
     subroutine initialize_internal_variables(this, options)
         implicit none
         class(domain_t), intent(inout)  :: this
-        class(options_t),intent(in)     :: options
+        type(options_t), intent(in)     :: options
 
         integer :: i
 
@@ -912,7 +880,7 @@ contains
     subroutine setup_meta_data(this, options)
         implicit none
         class(domain_t), intent(inout) :: this
-        class(options_t),intent(in)    :: options
+        type(options_t), intent(in)    :: options
 
         call this%info%add_attribute("comment",options%parameters%comment)
         call this%info%add_attribute("source","ICAR version:"//trim(options%parameters%version))
@@ -978,7 +946,7 @@ contains
     subroutine read_domain_shape(this, options)
         implicit none
         class(domain_t), intent(inout)  :: this
-        class(options_t),intent(in)     :: options
+        type(options_t), intent(in)     :: options
 
         real, allocatable :: temporary_data(:,:)
         integer :: nx_global, ny_global, nz_global, nsmooth
@@ -1073,7 +1041,7 @@ contains
     subroutine setup_geo_interpolation(this, forcing)
         implicit none
         class(domain_t),  intent(inout) :: this
-        class(boundary_t),intent(inout) :: forcing
+        type(boundary_t), intent(inout) :: forcing
 
         integer :: nx, ny, nz
 
@@ -1113,7 +1081,7 @@ contains
     module subroutine update_delta_fields(this, dt)
         implicit none
         class(domain_t),    intent(inout) :: this
-        class(time_delta_t),intent(in)    :: dt
+        type(time_delta_t), intent(in)    :: dt
 
         ! temporary to hold the variable to be interpolated to
         type(variable_t) :: var_to_update
@@ -1157,7 +1125,7 @@ contains
     module subroutine apply_forcing(this, dt)
         implicit none
         class(domain_t),    intent(inout) :: this
-        class(time_delta_t),intent(in)    :: dt
+        type(time_delta_t), intent(in)    :: dt
         integer :: ims, ime, jms, jme
 
         ! temporary to hold the variable to be interpolated to
@@ -1219,7 +1187,7 @@ contains
     module subroutine interpolate_forcing(this, forcing, update)
         implicit none
         class(domain_t),  intent(inout) :: this
-        class(boundary_t),intent(in)    :: forcing
+        type(boundary_t), intent(in)    :: forcing
         logical,          intent(in),   optional :: update
 
         ! internal field always present for value of optional "update"
@@ -1296,9 +1264,9 @@ contains
     subroutine interpolate_variable(var_data, input_data, forcing, dom, vert_interp, var_is_u, var_is_v, nsmooth)
         implicit none
         real,               intent(inout) :: var_data(:,:,:)
-        class(variable_t),  intent(in)    :: input_data
-        class(boundary_t),  intent(in)    :: forcing
-        class(domain_t),    intent(in)    :: dom
+        type(variable_t),   intent(in)    :: input_data
+        type(boundary_t),   intent(in)    :: forcing
+        type(domain_t),     intent(in)    :: dom
         logical,            intent(in),   optional :: vert_interp
         logical,            intent(in),   optional :: var_is_u, var_is_v
         integer,            intent(in),   optional :: nsmooth

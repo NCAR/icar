@@ -18,6 +18,7 @@
 !!-----------------------------------------
 program icar
 
+    use iso_fortran_env,    only : output_unit
     use options_interface,  only : options_t
     use domain_interface,   only : domain_t
     use boundary_interface, only : boundary_t
@@ -94,7 +95,10 @@ program icar
     call output_timer%stop()
     i = i + 1
 
+    if (this_image()==1) write(*,*) "Initialization complete, beginning physics integration."
+
     do while (domain%model_time < options%parameters%end_time)
+        call flush(output_unit)
 
         ! -----------------------------------------------------
         !

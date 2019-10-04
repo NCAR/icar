@@ -52,7 +52,7 @@ module exchangeable_interface
       implicit none
       class(exchangeable_t),           intent(inout) :: this
       type(grid_t),                    intent(in)    :: grid
-      class(variable_t),               intent(in),    optional :: metadata
+      type(variable_t),                intent(in),     optional :: metadata
       character(len=kMAX_NAME_LENGTH), intent(in),    optional :: forcing_var
     end subroutine
 
@@ -65,7 +65,7 @@ module exchangeable_interface
     module subroutine set_outputdata(this, metadata)
       implicit none
       class(exchangeable_t), intent(inout)  :: this
-      class(variable_t),     intent(in),    optional :: metadata
+      type(variable_t),      intent(in),    optional :: metadata
     end subroutine
 
 

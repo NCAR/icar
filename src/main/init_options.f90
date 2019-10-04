@@ -982,7 +982,7 @@ contains
 
     subroutine adv_parameters_namelist(filename, options)
         implicit none
-        character(len=*), intent(in) :: filename
+        character(len=*),   intent(in) :: filename
         type(options_type), intent(inout)::options
         type(adv_options_type)::adv_options
 
@@ -1202,7 +1202,7 @@ contains
             options%dz_levels(1:options%nz)=dz_levels(1:options%nz)
 
             if (minval(options%dz_levels)<1) then
-                print*, "NB: gfortran doesn't read namelist arrays on multiple lines (check dz_levels)"
+                if (this_image()==1) print*, "NB: gfortran doesn't read namelist arrays on multiple lines (check dz_levels)"
                 stop "ERROR: model levels must be > 1m vertical"
             endif
 

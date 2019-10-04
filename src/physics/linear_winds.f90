@@ -267,311 +267,6 @@ contains
     end subroutine linear_perturbation
 
     !>----------------------------------------------------------
-    !! Compute linear wind perturbations to U and V and add them back to the domain
-    !!
-    !! see Appendix A of Barstad and Gronas (2006) Tellus,58A,2-18
-    !!
-    !!----------------------------------------------------------
-    ! subroutine linear_winds(domain, Nsq, vsmooth, reverse, useDensity, debug)
-    !     use, intrinsic :: iso_c_binding
-    !     implicit none
-    !     class(linearizable_type),intent(inout) :: domain
-    !     real,    intent(in) :: Nsq      !> Input brunt-vaisalla frequency to use
-    !     integer, intent(in) :: vsmooth  !> Number of vertical layers to smooth winds over
-    !     logical, intent(in) :: reverse  !> reverse the linear solution (to "remove" linear wind effects)
-    !     logical, intent(in) :: useDensity !> Specify that we are using density in the advection calculations
-    !                                     !> if useDensity: use hueristics to modify the linear perturbation accordingly
-    !     logical, intent(in) :: debug    !> Debug flag to print additional information
-    !
-    !     ! Local variables
-    !     real    :: gain, offset !used in setting up k and l arrays
-    !     integer :: nx, ny, nz, i, z, realnx, realny, realnx_u, realny_v, bottom,top
-    !     logical :: staggered, zaxis_is_third
-    !     real    :: U, V         ! used to store the domain wide average values
-    !     real,dimension(:),allocatable :: U_layers, V_layers, preU_layers, preV_layers
-    !     integer(C_SIZE_T) :: n_elements
-    !
-    !     nx=size(domain%terrain_frequency,1)
-    !     nz=size(domain%u,2)
-    !     ny=size(domain%terrain_frequency,2)
-    !     allocate(U_layers(nz))
-    !     allocate(V_layers(nz))
-    !     allocate(preU_layers(nz))
-    !     allocate(preV_layers(nz))
-    !
-    !     realnx=size(domain%z,1)
-    !     realnx_u=size(domain%u,1)
-    !     realny=size(domain%z,3)
-    !     realny_v=size(domain%v,3)
-    !     ! this isn't perfect because if the number of vertical levels happen to equal forcing levels...
-    !     zaxis_is_third = (size(domain%z,3)==nz)
-    !     if (zaxis_is_third) then
-    !         if (size(domain%z,2)==nz) then
-    !             ! zaxis is not determined, test more rigorously
-    !             zaxis_is_third = (minval(domain%z(:,:,2) - domain%z(:,:,1)) >  0) .and. &
-    !                              (minval(domain%z(:,2,:) - domain%z(:,1,:)) <= 0)
-    !             if (debug) then
-    !                 !$omp critical (print_lock)
-    !                 write(*,*) "Warning: z axis in a domain is not determined:"
-    !                 write(*,*) "Z shape = ", shape(domain%z)
-    !                 write(*,*) "U shape = ", shape(domain%u)
-    !                 if (zaxis_is_third) then
-    !                     write(*,*) "Assuming zaxis is the third axis"
-    !                 else
-    !                     write(*,*) "Assuming zaxis is the second axis"
-    !                 endif
-    !                 !$omp end critical (print_lock)
-    !             endif
-    !         endif
-    !     endif
-    !
-    !     ! determine whether or not we are working on a staggered grid.
-    !     staggered = (realnx/=realnx_u).and.(realny/=realny_v)
-    !
-    !     do i=1,nz
-    !         preU_layers(i)=sum(domain%u(:realnx_u,i,:))/(realnx_u * realny)
-    !         preV_layers(i)=sum(domain%v(:,i,:realny_v))/(realnx * realny_v)
-    !     enddo
-    !     ! do i=1,nz
-    !     !     bottom = max(1, i-vsmooth)
-    !     !     top    = min(i+vsmooth, nz)
-    !     !
-    !     !     U_layers(i)=sum(preU_layers(bottom:top))/(top-bottom+1)
-    !     !     V_layers(i)=sum(preV_layers(bottom:top))/(top-bottom+1)
-    !     ! enddo
-    !     U_layers = sum(preU_layers(1:nz))/nz
-    !     V_layers = sum(preV_layers(1:nz))/nz
-    !
-    !     if (.not.data_allocated) then
-    !         if (debug) then
-    !             !$omp critical (print_lock)
-    !             if (this_image()==1) write(*,"(A,A)") char(13),"Allocating Linear Wind Data and FFTW plans"
-    !             !$omp end critical (print_lock)
-    !         endif
-    !         ! using fftw_alloc routines to ensure better allignment for vectorization
-    !         n_elements = nx*ny*nz
-    !         uh_aligned_data = fftw_alloc_complex(n_elements)
-    !         call c_f_pointer(uh_aligned_data, uhat, [nx,ny,nz])
-    !         u_h_aligned_data = fftw_alloc_complex(n_elements)
-    !         call c_f_pointer(u_h_aligned_data, u_hat, [nx,ny,nz])
-    !         vh_aligned_data = fftw_alloc_complex(n_elements)
-    !         call c_f_pointer(vh_aligned_data, vhat, [nx,ny,nz])
-    !         v_h_aligned_data = fftw_alloc_complex(n_elements)
-    !         call c_f_pointer(v_h_aligned_data, v_hat, [nx,ny,nz])
-    !         data_allocated = .True.
-    !
-    !         allocate(uplans(nz))
-    !         allocate(vplans(nz))
-    !         do i=1,nz
-    !             uplans(i) = fftw_plan_dft_2d(ny,nx, uhat(:,:,i),u_hat(:,:,i), FFTW_BACKWARD, FFTW_MEASURE)!PATIENT)!FFTW_ESTIMATE)
-    !             vplans(i) = fftw_plan_dft_2d(ny,nx, vhat(:,:,i),v_hat(:,:,i), FFTW_BACKWARD, FFTW_MEASURE)!PATIENT)!FFTW_ESTIMATE)
-    !         enddo
-    !         if (debug) then
-    !             !$omp critical (print_lock)
-    !             if (this_image()==1) write(*,*) "Allocation Complete:",trim(str(nx))," ",trim(str(ny))," ",trim(str(nz))
-    !             !$omp end critical (print_lock)
-    !         endif
-    !     endif
-    !     if (reverse) then
-    !         !$omp critical (print_lock)
-    !         if (this_image()==1) write(*,*) "ERROR: reversing linear winds not set up for parallel fftw computation yet"
-    !         if (this_image()==1) write(*,*) "Use only with spatially varying wind LUTs"
-    !         !$omp end critical (print_lock)
-    !         stop
-    !     endif
-    !
-    !     !$omp parallel default(shared), private(k,l,kl,sig,denom,m,msq,mimag,ineta,z,gain,offset,i,U,V) &
-    !     !$omp firstprivate(nx,ny,nz, zaxis_is_third, Nsq, realnx,realny, realnx_u, realny_v) &
-    !     !$omp firstprivate(useDensity, debug, staggered, reverse, buffer)
-    !
-    !     ! these should be stored in a separate data structure... and allocated/deallocated in a subroutine
-    !     ! for now these are reallocated/deallocated everytime so we can use it for different sized domains (e.g. coarse and fine)
-    !     ! maybe linear winds need to be embedded in an object instead of a module to avoid this problem...
-    !     if (.not.allocated(k)) then
-    !         allocate(k(nx,ny))
-    !         allocate(l(nx,ny))
-    !         allocate(kl(nx,ny))
-    !         allocate(sig(nx,ny))
-    !         allocate(denom(nx,ny))
-    !         allocate(m(nx,ny))
-    !         allocate(msq(nx,ny))
-    !         allocate(mimag(nx,ny))
-    !         allocate(ineta(nx,ny))
-    !
-    !         ! Compute 2D k and l wavenumber fields (could be stored in options or domain or something)
-    !         offset=pi/domain%dx
-    !         gain=2*offset/(nx-1)
-    !         ! don't use an implied do loop because PGF90 crashes with it and openmp...
-    !         ! k(:,1) = (/((i*gain-offset),i=0,nx-1)/)
-    !         do i=1,nx
-    !             k(i,1) = ((i-1)*gain-offset)
-    !         end do
-    !         do i=2,ny
-    !             k(:,i)=k(:,1)
-    !         enddo
-    !
-    !         gain=2*offset/(ny-1)
-    !         ! don't use an implied do loop because PGF90 crashes with it and openmp...
-    !         ! l(1,:) = (/((i*gain-offset),i=0,ny-1)/)
-    !         do i=1,ny
-    !             l(1,i) = ((i-1)*gain-offset)
-    !         end do
-    !         do i=2,nx
-    !             l(i,:)=l(1,:)
-    !         enddo
-    !
-    !         ! finally compute the kl combination array
-    !         kl = k**2+l**2
-    !         WHERE (kl==0.0) kl=1e-15
-    !     endif
-    !
-    !     m=1
-    !
-    !     !$omp do
-    !     do z=1,nz
-    !         U = U_layers(z)
-    !         V = V_layers(z)
-    !         if ((abs(U)+abs(V))>0.5) then
-    !             sig  = U*k+V*l
-    !             where(sig==0) sig=1e-10
-    !             denom = sig**2 ! -f**2
-    !             where(denom==0) denom=1e-20
-    !
-    !             !   where(denom.eq.0) denom=1e-20
-    !             ! # two possible non-hydrostatic versions
-    !             ! not yet converted from python...
-    !             ! # mimag=np.zeros((Ny,Nx)).astype('complex')
-    !             ! # msq = (Nsq/denom * kl).astype('complex')                   # % vertical wave number, hydrostatic
-    !             ! # msq = ((Nsq-sig**2)/denom * kl).astype('complex')          # % vertical wave number, hydrostatic
-    !             ! # mimag.imag=(np.sqrt(-msq)).real
-    !             ! # m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
-    !             !
-    !             ! mimag=np.zeros(Nx).astype('complex')
-    !             ! mimag.imag=(np.sqrt(-msq)).real
-    !             ! m=np.where(msq>=0, (np.sign(sig)*np.sqrt(msq)).astype('complex'), mimag)
-    !
-    !             msq   = Nsq / denom * kl
-    !             mimag = 0 + 0 * j ! be sure to reset real and imaginary components
-    !             mimag = mimag + (real(sqrt(-msq)) * j)
-    !
-    !             m = sqrt(msq)         ! # % vertical wave number, hydrostatic
-    !             where(sig < 0) m = m * (-1)   ! equivalent to m=m*sign(sig)
-    !             where(real(msq) < 0) m = mimag
-    !
-    !             if (zaxis_is_third) then
-    !                 ineta = j * domain%terrain_frequency * exp(j * m * &
-    !                         sum(domain%z(:,:,z) - domain%z(:,:,1)) / (realnx*realny))
-    !             else
-    !                 ineta=j*domain%terrain_frequency*exp(j*m* &
-    !                         sum(domain%z(:,z,:)-domain%z(:,1,:)) / (realnx*realny))
-    !             endif
-    !             !  what=sig*ineta
-    !
-    !             ! with coriolis : [+/-]j*[l/k]*f
-    !             !uhat = (0 - m) * ((sig * k) - (j * l * f)) * ineta / kl
-    !             !vhat = (0 - m) * ((sig * l) + (j * k * f)) * ineta / kl
-    !             ! removed coriolis term assumes the scale coriolis operates at is largely defined by the coarse model
-    !             ! if using e.g. a sounding or otherwise spatially constant u/v, then coriolis should be defined.
-    !             ineta = ineta / (kl / ((0 - m) * sig))
-    !             uhat(:,:,z) = k * ineta
-    !             vhat(:,:,z) = l * ineta
-    !
-    !             ! pull it back out of fourier space.
-    !             ! NOTE, the fftw transform inherently scales by N so the Fzs/Nx/Ny provides the only normalization necessary (I think)
-    !             call ifftshift(uhat, fixed_axis=z)
-    !             call ifftshift(vhat, fixed_axis=z)
-    !             ! plans are only created once and re-used, this is a limit to further parallelization at the moment.
-    !             call fftw_execute_dft(uplans(z), uhat(:,:,z),u_hat(:,:,z))
-    !             call fftw_execute_dft(vplans(z), vhat(:,:,z),v_hat(:,:,z))
-    !
-    !             ! The linear_mask field only applies to the high res grid (for now at least)
-    !             ! NOTE: we should be able to do this without the loop, but ifort -O was giving the wrong answer...
-    !             ! possible compiler bug version 12.1.x?
-    !             if (.not.reverse) then
-    !                 do i=1,realny
-    !                     u_hat(buffer+1:buffer+realnx,buffer+i,z) = &
-    !                         u_hat(buffer+1:buffer+realnx,buffer+i,z) * linear_mask(:,i)
-    !                     v_hat(buffer+1:buffer+realnx,buffer+i,z) = &
-    !                         v_hat(buffer+1:buffer+realnx,buffer+i,z) * linear_mask(:,i)
-    !                 enddo
-    !             endif
-    !
-    !             ! u/vhat are first staggered to apply to u/v appropriately if on a staggered grid (realnx/=real_nx_u)
-    !             ! when removing linear winds from forcing data, it may NOT be on a staggered grid
-    !             ! NOTE: we should be able to do this without the loop, but ifort -O was giving the wrong answer...
-    !             ! possible compiler bug version 12.1.x?
-    !             if (staggered) then
-    !                 do i=1,ny-1
-    !                     u_hat(1:nx-1,i,z) = (u_hat(1:nx-1,i,z) + u_hat(2:nx,i,z)) /2
-    !                     v_hat(:,i,z)      = (v_hat(:,i,z)      + v_hat(:,i+1,z))  /2
-    !                 enddo
-    !                 i=ny
-    !                 u_hat(1:nx-1,i,z) = (u_hat(1:nx-1,i,z) + u_hat(2:nx,i,z)) /2
-    !             endif
-    !
-    !             ! If we are using density in the advection calculations, modify the linear perturbation
-    !             ! to get the vertical velocities closer to what they would be without density (boussinesq)
-    !             ! need to check if this makes the most sense when close to the surface
-    !             ! if (useDensity) then
-    !             !     if (debug) then
-    !             !         !$omp critical (print_lock)
-    !             !         if (this_image()==1) write(*,*) "Using a density correction in linear winds"
-    !             !         !$omp end critical (print_lock)
-    !             !     endif
-    !             !     u_hat(buffer:realnx_u+buffer,buffer:realny+buffer,z) = &
-    !             !         2*real(u_hat(buffer:realnx_u+buffer,buffer:realny+buffer,z))! / domain%rho(1:realnx,z,1:realny)
-    !             !     v_hat(buffer:realnx+buffer,buffer:realny_v+buffer,z) = &
-    !             !         2*real(v_hat(buffer:realnx+buffer,buffer:realny_v+buffer,z))! / domain%rho(1:realnx,z,1:realny)
-    !             ! endif
-    !
-    !             ! If we are removing linear winds from a low res field, subtract u_hat v_hat instead
-    !             ! real(real()) extracts real component of complex, then converts to a real data type (may not be necessary except for IO?)
-    !             if (reverse) then
-    !                 domain%u(:,z,:) = domain%u(:,z,:) - &
-    !                     real(real( u_hat(1+buffer:realnx_u+buffer, 1+buffer:realny+buffer  ,z) ))*linear_contribution
-    !
-    !                 domain%v(:,z,:) = domain%v(:,z,:) - &
-    !                     real(real( v_hat(1+buffer:realnx+buffer,   1+buffer:realny_v+buffer,z) ))*linear_contribution
-    !             else
-    !                 ! note, linear_contribution component comes from the linear mask applied above on the mass grid
-    !                 if (staggered) then
-    !                     domain%u(2:realnx,z,:) = domain%u(2:realnx,z,:) + &
-    !                         real(real(u_hat(1+buffer:realnx-1+buffer,1+buffer:realny+buffer  ,z) ))
-    !                     domain%v(:,z,2:realny) = domain%v(:,z,2:realny) + &
-    !                         real(real(v_hat(1+buffer:realnx+buffer,  1+buffer:realny-1+buffer,z) ))
-    !                 else
-    !                     domain%u(:,z,:) = domain%u(:,z,:) + &
-    !                         real(real(u_hat(1+buffer:realnx_u+buffer,1+buffer:realny+buffer  ,z) ))
-    !                     domain%v(:,z,:) = domain%v(:,z,:) + &
-    !                         real(real(v_hat(1+buffer:realnx+buffer,  1+buffer:realny_v+buffer,z) ))
-    !                 endif
-    !             endif
-    !
-    !             if (debug) then
-    !                 if (z==1)then
-    !                     !$omp critical (print_lock)
-    !                     if (this_image()==1) write(*,*) "Nsq = ", Nsq
-    !                     if (this_image()==1) write(*,*) "U=",U, "    V=",V
-    !                     if (this_image()==1) write(*,*) "realnx=",realnx, "; nx=",nx, "; buffer=",buffer
-    !                     if (this_image()==1) write(*,*) "realny=",realny, "; ny=",ny!, buffer
-    !                     !$omp end critical (print_lock)
-    !                 endif
-    !             endif
-    !         endif
-    !     end do ! z-loop
-    !     !$omp end do
-    !
-    !     ! finally deallocate all temporary arrays that were created... chould be a datastructure and a subroutine...
-    !     deallocate(k,l,kl,sig,denom,m,ineta,msq,mimag)
-    !
-    !     !$omp end parallel
-    !
-    !     ! these are subroutine scoped not module, they should be deallocated automatically anyway
-    !     deallocate(U_layers,V_layers,preU_layers,preV_layers)
-    ! end subroutine linear_winds
-    !
-
-    !>----------------------------------------------------------
     !! Add a smoothed buffer around the edge of the terrain to prevent crazy wrap around effects
     !! in the FFT due to discontinuities between the left and right (or top and bottom) edges of the domain
     !!
@@ -823,7 +518,7 @@ contains
     !!----------------------------------------------------------
     subroutine initialize_spatial_winds(domain,options,reverse)
         implicit none
-        class(domain_t), intent(inout)::domain
+        type(domain_t),  intent(inout)::domain
         type(options_t), intent(in) :: options
         logical, intent(in) :: reverse
 
@@ -1049,11 +744,11 @@ contains
     !!----------------------------------------------------------
     subroutine spatial_winds(domain,reverse, vsmooth, winsz, update)
         implicit none
-        class(domain_t),intent(inout)::domain
-        logical, intent(in) :: reverse
-        integer, intent(in) :: vsmooth
-        integer, intent(in) :: winsz
-        logical, intent(in) :: update
+        type(domain_t), intent(inout):: domain
+        logical,        intent(in)   :: reverse
+        integer,        intent(in)   :: vsmooth
+        integer,        intent(in)   :: winsz
+        logical,        intent(in)   :: update
 
         integer :: nx,nxu, ny,nyv, nz, i,j,k, smoothz
         integer :: uk, vi !store a separate value of i for v and of k for u to we can handle nx+1, ny+1
@@ -1366,7 +1061,7 @@ contains
     !!----------------------------------------------------------
     subroutine setup_linwinds(domain, options, reverse, useDensity)
         implicit none
-        class(domain_t),    intent(inout)  :: domain
+        type(domain_t),     intent(inout)  :: domain
         type(options_t),    intent(in)     :: options
         logical,            intent(in)     :: reverse, useDensity
         ! locals
@@ -1504,7 +1199,7 @@ contains
     !!----------------------------------------------------------
     subroutine linear_perturb(domain,options,vsmooth,reverse,useDensity, update)
         implicit none
-        class(domain_t),    intent(inout):: domain
+        type(domain_t),     intent(inout):: domain
         type(options_t),    intent(in)   :: options
         integer,            intent(in)   :: vsmooth
         logical,            intent(in),  optional :: reverse, useDensity, update

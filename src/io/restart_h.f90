@@ -9,9 +9,9 @@ module restart_interface
     interface
         module subroutine restart_model(domain, dataset, options)
             implicit none
-            class(domain_t),  intent(inout) :: domain
-            class(output_t),  intent(inout) :: dataset
-            class(options_t), intent(inout) :: options
+            type(domain_t),  intent(inout) :: domain
+            type(output_t),  intent(inout) :: dataset
+            type(options_t), intent(inout) :: options
 
         end subroutine
     end interface

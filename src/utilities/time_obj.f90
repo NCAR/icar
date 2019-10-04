@@ -800,7 +800,7 @@ contains
     module function equals_with_precision(t1,t2, precision) result(equals)
         implicit none
         class(Time_type),    intent(in) :: t1, t2
-        class(time_delta_t), intent(in), optional :: precision
+        type(time_delta_t),  intent(in), optional :: precision
         logical :: equals
         type(time_delta_t) :: dt
 

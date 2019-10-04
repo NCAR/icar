@@ -7,7 +7,7 @@ contains
 
     module subroutine set_domain(this, domain)
         class(output_t),  intent(inout)  :: this
-        class(domain_t),  intent(in)     :: domain
+        type(domain_t),   intent(in)     :: domain
         integer :: i
 
         if (.not.this%is_initialized) call this%init()
@@ -20,14 +20,16 @@ contains
 
 
     module subroutine add_to_output(this, variable)
-        type(output_t),   intent(inout)  :: this
-        type(variable_t), intent(in)     :: variable
+        class(output_t),   intent(inout) :: this
+        type(variable_t),  intent(in)     :: variable
 
         if (.not.this%is_initialized) call this%init()
 
         if (this%n_variables == size(this%variables)) call this%increase_var_capacity()
 
+
         this%n_variables = this%n_variables + 1
+
         this%variables(this%n_variables) = variable
 
     end subroutine
@@ -72,7 +74,7 @@ contains
     module subroutine add_variables(this, var_list, domain)
         class(output_t), intent(inout)  :: this
         integer,         intent(in)     :: var_list(:)
-        class(domain_t), intent(in)     :: domain
+        type(domain_t),  intent(in)     :: domain
 
         if (0<var_list( kVARS%u) )                          call this%add_to_output( get_metadata( kVARS%u                            , domain%u%data_3d))
         if (0<var_list( kVARS%v) )                          call this%add_to_output( get_metadata( kVARS%v                            , domain%v%data_3d))
@@ -280,7 +282,7 @@ contains
     subroutine setup_dims_for_var(this, var)
         implicit none
         class(output_t),    intent(inout) :: this
-        class(variable_t),  intent(inout) :: var
+        type(variable_t),   intent(inout) :: var
         integer :: i, err
 
         if (allocated(var%dim_ids)) deallocate(var%dim_ids)
@@ -311,7 +313,7 @@ contains
     subroutine setup_variable(this, var)
         implicit none
         class(output_t),   intent(inout) :: this
-        class(variable_t), intent(inout) :: var
+        type(variable_t),  intent(inout) :: var
         integer :: i, err
 
         err = nf90_inq_varid(this%ncfile_id, var%name, var%var_id)
@@ -347,7 +349,7 @@ contains
     module subroutine increase_var_capacity(this)
         implicit none
         class(output_t),   intent(inout)  :: this
-        class(variable_t), allocatable :: new_variables(:)
+        type(variable_t),  allocatable :: new_variables(:)
 
         ! assert allocated(this%variables)
         allocate(new_variables, source=this%variables)

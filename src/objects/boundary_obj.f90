@@ -26,7 +26,7 @@ contains
     !!------------------------------------------------------------
     module subroutine init(this, options)
         class(boundary_t), intent(inout) :: this
-        class(options_t),  intent(inout) :: options
+        type(options_t),   intent(inout) :: options
 
         character(len=kMAX_NAME_LENGTH), allocatable :: vars_to_read(:)
         integer,                         allocatable :: var_dimensions(:)
@@ -70,7 +70,7 @@ contains
     module subroutine init_local(this, options, file_list, var_list, dim_list, start_time, &
                                  lat_var, lon_var, z_var, time_var, p_var, ps_var)
         class(boundary_t),               intent(inout)  :: this
-        class(options_t),                intent(inout)  :: options
+        type(options_t),                 intent(inout)  :: options
         character(len=kMAX_NAME_LENGTH), intent(in)     :: file_list(:)
         character(len=kMAX_NAME_LENGTH), intent(in)     :: var_list (:)
         integer,                         intent(in)     :: dim_list (:)
@@ -225,7 +225,7 @@ contains
     !!------------------------------------------------------------
     module subroutine update_forcing(this, options)
         class(boundary_t), intent(inout) :: this
-        class(options_t),  intent(inout) :: options
+        type(options_t),   intent(inout) :: options
 
         real, allocatable :: data3d(:,:,:), data2d(:,:)
         type(variable_t)  :: var
@@ -282,7 +282,7 @@ contains
     subroutine update_computed_vars(this, options)
         implicit none
         class(boundary_t),   intent(inout)   :: this
-        class(options_t),    intent(in)      :: options
+        type(options_t),     intent(in)      :: options
 
         integer           :: err
         type(variable_t)  :: var, pvar, zvar, tvar, qvar

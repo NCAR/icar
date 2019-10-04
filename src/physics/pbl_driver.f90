@@ -99,10 +99,10 @@ contains
                             domain% density               %data_3d,     &
                             domain% z                     %data_3d,     &
                             domain% dz_mass               %data_3d,     &
-                            domain% graupel               %data_3d,     &
                             domain% terrain               %data_2d,     &
                             its, ite, jts, jte, kts, kte,               &
                             dt_in)
+                            ! domain% qv_pbl_tendency     %data_3d)
         endif
 
         if (options%physics%boundarylayer==kPBL_YSU) then

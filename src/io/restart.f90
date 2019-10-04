@@ -1,8 +1,8 @@
 submodule (restart_interface) restart_implementation
 
-    use io_routines, only : io_read
+    use io_routines,    only : io_read
     use icar_constants, only : kMAX_FILE_LENGTH
-    use time_object,        only : Time_type
+    use time_object,    only : Time_type
 
 ! options%restart_step_in_file = restart_step
 ! options%restart_file         = restart_file
@@ -16,9 +16,9 @@ contains
 
 module subroutine restart_model(domain, dataset, options)
     implicit none
-    class(domain_t),  intent(inout) :: domain
-    class(output_t),  intent(inout) :: dataset
-    class(options_t), intent(inout) :: options
+    type(domain_t),  intent(inout) :: domain
+    type(output_t),  intent(inout) :: dataset
+    type(options_t), intent(inout) :: options
 
     character(len=kMAX_FILE_LENGTH) :: restart_file
 
@@ -32,8 +32,8 @@ end subroutine
 
 subroutine read_restart_data(domain, dataset, filename, time_step)
     implicit none
-    class(domain_t),  intent(inout) :: domain
-    class(output_t),  intent(inout) :: dataset
+    type(domain_t),   intent(inout) :: domain
+    type(output_t),   intent(inout) :: dataset
     character(len=*), intent(in)    :: filename
     integer,          intent(in)    :: time_step
 

@@ -146,7 +146,7 @@ contains
             if (varids(i) <= size(varlist)) then
                 varlist( varids(i) ) = varlist( varids(i) ) + 1
             else
-                write(*,*) "WARNING: trying to add var outside of permitted list:",varids(i), size(varlist)
+                if (this_image()==1) write(*,*) "WARNING: trying to add var outside of permitted list:",varids(i), size(varlist)
                 ierr=1
             endif
         enddo
@@ -163,7 +163,7 @@ contains
     !!
     !! -------------------------------
     module subroutine alloc_vars(this, input_vars, var_idx, error)
-        class(options_t), intent(inout):: this
+        class(options_t),  intent(inout):: this
         integer, optional, intent(in)  :: input_vars(:)
         integer, optional, intent(in)  :: var_idx
         integer, optional, intent(out) :: error
@@ -191,7 +191,7 @@ contains
     !!
     !! -------------------------------
     module subroutine restart_vars(this, input_vars, var_idx, error)
-        class(options_t), intent(inout):: this
+        class(options_t),  intent(inout):: this
         integer, optional, intent(in)  :: input_vars(:)
         integer, optional, intent(in)  :: var_idx
         integer, optional, intent(out) :: error
@@ -219,7 +219,7 @@ contains
     !!
     !! -------------------------------
     module subroutine advect_vars(this, input_vars, var_idx, error)
-        class(options_t), intent(inout):: this
+        class(options_t),  intent(inout):: this
         integer, optional, intent(in)  :: input_vars(:)
         integer, optional, intent(in)  :: var_idx
         integer, optional, intent(out) :: error
@@ -268,8 +268,8 @@ contains
 
             ! error -1 means the filename supplied was too long
             elseif (error == -1) then
-                write(*,*) "Options filename = ", trim(options_file), " ...<cutoff>"
-                write(*,*) "Maximum filename length = ", MAXFILELENGTH
+                if (this_image()==1) write(*,*) "Options filename = ", trim(options_file), " ...<cutoff>"
+                if (this_image()==1) write(*,*) "Maximum filename length = ", MAXFILELENGTH
                 stop "ERROR: options filename too long"
             endif
 
@@ -283,7 +283,7 @@ contains
 
         ! if options file does not exist, print an error and quit
         if (.not.file_exists) then
-            write(*,*) "Using options file = ", trim(options_file)
+            if (this_image()==1) write(*,*) "Using options file = ", trim(options_file)
             stop "Options file does not exist. "
         endif
     end function
@@ -316,16 +316,16 @@ contains
         close(name_unit)
 
         if (version.ne.kVERSION_STRING) then
-            write(*,*) "Model version does not match namelist version"
-            write(*,*) "  Model version: ",kVERSION_STRING
-            write(*,*) "  Namelist version: ",trim(version)
+            if (this_image()==1) write(*,*) "Model version does not match namelist version"
+            if (this_image()==1) write(*,*) "  Model version: ",kVERSION_STRING
+            if (this_image()==1) write(*,*) "  Namelist version: ",trim(version)
             call print_model_diffs(version)
             stop
         endif
         options%version = version
         options%comment = comment
 
-        write(*,*) "  Model version: ",trim(version)
+        if (this_image()==1) write(*,*) "  Model version: ",trim(version)
 
     end subroutine version_check
 
@@ -342,9 +342,9 @@ contains
 
         if (options%parameters%t_offset.eq.(-9999)) then
             if (options%parameters%warning_level>0) then
-                write(*,*) "WARNING, WARNING, WARNING"
-                write(*,*) "WARNING, Using default t_offset=0"
-                write(*,*) "WARNING, WARNING, WARNING"
+                if (this_image()==1) write(*,*) "WARNING, WARNING, WARNING"
+                if (this_image()==1) write(*,*) "WARNING, Using default t_offset=0"
+                if (this_image()==1) write(*,*) "WARNING, WARNING, WARNING"
             endif
             options%parameters%t_offset = 0
         endif
@@ -353,39 +353,39 @@ contains
         ! convection can modify wind field, and ideal doesn't rebalance winds every timestep
         if ((options%physics%convection.ne.0).and.(options%parameters%ideal)) then
             if (options%parameters%warning_level>3) then
-                write(*,*) ""
-                write(*,*) "WARNING WARNING WARNING"
-                write(*,*) "WARNING, Running convection in ideal mode may be bad..."
-                write(*,*) "WARNING WARNING WARNING"
+                if (this_image()==1) write(*,*) ""
+                if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
+                if (this_image()==1) write(*,*) "WARNING, Running convection in ideal mode may be bad..."
+                if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
             endif
             if (options%parameters%warning_level==10) then
-                write(*,*) "Set warning_level<10 to continue"
+                if (this_image()==1) write(*,*) "Set warning_level<10 to continue"
                 stop
             endif
         endif
         ! if using a real LSM, feedback will probably keep hot-air from getting even hotter, so not likely a problem
         if ((options%physics%landsurface>1).and.(options%physics%boundarylayer==0)) then
             if (options%parameters%warning_level>2) then
-                write(*,*) ""
-                write(*,*) "WARNING WARNING WARNING"
-                write(*,*) "WARNING, Running LSM without PBL may overheat the surface and CRASH the model. "
-                write(*,*) "WARNING WARNING WARNING"
+                if (this_image()==1) write(*,*) ""
+                if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
+                if (this_image()==1) write(*,*) "WARNING, Running LSM without PBL may overheat the surface and CRASH the model. "
+                if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
             endif
             if (options%parameters%warning_level>=7) then
-                write(*,*) "Set warning_level<7 to continue"
+                if (this_image()==1) write(*,*) "Set warning_level<7 to continue"
                 stop
             endif
         endif
         ! if using perscribed LSM fluxes, no feedbacks are present, so the surface layer is likely to overheat.
         if ((options%physics%landsurface==1).and.(options%physics%boundarylayer==0)) then
             if (options%parameters%warning_level>0) then
-                write(*,*) ""
-                write(*,*) "WARNING WARNING WARNING"
-                write(*,*) "WARNING, Prescribed LSM fluxes without a PBL may overheat the surface and CRASH. "
-                write(*,*) "WARNING WARNING WARNING"
+                if (this_image()==1) write(*,*) ""
+                if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
+                if (this_image()==1) write(*,*) "WARNING, Prescribed LSM fluxes without a PBL may overheat the surface and CRASH. "
+                if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
             endif
             if (options%parameters%warning_level>=5) then
-                write(*,*) "Set warning_level<5 to continue"
+                if (this_image()==1) write(*,*) "Set warning_level<5 to continue"
                 stop
             endif
         endif
@@ -394,25 +394,25 @@ contains
         if ((options%parameters%z_is_geopotential .eqv. .False.).and. &
             (options%parameters%zvar=="PH")) then
             if (options%parameters%warning_level>1) then
-                write(*,*) ""
-                write(*,*) "WARNING WARNING WARNING"
-                write(*,*) "WARNING z variable is not assumed to be geopotential height when it is 'PH'."
-                write(*,*) "WARNING If z is geopotential, set z_is_geopotential=True in the namelist."
-                write(*,*) "WARNING WARNING WARNING"
+                if (this_image()==1) write(*,*) ""
+                if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
+                if (this_image()==1) write(*,*) "WARNING z variable is not assumed to be geopotential height when it is 'PH'."
+                if (this_image()==1) write(*,*) "WARNING If z is geopotential, set z_is_geopotential=True in the namelist."
+                if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
             endif
             if (options%parameters%warning_level>=7) then
-                write(*,*) "Set warning_level<7 to continue"
+                if (this_image()==1) write(*,*) "Set warning_level<7 to continue"
                 stop
             endif
         endif
         if ((options%parameters%z_is_geopotential .eqv. .True.).and. &
             (options%parameters%z_is_on_interface .eqv. .False.)) then
             if (options%parameters%warning_level>1) then
-                write(*,*) ""
-                write(*,*) "WARNING WARNING WARNING"
-                write(*,*) "WARNING geopotential height is no longer assumed to be on model interface levels."
-                write(*,*) "WARNING To interpolate geopotential, set z_is_on_interface=True in the namelist. "
-                write(*,*) "WARNING WARNING WARNING"
+                if (this_image()==1) write(*,*) ""
+                if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
+                if (this_image()==1) write(*,*) "WARNING geopotential height is no longer assumed to be on model interface levels."
+                if (this_image()==1) write(*,*) "WARNING To interpolate geopotential, set z_is_on_interface=True in the namelist. "
+                if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
             endif
         endif
 
@@ -448,7 +448,7 @@ contains
         close(name_unit)
 
         if (minval(restart_date)<0) then
-            write(*,*) "------ Invalid restart_date ERROR ------"
+            if (this_image()==1) write(*,*) "------ Invalid restart_date ERROR ------"
             stop "restart_date must be specified in the namelist"
         endif
 
@@ -463,21 +463,21 @@ contains
         ! check to see if we actually udpated the restart date and print if in a more verbose mode
         if (options%debug) then
             if (restart_time /= time_at_step) then
-                write(*,*) " updated restart date: ", trim(time_at_step%as_string())
+                if (this_image()==1) write(*,*) " updated restart date: ", trim(time_at_step%as_string())
             endif
         endif
 
         restart_time = time_at_step
 
         if (options%debug) then
-            write(*,*) " ------------------ "
-            write(*,*) "RESTART INFORMATION"
-            write(*,*) "mjd",         restart_time%mjd()
-            write(*,*) "date:",       trim(restart_time%as_string())
-            write(*,*) "date",        restart_date
-            write(*,*) "file",   trim(restart_file)
-            write(*,*) "forcing step",restart_step
-            write(*,*) " ------------------ "
+            if (this_image()==1) write(*,*) " ------------------ "
+            if (this_image()==1) write(*,*) "RESTART INFORMATION"
+            if (this_image()==1) write(*,*) "mjd",         restart_time%mjd()
+            if (this_image()==1) write(*,*) "date:",       trim(restart_time%as_string())
+            if (this_image()==1) write(*,*) "date",        restart_date
+            if (this_image()==1) write(*,*) "file",   trim(restart_file)
+            if (this_image()==1) write(*,*) "forcing step",restart_step
+            if (this_image()==1) write(*,*) " ------------------ "
         endif
 
         ! save the parameters in the master options structure
@@ -486,7 +486,9 @@ contains
         options%restart_date         = restart_date
         options%restart_time         = restart_time
 
-        if (options%debug) write(*,*) " step in restart file",options%restart_step_in_file
+        if (options%debug) then
+            if (this_image()==1) write(*,*) " step in restart file",options%restart_step_in_file
+        endif
 
     end subroutine init_restart_options
 
@@ -677,7 +679,7 @@ contains
         endif
         if (zvar=="") then
             if (pvar=="") then
-                print*, "ERROR: either pressure (pvar) or atmospheric level height (zvar) must be specified"
+                if (this_image()==1) print*, "ERROR: either pressure (pvar) or atmospheric level height (zvar) must be specified"
                 error stop
             else
                 options%compute_z = .True.
@@ -885,7 +887,7 @@ contains
         close(name_unit)
 
         if (ideal) then
-            write(*,*) " Running Idealized simulation (time step does not advance)"
+            if (this_image()==1) write(*,*) " Running Idealized simulation (time step does not advance)"
         endif
 
         if ((trim(date)=="").and.(trim(start_date)/="")) date = start_date
@@ -908,7 +910,7 @@ contains
 
         if (smooth_wind_distance.eq.(-9999)) then
             smooth_wind_distance=dxlow*2
-            write(*,*) " Default smoothing distance = lowdx*2 = ", smooth_wind_distance
+            if (this_image()==1) write(*,*) " Default smoothing distance = lowdx*2 = ", smooth_wind_distance
         endif
 
         options%t_offset=t_offset
@@ -1651,14 +1653,14 @@ contains
         close(file_unit)
         nfiles = i
         ! print out a summary
-        write(*,*) "  Boundary conditions files to be used:"
+        if (this_image()==1) write(*,*) "  Boundary conditions files to be used:"
         if (nfiles>10) then
-            write(*,*) "    nfiles=", trim(str(nfiles)), ", too many to print."
-            write(*,*) "    First file:", trim(forcing_files(1))
-            write(*,*) "    Last file: ", trim(forcing_files(nfiles))
+            if (this_image()==1) write(*,*) "    nfiles=", trim(str(nfiles)), ", too many to print."
+            if (this_image()==1) write(*,*) "    First file:", trim(forcing_files(1))
+            if (this_image()==1) write(*,*) "    Last file: ", trim(forcing_files(nfiles))
         else
             do i=1,nfiles
-                write(*,*) "      ",trim(forcing_files(i))
+                if (this_image()==1) write(*,*) "      ",trim(forcing_files(i))
             enddo
         endif
 
