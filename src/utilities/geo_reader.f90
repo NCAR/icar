@@ -1228,8 +1228,8 @@ contains
             where(domain%lon > 180) domain%lon = domain%lon - 360
         endif
 
-        ! if necessary, convert from a -180 to 180 coordinate system into a 0-360 coordinate system (if domain crosses the dateline)
-        if ((minval(domain%lon) < -170) .and. (maxval(domain%lon) > 170)) then
+        ! if necessary the domain is centered closer to the dateline, than switch to a 0-360 coordinate system
+        if (sum(abs(domain%lon)) / size(domain%lon) > 90) then
             where(domain%lon<0) domain%lon = 360+domain%lon
         endif
 
