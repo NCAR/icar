@@ -308,7 +308,7 @@ contains
         !------------------------------------------------------------
         else if (this%calendar==NOLEAP) then
             year = floor((mjd + (this%month_start(this%month_zero)-1) + (this%day_zero-1) + this%hour_zero/24.0) / 365)
-            day_fraction = mjd - year*365+1 + (this%month_start(this%month_zero)-1) * 30 + (this%day_zero-1) + this%hour_zero/24.0
+            day_fraction = mjd - year*365+1 + (this%month_start(this%month_zero)-1) + (this%day_zero-1) + this%hour_zero/24.0
             month = 1
             do f=1,12
                 if (day_fraction >this%month_start(f)) then
