@@ -980,6 +980,7 @@ $(BUILD)lsm_driver.o: $(PHYS)lsm_driver.f90 $(BUILD)data_structures.o \
 						$(BUILD)lsm_noahdrv.o $(BUILD)lsm_noahlsm.o \
 						$(BUILD)water_simple.o $(BUILD)icar_constants.o \
 						$(BUILD)domain_h.o $(BUILD)options_h.o			\
+						$(BUILD)atm_utilities.o
 
 # $(BUILD)lsm_basic.o $(BUILD)lsm_simple.o
 
