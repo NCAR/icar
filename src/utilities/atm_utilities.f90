@@ -26,6 +26,76 @@ contains
 
 
     !>----------------------------------------------------------
+    !! Compute a 3D height field given a surface (or sea level) pressure
+    !! and 3D temperature, humidity and pressures.
+    !!
+    !! Input temperature is real temperature in Kelvin  [K]
+    !! Input humidity is mixing ratio                   [kg/kg]
+    !! Pressures (input and output) are in Pascals      [Pa]
+    !! Change in height is in meters                    [m]
+    !!
+    !!----------------------------------------------------------
+    subroutine compute_3d_z(p, ps, z, t, qv, zs)
+        implicit none
+        real, intent(in),            dimension(:,:,:)   :: p
+        real, intent(in),            dimension(:,:)     :: ps  ! surface (or sea level) pressure
+        real, intent(inout),         dimension(:,:,:)   :: z   ! height above sea level for each atmospheric level
+        real, intent(in),            dimension(:,:,:)   :: t   ! air temperature (real) [K]
+        real, intent(in),            dimension(:,:,:)   :: qv  ! water vapor mixing ratio
+        real, intent(in),  optional, dimension(:,:)     :: zs  ! if present, this is the height above z that the first level is computed for.
+
+        integer :: i
+
+        i=1
+        call compute_z_offset(z(:,i,:), p(:,i,:) / ps, t(:,i,:), qv(:,i,:))
+
+        if (present(zs)) then
+            z(:,i,:) = zs - z(:,i,:)
+        else
+            z(:,i,:) = 0 - z(:,i,:)
+        endif
+
+        do i=2, size(z, 2)
+            call compute_z_offset(z(:,i,:), p(:,i,:) / p(:,i-1,:), (t(:,i,:)+t(:,i-1,:))/2, (qv(:,i,:)+qv(:,i-1,:))/2)
+            z(:,i,:) = z(:,i-1,:) - z(:,i,:)
+        enddo
+
+    end subroutine
+
+
+    !>----------------------------------------------------------
+    !! Compute the change in height for a change in pressure,
+    !! and the temperature and humidity in between them
+    !!
+    !! Input temperature is real temperature in Kelvin  [K]
+    !! Input humidity is mixing ratio                   [kg/kg]
+    !! Pressures (input and output) are in Pascals      [Pa]
+    !! Change in height is in meters                    [m]
+    !!
+    !!----------------------------------------------------------
+    subroutine compute_z_offset(dz_out, p_ratio, t, qv)
+        implicit none
+        real, intent(inout),    dimension(:,:)   :: dz_out  ! change in height caused by change in pressure [m]
+        real, intent(in),       dimension(:,:)   :: p_ratio ! ratio of pressure_in and pressure_out [Pa/Pa]
+        real, intent(in),       dimension(:,:)   :: t       ! temperature in layer between p_out and p [K]
+        real, intent(in),       dimension(:,:)   :: qv      ! water vapor in layer between p_out and p [kg/kg]
+
+        dz_out = &
+            Rd / gravity * ( t * ( 1 + 0.608 * qv ) ) * &
+            LOG ( p_ratio )
+
+        ! WRF formulate to compute height from pressure
+        ! z(k) = z(k-1) - &
+        !     R_d / g * 0.5 * ( t(k) * ( 1 + 0.608 * qv(k) ) +   &
+        !                     t(k-1) * ( 1 + 0.608 * qv(k-1) ) ) * &
+        !     LOG ( p(k) / p(k-1) )
+
+    end subroutine compute_z_offset
+
+
+
+
+    !>----------------------------------------------------------
     !! Compute a 3D pressure field given a surface (or sea level) pressure
     !! and 3D temperature, humidity and their corresponding heights.
     !!
@@ -38,11 +108,11 @@ contains
     subroutine compute_3d_p(p, ps, z, t, qv, zs)
         implicit none
         real, intent(inout)        , dimension(:,:,:)   :: p
-        real, intent(in)           , dimension(:,:)     :: ps
-        real, intent(in)           , dimension(:,:,:)   :: z
-        real, intent(in)           , dimension(:,:,:)   :: t
-        real, intent(in)           , dimension(:,:,:)   :: qv
-        real, intent(in),  optional, dimension(:,:)     :: zs
+        real, intent(in)           , dimension(:,:)     :: ps  ! surface (or sea level) pressure
+        real, intent(in)           , dimension(:,:,:)   :: z   ! height above sea level for each atmospheric level
+        real, intent(in)           , dimension(:,:,:)   :: t   ! air temperature (real) [K]
+        real, intent(in)           , dimension(:,:,:)   :: qv  ! water vapor mixing ratio
+        real, intent(in),  optional, dimension(:,:)     :: zs  ! if present, this is the height above z that the first level is computed for.
 
         integer :: i
 
@@ -87,36 +157,36 @@ contains
 
     end subroutine compute_p_offset
 
-    !>----------------------------------------------------------
-    !! Compute the height of level z_out based on the pressure at z, z_out,
-    !! and the temperature and humidity in between them
-    !!
-    !! Input temperature is real temperature in Kelvin  [K]
-    !! Input humidity is mixing ratio                   [kg/kg]
-    !! Input pressures are in Pascals                   [Pa]
-    !! Heights (input and output) are in meters         [m]
-    !!
-    !!----------------------------------------------------------
-    subroutine compute_z_offset(z_out, z, p0, p1, t, qv)
-        implicit none
-        real, intent(inout),    dimension(:,:)   :: z_out   !
-        real, intent(in),       dimension(:,:)   :: z       !
-        real, intent(in),       dimension(:,:)   :: p0      !
-        real, intent(in),       dimension(:,:)   :: p1      !
-        real, intent(in),       dimension(:,:)   :: t       !
-        real, intent(in),       dimension(:,:)   :: qv      !
-
-        z_out = z - &
-                Rd / gravity * ( t * ( 1 + 0.608 * qv ) ) * &
-                LOG ( p1 / p0 )
-
-        ! note: WRF formulate to compute height from pressure
-        ! z(k) = z(k-1) - &
-        !     R_d / g * 0.5 * ( t(k) * ( 1 + 0.608 * qv(k) ) +   &
-        !                     t(k-1) * ( 1 + 0.608 * qv(k-1) ) ) * &
-        !     LOG ( p(k) / p(k-1) )
-
-    end subroutine compute_z_offset
+    ! !>----------------------------------------------------------
+    ! !! Compute the height of level z_out based on the pressure at z, z_out,
+    ! !! and the temperature and humidity in between them
+    ! !!
+    ! !! Input temperature is real temperature in Kelvin  [K]
+    ! !! Input humidity is mixing ratio                   [kg/kg]
+    ! !! Input pressures are in Pascals                   [Pa]
+    ! !! Heights (input and output) are in meters         [m]
+    ! !!
+    ! !!----------------------------------------------------------
+    ! subroutine compute_z_offset(z_out, z, p0, p1, t, qv)
+    !     implicit none
+    !     real, intent(inout),    dimension(:,:)   :: z_out   !
+    !     real, intent(in),       dimension(:,:)   :: z       !
+    !     real, intent(in),       dimension(:,:)   :: p0      !
+    !     real, intent(in),       dimension(:,:)   :: p1      !
+    !     real, intent(in),       dimension(:,:)   :: t       !
+    !     real, intent(in),       dimension(:,:)   :: qv      !
+    !
+    !     z_out = z - &
+    !             Rd / gravity * ( t * ( 1 + 0.608 * qv ) ) * &
+    !             LOG ( p1 / p0 )
+    !
+    !     ! note: WRF formulate to compute height from pressure
+    !     ! z(k) = z(k-1) - &
+    !     !     R_d / g * 0.5 * ( t(k) * ( 1 + 0.608 * qv(k) ) +   &
+    !     !                     t(k-1) * ( 1 + 0.608 * qv(k-1) ) ) * &
+    !     !     LOG ( p(k) / p(k-1) )
+    !
+    ! end subroutine compute_z_offset
 
     !>----------------------------------------------------------
     !! Convert relative humidity, temperature, and pressure to water vapor mixing ratio
