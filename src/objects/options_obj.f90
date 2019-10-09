@@ -677,14 +677,14 @@ contains
                 error stop
             endif
         endif
-        if (zvar=="") then
+
+        options%compute_z = .False.
+        if ((zvar=="") .and. ((pslvar/="") .or. (psvar/=""))) options%compute_z = .True.
+        if (options%compute_z) then
             if (pvar=="") then
                 if (this_image()==1) print*, "ERROR: either pressure (pvar) or atmospheric level height (zvar) must be specified"
                 error stop
-            else
-                options%compute_z = .True.
             endif
-
         endif
 
 
@@ -729,10 +729,15 @@ contains
         options%qgvar       = qgvar     ; options%vars_to_read(i) = qgvar;      options%dim_list(i) = 3;    i = i + 1
 
         ! vertical coordinate
-        options%zvar        = zvar      ! these variables are read explicitly so not added to vars_to_read list
         if (options%time_varying_z) then
-            options%vars_to_read(i) = zvar;      options%dim_list(i) = 3;    i = i + 1
+            if (options%compute_z) then
+                zvar = "height_computed"
+                options%vars_to_read(i) = zvar;      options%dim_list(i) = -3;    i = i + 1
+            else
+                options%vars_to_read(i) = zvar;      options%dim_list(i) = 3;    i = i + 1
+            endif
         endif
+        options%zvar        = zvar      ! this could get reassigned from "" to "height_computed" above
         options%zbvar       = zbvar     !; options%vars_to_read(i) = zbvar;      options%dim_list(i) = 3;    i = i + 1
 
         ! 2D model variables (e.g. Land surface and PBL height)
@@ -748,6 +753,8 @@ contains
         options%sst_var     = sst_var   ; options%vars_to_read(i) = sst_var;    options%dim_list(i) = 2;    i = i + 1
         options%rain_var    = rain_var  ; options%vars_to_read(i) = rain_var;   options%dim_list(i) = 2;    i = i + 1
 
+        !------------------------------------------------------
+        ! these variables are read explicitly so not added to vars_to_read list
         !------------------------------------------------------
         ! variable names for the high resolution domain
         options%hgt_hi          = hgt_hi

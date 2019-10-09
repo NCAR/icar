@@ -11,7 +11,7 @@ submodule(boundary_interface) boundary_implementation
     use time_io,                only : read_times, find_timestep_in_file
     use co_util,                only : broadcast
     use string,                 only : str
-    use mod_atm_utilities,      only : rh_to_mr, compute_3d_p, exner_function
+    use mod_atm_utilities,      only : rh_to_mr, compute_3d_p, compute_3d_z, exner_function
     use geo,                    only : standardize_coordinates
 
     implicit none
@@ -97,7 +97,7 @@ contains
         call io_read(file_list(this%curfile), lon_var, this%lon, this%curstep)
 
         ! read in the height coordinate of the input data
-        if (z_var /= "") then
+        if (.not. options%parameters%compute_z) then
             call io_read(file_list(this%curfile), z_var,   temp_z,   this%curstep)
             nx = size(temp_z,1)
             ny = size(temp_z,2)
@@ -181,6 +181,7 @@ contains
         type(variable_t)  :: new_variable
         integer           :: nx,ny,nz
 
+
         if (ndims==2) then
             call io_read(file_name, var_name, temp_2d_data, timestep)
 
@@ -210,7 +211,6 @@ contains
 
         ! these variables are computed (e.g. pressure from height or height from pressure)
         elseif (ndims==-3) then
-
             call new_variable%initialize( dims )
             new_variable%computed = .True.
 
@@ -298,6 +298,32 @@ contains
             ! get the next variable in the structure
             var = list%next(name)
             if (var%computed) then
+                if (name == options%parameters%zvar) then
+                    qvar = list%get_var(options%parameters%qvvar)
+                    tvar = list%get_var(options%parameters%tvar)
+                    zvar = list%get_var(options%parameters%hgtvar)
+
+                    if (options%parameters%t_is_potential) stop "Need real air temperature to compute height"
+
+                    pvar = list%get_var(options%parameters%pslvar, err)
+                    var = list%get_var(options%parameters%pvar, err)
+
+                    if (err == 0) then
+                        print*, minval(pvar%data_2d), maxval(pvar%data_2d)
+                        print*, minval(var%data_3d), maxval(var%data_3d)
+                        call compute_3d_z(var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d)
+                        print*, minval(this%z), maxval(this%z)
+                    else
+                        pvar = list%get_var(options%parameters%psvar, err)
+                        if (err == 0) then
+                            call compute_3d_z(var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d, zvar%data_2d)
+                        else
+                            print*, "ERROR reading surface pressure or sea level pressure, variables not found"
+                            error stop
+                        endif
+                    endif
+                endif
+
                 if (name == options%parameters%pvar) then
                     qvar = list%get_var(options%parameters%qvvar)
                     tvar = list%get_var(options%parameters%tvar)
@@ -320,6 +346,8 @@ contains
                         endif
                     endif
                 endif
+
+
             endif
         end do
 
