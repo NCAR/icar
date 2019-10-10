@@ -133,32 +133,6 @@ contains
         enddo
         ! end associate
 
-        ! do i=ims+1,ime-1
-        !     do j=jms+1,jme-1
-        !         do k=kms+1,kme
-        !             dv(i,j) = v(i,k,j+1) * dzv(i,k,j+1) - v(i,k,j) * dzv(i,k,j)
-        !             du(i,j) = u(i+1,k,j) * dzu(i+1,k,j) - u(i,k,j) * dzu(i,k,j)
-        !
-        !             if (abs((dv(i,j) + du(i,j))/dx - (w(i,k-1,j)-w(i,k,j))) > 1e-5) then
-        !                 print*, this_image(), i,j,k, (dv(i,j) + du(i,j))/dx, w(i,k,j)-w(i,k-1,j)
-        !             endif
-        !         enddo
-        !     enddo
-        ! enddo
-        !
-        ! block
-        !     integer :: i,j
-        !     if (this_image()==1) then
-        !         i=ims+1
-        !         j=jms+1
-        !         k=kms+1
-        !         print*, i,j,k
-        !         print*, this_image(), "dv", v(i,k,j+1), dzv(i,k,j+1), v(i,k,j), dzv(i,k,j)
-        !         print*, this_image(), "du", u(i+1,k,j), dzu(i+1,k,j), u(i,k,j), dzu(i,k,j)
-        !         print*, this_image(), "dw", w(i,k-1,j), w(i,k,j)
-        !     endif
-        ! endblock
-
     end subroutine balance_uvw
 
     !>------------------------------------------------------------
@@ -242,6 +216,9 @@ contains
             ! linear winds
             if (options%physics%windtype==kWIND_LINEAR) then
                 call linear_perturb(domain,options,options%lt_options%vert_smooth,.False.,options%parameters%advect_density)
+            ! simple acceleration over topography
+            elseif (options%physics%windtype==kCONSERVE_MASS) then
+                call mass_conservative_acceleration(domain%u%data_3d, domain%v%data_3d, domain%zr_u, domain%zr_v)
             endif
             ! else assumes even flow over the mountains
 
@@ -256,6 +233,9 @@ contains
             ! linear winds
             if (options%physics%windtype==kWIND_LINEAR) then
                 call linear_perturb(domain,options,options%lt_options%vert_smooth,.False.,options%parameters%advect_density, update=.True.)
+            ! simple acceleration over topography
+            elseif (options%physics%windtype==kCONSERVE_MASS) then
+                call mass_conservative_acceleration(domain%u%meta_data%dqdt_3d, domain%v%meta_data%dqdt_3d, domain%zr_u, domain%zr_v)
             endif
             ! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
             call balance_uvw(domain% u %meta_data%dqdt_3d,      &
@@ -264,10 +244,22 @@ contains
                              domain% advection_dz,              &
                              domain% dx,                        &
                              options)
+
         endif
 
-
     end subroutine update_winds
+
+    subroutine mass_conservative_acceleration(u, v, u_accel, v_accel)
+        implicit none
+        real, intent(inout) :: u(:,:,:)
+        real, intent(inout) :: v(:,:,:)
+        real, intent(in)    :: u_accel(:,:,:)
+        real, intent(in)    :: v_accel(:,:,:)
+
+        u = u / u_accel
+        v = v / v_accel
+
+    end subroutine mass_conservative_acceleration
 
     !>------------------------------------------------------------
     !! Setup initial fields (i.e. grid relative rotation fields)

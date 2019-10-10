@@ -163,6 +163,7 @@ module icar_constants
     integer, parameter :: kADV_MPDATA    = 2
 
     integer, parameter :: kWIND_LINEAR   = 1
+    integer, parameter :: kCONSERVE_MASS = 2
 
     integer, parameter :: kLC_LAND       = 1
     integer, parameter :: kLC_WATER      = 2

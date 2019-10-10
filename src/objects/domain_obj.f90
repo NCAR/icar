@@ -611,15 +611,17 @@ contains
 
         call read_core_variables(this, options)
 
-        allocate(z_level_ratio(this% ims : this% ime, &
-                               this% kms : this% kme, &
-                               this% jms : this% jme) )
-        allocate(zr_u(this%u_grid2d_ext% ims : this%u_grid2d_ext% ime, &
-                      this%u_grid%       kms : this%u_grid%       kme, &
-                      this%u_grid2d_ext% jms : this%u_grid2d_ext% jme) )
-        allocate(zr_v(this%v_grid2d_ext% ims : this%v_grid2d_ext% ime, &
-                      this%v_grid%       kms : this%v_grid%       kme, &
-                      this%v_grid2d_ext% jms : this%v_grid2d_ext% jme) )
+        allocate(this%z_level_ratio(this% ims : this% ime, &
+                                    this% kms : this% kme, &
+                                    this% jms : this% jme) )
+
+        allocate(this%zr_u( this%u_grid2d_ext% ims : this%u_grid2d_ext% ime,   &
+                            this%u_grid%       kms : this%u_grid%       kme,   &
+                            this%u_grid2d_ext% jms : this%u_grid2d_ext% jme) )
+
+        allocate(this%zr_v( this%v_grid2d_ext% ims : this%v_grid2d_ext% ime,   &
+                            this%v_grid%       kms : this%v_grid%       kme,   &
+                            this%v_grid2d_ext% jms : this%v_grid2d_ext% jme) )
 
 
         associate(z                     => this%z%data_3d,                      &
@@ -629,10 +631,14 @@ contains
                   dz                    => options%parameters%dz_levels,        &
                   dz_mass               => this%dz_mass%data_3d,                &
                   dz_interface          => this%dz_interface%data_3d,           &
-                  terrain               => this%terrain%data_2d)
+                  terrain               => this%terrain%data_2d,                &
+                  z_level_ratio         => this%z_level_ratio,                  &
+                  zr_u                  => this%zr_u,                           &
+                  zr_v                  => this%zr_v)
 
             i = this%grid%kms
 
+            max_level = size(dz)
 
             if (options%parameters%space_varying_dz) then
                 if (options%parameters%flat_z_height > size(dz)) then
@@ -640,17 +646,17 @@ contains
                         integer :: j
                         real :: height
                         height = 0
-                        do j=1, size(dz)
-                            if (height < options%parameters%flat_z_height) then
-                                height = height + dz(i)
-                                max_level = i
+                        do j = 1, size(dz)
+                            if (height <= options%parameters%flat_z_height) then
+                                height = height + dz(j)
+                                max_level = j
                             endif
                         enddo
                     end block
                 elseif (options%parameters%flat_z_height <= 0) then
-                    max_level = this%kme + options%parameters%flat_z_height
+                    max_level = size(dz) + options%parameters%flat_z_height
                 else
-                    max_level = this%kme
+                    max_level = size(dz)
                 endif
 
                 smooth_height = sum(this%global_terrain) / size(this%global_terrain) + sum(dz(1:max_level))

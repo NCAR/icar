@@ -114,6 +114,10 @@ module domain_interface
     double precision,           allocatable :: costheta(:,:)
     double precision,           allocatable :: sintheta(:,:)
     real,                       allocatable :: advection_dz(:,:,:)
+    ! store the ratio between the average dz and each grid cells topographically modified dz (for space varying dz only)
+    real,                       allocatable :: z_level_ratio(:,:,:)
+    real,                       allocatable :: zr_u(:,:,:)
+    real,                       allocatable :: zr_v(:,:,:)
 
     ! these coarrays are used to send all data to/from a master image for IO... ?
     ! For now this will be taken care of in the boundary conditions object
