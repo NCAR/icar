@@ -291,6 +291,14 @@ contains
 
         associate(list => this%variables)
 
+        if (options%parameters%qv_is_relative_humidity) then
+            call compute_mixing_ratio_from_rh(list, options)
+        endif
+
+        if (options%parameters%qv_is_spec_humidity) then
+            call compute_mixing_ratio_from_sh(list, options)
+        endif
+
         ! loop through the list of variables that need to be read in
         call list%reset_iterator()
         do while (list%has_more_elements())
@@ -298,60 +306,20 @@ contains
             ! get the next variable in the structure
             var = list%next(name)
             if (var%computed) then
+
                 if (name == options%parameters%zvar) then
-                    qvar = list%get_var(options%parameters%qvvar)
-                    tvar = list%get_var(options%parameters%tvar)
-                    zvar = list%get_var(options%parameters%hgtvar)
-
-                    if (options%parameters%t_is_potential) stop "Need real air temperature to compute height"
-
-                    pvar = list%get_var(options%parameters%pslvar, err)
-                    var = list%get_var(options%parameters%pvar, err)
-
-                    if (err == 0) then
-                        print*, minval(pvar%data_2d), maxval(pvar%data_2d)
-                        print*, minval(var%data_3d), maxval(var%data_3d)
-                        call compute_3d_z(var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d)
-                        print*, minval(this%z), maxval(this%z)
-                    else
-                        pvar = list%get_var(options%parameters%psvar, err)
-                        if (err == 0) then
-                            call compute_3d_z(var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d, zvar%data_2d)
-                        else
-                            print*, "ERROR reading surface pressure or sea level pressure, variables not found"
-                            error stop
-                        endif
-                    endif
+                    call compute_z_update(this, list, options)
                 endif
 
                 if (name == options%parameters%pvar) then
-                    qvar = list%get_var(options%parameters%qvvar)
-                    tvar = list%get_var(options%parameters%tvar)
-                    zvar = list%get_var(options%parameters%hgtvar)
-
-                    if (options%parameters%t_is_potential) stop "Need real air temperature to compute pressure"
-
-                    pvar = list%get_var(options%parameters%pslvar, err)
-
-                    if (err == 0) then
-                        call compute_3d_p(var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d, zvar%data_2d)
-
-                    else
-                        pvar = list%get_var(options%parameters%psvar, err)
-                        if (err == 0) then
-                            call compute_3d_p(var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d)
-                        else
-                            print*, "ERROR reading surface pressure or sea level pressure, variables not found"
-                            error stop
-                        endif
-                    endif
+                    call compute_p_update(this, list, options, var)
                 endif
-
 
             endif
         end do
 
         if (.not.options%parameters%t_is_potential) then
+
             tvar = list%get_var(options%parameters%tvar)
             pvar = list%get_var(options%parameters%pvar)
 
@@ -361,6 +329,112 @@ contains
         end associate
 
     end subroutine update_computed_vars
+
+
+    subroutine compute_mixing_ratio_from_rh(list, options)
+        implicit none
+        type(var_dict_t),   intent(inout)   :: list
+        type(options_t),    intent(in)      :: options
+
+        integer           :: err
+        type(variable_t)  :: pvar, tvar, qvar
+
+        tvar = list%get_var(options%parameters%tvar)
+        pvar = list%get_var(options%parameters%pvar)
+        qvar = list%get_var(options%parameters%qvvar)
+
+        if (maxval(qvar%data_3d) > 2) then
+            qvar%data_3d = qvar%data_3d/100.0
+        endif
+
+        qvar%data_3d = rh_to_mr(qvar%data_3d, tvar%data_3d, pvar%data_3d)
+
+    end subroutine compute_mixing_ratio_from_rh
+
+
+    subroutine compute_mixing_ratio_from_sh(list, options)
+        implicit none
+        type(var_dict_t),   intent(inout)   :: list
+        type(options_t),    intent(in)      :: options
+
+        integer           :: err
+        type(variable_t)  :: qvar
+
+        qvar = list%get_var(options%parameters%qvvar)
+
+        qvar%data_3d = qvar%data_3d / (1 + qvar%data_3d)
+
+    end subroutine compute_mixing_ratio_from_sh
+
+
+    subroutine compute_z_update(this, list, options)
+        implicit none
+        class(boundary_t),  intent(inout)   :: this
+        type(var_dict_t),   intent(inout)   :: list
+        type(options_t),    intent(in)      :: options
+
+        integer           :: err
+        type(variable_t)  :: var, pvar, zvar, tvar, qvar
+
+        if (options%parameters%t_is_potential) stop "Need real air temperature to compute height"
+
+        qvar = list%get_var(options%parameters%qvvar)
+        tvar = list%get_var(options%parameters%tvar)
+        zvar = list%get_var(options%parameters%hgtvar)
+
+        pvar = list%get_var(options%parameters%pslvar, err)
+        var = list%get_var(options%parameters%pvar, err)
+
+        if (err == 0) then
+            call compute_3d_z(var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d)
+
+        else
+            pvar = list%get_var(options%parameters%psvar, err)
+            if (err == 0) then
+                call compute_3d_z(var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d, zvar%data_2d)
+            else
+                print*, "ERROR reading surface pressure or sea level pressure, variables not found"
+                error stop
+            endif
+        endif
+
+    end subroutine compute_z_update
+
+    subroutine compute_p_update(this, list, options, pressure_var)
+        implicit none
+        class(boundary_t),  intent(inout)   :: this
+        type(var_dict_t),   intent(inout)   :: list
+        type(options_t),    intent(in)      :: options
+        type(variable_t),   intent(inout)   :: pressure_var
+
+        integer           :: err
+        type(variable_t)  :: pvar, zvar, tvar, qvar
+
+        if (options%parameters%t_is_potential) stop "Need real air temperature to compute pressure"
+
+        qvar = list%get_var(options%parameters%qvvar)
+        tvar = list%get_var(options%parameters%tvar)
+        zvar = list%get_var(options%parameters%hgtvar)
+
+        pvar = list%get_var(options%parameters%pslvar, err)
+
+        if (err == 0) then
+            call compute_3d_p(pressure_var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d, zvar%data_2d)
+
+        else
+            pvar = list%get_var(options%parameters%psvar, err)
+
+            if (err == 0) then
+                call compute_3d_p(pressure_var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d)
+            else
+                print*, "ERROR reading surface pressure or sea level pressure, variables not found"
+                error stop
+            endif
+        endif
+
+
+    end subroutine compute_p_update
+
 
     !>------------------------------------------------------------
     !! Sends the udpated forcing data to all other images
