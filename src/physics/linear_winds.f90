@@ -38,7 +38,7 @@ module linear_theory_winds
     use fft ! note fft module is defined in fftshift.f90
     use fftshifter
     use data_structures
-    use io_routines,               only : io_read
+    use io_routines,               only : io_read, io_write
     use string,                    only : str
     use linear_theory_lut_disk_io, only : read_LUT, write_LUT
     use mod_atm_utilities
@@ -54,6 +54,7 @@ module linear_theory_winds
     logical :: smooth_nsq
     logical :: using_blocked_flow
     real    :: N_squared
+    integer :: nth_file=1
 
     !! unfortunately these have to be allocated every call because we could be calling on both the high-res
     !! domain and the low res domain (to "remove" the linear winds)
@@ -967,15 +968,15 @@ contains
         endif
 
         if (reverse) print*, "WARNING using fixed nsq for linear wind removal: 3e-6"
-        !$omp parallel firstprivate(nx,nxu,ny,nyv,nz, reverse, vsmooth, winsz, using_blocked_flow), default(none), &
-        !$omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom, u1d, v1d), &
-        !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, smoothz, u, v, blocked), &
-        !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
-        !$omp shared(domain, spd_values, dir_values, nsq_values, u_LUT, v_LUT, linear_mask), &
-        !$omp shared(u_perturbation, v_perturbation, linear_update_fraction, linear_contribution, nsq_calibration), &
-        !$omp shared(min_stability, max_stability, n_dir_values, n_spd_values, n_nsq_values, smooth_nsq)
-
-        !$omp do
+        ! $omp parallel firstprivate(nx,nxu,ny,nyv,nz, reverse, vsmooth, winsz, using_blocked_flow), default(none), &
+        ! $omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom, u1d, v1d), &
+        ! $omp private(spos, dpos, npos, nexts,nextd, nextn,n, smoothz, u, v, blocked), &
+        ! $omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
+        ! $omp shared(domain, spd_values, dir_values, nsq_values, u_LUT, v_LUT, linear_mask), &
+        ! $omp shared(u_perturbation, v_perturbation, linear_update_fraction, linear_contribution, nsq_calibration), &
+        ! $omp shared(min_stability, max_stability, n_dir_values, n_spd_values, n_nsq_values, smooth_nsq)
+        !
+        ! $omp do
         do k=1,ny
             do j=1,nz
                 do i=1,nx
@@ -1022,23 +1023,23 @@ contains
                 end do
             endif
         end do
-        !$omp end do
-        !$omp end parallel
+        ! $omp end do
+        ! $omp end parallel
 
         ! smooth array has it's own parallelization, so this probably can't go in a critical section
         if (smooth_nsq) then
             call smooth_array(domain%nsquared, winsz, ydim=3)
         endif
 
-        !$omp parallel firstprivate(nx,nxu,ny,nyv,nz, reverse, vsmooth, winsz, using_blocked_flow), default(none), &
-        !$omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom, u1d, v1d), &
-        !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, smoothz, u, v, blocked), &
-        !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
-        !$omp shared(domain, spd_values, dir_values, nsq_values, u_LUT, v_LUT, linear_mask), &
-        !$omp shared(u_perturbation, v_perturbation, linear_update_fraction, linear_contribution, nsq_calibration), &
-        !$omp shared(min_stability, max_stability, n_dir_values, n_spd_values, n_nsq_values, smooth_nsq)
+        ! $omp parallel firstprivate(nx,nxu,ny,nyv,nz, reverse, vsmooth, winsz, using_blocked_flow), default(none), &
+        ! $omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom, u1d, v1d), &
+        ! $omp private(spos, dpos, npos, nexts,nextd, nextn,n, smoothz, u, v, blocked), &
+        ! $omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
+        ! $omp shared(domain, spd_values, dir_values, nsq_values, u_LUT, v_LUT, linear_mask), &
+        ! $omp shared(u_perturbation, v_perturbation, linear_update_fraction, linear_contribution, nsq_calibration), &
+        ! $omp shared(min_stability, max_stability, n_dir_values, n_spd_values, n_nsq_values, smooth_nsq)
         allocate(u1d(nxu), v1d(nxu))
-        !$omp do
+        ! $omp do
         do k=1, nyv
 
             uk = min(k,ny)
@@ -1161,13 +1162,15 @@ contains
                                 domain%v(i,j,k) = domain%v(i,j,k) + v_perturbation(i,j,k) * linear_mask(min(nx,i),min(ny,k)) * (1-blocked)
                             endif
                         endif
+
                     endif
                 end do
             end do
         end do
-        !$omp end do
+
+        ! $omp end do
         deallocate(u1d, v1d)
-        !$omp end parallel
+        ! $omp end parallel
     end subroutine spatial_winds
 
 

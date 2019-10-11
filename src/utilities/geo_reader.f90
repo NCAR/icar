@@ -134,7 +134,7 @@ contains
             stop "Denominator in triangulation is broken"
         endif
 
-        ! This is the core of the algorithm.
+        ! This is the core of the algorithm weights for Barycentric coordinates.
         ! compute weights for each x,y point
         w1 = ((y2-y3) * (xi-x3) + (x3-x2) * (yi-y3)) &
                            / denom
@@ -509,37 +509,42 @@ contains
     !! precision optionally defines the tolerance permitted to consider around the line
     !!
     !!------------------------------------------------------------
-    function point_is_on_line(x,y,x0,y0,x1,y1, precision) result(online)
+    function point_is_on_line(x,y,x0,y0,x1,y1, precision, error) result(online)
         ! WARNING: assumes y is between y0 and y1 and x < max(x0,x1)
         implicit none
         real, intent(in) :: x,y,x0,y0,x1,y1
         real, intent(in), optional :: precision
+        real, intent(out),optional :: error
         logical :: online
 
         real :: internal_precision
         double precision :: slope, offset
 
-        internal_precision = 1e-4
+        internal_precision = 1e-5
         if (present(precision)) internal_precision = precision
 
-        online=.False.
+        online = .False.
         ! can we abort testing whether we are actually on a border?
         if (x >= min(x0,x1)) then
             ! we COULD be on a border
-            if (x0/=x1) then
+            if (x0 /= x1) then
                 ! find the equation of the line and check if we are on it.
                 ! this is performed in double precision space to be as precise as possible
                 ! so that rounding errors are minimized
-                slope = (DBLE(y1)-y0) / (DBLE(x1)-x0)
+                slope = (DBLE(y1) - y0) / (DBLE(x1) - x0)
                 offset = y0 - (slope * x0)
                 ! note that due to rounding errors we could be "close" but not on it...
                 if (abs( ((slope * x) + offset) - y) < internal_precision) then
                     ! we are on a border, return true
-                    online=.True.
+                    online = .True.
+                    if (present(error)) error = abs( ((slope * x) + offset) - y)
                 endif
             else
                 ! if x0=x1 and x is between x0,x1 and y is between y0,y1 then
-                online=.True.
+                if (x == x0) then ! this is assumed from the input requirements, also assumes y is between y0 and y1
+                    online = .True.
+                    if (present(error)) error = 0
+                endif
             endif
         endif
 
@@ -558,11 +563,14 @@ contains
     !! Flips the inside/outside boolean if it intersected one or both verticies
     !!
     !!------------------------------------------------------------
-    subroutine check_vertex_hits(y, y0, y1, inside, top_vertex, bottom_vertex, precision)
+    subroutine check_vertex_hits(y, y0, y1, inside, top_vertex, bottom_vertex, precision, error)
         implicit none
         real,    intent(in)    :: y, y0, y1
         logical, intent(inout) :: top_vertex, bottom_vertex, inside
         real,    intent(in)    :: precision
+        real,    intent(out), optional :: error
+
+        if (present(error)) error = 0
 
         ! if the segment just parallels the line, then don't reset top_vertex, bottom_vertex history
         ! and don't flip inside/out
@@ -570,6 +578,7 @@ contains
 
         ! check if we hit the y0 vertex with our ray
         if (abs(y-y0) < precision) then
+            if (present(error)) error = abs(y-y0)
             ! if so, check if we are above or below the other vertex segment
             if (y<=y1) then
                 ! we are below the other vertex
@@ -593,6 +602,8 @@ contains
         endif
 
         if (abs(y-y1) < precision) then
+            if (present(error)) error = abs(y-y1)
+
             if (y<=y0) then
                 if (top_vertex) then
                     top_vertex=.False.
@@ -621,24 +632,30 @@ contains
     !! Note additional discussion here: https://wrf.ecse.rpi.edu//Research/Short_Notes/pnpoly.html
     !!
     !!------------------------------------------------------------
-    function point_in_poly(x, y, poly, precision) result(inside)
+    function point_in_poly(x, y, poly, precision, error) result(inside)
         implicit none
         real, intent(in) :: x, y
         real, intent(in) :: poly(:,:)
         real, intent(in), optional :: precision
+        real, intent(out), optional :: error
         logical :: inside
         logical :: top_vertex, bottom_vertex
 
         real :: internal_precision
+        logical :: point_on_line
         integer :: n, i
         real :: x0,y0,x1,y1
         double precision :: slope, x_line
+        real :: err, err_temp, line_err_temp
 
-        internal_precision = 1e-4
+        internal_precision = 1e-5
         if (present(precision)) internal_precision = precision
         n = size(poly,2)
+        err = 9999
+        if (present(error)) error = 0
 
         ! by default we assume we are not in the polygon
+        point_on_line = .False.
         inside = .False.
         top_vertex = .False.
         bottom_vertex = .False.
@@ -664,9 +681,10 @@ contains
                 if (y <= max(y0,y1)) then
                     if (x <= max(x0,x1)) then
 
-                        if (point_is_on_line(x,y,x0,y0,x1,y1, internal_precision)) then
-                            inside=.True.
-                            return
+                        if (point_is_on_line(x,y,x0,y0,x1,y1, internal_precision, error=line_err_temp)) then
+                            point_on_line = .True.
+                            err = min(err, line_err_temp)
+                            if (present(error)) error = err
                         endif
 
                         if (y0 /= y1) then
@@ -677,10 +695,12 @@ contains
                         else
                             x_line = -1e10 ! only inside if x0==x1
                         endif
+
                         ! if we cross one line then we are inside, but if we cross two we are outside, and so on
                         if ((x0 == x1) .or. (dble(x) <= x_line)) then
                             inside = .not. inside
-                            call check_vertex_hits(y,y0,y1,inside, top_vertex, bottom_vertex, internal_precision)
+                            call check_vertex_hits(y,y0,y1,inside, top_vertex, bottom_vertex, internal_precision, error=err_temp)
+                            err = max(err, err_temp)
                         else
                             top_vertex = .False.
                             bottom_vertex = .False.
@@ -693,20 +713,28 @@ contains
             y0 = y1
         enddo
 
+        if (inside) err = 0
+        if (point_on_line) inside = .True.
+        if (present(error)) error = err
+
         ! inside will be set to the correct value
     end function point_in_poly
 
 
-    function test_surrounding(lat,lon, lo, positions, nx, ny, n) result(surrounded)
+    function test_surrounding(lat,lon, lo, positions, nx, ny, n, error) result(surrounded)
         implicit none
         real,                    intent(in) :: lat, lon
         class(interpolable_type),intent(in) :: lo
         type(fourpos),           intent(inout) :: positions
         integer,                 intent(in) :: nx, ny, n
+        real,                    intent(out), optional :: error
         logical :: surrounded
         integer :: i
+        real :: err
 
         real :: polygon(2,n)
+
+        err = 0
 
         ! first enforce that all points passed in are within the bounds of the lat/lon arrays
         do i=1,n
@@ -721,20 +749,26 @@ contains
         enddo
 
         ! finally test that the provided lat/lon point falls within this polygon
-        surrounded = point_in_poly(lon, lat, polygon)
+        surrounded = point_in_poly(lon, lat, polygon, error=err)
+
+        if (present(error)) error = err
 
     end function test_surrounding
 
-    function test_triangle(lat,lon, lo, positions, nx, ny) result(surrounded)
+    function test_triangle(lat,lon, lo, positions, nx, ny, error) result(surrounded)
         implicit none
         real,                    intent(in) :: lat, lon
         class(interpolable_type),intent(in) :: lo
         type(fourpos),           intent(inout) :: positions
         integer,                 intent(in) :: nx, ny
+        real,                    intent(out), optional :: error
         logical :: surrounded
         integer :: i
+        real :: err
 
         real :: polygon(2,3)
+
+        err = 0
 
         ! assumes all points passed in are within the bounds of the lat/lon arrays!
         ! this is enforced in test_surrounding which should have passed by now
@@ -753,7 +787,9 @@ contains
         polygon(:,3) = polygon(:,3) / 4
 
         ! finally test that the provided lat/lon point falls within this polygon
-        surrounded = point_in_poly(lon, lat, polygon)
+        surrounded = point_in_poly(lon, lat, polygon, error=err)
+
+        if (present(error)) error = err
 
     end function test_triangle
 
@@ -770,50 +806,80 @@ contains
         integer,intent(in) :: nx,ny
         integer :: i, j
         integer :: xdeltas(4), ydeltas(4), dx, dy
+        integer :: lowerx, upperx, lowery, uppery
+        real :: best_err, current_err, tri1_err, tri2_err
+        logical :: tri_1, tri_2
+        type(fourpos) :: search_point
 
-        xdeltas=[-1,-1,1,1]
-        ydeltas=[-1,1,-1,1]
+        best_err = 1e10
 
-        do i=1,4
+        xdeltas = [-1,-1,1,1]
+        ydeltas = [-1,1,-1,1]
+
+        find_surrounding%x = -999
+        find_surrounding%y = -999
+
+        lowerx = lbound(lo%lat,1)
+        upperx = ubound(lo%lat,1)
+        lowery = lbound(lo%lat,2)
+        uppery = ubound(lo%lat,2)
+
+        do i = 1, 4
             dx = xdeltas(i)
             dy = ydeltas(i)
-            find_surrounding%x = [pos%x, pos%x+dx, pos%x+dx, pos%x  ]
-            find_surrounding%y = [pos%y, pos%y,   pos%y+dy, pos%y+dy]
 
-            if (test_surrounding(lat, lon, lo, find_surrounding, nx, ny, 4)) then
-                ! if it is not in this triangle, it must be in the other.
+            ! check that the current search box exists in the input data
+            if (((pos%x + dx) > upperx) .or. ((pos%x + dx) < lowerx) .or. ((pos%y + dy) > uppery) .or. ((pos%y + dy) < lowery)) then
+                cycle
+            endif
 
-                if (.not.test_triangle(lat, lon, lo, find_surrounding, nx, ny)) then
-                    find_surrounding%x = [pos%x, pos%x,   pos%x+dx, pos%x+dx ]
-                    find_surrounding%y = [pos%y, pos%y+dy, pos%y,   pos%y+dy]
+            search_point%x = [pos%x, pos%x+dx, pos%x+dx, pos%x  ]
+            search_point%y = [pos%y, pos%y,   pos%y+dy, pos%y+dy]
 
-                    if (.not.test_triangle(lat, lon, lo, find_surrounding, nx, ny)) then
-                        find_surrounding%x = [pos%x+dx, pos%x,   pos%x+dx, pos%x]
-                        find_surrounding%y = [pos%y+dy, pos%y+dy, pos%y,   pos%y]
+            if (test_surrounding(lat, lon, lo, search_point, nx, ny, 4, error=current_err)) then
+                if (current_err < best_err) then
+                    best_err = current_err
+                    ! if it is not in this triangle, it must be in the other.
 
-                        if (.not.test_triangle(lat, lon, lo, find_surrounding, nx, ny)) then
-                            find_surrounding%x = [pos%x+dx, pos%x+dx,   pos%x, pos%x]
-                            find_surrounding%y = [pos%y+dy, pos%y,   pos%y+dy, pos%y]
+                    tri_1 = test_triangle(lat, lon, lo, search_point, nx, ny, error=tri1_err)
 
-                            if (.not.test_triangle(lat, lon, lo, find_surrounding, nx, ny)) then
+                    search_point%x = [pos%x, pos%x,   pos%x+dx, pos%x+dx ]
+                    search_point%y = [pos%y, pos%y+dy, pos%y,   pos%y+dy]
 
-                                write(*,*) "ERROR finding triangle"
-                                write(*,*) find_surrounding%x
-                                write(*,*) find_surrounding%y
-                                write(*,*) lat, lon
-                                do j=1,4
-                                    write(*,*) lo%lat(find_surrounding%x(j), find_surrounding%y(j)), &
-                                               lo%lon(find_surrounding%x(j), find_surrounding%y(j))
-                                enddo
+                    tri_2 = test_triangle(lat, lon, lo, search_point, nx, ny, error=tri2_err)
+
+                    if (tri_1) then
+                        search_point%x = [pos%x, pos%x+dx, pos%x+dx, pos%x  ]
+                        search_point%y = [pos%y, pos%y,   pos%y+dy, pos%y+dy]
+
+                        if (tri_2) then
+                            if (tri2_err < tri1_err) then
+                                search_point%x = [pos%x, pos%x,   pos%x+dx, pos%x+dx ]
+                                search_point%y = [pos%y, pos%y+dy, pos%y,   pos%y+dy]
                             endif
                         endif
                     endif
-                endif
+                    find_surrounding = search_point
 
-                return
+
+                    if (.not.test_triangle(lat, lon, lo, search_point, nx, ny)) then
+
+                        write(*,*) "Warning point in box, but not triangle"
+                        write(*,*) search_point%x
+                        write(*,*) search_point%y
+                        write(*,*) lat, lon
+                        do j=1,4
+                            write(*,*) lo%lat(search_point%x(j), search_point%y(j)), &
+                                       lo%lon(search_point%x(j), search_point%y(j))
+                        enddo
+                    endif
+
+                endif
 
             endif
         enddo
+
+        if (find_surrounding%x(1) > -999) return
 
         write(*,*) "ERROR: Failed to find point", lon, lat, " in a quadrant near:"
         write(*,*) lo%lon(pos%x, pos%y), lo%lat(pos%x, pos%y)
@@ -869,10 +935,10 @@ contains
                 stop
             endif
 
-            do i=ims, ime
+            do i = ims, ime
                 curpos = find_location(lo, hi%lat(i,j), hi%lon(i,j), lastpos)
 
-                if (curpos%x<1) then
+                if (curpos%x < 1) then
                     ! something broke, try assuming that the grids are the same possibly wrapping (for ideal)
                     write(*,*) "Error in Geographic interpolation, check input lat / lon grids", i,j
                     curpos%x = mod(i-1, lo_nx) + 1
@@ -895,6 +961,7 @@ contains
                     lo%geolut%w(:,i,j) = tri_weights(hi%lat(i,j), lat, hi%lon(i,j), lon)
                     ! lo%geolut%w(:,i,j) = idw_weights(hi%lat(i,j), lat, hi%lon(i,j), lon)
                     ! lo%geolut%w(:,i,j) = bilin_weights(hi%lat(i,j), lat, hi%lon(i,j), lon)
+
                 endif
 
             enddo
@@ -1166,7 +1233,9 @@ contains
         endif
 
         ! also convert from a -180 to 180 coordinate system into a 0-360 coordinate system if necessary
-        where(domain%lon<0) domain%lon = 360+domain%lon
+        if ((minval(domain%lon) < -170) .and. (maxval(domain%lon) > 170)) then
+            where(domain%lon<0) domain%lon = 360+domain%lon
+        endif
 
     end subroutine standardize_coordinates
 

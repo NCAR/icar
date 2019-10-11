@@ -71,7 +71,7 @@ contains
                 allocate(domain%tend%qv_pbl(ids:ide,kds:kde,jds:jde))
                 domain%tend%qv_pbl=0
             endif
-            allocate(w_stochastic(ids:ide,kds:kde,jds:jde))
+            ! allocate(w_stochastic(ids:ide,kds:kde,jds:jde))
             call tiedtkeinit(domain%tend%th,domain%tend%qv,   &
                              domain%tend%qc,domain%tend%qi,   &
                              domain%tend%u, domain%tend%v,    &
@@ -147,18 +147,18 @@ subroutine convect(domain,options,dt_in)
     !$omp end parallel
 
     if (options%physics%convection==kCU_TIEDTKE) then
-        call random_number(w_stochastic)
-        block
-            integer :: i
-            do i=1,size(w_stochastic,2)
-                w_stochastic(:,i,:) = domain%sensible_heat/500 + w_stochastic(:,i,:)
-            enddo
-        end block
+        ! call random_number(w_stochastic)
+        ! block
+        !     integer :: i
+        !     do i=1,size(w_stochastic,2)
+        !         w_stochastic(:,i,:) = domain%sensible_heat/500 + w_stochastic(:,i,:)
+        !     enddo
+        ! end block
         call CU_TIEDTKE(                                          &
                  dt_in,itimestep,STEPCU                           &
                 ,RAINCV,PRATEC,domain%latent_heat/LH_vaporization &
                 ,domain%sensible_heat,domain%ZNU                  &
-                ,domain%Um,domain%Vm,domain%w+(w_stochastic*20-15)                &
+                ,domain%Um,domain%Vm,domain%w_real                &
                 ! ,domain%Um,domain%Vm,domain%w_real+(w_stochastic*20-15)                &
                 ,domain%T,domain%qv                               &
                 ,domain%cloud,domain%ice,domain%pii,domain%rho    &
