@@ -49,7 +49,8 @@ contains
         "      resolution linear wind field.  Lots of smaller tweaks and bug fixes."//          &
         "      Also added online bias correction option. ",                                     &
         "Added convective wind advection and improved Linear wind LUT. ",                       &
-        "Relatively stable checkpoint widely used. ",                                           &
+        "Relatively stable checkpoint widely used. "//                                          &
+        "      Bugfixes also improved time handling (use time_var for forcing data)",           &
         "Significantly improved geographic interpolation bug fixes. "                           &
         ]
 
