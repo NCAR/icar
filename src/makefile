@@ -374,7 +374,7 @@ calendar_test: $(BUILD)test_calendar.o $(BUILD)time.o
 mpdata_test: $(BUILD)test_mpdata.o $(BUILD)adv_mpdata.o
 	${F90} $^ -o $@ ${LFLAGS}
 
-point_in_on_test: $(BUILD)test_point_in_on.o $(BUILD)geo_reader.o $(BUILD)data_structures.o
+point_in_on_test: $(BUILD)test_point_in_on.o $(BUILD)geo_reader.o $(BUILD)data_structures.o $(BUILD)icar_constants.o
 	${F90} $^ -o $@ ${LFLAGS}
 
 blocking_test: $(BUILD)test_blocking.o $(BUILD)io_routines.o $(BUILD)winds_blocking.o \
@@ -465,7 +465,7 @@ $(BUILD)lt_lut_io.o: $(IO)lt_lut_io.f90 $(BUILD)data_structures.o $(BUILD)io_rou
 #	Interpolation Routines
 ###################################################################
 
-$(BUILD)geo_reader.o:$(UTIL)geo_reader.f90 $(BUILD)data_structures.o
+$(BUILD)geo_reader.o:$(UTIL)geo_reader.f90 $(BUILD)data_structures.o $(BUILD)icar_constants.o
 	${F90} ${FFLAGS} $(UTIL)geo_reader.f90 -o $(BUILD)geo_reader.o
 
 $(BUILD)vinterp.o: $(UTIL)vinterp.f90 $(BUILD)data_structures.o

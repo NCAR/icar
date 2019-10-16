@@ -18,6 +18,9 @@ module icar_constants
 ! ------------------------------------------------
     real,   parameter :: kSMALL_VALUE = 1e-6
 
+    integer, parameter :: kPRIME_CENTERED    = 0
+    integer, parameter :: kDATELINE_CENTERED = 1
+
 ! ------------------------------------------------
 ! Physics scheme selection definitions
 !
