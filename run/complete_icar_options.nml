@@ -189,19 +189,24 @@
 &var_list
     ! These are the names of the variables in the forcing data files
     ! variables on the mass / center grid
-    time_var= "time",       ! Time                      [defined in netcdf attributes] OPTIONAL
+    time_var= "XTIME",      ! Time                      [defined in netcdf attributes]
     latvar  = "XLAT",       ! latitude                  [degrees]
     lonvar  = "XLONG",      ! longitude                 [degrees]
     pvar    = "P",          ! pressure                  [Pa]
-    pbvar   = "PB",         ! base pressure state       [Pa]        OPTIONAL
+    ! pbvar   = "PB",         ! base pressure state       [Pa]        OPTIONAL
     tvar    = "T",          ! temperature               [K]   (with optional offset)
     qvvar   = "QVAPOR",     ! water vapor mixing ratio  [kg/kg]
-    qcvar   = "QCLOUD",     ! cloud water mixing ratio  [kg/kg]     OPTIONAL
-    qivar   = "QICE",       ! cloud ice mixing ratio    [kg/kg]     OPTIONAL
+    ! qcvar   = "QCLOUD",     ! cloud water mixing ratio  [kg/kg]     OPTIONAL
+    ! qrvar   = "QRAIN",      ! rain water mixing ratio   [kg/kg]     OPTIONAL
+    ! qsvar   = "QSNOW",      ! snow mixing ratio         [kg/kg]     OPTIONAL
+    ! qnrvar  = "QNRAIN",     ! rain number concentration [kg^-1]     OPTIONAL
+    ! qgvar   = "QGRAUP",     ! graupel mixing ratio      [kg/kg]     OPTIONAL
+    ! qnivar  = "QNICE",      ! ice number concentration  [kg^-1]     OPTIONAL
+    ! qivar   = "QICE",       ! cloud ice mixing ratio    [kg/kg]     OPTIONAL
     hgtvar  = "HGT",        ! surface elevation         [m]
     zvar    = "PH",         ! model level elevations    [m or m/s^2 if z_is_geopotential]
-    zbvar   = "PHB",        ! base height state         [m or m/s^2] OPTIONAL
-    sst_var = "TSK"         ! Water surface temperature [K]          OPTIONAL (used with water=2)
+    ! zbvar   = "PHB",        ! base height state         [m or m/s^2] OPTIONAL
+    ! sst_var = "TSK"         ! Water surface temperature [K]          OPTIONAL (used with water=2)
 
     ! WARNING, if U and V are "grid relative" (e.g. output from WRF) and on a skewed grid, this will cause problems
     ! run the helpers/wrf2icar.sh script first to rotate the wind field to be east-west, north-south relative

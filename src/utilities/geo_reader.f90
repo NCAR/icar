@@ -18,6 +18,7 @@
 !!------------------------------------------------------------
 module geo
     use data_structures
+    use icar_constants, only : kDATELINE_CENTERED, kPRIME_CENTERED
 
     implicit none
 
@@ -520,7 +521,7 @@ contains
         real :: internal_precision
         double precision :: slope, offset
 
-        internal_precision = 1e-5
+        internal_precision = 1e-4
         if (present(precision)) internal_precision = precision
 
         online = .False.
@@ -648,7 +649,7 @@ contains
         double precision :: slope, x_line
         real :: err, err_temp, line_err_temp
 
-        internal_precision = 1e-5
+        internal_precision = 1e-4
         if (present(precision)) internal_precision = precision
         n = size(poly,2)
         err = 9999
@@ -858,12 +859,26 @@ contains
                                 search_point%y = [pos%y, pos%y+dy, pos%y,   pos%y+dy]
                             endif
                         endif
+                    elseif (.not.tri_2) then
+                        ! in edge cases the x,y point is technically closest, but the lat, lon point won't fall in a triangle that contains it
+                        ! so search the other possible triangles in this 4 grid cell box too.
+                        search_point%x = [pos%x,    pos%x+dx, pos%x+dx, pos%x]
+                        search_point%y = [pos%y+dy, pos%y+dy, pos%y,    pos%y]
+
+                        tri_1 = test_triangle(lat, lon, lo, search_point, nx, ny, error=tri1_err)
+
+                        if (.not.tri_1) then
+                            search_point%x = [pos%x+dx, pos%x+dx, pos%x,    pos%x]
+                            search_point%y = [pos%y,    pos%y+dy, pos%y+dy, pos%y]
+
+                            tri_2 = test_triangle(lat, lon, lo, search_point, nx, ny, error=tri2_err)
+                        endif
+
                     endif
                     find_surrounding = search_point
 
 
                     if (.not.test_triangle(lat, lon, lo, search_point, nx, ny)) then
-
                         write(*,*) "Warning point in box, but not triangle"
                         write(*,*) search_point%x
                         write(*,*) search_point%y
@@ -1196,9 +1211,10 @@ contains
     !!  @param[inout]   long_data  2D array of longitudes (either -180 - 180 or 0 - 360)
     !!
     !! ----------------------------------------------------------------------------
-    subroutine standardize_coordinates(domain)
+    subroutine standardize_coordinates(domain, longitude_system)
         implicit none
         class(interpolable_type), intent(inout) :: domain
+        integer,                  intent(in), optional :: longitude_system
 
         real, dimension(:,:), allocatable :: temporary_geo_data
         integer :: nx, ny, i
@@ -1232,9 +1248,27 @@ contains
 
         endif
 
-        ! also convert from a -180 to 180 coordinate system into a 0-360 coordinate system if necessary
-        if ((minval(domain%lon) < -170) .and. (maxval(domain%lon) > 170)) then
-            where(domain%lon<0) domain%lon = 360+domain%lon
+        if (present(longitude_system)) then
+            if (longitude_system == kPRIME_CENTERED) then
+                where(domain%lon<0) domain%lon = 360+domain%lon
+            elseif (longitude_system == kDATELINE_CENTERED) then
+                where(domain%lon>180) domain%lon = domain%lon - 360
+            else
+                write(*,*) "Unknown longitude system of coordinates:", longitude_system
+                write(*,*) " Set options%parameters%longitude_system to either:"
+                write(*,*) " Prime meridian centered (0 to 360): ", kPRIME_CENTERED
+                write(*,*) " Dateline meridian centered (-180 to 180): ", kDATELINE_CENTERED
+                stop
+            endif
+        else
+            ! try to guess which coordinate system to use
+
+            ! first convert all domains into -180 to +180 coordinates
+            where(domain%lon>180) domain%lon = domain%lon - 360
+            ! also convert from a -180 to 180 coordinate system into a 0-360 coordinate system if closer to the dateline
+            if ((minval(domain%lon) < -150) .or. (maxval(domain%lon) > 150)) then
+                where(domain%lon<0) domain%lon = 360+domain%lon
+            endif
         endif
 
     end subroutine standardize_coordinates
