@@ -7,6 +7,8 @@
 !!------------------------------------------------------------
 submodule(boundary_interface) boundary_implementation
 
+    use icar_constants,         only : gravity
+    use array_utilities,        only : interpolate_in_z
     use io_routines,            only : io_getdims, io_read, io_maxDims, io_variable_is_present
     use time_io,                only : read_times, find_timestep_in_file
     use co_util,                only : broadcast
@@ -269,7 +271,7 @@ contains
 
             end do
 
-            call update_computed_vars(this, options)
+            call update_computed_vars(this, options, update=.True.)
 
             end associate
         ! endif
@@ -279,15 +281,22 @@ contains
     end subroutine
 
 
-    subroutine update_computed_vars(this, options)
+    subroutine update_computed_vars(this, options, update)
         implicit none
         class(boundary_t),   intent(inout)   :: this
         type(options_t),     intent(in)      :: options
+        logical,             intent(in),    optional :: update
 
         integer           :: err
         type(variable_t)  :: var, pvar, zvar, tvar, qvar
+        logical :: update_internal
+
+        integer :: nx,ny,nz
+        real, allocatable :: temp_z(:,:,:)
         character(len=kMAX_NAME_LENGTH) :: name
 
+        update_internal = .False.
+        if (present(update)) update_internal = update
 
         associate(list => this%variables)
 
@@ -297,6 +306,22 @@ contains
 
         if (options%parameters%qv_is_spec_humidity) then
             call compute_mixing_ratio_from_sh(list, options)
+        endif
+
+        ! because z is not updated over time, we don't want to reapply this every time, only in the initialization
+        if (.not. update_internal) then
+            if (options%parameters%z_is_geopotential) then
+                this%z = this%z / gravity
+            endif
+
+            if (options%parameters%z_is_on_interface) then
+                call interpolate_in_z(this%z)
+            endif
+        endif
+
+        if (options%parameters%t_offset /= 0) then
+            tvar = list%get_var(options%parameters%tvar)
+            tvar%data_3d = tvar%data_3d + options%parameters%t_offset
         endif
 
         ! loop through the list of variables that need to be read in

@@ -17,6 +17,29 @@ module array_utilities
 
 contains
 
+    subroutine interpolate_in_z(input)
+        implicit none
+        real, allocatable, intent(inout) :: input(:,:,:)
+
+        real, allocatable :: temp_z(:,:,:)
+        integer :: nx, ny, nz
+
+        nx = size(input, 1)
+        nz = size(input, 2)
+        ny = size(input, 3)
+
+        allocate(temp_z(nx,nz,ny))
+        temp_z = input
+
+        deallocate(input)
+        allocate(input(nx,nz-1,ny))
+
+        input = (temp_z(:,1:nz-1,:) + temp_z(:,2:nz,:))/2
+
+        deallocate(temp_z)
+
+    end subroutine interpolate_in_z
+
     subroutine array_offset_x_3d(input_array, output_array)
         implicit none
         real,              intent(in)    :: input_array(:,:,:)

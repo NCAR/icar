@@ -747,7 +747,7 @@ caf_linear_winds_setup_test: $(BUILD)test_caf_linear_winds_setup.o	\
 				$(BUILD)fftshift.o 		 $(BUILD)fftw.o  			\
 				$(BUILD)vinterp.o		 $(BUILD)linear_winds.o		\
 				$(BUILD)lt_lut_io.o		 $(BUILD)lsm_driver.o		\
-				$(BUILD)lsm_noahdrv.o $(BUILD)lsm_noahlsm.o \
+				$(BUILD)lsm_noahdrv.o	 $(BUILD)lsm_noahlsm.o \
 				$(BUILD)water_simple.o
 	${LINKER} $^ -o $@ ${LFLAGS}
 
