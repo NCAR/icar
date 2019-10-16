@@ -263,7 +263,7 @@ contains
         implicit none
         real,dimension(:,:,:),    intent(inout) :: hi
         real,dimension(:,:,:),    intent(in)    :: lo
-        type(vert_look_up_table),intent(in)    :: vlut
+        type(vert_look_up_table), intent(in)    :: vlut
         logical, optional,        intent(in)    :: boundary_only
         integer, optional,        intent(in)    :: axis
         integer :: i,j,k, nx,ny,nz, zaxis
@@ -282,9 +282,9 @@ contains
         endif
 
         if (zaxis==2) then
-            nx=size(hi,1)
-            nz=size(hi,2)
-            ny=size(hi,3)
+            nx = size(hi,1)
+            nz = size(hi,2)
+            ny = size(hi,3)
 
             do j=1,ny
                 do k=1,nz
