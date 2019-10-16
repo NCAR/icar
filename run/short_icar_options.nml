@@ -13,6 +13,7 @@
     ! Common precipitation downscaling run use pbl=0 lsm=0 mp=1 rad=0 conv=0 adv=1 wind=1
     ! For a FASTER run (simpler physics), set mp=2
     ! If surface air temperature is important use pbl=2 lsm=3 rad=2 water=2 this requires Noah LSM data
+    ! Warning, convection can be unstable
     ! N/A = Not Available or Not fully implemented
     ! wishlist = No Code Present yet
 
@@ -91,6 +92,7 @@
     !   this is now optional, if not supplied, ICAR will determine it from the number of levels specified
     !   if it is supplied it must be less than or equal to the number of levels specified below
     !   but it can be used to subset the number of levels used.
+    !   WARNING : ICAR can be surprisingly sensitive to this parameter
     nz = 15, ! []
     !   Set this to true if the zvar in the input data is actually in units of geopotential height (m/s^2)
     z_is_geopotential = True,
@@ -131,6 +133,8 @@
     lonvar  = "XLONG",      ! longitude                 [degrees]
     sst_var = "TSK"         ! Water surface temperature [K]
 
+    ! WARNING, if U and V are "grid relative" (e.g. output from WRF) and on a skewed grid, this will cause problems
+    ! run the helpers/wrf2icar.sh script first to rotate the wind field to be east-west, north-south relative
     ! variables on the ew staggered (U) grid
     uvar    = "U",          ! East-West wind speed      [m/s]
 
@@ -151,6 +155,8 @@
     ulon_hi = "XLONG_U",    ! longitude (ew-staggered grid) [degrees]
     vlat_hi = "XLAT_V",     ! latitude  (ns-staggered grid) [degrees]
     vlon_hi = "XLONG_V",    ! longitude (ns-staggered grid) [degrees]
+
+    ! To use the Noah LSM additional fields must be specified on the high-res grid, see complete_icar_options.nml
 
     ! only required for some physics code (Noah LSM, water, Tiedke, KF(?))
     landvar = "LANDMASK",   ! land-water mask (as in WRF) 1=land, 0 or 2=water
