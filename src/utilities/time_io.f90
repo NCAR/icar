@@ -166,11 +166,12 @@ contains
     end function hour_from_units
 
 
-    subroutine read_times(filename, varname, times, timezone_offset)
+    subroutine read_times(filename, varname, times, timezone_offset, curstep)
         implicit none
         character(len=*),   intent(in) :: filename, varname
         type(Time_type),    intent(inout), allocatable, dimension(:) :: times
-        double precision, optional :: timezone_offset
+        double precision,   intent(in), optional :: timezone_offset
+        integer,            intent(in), optional :: curstep
 
         double precision, allocatable, dimension(:) :: temp_times
         integer :: time_idx, error
@@ -179,7 +180,11 @@ contains
         double precision :: calendar_gain
 
         ! first read the time variable (presumebly a 1D double precision array)
-        call io_read(trim(filename), trim(varname), temp_times)
+        if (present(curstep)) then
+            call io_read(trim(filename), trim(varname), temp_times, curstep=curstep)
+        else
+            call io_read(trim(filename), trim(varname), temp_times)
+        endif
 
         ! attempt to read the calendar attribute from the time variable
         call io_read_attribute(trim(filename),"calendar", calendar, var_name=trim(varname), error=error)

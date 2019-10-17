@@ -27,6 +27,7 @@ contains
             call cpu_time(this%start_time)
         else
             call system_clock(this%counter, this%count_rate, this%count_max)
+            this%start_time = 0
         endif
     end subroutine start
 
@@ -123,21 +124,23 @@ contains
         real :: temporary_time, current_time
         integer :: count_end
 
-        if (this%is_running) then
-            if (this%use_cpu_time) then
-                call cpu_time(current_time)
-            else
-                call system_clock(count_end)
-                if (count_end<this%counter) then
-                    current_time = (count_end + (this%count_max - this%counter)) / real(this%count_rate)
-                else
-                    current_time = (count_end - this%counter) / real(this%count_rate)
-                endif
-            endif
-            temporary_time = this%total_time + (current_time - this%start_time)
-        else
-            temporary_time = this%total_time
-        endif
+        ! if (this%is_running) then
+        !     if (this%use_cpu_time) then
+        !         call cpu_time(current_time)
+        !     else
+        !         call system_clock(count_end)
+        !         if (count_end<this%counter) then
+        !             current_time = (count_end + (this%count_max - this%counter)) / real(this%count_rate)
+        !         else
+        !             current_time = (count_end - this%counter) / real(this%count_rate)
+        !         endif
+        !     endif
+        !     temporary_time = this%total_time + (current_time - this%start_time)
+        ! else
+        !     temporary_time = this%total_time
+        ! endif
+
+        temporary_time = this%get_time()
 
         ! if the user specified a format string, use that when creating the output
         if (present(format)) then

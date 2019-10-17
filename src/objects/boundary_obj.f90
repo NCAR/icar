@@ -756,8 +756,8 @@ contains
 
         type(Time_type), dimension(:), allocatable :: times
 
-        call read_times(filename, time_var, times)
-        model_time = times(curstep)
+        call read_times(filename, time_var, times, curstep=curstep)
+        model_time = times(1)
         deallocate(times)
 
     end subroutine read_bc_time
