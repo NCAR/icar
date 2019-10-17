@@ -946,7 +946,7 @@ contains
 
         end associate
 
-        if (allocated(domain%znw).or.allocated(this%znu)) call init_znu(this)
+        if (allocated(this%znw).or.allocated(this%znu)) call init_znu(this)
 
     end subroutine initialize_internal_variables
 
