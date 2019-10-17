@@ -10,7 +10,7 @@ module domain_interface
   use io_routines,              only : io_read
   use time_object,              only : Time_type
   use time_delta_object,        only : time_delta_t
-  use data_structures,          only : interpolable_type
+  use data_structures,          only : interpolable_type, tendencies_type
   implicit none
 
   private
@@ -60,6 +60,8 @@ module domain_interface
     type(variable_t) :: graupel
     type(variable_t) :: accumulated_precipitation
     integer,allocatable :: precipitation_bucket(:,:)
+    type(variable_t) :: accumulated_convective_pcp
+    integer,allocatable :: cu_precipitation_bucket(:,:)
     type(variable_t) :: accumulated_snowfall
     integer,allocatable :: snowfall_bucket(:,:)
     type(variable_t) :: cloud_fraction
@@ -96,9 +98,11 @@ module domain_interface
     type(variable_t) :: v_latitude
     type(variable_t) :: v_longitude
 
+    type(variable_t) :: w_real
     type(variable_t) :: u_mass
     type(variable_t) :: v_mass
 
+    type(tendencies_type) :: tend
 
     type(var_dict_t) :: variables_to_force
 
@@ -118,6 +122,8 @@ module domain_interface
     real,                       allocatable :: z_level_ratio(:,:,:)
     real,                       allocatable :: zr_u(:,:,:)
     real,                       allocatable :: zr_v(:,:,:)
+    real,                       allocatable :: znu(:)
+    real,                       allocatable :: znw(:)
 
     ! these coarrays are used to send all data to/from a master image for IO... ?
     ! For now this will be taken care of in the boundary conditions object

@@ -134,10 +134,12 @@ contains
         type(options_t), intent(in)     :: opt
         integer :: i,j
 
-        integer :: ims, ime, jms, jme
+        integer :: ims, ime, jms, jme, kms, kme
 
         ims = this%grid%ims
         ime = this%grid%ime
+        kms = this%grid%kms
+        kme = this%grid%kme
         jms = this%grid%jms
         jme = this%grid%jme
 
@@ -148,6 +150,7 @@ contains
         if (0<opt%vars_to_allocate( kVARS%v) )                          call setup(this%v,                        this%v_grid,   forcing_var=opt%parameters%vvar,       list=this%variables_to_force, force_boundaries=.False.)
         if (0<opt%vars_to_allocate( kVARS%v) )                          call setup(this%v_mass,                   this%grid)
         if (0<opt%vars_to_allocate( kVARS%w) )                          call setup(this%w,                        this%grid )
+        if (0<opt%vars_to_allocate( kVARS%w) )                          call setup(this%w_real,                   this%grid )
         if (0<opt%vars_to_allocate( kVARS%water_vapor) )                call setup(this%water_vapor,              this%grid,     forcing_var=opt%parameters%qvvar,      list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%potential_temperature) )      call setup(this%potential_temperature,    this%grid,     forcing_var=opt%parameters%tvar,       list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%cloud_water) )                call setup(this%cloud_water_mass,         this%grid,     forcing_var=opt%parameters%qcvar,      list=this%variables_to_force, force_boundaries=.True.)
@@ -161,6 +164,7 @@ contains
         if (0<opt%vars_to_allocate( kVARS%graupel_in_air) )             call setup(this%graupel_mass,             this%grid,     forcing_var=opt%parameters%qgvar,      list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%graupel_number_concentration))call setup(this%graupel_number,           this%grid )
         if (0<opt%vars_to_allocate( kVARS%precipitation) )              call setup(this%accumulated_precipitation,this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%convective_precipitation) )   call setup(this%accumulated_convective_pcp,this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%snowfall) )                   call setup(this%accumulated_snowfall,     this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%pressure) )                   call setup(this%pressure,                 this%grid,     forcing_var=opt%parameters%pvar,       list=this%variables_to_force, force_boundaries=.False.)
         if (0<opt%vars_to_allocate( kVARS%temperature) )                call setup(this%temperature,              this%grid )
@@ -202,13 +206,28 @@ contains
         if (0<opt%vars_to_allocate( kVARS%soil_deep_temperature) )      call setup(this%soil_deep_temperature,    this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%roughness_z0) )               call setup(this%roughness_z0,             this%grid2d)
 
-        if (0<opt%vars_to_allocate( kVARS%precipitation) ) allocate(this%precipitation_bucket     (ims:ime, jms:jme),          source=0)
-        if (0<opt%vars_to_allocate( kVARS%snowfall) )      allocate(this%snowfall_bucket          (ims:ime, jms:jme),          source=0)
-        if (0<opt%vars_to_allocate( kVARS%veg_type) )      allocate(this%veg_type                 (ims:ime, jms:jme),          source=7)
-        if (0<opt%vars_to_allocate( kVARS%soil_type) )     allocate(this%soil_type                (ims:ime, jms:jme),          source=3)
-        if (0<opt%vars_to_allocate( kVARS%land_mask) )     allocate(this%land_mask                (ims:ime, jms:jme),          source=kLC_LAND)
+        ! integer variable_t types aren't available (yet...)
+        if (0<opt%vars_to_allocate( kVARS%convective_precipitation) )   allocate(this%cu_precipitation_bucket  (ims:ime, jms:jme),          source=0)
+        if (0<opt%vars_to_allocate( kVARS%precipitation) )              allocate(this%precipitation_bucket     (ims:ime, jms:jme),          source=0)
+        if (0<opt%vars_to_allocate( kVARS%snowfall) )                   allocate(this%snowfall_bucket          (ims:ime, jms:jme),          source=0)
+        if (0<opt%vars_to_allocate( kVARS%veg_type) )                   allocate(this%veg_type                 (ims:ime, jms:jme),          source=7)
+        if (0<opt%vars_to_allocate( kVARS%soil_type) )                  allocate(this%soil_type                (ims:ime, jms:jme),          source=3)
+        if (0<opt%vars_to_allocate( kVARS%land_mask) )                  allocate(this%land_mask                (ims:ime, jms:jme),          source=kLC_LAND)
 
-        ! integer variable_t types aren't available yet...
+        ! tendency variables that don't need to be output... maybe these should be set up the same way
+        if (0<opt%vars_to_allocate( kVARS%tend_qv_adv) )                allocate(this%tend%qv_adv(ims:ime, kms:kme, jms:jme),   source=0.0)
+        if (0<opt%vars_to_allocate( kVARS%tend_qv_pbl) )                allocate(this%tend%qv_pbl(ims:ime, kms:kme, jms:jme),   source=0.0)
+        if (0<opt%vars_to_allocate( kVARS%tend_qv) )                    allocate(this%tend%qv(ims:ime, kms:kme, jms:jme),       source=0.0)
+        if (0<opt%vars_to_allocate( kVARS%tend_th) )                    allocate(this%tend%th(ims:ime, kms:kme, jms:jme),       source=0.0)
+        if (0<opt%vars_to_allocate( kVARS%tend_qc) )                    allocate(this%tend%qc(ims:ime, kms:kme, jms:jme),       source=0.0)
+        if (0<opt%vars_to_allocate( kVARS%tend_qi) )                    allocate(this%tend%qi(ims:ime, kms:kme, jms:jme),       source=0.0)
+        if (0<opt%vars_to_allocate( kVARS%tend_qs) )                    allocate(this%tend%qs(ims:ime, kms:kme, jms:jme),       source=0.0)
+        if (0<opt%vars_to_allocate( kVARS%tend_qr) )                    allocate(this%tend%qr(ims:ime, kms:kme, jms:jme),       source=0.0)
+        if (0<opt%vars_to_allocate( kVARS%tend_u) )                     allocate(this%tend%u(ims:ime, kms:kme, jms:jme),        source=0.0)
+        if (0<opt%vars_to_allocate( kVARS%tend_v) )                     allocate(this%tend%v(ims:ime, kms:kme, jms:jme),        source=0.0)
+
+        if (0<opt%vars_to_allocate( kVARS%znu) )                        allocate(this%znu(kms:kme),   source=0.0)
+        if (0<opt%vars_to_allocate( kVARS%znw) )                        allocate(this%znw(kms:kme),   source=0.0)
 
     end subroutine
 
@@ -708,6 +727,56 @@ contains
 
     end subroutine initialize_core_variables
 
+
+    !>------------------------------------------------------------
+    !! Calculate the ZNU and ZNW variables
+    !!
+    !! @param domain    Model domain structure
+    !!
+    !!------------------------------------------------------------
+    subroutine init_znu(domain)
+        implicit none
+        type(domain_t), intent(inout) :: domain
+
+        integer :: i, xpt, ypt
+        real    :: ptop
+        integer :: kms, kme
+
+        kms = domain%kms
+        kme = domain%kme
+
+        ! one grid point into the domain gets a non-boundary point
+        xpt = domain%ims + 1
+        ypt = domain%jms + 1
+
+        associate(p     => domain%pressure%data_3d,                         &
+                  nz    => domain%nz,                                       &
+                  psfc  => domain%surface_pressure%data_2d(xpt, ypt))
+
+        ptop = p(xpt,kme,ypt) - (p(xpt,kme-1,ypt) - p(xpt,kme,ypt))/2.0 !NOT CORRECT
+        ptop = max(ptop,1.0)
+
+        if (allocated(domain%znu)) then
+            do i=kms, kme
+                domain%znu(i) = (p(xpt,i,ypt) - ptop) / (psfc - ptop)
+            enddo
+        endif
+
+        if (allocated(domain%znw)) then
+            do i = kms, kme
+                if (i > kms) then
+                    domain%znw(i) = ((p(xpt,i,ypt) + p(xpt,i-1,ypt)) / 2 - ptop) / (psfc-ptop)
+                else
+                    domain%znw(i) = 1
+                endif
+            enddo
+        endif
+
+        end associate
+
+    end subroutine init_znu
+
+
     subroutine read_land_variables(this, options)
         implicit none
         class(domain_t), intent(inout)  :: this
@@ -876,6 +945,8 @@ contains
                   endif
 
         end associate
+
+        if (allocated(domain%znw).or.allocated(this%znu)) call init_znu(this)
 
     end subroutine initialize_internal_variables
 

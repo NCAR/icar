@@ -24,7 +24,7 @@ module initialization
     use microphysics,               only : mp_init
     use advection,                  only : adv_init
     use radiation,                  only : radiation_init
-    ! use convection,                 only : init_convection
+    use convection,                 only : init_convection
     use planetary_boundary_layer,   only : pbl_init
     use land_surface,               only : lsm_init
 
@@ -100,8 +100,8 @@ contains
         ! initialize microphysics code (e.g. compute look up tables in Thompson et al)
         call mp_init(options) !this could easily be moved to init_model...
 
-        ! call init_convection(domain,options)
-        !
+        call init_convection(domain,options)
+
         call pbl_init(domain,options)
 
         call radiation_init(domain,options)

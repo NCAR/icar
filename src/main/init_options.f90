@@ -121,11 +121,11 @@ contains
         type(options_type), intent(inout)::options
 
         if (options%t_offset.eq.(-9999)) then
-            if (options%warning_level>0) then
-                write(*,*) "WARNING, WARNING, WARNING"
-                write(*,*) "WARNING, Using default t_offset=0"
-                write(*,*) "WARNING, WARNING, WARNING"
-            endif
+            ! if (options%warning_level>0) then
+            !     write(*,*) "WARNING, WARNING, WARNING"
+            !     write(*,*) "WARNING, Using default t_offset=0"
+            !     write(*,*) "WARNING, WARNING, WARNING"
+            ! endif
             options%t_offset = 0
         endif
 

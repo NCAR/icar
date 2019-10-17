@@ -10,6 +10,7 @@ submodule(options_interface) options_implementation
     use string,                     only : str
     use model_tracking,             only : print_model_diffs
 
+    use convection,                 only : cu_var_request
     use land_surface,               only : lsm_var_request
     use radiation,                  only : ra_var_request
     use microphysics,               only : mp_var_request
@@ -45,65 +46,31 @@ contains
         character(len=MAXFILELENGTH) :: options_filename
         integer :: i
 
-        this%comment = "This is a test"
+        options_filename = get_options_file()
+        if (this_image()==1) write(*,*) "Using options file = ", trim(options_filename)
 
-        ! allocate(this%parameters[*])
-        ! allocate(this%physics[*])
-        ! allocate(this%mp_options[*])
-        ! allocate(this%lt_options[*])
-        ! allocate(this%block_options[*])
-        ! allocate(this%adv_options[*])
-        ! allocate(this%lsm_options[*])
-        ! allocate(this%bias_options[*])
+        call version_check(         options_filename,   this%parameters)
+        call physics_namelist(      options_filename,   this)
+        call var_namelist(          options_filename,   this%parameters)
+        call parameters_namelist(   options_filename,   this%parameters)
+        call model_levels_namelist( options_filename,   this%parameters)
 
-        ! Uses just the first image to read the options files from the disk to avoid potentially having
-        ! thousands of images hit the disk simultaneously
-        ! if (this_image()==1) then
-            options_filename=get_options_file()
-            if (this_image()==1) write(*,*) "Using options file = ", trim(options_filename)
+        call lt_parameters_namelist(    this%parameters%lt_options_filename,    this)
+        call block_parameters_namelist( this%parameters%block_options_filename, this)
+        call mp_parameters_namelist(    this%parameters%mp_options_filename,    this)
+        call adv_parameters_namelist(   this%parameters%adv_options_filename,   this)
+        call lsm_parameters_namelist(   this%parameters%lsm_options_filename,   this)
+        call bias_parameters_namelist(  this%parameters%bias_options_filename,  this)
 
-            call version_check(         options_filename,   this%parameters)
-            call physics_namelist(      options_filename,   this)
-            call var_namelist(          options_filename,   this%parameters)
-            call parameters_namelist(   options_filename,   this%parameters)
-            call model_levels_namelist( options_filename,   this%parameters)
+        if (this%parameters%restart) then
+            call init_restart_options(options_filename, this%parameters)
+            this%parameters%start_time = this%parameters%restart_time
+        endif
 
-            call lt_parameters_namelist(    this%parameters%lt_options_filename,    this)
-            call block_parameters_namelist( this%parameters%block_options_filename, this)
-            call mp_parameters_namelist(    this%parameters%mp_options_filename,    this)
-            call adv_parameters_namelist(   this%parameters%adv_options_filename,   this)
-            call lsm_parameters_namelist(   this%parameters%lsm_options_filename,   this)
-            call bias_parameters_namelist(  this%parameters%bias_options_filename,  this)
+        call filename_namelist(options_filename, this%parameters)
 
-            if (this%parameters%restart) then
-                call init_restart_options(options_filename, this%parameters)
-                this%parameters%start_time = this%parameters%restart_time
-            endif
-
-            call filename_namelist(options_filename, this%parameters)
-            ! check for any inconsistencies in the options requested
-            call options_check(this)
-
-        ! endif
-
-        ! sync all
-
-        ! Note, this is a really inefficient broadcast mechanism, should move to a more efficient form at some point
-        ! unfortunately, this slows down on large numbers of images
-        ! Note that looping like this is MUCH faster than just letting all processes grab data
-        ! do i=2,num_images()
-        !     if (this_image()==i) then
-        !         this%parameters     = this%parameters[1]
-        !         this%physics        = this%physics[1]
-        !         this%mp_options     = this%mp_options[1]
-        !         this%lt_options     = this%lt_options[1]
-        !         this%block_options  = this%block_options[1]
-        !         this%adv_options    = this%adv_options[1]
-        !         this%lsm_options    = this%lsm_options[1]
-        !         this%bias_options   = this%bias_options[1]
-        !     endif
-        !     sync all
-        ! end do
+        ! check for any inconsistencies in the options requested
+        call options_check(this)
 
         call collect_physics_requests(this)
 
@@ -121,6 +88,7 @@ contains
 
         call ra_var_request(options)
         call lsm_var_request(options)
+        call cu_var_request(options)
         call mp_var_request(options)
         call adv_var_request(options)
 
@@ -341,11 +309,11 @@ contains
         type(options_t), intent(inout)::options
 
         if (options%parameters%t_offset.eq.(-9999)) then
-            if (options%parameters%warning_level>0) then
-                if (this_image()==1) write(*,*) "WARNING, WARNING, WARNING"
-                if (this_image()==1) write(*,*) "WARNING, Using default t_offset=0"
-                if (this_image()==1) write(*,*) "WARNING, WARNING, WARNING"
-            endif
+            ! if (options%parameters%warning_level>0) then
+            !     if (this_image()==1) write(*,*) "WARNING, WARNING, WARNING"
+            !     if (this_image()==1) write(*,*) "WARNING, Using default t_offset=0"
+            !     if (this_image()==1) write(*,*) "WARNING, WARNING, WARNING"
+            ! endif
             options%parameters%t_offset = 0
         endif
 

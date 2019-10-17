@@ -47,6 +47,7 @@ module icar_constants
         integer :: graupel_in_air
         integer :: graupel_number_concentration
         integer :: precipitation
+        integer :: convective_precipitation
         integer :: snowfall
         integer :: graupel
         integer :: exner
@@ -87,6 +88,18 @@ module icar_constants
         integer :: u_longitude
         integer :: v_latitude
         integer :: v_longitude
+        integer :: tend_qv_adv
+        integer :: tend_qv_pbl
+        integer :: tend_qv
+        integer :: tend_th
+        integer :: tend_qc
+        integer :: tend_qi
+        integer :: tend_qs
+        integer :: tend_qr
+        integer :: tend_u
+        integer :: tend_v
+        integer :: znu
+        integer :: znw
         integer :: last_var
     end type var_constants_type
 
@@ -95,7 +108,9 @@ module icar_constants
                                                            21, 22, 23, 24, 25, 26, 27, 28, 29, 30,  &
                                                            31, 32, 33, 34, 35, 36, 37, 38, 39, 40,  &
                                                            41, 42, 43, 44, 45, 46, 47, 48, 49, 50,  &
-                                                           51, 52, 53, 54, 55, 56, 57, 58, 59, 60  )
+                                                           51, 52, 53, 54, 55, 56, 57, 58, 59, 60,  &
+                                                           61, 62, 63, 64, 65, 66, 67, 68, 69, 70,  &
+                                                           71, 72, 73 )
 
     integer, parameter :: kINTEGER_BITS     = storage_size(kINTEGER_BITS)
     integer, parameter :: kMAX_STORAGE_VARS = storage_size(kVARS) / kINTEGER_BITS

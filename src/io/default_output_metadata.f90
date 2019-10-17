@@ -373,6 +373,17 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
+        !!  Accumulated convective precipitation at the surface
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%convective_precipitation))
+            var%name        = "cu_precipitation"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "convective_precipitation_amount"),     &
+                               attribute_t("units",         "kg m-2"),                              &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
         !!  Accumulated snowfall at the surface
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%snowfall))
