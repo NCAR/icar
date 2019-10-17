@@ -6,6 +6,8 @@ import multiprocessing as mp
 import numpy as np
 import xarray as xr
 
+import sys
+
 pool = None
 
 # This should be an input, this is the search string that is assumed to match
@@ -92,7 +94,7 @@ def agg_file(first_file):
     Result: aggregated dataset is written to a netcdf file'''
 
     print(first_file)
-    date_search = first_file.replace("_000001_","*")
+    date_search = first_file.replace("000001_","*")
     this_date_files = glob.glob(date_search)
     this_date_files.sort()
 
@@ -125,7 +127,6 @@ def agg_file(first_file):
         ys, ye = jts - jds, jte - jds + 1
         zs, ze = kts - kds, kte - kds + 1
 
-
         for v in d.variables:
             dims   = d[v].dims
             x_off, y_off = get_dim_offset(dims)
@@ -140,9 +141,10 @@ def agg_file(first_file):
             if len(dims) == 4:
                 data_set[v].values[:,zs:ze, ys:ye+y_off, xs:xe+x_off] = d[v].values[:,zts:zte, yts:yte+y_off, xts:xte+x_off]
 
-    data_set.to_netcdf(first_file.replace("_000001_","_"))
+    print(first_file.replace("000001_","_"))
+    data_set.to_netcdf(first_file.replace("000001_","_"))
 
-def main():
+def main(file_search = "icar_out{ens}_*"):
     first_files = glob.glob(file_search.format(ens="000001"))
     first_files.sort()
 
@@ -159,4 +161,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) > 1:
+        main(sys.argv[1])
+    else:
+        main()
