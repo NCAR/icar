@@ -1413,11 +1413,17 @@ contains
         ! the current model state
         call update_dxdt(bc,domain)
 
-        ! we need the internal values of these fields to be in sync with the high res model
-        ! for the linear wind calculations... albeit these are for time t, and winds are for time t+1
-        bc%next_domain%qv=domain%qv
-        bc%next_domain%th=domain%th
-        bc%next_domain%cloud=domain%cloud + domain%ice + domain%qrain + domain%qsnow
+        ! 20190513 jh ... added an option to calculate the Brunt Vaisala frequency from the forcing dataset
+        !                 instead of the current state of the ICAR domain. If that option is set to true then
+        !                 we skip the assignment of domain quantities to bc%next_domain. That way we don't over
+        !                 write the values of the quantities in the forcing already stored there.
+        if (.NOT. options%lt_options%N_from_forcing) then
+            ! we need the internal values of these fields to be in sync with the high res model
+            ! for the linear wind calculations... albeit these are for time t, and winds are for time t+1
+            bc%next_domain%qv=domain%qv
+            bc%next_domain%th=domain%th
+            bc%next_domain%cloud=domain%cloud + domain%ice + domain%qrain + domain%qsnow
+        endif
 
         ! these are required by update_winds for most options
         bc%next_domain%pii = (bc%next_domain%p / 100000.0)** (Rd / cp)

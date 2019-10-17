@@ -381,6 +381,7 @@ module data_structures
         real    :: min_stability            ! these may need to be a little narrower.
         logical :: variable_N               ! Compute the Brunt Vaisala Frequency (N^2) every time step
         logical :: smooth_nsq               ! Smooth the Calculated N^2 over vert_smooth vertical levels
+        logical :: N_from_forcing           ! If true N is calculated from the forcing data at every forcing timestep instead of using the atmosperic fields of ICAR (standard: False)
         integer :: vert_smooth              ! number of model levels to smooth winds over in the vertical
 
         real    :: N_squared                ! static Brunt Vaisala Frequency (N^2) to use
