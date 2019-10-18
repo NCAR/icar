@@ -1022,9 +1022,20 @@ contains
         logical :: boundary_buffer          ! apply some smoothing to the x and y boundaries in MPDATA
         logical :: flux_corrected_transport ! use the flux corrected transport option in MPDATA
         integer :: mpdata_order             ! MPDATA order of correction (e.g. 1st=upwind, 2nd=classic, 3rd=better)
+        ! jhorak: options to choose the boundary condition used at the model top added.
+        ! option values and the associated boundary condition are:
+        ! 0 ... zero gradient (default behaviour if not set)
+        ! 1 ... constant gradient BC (or adjusted correspondingly if this would lead to a negative value)
+        ! 2 ... zero value 
+        ! 3 ... zero value but on the flux divergence in the topmost vertical layer for downdrafts
+        integer :: bc_top                   ! type of boundary condition to apply to microphysics fields (qv,qc,qi,qr,qs,qg) at the model top
+        integer :: bc_th_top                ! type of boundary condition to apply to potential temperature at the model
+
+
+
 
         ! define the namelist
-        namelist /adv_parameters/ boundary_buffer, flux_corrected_transport, mpdata_order
+        namelist /adv_parameters/ boundary_buffer, flux_corrected_transport, mpdata_order, bc_top, bc_th_top
 
          ! because adv_options could be in a separate file
          if (options%use_adv_options) then
@@ -1038,6 +1049,8 @@ contains
         boundary_buffer = .False.
         flux_corrected_transport = .True.
         mpdata_order = 2
+        bc_top = 0      
+        bc_th_top = 0
 
         ! read the namelist options
         if (options%use_adv_options) then
@@ -1050,6 +1063,30 @@ contains
         adv_options%boundary_buffer = boundary_buffer
         adv_options%flux_corrected_transport = flux_corrected_transport
         adv_options%mpdata_order = mpdata_order
+        adv_options%bc_top = bc_top
+        adv_options%bc_th_top = bc_th_top
+
+        if (options%debug) then
+                if (adv_options%bc_top > 0) then
+                        write(*,*) "DEBUG"
+                        write(*,*) "DEBUG experimental boundary condition applied to microphysics fields at model"
+                        if (adv_options%bc_top == 1) then
+                                write(*,*) "DEBUG constant gradient boundary condition for microphysics fields"
+                        endif
+                        if (adv_options%bc_top == 2) then
+                                write(*,*) "DEBUG zero value on inflow, zero-gradient on outflow for microphysics fields"
+                        endif
+                        write(*,*) "DEBUG"
+                endif
+                if (adv_options%bc_th_top > 0) then
+                        write(*,*) "DEBUG"
+                        write(*,*) "DEBUG experimental boundary condition applied at model"
+                        if (adv_options%bc_th_top == 1) then
+                                write(*,*) "DEBUG constant gradient boundary condition for potential temperature"
+                        endif
+                        write(*,*) "DEBUG"
+                endif
+        endif
 
         ! copy the data back into the global options data structure
         options%adv_options = adv_options

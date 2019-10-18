@@ -40,33 +40,76 @@ contains
 !         f= ((U+ABS(U)) * l + (U-ABS(U)) * r)/2
 !
 !     end subroutine flux2
-
-    subroutine advect3d(q,u,v,w,rho,dz,nx,nz,ny,options)
+!
+!    modifications:
+!
+!    20190402 jh ... added integer that indicates which boundary condition to use for the quantity.
+!                    0 ... zero gradient (default)
+!                    1 ... constant gradient
+!                    2 ... zero value
+!                    3 ... zero value but for the flux gradient over the topmost vertical layer
+!
+    subroutine advect3d(q,u,v,w,rho,dz,nx,nz,ny,options,bctop)
         implicit none
         real, dimension(1:nx,  1:nz,1:ny),  intent(inout)   :: q
         real, dimension(1:nx,  1:nz,1:ny),  intent(in)      :: w
         real, dimension(1:nx-1,1:nz,1:ny),  intent(in)      :: u
         real, dimension(1:nx,  1:nz,1:ny-1),intent(in)      :: v
-        real, dimension(:, :, :),  intent(in)      :: rho
-        real, dimension(:, :, :),  intent(in)      :: dz
+        real, dimension(:, :, :),           intent(in)      :: rho
+        real, dimension(:, :, :),           intent(in)      :: dz
         integer,                            intent(in)      :: ny, nz, nx
+        integer,                            intent(in)      :: bctop
         type(options_type), intent(in)::options
+
 
         ! interal parameters
         integer                         :: err, i
         real, dimension(1:nx,1:nz,1:ny) :: qin
-        real, dimension(1:nx-1,1:nz)    :: f1   ! historical note, there used to be an f2 to store f[x+1]
+        real, dimension(1:nx,1:nz,1:ny) :: qinbc ! equal to qin if bc_top is not set or set to zero
+        real, dimension(1:nx-1,1:nz)    :: f1    ! historical note, there used to be an f2 to store f[x+1]
         real, dimension(1:nx-2,1:nz)    :: f3,f4
         real, dimension(1:nx-2,1:nz-1)  :: f5
 
-        !$omp parallel shared(qin,q,u,v,w,rho,dz) firstprivate(nx,ny,nz) private(i,f1,f3,f4,f5)
+        !$omp parallel shared(qin,qinbc,q,u,v,w,rho,dz) firstprivate(nx,ny,nz) private(i,f1,f3,f4,f5)
         !$omp do schedule(static)
         do i=1,ny
             qin(:,:,i)=q(:,:,i)
+            qinbc(:,:,i)=q(:,:,i)
         enddo
         !$omp end do
 
         !$omp barrier
+
+        ! ---------------
+        ! jhorak:
+        ! if alternative boundary conditions for the model top are set, this if clause triggers.
+        ! the standard bc (bctop = 0) currently is a zero gradient boundary condition for all quantities
+        ! in this case the if clause is ignored.
+        ! ---------------
+        if (bctop /= 0) then
+            if (bctop == 1) then
+                ! constant gradient BC. If q_{n+1}<= 0 it is set to zero.
+                ! we basically extrapolate q_{n+1} linearly from q_{n} and q_{n-1}.
+                ! here n is the number of vertical levels
+                qinbc(:,nz,:) = qin(:,nz,:)+( qin(:,nz,:)-qin(:,nz-1,:) )
+                ! if one of the quantities is now negative we correct that to zero.
+                where (qinbc(:,nz,:) < 0) qinbc(:,nz,:) = 0
+                
+            elseif (bctop == 2) then
+                ! zero value BC. We set q_{n+1} = 0 where n is the number of vertical levels
+                ! only inflow (downdraft) needs adjusting since for updrafts no quantity outside
+                ! the domain is necessary for the calculation
+                where (w(:,nz,:) < 0) qinbc(:,nz,:) = 0
+                
+            elseif (bctop == 3) then
+                ! zero value BC for flux gradient of the topmost level for downdrafts
+                ! this ensures that a downdraft at the model top wont change the content
+                ! of the topmost grid cell. Again only needed for downdrafts since
+                ! updraft advection doesn't required an assumption about the quantity
+                ! outside of the model domain.
+                where (w(:,nz,:) < 0) qinbc(:,nz,:) = (w(:,nz-1,:)/w(:,nz,:)) * qin(:,nz,:)
+            endif
+        endif
 
         !$omp do schedule(static)
         do i=2,ny-1
@@ -87,7 +130,8 @@ contains
                  (v(2:nx-1,:,i-1)    - ABS(v(2:nx-1,:,i-1)))    * qin(2:nx-1,:,i))   / 2
 
             f5= ((w(2:nx-1,1:nz-1,i) + ABS(w(2:nx-1,1:nz-1,i))) * qin(2:nx-1,1:nz-1,i) + &
-                 (w(2:nx-1,1:nz-1,i) - ABS(w(2:nx-1,1:nz-1,i))) * qin(2:nx-1,2:nz,i))  / 2
+                 (w(2:nx-1,1:nz-1,i) - ABS(w(2:nx-1,1:nz-1,i))) * qin(2:nx-1,2:nz,i)) / 2
+
 
            if (options%advect_density) then
                ! perform horizontal advection
@@ -102,7 +146,7 @@ contains
                q(2:nx-1,1,i)      = q(2:nx-1,1,i)      - f5(:,1)                                             &
                                     / rho(2:nx-1,1,i) / dz(2:nx-1,1,i)
                ! add fluxes to top layer
-               q(2:nx-1,nz,i)     = q(2:nx-1,nz,i)     - (qin(2:nx-1,nz,i) * w(2:nx-1,nz,i)-f5(:,nz-1))      &
+               q(2:nx-1,nz,i)     = q(2:nx-1,nz,i) - (qinbc(2:nx-1,nz,i) * w(2:nx-1,nz,i) - f5(:,nz-1))      &
                                     / rho(2:nx-1,nz,i) / dz(2:nx-1,nz,i)
            else
                ! perform horizontal advection
@@ -113,7 +157,7 @@ contains
                ! add fluxes to bottom layer
                q(2:nx-1,1,i)      = q(2:nx-1,1,i)       - f5(:,1)
                ! add fluxes to top layer
-               q(2:nx-1,nz,i)     = q(2:nx-1,nz,i)      - (qin(2:nx-1,nz,i) * w(2:nx-1,nz,i) - f5(:,nz-1))
+               q(2:nx-1,nz,i)     = q(2:nx-1,nz,i) - (qinbc(2:nx-1,nz,i) * w(2:nx-1,nz,i) - f5(:,nz-1))               
            endif
         enddo
         !$omp end do
@@ -222,8 +266,8 @@ contains
         domain%u_cu(:,nz,:) = 0
         domain%v_cu(:,nz,:) = 0
 
-        call advect3d(domain%u_cu, U_4cu_u,V_4cu_u,W_4cu_u, domain%rho, domain%dz_inter, nx+1,nz,ny, options)
-        call advect3d(domain%v_cu, U_4cu_v,V_4cu_v,W_4cu_v, domain%rho, domain%dz_inter, nx,nz,ny+1, options)
+        call advect3d(domain%u_cu, U_4cu_u,V_4cu_u,W_4cu_u, domain%rho, domain%dz_inter, nx+1,nz,ny, options, 0) ! the last parameter (0) indicates the boundary condition to be used for advection
+        call advect3d(domain%v_cu, U_4cu_v,V_4cu_v,W_4cu_v, domain%rho, domain%dz_inter, nx,nz,ny+1, options, 0) ! at the model top. 0 corresponds to the default zero gradient BC
 
     end subroutine advect_cu_winds
 
@@ -290,26 +334,37 @@ contains
 
         lastqv_m=domain%qv
 
-        call advect3d(domain%qv,          U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-        call advect3d(domain%cloud,       U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-        call advect3d(domain%qrain,       U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-        call advect3d(domain%qsnow,       U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-        call advect3d(domain%th,          U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
+        ! 20190402 jh ... added the boundary condition to be used at the model top to the function call of
+        !                 advect3d. depending on the option set the behaviour is modified accordingly.
+        !                 the boundary condition settings currently implemented are
+        !
+        !                 0 ... zero gradient on the quantitiy (default)
+        !                 1 ... constant gradient on the quantitiy
+        !                 2 ... zero value on the quantity
+        !                 3 ... zero value on the flux gradient over the topmost vertical layer
+        !                   
+        !                 currently implemented for upwind advection
+        
+        call advect3d(domain%qv,          U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options,options%adv_options%bc_top)
+        call advect3d(domain%cloud,       U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options,options%adv_options%bc_top)
+        call advect3d(domain%qrain,       U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options,options%adv_options%bc_top)
+        call advect3d(domain%qsnow,       U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options,options%adv_options%bc_top)
+        call advect3d(domain%th,          U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options,options%adv_options%bc_th_top)
         if (options%physics%microphysics == kMP_THOMPSON) then
-            call advect3d(domain%ice,     U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-            call advect3d(domain%qgrau,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-            call advect3d(domain%nice,    U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-            call advect3d(domain%nrain,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
+            call advect3d(domain%ice,     U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options,options%adv_options%bc_top)
+            call advect3d(domain%qgrau,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options,options%adv_options%bc_top)
+            call advect3d(domain%nice,    U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options,options%adv_options%bc_top)
+            call advect3d(domain%nrain,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options,options%adv_options%bc_top)
         elseif (options%physics%microphysics == kMP_MORRISON) then
-            call advect3d(domain%ice,     U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-            call advect3d(domain%qgrau,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-            call advect3d(domain%nice,    U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-            call advect3d(domain%nrain,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-            call advect3d(domain%nsnow,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-            call advect3d(domain%ngraupel,U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
+            call advect3d(domain%ice,     U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options,options%adv_options%bc_top)
+            call advect3d(domain%qgrau,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options,options%adv_options%bc_top)
+            call advect3d(domain%nice,    U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options,options%adv_options%bc_top)
+            call advect3d(domain%nrain,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options,options%adv_options%bc_top)
+            call advect3d(domain%nsnow,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options,options%adv_options%bc_top)
+            call advect3d(domain%ngraupel,U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options,options%adv_options%bc_top)
         elseif (options%physics%microphysics == kMP_WSM6) then
-            call advect3d(domain%ice,     U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
-            call advect3d(domain%qgrau,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options)
+            call advect3d(domain%ice,     U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options,options%adv_options%bc_top)
+            call advect3d(domain%qgrau,   U_m,V_m,W_m, domain%rho, domain%dz_inter, nx,nz,ny, options,options%adv_options%bc_top)
         endif
 
         ! if (options%physics%convection > 0) then
