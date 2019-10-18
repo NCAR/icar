@@ -28,6 +28,12 @@ module time_step
     private
     public :: step
 
+    !  temporary variables used to update the w_real state. This should move to mod_atm_utilities
+    real, allocatable :: lastw(:,:)
+    real, allocatable :: currw(:,:)
+    real, allocatable :: uw(:,:)
+    real, allocatable :: vw(:,:)
+
 contains
 
 
@@ -44,21 +50,22 @@ contains
         implicit none
         type(domain_t),  intent(inout)   :: domain
         type(options_t), intent(in)      :: options
+        integer :: z
 
-        associate(ims                   => domain%ims,                          &
-                  ime                   => domain%ime,                          &
-                  jms                   => domain%jms,                          &
-                  jme                   => domain%jme,                          &
-                  kms                   => domain%kms,                          &
-                  kme                   => domain%kme,                          &
+        associate(ims => domain%ims, ime => domain%ime,                         &
+                  jms => domain%jms, jme => domain%jme,                         &
+                  kms => domain%kms, kme => domain%kme,                         &
                   exner                 => domain%exner%data_3d,                &
                   pressure              => domain%pressure%data_3d,             &
                   pressure_i            => domain%pressure_interface%data_3d,   &
+                  dz_interface          => domain%dz_interface%data_3d,         &
                   psfc                  => domain%surface_pressure%data_2d,     &
                   density               => domain%density%data_3d,              &
                   temperature           => domain%temperature%data_3d,          &
                   u                     => domain%u%data_3d,                    &
                   v                     => domain%v%data_3d,                    &
+                  w                     => domain%w%data_3d,                    &
+                  w_real                => domain%w_real%data_3d,               &
                   u_mass                => domain%u_mass%data_3d,               &
                   v_mass                => domain%v_mass%data_3d,               &
                   potential_temperature => domain%potential_temperature%data_3d )
@@ -81,22 +88,11 @@ contains
         u_mass = (u(ims+1:ime+1,:,:) + u(ims:ime,:,:)) / 2
         v_mass = (v(:,:,jms+1:jme+1) + v(:,:,jms:jme)) / 2
 
-        end associate
 
     ! NOTE: all code below is not implemented in ICAR 2.0 yet
     ! it is left as a reminder of what needs to be done, and example when the time comes
     !
-    !     integer :: nx,ny,nz, y, z
-    !
-    !     nx=size(domain%p,1)
-    !     nz=size(domain%p,2)
-    !     ny=size(domain%p,3)
-    !
-    !     ! update p_inter, psfc, ptop, Um, Vm, mut
-    !     if (options%physics%convection>0) then
-    !         domain%Um = domain%Um + 0.5*(domain%u_cu(1:nx-1,:,:)+domain%u_cu(2:nx,:,:))
-    !         domain%Vm = domain%Vm + 0.5*(domain%v_cu(:,:,1:ny-1)+domain%v_cu(:,:,2:ny))
-    !     endif
+    !     ! update mut
     !
     !     domain%p_inter=domain%p
     !     call update_pressure(domain%p_inter, domain%z, domain%z_inter, domain%t)
@@ -108,12 +104,12 @@ contains
     !     domain%mut(:,1:nz-1,:) = domain%p_inter(:,1:nz-1,:) - domain%p_inter(:,2:nz,:)
     !     domain%mut(:,nz,:) = domain%p_inter(:,nz,:) - domain%ptop
     !
-    !     if (.not.allocated(lastw)) then
-    !         allocate(lastw(nx-2,ny-2))
-    !         allocate(currw(nx-2,ny-2))
-    !         allocate(uw(nx-1,ny-2))
-    !         allocate(vw(nx-2,ny-1))
-    !     endif
+        if (.not.allocated(lastw)) then
+            allocate( lastw( ims+1:ime-1, jms+1:jme-1))
+            allocate( currw( ims+1:ime-1, jms+1:jme-1))
+            allocate(    uw( ims+1:ime,   jms+1:jme-1))
+            allocate(    vw( ims+1:ime-1, jms+1:jme  ))
+        endif
     !
     !     ! temporary constant
     !     ! use log-law of the wall to convert from first model level to surface
@@ -128,29 +124,30 @@ contains
     !     ! now calculate master ustar based on U and V combined in quadrature
     !     domain%ustar(2:nx-1,2:ny-1) = sqrt(domain%Um(2:nx-1,1,2:ny-1)**2 + domain%Vm(2:nx-1,1,2:ny-1)**2) * currw
     !
-    !     ! finally, calculate the real vertical motions (including U*dzdx + V*dzdy)
-    !     lastw=0
-    !     do z=1,nz
-    !         ! compute the U * dz/dx component of vertical motion
-    !         uw    = domain%u(2:nx,  z,2:ny-1) * domain%dzdx(:,2:ny-1)
-    !         ! compute the V * dz/dy component of vertical motion
-    !         vw    = domain%v(2:nx-1,z,2:ny  ) * domain%dzdy(2:nx-1,:)
-    !         ! convert the W grid relative motion to m/s
-    !         currw = domain%w(2:nx-1,z,2:ny-1) * domain%dz_inter(2:nx-1,z,2:ny-1) / domain%dx
-    !
-    !         if (options%physics%convection>0) then
-    !             currw = currw + domain%w_cu(2:nx-1,z,2:ny-1) * domain%dz_inter(2:nx-1,z,2:ny-1) / domain%dx
-    !         endif
-    !
-    !         ! compute the real vertical velocity of air by combining the different components onto the mass grid
-    !         ! includes vertical interpolation between w_z-1/2 and w_z+1/2
-    !         domain%w_real(2:nx-1,z,2:ny-1) = (uw(1:nx-2,:) + uw(2:nx-1,:))*0.5 &
-    !                                         +(vw(:,1:ny-2) + vw(:,2:ny-1))*0.5 &
-    !                                         +(lastw + currw) * 0.5
-    !
-    !         lastw=currw ! could avoid this memcopy cost using pointers or a single manual loop unroll
-    !     end do
-    !
+        ! finally, calculate the real vertical motions (including U*dzdx + V*dzdy)
+        lastw = 0
+        do z = kms, kme
+            ! compute the U * dz/dx component of vertical motion
+            uw    = u(ims+1:ime,   z, jms+1:jme-1) * domain%dzdx(:,z,jms+1:jme-1)
+            ! compute the V * dz/dy component of vertical motion
+            vw    = v(ims+1:ime-1, z, jms+1:jme  ) * domain%dzdy(ims+1:ime-1,z,:)
+            ! convert the W grid relative motion to m/s
+            currw = w(ims+1:ime-1, z, jms+1:jme-1) * dz_interface(ims+1:ime-1, z, jms+1:jme-1) / domain%dx
+
+            ! if (options%physics%convection>0) then
+            !     currw = currw + domain%w_cu(2:nx-1,z,2:ny-1) * domain%dz_inter(2:nx-1,z,2:ny-1) / domain%dx
+            ! endif
+
+            ! compute the real vertical velocity of air by combining the different components onto the mass grid
+            ! includes vertical interpolation between w_z-1/2 and w_z+1/2
+            w_real(ims+1:ime-1, z, jms+1:jme-1) = (uw(ims+1:ime-1,:) + uw(ims+2:ime,:))*0.5 &
+                                                 +(vw(:,jms+1:jme-1) + vw(:,jms+2:jme))*0.5 &
+                                                 +(lastw + currw) * 0.5
+
+            lastw = currw ! could avoid this memcopy cost using pointers or a single manual loop unroll
+        end do
+        end associate
+
     end subroutine diagnostic_update
 
 

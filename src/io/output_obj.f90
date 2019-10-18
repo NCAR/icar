@@ -50,6 +50,9 @@ contains
         if (err /= NF90_NOERR) then
             call check( nf90_create(filename, NF90_CLOBBER, this%ncfile_id), "Opening:"//trim(filename))
             this%creating=.True.
+        else
+            ! in case we need to add a new variable when setting up variables
+            call check(nf90_redef(this%ncfile_id), "Setting redefine mode for: "//trim(filename))
         endif
 
         ! define variables or find variable IDs (and dimensions)
@@ -59,9 +62,9 @@ contains
             ! add global attributes such as the image number, domain dimension, creation time
             call add_global_attributes(this)
 
-            ! End define mode. This tells netCDF we are done defining metadata.
-            call check( nf90_enddef(this%ncfile_id), "end define mode" )
         endif
+        ! End define mode. This tells netCDF we are done defining metadata.
+        call check( nf90_enddef(this%ncfile_id), "end define mode" )
 
         ! store output
         call save_data(this, current_step, time)
@@ -79,6 +82,7 @@ contains
         if (0<var_list( kVARS%u) )                          call this%add_to_output( get_metadata( kVARS%u                            , domain%u%data_3d))
         if (0<var_list( kVARS%v) )                          call this%add_to_output( get_metadata( kVARS%v                            , domain%v%data_3d))
         if (0<var_list( kVARS%w) )                          call this%add_to_output( get_metadata( kVARS%w                            , domain%w%data_3d))
+        if (0<var_list( kVARS%w) )                          call this%add_to_output( get_metadata( kVARS%w_real                       , domain%w_real%data_3d))
         if (0<var_list( kVARS%water_vapor) )                call this%add_to_output( get_metadata( kVARS%water_vapor                  , domain%water_vapor%data_3d))
         if (0<var_list( kVARS%potential_temperature) )      call this%add_to_output( get_metadata( kVARS%potential_temperature        , domain%potential_temperature%data_3d))
         if (0<var_list( kVARS%cloud_water) )                call this%add_to_output( get_metadata( kVARS%cloud_water                  , domain%cloud_water_mass%data_3d))

@@ -634,6 +634,15 @@ contains
                                     this% kms : this% kme, &
                                     this% jms : this% jme) )
 
+        allocate(this%dzdx(this% ims+1 : this% ime, &
+                           this% kms : this% kme, &
+                           this% jms : this% jme) )
+
+        allocate(this%dzdy(this% ims : this% ime, &
+                           this% kms : this% kme, &
+                           this% jms+1 : this% jme) )
+
+
         allocate(this%zr_u( this%u_grid2d_ext% ims : this%u_grid2d_ext% ime,   &
                             this%u_grid%       kms : this%u_grid%       kme,   &
                             this%u_grid2d_ext% jms : this%u_grid2d_ext% jme) )
@@ -643,7 +652,10 @@ contains
                             this%v_grid2d_ext% jms : this%v_grid2d_ext% jme) )
 
 
-        associate(z                     => this%z%data_3d,                      &
+        associate(ims => this%ims,      ime => this%ime,                        &
+                  jms => this%jms,      jme => this%jme,                        &
+                  kms => this%kms,      kme => this%kme,                        &
+                  z                     => this%z%data_3d,                      &
                   z_u                   => this%geo_u%z,                        &
                   z_v                   => this%geo_v%z,                        &
                   z_interface           => this%z_interface%data_3d,            &
@@ -651,6 +663,8 @@ contains
                   dz_mass               => this%dz_mass%data_3d,                &
                   dz_interface          => this%dz_interface%data_3d,           &
                   terrain               => this%terrain%data_2d,                &
+                  dzdx                  => this%dzdx,                           &
+                  dzdy                  => this%dzdy,                           &
                   z_level_ratio         => this%z_level_ratio,                  &
                   zr_u                  => this%zr_u,                           &
                   zr_v                  => this%zr_v)
@@ -700,6 +714,9 @@ contains
             z_u(:,i,:)          = z_u(:,i,:) + dz(i) / 2 * zr_u(:,i,:)
             z_v(:,i,:)          = z_v(:,i,:) + dz(i) / 2 * zr_v(:,i,:)
 
+            dzdx(:,i,:) = (z(ims+1:ime,i,:) - z(ims:ime-1,i,:)) / this%dx
+            dzdy(:,i,:) = (z(:,i,jms+1:jme) - z(:,i,jms:jme-1)) / this%dx
+
             do i = this%grid%kms+1, this%grid%kme
                 if (i<=max_level) then
                     z_level_ratio(:,i,:) = z_level_ratio(:,i-1,:)
@@ -719,6 +736,8 @@ contains
                 z_u(:,i,:)         = z_u(:,i-1,:)         + ((dz(i) * zr_u(:,i,:) + dz(i-1) * zr_u(:,i-1,:)) / 2)
                 z_v(:,i,:)         = z_v(:,i-1,:)         + ((dz(i) * zr_v(:,i,:) + dz(i-1) * zr_v(:,i-1,:)) / 2)
 
+                dzdx(:,i,:) = (z(ims+1:ime,i,:) - z(ims:ime-1,i,:)) / this%dx
+                dzdy(:,i,:) = (z(:,i,jms+1:jme) - z(:,i,jms:jme-1)) / this%dx
             enddo
 
         end associate

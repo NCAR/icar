@@ -164,11 +164,22 @@ contains
         !!  W  Vertical Winds
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%w))
+            var%name        = "w_grid"
+            var%dimensions  = three_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "grid_upward_air_velocity"),    &
+                               attribute_t("long_name",     "Vertical wind"),                   &
+                               attribute_t("description",   "Vertical wind relative to the grid"),&
+                               attribute_t("units",         "m s-1"),                           &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        associate(var=>var_meta(kVARS%w_real))
             var%name        = "w"
             var%dimensions  = three_d_t_dimensions
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "upward_air_velocity"),             &
                                attribute_t("long_name",     "Vertical wind"),                   &
+                               attribute_t("description",   "Vertical wind including u/v"),     &
                                attribute_t("units",         "m s-1"),                           &
                                attribute_t("coordinates",   "lat lon")]
         end associate
@@ -353,6 +364,9 @@ contains
                                attribute_t("units",         "cm-3"),                                                 &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Precipitation rate at the surface (requires tracking past precipitation amounts)
+        !!------------------------------------------------------------
         ! associate(var=>var_meta(kVARS%precip_rate))
         !     var%name        = "precip_rate"
         !     var%dimensions  = two_d_t_dimensions

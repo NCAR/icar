@@ -122,6 +122,8 @@ module domain_interface
     real,                       allocatable :: z_level_ratio(:,:,:)
     real,                       allocatable :: zr_u(:,:,:)
     real,                       allocatable :: zr_v(:,:,:)
+    real,                       allocatable :: dzdx(:,:,:) ! change in height with change in x/y position (used to calculate w_real vertical motions)
+    real,                       allocatable :: dzdy(:,:,:) ! change in height with change in x/y position (used to calculate w_real vertical motions)
     real,                       allocatable :: znu(:)
     real,                       allocatable :: znw(:)
 
