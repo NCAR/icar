@@ -27,6 +27,7 @@ program icar
     use initialization,     only : init_model
     use timer_interface,    only : timer_t
     use time_object,        only : Time_type
+    use time_delta_object,  only : time_delta_t
     use wind,               only : update_winds
     use restart_interface,  only : restart_model
     use icar_constants,     only : kVARS
@@ -41,11 +42,15 @@ program icar
     ! type(output_t)  :: surface_dataset
     type(timer_t)   :: initialization_timer, total_timer, input_timer, output_timer, physics_timer
     type(Time_type) :: next_output
+    type(time_delta_t) :: small_time_delta
 
     character(len=1024) :: file_name
     character(len=49)   :: file_date_format = '(I4,"-",I0.2,"-",I0.2,"_",I0.2,"-",I0.2,"-",I0.2)'
     integer :: i
     integer :: output_vars(18)
+
+
+    call small_time_delta%set(1)
 
     call total_timer%start()
     call initialization_timer%start()
@@ -106,7 +111,7 @@ program icar
         !
         ! -----------------------------------------------------
         call input_timer%start()
-        if (boundary%current_time <= domain%model_time ) then
+        if (boundary%current_time <= (domain%model_time + small_time_delta) ) then
             if (this_image()==1) write(*,*) ""
             if (this_image()==1) write(*,*) " ----------------------------------------------------------------------"
             if (this_image()==1) write(*,*) "Updating Boundary conditions"
@@ -147,7 +152,7 @@ program icar
         ! ideally this will just become timer_start, save_file()...
         ! the output object needs a pointer to model_time and will have to know how to create output file names
         call output_timer%start()
-        if (domain%model_time >= next_output) then
+        if ((domain%model_time + small_time_delta) >= next_output) then
             if (this_image()==1) write(*,*) "Writing output file"
             if (i>24) then
                 write(file_name, '(A,I6.6,"_",A,".nc")')    &
