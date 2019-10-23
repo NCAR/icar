@@ -392,6 +392,7 @@ OBJS=	$(BUILD)driver.o            \
 		$(BUILD)lsm_driver.o		\
 		$(BUILD)lsm_noahdrv.o		\
 		$(BUILD)lsm_noahlsm.o		\
+		$(BUILD)water_simple.o		\
 		$(BUILD)geo_reader.o		\
 		$(BUILD)io_routines.o		\
 		$(BUILD)data_structures.o	\
@@ -884,7 +885,7 @@ $(BUILD)domain_obj.o: $(OBJECTS)domain_obj.f90 $(BUILD)domain_h.o $(BUILD)option
 
 $(BUILD)init.o:$(MAIN)init.f90 $(BUILD)data_structures.o $(BUILD)options_h.o $(BUILD)domain_h.o $(BUILD)boundary_h.o \
 	 				$(BUILD)mp_driver.o $(BUILD)advection_driver.o $(BUILD)atm_utilities.o $(BUILD)wind.o $(BUILD)ra_driver.o \
-					$(BUILD)pbl_driver.o $(BUILD)cu_driver.o
+					$(BUILD)pbl_driver.o $(BUILD)cu_driver.o $(BUILD)lsm_driver.o
 
 $(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.o $(BUILD)string.o 	\
 					$(BUILD)advection_driver.o $(BUILD)mp_driver.o $(BUILD)domain_h.o 				\

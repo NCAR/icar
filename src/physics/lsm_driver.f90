@@ -36,7 +36,7 @@ module land_surface
     use module_sf_noahdrv,   only : lsm_noah, lsm_noah_init
     ! use module_lsm_basic,    only : lsm_basic
     ! use module_lsm_simple,   only : lsm_simple, lsm_simple_init
-    ! use module_water_simple, only : water_simple
+    use module_water_simple, only : water_simple
     use mod_atm_utilities,   only : sat_mr
     use time_object,         only : Time_type
     use data_structures
@@ -103,8 +103,8 @@ contains
                          kVARS%skin_temperature, kVARS%soil_water_content, kVARS%soil_temperature, kVARS%terrain,       &
                          kVARS%sensible_heat, kVARS%latent_heat, kVARS%u_10m, kVARS%v_10m, kVARS%temperature_2m,        &
                          kVARS%humidity_2m, kVARS%surface_pressure, kVARS%longwave_up, kVARS%ground_heat_flux,          &
-                         kVARS%soil_totalmoisture, kVARS%soil_deep_temperature, kVARS%roughness_z0, kVARS%veg_type,      &
-                         kVARS%soil_type, kVARS%land_mask])
+                         kVARS%soil_totalmoisture, kVARS%soil_deep_temperature, kVARS%roughness_z0, kVARS%ustar,        &
+                         kVARS%veg_type, kVARS%soil_type, kVARS%land_mask])
 
              call options%advect_vars([kVARS%potential_temperature, kVARS%water_vapor])
 
@@ -116,8 +116,22 @@ contains
                          kVARS%sensible_heat, kVARS%latent_heat, kVARS%u_10m, kVARS%v_10m, kVARS%temperature_2m,        &
                          kVARS%humidity_2m, kVARS%surface_pressure, kVARS%longwave_up, kVARS%ground_heat_flux])
                          ! kVARS%soil_totalmoisture, kVARS%soil_deep_temperature, kVARS%roughness_z0, kVARS%veg_type,      &
-                         ! kVARS%soil_type, kVARS%land_mask, kVARS%vegetation_fraction])
+                         ! kVARS%soil_type, kVARS%land_mask, kVARS%vegetation_fraction]
         endif
+        if (options%physics%watersurface > 1) then
+            call options%alloc_vars( &
+                         [kVARS%sst, kVARS%ustar, kVARS%surface_pressure, kVARS%water_vapor,            &
+                         kVARS%temperature, kVARS%sensible_heat, kVARS%latent_heat, kVARS%land_mask,    &
+                         kVARS%humidity_2m, kVARS%temperature_2m, kVARS%skin_temperature, kVARS%u_10m, kVARS%v_10m])
+
+             call options%advect_vars([kVARS%potential_temperature, kVARS%water_vapor])
+
+             call options%restart_vars( &
+                         [kVARS%sst, kVARS%potential_temperature, kVARS%water_vapor, kVARS%skin_temperature,        &
+                         kVARS%surface_pressure, kVARS%sensible_heat, kVARS%latent_heat, kVARS%u_10m, kVARS%v_10m,  &
+                         kVARS%humidity_2m, kVARS%temperature_2m])
+        endif
+
 
     end subroutine lsm_var_request
 
@@ -375,9 +389,9 @@ contains
         allocate(lhdQV(its:ite,jts:jte))
         lhdQV = 0
         allocate(Z0(ims:ime,jms:jme))
-        Z0 = 0.01 ! this should get updated by the LSM
+        Z0 = domain%roughness_z0%data_2d ! this should get updated by the LSM(?)
         allocate(QSFC(ims:ime,jms:jme))
-        QSFC = domain%water_vapor%data_3d(:,kme,:) ! this should get updated by the lsm
+        QSFC = domain%water_vapor%data_3d(:,kms,:) ! this should get updated by the lsm
         allocate(Ri(ims:ime,jms:jme))
         Ri = 0
         allocate(z_atm(ims:ime,jms:jme))
@@ -396,7 +410,7 @@ contains
         current_precipitation = 0
 
         allocate(windspd(ims:ime,jms:jme))
-        windspd = 0
+        windspd = 3
 
         ! NOTE, these fields have probably not been initialized yet...
         ! windspd = sqrt(domain%u10**2+domain%v10**2)
@@ -419,8 +433,8 @@ contains
 
 
         ! initial guesses (not needed?)
-        domain%temperature_2m%data_2d = 280
-        domain%humidity_2m%data_2d = 0.001  ! domain%water_vapor%data_3d(:,1,:)
+        domain%temperature_2m%data_2d = domain%temperature%data_3d(:,kms,:)
+        domain%humidity_2m%data_2d = domain%water_vapor%data_3d(:,kms,:)
 
         if (options%physics%landsurface==kLSM_SIMPLE) then
             write(*,*) "    Simple LSM (may not work?)"
@@ -523,10 +537,6 @@ contains
             lsm_dt = domain%model_time%seconds() - last_model_time
             last_model_time = domain%model_time%seconds()
 
-            domain%temperature%data_3d = domain%exner%data_3d * domain%potential_temperature%data_3d
-            domain%u_10m%data_2d = domain%u_mass%data_3d(:,1,:)
-            domain%v_10m%data_2d = domain%v_mass%data_3d(:,1,:)
-
             ! exchange coefficients
             windspd = sqrt(domain%u_10m%data_2d**2 + domain%v_10m%data_2d**2)
             if (exchange_term==1) then
@@ -551,13 +561,22 @@ contains
                 !     enddo
                 ! enddo
             ! else
-            ! if (options%physics%watersurface==kWATER_SIMPLE) then
-            !     call water_simple(domain%sst, domain%psfc, windspd, domain%ustar,  &
-            !                       domain%water_vapor%data_3d, domain%t,                             &
-            !                       domain%sensible_heat%data_2d, domain%latent_heat,        &
-            !                       domain%z(:,1,:)-domain%terrain, Z0,              &
-            !                       domain%landmask, QSFC, QFX, domain%skin_t)
-            ! endif
+            if (options%physics%watersurface==kWATER_SIMPLE) then
+
+                call water_simple(domain%sst%data_2d,                   &
+                                  domain%surface_pressure%data_2d,      &
+                                  windspd,                              &
+                                  domain%ustar,                         &
+                                  domain%water_vapor%data_3d,           &
+                                  domain%temperature%data_3d,           &
+                                  domain%sensible_heat%data_2d,         &
+                                  domain%latent_heat%data_2d,           &
+                                  z_atm, domain%roughness_z0%data_2d,   &
+                                  domain%land_mask,                     &
+                                  QSFC,                                 &
+                                  QFX,                                  &
+                                  domain%skin_temperature%data_2d)
+            endif
 
             where(windspd<1) windspd=1 ! minimum wind speed to prevent the exchange coefficient from blowing up
             CHS = CHS * windspd

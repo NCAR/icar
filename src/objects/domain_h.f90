@@ -85,6 +85,7 @@ module domain_interface
     type(variable_t) :: canopy_water
     type(variable_t) :: snow_water_equivalent
     type(variable_t) :: skin_temperature
+    type(variable_t) :: sst
     type(variable_t) :: soil_water_content
     type(variable_t) :: soil_temperature
     type(variable_t) :: soil_totalmoisture
@@ -124,6 +125,7 @@ module domain_interface
     real,                       allocatable :: zr_v(:,:,:)
     real,                       allocatable :: dzdx(:,:,:) ! change in height with change in x/y position (used to calculate w_real vertical motions)
     real,                       allocatable :: dzdy(:,:,:) ! change in height with change in x/y position (used to calculate w_real vertical motions)
+    real,                       allocatable :: ustar(:,:)
     real,                       allocatable :: znu(:)
     real,                       allocatable :: znw(:)
 

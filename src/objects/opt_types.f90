@@ -201,6 +201,7 @@ module options_types
         logical :: time_varying_z       ! read in a new z coordinate every time step and interpolate accordingly
         real :: cfl_reduction_factor    ! amount to multiple CFL by to improve stability (typically 1)
         integer :: cfl_strictness       ! CFL method 1=3D from 1D*sqrt(3), 2=ave.3D wind*sqrt(3), 3=sum.3D wind, 4=opt3 * sqrt(3), 5 = sum(max.3d)
+        real :: stochastic_cu
 
         ! date/time parameters
         type(Time_type) :: initial_time ! Date of the first forcing time step

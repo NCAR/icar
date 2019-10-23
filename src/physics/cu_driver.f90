@@ -89,6 +89,9 @@ contains
             RAINCV = 0
             PRATEC = 0
 
+            allocate(W0AVG(ims:ime,kms:kme,jms:jme))
+            W0AVG = 0
+
             allocate(XLAND(ims:ime,jms:jme))
             XLAND = domain%land_mask
             where(domain%land_mask == 0) XLAND = 2 ! 0 is water if using "LANDMASK" as input
@@ -97,7 +100,7 @@ contains
         if (options%physics%convection == kCU_TIEDTKE) then
             if (this_image()==1) write(*,*) "    Tiedtke Cumulus scheme"
 
-            ! allocate(w_stochastic(ims:ime,kms:kme,jms:jme))
+            allocate(w_stochastic(ims:ime,kms:kme,jms:jme))
             call tiedtkeinit(domain%tend%th,domain%tend%qv,   &
                              domain%tend%qc,domain%tend%qi,   &
                              domain%tend%u, domain%tend%v,    &
@@ -109,8 +112,7 @@ contains
 
          ! elseif (options%physics%convection==kCU_KAINFR) then
          !     write(*,*) "    Kain-Fritsch Cumulus scheme"
-         !     allocate(W0AVG(ids:ide,kds:kde,jds:jde))
-         !     W0AVG=0
+         !
          !     allocate(NCA(ids:ide,jds:jde))
          !     NCA=0
          !     call kfinit(domain%tend%th,domain%tend%qv,   &
@@ -158,13 +160,18 @@ subroutine convect(domain,options,dt_in)
     !$omp end parallel
 
     if (options%physics%convection==kCU_TIEDTKE) then
-        ! call random_number(w_stochastic)
-        ! block
-        !     integer :: i
-        !     do i=1,size(w_stochastic,2)
-        !         w_stochastic(:,i,:) = domain%sensible_heat/500 + w_stochastic(:,i,:)
-        !     enddo
-        ! end block
+        if (options%parameters%stochastic_cu /= kNO_STOCHASTIC) then
+            call random_number(w_stochastic)
+            block
+                integer :: i
+                do i=1,size(w_stochastic,2)
+                    w_stochastic(:,i,:) = domain%sensible_heat%data_2d/500 + w_stochastic(:,i,:)
+                enddo
+            end block
+            W0AVG = domain%w_real%data_3d+(w_stochastic * options%parameters%stochastic_cu - options%parameters%stochastic_cu*0.75) ! e.g. * 20 - 15)
+        else
+            W0AVG = domain%w_real%data_3d
+        endif
         call CU_TIEDTKE(                                        &
                  dt_in, itimestep, STEPCU                       &
                 ,RAINCV, PRATEC                                 &
@@ -173,8 +180,7 @@ subroutine convect(domain,options,dt_in)
                 ,domain%znu                                     &
                 ,domain%u_mass%data_3d                          &
                 ,domain%v_mass%data_3d                          &
-                ,domain%w_real%data_3d                          &
-                ! ,domain%w_real%data_3d+(w_stochastic*20-15)   &
+                ,W0AVG                                          &
                 ,domain%temperature%data_3d                     &
                 ,domain%water_vapor%data_3d                     &
                 ,domain%cloud_water_mass%data_3d                &

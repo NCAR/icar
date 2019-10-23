@@ -770,6 +770,7 @@ contains
         ! parameters to read
         real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance
         real    :: cfl_reduction_factor
+        real    :: stochastic_cu
         integer :: ntimesteps
         integer :: nz, n_ext_winds,buffer, warning_level, cfl_strictness
         logical :: ideal, readz, readdz, interactive, debug, external_winds, surface_io_only, &
@@ -793,6 +794,7 @@ contains
                               date, calendar, high_res_soil_state, t_is_potential,                       &
                               qv_is_relative_humidity, qv_is_spec_humidity,  &
                               use_agl_height, start_date, forcing_start_date, end_date, time_varying_z,  &
+                              stochastic_cu,                                &
                               cfl_reduction_factor,     cfl_strictness,     &
                               mp_options_filename,      use_mp_options,     &
                               block_options_filename,   use_block_options,  &
@@ -837,6 +839,7 @@ contains
         cfl_strictness      =  3
         inputinterval       =  3600
         outputinterval      =  3600
+        stochastic_cu       = kNO_STOCHASTIC
 
         ! flag set to read specific parameterization options
         use_mp_options=.False.
@@ -963,6 +966,7 @@ contains
 
         options%high_res_soil_state = high_res_soil_state
         options%time_varying_z = time_varying_z
+        options%stochastic_cu = stochastic_cu
         options%cfl_reduction_factor = cfl_reduction_factor
         options%cfl_strictness = cfl_strictness
 

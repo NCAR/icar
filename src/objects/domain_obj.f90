@@ -183,7 +183,8 @@ contains
         if (0<opt%vars_to_allocate( kVARS%lai) )                        call setup(this%lai,                      this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%canopy_water) )               call setup(this%canopy_water,             this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%snow_water_equivalent) )      call setup(this%snow_water_equivalent,    this%grid2d )
-        if (0<opt%vars_to_allocate( kVARS%skin_temperature) )           call setup(this%skin_temperature,         this%grid2d,   forcing_var=opt%parameters%sst_var,     list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%sst) )                        call setup(this%sst,                      this%grid2d,   forcing_var=opt%parameters%sst_var,     list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%skin_temperature) )           call setup(this%skin_temperature,         this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%soil_water_content) )         call setup(this%soil_water_content,       this%grid_soil)
         if (0<opt%vars_to_allocate( kVARS%soil_temperature) )           call setup(this%soil_temperature,         this%grid_soil)
         if (0<opt%vars_to_allocate( kVARS%latitude) )                   call setup(this%latitude,                 this%grid2d)
@@ -225,6 +226,8 @@ contains
         if (0<opt%vars_to_allocate( kVARS%tend_qr) )                    allocate(this%tend%qr(ims:ime, kms:kme, jms:jme),       source=0.0)
         if (0<opt%vars_to_allocate( kVARS%tend_u) )                     allocate(this%tend%u(ims:ime, kms:kme, jms:jme),        source=0.0)
         if (0<opt%vars_to_allocate( kVARS%tend_v) )                     allocate(this%tend%v(ims:ime, kms:kme, jms:jme),        source=0.0)
+
+        if (0<opt%vars_to_allocate( kVARS%ustar) )                      allocate(this%ustar(ims:ime, jms:jme),   source=0.1)
 
         if (0<opt%vars_to_allocate( kVARS%znu) )                        allocate(this%znu(kms:kme),   source=0.0)
         if (0<opt%vars_to_allocate( kVARS%znw) )                        allocate(this%znw(kms:kme),   source=0.0)
@@ -804,8 +807,6 @@ contains
         integer :: i, nsoil
         real, allocatable :: temporary_data(:,:), temporary_data_3d(:,:,:)
         real :: soil_thickness(20)
-
-        if (this_image()==1) print*, "Testing soil variable initialization"
 
         soil_thickness = 1.0
         soil_thickness(1:4) = [0.1, 0.2, 0.5, 1.0]
@@ -1395,7 +1396,7 @@ contains
             call geo_interp(temp_3d, input_data%data_3d, forcing%geo%geolut)
 
             ! note that pressure (and possibly other variables?) should not be interpolated, it will be adjusted later
-            ! really, it whould be interpolated, and the bottom layers (below the forcing model) should be adjusted separately...
+            ! really, it should be interpolated, and the bottom layers (below the forcing model) should be adjusted separately...
             if (interpolate_vertically) then
                 call vinterp(var_data, temp_3d, forcing%geo%vert_lut)
             else

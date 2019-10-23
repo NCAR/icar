@@ -110,20 +110,24 @@ contains
             allocate(    uw( ims+1:ime,   jms+1:jme-1))
             allocate(    vw( ims+1:ime-1, jms+1:jme  ))
         endif
-    !
-    !     ! temporary constant
-    !     ! use log-law of the wall to convert from first model level to surface
-    !     currw = karman / log((domain%z(2:nx-1,1,2:ny-1)-domain%terrain(2:nx-1,2:ny-1)) / domain%znt(2:nx-1,2:ny-1))
-    !     ! use log-law of the wall to convert from surface to 10m height
-    !     lastw = log(10.0 / domain%znt(2:nx-1,2:ny-1)) / karman
-    !     domain%ustar(2:nx-1,2:ny-1) = domain%Um   (2:nx-1,1,2:ny-1) * currw
-    !     domain%u10  (2:nx-1,2:ny-1) = domain%ustar(2:nx-1,2:ny-1)   * lastw
-    !     domain%ustar(2:nx-1,2:ny-1) = domain%Vm   (2:nx-1,1,2:ny-1) * currw
-    !     domain%v10  (2:nx-1,2:ny-1) = domain%ustar(2:nx-1,2:ny-1)   * lastw
-    !
-    !     ! now calculate master ustar based on U and V combined in quadrature
-    !     domain%ustar(2:nx-1,2:ny-1) = sqrt(domain%Um(2:nx-1,1,2:ny-1)**2 + domain%Vm(2:nx-1,1,2:ny-1)**2) * currw
-    !
+
+        ! temporary constant
+        ! use log-law of the wall to convert from first model level to surface
+        currw = karman / log((domain%z%data_3d(ims+1:ime-1,kms,jms+1:jme-1) - domain%terrain%data_2d(ims+1:ime-1,jms+1:jme-1)) / domain%roughness_z0%data_2d(ims+1:ime-1,jms+1:jme-1))
+        ! use log-law of the wall to convert from surface to 10m height
+        lastw = log(10.0 / domain%roughness_z0%data_2d(ims+1:ime-1,jms+1:jme-1)) / karman
+        if (associated(domain%u_10m%data_2d)) then
+            domain%ustar        (ims+1:ime-1,jms+1:jme-1) = u_mass      (ims+1:ime-1,kms,jms+1:jme-1) * currw
+            domain%u_10m%data_2d(ims+1:ime-1,jms+1:jme-1) = domain%ustar(ims+1:ime-1,jms+1:jme-1)     * lastw
+            domain%ustar        (ims+1:ime-1,jms+1:jme-1) = v_mass      (ims+1:ime-1,kms,jms+1:jme-1) * currw
+            domain%v_10m%data_2d(ims+1:ime-1,jms+1:jme-1) = domain%ustar(ims+1:ime-1,jms+1:jme-1)     * lastw
+        endif
+
+        if (allocated(domain%ustar)) then
+            ! now calculate master ustar based on U and V combined in quadrature
+            domain%ustar(ims+1:ime-1,jms+1:jme-1) = sqrt(u_mass(ims+1:ime-1,kms,jms+1:jme-1)**2 + v_mass(ims+1:ime-1,kms,jms+1:jme-1)**2) * currw
+        endif
+        
         ! finally, calculate the real vertical motions (including U*dzdx + V*dzdy)
         lastw = 0
         do z = kms, kme

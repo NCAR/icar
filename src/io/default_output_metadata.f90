@@ -173,6 +173,7 @@ contains
                                attribute_t("units",         "m s-1"),                           &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+
         associate(var=>var_meta(kVARS%w_real))
             var%name        = "w"
             var%dimensions  = three_d_t_dimensions
@@ -213,6 +214,7 @@ contains
         associate(var=>var_meta(kVARS%surface_pressure))
             var%name        = "psfc"
             var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "surface_air_pressure"),            &
                                attribute_t("long_name",     "Surface Pressure"),                &
                                attribute_t("units",         "Pa"),                              &
