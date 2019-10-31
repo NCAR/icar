@@ -1,6 +1,6 @@
 submodule(options_interface) options_implementation
 
-    use icar_constants
+    use icar_constants,             only : kDATELINE_CENTERED, MAXFILELENGTH, MAXVARLENGTH, MAX_NUMBER_FILES, MAXLEVELS, kNO_STOCHASTIC, kVERSION_STRING, pi
     use options_types,              only : parameter_options_type, physics_type, mp_options_type, lt_options_type, &
                                            block_options_type, adv_options_type, lsm_options_type, bias_options_type
     use io_routines,                only : io_newunit
@@ -772,6 +772,7 @@ contains
         real    :: cfl_reduction_factor
         real    :: stochastic_cu
         integer :: ntimesteps
+        integer :: longitude_system
         integer :: nz, n_ext_winds,buffer, warning_level, cfl_strictness
         logical :: ideal, readz, readdz, interactive, debug, external_winds, surface_io_only, &
                    mean_winds, mean_fields, restart, advect_density, z_is_geopotential, z_is_on_interface,&
@@ -794,7 +795,7 @@ contains
                               date, calendar, high_res_soil_state, t_is_potential,                       &
                               qv_is_relative_humidity, qv_is_spec_humidity,  &
                               use_agl_height, start_date, forcing_start_date, end_date, time_varying_z,  &
-                              stochastic_cu,                                &
+                              stochastic_cu, longitude_system,              &
                               cfl_reduction_factor,     cfl_strictness,     &
                               mp_options_filename,      use_mp_options,     &
                               block_options_filename,   use_block_options,  &
@@ -840,6 +841,7 @@ contains
         inputinterval       =  3600
         outputinterval      =  3600
         stochastic_cu       = kNO_STOCHASTIC
+        longitude_system    = kDATELINE_CENTERED
 
         ! flag set to read specific parameterization options
         use_mp_options=.False.
@@ -902,6 +904,7 @@ contains
             endif
         endif
         options%smooth_wind_distance = smooth_wind_distance
+        options%longitude_system = longitude_system
 
         options%in_dt      = inputinterval
         call options%input_dt%set(seconds=inputinterval)

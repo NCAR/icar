@@ -7,7 +7,7 @@
 !!------------------------------------------------------------
 submodule(boundary_interface) boundary_implementation
 
-    use icar_constants,         only : gravity
+    use icar_constants,         only : gravity, kPRIME_CENTERED, kDATELINE_CENTERED
     use array_utilities,        only : interpolate_in_z
     use io_routines,            only : io_getdims, io_read, io_maxDims, io_variable_is_present
     use time_io,                only : read_times, find_timestep_in_file
@@ -60,7 +60,7 @@ contains
 
         ! call this%distribute_initial_conditions()
 
-        call setup_boundary_geo(this)
+        call setup_boundary_geo(this, options%parameters%longitude_system)
 
     end subroutine
 
@@ -137,9 +137,10 @@ contains
     !! Setup the main geo structure in the boundary structure
     !!
     !!------------------------------------------------------------
-    subroutine setup_boundary_geo(this)
+    subroutine setup_boundary_geo(this, longitude_system)
         implicit none
         type(boundary_t), intent(inout) :: this
+        integer,          intent(in)    :: longitude_system
 
         if (allocated(this%geo%lat)) deallocate(this%geo%lat)
         allocate( this%geo%lat, source=this%lat)
@@ -151,7 +152,7 @@ contains
         ! if (allocated(this%geo%z)) deallocate(this%geo%z)
         ! allocate( this%geo%z, source=this%z)
 
-        call standardize_coordinates(this%geo)
+        call standardize_coordinates(this%geo, longitude_system)
 
         this%geo_u = this%geo
         this%geo_v = this%geo

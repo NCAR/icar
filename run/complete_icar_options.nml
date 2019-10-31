@@ -95,6 +95,10 @@
 
     !   The grid spacing of the high-resolution data
     dx = 4000.0,        ! [m]
+
+    ! Specify the longitude coordinate system to use 0 = -180 to 180, 1 = 0 to 360 (the default)
+    longitude_system = 1  ! [0,1]
+
     !   The approximate grid spacing of the forcing data
     !   only used in rm_linear_winds?
     ! dxlow = 20000.0,    ! [m]

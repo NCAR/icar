@@ -482,8 +482,8 @@ contains
             end associate
         endif
 
-        call standardize_coordinates(this%geo_u)
-        call standardize_coordinates(this%geo_v)
+        call standardize_coordinates(this%geo_u, options%parameters%longitude_system)
+        call standardize_coordinates(this%geo_v, options%parameters%longitude_system)
 
         if (this_image()==1) write(*,*) "  Finished reading core domain variables"
 
@@ -593,12 +593,13 @@ contains
     !! Setup a single Geographic structure given a latitude, longitude, and z array
     !!
     !! -------------------------------
-    subroutine setup_geo(geo, latitude, longitude, z)
+    subroutine setup_geo(geo, latitude, longitude, z, longitude_system)
         implicit none
         type(interpolable_type),  intent(inout) :: geo
         real,                     intent(in)    :: latitude(:,:)
         real,                     intent(in)    :: longitude(:,:)
         real,                     intent(in)    :: z(:,:,:)
+        integer,                  intent(in)    :: longitude_system
 
         if (allocated(geo%lat)) deallocate(geo%lat)
         allocate( geo%lat, source=latitude)
@@ -613,7 +614,7 @@ contains
         ! This also puts the longitudes onto a 0-360 if they are -180-180 (important for Alaska)
         ! Though if working in Europe the -180-180 grid is better ideally the optimal value should be checked.
         ! and good luck if you want to work over the poles...
-        call standardize_coordinates(geo)
+        call standardize_coordinates(geo, longitude_system)
 
     end subroutine
 
@@ -745,7 +746,7 @@ contains
 
         end associate
 
-        call setup_geo(this%geo,   this%latitude%data_2d,   this%longitude%data_2d,   this%z%data_3d)
+        call setup_geo(this%geo,   this%latitude%data_2d,   this%longitude%data_2d,   this%z%data_3d, options%parameters%longitude_system)
 
     end subroutine initialize_core_variables
 

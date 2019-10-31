@@ -203,6 +203,10 @@ module options_types
         integer :: cfl_strictness       ! CFL method 1=3D from 1D*sqrt(3), 2=ave.3D wind*sqrt(3), 3=sum.3D wind, 4=opt3 * sqrt(3), 5 = sum(max.3d)
         real :: stochastic_cu
 
+        integer :: longitude_system     ! specify center for longitude system
+                                        ! 0 = kPRIME_CENTERED    (-180 - 180)
+                                        ! 1 = kDATELINE_CENTERED (0 - 360)
+
         ! date/time parameters
         type(Time_type) :: initial_time ! Date of the first forcing time step
         type(Time_type) :: start_time   ! Date to start running the model
