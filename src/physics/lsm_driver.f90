@@ -360,6 +360,8 @@ contains
         type(options_t),intent(in)    :: options
         integer :: i
 
+        if (options%physics%landsurface == 0) return
+
         if (this_image()==1) write(*,*) "Initializing LSM"
 
         exchange_term = 1
@@ -527,6 +529,8 @@ contains
         real, intent(in) :: dt
         real ::lsm_dt
         integer :: nx,ny,i,j
+
+        if (options%physics%landsurface == 0) return
 
         if (last_model_time==-999) then
             last_model_time = domain%model_time%seconds()-update_interval

@@ -844,7 +844,9 @@ contains
             endif
 
         else
-             this%soil_deep_temperature%data_2d = 280
+            if (associated(this%soil_deep_temperature%data_2d)) then
+                this%soil_deep_temperature%data_2d = 280
+            endif
         endif
 
         if (options%parameters%soil_t_var /= "") then
@@ -861,9 +863,11 @@ contains
             endif
 
         else
-            do i=1,nsoil
-                this%soil_temperature%data_3d(:,i,:) = this%soil_deep_temperature%data_2d
-            enddo
+            if (associated(this%soil_temperature%data_3d)) then
+                do i=1,nsoil
+                    this%soil_temperature%data_3d(:,i,:) = this%soil_deep_temperature%data_2d
+                enddo
+            endif
         endif
 
         if (options%parameters%soil_vwc_var /= "") then
@@ -877,7 +881,9 @@ contains
             endif
 
         else
-             this%soil_water_content%data_3d = 0.2
+            if (associated(this%soil_water_content%data_3d)) then
+                this%soil_water_content%data_3d = 0.2
+            endif
         endif
 
         if (options%parameters%vegtype_var /= "") then
@@ -900,14 +906,18 @@ contains
             endif
 
         else
-             this%vegetation_fraction%data_3d = 0.6
+            if (associated(this%vegetation_fraction%data_3d)) then
+                this%vegetation_fraction%data_3d = 0.6
+            endif
         endif
 
         if (associated(this%soil_totalmoisture%data_2d)) then
             this%soil_totalmoisture%data_2d = 0
-            do i=1, nsoil
-                this%soil_totalmoisture%data_2d = this%soil_totalmoisture%data_2d + this%soil_water_content%data_3d(:,i,:) * soil_thickness(i)
-            enddo
+            if (associated(this%soil_water_content%data_3d)) then
+                do i=1, nsoil
+                    this%soil_totalmoisture%data_2d = this%soil_totalmoisture%data_2d + this%soil_water_content%data_3d(:,i,:) * soil_thickness(i)
+                enddo
+            endif
         endif
 
         ! these will all be udpated by either forcing data or the land model, but initialize to sensible values to avoid breaking other initialization routines
@@ -1018,7 +1028,10 @@ contains
         call options%alloc_vars(                                                    &
                      [kVARS%z,                      kVARS%z_interface,              &
                       kVARS%dz,                     kVARS%dz_interface,             &
+                      kVARS%u,                      kVARS%v,                        &
+                      kVARS%surface_pressure,       kVARS%roughness_z0,              &
                       kVARS%terrain,                kVARS%pressure,                 &
+                      kVARS%temperature,            kVARS%pressure_interface,       &
                       kVARS%exner,                  kVARS%potential_temperature,    &
                       kVARS%latitude,               kVARS%longitude,                &
                       kVARS%u_latitude,             kVARS%u_longitude,              &
