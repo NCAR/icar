@@ -1,6 +1,6 @@
 submodule(options_interface) options_implementation
 
-    use icar_constants,             only : kDATELINE_CENTERED, MAXFILELENGTH, MAXVARLENGTH, MAX_NUMBER_FILES, MAXLEVELS, kNO_STOCHASTIC, kVERSION_STRING, pi
+    use icar_constants,             only : kMAINTAIN_LON, MAXFILELENGTH, MAXVARLENGTH, MAX_NUMBER_FILES, MAXLEVELS, kNO_STOCHASTIC, kVERSION_STRING, pi
     use options_types,              only : parameter_options_type, physics_type, mp_options_type, lt_options_type, &
                                            block_options_type, adv_options_type, lsm_options_type, bias_options_type
     use io_routines,                only : io_newunit
@@ -841,7 +841,7 @@ contains
         inputinterval       =  3600
         outputinterval      =  3600
         stochastic_cu       = kNO_STOCHASTIC
-        longitude_system    = kDATELINE_CENTERED
+        longitude_system    = kMAINTAIN_LON
 
         ! flag set to read specific parameterization options
         use_mp_options=.False.

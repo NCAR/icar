@@ -18,7 +18,7 @@
 !!------------------------------------------------------------
 module geo
     use data_structures
-    use icar_constants, only : kDATELINE_CENTERED, kPRIME_CENTERED
+    use icar_constants, only : kMAINTAIN_LON, kDATELINE_CENTERED, kPRIME_CENTERED, kGUESS_LON
 
     implicit none
 
@@ -1240,25 +1240,26 @@ contains
         endif
 
         if (present(longitude_system)) then
-            if (longitude_system == kPRIME_CENTERED) then
+            if (longitude_system == kMAINTAIN_LON) then
+                ! break
+            elseif (longitude_system == kPRIME_CENTERED) then
                 where(domain%lon<0) domain%lon = 360+domain%lon
             elseif (longitude_system == kDATELINE_CENTERED) then
                 where(domain%lon>180) domain%lon = domain%lon - 360
+            elseif (longitude_system == kGUESS_LON) then
+                ! try to guess which coordinate system to use
+                ! first convert all domains into -180 to +180 coordinates
+                where(domain%lon>180) domain%lon = domain%lon - 360
+                ! also convert from a -180 to 180 coordinate system into a 0-360 coordinate system if closer to the dateline
+                if ((minval(domain%lon) < -150) .or. (maxval(domain%lon) > 150)) then
+                    where(domain%lon<0) domain%lon = 360+domain%lon
+                endif
             else
                 write(*,*) "Unknown longitude system of coordinates:", longitude_system
                 write(*,*) " Set options%parameters%longitude_system to either:"
                 write(*,*) " Prime meridian centered (0 to 360): ", kPRIME_CENTERED
                 write(*,*) " Dateline meridian centered (-180 to 180): ", kDATELINE_CENTERED
                 stop
-            endif
-        else
-            ! try to guess which coordinate system to use
-
-            ! first convert all domains into -180 to +180 coordinates
-            where(domain%lon>180) domain%lon = domain%lon - 360
-            ! also convert from a -180 to 180 coordinate system into a 0-360 coordinate system if closer to the dateline
-            if ((minval(domain%lon) < -150) .or. (maxval(domain%lon) > 150)) then
-                where(domain%lon<0) domain%lon = 360+domain%lon
             endif
         endif
 
