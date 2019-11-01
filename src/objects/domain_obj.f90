@@ -628,7 +628,6 @@ contains
         class(domain_t), intent(inout)  :: this
         type(options_t), intent(in)     :: options
 
-        real, allocatable, dimension(:,:,:) :: z_level_ratio, zr_u, zr_v
         integer :: i, max_level
         real :: smooth_height
 
