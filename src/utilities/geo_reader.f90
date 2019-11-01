@@ -132,7 +132,7 @@ contains
             write(*,*) x1, y1
             write(*,*) x2, y2
             write(*,*) x3, y3
-            stop "Denominator in triangulation is broken"
+            error stop "Denominator in triangulation is broken"
         endif
 
         ! This is the core of the algorithm weights for Barycentric coordinates.
@@ -153,7 +153,7 @@ contains
             write(*,*) x2, y2
             write(*,*) x3, y3
             write(*,*) w1, w2, w3
-            stop "Triangulation is broken"
+            error stop "Triangulation is broken"
         endif
         w1=max(0.,w1); w2=max(0.,w2); w3=max(0.,w3);
 
@@ -891,7 +891,7 @@ contains
         write(*,*) lo%lon(pos%x, pos%y), lo%lat(pos%x, pos%y)
         write(*,*) pos
         write(*,*) nx, ny
-        stop "Failed to find point"
+        error stop "Failed to find point"
         ! enforce that surround points fall within the bounds of the full domain
 
     end function find_surrounding
@@ -938,7 +938,7 @@ contains
                 ! lastpos%x = 1
                 ! lastpos%y = 1
                 write(*,*) "Error in Geographic interpolation, check input lat / lon grids", ims,j
-                stop
+                error stop
             endif
 
             do i = ims, ime
@@ -1242,9 +1242,9 @@ contains
         if (present(longitude_system)) then
             if (longitude_system == kMAINTAIN_LON) then
                 ! break
-            elseif (longitude_system == kPRIME_CENTERED) then
-                where(domain%lon<0) domain%lon = 360+domain%lon
             elseif (longitude_system == kDATELINE_CENTERED) then
+                where(domain%lon<0) domain%lon = 360+domain%lon
+            elseif (longitude_system == kPRIME_CENTERED) then
                 where(domain%lon>180) domain%lon = domain%lon - 360
             elseif (longitude_system == kGUESS_LON) then
                 ! try to guess which coordinate system to use
@@ -1259,7 +1259,7 @@ contains
                 write(*,*) " Set options%parameters%longitude_system to either:"
                 write(*,*) " Prime meridian centered (0 to 360): ", kPRIME_CENTERED
                 write(*,*) " Dateline meridian centered (-180 to 180): ", kDATELINE_CENTERED
-                stop
+                error stop
             endif
         endif
 
