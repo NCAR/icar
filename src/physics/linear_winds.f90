@@ -650,7 +650,7 @@ contains
                     ! print the current status if this is being run "interactively"
                     if (options%parameters%interactive) then
                         !$omp critical (print_lock)
-                        if (this_image()==1) write(*,"(A,I6,f5.1,A)"), loops_completed/real(nz*(stop_pos-start_pos+1))*100," %"
+                        if (this_image()==1) write(*,"(A,I6,f5.1,A)") loops_completed/real(nz*(stop_pos-start_pos+1))*100," %"
                         !$omp end critical (print_lock)
                     endif
                     ! if (reverse) then
