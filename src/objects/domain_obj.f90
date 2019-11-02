@@ -628,6 +628,7 @@ contains
         class(domain_t), intent(inout)  :: this
         type(options_t), intent(in)     :: options
 
+        real, allocatable :: temp(:,:,:)
         integer :: i, max_level
         real :: smooth_height
 
@@ -662,6 +663,7 @@ contains
                   z_u                   => this%geo_u%z,                        &
                   z_v                   => this%geo_v%z,                        &
                   z_interface           => this%z_interface%data_3d,            &
+                  nz                    => options%parameters%nz,               &
                   dz                    => options%parameters%dz_levels,        &
                   dz_mass               => this%dz_mass%data_3d,                &
                   dz_interface          => this%dz_interface%data_3d,           &
@@ -674,15 +676,16 @@ contains
 
             i = this%grid%kms
 
-            max_level = size(dz)
+            max_level = nz
 
             if (options%parameters%space_varying_dz) then
-                if (options%parameters%flat_z_height > size(dz)) then
+                if (options%parameters%flat_z_height > nz) then
+                    if (this_image()==1) write(*,*) "Treating flat_z_height as specified in meters above mean terrain height: ", options%parameters%flat_z_height," meters"
                     block
                         integer :: j
                         real :: height
                         height = 0
-                        do j = 1, size(dz)
+                        do j = 1, nz
                             if (height <= options%parameters%flat_z_height) then
                                 height = height + dz(j)
                                 max_level = j
@@ -690,9 +693,11 @@ contains
                         enddo
                     end block
                 elseif (options%parameters%flat_z_height <= 0) then
-                    max_level = size(dz) + options%parameters%flat_z_height
+                    if (this_image()==1) write(*,*) "Treating flat_z_height as counting levels down from the model top: ", options%parameters%flat_z_height," levels"
+                    max_level = nz + options%parameters%flat_z_height
                 else
-                    max_level = size(dz)
+                    if (this_image()==1) write(*,*) "Treating flat_z_height as counting levels up from the ground: ", options%parameters%flat_z_height," levels"
+                    max_level = options%parameters%flat_z_height
                 endif
 
                 smooth_height = sum(this%global_terrain) / size(this%global_terrain) + sum(dz(1:max_level))
@@ -731,19 +736,36 @@ contains
                     zr_v(:,i,:) = 1
                 endif
 
-                dz_mass(:,i,:)     = (dz(i) * z_level_ratio(:,i,:) + dz(i-1) * z_level_ratio(:,i-1,:)) / 2
+                dz_mass(:,i,:)     = (dz(i)/2 * z_level_ratio(:,i,:) + dz(i-1)/2 * z_level_ratio(:,i-1,:))
                 dz_interface(:,i,:)= dz(i) * z_level_ratio(:,i,:)
                 z(:,i,:)           = z(:,i-1,:)           + dz_mass(:,i,:)
                 z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i,:)
 
-                z_u(:,i,:)         = z_u(:,i-1,:)         + ((dz(i) * zr_u(:,i,:) + dz(i-1) * zr_u(:,i-1,:)) / 2)
-                z_v(:,i,:)         = z_v(:,i-1,:)         + ((dz(i) * zr_v(:,i,:) + dz(i-1) * zr_v(:,i-1,:)) / 2)
+                z_u(:,i,:)         = z_u(:,i-1,:)         + ((dz(i)/2 * zr_u(:,i,:) + dz(i-1)/2 * zr_u(:,i-1,:)))
+                z_v(:,i,:)         = z_v(:,i-1,:)         + ((dz(i)/2 * zr_v(:,i,:) + dz(i-1)/2 * zr_v(:,i-1,:)))
 
                 dzdx(:,i,:) = (z(ims+1:ime,i,:) - z(ims:ime-1,i,:)) / this%dx
                 dzdy(:,i,:) = (z(:,i,jms+1:jme) - z(:,i,jms:jme-1)) / this%dx
             enddo
 
+
         end associate
+
+        temp =  this%zr_u
+        deallocate(this%zr_u)
+        allocate(this%zr_u( this%u_grid% ims : this%u_grid% ime,   &
+                       this%u_grid% kms : this%u_grid% kme,   &
+                       this%u_grid% jms : this%u_grid% jme) )
+        this%zr_u = temp(this%u_grid%ims:this%u_grid%ime, :, this%u_grid%jms:this%u_grid%jme)
+        deallocate(temp)
+
+        temp =  this%zr_v
+        deallocate(this%zr_v)
+        allocate(this%zr_v( this%v_grid% ims : this%v_grid% ime,   &
+                       this%v_grid% kms : this%v_grid% kme,   &
+                       this%v_grid% jms : this%v_grid% jme) )
+        this%zr_v = temp(this%v_grid%ims:this%v_grid%ime, :, this%v_grid%jms:this%v_grid%jme)
+        deallocate(temp)
 
         call setup_geo(this%geo,   this%latitude%data_2d,   this%longitude%data_2d,   this%z%data_3d, options%parameters%longitude_system)
 
