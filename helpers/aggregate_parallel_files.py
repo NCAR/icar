@@ -119,6 +119,16 @@ def agg_file(first_file):
         ims, ime, jms, jme, kms, kme = get_dims(d, section='m')
         its, ite, jts, jte, kts, kte = get_dims(d, section='t')
 
+        if ims==ids:
+            its = ids
+        if ime==ide:
+            ite = ide
+
+        if jms==jds:
+            jts = jds
+        if jme==jde:
+            jte = jde
+
         xts, xte = its - ims, ite - ims + 1
         yts, yte = jts - jms, jte - jms + 1
         zts, zte = kts - kms, kte - kms + 1
