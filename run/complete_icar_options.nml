@@ -191,6 +191,8 @@
     use_bias_correction = false
     !   Read parameters for experimental blocked flow parameterization
     use_block_options = false
+
+    use_cu_options = false
 /
 
 !---------------------------------------------------------
@@ -298,6 +300,19 @@
     top_mp_level = 0    ! if <=0 stop that many levels below the model top
     local_precip_fraction = 1.0 ! Fraction of micrphysics derived precipitation to deposit in the local grid cell
                                 ! the remaining precip is distributed to the surrounding grid cells.
+/
+
+
+!---------------------------------------------------------
+!   Optionally specified convection parameters
+!---------------------------------------------------------
+&cu_parameters
+    stochastic_cu = 0
+    tendency_fraction = 1.0
+    tend_qv_fraction = 1.0
+    tend_qc_fraction = 1.0
+    tend_th_fraction = 1.0
+    tend_qi_fraction = 1.0
 /
 
 !---------------------------------------------------------

@@ -104,6 +104,19 @@ module options_types
 
 
     ! ------------------------------------------------
+    ! store Convection parameter options
+    ! ------------------------------------------------
+    type cu_options_type
+        real :: stochastic_cu
+        real :: tendency_fraction
+        real :: tend_qv_fraction
+        real :: tend_qc_fraction
+        real :: tend_th_fraction
+        real :: tend_qi_fraction
+    end type cu_options_type
+
+
+    ! ------------------------------------------------
     ! store Online Bias Correction options
     ! ------------------------------------------------
     type bias_options_type
@@ -152,7 +165,8 @@ module options_types
         integer                     :: dim_list(    kMAX_STORAGE_VARS)
         ! Filenames for files to read various physics options from
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, adv_options_filename, &
-                                        lsm_options_filename, bias_options_filename, block_options_filename
+                                        lsm_options_filename, bias_options_filename, block_options_filename, &
+                                        cu_options_filename
         character(len=MAXFILELENGTH) :: calendar
 
 
@@ -201,7 +215,6 @@ module options_types
         logical :: time_varying_z       ! read in a new z coordinate every time step and interpolate accordingly
         real :: cfl_reduction_factor    ! amount to multiple CFL by to improve stability (typically 1)
         integer :: cfl_strictness       ! CFL method 1=3D from 1D*sqrt(3), 2=ave.3D wind*sqrt(3), 3=sum.3D wind, 4=opt3 * sqrt(3), 5 = sum(max.3d)
-        real :: stochastic_cu
 
         integer :: longitude_system     ! specify center for longitude system
                                         ! 0 = kPRIME_CENTERED    (-180 - 180)
@@ -224,6 +237,7 @@ module options_types
 
         ! physics parameterization options
         logical :: use_mp_options
+        logical :: use_cu_options
         logical :: use_lt_options
         logical :: use_block_options
         logical :: use_adv_options

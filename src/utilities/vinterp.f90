@@ -311,7 +311,7 @@ contains
         else
             write(*,*) "Vertical interpolation over the first axis not supported yet"
             write(*,*) "  if needed, update vinterp.f90"
-            stop
+            error stop
         endif
 
     end subroutine vinterp

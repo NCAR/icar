@@ -160,7 +160,7 @@ subroutine convect(domain,options,dt_in)
     !$omp end parallel
 
     if (options%physics%convection==kCU_TIEDTKE) then
-        if (options%parameters%stochastic_cu /= kNO_STOCHASTIC) then
+        if (options%cu_options%stochastic_cu /= kNO_STOCHASTIC) then
             call random_number(w_stochastic)
             block
                 integer :: i
@@ -168,7 +168,7 @@ subroutine convect(domain,options,dt_in)
                     w_stochastic(:,i,:) = domain%sensible_heat%data_2d/500 + w_stochastic(:,i,:)
                 enddo
             end block
-            W0AVG = domain%w_real%data_3d+(w_stochastic * options%parameters%stochastic_cu - options%parameters%stochastic_cu*0.75) ! e.g. * 20 - 15)
+            W0AVG = domain%w_real%data_3d+(w_stochastic * options%cu_options%stochastic_cu - options%cu_options%stochastic_cu*0.75) ! e.g. * 20 - 15)
         else
             W0AVG = domain%w_real%data_3d
         endif
@@ -228,32 +228,35 @@ subroutine convect(domain,options,dt_in)
     ! use a separate dt to make it easier to apply on a different dt
     internal_dt = dt_in
 
-    ! $omp parallel private(j) &
-    ! $omp default(shared)
-    ! $omp do schedule(static)
-    do j=jts,jte
-        domain%water_vapor%data_3d(:,:,j)           = domain%water_vapor%data_3d(:,:,j)           + domain%tend%qv(:,:,j)*internal_dt
-        domain%cloud_water_mass%data_3d(:,:,j)      = domain%cloud_water_mass%data_3d(:,:,j)      + domain%tend%qc(:,:,j)*internal_dt
-        domain%potential_temperature%data_3d(:,:,j) = domain%potential_temperature%data_3d(:,:,j) + domain%tend%th(:,:,j)*internal_dt
-        domain%cloud_ice_mass%data_3d(:,:,j)        = domain%cloud_ice_mass%data_3d(:,:,j)        + domain%tend%qi(:,:,j)*internal_dt
-        ! if (options%physics%convection==kCU_KAINFR) then
-        !     domain%qsnow(:,:,j) =domain%qsnow(:,:,j) + domain%tend%Qs(:,:,j)*internal_dt
-        !     domain%qrain(:,:,j) =domain%qrain(:,:,j) + domain%tend%Qr(:,:,j)*internal_dt
-        ! endif
+    if (options%physics%convection==kCU_TIEDTKE) then
+        ! $omp parallel private(j) &
+        ! $omp default(shared)
+        ! $omp do schedule(static)
+        do j=jts,jte
+            if (options%cu_options%tendency_fraction > 0) then
+                if (options%cu_options%tend_qv_fraction > 0) domain%water_vapor%data_3d(:,:,j)           = domain%water_vapor%data_3d(:,:,j)           + domain%tend%qv(:,:,j)*internal_dt * options%cu_options%tend_qv_fraction
+                if (options%cu_options%tend_qc_fraction > 0) domain%cloud_water_mass%data_3d(:,:,j)      = domain%cloud_water_mass%data_3d(:,:,j)      + domain%tend%qc(:,:,j)*internal_dt * options%cu_options%tend_qc_fraction
+                if (options%cu_options%tend_th_fraction > 0) domain%potential_temperature%data_3d(:,:,j) = domain%potential_temperature%data_3d(:,:,j) + domain%tend%th(:,:,j)*internal_dt * options%cu_options%tend_th_fraction
+                if (options%cu_options%tend_qi_fraction > 0) domain%cloud_ice_mass%data_3d(:,:,j)        = domain%cloud_ice_mass%data_3d(:,:,j)        + domain%tend%qi(:,:,j)*internal_dt * options%cu_options%tend_qi_fraction
+            endif
+            ! if (options%physics%convection==kCU_KAINFR) then
+            !     domain%qsnow(:,:,j) =domain%qsnow(:,:,j) + domain%tend%Qs(:,:,j)*internal_dt
+            !     domain%qrain(:,:,j) =domain%qrain(:,:,j) + domain%tend%Qr(:,:,j)*internal_dt
+            ! endif
 
-        domain%accumulated_precipitation%data_2d(:,j)  = domain%accumulated_precipitation%data_2d(:,j) + RAINCV(:,j)
-        domain%accumulated_convective_pcp%data_2d(:,j) = domain%accumulated_convective_pcp%data_2d(:,j) + RAINCV(:,j)
+            domain%accumulated_precipitation%data_2d(:,j)  = domain%accumulated_precipitation%data_2d(:,j) + RAINCV(:,j)
+            domain%accumulated_convective_pcp%data_2d(:,j) = domain%accumulated_convective_pcp%data_2d(:,j) + RAINCV(:,j)
 
-        ! if (options%physics%convection==kCU_TIEDTKE) then
-        !     domain%u_cu(ids+1:ide,:,j) = 0.999*domain%u_cu(ids+1:ide,:,j) + (domain%tend%u(ids:ide-1,:,j)+domain%tend%u(ids+1:ide,:,j))/2 * internal_dt
-        !     if (j>jds) then
-        !         domain%v_cu(:,:,j) = 0.999*domain%v_cu(:,:,j) + (domain%tend%v(:,:,j)+domain%tend%v(:,:,j-1))/2 * internal_dt
-        !     endif
-        ! endif
-    enddo
-    ! $omp end do
-    ! $omp end parallel
-
+            ! if (options%physics%convection==kCU_TIEDTKE) then
+            !     domain%u_cu(ids+1:ide,:,j) = 0.999*domain%u_cu(ids+1:ide,:,j) + (domain%tend%u(ids:ide-1,:,j)+domain%tend%u(ids+1:ide,:,j))/2 * internal_dt
+            !     if (j>jds) then
+            !         domain%v_cu(:,:,j) = 0.999*domain%v_cu(:,:,j) + (domain%tend%v(:,:,j)+domain%tend%v(:,:,j-1))/2 * internal_dt
+            !     endif
+            ! endif
+        enddo
+        ! $omp end do
+        ! $omp end parallel
+    endif
 
 end subroutine convect
 end module convection

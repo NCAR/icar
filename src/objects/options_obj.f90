@@ -1,8 +1,9 @@
 submodule(options_interface) options_implementation
 
     use icar_constants,             only : kMAINTAIN_LON, MAXFILELENGTH, MAXVARLENGTH, MAX_NUMBER_FILES, MAXLEVELS, kNO_STOCHASTIC, kVERSION_STRING, pi
-    use options_types,              only : parameter_options_type, physics_type, mp_options_type, lt_options_type, &
-                                           block_options_type, adv_options_type, lsm_options_type, bias_options_type
+    use options_types,              only : parameter_options_type, physics_type, mp_options_type, lt_options_type,      &
+                                           block_options_type, adv_options_type, lsm_options_type, bias_options_type,   &
+                                           cu_options_type
     use io_routines,                only : io_newunit
     use time_io,                    only : find_timestep_in_file
     use time_delta_object,          only : time_delta_t
@@ -60,6 +61,7 @@ contains
         call mp_parameters_namelist(    this%parameters%mp_options_filename,    this)
         call adv_parameters_namelist(   this%parameters%adv_options_filename,   this)
         call lsm_parameters_namelist(   this%parameters%lsm_options_filename,   this)
+        call cu_parameters_namelist(    this%parameters%cu_options_filename,    this)
         call bias_parameters_namelist(  this%parameters%bias_options_filename,  this)
 
         if (this%parameters%restart) then
@@ -697,14 +699,14 @@ contains
         options%qgvar       = qgvar     ; options%vars_to_read(i) = qgvar;      options%dim_list(i) = 3;    i = i + 1
 
         ! vertical coordinate
-        if (options%time_varying_z) then
-            if (options%compute_z) then
-                zvar = "height_computed"
-                options%vars_to_read(i) = zvar;      options%dim_list(i) = -3;    i = i + 1
-            else
-                options%vars_to_read(i) = zvar;      options%dim_list(i) = 3;    i = i + 1
-            endif
+        ! if (options%time_varying_z) then
+        if (options%compute_z) then
+            zvar = "height_computed"
+            options%vars_to_read(i) = zvar;      options%dim_list(i) = -3;    i = i + 1
+        else
+            options%vars_to_read(i) = zvar;      options%dim_list(i) = 3;    i = i + 1
         endif
+        ! endif
         options%zvar        = zvar      ! this could get reassigned from "" to "height_computed" above
         options%zbvar       = zbvar     !; options%vars_to_read(i) = zbvar;      options%dim_list(i) = 3;    i = i + 1
 
@@ -770,7 +772,6 @@ contains
         ! parameters to read
         real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance
         real    :: cfl_reduction_factor
-        real    :: stochastic_cu
         integer :: ntimesteps
         integer :: longitude_system
         integer :: nz, n_ext_winds,buffer, warning_level, cfl_strictness
@@ -779,13 +780,14 @@ contains
                    high_res_soil_state, use_agl_height, time_varying_z, t_is_potential, qv_is_spec_humidity, &
                    qv_is_relative_humidity, &
                    use_mp_options, use_lt_options, use_adv_options, use_lsm_options, use_bias_correction, &
-                   use_block_options
+                   use_block_options, use_cu_options
 
         character(len=MAXFILELENGTH) :: date, calendar, start_date, forcing_start_date, end_date
         integer :: year, month, day, hour, minute, second
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, &
                                         adv_options_filename, lsm_options_filename, &
-                                        bias_options_filename, block_options_filename
+                                        bias_options_filename, block_options_filename, &
+                                        cu_options_filename
 
         namelist /parameters/ ntimesteps, outputinterval, inputinterval, surface_io_only,                &
                               dx, dxlow, ideal, readz, readdz, nz, t_offset,                             &
@@ -795,14 +797,15 @@ contains
                               date, calendar, high_res_soil_state, t_is_potential,                       &
                               qv_is_relative_humidity, qv_is_spec_humidity,  &
                               use_agl_height, start_date, forcing_start_date, end_date, time_varying_z,  &
-                              stochastic_cu, longitude_system,              &
+                              longitude_system,                             &
                               cfl_reduction_factor,     cfl_strictness,     &
                               mp_options_filename,      use_mp_options,     &
                               block_options_filename,   use_block_options,  &
                               lt_options_filename,      use_lt_options,     &
                               lsm_options_filename,     use_lsm_options,    &
                               adv_options_filename,     use_adv_options,    &
-                              bias_options_filename,    use_bias_correction
+                              bias_options_filename,    use_bias_correction,&
+                              cu_options_filename,      use_cu_options
 
 !       default parameters
         surface_io_only     = .False.
@@ -840,7 +843,6 @@ contains
         cfl_strictness      =  3
         inputinterval       =  3600
         outputinterval      =  3600
-        stochastic_cu       = kNO_STOCHASTIC
         longitude_system    = kMAINTAIN_LON
 
         ! flag set to read specific parameterization options
@@ -852,6 +854,9 @@ contains
 
         use_adv_options=.False.
         adv_options_filename = filename
+
+        use_cu_options=.False.
+        cu_options_filename = filename
 
         use_lsm_options=.False.
         lsm_options_filename = filename
@@ -969,7 +974,7 @@ contains
 
         options%high_res_soil_state = high_res_soil_state
         options%time_varying_z = time_varying_z
-        options%stochastic_cu = stochastic_cu
+
         options%cfl_reduction_factor = cfl_reduction_factor
         options%cfl_strictness = cfl_strictness
 
@@ -979,6 +984,9 @@ contains
 
         options%use_lt_options      = use_lt_options
         options%lt_options_filename = lt_options_filename
+
+        options%use_cu_options      = use_cu_options
+        options%cu_options_filename = cu_options_filename
 
         options%use_adv_options     = use_adv_options
         options%adv_options_filename= adv_options_filename
@@ -1367,6 +1375,71 @@ contains
         ! copy the data back into the global options data structure
         options%adv_options = adv_options
     end subroutine adv_parameters_namelist
+
+
+    !> -------------------------------
+    !! Initialize the convection scheme options
+    !!
+    !! Reads the cu_parameters namelist or sets default values
+    !!
+    !! -------------------------------
+    subroutine cu_parameters_namelist(filename, options)
+        implicit none
+        character(len=*),   intent(in)   :: filename
+        type(options_t),    intent(inout):: options
+
+        type(cu_options_type) :: cu_options
+        integer :: name_unit
+
+        real :: tendency_fraction, tend_qv_fraction, tend_qc_fraction, tend_th_fraction, tend_qi_fraction
+        real :: stochastic_cu
+
+
+        ! define the namelist
+        namelist /cu_parameters/ tendency_fraction, tend_qv_fraction, tend_qc_fraction, tend_th_fraction, tend_qi_fraction, &
+                                 stochastic_cu
+
+        ! because adv_options could be in a separate file
+        if (options%parameters%use_cu_options) then
+            if (trim(filename)/=trim(get_options_file())) then
+                call version_check(filename,options%parameters)
+            endif
+        endif
+
+        ! set default values
+        stochastic_cu       = kNO_STOCHASTIC
+
+        tendency_fraction   = 1.0
+        tend_qv_fraction    = -1.0
+        tend_qc_fraction    = -1.0
+        tend_th_fraction    = -1.0
+        tend_qi_fraction    = -1.0
+
+        ! read the namelist options
+        if (options%parameters%use_cu_options) then
+            open(io_newunit(name_unit), file=filename)
+            read(name_unit,nml=cu_parameters)
+            close(name_unit)
+        endif
+
+        ! if not set separately, default to the global tendency setting
+        if (tend_qv_fraction < 0) tend_qv_fraction = tendency_fraction
+        if (tend_qc_fraction < 0) tend_qc_fraction = tendency_fraction
+        if (tend_th_fraction < 0) tend_th_fraction = tendency_fraction
+        if (tend_qi_fraction < 0) tend_qi_fraction = tendency_fraction
+
+        ! store everything in the cu_options structure
+        cu_options%stochastic_cu        = stochastic_cu
+        cu_options%tendency_fraction    = tendency_fraction
+        cu_options%tend_qv_fraction     = tend_qv_fraction
+        cu_options%tend_qc_fraction     = tend_qc_fraction
+        cu_options%tend_th_fraction     = tend_th_fraction
+        cu_options%tend_qi_fraction     = tend_qi_fraction
+
+        ! copy the data back into the global options data structure
+        options%cu_options = cu_options
+    end subroutine cu_parameters_namelist
+
 
 
     !> -------------------------------

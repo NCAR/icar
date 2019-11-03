@@ -331,13 +331,14 @@ contains
 
             ! get the next variable in the structure
             var = list%next(name)
+
             if (var%computed) then
 
-                if (name == options%parameters%zvar) then
+                if (trim(name) == trim(options%parameters%zvar)) then
                     call compute_z_update(this, list, options)
                 endif
 
-                if (name == options%parameters%pvar) then
+                if (trim(name) == trim(options%parameters%pvar)) then
                     call compute_p_update(this, list, options, var)
                 endif
 
@@ -407,9 +408,9 @@ contains
         qvar = list%get_var(options%parameters%qvvar)
         tvar = list%get_var(options%parameters%tvar)
         zvar = list%get_var(options%parameters%hgtvar)
+        var = list%get_var(options%parameters%pvar, err)
 
         pvar = list%get_var(options%parameters%pslvar, err)
-        var = list%get_var(options%parameters%pvar, err)
 
         if (err == 0) then
             call compute_3d_z(var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d)
