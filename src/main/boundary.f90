@@ -1061,6 +1061,7 @@ contains
         call update_edges(bc%dth_dt,bc%next_domain%th,domain%th)
         call update_edges(bc%dqv_dt,bc%next_domain%qv,domain%qv)
         call update_edges(bc%dqc_dt,bc%next_domain%cloud,domain%cloud)
+        call update_edges(bc%dqi_dt,bc%next_domain%ice,domain%cloud)
     end subroutine update_dxdt
 
     !>------------------------------------------------------------
@@ -1236,7 +1237,7 @@ contains
         integer,dimension(io_maxDims)::dims !note, io_maxDims is included from io_routines.
         type(bc_type) :: newbc ! just used for updating z coordinate
         real, allocatable, dimension(:,:,:) :: zbase ! may be needed to temporarily store PHB data
-        logical :: use_boundary,use_interior
+        logical :: use_boundary, use_interior, use_boundary_Nff
         integer::i,nz,nx,ny
         ! MODULE variables : curstep, curfile, nfiles, steps_in_file, file_list
 
@@ -1254,6 +1255,15 @@ contains
         endif
         use_interior=.False. ! this is passed to the use_boundary flag in geo_interp
         use_boundary=.True.
+        
+        ! if N is to be calculated from the forcing data set then some
+        ! variables are required to be read on the entire domain and
+        ! not only at the boundaries. Here we set use_boundary_Nff accordingly
+        ! variables that matter: th, qv, qc and qi.
+        use_boundary_Nff=.True. ! preserve original behaviour
+        if (options%lt_options%N_from_forcing) then
+            use_boundary_Nff=.False.
+        endif
 
         if (options%time_var=="") then
             bc%next_domain%model_time = bc%next_domain%model_time + options%input_dt
@@ -1338,7 +1348,7 @@ contains
 
         ! not necessary as long as we are interpolating above
         call read_var(bc%next_domain%th,      file_list(curfile), options%tvar,   &
-                      bc%geolut, bc%vert_lut, curstep, use_boundary,              &
+                      bc%geolut, bc%vert_lut, curstep, use_boundary_Nff,          &
                       options, time_varying_zlut=newbc%vert_lut)
 
         if (.not.options%t_is_potential) then
@@ -1347,7 +1357,7 @@ contains
         endif
 
         call read_var(bc%next_domain%qv,      file_list(curfile), options%qvvar,  &
-                      bc%geolut, bc%vert_lut, curstep, use_boundary,              &
+                      bc%geolut, bc%vert_lut, curstep, use_boundary_Nff,          &
                       options, time_varying_zlut=newbc%vert_lut)
 
         if (options%qv_is_spec_humidity) then
@@ -1360,12 +1370,12 @@ contains
 
         if (trim(options%qcvar)/="") then
             call read_var(bc%next_domain%cloud,   file_list(curfile), options%qcvar,  &
-                          bc%geolut, bc%vert_lut, curstep, use_boundary,              &
+                          bc%geolut, bc%vert_lut, curstep, use_boundary_Nff,          &
                           options, time_varying_zlut=newbc%vert_lut)
         endif
         if (trim(options%qivar)/="") then
             call read_var(bc%next_domain%ice,     file_list(curfile), options%qivar,  &
-                          bc%geolut, bc%vert_lut, curstep, use_boundary,              &
+                          bc%geolut, bc%vert_lut, curstep, use_boundary_Nff,          &
                           options, time_varying_zlut=newbc%vert_lut)
         endif
 
