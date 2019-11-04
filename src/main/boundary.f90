@@ -1061,7 +1061,7 @@ contains
         call update_edges(bc%dth_dt,bc%next_domain%th,domain%th)
         call update_edges(bc%dqv_dt,bc%next_domain%qv,domain%qv)
         call update_edges(bc%dqc_dt,bc%next_domain%cloud,domain%cloud)
-        call update_edges(bc%dqi_dt,bc%next_domain%ice,domain%cloud)
+        call update_edges(bc%dqi_dt,bc%next_domain%ice,domain%ice)
     end subroutine update_dxdt
 
     !>------------------------------------------------------------
