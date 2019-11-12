@@ -302,7 +302,7 @@ module data_structures
 
         ! dX_dt variables are the change in variable X between two forcing time steps
         ! wind and pressure dX_dt fields applied to full 3d grid, others applied only to boundaries
-        real, allocatable, dimension(:,:,:) :: du_dt,dv_dt,dp_dt,dth_dt,dqv_dt,dqc_dt
+        real, allocatable, dimension(:,:,:) :: du_dt,dv_dt,dp_dt,dth_dt,dqv_dt,dqc_dt,dqi_dt,dqr_dt,dqs_dt,dqg_dt
         ! sh, lh, and pblh fields are only 2d.
         ! These are only used with LSM option 1 and are derived from forcing file
         real, allocatable, dimension(:,:)   :: dsh_dt,dlh_dt,dpblh_dt
