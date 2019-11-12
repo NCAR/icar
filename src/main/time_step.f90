@@ -128,6 +128,7 @@ contains
             call boundary_update(domain%th, bc%dth_dt * dt)
             call boundary_update(domain%qv, bc%dqv_dt * dt)
             call boundary_update(domain%cloud, bc%dqc_dt * dt)
+            call boundary_update(domain%ice,   bc%dqi_dt * dt)
         endif
 
         ! because density changes with each time step, u/v/w have to be rebalanced as well.
@@ -258,6 +259,7 @@ contains
         bc%dth_dt = bc%dth_dt / dt
         bc%dqv_dt = bc%dqv_dt / dt
         bc%dqc_dt = bc%dqc_dt / dt
+        bc%dqi_dt = bc%dqi_dt / dt
 
         if (trim(options%rain_var)/="") then
             bc%drain_dt = bc%drain_dt / dt

@@ -1108,6 +1108,7 @@ contains
         call update_edges(bc%dth_dt,bc%next_domain%th,domain%th)
         call update_edges(bc%dqv_dt,bc%next_domain%qv,domain%qv)
         call update_edges(bc%dqc_dt,bc%next_domain%cloud,domain%cloud)
+        call update_edges(bc%dqi_dt,bc%next_domain%ice,domain%ice)
     end subroutine update_dxdt
 
     !>------------------------------------------------------------
@@ -1283,7 +1284,7 @@ contains
         integer,dimension(io_maxDims)::dims !note, io_maxDims is included from io_routines.
         type(bc_type) :: newbc ! just used for updating z coordinate
         real, allocatable, dimension(:,:,:) :: zbase ! may be needed to temporarily store PHB data
-        logical :: use_boundary,use_interior
+        logical :: use_boundary, use_interior, use_boundary_Nff
         integer::i,nz,nx,ny
         ! MODULE variables : curstep, curfile, nfiles, steps_in_file, file_list
 
@@ -1301,6 +1302,15 @@ contains
         endif
         use_interior=.False. ! this is passed to the use_boundary flag in geo_interp
         use_boundary=.True.
+        
+        ! if N is to be calculated from the forcing data set then some
+        ! variables are required to be read on the entire domain and
+        ! not only at the boundaries. Here we set use_boundary_Nff accordingly
+        ! variables that matter: th, qv, qc and qi.
+        use_boundary_Nff=.True. ! preserve original behaviour
+        if (options%lt_options%N_from_forcing) then
+            use_boundary_Nff=.False.
+        endif
 
         if (options%time_var=="") then
             bc%next_domain%model_time = bc%next_domain%model_time + options%input_dt
@@ -1385,7 +1395,7 @@ contains
 
         ! not necessary as long as we are interpolating above
         call read_var(bc%next_domain%th,      file_list(curfile), options%tvar,   &
-                      bc%geolut, bc%vert_lut, curstep, use_boundary,              &
+                      bc%geolut, bc%vert_lut, curstep, use_boundary_Nff,          &
                       options, time_varying_zlut=newbc%vert_lut)
 
         if (.not.options%t_is_potential) then
@@ -1394,7 +1404,7 @@ contains
         endif
 
         call read_var(bc%next_domain%qv,      file_list(curfile), options%qvvar,  &
-                      bc%geolut, bc%vert_lut, curstep, use_boundary,              &
+                      bc%geolut, bc%vert_lut, curstep, use_boundary_Nff,          &
                       options, time_varying_zlut=newbc%vert_lut)
 
         if (options%qv_is_spec_humidity) then
@@ -1407,12 +1417,12 @@ contains
 
         if (trim(options%qcvar)/="") then
             call read_var(bc%next_domain%cloud,   file_list(curfile), options%qcvar,  &
-                          bc%geolut, bc%vert_lut, curstep, use_boundary,              &
+                          bc%geolut, bc%vert_lut, curstep, use_boundary_Nff,          &
                           options, time_varying_zlut=newbc%vert_lut)
         endif
         if (trim(options%qivar)/="") then
             call read_var(bc%next_domain%ice,     file_list(curfile), options%qivar,  &
-                          bc%geolut, bc%vert_lut, curstep, use_boundary,              &
+                          bc%geolut, bc%vert_lut, curstep, use_boundary_Nff,          &
                           options, time_varying_zlut=newbc%vert_lut)
         endif
         
@@ -1492,11 +1502,17 @@ contains
         ! the current model state
         call update_dxdt(bc,domain)
 
-        ! we need the internal values of these fields to be in sync with the high res model
-        ! for the linear wind calculations... albeit these are for time t, and winds are for time t+1
-        bc%next_domain%qv=domain%qv
-        bc%next_domain%th=domain%th
-        bc%next_domain%cloud=domain%cloud + domain%ice + domain%qrain + domain%qsnow
+        ! 20190513 jh ... added an option to calculate the Brunt Vaisala frequency from the forcing dataset
+        !                 instead of the current state of the ICAR domain. If that option is set to true then
+        !                 we skip the assignment of domain quantities to bc%next_domain. That way we don't over
+        !                 write the values of the quantities in the forcing already stored there.
+        if (.NOT. options%lt_options%N_from_forcing) then
+            ! we need the internal values of these fields to be in sync with the high res model
+            ! for the linear wind calculations... albeit these are for time t, and winds are for time t+1
+            bc%next_domain%qv=domain%qv
+            bc%next_domain%th=domain%th
+            bc%next_domain%cloud=domain%cloud + domain%ice + domain%qrain + domain%qsnow
+        endif
 
         ! these are required by update_winds for most options
         bc%next_domain%pii = (bc%next_domain%p / 100000.0)** (Rd / cp)

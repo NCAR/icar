@@ -302,7 +302,7 @@ module data_structures
 
         ! dX_dt variables are the change in variable X between two forcing time steps
         ! wind and pressure dX_dt fields applied to full 3d grid, others applied only to boundaries
-        real, allocatable, dimension(:,:,:) :: du_dt,dv_dt,dp_dt,dth_dt,dqv_dt,dqc_dt
+        real, allocatable, dimension(:,:,:) :: du_dt,dv_dt,dp_dt,dth_dt,dqv_dt,dqc_dt,dqi_dt
         ! sh, lh, and pblh fields are only 2d.
         ! These are only used with LSM option 1 and are derived from forcing file
         real, allocatable, dimension(:,:)   :: dsh_dt,dlh_dt,dpblh_dt
@@ -381,6 +381,7 @@ module data_structures
         real    :: min_stability            ! these may need to be a little narrower.
         logical :: variable_N               ! Compute the Brunt Vaisala Frequency (N^2) every time step
         logical :: smooth_nsq               ! Smooth the Calculated N^2 over vert_smooth vertical levels
+        logical :: N_from_forcing           ! If true N is calculated from the forcing data at every forcing timestep instead of using the atmosperic fields of ICAR (standard: False)
         integer :: vert_smooth              ! number of model levels to smooth winds over in the vertical
 
         real    :: N_squared                ! static Brunt Vaisala Frequency (N^2) to use
