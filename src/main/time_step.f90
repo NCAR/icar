@@ -123,12 +123,15 @@ contains
         ! v has one more y element than others
         ny = ny + 1
         domain%v(:,:,ny) = domain%v(:,:,ny) + (bc%dv_dt(:,:,ny) * dt)
-        ! dXdt for qv,qc,th are only applied to the boundarys
+        ! dXdt for qv,qc,qi,qr,qs,qg and th are only applied to the boundarys
         if (.not.options%ideal) then
-            call boundary_update(domain%th, bc%dth_dt * dt)
-            call boundary_update(domain%qv, bc%dqv_dt * dt)
+            call boundary_update(domain%th,    bc%dth_dt * dt)
+            call boundary_update(domain%qv,    bc%dqv_dt * dt)
             call boundary_update(domain%cloud, bc%dqc_dt * dt)
             call boundary_update(domain%ice,   bc%dqi_dt * dt)
+            call boundary_update(domain%qrain, bc%dqr_dt * dt)
+            call boundary_update(domain%qsnow, bc%dqs_dt * dt)
+            call boundary_update(domain%qgrau, bc%dqg_dt * dt)
         endif
 
         ! because density changes with each time step, u/v/w have to be rebalanced as well.

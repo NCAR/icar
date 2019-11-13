@@ -1105,10 +1105,13 @@ contains
         bc%dsst_dt  =bc%next_domain%sst-domain%sst
 
         ! these fields are only updated along the edges of the domain
-        call update_edges(bc%dth_dt,bc%next_domain%th,domain%th)
-        call update_edges(bc%dqv_dt,bc%next_domain%qv,domain%qv)
-        call update_edges(bc%dqc_dt,bc%next_domain%cloud,domain%cloud)
-        call update_edges(bc%dqi_dt,bc%next_domain%ice,domain%ice)
+        call update_edges(bc%dth_dt,bc%next_domain%th    ,domain%th)
+        call update_edges(bc%dqv_dt,bc%next_domain%qv    ,domain%qv)
+        call update_edges(bc%dqc_dt,bc%next_domain%cloud ,domain%cloud)
+        call update_edges(bc%dqi_dt,bc%next_domain%ice   ,domain%ice)
+        call update_edges(bc%dqr_dt,bc%next_domain%qrain ,domain%qrain)
+        call update_edges(bc%dqs_dt,bc%next_domain%qsnow ,domain%qsnow)
+        call update_edges(bc%dqg_dt,bc%next_domain%qgrau ,domain%qgrau)
     end subroutine update_dxdt
 
     !>------------------------------------------------------------
@@ -1495,6 +1498,9 @@ contains
             call mean_boundaries(bc%next_domain%qv)
             call mean_boundaries(bc%next_domain%cloud)
             call mean_boundaries(bc%next_domain%ice)
+            call mean_boundaries(bc%next_domain%qrain)
+            call mean_boundaries(bc%next_domain%qsnow)
+            call mean_boundaries(bc%next_domain%qgrau)
         endif
 
 
