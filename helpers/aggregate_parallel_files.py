@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+import os
 import glob
 import multiprocessing as mp
 
@@ -95,6 +95,10 @@ def agg_file(first_file):
 
     print(first_file)
     date_search = first_file.replace("000001_","*")
+
+    if os.path.isfile(first_file.replace("000001_","_")):
+        return
+
     this_date_files = glob.glob(date_search)
     this_date_files.sort()
 
