@@ -39,6 +39,7 @@ module boundary_interface
         type(interpolable_type) :: geo
         type(interpolable_type) :: geo_u
         type(interpolable_type) :: geo_v
+        type(interpolable_type) :: original_geo
 
     contains
 

@@ -9,12 +9,14 @@ submodule(boundary_interface) boundary_implementation
 
     use icar_constants,         only : gravity, kPRIME_CENTERED, kDATELINE_CENTERED
     use array_utilities,        only : interpolate_in_z
+    use data_structures,        only : interpolable_type
     use io_routines,            only : io_getdims, io_read, io_maxDims, io_variable_is_present
     use time_io,                only : read_times, find_timestep_in_file
     use co_util,                only : broadcast
     use string,                 only : str
     use mod_atm_utilities,      only : rh_to_mr, compute_3d_p, compute_3d_z, exner_function
     use geo,                    only : standardize_coordinates
+    use vertical_interpolation, only : vLUT, vinterp
 
     implicit none
 contains
@@ -100,7 +102,8 @@ contains
 
         ! read in the height coordinate of the input data
         if (.not. options%parameters%compute_z) then
-            call io_read(file_list(this%curfile), z_var,   temp_z,   this%curstep)
+            ! call io_read(file_list(this%curfile), z_var,   temp_z,   this%curstep)
+            call io_read(file_list(1), z_var,   temp_z,   1)
             nx = size(temp_z,1)
             ny = size(temp_z,2)
             nz = size(temp_z,3)
@@ -148,14 +151,15 @@ contains
         if (allocated(this%geo%lon)) deallocate(this%geo%lon)
         allocate( this%geo%lon, source=this%lon)
 
-        ! geo%z needs to be interpolated from this%z to the high-res grids for vinterp
-        ! if (allocated(this%geo%z)) deallocate(this%geo%z)
-        ! allocate( this%geo%z, source=this%z)
-
         call standardize_coordinates(this%geo, longitude_system)
 
         this%geo_u = this%geo
         this%geo_v = this%geo
+
+        ! geo%z will be interpolated from this%z to the high-res grids for vinterp in domain... not a great separation
+        ! here we save the original z dataset so that it can be used to interpolate varying z through time.
+        if (allocated(this%original_geo%z)) deallocate(this%original_geo%z)
+        allocate( this%original_geo%z, source=this%z)
 
     end subroutine
 
@@ -272,12 +276,66 @@ contains
 
             end do
 
+            ! after reading all variables that can be read, not compute any remaining variables (e.g. z from p+ps)
             call update_computed_vars(this, options, update=.True.)
+
+            ! if the vertical levels of the forcing data change over time, they need to be interpolated to the original levels here.
+            if (options%parameters%time_varying_z) then
+                call interpolate_original_levels(this, options)
+            endif
 
             end associate
         ! endif
 
         ! call this%distribute_update()
+
+    end subroutine
+
+    subroutine interpolate_original_levels(this, options)
+        implicit none
+        class(boundary_t),   intent(inout)   :: this
+        type(options_t),     intent(in)      :: options
+
+        type(variable_t)        :: input_z, var
+        type(interpolable_type) :: input_geo
+        real, allocatable :: temp_3d(:,:,:)
+        character(len=kMAX_NAME_LENGTH) :: name
+
+
+        associate(list => this%variables)
+
+        input_z = list%get_var(options%parameters%zvar)
+
+        if (options%parameters%z_is_geopotential) then
+            input_z%data_3d = input_z%data_3d / gravity
+        endif
+
+        ! if (options%parameters%z_is_on_interface) then
+        !     call interpolate_in_z(input_z%data_3d)
+        ! endif
+
+        allocate(input_geo%z, source=input_z%data_3d)
+
+        ! create a vertical interpolation look up table for the current time step
+        call vLUT(this%original_geo, input_geo)
+
+
+        ! loop through the list of variables that were read in and might need to be interpolated in 3D
+        call list%reset_iterator()
+        do while (list%has_more_elements())
+            ! get the next variable in the structure
+            var = list%next(name)
+
+            if (var%three_d) then
+                ! need to vinterp this dataset to the original vertical levels (if necessary)
+
+                temp_3d = var%data_3d
+                call vinterp(var%data_3d, temp_3d, input_geo%vert_lut)
+
+            endif
+
+        end do
+        end associate
 
     end subroutine
 
@@ -420,7 +478,7 @@ contains
             if (err == 0) then
                 call compute_3d_z(var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d, zvar%data_2d)
             else
-                print*, "ERROR reading surface pressure or sea level pressure, variables not found"
+                write(*,*) "ERROR reading surface pressure or sea level pressure, variables not found"
                 error stop
             endif
         endif
@@ -454,7 +512,7 @@ contains
             if (err == 0) then
                 call compute_3d_p(pressure_var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d)
             else
-                print*, "ERROR reading surface pressure or sea level pressure, variables not found"
+                write(*,*) "ERROR reading surface pressure or sea level pressure, variables not found"
                 error stop
             endif
         endif
