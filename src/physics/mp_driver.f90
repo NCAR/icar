@@ -537,9 +537,8 @@ contains
 
             ! set the current tile to the top layer to process microphysics for
             if (options%mp_options%top_mp_level>0) then
-                kte=min(kte, options%mp_options%top_mp_level)
+                kte = min(kte, options%mp_options%top_mp_level)
             endif
-
 
 
             if (present(subset)) then
