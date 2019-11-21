@@ -345,6 +345,7 @@ contains
         this%terrain%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
         this%global_terrain = temporary_data ! save the global terrain map for the linear wind solution
 
+        ! here we just initialize the first level of geo_u and geo_v with the terrain height.  3D Z will be defined later
         associate(g => this%u_grid2d_ext, geo => this%geo_u)
             call array_offset_x(temporary_data, temp_offset)
             if (allocated(geo%z)) deallocate(geo%z)
@@ -537,6 +538,9 @@ contains
         ys_in=grid%jms; ys_out=1
         xe_in=grid%ime; xe_out=nxo
         ye_in=grid%jme; ye_out=nyo
+
+        if ((ye_in-ys_in+1) /= nyo) print*, "subset_array ERROR in image:",this_image(),ye_in,ys_in,nyo
+        if ((xe_in-xs_in+1) /= nxo) print*, "subset_array ERROR in image:",this_image(),xe_in,xs_in,nxo
 
         !----------------------------------------------------
         ! This is the area of overlap
@@ -739,7 +743,7 @@ contains
                 dz_mass(:,i,:)     = (dz(i)/2 * z_level_ratio(:,i,:) + dz(i-1)/2 * z_level_ratio(:,i-1,:))
                 dz_interface(:,i,:)= dz(i) * z_level_ratio(:,i,:)
                 z(:,i,:)           = z(:,i-1,:)           + dz_mass(:,i,:)
-                z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i,:)
+                z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i-1,:)
 
                 z_u(:,i,:)         = z_u(:,i-1,:)         + ((dz(i)/2 * zr_u(:,i,:) + dz(i-1)/2 * zr_u(:,i-1,:)))
                 z_v(:,i,:)         = z_v(:,i-1,:)         + ((dz(i)/2 * zr_v(:,i,:) + dz(i-1)/2 * zr_v(:,i-1,:)))
@@ -1083,9 +1087,9 @@ contains
         real, allocatable :: temporary_data(:,:)
         integer :: nx_global, ny_global, nz_global, nsmooth
 
-        nsmooth = nint(options%parameters%smooth_wind_distance / options%parameters%dx)
+        nsmooth = max(1, int(options%parameters%smooth_wind_distance / options%parameters%dx))
         this%nsmooth = nsmooth
-
+        if ((this_image()==1).and.(options%parameters%debug)) print*, "number of gridcells to smooth = ",nsmooth
         ! This doesn't need to read in this variable, it could just request the dimensions
         ! but this is not a performance sensitive part of the code (for now)
         call io_read(options%parameters%init_conditions_file,   &
@@ -1175,28 +1179,42 @@ contains
         class(domain_t),  intent(inout) :: this
         type(boundary_t), intent(inout) :: forcing
 
+        type(interpolable_type) :: forc_u_from_mass, forc_v_from_mass
+
         integer :: nx, ny, nz
 
         ! this%geo and forcing%geo have to be of class interpolable
         ! which means they must contain lat, lon, z, geolut, and vLUT components
-        call geo_LUT(this%geo,   forcing%geo)
+        forc_u_from_mass%lat = forcing%lat
+        forc_u_from_mass%lon = forcing%lon
+        forc_v_from_mass%lat = forcing%lat
+        forc_v_from_mass%lon = forcing%lon
+
+        call geo_LUT(this%geo_u, forc_u_from_mass)
+        call geo_LUT(this%geo_v, forc_v_from_mass)
         call geo_LUT(this%geo_u, forcing%geo_u)
         call geo_LUT(this%geo_v, forcing%geo_v)
+        call geo_LUT(this%geo,   forcing%geo)
 
         nx = size(this%geo%z, 1)
         nz = size(forcing%z,  2)
         ny = size(this%geo%z, 3)
 
+
         allocate(forcing%geo%z(nx, nz, ny))
         call geo_interp(forcing%geo%z, forcing%z, forcing%geo%geolut)
         call vLUT(this%geo,   forcing%geo)
 
-        allocate(forcing%geo_u%z, mold=this%geo_u%z)
-        call geo_interp(forcing%geo_u%z, forcing%z, forcing%geo_u%geolut)
+        nx = size(this%geo_u%z, 1)
+        ny = size(this%geo_u%z, 3)
+        allocate(forcing%geo_u%z(nx,nz,ny))
+        call geo_interp(forcing%geo_u%z, forcing%z, forc_u_from_mass%geolut)
         call vLUT(this%geo_u, forcing%geo_u)
 
-        allocate(forcing%geo_v%z, mold=this%geo_v%z)
-        call geo_interp(forcing%geo_v%z, forcing%z, forcing%geo_v%geolut)
+        nx = size(this%geo_v%z, 1)
+        ny = size(this%geo_v%z, 3)
+        allocate(forcing%geo_v%z(nx,nz,ny))
+        call geo_interp(forcing%geo_v%z, forcing%z, forc_v_from_mass%geolut)
         call vLUT(this%geo_v, forcing%geo_v)
 
     end subroutine
@@ -1459,8 +1477,9 @@ contains
             nz = size(var_data,2)
 
             ! One grid cell smoothing of original input data
-            ! call smooth_array(input_data%data_3d, windowsize=1, ydim=2)
+            call smooth_array(input_data%data_3d, windowsize=1, ydim=3)
             call geo_interp(pre_smooth, input_data%data_3d, forcing%geo_u%geolut)
+
             call vinterp(temp_3d, pre_smooth, forcing%geo_u%vert_lut)
             ! temp_3d = pre_smooth(:,:nz,:) ! no vertical interpolation option
 
@@ -1469,7 +1488,6 @@ contains
             var_data = temp_3d(dom%u_grid%ims-dom%u_grid2d_ext%ims+1 : dom%u_grid%ime-dom%u_grid2d_ext%ims+1,    &
                                 :,   &
                                dom%u_grid%jms-dom%u_grid2d_ext%jms+1 : dom%u_grid%jme-dom%u_grid2d_ext%jms+1)
-
         ! Interpolate to the v staggered grid
         else if (vvar) then
 
@@ -1482,7 +1500,7 @@ contains
             nz = size(var_data,2)
 
             ! One grid cell smoothing of original input data
-            ! call smooth_array(input_data%data_3d, windowsize=1, ydim=2)
+            call smooth_array(input_data%data_3d, windowsize=1, ydim=3)
             call geo_interp(pre_smooth, input_data%data_3d, forcing%geo_v%geolut)
             call vinterp(temp_3d, pre_smooth, forcing%geo_v%vert_lut)
             ! temp_3d = pre_smooth(:,:nz,:) ! no vertical interpolation option
