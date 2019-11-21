@@ -570,7 +570,7 @@ contains
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
                                         swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var
 
-        namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qgvar,hgtvar,shvar,lhvar,pblhvar,   &
+        namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qgvar,qsvar,hgtvar,shvar,lhvar,pblhvar,   &
                             landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar, &
                             psvar, pslvar, &
                             hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
