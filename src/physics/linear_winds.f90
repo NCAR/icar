@@ -63,6 +63,11 @@ module linear_theory_winds
     logical :: using_blocked_flow
     real    :: N_squared
 
+
+    interface linear_perturbation
+        module procedure linear_perturbation_constz, linear_perturbation_varyingz
+    end interface
+
     !! unfortunately these have to be allocated every call because we could be calling on both the high-res
     !! domain and the low res domain (to "remove" the linear winds)
     real,                       allocatable,    dimension(:,:)  :: k, l, kl, sig
@@ -226,7 +231,7 @@ contains
         ! returns u_perturb and v_perturb
     end subroutine linear_perturbation_at_height
 
-    subroutine linear_perturbation(U, V, Nsq, z_bottom, z_top, minimum_step, fourier_terrain, lt_data)
+    subroutine linear_perturbation_constz(U, V, Nsq, z_bottom, z_top, minimum_step, fourier_terrain, lt_data)
         use, intrinsic :: iso_c_binding
         implicit none
         real,                     intent(in)    :: U, V             ! U and V components of background wind
@@ -264,8 +269,81 @@ contains
 
         lt_data%u_perturb = lt_data%u_accumulator / n_steps
         lt_data%v_perturb = lt_data%v_accumulator / n_steps
-    end subroutine linear_perturbation
+    end subroutine linear_perturbation_constz
 
+
+    subroutine linear_perturbation_varyingz(U, V, Nsq, z_bottom, z_top, minimum_step, fourier_terrain, lt_data)
+        use, intrinsic :: iso_c_binding
+        implicit none
+        real,                     intent(in)    :: U, V             ! U and V components of background wind
+        real,                     intent(in)    :: Nsq              ! Brunt-Vaisalla frequency (N squared)
+        real,                     intent(in)    :: z_top(:,:), z_bottom(:,:)  ! elevation for the top and bottom bound of a layer
+        real,                     intent(in)    :: minimum_step     ! minimum layer step size to compute LT for
+        complex(C_DOUBLE_COMPLEX),intent(in)    :: fourier_terrain(:,:) ! FFT(terrain)
+        type(linear_theory_type), intent(inout) :: lt_data          ! intermediate arrays needed for LT calc
+
+        integer :: n_steps, i
+        real    :: step_size, current_z, start_z, end_z
+        real,   allocatable :: layer_count(:,:), layer_fraction(:,:)
+        real,   allocatable :: internal_z_top(:,:), internal_z_bottom(:,:)
+
+        ! Handle the trivial case quickly
+        if ((U==0).and.(V==0)) then
+            lt_data%u_perturb = 0
+            lt_data%v_perturb = 0
+            return
+        endif
+
+        start_z = minval(z_bottom)
+        end_z = maxval(z_top)
+
+        allocate(internal_z_top(size(lt_data%u_perturb,1),size(lt_data%u_perturb,2)), source=minval(z_top))
+        internal_z_top(buffer:buffer+size(z_top,1)-1,buffer:buffer+size(z_top,2)-1) = z_top
+
+        allocate(internal_z_bottom(size(lt_data%u_perturb,1),size(lt_data%u_perturb,2)), source=minval(z_bottom))
+        internal_z_bottom(buffer:buffer+size(z_bottom,1)-1,buffer:buffer+size(z_bottom,2)-1) = z_bottom
+
+        allocate(layer_count(size(lt_data%u_perturb,1),size(lt_data%u_perturb,2)))
+        layer_count = 0
+        allocate(layer_fraction, source=layer_count)
+        if (this_image()==1) print*, "LUT generation:",U, V, Nsq
+        if (this_image()==1) print*, internal_z_top(1,1), minval(internal_z_top), maxval(internal_z_top)
+        if (this_image()==1) print*, internal_z_bottom(1,1), minval(internal_z_bottom), maxval(internal_z_bottom)
+
+        step_size = min(minimum_step, minval(z_top - z_bottom))
+        current_z = start_z + step_size/2 ! we want the value in the middle of each theoretical layer
+
+        ! sum up u/v perturbations over all layers evaluated
+        lt_data%u_accumulator = 0
+        lt_data%v_accumulator = 0
+
+        do while (current_z < end_z)
+
+            call linear_perturbation_at_height(U,V,Nsq,current_z, fourier_terrain, lt_data)
+
+            ! if (this_image()==1) print*, minval(max(0.0, min(step_size/2, current_z - internal_z_bottom))), &
+            !                         minval(max(0.0, min(step_size/2, internal_z_top - current_z))),         &
+            !                         minval(max(0.0, min(step_size/2, current_z - internal_z_bottom)) + max(0.0, min(step_size/2, internal_z_top - current_z)))
+
+            layer_fraction = (  max(0.0, min(step_size/2, current_z - internal_z_bottom)) &
+                              + max(0.0, min(step_size/2, internal_z_top - current_z))    ) / step_size
+
+            layer_count = layer_count + layer_fraction
+            lt_data%u_accumulator = lt_data%u_accumulator + lt_data%u_perturb * layer_fraction
+            lt_data%v_accumulator = lt_data%v_accumulator + lt_data%v_perturb * layer_fraction
+            if (this_image()==1) print*, current_z, &
+                                    minval(layer_fraction(buffer:buffer+size(z_bottom,1)-1,buffer:buffer+size(z_bottom,2)-1)), &
+                                    maxval(layer_fraction(buffer:buffer+size(z_bottom,1)-1,buffer:buffer+size(z_bottom,2)-1))
+
+            current_z = current_z + step_size
+        enddo
+
+        if (this_image()==1) print*, start_z, end_z, step_size, current_z
+        if (this_image()==1) print*, minval(layer_count), " :: ", maxval(layer_count)
+
+        lt_data%u_perturb = lt_data%u_accumulator / layer_count
+        lt_data%v_perturb = lt_data%v_accumulator / layer_count
+    end subroutine linear_perturbation_varyingz
     !>----------------------------------------------------------
     !! Add a smoothed buffer around the edge of the terrain to prevent crazy wrap around effects
     !! in the FFT due to discontinuities between the left and right (or top and bottom) edges of the domain
@@ -653,20 +731,22 @@ contains
                         if (this_image()==1) write(*,"(f5.1,A)") loops_completed/real(nz*(stop_pos-start_pos+1))*100," %"
                         !$omp end critical (print_lock)
                     endif
-                    ! if (reverse) then
-                    !     layer_height        = domain%z(1,1,z) - domain%terrain%data_2d(1,1)
-                    !     layer_height_bottom = layer_height - (options%parameters%dz_levels(z) / 2)
-                    !     layer_height_top    = layer_height + (options%parameters%dz_levels(z) / 2)
-                    ! else
+
+                    if (options%parameters%space_varying_dz) then
+
+                        call linear_perturbation(u, v, exp(nsq_values(j)),                                                                          &
+                                                 domain%z_interface%data_3d(:,z,:) - domain%terrain%data_2d,                                        &
+                                                 domain%z_interface%data_3d(:,z,:) - domain%terrain%data_2d + domain%dz_interface%data_3d(:,z,:),   &
+                                                 minimum_layer_size, domain%terrain_frequency, lt_data_m)
+                    else
                         layer_height = domain%z%data_3d(ims,z,jms) - domain%terrain%data_2d(ims,jms)
                         layer_height_bottom = layer_height - (options%parameters%dz_levels(z) / 2)
                         layer_height_top    = layer_height + (options%parameters%dz_levels(z) / 2)
-                    ! endif
 
-                    call linear_perturbation(u, v, exp(nsq_values(j)),                                  &
-                                             layer_height_bottom, layer_height_top, minimum_layer_size, &
-                                             domain%terrain_frequency, lt_data_m)
-
+                        call linear_perturbation(u, v, exp(nsq_values(j)),                                  &
+                                                 layer_height_bottom, layer_height_top, minimum_layer_size, &
+                                                 domain%terrain_frequency, lt_data_m)
+                    endif
                     ! need to handle stagger (nxu /= nx) and the buffer around edges of the domain
                     if (nxu /= nx) then
                         temporary_u(:,:) = real( real(                                              &
