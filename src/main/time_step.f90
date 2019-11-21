@@ -78,15 +78,22 @@ contains
         pressure_i(:, kms, :) = pressure(:, kms, :) + (pressure(:, kms, :) - pressure(:, kms+1, :)) / 2
         ! this isn't correct, we should be using update_pressure or similar to solve this
         ! domain%ptop = 2*domain%p(:,nz,:) - domain%p(:,nz-1,:)
-        psfc = pressure_i(:, kms, :)
+        if (associated(domain%surface_pressure%data_2d)) then
+            psfc = pressure_i(:, kms, :)
+        endif
 
         temperature = potential_temperature * exner
 
-        density =  pressure / &
-                    (Rd * temperature) ! kg/m^3
-
-        u_mass = (u(ims+1:ime+1,:,:) + u(ims:ime,:,:)) / 2
-        v_mass = (v(:,:,jms+1:jme+1) + v(:,:,jms:jme)) / 2
+        if (associated(domain%density%data_3d)) then
+            density =  pressure / &
+                        (Rd * temperature) ! kg/m^3
+        endif
+        if (associated(domain%u_mass%data_3d)) then
+            u_mass = (u(ims+1:ime+1,:,:) + u(ims:ime,:,:)) / 2
+        endif
+        if (associated(domain%v_mass%data_3d)) then
+            v_mass = (v(:,:,jms+1:jme+1) + v(:,:,jms:jme)) / 2
+        endif
 
 
     ! NOTE: all code below is not implemented in ICAR 2.0 yet
@@ -112,10 +119,13 @@ contains
         endif
 
         ! temporary constant
-        ! use log-law of the wall to convert from first model level to surface
-        currw = karman / log((domain%z%data_3d(ims+1:ime-1,kms,jms+1:jme-1) - domain%terrain%data_2d(ims+1:ime-1,jms+1:jme-1)) / domain%roughness_z0%data_2d(ims+1:ime-1,jms+1:jme-1))
-        ! use log-law of the wall to convert from surface to 10m height
-        lastw = log(10.0 / domain%roughness_z0%data_2d(ims+1:ime-1,jms+1:jme-1)) / karman
+        if (associated(domain%roughness_z0%data_2d)) then
+            ! use log-law of the wall to convert from first model level to surface
+            currw = karman / log((domain%z%data_3d(ims+1:ime-1,kms,jms+1:jme-1) - domain%terrain%data_2d(ims+1:ime-1,jms+1:jme-1)) / domain%roughness_z0%data_2d(ims+1:ime-1,jms+1:jme-1))
+            ! use log-law of the wall to convert from surface to 10m height
+            lastw = log(10.0 / domain%roughness_z0%data_2d(ims+1:ime-1,jms+1:jme-1)) / karman
+        endif
+
         if (associated(domain%u_10m%data_2d)) then
             domain%ustar        (ims+1:ime-1,jms+1:jme-1) = u_mass      (ims+1:ime-1,kms,jms+1:jme-1) * currw
             domain%u_10m%data_2d(ims+1:ime-1,jms+1:jme-1) = domain%ustar(ims+1:ime-1,jms+1:jme-1)     * lastw
@@ -127,7 +137,7 @@ contains
             ! now calculate master ustar based on U and V combined in quadrature
             domain%ustar(ims+1:ime-1,jms+1:jme-1) = sqrt(u_mass(ims+1:ime-1,kms,jms+1:jme-1)**2 + v_mass(ims+1:ime-1,kms,jms+1:jme-1)**2) * currw
         endif
-        
+
         ! finally, calculate the real vertical motions (including U*dzdx + V*dzdy)
         lastw = 0
         do z = kms, kme
@@ -189,9 +199,9 @@ contains
         maxwind1d = 0
         maxwind3d = 0
 
-        nx = size(rho,1)
-        nz = size(rho,2)
-        ny = size(rho,3)
+        nx = size(w,1)
+        nz = size(w,2)
+        ny = size(w,3)
 
         if (cfl_strictness==1) then
             ! to ensure we are stable for 1D advection:
