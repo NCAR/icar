@@ -308,7 +308,7 @@ contains
         jms = lbound(lo%lat,2)
         jme = ubound(lo%lat,2)
 
-        ! calcualte dx/dy at the middle of the grid
+        ! calculate dx/dy of the grid
         dx = lo%lon(ims+1,jms) - lo%lon(ims,jms)
         dy = lo%lat(ims,jms+1) - lo%lat(ims,jms)
 
