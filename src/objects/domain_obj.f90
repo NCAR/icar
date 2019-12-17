@@ -1185,10 +1185,10 @@ contains
 
         ! this%geo and forcing%geo have to be of class interpolable
         ! which means they must contain lat, lon, z, geolut, and vLUT components
-        forc_u_from_mass%lat = forcing%lat
-        forc_u_from_mass%lon = forcing%lon
-        forc_v_from_mass%lat = forcing%lat
-        forc_v_from_mass%lon = forcing%lon
+        forc_u_from_mass%lat = forcing%geo%lat
+        forc_u_from_mass%lon = forcing%geo%lon
+        forc_v_from_mass%lat = forcing%geo%lat
+        forc_v_from_mass%lon = forcing%geo%lon
 
         call geo_LUT(this%geo_u, forc_u_from_mass)
         call geo_LUT(this%geo_v, forc_v_from_mass)
