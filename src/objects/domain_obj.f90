@@ -88,12 +88,16 @@ contains
       if (associated(this%water_vapor%data_3d))           call this%water_vapor%send()
       if (associated(this%potential_temperature%data_3d)) call this%potential_temperature%send()
       if (associated(this%cloud_water_mass%data_3d))      call this%cloud_water_mass%send()
+      if (associated(this%cloud_number%data_3d))          call this%cloud_number%send()
       if (associated(this%cloud_ice_mass%data_3d))        call this%cloud_ice_mass%send()
       if (associated(this%cloud_ice_number%data_3d))      call this%cloud_ice_number%send()
       if (associated(this%rain_mass%data_3d))             call this%rain_mass%send()
       if (associated(this%rain_number%data_3d))           call this%rain_number%send()
       if (associated(this%snow_mass%data_3d))             call this%snow_mass%send()
+      if (associated(this%snow_number%data_3d))           call this%snow_number%send()
       if (associated(this%graupel_mass%data_3d))          call this%graupel_mass%send()
+      if (associated(this%graupel_number%data_3d))        call this%graupel_number%send()
+
     end subroutine
 
     !> -------------------------------
@@ -102,15 +106,18 @@ contains
     !! -------------------------------
     module subroutine halo_retrieve(this)
       class(domain_t), intent(inout) :: this
-      if (associated(this%water_vapor%data_3d))           call this%water_vapor%retrieve() ! the retrieve call will sync all
+      if (associated(this%water_vapor%data_3d))           call this%water_vapor%retrieve() ! the first retrieve call will sync all
       if (associated(this%potential_temperature%data_3d)) call this%potential_temperature%retrieve(no_sync=.True.)
       if (associated(this%cloud_water_mass%data_3d))      call this%cloud_water_mass%retrieve(no_sync=.True.)
+      if (associated(this%cloud_number%data_3d))          call this%cloud_number%retrieve(no_sync=.True.)
       if (associated(this%cloud_ice_mass%data_3d))        call this%cloud_ice_mass%retrieve(no_sync=.True.)
       if (associated(this%cloud_ice_number%data_3d))      call this%cloud_ice_number%retrieve(no_sync=.True.)
       if (associated(this%rain_mass%data_3d))             call this%rain_mass%retrieve(no_sync=.True.)
       if (associated(this%rain_number%data_3d))           call this%rain_number%retrieve(no_sync=.True.)
       if (associated(this%snow_mass%data_3d))             call this%snow_mass%retrieve(no_sync=.True.)
+      if (associated(this%snow_number%data_3d))           call this%snow_number%retrieve(no_sync=.True.)
       if (associated(this%graupel_mass%data_3d))          call this%graupel_mass%retrieve(no_sync=.True.)
+      if (associated(this%graupel_number%data_3d))        call this%graupel_number%retrieve(no_sync=.True.)
     end subroutine
 
     !> -------------------------------
@@ -1160,12 +1167,15 @@ contains
       if (associated(this%water_vapor%data_3d)           ) where(this%water_vapor%data_3d < 0)             this%water_vapor%data_3d = 0
       if (associated(this%potential_temperature%data_3d) ) where(this%potential_temperature%data_3d < 0)   this%potential_temperature%data_3d = 0
       if (associated(this%cloud_water_mass%data_3d)      ) where(this%cloud_water_mass%data_3d < 0)        this%cloud_water_mass%data_3d = 0
+      if (associated(this%cloud_number%data_3d)          ) where(this%cloud_number%data_3d < 0)            this%cloud_number%data_3d = 0
       if (associated(this%cloud_ice_mass%data_3d)        ) where(this%cloud_ice_mass%data_3d < 0)          this%cloud_ice_mass%data_3d = 0
       if (associated(this%cloud_ice_number%data_3d)      ) where(this%cloud_ice_number%data_3d < 0)        this%cloud_ice_number%data_3d = 0
       if (associated(this%rain_mass%data_3d)             ) where(this%rain_mass%data_3d < 0)               this%rain_mass%data_3d = 0
       if (associated(this%rain_number%data_3d)           ) where(this%rain_number%data_3d < 0)             this%rain_number%data_3d = 0
       if (associated(this%snow_mass%data_3d)             ) where(this%snow_mass%data_3d < 0)               this%snow_mass%data_3d = 0
+      if (associated(this%snow_number%data_3d)           ) where(this%snow_number%data_3d < 0)             this%snow_number%data_3d = 0
       if (associated(this%graupel_mass%data_3d)          ) where(this%graupel_mass%data_3d < 0)            this%graupel_mass%data_3d = 0
+      if (associated(this%graupel_number%data_3d)        ) where(this%graupel_number%data_3d < 0)          this%graupel_number%data_3d = 0
 
     end subroutine
 
