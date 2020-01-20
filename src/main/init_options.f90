@@ -337,7 +337,7 @@ contains
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
                                         swdown_var, lwdown_var, sst_var, rain_var, time_var,            &
-                                        qrvar, qsvar, qgvar, qnivar, qnrvar
+                                        qrvar, qsvar, qgvar, qnivar, qnrvar, nvar
 
         namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,   &
                             landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar, &
@@ -345,7 +345,7 @@ contains
                             soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
                             vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
                             swdown_var, lwdown_var, sst_var, rain_var, time_var,            &
-                            qrvar, qsvar, qgvar, qnivar, qnrvar
+                            qrvar, qsvar, qgvar, qnivar, qnrvar, nvar
 
         ! no default values supplied for variable names
         hgtvar=""
@@ -369,6 +369,7 @@ contains
         qgvar=""         ! jh - added as optional field
         qnivar=""        ! jh - added as optional field
         qnrvar=""        ! jh - added as optional field
+        nvar=""          ! jh - added as optional field
         zvar=""
         zbvar=""
         shvar=""
@@ -432,6 +433,8 @@ contains
         options%qgvar       = qgvar    ! jh - added as optional field
         options%qnivar      = qnivar   ! jh - added as optional field
         options%qnrvar      = qnrvar   ! jh - added as optional field
+        
+        options%nvar        = nvar     ! jh - added as optional field
         
         ! vertical coordinate
         options%zvar        = zvar
