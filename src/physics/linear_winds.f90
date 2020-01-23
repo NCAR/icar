@@ -933,7 +933,7 @@ contains
     !! then bilinearly interpolate the nearest LUT values for that points linear wind field
     !!
     !!----------------------------------------------------------
-    subroutine spatial_winds(domain,options,reverse, vsmooth, winsz)
+    subroutine spatial_winds(domain, options, reverse, vsmooth, winsz)
         implicit none
         class(linearizable_type),intent(inout)::domain
         type(options_type), intent(in) :: options
@@ -1000,12 +1000,12 @@ contains
                 do k=1,ny
                     do j=1,nz
                         do i=1,nx
-        
+
                             ! look up vsmooth gridcells up to nz at the maximum
                             top = min(j+vsmooth, nz)
                             ! if (top-j)/=vsmooth, then look down enough layers to make the window vsmooth in size
                             bottom = max(1, j - (vsmooth - (top-j)))
-        
+
                             if (.not.reverse) then
                                     domain%nsquared(i,j,k) = calc_stability(domain%th(i,bottom,k), domain%th(i,top,k),  &
                                                                             domain%pii(i,bottom,k),domain%pii(i,top,k), &
@@ -1013,7 +1013,7 @@ contains
                                                                             domain%qv(i,bottom,k), domain%qv(i,top,k),  &
                                                                             domain%cloud(i,j,k)+domain%ice(i,j,k)       &
                                                                             +domain%qrain(i,j,k)+domain%qsnow(i,j,k))
-            
+
                                     domain%nsquared(i,j,k) = max(min_stability, min(max_stability, &
                                                             domain%nsquared(i,j,k) * nsq_calibration(i,k)))
                             else
