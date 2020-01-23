@@ -933,14 +933,15 @@ contains
     !! then bilinearly interpolate the nearest LUT values for that points linear wind field
     !!
     !!----------------------------------------------------------
-    subroutine spatial_winds(domain,options, reverse, vsmooth, winsz)
+    subroutine spatial_winds(domain, options, reverse, vsmooth, winsz)
         implicit none
         class(linearizable_type),intent(inout)::domain
         type(options_type), intent(in) :: options
         logical, intent(in) :: reverse
         integer, intent(in) :: vsmooth
         integer, intent(in) :: winsz
-
+        
+        logical :: externalN ! flag whether N is read from a field in the forcing dataset
         integer :: nx,nxu, ny,nyv, nz, i,j,k, smoothz
         integer :: uk, vi !store a separate value of i for v and of k for u to we can handle nx+1, ny+1
         integer :: step, dpos, npos, spos, nexts, nextd, nextn
@@ -955,6 +956,21 @@ contains
         nz  = size(domain%u,2)
         nxu = size(domain%u,1)
         nyv = size(domain%v,3)
+        
+        ! Here we just set externalN based on two options.
+        ! if NfromForcing is True and nvar is defined then N is to be
+        ! read from the forcing data set instead of being calculated by ICAR,
+        ! meaning that externalN = True. If not both conditions are satisfied,
+        ! externalN is False.
+        if (trim(options%nvar)/="") then
+            if (options%lt_options%N_from_forcing) then
+                externalN = .True.
+            else
+                externalN = .False.
+            endif
+        else
+            externalN = .False.
+        endif
 
         if (reverse) then
             u_LUT=>rev_u_LUT
@@ -969,9 +985,9 @@ contains
         endif
 
         if (reverse) print*, "WARNING using fixed nsq for linear wind removal: 3e-6"
-
         ! we only need to go through the calculations if N is variable
         if (options%lt_options%variable_N) then
+            if (.NOT. externalN) then
                 ! $omp parallel firstprivate(nx,nxu,ny,nyv,nz, reverse, vsmooth, winsz, using_blocked_flow), default(none), &
                 ! $omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom, u1d, v1d), &
                 ! $omp private(spos, dpos, npos, nexts,nextd, nextn,n, smoothz, u, v, blocked), &
@@ -984,22 +1000,22 @@ contains
                 do k=1,ny
                     do j=1,nz
                         do i=1,nx
-        
+
                             ! look up vsmooth gridcells up to nz at the maximum
                             top = min(j+vsmooth, nz)
                             ! if (top-j)/=vsmooth, then look down enough layers to make the window vsmooth in size
                             bottom = max(1, j - (vsmooth - (top-j)))
-        
+
                             if (.not.reverse) then
-                                domain%nsquared(i,j,k) = calc_stability(domain%th(i,bottom,k), domain%th(i,top,k),  &
-                                                                        domain%pii(i,bottom,k),domain%pii(i,top,k), &
-                                                                        domain%z(i,bottom,k),  domain%z(i,top,k),   &
-                                                                        domain%qv(i,bottom,k), domain%qv(i,top,k),  &
-                                                                        domain%cloud(i,j,k)+domain%ice(i,j,k)       &
-                                                                        +domain%qrain(i,j,k)+domain%qsnow(i,j,k))
-        
-                                domain%nsquared(i,j,k) = max(min_stability, min(max_stability, &
-                                                        domain%nsquared(i,j,k) * nsq_calibration(i,k)))
+                                    domain%nsquared(i,j,k) = calc_stability(domain%th(i,bottom,k), domain%th(i,top,k),  &
+                                                                            domain%pii(i,bottom,k),domain%pii(i,top,k), &
+                                                                            domain%z(i,bottom,k),  domain%z(i,top,k),   &
+                                                                            domain%qv(i,bottom,k), domain%qv(i,top,k),  &
+                                                                            domain%cloud(i,j,k)+domain%ice(i,j,k)       &
+                                                                            +domain%qrain(i,j,k)+domain%qsnow(i,j,k))
+
+                                    domain%nsquared(i,j,k) = max(min_stability, min(max_stability, &
+                                                            domain%nsquared(i,j,k) * nsq_calibration(i,k)))
                             else
                                 ! Low-res boundary condition variables will be in a different array format.  It should be
                                 ! easy enough to call calc_stability after e.g. transposing z and y dimension, but some
@@ -1029,6 +1045,7 @@ contains
                 end do
                 ! $omp end do
                 ! $omp end parallel
+            endif
         else
                 domain%nsquared = options%lt_options%N_squared
         endif
@@ -1409,7 +1426,7 @@ contains
         ! if we are reverseing the effects, that means we are in the low-res domain
         ! that domain does not have a spatial LUT calculated, so it can not be performed
         if (use_spatial_linear_fields)then
-            call spatial_winds(domain,options,rev, vsmooth, stability_window_size)
+            call spatial_winds(domain, options, rev, vsmooth, stability_window_size)
         else
             ! Nsq = squared Brunt Vaisalla frequency (1/s) typically from dry static stability
             stability = calc_domain_stability(domain)

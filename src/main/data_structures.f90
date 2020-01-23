@@ -463,7 +463,7 @@ module data_structures
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
                                         swdown_var, lwdown_var, &
                                         sst_var, rain_var, time_var, &
-                                        qnivar, qnrvar    ! jh - added as optional fields
+                                        qnivar, qnrvar, nvar    ! jh - added as optional fields
 
         ! Filenames for files to read various physics options from
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, adv_options_filename, &

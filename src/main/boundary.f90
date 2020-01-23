@@ -1033,6 +1033,23 @@ contains
 
             domain%pii = (domain%p / 100000.0) ** (Rd / cp)
             domain%rho = domain%p / (Rd * domain%th * domain%pii) ! kg/m^3
+            
+            ! jh - added forcing brunt vaisala frequency as optional field (nvar) BEGIN
+            ! If N_from_forcing is true and nvar is set in the options file then
+            ! the Brunt Vaisala frequency will be read from the forcing dataset.
+            if ((trim(options%nvar)/="") .AND. (options%lt_options%N_from_forcing)) then
+
+                if (.not.allocated(domain%nsquared)) allocate(domain%nsquared(nx,nz,ny))
+
+                domain%nsquared = options%lt_options%min_stability
+                call read_var(domain%nsquared,  file_list(curfile),   options%nvar,  &
+                                bc%geolut, bc%vert_lut, curstep, boundary_value, &
+                                options)                                
+                domain%nsquared = log(domain%nsquared)
+                if (options%debug) write(*,*) "N2 is read from the forcing data set"
+            endif
+            ! jh - added forcing brunt vaisala frequency as optional field (nvar) END
+            
             call update_winds(domain, options)
         endif
 
@@ -1289,6 +1306,10 @@ contains
         real, allocatable, dimension(:,:,:) :: zbase ! may be needed to temporarily store PHB data
         logical :: use_boundary, use_interior, use_boundary_Nff
         integer::i,nz,nx,ny
+        
+        integer,dimension(3) :: hrshape  ! needed to determine shape of high resolution domain%nsquared
+        integer :: nzh,nxh,nyh           ! z,x and y extension of the field domain%nsquared
+        
         ! MODULE variables : curstep, curfile, nfiles, steps_in_file, file_list
 
         if (.not.options%ideal) then
@@ -1518,6 +1539,28 @@ contains
             bc%next_domain%qv=domain%qv
             bc%next_domain%th=domain%th
             bc%next_domain%cloud=domain%cloud + domain%ice + domain%qrain + domain%qsnow
+        elseif ((trim(options%nvar)/="") .and. (options%lt_options%N_from_forcing)) then
+            ! we directly read nsquared from the forcing data if the corresponding options are set
+            ! that means that in the calls that update_winds makes, nsquared isn't calculated anew,
+            ! but the values read in here are kept.
+            
+            hrshape = shape(domain%nsquared)
+            nxh = hrshape(1)
+            nzh = hrshape(2)
+            nyh = hrshape(3)
+            if (.not.allocated(bc%next_domain%nsquared)) allocate(bc%next_domain%nsquared(nxh,nzh,nyh))
+            
+            call read_var(bc%next_domain%nsquared,      file_list(curfile), options%nvar,   &
+                          bc%geolut, bc%vert_lut, curstep, use_interior,                    &
+                          options, time_varying_zlut=newbc%vert_lut, interp_vertical=.True. )
+                          
+            ! here we make sure that all read nsquared are within the bounds defined in the
+            ! icar options
+            where (bc%next_domain%nsquared <= 0) bc%next_domain%nsquared = options%lt_options%min_stability
+            where (bc%next_domain%nsquared < options%lt_options%min_stability) bc%next_domain%nsquared = options%lt_options%min_stability
+            where (bc%next_domain%nsquared > options%lt_options%max_stability) bc%next_domain%nsquared = options%lt_options%max_stability
+            
+            bc%next_domain%nsquared = log(bc%next_domain%nsquared) ! needed since ICAR stores not nsquared but the log(nsquared)
         endif
 
         ! these are required by update_winds for most options
