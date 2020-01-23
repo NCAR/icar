@@ -15,7 +15,7 @@ module convection
     public :: init_convection, convect
     logical,allocatable, dimension(:,:) :: CU_ACT_FLAG
     real,   allocatable, dimension(:,:) :: XLAND, RAINCV, PRATEC, NCA
-    real,   allocatable, dimension(:,:,:):: W0AVG
+    real,   allocatable, dimension(:,:,:):: W0AVG, w_stochastic(:,:,:)
 
 contains
 
@@ -71,15 +71,15 @@ contains
                 allocate(domain%tend%qv_pbl(ids:ide,kds:kde,jds:jde))
                 domain%tend%qv_pbl=0
             endif
-
+            ! allocate(w_stochastic(ids:ide,kds:kde,jds:jde))
             call tiedtkeinit(domain%tend%th,domain%tend%qv,   &
                              domain%tend%qc,domain%tend%qi,   &
                              domain%tend%u, domain%tend%v,    &
                              .false.,1,1,0,                   &
                              .true.,                          &
-                             ids, ide, jds, jde, kds, kde-1,  &
+                             ids, ide, jds, jde, kds, kde,  &
                              ids, ide, jds, jde, kds, kde,    &
-                             ids, ide, jds, jde, kds, kde-1)
+                             ids, ide, jds, jde, kds, kde-1 )
          elseif (options%physics%convection==kCU_KAINFR) then
              write(*,*) "    Kain-Fritsch Cumulus scheme"
              allocate(W0AVG(ids:ide,kds:kde,jds:jde))
@@ -146,19 +146,25 @@ subroutine convect(domain,options,dt_in)
     !$omp end do
     !$omp end parallel
 
-
     if (options%physics%convection==kCU_TIEDTKE) then
-
+        ! call random_number(w_stochastic)
+        ! block
+        !     integer :: i
+        !     do i=1,size(w_stochastic,2)
+        !         w_stochastic(:,i,:) = domain%sensible_heat/500 + w_stochastic(:,i,:)
+        !     enddo
+        ! end block
         call CU_TIEDTKE(                                          &
                  dt_in,itimestep,STEPCU                           &
                 ,RAINCV,PRATEC,domain%latent_heat/LH_vaporization &
                 ,domain%sensible_heat,domain%ZNU                  &
                 ,domain%Um,domain%Vm,domain%w_real                &
+                ! ,domain%Um,domain%Vm,domain%w_real+(w_stochastic*20-15)                &
                 ,domain%T,domain%qv                               &
                 ,domain%cloud,domain%ice,domain%pii,domain%rho    &
                 ,domain%tend%qv_adv,domain%tend%qv_pbl            &
                 ,domain%dz_inter,domain%p,domain%p_inter,XLAND,CU_ACT_FLAG &
-                ,ids+1,ide-1, jds+1,jde-1, kds,kde-1              & ! domain
+                ,ids,ide, jds,jde, kds,kde              & ! domain
                 ,ids,ide,     jds,  jde,   kds,kde                & ! memory
                 ,ids+1,ide-1, jds+1,jde-1, kds,kde-1              & ! tile
                 ,domain%tend%th, domain%tend%qv, domain%tend%qc   &
@@ -194,9 +200,18 @@ subroutine convect(domain,options,dt_in)
     internal_dt=dt_in
 !     $omp firstprivate(ids,ide, jds,jde, dt_in, internal_dt) &
 
-    !$omp parallel private(j) &
-    !$omp default(shared)
-    !$omp do schedule(static)
+
+    ! print*, "-----------------------------------"
+    ! print*, shape(domain%w_real)
+    ! print*, ids, ide, jds, jde
+    ! print*, shape(domain%u_cu), lbound(domain%u_cu,1), ubound(domain%u_cu,1)
+    ! print*, shape(domain%v_cu), lbound(domain%v_cu,1), ubound(domain%v_cu,1)
+    ! print*, shape(domain%tend%u), lbound(domain%tend%u,1), ubound(domain%tend%u,1)
+    ! print*, shape(domain%tend%v), lbound(domain%tend%v,1), ubound(domain%tend%v,1)
+    !
+    ! $omp parallel private(j) &
+    ! $omp default(shared)
+    ! $omp do schedule(static)
     do j=jds,jde
         domain%qv(:,:,j)   =domain%qv(:,:,j)   + domain%tend%Qv(:,:,j)*internal_dt
         domain%cloud(:,:,j)=domain%cloud(:,:,j)+ domain%tend%Qc(:,:,j)*internal_dt
@@ -210,15 +225,15 @@ subroutine convect(domain,options,dt_in)
         domain%rain(:,j)   =domain%rain(:,j)  + RAINCV(:,j)
         domain%crain(:,j)  =domain%crain(:,j) + RAINCV(:,j)
 
-        if (options%physics%convection==kCU_TIEDTKE) then
-            domain%u_cu(ids+1:ide,:,j) = 0.999*domain%u_cu(ids+1:ide,:,j) + (domain%tend%u(ids:ide-1,:,j)+domain%tend%u(ids+1:ide,:,j))/2 * internal_dt
-            if (j>jds) then
-                domain%v_cu(:,:,j) = 0.999*domain%v_cu(:,:,j) + (domain%tend%v(:,:,j)+domain%tend%v(:,:,j-1))/2 * internal_dt
-            endif
-        endif
+        ! if (options%physics%convection==kCU_TIEDTKE) then
+        !     domain%u_cu(ids+1:ide,:,j) = 0.999*domain%u_cu(ids+1:ide,:,j) + (domain%tend%u(ids:ide-1,:,j)+domain%tend%u(ids+1:ide,:,j))/2 * internal_dt
+        !     if (j>jds) then
+        !         domain%v_cu(:,:,j) = 0.999*domain%v_cu(:,:,j) + (domain%tend%v(:,:,j)+domain%tend%v(:,:,j-1))/2 * internal_dt
+        !     endif
+        ! endif
     enddo
-    !$omp end do
-    !$omp end parallel
+    ! $omp end do
+    ! $omp end parallel
 
 
 end subroutine convect

@@ -64,7 +64,7 @@ def parse():
     parser.add_argument('lat_s',    nargs="?",     action='store',  help="southern latitude boundary",         default="20")
     parser.add_argument('lon_e',    nargs="?",     action='store',  help="eastern longitude boundary",         default="-50")
     parser.add_argument('lon_w',    nargs="?",     action='store',  help="western longitude boundary",         default="-140")
-    parser.add_argument('dir',      nargs="?",     action='store',  help="ERAi file location",                 default="/glade/p/rda/data/ds627.0/")
+    parser.add_argument('dir',      nargs="?",     action='store',  help="ERAi file location",                 default="/glade/collections/rda/data/ds627.0/")
     parser.add_argument('atmdir',   nargs="?",     action='store',  help="ERAi atmospheric data file location",default="ei.oper.an.ml/_Y__M_/")
     parser.add_argument('sfcdir',   nargs="?",     action='store',  help="ERAi surface data file location",    default="ei.oper.fc.sfc/_Y__M_/")
     parser.add_argument('atmfile',  nargs="?",     action='store',  help="ERAi primary atmospheric file",      default="ei.oper.an.ml.regn128sc._Y__M__D__h_")

@@ -1,7 +1,7 @@
 module icar_constants
 
     implicit none
-    character(len=5) :: kVERSION_STRING = "0.9.5"
+    character(len=5) :: kVERSION_STRING = "1.0.1"
 
 ! ------------------------------------------------
 ! Model constants (string lengths)
@@ -17,6 +17,9 @@ module icar_constants
 ! Value to accept for difference between real numbers should be as a fraction but then have to test for non-zero...
 ! ------------------------------------------------
     real,   parameter :: kSMALL_VALUE = 1e-6
+
+    integer, parameter :: kPRIME_CENTERED    = 0
+    integer, parameter :: kDATELINE_CENTERED = 1
 
 ! ------------------------------------------------
 ! Physics scheme selection definitions

@@ -336,14 +336,16 @@ contains
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,   &
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
-                                        swdown_var, lwdown_var, sst_var, rain_var, time_var
+                                        swdown_var, lwdown_var, sst_var, rain_var, time_var,            &
+                                        qrvar, qsvar, qgvar, qnivar, qnrvar, nvar
 
         namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,hgtvar,shvar,lhvar,pblhvar,   &
                             landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar, &
                             hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
                             soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
                             vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
-                            swdown_var, lwdown_var, sst_var, rain_var, time_var
+                            swdown_var, lwdown_var, sst_var, rain_var, time_var,            &
+                            qrvar, qsvar, qgvar, qnivar, qnrvar, nvar
 
         ! no default values supplied for variable names
         hgtvar=""
@@ -362,6 +364,12 @@ contains
         qvvar=""
         qcvar=""
         qivar=""
+        qrvar=""         ! jh - added as optional field
+        qsvar=""         ! jh - added as optional field
+        qgvar=""         ! jh - added as optional field
+        qnivar=""        ! jh - added as optional field
+        qnrvar=""        ! jh - added as optional field
+        nvar=""          ! jh - added as optional field
         zvar=""
         zbvar=""
         shvar=""
@@ -419,7 +427,15 @@ contains
         options%qvvar       = qvvar
         options%qcvar       = qcvar
         options%qivar       = qivar
-
+        
+        options%qrvar       = qrvar    ! jh - added as optional field
+        options%qsvar       = qsvar    ! jh - added as optional field
+        options%qgvar       = qgvar    ! jh - added as optional field
+        options%qnivar      = qnivar   ! jh - added as optional field
+        options%qnrvar      = qnrvar   ! jh - added as optional field
+        
+        options%nvar        = nvar     ! jh - added as optional field
+        
         ! vertical coordinate
         options%zvar        = zvar
         options%zbvar       = zbvar
@@ -833,7 +849,8 @@ contains
         integer :: name_unit
 
         integer :: vert_smooth
-        logical :: variable_N           ! Compute the Brunt Vaisala Frequency (N^2) every time step
+        logical :: variable_N               ! Compute the Brunt Vaisala Frequency (N^2) every time step
+        logical :: N_from_forcing           ! If true N is calculated from the forcing data at every forcing timestep instead of using the atmosperic fields of ICAR (standard: False)
         logical :: smooth_nsq               ! Smooth the Calculated N^2 over vert_smooth vertical levels
         integer :: buffer                   ! number of grid cells to buffer around the domain MUST be >=1
         integer :: stability_window_size    ! window to average nsq over
@@ -865,7 +882,7 @@ contains
         logical :: overwrite_lt_lut
 
         ! define the namelist
-        namelist /lt_parameters/ variable_N, smooth_nsq, buffer, stability_window_size, max_stability, min_stability, &
+        namelist /lt_parameters/ variable_N, N_from_forcing, smooth_nsq, buffer, stability_window_size, max_stability, min_stability, &
                                  linear_contribution, linear_update_fraction, N_squared, vert_smooth, &
                                  remove_lowres_linear, rm_N_squared, rm_linear_contribution, &
                                  spatial_linear_fields, linear_mask, nsq_calibration, minimum_layer_size, &
@@ -882,6 +899,7 @@ contains
 
         ! set default values
         variable_N = .True.
+        N_from_forcing = .False.       ! standard is set to false to preserve original behaviour
         smooth_nsq = .True.
         buffer = 50                    ! number of grid cells to buffer around the domain MUST be >=1
         stability_window_size = 10     ! window to average nsq over
@@ -933,6 +951,7 @@ contains
             opt%max_stability = max_stability
             opt%min_stability = min_stability
             opt%variable_N = variable_N
+            opt%N_from_forcing = N_from_forcing
             opt%smooth_nsq = smooth_nsq
 
             if (vert_smooth<0) then
@@ -976,6 +995,18 @@ contains
             opt%overwrite_lt_lut = overwrite_lt_lut
 
         end associate
+        
+        if (options%debug) then
+                if (options%lt_options%N_from_forcing) then
+                        write(*,*) "DEBUG"
+                        write(*,*) "DEBUG experimental linear theory option activated"
+                        write(*,*) "DEBUG N_from_forcing is set to true. Calculating N from forcing."
+                        if (.NOT. options%lt_options%variable_N) then
+                                write(*,*) "DEBUG however, setting is useless since variable_N is set to false!"
+                        endif
+                        write(*,*) "DEBUG"
+                endif
+        endif
 
     end subroutine lt_parameters_namelist
 

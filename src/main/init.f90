@@ -746,6 +746,14 @@ contains
         boundary%dqv_dt = 0
         allocate(boundary%dqc_dt(nz,max(nx,ny),4))
         boundary%dqc_dt = 0
+        allocate(boundary%dqi_dt(nz,max(nx,ny),4))
+        boundary%dqi_dt = 0
+        allocate(boundary%dqr_dt(nz,max(nx,ny),4))
+        boundary%dqr_dt = 0
+        allocate(boundary%dqs_dt(nz,max(nx,ny),4))
+        boundary%dqs_dt = 0
+        allocate(boundary%dqg_dt(nz,max(nx,ny),4))
+        boundary%dqg_dt = 0
         allocate(boundary%dlh_dt(nx,ny))
         boundary%dlh_dt = 0
         allocate(boundary%dsh_dt(nx,ny))

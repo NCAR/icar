@@ -147,31 +147,36 @@ contains
         allocate(inputwind(nx,ny,nz)) ! Can't be module level because nx,ny,nz could change between calls,
 
         inputwind=wind !make a copy so we always use the unsmoothed data when computing the smoothed data
-        if (((windowsize*2+1)>nx).and.(ydim==3)) then
-            write(*,*) "WARNING can not operate if windowsize*2+1 is larger than nx"
-            write(*,*) "NX         = ", nx
-            write(*,*) "windowsize = ", windowsize
-            stop
+        if (( ( (windowsize*2+1)>nz) .or. ((windowsize*2+1)>nx) ) .and. (ydim==3)) then
+            write(*,*) "WARNING smoothing windowsize*2+1 is larger than nx or ny."
+            write(*,*) "  This might lead to artifacts in the wind field especially near the borders."
+            write(*,*) "  NX         = ", nx
+            write(*,*) "  NY         = ", nz
+            write(*,*) "  windowsize = ", windowsize
         endif
 
         !parallelize over a slower dimension (not the slowest because it is MUCH easier this way)
         ! as long as the inner loops (the array operations) are over the fastest dimension we are mostly OK
-        !$omp parallel firstprivate(windowsize,nx,ny,nz,ydim), &
-        !$omp private(i,j,k,startx,endx,starty,endy, rowsums,rowmeans,nrows,ncols,cursum), &
-        !$omp shared(wind,inputwind)
+        ! $omp parallel firstprivate(windowsize,nx,ny,nz,ydim), &
+        ! $omp private(i,j,k,startx,endx,starty,endy, rowsums,rowmeans,nrows,ncols,cursum), &
+        ! $omp shared(wind,inputwind)
         allocate(rowsums(nx)) !this is only used when ydim=3, so nz is really ny
         allocate(rowmeans(nx)) !this is only used when ydim=3, so nz is really ny
         nrows=windowsize*2+1
         ncols=windowsize*2+1
-        !$omp do schedule(static)
+
+        ! $omp do schedule(static)
         do j=1,ny
 
             ! so we pre-compute the sum over rows for each column in the current window
             if (ydim==3) then
                 rowsums=inputwind(1:nx,j,1)*(windowsize+1)
-                do i=1,windowsize
+                do i=1, min(windowsize,nz)
                     rowsums=rowsums+inputwind(1:nx,j,i)
                 enddo
+                if (windowsize > nz) then
+                    rowsums = rowsums + inputwind(1:nx,j,nz) * (windowsize-nz)
+                endif
             endif
             ! don't parallelize over this loop because it is much more efficient to be able to assume
             ! that you ran the previous row in serial for the slow (ydim=3) case
@@ -181,17 +186,17 @@ contains
                     ! if we are pinned to the top edge
                     if ((k-windowsize)<=1) then
                         starty=1
-                        endy  =k+windowsize
+                        endy  =min(nz, k+windowsize)
                         rowsums=rowsums-inputwind(1:nx,j,starty)+inputwind(1:nx,j,endy)
                     ! if we are pinned to the bottom edge
                     else if ((k+windowsize)>nz) then
-                        starty=k-windowsize
+                        starty=max(2,k-windowsize)
                         endy  =nz
                         rowsums=rowsums-inputwind(1:nx,j,starty-1)+inputwind(1:nx,j,endy)
                     ! if we are in the middle (this is the most common)
                     else
-                        starty=k-windowsize
-                        endy  =k+windowsize
+                        starty=max(2,k-windowsize)
+                        endy  =min(nz,k+windowsize)
                         rowsums=rowsums-inputwind(1:nx,j,starty-1)+inputwind(:,j,endy)
                     endif
                     rowmeans=rowsums/nrows
@@ -203,17 +208,17 @@ contains
                         ! if we are pinned to the left edge
                         if ((i-windowsize)<=1) then
                             startx=1
-                            endx  =i+windowsize
+                            endx  =min(nx,i+windowsize)
                             cursum=cursum-rowmeans(startx)+rowmeans(endx)
                         ! if we are pinned to the right edge
                         else if ((i+windowsize)>nx) then
-                            startx=i-windowsize
+                            startx=max(2,i-windowsize)
                             endx  =nx
                             cursum=cursum-rowmeans(startx-1)+rowmeans(endx)
                         ! if we are in the middle (this is the most common)
                         else
-                            startx=i-windowsize
-                            endx  =i+windowsize
+                            startx=max(2,i-windowsize)
+                            endx  =min(nx,i+windowsize)
                             cursum=cursum-rowmeans(startx-1)+rowmeans(endx)
                         endif
 
@@ -236,9 +241,9 @@ contains
                 enddo
             enddo
         enddo
-        !$omp end do
+        ! $omp end do
         deallocate(rowmeans,rowsums)
-        !$omp end parallel
+        ! $omp end parallel
 
         deallocate(inputwind)
     end subroutine smooth_array_3d

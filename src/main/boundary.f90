@@ -139,7 +139,7 @@ contains
 
             error=1
             curfile=0
-            do while ( (error/=0) .and. (curfile <= size(file_list)) )
+            do while ( (error/=0) .and. (curfile < size(file_list)) )
                 curfile = curfile + 1
                 curstep = find_timestep_in_file(file_list(curfile), options%time_var, time, error=error)
             enddo
@@ -942,6 +942,53 @@ contains
                 domain%ice=0
             endif
 
+            ! jh - added qr, qs, qg, ni and nr as optional fields BEGIN
+            if (trim(options%qrvar)/="") then
+                call read_var(domain%qrain,  file_list(curfile),   options%qrvar, &
+                                bc%geolut, bc%vert_lut, curstep, boundary_value,  &
+                                options)
+            else
+                if (options%debug) write(*,*) "No Rain specified"
+                domain%qrain=0
+            endif
+
+            if (trim(options%qsvar)/="") then
+                call read_var(domain%qsnow,  file_list(curfile),   options%qsvar, &
+                                bc%geolut, bc%vert_lut, curstep, boundary_value,  &
+                                options)
+            else
+                if (options%debug) write(*,*) "No Snow specified"
+                domain%qsnow=0
+            endif
+            
+            if (trim(options%qgvar)/="") then
+                call read_var(domain%qgrau,  file_list(curfile),   options%qgvar, &
+                                bc%geolut, bc%vert_lut, curstep, boundary_value,  &
+                                options)
+            else
+                if (options%debug) write(*,*) "No Graupel specified"
+                domain%qgrau=0
+            endif
+            
+            if (trim(options%qnivar)/="") then
+                call read_var(domain%nice,  file_list(curfile),   options%qnivar,  &
+                                bc%geolut, bc%vert_lut, curstep, boundary_value, &
+                                options)
+            else
+                if (options%debug) write(*,*) "No Ice number density specified"
+                domain%nice=0
+            endif
+            
+            if (trim(options%qnrvar)/="") then
+                call read_var(domain%nrain,  file_list(curfile),   options%qnrvar,  &
+                                bc%geolut, bc%vert_lut, curstep, boundary_value, &
+                                options)
+            else
+                if (options%debug) write(*,*) "No Rain number density specified"
+                domain%nrain=0
+            endif
+            ! jh - added qr, qs, qg, ni and nr as optional fields END
+
             if (options%physics%landsurface==kLSM_BASIC) then
                 call read_2dvar(domain%sensible_heat,file_list(curfile),options%shvar,  bc%geolut,curstep)
                 call read_2dvar(domain%latent_heat,  file_list(curfile),options%lhvar,  bc%geolut,curstep)
@@ -986,6 +1033,23 @@ contains
 
             domain%pii = (domain%p / 100000.0) ** (Rd / cp)
             domain%rho = domain%p / (Rd * domain%th * domain%pii) ! kg/m^3
+            
+            ! jh - added forcing brunt vaisala frequency as optional field (nvar) BEGIN
+            ! If N_from_forcing is true and nvar is set in the options file then
+            ! the Brunt Vaisala frequency will be read from the forcing dataset.
+            if ((trim(options%nvar)/="") .AND. (options%lt_options%N_from_forcing)) then
+
+                if (.not.allocated(domain%nsquared)) allocate(domain%nsquared(nx,nz,ny))
+
+                domain%nsquared = options%lt_options%min_stability
+                call read_var(domain%nsquared,  file_list(curfile),   options%nvar,  &
+                                bc%geolut, bc%vert_lut, curstep, boundary_value, &
+                                options)                                
+                domain%nsquared = log(domain%nsquared)
+                if (options%debug) write(*,*) "N2 is read from the forcing data set"
+            endif
+            ! jh - added forcing brunt vaisala frequency as optional field (nvar) END
+            
             call update_winds(domain, options)
         endif
 
@@ -1058,9 +1122,13 @@ contains
         bc%dsst_dt  =bc%next_domain%sst-domain%sst
 
         ! these fields are only updated along the edges of the domain
-        call update_edges(bc%dth_dt,bc%next_domain%th,domain%th)
-        call update_edges(bc%dqv_dt,bc%next_domain%qv,domain%qv)
-        call update_edges(bc%dqc_dt,bc%next_domain%cloud,domain%cloud)
+        call update_edges(bc%dth_dt,bc%next_domain%th    ,domain%th)
+        call update_edges(bc%dqv_dt,bc%next_domain%qv    ,domain%qv)
+        call update_edges(bc%dqc_dt,bc%next_domain%cloud ,domain%cloud)
+        call update_edges(bc%dqi_dt,bc%next_domain%ice   ,domain%ice)
+        call update_edges(bc%dqr_dt,bc%next_domain%qrain ,domain%qrain)
+        call update_edges(bc%dqs_dt,bc%next_domain%qsnow ,domain%qsnow)
+        call update_edges(bc%dqg_dt,bc%next_domain%qgrau ,domain%qgrau)
     end subroutine update_dxdt
 
     !>------------------------------------------------------------
@@ -1236,8 +1304,12 @@ contains
         integer,dimension(io_maxDims)::dims !note, io_maxDims is included from io_routines.
         type(bc_type) :: newbc ! just used for updating z coordinate
         real, allocatable, dimension(:,:,:) :: zbase ! may be needed to temporarily store PHB data
-        logical :: use_boundary,use_interior
+        logical :: use_boundary, use_interior, use_boundary_Nff
         integer::i,nz,nx,ny
+        
+        integer,dimension(3) :: hrshape  ! needed to determine shape of high resolution domain%nsquared
+        integer :: nzh,nxh,nyh           ! z,x and y extension of the field domain%nsquared
+        
         ! MODULE variables : curstep, curfile, nfiles, steps_in_file, file_list
 
         if (.not.options%ideal) then
@@ -1254,6 +1326,15 @@ contains
         endif
         use_interior=.False. ! this is passed to the use_boundary flag in geo_interp
         use_boundary=.True.
+        
+        ! if N is to be calculated from the forcing data set then some
+        ! variables are required to be read on the entire domain and
+        ! not only at the boundaries. Here we set use_boundary_Nff accordingly
+        ! variables that matter: th, qv, qc and qi.
+        use_boundary_Nff=.True. ! preserve original behaviour
+        if (options%lt_options%N_from_forcing) then
+            use_boundary_Nff=.False.
+        endif
 
         if (options%time_var=="") then
             bc%next_domain%model_time = bc%next_domain%model_time + options%input_dt
@@ -1338,7 +1419,7 @@ contains
 
         ! not necessary as long as we are interpolating above
         call read_var(bc%next_domain%th,      file_list(curfile), options%tvar,   &
-                      bc%geolut, bc%vert_lut, curstep, use_boundary,              &
+                      bc%geolut, bc%vert_lut, curstep, use_boundary_Nff,          &
                       options, time_varying_zlut=newbc%vert_lut)
 
         if (.not.options%t_is_potential) then
@@ -1347,7 +1428,7 @@ contains
         endif
 
         call read_var(bc%next_domain%qv,      file_list(curfile), options%qvvar,  &
-                      bc%geolut, bc%vert_lut, curstep, use_boundary,              &
+                      bc%geolut, bc%vert_lut, curstep, use_boundary_Nff,          &
                       options, time_varying_zlut=newbc%vert_lut)
 
         if (options%qv_is_spec_humidity) then
@@ -1360,14 +1441,46 @@ contains
 
         if (trim(options%qcvar)/="") then
             call read_var(bc%next_domain%cloud,   file_list(curfile), options%qcvar,  &
-                          bc%geolut, bc%vert_lut, curstep, use_boundary,              &
+                          bc%geolut, bc%vert_lut, curstep, use_boundary_Nff,          &
                           options, time_varying_zlut=newbc%vert_lut)
         endif
         if (trim(options%qivar)/="") then
             call read_var(bc%next_domain%ice,     file_list(curfile), options%qivar,  &
-                          bc%geolut, bc%vert_lut, curstep, use_boundary,              &
+                          bc%geolut, bc%vert_lut, curstep, use_boundary_Nff,          &
                           options, time_varying_zlut=newbc%vert_lut)
         endif
+        
+        ! jh - added qr, qs, qg, ni and nr as optional fields BEGIN
+        if (trim(options%qrvar)/="") then
+            call read_var(bc%next_domain%qrain,  file_list(curfile),   options%qrvar, &
+                            bc%geolut, bc%vert_lut, curstep, use_boundary,  &
+                            options, time_varying_zlut=newbc%vert_lut)
+        endif
+
+        if (trim(options%qsvar)/="") then
+            call read_var(bc%next_domain%qsnow,  file_list(curfile),   options%qsvar, &
+                            bc%geolut, bc%vert_lut, curstep, use_boundary,  &
+                            options, time_varying_zlut=newbc%vert_lut)
+        endif
+        
+        if (trim(options%qgvar)/="") then
+            call read_var(bc%next_domain%qgrau,  file_list(curfile),   options%qgvar, &
+                            bc%geolut, bc%vert_lut, curstep, use_boundary,  &
+                            options, time_varying_zlut=newbc%vert_lut)
+        endif
+        
+        if (trim(options%qnivar)/="") then
+            call read_var(bc%next_domain%nice,  file_list(curfile),   options%qnivar,  &
+                            bc%geolut, bc%vert_lut, curstep, use_boundary, &
+                            options, time_varying_zlut=newbc%vert_lut)
+        endif
+        
+        if (trim(options%qnrvar)/="") then
+            call read_var(bc%next_domain%nrain,  file_list(curfile),   options%qnrvar,  &
+                            bc%geolut, bc%vert_lut, curstep, use_boundary, &
+                            options, time_varying_zlut=newbc%vert_lut)
+        endif
+        ! jh - added qr, qs, qg, ni and nr as optional fields END
 
         ! finally, if we need to read in land surface forcing read in those 2d variables as well.
         if (options%physics%landsurface==kLSM_BASIC) then
@@ -1406,6 +1519,9 @@ contains
             call mean_boundaries(bc%next_domain%qv)
             call mean_boundaries(bc%next_domain%cloud)
             call mean_boundaries(bc%next_domain%ice)
+            call mean_boundaries(bc%next_domain%qrain)
+            call mean_boundaries(bc%next_domain%qsnow)
+            call mean_boundaries(bc%next_domain%qgrau)
         endif
 
 
@@ -1413,11 +1529,39 @@ contains
         ! the current model state
         call update_dxdt(bc,domain)
 
-        ! we need the internal values of these fields to be in sync with the high res model
-        ! for the linear wind calculations... albeit these are for time t, and winds are for time t+1
-        bc%next_domain%qv=domain%qv
-        bc%next_domain%th=domain%th
-        bc%next_domain%cloud=domain%cloud + domain%ice + domain%qrain + domain%qsnow
+        ! 20190513 jh ... added an option to calculate the Brunt Vaisala frequency from the forcing dataset
+        !                 instead of the current state of the ICAR domain. If that option is set to true then
+        !                 we skip the assignment of domain quantities to bc%next_domain. That way we don't over
+        !                 write the values of the quantities in the forcing already stored there.
+        if (.NOT. options%lt_options%N_from_forcing) then
+            ! we need the internal values of these fields to be in sync with the high res model
+            ! for the linear wind calculations... albeit these are for time t, and winds are for time t+1
+            bc%next_domain%qv=domain%qv
+            bc%next_domain%th=domain%th
+            bc%next_domain%cloud=domain%cloud + domain%ice + domain%qrain + domain%qsnow
+        elseif ((trim(options%nvar)/="") .and. (options%lt_options%N_from_forcing)) then
+            ! we directly read nsquared from the forcing data if the corresponding options are set
+            ! that means that in the calls that update_winds makes, nsquared isn't calculated anew,
+            ! but the values read in here are kept.
+            
+            hrshape = shape(domain%nsquared)
+            nxh = hrshape(1)
+            nzh = hrshape(2)
+            nyh = hrshape(3)
+            if (.not.allocated(bc%next_domain%nsquared)) allocate(bc%next_domain%nsquared(nxh,nzh,nyh))
+            
+            call read_var(bc%next_domain%nsquared,      file_list(curfile), options%nvar,   &
+                          bc%geolut, bc%vert_lut, curstep, use_interior,                    &
+                          options, time_varying_zlut=newbc%vert_lut, interp_vertical=.True. )
+                          
+            ! here we make sure that all read nsquared are within the bounds defined in the
+            ! icar options
+            where (bc%next_domain%nsquared <= 0) bc%next_domain%nsquared = options%lt_options%min_stability
+            where (bc%next_domain%nsquared < options%lt_options%min_stability) bc%next_domain%nsquared = options%lt_options%min_stability
+            where (bc%next_domain%nsquared > options%lt_options%max_stability) bc%next_domain%nsquared = options%lt_options%max_stability
+            
+            bc%next_domain%nsquared = log(bc%next_domain%nsquared) ! needed since ICAR stores not nsquared but the log(nsquared)
+        endif
 
         ! these are required by update_winds for most options
         bc%next_domain%pii = (bc%next_domain%p / 100000.0)** (Rd / cp)

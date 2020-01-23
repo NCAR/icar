@@ -2,7 +2,7 @@
 !   Model and run meta-data
 !---------------------------------------------------------
 &model_version
-    version = "0.9.5",                    ! This must match the version of the compiled code
+    version = "1.0.1",                    ! This must match the version of the compiled code
     comment = "Add your comment here"     ! This will be stored in output files
 /
 
@@ -26,6 +26,7 @@
     ! For a FASTER run (simpler physics), set mp=2
     ! If surface air temperature is important use pbl=2 lsm=3 rad=2 water=2 this requires Noah LSM data
     ! N/A = Not Available or Not fully implemented
+    ! Warning, convection can be unstable.
     ! wishlist = No Code Present yet
 
     pbl = 0,  ! 1=legacy (deprecated)      2=Simple (Local HP96)        3=YSU             (N/A)
@@ -99,6 +100,7 @@
     !   this is now optional, if not supplied, ICAR will determine it from the number of levels specified
     !   if it is supplied it must be less than or equal to the number of levels specified below
     !   but it can be used to subset the number of levels used.
+    !   WARNING : ICAR can be surprisingly sensitive to this parameter
     nz = 15, ! []
 
     !   Set this to true of the zvar in the input data is actually in units of geopotential height (m/s^2)
@@ -163,7 +165,7 @@
     debug = true,
     warning_level = 4, ! 0-10 increases the level of errors it warns about and quits over (slightly)
 
-    ! controls printing of % completed for longer processes.  Nice to see if it is running in a console, not nice to see in a log file.
+    ! controls printing of % completed for longer processes.  Nice if it is running in a console, not nice in a log file.
     interactive=False
 
     !   If the following are true, their respective namelists (below) will also be read in.
@@ -187,20 +189,27 @@
 &var_list
     ! These are the names of the variables in the forcing data files
     ! variables on the mass / center grid
-    time_var= "time",       ! Time                      [defined in netcdf attributes] OPTIONAL
+    time_var= "XTIME",      ! Time                      [defined in netcdf attributes]
     latvar  = "XLAT",       ! latitude                  [degrees]
     lonvar  = "XLONG",      ! longitude                 [degrees]
     pvar    = "P",          ! pressure                  [Pa]
-    pbvar   = "PB",         ! base pressure state       [Pa]        OPTIONAL
+    ! pbvar   = "PB",         ! base pressure state       [Pa]        OPTIONAL
     tvar    = "T",          ! temperature               [K]   (with optional offset)
     qvvar   = "QVAPOR",     ! water vapor mixing ratio  [kg/kg]
-    qcvar   = "QCLOUD",     ! cloud water mixing ratio  [kg/kg]     OPTIONAL
-    qivar   = "QICE",       ! cloud ice mixing ratio    [kg/kg]     OPTIONAL
+    ! qcvar   = "QCLOUD",     ! cloud water mixing ratio  [kg/kg]     OPTIONAL
+    ! qrvar   = "QRAIN",      ! rain water mixing ratio   [kg/kg]     OPTIONAL
+    ! qsvar   = "QSNOW",      ! snow mixing ratio         [kg/kg]     OPTIONAL
+    ! qnrvar  = "QNRAIN",     ! rain number concentration [kg^-1]     OPTIONAL
+    ! qgvar   = "QGRAUP",     ! graupel mixing ratio      [kg/kg]     OPTIONAL
+    ! qnivar  = "QNICE",      ! ice number concentration  [kg^-1]     OPTIONAL
+    ! qivar   = "QICE",       ! cloud ice mixing ratio    [kg/kg]     OPTIONAL
     hgtvar  = "HGT",        ! surface elevation         [m]
     zvar    = "PH",         ! model level elevations    [m or m/s^2 if z_is_geopotential]
-    zbvar   = "PHB",        ! base height state         [m or m/s^2] OPTIONAL
-    sst_var = "TSK"         ! Water surface temperature [K]          OPTIONAL (used with water=2)
+    ! zbvar   = "PHB",        ! base height state         [m or m/s^2] OPTIONAL
+    ! sst_var = "TSK"         ! Water surface temperature [K]          OPTIONAL (used with water=2)
 
+    ! WARNING, if U and V are "grid relative" (e.g. output from WRF) and on a skewed grid, this will cause problems
+    ! run the helpers/wrf2icar.sh script first to rotate the wind field to be east-west, north-south relative
     ! variables on the ew staggered (U) grid
     uvar    = "U",          ! East-West wind speed      [m/s]
     ulat    = "XLAT_U",     ! latitude                  [degrees]
@@ -254,7 +263,7 @@
 !   Optionally specified Microphysics parameters (mostly for Thompson)
 !---------------------------------------------------------
 &mp_parameters
-    update_interval = 60 ! maximum update interval allowed
+    update_interval = 0  ! maximum update interval allowed
                          ! MP only updated when this interval will be exceeded in the next step
 
     Nt_c  = 100.e6      !  50, 100,500,1000
@@ -280,7 +289,7 @@
     Ef_rw_l = .False.   ! True sets ef_rw = 1, insted of max 0.95
     Ef_sw_l = .False.   ! True sets ef_rw = 1, insted of max 0.95
 
-    top_mp_level = 0    ! if <=0 just use the actual model top
+    top_mp_level = 0    ! if <=0 stop that many levels below the model top
     local_precip_fraction = 1.0 ! Fraction of micrphysics derived precipitation to deposit in the local grid cell
                                 ! the remaining precip is distributed to the surrounding grid cells.
 /
@@ -306,7 +315,7 @@
 !   Optionally specified land surface model parameters (mostly for Noah)
 !---------------------------------------------------------
 &lsm_parameters
-    update_interval = 600             ! Int : Seconds to wait before updating land surface fluxes again (default=300)
+    update_interval = 300             ! Int : Seconds to wait before updating land surface fluxes again (default=300)
 
     LU_Categories = "MODIFIED_IGBP_MODIS_NOAH"   ! Land Use Category definitions
                                     ! Note, this must match a category in VEGPARM.TBL and correspond to
@@ -326,9 +335,9 @@
 !   Optionally specified Linear Theory parameters
 !---------------------------------------------------------
 &lt_parameters
-    buffer = 50                     ! The number of grid cells of buffer to use around the topography for the fft calculations
-    stability_window_size = 10      ! The number of grid cells in all directions to average Nsq over for variable_N
-    vert_smooth = 10,               ! The number of vertical levels to look up and down when calculating brunt vaisalla frequency
+    buffer = 200                    ! The number of grid cells of buffer to use around the topography for the fft calculations
+    stability_window_size = 20      ! The number of grid cells in all directions to average Nsq over for variable_N
+    vert_smooth = 20,               ! The number of vertical levels to look up and down when calculating brunt vaisalla frequency
     smooth_nsq = .True.,            ! set to true to provide additional vertical smoothing of Nsq within spatial_linear_winds
     max_stability = 6e-4            ! The maximum Brunt-Vaisalla frequency to allow
     min_stability = 1e-7            ! The minimum Brunt-Vaisalla frequency to allow

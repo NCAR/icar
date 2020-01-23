@@ -8,6 +8,8 @@
 !!------------------------------------------------------------
 module string
 
+    use iso_fortran_env, only : real32, real64
+
     implicit none
     !>-----------------------------
     !!  Generic interface to various types of string conversion functions
@@ -25,7 +27,7 @@ contains
     !! Convert a string to a double precision real number
     !!
     !!------------------------------
-    function get_double(str_in)
+    elemental function get_double(str_in)
         implicit none
         character(len=*), intent(in) :: str_in      ! input string
         double precision :: get_double              ! double precision return value
@@ -38,7 +40,7 @@ contains
     !! Convert a string to a single precision real number
     !!
     !!------------------------------
-    function get_real(str_in)
+    elemental function get_real(str_in)
         implicit none
         character(len=*), intent(in) :: str_in      ! input string
         real :: get_real                            ! return real value
@@ -51,7 +53,7 @@ contains
     !! Convert a string to a single precision integer
     !!
     !!------------------------------
-    function get_integer(str_in)
+    elemental function get_integer(str_in)
         implicit none
         character(len=*), intent(in) :: str_in      ! input string
         integer :: get_integer                      ! return integer value
@@ -67,10 +69,10 @@ contains
     !!  Optionally specify a format string
     !!
     !!------------------------------
-    function str_d(value,fmt) result(output_string)
+    elemental function str_d(value,fmt) result(output_string)
         implicit none
-        double precision :: value                       ! double precision value to be converted
-        character(len=*), optional :: fmt               ! optional format string for conversion
+        double precision, intent(in) :: value                       ! double precision value to be converted
+        character(len=*), intent(in), optional :: fmt               ! optional format string for conversion
         character(len=MAXSTRINGLENGTH) :: output_string ! return value
         
         if (present(fmt)) then
@@ -88,10 +90,10 @@ contains
     !!  Optionally specify a format string
     !!
     !!------------------------------
-    function str_r(value,fmt) result(output_string)
+    elemental function str_r(value,fmt) result(output_string)
         implicit none
-        real :: value                                   ! single precision value to be converted
-        character(len=*), optional :: fmt               ! optional format string for conversion
+        real, intent(in) :: value                                   ! single precision value to be converted
+        character(len=*), intent(in), optional :: fmt               ! optional format string for conversion
         character(len=MAXSTRINGLENGTH) :: output_string ! return value
         
         if (present(fmt)) then
@@ -109,10 +111,10 @@ contains
     !!  Optionally specify a format string
     !!
     !!------------------------------
-    function str_i(value,fmt) result(output_string)
+    elemental function str_i(value,fmt) result(output_string)
         implicit none
-        integer :: value                                ! integer value to be converted
-        character(len=*), optional :: fmt               ! optional format string for conversion
+        integer, intent(in) :: value                                ! integer value to be converted
+        character(len=*), intent(in), optional :: fmt               ! optional format string for conversion
         character(len=MAXSTRINGLENGTH) :: output_string ! return value
         
         if (present(fmt)) then
@@ -123,6 +125,5 @@ contains
         
         output_string=adjustl(output_string)
     end function str_i
-
 
 end module string
