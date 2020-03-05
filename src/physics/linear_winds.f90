@@ -41,7 +41,7 @@ module linear_theory_winds
     use io_routines,               only : io_read, io_write
     use string,                    only : str
     use linear_theory_lut_disk_io, only : read_LUT, write_LUT
-    use mod_atm_utilities
+    use mod_atm_utilities,         only : calc_stability, calc_u, calc_v, calc_speed, calc_direction, blocking_fraction
     use array_utilities,           only : smooth_array, calc_weight, linear_space
 
     implicit none
@@ -940,7 +940,7 @@ contains
         logical, intent(in) :: reverse
         integer, intent(in) :: vsmooth
         integer, intent(in) :: winsz
-        
+
         logical :: externalN ! flag whether N is read from a field in the forcing dataset
         integer :: nx,nxu, ny,nyv, nz, i,j,k, smoothz
         integer :: uk, vi !store a separate value of i for v and of k for u to we can handle nx+1, ny+1
@@ -956,7 +956,7 @@ contains
         nz  = size(domain%u,2)
         nxu = size(domain%u,1)
         nyv = size(domain%v,3)
-        
+
         ! Here we just set externalN based on two options.
         ! if NfromForcing is True and nvar is defined then N is to be
         ! read from the forcing data set instead of being calculated by ICAR,
@@ -1026,13 +1026,13 @@ contains
                         ! look up table is computed in log space
                         domain%nsquared(:,j,k) = log(domain%nsquared(:,j,k))
                     end do
-        
+
                     if (smooth_nsq) then
                         do j=1,nz
                             ! compute window as above.
                             top = min(j+vsmooth,nz)
                             bottom = max(1, j - (vsmooth - (top-j)) )
-        
+
                             do smoothz = bottom, j-1
                                 domain%nsquared(:,j,k) = domain%nsquared(:,j,k) + domain%nsquared(:,smoothz,k)
                             end do
@@ -1047,7 +1047,7 @@ contains
                 ! $omp end parallel
             endif
         else
-                domain%nsquared = options%lt_options%N_squared
+                domain%nsquared = log(options%lt_options%N_squared)
         endif
 
         ! smooth array has it's own parallelization, so this probably can't go in a critical section
