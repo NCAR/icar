@@ -145,7 +145,7 @@ contains
 
         w3 = 1 - w1 - w2
 
-        if (minval([w1,w2,w3]) < -1e-3) then
+        if (minval([w1,w2,w3]) < -1e-2) then
             write(*,*) "ERROR: Point not located in bounding triangle"
             write(*,*) xi, yi
             write(*,*) "Triangle vertices"
@@ -157,7 +157,7 @@ contains
         endif
         w1=max(0.,w1); w2=max(0.,w2); w3=max(0.,w3);
 
-        if (abs((w1+w2+w3)-1)>1e-3) then
+        if (abs((w1+w2+w3)-1)>1e-2) then
             write(*,*) "Error, w1+w2+w3 != 1"
             write(*,*) w1,w2,w3
             write(*,*) "Point"
