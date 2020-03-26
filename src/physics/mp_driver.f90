@@ -30,7 +30,7 @@ module microphysics
     use icar_constants
     ! use mod_wrf_constants
     use module_mp_thompson_aer,     only: mp_gt_driver_aer, thompson_aer_init
-    ! use module_mp_thompson,         only: mp_gt_driver, thompson_init
+    use module_mp_thompson,         only: mp_gt_driver, thompson_init
     ! use module_mp_morr_two_moment,  only: MORR_TWO_MOMENT_INIT, MP_MORR_TWO_MOMENT
     ! use module_mp_wsm6,             only: wsm6, wsm6init
     use module_mp_simple,           only: mp_simple_driver, mp_simple_var_request
@@ -78,8 +78,12 @@ contains
         if (this_image()==1) write(*,*) "Initializing Microphysics"
         if (options%physics%microphysics    == kMP_THOMPSON) then
             if (this_image()==1) write(*,*) "    Thompson Microphysics"
+            call thompson_init(options%mp_options)
+            precip_delta=.True.
+
+        elseif (options%physics%microphysics    == kMP_THOMP_AER) then
+            if (this_image()==1) write(*,*) "    Thompson Eidhammer Microphysics"
             call thompson_aer_init()
-            ! call thompson_init(options%mp_options)
             precip_delta=.True.
 
         elseif (options%physics%microphysics == kMP_SB04) then
@@ -135,6 +139,10 @@ contains
 
         if (options%physics%microphysics    == kMP_THOMPSON) then
             call mp_thompson_aer_var_request(options)
+
+        elseif (options%physics%microphysics    == kMP_THOMP_AER) then
+            call mp_thompson_aer_var_request(options)
+
         elseif (options%physics%microphysics == kMP_SB04) then
             call mp_simple_var_request(options)
 
@@ -147,32 +155,32 @@ contains
     end subroutine mp_var_request
 
 
-    subroutine allocate_module_variables(nx, ny, nz)
+    subroutine allocate_module_variables(ims,ime,jms,jme,kms,kme)
         implicit none
-        integer, intent(in) :: nx, ny, nz
+        integer, intent(in) :: ims,ime,jms,jme,kms,kme
 
         ! snow rain ratio
         if (.not.allocated(SR)) then
-            allocate(SR(nx,ny))
+            allocate(SR(ims:ime,jms:jme))
             SR=0
         endif
         ! last snow amount
         if (.not.allocated(last_snow)) then
-            allocate(last_snow(nx,ny))
+            allocate(last_snow(ims:ime,jms:jme))
             last_snow=0
         endif
         ! last rain amount
         if (.not.allocated(last_rain)) then
-            allocate(last_rain(nx,ny))
+            allocate(last_rain(ims:ime,jms:jme))
             last_rain=0
         endif
         ! temporary precip amount
         if (.not.allocated(this_precip)) then
-            allocate(this_precip(nx,ny))
+            allocate(this_precip(ims:ime,jms:jme))
             this_precip=0
         endif
         if (.not.allocated(refl_10cm)) then
-            allocate(refl_10cm(nx,ny))
+            allocate(refl_10cm(ims:ime,jms:jme))
             refl_10cm=0
         endif
         ! if (.not.allocated(domain%tend%qr)) then
@@ -324,6 +332,37 @@ contains
         ! run the thompson microphysics
         if (options%physics%microphysics==kMP_THOMPSON) then
             ! call the thompson microphysics
+            call mp_gt_driver(qv = domain%water_vapor%data_3d,                      &
+                              th = domain%potential_temperature%data_3d,            &
+                              qc = domain%cloud_water_mass%data_3d,                 &
+                              qi = domain%cloud_ice_mass%data_3d,                   &
+                              ni = domain%cloud_ice_number%data_3d,                 &
+                              qr = domain%rain_mass%data_3d,                        &
+                              nr = domain%rain_number%data_3d,                      &
+                              qs = domain%snow_mass%data_3d,                        &
+                              qg = domain%graupel_mass%data_3d,                     &
+                              pii= domain%exner%data_3d,                            &
+                              p =  domain%pressure%data_3d,                         &
+                              dz = domain%dz_mass%data_3d,                          &
+                              dt_in = dt,                                           &
+                              itimestep = 1,                                        & ! not used in thompson
+                              RAINNC = domain%accumulated_precipitation%data_2d,    &
+                              RAINNCV = this_precip,                                & ! not used outside thompson (yet)
+                              SR = SR,                                              & ! not used outside thompson (yet)
+                              SNOWNC = domain%accumulated_snowfall%data_2d,         &
+                              ! GRAUPELNC = domain%accumulated_graupel%data_2d,       & ! not used outside thompson (yet)
+                              ids = ids, ide = ide,                   & ! domain dims
+                              jds = jds, jde = jde,                   &
+                              kds = kds, kde = kde,                   &
+                              ims = ims, ime = ime,                   & ! memory dims
+                              jms = jms, jme = jme,                   &
+                              kms = kms, kme = kme,                   &
+                              its = its, ite = ite,                   & ! tile dims
+                              jts = jts, jte = jte,                   &
+                              kts = kts, kte = kte)
+
+        elseif (options%physics%microphysics==kMP_THOMP_AER) then
+            ! call the thompson microphysics
             call mp_gt_driver_aer(qv = domain%water_vapor%data_3d,                      &
                                   th = domain%potential_temperature%data_3d,            &
                                   qc = domain%cloud_water_mass%data_3d,                 &
@@ -333,9 +372,9 @@ contains
                                   nr = domain%rain_number%data_3d,                      &
                                   qs = domain%snow_mass%data_3d,                        &
                                   qg = domain%graupel_mass%data_3d,                     &
-                                  pii= domain%exner%data_3d,                           &
-                                  p =  domain%pressure%data_3d,                          &
-                                  w =  domain%w%data_3d,                                 &
+                                  pii= domain%exner%data_3d,                            &
+                                  p =  domain%pressure%data_3d,                         &
+                                  w =  domain%w%data_3d,                                &
                                   dz = domain%dz_mass%data_3d,                          &
                                   dt_in = dt,                                           &
                                   RAINNC = domain%accumulated_precipitation%data_2d,    &
@@ -508,7 +547,7 @@ contains
         jde = domain%grid%jde;   jme = domain%grid%jme;   jte = domain%grid%jte
         ny  = domain%grid%ny
 
-        if (.not.allocated(SR)) call allocate_module_variables(nx, ny, nz)
+        if (.not.allocated(SR)) call allocate_module_variables(ims, ime, jms, jme, kms, kme)
 
         ! if this is the first time mp is called, set last time such that mp will update
         if (last_model_time==-999) then

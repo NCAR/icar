@@ -168,6 +168,7 @@ module icar_constants
     integer, parameter :: kMP_SB04       = 2
     integer, parameter :: kMP_MORRISON   = 3
     integer, parameter :: kMP_WSM6       = 4
+    integer, parameter :: kMP_THOMP_AER  = 5
 
     integer, parameter :: kPBL_BASIC     = 1
     integer, parameter :: kPBL_SIMPLE    = 2

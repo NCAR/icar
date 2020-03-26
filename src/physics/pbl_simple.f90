@@ -95,7 +95,7 @@ contains
 
         !$omp do schedule(static, 2)
         do j = jts, jte
-            do k = kts, kte
+            do k = kts, kte-1
                 lastqv_m(:,k,j) = qv(:,k,j)
                 call calc_shear(um, vm, dz, its, ite, k, j)
                 call calc_virt_pot_temp_zgradient(th, qv, dz, cloud, ice, qrain, qsnow, its, ite, k, j)
