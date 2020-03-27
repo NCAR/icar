@@ -957,7 +957,7 @@ $(BUILD)mp_morrison.o:$(PHYS)mp_morrison.f90 $(BUILD)data_structures.o
 
 $(BUILD)mp_wsm6.o:$(PHYS)mp_wsm6.f90 $(BUILD)wrf_constants.o
 
-$(BUILD)mp_thompson.o:$(PHYS)mp_thompson.f90 $(BUILD)data_structures.o $(BUILD)opt_types.o
+$(BUILD)mp_thompson.o:$(PHYS)mp_thompson.f90 $(BUILD)opt_types.o
 
 $(BUILD)mp_thompson_aer.o:$(PHYS)mp_thompson_aer.f90 $(BUILD)co_utilities.o
 
