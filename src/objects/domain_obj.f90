@@ -152,12 +152,13 @@ contains
 
         if (this_image()==1) print *,"  Initializing variables"
 
-        if (0<opt%vars_to_allocate( kVARS%u) )                          call setup(this%u,                        this%u_grid,   forcing_var=opt%parameters%uvar,       list=this%variables_to_force, force_boundaries=.False.)
+        ! if (0<opt%vars_to_allocate( kVARS%u) )                          call setup(this%u,                        this%u_grid,   forcing_var=opt%parameters%uvar,       list=this%variables_to_force, force_boundaries=.False.)
         if (0<opt%vars_to_allocate( kVARS%u) )                          call setup(this%u_mass,                   this%grid)
         if (0<opt%vars_to_allocate( kVARS%v) )                          call setup(this%v,                        this%v_grid,   forcing_var=opt%parameters%vvar,       list=this%variables_to_force, force_boundaries=.False.)
         if (0<opt%vars_to_allocate( kVARS%v) )                          call setup(this%v_mass,                   this%grid)
         if (0<opt%vars_to_allocate( kVARS%w) )                          call setup(this%w,                        this%grid )
         if (0<opt%vars_to_allocate( kVARS%w) )                          call setup(this%w_real,                   this%grid )
+        ! if (0<opt%vars_to_allocate( kVARS%w) )                          call setup(this%Div,                    this%grid )
         if (0<opt%vars_to_allocate( kVARS%water_vapor) )                call setup(this%water_vapor,              this%grid,     forcing_var=opt%parameters%qvvar,      list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%potential_temperature) )      call setup(this%potential_temperature,    this%grid,     forcing_var=opt%parameters%tvar,       list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%cloud_water) )                call setup(this%cloud_water_mass,         this%grid,     forcing_var=opt%parameters%qcvar,      list=this%variables_to_force, force_boundaries=.True.)
@@ -641,7 +642,9 @@ contains
 
         real, allocatable :: temp(:,:,:)
         integer :: i, max_level
-        real :: smooth_height
+        real :: smooth_height, z_sleve(:,:,:), z_s_u(:,:,:), z_s_v(:,:,:) ! here???
+        logical :: SLEVE
+
 
         call read_core_variables(this, options)
 
@@ -685,6 +688,59 @@ contains
                   zr_u                  => this%zr_u,                           &
                   zr_v                  => this%zr_v)
 
+          SLEVE = .True.
+          
+          if (SLEVE==.True.) then  
+            ! ______ SLEVE simple Implementation  _______________________
+
+            smooth_height = sum(dz(1:nz)) ! this overrides any flat_z_height, will parameterize later
+
+            i=kms
+
+            ! First calculate 2 adjacent SLEVE z levels:
+            H = smooth_height  ! lexicon
+            s = smooth_height / 3  ! should become namlist option
+            h = terrain(:,:) 
+
+            ! This = z_interface, i think..... 
+            ! z_sleve(:,i,:) = dz(i) + h * (SINH( (H - dz(i))/s ) / np.sinh(H/s) )
+            z_sleve(:,i,:) = terrain
+            z_sleve(:,i+1,:) = dz(i+1) + h * (np.sinh( (H - dz(i+1))/s ) / np.sinh(H/s) )
+            
+            dz_interface(:,i,:)  =  z_sleve(:,i+1,:) - z_sleve(:,i,:)  ! = 'dz_sleve'
+            dz_interface(:,i,:)  =  z_sleve(:,i+1,:) - terrain(:,:)  ! = same as above
+            z_level_ratio(:,i,:) = dz_interface(:,i,:)  / dz(i)
+            dz_mass(:,i,:) = dz_interface(:,i,:) / 2
+
+
+
+            zr_u(:,i,:) = 
+            
+            ! similar for zr_u and zr_v ? But now h is zr_u ?
+            ! z_s_u(:,i,:) = 
+
+            ! for the u and v grids, z(1) was already initialized with terrain.
+            ! but the first level needs to be offset, and the rest of the levels need to be created
+            z_u(:,i,:)          = z_u(:,i,:) + dz(i) / 2 * zr_u(:,i,:)
+            z_v(:,i,:)          = z_v(:,i,:) + dz(i) / 2 * zr_v(:,i,:)
+
+
+
+            ! ____ end SLEVE simple Implementation  _______
+            ! ############################################
+
+            ! dz_mass(:,i,:)      = dz(i) / 2 * z_level_ratio(:,i,:)
+            ! dz_interface(:,i,:) = dz(i) * z_level_ratio(:,i,:)
+            ! z(:,i,:)            = terrain + dz_mass(:,i,:)
+            ! z_interface(:,i,:)  = terrain
+
+
+
+
+
+
+
+          else  
             i = this%grid%kms
 
             max_level = nz
@@ -713,7 +769,7 @@ contains
 
                 smooth_height = sum(this%global_terrain) / size(this%global_terrain) + sum(dz(1:max_level))
 
-                z_level_ratio(:,i,:) = (smooth_height - terrain) / sum(dz(1:max_level))
+                z_level_ratio(:,i,:) = (smooth_height - terrain) / sum(dz(1:max_level)) !BK: Ratio between spatially varying and non-varying dz(at flatdz height) 
 
                 zr_u(:,i,:) = (smooth_height - z_u(:,i,:)) / sum(dz(1:max_level))
                 zr_v(:,i,:) = (smooth_height - z_v(:,i,:)) / sum(dz(1:max_level))
@@ -758,6 +814,19 @@ contains
                 dzdx(:,i,:) = (z(ims+1:ime,i,:) - z(ims:ime-1,i,:)) / this%dx
                 dzdy(:,i,:) = (z(:,i,jms+1:jme) - z(:,i,jms:jme-1)) / this%dx
             enddo
+
+
+            ! # # # # # #   BK debug wind field:    # # # # # # # # #
+            if (options%parameters%debug ) then
+                print*, ""
+                print*, "z_level_ratio(150,i,150) : ", z_level_ratio(150,:,150)
+                print*, "dzdx at  i,j,k = 150,150,k: " !, k, " : "
+                print*, dzdx(150,:,150)
+                print*, "dzdy at i,j,k = 150,150,k: "!, k, " : "
+                print*, dzdy(150,:,150)
+
+            endif  
+
 
 
         end associate
