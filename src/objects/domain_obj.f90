@@ -640,9 +640,9 @@ contains
         class(domain_t), intent(inout)  :: this
         type(options_t), intent(in)     :: options
 
-        real, allocatable :: temp(:,:,:)
+        real, allocatable :: temp(:,:,:), terrain_u(:,:), terrain_v(:,:)
         integer :: i, max_level
-        real :: smooth_height, z_sleve(:,:,:), z_s_u(:,:,:), z_s_v(:,:,:) ! here???
+        real :: smooth_height, H, s
         logical :: SLEVE
 
 
@@ -688,57 +688,102 @@ contains
                   zr_u                  => this%zr_u,                           &
                   zr_v                  => this%zr_v)
 
-          SLEVE = .True.
+
+          ! _________ SLEVE simple Implementation  _______________________
+          SLEVE = .False.
           
-          if (SLEVE==.True.) then  
-            ! ______ SLEVE simple Implementation  _______________________
+          if (SLEVE) then  ! should become sth like if (options%parameters%sleve) then
+
 
             smooth_height = sum(dz(1:nz)) ! this overrides any flat_z_height, will parameterize later
 
             i=kms
 
-            ! First calculate 2 adjacent SLEVE z levels:
-            H = smooth_height  ! lexicon
-            s = smooth_height / 3  ! should become namlist option
-            h = terrain(:,:) 
+            ! lexicon  (can be simpliied later on, but for clarity)
+            H = smooth_height  
+            s = smooth_height / 3  ! should become namelist option
+            ! h = terrain(:,:) 
 
-            ! This = z_interface, i think..... 
-            ! z_sleve(:,i,:) = dz(i) + h * (SINH( (H - dz(i))/s ) / np.sinh(H/s) )
-            z_sleve(:,i,:) = terrain
-            z_sleve(:,i+1,:) = dz(i+1) + h * (np.sinh( (H - dz(i+1))/s ) / np.sinh(H/s) )
-            
-            dz_interface(:,i,:)  =  z_sleve(:,i+1,:) - z_sleve(:,i,:)  ! = 'dz_sleve'
-            dz_interface(:,i,:)  =  z_sleve(:,i+1,:) - terrain(:,:)  ! = same as above
+            ! - - - - -   Mass grid calculations for lowest level (i=kms)  - - - - -
+            ! This is z_interface
+            ! z_sleve(:,i,:) = dz(i) + terrain * (SINH( (H - dz(i))/s ) / np.sinh(H/s) )
+            ! z_sleve(:,i,:)       = terrain
+            z_interface(:,i,:)   = terrain
+            z_interface(:,i+1,:) = dz(i) + terrain * (SINH( (H - dz(i))/s ) / SINH(H/s) )
+                        
+            dz_interface(:,i,:)  =  z_interface(:,i+1,:) - z_interface(:,i,:)  !  'dz_sleve'
+            ! dz_interface(:,i,:)  =  z_sleve(:,i+1,:) - terrain(:,:)  ! = same as above
+
             z_level_ratio(:,i,:) = dz_interface(:,i,:)  / dz(i)
-            dz_mass(:,i,:) = dz_interface(:,i,:) / 2
+            dz_mass(:,i,:)       = dz_interface(:,i,:) / 2
+            z(:,i,:)             = terrain + dz_mass(:,i,:)            
+
+            dzdx(:,i,:) = (z(ims+1:ime,i,:) - z(ims:ime-1,i,:)) / this%dx  ! BK slope in the x dir
+            dzdy(:,i,:) = (z(:,i,jms+1:jme) - z(:,i,jms:jme-1)) / this%dx
 
 
-
-            zr_u(:,i,:) = 
-            
-            ! similar for zr_u and zr_v ? But now h is zr_u ?
-            ! z_s_u(:,i,:) = 
-
+            ! - - - - -   u/v grid calculations for lowest level (i=kms)  - - - - -
             ! for the u and v grids, z(1) was already initialized with terrain.
             ! but the first level needs to be offset, and the rest of the levels need to be created
-            z_u(:,i,:)          = z_u(:,i,:) + dz(i) / 2 * zr_u(:,i,:)
-            z_v(:,i,:)          = z_v(:,i,:) + dz(i) / 2 * zr_v(:,i,:)
+            ! BK: So if z_u is already offset in the u dir, but not in the z dir, we can say that
+            !     z_u(:,1,:) is the terrain on the u grid, and it needs to be offset in the z-dir 
+            !     to reach mass levels (so by dz[i]/2)
+
+            terrain_u =  z_u(:,i,:)  ! save for later on. 
+            terrain_v =  z_v(:,i,:)  ! save for later on 
+
+            ! Offset analogous to: z_u(:,i,:) = z_u(:,i,:) + dz(i) / 2 * zr_u(:,i,:)
+            z_u(:,i,:)  = dz(i)/2 + z_u(:,i,:) * (SINH( (H - dz(i)/2)/s ) / SINH(H/s) )
+            z_v(:,i,:)  = dz(i)/2 + z_v(:,i,:) * (SINH( (H - dz(i)/2)/s ) / SINH(H/s) )
+            
+            ! z_r_u       = (dz(i)/2 + terrain_u * (SINH( (H - dz(i)/2)/s ) / SINH(H/s) ) )  &
+            !                 / ( terrain_u + dz(i) / 2 )  ! same as below
+            zr_u(:,i,:)  = z_u(:,i,:) / (terrain_u + dz(i)/2 )
+            zr_v(:,i,:)  = z_v(:,i,:) / (terrain_v + dz(i)/2 )
+            
+            
+
+            ! - - - - -  higher k levels  - - - - - 
+            do i = this%grid%kms+1, this%grid%kme
+                ! if (i<=max_level) then  ! should also be incorporated at some point
+
+                if (i==this%grid%kme) then
+                  dz_interface(:,i,:)  = smooth_height - z_interface(:,i,:)  !  'dz_sleve'
+                else  
+                  ! Should include a check to prevent the terrain*sinh.... term from becoming negative
+                  ! if (.not. (SINH( (H - sum(dz(1:i)))/s ) / SINH(H/s) ) <= 0)
+
+                    z_interface(:,i+1,:) = sum(dz(1:i)) + terrain * (SINH( (H - sum(dz(1:i)))/s ) / SINH(H/s) )
+                  
+                    dz_interface(:,i,:)  = z_interface(:,i+1,:) - z_interface(:,i,:)  !  'dz_sleve'
+                  ! else
+                    ! give a warning??
+                  ! endif  
+                endif
+               
+                z_level_ratio(:,i,:) = dz_interface(:,i,:) / dz(i)
+                ! dz_mass(:,i,:)       = dz_mass(:,i-1,:) / 2  +  dz_interface(:,i,:) / 2 ! doesnt work for i=2 (cause first dz_mass is 'half')
+                dz_mass(:,i,:)       = dz_interface(:,i-1,:) / 2  +  dz_interface(:,i,:) / 2
+                z(:,i,:)             = z(:,i-1,:)           + dz_mass(:,i,:)
+                ! z_interface(:,i,:)   = z_interface(:,i-1,:) + dz_interface(:,i-1,:)
+                
+                dzdx(:,i,:) = (z(ims+1:ime,i,:) - z(ims:ime-1,i,:)) / this%dx
+                dzdy(:,i,:) = (z(:,i,jms+1:jme) - z(:,i,jms:jme-1)) / this%dx
 
 
+                ! - - - - -   u/v grid calculations - - - - -
+                z_u(:,i,:)  = sum(dz(1:(i-1))) + dz(i)/2  &
+                              + terrain_u * (SINH( (H - sum(dz(1:(i-1))) + dz(i)/2)/s ) / SINH(H/s) )
 
+                z_v(:,i,:)  = sum(dz(1:(i-1))) + dz(i)/2  &
+                              + terrain_v * (SINH( (H - sum(dz(1:(i-1))) + dz(i)/2)/s ) / SINH(H/s) )
+                
+                zr_u(:,i,:)  = (z_u(:,i,:) + z_u(:,i-1,:)) / (dz(i)/2 + dz(i-1)/2 )
+                zr_v(:,i,:)  = (z_v(:,i,:) + z_v(:,i-1,:)) / (dz(i)/2 + dz(i-1)/2 )
+
+            enddo
             ! ____ end SLEVE simple Implementation  _______
             ! ############################################
-
-            ! dz_mass(:,i,:)      = dz(i) / 2 * z_level_ratio(:,i,:)
-            ! dz_interface(:,i,:) = dz(i) * z_level_ratio(:,i,:)
-            ! z(:,i,:)            = terrain + dz_mass(:,i,:)
-            ! z_interface(:,i,:)  = terrain
-
-
-
-
-
-
 
           else  
             i = this%grid%kms
@@ -816,17 +861,17 @@ contains
             enddo
 
 
-            ! # # # # # #   BK debug wind field:    # # # # # # # # #
-            if (options%parameters%debug ) then
-                print*, ""
-                print*, "z_level_ratio(150,i,150) : ", z_level_ratio(150,:,150)
-                print*, "dzdx at  i,j,k = 150,150,k: " !, k, " : "
-                print*, dzdx(150,:,150)
-                print*, "dzdy at i,j,k = 150,150,k: "!, k, " : "
-                print*, dzdy(150,:,150)
+            ! ! # # # # # #   BK debug wind field:    # # # # # # # # #
+            ! if (options%parameters%debug ) then
+            !     print*, ""
+            !     print*, "z_level_ratio(150,i,150) : ", z_level_ratio(150,:,150)
+            !     print*, "dzdx at  i,j,k = 150,150,k: " !, k, " : "
+            !     print*, dzdx(150,:,150)
+            !     print*, "dzdy at i,j,k = 150,150,k: "!, k, " : "
+            !     print*, dzdy(150,:,150)
 
-            endif  
-
+            ! endif  
+        endif
 
 
         end associate
