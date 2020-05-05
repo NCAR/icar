@@ -1676,6 +1676,19 @@ contains
         options%flat_z_height = flat_z_height
         options%fixed_dz_advection = fixed_dz_advection
 
+        if (fixed_dz_advection) then
+            print*, "WARNING: setting fixed_dz_advection to true is not recommended, use wind = 2 instead"
+            print*, "if you want to continue and enable this, you will need to change this code in the options_obj"
+            error stop
+        endif
+
+        if (dz_modifies_wind) then
+            print*, "WARNING: setting dz_modifies_wind to true is not recommended, use wind = 2 instead"
+            print*, "if you want to continue and enable this, you will need to change this code in the options_obj"
+            error stop
+        endif
+
+
     end subroutine model_levels_namelist
 
     !> ----------------------------------------------------------------------------
