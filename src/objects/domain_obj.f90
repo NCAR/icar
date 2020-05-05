@@ -152,13 +152,12 @@ contains
 
         if (this_image()==1) print *,"  Initializing variables"
 
-        ! if (0<opt%vars_to_allocate( kVARS%u) )                          call setup(this%u,                        this%u_grid,   forcing_var=opt%parameters%uvar,       list=this%variables_to_force, force_boundaries=.False.)
+        if (0<opt%vars_to_allocate( kVARS%u) )                          call setup(this%u,                        this%u_grid,   forcing_var=opt%parameters%uvar,       list=this%variables_to_force, force_boundaries=.False.)
         if (0<opt%vars_to_allocate( kVARS%u) )                          call setup(this%u_mass,                   this%grid)
         if (0<opt%vars_to_allocate( kVARS%v) )                          call setup(this%v,                        this%v_grid,   forcing_var=opt%parameters%vvar,       list=this%variables_to_force, force_boundaries=.False.)
         if (0<opt%vars_to_allocate( kVARS%v) )                          call setup(this%v_mass,                   this%grid)
         if (0<opt%vars_to_allocate( kVARS%w) )                          call setup(this%w,                        this%grid )
         if (0<opt%vars_to_allocate( kVARS%w) )                          call setup(this%w_real,                   this%grid )
-        ! if (0<opt%vars_to_allocate( kVARS%w) )                          call setup(this%Div,                    this%grid )
         if (0<opt%vars_to_allocate( kVARS%water_vapor) )                call setup(this%water_vapor,              this%grid,     forcing_var=opt%parameters%qvvar,      list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%potential_temperature) )      call setup(this%potential_temperature,    this%grid,     forcing_var=opt%parameters%tvar,       list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%cloud_water) )                call setup(this%cloud_water_mass,         this%grid,     forcing_var=opt%parameters%qcvar,      list=this%variables_to_force, force_boundaries=.True.)
@@ -641,7 +640,7 @@ contains
         type(options_t), intent(in)     :: options
 
         real, allocatable :: temp(:,:,:), terrain_u(:,:), terrain_v(:,:)
-        integer :: i, max_level
+        integer :: i, max_level, xx, yy
         real :: smooth_height, H, s
         logical :: SLEVE
 
@@ -690,7 +689,7 @@ contains
 
 
           ! _________ SLEVE simple Implementation  _______________________
-          SLEVE = .False.
+          SLEVE = .True.
           
           if (SLEVE) then  ! should become sth like if (options%parameters%sleve) then
 
@@ -733,15 +732,23 @@ contains
             terrain_v =  z_v(:,i,:)  ! save for later on 
 
             ! Offset analogous to: z_u(:,i,:) = z_u(:,i,:) + dz(i) / 2 * zr_u(:,i,:)
-            z_u(:,i,:)  = dz(i)/2 + z_u(:,i,:) * (SINH( (H - dz(i)/2)/s ) / SINH(H/s) )
-            z_v(:,i,:)  = dz(i)/2 + z_v(:,i,:) * (SINH( (H - dz(i)/2)/s ) / SINH(H/s) )
+            z_u(:,i,:)  = dz(i)/2 + terrain_u * (SINH( (H - dz(i)/2)/s ) / SINH(H/s) )
+            z_v(:,i,:)  = dz(i)/2 + terrain_v * (SINH( (H - dz(i)/2)/s ) / SINH(H/s) )
             
             ! z_r_u       = (dz(i)/2 + terrain_u * (SINH( (H - dz(i)/2)/s ) / SINH(H/s) ) )  &
             !                 / ( terrain_u + dz(i) / 2 )  ! same as below
-            zr_u(:,i,:)  = z_u(:,i,:) / (terrain_u + dz(i)/2 )
-            zr_v(:,i,:)  = z_v(:,i,:) / (terrain_v + dz(i)/2 )
+            ! zr_u(:,i,:)  = z_u(:,i,:) / (terrain_u + dz(i)/2 )
+            ! zr_v(:,i,:)  = z_v(:,i,:) / (terrain_v + dz(i)/2 )
+
+            zr_u(:,i,:)  = (z_u(:,i,:) - terrain_u) / ( dz(i)/2 )
+            zr_v(:,i,:)  = (z_v(:,i,:) - terrain_v) / (dz(i)/2 )
             
-            
+            ! xx=200 
+            ! yy=1  ! center of ideal domain
+            ! print*, "sinh term z_u: ", (SINH( (H - dz(i)/2 )/ s ) / SINH(H/s) )
+            ! print*, "z_u(",xx,i,yy,") : ", z_u(xx,i,yy)
+            ! print*, "zr_u(",xx,i,yy,") : ", zr_u(xx,i,yy)
+           
 
             ! - - - - -  higher k levels  - - - - - 
             do i = this%grid%kms+1, this%grid%kme
@@ -773,17 +780,46 @@ contains
 
                 ! - - - - -   u/v grid calculations - - - - -
                 z_u(:,i,:)  = sum(dz(1:(i-1))) + dz(i)/2  &
-                              + terrain_u * (SINH( (H - sum(dz(1:(i-1))) + dz(i)/2)/s ) / SINH(H/s) )
+                              + terrain_u * (SINH( (H - sum(dz(1:(i-1))) - dz(i)/2 )/ s ) / SINH(H/s) )
 
                 z_v(:,i,:)  = sum(dz(1:(i-1))) + dz(i)/2  &
-                              + terrain_v * (SINH( (H - sum(dz(1:(i-1))) + dz(i)/2)/s ) / SINH(H/s) )
+                              + terrain_v * (SINH( (H - sum(dz(1:(i-1))) - dz(i)/2)/s ) / SINH(H/s) )
                 
-                zr_u(:,i,:)  = (z_u(:,i,:) + z_u(:,i-1,:)) / (dz(i)/2 + dz(i-1)/2 )
-                zr_v(:,i,:)  = (z_v(:,i,:) + z_v(:,i-1,:)) / (dz(i)/2 + dz(i-1)/2 )
+                zr_u(:,i,:)  = (z_u(:,i,:) - z_u(:,i-1,:)) / (dz(i)/2 + dz(i-1)/2 )
+                zr_v(:,i,:)  = (z_v(:,i,:) - z_v(:,i-1,:)) / (dz(i)/2 + dz(i-1)/2 )
 
+                ! print*, ""
+                ! print*, "i - sum(dz(1:(i-1))) : ",i, " - ", sum(dz(1:(i-1)))
+                ! print*, "sinh term z_u: ", (SINH( (H - sum(dz(1:(i-1))) + dz(i)/2 )/ s ) / SINH(H/s) )
+                ! print*, "z_u (",xx,i,yy,") : ", z_u(xx,i,yy)
+                ! print*, "zr_u(",xx,i,yy,") : ", zr_u(xx,i,yy)
             enddo
             ! ____ end SLEVE simple Implementation  _______
             ! ############################################
+
+
+            ! ! # # # # # #   BK debug wind field:    # # # # # # # # #
+            ! if (options%parameters%debug ) then
+            !     xx=200 
+            !     yy=1  ! center of ideal domain
+            !     print*, ""
+            !     print*, "zru shape: ", SHAPE(zr_u)
+            !     print*, "z_level_ratio shape: ", SHAPE(z_level_ratio)
+            !     print*, ""
+            !     print*, "z_level_ratio(",xx,",i,",yy,") : ", z_level_ratio(xx,:,yy)
+            !     print*, "zr_u(",xx,",i,",yy,") : ", zr_u(xx,:,yy)
+            !     ! print*, "z_level_ratio(150,i,150) : ", z_level_ratio(150,:,150)
+            !     print*, "dzdx at  i,j,k = 200,1,k: " !, k, " : "
+            !     print*, dzdx(xx,:,yy)
+            !     ! print*, "dzdy at i,j,k = 150,150,k: "!, k, " : "
+            !     ! print*, dzdy(150,:,150)
+            ! endif 
+
+
+            call io_write("zr_u.nc", "zr_u", zr_u(:,:,:) )
+            call io_write("zrl.nc", "zrl", z_level_ratio(:,:,:) )
+            call io_write("dzdx.nc", "dzdx", dzdx(:,:,:) )
+
 
           else  
             i = this%grid%kms
@@ -859,18 +895,7 @@ contains
                 dzdx(:,i,:) = (z(ims+1:ime,i,:) - z(ims:ime-1,i,:)) / this%dx
                 dzdy(:,i,:) = (z(:,i,jms+1:jme) - z(:,i,jms:jme-1)) / this%dx
             enddo
-
-
-            ! ! # # # # # #   BK debug wind field:    # # # # # # # # #
-            ! if (options%parameters%debug ) then
-            !     print*, ""
-            !     print*, "z_level_ratio(150,i,150) : ", z_level_ratio(150,:,150)
-            !     print*, "dzdx at  i,j,k = 150,150,k: " !, k, " : "
-            !     print*, dzdx(150,:,150)
-            !     print*, "dzdy at i,j,k = 150,150,k: "!, k, " : "
-            !     print*, dzdy(150,:,150)
-
-            ! endif  
+ 
         endif
 
 
