@@ -630,20 +630,41 @@ contains
     end subroutine
 
 
-    !> -------------------------------
-    !! Initialize various domain variables, mostly z, dz, etc.
-    !!
-    !! -------------------------------
-    subroutine initialize_core_variables(this, options)
+    function find_flat_model_level(options, nz, dz) result(max_level)
+        implicit none
+        type(options_t), intent(in) :: options
+        integer,         intent(in) :: nz
+        real,            intent(in) :: dz(:)
+        integer :: max_level
+
+        integer :: j
+        real :: height
+
+        if (options%parameters%flat_z_height > nz) then
+            if (this_image()==1) write(*,*) "Treating flat_z_height as specified in meters above mean terrain height: ", options%parameters%flat_z_height," meters"
+            height = 0
+            do j = 1, nz
+                if (height <= options%parameters%flat_z_height) then
+                    height = height + dz(j)
+                    max_level = j
+                endif
+            enddo
+
+        elseif (options%parameters%flat_z_height <= 0) then
+            if (this_image()==1) write(*,*) "Treating flat_z_height as counting levels down from the model top: ", options%parameters%flat_z_height," levels"
+            max_level = nz + options%parameters%flat_z_height
+
+        else
+            if (this_image()==1) write(*,*) "Treating flat_z_height as counting levels up from the ground: ", options%parameters%flat_z_height," levels"
+            max_level = options%parameters%flat_z_height
+        endif
+
+    end function find_flat_model_level
+
+
+    subroutine allocate_z_arrays(this)
         implicit none
         class(domain_t), intent(inout)  :: this
-        type(options_t), intent(in)     :: options
-
-        real, allocatable :: temp(:,:,:)
-        integer :: i, max_level
-        real :: smooth_height
-
-        call read_core_variables(this, options)
 
         allocate(this%z_level_ratio(this% ims : this% ime, &
                                     this% kms : this% kme, &
@@ -667,6 +688,38 @@ contains
                             this%v_grid2d_ext% jms : this%v_grid2d_ext% jme) )
 
 
+        allocate(this%global_z_level_ratio( this% ids : this% ide, &
+                                            this% kds : this% kde, &
+                                            this% jds : this% jde) )
+
+        allocate(this%global_z_interface(this% ids : this% ide,   &
+                                         this% kds : this% kde+1, &
+                                         this% jds : this% jde)   )
+
+        allocate(this%global_dz_interface(this% ids : this% ide,   &
+                                          this% kds : this% kde,   &
+                                          this% jds : this% jde)   )
+
+
+    end subroutine allocate_z_arrays
+
+    !> -------------------------------
+    !! Initialize various domain variables, mostly z, dz, etc.
+    !!
+    !! -------------------------------
+    subroutine initialize_core_variables(this, options)
+        implicit none
+        class(domain_t), intent(inout)  :: this
+        type(options_t), intent(in)     :: options
+
+        real, allocatable :: temp(:,:,:)
+        integer :: i, max_level
+        real :: smooth_height
+
+        call read_core_variables(this, options)
+
+        call allocate_z_arrays(this)
+
         associate(ims => this%ims,      ime => this%ime,                        &
                   jms => this%jms,      jme => this%jme,                        &
                   kms => this%kms,      kme => this%kme,                        &
@@ -679,6 +732,10 @@ contains
                   dz_mass               => this%dz_mass%data_3d,                &
                   dz_interface          => this%dz_interface%data_3d,           &
                   terrain               => this%terrain%data_2d,                &
+                  global_z_interface    => this%global_z_interface,             &
+                  global_dz_interface   => this%global_dz_interface,            &
+                  global_terrain        => this%global_terrain,                 &
+                  global_z_level_ratio  => this%global_z_level_ratio,           &
                   dzdx                  => this%dzdx,                           &
                   dzdy                  => this%dzdy,                           &
                   z_level_ratio         => this%z_level_ratio,                  &
@@ -690,35 +747,18 @@ contains
             max_level = nz
 
             if (options%parameters%space_varying_dz) then
-                if (options%parameters%flat_z_height > nz) then
-                    if (this_image()==1) write(*,*) "Treating flat_z_height as specified in meters above mean terrain height: ", options%parameters%flat_z_height," meters"
-                    block
-                        integer :: j
-                        real :: height
-                        height = 0
-                        do j = 1, nz
-                            if (height <= options%parameters%flat_z_height) then
-                                height = height + dz(j)
-                                max_level = j
-                            endif
-                        enddo
-                    end block
-                elseif (options%parameters%flat_z_height <= 0) then
-                    if (this_image()==1) write(*,*) "Treating flat_z_height as counting levels down from the model top: ", options%parameters%flat_z_height," levels"
-                    max_level = nz + options%parameters%flat_z_height
-                else
-                    if (this_image()==1) write(*,*) "Treating flat_z_height as counting levels up from the ground: ", options%parameters%flat_z_height," levels"
-                    max_level = options%parameters%flat_z_height
-                endif
+                max_level = find_flat_model_level(options, nz, dz)
 
-                smooth_height = sum(this%global_terrain) / size(this%global_terrain) + sum(dz(1:max_level))
+                smooth_height = sum(global_terrain) / size(global_terrain) + sum(dz(1:max_level))
 
-                z_level_ratio(:,i,:) = (smooth_height - terrain) / sum(dz(1:max_level))
+                z_level_ratio(:,i,:) = min(1.0, (smooth_height - terrain) / sum(dz(1:max_level)))
+                global_z_level_ratio(:,i,:) = min(1.0, (smooth_height - global_terrain) / sum(dz(1:max_level)))
 
-                zr_u(:,i,:) = (smooth_height - z_u(:,i,:)) / sum(dz(1:max_level))
-                zr_v(:,i,:) = (smooth_height - z_v(:,i,:)) / sum(dz(1:max_level))
+                zr_u(:,i,:) = min(1.0, (smooth_height - z_u(:,i,:)) / sum(dz(1:max_level)))
+                zr_v(:,i,:) = min(1.0, (smooth_height - z_v(:,i,:)) / sum(dz(1:max_level)))
             else
                 z_level_ratio = 1
+                global_z_level_ratio = 1
                 zr_u = 1
                 zr_v = 1
             endif
@@ -727,6 +767,10 @@ contains
             dz_interface(:,i,:) = dz(i) * z_level_ratio(:,i,:)
             z(:,i,:)            = terrain + dz_mass(:,i,:)
             z_interface(:,i,:)  = terrain
+
+            global_dz_interface(:,i,:) = dz(i) * global_z_level_ratio(:,i,:)
+            global_z_interface(:,i,:)  = global_terrain
+
 
             ! for the u and v grids, z(1) was already initialized with terrain.
             ! but the first level needs to be offset, and the rest of the levels need to be created
@@ -741,16 +785,25 @@ contains
                     z_level_ratio(:,i,:) = z_level_ratio(:,i-1,:)
                     zr_u(:,i,:) = zr_u(:,i-1,:)
                     zr_v(:,i,:) = zr_v(:,i-1,:)
+
+                    global_z_level_ratio(:,i,:) = global_z_level_ratio(:,i-1,:)
+
                 else
                     z_level_ratio(:,i,:) = 1
                     zr_u(:,i,:) = 1
                     zr_v(:,i,:) = 1
+
+                    global_z_level_ratio(:,i,:) = 1
+
                 endif
 
                 dz_mass(:,i,:)     = (dz(i)/2 * z_level_ratio(:,i,:) + dz(i-1)/2 * z_level_ratio(:,i-1,:))
                 dz_interface(:,i,:)= dz(i) * z_level_ratio(:,i,:)
                 z(:,i,:)           = z(:,i-1,:)           + dz_mass(:,i,:)
                 z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i-1,:)
+
+                global_dz_interface(:,i,:) = dz(i) * global_z_level_ratio(:,i,:)
+                global_z_interface(:,i,:)  = global_z_interface(:,i-1,:) + global_dz_interface(:,i-1,:)
 
                 z_u(:,i,:)         = z_u(:,i-1,:)         + ((dz(i)/2 * zr_u(:,i,:) + dz(i-1)/2 * zr_u(:,i-1,:)))
                 z_v(:,i,:)         = z_v(:,i-1,:)         + ((dz(i)/2 * zr_v(:,i,:) + dz(i-1)/2 * zr_v(:,i-1,:)))
@@ -759,6 +812,12 @@ contains
                 dzdy(:,i,:) = (z(:,i,jms+1:jme) - z(:,i,jms:jme-1)) / this%dx
             enddo
 
+            i = this%grid%kme + 1
+            global_z_interface(:,i,:) = global_z_interface(:,i-1,:) + global_dz_interface(:,i-1,:)
+
+            ! technically these should probably be defined to the k+1 model top as well bu not used at present.
+            ! z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i-1,:)
+            ! dz_mass(:,i,:)     = dz(i-1)/2 * z_level_ratio(:,i-1,:)
 
         end associate
 

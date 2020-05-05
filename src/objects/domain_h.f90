@@ -57,6 +57,7 @@ module domain_interface
     type(variable_t) :: dz_interface
     type(variable_t) :: z_interface
     type(variable_t) :: dz_mass
+    type(variable_t) :: nsq
     type(variable_t) :: graupel
     type(variable_t) :: accumulated_precipitation
     integer,allocatable :: precipitation_bucket(:,:)
@@ -114,7 +115,6 @@ module domain_interface
     real :: dx
     integer :: nsmooth
 
-    real,                       allocatable :: global_terrain(:,:)
     complex(C_DOUBLE_COMPLEX),  allocatable :: terrain_frequency(:,:) ! FFT(terrain)
     double precision,           allocatable :: costheta(:,:)
     double precision,           allocatable :: sintheta(:,:)
@@ -128,6 +128,14 @@ module domain_interface
     real,                       allocatable :: ustar(:,:)
     real,                       allocatable :: znu(:)
     real,                       allocatable :: znw(:)
+
+    ! these data are stored on the domain wide grid even if this process is only looking at a subgrid
+    ! these variables are necessary with linear winds, especially with spatially variable dz, to compute the LUT
+    real,                       allocatable :: global_terrain(:,:)
+    real,                       allocatable :: global_z_interface(:,:,:)
+    real,                       allocatable :: global_dz_interface(:,:,:)
+    real,                       allocatable :: global_z_level_ratio(:,:,:)
+
 
     ! these coarrays are used to send all data to/from a master image for IO... ?
     ! For now this will be taken care of in the boundary conditions object
