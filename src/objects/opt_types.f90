@@ -234,6 +234,10 @@ module options_types
         real    :: flat_z_height        ! height above mean ground level [m] above which z levels are flat in space
         logical :: use_agl_height       ! interpolate from forcing to model layers using Z above ground level, not sea level
         logical :: fixed_dz_advection   ! with variable dz, allows thinner model levels to accelerate the wind (maybe this should be wind=2)
+        logical :: sleve                ! Using a sleve space_varying_dz offers control over the decay of terrain features in the vertical grid structure. See Schär et al 2002, Leuenberger et al 2009
+        real    :: sleve_decay_factor   ! The ratio H/s (model top or flat_z_height over decay height s). Schär: "the single scale parameter s plays the role of a scale height; that is, the underlying terrain features ap- proximately decay by a factor 1/e over a depth s. With s=H, the resulting coordinate structure is qualitatively comparable to sigma coordinates. With s < H, a hybridlike setting is obtained"
+        ! maybe make sleve_decay_factor a function of flat_z_height ???
+        real    :: sleve_n              ! Additional parameter introduced by Leuenberger 2009. Not yet implemented.
 
         ! physics parameterization options
         logical :: use_mp_options

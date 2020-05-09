@@ -1614,16 +1614,19 @@ contains
         integer :: name_unit, this_level
         real, allocatable, dimension(:) :: dz_levels
         real, dimension(45) :: fulldz
-        logical :: space_varying, fixed_dz_advection, dz_modifies_wind
-        real :: flat_z_height
+        logical :: space_varying, fixed_dz_advection, dz_modifies_wind, sleve
+        real :: flat_z_height, sleve_decay_factor, sleve_n
 
-        namelist /z_info/ dz_levels, space_varying, dz_modifies_wind, flat_z_height, fixed_dz_advection
+        namelist /z_info/ dz_levels, space_varying, dz_modifies_wind, flat_z_height, fixed_dz_advection, sleve, sleve_decay_factor, sleve_n
 
         this_level=1
         space_varying = .False.
         fixed_dz_advection = .False.
         dz_modifies_wind = .False.
         flat_z_height = -1
+        sleve = .False.
+        sleve_decay_factor = 2.
+        sleve_n = 1.  ! to be incorporated later. See Leuenberger 2009
 
         ! read the z_info namelist if requested
         if (options%readdz) then
@@ -1675,7 +1678,9 @@ contains
         options%space_varying_dz = space_varying
         options%flat_z_height = flat_z_height
         options%fixed_dz_advection = fixed_dz_advection
-
+        options%sleve = sleve
+        options%sleve_decay_factor = sleve_decay_factor
+        options%sleve_n = sleve_n
     end subroutine model_levels_namelist
 
     !> ----------------------------------------------------------------------------
