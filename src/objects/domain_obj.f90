@@ -751,11 +751,11 @@ contains
 
                 smooth_height = sum(global_terrain) / size(global_terrain) + sum(dz(1:max_level))
 
-                z_level_ratio(:,i,:) = min(1.0, (smooth_height - terrain) / sum(dz(1:max_level)))
-                global_z_level_ratio(:,i,:) = min(1.0, (smooth_height - global_terrain) / sum(dz(1:max_level)))
+                z_level_ratio(:,i,:) = (smooth_height - terrain) / sum(dz(1:max_level))
+                global_z_level_ratio(:,i,:) = (smooth_height - global_terrain) / sum(dz(1:max_level))
 
-                zr_u(:,i,:) = min(1.0, (smooth_height - z_u(:,i,:)) / sum(dz(1:max_level)))
-                zr_v(:,i,:) = min(1.0, (smooth_height - z_v(:,i,:)) / sum(dz(1:max_level)))
+                zr_u(:,i,:) = (smooth_height - z_u(:,i,:)) / sum(dz(1:max_level))
+                zr_v(:,i,:) = (smooth_height - z_v(:,i,:)) / sum(dz(1:max_level))
             else
                 z_level_ratio = 1
                 global_z_level_ratio = 1
