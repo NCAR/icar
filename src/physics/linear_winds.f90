@@ -63,6 +63,7 @@ module linear_theory_winds
     logical :: using_blocked_flow
     real    :: N_squared
 
+    logical :: debug_print = .false.
 
     interface linear_perturbation
         module procedure linear_perturbation_constz, linear_perturbation_varyingz
@@ -120,7 +121,7 @@ module linear_theory_winds
     integer :: n_nsq_values=10
     integer :: n_spd_values=10
 
-    complex,parameter :: j= (0,1)
+    complex,parameter :: imaginary_number = (0,1)
 
     real, parameter :: SMALL_VALUE = 1e-15
 
@@ -202,13 +203,13 @@ contains
 
         lt_data%msq   = Nsq / lt_data%denom * lt_data%kl
         lt_data%mimag = (0, 0) ! be sure to reset real and imaginary components
-        lt_data%mimag = lt_data%mimag + (real(sqrt(-lt_data%msq)) * j)
+        lt_data%mimag = lt_data%mimag + (real(sqrt(-lt_data%msq)) * imaginary_number)
 
         lt_data%m = sqrt(lt_data%msq)                         ! vertical wave number, hydrostatic
         where(lt_data%sig < 0) lt_data%m = lt_data%m * (-1)   ! equivalent to m = m * sign(sig)
         where(real(lt_data%msq) < 0) lt_data%m = lt_data%mimag
 
-        lt_data%ineta = j * fourier_terrain * exp(j * lt_data%m * z)
+        lt_data%ineta = imaginary_number * fourier_terrain * exp(imaginary_number * lt_data%m * z)
         !  what=sig*ineta
 
         ! with coriolis : [-/+] j * [l/k] * f
@@ -287,6 +288,8 @@ contains
         real,   allocatable :: layer_count(:,:), layer_fraction(:,:)
         real,   allocatable :: internal_z_top(:,:), internal_z_bottom(:,:)
 
+        ! if (this_image()==1) print*, "called", shape(z_bottom), buffer, shape(z_top)
+
         ! Handle the trivial case quickly
         if ((U==0).and.(V==0)) then
             lt_data%u_perturb = 0
@@ -297,18 +300,35 @@ contains
         start_z = minval(z_bottom)
         end_z = maxval(z_top)
 
-        allocate(internal_z_top(size(lt_data%u_perturb,1),size(lt_data%u_perturb,2)), source=minval(z_top))
-        internal_z_top(buffer:buffer+size(z_top,1)-1,buffer:buffer+size(z_top,2)-1) = z_top
+        ! if (this_image()==1) print*, "zbot(1,1), zbo(n/2,n/2)", z_bottom(1,1), z_bottom(size(z_bottom,1)/2, size(z_bottom,2)/2)
+        ! if (this_image()==1) print*, "ztop(1,1), ztop(n/2,n/2)", z_top(1,1), z_top(size(z_top,1)/2, size(z_top,2)/2)
 
-        allocate(internal_z_bottom(size(lt_data%u_perturb,1),size(lt_data%u_perturb,2)), source=minval(z_bottom))
-        internal_z_bottom(buffer:buffer+size(z_bottom,1)-1,buffer:buffer+size(z_bottom,2)-1) = z_bottom
+        ! if (this_image()==1) print*, "zbot(1:4,1)", z_bottom(1:4,1)
+        ! if (this_image()==1) print*, "zbot(1:4,2)", z_bottom(1:4,2)
+        ! if (this_image()==1) print*, "zbot(1:4,3)", z_bottom(1:4,3)
+        ! if (this_image()==1) print*, "zbot(1:4,4)", z_bottom(1:4,4)
 
-        allocate(layer_count(size(lt_data%u_perturb,1),size(lt_data%u_perturb,2)))
+        ! if (this_image()==1) print*, "zbot(buffer-1:buffer+2,1)", z_bottom(buffer-1:buffer+2,1)
+        ! if (this_image()==1) print*, "zbot(buffer-1:buffer+2,2)", z_bottom(buffer-1:buffer+2,2)
+
+
+        allocate(internal_z_top(size(lt_data%u_perturb,1),size(lt_data%u_perturb,2)))
+        internal_z_top = maxval(z_top)
+        internal_z_top(buffer:buffer+size(z_top,1)-1, buffer:buffer+size(z_top,2)-1) = z_top(:,:)
+
+        allocate(internal_z_bottom(size(lt_data%u_perturb,1),size(lt_data%u_perturb,2)), source=maxval(z_bottom))
+        internal_z_bottom(buffer:buffer+size(z_bottom,1)-1, buffer:buffer+size(z_bottom,2)-1) = z_bottom
+
+        ! if (this_image()==1) print*, "inter_zbot(buffer-1:buffer+2,b+2)", internal_z_bottom(buffer+size(z_top,1)/2-1:size(z_top,1)/2+buffer+2,buffer+2)
+
+
+
+        allocate(layer_count(size(lt_data%u_perturb,1), size(lt_data%u_perturb,2)))
         layer_count = 0
         allocate(layer_fraction, source=layer_count)
-        if (this_image()==1) print*, "LUT generation:",U, V, Nsq
-        if (this_image()==1) print*, internal_z_top(1,1), minval(internal_z_top), maxval(internal_z_top)
-        if (this_image()==1) print*, internal_z_bottom(1,1), minval(internal_z_bottom), maxval(internal_z_bottom)
+        ! if (this_image()==1) print*, "LUT generation:",U, V, Nsq
+        ! if (this_image()==1) print*, minval(internal_z_top), maxval(internal_z_top), minval(z_top - z_bottom)
+        ! if (this_image()==1) print*, minval(internal_z_bottom), maxval(internal_z_bottom), minimum_step
 
         step_size = min(minimum_step, minval(z_top - z_bottom))
         current_z = start_z + step_size/2 ! we want the value in the middle of each theoretical layer
@@ -317,6 +337,11 @@ contains
         lt_data%u_accumulator = 0
         lt_data%v_accumulator = 0
 
+        ! if (debug_print) then
+        !     print*, "linear_perturbation_varyingz:", step_size, current_z
+        ! endif
+
+        ! if (this_image()==1) print*, "    start_z:", start_z, "    current_z:", current_z, "    end_z:", end_z !, "    internal_z_top:", internal_z_top(buffer+size(z_bottom,1)/2-1,buffer+size(z_bottom,2)/2-1)
         do while (current_z < end_z)
 
             call linear_perturbation_at_height(U,V,Nsq,current_z, fourier_terrain, lt_data)
@@ -325,25 +350,54 @@ contains
             !                         minval(max(0.0, min(step_size/2, internal_z_top - current_z))),         &
             !                         minval(max(0.0, min(step_size/2, current_z - internal_z_bottom)) + max(0.0, min(step_size/2, internal_z_top - current_z)))
 
-            layer_fraction = (  max(0.0, min(step_size/2, current_z - internal_z_bottom)) &
-                              + max(0.0, min(step_size/2, internal_z_top - current_z))    ) / step_size
+            layer_fraction = max(0.0,                                                                                       &
+                                min(step_size/2, current_z - internal_z_bottom) + min(0.0, internal_z_top - current_z)      &
+                              + min(step_size/2, internal_z_top - current_z)    + min(0.0, current_z - internal_z_bottom)   ) / step_size
 
+            ! if (this_image()==1) print*, minval(internal_z_top - current_z), minval(current_z - internal_z_bottom)
             layer_count = layer_count + layer_fraction
             lt_data%u_accumulator = lt_data%u_accumulator + lt_data%u_perturb * layer_fraction
             lt_data%v_accumulator = lt_data%v_accumulator + lt_data%v_perturb * layer_fraction
-            if (this_image()==1) print*, current_z, &
-                                    minval(layer_fraction(buffer:buffer+size(z_bottom,1)-1,buffer:buffer+size(z_bottom,2)-1)), &
-                                    maxval(layer_fraction(buffer:buffer+size(z_bottom,1)-1,buffer:buffer+size(z_bottom,2)-1))
+            ! if (start_z > 17000) then
+            !     block
+            !         integer :: xs,xe
+            !         xs = buffer+size(z_bottom,1)/2-8
+            !         xe = buffer+size(z_bottom,1)/2+2
+            !         if (this_image()==1) print*, layer_fraction(buffer+size(z_bottom,1)/2+1,buffer+1),                    layer_fraction(xs:xe,buffer+1)
+            !         if (this_image()==1) print*, current_z - internal_z_bottom(buffer+size(z_bottom,1)/2+1, buffer+2),    current_z - internal_z_bottom(xs:xe, buffer+2)
+            !         if (this_image()==1) print*, internal_z_top(buffer+size(z_bottom,1)/2+1, buffer+2) - current_z,       internal_z_top(xs:xe, buffer+2) - current_z
+            !     end block
+            ! endif
+            ! if (start_z < 100) then
+            !     if (this_image()==1) print*, layer_fraction(1::53,buffer+1)
+            !     if (this_image()==1) print*, current_z - internal_z_bottom(1::53, buffer+2)
+            !     if (this_image()==1) print*, internal_z_top(1::53, buffer+2) - current_z
+            ! endif
+
+            ! if (this_image()==1) print*, current_z, layer_fraction(buffer+size(z_bottom,1)/2-1,buffer+size(z_bottom,2)/2-1), &
+            !                         layer_fraction(buffer+2,buffer+2), &! (current_z - internal_z_bottom(buffer+size(z_bottom,1)/2-1,buffer+size(z_bottom,2)/2-1)), internal_z_top(buffer+size(z_bottom,1)/2-1,buffer+size(z_bottom,2)/2-1) - current_z !, &
+            !                         minval(layer_fraction(buffer+1:buffer+size(z_bottom,1)-1,buffer+1:buffer+size(z_bottom,2)-1)), &
+            !                         maxval(layer_fraction(buffer+1:buffer+size(z_bottom,1)-1,buffer+1:buffer+size(z_bottom,2)-1))
+
+            ! if (debug_print) then
+            !     print*, minval(layer_fraction), maxval(layer_fraction)
+            ! endif
+
 
             current_z = current_z + step_size
         enddo
 
-        if (this_image()==1) print*, start_z, end_z, step_size, current_z
-        if (this_image()==1) print*, minval(layer_count), " :: ", maxval(layer_count)
+        ! if (this_image()==1) print*, start_z, end_z, step_size, current_z
+        ! if (this_image()==1) print*, minval(layer_count), " :: ", maxval(layer_count)
+
+        ! if (debug_print) then
+        !         print*, "linear_perturbation_varyingz:", minval(layer_count), maxval(layer_count)
+        ! endif
 
         lt_data%u_perturb = lt_data%u_accumulator / layer_count
         lt_data%v_perturb = lt_data%v_accumulator / layer_count
     end subroutine linear_perturbation_varyingz
+
     !>----------------------------------------------------------
     !! Add a smoothed buffer around the edge of the terrain to prevent crazy wrap around effects
     !! in the FFT due to discontinuities between the left and right (or top and bottom) edges of the domain
@@ -704,6 +758,12 @@ contains
             allocate(temporary_v(fftnx - buffer*2,   fftny - buffer*2+1), source=0.0)
             this_n = stop_pos-start_pos+1
             ! $omp do
+
+            if (this_image()==1) print*, "Starting"
+            if (this_image()==1) print*, maxval(domain%z_interface%data_3d(:,nz,:)), maxval(domain%global_terrain), maxval(domain%z_interface%data_3d(:,nz,:)-domain%global_terrain)
+            if (this_image()==1) print*, minval(domain%z_interface%data_3d(:,nz,:)), minval(domain%global_terrain), minval(domain%z_interface%data_3d(:,nz,:)-domain%global_terrain)
+            if (this_image()==1) print*, shape(domain%z_interface%data_3d), shape(domain%global_terrain)
+
             do ijk = start_pos, stop_pos
                 ! loop over the combined ijk space to improve parallelization (more granular parallelization)
                 ! because it is one combined loop, we have to calculate the i,k indicies from the combined ik variable
@@ -723,7 +783,11 @@ contains
                 u = calc_u( dir_values(i), spd_values(k) )
                 v = calc_v( dir_values(i), spd_values(k) )
 
+                ! if (this_image()==1) print*, i,j,k, u,v, dir_values(i), spd_values(k)
+                debug_print = .False.
+                if ((spd_values(k)==15).and.(abs(u-15) < 1).and.(j==15)) debug_print=.True.
                 ! calculate the linear wind field for the current u and v values
+
                 do z=1,nz
                     ! print the current status if this is being run "interactively"
                     if (options%parameters%interactive) then
@@ -734,14 +798,25 @@ contains
 
                     if (options%parameters%space_varying_dz) then
 
-                        call linear_perturbation(u, v, exp(nsq_values(j)),                                                                          &
-                                                 domain%z_interface%data_3d(:,z,:) - domain%terrain%data_2d,                                        &
-                                                 domain%z_interface%data_3d(:,z,:) - domain%terrain%data_2d + domain%dz_interface%data_3d(:,z,:),   &
+                        ! call update_irregular_grid(u,v, nsq_values(j), z, domain, minimum_layer_size)
+                        call linear_perturbation(u, v, exp(nsq_values(j)),                                                                      &
+                                                 domain%global_z_interface(:,z,:) - domain%global_terrain,                                      &
+                                                 domain%global_z_interface(:,z,:) - domain%global_terrain + domain%global_dz_interface(:,z,:),  &
                                                  minimum_layer_size, domain%terrain_frequency, lt_data_m)
+
                     else
                         layer_height = domain%z%data_3d(ims,z,jms) - domain%terrain%data_2d(ims,jms)
                         layer_height_bottom = layer_height - (options%parameters%dz_levels(z) / 2)
                         layer_height_top    = layer_height + (options%parameters%dz_levels(z) / 2)
+
+                        if (z>1) then
+                            if (layer_height_bottom /= sum(options%parameters%dz_levels(1:z-1))) then
+                                print*, this_image(), layer_height_bottom - sum(options%parameters%dz_levels(1:z-1)), "layer_height_bottom = ", layer_height_bottom, "sum(dz) = ", sum(options%parameters%dz_levels(1:z-1))
+                            endif
+                            if (layer_height_top /= sum(options%parameters%dz_levels(1:z))) then
+                                print*, this_image(), layer_height_top - sum(options%parameters%dz_levels(1:z)), "layer_height_top = ", layer_height_top, "sum(dz) = ", sum(options%parameters%dz_levels(1:z))
+                            endif
+                        endif
 
                         call linear_perturbation(u, v, exp(nsq_values(j)),                                  &
                                                  layer_height_bottom, layer_height_top, minimum_layer_size, &
@@ -1028,7 +1103,7 @@ contains
 
                         ! Calculate the Brunt-Vaisalla frequency of the current grid cell
                         !   Then compute the mean in log space
-                        curnsq = log(3e-5) !sum(domain%nsquared(vi,bottom:top,uk)) / (top - bottom + 1)
+                        curnsq = log(2.75e-5) !sum(domain%nsquared(vi,bottom:top,uk)) / (top - bottom + 1)
                         !   and find the corresponding position in the Look up Table
                         npos = 1
                         do step=1, n_nsq_values
