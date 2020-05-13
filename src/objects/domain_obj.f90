@@ -76,7 +76,16 @@ contains
 
       this%model_time = forcing%current_time
 
+      call terrain_delta(this, forcing, options)  ! BK TEST
     end subroutine
+
+
+
+
+
+
+
+
 
 
     !> -------------------------------
@@ -201,6 +210,10 @@ contains
         if (0<opt%vars_to_allocate( kVARS%v_latitude) )                 call setup(this%v_latitude,               this%v_grid2d)
         if (0<opt%vars_to_allocate( kVARS%v_longitude) )                call setup(this%v_longitude,              this%v_grid2d)
         if (0<opt%vars_to_allocate( kVARS%terrain) )                    call setup(this%terrain,                  this%grid2d)
+        ! if (0<opt%vars_to_allocate( kVARS%terrain) )                    call setup(this%forcing_terrain,          this%grid2d,    forcing_var=opt%parameters%hgtvar, list=this%variables_to_force)
+        ! if (0<opt%vars_to_allocate( kVARS%terrain) )                    call setup(this%forcing_terrain_u,        this%u_grid2d) !,  forcing_var=opt%parameters%hgtvar, list=this%variables_to_force)
+        ! if (0<opt%vars_to_allocate( kVARS%terrain) )                    call setup(this%forcing_terrain_v,        this%v_grid,  forcing_var=opt%parameters%hgtvar, list=this%variables_to_force)
+        ! if (0<opt%vars_to_allocate( kVARS%terrain) )                    call setup(this%delta_terrain,            this%grid2d)               
         if (0<opt%vars_to_allocate( kVARS%sensible_heat) )              call setup(this%sensible_heat,            this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%latent_heat) )                call setup(this%latent_heat,              this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%u_10m) )                      call setup(this%u_10m,                    this%grid2d)
@@ -753,6 +766,80 @@ contains
 
     end subroutine allocate_z_arrays
 
+
+
+    !> -------------------------------
+    !! BK 2020 05 10: Attempt to calculate the difference  between the hi-res terrain and interpolated 
+    !! forcing terrain for wind acceleration purposes. 
+    !> -------------------------------
+    ! subroutine terrain_delta(this, forcing, options)
+    !     implicit none
+    !     class(domain_t),  intent(inout) :: this
+    !     type(boundary_t), intent(inout) :: forcing
+    !     type(options_t), intent(in)     :: options
+
+    !     type(variable_t)  :: var !,  data_out
+    !     character :: name
+    !     real, allocatable :: data_out(:,:), temp_offset(:,:)
+        
+
+    !     ! call allocate_z_arrays(this)
+
+    !     ! associate(terrain               => this%terrain%data_2d,                &
+    !     !           forcing_terrain       => this%forcing_terrain%data_2d,        &
+    !     !           delta_terrain         => this%delta_terrain%data_2d,          &
+    !     !           global_z_interface    => this%global_z_interface,             &
+    !     !           dzdx                  => this%dzdx,                           &
+    !     !           dzdy                  => this%dzdy,                           &
+    !     !           z_level_ratio         => this%z_level_ratio,                  &
+    !     !           zr_u                  => this%zr_u,                           &
+    !     !           zr_v                  => this%zr_v)
+
+    !     ! ! ! !   Should maybe caluclate on the u and v grid since this will be used for wind acceleration???
+
+    !     ! associate(g => this%u_grid2d_ext, geo => this%geo_u)
+    !     !     call array_offset_x(temporary_data, temp_offset)
+    !     !     if (allocated(geo%z)) deallocate(geo%z)
+    !     !     allocate(geo%z(1:g%ime-g%ims+1, 1:this%u_grid%kme-this%u_grid%kms+1, 1:g%jme-g%jms+1))
+    !     !     geo%z(:,1,:) = temp_offset(g%ims:g%ime, g%jms:g%jme)
+    !     ! end associate
+    !     print* , " created hgt variable forcing_terrain: ", shape(this%forcing_terrain%data_2d)
+
+    !     ! TRy this.... 
+    !     associate(forcing_terrain_u => this%forcing_terrain_u%data_2d  , g => this%u_grid2d_ext)
+    !         ! allocate forcing_terrain_u( )
+    !         call array_offset_x(this%forcing_terrain%data_2d, temp_offset)
+    !                 print* , "  hgt variable forcing_terrain offset x: ", shape(temp_offset)
+
+    !         ! allocate(this%forcing_terrain_u(1:g%ime-g%ims+1, 1, 1:g%jme-g%jms+1)) 
+
+    !         ! this%forcing_terrain_u =  temp_offset            
+
+    !     end associate
+     
+    !     print* , " created hgt variable forcing_terrain_v on v_grid: ", shape(this%forcing_terrain_v%data_2d)
+
+    !     ! print*, "lo-res z size: ",shape( forcing%z ) ! this is likely the entire cosmo domain
+    !     print*,""
+    !     ! print* , " created hgt variable forcing_terrain: ", shape(this%forcing_terrain%data_2d)
+    !     print* , " created hgt variable forcing_terrain_u: ", shape(this%forcing_terrain_u%data_2d)
+    !     write(*,*) this%forcing_terrain_u%data_2d(:,1)
+
+    !     write(*,*) this%forcing_terrain%data_2d(:,1)
+    !     ! print* , "this%u_grid2d_ext ", shape(this%u_grid2d_ext)
+
+    !     ! print* , " created hgt variable forcing_terrain_v on v_grid: ", shape(this%forcing_terrain_v%data_2d)
+
+    !     ! array_offset_x
+    !     ! print* , " cmeta data forcing_terrain_u: ", this%forcing_terrain_u%meta_data
+    !     ! ! this%forcing_terrain_u
+    !     print*,""
+
+    !     ! end associate
+
+    ! end subroutine
+
+
     !> -------------------------------
     !! Initialize various domain variables, mostly z, dz, etc.
     !!
@@ -762,11 +849,13 @@ contains
         class(domain_t), intent(inout)  :: this
         type(options_t), intent(in)     :: options
 
-         real, allocatable :: temp(:,:,:), terrain_u(:,:), terrain_v(:,:)
+        real, allocatable :: temp(:,:,:), terrain_u(:,:), terrain_v(:,:)
         real, allocatable :: dz_scl(:)
         integer :: i, max_level 
         real :: smooth_height, H, s, n
         logical :: SLEVE
+        character :: filename, file_idS, file_idn
+
 
         call read_core_variables(this, options)
 
@@ -784,6 +873,8 @@ contains
                   dz_mass               => this%dz_mass%data_3d,                &
                   dz_interface          => this%dz_interface%data_3d,           &
                   terrain               => this%terrain%data_2d,                &
+                  forcing_terrain       => this%forcing_terrain%data_2d,        &
+                  delta_terrain         => this%delta_terrain%data_2d,          &
                   global_z_interface    => this%global_z_interface,             &
                   global_dz_interface   => this%global_dz_interface,            &
                   global_terrain        => this%global_terrain,                 &
@@ -797,16 +888,16 @@ contains
 
           ! _________ SLEVE simple Implementation  _______________________
           if (options%parameters%sleve) then  
-            ! THis basically entails 2 transformations: First a linear one so that dz ranges from 0 to smooth_height H. (boundary cnd (3) in Schär et al 2002)
-            !   
-            ! Next, the nonlinear SLEVE transformation z_sleve = Z + terrain * sinh((H-Z)/s) / SINH(H/s)   (eqn (11) in Schär et al 2002)
+            ! This basically entails 2 transformations: First a linear one so that dz ranges from 0 to smooth_height H. 
+            ! (boundary cnd (3) in Schär et al 2002)  Next, the nonlinear SLEVE transformation 
+            !  eqn (2) from Leuenberger et al 2009 z_sleve = Z + terrain * sinh((H/s)**n - (Z/s)**n) / SINH((H/s)**n)
+            ! Here H is the model top or (flat_z_height in m), s controls how fast the terrain decays 
+            ! and n controls the compression throughout the column (this last factor was added by Leuenberger et al 2009)
+            ! References: Leuenberger et al 2009 "A Generalization of the SLEVE Vertical Coordinate"
+            !             Schär et al 2002 "A New Terrain-Following Vertical Coordinate Formulation for Atmospheric Prediction Models"
             
-            max_level = find_flat_model_level(options, nz, dz)  ! max_level=nz
+            max_level = find_flat_model_level(options, nz, dz)  
             
-            if (max_level /= nz ) then
-                if (this_image()==1)  write(*,*) "WARNING: Sleve not tested for flat_z_height != 0 (yet)"
-            endif
-
             smooth_height = sum(global_terrain) / size(global_terrain) + sum(dz(1:max_level))
 
             ! Terminology from Schär et al 2002, Leuenberger 2009: (can be simpliied later on, but for clarity)
@@ -815,32 +906,34 @@ contains
             n  =  options%parameters%sleve_n  ! this will have an effect on the z_level ratio throughout the vertical column, and thus on the terrain induced acceleration with wind=2 . Conceptually very nice, but for wind is 2 not ideal. Unless we let that acceleration depend on the difference between hi-res and lo-res terrain. 
             ! h = terrain(:,:) 
 
-
             ! Scale dz with smooth_height/sum(dz(1:max_level)) before calculating sleve levels. 
-            ! If scaled afterwards, the z_level_ratio becomes very large, which has effects for wind speed-up etc.
             dz_scl   =   dz(:)  *  H / sum(dz(1:max_level))
 
+            ! dz_scl   =   dz(:)  *  smooth_height / sum(dz(1:max_level))
+            ! H        =  sum(dz_scl(1:max_level))  ! should also lead to smooth_height, but more error proof?
 
-            if (this_image()==1) then  ! Print some diagnostics. USeful for development. 
-              ! print *, ""
-              ! print *, "dz_scl(:): ", dz_scl(:max_level)
+            if ((this_image()==1).and.(options%parameters%debug)) then  ! Print some diagnostics. USeful for development. 
               print*, ""
               print*, "using a sleve_decay_factor (H/s) of ", options%parameters%sleve_decay_factor
-              print*, "using a sleve_n (H/s) of ", options%parameters%sleve_n
+              print*, "using a sleve_n of ", options%parameters%sleve_n
               print*, ""
               write(*,*) "smooth height is ", smooth_height
               write(*,*) "mean terrain ", sum(terrain) / size(terrain)
               write(*,*) "sum(dz) ", sum(dz(1:max_level))
-              ! write(*,*) "sum(dz_scl) ", sum(dz_scl(1:max_level))  ! equals smooth_height
-              ! print *, "smooth_height / sum(dz(i:max_level)) ",smooth_height / sum(dz(1:max_level))
+              print*, ""
             endif
+
+            !     call geo_LUT(this%geo_u, forcing%geo_u)
+            ! call geo_LUT(this%geo_v, forcing%geo_v)
+            ! call geo_LUT(this%geo,   forcing%geo)
+            ! print*, "this%geo size: ", size(this%geo)  
+            ! print*," forcing%geo size: ",  size(forcing%geo)
 
 
 
             i=kms 
             
             ! - - - - -   Mass grid calculations for lowest level (i=kms)  - - - - -
-            
             z_interface(:,i,:)   = terrain
 
             z_interface(:,i+1,:)  = dz_scl(i)   &
@@ -874,8 +967,8 @@ contains
                           + terrain_v  *  SINH( (H/s)**n - ( dz_scl(i)/2 /s)**n ) / SINH((H/s)**n)                                        
 
 
-            zr_u(:,i,:)  = (z_u(:,i,:) - terrain_u) / ( dz_scl(i)/2 )
-            zr_v(:,i,:)  = (z_v(:,i,:) - terrain_v) / (dz_scl(i)/2 )
+            zr_u(:,i,:)  =  (z_u(:,i,:) - terrain_u) / ( dz_scl(i)/2 )
+            zr_v(:,i,:)  =  (z_v(:,i,:) - terrain_v) / (dz_scl(i)/2 )
 
             ! - - - - -  higher k levels  - - - - - 
             do i = this%grid%kms+1, this%grid%kme
@@ -884,35 +977,33 @@ contains
 
                     if (i==this%grid%kme) then  ! if we are at the model top i+1 is not defined
 
-                      dz_interface(:,i,:)  = smooth_height - z_interface(:,i,:)  !
+                      dz_interface(:,i,:)  =  smooth_height - z_interface(:,i,:)  !
                     
                     else  
 
-                      z_interface(:,i+1,:)  = sum(dz_scl(1:i))    &
-                                     + terrain  *  SINH( (H/s)**n - (sum(dz_scl(1:i))/s)**n ) / SINH((H/s)**n)     
-
+                      z_interface(:,i+1,:)  =  sum(dz_scl(1:i))    &
+                                     + terrain * SINH( (H/s)**n - (sum(dz_scl(1:i))/s)**n ) / SINH((H/s)**n)     
                     
                       dz_interface(:,i,:)  = z_interface(:,i+1,:) - z_interface(:,i,:)  !  'dz_sleve'
+
                     endif
                    
                     z_level_ratio(:,i,:) = dz_interface(:,i,:) / dz_scl(i)
 
-                    if ( ANY(z_level_ratio(:,i,:)<0) ) then   ! this all needs to be investigated and fine-tuned further
+                    if ( ANY(z_level_ratio(:,i,:)<0) ) then   
                       if (this_image()==1) then
                         write(*,*) "Error: z_level_ratio below zero (for level  ",i,")"
-                        ! error stop
+                        error stop
                         print*, dz_interface(:,i,:)
                         print*,""
                       endif
                     else if ( ANY(z_level_ratio(:,i,:)<=0.01) ) then
                       if (this_image()==1)  write(*,*) "WARNING: z_level_ratio very low (at level ",i,")"
-                      
                     endif  
                     
                     ! - - - - -   u/v grid calculations - - - - -
                     z_u(:,i,:)   = (sum(dz_scl(1:(i-1))) + dz_scl(i)/2)   &
                                    + terrain_u  *  SINH( (H/s)**n - ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s)**n ) / SINH((H/s)**n)  
-
                     z_v(:,i,:)   = (sum(dz_scl(1:(i-1))) + dz_scl(i)/2)   &
                                   + terrain_v  *  SINH( (H/s)**n - ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s)**n ) / SINH((H/s)**n)  
 
@@ -925,7 +1016,6 @@ contains
                     zr_u(:,i,:) = 1
                     zr_v(:,i,:) = 1
 
-                    ! dz_scl ???
                     ! if (i==this%grid%kme) then
                     !   dz_interface(:,i,:)  = smooth_height - z_interface(:,i,:)  !
                     ! else  
@@ -947,13 +1037,19 @@ contains
 
             enddo  ! ____ end SLEVE simple Implementation  _______
             
-            ! call io_write("zr_u.nc", "zr_u", zr_u(:,:,:) )
-            call io_write("zlr.nc", "z_level_ratio", z_level_ratio(:,:,:) )
-            ! call io_write("dzdx.nc", "dzdx", dzdx(:,:,:) )
+
+            ! if (options%parameters%debug) then 
+            !   ! Write the z_level_ratio for analysis:
+            !   write(file_idn, *) options%parameters%sleve_n
+            !   write(file_idS, *) options%parameters%sleve_decay_factor
+            !   filename = 'zlr_n_' // trim(adjustl(file_idn)) // '_S_'//trim(adjustl(file_idS)) //'.nc'
+            !   call io_write(filename, "z_level_ratio", z_level_ratio(:,:,:) )
+            !   ! call io_write("zlr.nc", "z_level_ratio", z_level_ratio(:,:,:) )
+            !   ! call io_write("dzdx.nc", "dzdx", dzdx(:,:,:) )
+            ! endif
 
 
-          ! the if structure below could be restructured.
-          else  !. i.e. no sleve  ....
+          else  !. i.e. no sleve coordinates
             i = this%grid%kms
 
             max_level = nz
@@ -1052,6 +1148,7 @@ contains
         deallocate(temp)
 
         call setup_geo(this%geo,   this%latitude%data_2d,   this%longitude%data_2d,   this%z%data_3d, options%parameters%longitude_system)
+
 
     end subroutine initialize_core_variables
 
@@ -1501,7 +1598,7 @@ contains
         call vLUT(this%geo_v, forcing%geo_v)
 
     end subroutine
-
+    
 
     !> -------------------------------
     !! Update the dQdt fields for all forced variables

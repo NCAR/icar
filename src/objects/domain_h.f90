@@ -69,6 +69,10 @@ module domain_interface
     type(variable_t) :: longwave
     type(variable_t) :: shortwave
     type(variable_t) :: terrain
+    type(variable_t) :: forcing_terrain  ! BK 05/2020: The forcing terrain interpolated 2d to the hi-res grid. In order to calculate:
+    type(variable_t) :: forcing_terrain_u  
+    type(variable_t) :: forcing_terrain_v
+    type(variable_t) :: delta_terrain    ! Bk 05/2020: The difference in terrain between forcing and hi-res. For accurate terrain-induced speedup
     type(variable_t) :: u_10m
     type(variable_t) :: v_10m
     type(variable_t) :: temperature_2m

@@ -18,6 +18,18 @@
     ! compensate for varying dz in advection, effectively speeding up air through smaller dz windows.
     ! fixed_dz_advection = .False.
 
+    ! Use SLEVE vertical coordinate, where the decay of the terrain influence towards model top is controlled by the 
+    ! sleve_decay_factor (=H/s), and the exponential factor n that controls compression across the z column. 
+    ! For higher n values, the terrain compression happens more in the mid to upper z levels (but always below 
+    ! flat_z_height), whereas for n=1 it is mainly at the lower levels, which may cause numerical issues if these 
+    ! are very thin. 
+    ! References: Leuenberger et al 2009 "A Generalization of the SLEVE Vertical Coordinate"
+    !   Schär et al 2002 "A New Terrain-Following Vertical Coordinate Formulation for Atmospheric Prediction Models"
+            
+    sleve = .True.
+    sleve_decay_factor = 2
+    sleve_n = 1.2  
+
     !   Sample model level thickness [m]  Bottom levels could be thicker.
     !   NB: if using gfortran put all on one line
     dz_levels = 50.,   75.,  125.,  200.,  300.,  400.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,    ! 1-20
