@@ -70,9 +70,6 @@ module domain_interface
     type(variable_t) :: shortwave
     type(variable_t) :: terrain
     type(variable_t) :: forcing_terrain  ! BK 05/2020: The forcing terrain interpolated 2d to the hi-res grid. In order to calculate:
-    type(variable_t) :: forcing_terrain_u  
-    type(variable_t) :: forcing_terrain_v
-    type(variable_t) :: delta_terrain    ! Bk 05/2020: The difference in terrain between forcing and hi-res. For accurate terrain-induced speedup
     type(variable_t) :: u_10m
     type(variable_t) :: v_10m
     type(variable_t) :: temperature_2m
@@ -129,6 +126,12 @@ module domain_interface
     real,                       allocatable :: zr_v(:,:,:)
     real,                       allocatable :: dzdx(:,:,:) ! change in height with change in x/y position (used to calculate w_real vertical motions)
     real,                       allocatable :: dzdy(:,:,:) ! change in height with change in x/y position (used to calculate w_real vertical motions)
+    ! BK 2020/05
+    real,                       allocatable :: delta_dzdx(:,:,:) ! change in height difference (between hi and lo-res data) with change in x/y position (used to calculate w_real vertical motions)
+    real,                       allocatable :: delta_dzdy(:,:,:) ! change in height difference (between hi and lo-res data) with change in x/y position (used to calculate w_real vertical motions)
+    real,                       allocatable :: zfr_u(:,:,:)              
+    real,                       allocatable :: zfr_v(:,:,:)
+    
     real,                       allocatable :: ustar(:,:)
     real,                       allocatable :: znu(:)
     real,                       allocatable :: znw(:)
