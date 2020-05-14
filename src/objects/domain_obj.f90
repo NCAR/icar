@@ -718,6 +718,43 @@ contains
                                           this% kds : this% kde,   &
                                           this% jds : this% jde)   )
 
+        ! - - - - - - - - - - - - - -
+        allocate( zf_interface(this% ids : this% ide,   &
+                                          this% kds : this% kde,   &
+                                          this% jds : this% jde)   )
+
+        allocate(dzf_interface(this% ids : this% ide,   &
+                              this% kds : this% kde,   &
+                              this% jds : this% jde)   )
+
+        allocate(zf(this% ids : this% ide,   &
+                    this% kds : this% kde,   &
+                    this% jds : this% jde)   )
+        
+        allocate(dzf_mass(this% ids : this% ide,   &
+                          this% kds : this% kde,   &
+                          this% jds : this% jde)   )
+         
+        allocate(dzfdx(this% ims+1 : this% ime, &
+                           this% kms : this% kme, &
+                           this% jms : this% jme) )
+
+        allocate(dzfdy(this% ims : this% ime, &
+                           this% kms : this% kme, &
+                           this% jms+1 : this% jme) )
+
+        allocate(delta_terrain(this% ids : this% ide,   &
+                              this% kds : this% kde,   &
+                              this% jds : this% jde)   )
+        
+        allocate(delta_dzdx(this% ids : this% ide,   &
+                              this% kds : this% kde,   &
+                              this% jds : this% jde)   )
+
+        allocate(delta_dzdx_2(this% ids : this% ide,   &
+                              this% kds : this% kde,   &
+                              this% jds : this% jde)   )
+
 
     end subroutine allocate_z_arrays
 
@@ -822,7 +859,7 @@ contains
         type(options_t), intent(in)     :: options
 
         real, allocatable :: temp(:,:,:), terrain_u(:,:), terrain_v(:,:)
-        real, allocatable :: zf_interface(:,:,:), dzf_interface(:,:,:), zf(:,:,:), dzf_mass(:,:,:), dzfdx(:,:,:), dzfdy(:,:,:) delta_terrain(:,:), delta_dzdx(:,:,:), delta_dzdx_2(:,:,:)
+        real, allocatable :: zf_interface(:,:,:), dzf_interface(:,:,:), zf(:,:,:), dzf_mass(:,:,:), dzfdx(:,:,:), dzfdy(:,:,:), delta_terrain(:,:), delta_dzdx(:,:,:), delta_dzdx_2(:,:,:)
         real, allocatable :: dz_scl(:)
         integer :: i, max_level 
         real :: smooth_height, H, s, n
@@ -906,13 +943,11 @@ contains
                                     ! this% kms : this% kme, &
                                     ! this% jms : this% jme) )
 
-
-
             do i = this%grid%kms, this%grid%kme
               
-              if (i<=max_level)
+              if (i<=max_level) then
               
-                if (i==this%grid%kms)    zf_interface(:,i,:)   =   forcing_terrain
+                if (i==this%grid%kms)    zf_interface(:,i,:)   =  forcing_terrain
                 if (i==this%grid%kme)    dzf_interface(:,i,:)  =  smooth_height - zf_interface(:,i,:)  
                
                 zf_interface(:,i+1,:)  = dz_scl(i)   &
