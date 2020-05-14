@@ -718,42 +718,6 @@ contains
                                           this% kds : this% kde,   &
                                           this% jds : this% jde)   )
 
-        ! - - - - - - - - - - - - - -
-        allocate( zf_interface(this% ids : this% ide,   &
-                                          this% kds : this% kde,   &
-                                          this% jds : this% jde)   )
-
-        allocate(dzf_interface(this% ids : this% ide,   &
-                              this% kds : this% kde,   &
-                              this% jds : this% jde)   )
-
-        allocate(zf(this% ids : this% ide,   &
-                    this% kds : this% kde,   &
-                    this% jds : this% jde)   )
-        
-        allocate(dzf_mass(this% ids : this% ide,   &
-                          this% kds : this% kde,   &
-                          this% jds : this% jde)   )
-         
-        allocate(dzfdx(this% ims+1 : this% ime, &
-                           this% kms : this% kme, &
-                           this% jms : this% jme) )
-
-        allocate(dzfdy(this% ims : this% ime, &
-                           this% kms : this% kme, &
-                           this% jms+1 : this% jme) )
-
-        allocate(delta_terrain(this% ids : this% ide,   &
-                              this% kds : this% kde,   &
-                              this% jds : this% jde)   )
-        
-        allocate(delta_dzdx(this% ids : this% ide,   &
-                              this% kds : this% kde,   &
-                              this% jds : this% jde)   )
-
-        allocate(delta_dzdx_2(this% ids : this% ide,   &
-                              this% kds : this% kde,   &
-                              this% jds : this% jde)   )
 
 
     end subroutine allocate_z_arrays
@@ -936,12 +900,49 @@ contains
 
             ! #----------------------- calc z levels from forcing terrain -------------------
             print* , " hgt variable forcing_terrain: ", shape(this%forcing_terrain%data_2d)
-            call io_write("forcing_terrain.nc", forcing_terrain, forcing_terrain(:,:) ) ! check in plot
+            call io_write("forcing_terrain.nc", "forcing_terrain", forcing_terrain(:,:) ) ! check in plot
 
             ! Allodcate al of the 'f' variables below? required, or just faster?
             ! allocate( zf_interface(this% ims : this% ime, &
                                     ! this% kms : this% kme, &
                                     ! this% jms : this% jme) )
+
+            ! - - - - - - - - - - - - - -
+            allocate( zf_interface(this% ids : this% ide,   &
+                                              this% kds : this% kde,   &
+                                              this% jds : this% jde)   )
+
+            allocate(dzf_interface(this% ids : this% ide,   &
+                                  this% kds : this% kde,   &
+                                  this% jds : this% jde)   )
+
+            allocate(zf(this% ids : this% ide,   &
+                        this% kds : this% kde,   &
+                        this% jds : this% jde)   )
+            
+            allocate(dzf_mass(this% ids : this% ide,   &
+                              this% kds : this% kde,   &
+                              this% jds : this% jde)   )
+             
+            allocate(dzfdx(this% ims+1 : this% ime, &
+                               this% kms : this% kme, &
+                               this% jms : this% jme) )
+
+            allocate(dzfdy(this% ims : this% ime, &
+                               this% kms : this% kme, &
+                               this% jms+1 : this% jme) )
+
+            allocate(delta_terrain(this% ids : this% ide,   &
+                                  this% kds : this% kde,   &
+                                  this% jds : this% jde)   )
+            
+            allocate(delta_dzdx(this% ids : this% ide,   &
+                                  this% kds : this% kde,   &
+                                  this% jds : this% jde)   )
+
+            allocate(delta_dzdx_2(this% ids : this% ide,   &
+                                  this% kds : this% kde,   &
+                                  this% jds : this% jde)   )                                    
 
             do i = this%grid%kms, this%grid%kme
               
@@ -990,8 +991,8 @@ contains
 
 
             ! write and compare 
-            call io_write("delta_dzdx.nc", delta_dzdx, delta_dzdx(:,:,:) )
-            call io_write("delta_dzdx_2.nc", delta_dzdx_2, delta_dzdx_2(:,:,:) )
+            call io_write("delta_dzdx.nc", "delta_dzdx", delta_dzdx(:,:,:) )
+            call io_write("delta_dzdx_2.nc", "delta_dzdx_2", delta_dzdx_2(:,:,:) )
 
             ! ! if the latter works, put this call at the end of current module
             ! if (use_delta_terrain) then
