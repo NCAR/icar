@@ -908,41 +908,49 @@ contains
                                     ! this% jms : this% jme) )
 
             ! - - - - - - - - - - - - - -
-            allocate( zf_interface(this% ids : this% ide,   &
-                                              this% kds : this% kde,   &
-                                              this% jds : this% jde)   )
+            allocate( zf_interface(this% ims : this% ime, &
+                                    this% kms : this% kme, &
+                                    this% jms : this% jme) )
 
-            allocate(dzf_interface(this% ids : this% ide,   &
-                                  this% kds : this% kde,   &
-                                  this% jds : this% jde)   )
+            allocate(dzf_interface(this% ims : this% ime, &
+                                    this% kms : this% kme, &
+                                    this% jms : this% jme) )
 
-            allocate(zf(this% ids : this% ide,   &
-                        this% kds : this% kde,   &
-                        this% jds : this% jde)   )
+            allocate(zf(this% ims : this% ime, &
+                                    this% kms : this% kme, &
+                                    this% jms : this% jme) )
             
-            allocate(dzf_mass(this% ids : this% ide,   &
-                              this% kds : this% kde,   &
-                              this% jds : this% jde)   )
+            allocate(dzf_mass(this% ims : this% ime, &
+                                    this% kms : this% kme, &
+                                    this% jms : this% jme) )
              
-            allocate(dzfdx(this% ims+1 : this% ime, &
-                               this% kms : this% kme, &
-                               this% jms : this% jme) )
-
+            allocate(dzfdx(this% ims +1: this% ime, &
+                          this% kms : this% kme, &
+                          this% jms : this% jme) )
             allocate(dzfdy(this% ims : this% ime, &
-                               this% kms : this% kme, &
-                               this% jms+1 : this% jme) )
+                          this% kms : this% kme, &
+                          this% jms+1 : this% jme) )
 
-            allocate(delta_terrain(this% ids : this% ide,   &
-                                  this% kds : this% kde,   &
-                                  this% jds : this% jde)   )
+        ! allocate(this%dzdx(this% ims+1 : this% ime, &
+        !                    this% kms : this% kme, &
+        !                    this% jms : this% jme) )
+
+        ! allocate(this%dzdy(this% ims : this% ime, &
+        !                    this% kms : this% kme, &
+        !                    this% jms+1 : this% jme) )
+
+
+            allocate(delta_terrain(this% ims : this% ime, &
+                                    this% kms : this% kme, &
+                                    this% jms : this% jme) )
             
-            allocate(delta_dzdx(this% ids : this% ide,   &
-                                  this% kds : this% kde,   &
-                                  this% jds : this% jde)   )
+            allocate(delta_dzdx(this% ims+1 : this% ime, &
+                                    this% kms : this% kme, &
+                                    this% jms : this% jme) )
 
-            allocate(delta_dzdx_2(this% ids : this% ide,   &
-                                  this% kds : this% kde,   &
-                                  this% jds : this% jde)   )                                    
+            allocate(delta_dzdx_2(this% ims+1 : this% ime, &
+                                    this% kms : this% kme, &
+                                    this% jms : this% jme) )                                    
 
             do i = this%grid%kms, this%grid%kme
               
