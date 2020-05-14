@@ -917,8 +917,8 @@ contains
                                     this% jms : this% jme) )
 
             allocate(zf(this% ims : this% ime, &
-                                    this% kms : this% kme, &
-                                    this% jms : this% jme) )
+                        this% kms : this% kme, &
+                        this% jms : this% jme) )
             
             allocate(dzf_mass(this% ims : this% ime, &
                                     this% kms : this% kme, &
@@ -941,7 +941,6 @@ contains
 
 
             allocate(delta_terrain(this% ims : this% ime, &
-                                    this% kms : this% kme, &
                                     this% jms : this% jme) )
             
             allocate(delta_dzdx(this% ims+1 : this% ime, &
@@ -993,7 +992,7 @@ contains
             ! the same??? without all the above??? could be function in if(use_delta_terrain_for_speedup==True)
             delta_terrain = (terrain - forcing_terrain)
             do  i = this%grid%kms, this%grid%kme
-              delta_dzdx_2(:,i,:) =   ( delta_terrain(ims+1:ime,i,:) - delta_terrain(ims:ime-1,i,:) )    &
+              delta_dzdx_2(:,i,:) =   ( delta_terrain(ims+1:ime,:) - delta_terrain(ims:ime-1,:) )    &
                                       * SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  / this%dx  
             enddo
 
