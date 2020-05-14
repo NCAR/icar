@@ -724,92 +724,92 @@ contains
 
 
 
-    subroutine delta_terrain(this, terrain_u, terrain_v, dz_scl, max_level, H, options)
-        implicit none
-        class(domain_t),  intent(inout) :: this
-        ! type(boundary_t), intent(inout) :: forcing
-        type(options_t), intent(in)     :: options
-        real,            intent(in)     :: terrain_u(:,:), terrain_v(:,:), delta_terrain(:,:), dz_scl(:), H
-        integer,         intent(in)     :: max_level
+    ! subroutine delta_terrain(this, terrain_u, terrain_v, dz_scl, max_level, H, options)
+    !     implicit none
+    !     class(domain_t),  intent(inout) :: this
+    !     ! type(boundary_t), intent(inout) :: forcing
+    !     type(options_t), intent(in)     :: options
+    !     real,            intent(in)     :: terrain_u(:,:), terrain_v(:,:), delta_terrain(:,:), dz_scl(:), H
+    !     integer,         intent(in)     :: max_level
 
-        real, allocatable :: forcing_terrain_u(:,:), forcing_terrain_v(:,:)
+    !     real, allocatable :: forcing_terrain_u(:,:), forcing_terrain_v(:,:)
         
-        associate(terrain               => this%terrain%data_2d,                &
-                  forcing_terrain       => this%forcing_terrain%data_2d,        &
-                  n                     =>  options%parameters%sleve_n,         & 
-                  delta_dzdx         => this%delta_dzdx,                        &   ! DEFINE IN DOMAIN OBJ
-                  delta_dzdy         => this%delta_dzdy,                        &   ! DEFINE IN DOMAIN OBJ
-                  zfr_u              => this%zfr_u,                         &
-                  zfr_v              => this%zfr_v )
-                  ! dzdx                  => this%dzdx,                           &
-                  ! dzdy                  => this%dzdy,                           &
-                  ! z_level_ratio         => this%z_level_ratio,                  &
-                  ! zr_u                  => this%zr_u,                           &
-                  ! zr_v                  => this%zr_v)
+    !     associate(terrain               => this%terrain%data_2d,                &
+    !               forcing_terrain       => this%forcing_terrain%data_2d,        &
+    !               n                     =>  options%parameters%sleve_n,         & 
+    !               delta_dzdx         => this%delta_dzdx,                        &   ! DEFINE IN DOMAIN OBJ
+    !               delta_dzdy         => this%delta_dzdy,                        &   ! DEFINE IN DOMAIN OBJ
+    !               zfr_u              => this%zfr_u,                         &
+    !               zfr_v              => this%zfr_v )
+    !               ! dzdx                  => this%dzdx,                           &
+    !               ! dzdy                  => this%dzdy,                           &
+    !               ! z_level_ratio         => this%z_level_ratio,                  &
+    !               ! zr_u                  => this%zr_u,                           &
+    !               ! zr_v                  => this%zr_v)
 
             
 
-        ! H  =  smooth_height  !sum(dz(1:max_level))  !
-        s  =  H / options%parameters%sleve_decay_factor  
+    !     ! H  =  smooth_height  !sum(dz(1:max_level))  !
+    !     s  =  H / options%parameters%sleve_decay_factor  
             
-        ! print* , " variable forcing_terrain: ", shape(this%forcing_terrain%data_2d)
+    !     ! print* , " variable forcing_terrain: ", shape(this%forcing_terrain%data_2d)
 
-        !_________ 1. Calculate delta_dzdx for w_real calculation  _________
+    !     !_________ 1. Calculate delta_dzdx for w_real calculation  _________
 
-        delta_terrain = (terrain - forcing_terrain)
+    !     delta_terrain = (terrain - forcing_terrain)
         
-        do  i = this%grid%kms, this%grid%kme
+    !     do  i = this%grid%kms, this%grid%kme
   
-          delta_dzdx_2(:,i,:) =   ( delta_terrain(ims+1:ime,i,:) - delta_terrain(ims:ime-1,i,:) )    &
-                                  * SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  / this%dx  
-          ! same for y dir
+    !       delta_dzdx_2(:,i,:) =   ( delta_terrain(ims+1:ime,i,:) - delta_terrain(ims:ime-1,i,:) )    &
+    !                               * SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  / this%dx  
+    !       ! same for y dir
 
-        enddo
-        ! delta_dzdx_2(:,i,:) =   (terrain(ims+1:ime,i,:) - forcing_terrain)    &
-        !                         * SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  / this%dx  
-
-
+    !     enddo
+    !     ! delta_dzdx_2(:,i,:) =   (terrain(ims+1:ime,i,:) - forcing_terrain)    &
+    !     !                         * SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  / this%dx  
 
 
 
-        !_________ 2. Calculate the ratio bewteen z levels from hi-res and forcing data for wind acceleration  _________                                
 
-        ! offset forcint terrain:
-        allocate(forcing_terrain_u( this%u_grid2d_ext% ims : this%u_grid2d_ext% ime,   &
-                                    this%u_grid2d_ext% jms : this%u_grid2d_ext% jme) )
-        call array_offset_x(this%forcing_terrain%data_2d, forcing_terrain_u)
-        print* , "  hgt variable forcing_terrain offset x: ", shape(forcing_terrain_u)
 
-        ! forcing_terrain_v(:,:) ....
+    !     !_________ 2. Calculate the ratio bewteen z levels from hi-res and forcing data for wind acceleration  _________                                
 
-        do i = this%grid%kms, this%grid%kme
-          zfr_u(:,i,:) = (1 + terrain_u *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n))  &  ! officially sum + 1/2 but since we're calculating ratios....
-                       /  (1 + forcing_terrain_u *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n))
+    !     ! offset forcint terrain:
+    !     allocate(forcing_terrain_u( this%u_grid2d_ext% ims : this%u_grid2d_ext% ime,   &
+    !                                 this%u_grid2d_ext% jms : this%u_grid2d_ext% jme) )
+    !     call array_offset_x(this%forcing_terrain%data_2d, forcing_terrain_u)
+    !     print* , "  hgt variable forcing_terrain offset x: ", shape(forcing_terrain_u)
+
+    !     ! forcing_terrain_v(:,:) ....
+
+    !     do i = this%grid%kms, this%grid%kme
+    !       zfr_u(:,i,:) = (1 + terrain_u *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n))  &  ! officially sum + 1/2 but since we're calculating ratios....
+    !                    /  (1 + forcing_terrain_u *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n))
           
-          ! zfr_v(:,i,:) =
-        enddo 
+    !       ! zfr_v(:,i,:) =
+    !     enddo 
 
-        call io_write("zfr_u.nc", zfr_u, zfr_u(:,:,:) ) ! check in plot
+    !     call io_write("zfr_u.nc", zfr_u, zfr_u(:,:,:) ) ! check in plot
         
 
-        ! associate(g => this%u_grid2d_ext, geo => this%geo_u)
-        !     call array_offset_x(temporary_data, temp_offset)
-        !     if (allocated(geo%z)) deallocate(geo%z)
-        !     allocate(geo%z(1:g%ime-g%ims+1, 1:this%u_grid%kme-this%u_grid%kms+1, 1:g%jme-g%jms+1))
-        !     geo%z(:,1,:) = temp_offset(g%ims:g%ime, g%jms:g%jme)
-        ! end associate
+    !     ! associate(g => this%u_grid2d_ext, geo => this%geo_u)
+    !     !     call array_offset_x(temporary_data, temp_offset)
+    !     !     if (allocated(geo%z)) deallocate(geo%z)
+    !     !     allocate(geo%z(1:g%ime-g%ims+1, 1:this%u_grid%kme-this%u_grid%kms+1, 1:g%jme-g%jms+1))
+    !     !     geo%z(:,1,:) = temp_offset(g%ims:g%ime, g%jms:g%jme)
+    !     ! end associate
         
-        ! ! TRy this.... 
-        ! associate(forcing_terrain_u => this%forcing_terrain_u%data_2d  , g => this%u_grid2d_ext)
-        !     ! allocate forcing_terrain_u( )
-        !     call array_offset_x(this%forcing_terrain%data_2d, temp_offset)
-        !             print* , "  hgt variable forcing_terrain offset x: ", shape(temp_offset)
-        !     ! allocate(this%forcing_terrain_u(1:g%ime-g%ims+1, 1, 1:g%jme-g%jms+1)) 
-        !     ! this%forcing_terrain_u =  temp_offset            
+    !     ! ! TRy this.... 
+    !     ! associate(forcing_terrain_u => this%forcing_terrain_u%data_2d  , g => this%u_grid2d_ext)
+    !     !     ! allocate forcing_terrain_u( )
+    !     !     call array_offset_x(this%forcing_terrain%data_2d, temp_offset)
+    !     !             print* , "  hgt variable forcing_terrain offset x: ", shape(temp_offset)
+    !     !     ! allocate(this%forcing_terrain_u(1:g%ime-g%ims+1, 1, 1:g%jme-g%jms+1)) 
+    !     !     ! this%forcing_terrain_u =  temp_offset            
 
-        end associate
+    !     end associate
      
-    end subroutine
+    ! end subroutine
 
 
     !> -------------------------------

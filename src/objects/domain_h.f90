@@ -129,9 +129,9 @@ module domain_interface
     ! BK 2020/05
     real,                       allocatable :: delta_dzdx(:,:,:) ! change in height difference (between hi and lo-res data) with change in x/y position (used to calculate w_real vertical motions)
     real,                       allocatable :: delta_dzdy(:,:,:) ! change in height difference (between hi and lo-res data) with change in x/y position (used to calculate w_real vertical motions)
-    real,                       allocatable :: zfr_u(:,:,:)              
+    real,                       allocatable :: zfr_u(:,:,:)     ! ratio between z levels (on grid)
     real,                       allocatable :: zfr_v(:,:,:)
-    
+
     real,                       allocatable :: ustar(:,:)
     real,                       allocatable :: znu(:)
     real,                       allocatable :: znw(:)
