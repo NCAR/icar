@@ -740,7 +740,7 @@ contains
 
 
 
-    module subroutine calculate_delta_terrain(this,  options)  ! terrain_u, terrain_v,dz_scl, max_level, H
+    module subroutine calculate_delta_terrain(this, options)  ! terrain_u, terrain_v,dz_scl, max_level, H
         implicit none
         class(domain_t),  intent(inout) :: this
         ! type(boundary_t), intent(inout) :: forcing

@@ -260,6 +260,11 @@ module domain_interface
         type(time_delta_t), intent(in)    :: dt
     end subroutine
 
+    module subroutine calculate_delta_terrain(this, options)
+        implicit none
+        class(domain_t), intent(inout) :: this
+        type(options_t), intent(inout) :: options
+    end subroutine
 
   end interface
 
