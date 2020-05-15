@@ -189,6 +189,8 @@ module domain_interface
     procedure :: update_delta_fields
     procedure :: apply_forcing
 
+    procedure :: calculate_delta_terrain
+
   end type
 
   integer, parameter :: space_dimension=3
