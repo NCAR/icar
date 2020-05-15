@@ -263,7 +263,7 @@ module domain_interface
     module subroutine calculate_delta_terrain(this, options)
         implicit none
         class(domain_t), intent(inout) :: this
-        type(options_t), intent(inout) :: options
+        type(options_t), intent(in) :: options
     end subroutine
 
   end interface
