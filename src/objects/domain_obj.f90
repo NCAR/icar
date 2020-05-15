@@ -751,7 +751,7 @@ contains
         type(options_t), intent(in)     :: options
 
         real, allocatable :: temp(:,:,:), terrain_u(:,:), terrain_v(:,:)
-        integer :: i, max_level 
+        integer :: i
         real :: smooth_height, H, s, n
         logical :: SLEVE  
         ! character :: filename, file_idS, file_idn
@@ -783,6 +783,7 @@ contains
                   dzdx                  => this%dzdx,                           &
                   dzdy                  => this%dzdy,                           &
                   dz_scl                  => this%dz_scl,                           &
+                  max_level             => this%max_level                       &
                   z_level_ratio         => this%z_level_ratio,                  &
                   zr_u                  => this%zr_u,                           &
                   zr_v                  => this%zr_v)
@@ -809,7 +810,7 @@ contains
             ! h = terrain(:,:) 
 
             ! Scale dz with smooth_height/sum(dz(1:max_level)) before calculating sleve levels. 
-
+            print *, "dz shape: ", shape(dz)
             dz_scl(:)   =   dz(:)  *  H / sum(dz(1:max_level))
 
             ! dz_scl   =   dz(:)  *  smooth_height / sum(dz(1:max_level))
@@ -1797,7 +1798,7 @@ contains
         type(options_t), intent(in)     :: options
 
         real, allocatable :: forcing_terrain_u(:,:), forcing_terrain_v(:,:), delta_terrain(:,:), delta_dzdx_lc(:,:,:)
-        real, allocatable :: zf_interface(:,:,:), dzf_interface(:,:,:), zf(:,:,:), dzf_mass(:,:,:), dzfdx(:,:,:), dzfdy(:,:,:), delta_dzdx(:,:,:) !, delta_dzdx_2(:,:,:)
+        real, allocatable :: zf_interface(:,:,:), dzf_interface(:,:,:), zf(:,:,:), dzf_mass(:,:,:), dzfdx(:,:,:), dzfdy(:,:,:), delta_dzdx(:,:,:), sin_h(:) !, delta_dzdx_2(:,:,:)
         real :: s
         integer :: i
 
@@ -1862,7 +1863,7 @@ contains
                                     this% kms : this% kme, &
                                     this% jms : this% jme) )
 
-     
+            print*,"maxval(forcing_terrain): " maxval(forcing_terrain)     
             do i = this%grid%kms, this%grid%kme
               
               if (i<=max_level) then
@@ -1870,14 +1871,18 @@ contains
                 if (i==this%grid%kms)    zf_interface(:,i,:)   =  forcing_terrain
                 if (i==this%grid%kme)    dzf_interface(:,i,:)  =  H - zf_interface(:,i,:)  
                
-                zf_interface(:,i+1,:)  = dz_scl(i)   &
-                                       + forcing_terrain  *  SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  ! same for higher k
+                zf_interface(:,i+1,:)  = sum(dz_scl(1:i))   &
+                                       + forcing_terrain  *  SINH( (H/s)**n - (sum(dz_scl(1:i))/s)**n ) / SINH((H/s)**n) 
+
+
               
                 if (i/=this%grid%kme)  dzf_interface(:,i,:)  =  zf_interface(:,i+1,:) - zf_interface(:,i,:) 
                 
                 if (i==this%grid%kms) then
+
                     dzf_mass(:,i,:)       = dzf_interface(:,i,:) / 2           ! Diff for k=1
                     zf(:,i,:)             = forcing_terrain + dzf_mass(:,i,:)          ! Diff for k=1   
+                    print*,"LEVEL 1 zf(150,1,:): ",zf(150,i,:)
                 ! else
                 !     dzf_mass(:,i,:)   =  dzf_interface(:,i-1,:) / 2  +  dzf_interface(:,i,:) / 2
                 !     zf(:,i,:)         =  zf(:,i-1,:)           + dzf_mass(:,i,:)
@@ -1894,14 +1899,14 @@ contains
               endif
               dzfdx(:,i,:) = (zf(ims+1:ime,i,:) - zf(ims:ime-1,i,:)) / this%dx  
               dzfdy(:,i,:) = (zf(:,i,jms+1:jme) - zf(:,i,jms:jme-1)) / this%dx
-
+              print*,"Level ",i,"  zf(150,i,:): ",zf(150,i,:)
             enddo
 
             ! Then finally:
             delta_dzdx_lc(:,:,:) = dzdx(:,:,:)  -  dzfdx(:,:,:)  ! use this for w_real calculation.
 
 
-            ! the same??? without all the above??? could be function in if(use_delta_terrain_for_speedup==True)
+            ! the same??? without all the above??? 
             delta_terrain = (terrain - forcing_terrain)
             do  i = this%grid%kms, this%grid%kme
               delta_dzdx(:,i,:) =   ( delta_terrain(ims+1:ime,:) - delta_terrain(ims:ime-1,:) )    &
@@ -1909,13 +1914,18 @@ contains
 
               delta_dzdy(:,i,:) =   ( delta_terrain(:,jms+1:jme) - delta_terrain(:, jms:jme-1) )    &
                                       * SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  / this%dx                                        
+            
+              ! sin_h =  SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)                                  
             enddo
 
 
             ! write and compare 
             call io_write("delta_dzdx_sc.nc", "delta_dzdx", delta_dzdx(:,:,:) )
             call io_write("delta_dzdx_lc.nc", "delta_dzdx_lc", delta_dzdx_lc(:,:,:) )
-
+            print*, "sinh term ", sin_h(:) 
+            call io_write("dzdx.nc", "dzdx", dzdx(:,:) )
+            call io_write("dzfdx.nc", "dzfdx", dzfdx(:,:) )
+            call io_write("zf.nc", "zf", zf(:,:) )
 
     
         !_________ 2. Calculate the ratio bewteen z levels from hi-res and forcing data for wind acceleration  _________                                

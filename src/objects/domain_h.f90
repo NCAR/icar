@@ -57,9 +57,6 @@ module domain_interface
     type(variable_t) :: dz_interface
     type(variable_t) :: z_interface
     type(variable_t) :: dz_mass
-    ! type(variable_t) :: dz_scl
-    ! type(variable_t) :: H       ! model top or smooth_height
-    ! type(variable_t) :: max_level
     type(variable_t) :: nsq
     type(variable_t) :: graupel
     type(variable_t) :: accumulated_precipitation
