@@ -57,6 +57,9 @@ module domain_interface
     type(variable_t) :: dz_interface
     type(variable_t) :: z_interface
     type(variable_t) :: dz_mass
+    ! type(variable_t) :: dz_scl
+    ! type(variable_t) :: H       ! model top or smooth_height
+    type(variable_t) :: max_level
     type(variable_t) :: nsq
     type(variable_t) :: graupel
     type(variable_t) :: accumulated_precipitation
@@ -69,7 +72,10 @@ module domain_interface
     type(variable_t) :: longwave
     type(variable_t) :: shortwave
     type(variable_t) :: terrain
-    type(variable_t) :: forcing_terrain  ! BK 05/2020: The forcing terrain interpolated 2d to the hi-res grid. In order to calculate:
+    type(variable_t) :: terrain_u  
+    type(variable_t) :: terrain_v
+    type(variable_t) :: dz_scl
+    type(variable_t) :: forcing_terrain  ! BK 05/2020: The forcing terrain interpolated 2d to the hi-res grid. In order to calculate difference in slope
     type(variable_t) :: u_10m
     type(variable_t) :: v_10m
     type(variable_t) :: temperature_2m
@@ -113,6 +119,8 @@ module domain_interface
     type(interpolable_type) :: geo_u
     type(interpolable_type) :: geo_v
 
+    real :: H ! model top or smooth_height
+    integer :: max_level  ! number of vertical levels below flat_z_height
     real :: dx
     integer :: nsmooth
 
@@ -135,6 +143,8 @@ module domain_interface
     real,                       allocatable :: ustar(:,:)
     real,                       allocatable :: znu(:)
     real,                       allocatable :: znw(:)
+
+    real,                       allocatable :: dz_scl(:)  ! the scaled dz levels, required for delta terrain calculation
 
     ! these data are stored on the domain wide grid even if this process is only looking at a subgrid
     ! these variables are necessary with linear winds, especially with spatially variable dz, to compute the LUT

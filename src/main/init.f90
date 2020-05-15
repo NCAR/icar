@@ -78,6 +78,11 @@ contains
         if (this_image()==1) write(*,*) "Reading Initial conditions from boundary dataset"
         call domain%get_initial_conditions(boundary, options)
 
+        ! use_delta_terrain=.true.    
+        ! if(use_delta_terrain) then
+        call domain%calculate_delta_terrain( options)
+        ! #------------------------------------------
+
         if (this_image()==1) write(*,*) "Updating initial winds"
         call update_winds(domain, options)
 
