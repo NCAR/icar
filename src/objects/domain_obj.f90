@@ -731,7 +731,7 @@ contains
 
 
 
-    subroutine delta_terrain(this, terrain_u, terrain_v, dz_scl, max_level, H, options)
+    subroutine calculate_delta_terrain(this, terrain_u, terrain_v, dz_scl, max_level, H, options)
         implicit none
         class(domain_t),  intent(inout) :: this
         ! type(boundary_t), intent(inout) :: forcing
@@ -805,42 +805,42 @@ contains
                                     this% jms+1 : this% jme) )         
 
 
-            do i = this%grid%kms, this%grid%kme
+            ! do i = this%grid%kms, this%grid%kme
               
-              if (i<=max_level) then
+            !   if (i<=max_level) then
               
-                if (i==this%grid%kms)    zf_interface(:,i,:)   =  forcing_terrain
-                if (i==this%grid%kme)    dzf_interface(:,i,:)  =  smooth_height - zf_interface(:,i,:)  
+            !     if (i==this%grid%kms)    zf_interface(:,i,:)   =  forcing_terrain
+            !     if (i==this%grid%kme)    dzf_interface(:,i,:)  =  smooth_height - zf_interface(:,i,:)  
                
-                zf_interface(:,i+1,:)  = dz_scl(i)   &
-                                       + forcing_terrain  *  SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  ! same for higher k
+            !     zf_interface(:,i+1,:)  = dz_scl(i)   &
+            !                            + forcing_terrain  *  SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  ! same for higher k
               
-                if (i/=this%grid%kme)  dzf_interface(:,i,:)  =  zf_interface(:,i+1,:) - zf_interface(:,i,:) 
+            !     if (i/=this%grid%kme)  dzf_interface(:,i,:)  =  zf_interface(:,i+1,:) - zf_interface(:,i,:) 
                 
-                if (i==this%grid%kms) then
-                    dzf_mass(:,i,:)       = dzf_interface(:,i,:) / 2           ! Diff for k=1
-                    zf(:,i,:)             = forcing_terrain + dzf_mass(:,i,:)          ! Diff for k=1   
-                ! else
-                !     dzf_mass(:,i,:)   =  dzf_interface(:,i-1,:) / 2  +  dzf_interface(:,i,:) / 2
-                !     zf(:,i,:)         =  zf(:,i-1,:)           + dzf_mass(:,i,:)
-                endif
+            !     if (i==this%grid%kms) then
+            !         dzf_mass(:,i,:)       = dzf_interface(:,i,:) / 2           ! Diff for k=1
+            !         zf(:,i,:)             = forcing_terrain + dzf_mass(:,i,:)          ! Diff for k=1   
+            !     ! else
+            !     !     dzf_mass(:,i,:)   =  dzf_interface(:,i-1,:) / 2  +  dzf_interface(:,i,:) / 2
+            !     !     zf(:,i,:)         =  zf(:,i-1,:)           + dzf_mass(:,i,:)
+            !     endif
               
-              else  ! i.e. above flat_z_height
-                dzf_interface(:,i,:) =   dz(i)
-                if (i/=this%grid%kme)   zf_interface(:,i+1,:) = zf_interface(:,i,:) + dz(i)
-              endif  
+            !   else  ! i.e. above flat_z_height
+            !     dzf_interface(:,i,:) =   dz(i)
+            !     if (i/=this%grid%kme)   zf_interface(:,i+1,:) = zf_interface(:,i,:) + dz(i)
+            !   endif  
 
-              if (i/=this%grid%kms) then
-                    dzf_mass(:,i,:)   =  dzf_interface(:,i-1,:) / 2  +  dzf_interface(:,i,:) / 2
-                    zf(:,i,:)         =  zf(:,i-1,:)           + dzf_mass(:,i,:)
-              endif
-              dzfdx(:,i,:) = (zf(ims+1:ime,i,:) - zf(ims:ime-1,i,:)) / this%dx  
-              dzfdy(:,i,:) = (zf(:,i,jms+1:jme) - zf(:,i,jms:jme-1)) / this%dx
+            !   if (i/=this%grid%kms) then
+            !         dzf_mass(:,i,:)   =  dzf_interface(:,i-1,:) / 2  +  dzf_interface(:,i,:) / 2
+            !         zf(:,i,:)         =  zf(:,i-1,:)           + dzf_mass(:,i,:)
+            !   endif
+            !   dzfdx(:,i,:) = (zf(ims+1:ime,i,:) - zf(ims:ime-1,i,:)) / this%dx  
+            !   dzfdy(:,i,:) = (zf(:,i,jms+1:jme) - zf(:,i,jms:jme-1)) / this%dx
 
-            enddo
+            ! enddo
 
-            ! Then finally:
-            delta_dzdx_2(:,:,:) = dzdx(:,:,:)  -  dzfdx(:,:,:)  ! use this for w_real calculation.
+            ! ! Then finally:
+            ! delta_dzdx_2(:,:,:) = dzdx(:,:,:)  -  dzfdx(:,:,:)  ! use this for w_real calculation.
 
 
             ! the same??? without all the above??? could be function in if(use_delta_terrain_for_speedup==True)
@@ -886,7 +886,7 @@ contains
           
         enddo 
 
-        call io_write("zfr_u.nc", zfr_u, zfr_u(:,:,:) ) ! check in plot
+        call io_write("zfr_u.nc", "zfr_u", zfr_u(:,:,:) ) ! check in plot
         
         print *, "zfr_u min/max: ", min(zfr_u), " / ", max(zfr_u)
 
@@ -1193,7 +1193,7 @@ contains
 
             ! ! if the latter works, put this call at the end of current module
             ! if (use_delta_terrain) then
-            call delta_terrain(this, terrain_u, terrain_v, dz_scl, max_level, H, options)
+            call calculate_delta_terrain(this, terrain_u, terrain_v, dz_scl, max_level, H, options)
             !   ! if sleve then dz = dzscale (below max_level, above max_level dzdx = 0)
             !   ! else 
             ! endif
