@@ -761,6 +761,7 @@ contains
                   terrain_v             => this%terrain_v%data_2d,              &
                   forcing_terrain       => this%forcing_terrain%data_2d,        &
                   n                     =>  options%parameters%sleve_n,         & 
+                  dz                    => options%parameters%dz_levels,        &
                   dzdx                  => this%dzdx,                           &
                   dzdy                  => this%dzdy,                           &
                   dz_scl                => this%dz_scl,                          &
@@ -823,7 +824,7 @@ contains
               if (i<=max_level) then
               
                 if (i==this%grid%kms)    zf_interface(:,i,:)   =  forcing_terrain
-                if (i==this%grid%kme)    dzf_interface(:,i,:)  =  smooth_height - zf_interface(:,i,:)  
+                if (i==this%grid%kme)    dzf_interface(:,i,:)  =  H - zf_interface(:,i,:)  
                
                 zf_interface(:,i+1,:)  = dz_scl(i)   &
                                        + forcing_terrain  *  SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  ! same for higher k
@@ -1187,7 +1188,7 @@ contains
                 dzdy(:,i,:) = (z(:,i,jms+1:jme) - z(:,i,jms:jme-1)) / this%dx
             enddo
  
-        endif
+          endif
 
             i = this%grid%kme + 1
             global_z_interface(:,i,:) = global_z_interface(:,i-1,:) + global_dz_interface(:,i-1,:)
@@ -1197,9 +1198,6 @@ contains
             ! dz_mass(:,i,:)     = dz(i-1)/2 * z_level_ratio(:,i-1,:)
 
     
-        endif    
-
-
         end associate
 
         temp =  this%zr_u
@@ -1816,15 +1814,13 @@ contains
             ! get the associated forcing data
             input_data = forcing%variables%get_var(var_to_interpolate%forcing_var)
 
-            if (var_to_interpolate=="forcing_terrain") print*,"interpolating forcing_terrain"
-
+            
             ! interpolate
             if (var_to_interpolate%two_d) then
                 if (update_only) then
                     call geo_interp2d(var_to_interpolate%dqdt_2d, input_data%data_2d, forcing%geo%geolut)
                 else
                     call geo_interp2d(var_to_interpolate%data_2d, input_data%data_2d, forcing%geo%geolut)
-                    if (var_to_interpolate=="HSURF") print*,"interpolated forcing_terrain ", shape(input_data%data_2d)
                 endif
 
             else
