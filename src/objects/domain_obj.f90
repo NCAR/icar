@@ -783,7 +783,7 @@ contains
                   dzdx                  => this%dzdx,                           &
                   dzdy                  => this%dzdy,                           &
                   dz_scl                  => this%dz_scl,                           &
-                  max_level             => this%max_level                       &
+                  max_level             => this%max_level,                       &
                   z_level_ratio         => this%z_level_ratio,                  &
                   zr_u                  => this%zr_u,                           &
                   zr_v                  => this%zr_v)
@@ -810,8 +810,8 @@ contains
             ! h = terrain(:,:) 
 
             ! Scale dz with smooth_height/sum(dz(1:max_level)) before calculating sleve levels. 
-            print *, "dz shape: ", shape(dz)
-            dz_scl(:)   =   dz(:)  *  H / sum(dz(1:max_level))
+            
+            dz_scl(:)   =   dz(1:nz)  *  H / sum(dz(1:max_level))
 
             ! dz_scl   =   dz(:)  *  smooth_height / sum(dz(1:max_level))
             ! H        =  sum(dz_scl(1:max_level))  ! should also lead to smooth_height, but more error proof?
@@ -1863,7 +1863,7 @@ contains
                                     this% kms : this% kme, &
                                     this% jms : this% jme) )
 
-            print*,"maxval(forcing_terrain): " maxval(forcing_terrain)     
+            print*,"maxval(forcing_terrain): ", maxval(forcing_terrain)     
             do i = this%grid%kms, this%grid%kme
               
               if (i<=max_level) then
@@ -1874,6 +1874,7 @@ contains
                 zf_interface(:,i+1,:)  = sum(dz_scl(1:i))   &
                                        + forcing_terrain  *  SINH( (H/s)**n - (sum(dz_scl(1:i))/s)**n ) / SINH((H/s)**n) 
 
+                print*,"zf_inteface (150,150",i,"): ",zf_interface(:,i,:)
 
               
                 if (i/=this%grid%kme)  dzf_interface(:,i,:)  =  zf_interface(:,i+1,:) - zf_interface(:,i,:) 
@@ -1882,7 +1883,7 @@ contains
 
                     dzf_mass(:,i,:)       = dzf_interface(:,i,:) / 2           ! Diff for k=1
                     zf(:,i,:)             = forcing_terrain + dzf_mass(:,i,:)          ! Diff for k=1   
-                    print*,"LEVEL 1 zf(150,1,:): ",zf(150,i,:)
+                    
                 ! else
                 !     dzf_mass(:,i,:)   =  dzf_interface(:,i-1,:) / 2  +  dzf_interface(:,i,:) / 2
                 !     zf(:,i,:)         =  zf(:,i-1,:)           + dzf_mass(:,i,:)
@@ -1899,7 +1900,7 @@ contains
               endif
               dzfdx(:,i,:) = (zf(ims+1:ime,i,:) - zf(ims:ime-1,i,:)) / this%dx  
               dzfdy(:,i,:) = (zf(:,i,jms+1:jme) - zf(:,i,jms:jme-1)) / this%dx
-              print*,"Level ",i,"  zf(150,i,:): ",zf(150,i,:)
+              
             enddo
 
             ! Then finally:
@@ -1923,9 +1924,9 @@ contains
             call io_write("delta_dzdx_sc.nc", "delta_dzdx", delta_dzdx(:,:,:) )
             call io_write("delta_dzdx_lc.nc", "delta_dzdx_lc", delta_dzdx_lc(:,:,:) )
             print*, "sinh term ", sin_h(:) 
-            call io_write("dzdx.nc", "dzdx", dzdx(:,:) )
-            call io_write("dzfdx.nc", "dzfdx", dzfdx(:,:) )
-            call io_write("zf.nc", "zf", zf(:,:) )
+            call io_write("dzdx.nc", "dzdx", dzdx(:,:,:) )
+            call io_write("dzfdx.nc", "dzfdx", dzfdx(:,:,:) )
+            call io_write("zf.nc", "zf", zf(:,:,:) )
 
     
         !_________ 2. Calculate the ratio bewteen z levels from hi-res and forcing data for wind acceleration  _________                                
