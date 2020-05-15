@@ -773,8 +773,8 @@ contains
                   dz_mass               => this%dz_mass%data_3d,                &
                   dz_interface          => this%dz_interface%data_3d,           &
                   terrain               => this%terrain%data_2d,                &
-                  terrain_u             => this%terrain_u%data_2d,                &
-                  terrain_v             => this%terrain_v%data_2d,                &
+                  terrain_u             => this%terrain_u%data_2d,              &
+                  terrain_v             => this%terrain_v%data_2d,              &
                   forcing_terrain       => this%forcing_terrain%data_2d,        &
                   global_z_interface    => this%global_z_interface,             &
                   global_dz_interface   => this%global_dz_interface,            &
@@ -782,8 +782,9 @@ contains
                   global_z_level_ratio  => this%global_z_level_ratio,           &
                   dzdx                  => this%dzdx,                           &
                   dzdy                  => this%dzdy,                           &
-                  dz_scl                  => this%dz_scl,                           &
-                  max_level             => this%max_level,                       &
+                  dz_scl                => this%dz_scl,                         &
+                  H                     => this%H,                              &
+                  max_level             => this%max_level,                      &
                   z_level_ratio         => this%z_level_ratio,                  &
                   zr_u                  => this%zr_u,                           &
                   zr_v                  => this%zr_v)
@@ -1813,101 +1814,100 @@ contains
                   dz                    => options%parameters%dz_levels,        &
                   dzdx                  => this%dzdx,                           &
                   dzdy                  => this%dzdy,                           &
-                  dz_scl                => this%dz_scl,                          &
-                  H                     => this%H,                               &
-                  max_level             => this%max_level,                       &
+                  dz_scl                => this%dz_scl,                         &
+                  H                     => this%H,                              & !smooth_height  !sum(dz(1:max_level))  
+                  max_level             => this%max_level,                      &
                   delta_dzdx            => this%delta_dzdx,                     & 
                   delta_dzdy            => this%delta_dzdy,                     & 
                   zfr_u                 => this%zfr_u,                          &
                   zfr_v                 => this%zfr_v )
  
-        ! H  =  smooth_height  !sum(dz(1:max_level))  !
+        
         s  =  H / options%parameters%sleve_decay_factor  
-            
- 
+           
+          
         !_________ 1. Calculate delta_dzdx for w_real calculation  _________
 
-        ! #----------------------- calc z levels from forcing terrain -------------------
+            ! #----------------------- option 1A: calc z levels from forcing terrain -------------------
             
             call io_write("forcing_terrain.nc", "forcing_terrain", forcing_terrain(:,:) ) ! check in plot
             call io_write("terrain.nc", "terrain", terrain(:,:) ) ! check in plot
 
             ! - - - - - - - - - - - - - -
-            allocate( zf_interface(this% ims : this% ime, &
-                                    this% kms : this% kme+1, &
-                                    this% jms : this% jme) )
+            ! allocate( zf_interface(this% ims : this% ime, &
+            !                         this% kms : this% kme+1, &
+            !                         this% jms : this% jme) )
 
-            allocate(dzf_interface(this% ims : this% ime, &
-                                    this% kms : this% kme, &
-                                    this% jms : this% jme) )
+            ! allocate(dzf_interface(this% ims : this% ime, &
+            !                         this% kms : this% kme, &
+            !                         this% jms : this% jme) )
 
-            allocate(zf(this% ims : this% ime, &
-                        this% kms : this% kme, &
-                        this% jms : this% jme) )
+            ! allocate(zf(this% ims : this% ime, &
+            !             this% kms : this% kme, &
+            !             this% jms : this% jme) )
             
-            allocate(dzf_mass(this% ims : this% ime, &
-                                    this% kms : this% kme, &
-                                    this% jms : this% jme) )
+            ! allocate(dzf_mass(this% ims : this% ime, &
+            !                         this% kms : this% kme, &
+            !                         this% jms : this% jme) )
              
-            allocate(dzfdx(this% ims +1: this% ime, &
-                          this% kms : this% kme, &
-                          this% jms : this% jme) )
-            allocate(dzfdy(this% ims : this% ime, &
-                          this% kms : this% kme, &
-                          this% jms+1 : this% jme) )
+            ! allocate(dzfdx(this% ims +1: this% ime, &
+            !               this% kms : this% kme, &
+            !               this% jms : this% jme) )
+            ! allocate(dzfdy(this% ims : this% ime, &
+            !               this% kms : this% kme, &
+            !               this% jms+1 : this% jme) )
 
-            allocate(delta_terrain(this% ims : this% ime, &
-                                    this% jms : this% jme) )
+            ! allocate(delta_terrain(this% ims : this% ime, &
+            !                         this% jms : this% jme) )
             
-            allocate(delta_dzdx_lc(this% ims+1 : this% ime, &
-                                    this% kms : this% kme, &
-                                    this% jms : this% jme) )
+            ! allocate(delta_dzdx_lc(this% ims+1 : this% ime, &
+            !                         this% kms : this% kme, &
+            !                         this% jms : this% jme) )
 
-            print*,"maxval(forcing_terrain): ", maxval(forcing_terrain)     
-            do i = this%grid%kms, this%grid%kme
+            ! do i = this%grid%kms, this%grid%kme
               
-              if (i<=max_level) then
+            !   if (i<=max_level) then
               
-                if (i==this%grid%kms)    zf_interface(:,i,:)   =  forcing_terrain
-                if (i==this%grid%kme)    dzf_interface(:,i,:)  =  H - zf_interface(:,i,:)  
+            !     if (i==this%grid%kms)    zf_interface(:,i,:)   =  forcing_terrain
+            !     if (i==this%grid%kme)    dzf_interface(:,i,:)  =  H - zf_interface(:,i,:)  
                
-                zf_interface(:,i+1,:)  = sum(dz_scl(1:i))   &
-                                       + forcing_terrain  *  SINH( (H/s)**n - (sum(dz_scl(1:i))/s)**n ) / SINH((H/s)**n) 
-
-                print*,"zf_inteface (150,150",i,"): ",zf_interface(:,i,:)
-
+            !     zf_interface(:,i+1,:)  = sum(dz_scl(1:i))   &
+            !                            + forcing_terrain  *  SINH( (H/s)**n - (sum(dz_scl(1:i))/s)**n ) / SINH((H/s)**n) 
               
-                if (i/=this%grid%kme)  dzf_interface(:,i,:)  =  zf_interface(:,i+1,:) - zf_interface(:,i,:) 
+            !     if (i/=this%grid%kme)  dzf_interface(:,i,:)  =  zf_interface(:,i+1,:) - zf_interface(:,i,:) 
                 
-                if (i==this%grid%kms) then
+            !     if (i==this%grid%kms) then
 
-                    dzf_mass(:,i,:)       = dzf_interface(:,i,:) / 2           ! Diff for k=1
-                    zf(:,i,:)             = forcing_terrain + dzf_mass(:,i,:)          ! Diff for k=1   
+            !         dzf_mass(:,i,:)       = dzf_interface(:,i,:) / 2           ! Diff for k=1
+            !         zf(:,i,:)             = forcing_terrain + dzf_mass(:,i,:)          ! Diff for k=1   
                     
-                ! else
-                !     dzf_mass(:,i,:)   =  dzf_interface(:,i-1,:) / 2  +  dzf_interface(:,i,:) / 2
-                !     zf(:,i,:)         =  zf(:,i-1,:)           + dzf_mass(:,i,:)
-                endif
+            !     ! else
+            !     !     dzf_mass(:,i,:)   =  dzf_interface(:,i-1,:) / 2  +  dzf_interface(:,i,:) / 2
+            !     !     zf(:,i,:)         =  zf(:,i-1,:)           + dzf_mass(:,i,:)
+            !     endif
               
-              else  ! i.e. above flat_z_height
-                dzf_interface(:,i,:) =   dz(i)
-                if (i/=this%grid%kme)   zf_interface(:,i+1,:) = zf_interface(:,i,:) + dz(i)
-              endif  
+            !   else  ! i.e. above flat_z_height
+            !     dzf_interface(:,i,:) =   dz(i)
+            !     if (i/=this%grid%kme)   zf_interface(:,i+1,:) = zf_interface(:,i,:) + dz(i)
+            !   endif  
 
-              if (i/=this%grid%kms) then
-                    dzf_mass(:,i,:)   =  dzf_interface(:,i-1,:) / 2  +  dzf_interface(:,i,:) / 2
-                    zf(:,i,:)         =  zf(:,i-1,:)           + dzf_mass(:,i,:)
-              endif
-              dzfdx(:,i,:) = (zf(ims+1:ime,i,:) - zf(ims:ime-1,i,:)) / this%dx  
-              dzfdy(:,i,:) = (zf(:,i,jms+1:jme) - zf(:,i,jms:jme-1)) / this%dx
+            !   if (i/=this%grid%kms) then
+            !         dzf_mass(:,i,:)   =  dzf_interface(:,i-1,:) / 2  +  dzf_interface(:,i,:) / 2
+            !         zf(:,i,:)         =  zf(:,i-1,:)           + dzf_mass(:,i,:)
+            !   endif
+            !   dzfdx(:,i,:) = (zf(ims+1:ime,i,:) - zf(ims:ime-1,i,:)) / this%dx  
+            !   dzfdy(:,i,:) = (zf(:,i,jms+1:jme) - zf(:,i,jms:jme-1)) / this%dx
               
-            enddo
+            ! enddo
 
-            ! Then finally:
-            delta_dzdx_lc(:,:,:) = dzdx(:,:,:)  -  dzfdx(:,:,:)  ! use this for w_real calculation.
+            ! ! Then finally:
+            ! delta_dzdx_lc(:,:,:) = dzdx(:,:,:)  -  dzfdx(:,:,:)  ! use this for w_real calculation.
+            ! call io_write("dzfdx.nc", "dzfdx", dzfdx(:,:,:) )
+            ! call io_write("zf.nc", "zf", zf(:,:,:) )
+            ! call io_write("delta_dzdx_lc.nc", "delta_dzdx_lc", delta_dzdx_lc(:,:,:) )
+            ! print*, "sinh term ", sin_h(:) 
 
-
-            ! the same??? without all the above??? 
+            ! _______________ option 1B: the same as the above, but way shorter. ________________
             delta_terrain = (terrain - forcing_terrain)
             do  i = this%grid%kms, this%grid%kme
               delta_dzdx(:,i,:) =   ( delta_terrain(ims+1:ime,:) - delta_terrain(ims:ime-1,:) )    &
@@ -1922,11 +1922,7 @@ contains
 
             ! write and compare 
             call io_write("delta_dzdx_sc.nc", "delta_dzdx", delta_dzdx(:,:,:) )
-            call io_write("delta_dzdx_lc.nc", "delta_dzdx_lc", delta_dzdx_lc(:,:,:) )
-            print*, "sinh term ", sin_h(:) 
             call io_write("dzdx.nc", "dzdx", dzdx(:,:,:) )
-            call io_write("dzfdx.nc", "dzfdx", dzfdx(:,:,:) )
-            call io_write("zf.nc", "zf", zf(:,:,:) )
 
     
         !_________ 2. Calculate the ratio bewteen z levels from hi-res and forcing data for wind acceleration  _________                                
@@ -1935,14 +1931,14 @@ contains
         allocate(forcing_terrain_u( this%u_grid2d_ext% ims : this%u_grid2d_ext% ime,   &
                                     this%u_grid2d_ext% jms : this%u_grid2d_ext% jme) )
         call array_offset_x(this%forcing_terrain%data_2d, forcing_terrain_u)
-        print* , "  hgt variable forcing_terrain offset x: ", shape(forcing_terrain_u)
+        
+        ! print* , "  hgt variable forcing_terrain offset x: ", shape(forcing_terrain_u)
         ! call io_write("forcing_terrain_u.nc", "forcing_terrain_u", forcing_terrain_u(:,:) ) ! check in plot
 
-        ! forcing_terrain_v(:,:) ....
         allocate(forcing_terrain_v( this%v_grid2d_ext% ims : this%v_grid2d_ext% ime,   &
                                     this%v_grid2d_ext% jms : this%v_grid2d_ext% jme) )
         call array_offset_y(this%forcing_terrain%data_2d, forcing_terrain_v)
-        print* , "  hgt variable forcing_terrain offset y: ", shape(forcing_terrain_v)
+        ! print* , "  hgt variable forcing_terrain offset y: ", shape(forcing_terrain_v)
 
         do i = this%grid%kms, this%grid%kme
           zfr_u(:,i,:) = (1 + terrain_u *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n))  &  ! officially sum + 1/2 but since we're calculating ratios....
