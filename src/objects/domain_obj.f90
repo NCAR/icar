@@ -718,6 +718,14 @@ contains
                                           this% kds : this% kde,   &
                                           this% jds : this% jde)   )
 
+        allocate(this%delta_dzdx( this% ims+1 : this% ime, &    ! can go to allocate_z_arrays ?
+                                  this% kms : this% kme, &
+                                  this% jms : this% jme) )         
+        
+        allocate(this%delta_dzdy( this% ims: this% ime, &
+                                  this% kms : this% kme, &
+                                  this% jms+1 : this% jme) )    
+
         allocate(this%zfr_u(this% ims : this% ime, &
                                     this% kms : this% kme, &
                                     this% jms : this% jme) )
@@ -737,19 +745,23 @@ contains
         ! type(boundary_t), intent(inout) :: forcing
         type(options_t), intent(in)     :: options
         real,            intent(in)     :: terrain_u(:,:), terrain_v(:,:),  dz_scl(:), H
-        integer,         intent(in)     :: max_level
+        integer,         intent(in)     :: i, max_level
 
         real, allocatable :: forcing_terrain_u(:,:), forcing_terrain_v(:,:), delta_terrain(:,:)
-        
-        associate(terrain               => this%terrain%data_2d,                &
+        real :: s
+
+        associate(ims => this%ims,      ime => this%ime,                        &
+                  jms => this%jms,      jme => this%jme,                        &
+                  kms => this%kms,      kme => this%kme,                        &
+                  terrain               => this%terrain%data_2d,                &
                   forcing_terrain       => this%forcing_terrain%data_2d,        &
                   n                     =>  options%parameters%sleve_n,         & 
                   dzdx                  => this%dzdx,                           &
                   dzdy                  => this%dzdy,                           &
-                  delta_dzdx         => this%delta_dzdx,                        &   ! DEFINE IN DOMAIN OBJ
-                  delta_dzdy         => this%delta_dzdy,                        &   ! DEFINE IN DOMAIN OBJ
-                  zfr_u              => this%zfr_u,                         &
-                  zfr_v              => this%zfr_v )
+                  delta_dzdx            => this%delta_dzdx,                     & 
+                  delta_dzdy            => this%delta_dzdy,                     & 
+                  zfr_u                 => this%zfr_u,                          &
+                  zfr_v                 => this%zfr_v )
                   ! z_level_ratio         => this%z_level_ratio,                  &
                   ! zr_u                  => this%zr_u,                           &
                   ! zr_v                  => this%zr_v)
@@ -796,13 +808,7 @@ contains
             !                         this% kms : this% kme, &
             !                         this% jms : this% jme) )
 
-            allocate(delta_dzdx(this% ims+1 : this% ime, &    ! can go to allocate_z_arrays ?
-                                    this% kms : this% kme, &
-                                    this% jms : this% jme) )         
-            
-            allocate(delta_dzdy(this% ims: this% ime, &
-                                    this% kms : this% kme, &
-                                    this% jms+1 : this% jme) )         
+     
 
 
             ! do i = this%grid%kms, this%grid%kme
@@ -888,7 +894,7 @@ contains
 
         call io_write("zfr_u.nc", "zfr_u", zfr_u(:,:,:) ) ! check in plot
         
-        print *, "zfr_u min/max: ", min(zfr_u), " / ", max(zfr_u)
+        print *, "zfr_u min/max: ", minval(zfr_u), " / ", maxval(zfr_u)
 
         ! =>  But how to scale the winds with this??
 
@@ -928,7 +934,7 @@ contains
         real, allocatable :: dz_scl(:)
         integer :: i, max_level 
         real :: smooth_height, H, s, n
-        logical :: SLEVE
+        logical :: SLEVE, use_delta_terrain
         character :: filename, file_idS, file_idn
 
 
