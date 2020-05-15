@@ -27,7 +27,7 @@ module initialization
     use convection,                 only : init_convection
     use planetary_boundary_layer,   only : pbl_init
     use land_surface,               only : lsm_init
-
+    use io_routines,          only : io_read, io_write
     use mod_atm_utilities,          only : init_atm_utilities
     use wind,                       only : update_winds
 

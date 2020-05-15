@@ -749,6 +749,7 @@ contains
         ! integer,         intent(in)     :: max_level
 
         real, allocatable :: forcing_terrain_u(:,:), forcing_terrain_v(:,:), delta_terrain(:,:), delta_dzdx_lc(:,:,:)
+        real, allocatable :: zf_interface(:,:,:), dzf_interface(:,:,:), zf(:,:,:), dzf_mass(:,:,:), dzfdx(:,:,:), dzfdy(:,:,:), delta_dzdx(:,:,:) !, delta_dzdx_2(:,:,:)
         real :: s
         integer :: i
 
@@ -762,9 +763,9 @@ contains
                   n                     =>  options%parameters%sleve_n,         & 
                   dzdx                  => this%dzdx,                           &
                   dzdy                  => this%dzdy,                           &
-                  dz_scl                => this%dz_scl                          &
-                  H                     => this%H                               &
-                  max_level             => this%max_level                       &
+                  dz_scl                => this%dz_scl,                          &
+                  H                     => this%H,                               &
+                  max_level             => this%max_level,                       &
                   delta_dzdx            => this%delta_dzdx,                     & 
                   delta_dzdy            => this%delta_dzdy,                     & 
                   zfr_u                 => this%zfr_u,                          &
@@ -932,7 +933,6 @@ contains
         type(options_t), intent(in)     :: options
 
         real, allocatable :: temp(:,:,:), terrain_u(:,:), terrain_v(:,:)
-        ! real, allocatable :: zf_interface(:,:,:), dzf_interface(:,:,:), zf(:,:,:), dzf_mass(:,:,:), dzfdx(:,:,:), dzfdy(:,:,:), delta_terrain(:,:), delta_dzdx(:,:,:), delta_dzdx_2(:,:,:)
         real, allocatable :: dz_scl(:)
         integer :: i, max_level 
         real :: smooth_height, H, s, n

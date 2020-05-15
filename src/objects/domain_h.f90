@@ -59,7 +59,7 @@ module domain_interface
     type(variable_t) :: dz_mass
     ! type(variable_t) :: dz_scl
     ! type(variable_t) :: H       ! model top or smooth_height
-    type(variable_t) :: max_level
+    ! type(variable_t) :: max_level
     type(variable_t) :: nsq
     type(variable_t) :: graupel
     type(variable_t) :: accumulated_precipitation
@@ -74,8 +74,7 @@ module domain_interface
     type(variable_t) :: terrain
     type(variable_t) :: terrain_u  
     type(variable_t) :: terrain_v
-    type(variable_t) :: dz_scl
-    type(variable_t) :: forcing_terrain  ! BK 05/2020: The forcing terrain interpolated 2d to the hi-res grid. In order to calculate difference in slope
+        type(variable_t) :: forcing_terrain  ! BK 05/2020: The forcing terrain interpolated 2d to the hi-res grid. In order to calculate difference in slope
     type(variable_t) :: u_10m
     type(variable_t) :: v_10m
     type(variable_t) :: temperature_2m
