@@ -718,6 +718,12 @@ contains
                                           this% kds : this% kde,   &
                                           this% jds : this% jde)   )
 
+        allocate(this%zfr_u(this% ims : this% ime, &
+                                    this% kms : this% kme, &
+                                    this% jms : this% jme) )
+        allocate(this%zfr_v(this% ims : this% ime, &
+                                    this% kms : this% kme, &
+                                    this% jms : this% jme) )
 
 
     end subroutine allocate_z_arrays
@@ -725,92 +731,187 @@ contains
 
 
 
-    ! subroutine delta_terrain(this, terrain_u, terrain_v, dz_scl, max_level, H, options)
-    !     implicit none
-    !     class(domain_t),  intent(inout) :: this
-    !     ! type(boundary_t), intent(inout) :: forcing
-    !     type(options_t), intent(in)     :: options
-    !     real,            intent(in)     :: terrain_u(:,:), terrain_v(:,:), delta_terrain(:,:), dz_scl(:), H
-    !     integer,         intent(in)     :: max_level
+    subroutine delta_terrain(this, terrain_u, terrain_v, dz_scl, max_level, H, options)
+        implicit none
+        class(domain_t),  intent(inout) :: this
+        ! type(boundary_t), intent(inout) :: forcing
+        type(options_t), intent(in)     :: options
+        real,            intent(in)     :: terrain_u(:,:), terrain_v(:,:),  dz_scl(:), H
+        integer,         intent(in)     :: max_level
 
-    !     real, allocatable :: forcing_terrain_u(:,:), forcing_terrain_v(:,:)
+        real, allocatable :: forcing_terrain_u(:,:), forcing_terrain_v(:,:), delta_terrain(:,:)
         
-    !     associate(terrain               => this%terrain%data_2d,                &
-    !               forcing_terrain       => this%forcing_terrain%data_2d,        &
-    !               n                     =>  options%parameters%sleve_n,         & 
-    !               delta_dzdx         => this%delta_dzdx,                        &   ! DEFINE IN DOMAIN OBJ
-    !               delta_dzdy         => this%delta_dzdy,                        &   ! DEFINE IN DOMAIN OBJ
-    !               zfr_u              => this%zfr_u,                         &
-    !               zfr_v              => this%zfr_v )
-    !               ! dzdx                  => this%dzdx,                           &
-    !               ! dzdy                  => this%dzdy,                           &
-    !               ! z_level_ratio         => this%z_level_ratio,                  &
-    !               ! zr_u                  => this%zr_u,                           &
-    !               ! zr_v                  => this%zr_v)
+        associate(terrain               => this%terrain%data_2d,                &
+                  forcing_terrain       => this%forcing_terrain%data_2d,        &
+                  n                     =>  options%parameters%sleve_n,         & 
+                  dzdx                  => this%dzdx,                           &
+                  dzdy                  => this%dzdy,                           &
+                  delta_dzdx         => this%delta_dzdx,                        &   ! DEFINE IN DOMAIN OBJ
+                  delta_dzdy         => this%delta_dzdy,                        &   ! DEFINE IN DOMAIN OBJ
+                  zfr_u              => this%zfr_u,                         &
+                  zfr_v              => this%zfr_v )
+                  ! z_level_ratio         => this%z_level_ratio,                  &
+                  ! zr_u                  => this%zr_u,                           &
+                  ! zr_v                  => this%zr_v)
 
+ 
+        ! H  =  smooth_height  !sum(dz(1:max_level))  !
+        s  =  H / options%parameters%sleve_decay_factor  
             
+ 
+        !_________ 1. Calculate delta_dzdx for w_real calculation  _________
 
-    !     ! H  =  smooth_height  !sum(dz(1:max_level))  !
-    !     s  =  H / options%parameters%sleve_decay_factor  
+        ! #----------------------- calc z levels from forcing terrain -------------------
+            ! print* , " variable forcing_terrain: ", shape(this%forcing_terrain%data_2d)
+            call io_write("forcing_terrain.nc", "forcing_terrain", forcing_terrain(:,:) ) ! check in plot
+
+            ! ! - - - - - - - - - - - - - -
+            ! allocate( zf_interface(this% ims : this% ime, &
+            !                         this% kms : this% kme+1, &
+            !                         this% jms : this% jme) )
+
+            ! allocate(dzf_interface(this% ims : this% ime, &
+            !                         this% kms : this% kme, &
+            !                         this% jms : this% jme) )
+
+            ! allocate(zf(this% ims : this% ime, &
+            !             this% kms : this% kme, &
+            !             this% jms : this% jme) )
             
-    !     ! print* , " variable forcing_terrain: ", shape(this%forcing_terrain%data_2d)
+            ! allocate(dzf_mass(this% ims : this% ime, &
+            !                         this% kms : this% kme, &
+            !                         this% jms : this% jme) )
+             
+            ! allocate(dzfdx(this% ims +1: this% ime, &
+            !               this% kms : this% kme, &
+            !               this% jms : this% jme) )
+            ! allocate(dzfdy(this% ims : this% ime, &
+            !               this% kms : this% kme, &
+            !               this% jms+1 : this% jme) )
 
-    !     !_________ 1. Calculate delta_dzdx for w_real calculation  _________
+            allocate(delta_terrain(this% ims : this% ime, &
+                                    this% jms : this% jme) )
+            
+            ! allocate(delta_dzdx_2(this% ims+1 : this% ime, &
+            !                         this% kms : this% kme, &
+            !                         this% jms : this% jme) )
 
-    !     delta_terrain = (terrain - forcing_terrain)
-        
-    !     do  i = this%grid%kms, this%grid%kme
-  
-    !       delta_dzdx_2(:,i,:) =   ( delta_terrain(ims+1:ime,i,:) - delta_terrain(ims:ime-1,i,:) )    &
-    !                               * SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  / this%dx  
-    !       ! same for y dir
-
-    !     enddo
-    !     ! delta_dzdx_2(:,i,:) =   (terrain(ims+1:ime,i,:) - forcing_terrain)    &
-    !     !                         * SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  / this%dx  
-
-
-
+            allocate(delta_dzdx(this% ims+1 : this% ime, &    ! can go to allocate_z_arrays ?
+                                    this% kms : this% kme, &
+                                    this% jms : this% jme) )         
+            
+            allocate(delta_dzdy(this% ims: this% ime, &
+                                    this% kms : this% kme, &
+                                    this% jms+1 : this% jme) )         
 
 
-    !     !_________ 2. Calculate the ratio bewteen z levels from hi-res and forcing data for wind acceleration  _________                                
+            do i = this%grid%kms, this%grid%kme
+              
+              if (i<=max_level) then
+              
+                if (i==this%grid%kms)    zf_interface(:,i,:)   =  forcing_terrain
+                if (i==this%grid%kme)    dzf_interface(:,i,:)  =  smooth_height - zf_interface(:,i,:)  
+               
+                zf_interface(:,i+1,:)  = dz_scl(i)   &
+                                       + forcing_terrain  *  SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  ! same for higher k
+              
+                if (i/=this%grid%kme)  dzf_interface(:,i,:)  =  zf_interface(:,i+1,:) - zf_interface(:,i,:) 
+                
+                if (i==this%grid%kms) then
+                    dzf_mass(:,i,:)       = dzf_interface(:,i,:) / 2           ! Diff for k=1
+                    zf(:,i,:)             = forcing_terrain + dzf_mass(:,i,:)          ! Diff for k=1   
+                ! else
+                !     dzf_mass(:,i,:)   =  dzf_interface(:,i-1,:) / 2  +  dzf_interface(:,i,:) / 2
+                !     zf(:,i,:)         =  zf(:,i-1,:)           + dzf_mass(:,i,:)
+                endif
+              
+              else  ! i.e. above flat_z_height
+                dzf_interface(:,i,:) =   dz(i)
+                if (i/=this%grid%kme)   zf_interface(:,i+1,:) = zf_interface(:,i,:) + dz(i)
+              endif  
 
-    !     ! offset forcint terrain:
-    !     allocate(forcing_terrain_u( this%u_grid2d_ext% ims : this%u_grid2d_ext% ime,   &
-    !                                 this%u_grid2d_ext% jms : this%u_grid2d_ext% jme) )
-    !     call array_offset_x(this%forcing_terrain%data_2d, forcing_terrain_u)
-    !     print* , "  hgt variable forcing_terrain offset x: ", shape(forcing_terrain_u)
+              if (i/=this%grid%kms) then
+                    dzf_mass(:,i,:)   =  dzf_interface(:,i-1,:) / 2  +  dzf_interface(:,i,:) / 2
+                    zf(:,i,:)         =  zf(:,i-1,:)           + dzf_mass(:,i,:)
+              endif
+              dzfdx(:,i,:) = (zf(ims+1:ime,i,:) - zf(ims:ime-1,i,:)) / this%dx  
+              dzfdy(:,i,:) = (zf(:,i,jms+1:jme) - zf(:,i,jms:jme-1)) / this%dx
 
-    !     ! forcing_terrain_v(:,:) ....
+            enddo
 
-    !     do i = this%grid%kms, this%grid%kme
-    !       zfr_u(:,i,:) = (1 + terrain_u *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n))  &  ! officially sum + 1/2 but since we're calculating ratios....
-    !                    /  (1 + forcing_terrain_u *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n))
+            ! Then finally:
+            delta_dzdx_2(:,:,:) = dzdx(:,:,:)  -  dzfdx(:,:,:)  ! use this for w_real calculation.
+
+
+            ! the same??? without all the above??? could be function in if(use_delta_terrain_for_speedup==True)
+            delta_terrain = (terrain - forcing_terrain)
+            do  i = this%grid%kms, this%grid%kme
+              delta_dzdx(:,i,:) =   ( delta_terrain(ims+1:ime,:) - delta_terrain(ims:ime-1,:) )    &
+                                      * SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  / this%dx  
+
+              delta_dzdy(:,i,:) =   ( delta_terrain(:,jms+1:jme) - delta_terrain(:, jms:jme-1) )    &
+                                      * SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  / this%dx                                        
+            enddo
+
+
+            ! write and compare 
+            call io_write("delta_dzdx.nc", "delta_dzdx", delta_dzdx(:,:,:) )
+            call io_write("delta_dzdx_2.nc", "delta_dzdx", delta_dzdx_2(:,:,:) )
+
+
+
+
+
+    
+        !_________ 2. Calculate the ratio bewteen z levels from hi-res and forcing data for wind acceleration  _________                                
+
+        ! offset forcint terrain:
+        allocate(forcing_terrain_u( this%u_grid2d_ext% ims : this%u_grid2d_ext% ime,   &
+                                    this%u_grid2d_ext% jms : this%u_grid2d_ext% jme) )
+        call array_offset_x(this%forcing_terrain%data_2d, forcing_terrain_u)
+        print* , "  hgt variable forcing_terrain offset x: ", shape(forcing_terrain_u)
+
+        ! forcing_terrain_v(:,:) ....
+        allocate(forcing_terrain_v( this%v_grid2d_ext% ims : this%v_grid2d_ext% ime,   &
+                                    this%v_grid2d_ext% jms : this%v_grid2d_ext% jme) )
+        call array_offset_y(this%forcing_terrain%data_2d, forcing_terrain_v)
+        print* , "  hgt variable forcing_terrain offset y: ", shape(forcing_terrain_v)
+
+        do i = this%grid%kms, this%grid%kme
+          zfr_u(:,i,:) = (1 + terrain_u *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n))  &  ! officially sum + 1/2 but since we're calculating ratios....
+                       /  (1 + forcing_terrain_u *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n))
           
-    !       ! zfr_v(:,i,:) =
-    !     enddo 
+          zfr_v(:,i,:) = (1 + terrain_v *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n))  &  ! officially sum + 1/2 but since we're calculating ratios....
+                       /  (1 + forcing_terrain_v *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n))
+          
+        enddo 
 
-    !     call io_write("zfr_u.nc", zfr_u, zfr_u(:,:,:) ) ! check in plot
+        call io_write("zfr_u.nc", zfr_u, zfr_u(:,:,:) ) ! check in plot
         
+        print *, "zfr_u min/max: ", min(zfr_u), " / ", max(zfr_u)
 
-    !     ! associate(g => this%u_grid2d_ext, geo => this%geo_u)
-    !     !     call array_offset_x(temporary_data, temp_offset)
-    !     !     if (allocated(geo%z)) deallocate(geo%z)
-    !     !     allocate(geo%z(1:g%ime-g%ims+1, 1:this%u_grid%kme-this%u_grid%kms+1, 1:g%jme-g%jms+1))
-    !     !     geo%z(:,1,:) = temp_offset(g%ims:g%ime, g%jms:g%jme)
-    !     ! end associate
+        ! =>  But how to scale the winds with this??
+
+
+
+        ! associate(g => this%u_grid2d_ext, geo => this%geo_u)
+        !     call array_offset_x(temporary_data, temp_offset)
+        !     if (allocated(geo%z)) deallocate(geo%z)
+        !     allocate(geo%z(1:g%ime-g%ims+1, 1:this%u_grid%kme-this%u_grid%kms+1, 1:g%jme-g%jms+1))
+        !     geo%z(:,1,:) = temp_offset(g%ims:g%ime, g%jms:g%jme)
+        ! end associate
         
-    !     ! ! TRy this.... 
-    !     ! associate(forcing_terrain_u => this%forcing_terrain_u%data_2d  , g => this%u_grid2d_ext)
-    !     !     ! allocate forcing_terrain_u( )
-    !     !     call array_offset_x(this%forcing_terrain%data_2d, temp_offset)
-    !     !             print* , "  hgt variable forcing_terrain offset x: ", shape(temp_offset)
-    !     !     ! allocate(this%forcing_terrain_u(1:g%ime-g%ims+1, 1, 1:g%jme-g%jms+1)) 
-    !     !     ! this%forcing_terrain_u =  temp_offset            
+        ! ! TRy this.... 
+        ! associate(forcing_terrain_u => this%forcing_terrain_u%data_2d  , g => this%u_grid2d_ext)
+        !     ! allocate forcing_terrain_u( )
+        !     call array_offset_x(this%forcing_terrain%data_2d, temp_offset)
+        !             print* , "  hgt variable forcing_terrain offset x: ", shape(temp_offset)
+        !     ! allocate(this%forcing_terrain_u(1:g%ime-g%ims+1, 1, 1:g%jme-g%jms+1)) 
+        !     ! this%forcing_terrain_u =  temp_offset            
 
-    !     end associate
+        end associate
      
-    ! end subroutine
+    end subroutine
 
 
     !> -------------------------------
@@ -823,7 +924,7 @@ contains
         type(options_t), intent(in)     :: options
 
         real, allocatable :: temp(:,:,:), terrain_u(:,:), terrain_v(:,:)
-        real, allocatable :: zf_interface(:,:,:), dzf_interface(:,:,:), zf(:,:,:), dzf_mass(:,:,:), dzfdx(:,:,:), dzfdy(:,:,:), delta_terrain(:,:), delta_dzdx(:,:,:), delta_dzdx_2(:,:,:)
+        ! real, allocatable :: zf_interface(:,:,:), dzf_interface(:,:,:), zf(:,:,:), dzf_mass(:,:,:), dzfdx(:,:,:), dzfdy(:,:,:), delta_terrain(:,:), delta_dzdx(:,:,:), delta_dzdx_2(:,:,:)
         real, allocatable :: dz_scl(:)
         integer :: i, max_level 
         real :: smooth_height, H, s, n
@@ -955,16 +1056,16 @@ contains
                    
                     z_level_ratio(:,i,:) = dz_interface(:,i,:) / dz_scl(i)
 
-                    ! if ( ANY(z_level_ratio(:,i,:)<0) ) then   ! Eror catching. Probably good to engage.
-                    !   if (this_image()==1) then
-                    !     write(*,*) "Error: z_level_ratio below zero (for level  ",i,")"
-                    !     error stop
-                    !     print*, dz_interface(:,i,:)
-                    !     print*,""
-                    !   endif
-                    ! else if ( ANY(z_level_ratio(:,i,:)<=0.01) ) then
-                    !   if (this_image()==1)  write(*,*) "WARNING: z_level_ratio very low (at level ",i,")"
-                    ! endif  
+                    if ( ANY(z_level_ratio(:,i,:)<0) ) then   ! Eror catching. Probably good to engage.
+                      if (this_image()==1) then
+                        write(*,*) "Error: z_level_ratio below zero (for level  ",i,")"
+                        error stop
+                        print*, dz_interface(:,i,:)
+                        print*,""
+                      endif
+                    else if ( ANY(z_level_ratio(:,i,:)<=0.01) ) then
+                      if (this_image()==1)  write(*,*) "WARNING: z_level_ratio very low (at level ",i,")"
+                    endif  
                     
                     ! - - - - -   u/v grid calculations - - - - -
                     z_u(:,i,:)   = (sum(dz_scl(1:(i-1))) + dz_scl(i)/2)   &
@@ -998,9 +1099,6 @@ contains
             
 
             ! if (options%parameters%debug) then 
-            !   ! Write the z_level_ratio for analysis:
-            !   write(file_idn, *) options%parameters%sleve_n
-            !   write(file_idS, *) options%parameters%sleve_decay_factor
             !   filename = 'zlr_n_' // trim(adjustl(file_idn)) // '_S_'//trim(adjustl(file_idS)) //'.nc'
             !   call io_write(filename, "z_level_ratio", z_level_ratio(:,:,:) )
             !   ! call io_write("zlr.nc", "z_level_ratio", z_level_ratio(:,:,:) )
@@ -1091,98 +1189,11 @@ contains
         use_delta_terrain=.true.    
         if(use_delta_terrain) then
         
-           ! #----------------------- calc z levels from forcing terrain -------------------
-            print* , " hgt variable forcing_terrain: ", shape(this%forcing_terrain%data_2d)
-            call io_write("forcing_terrain.nc", "forcing_terrain", forcing_terrain(:,:) ) ! check in plot
-
-            ! - - - - - - - - - - - - - -
-            allocate( zf_interface(this% ims : this% ime, &
-                                    this% kms : this% kme+1, &
-                                    this% jms : this% jme) )
-
-            allocate(dzf_interface(this% ims : this% ime, &
-                                    this% kms : this% kme, &
-                                    this% jms : this% jme) )
-
-            allocate(zf(this% ims : this% ime, &
-                        this% kms : this% kme, &
-                        this% jms : this% jme) )
-            
-            allocate(dzf_mass(this% ims : this% ime, &
-                                    this% kms : this% kme, &
-                                    this% jms : this% jme) )
-             
-            allocate(dzfdx(this% ims +1: this% ime, &
-                          this% kms : this% kme, &
-                          this% jms : this% jme) )
-            allocate(dzfdy(this% ims : this% ime, &
-                          this% kms : this% kme, &
-                          this% jms+1 : this% jme) )
-
-            allocate(delta_terrain(this% ims : this% ime, &
-                                    this% jms : this% jme) )
-            
-            allocate(delta_dzdx(this% ims+1 : this% ime, &
-                                    this% kms : this% kme, &
-                                    this% jms : this% jme) )
-
-            allocate(delta_dzdx_2(this% ims+1 : this% ime, &
-                                    this% kms : this% kme, &
-                                    this% jms : this% jme) )                                    
-
-            do i = this%grid%kms, this%grid%kme
-              
-              if (i<=max_level) then
-              
-                if (i==this%grid%kms)    zf_interface(:,i,:)   =  forcing_terrain
-                if (i==this%grid%kme)    dzf_interface(:,i,:)  =  smooth_height - zf_interface(:,i,:)  
-               
-                zf_interface(:,i+1,:)  = dz_scl(i)   &
-                                       + forcing_terrain  *  SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  ! same for higher k
-              
-                if (i/=this%grid%kme)  dzf_interface(:,i,:)  =  zf_interface(:,i+1,:) - zf_interface(:,i,:) 
-                
-                if (i==this%grid%kms) then
-                    dzf_mass(:,i,:)       = dzf_interface(:,i,:) / 2           ! Diff for k=1
-                    zf(:,i,:)             = forcing_terrain + dzf_mass(:,i,:)          ! Diff for k=1   
-                ! else
-                !     dzf_mass(:,i,:)   =  dzf_interface(:,i-1,:) / 2  +  dzf_interface(:,i,:) / 2
-                !     zf(:,i,:)         =  zf(:,i-1,:)           + dzf_mass(:,i,:)
-                endif
-              
-              else  ! i.e. above flat_z_height
-                dzf_interface(:,i,:) =   dz(i)
-                if (i/=this%grid%kme)   zf_interface(:,i+1,:) = zf_interface(:,i,:) + dz(i)
-              endif  
-
-              if (i/=this%grid%kms) then
-                    dzf_mass(:,i,:)   =  dzf_interface(:,i-1,:) / 2  +  dzf_interface(:,i,:) / 2
-                    zf(:,i,:)         =  zf(:,i-1,:)           + dzf_mass(:,i,:)
-              endif
-              dzfdx(:,i,:) = (zf(ims+1:ime,i,:) - zf(ims:ime-1,i,:)) / this%dx  
-              dzfdy(:,i,:) = (zf(:,i,jms+1:jme) - zf(:,i,jms:jme-1)) / this%dx
-
-            enddo
-
-
-            ! Then finally:
-            delta_dzdx(:,:,:) = dzdx(:,:,:)  -  dzfdx(:,:,:)  ! use this for w_real calculation.
-
-            ! the same??? without all the above??? could be function in if(use_delta_terrain_for_speedup==True)
-            delta_terrain = (terrain - forcing_terrain)
-            do  i = this%grid%kms, this%grid%kme
-              delta_dzdx_2(:,i,:) =   ( delta_terrain(ims+1:ime,:) - delta_terrain(ims:ime-1,:) )    &
-                                      * SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  / this%dx  
-            enddo
-
-
-            ! write and compare 
-            call io_write("delta_dzdx.nc", "delta_dzdx", delta_dzdx(:,:,:) )
-            call io_write("delta_dzdx_2.nc", "delta_dzdx_2", delta_dzdx_2(:,:,:) )
+           
 
             ! ! if the latter works, put this call at the end of current module
             ! if (use_delta_terrain) then
-            !   call delta_terrain(this, terrain_u, terrain_v, dz_scl, max_level, H, options)
+            call delta_terrain(this, terrain_u, terrain_v, dz_scl, max_level, H, options)
             !   ! if sleve then dz = dzscale (below max_level, above max_level dzdx = 0)
             !   ! else 
             ! endif
