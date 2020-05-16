@@ -1614,10 +1614,10 @@ contains
         integer :: name_unit, this_level
         real, allocatable, dimension(:) :: dz_levels
         real, dimension(45) :: fulldz
-        logical :: space_varying, fixed_dz_advection, dz_modifies_wind, sleve
+        logical :: space_varying, fixed_dz_advection, dz_modifies_wind, sleve, use_terrain_difference
         real :: flat_z_height, sleve_decay_factor, sleve_n
 
-        namelist /z_info/ dz_levels, space_varying, dz_modifies_wind, flat_z_height, fixed_dz_advection, sleve, sleve_decay_factor, sleve_n
+        namelist /z_info/ dz_levels, space_varying, dz_modifies_wind, flat_z_height, fixed_dz_advection, sleve, sleve_decay_factor, sleve_n, use_terrain_difference
 
         this_level=1
         space_varying = .False.
@@ -1626,7 +1626,8 @@ contains
         flat_z_height = -1
         sleve = .False.
         sleve_decay_factor = 2.
-        sleve_n = 1.  ! to be incorporated later. See Leuenberger 2009
+        sleve_n = 1.  
+        use_terrain_difference = .False.
 
         ! read the z_info namelist if requested
         if (options%readdz) then
@@ -1681,7 +1682,7 @@ contains
         options%sleve = sleve
         options%sleve_decay_factor = sleve_decay_factor
         options%sleve_n = sleve_n
-
+        options%use_terrain_difference = use_terrain_difference 
 
         if (fixed_dz_advection) then
             print*, "WARNING: setting fixed_dz_advection to true is not recommended, use wind = 2 instead"

@@ -1016,7 +1016,7 @@ contains
             ! technically these should probably be defined to the k+1 model top as well bu not used at present.
             ! z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i-1,:)
             ! dz_mass(:,i,:)     = dz(i-1)/2 * z_level_ratio(:,i-1,:)
-
+          call io_write("zr_u.nc", zr_u, zr_u(:,:,:) )  
     
         end associate
 
@@ -1941,12 +1941,12 @@ contains
         ! print* , "  hgt variable forcing_terrain offset y: ", shape(forcing_terrain_v)
 
         do i = this%grid%kms, this%grid%kme
-          zfr_u(:,i,:) = (1 + terrain_u *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n))  &  ! officially sum + 1/2 but since we're calculating ratios....
-                       /  (1 + forcing_terrain_u *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n))
+          zfr_u(:,i,:) = (1 + terrain_u *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n) / sum(dz(1:i)) )  &  ! officially sum + 1/2 but since we're calculating ratios....
+                       /  (1 + forcing_terrain_u *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n) / sum(dz(1:i)) )
           
-          zfr_v(:,i,:) = (1 + terrain_v *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n))  &  ! officially sum + 1/2 but since we're calculating ratios....
-                       /  (1 + forcing_terrain_v *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n))
-          
+          zfr_v(:,i,:) = (1 + terrain_v *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n) / sum(dz(1:i)) )  &  ! officially sum + 1/2 but since we're calculating ratios....
+                       /  (1 + forcing_terrain_v *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n) /sum(dz(1:i)) )
+                              
         enddo 
 
         call io_write("zfr_u.nc", "zfr_u", zfr_u(:,:,:) ) ! check in plot

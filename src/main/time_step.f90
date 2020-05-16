@@ -143,10 +143,8 @@ contains
         ! finally, calculate the real vertical motions (including U*dzdx + V*dzdy)
         lastw = 0
         do z = kms, kme
-
-            use_delta_terrain=.true.    ! <- move to options
             
-            if(use_delta_terrain) then
+            if(use_terrain_difference) then
                             ! compute the U * dz/dx component of vertical motion
                 uw    = u(ims+1:ime,   z, jms+1:jme-1) * domain%delta_dzdx(:,z,jms+1:jme-1)
                 ! compute the V * dz/dy component of vertical motion
