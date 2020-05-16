@@ -79,7 +79,7 @@ contains
         call domain%get_initial_conditions(boundary, options)
 
            
-        if(use_terrain_difference)  then
+        if(options%parameters%use_terrain_difference)  then
             
             call domain%calculate_delta_terrain( options)
 

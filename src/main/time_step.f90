@@ -144,7 +144,7 @@ contains
         lastw = 0
         do z = kms, kme
             
-            if(use_terrain_difference) then
+            if(options%parameters%use_terrain_difference) then
                             ! compute the U * dz/dx component of vertical motion
                 uw    = u(ims+1:ime,   z, jms+1:jme-1) * domain%delta_dzdx(:,z,jms+1:jme-1)
                 ! compute the V * dz/dy component of vertical motion
