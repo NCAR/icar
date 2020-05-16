@@ -1016,7 +1016,7 @@ contains
             ! technically these should probably be defined to the k+1 model top as well bu not used at present.
             ! z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i-1,:)
             ! dz_mass(:,i,:)     = dz(i-1)/2 * z_level_ratio(:,i-1,:)
-          call io_write("zr_u.nc", zr_u, zr_u(:,:,:) )  
+          call io_write("zr_u.nc", "zr_u", zr_u(:,:,:) )  
     
         end associate
 
@@ -1799,7 +1799,7 @@ contains
         type(options_t), intent(in)     :: options
 
         real, allocatable :: forcing_terrain_u(:,:), forcing_terrain_v(:,:), delta_terrain(:,:), delta_dzdx_lc(:,:,:)
-        real, allocatable :: zf_interface(:,:,:), dzf_interface(:,:,:), zf(:,:,:), dzf_mass(:,:,:), dzfdx(:,:,:), dzfdy(:,:,:), delta_dzdx(:,:,:), sin_h(:) !, delta_dzdx_2(:,:,:)
+        real, allocatable :: zf_interface(:,:,:), dzf_interface(:,:,:), zf(:,:,:), dzf_mass(:,:,:), dzfdx(:,:,:), dzfdy(:,:,:), delta_dzdx(:,:,:)
         real :: s
         integer :: i
 
@@ -1830,8 +1830,7 @@ contains
 
             ! #----------------------- option 1A: calc z levels from forcing terrain -------------------
             
-            call io_write("forcing_terrain.nc", "forcing_terrain", forcing_terrain(:,:) ) ! check in plot
-            call io_write("terrain.nc", "terrain", terrain(:,:) ) ! check in plot
+
 
             ! - - - - - - - - - - - - - -
             ! allocate( zf_interface(this% ims : this% ime, &
@@ -1915,14 +1914,9 @@ contains
 
               delta_dzdy(:,i,:) =   ( delta_terrain(:,jms+1:jme) - delta_terrain(:, jms:jme-1) )    &
                                       * SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  / this%dx                                        
-            
-              ! sin_h =  SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)                                  
+                                          
             enddo
 
-
-            ! write and compare 
-            call io_write("delta_dzdx_sc.nc", "delta_dzdx", delta_dzdx(:,:,:) )
-            call io_write("dzdx.nc", "dzdx", dzdx(:,:,:) )
 
     
         !_________ 2. Calculate the ratio bewteen z levels from hi-res and forcing data for wind acceleration  _________                                
@@ -1941,20 +1935,27 @@ contains
         ! print* , "  hgt variable forcing_terrain offset y: ", shape(forcing_terrain_v)
 
         do i = this%grid%kms, this%grid%kme
-          zfr_u(:,i,:) = (1 + terrain_u *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n) / sum(dz(1:i)) )  &  ! officially sum + 1/2 but since we're calculating ratios....
+          zfr_u(:,i,:) = (1 + terrain_u *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n) / sum(dz(1:i)) )  &  ! officially sum + 1/2 but since we're calculating ratios it is prb ok to approximate like this.
                        /  (1 + forcing_terrain_u *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n) / sum(dz(1:i)) )
           
-          zfr_v(:,i,:) = (1 + terrain_v *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n) / sum(dz(1:i)) )  &  ! officially sum + 1/2 but since we're calculating ratios....
+          zfr_v(:,i,:) = (1 + terrain_v *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n) / sum(dz(1:i)) )  &  ! officially sum + 1/2 
                        /  (1 + forcing_terrain_v *  SINH( (H/s)**n - ( sum(dz_scl(1:i)) /s)**n ) / SINH((H/s)**n) /sum(dz(1:i)) )
                               
         enddo 
 
-        call io_write("zfr_u.nc", "zfr_u", zfr_u(:,:,:) ) ! check in plot
+
+                ! write and compare 
+        if ((this_image()==1).and.(options%parameters%debug)) then  ! Print some diagnostics. USeful for development.         
+          call io_write("forcing_terrain.nc", "forcing_terrain", forcing_terrain(:,:) ) ! check in plot
+          call io_write("terrain.nc", "terrain", terrain(:,:) ) ! check in plot        
+          call io_write("delta_dzdx_sc.nc", "delta_dzdx", delta_dzdx(:,:,:) )
+          call io_write("dzdx.nc", "dzdx", dzdx(:,:,:) )
+          call io_write("zfr_u.nc", "zfr_u", zfr_u(:,:,:) ) ! check in plot
+        endif
         
-        print *, "zfr_u min/max: ", minval(zfr_u), " / ", maxval(zfr_u)
+        
 
-        ! =>  But how to scale the winds with this??
-
+        
         end associate
      
     end subroutine
