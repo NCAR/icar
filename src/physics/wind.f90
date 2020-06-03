@@ -219,7 +219,7 @@ contains
             ! simple acceleration over topography
             elseif (options%physics%windtype==kCONSERVE_MASS) then
                 if (options%parameters%use_terrain_difference) then  ! 
-                !! use the ratio between hi-res and lo-res grid deformation (i.e. due to 'addtional' terrain) for speedup
+                !! use the ratio between hi-res and lo-res grid deformation (i.e. due to 'additional' terrain) for speedup
                     call mass_conservative_acceleration(domain%u%data_3d, domain%v%data_3d, domain%zfr_u, domain%zfr_v)
                 else    
                     call mass_conservative_acceleration(domain%u%data_3d, domain%v%data_3d, domain%zr_u, domain%zr_v)

@@ -144,17 +144,17 @@ contains
         lastw = 0
         do z = kms, kme
             
-            if(options%parameters%use_terrain_difference) then
-                            ! compute the U * dz/dx component of vertical motion
-                uw    = u(ims+1:ime,   z, jms+1:jme-1) * domain%delta_dzdx(:,z,jms+1:jme-1)
-                ! compute the V * dz/dy component of vertical motion
-                vw    = v(ims+1:ime-1, z, jms+1:jme  ) * domain%delta_dzdy(ims+1:ime-1,z,:)
-            else    
+            ! ! if(options%parameters%use_terrain_difference) then
+            !                 ! compute the U * dz/dx component of vertical motion
+            !     uw    = u(ims+1:ime,   z, jms+1:jme-1) * domain%delta_dzdx(:,z,jms+1:jme-1)
+            !     ! compute the V * dz/dy component of vertical motion
+            !     vw    = v(ims+1:ime-1, z, jms+1:jme  ) * domain%delta_dzdy(ims+1:ime-1,z,:)
+            ! else    
                 ! compute the U * dz/dx component of vertical motion
                 uw    = u(ims+1:ime,   z, jms+1:jme-1) * domain%dzdx(:,z,jms+1:jme-1)
                 ! compute the V * dz/dy component of vertical motion
                 vw    = v(ims+1:ime-1, z, jms+1:jme  ) * domain%dzdy(ims+1:ime-1,z,:)
-            endif    
+            ! endif    
             ! ! convert the W grid relative motion to m/s
             ! currw = w(ims+1:ime-1, z, jms+1:jme-1) * dz_interface(ims+1:ime-1, z, jms+1:jme-1) / domain%dx
 

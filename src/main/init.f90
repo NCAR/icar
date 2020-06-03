@@ -84,9 +84,9 @@ contains
             call domain%calculate_delta_terrain( options)
 
             if (this_image()==1 .AND. options%physics%windtype==kCONSERVE_MASS) then
-                write(*,*) "using the difference between hi- and lo-res terrain for u/v components of w_real, as well as for horizontal wind acceleration "
-            elseif (this_image()==1) then
-                write(*,*) "using the difference between hi- and lo-res terrain for u/v components of w_real "
+                write(*,*) "using the difference between hi- and lo-res terrain  for horizontal wind acceleration "
+            ! elseif (this_image()==1) then
+            !     write(*,*) "using the difference between hi- and lo-res terrain for u/v components of w_real "
             endif
         endif
         
