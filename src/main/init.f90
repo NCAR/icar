@@ -81,7 +81,8 @@ contains
            
         if(options%parameters%use_terrain_difference)  then
             
-            call domain%calculate_delta_terrain( options)
+            
+            call domain%calculate_delta_terrain(boundary, options)
 
             if (this_image()==1 .AND. options%physics%windtype==kCONSERVE_MASS) then
                 write(*,*) "using the difference between hi- and lo-res terrain  for horizontal wind acceleration "

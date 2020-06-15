@@ -69,9 +69,9 @@ module domain_interface
     type(variable_t) :: longwave
     type(variable_t) :: shortwave
     type(variable_t) :: terrain
-    ! type(variable_t) :: terrain_u  
-    ! type(variable_t) :: terrain_v
-        type(variable_t) :: forcing_terrain  ! BK 05/2020: The forcing terrain interpolated 2d to the hi-res grid. In order to calculate difference in slope
+    type(variable_t) :: forcing_terrain  ! BK 05/2020: The forcing terrain interpolated 2d to the hi-res grid. In order to calculate difference in slope
+        type(variable_t) :: forcing_terrain2 ! test 9-6-2020
+        ! type(variable_t) :: forcing_terrain_u1 ! test 9-6-2020
     type(variable_t) :: u_10m
     type(variable_t) :: v_10m
     type(variable_t) :: temperature_2m
@@ -137,6 +137,9 @@ module domain_interface
     real,                       allocatable :: zfr_v(:,:,:)
     real,                       allocatable :: terrain_u(:,:)
     real,                       allocatable :: terrain_v(:,:)
+    real,                       allocatable :: forcing_terrain_u(:,:)
+    real,                       allocatable :: forcing_terrain_v(:,:)
+    real,                       allocatable :: forc(:,:)
 
     real,                       allocatable :: ustar(:,:)
     real,                       allocatable :: znu(:)
@@ -259,9 +262,10 @@ module domain_interface
         type(time_delta_t), intent(in)    :: dt
     end subroutine
 
-    module subroutine calculate_delta_terrain(this, options)
+    module subroutine calculate_delta_terrain(this, forcing, options)
         implicit none
         class(domain_t), intent(inout) :: this
+        type(boundary_t), intent(in)    :: forcing
         type(options_t), intent(in) :: options
     end subroutine
 
