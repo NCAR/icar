@@ -211,6 +211,7 @@ module options_types
         type(time_delta_t) :: output_dt ! store out_dt as a time delta object
         real :: outputinterval          ! time steps per output
         real :: inputinterval           ! time steps per input
+        real :: frames_per_outfile      ! frames (outputintervals) per out file
         real :: smooth_wind_distance    ! distance over which to smooth the forcing wind field (m)
         logical :: time_varying_z       ! read in a new z coordinate every time step and interpolate accordingly
         real :: cfl_reduction_factor    ! amount to multiple CFL by to improve stability (typically 1)

@@ -10,25 +10,22 @@
 !   Model levels specification (may be optional, but should be specified)
 !---------------------------------------------------------
 &z_info
-    ! use dz_levels as a guide but allow dz to vary in space so that z is constant in space at flat_z_height
+    !   use dz_levels as a guide but allow dz to vary in space so that z is constant in space at flat_z_height
     ! space_varying = .False.
-    ! height at which the z coordinate value should be constant in space (if space_varying=True), if < 0 make the model top flat (computed as sum(dz_levels) + mean(terrain))
+    !   height at which the z coordinate value should be constant in space (if space_varying=True), if < 0 make the model top flat (computed as sum(dz_levels) + mean(terrain))
     ! flat_z_height = -1
 
-    ! compensate for varying dz in advection, effectively speeding up air through smaller dz windows.
+    !   compensate for varying dz in advection, effectively speeding up air through smaller dz windows.
     ! fixed_dz_advection = .False.
 
-    ! Use SLEVE vertical coordinate, where the decay of the terrain influence towards model top is controlled by the 
-    ! sleve_decay_factor (=H/s), and the exponential factor n that controls compression across the z column. 
-    ! For higher n values, the terrain compression happens more in the mid to upper z levels (but always below 
-    ! flat_z_height), whereas for n=1 it is mainly at the lower levels, which may cause numerical issues if these 
-    ! are very thin. 
-    ! References: Leuenberger et al 2009 "A Generalization of the SLEVE Vertical Coordinate"
-    !   Schär et al 2002 "A New Terrain-Following Vertical Coordinate Formulation for Atmospheric Prediction Models"
+    !   Use a hybrid(SLEVE) vertical coordinate, where the decay of the terrain influence towards model top is controlled by the sleve_decay_factor (=H/s), and the exponential factor n that controls compression across the z column. For higher n values, the terrain compression happens more in the mid to upper z levels (but always below flat_z_height), whereas for n=1 it is mainly at the lower levels, which may cause numerical issues if these are very thin. 
             
     sleve = .True.
     sleve_decay_factor = 2
     sleve_n = 1.2  
+
+    !   Option to use the difference between forcing (lo-res) and hi-res terrain for terrain induced wind speedup (wind=2)
+    use_terrain_difference = .True.
 
     !   Sample model level thickness [m]  Bottom levels could be thicker.
     !   NB: if using gfortran put all on one line
@@ -99,7 +96,9 @@
     !   The length of an input forcing time step
     inputinterval = 3600,   ! [s]
     !   The output interval
-    outputinterval = 3600,  ! [s]
+    outputinterval = 10800,  ! [s]
+    !   The number of outputintervals (frames) that are written to one output file. 
+    frames_per_outfile = 24
 
     !   Limit output data to near surface variables
     !   WARNING if true it is impossible to restart the run (for now)

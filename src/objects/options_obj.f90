@@ -770,7 +770,7 @@ contains
         integer :: name_unit
         type(time_delta_t) :: dt
         ! parameters to read
-        real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance
+        real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance, frames_per_outfile
         real    :: cfl_reduction_factor
         integer :: ntimesteps
         integer :: longitude_system
@@ -789,7 +789,7 @@ contains
                                         bias_options_filename, block_options_filename, &
                                         cu_options_filename
 
-        namelist /parameters/ ntimesteps, outputinterval, inputinterval, surface_io_only,                &
+        namelist /parameters/ ntimesteps, outputinterval, frames_per_outfile, inputinterval, surface_io_only,                &
                               dx, dxlow, ideal, readz, readdz, nz, t_offset,                             &
                               debug, warning_level, interactive, restart,                                &
                               external_winds, buffer, n_ext_winds, advect_density, smooth_wind_distance, &
@@ -843,6 +843,7 @@ contains
         cfl_strictness      =  3
         inputinterval       =  3600
         outputinterval      =  3600
+        frames_per_outfile  =  24
         longitude_system    = kMAINTAIN_LON
 
         ! flag set to read specific parameterization options
@@ -925,6 +926,9 @@ contains
         else
             options%output_file_frequency="every step"
         endif
+
+        ! options%paramters%frames_per_outfile : this may cause trouble with the above, but a nicer way
+        options%frames_per_outfile = frames_per_outfile 
 
         options%surface_io_only = surface_io_only
 
