@@ -52,7 +52,7 @@ module icar_constants
         integer :: snowfall
         integer :: graupel
         integer :: exner
-        integer :: nsq
+        integer :: nsquared
         integer :: density
         integer :: z
         integer :: z_interface

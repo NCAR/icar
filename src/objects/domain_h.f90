@@ -57,7 +57,7 @@ module domain_interface
     type(variable_t) :: dz_interface
     type(variable_t) :: z_interface
     type(variable_t) :: dz_mass
-    type(variable_t) :: nsq
+    type(variable_t) :: nsquared
     type(variable_t) :: graupel
     type(variable_t) :: accumulated_precipitation
     integer,allocatable :: precipitation_bucket(:,:)

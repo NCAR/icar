@@ -16,6 +16,7 @@ submodule(options_interface) options_implementation
     use radiation,                  only : ra_var_request
     use microphysics,               only : mp_var_request
     use advection,                  only : adv_var_request
+    use wind,                       only : wind_var_request
 
     implicit none
 
@@ -93,6 +94,7 @@ contains
         call cu_var_request(options)
         call mp_var_request(options)
         call adv_var_request(options)
+        call wind_var_request(options)
 
     end subroutine
 
