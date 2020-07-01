@@ -568,7 +568,7 @@ contains
                                         hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qgvar,qsvar,hgtvar,shvar,lhvar,pblhvar,   &
                                         psvar, pslvar, &
-                                        soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
+                                        soiltype_var, soil_t_var,soil_vwc_var,swe_var, soil_deept_var,           &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
                                         swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var
 
@@ -576,7 +576,7 @@ contains
                             landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar, &
                             psvar, pslvar, &
                             hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
-                            soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
+                            soiltype_var, soil_t_var,soil_vwc_var,swe_var,soil_deept_var,           &
                             vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
                             swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var
 
@@ -621,6 +621,7 @@ contains
         soiltype_var=""
         soil_t_var=""
         soil_vwc_var=""
+        swe_var=""
         soil_deept_var=""
         vegtype_var=""
         vegfrac_var=""
@@ -745,6 +746,7 @@ contains
         options%soiltype_var    = soiltype_var
         options%soil_t_var      = soil_t_var
         options%soil_vwc_var    = soil_vwc_var
+        options%swe_var         = swe_var
         options%soil_deept_var  = soil_deept_var
         options%vegtype_var     = vegtype_var
         options%vegfrac_var     = vegfrac_var

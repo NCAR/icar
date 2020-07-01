@@ -156,7 +156,7 @@ module options_types
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar,hgtvar, &
                                         pslvar, psvar, &
                                         shvar,lhvar,pblhvar,zvar,zbvar,&
-                                        soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
+                                        soiltype_var, soil_t_var,soil_vwc_var,swe_var,soil_deept_var, &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
                                         swdown_var, lwdown_var, &
                                         sst_var, rain_var, time_var, sinalpha_var, cosalpha_var

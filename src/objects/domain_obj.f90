@@ -963,6 +963,22 @@ contains
             endif
         endif
 
+
+        if (options%parameters%swe_var /= "") then
+            call io_read(options%parameters%init_conditions_file,   &
+                           options%parameters%swe_var,         &
+                           temporary_data)
+            if (associated(this%snow_water_equivalent%data_2d)) then
+                this%snow_water_equivalent%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+            endif
+
+        else
+            if (associated(this%snow_water_equivalent%data_2d)) then
+                this%snow_water_equivalent%data_2d = 0
+            endif
+        endif
+
+
         if (options%parameters%soil_vwc_var /= "") then
             call io_read(options%parameters%init_conditions_file,   &
                            options%parameters%soil_vwc_var,         &
