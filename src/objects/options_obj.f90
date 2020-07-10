@@ -770,7 +770,7 @@ contains
         integer :: name_unit
         type(time_delta_t) :: dt
         ! parameters to read
-        real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance
+        real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance, agl_cap
         real    :: cfl_reduction_factor
         integer :: ntimesteps
         integer :: longitude_system
@@ -795,9 +795,9 @@ contains
                               external_winds, buffer, n_ext_winds, advect_density, smooth_wind_distance, &
                               mean_winds, mean_fields, z_is_geopotential, z_is_on_interface,             &
                               date, calendar, high_res_soil_state, t_is_potential,                       &
-                              qv_is_relative_humidity, qv_is_spec_humidity,  &
-                              use_agl_height, start_date, forcing_start_date, end_date, time_varying_z,  &
-                              longitude_system,                             &
+                              qv_is_relative_humidity, qv_is_spec_humidity,                              &
+                              use_agl_height, agl_cap, start_date, forcing_start_date, end_date,         &
+                              time_varying_z,  longitude_system,            &
                               cfl_reduction_factor,     cfl_strictness,     &
                               mp_options_filename,      use_mp_options,     &
                               block_options_filename,   use_block_options,  &
@@ -834,6 +834,7 @@ contains
         calendar            = "gregorian"
         high_res_soil_state = .False.
         use_agl_height      = .False.
+        agl_cap             = 300
         date                = ""
         start_date          = ""
         forcing_start_date  = ""
@@ -959,6 +960,7 @@ contains
         options%interactive      = interactive
         options%warning_level    = warning_level
         options%use_agl_height   = use_agl_height
+        options%agl_cap          = agl_cap
 
         options%qv_is_relative_humidity = qv_is_relative_humidity
         options%qv_is_spec_humidity= qv_is_spec_humidity
