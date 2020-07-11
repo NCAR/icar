@@ -1619,9 +1619,9 @@ contains
         real, allocatable, dimension(:) :: dz_levels
         real, dimension(45) :: fulldz
         logical :: space_varying, fixed_dz_advection, dz_modifies_wind, sleve, use_terrain_difference
-        real :: flat_z_height, sleve_decay_factor, sleve_n
+        real :: flat_z_height, terrain_smooth_windowsize, terrain_smooth_cycles, decay_rate_L_topo, decay_rate_S_topo, sleve_n
 
-        namelist /z_info/ dz_levels, space_varying, dz_modifies_wind, flat_z_height, fixed_dz_advection, sleve, sleve_decay_factor, sleve_n, use_terrain_difference
+        namelist /z_info/ dz_levels, space_varying, dz_modifies_wind, flat_z_height, fixed_dz_advection, sleve, terrain_smooth_windowsize, terrain_smooth_cycles, decay_rate_L_topo, decay_rate_S_topo, sleve_n, use_terrain_difference
 
         this_level=1
         space_varying = .False.
@@ -1629,8 +1629,11 @@ contains
         dz_modifies_wind = .False.
         flat_z_height = -1
         sleve = .False.
-        sleve_decay_factor = 2.
-        sleve_n = 1.  
+        terrain_smooth_windowsize = 3
+        terrain_smooth_cycles = 5
+        decay_rate_L_topo = 2.
+        decay_rate_S_topo = 6.
+        sleve_n = 1.2  
         use_terrain_difference = .False.
 
         ! read the z_info namelist if requested
@@ -1684,7 +1687,10 @@ contains
         options%flat_z_height = flat_z_height
         options%fixed_dz_advection = fixed_dz_advection
         options%sleve = sleve
-        options%sleve_decay_factor = sleve_decay_factor
+        options%terrain_smooth_windowsize = terrain_smooth_windowsize
+        options%terrain_smooth_cycles = terrain_smooth_cycles
+        options%decay_rate_L_topo = decay_rate_L_topo  ! decay_rate_large_scale_topography
+        options%decay_rate_S_topo = decay_rate_S_topo ! decay_rate_small_scale_topography !
         options%sleve_n = sleve_n
         options%use_terrain_difference = use_terrain_difference 
 

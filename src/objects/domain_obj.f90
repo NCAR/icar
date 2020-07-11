@@ -15,7 +15,7 @@ submodule(domain_interface) domain_implementation
     use co_util,              only : broadcast
     use io_routines,          only : io_read, io_write
     use geo,                  only : geo_lut, geo_interp, geo_interp2d, standardize_coordinates
-    use array_utilities,      only : array_offset_x, array_offset_y, smooth_array
+    use array_utilities,      only : array_offset_x, array_offset_y, smooth_array, smooth_array_2d
     use vertical_interpolation,only : vinterp, vLUT
 
     implicit none
@@ -756,7 +756,7 @@ contains
 
         real, allocatable :: temp(:,:,:) !, terrain_u(:,:), terrain_v(:,:)
         integer :: i
-        real :: smooth_height, H, s, n
+        real :: smooth_height, H, s, n, s1, s2
         logical :: SLEVE  
         ! character :: filename, file_idS, file_idn
 
@@ -764,6 +764,8 @@ contains
         call read_core_variables(this, options)
 
         call allocate_z_arrays(this)
+
+        call smooth_terrain(this, options)  ! here h1 and h2 are calculated
 
         associate(ims => this%ims,      ime => this%ime,                        &
                   jms => this%jms,      jme => this%jme,                        &
@@ -779,6 +781,12 @@ contains
                   terrain               => this%terrain%data_2d,                &
                   terrain_u             => this%terrain_u,              &
                   terrain_v             => this%terrain_v,              &
+                  h1                    => this%h1,                &  
+                  h2                    => this%h2,                & 
+                  h1_u                  => this%h1_u,                &  
+                  h2_u                  => this%h2_u,                & 
+                  h1_v                  => this%h1_v,                &  
+                  h2_v                  => this%h2_v,                &  
                   global_z_interface    => this%global_z_interface,             &
                   global_dz_interface   => this%global_dz_interface,            &
                   global_terrain        => this%global_terrain,                 &
@@ -802,14 +810,17 @@ contains
             ! and n controls the compression throughout the column (this last factor was added by Leuenberger et al 2009)
             ! References: Leuenberger et al 2009 "A Generalization of the SLEVE Vertical Coordinate"
             !             Schär et al 2002 "A New Terrain-Following Vertical Coordinate Formulation for Atmospheric Prediction Models"
-            
+                       
+
             max_level = find_flat_model_level(options, nz, dz)  
             
             smooth_height = sum(global_terrain) / size(global_terrain) + sum(dz(1:max_level))
 
             ! Terminology from Schär et al 2002, Leuenberger 2009: (can be simpliied later on, but for clarity)
             H  =  smooth_height  !sum(dz(1:max_level))  !
-            s  =  H / options%parameters%sleve_decay_factor  
+            ! s  =  H / options%parameters%sleve_decay_factor  ! Need to split this up into a sleve_decay_factor_coarse (s1) and sleve_decay_factor_small (s2)
+            s1 = H / options%parameters%decay_rate_L_topo 
+            s2 = H / options%parameters%decay_rate_S_topo 
             n  =  options%parameters%sleve_n  ! this will have an effect on the z_level ratio throughout the vertical column, and thus on the terrain induced acceleration with wind=2 . Conceptually very nice, but for wind is 2 not ideal. Unless we let that acceleration depend on the difference between hi-res and lo-res terrain. 
             ! h = terrain(:,:) 
 
@@ -821,7 +832,12 @@ contains
             ! dz_scl   =   dz(:)  *  smooth_height / sum(dz(1:max_level))
             ! H        =  sum(dz_scl(1:max_level))  ! should also lead to smooth_height, but more error proof?
 
-            if (this_image()==1) print*, "  Using a hybrid terrain following coordinate with a terrain decay_factor (H/s) of ", options%parameters%sleve_decay_factor
+            ! if (this_image()==1) print*, "  Using a hybrid terrain following coordinate with a terrain decay_factor (H/s) of ", options%parameters%sleve_decay_factor
+            if (this_image()==1) print*, "  Using a SLEVE coordinate with a Decay Rate for Large-Scale Topography: (H/s) of ", s1
+            if (this_image()==1) print*, "  Using a SLEVE coordinate with a Decay Rate for Small-Scale Topography: (H/s) of ", s2
+   !          Decay Rate for Large-Scale Topography: svc1 = 10000.0000
+            ! Decay Rate for Small-Scale Topography: svc2 =  3300.0000
+
             ! if ((this_image()==1).and.(options%parameters%debug)) then  ! Print some diagnostics. USeful for development. 
             if ((this_image()==1)) then
               ! print*, "using a sleve_decay_factor (H/s) of ", options%parameters%sleve_decay_factor
@@ -833,7 +849,19 @@ contains
               write(*,*) "  sum(dz_scl) ", sum(dz_scl(1:max_level))
               write(*,*) "  model top ", sum(dz_scl(1:nz))
               print*, ""
+
+              ! print*, "terrain shape ", shape(terrain)
+              ! print*, "h1 shape ", shape(h1)
+              ! print*, "h2 shape ", shape(h2)
+              ! print*, "h1-U shape ", shape(h1_u)
+              ! print*, "h1 max ", MAXVAL(h1)
+              ! print*, "h1 min ", MINVAL(h1)
+              ! print*, "terrain max ", MAXVAL(terrain)
+              ! print*, "terrain min ", MINVAL(terrain)
             endif
+
+
+
 
 
             i=kms 
@@ -842,8 +870,10 @@ contains
             z_interface(:,i,:)   = terrain
 
             z_interface(:,i+1,:)  = dz_scl(i)   &
-                                     + terrain  *  SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  ! same for higher k
-                        
+                                    + h1  *  SINH( (H/s1)**n - (dz_scl(i)/s1)**n ) / SINH((H/s1)**n)  &! large-scale terrain
+                                    + h2  *  SINH( (H/s2)**n - (dz_scl(i)/s2)**n ) / SINH((H/s2)**n)   ! small terrain features
+                                     ! + terrain  *  SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  
+
             dz_interface(:,i,:)  =  z_interface(:,i+1,:) - z_interface(:,i,:)  ! same for higher k
             
             z_level_ratio(:,i,:) = dz_interface(:,i,:)  / dz_scl(i)  ! same for higher k
@@ -861,14 +891,19 @@ contains
             !     z_u(:,1,:) is the terrain on the u grid, and it needs to be offset in the z-dir 
             !     to reach mass levels (so by dz[i]/2)
 
-            terrain_u =  z_u(:,i,:)  ! save for later on. 
-            terrain_v =  z_v(:,i,:)  ! save for later on 
+            terrain_u =  z_u(:,kms,:)  ! save for later on. 
+            terrain_v =  z_v(:,kms,:)  ! save for later on 
+
  
             ! Offset analogous to: z_u(:,i,:) = z_u(:,i,:) + dz(i) / 2 * zr_u(:,i,:)
             z_u(:,i,:)  = dz_scl(i)/2  &
-                          + terrain_u  *  SINH( (H/s)**n - ( dz_scl(i)/2 /s)**n ) / SINH((H/s)**n)                                        
+                          ! + terrain_u  *  SINH( (H/s)**n - ( dz_scl(i)/2 /s)**n ) / SINH((H/s)**n)
+                          + h1_u  *  SINH( (H/s1)**n - (dz_scl(i)/2/s1)**n ) / SINH((H/s1)**n)  &! large-scale terrain
+                          + h2_u  *  SINH( (H/s2)**n - (dz_scl(i)/2/s2)**n ) / SINH((H/s2)**n)   ! small terrain features                                        
             z_v(:,i,:)  = dz_scl(i)/2   & 
-                          + terrain_v  *  SINH( (H/s)**n - ( dz_scl(i)/2 /s)**n ) / SINH((H/s)**n)                                        
+                          ! + terrain_v  *  SINH( (H/s)**n - ( dz_scl(i)/2 /s)**n ) / SINH((H/s)**n)                                        
+                          + h1_v  *  SINH( (H/s1)**n - (dz_scl(i)/2/s1)**n ) / SINH((H/s1)**n)  &! large-scale terrain
+                          + h2_v  *  SINH( (H/s2)**n - (dz_scl(i)/2/s2)**n ) / SINH((H/s2)**n)   ! small terrain features                                        
 
 
             zr_u(:,i,:)  =  (z_u(:,i,:) - terrain_u) / ( dz_scl(i)/2 )
@@ -886,8 +921,9 @@ contains
                     else  
 
                       z_interface(:,i+1,:)  =  sum(dz_scl(1:i))    &
-                                     + terrain * SINH( (H/s)**n - (sum(dz_scl(1:i))/s)**n ) / SINH((H/s)**n)     
-                    
+                                     ! + terrain * SINH( (H/s)**n - (sum(dz_scl(1:i))/s)**n ) / SINH((H/s)**n)     
+                                    + h1  *  SINH( (H/s1)**n - (sum(dz_scl(1:i))/s1)**n ) / SINH((H/s1)**n)  &! large-scale terrain
+                                    + h2  *  SINH( (H/s2)**n - (sum(dz_scl(1:i))/s2)**n ) / SINH((H/s2)**n)   ! small terrain features
                       dz_interface(:,i,:)  = z_interface(:,i+1,:) - z_interface(:,i,:)  
 
                     endif
@@ -897,6 +933,7 @@ contains
                     if ( ANY(z_level_ratio(:,i,:)<0) ) then   ! Eror catching. Probably good to engage.
                       if (this_image()==1) then
                         write(*,*) "Error: z_level_ratio below zero (for level  ",i,")"
+                        print*, "min max dz_interface: ",MINVAL(dz_interface(:,i,:)),MAXVAL(dz_interface(:,i,:))
                         error stop
                         print*, dz_interface(:,i,:)
                         print*,""
@@ -907,9 +944,13 @@ contains
                     
                     ! - - - - -   u/v grid calculations - - - - -
                     z_u(:,i,:)   = (sum(dz_scl(1:(i-1))) + dz_scl(i)/2)   &
-                                   + terrain_u  *  SINH( (H/s)**n - ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s)**n ) / SINH((H/s)**n)  
+                                   ! + terrain_u  *  SINH( (H/s)**n - ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s)**n ) / SINH((H/s)**n) 
+                                   + h1_u  *  SINH( (H/s1)**n -  ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s1)**n ) / SINH((H/s1)**n)  &! large-scale terrain
+                                   + h2_u  *  SINH( (H/s2)**n -  ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s2)**n ) / SINH((H/s2)**n)   ! small terrain features     
                     z_v(:,i,:)   = (sum(dz_scl(1:(i-1))) + dz_scl(i)/2)   &
-                                  + terrain_v  *  SINH( (H/s)**n - ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s)**n ) / SINH((H/s)**n)  
+                                  ! + terrain_v  *  SINH( (H/s)**n - ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s)**n ) / SINH((H/s)**n)  
+                                   + h1_v  *  SINH( (H/s1)**n -  ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s1)**n ) / SINH((H/s1)**n)  &! large-scale terrain
+                                   + h2_v  *  SINH( (H/s2)**n -  ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s2)**n ) / SINH((H/s2)**n)   ! small terrain features     
 
                     zr_u(:,i,:)  = (z_u(:,i,:) - z_u(:,i-1,:)) / (dz_scl(i)/2 + dz_scl(i-1)/2 )  ! if dz_scl(i-1) = 0 (and no error)  k=1 can be included
                     zr_v(:,i,:)  = (z_v(:,i,:) - z_v(:,i-1,:)) / (dz_scl(i)/2 + dz_scl(i-1)/2 )
@@ -1305,8 +1346,14 @@ contains
         write(a_string,*) options%parameters%sleve
         call this%info%add_attribute("sleve",a_string)
         if (options%parameters%sleve) then
-          write(a_string,*) options%parameters%sleve_decay_factor
-          call this%info%add_attribute("sleve_decay_factor",a_string )
+          write(a_string,*) options%parameters%terrain_smooth_windowsize
+          call this%info%add_attribute("terrain_smooth_windowsize",a_string )
+          write(a_string,*) options%parameters%terrain_smooth_cycles
+          call this%info%add_attribute("terrain_smooth_cycles",a_string )
+          write(a_string,*) options%parameters%decay_rate_L_topo
+          call this%info%add_attribute("decay_rate_L_topo",a_string )
+          write(a_string,*) options%parameters%decay_rate_s_topo
+          call this%info%add_attribute("decay_rate_S_topo",a_string )
           write(a_string,*) options%parameters%sleve_n
           call this%info%add_attribute("sleve_n",a_string )
         endif  
@@ -1834,7 +1881,7 @@ contains
         type(options_t), intent(in)     :: options
         
 
-        real, allocatable ::  delta_terrain(:,:), delta_dzdx_sc(:,:,:), delta_dzdy_sc(:,:,:) !forcing_terrain_u(:,:), forcing_terrain_v(:,:),
+        real, allocatable ::  delta_terrain(:,:)!, delta_dzdx_sc(:,:,:), delta_dzdy_sc(:,:,:) !forcing_terrain_u(:,:), forcing_terrain_v(:,:),
         real, allocatable :: zf_interface(:,:,:), dzf_interface(:,:,:), zf(:,:,:), dzf_mass(:,:,:), dzfdx(:,:,:), dzfdy(:,:,:)!, delta_dzdx(:,:,:)
         real, allocatable :: temp_offset(:,:), temp(:,:,:)
 
@@ -1902,13 +1949,13 @@ contains
         allocate(delta_terrain(this% ims : this% ime, &
                                 this% jms : this% jme) )
         
-        allocate(delta_dzdx_sc(this% ims+1 : this% ime, &
-                                this% kms : this% kme, &
-                                this% jms : this% jme) )
+        ! allocate(delta_dzdx_sc(this% ims+1 : this% ime, &
+        !                         this% kms : this% kme, &
+        !                         this% jms : this% jme) )
 
-        allocate(delta_dzdy_sc(this% ims : this% ime, &
-                                this% kms : this% kme, &
-                                this% jms+1 : this% jme) )
+        ! allocate(delta_dzdy_sc(this% ims : this% ime, &
+        !                         this% kms : this% kme, &
+        !                         this% jms+1 : this% jme) )
 
 
 
@@ -2100,6 +2147,106 @@ contains
         if ((this_image()==1).and.(options%parameters%debug))  call io_write("forcing_terrain_u.nc", "forcing_terrain_u", this%forcing_terrain_u(:,:) ) ! check in plot
         
     end subroutine
+
+
+    !> -------------------------------
+    !!  Smooth the hi-res terrain for SLEVE coordinate calculation
+    !!  h(x,y) = h_1(x,y) + h_2(x,y) ; 
+    !!  where the subscripts 1 and 2 refer to large-scale and small-scale contributions, respectively. 
+    !!  In practice, the large-scale contribution h1 can be obtained from the full topography by an appropriate smoothing operation.
+    !!
+    !> -------------------------------
+    
+    subroutine smooth_terrain(this, options)
+        implicit none
+        class(domain_t), intent(inout)  :: this
+        type(options_t), intent(in)     :: options
+
+        ! real, allocatable :: smoothing_factor  ! the smoothing factor? windowsize?
+        ! real, allocatable :: h1(:,:), h2(:,:) 
+        integer :: i !, nflt, windowsize, 
+
+
+        allocate(this%h1(this% ims : this% ime, &
+                    this% jms : this% jme) )   
+
+        allocate(this%h2(this% ims : this% ime, &
+                    this% jms : this% jme) )   
+
+        allocate(this%h1_u( this%u_grid2d_ext% ims : this%u_grid2d_ext% ime,   &  
+                            this%u_grid2d_ext% jms : this%u_grid2d_ext% jme) )
+
+        allocate(this%h1_v( this%v_grid2d_ext% ims : this%v_grid2d_ext% ime,   &
+                            this%v_grid2d_ext% jms : this%v_grid2d_ext% jme) )
+
+        allocate(this%h2_u( this%u_grid2d_ext% ims : this%u_grid2d_ext% ime,   &  
+                            this%u_grid2d_ext% jms : this%u_grid2d_ext% jme) )
+
+        allocate(this%h2_v( this%v_grid2d_ext% ims : this%v_grid2d_ext% ime,   &
+                            this%v_grid2d_ext% jms : this%v_grid2d_ext% jme) )
+
+
+        associate(ims => this%ims,      ime => this%ime,                        &
+                  jms => this%jms,      jme => this%jme,                        &
+                  kms => this%kms,      kme => this%kme,                        &
+                  z_u                   => this%geo_u%z,                        &
+                  z_v                   => this%geo_v%z,                        &
+                  h1                    => this%h1,                &  
+                  h2                    => this%h2,                & 
+                  h1_u                  => this%h1_u,                &  
+                  h2_u                  => this%h2_u,                & 
+                  h1_v                  => this%h1_v,                &  
+                  h2_v                  => this%h2_v,                &  
+                  ! terrain_u             => this%terrain_u,              &
+                  ! terrain_v             => this%terrain_v,              &
+                  terrain               => this%terrain%data_2d)
+
+
+        h1 = terrain  ! global or not?
+        h1_u = z_u(:,kms,:)  ! terrain_u is not defined yet
+        h1_v = z_v(:,kms,:)
+        
+        ! nflt = options%parameters%terrain_smooth_cycles !5 ! number of smoothing iterations
+        ! windowsize = options%parameters%terrain_smooth_windowsize  ! number of grid cells to smooth over?
+        ! windowsize = options%parameters%smoothing_factor  ! not added to options yet.
+        
+
+        ! if ((this_image()==1).and.(options%parameters%debug)) then  ! Print some diagnostics. USeful for development. 
+        if ((this_image()==1)) then
+          print*, "  smoothing large-scale terrain (h1) with a windowsize of ", options%parameters%terrain_smooth_windowsize, " for ", options%parameters%terrain_smooth_cycles, " smoothing cylces."
+        endif
+
+        do i =1,options%parameters%terrain_smooth_cycles
+          call smooth_array_2d( h1, windowsize = options%parameters%terrain_smooth_windowsize)
+          call smooth_array_2d( h1_u, windowsize = options%parameters%terrain_smooth_windowsize)
+          call smooth_array_2d( h1_v, windowsize = options%parameters%terrain_smooth_windowsize)
+        enddo
+
+
+        h2 = terrain - h1  
+        h2_u = z_u(:,kms,:) - h1_u  
+        h2_v = z_v(:,kms,:) - h1_v  
+
+        ! if ((this_image()==1).and.(options%parameters%debug)) 
+        if (this_image()==1)  call io_write("terrain_smooth_h1.nc", "h1", h1(:,:) ) 
+        if (this_image()==1)  call io_write("terrain_smooth_h2.nc", "h2", h2(:,:) ) 
+        if (this_image()==1)  call io_write("h1_u.nc", "h1_u", h1_u(:,:) ) 
+        if (this_image()==1)  call io_write("h2_u.nc", "h2_u", h2_u(:,:) ) 
+        
+
+        if (this_image()==1) then
+           print*, "  Full terrain max topography", MAXVAL(terrain)
+        !   print*, "terrain min ", MINVAL(terrain)
+           print*, "  Max of large-scale topography (h1)  ", MAXVAL(h1)
+           print*, "  Max of small-scale topography (h2)  ", MAXVAL(h2)
+        !   print*, "h1 min ", MINVAL(h1)
+        end if
+
+        end associate
+
+    end subroutine
+
+
 
 
 

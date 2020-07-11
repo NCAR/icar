@@ -18,11 +18,14 @@
     !   compensate for varying dz in advection, effectively speeding up air through smaller dz windows.
     ! fixed_dz_advection = .False.
 
-    !   Use a hybrid(SLEVE) vertical coordinate, where the decay of the terrain influence towards model top is controlled by the sleve_decay_factor (=H/s), and the exponential factor n that controls compression across the z column. For higher n values, the terrain compression happens more in the mid to upper z levels (but always below flat_z_height), whereas for n=1 it is mainly at the lower levels, which may cause numerical issues if these are very thin. 
-            
+   ! Use a SLEVE vertical coordinate, where the decay of the large- and small-scale terrain influence towards model top is controlled by the decay_rate_L_topo and decay_rate_S_topo respectively (=H/s1 and H/s2), and the exponential factor n that controls compression across the z column. For higher n values, the terrain compression happens more in the mid to upper z levels (but always below flat_z_height), whereas for n=1 it is mainly at the lower levels, which may cause numerical issues if these are very thin. By setting s1=s2 a standard hybrid coordinate is achieved. 
+    
     sleve = .True.
-    sleve_decay_factor = 2
-    sleve_n = 1.2  
+    terrain_smooth_windowsize = 4
+    terrain_smooth_cycles = 5
+    decay_rate_L_topo = 2
+    decay_rate_S_topo = 6
+    sleve_n = 1.35
 
     !   Option to use the difference between forcing (lo-res) and hi-res terrain for terrain induced wind speedup (wind=2)
     use_terrain_difference = .True.
