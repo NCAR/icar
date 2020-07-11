@@ -62,6 +62,14 @@ program icar
 
     if (this_image()==1) write(*,*) "Setting up output files"
     ! should be combined into a single setup_output call
+    
+    if (this_image()==1 .and. options%parameters%frames_per_outfile<2) then
+        print*,"  frames per output file should be 2 or more. Currently: ", options%parameters%frames_per_outfile
+    else
+        if (this_image()==1) print*,"  frames per output file= ", options%parameters%frames_per_outfile
+    end if    
+    
+
     call dataset%set_domain(domain)
     call dataset%add_variables(options%vars_for_restart, domain)
 
@@ -154,7 +162,8 @@ program icar
         call output_timer%start()
         if ((domain%model_time + small_time_delta) >= next_output) then
             if (this_image()==1) write(*,*) "Writing output file"
-            if (i>24) then
+            ! if (i>24) then
+            if (i>options%parameters%frames_per_outfile) then
                 write(file_name, '(A,I6.6,"_",A,".nc")')    &
                     trim(options%parameters%output_file),   &
                     this_image(),                           &

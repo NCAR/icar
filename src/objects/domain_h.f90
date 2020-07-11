@@ -69,10 +69,9 @@ module domain_interface
     type(variable_t) :: longwave
     type(variable_t) :: shortwave
     type(variable_t) :: terrain
-    type(variable_t) :: forcing_terrain  ! BK 05/2020: The forcing terrain interpolated 2d to the hi-res grid. In order to calculate:
-    type(variable_t) :: forcing_terrain_u  
-    type(variable_t) :: forcing_terrain_v
-    type(variable_t) :: delta_terrain    ! Bk 05/2020: The difference in terrain between forcing and hi-res. For accurate terrain-induced speedup
+    type(variable_t) :: forcing_terrain  ! BK 05/2020: The forcing terrain interpolated 2d to the hi-res grid. In order to calculate difference in slope
+        type(variable_t) :: forcing_terrain2 ! test 9-6-2020
+        ! type(variable_t) :: forcing_terrain_u1 ! test 9-6-2020
     type(variable_t) :: u_10m
     type(variable_t) :: v_10m
     type(variable_t) :: temperature_2m
@@ -116,6 +115,8 @@ module domain_interface
     type(interpolable_type) :: geo_u
     type(interpolable_type) :: geo_v
 
+    real :: H ! model top or smooth_height
+    integer :: max_level  ! number of vertical levels below flat_z_height
     real :: dx
     integer :: nsmooth
 
@@ -129,9 +130,28 @@ module domain_interface
     real,                       allocatable :: zr_v(:,:,:)
     real,                       allocatable :: dzdx(:,:,:) ! change in height with change in x/y position (used to calculate w_real vertical motions)
     real,                       allocatable :: dzdy(:,:,:) ! change in height with change in x/y position (used to calculate w_real vertical motions)
+    ! BK 2020/05
+    real,                       allocatable :: delta_dzdx(:,:,:) ! change in height difference (between hi and lo-res data) with change in x/y position (used to calculate w_real vertical motions)
+    real,                       allocatable :: delta_dzdy(:,:,:) ! change in height difference (between hi and lo-res data) with change in x/y position (used to calculate w_real vertical motions)
+    real,                       allocatable :: zfr_u(:,:,:)     ! ratio between z levels (on grid)
+    real,                       allocatable :: zfr_v(:,:,:)
+    real,                       allocatable :: terrain_u(:,:)
+    real,                       allocatable :: terrain_v(:,:)
+    real,                       allocatable :: forcing_terrain_u(:,:)
+    real,                       allocatable :: forcing_terrain_v(:,:)
+    real,                       allocatable :: forc(:,:)
+    real,                       allocatable :: h1(:,:)     ! the large-scale terrain (h1) for the SLEVE coordinate (achieved by smoothin the org terrain)
+    real,                       allocatable :: h2(:,:)     ! the small-scale terrain (h2) for the SLEVE coordinate (difference org and h1 terrain)
+    real,                       allocatable :: h1_u(:,:)     ! the large-scale terrain (h1) on the u grid
+    real,                       allocatable :: h1_v(:,:)     ! the large-scale terrain (h1) on the v grid
+    real,                       allocatable :: h2_u(:,:)     ! the small-scale terrain (h2) on the u grid
+    real,                       allocatable :: h2_v(:,:)     ! the small-scale terrain (h2) on the v grid
+
     real,                       allocatable :: ustar(:,:)
     real,                       allocatable :: znu(:)
     real,                       allocatable :: znw(:)
+
+    real,                       allocatable :: dz_scl(:)  ! the scaled dz levels, required for delta terrain calculation
 
     ! these data are stored on the domain wide grid even if this process is only looking at a subgrid
     ! these variables are necessary with linear winds, especially with spatially variable dz, to compute the LUT
@@ -176,6 +196,8 @@ module domain_interface
     procedure :: interpolate_forcing
     procedure :: update_delta_fields
     procedure :: apply_forcing
+
+    procedure :: calculate_delta_terrain
 
   end type
 
@@ -246,6 +268,12 @@ module domain_interface
         type(time_delta_t), intent(in)    :: dt
     end subroutine
 
+    module subroutine calculate_delta_terrain(this, forcing, options)
+        implicit none
+        class(domain_t), intent(inout) :: this
+        type(boundary_t), intent(in)    :: forcing
+        type(options_t), intent(in) :: options
+    end subroutine
 
   end interface
 
