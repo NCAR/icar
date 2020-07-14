@@ -704,11 +704,11 @@ CONTAINS
         if(fallsum_qsi.gt.0.) then
           tstepsnow(i)   = fallsum_qsi*delz(i,kts)/denr*dtcld*1000.            &
                            +tstepsnow(i)
-        IF ( PRESENT (snowncv) .AND. PRESENT (snow)) THEN
+        ! IF ( PRESENT (snowncv) .AND. PRESENT (snow)) THEN
         !   snowncv(i,lat) = fallsum_qsi*delz(i,kts)/denr*dtcld*1000.            & 
         !                    +snowncv(i,lat)
           snow(i,lat) = fallsum_qsi*delz(i,kts)/denr*dtcld*1000. + snow(i,lat)
-        ENDIF
+        ! ENDIF
         endif
         if(fallsum_qg.gt.0.) then
           tstepgraup(i)  = fallsum_qg*delz(i,kts)/denr*dtcld*1000.            &
