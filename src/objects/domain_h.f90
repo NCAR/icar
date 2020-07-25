@@ -20,7 +20,7 @@ module domain_interface
     type(meta_data_t)    :: info
     type(grid_t)         :: grid,   u_grid,   v_grid
     type(grid_t)         :: grid2d, u_grid2d, v_grid2d
-    type(grid_t)         :: u_grid2d_ext, v_grid2d_ext ! extended grids for u and v fields pre smoothing
+    type(grid_t)         :: u_grid2d_ext, v_grid2d_ext!, grid2d_ext ! extended grids for u and v fields pre smoothing (grid_2d_ext is for SLEVE topography smoothing)
     type(grid_t)         :: grid_monthly, grid_soil
 
     type(Time_type) :: model_time

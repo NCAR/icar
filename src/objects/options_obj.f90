@@ -514,6 +514,7 @@ contains
 
         wind= 1 ! 0 = no LT,
                 ! 1 = linear theory wind perturbations
+                ! 2 = terrain induced horizontal accelleration
 
 !       read the namelist
         open(io_newunit(name_unit), file=filename)
