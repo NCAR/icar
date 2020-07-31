@@ -133,6 +133,36 @@ contains
 
     end subroutine
 
+    subroutine mp_wsm6_var_request(options)
+        implicit none
+        type(options_t), intent(inout) :: options
+
+        ! List the variables that are required to be allocated for the simple microphysics
+        call options%alloc_vars( &
+                     [kVARS%pressure,    kVARS%potential_temperature,   kVARS%exner,        kVARS%density,      &
+                      kVARS%water_vapor, kVARS%cloud_water,             kVARS%rain_in_air,  &
+                      kVARS%snow_in_air, kVARS%cloud_ice,               kVARS%w,            &
+                      kVARS%snowfall,    kVARS%precipitation,           kVARS%graupel,      kVARS%graupel_in_air,     &
+                      kVARS%dz ])
+
+        ! List the variables that are required to be advected for the simple microphysics
+        call options%advect_vars( &
+                      [kVARS%potential_temperature, kVARS%water_vapor, kVARS%cloud_water,  &
+                       kVARS%snow_in_air,           kVARS%cloud_ice,   &
+                       kVARS%rain_in_air,           kVARS%graupel_in_air   ] )
+
+        ! List the variables that are required to be allocated for the simple microphysics
+        call options%restart_vars( &
+                       [kVARS%pressure,     kVARS%potential_temperature,    kVARS%water_vapor,   &
+                        kVARS%cloud_water,  kVARS%rain_in_air,              kVARS%snow_in_air,   &
+                        kVARS%precipitation,kVARS%snowfall,                 kVARS%dz,            &
+                        kVARS%snow_in_air,  kVARS%cloud_ice,                &
+                        kVARS%rain_in_air,  kVARS%graupel_in_air ] )
+
+
+    end subroutine
+
+
     subroutine mp_var_request(options)
         implicit none
         type(options_t), intent(inout) :: options
@@ -149,7 +179,7 @@ contains
         elseif (options%physics%microphysics==kMP_MORRISON) then
             stop "Morrison physics not re-implemented yet"
         elseif (options%physics%microphysics==kMP_WSM6) then
-            call mp_thompson_aer_var_request(options)
+            call mp_wsm6_var_request(options)
         endif
 
     end subroutine mp_var_request
