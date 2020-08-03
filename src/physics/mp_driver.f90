@@ -126,9 +126,10 @@ contains
         call options%restart_vars( &
                        [kVARS%pressure,     kVARS%potential_temperature,    kVARS%water_vapor,   &
                         kVARS%cloud_water,  kVARS%rain_in_air,              kVARS%snow_in_air,   &
-                        kVARS%precipitation,kVARS%snowfall,                 kVARS%dz,            &
-                        kVARS%snow_in_air,  kVARS%cloud_ice,                kVARS%rain_number_concentration, &
-                        kVARS%rain_in_air,  kVARS%ice_number_concentration, kVARS%graupel_in_air ] )
+                        kVARS%precipitation,kVARS%snowfall,                 kVARS%graupel,       &
+                        kVARS%dz,           kVARS%snow_in_air,              kVARS%cloud_ice,     &
+                        kVARS%rain_number_concentration, kVARS%rain_in_air,  &
+                        kVARS%ice_number_concentration,  kVARS%graupel_in_air ] )
 
 
     end subroutine
@@ -155,8 +156,8 @@ contains
         call options%restart_vars( &
                        [kVARS%pressure,     kVARS%potential_temperature,    kVARS%water_vapor,   &
                         kVARS%cloud_water,  kVARS%rain_in_air,              kVARS%snow_in_air,   &
-                        kVARS%precipitation,kVARS%snowfall,                 kVARS%dz,            &
-                        kVARS%snow_in_air,  kVARS%cloud_ice,                &
+                        kVARS%precipitation,kVARS%snowfall,                 kVARS%graupel,       &
+                        kVARS%dz,           kVARS%snow_in_air,              kVARS%cloud_ice,     &
                         kVARS%rain_in_air,  kVARS%graupel_in_air ] )
 
 
@@ -380,7 +381,7 @@ contains
                               RAINNCV = this_precip,                                & ! not used outside thompson (yet)
                               SR = SR,                                              & ! not used outside thompson (yet)
                               SNOWNC = domain%accumulated_snowfall%data_2d,         &
-                              ! GRAUPELNC = domain%accumulated_graupel%data_2d,       & ! not used outside thompson (yet)
+                              GRAUPELNC = domain%graupel%data_2d,       & 
                               ids = ids, ide = ide,                   & ! domain dims
                               jds = jds, jde = jde,                   &
                               kds = kds, kde = kde,                   &
@@ -409,6 +410,7 @@ contains
                                   dt_in = dt,                                           &
                                   RAINNC = domain%accumulated_precipitation%data_2d,    &
                                   SNOWNC = domain%accumulated_snowfall%data_2d,         &
+                                  GRAUPELNC = domain%graupel%data_2d,       &
                                   has_reqc=0, has_reqi=0, has_reqs=0,                   &
                                   ids = ids, ide = ide,                   & ! domain dims
                                   jds = jds, jde = jde,                   &
@@ -482,7 +484,7 @@ contains
                               rainncv = this_precip,                                & ! not used outside thompson (yet)
                               sr = SR,                                              & ! not used outside thompson (yet)
                               snow = domain%accumulated_snowfall%data_2d,         &
-                              ! graupel = domain%accumulated_graupel%data_2d,       & ! not used outside thompson (yet)
+                              graupel = domain%graupel%data_2d,       & 
                               ids = ids, ide = ide,                   & ! domain dims
                               jds = jds, jde = jde,                   &
                               kds = kds, kde = kde,                   &

@@ -704,20 +704,16 @@ CONTAINS
         if(fallsum_qsi.gt.0.) then
           tstepsnow(i)   = fallsum_qsi*delz(i,kts)/denr*dtcld*1000.            &
                            +tstepsnow(i)
-        ! IF ( PRESENT (snowncv) .AND. PRESENT (snow)) THEN
-        !   snowncv(i,lat) = fallsum_qsi*delz(i,kts)/denr*dtcld*1000.            & 
-        !                    +snowncv(i,lat)
-          snow(i,lat) = fallsum_qsi*delz(i,kts)/denr*dtcld*1000. + snow(i,lat)
-        ! ENDIF
+        IF ( PRESENT (snow)) snow(i,lat) = fallsum_qsi*delz(i,kts)/denr*dtcld*1000. + snow(i,lat)
+        IF ( PRESENT (snowncv)) snowncv(i,lat) = fallsum_qsi*delz(i,kts)/denr*dtcld*1000.            & 
+                            +snowncv(i,lat)
         endif
         if(fallsum_qg.gt.0.) then
           tstepgraup(i)  = fallsum_qg*delz(i,kts)/denr*dtcld*1000.            &
                            +tstepgraup(i)
-        IF ( PRESENT (graupelncv) .AND. PRESENT (graupel)) THEN
-        !   graupelncv(i,lat) = fallsum_qg*delz(i,kts)/denr*dtcld*1000.          &   
-        !                       + graupelncv(i,lat)
-          graupel(i,lat) = fallsum_qg*delz(i,kts)/denr*dtcld*1000. + graupel(i,lat)
-        ENDIF
+        IF ( PRESENT (graupel)) graupel(i,lat) = fallsum_qg*delz(i,kts)/denr*dtcld*1000. + graupel(i,lat)
+        IF ( PRESENT (graupelncv)) graupelncv(i,lat) = fallsum_qg*delz(i,kts)/denr*dtcld*1000.          &   
+                               + graupelncv(i,lat)
         endif
 !       if(fallsum.gt.0.)sr(i)=(snowncv(i,lat) + graupelncv(i,lat))/(rainncv(i)+1.e-12)
         ! if(fallsum.gt.0.)sr(i)=(tstepsnow(i) + tstepgraup(i))/(rainncv(i)+1.e-12)
