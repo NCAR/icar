@@ -248,6 +248,8 @@ module options_types
 
         logical :: nudging   ! constrain the solution of certain variables (QV,QS,QC,QI,QR,QG) to be close (nudge_factor) to the forcing data
 
+        real    :: agl_cap              ! height up to which AGL height is used for vertical interpolation
+        
         ! physics parameterization options
         logical :: use_mp_options
         logical :: use_cu_options

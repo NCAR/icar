@@ -90,7 +90,7 @@ contains
             call simple_pbl(domain% potential_temperature %data_3d,     &
                             domain% water_vapor           %data_3d,     &
                             domain% cloud_water_mass      %data_3d,     &
-                            domain% cloud_ice_number      %data_3d,     &
+                            domain% cloud_ice_mass        %data_3d,     &
                             domain% rain_mass             %data_3d,     &
                             domain% snow_mass             %data_3d,     &
                             domain% u_mass                %data_3d,     &

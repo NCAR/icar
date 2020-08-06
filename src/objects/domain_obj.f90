@@ -67,7 +67,7 @@ contains
       type(options_t),  intent(in)    :: options
 
       ! create geographic lookup table for domain
-      call setup_geo_interpolation(this, forcing)
+      call setup_geo_interpolation(this, forcing, options)
 
       ! for all variables with a forcing_var /= "", get forcing, interpolate to local domain
       call this%interpolate_forcing(forcing)
@@ -1521,14 +1521,15 @@ contains
     !! Setup the Geographic look up tables for interpolating a given forcing data set to each of the grids
     !!
     !! -------------------------------
-    subroutine setup_geo_interpolation(this, forcing)
+    subroutine setup_geo_interpolation(this, forcing, options)
         implicit none
         class(domain_t),  intent(inout) :: this
         type(boundary_t), intent(inout) :: forcing
+        type(options_t), intent(in)     :: options
 
         type(interpolable_type) :: forc_u_from_mass, forc_v_from_mass
-
-        integer :: nx, ny, nz
+        
+        integer :: nx, ny, nz, i, ims, ime, jms, jme, AGL_top, AGL_nz
 
         ! this%geo and forcing%geo have to be of class interpolable
         ! which means they must contain lat, lon, z, geolut, and vLUT components
@@ -1543,15 +1544,28 @@ contains
         call geo_LUT(this%geo_v, forcing%geo_v)
         call geo_LUT(this%geo,   forcing%geo)
 
-        nx = size(this%geo%z, 1)
+        if (options%parameters%use_agl_height) then
+
+            !! Subtract off terrain from geo_u and geo_v
+            ! Find height of level closest to user-specified AGL_cap height
+            AGL_top = 0
+            AGL_nz = 1
+            do while (AGL_top < options%parameters%agl_cap) 
+                AGL_top = AGL_top + options%parameters%dz_levels(AGL_nz)
+                AGL_nz = AGL_nz + 1
+            end do
+
+            ! Step in reverse so that the bottom level is preserved until it is no longer needed
+            do i=AGL_nz,1,-1
+                ! Multiply subtraction of base-topography by a factor that scales from 1 at surface to 0 at AGL_cap height
+                this%geo_u%z(:,i,:) = this%geo_u%z(:,i,:)-(this%geo_u%z(:,1,:)*((AGL_nz-i)/AGL_nz))
+                this%geo_v%z(:,i,:) = this%geo_v%z(:,i,:)-(this%geo_v%z(:,1,:)*((AGL_nz-i)/AGL_nz))
+                forcing%z(:,i,:) = forcing%z(:,i,:)-(forcing%original_geo%z(:,1,:)*((AGL_nz-i)/AGL_nz))    
+            enddo
+
+        endif
+
         nz = size(forcing%z,  2)
-        ny = size(this%geo%z, 3)
-
-
-        allocate(forcing%geo%z(nx, nz, ny))
-        call geo_interp(forcing%geo%z, forcing%z, forcing%geo%geolut)
-        call vLUT(this%geo,   forcing%geo)
-
         nx = size(this%geo_u%z, 1)
         ny = size(this%geo_u%z, 3)
         allocate(forcing%geo_u%z(nx,nz,ny))
@@ -1564,8 +1578,23 @@ contains
         call geo_interp(forcing%geo_v%z, forcing%z, forc_v_from_mass%geolut)
         call vLUT(this%geo_v, forcing%geo_v)
 
-    end subroutine
+        if (options%parameters%use_agl_height) then
     
+            !! Add back terrain-subtracted portions to forcing%z
+
+            do i=AGL_nz,1,-1
+                forcing%z(:,i,:) = forcing%z(:,i,:)+(forcing%original_geo%z(:,1,:)*((AGL_nz-i)/AGL_nz))
+            enddo
+        endif
+        
+        nx = size(this%geo%z, 1)
+        ny = size(this%geo%z, 3)
+        allocate(forcing%geo%z(nx, nz, ny))
+        call geo_interp(forcing%geo%z, forcing%z, forcing%geo%geolut)
+        call vLUT(this%geo,   forcing%geo)
+
+
+    end subroutine
 
     !> -------------------------------
     !! Update the dQdt fields for all forced variables

@@ -28,11 +28,11 @@
 module microphysics
     ! use data_structures
     use icar_constants
-    ! use mod_wrf_constants
+    use mod_wrf_constants
     use module_mp_thompson_aer,     only: mp_gt_driver_aer, thompson_aer_init
     use module_mp_thompson,         only: mp_gt_driver, thompson_init
     ! use module_mp_morr_two_moment,  only: MORR_TWO_MOMENT_INIT, MP_MORR_TWO_MOMENT
-    ! use module_mp_wsm6,             only: wsm6, wsm6init
+     use module_mp_wsm6,             only: wsm6, wsm6init
     use module_mp_simple,           only: mp_simple_driver, mp_simple_var_request
     use time_object,                only: Time_type
     use options_interface,          only: options_t
@@ -93,9 +93,9 @@ contains
         !     write(*,*) "    Morrison Microphysics"
         !     call MORR_TWO_MOMENT_INIT(hail_opt=0)
         !     precip_delta=.False.
-        ! elseif (options%physics%microphysics==kMP_WSM6) then
-        !     write(*,*) "    WSM6 Microphysics"
-        !     call wsm6init(rhoair0,rhowater,rhosnow,cliq,cpv)
+        elseif (options%physics%microphysics==kMP_WSM6) then
+            if (this_image()==1) write(*,*) "    WSM6 Microphysics"
+            call wsm6init(rhoair0,rhowater,rhosnow,cliq,cpv)
         endif
 
         update_interval = options%mp_options%update_interval
@@ -126,12 +126,43 @@ contains
         call options%restart_vars( &
                        [kVARS%pressure,     kVARS%potential_temperature,    kVARS%water_vapor,   &
                         kVARS%cloud_water,  kVARS%rain_in_air,              kVARS%snow_in_air,   &
-                        kVARS%precipitation,kVARS%snowfall,                 kVARS%dz,            &
-                        kVARS%snow_in_air,  kVARS%cloud_ice,                kVARS%rain_number_concentration, &
-                        kVARS%rain_in_air,  kVARS%ice_number_concentration, kVARS%graupel_in_air ] )
+                        kVARS%precipitation,kVARS%snowfall,                 kVARS%graupel,       &
+                        kVARS%dz,           kVARS%snow_in_air,              kVARS%cloud_ice,     &
+                        kVARS%rain_number_concentration, kVARS%rain_in_air,  &
+                        kVARS%ice_number_concentration,  kVARS%graupel_in_air ] )
 
 
     end subroutine
+
+    subroutine mp_wsm6_var_request(options)
+        implicit none
+        type(options_t), intent(inout) :: options
+
+        ! List the variables that are required to be allocated for the simple microphysics
+        call options%alloc_vars( &
+                     [kVARS%pressure,    kVARS%potential_temperature,   kVARS%exner,        kVARS%density,      &
+                      kVARS%water_vapor, kVARS%cloud_water,             kVARS%rain_in_air,  &
+                      kVARS%snow_in_air, kVARS%cloud_ice,               kVARS%w,            &
+                      kVARS%snowfall,    kVARS%precipitation,           kVARS%graupel,      kVARS%graupel_in_air,     &
+                      kVARS%dz ])
+
+        ! List the variables that are required to be advected for the simple microphysics
+        call options%advect_vars( &
+                      [kVARS%potential_temperature, kVARS%water_vapor, kVARS%cloud_water,  &
+                       kVARS%snow_in_air,           kVARS%cloud_ice,   &
+                       kVARS%rain_in_air,           kVARS%graupel_in_air   ] )
+
+        ! List the variables that are required to be allocated for the simple microphysics
+        call options%restart_vars( &
+                       [kVARS%pressure,     kVARS%potential_temperature,    kVARS%water_vapor,   &
+                        kVARS%cloud_water,  kVARS%rain_in_air,              kVARS%snow_in_air,   &
+                        kVARS%precipitation,kVARS%snowfall,                 kVARS%graupel,       &
+                        kVARS%dz,           kVARS%snow_in_air,              kVARS%cloud_ice,     &
+                        kVARS%rain_in_air,  kVARS%graupel_in_air ] )
+
+
+    end subroutine
+
 
     subroutine mp_var_request(options)
         implicit none
@@ -149,7 +180,7 @@ contains
         elseif (options%physics%microphysics==kMP_MORRISON) then
             stop "Morrison physics not re-implemented yet"
         elseif (options%physics%microphysics==kMP_WSM6) then
-            stop "WSM6 physics not re-implemented yet"
+            call mp_wsm6_var_request(options)
         endif
 
     end subroutine mp_var_request
@@ -350,7 +381,7 @@ contains
                               RAINNCV = this_precip,                                & ! not used outside thompson (yet)
                               SR = SR,                                              & ! not used outside thompson (yet)
                               SNOWNC = domain%accumulated_snowfall%data_2d,         &
-                              ! GRAUPELNC = domain%accumulated_graupel%data_2d,       & ! not used outside thompson (yet)
+                              GRAUPELNC = domain%graupel%data_2d,       & 
                               ids = ids, ide = ide,                   & ! domain dims
                               jds = jds, jde = jde,                   &
                               kds = kds, kde = kde,                   &
@@ -379,6 +410,7 @@ contains
                                   dt_in = dt,                                           &
                                   RAINNC = domain%accumulated_precipitation%data_2d,    &
                                   SNOWNC = domain%accumulated_snowfall%data_2d,         &
+                                  GRAUPELNC = domain%graupel%data_2d,       &
                                   has_reqc=0, has_reqi=0, has_reqs=0,                   &
                                   ids = ids, ide = ide,                   & ! domain dims
                                   jds = jds, jde = jde,                   &
@@ -429,23 +461,40 @@ contains
         !                    ,IDS,IDE, JDS,JDE, KDS,KDE               & ! memory dims
         !                    ,ITS,ITE, JTS,JTE, KTS,KTE               & ! tile   dims            )
         !                )
-        ! elseif (options%physics%microphysics==kMP_WSM6) then
-        !     call wsm6(domain%th, domain%qv, domain%cloud, domain%qrain,      &
-        !                     domain%ice, domain%qsnow, domain%qgrau           & ! check these, should p and dz be between interfaces or levels?
-        !                    ,domain%rho, domain%pii, domain%p, domain%dz_inter&
-        !                    ,mp_dt,gravity, cp, cpv, rd, rw, 273.15          &
-        !                    ,ep1, ep2, epsilon                                &
-        !                    ,XLS, XLV, XLF, rhoair0,rhowater                  &
-        !                    ,cliq,cice,psat                                   &
-        !                    ,domain%rain, last_rain                           &
-        !                    ,domain%snow, last_snow                           &
-        !                    ,sr                                               &
-        !                    ,domain%graupel, this_precip                      &
-        !                    ,ids,ide, jds,jde, kds,kde                        &
-        !                    ,ids,ide, jds,jde, kds,kde                        &
-        !                    ,its,ite, jts,jte, kts,kte                        &
-        !                                                                      )
-        !
+        elseif (options%physics%microphysics==kMP_WSM6) then
+            call wsm6(q = domain%water_vapor%data_3d,                      &
+                              th = domain%potential_temperature%data_3d,            &
+                              qc = domain%cloud_water_mass%data_3d,                 &
+                              qi = domain%cloud_ice_mass%data_3d,                   &
+                              qr = domain%rain_mass%data_3d,                        &
+                              qs = domain%snow_mass%data_3d,                        &
+                              qg = domain%graupel_mass%data_3d,                     &
+                              pii= domain%exner%data_3d,                            &
+                              p =  domain%pressure%data_3d,                         &
+                              delz = domain%dz_mass%data_3d,                          &
+                              den = domain%density%data_3d,                   &
+                              delt = dt,                                           &
+                              g = gravity,                                          &
+                              cpd = cp, cpv = cpv, rd = Rd, rv = Rw, t0c = 273.15,          &
+                              ep1 = EP1, ep2 = EP2, qmin = epsilon,                                &
+                              XLS = XLS, XLV0 = XLV, XLF0 = XLF,                    & 
+                              den0 = rhoair0, denr = rhowater,                  &
+                              cliq = cliq, cice = cice, psat = psat,                                   &
+                              rain = domain%accumulated_precipitation%data_2d,    &
+                              rainncv = this_precip,                                & ! not used outside thompson (yet)
+                              sr = SR,                                              & ! not used outside thompson (yet)
+                              snow = domain%accumulated_snowfall%data_2d,         &
+                              graupel = domain%graupel%data_2d,       & 
+                              ids = ids, ide = ide,                   & ! domain dims
+                              jds = jds, jde = jde,                   &
+                              kds = kds, kde = kde,                   &
+                              ims = ims, ime = ime,                   & ! memory dims
+                              jms = jms, jme = jme,                   &
+                              kms = kms, kme = kme,                   &
+                              its = its, ite = ite,                   & ! tile dims
+                              jts = jts, jte = jte,                   &
+                              kts = kts, kte = kte)
+
         endif
 
         ! needs to be converted to work on specified tile or better, maybe moved out of microphysics driver entirely...

@@ -906,14 +906,12 @@
 !          pcp_ic(i,j) = pptice
 !          RAINNCV(i,j) = pptrain + pptsnow + pptgraul + pptice
          RAINNC(i,j) = RAINNC(i,j) + pptrain + pptsnow + pptgraul + pptice
-!          IF ( PRESENT(snowncv) .AND. PRESENT(snownc) ) THEN
-!             SNOWNCV(i,j) = pptsnow + pptice
-            SNOWNC(i,j) = SNOWNC(i,j) + pptsnow + pptice
-!          ENDIF
-         IF ( PRESENT(graupelncv) .AND. PRESENT(graupelnc) ) THEN
-            GRAUPELNCV(i,j) = pptgraul
-            GRAUPELNC(i,j) = GRAUPELNC(i,j) + pptgraul
-         ENDIF
+         IF ( PRESENT(SNOWNC) ) SNOWNC(i,j) = SNOWNC(i,j) + pptsnow + pptice
+         IF ( PRESENT(SNOWNCV) )     SNOWNCV(i,j) = pptsnow + pptice
+         
+         IF ( PRESENT(GRAUPELNC) ) GRAUPELNC(i,j) = GRAUPELNC(i,j) + pptgraul
+         IF ( PRESENT(GRAUPELNCV) )    GRAUPELNCV(i,j) = pptgraul
+         
          SR(i,j) = (pptsnow + pptgraul + pptice)/(RAINNCV(i,j)+1.e-12)
 
          do k = kts, kte
