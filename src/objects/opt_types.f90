@@ -248,6 +248,8 @@ module options_types
         real    :: sleve_n              ! Additional parameter introduced by Leuenberger 2009.
         logical :: use_terrain_difference ! calculate dzdx from the differenec between hi- and lo-res terrain, rather than from hi-res terrain only. For use when forcing data is of a resolution that it resolves signigicant terrain influence (on wind field mainly) 
 
+        real    :: agl_cap              ! height up to which AGL height is used for vertical interpolation
+        
         ! physics parameterization options
         logical :: use_mp_options
         logical :: use_cu_options
