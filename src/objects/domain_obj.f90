@@ -800,7 +800,7 @@ contains
 
             ! Terminology from Schär et al 2002, Leuenberger 2009: (can be simpliied later on, but for clarity)
             H  =  smooth_height  !sum(dz(1:max_level))  !
-            s  =  H / options%parameters%sleve_decay_factor  ! Need to split this up into a sleve_decay_factor_coarse (s1) and sleve_decay_factor_small (s2)
+            ! s  =  H / options%parameters%sleve_decay_factor  ! Need to split this up into a sleve_decay_factor_coarse (s1) and sleve_decay_factor_small (s2)
             s1 = H / options%parameters%decay_rate_L_topo 
             s2 = H / options%parameters%decay_rate_S_topo 
             n  =  options%parameters%sleve_n  ! this will have an effect on the z_level ratio throughout the vertical column, and thus on the terrain induced acceleration with wind=2 . Conceptually very nice, but for wind is 2 not ideal. Unless we let that acceleration depend on the difference between hi-res and lo-res terrain. 
@@ -1953,15 +1953,17 @@ contains
                   zfr_v                 => this%zfr_v )
  
         
-        s  =  H / options%parameters%sleve_decay_factor  
+        ! s  =  H / options%parameters%sleve_decay_factor  
         s1 =  H / options%parameters%decay_rate_L_topo 
         s2 =  H / options%parameters%decay_rate_S_topo  
 
+        s = (s1+s2)/2 ! Experiment, lets see what this does. 
+        ! if (this_image()==1) print*, "  s_accel max: ", s, "  - h max:", MAXVAL(global_terrain)
           
+
         !_________ 1. Calculate delta_dzdx for w_real calculation - CURRENTLY NOT USED- reconsider  _________
         allocate(delta_terrain(this% ims : this% ime, &
                                 this% jms : this% jme) )
-
 
         if (options%parameters%sleve)then  ! ############# Hybrid or SLEVE coordinates  ##############################
 
@@ -2013,21 +2015,23 @@ contains
 
 
             !_________ 2. Calculate the ratio bewteen z levels from hi-res and forcing data for wind acceleration  _________                                
-        
-
-            ! s = (s2+s1)/2.0 ! Experiment, lets see what this does. 
-            s = s2 ! Experiment, lets see what this does. 
-            if (this_image()==1) print*, "  with a decay height for terrain difference:", s, "m. (Factor H/s:", H/s ,")"
+                    
+            if (this_image()==1) print*, "  horizontally accelerating winds below:", s, "m. " !,"(Factor H/s:", H/s ,")"
 
             do i = this%grid%kms, this%grid%kme
 
-              ! Terrain-induced acceleration only occurs in the lower atmosphere, hence s-h, iso H-h
-              zfr_u(:,i,:)  =  (s1 - terrain_u(:,:)  * SINH( (H/s)**n - (sum(dz_scl(1:i))/s)**n ) / SINH((H/s)**n)  ) &  
-                    /  (s1 - forcing_terrain_u(:,:)  * SINH( (H/s)**n - (sum(dz_scl(1:i))/s)**n ) / SINH((H/s)**n)  )
+              ! a = sum(dz_scl(1:i))
+              if ( sum(dz_scl(1:i)) <= s) then
+                ! Terrain-induced acceleration only occurs in the lower atmosphere, hence s-h, iso H-h
+                zfr_u(:,i,:)  =  (s - terrain_u(:,:) * SINH( (s/s2)**n - (sum(dz_scl(1:i))/s2)**n ) / SINH((s/s2)**n)  ) &  
+                      /  (s - forcing_terrain_u(:,:) * SINH( (s/s2)**n - (sum(dz_scl(1:i))/s2)**n ) / SINH((s/s2)**n)  )
 
-              zfr_v(:,i,:)  =  (s1 - terrain_v  * SINH( (H/s)**n - (sum(dz_scl(1:i))/s)**n ) / SINH((H/s)**n)  ) &  
-                    /  (s1 - forcing_terrain_v  * SINH( (H/s)**n - (sum(dz_scl(1:i))/s)**n ) / SINH((H/s)**n)  )
-
+                zfr_v(:,i,:)  =  (s - terrain_v * SINH( (s/s2)**n - (sum(dz_scl(1:i))/s2)**n ) / SINH((s/s2)**n)  ) &  
+                      /  (s - forcing_terrain_v * SINH( (s/s2)**n - (sum(dz_scl(1:i))/s2)**n ) / SINH((s/s2)**n)  )
+              else
+                    zfr_u(:,i,:) = 1
+                    zfr_v(:,i,:) = 1 
+              endif
 
               ! zfr_u(:,i,:)  =  (H - terrain_u(:,:)  * SINH( (H/s)**n - (sum(dz_scl(1:i))/s)**n ) / SINH((H/s)**n)  ) &  
               !       /  (H - forcing_terrain_u(:,:)  * SINH( (H/s)**n - (sum(dz_scl(1:i))/s)**n ) / SINH((H/s)**n)  )
@@ -2039,9 +2043,9 @@ contains
 
             enddo 
 
-            if (this_image()==1)  call io_write("zfr_u_SLEVE.nc", "zfr_u", zfr_u(:,:,:) ) 
+            ! if (this_image()==1)  call io_write("zfr_u_SLEVE.nc", "zfr_u", zfr_u(:,:,:) ) 
             ! if ((this_image()==1).and.(options%parameters%debug))  call io_write("zfr_u_SLEVE.nc", "zfr_u", zfr_u(:,:,:) ) ! check in plot                   
-            if ((this_image()==1))  call io_write("zfr_v_SLEVE.nc", "zfr_v", zfr_v(:,:,:) ) ! check in plot                   
+            ! if ((this_image()==1))  call io_write("zfr_v_SLEVE.nc", "zfr_v", zfr_v(:,:,:) ) ! check in plot                   
 
 
         else !########################### no hybrid / SLEVE coordinates:  ###########################
