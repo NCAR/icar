@@ -739,7 +739,7 @@ contains
 
         real, allocatable :: temp(:,:,:) !, terrain_u(:,:), terrain_v(:,:)
         integer :: i
-        real :: smooth_height, H, s, n, s1, s2
+        real :: smooth_height, H, s, n, s1, s2, gamma
         logical :: SLEVE  
         ! character :: filename, file_idS, file_idn
 
@@ -813,6 +813,10 @@ contains
             ! H        =  sum(dz_scl(1:max_level))  ! should also lead to smooth_height, but more error proof?
 
 
+            ! - - -   calculate invertibility parameter gamma (Schär et al 2002 eqn 20):  - - - - - -
+            gamma  =  1  -  MAXVAL(h1)/s1 * COSH(H/s1)/SINH(H/s1) - MAXVAL(h2)/s2 * COSH(H/s2)/SINH(H/s2)
+
+
             ! Decay Rate for Large-Scale Topography: svc1 = 10000.0000  COSMO1 operational setting (but model top is at ~22000 masl)
             ! Decay Rate for Small-Scale Topography: svc2 =  3300.0000
             if ((this_image()==1)) then
@@ -822,6 +826,8 @@ contains
               print*, "    Using a sleve_n of ", options%parameters%sleve_n
               ! print*, ""
               write(*,*) "    Smooth height (model top) is ", smooth_height, "m.a.s.l"
+              write(*,*) "    invertibility parameter gamma is: ", gamma
+              if(gamma <= 0) print*, " CAUTION: coordinate transformation is not invertible (gamma <= 0 ) !!! reduce decay rate(s)!"
               ! write(*,*) "  mean terrain ", sum(terrain) / size(terrain)
               ! write(*,*) "  sum(dz) ", sum(dz(1:max_level))
               ! write(*,*) "  sum(dz_scl) ", sum(dz_scl(1:max_level))
@@ -1911,7 +1917,7 @@ contains
         real, allocatable :: zf_interface(:,:,:), dzf_interface(:,:,:), zf(:,:,:), dzf_mass(:,:,:), dzfdx(:,:,:), dzfdy(:,:,:)!, delta_dzdx(:,:,:)
         real, allocatable :: temp_offset(:,:), temp(:,:,:), temp2(:,:)
 
-        real :: s, s1, s2, s1_2
+        real :: wind_top, s1, s2, s, e
         integer :: i
 
         call read_forcing_terrain(this, options, forcing)
@@ -1929,6 +1935,7 @@ contains
                   jms => this%jms,      jme => this%jme,                        &
                   kms => this%kms,      kme => this%kme,                        &
                   terrain               => this%terrain%data_2d,                &
+                  global_terrain        => this%global_terrain,                 &
                   terrain_u             => this%terrain_u,                      &
                   terrain_v             => this%terrain_v,                      &
                   forcing_terrain       => this%forcing_terrain%data_2d,        &
@@ -1956,10 +1963,21 @@ contains
         ! s  =  H / options%parameters%sleve_decay_factor  
         s1 =  H / options%parameters%decay_rate_L_topo 
         s2 =  H / options%parameters%decay_rate_S_topo  
+        s = s1 ! only for the -currently unused- delta_dzdx_sc calculation (1B)
+        ! wind_top = (s1+s2)/2 ! Experiment, lets see what this does. 
 
-        s = (s1+s2)/2 ! Experiment, lets see what this does. 
-        ! if (this_image()==1) print*, "  s_accel max: ", s, "  - h max:", MAXVAL(global_terrain)
-          
+        ! To prevent the wind_top (the height below which we hor.accelerate winds) from becoming too low, thus creating 
+        !   very large acceleration, we introduce this check. 
+        e = 1.2  ! <- first guess
+        if (MAXVAL(global_terrain) *e < s1 ) then
+            wind_top = s1 
+            if (this_image()==1) print*, "  horizontally accelerating winds below:", wind_top, "m. " !,"(Factor H/s:", H/s ,")"
+        else
+            wind_top = MAXVAL(global_terrain) * e !**2
+            if (this_image()==1 )   print*, "  adjusting wind top upward from ",s1 ," to ", wind_top  ,"m. Horizontally accelerating winds below this level."
+        endif
+        ! if (this_image()==1) print*, "  s_accel max: ", wind_top, "  - h max:", MAXVAL(global_terrain)
+
 
         !_________ 1. Calculate delta_dzdx for w_real calculation - CURRENTLY NOT USED- reconsider  _________
         allocate(delta_terrain(this% ims : this% ime, &
@@ -2015,19 +2033,18 @@ contains
 
 
             !_________ 2. Calculate the ratio bewteen z levels from hi-res and forcing data for wind acceleration  _________                                
-                    
-            if (this_image()==1) print*, "  horizontally accelerating winds below:", s, "m. " !,"(Factor H/s:", H/s ,")"
+            
 
             do i = this%grid%kms, this%grid%kme
 
               ! a = sum(dz_scl(1:i))
-              if ( sum(dz_scl(1:i)) <= s) then
-                ! Terrain-induced acceleration only occurs in the lower atmosphere, hence s-h, iso H-h
-                zfr_u(:,i,:)  =  (s - terrain_u(:,:) * SINH( (s/s2)**n - (sum(dz_scl(1:i))/s2)**n ) / SINH((s/s2)**n)  ) &  
-                      /  (s - forcing_terrain_u(:,:) * SINH( (s/s2)**n - (sum(dz_scl(1:i))/s2)**n ) / SINH((s/s2)**n)  )
+              if ( sum(dz_scl(1:i)) <= wind_top) then
+                ! Terrain-induced acceleration only occurs in the lower atmosphere, hence wind_top - h, iso H - h
+                zfr_u(:,i,:)  =  (wind_top - terrain_u(:,:) * SINH( (wind_top/s2)**n - (sum(dz_scl(1:i))/s2)**n ) / SINH((wind_top/s2)**n)  ) &  
+                      /  (wind_top - forcing_terrain_u(:,:) * SINH( (wind_top/s2)**n - (sum(dz_scl(1:i))/s2)**n ) / SINH((wind_top/s2)**n)  )
 
-                zfr_v(:,i,:)  =  (s - terrain_v * SINH( (s/s2)**n - (sum(dz_scl(1:i))/s2)**n ) / SINH((s/s2)**n)  ) &  
-                      /  (s - forcing_terrain_v * SINH( (s/s2)**n - (sum(dz_scl(1:i))/s2)**n ) / SINH((s/s2)**n)  )
+                zfr_v(:,i,:)  =  (wind_top - terrain_v * SINH( (wind_top/s2)**n - (sum(dz_scl(1:i))/s2)**n ) / SINH((wind_top/s2)**n)  ) &  
+                      /  (wind_top - forcing_terrain_v * SINH( (wind_top/s2)**n - (sum(dz_scl(1:i))/s2)**n ) / SINH((wind_top/s2)**n)  )
               else
                     zfr_u(:,i,:) = 1
                     zfr_v(:,i,:) = 1 
