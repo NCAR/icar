@@ -39,6 +39,9 @@ contains
         real,               intent(in),    optional         :: greater_than, less_than
         logical,            intent(in),    optional         :: fix
         real :: vmax, vmin
+        logical :: printed
+
+        printed = .False.
 
         if (.not.associated(var)) then
             return
@@ -78,8 +81,13 @@ contains
                         do k=lbound(var,2),ubound(var,2)
                             do i=lbound(var,1),ubound(var,1)
                                 if (var(i,k,j) < less_than) then
-                                    print*, "First Error was in grid cell:", i,k,j, var(i,k,j)
-                                    error stop
+                                    if (.not.printed) then
+                                        print*, "First Error was in grid cell:", i,k,j, var(i,k,j)
+                                        printed = .True.
+                                    endif
+                                    if (.not.present(fix)) then
+                                        error stop
+                                    endif
                                 endif
                             enddo
                         enddo

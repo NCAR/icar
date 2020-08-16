@@ -8,9 +8,12 @@
 !!
 !!------------------------------------------------------------
 module wind
+    use icar_constants
+    use data_structures
+
     use linear_theory_winds, only : linear_perturb
     ! use mod_blocking,        only : add_blocked_flow
-    use data_structures
+
     use domain_interface,  only : domain_t
     use options_interface, only : options_t
 
@@ -18,9 +21,50 @@ module wind
 
     implicit none
     private
-    public::update_winds, init_winds
+    public::update_winds, init_winds, wind_var_request
     real, parameter::deg2rad=0.017453293 !2*pi/360
 contains
+
+
+
+        subroutine wind_linear_var_request(options)
+            implicit none
+            type(options_t), intent(inout) :: options
+
+            ! List the variables that are required to be allocated for the linear wind solution
+            call options%alloc_vars( &
+                            [kVARS%nsquared,    kVARS%potential_temperature,   kVARS%exner,            &
+                             kVARS%water_vapor, kVARS%cloud_water,             kVARS%rain_in_air,      &
+                             kVARS%u,           kVARS%v,                       kVARS%w,                &
+                             kVARS%dz ])
+
+            ! List the variables that are required to be advected
+            ! call options%advect_vars( &
+            !               [, &
+            !                , &
+            !                ] )
+
+            ! List the variables that are required for restarts with the linear wind solution
+            call options%restart_vars( &
+                            [kVARS%nsquared,    kVARS%potential_temperature,                           &
+                             kVARS%water_vapor, kVARS%cloud_water,             kVARS%rain_in_air,      &
+                             kVARS%u,           kVARS%v,                       kVARS%w,                &
+                             kVARS%dz ])
+
+        end subroutine
+
+        subroutine wind_var_request(options)
+            implicit none
+            type(options_t), intent(inout) :: options
+
+            if (options%physics%windtype == kWIND_LINEAR) then
+                call wind_linear_var_request(options)
+            endif
+
+        end subroutine wind_var_request
+
+
+
 
     !>------------------------------------------------------------
     !! Forces u,v, and w fields to balance
@@ -215,7 +259,7 @@ contains
 
             ! linear winds
             if (options%physics%windtype==kWIND_LINEAR) then
-                call linear_perturb(domain,options,options%lt_options%vert_smooth,.False.,options%parameters%advect_density)
+                call linear_perturb(domain,options,options%lt_options%vert_smooth,.False.,options%parameters%advect_density, update=.False.)
             ! simple acceleration over topography
             elseif (options%physics%windtype==kCONSERVE_MASS) then
                 call mass_conservative_acceleration(domain%u%data_3d, domain%v%data_3d, domain%zr_u, domain%zr_v)

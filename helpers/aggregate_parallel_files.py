@@ -95,8 +95,8 @@ def agg_file(first_file):
 
     print(first_file)
     date_search = first_file.replace("000001_","*")
-
-    if os.path.isfile(first_file.replace("000001_","_")):
+    outputfile = first_file.replace("000001_","_").replace("__","_")
+    if os.path.isfile(outputfile):
         return
 
     this_date_files = glob.glob(date_search)
@@ -155,10 +155,10 @@ def agg_file(first_file):
             if len(dims) == 4:
                 data_set[v].values[:,zs:ze, ys:ye+y_off, xs:xe+x_off] = d[v].values[:,zts:zte, yts:yte+y_off, xts:xte+x_off]
 
-    print(first_file.replace("000001_","_"))
-    data_set.to_netcdf(first_file.replace("000001_","_"))
+    print(outputfile)
+    data_set.to_netcdf(outputfile)
 
-def main(file_search = "icar_out{ens}_*"):
+def main(file_search = "icar_out_{ens}_*"):
     first_files = glob.glob(file_search.format(ens="000001"))
     first_files.sort()
 

@@ -1,4 +1,5 @@
 import datetime
+import sys
 
 import numpy as np
 
@@ -81,4 +82,4 @@ def write_file(date,info,erai):
 
     # write to output file
     mygis.write(filename=filename,varname="qv",data=erai.qv,attributes=qvatts,dtype="f",dims=dims,
-                  extravars=extra_vars,history=" Produced by erai2icar v."+info.version)
+                  extravars=extra_vars,history=" Produced by erai2icar v."+info.version+" "+" ".join(sys.argv))
