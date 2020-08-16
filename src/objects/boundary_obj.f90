@@ -476,8 +476,6 @@ contains
             allocate(real_t, mold=tvar%data_3d)
             real_t = exner_function(var%data_3d) * tvar%data_3d
             t => real_t
-            ! print*, this_image(), minval(t), maxval(t)
-            ! print*, this_image(), minval(tvar%data_3d), maxval(tvar%data_3d)
         else
             t => tvar%data_3d
         endif
