@@ -60,12 +60,15 @@ contains
     !! and interpolating the first time step of forcing data on to the high res domain grids
     !!
     !! -------------------------------
-    module subroutine get_initial_conditions(this, forcing, options)
+    module subroutine get_initial_conditions(this, forcing, options, external_conditions)
       implicit none
       class(domain_t),  intent(inout) :: this
-      type(boundary_t), intent(inout) :: forcing
+      type(boundary_t), intent(inout) :: forcing 
+      type(boundary_t), intent(inout), optional :: external_conditions
       type(options_t),  intent(in)    :: options
 
+      integer :: i
+      
       ! create geographic lookup table for domain
       call setup_geo_interpolation(this, forcing, options)
 
@@ -75,6 +78,21 @@ contains
       call initialize_internal_variables(this, options)
 
       this%model_time = forcing%current_time
+
+
+      ! - - - - - - - - - - - - - - - - - - -  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+      ! read in any external variables, such as SWE or snow height.
+      if (present(external_conditions))    then
+
+        ! create geographic lookup table for domain
+        call setup_geo_interpolation(this, external_conditions, options)
+
+        ! interpolate external variables to the hi-res grid
+        call this%interpolate_external( external_conditions )!, options)
+        ! if (this_image()==1) print*, " interpolating exteral conditions"
+      endif
+
+      ! - - - - - - - - - - - - - - - - - - -  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     end subroutine
 
@@ -1109,6 +1127,7 @@ contains
 
     end subroutine init_znu
 
+    
 
     subroutine read_land_variables(this, options)
         implicit none
@@ -1458,29 +1477,6 @@ contains
         call this%grid_soil%set_grid_dimensions(    nx_global, ny_global, 4)
         call this%grid_monthly%set_grid_dimensions( nx_global, ny_global, 12)
 
-        ! -------------------------------------------------------------------------------------------------------------
-        ! ! For the SLEVE coordinate, the topography is split into large- and small-scale topography. The entrire terrain 
-        ! ! needs to be smoothed to derive the large-scale topography. To this end, the 2D mass grid needs to be extended 
-        ! ! on all sides (!) -> 2020/07/14  Found different solution, grid2d_ext and this section between dashed lines can be removed?
-
-        ! call this%grid2d_ext%set_grid_dimensions(   nx_global, ny_global, 0,                                       &
-        !                                             nx_extra = 2 * options%parameters%terrain_smooth_windowsize,  &
-        !                                             ny_extra = 2 * options%parameters%terrain_smooth_windowsize )
-        
-        ! ! if(this_image()==1) print*, "grid2d_ext ids ide: ", this%grid2d_ext%ids, this%grid2d_ext%ide 
-        ! ! if(this_image()==1) print*, "grid2d_ext jds jde: ", this%grid2d_ext%jds, this%grid2d_ext%jde 
-
-        ! this%grid2d_ext%ims = max(this%grid2d%ims - options%parameters%terrain_smooth_windowsize, this%grid2d%ids)
-        ! this%grid2d_ext%ime = min(this%grid2d%ime + options%parameters%terrain_smooth_windowsize, this%grid2d%ide)
-        ! this%grid2d_ext%jms = max(this%grid2d%jms - options%parameters%terrain_smooth_windowsize, this%grid2d%jds)
-        ! this%grid2d_ext%jme = min(this%grid2d%jme + options%parameters%terrain_smooth_windowsize, this%grid2d%jde)
-
-        ! ! if(this_image()==1) print*, "1. grid2d_ext ims ime: ", this%grid2d_ext%ims, this%grid2d_ext%ime 
-        ! ! ! if(this_image()==1) print*, "1. grid2d_ext jms jme: ", this%grid2d_ext%jms, this%grid2d_ext%jme 
-        ! ! if(this_image()==2) print*, "2. grid2d_ext ims ime: ", this%grid2d_ext%ims, this%grid2d_ext%ime 
-        ! ! if(this_image()==3) print*, "3. grid2d_ext ims ime: ", this%grid2d_ext%ims, this%grid2d_ext%ime 
-        ! ! if(this_image()==4) print*, "4. grid2d_ext ims ime: ", this%grid2d_ext%ims, this%grid2d_ext%ime 
-        ! -------------------------------------------------------------------------------------------------------------
         
         deallocate(temporary_data)
 
@@ -1539,66 +1535,70 @@ contains
 
         ! this%geo and forcing%geo have to be of class interpolable
         ! which means they must contain lat, lon, z, geolut, and vLUT components
-        forc_u_from_mass%lat = forcing%geo%lat
-        forc_u_from_mass%lon = forcing%geo%lon
-        forc_v_from_mass%lat = forcing%geo%lat
-        forc_v_from_mass%lon = forcing%geo%lon
 
-        call geo_LUT(this%geo_u, forc_u_from_mass)
-        call geo_LUT(this%geo_v, forc_v_from_mass)
         call geo_LUT(this%geo_u, forcing%geo_u)
         call geo_LUT(this%geo_v, forcing%geo_v)
         call geo_LUT(this%geo,   forcing%geo)
 
-        if (options%parameters%use_agl_height) then
+        if (allocated(forcing%z)) then  ! In case of external 2D forcing data, skip the VLUTs. 
 
-            !! Subtract off terrain from geo_u and geo_v
-            ! Find height of level closest to user-specified AGL_cap height
-            AGL_top = 0
-            AGL_nz = 1
-            do while (AGL_top < options%parameters%agl_cap) 
-                AGL_top = AGL_top + options%parameters%dz_levels(AGL_nz)
-                AGL_nz = AGL_nz + 1
-            end do
+            forc_u_from_mass%lat = forcing%geo%lat
+            forc_u_from_mass%lon = forcing%geo%lon
+            forc_v_from_mass%lat = forcing%geo%lat
+            forc_v_from_mass%lon = forcing%geo%lon
 
-            ! Step in reverse so that the bottom level is preserved until it is no longer needed
-            do i=AGL_nz,1,-1
-                ! Multiply subtraction of base-topography by a factor that scales from 1 at surface to 0 at AGL_cap height
-                this%geo_u%z(:,i,:) = this%geo_u%z(:,i,:)-(this%geo_u%z(:,1,:)*((AGL_nz-i)/AGL_nz))
-                this%geo_v%z(:,i,:) = this%geo_v%z(:,i,:)-(this%geo_v%z(:,1,:)*((AGL_nz-i)/AGL_nz))
-                forcing%z(:,i,:) = forcing%z(:,i,:)-(forcing%original_geo%z(:,1,:)*((AGL_nz-i)/AGL_nz))    
-            enddo
+            call geo_LUT(this%geo_u, forc_u_from_mass)
+            call geo_LUT(this%geo_v, forc_v_from_mass)
 
-        endif
+            if (options%parameters%use_agl_height) then
 
-        nz = size(forcing%z,  2)
-        nx = size(this%geo_u%z, 1)
-        ny = size(this%geo_u%z, 3)
-        allocate(forcing%geo_u%z(nx,nz,ny))
-        call geo_interp(forcing%geo_u%z, forcing%z, forc_u_from_mass%geolut)
-        call vLUT(this%geo_u, forcing%geo_u)
+                !! Subtract off terrain from geo_u and geo_v
+                ! Find height of level closest to user-specified AGL_cap height
+                AGL_top = 0
+                AGL_nz = 1
+                do while (AGL_top < options%parameters%agl_cap) 
+                    AGL_top = AGL_top + options%parameters%dz_levels(AGL_nz)
+                    AGL_nz = AGL_nz + 1
+                end do
 
-        nx = size(this%geo_v%z, 1)
-        ny = size(this%geo_v%z, 3)
-        allocate(forcing%geo_v%z(nx,nz,ny))
-        call geo_interp(forcing%geo_v%z, forcing%z, forc_v_from_mass%geolut)
-        call vLUT(this%geo_v, forcing%geo_v)
+                ! Step in reverse so that the bottom level is preserved until it is no longer needed
+                do i=AGL_nz,1,-1
+                    ! Multiply subtraction of base-topography by a factor that scales from 1 at surface to 0 at AGL_cap height
+                    this%geo_u%z(:,i,:) = this%geo_u%z(:,i,:)-(this%geo_u%z(:,1,:)*((AGL_nz-i)/AGL_nz))
+                    this%geo_v%z(:,i,:) = this%geo_v%z(:,i,:)-(this%geo_v%z(:,1,:)*((AGL_nz-i)/AGL_nz))
+                    forcing%z(:,i,:) = forcing%z(:,i,:)-(forcing%original_geo%z(:,1,:)*((AGL_nz-i)/AGL_nz))    
+                enddo
 
-        if (options%parameters%use_agl_height) then
-    
-            !! Add back terrain-subtracted portions to forcing%z
+            endif
 
-            do i=AGL_nz,1,-1
-                forcing%z(:,i,:) = forcing%z(:,i,:)+(forcing%original_geo%z(:,1,:)*((AGL_nz-i)/AGL_nz))
-            enddo
-        endif
+            nz = size(forcing%z,  2)
+            nx = size(this%geo_u%z, 1)
+            ny = size(this%geo_u%z, 3)
+            allocate(forcing%geo_u%z(nx,nz,ny))
+            call geo_interp(forcing%geo_u%z, forcing%z, forc_u_from_mass%geolut)
+            call vLUT(this%geo_u, forcing%geo_u)
+
+            nx = size(this%geo_v%z, 1)
+            ny = size(this%geo_v%z, 3)
+            allocate(forcing%geo_v%z(nx,nz,ny))
+            call geo_interp(forcing%geo_v%z, forcing%z, forc_v_from_mass%geolut)
+            call vLUT(this%geo_v, forcing%geo_v)
+
+            if (options%parameters%use_agl_height) then
         
-        nx = size(this%geo%z, 1)
-        ny = size(this%geo%z, 3)
-        allocate(forcing%geo%z(nx, nz, ny))
-        call geo_interp(forcing%geo%z, forcing%z, forcing%geo%geolut)
-        call vLUT(this%geo,   forcing%geo)
+                !! Add back terrain-subtracted portions to forcing%z
+                do i=AGL_nz,1,-1
+                    forcing%z(:,i,:) = forcing%z(:,i,:)+(forcing%original_geo%z(:,1,:)*((AGL_nz-i)/AGL_nz))
+                enddo
+            endif
+            
+            nx = size(this%geo%z, 1)
+            ny = size(this%geo%z, 3)
+            allocate(forcing%geo%z(nx, nz, ny))
+            call geo_interp(forcing%geo%z, forcing%z, forcing%geo%geolut)
+            call vLUT(this%geo,   forcing%geo)
 
+        end if
 
     end subroutine
 
@@ -1711,6 +1711,33 @@ contains
 
     end subroutine
 
+    !> -----------------------------------------------------------------------------------------------------------------
+    !! Loop through external variables if supplied and interpolate the external data to the domain
+    !!  !! SWE only for now !!
+    !! -----------------------------------------------------------------------------------------------------------------
+    module subroutine interpolate_external(this, external_conditions)
+        implicit none
+        class(domain_t),  intent(inout) :: this
+        type(boundary_t), intent(in)    :: external_conditions
+
+        character(len=99) :: varname
+        type(variable_t) :: external_var
+
+        ! do i = 1, external_conditions%variables%n_vars
+        !     print*, "    interpolating external_conditions for ", trim(external_conditions%variables%var_list(i)%name) 
+        ! end do
+
+        ! -------  repeat this code block for other external variables?   -----------------
+        varname = "swe"   
+
+        if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " for initial conditions"
+        external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
+
+        call geo_interp2d(  this%snow_water_equivalent%data_2d,                                  & 
+                            external_var%data_2d,        & 
+                            external_conditions%geo%geolut )
+    
+    end subroutine
 
     !> -------------------------------
     !! Loop through all variables for which forcing data have been supplied and interpolate the forcing data to the domain

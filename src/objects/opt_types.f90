@@ -148,7 +148,7 @@ module options_types
         character (len=MAXVARLENGTH) :: version,comment
 
         ! file names
-        character (len=MAXFILELENGTH) :: init_conditions_file, linear_mask_file, nsq_calibration_file
+        character (len=MAXFILELENGTH) :: init_conditions_file, linear_mask_file, nsq_calibration_file, external_files
         character (len=MAXFILELENGTH), dimension(:), allocatable :: boundary_files, ext_wind_files
         character (len=MAXFILELENGTH) :: output_file,restart_file,output_file_frequency
 
@@ -161,10 +161,15 @@ module options_types
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
                                         swdown_var, lwdown_var, &
-                                        sst_var, rain_var, time_var, sinalpha_var, cosalpha_var
+                                        sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &
+                                        lat_ext, lon_ext, swe_ext, hs_ext, tss_ext, z_ext
 
         character(len=MAXVARLENGTH) :: vars_to_read(kMAX_STORAGE_VARS)
         integer                     :: dim_list(    kMAX_STORAGE_VARS)
+
+        character(len=MAXVARLENGTH) :: ext_var_list(kMAX_STORAGE_VARS)
+        integer                     :: ext_dim_list(    kMAX_STORAGE_VARS)
+
         ! Filenames for files to read various physics options from
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, adv_options_filename, &
                                         lsm_options_filename, bias_options_filename, block_options_filename, &

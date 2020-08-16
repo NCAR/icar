@@ -59,47 +59,38 @@ contains
                                  )
 
         ! endif
+
         ! call this%distribute_initial_conditions()
 
-
-        ! Need to modify the routine below to take 2d variables.
         call setup_boundary_geo(this, options%parameters%longitude_system)
 
     end subroutine
 
     !>-----------------------------------------------------------
-    !! initialize structure for additional external files (i.e. SWE, snowheight etc)
-    !!
-    !>-----------------------------------------------------------
-    module subroutine init_external(this, options)
-        class(boundary_t), intent(inout) :: this  ! the additional starting conditions 
+    ! initialize structure for external files (i.e. SWE, snowheight etc)
+    module subrouting init_external(this, options)
+        class(boundary_t), intent(inout) :: this
         type(options_t),   intent(inout) :: options
 
         character(len=kMAX_NAME_LENGTH), allocatable :: vars_to_read(:)
         integer,                         allocatable :: var_dimensions(:)
-        character(len=kMAX_NAME_LENGTH)  :: lat_ext
-        character(len=kMAX_NAME_LENGTH)  :: lon_ext
-        character(len=kMAX_NAME_LENGTH)  :: zvar_ext
-        ! character(len=kMAX_NAME_LENGTH), allocatable :: ext_list(:)
-        ! integer, allocatable :: dim_list(:)
 
-        allocate(this%file_list(1))
-        ! allocate(ext_list(1))
-        ! allocate(dim_list(1))
+        this%file_list = options%parameters%external_files
 
-        this%file_list(1) = options%parameters%external_files
-        
-        call setup_variable_lists(options%parameters%ext_var_list, options%parameters%ext_dim_list, vars_to_read, var_dimensions)  ! this simply copies o%p%ext_vars to vars_to_read and same for dims (+some checks)
-        
+        ! call setup_variable_lists(options%parameters%ext_vars, options%parameters%ext_dim_list, vars_to_read, var_dimensions)  ! this simply copies o%p%ext_vars to vars_to_read and same for dims (+some checks)
+        call setup_variable_lists("swe", 2, vars_to_read, var_dimensions)  ! hard coded for testing
 
-        if ( trim(options%parameters%z_ext) /= "") zvar_ext = options%parameters%z_ext
-
-        call this%init_local2(options,                          &
+        call this%init_local2(options,                           &
                              this%file_list,                    &
                              vars_to_read, var_dimensions,      &
-                             options%parameters%lat_ext,        &  !lat_ext,
-                             options%parameters%lon_ext        &  !lon_ext      &
-                             ! zvar_ext      &  !,- include if statement for this??
+                             ! start_time_ext, &  !options%parameters%start_time,     &
+                             lat_ext,     & !options%parameters%latvar,         &
+                             lon_ext !,     & !options%parameters%lonvar,         &
+                             ! zvar_ext,      & ! options%parameters%zvar,           &
+                             ! time_ext,      &  !options%parameters%time_var,       &
+                             ! ext_ta2,       &  ! what else? nespresso?
+                             ! tsnow_ext,     &  !options%parameters%psvar           &
+                             ! swe_ext          !options%parameters%pvar,           &   ! should be in vars_to_read / o%p%ext_vars
                              )
 
         call setup_boundary_geo(this, options%parameters%longitude_system)
@@ -111,11 +102,9 @@ contains
     !! Set default component values
     !! Reads initial conditions from the external file
     !!
-    !!   For now this is only available for static data (no time component) 
-    !!
     !!------------------------------------------------------------
     module subroutine init_local2(this, options, file_list, var_list, dim_list, & !start_time_ext, &
-                                 lat_ext, lon_ext, zvar_ext)!, time_ext, swe_ext, tsnow_ext)
+                                 lat_ext, lon_ext ) !, z_ext, time_ext, swe_ext, tsnow_ext)
         class(boundary_t),               intent(inout)          :: this
         type(options_t),                 intent(inout)          :: options
         character(len=kMAX_NAME_LENGTH), intent(in)             :: file_list(:)
@@ -124,134 +113,63 @@ contains
         ! type(Time_type),                 intent(in), optional   :: start_time
         character(len=kMAX_NAME_LENGTH), intent(in)             :: lat_ext
         character(len=kMAX_NAME_LENGTH), intent(in)             :: lon_ext
-        character(len=kMAX_NAME_LENGTH), intent(in), optional   :: zvar_ext
+        ! character(len=kMAX_NAME_LENGTH), intent(in), optional   :: z_ext
         ! character(len=kMAX_NAME_LENGTH), intent(in), optional   :: time_ext
+        ! character(len=kMAX_NAME_LENGTH), intent(in)     :: swe_ext
+        ! character(len=kMAX_NAME_LENGTH), intent(in)     :: tsnow_ext
 
         real, allocatable :: temp_z(:,:,:)
+
 
         integer :: i, nx, ny, nz
 
         ! if (present(time_ext)) then
         !     ! figure out while file and timestep contains the requested start_time
-            ! call set_curfile_curstep(this, start_time, file_list, time_var)
+        !     call set_curfile_curstep(this, start_time, file_list, time_var)
         !     call read_bc_time(this%current_time, file_list(this%curfile), time_var, this%curstep)
         ! else
-            this%curstep=1 !?
-            this%curfile=1 !?
+        !     this%curstep=1 !?
         ! endif
 
-        
         !  read in latitude and longitude coordinate data
-        call io_read(file_list(this%curfile), lat_ext, this%lat, this%curstep)
-        call io_read(file_list(this%curfile), lon_ext, this%lon, this%curstep)
-       
-        ! read in the height coordinate of the input data
-        if (present(zvar_ext) .and. (trim(zvar_ext)/="") ) then
-            if (this_image()==1)  print *, " zvar_ext ", trim(zvar_ext)
-            if (.not. options%parameters%compute_z ) then ! .and. present(zvar_ext)
-                ! call io_read(file_list(this%curfile), z_var,   temp_z,   this%curstep)    
-                call io_read(file_list(1), zvar_ext,   temp_z,   1)
-                nx = size(temp_z,1)
-                ny = size(temp_z,2)
-                nz = size(temp_z,3)
-                if (allocated(this%z)) deallocate(this%z)
-                allocate(this%z(nx,nz,ny))
-                this%z = reshape(temp_z, shape=[nx,nz,ny], order=[1,3,2])
-            else
-                call io_read(file_list(this%curfile), file_list(1),   temp_z,   this%curstep)
-                nx = size(temp_z,1)
-                ny = size(temp_z,2)
-                ! nz = size(temp_z,3)
-                if (allocated(this%z)) deallocate(this%z)
-                allocate(this%z(nx,nz,ny))
-            endif
-        else    
-            ! print *, "  ext var = 2D"
-            nx = size(this%lat,1)
-            ny = size(this%lat,2)
-            nz = 0
-            ! this%z = 0
-        endif
+        call io_read(file_list(this%curfile), lat_var, this%lat, this%curstep)
+        call io_read(file_list(this%curfile), lon_var, this%lon, this%curstep)
+
+        ! constrained to 2d for now. Can extend to 3d later
+        nx = size(this%lat,1)
+        ny = size(this%lat,2)
+        nz = 0
+
+        ! ! read in the height coordinate of the input data
+        ! if (.not. options%parameters%compute_z .and. present(z_ext)) then
+        !     ! call io_read(file_list(this%curfile), z_var,   temp_z,   this%curstep)
+        !     call io_read(file_list(1), z_ext,   temp_z,   1)
+        !     nx = size(temp_z,1)
+        !     ny = size(temp_z,2)
+        !     nz = size(temp_z,3)
+        !     if (allocated(this%z)) deallocate(this%z)
+        !     allocate(this%z(nx,nz,ny))
+        !     this%z = reshape(temp_z, shape=[nx,nz,ny], order=[1,3,2])
+        ! ! what if ext_var is 2d?    
+        ! else
+        !     call io_read(file_list(this%curfile), file_list(1),   temp_z,   this%curstep)
+        !     nx = size(temp_z,1)
+        !     ny = size(temp_z,2)
+        !     ! nz = size(temp_z,3)
+        !     if (allocated(this%z)) deallocate(this%z)
+        !     allocate(this%z(nx,nz,ny))
+        ! endif
 
         ! ! call assert(size(var_list) == size(dim_list), "list of variable dimensions must match list of variables")
 
         do i=1, size(var_list)
 
             call add_var_to_dict(this%variables, file_list(this%curfile), var_list(i), dim_list(i), this%curstep, [nx, nz, ny])
-            ! if (this_image()==1)  print*, i," var_list(i): ",trim(var_list(i)), " dim_list(i): ", dim_list(i), " this%curstep ", this%curstep
-            
-        end do
-
-    end subroutine
-
-
-    !>------------------------------------------------------------
-    !! Set default component values
-    !! Reads initial conditions from the forcing file
-    !!
-    !!------------------------------------------------------------
-    module subroutine init_local(this, options, file_list, var_list, dim_list, start_time, &
-                                 lat_var, lon_var, z_var, time_var, p_var, ps_var)
-        class(boundary_t),               intent(inout)  :: this
-        type(options_t),                 intent(inout)  :: options
-        character(len=kMAX_NAME_LENGTH), intent(in)     :: file_list(:)
-        character(len=kMAX_NAME_LENGTH), intent(in)     :: var_list (:)
-        integer,                         intent(in)     :: dim_list (:)
-        type(Time_type),                 intent(in)     :: start_time
-        character(len=kMAX_NAME_LENGTH), intent(in)     :: lat_var
-        character(len=kMAX_NAME_LENGTH), intent(in)     :: lon_var
-        character(len=kMAX_NAME_LENGTH), intent(in)     :: z_var
-        character(len=kMAX_NAME_LENGTH), intent(in)     :: time_var
-        character(len=kMAX_NAME_LENGTH), intent(in)     :: p_var
-        character(len=kMAX_NAME_LENGTH), intent(in)     :: ps_var
-
-        type(variable_t)  :: test_variable
-        real, allocatable :: temp_z(:,:,:)
-
-
-        integer :: i, nx, ny, nz
-
-        ! figure out while file and timestep contains the requested start_time
-        call set_curfile_curstep(this, start_time, file_list, time_var)
-        call read_bc_time(this%current_time, file_list(this%curfile), time_var, this%curstep)
-
-        !  read in latitude and longitude coordinate data
-        call io_read(file_list(this%curfile), lat_var, this%lat, this%curstep)
-        call io_read(file_list(this%curfile), lon_var, this%lon, this%curstep)
-
-        ! read in the height coordinate of the input data
-        if (.not. options%parameters%compute_z) then
-            ! call io_read(file_list(this%curfile), z_var,   temp_z,   this%curstep)
-            call io_read(file_list(1), z_var,   temp_z,   1)
-            nx = size(temp_z,1)
-            ny = size(temp_z,2)
-            nz = size(temp_z,3)
-
-            if (allocated(this%z)) deallocate(this%z)
-            allocate(this%z(nx,nz,ny))
-
-            this%z = reshape(temp_z, shape=[nx,nz,ny], order=[1,3,2])
-        else
-            call io_read(file_list(this%curfile), p_var,   temp_z,   this%curstep)
-            nx = size(temp_z,1)
-            ny = size(temp_z,2)
-            nz = size(temp_z,3)
-
-            if (allocated(this%z)) deallocate(this%z)
-            allocate(this%z(nx,nz,ny))
-
-        endif
-
-
-        ! call assert(size(var_list) == size(dim_list), "list of variable dimensions must match list of variables")
-
-        do i=1, size(var_list)
-
-            call add_var_to_dict(this%variables, file_list(this%curfile), var_list(i), dim_list(i), this%curstep, [nx, nz, ny])
+            ! call add_var_to_dict(this%variables, file_list(this%curfile), var_list(i), dim_list(i), this%curstep, [nx, ny])
 
         end do
 
-        call update_computed_vars(this, options)
+        ! call update_computed_vars(this, options)
 
     end subroutine
 
@@ -264,7 +182,6 @@ contains
         type(boundary_t), intent(inout) :: this
         integer,          intent(in)    :: longitude_system
 
-
         if (allocated(this%geo%lat)) deallocate(this%geo%lat)
         allocate( this%geo%lat, source=this%lat)
 
@@ -276,22 +193,15 @@ contains
         this%geo_u = this%geo
         this%geo_v = this%geo
 
-        ! ! print*, "lon shape", shape(this%lon)
-        ! ! ! print*, "lat shape", shape(this%lat)
-        ! print*, "    z shape", shape(this%z)
-        ! print*, "    size z shape", size(shape(this%z))
-        ! ! print*, "size z, 2", size(this%z,2)
-        ! print*, "    this z allocated? :", allocated(this%z)
-        ! ! print *, " z dim", dimensions(this%z)
-
-        if ( allocated(this%z) )  then
-            ! geo%z will be interpolated from this%z to the high-res grids for vinterp in domain... not a great separation
-            ! here we save the original z dataset so that it can be used to interpolate varying z through time.
-            if (allocated(this%original_geo%z)) deallocate(this%original_geo%z)
-            allocate( this%original_geo%z, source=this%z)
-        endif
+        ! geo%z will be interpolated from this%z to the high-res grids for vinterp in domain... not a great separation
+        ! here we save the original z dataset so that it can be used to interpolate varying z through time.
+        if (allocated(this%original_geo%z)) deallocate(this%original_geo%z)
+        allocate( this%original_geo%z, source=this%z)
 
     end subroutine
+
+
+
 
 
 
@@ -326,7 +236,7 @@ contains
             new_variable%data_2d = temp_2d_data
 
             call var_dict%add_var(var_name, new_variable)
-            ! print*, "    added boundary variable ", trim(var_name), " to dict with shape ", shape( temp_2d_data )
+
             ! do not deallocate data arrays because they are pointed to inside the var_dict now
             ! deallocate(new_variable%data_2d)
 
@@ -813,7 +723,6 @@ contains
             if (trim(master_var_list(i)) /= '') then
                 vars_to_read(curvar) = master_var_list(i)
                 var_dimensions(curvar) = master_dim_list(i)
-                ! if (this_image()==1) print *, "in variable list: ", vars_to_read(curvar)
                 curvar = curvar + 1
             endif
         enddo
