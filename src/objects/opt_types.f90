@@ -234,7 +234,8 @@ module options_types
         real    :: flat_z_height        ! height above mean ground level [m] above which z levels are flat in space
         logical :: use_agl_height       ! interpolate from forcing to model layers using Z above ground level, not sea level
         logical :: fixed_dz_advection   ! with variable dz, allows thinner model levels to accelerate the wind (maybe this should be wind=2)
-
+        real    :: agl_cap              ! height up to which AGL height is used for vertical interpolation
+        
         ! physics parameterization options
         logical :: use_mp_options
         logical :: use_cu_options
