@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/NCAR/icar.svg)](https://travis-ci.org/NCAR/icar)
 [![Documentation Status](https://readthedocs.org/projects/icar/badge/)](http://icar.readthedocs.org/en/develop/)
 
-*Note: Development has shifted to the v2 branch and it is recommended that all users test that branch to see if it works for them and switch if possible. *
+* *Note: Development has shifted to the v2 branch and it is recommended that all users test that branch to see if it works for them and switch if possible.*
 
 ICAR is a simplified atmospheric model designed primarily for climate downscaling, atmospheric sensitivity tests, and hopefully educational uses. At this early stage, the model is still undergoing rapid development, and users are encouraged to get updates frequently. 
 
