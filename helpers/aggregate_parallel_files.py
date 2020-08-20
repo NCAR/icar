@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import os
 import glob
-import multiprocessing as mp
+import time
+# import multiprocessing as mp
 
 import numpy as np
 import xarray as xr
@@ -83,7 +84,7 @@ def set_up_dataset(d):
     return ds.set_coords([c for c in d.coords])
 
 
-def agg_file(first_file):
+def agg_file(first_file, verbose=True):
     '''Aggregated all files that come from the same time step as first_file
 
     first_file should have _001_ in the filename somewhere.  This will be replaced
@@ -93,7 +94,7 @@ def agg_file(first_file):
 
     Result: aggregated dataset is written to a netcdf file'''
 
-    print(first_file)
+    if verbose:print(first_file)
     date_search = first_file.replace("000001_","*")
     outputfile = first_file.replace("000001_","_").replace("__","_")
     if os.path.isfile(outputfile):
@@ -174,8 +175,26 @@ def main(file_search = "icar_out_{ens}_*"):
 # pool = mp.Pool(n_processors)
 
 
+def continuous(file_search):
+    print("Running continuous aggregation, Ctrl-C to stop")
+    while True:
+        first_files = glob.glob(file_search.format(ens="000001"))
+        first_files.sort()
+
+        # skip the last file in the list as ICAR might still be running
+        for f in first_files[:-1]:
+            agg_file(f, verbose=False)
+
+        time.sleep(10)
+
+
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
+    if len(sys.argv) > 2:
+        try:
+            continuous(sys.argv[1])
+        except KeyboardInterrupt:
+            pass
+    elif len(sys.argv) > 1:
         main(sys.argv[1])
     else:
         main()
