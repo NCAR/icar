@@ -381,7 +381,7 @@ contains
                               RAINNCV = this_precip,                                & ! not used outside thompson (yet)
                               SR = SR,                                              & ! not used outside thompson (yet)
                               SNOWNC = domain%accumulated_snowfall%data_2d,         &
-                              GRAUPELNC = domain%graupel%data_2d,       & 
+                              GRAUPELNC = domain%graupel%data_2d,       &
                               ids = ids, ide = ide,                   & ! domain dims
                               jds = jds, jde = jde,                   &
                               kds = kds, kde = kde,                   &
@@ -477,14 +477,14 @@ contains
                               g = gravity,                                          &
                               cpd = cp, cpv = cpv, rd = Rd, rv = Rw, t0c = 273.15,          &
                               ep1 = EP1, ep2 = EP2, qmin = epsilon,                                &
-                              XLS = XLS, XLV0 = XLV, XLF0 = XLF,                    & 
+                              XLS = XLS, XLV0 = XLV, XLF0 = XLF,                    &
                               den0 = rhoair0, denr = rhowater,                  &
                               cliq = cliq, cice = cice, psat = psat,                                   &
                               rain = domain%accumulated_precipitation%data_2d,    &
                               rainncv = this_precip,                                & ! not used outside thompson (yet)
                               sr = SR,                                              & ! not used outside thompson (yet)
                               snow = domain%accumulated_snowfall%data_2d,         &
-                              graupel = domain%graupel%data_2d,       & 
+                              graupel = domain%graupel%data_2d,       &
                               ids = ids, ide = ide,                   & ! domain dims
                               jds = jds, jde = jde,                   &
                               kds = kds, kde = kde,                   &
