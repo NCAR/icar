@@ -570,7 +570,7 @@ contains
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
                                         swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &
-                                        lat_ext, lon_ext, swe_ext, hs_ext, tss_ext, z_ext
+                                        lat_ext, lon_ext, swe_ext, hs_ext, tss_ext, z_ext, time_ext
 
         namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qgvar,qsvar,hgtvar,shvar,lhvar,pblhvar,   &
                             landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar, &
@@ -579,7 +579,7 @@ contains
                             soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
                             vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
                             swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &
-                            lat_ext, lon_ext, swe_ext, hs_ext, tss_ext, z_ext
+                            lat_ext, lon_ext, swe_ext, hs_ext, tss_ext, z_ext, time_ext
 
         ! no default values supplied for variable names
         hgtvar=""
@@ -636,6 +636,7 @@ contains
         hs_ext=""
         tss_ext=""
         z_ext = ""
+        time_ext = ""
 
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=var_list)
@@ -771,6 +772,7 @@ contains
         options%hs_ext     = hs_ext  ; options%ext_var_list(j) = hs_ext;      options%ext_dim_list(j) = 2;    j = j + 1
         options%tss_ext    = tss_ext ; options%ext_var_list(j) = tss_ext;     options%ext_dim_list(j) = 2;    j = j + 1
         ! options%z_ext      = z_ext   ; options%ext_var_list(j) = z_ext;       options%ext_dim_list(j) = 3;    j = j + 1
+        options%time_ext      = time_ext   ; options%ext_var_list(j) = z_ext;       options%ext_dim_list(j) = 3;    j = j + 1
     
      
 

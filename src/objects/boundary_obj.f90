@@ -61,8 +61,7 @@ contains
         ! endif
         ! call this%distribute_initial_conditions()
 
-
-        ! Need to modify the routine below to take 2d variables.
+        
         call setup_boundary_geo(this, options%parameters%longitude_system)
 
     end subroutine
@@ -97,12 +96,15 @@ contains
         call this%init_local2(options,                          &
                              this%file_list,                    &
                              vars_to_read, var_dimensions,      &
-                             options%parameters%lat_ext,        &  !lat_ext,
-                             options%parameters%lon_ext        &  !lon_ext      &
+                             start_time = options%parameters%start_time,     &
+                             lat_ext = options%parameters%lat_ext,        &  !lat_ext,
+                             lon_ext = options%parameters%lon_ext,        &  !lon_ext      &
                              ! zvar_ext      &  !,- include if statement for this??
+                             time_ext = options%parameters%time_ext &
                              )
 
         call setup_boundary_geo(this, options%parameters%longitude_system)
+
 
     end subroutine
 
@@ -114,36 +116,43 @@ contains
     !!   For now this is only available for static data (no time component) 
     !!
     !!------------------------------------------------------------
-    module subroutine init_local2(this, options, file_list, var_list, dim_list, & !start_time_ext, &
-                                 lat_ext, lon_ext, zvar_ext)!, time_ext, swe_ext, tsnow_ext)
+    module subroutine init_local2(this, options, file_list, var_list, dim_list, start_time, &
+                                 lat_ext, lon_ext, zvar_ext, time_ext)!, swe_ext, tsnow_ext)
         class(boundary_t),               intent(inout)          :: this
         type(options_t),                 intent(inout)          :: options
         character(len=kMAX_NAME_LENGTH), intent(in)             :: file_list(:)
         character(len=kMAX_NAME_LENGTH), intent(in)             :: var_list (:)
         integer,                         intent(in)             :: dim_list (:)
-        ! type(Time_type),                 intent(in), optional   :: start_time
+        type(Time_type),                 intent(in), optional   :: start_time
         character(len=kMAX_NAME_LENGTH), intent(in)             :: lat_ext
         character(len=kMAX_NAME_LENGTH), intent(in)             :: lon_ext
         character(len=kMAX_NAME_LENGTH), intent(in), optional   :: zvar_ext
-        ! character(len=kMAX_NAME_LENGTH), intent(in), optional   :: time_ext
+        character(len=kMAX_NAME_LENGTH), intent(in), optional   :: time_ext
 
         real, allocatable :: temp_z(:,:,:)
 
         integer :: i, nx, ny, nz
 
-        ! if (present(time_ext)) then
-        !     ! figure out while file and timestep contains the requested start_time
-            ! call set_curfile_curstep(this, start_time, file_list, time_var)
-        !     call read_bc_time(this%current_time, file_list(this%curfile), time_var, this%curstep)
-        ! else
+        if (present(time_ext) .and. (trim(time_ext)/="") ) then
+            ! figure out while file and timestep contains the requested start_time
+            ! if (this_image()==1) print * ," looking for time_ext"
+            call set_curfile_curstep(this, start_time, file_list, time_ext)
+            call read_bc_time(this%current_time, file_list(this%curfile), time_ext, this%curstep)
+        else
             this%curstep=1 !?
             this%curfile=1 !?
-        ! endif
+        endif
 
         
         !  read in latitude and longitude coordinate data
         call io_read(file_list(this%curfile), lat_ext, this%lat, this%curstep)
         call io_read(file_list(this%curfile), lon_ext, this%lon, this%curstep)
+
+
+        ! if ( (size(this%lat,2)==1) .and. (size(this%lon,2)==1) ) then  !(size(this%lat,1)/=size(this%lon,1)) (shape(this%lat) /= shape(this%lon)) .and.
+        !     this%lat = reshape(this%lat, (/size(this%lat,1), size(this%lon,1)/), pad=this%lat)
+        !     this%lon = reshape(this%lon, (/size(this%lat,1), size(this%lon,1)/), pad=this%lon)
+        ! endif    
        
         ! read in the height coordinate of the input data
         if (present(zvar_ext) .and. (trim(zvar_ext)/="") ) then
@@ -167,10 +176,17 @@ contains
             endif
         else    
             ! print *, "  ext var = 2D"
-            nx = size(this%lat,1)
-            ny = size(this%lat,2)
-            nz = 0
-            ! this%z = 0
+            if ( (size(this%lat,2)==1) .and. (size(this%lon,2)==1) ) then 
+                if (this_image()==1) print*, "  external conditions provided on regular 1D grid"
+                nx = size(this%lon,1)
+                ny = size(this%lat,1)
+                nz = 0
+            else    
+                nx = size(this%lat,1)
+                ny = size(this%lat,2)
+                nz = 0
+            endif
+            
         endif
 
         ! ! call assert(size(var_list) == size(dim_list), "list of variable dimensions must match list of variables")
@@ -321,7 +337,8 @@ contains
 
         if (ndims==2) then
             call io_read(file_name, var_name, temp_2d_data, timestep)
-
+            ! print*, "    file_name, var_name ", file_name, trim(var_name)
+            
             call new_variable%initialize( shape( temp_2d_data ) )
             new_variable%data_2d = temp_2d_data
 

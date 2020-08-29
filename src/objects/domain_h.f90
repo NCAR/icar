@@ -222,10 +222,11 @@ module domain_interface
         type(options_t),  intent(in)    :: options
     end subroutine
 
-    module subroutine interpolate_external(this, external_conditions)
+    module subroutine interpolate_external(this, external_conditions, options)
         implicit none
         class(domain_t),  intent(inout) :: this
         type(boundary_t), intent(in)    :: external_conditions
+        type(options_t),  intent(in)    :: options
     end subroutine
 
     module subroutine interpolate_forcing(this, forcing, update)

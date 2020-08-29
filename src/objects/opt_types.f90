@@ -162,7 +162,7 @@ module options_types
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
                                         swdown_var, lwdown_var, &
                                         sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &
-                                        lat_ext, lon_ext, swe_ext, hs_ext, tss_ext, z_ext
+                                        lat_ext, lon_ext, swe_ext, hs_ext, tss_ext, z_ext, time_ext
 
         character(len=MAXVARLENGTH) :: vars_to_read(kMAX_STORAGE_VARS)
         integer                     :: dim_list(    kMAX_STORAGE_VARS)

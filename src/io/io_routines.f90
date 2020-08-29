@@ -396,11 +396,11 @@ contains
         else
             dimstart=1
         endif
-
+        
         diminfo = 1
         ! Read the dimension lengths
         call io_getdims(filename,varname,diminfo)
-
+        
         if (allocated(data_in)) deallocate(data_in)
         allocate(data_in(diminfo(2),diminfo(3)))
 

@@ -88,7 +88,7 @@ contains
         call setup_geo_interpolation(this, external_conditions, options)
 
         ! interpolate external variables to the hi-res grid
-        call this%interpolate_external( external_conditions )!, options)
+        call this%interpolate_external( external_conditions, options)
         ! if (this_image()==1) print*, " interpolating exteral conditions"
       endif
 
@@ -1715,10 +1715,11 @@ contains
     !! Loop through external variables if supplied and interpolate the external data to the domain
     !!  !! SWE only for now !!
     !! -----------------------------------------------------------------------------------------------------------------
-    module subroutine interpolate_external(this, external_conditions)
+    module subroutine interpolate_external(this, external_conditions, options)
         implicit none
         class(domain_t),  intent(inout) :: this
         type(boundary_t), intent(in)    :: external_conditions
+        type(options_t), intent(in)     :: options
 
         character(len=99) :: varname
         type(variable_t) :: external_var
@@ -1728,13 +1729,16 @@ contains
         ! end do
 
         ! -------  repeat this code block for other external variables?   -----------------
-        varname = "swe"   
+        varname = options%parameters%swe_ext   !   options%ext_var_list(j)
+        
 
         if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " for initial conditions"
         external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
 
-        call geo_interp2d(  this%snow_water_equivalent%data_2d,                                  & 
-                            external_var%data_2d,        & 
+        ! print*, " external var shape: ", shape(external_var%data_2d)
+
+        call geo_interp2d(  this%snow_water_equivalent%data_2d, & ! ( this%grid2d% ids : this%grid2d% ide, this%grid2d% jds : this%grid2d% jde)   ,            & 
+                            external_var%data_2d,               & 
                             external_conditions%geo%geolut )
     
     end subroutine
