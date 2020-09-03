@@ -27,8 +27,7 @@
 # Variables that need to be set by the user:
 #
 # INSTALLDIR : default = ~/bin/
-# LIBFFT	 : location of fftw libraries		default = /usr/local/lib
-# INCFFT	 : location of fftw headers			default = /usr/local/include
+# FFTW       : location of fftw installation    default = $home/usr/local
 # LIBNETCDF	 : location of netdcdf libraries	default = compiler/machine dependant /usr/local/lib
 # INCNETCDF	 : location of netcdf headers		default = compiler/machine dependant /usr/local/include
 #
@@ -306,7 +305,7 @@ ifeq ($(COMPILER), intel)
 		CAF_FLAG=-coarray=single
 	else
 		CAF_FLAG=-coarray=distributed
-		LINKER=mpif90
+		LINKER=mpiifort
 	endif
 endif
 
