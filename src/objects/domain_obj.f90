@@ -366,6 +366,8 @@ contains
             allocate(geo%z(1:g%ime-g%ims+1, 1:this%u_grid%kme-this%u_grid%kms+1, 1:g%jme-g%jms+1))
             geo%z(:,1,:) = temp_offset(g%ims:g%ime, g%jms:g%jme)
         end associate
+        
+        
 
 
         ! Read the latitude data
@@ -666,17 +668,17 @@ contains
         implicit none
         class(domain_t), intent(inout)  :: this
 
-        allocate(this%z_level_ratio(this% ims : this% ime, &
+        allocate(this%jacobian(this% ims : this% ime, &
                                     this% kms : this% kme, &
                                     this% jms : this% jme) )
 
-        allocate(this%dzdx(this% ims+1 : this% ime, &
+        allocate(this%dzdx(this% ims : this% ime+1, &
                            this% kms : this% kme, &
                            this% jms : this% jme) )
 
         allocate(this%dzdy(this% ims : this% ime, &
                            this% kms : this% kme, &
-                           this% jms+1 : this% jme) )
+                           this% jms : this% jme+1) )
 
 
         allocate(this%zr_u( this%u_grid2d_ext% ims : this%u_grid2d_ext% ime,   &
@@ -688,7 +690,7 @@ contains
                             this%v_grid2d_ext% jms : this%v_grid2d_ext% jme) )
 
 
-        allocate(this%global_z_level_ratio( this% ids : this% ide, &
+        allocate(this%global_jacobian( this% ids : this% ide, &
                                             this% kds : this% kde, &
                                             this% jds : this% jde) )
 
@@ -714,7 +716,6 @@ contains
 
         real, allocatable :: temp(:,:,:)
         integer :: i, max_level
-        real :: smooth_height
 
         call read_core_variables(this, options)
 
@@ -735,10 +736,11 @@ contains
                   global_z_interface    => this%global_z_interface,             &
                   global_dz_interface   => this%global_dz_interface,            &
                   global_terrain        => this%global_terrain,                 &
-                  global_z_level_ratio  => this%global_z_level_ratio,           &
+                  global_jacobian  => this%global_jacobian,           &
                   dzdx                  => this%dzdx,                           &
                   dzdy                  => this%dzdy,                           &
-                  z_level_ratio         => this%z_level_ratio,                  &
+                  jacobian         => this%jacobian,                  &
+                  smooth_height    => this%smooth_height,                       &
                   zr_u                  => this%zr_u,                           &
                   zr_v                  => this%zr_v)
 
@@ -749,26 +751,26 @@ contains
             if (options%parameters%space_varying_dz) then
                 max_level = find_flat_model_level(options, nz, dz)
 
-                smooth_height = sum(global_terrain) / size(global_terrain) + sum(dz(1:max_level))
+                smooth_height = sum(dz(1:max_level)) !sum(global_terrain) / size(global_terrain) + sum(dz(1:max_level))
 
-                z_level_ratio(:,i,:) = (smooth_height - terrain) / sum(dz(1:max_level))
-                global_z_level_ratio(:,i,:) = (smooth_height - global_terrain) / sum(dz(1:max_level))
+                jacobian(:,i,:) = (smooth_height - terrain) / smooth_height ! sum(dz(1:max_level))
+                global_jacobian(:,i,:) = (smooth_height - global_terrain) /smooth_height !sum(dz(1:max_level))
 
-                zr_u(:,i,:) = (smooth_height - z_u(:,i,:)) / sum(dz(1:max_level))
-                zr_v(:,i,:) = (smooth_height - z_v(:,i,:)) / sum(dz(1:max_level))
+                zr_u(:,i,:) = (smooth_height - z_u(:,i,:)) / smooth_height !sum(dz(1:max_level))
+                zr_v(:,i,:) = (smooth_height - z_v(:,i,:)) / smooth_height !sum(dz(1:max_level))
             else
-                z_level_ratio = 1
-                global_z_level_ratio = 1
+                jacobian = 1
+                global_jacobian = 1
                 zr_u = 1
                 zr_v = 1
             endif
 
-            dz_mass(:,i,:)      = dz(i) / 2 * z_level_ratio(:,i,:)
-            dz_interface(:,i,:) = dz(i) * z_level_ratio(:,i,:)
+            dz_mass(:,i,:)      = dz(i) / 2 * jacobian(:,i,:)
+            dz_interface(:,i,:) = dz(i) * jacobian(:,i,:)
             z(:,i,:)            = terrain + dz_mass(:,i,:)
             z_interface(:,i,:)  = terrain
 
-            global_dz_interface(:,i,:) = dz(i) * global_z_level_ratio(:,i,:)
+            global_dz_interface(:,i,:) = dz(i) * global_jacobian(:,i,:)
             global_z_interface(:,i,:)  = global_terrain
 
 
@@ -776,48 +778,45 @@ contains
             ! but the first level needs to be offset, and the rest of the levels need to be created
             z_u(:,i,:)          = z_u(:,i,:) + dz(i) / 2 * zr_u(:,i,:)
             z_v(:,i,:)          = z_v(:,i,:) + dz(i) / 2 * zr_v(:,i,:)
-
-            dzdx(:,i,:) = (z(ims+1:ime,i,:) - z(ims:ime-1,i,:)) / this%dx
-            dzdy(:,i,:) = (z(:,i,jms+1:jme) - z(:,i,jms:jme-1)) / this%dx
-
+                        
             do i = this%grid%kms+1, this%grid%kme
                 if (i<=max_level) then
-                    z_level_ratio(:,i,:) = z_level_ratio(:,i-1,:)
+                    jacobian(:,i,:) = jacobian(:,i-1,:)
                     zr_u(:,i,:) = zr_u(:,i-1,:)
                     zr_v(:,i,:) = zr_v(:,i-1,:)
 
-                    global_z_level_ratio(:,i,:) = global_z_level_ratio(:,i-1,:)
+                    global_jacobian(:,i,:) = global_jacobian(:,i-1,:)
 
                 else
-                    z_level_ratio(:,i,:) = 1
+                    jacobian(:,i,:) = 1
                     zr_u(:,i,:) = 1
                     zr_v(:,i,:) = 1
 
-                    global_z_level_ratio(:,i,:) = 1
+                    global_jacobian(:,i,:) = 1
 
                 endif
 
-                dz_mass(:,i,:)     = (dz(i)/2 * z_level_ratio(:,i,:) + dz(i-1)/2 * z_level_ratio(:,i-1,:))
-                dz_interface(:,i,:)= dz(i) * z_level_ratio(:,i,:)
+                dz_mass(:,i,:)     = (dz(i)/2 * jacobian(:,i,:) + dz(i-1)/2 * jacobian(:,i-1,:))
+                dz_interface(:,i,:)= dz(i) * jacobian(:,i,:)
                 z(:,i,:)           = z(:,i-1,:)           + dz_mass(:,i,:)
                 z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i-1,:)
 
-                global_dz_interface(:,i,:) = dz(i) * global_z_level_ratio(:,i,:)
+                global_dz_interface(:,i,:) = dz(i) * global_jacobian(:,i,:)
                 global_z_interface(:,i,:)  = global_z_interface(:,i-1,:) + global_dz_interface(:,i-1,:)
 
                 z_u(:,i,:)         = z_u(:,i-1,:)         + ((dz(i)/2 * zr_u(:,i,:) + dz(i-1)/2 * zr_u(:,i-1,:)))
                 z_v(:,i,:)         = z_v(:,i-1,:)         + ((dz(i)/2 * zr_v(:,i,:) + dz(i-1)/2 * zr_v(:,i-1,:)))
 
-                dzdx(:,i,:) = (z(ims+1:ime,i,:) - z(ims:ime-1,i,:)) / this%dx
-                dzdy(:,i,:) = (z(:,i,jms+1:jme) - z(:,i,jms:jme-1)) / this%dx
             enddo
+
+            call setup_dzdxy(this, options)
 
             i = this%grid%kme + 1
             global_z_interface(:,i,:) = global_z_interface(:,i-1,:) + global_dz_interface(:,i-1,:)
 
             ! technically these should probably be defined to the k+1 model top as well bu not used at present.
             ! z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i-1,:)
-            ! dz_mass(:,i,:)     = dz(i-1)/2 * z_level_ratio(:,i-1,:)
+            ! dz_mass(:,i,:)     = dz(i-1)/2 * jacobian(:,i-1,:)
 
         end associate
 
@@ -841,7 +840,41 @@ contains
 
     end subroutine initialize_core_variables
 
+    subroutine setup_dzdxy(this,options)
+        implicit none
+        class(domain_t), intent(inout)  :: this
+        type(options_t), intent(in)     :: options
 
+        real, allocatable :: global_z(:,:,:)
+        real, allocatable :: global_dzdx(:,:,:)
+        real, allocatable :: global_dzdy(:,:,:)
+        integer :: i
+        
+        allocate(global_z( this% ids : this% ide, this% kds : this% kde, this% jds : this% jde) )     
+        allocate(global_dzdx( this% ids : this% ide+1, this% kds : this% kde, this% jds : this% jde) )    
+        allocate(global_dzdy( this% ids : this% ide, this% kds : this% kde, this% jds : this% jde+1) )     
+
+        global_z(:,1,:) = this%global_terrain + (options%parameters%dz_levels(1)/2)*this%global_jacobian(:,1,:)
+        
+        do i=2,this%kme
+            global_z(:,i,:) = global_z(:,i-1,:) + (((options%parameters%dz_levels(i)) / 2)*this%global_jacobian(:,i,:)) + &
+                                                  (((options%parameters%dz_levels(i-1)) / 2)*this%global_jacobian(:,i-1,:))
+        enddo
+        
+        global_dzdx = 0
+        global_dzdy = 0
+        
+        global_dzdx(this%ids+1:this%ide,:,:) = (global_z(this%ids+1:this%ide,:,:) - global_z(this%ids:this%ide-1,:,:)) / this%dx
+        global_dzdy(:,:,this%jds+1:this%jde) = (global_z(:,:,this%jds+1:this%jde) - global_z(:,:,this%jds:this%jde-1)) / this%dx
+
+        this%dzdx(:,:,:) = global_dzdx(this%ims:this%ime+1,:,this%jms:this%jme)
+        this%dzdy(:,:,:) = global_dzdy(this%ims:this%ime,:,this%jms:this%jme+1)
+        
+        deallocate(global_z)
+        deallocate(global_dzdx)
+        deallocate(global_dzdy)
+        
+    end subroutine setup_dzdxy
     !>------------------------------------------------------------
     !! Calculate the ZNU and ZNW variables
     !!

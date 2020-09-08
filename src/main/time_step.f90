@@ -142,9 +142,9 @@ contains
         lastw = 0
         do z = kms, kme
             ! compute the U * dz/dx component of vertical motion
-            uw    = u(ims+1:ime,   z, jms+1:jme-1) * domain%dzdx(:,z,jms+1:jme-1)
+            uw    = u(ims+1:ime,   z, jms+1:jme-1) * domain%dzdx(ims+1:ime,z,jms+1:jme-1)
             ! compute the V * dz/dy component of vertical motion
-            vw    = v(ims+1:ime-1, z, jms+1:jme  ) * domain%dzdy(ims+1:ime-1,z,:)
+            vw    = v(ims+1:ime-1, z, jms+1:jme  ) * domain%dzdy(ims+1:ime-1,z,jms+1:jme)
             ! the W grid relative motion
             currw = w(ims+1:ime-1, z, jms+1:jme-1)
 
@@ -156,10 +156,10 @@ contains
             ! includes vertical interpolation between w_z-1/2 and w_z+1/2
             w_real(ims+1:ime-1, z, jms+1:jme-1) = (uw(ims+1:ime-1,:) + uw(ims+2:ime,:))*0.5 &
                                                  +(vw(:,jms+1:jme-1) + vw(:,jms+2:jme))*0.5 &
-                                                 +(lastw + currw) * 0.5
-
+                                                 +domain%jacobian(ims+1:ime-1,z,jms+1:jme-1)*(lastw + currw) * 0.5
             lastw = currw ! could avoid this memcopy cost using pointers or a single manual loop unroll
         end do
+
         end associate
 
     end subroutine diagnostic_update
@@ -426,7 +426,7 @@ contains
         time_step_size = end_time - domain%model_time
 
         call update_dt(dt, options, domain, end_time)
-
+        write(*,*) 'dt is....',dt%seconds()
         ! now just loop over internal timesteps computing all physics in order (operator splitting...)
         do while (domain%model_time < end_time)
 

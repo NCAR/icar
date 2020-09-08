@@ -772,7 +772,7 @@ contains
         ! parameters to read
         real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance, agl_cap
         real    :: cfl_reduction_factor
-        integer :: ntimesteps
+        integer :: ntimesteps, wind_iterations
         integer :: longitude_system
         integer :: nz, n_ext_winds,buffer, warning_level, cfl_strictness
         logical :: ideal, readz, readdz, interactive, debug, external_winds, surface_io_only, &
@@ -789,7 +789,7 @@ contains
                                         bias_options_filename, block_options_filename, &
                                         cu_options_filename
 
-        namelist /parameters/ ntimesteps, outputinterval, inputinterval, surface_io_only,                &
+        namelist /parameters/ ntimesteps, wind_iterations, outputinterval, inputinterval, surface_io_only, &
                               dx, dxlow, ideal, readz, readdz, nz, t_offset,                             &
                               debug, warning_level, interactive, restart,                                &
                               external_winds, buffer, n_ext_winds, advect_density, smooth_wind_distance, &
@@ -821,6 +821,7 @@ contains
         qv_is_relative_humidity=.False.
         z_is_geopotential   = .False.
         z_is_on_interface   = .False.
+        wind_iterations     = 100
         dxlow               = 100000
         restart             = .False.
         ideal               = .False.
@@ -973,7 +974,7 @@ contains
         options%restart = restart
 
         options%nz = nz
-
+        options%wind_iterations = wind_iterations
         options%high_res_soil_state = high_res_soil_state
         options%time_varying_z = time_varying_z
 
@@ -1678,11 +1679,11 @@ contains
         options%flat_z_height = flat_z_height
         options%fixed_dz_advection = fixed_dz_advection
 
-        if (fixed_dz_advection) then
-            print*, "WARNING: setting fixed_dz_advection to true is not recommended, use wind = 2 instead"
-            print*, "if you want to continue and enable this, you will need to change this code in the options_obj"
-            error stop
-        endif
+        !if (fixed_dz_advection) then
+        !    print*, "WARNING: setting fixed_dz_advection to true is not recommended, use wind = 2 instead"
+        !    print*, "if you want to continue and enable this, you will need to change this code in the options_obj"
+        !    error stop
+        !endif
 
         if (dz_modifies_wind) then
             print*, "WARNING: setting dz_modifies_wind to true is not recommended, use wind = 2 instead"

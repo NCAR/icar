@@ -112,7 +112,7 @@ module domain_interface
     type(interpolable_type) :: geo_u
     type(interpolable_type) :: geo_v
 
-    real :: dx
+    real :: smooth_height, dx
     integer :: nsmooth
 
     complex(C_DOUBLE_COMPLEX),  allocatable :: terrain_frequency(:,:) ! FFT(terrain)
@@ -120,7 +120,7 @@ module domain_interface
     double precision,           allocatable :: sintheta(:,:)
     real,                       allocatable :: advection_dz(:,:,:)
     ! store the ratio between the average dz and each grid cells topographically modified dz (for space varying dz only)
-    real,                       allocatable :: z_level_ratio(:,:,:)
+    real,                       allocatable :: jacobian(:,:,:)
     real,                       allocatable :: zr_u(:,:,:)
     real,                       allocatable :: zr_v(:,:,:)
     real,                       allocatable :: dzdx(:,:,:) ! change in height with change in x/y position (used to calculate w_real vertical motions)
@@ -134,7 +134,7 @@ module domain_interface
     real,                       allocatable :: global_terrain(:,:)
     real,                       allocatable :: global_z_interface(:,:,:)
     real,                       allocatable :: global_dz_interface(:,:,:)
-    real,                       allocatable :: global_z_level_ratio(:,:,:)
+    real,                       allocatable :: global_jacobian(:,:,:)
 
 
     ! these coarrays are used to send all data to/from a master image for IO... ?

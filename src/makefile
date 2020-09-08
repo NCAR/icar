@@ -1029,7 +1029,7 @@ $(BUILD)adv_mpdata.o:$(PHYS)adv_mpdata.f90 $(PHYS)adv_mpdata_FCT_core.f90 $(BUIL
 ###################################################################
 #	Wind related code
 ###################################################################
-$(BUILD)wind.o:$(PHYS)wind.f90 $(BUILD)data_structures.o \
+$(BUILD)wind.o:$(PHYS)wind.f90 $(BUILD)data_structures.o $(BUILD)exchangeable_h.o \
 				$(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)linear_winds.o
 
 #########################

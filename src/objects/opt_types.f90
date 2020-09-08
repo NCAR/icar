@@ -196,6 +196,7 @@ module options_types
         ! various integer parameters/options
         integer :: ntimesteps           ! total number of time steps to be simulated (from the first forcing data)
         integer :: nz                   ! number of model vertical levels
+        integer :: wind_iterations      ! number of time to iterate for wind=3 option
         integer :: ext_winds_nfiles     ! number of extrenal wind filenames to read from namelist
         type(Time_type) :: restart_time ! Date of the restart time step
         ! integer :: restart_step         ! step in forcing data to begin running
