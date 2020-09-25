@@ -20,7 +20,7 @@ module domain_interface
     type(meta_data_t)    :: info
     type(grid_t)         :: grid,   u_grid,   v_grid
     type(grid_t)         :: grid2d, u_grid2d, v_grid2d
-    type(grid_t)         :: u_grid2d_ext, v_grid2d_ext ! extended grids for u and v fields pre smoothing
+    type(grid_t)         :: u_grid2d_ext, v_grid2d_ext!, grid2d_ext ! extended grids for u and v fields pre smoothing (grid_2d_ext is for SLEVE topography smoothing)
     type(grid_t)         :: grid_monthly, grid_soil
 
     type(Time_type) :: model_time
@@ -69,6 +69,9 @@ module domain_interface
     type(variable_t) :: longwave
     type(variable_t) :: shortwave
     type(variable_t) :: terrain
+    type(variable_t) :: forcing_terrain  ! BK 05/2020: The forcing terrain interpolated 2d to the hi-res grid. In order to calculate difference in slope
+        type(variable_t) :: forcing_terrain2 ! test 9-6-2020
+        ! type(variable_t) :: forcing_terrain_u1 ! test 9-6-2020
     type(variable_t) :: u_10m
     type(variable_t) :: v_10m
     type(variable_t) :: temperature_2m
@@ -127,7 +130,6 @@ module domain_interface
     real,                       allocatable :: zr_v(:,:,:)
     real,                       allocatable :: dzdx(:,:,:) ! change in height with change in x/y position (used to calculate w_real vertical motions)
     real,                       allocatable :: dzdy(:,:,:) ! change in height with change in x/y position (used to calculate w_real vertical motions)
-    
     ! BK 2020/05
     real,                       allocatable :: delta_dzdx(:,:,:) ! change in height difference (between hi and lo-res data) with change in x/y position (used to calculate w_real vertical motions)
     real,                       allocatable :: delta_dzdy(:,:,:) ! change in height difference (between hi and lo-res data) with change in x/y position (used to calculate w_real vertical motions)
@@ -150,6 +152,8 @@ module domain_interface
     real,                       allocatable :: ustar(:,:)
     real,                       allocatable :: znu(:)
     real,                       allocatable :: znw(:)
+
+    real,                       allocatable :: dz_scl(:)  ! the scaled dz levels, required for delta terrain calculation
 
     ! these data are stored on the domain wide grid even if this process is only looking at a subgrid
     ! these variables are necessary with linear winds, especially with spatially variable dz, to compute the LUT
@@ -194,6 +198,8 @@ module domain_interface
     procedure :: interpolate_forcing
     procedure :: update_delta_fields
     procedure :: apply_forcing
+
+    procedure :: calculate_delta_terrain
 
   end type
 
@@ -264,6 +270,12 @@ module domain_interface
         type(time_delta_t), intent(in)    :: dt
     end subroutine
 
+    module subroutine calculate_delta_terrain(this, forcing, options)
+        implicit none
+        class(domain_t), intent(inout) :: this
+        type(boundary_t), intent(in)    :: forcing
+        type(options_t), intent(in) :: options
+    end subroutine
 
   end interface
 
