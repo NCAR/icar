@@ -271,6 +271,12 @@ contains
             elseif (options%physics%windtype==kITERATIVE_WINDS) then
                 call iterative_winds(domain, options)
 
+                if (options%parameters%use_terrain_difference) then  ! 
+                !! use the ratio between hi-res and lo-res grid deformation (i.e. due to 'additional' terrain) for speedup
+                    call mass_conservative_acceleration(domain%u%data_3d, domain%v%data_3d, domain%zfr_u, domain%zfr_v)
+                else    
+                    call mass_conservative_acceleration(domain%u%data_3d, domain%v%data_3d, domain%zr_u, domain%zr_v)
+                endif    
             endif
             ! else assumes even flow over the mountains
 
@@ -290,6 +296,14 @@ contains
                 call mass_conservative_acceleration(domain%u%meta_data%dqdt_3d, domain%v%meta_data%dqdt_3d, domain%zr_u, domain%zr_v)
             elseif (options%physics%windtype==kITERATIVE_WINDS) then
                 call iterative_winds(domain, options, update_in=.True.)
+                
+                if (options%parameters%use_terrain_difference) then  ! 
+                !! use the ratio between hi-res and lo-res grid deformation (i.e. due to 'addtional' terrain) for speedup
+                    call mass_conservative_acceleration(domain%u%meta_data%dqdt_3d, domain%v%meta_data%dqdt_3d, domain%zfr_u, domain%zfr_v)
+                else    
+                    call mass_conservative_acceleration(domain%u%meta_data%dqdt_3d, domain%v%meta_data%dqdt_3d, domain%zr_u, domain%zr_v)
+                endif   
+
             endif
             ! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
 

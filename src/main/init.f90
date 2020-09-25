@@ -27,7 +27,7 @@ module initialization
     use convection,                 only : init_convection
     use planetary_boundary_layer,   only : pbl_init
     use land_surface,               only : lsm_init
-
+    use io_routines,          only : io_read, io_write
     use mod_atm_utilities,          only : init_atm_utilities
     use wind,                       only : update_winds
 
@@ -77,6 +77,20 @@ contains
 
         if (this_image()==1) write(*,*) "Reading Initial conditions from boundary dataset"
         call domain%get_initial_conditions(boundary, options)
+
+           
+        if(options%parameters%use_terrain_difference)  then
+
+            if (this_image()==1 .AND. options%physics%windtype==kCONSERVE_MASS) then
+                write(*,*) "using the difference between hi- and lo-res terrain  for horizontal wind acceleration "
+            ! elseif (this_image()==1) then
+            !     write(*,*) "using the difference between hi- and lo-res terrain for u/v components of w_real "
+            endif
+                        
+            call domain%calculate_delta_terrain(boundary, options)
+
+        endif
+        
 
         if (this_image()==1) write(*,*) "Updating initial winds"
         call update_winds(domain, options)
