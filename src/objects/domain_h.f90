@@ -121,10 +121,32 @@ module domain_interface
     real,                       allocatable :: advection_dz(:,:,:)
     ! store the ratio between the average dz and each grid cells topographically modified dz (for space varying dz only)
     real,                       allocatable :: jacobian(:,:,:)
+    real,                       allocatable :: jacobian_u(:,:,:)
+    real,                       allocatable :: jacobian_v(:,:,:)
     real,                       allocatable :: zr_u(:,:,:)
     real,                       allocatable :: zr_v(:,:,:)
     real,                       allocatable :: dzdx(:,:,:) ! change in height with change in x/y position (used to calculate w_real vertical motions)
     real,                       allocatable :: dzdy(:,:,:) ! change in height with change in x/y position (used to calculate w_real vertical motions)
+    
+    ! BK 2020/05
+    real,                       allocatable :: delta_dzdx(:,:,:) ! change in height difference (between hi and lo-res data) with change in x/y position (used to calculate w_real vertical motions)
+    real,                       allocatable :: delta_dzdy(:,:,:) ! change in height difference (between hi and lo-res data) with change in x/y position (used to calculate w_real vertical motions)
+    real,                       allocatable :: zfr_u(:,:,:)     ! ratio between z levels (on grid)
+    real,                       allocatable :: zfr_v(:,:,:)
+    real,                       allocatable :: terrain_u(:,:)
+    real,                       allocatable :: terrain_v(:,:)
+    real,                       allocatable :: forcing_terrain_u(:,:)
+    real,                       allocatable :: forcing_terrain_v(:,:)
+    real,                       allocatable :: forc(:,:)
+    real,                       allocatable :: h1(:,:)     ! the large-scale terrain (h1) for the SLEVE coordinate (achieved by smoothin the org terrain)
+    real,                       allocatable :: h2(:,:)     ! the small-scale terrain (h2) for the SLEVE coordinate (difference org and h1 terrain)
+    real,                       allocatable :: h1_u(:,:)     ! the large-scale terrain (h1) on the u grid
+    real,                       allocatable :: h1_v(:,:)     ! the large-scale terrain (h1) on the v grid
+    real,                       allocatable :: h2_u(:,:)     ! the small-scale terrain (h2) on the u grid
+    real,                       allocatable :: h2_v(:,:)     ! the small-scale terrain (h2) on the v grid
+
+    real,                       allocatable :: dz_scl(:)  ! the scaled dz levels, required for delta terrain calculation
+    
     real,                       allocatable :: ustar(:,:)
     real,                       allocatable :: znu(:)
     real,                       allocatable :: znw(:)

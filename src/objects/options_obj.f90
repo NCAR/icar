@@ -1617,16 +1617,24 @@ contains
         integer :: name_unit, this_level
         real, allocatable, dimension(:) :: dz_levels
         real, dimension(45) :: fulldz
-        logical :: space_varying, fixed_dz_advection, dz_modifies_wind
-        real :: flat_z_height
+        logical :: space_varying, fixed_dz_advection, dz_modifies_wind, sleve, use_terrain_difference
+        real :: flat_z_height, terrain_smooth_windowsize, terrain_smooth_cycles, decay_rate_L_topo, decay_rate_S_topo, sleve_n, sleve_decay_factor
 
-        namelist /z_info/ dz_levels, space_varying, dz_modifies_wind, flat_z_height, fixed_dz_advection
+        namelist /z_info/ dz_levels, space_varying, dz_modifies_wind, flat_z_height, fixed_dz_advection, sleve, terrain_smooth_windowsize, terrain_smooth_cycles, decay_rate_L_topo, decay_rate_S_topo, sleve_n, use_terrain_difference, sleve_decay_factor
 
         this_level=1
         space_varying = .False.
         fixed_dz_advection = .False.
         dz_modifies_wind = .False.
         flat_z_height = -1
+        sleve = .False.
+        terrain_smooth_windowsize = 3
+        terrain_smooth_cycles = 5
+        decay_rate_L_topo = 2.
+        decay_rate_S_topo = 6.
+        sleve_n = 1.2  
+        use_terrain_difference = .False.
+        sleve_decay_factor = 3
 
         ! read the z_info namelist if requested
         if (options%readdz) then
@@ -1678,6 +1686,14 @@ contains
         options%space_varying_dz = space_varying
         options%flat_z_height = flat_z_height
         options%fixed_dz_advection = fixed_dz_advection
+        options%sleve = sleve
+        options%terrain_smooth_windowsize = terrain_smooth_windowsize
+        options%terrain_smooth_cycles = terrain_smooth_cycles
+        options%decay_rate_L_topo = decay_rate_L_topo  ! decay_rate_large_scale_topography
+        options%decay_rate_S_topo = decay_rate_S_topo ! decay_rate_small_scale_topography !
+        options%sleve_n = sleve_n
+        options%use_terrain_difference = use_terrain_difference 
+        options%sleve_decay_factor = sleve_decay_factor
 
         !if (fixed_dz_advection) then
         !    print*, "WARNING: setting fixed_dz_advection to true is not recommended, use wind = 2 instead"

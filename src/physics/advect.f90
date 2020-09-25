@@ -100,7 +100,7 @@ contains
 !
 !     end subroutine flux2
 
-    subroutine advect3d(q,u,v,w,rho,dz,dx,nx,nz,ny,dzdx,dzdy,jaco,smooth_height,options)
+    subroutine advect3d(q,u,v,w,rho,dz,dx,nx,nz,ny,jaco,options)
         implicit none
         real, dimension(1:nx,  1:nz,1:ny),  intent(inout)   :: q
         real, dimension(1:nx,  1:nz,1:ny),  intent(in)      :: w
@@ -110,28 +110,19 @@ contains
         real, dimension(:, :, :),           intent(in)      :: dz
         real,                               intent(in)      :: dx
         integer,                            intent(in)      :: ny, nz, nx
-        real, dimension(:, :, :),           intent(in)      :: dzdx
-        real, dimension(:, :, :),           intent(in)      :: dzdy
         real, dimension(:, :, :),           intent(in)      :: jaco
-        real,                               intent(in)      :: smooth_height
         type(options_t), intent(in)::options
 
         ! interal parameters
         integer                         :: err, i, j, k
         real, dimension(1:nx,1:nz,1:ny) :: qin
-        real, dimension(1:nx,1:nz,1:ny) :: dzdx_surf
-        real, dimension(1:nx,1:nz,1:ny) :: dzdy_surf
         real, dimension(1:nx-1,1:nz)    :: f1   ! historical note, there used to be an f2 to store f[x+1]
         real, dimension(1:nx-2,1:nz)    :: f3,f4
         real, dimension(1:nx-2,1:nz-1)  :: f5
+        
+        ! Multiply dz by jacobian so that all advection terms will be divided by mass-centered jacobian
 
-        !$omp parallel shared(qin,q,u,v,w,rho,dz,dzdx,dzdy,dzdx_surf,dzdy_surf,jaco,smooth_height) firstprivate(nx,ny,nz) private(i,f1,f3,f4,f5)
-        !$omp do schedule(static)
-        do i=1,nz
-            dzdx_surf(:,i,:) = (dzdx(2:nx+1,1,:)+dzdx(1:nx,1,:))/2
-            dzdy_surf(:,i,:) = (dzdy(:,1,2:ny+1)+dzdy(:,1,1:ny))/2
-        enddo        
-        !$omp end do
+        !$omp parallel shared(qin,q,u,v,w,rho,dz,jaco) firstprivate(nx,ny,nz) private(i,f1,f3,f4,f5)
         !$omp do schedule(static)
         do i=1,ny
             qin(:,:,i)=q(:,:,i)
@@ -175,17 +166,15 @@ contains
            !     q(2:nx-1,nz,i)     = q(2:nx-1,nz,i)     - (qin(2:nx-1,nz,i) * w(2:nx-1,nz,i)-f5(:,nz-1))      &
            !                          / rho(2:nx-1,nz,i) / dz(2:nx-1,nz,i)
            ! else
-               ! perform horizontal advection
-               q(2:nx-1,:,i)      = q(2:nx-1,:,i)       - (((f1(2:nx-1,:) - f1(1:nx-2,:)) + (f3 - f4)) / (dx) &
-                                                        - ((f1(2:nx-1,:) + f1(1:nx-2,:))/2) * dzdx_surf(2:nx-1,:,i)/(jaco(2:nx-1,:,i)*smooth_height) &
-                                                        - ((f3 + f4)/2) * dzdy_surf(2:nx-1,:,i)/(jaco(2:nx-1,:,i)*smooth_height))/dz(2:nx-1,:,i)
+               ! perform horizontal advection, from difference terms
+               q(2:nx-1,:,i)      = q(2:nx-1,:,i)       - ((f1(2:nx-1,:) - f1(1:nx-2,:)) + (f3 - f4)) /(dx*dz(2:nx-1,:,i)*jaco(2:nx-1,:,i))                      
                ! then vertical (order doesn't matter because fluxes f1-6 are calculated before applying them)
                ! add fluxes to middle layers
-               q(2:nx-1,2:nz-1,i) = q(2:nx-1,2:nz-1,i)  - (f5(:,2:nz-1) - f5(:,1:nz-2)) / dz(2:nx-1,2:nz-1,i)
+               q(2:nx-1,2:nz-1,i) = q(2:nx-1,2:nz-1,i)  - (f5(:,2:nz-1) - f5(:,1:nz-2)) / (dz(2:nx-1,2:nz-1,i)*jaco(2:nx-1,2:nz-1,i))
                ! add fluxes to bottom layer
-               q(2:nx-1,1,i)      = q(2:nx-1,1,i)       - f5(:,1) / dz(2:nx-1,1,i)
+               q(2:nx-1,1,i)      = q(2:nx-1,1,i)       - f5(:,1) / (dz(2:nx-1,1,i)*jaco(2:nx-1,1,i))
                ! add fluxes to top layer
-               q(2:nx-1,nz,i)     = q(2:nx-1,nz,i)      - (qin(2:nx-1,nz,i) * w(2:nx-1,nz,i) - f5(:,nz-1)) / dz(2:nx-1,nz,i)
+               q(2:nx-1,nz,i)     = q(2:nx-1,nz,i)      - (qin(2:nx-1,nz,i) * w(2:nx-1,nz,i) - f5(:,nz-1)) / (dz(2:nx-1,nz,i)*jaco(2:nx-1,nz,i))
            ! endif
         enddo
         !$omp end do
@@ -325,7 +314,7 @@ contains
 
     end subroutine test_divergence
 
-    subroutine setup_module_winds(u,v,w, dz, dx, options, dt)
+    subroutine setup_module_winds(u,v,w, dz, dx, options, dt,jaco,jaco_u,jaco_v)
         implicit none
         real,               intent(in)  :: u(:,:,:)
         real,               intent(in)  :: v(:,:,:)
@@ -334,6 +323,9 @@ contains
         real,               intent(in)  :: dx
         type(options_t),    intent(in)  :: options
         real,               intent(in)  :: dt
+        real,               intent(in)  :: jaco(:, :, :)
+        real,               intent(in)  :: jaco_u(:, :, :)
+        real,               intent(in)  :: jaco_v(:, :, :)
 
         integer :: nx, nz, ny, i
 
@@ -364,9 +356,12 @@ contains
                 ! W_m = (domain%w_cu + domain%w)                     * (dt/dx)
                 ! call rebalance_cu_winds(U_m,V_m,W_m)
             ! else
-                U_m = u(2:nx,:,:) * ((dz(1:nx-1,:,:)+dz(2:nx,:,:))/2 * dt)
-                V_m = v(:,:,2:ny) * ((dz(:,:,1:ny-1)+dz(:,:,2:ny))/2 * dt)
+                U_m = u(2:nx,:,:) * ((dz(1:nx-1,:,:)+dz(2:nx,:,:))/2 * dt) * jaco_u(2:nx,:,:)
+                V_m = v(:,:,2:ny) * ((dz(:,:,1:ny-1)+dz(:,:,2:ny))/2 * dt) * jaco_v(:,:,2:ny)
                 W_m = w * dt
+                !Because Jacobian is defined on mass-grid, need to make assumption about first level (ground)
+                W_m(:,1,:) = W_m(:,1,:) * jaco(:,1,:)
+                W_m(:,2:nz,:) = W_m(:,2:nz,:) * (jaco(:,1:nz-1,:) + jaco(:,2:nz,:))/2
             ! endif
         ! endif
 
@@ -420,7 +415,7 @@ contains
         call setup_advection_dz(domain, options, nx,ny,nz)
 
         ! calculate U,V,W normalized for dt/dx (dx**2 for density advection so we can skip a /dx in the actual advection code)
-        call setup_module_winds(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%advection_dz, domain%dx, options, dt)
+        call setup_module_winds(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%advection_dz, domain%dx, options, dt,domain%jacobian,domain%jacobian_u,domain%jacobian_v)
 
         ! lastqv_m=domain%qv
 
@@ -428,17 +423,17 @@ contains
             call test_divergence(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%advection_dz, domain%dx, domain%ims, domain%ime, domain%jms, domain%jme, domain%kms, domain%kme)
         endif
 
-        if (options%vars_to_advect(kVARS%water_vapor)>0)                  call advect3d(domain%water_vapor%data_3d,             U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%dzdx, domain%dzdy, domain%jacobian, domain%smooth_height, options)
-        if (options%vars_to_advect(kVARS%cloud_water)>0)                  call advect3d(domain%cloud_water_mass%data_3d,        U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%dzdx, domain%dzdy, domain%jacobian, domain%smooth_height, options)
-        if (options%vars_to_advect(kVARS%rain_in_air)>0)                  call advect3d(domain%rain_mass%data_3d,               U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%dzdx, domain%dzdy, domain%jacobian, domain%smooth_height, options)
-        if (options%vars_to_advect(kVARS%snow_in_air)>0)                  call advect3d(domain%snow_mass%data_3d,               U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%dzdx, domain%dzdy, domain%jacobian, domain%smooth_height, options)
-        if (options%vars_to_advect(kVARS%potential_temperature)>0)        call advect3d(domain%potential_temperature%data_3d,   U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%dzdx, domain%dzdy, domain%jacobian, domain%smooth_height, options)
-        if (options%vars_to_advect(kVARS%cloud_ice)>0)                    call advect3d(domain%cloud_ice_mass%data_3d,          U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%dzdx, domain%dzdy, domain%jacobian, domain%smooth_height, options)
-        if (options%vars_to_advect(kVARS%graupel_in_air)>0)               call advect3d(domain%graupel_mass%data_3d,            U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%dzdx, domain%dzdy, domain%jacobian, domain%smooth_height, options)
-        if (options%vars_to_advect(kVARS%ice_number_concentration)>0)     call advect3d(domain%cloud_ice_number%data_3d,        U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%dzdx, domain%dzdy, domain%jacobian, domain%smooth_height, options)
-        if (options%vars_to_advect(kVARS%rain_number_concentration)>0)    call advect3d(domain%rain_number%data_3d,             U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%dzdx, domain%dzdy, domain%jacobian, domain%smooth_height, options)
-        if (options%vars_to_advect(kVARS%snow_number_concentration)>0)    call advect3d(domain%snow_number%data_3d,             U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%dzdx, domain%dzdy, domain%jacobian, domain%smooth_height, options)
-        if (options%vars_to_advect(kVARS%graupel_number_concentration)>0) call advect3d(domain%graupel_number%data_3d,          U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%dzdx, domain%dzdy, domain%jacobian, domain%smooth_height, options)
+        if (options%vars_to_advect(kVARS%water_vapor)>0)                  call advect3d(domain%water_vapor%data_3d,             U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%jacobian, options)
+        if (options%vars_to_advect(kVARS%cloud_water)>0)                  call advect3d(domain%cloud_water_mass%data_3d,        U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%jacobian, options)
+        if (options%vars_to_advect(kVARS%rain_in_air)>0)                  call advect3d(domain%rain_mass%data_3d,               U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%jacobian, options)
+        if (options%vars_to_advect(kVARS%snow_in_air)>0)                  call advect3d(domain%snow_mass%data_3d,               U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%jacobian, options)
+        if (options%vars_to_advect(kVARS%potential_temperature)>0)        call advect3d(domain%potential_temperature%data_3d,   U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%jacobian, options)
+        if (options%vars_to_advect(kVARS%cloud_ice)>0)                    call advect3d(domain%cloud_ice_mass%data_3d,          U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%jacobian, options)
+        if (options%vars_to_advect(kVARS%graupel_in_air)>0)               call advect3d(domain%graupel_mass%data_3d,            U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%jacobian, options)
+        if (options%vars_to_advect(kVARS%ice_number_concentration)>0)     call advect3d(domain%cloud_ice_number%data_3d,        U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%jacobian, options)
+        if (options%vars_to_advect(kVARS%rain_number_concentration)>0)    call advect3d(domain%rain_number%data_3d,             U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%jacobian, options)
+        if (options%vars_to_advect(kVARS%snow_number_concentration)>0)    call advect3d(domain%snow_number%data_3d,             U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%jacobian, options)
+        if (options%vars_to_advect(kVARS%graupel_number_concentration)>0) call advect3d(domain%graupel_number%data_3d,          U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%jacobian, options)
 
         ! if (options%physics%convection > 0) then
         !     call advect_cu_winds(domain, options, dt)
