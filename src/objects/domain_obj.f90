@@ -2162,7 +2162,6 @@ contains
 
         call read_forcing_terrain(this, options, forcing)
 
-        return
         allocate(this%zfr_u( this%u_grid2d_ext% ims : this%u_grid2d_ext% ime,   &  ! can go to calculate delta terrain ?
                              this%u_grid% kms : this%u_grid% kme,   &
                              this%u_grid2d_ext% jms : this%u_grid2d_ext% jme) )
