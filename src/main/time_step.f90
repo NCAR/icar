@@ -143,12 +143,6 @@ contains
         ! finally, calculate the real vertical motions (including U*dzdx + V*dzdy)
         lastw = 0
         do z = kms, kme
-<<<<<<< HEAD
-            ! compute the U * dz/dx component of vertical motion
-            uw    = u(ims+1:ime,   z, jms+1:jme-1) * domain%dzdx(ims+1:ime,z,jms+1:jme-1)
-            ! compute the V * dz/dy component of vertical motion
-            vw    = v(ims+1:ime-1, z, jms+1:jme  ) * domain%dzdy(ims+1:ime-1,z,jms+1:jme)
-=======
             
             ! ! if(options%parameters%use_terrain_difference) then
             !                 ! compute the U * dz/dx component of vertical motion
@@ -157,14 +151,13 @@ contains
             !     vw    = v(ims+1:ime-1, z, jms+1:jme  ) * domain%delta_dzdy(ims+1:ime-1,z,:)
             ! else    
                 ! compute the U * dz/dx component of vertical motion
-                uw    = u(ims+1:ime,   z, jms+1:jme-1) * domain%dzdx(:,z,jms+1:jme-1)
+                uw    = u(ims+1:ime,   z, jms+1:jme-1) * domain%dzdx(ims+1:ime,z,jms+1:jme-1)
                 ! compute the V * dz/dy component of vertical motion
-                vw    = v(ims+1:ime-1, z, jms+1:jme  ) * domain%dzdy(ims+1:ime-1,z,:)
+                vw    = v(ims+1:ime-1, z, jms+1:jme  ) * domain%dzdy(ims+1:ime-1,z,jms+1:jme)
             ! endif    
             ! ! convert the W grid relative motion to m/s
             ! currw = w(ims+1:ime-1, z, jms+1:jme-1) * dz_interface(ims+1:ime-1, z, jms+1:jme-1) / domain%dx
 
->>>>>>> d49bbdcdbdfd2ee4fc26547c5534448f0ef2acad
             ! the W grid relative motion
             currw = w(ims+1:ime-1, z, jms+1:jme-1)
 
@@ -446,7 +439,7 @@ contains
         time_step_size = end_time - domain%model_time
 
         call update_dt(dt, options, domain, end_time)
-        write(*,*) 'dt is....',dt%seconds()
+
         ! now just loop over internal timesteps computing all physics in order (operator splitting...)
         do while (domain%model_time < end_time)
 

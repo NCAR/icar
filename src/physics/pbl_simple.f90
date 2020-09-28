@@ -152,6 +152,7 @@ contains
         ! first layer assumes no flow through the surface, that comes from the LSM
         q(its:ite, kts,j) = q(its:ite, kts, j) - fluxes(its:ite,kts) / rho_dz(its:ite, kts)
         ! middle layers (no change for top layer assuming flux in = flux out)
+        if (ANY(rho_dz(its:ite,kts+1:kte)==0)) write(*,*) "Some rho_dz is 0"
         q(its:ite, kts+1:kte,j) = q(its:ite, kts+1:kte, j) - (fluxes(its:ite,kts+1:kte) - fluxes(its:ite,kts:kte-1)) / rho_dz(its:ite,kts+1:kte)
         ! make sure top fluxes end up in top layer
         q(its:ite, kte+1,j) = q(its:ite, kte+1, j) + fluxes(its:ite,kte) / rho_dz(its:ite, kte)
