@@ -790,11 +790,7 @@ contains
                                         bias_options_filename, block_options_filename, &
                                         cu_options_filename
 
-<<<<<<< HEAD
-        namelist /parameters/ ntimesteps, wind_iterations, outputinterval, inputinterval, surface_io_only, &
-=======
-        namelist /parameters/ ntimesteps, outputinterval, frames_per_outfile, inputinterval, surface_io_only,                &
->>>>>>> d49bbdcdbdfd2ee4fc26547c5534448f0ef2acad
+        namelist /parameters/ ntimesteps, wind_iterations, outputinterval, frames_per_outfile, inputinterval, surface_io_only,                &
                               dx, dxlow, ideal, readz, readdz, nz, t_offset,                             &
                               debug, warning_level, interactive, restart,                                &
                               external_winds, buffer, n_ext_winds, advect_density, smooth_wind_distance, &

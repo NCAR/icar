@@ -514,6 +514,7 @@ contains
 
         wind= 1 ! 0 = no LT,
                 ! 1 = linear theory wind perturbations
+                ! 2 = terrain induced horizontal accelleration
 
 !       read the namelist
         open(io_newunit(name_unit), file=filename)
@@ -770,7 +771,7 @@ contains
         integer :: name_unit
         type(time_delta_t) :: dt
         ! parameters to read
-        real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance, agl_cap
+        real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance, frames_per_outfile, agl_cap
         real    :: cfl_reduction_factor
         integer :: ntimesteps, wind_iterations
         integer :: longitude_system
@@ -789,7 +790,7 @@ contains
                                         bias_options_filename, block_options_filename, &
                                         cu_options_filename
 
-        namelist /parameters/ ntimesteps, wind_iterations, outputinterval, inputinterval, surface_io_only, &
+        namelist /parameters/ ntimesteps, wind_iterations, outputinterval, frames_per_outfile, inputinterval, surface_io_only,                &
                               dx, dxlow, ideal, readz, readdz, nz, t_offset,                             &
                               debug, warning_level, interactive, restart,                                &
                               external_winds, buffer, n_ext_winds, advect_density, smooth_wind_distance, &
@@ -845,6 +846,7 @@ contains
         cfl_strictness      =  3
         inputinterval       =  3600
         outputinterval      =  3600
+        frames_per_outfile  =  24
         longitude_system    = kMAINTAIN_LON
 
         ! flag set to read specific parameterization options
@@ -927,6 +929,9 @@ contains
         else
             options%output_file_frequency="every step"
         endif
+
+        ! options%paramters%frames_per_outfile : this may cause trouble with the above, but a nicer way
+        options%frames_per_outfile = frames_per_outfile 
 
         options%surface_io_only = surface_io_only
 
@@ -1618,9 +1623,10 @@ contains
         real, allocatable, dimension(:) :: dz_levels
         real, dimension(45) :: fulldz
         logical :: space_varying, fixed_dz_advection, dz_modifies_wind, sleve, use_terrain_difference
-        real :: flat_z_height, terrain_smooth_windowsize, terrain_smooth_cycles, decay_rate_L_topo, decay_rate_S_topo, sleve_n, sleve_decay_factor
 
-        namelist /z_info/ dz_levels, space_varying, dz_modifies_wind, flat_z_height, fixed_dz_advection, sleve, terrain_smooth_windowsize, terrain_smooth_cycles, decay_rate_L_topo, decay_rate_S_topo, sleve_n, use_terrain_difference, sleve_decay_factor
+        real :: flat_z_height, terrain_smooth_windowsize, terrain_smooth_cycles, decay_rate_L_topo, decay_rate_S_topo, sleve_n
+
+        namelist /z_info/ dz_levels, space_varying, dz_modifies_wind, flat_z_height, fixed_dz_advection, sleve, terrain_smooth_windowsize, terrain_smooth_cycles, decay_rate_L_topo, decay_rate_S_topo, sleve_n, use_terrain_difference
 
         this_level=1
         space_varying = .False.
@@ -1634,7 +1640,6 @@ contains
         decay_rate_S_topo = 6.
         sleve_n = 1.2  
         use_terrain_difference = .False.
-        sleve_decay_factor = 3
 
         ! read the z_info namelist if requested
         if (options%readdz) then
@@ -1693,7 +1698,6 @@ contains
         options%decay_rate_S_topo = decay_rate_S_topo ! decay_rate_small_scale_topography !
         options%sleve_n = sleve_n
         options%use_terrain_difference = use_terrain_difference 
-        options%sleve_decay_factor = sleve_decay_factor
 
         !if (fixed_dz_advection) then
         !    print*, "WARNING: setting fixed_dz_advection to true is not recommended, use wind = 2 instead"
@@ -1706,7 +1710,6 @@ contains
             print*, "if you want to continue and enable this, you will need to change this code in the options_obj"
             error stop
         endif
-
 
     end subroutine model_levels_namelist
 

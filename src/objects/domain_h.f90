@@ -153,8 +153,6 @@ module domain_interface
     real,                       allocatable :: znu(:)
     real,                       allocatable :: znw(:)
 
-    real,                       allocatable :: dz_scl(:)  ! the scaled dz levels, required for delta terrain calculation
-
     ! these data are stored on the domain wide grid even if this process is only looking at a subgrid
     ! these variables are necessary with linear winds, especially with spatially variable dz, to compute the LUT
     real,                       allocatable :: global_terrain(:,:)
