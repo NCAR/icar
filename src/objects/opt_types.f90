@@ -7,6 +7,8 @@ module options_types
     implicit none
 
 
+    ! ! ! !  TEST for AGL branch
+
     ! ------------------------------------------------
     ! type to store integer options for each physics package
     ! ------------------------------------------------
@@ -196,6 +198,7 @@ module options_types
         ! various integer parameters/options
         integer :: ntimesteps           ! total number of time steps to be simulated (from the first forcing data)
         integer :: nz                   ! number of model vertical levels
+        integer :: wind_iterations      ! number of time to iterate for wind=3 option
         integer :: ext_winds_nfiles     ! number of extrenal wind filenames to read from namelist
         type(Time_type) :: restart_time ! Date of the restart time step
         ! integer :: restart_step         ! step in forcing data to begin running
@@ -241,12 +244,11 @@ module options_types
         real    :: decay_rate_L_topo    !
         real    :: decay_rate_S_topo    !        
 
-
-
-        real    :: sleve_decay_factor   ! The ratio H/s (model top or flat_z_height over decay height s). Schär: "the single scale parameter s plays the role of a scale height; that is, the underlying terrain features ap- proximately decay by a factor 1/e over a depth s. With s=H, the resulting coordinate structure is qualitatively comparable to sigma coordinates. With s < H, a hybridlike setting is obtained"
-        ! maybe make sleve_decay_factor a function of flat_z_height ???
+        ! real    :: sleve_decay_factor   ! The ratio H/s (model top or flat_z_height over decay height s). Schär: "the single scale parameter s plays the role of a scale height; that is, the underlying terrain features ap- proximately decay by a factor 1/e over a depth s. With s=H, the resulting coordinate structure is qualitatively comparable to sigma coordinates. With s < H, a hybridlike setting is obtained"
         real    :: sleve_n              ! Additional parameter introduced by Leuenberger 2009.
         logical :: use_terrain_difference ! calculate dzdx from the differenec between hi- and lo-res terrain, rather than from hi-res terrain only. For use when forcing data is of a resolution that it resolves signigicant terrain influence (on wind field mainly) 
+
+        logical :: nudging   ! constrain the solution of certain variables (QV,QS,QC,QI,QR,QG) to be close (nudge_factor) to the forcing data
 
         real    :: agl_cap              ! height up to which AGL height is used for vertical interpolation
         

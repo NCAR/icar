@@ -391,6 +391,7 @@ OBJS=	$(BUILD)driver.o            \
 		$(BUILD)cu_tiedtke.o		\
 		$(BUILD)advection_driver.o	\
 		$(BUILD)advect.o			\
+		$(BUILD)adv_mpdata.o                        \
 		$(BUILD)lsm_driver.o		\
 		$(BUILD)lsm_noahdrv.o		\
 		$(BUILD)lsm_noahlsm.o		\
@@ -1019,17 +1020,17 @@ $(BUILD)pbl_ysu.o: $(PHYS)pbl_ysu.f90
 #	Advection related code
 ###################################################################
 $(BUILD)advection_driver.o:$(PHYS)advection_driver.f90 $(BUILD)data_structures.o $(BUILD)advect.o \
-							$(BUILD)options_h.o $(BUILD)domain_h.o
+							$(BUILD)options_h.o $(BUILD)domain_h.o $(BUILD)adv_mpdata.o
 
 $(BUILD)advect.o:$(PHYS)advect.f90 $(BUILD)data_structures.o $(BUILD)options_h.o $(BUILD)domain_h.o
 
-$(BUILD)adv_mpdata.o:$(PHYS)adv_mpdata.f90 $(PHYS)adv_mpdata_FCT_core.f90 $(BUILD)data_structures.o
+$(BUILD)adv_mpdata.o:$(PHYS)adv_mpdata.f90 $(PHYS)adv_mpdata_FCT_core.f90 $(BUILD)data_structures.o $(BUILD)options_h.o $(BUILD)domain_h.o
 
 
 ###################################################################
 #	Wind related code
 ###################################################################
-$(BUILD)wind.o:$(PHYS)wind.f90 $(BUILD)data_structures.o \
+$(BUILD)wind.o:$(PHYS)wind.f90 $(BUILD)data_structures.o $(BUILD)exchangeable_h.o \
 				$(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)linear_winds.o
 
 #########################

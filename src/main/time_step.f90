@@ -151,9 +151,9 @@ contains
             !     vw    = v(ims+1:ime-1, z, jms+1:jme  ) * domain%delta_dzdy(ims+1:ime-1,z,:)
             ! else    
                 ! compute the U * dz/dx component of vertical motion
-                uw    = u(ims+1:ime,   z, jms+1:jme-1) * domain%dzdx(:,z,jms+1:jme-1)
+                uw    = u(ims+1:ime,   z, jms+1:jme-1) * domain%dzdx(ims+1:ime,z,jms+1:jme-1)
                 ! compute the V * dz/dy component of vertical motion
-                vw    = v(ims+1:ime-1, z, jms+1:jme  ) * domain%dzdy(ims+1:ime-1,z,:)
+                vw    = v(ims+1:ime-1, z, jms+1:jme  ) * domain%dzdy(ims+1:ime-1,z,jms+1:jme)
             ! endif    
             ! ! convert the W grid relative motion to m/s
             ! currw = w(ims+1:ime-1, z, jms+1:jme-1) * dz_interface(ims+1:ime-1, z, jms+1:jme-1) / domain%dx
@@ -169,10 +169,10 @@ contains
             ! includes vertical interpolation between w_z-1/2 and w_z+1/2
             w_real(ims+1:ime-1, z, jms+1:jme-1) = (uw(ims+1:ime-1,:) + uw(ims+2:ime,:))*0.5 &
                                                  +(vw(:,jms+1:jme-1) + vw(:,jms+2:jme))*0.5 &
-                                                 +(lastw + currw) * 0.5
-
+                                                 +domain%jacobian(ims+1:ime-1,z,jms+1:jme-1)*(lastw + currw) * 0.5
             lastw = currw ! could avoid this memcopy cost using pointers or a single manual loop unroll
         end do
+
         end associate
 
     end subroutine diagnostic_update
