@@ -126,6 +126,7 @@ module domain_interface
     real,                       allocatable :: jacobian(:,:,:)
     real,                       allocatable :: jacobian_u(:,:,:)
     real,                       allocatable :: jacobian_v(:,:,:)
+    real,                       allocatable :: jacobian_w(:,:,:)
     real,                       allocatable :: zr_u(:,:,:)
     real,                       allocatable :: zr_v(:,:,:)
     real,                       allocatable :: dzdx(:,:,:) ! change in height with change in x/y position (used to calculate w_real vertical motions)
@@ -194,6 +195,7 @@ module domain_interface
 
     procedure :: get_initial_conditions
     procedure :: interpolate_forcing
+    procedure :: interpolate_external
     procedure :: update_delta_fields
     procedure :: apply_forcing
 
@@ -213,10 +215,18 @@ module domain_interface
     end subroutine
 
     ! read initial atmospheric conditions from forcing data
-    module subroutine get_initial_conditions(this, forcing, options)
+    module subroutine get_initial_conditions(this, forcing, options, external_conditions)
         implicit none
         class(domain_t),  intent(inout) :: this
         type(boundary_t), intent(inout) :: forcing
+        type(boundary_t), intent(inout), optional :: external_conditions  ! external data such as SWE
+        type(options_t),  intent(in)    :: options
+    end subroutine
+
+    module subroutine interpolate_external(this, external_conditions, options)
+        implicit none
+        class(domain_t),  intent(inout) :: this
+        type(boundary_t), intent(in)    :: external_conditions
         type(options_t),  intent(in)    :: options
     end subroutine
 

@@ -314,7 +314,7 @@ contains
 
     end subroutine test_divergence
 
-    subroutine setup_module_winds(u,v,w, dz, dx, options, dt,jaco,jaco_u,jaco_v)
+    subroutine setup_module_winds(u,v,w, dz, dx, options, dt,jaco,jaco_u,jaco_v, jaco_w)
         implicit none
         real,               intent(in)  :: u(:,:,:)
         real,               intent(in)  :: v(:,:,:)
@@ -326,6 +326,7 @@ contains
         real,               intent(in)  :: jaco(:, :, :)
         real,               intent(in)  :: jaco_u(:, :, :)
         real,               intent(in)  :: jaco_v(:, :, :)
+        real,               intent(in)  :: jaco_w(:, :, :)
 
         integer :: nx, nz, ny, i
 
@@ -358,10 +359,7 @@ contains
             ! else
                 U_m = u(2:nx,:,:) * ((dz(1:nx-1,:,:)+dz(2:nx,:,:))/2 * dt) * jaco_u(2:nx,:,:)
                 V_m = v(:,:,2:ny) * ((dz(:,:,1:ny-1)+dz(:,:,2:ny))/2 * dt) * jaco_v(:,:,2:ny)
-                W_m = w * dt
-                !Because Jacobian is defined on mass-grid, need to make assumption about first level (ground)
-                W_m(:,1,:) = W_m(:,1,:) * jaco(:,1,:)
-                W_m(:,2:nz,:) = W_m(:,2:nz,:) * (jaco(:,1:nz-1,:) + jaco(:,2:nz,:))/2
+                W_m = w * dt * jaco_w
             ! endif
         ! endif
 
@@ -415,7 +413,7 @@ contains
         call setup_advection_dz(domain, options, nx,ny,nz)
 
         ! calculate U,V,W normalized for dt/dx (dx**2 for density advection so we can skip a /dx in the actual advection code)
-        call setup_module_winds(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%advection_dz, domain%dx, options, dt,domain%jacobian,domain%jacobian_u,domain%jacobian_v)
+        call setup_module_winds(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%advection_dz, domain%dx, options, dt,domain%jacobian,domain%jacobian_u,domain%jacobian_v,domain%jacobian_w)
 
         ! lastqv_m=domain%qv
 

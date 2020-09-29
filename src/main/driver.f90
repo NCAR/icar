@@ -37,7 +37,7 @@ program icar
 
     type(options_t) :: options
     type(domain_t)  :: domain
-    type(boundary_t):: boundary
+    type(boundary_t):: boundary, add_cond
     type(output_t)  :: dataset
     ! type(output_t)  :: surface_dataset
     type(timer_t)   :: initialization_timer, total_timer, input_timer, output_timer, physics_timer
@@ -58,7 +58,7 @@ program icar
     !  Model Initialization
     !
     ! Reads config options and initializes domain and boundary conditions
-    call init_model(options, domain, boundary)
+    call init_model(options, domain, boundary, add_cond)  ! added boundary structure for external files (additional conditions)
 
     if (this_image()==1) write(*,*) "Setting up output files"
     ! should be combined into a single setup_output call
