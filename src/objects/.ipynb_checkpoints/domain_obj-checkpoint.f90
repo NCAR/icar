@@ -688,6 +688,10 @@ contains
                                     this% kms : this% kme, &
                                     this% jms : this% jme+1) )
                                     
+        allocate(this%jacobian_w(this% ims : this% ime, &
+                                    this% kms : this% kme, &
+                                    this% jms : this% jme) )
+                                                                
         allocate(this%dzdx(this% ims : this% ime+1, &
                            this% kms : this% kme, &
                            this% jms : this% jme) )
@@ -787,6 +791,7 @@ contains
                   jacobian              => this%jacobian,                       &
                   jacobian_u                  => this%jacobian_u,                           &
                   jacobian_v                  => this%jacobian_v,                           &
+                  jacobian_w                  => this%jacobian_w,                           &
                   smooth_height         => this%smooth_height,                  &
                   dz_scl                => this%dz_scl,                         &
                   zr_u                  => this%zr_u,                           &
@@ -806,7 +811,7 @@ contains
 
             max_level = find_flat_model_level(options, nz, dz)  
             
-            smooth_height = sum(global_terrain) / size(global_terrain) + sum(dz(1:max_level))
+            smooth_height = sum(dz(1:max_level)) !sum(global_terrain) / size(global_terrain) + sum(dz(1:max_level))
 
             ! Terminology from Schär et al 2002, Leuenberger 2009: (can be simpliied later on, but for clarity)
             s1 = smooth_height / options%parameters%decay_rate_L_topo 
@@ -815,7 +820,7 @@ contains
             ! h = terrain(:,:) 
 
             ! Scale dz with smooth_height/sum(dz(1:max_level)) before calculating sleve levels. 
-            dz_scl(:)   =   dz(1:nz)  *  smooth_height / sum(dz(1:max_level))  ! this leads to a jump in dz thickness at max_level+1. Not sure if this is a problem. 
+            dz_scl(:)   =   dz(1:nz) ! *  smooth_height / sum(dz(1:max_level))  ! this leads to a jump in dz thickness at max_level+1. Not sure if this is a problem. 
             ! dz_scl(:)   =   dz(1:nz)  *  H / sum(dz(1:nz))  ! gives the same for flatz=0, but smoother otherwise? BAD idea
             ! dz_scl   =   dz(:)  *  smooth_height / sum(dz(1:max_level))
             ! H        =  sum(dz_scl(1:max_level))  ! should also lead to smooth_height, but more error proof?
@@ -867,8 +872,8 @@ contains
             dz_mass(:,i,:)       = dz_interface(:,i,:) / 2           ! Diff for k=1
             z(:,i,:)             = terrain + dz_mass(:,i,:)          ! Diff for k=1   
             
-            jacobian(:,i,:) = dz_interface(:,i,:)/dz(i)
-            global_jacobian(:,i,:) = global_dz_interface(:,i,:)/dz(i)
+            jacobian(:,i,:) = dz_interface(:,i,:)/dz_scl(i)
+            global_jacobian(:,i,:) = global_dz_interface(:,i,:)/dz_scl(i)
 
             ! ! - - - - -   u/v grid calculations for lowest level (i=kms)  - - - - - 
             ! ! for the u and v grids, z(1) was already initialized with terrain.
@@ -946,8 +951,8 @@ contains
                     zr_u(:,i,:) = 1  
                     zr_v(:,i,:) = 1
 
-                    global_dz_interface(:,i,:) =  dz(i)
-                    dz_interface(:,i,:) =  dz(i) !(dz(i) + dz_scl(i) )/2   ! to mitigate the jump in dz at max_level+1: (dz+dz_scl)/2 iso dz
+                    global_dz_interface(:,i,:) =  dz_scl(i)
+                    dz_interface(:,i,:) =  dz_scl(i) !(dz(i) + dz_scl(i) )/2   ! to mitigate the jump in dz at max_level+1: (dz+dz_scl)/2 iso dz
                     if (i/=this%grid%kme)   z_interface(:,i+1,:) = z_interface(:,i,:) + dz(i) ! (dz(i) + dz_scl( i) )/2 !test in icar_s5T
 
                     z_u(:,i,:)  = z_u(:,i-1,:)  + ((dz(i)/2 * zr_u(:,i,:) + dz(i-1)/2 * zr_u(:,i-1,:))) ! zr_u only relevant for first i above max level, aferwards both zr_u(i) AND zr_u(i-1) are 1
@@ -958,8 +963,8 @@ contains
                 dz_mass(:,i,:)   =  dz_interface(:,i-1,:) / 2  +  dz_interface(:,i,:) / 2
                 z(:,i,:)         =  z(:,i-1,:)           + dz_mass(:,i,:)
                 
-                jacobian(:,i,:) = dz_interface(:,i,:)/dz(i)
-                global_jacobian(:,i,:) = global_dz_interface(:,i,:)/dz(i)
+                jacobian(:,i,:) = dz_interface(:,i,:)/dz_scl(i)
+                global_jacobian(:,i,:) = global_dz_interface(:,i,:)/dz_scl(i)
 
             enddo  ! ____ end SLEVE simple Implementation  _______
             
@@ -1040,7 +1045,7 @@ contains
             global_z_interface(:,i,:) = global_z_interface(:,i-1,:) + global_dz_interface(:,i-1,:)
 
         endif
-        
+                
         if (allocated(temp)) deallocate(temp)
         allocate(temp(this%ids:this%ide+1, this%kds:this%kde, this%jds:this%jde+1))
         temp(this%ids,:,this%jds:this%jde) = global_jacobian(this%ids,:,this%jds:this%jde)
@@ -1048,13 +1053,18 @@ contains
         temp(this%ids+1:this%ide,:,this%jds:this%jde) = (global_jacobian(this%ids+1:this%ide,:,this%jds:this%jde) + &
                                                              global_jacobian(this%ids:this%ide-1,:,this%jds:this%jde))/2
         jacobian_u = temp(ims:ime+1,:,jms:jme)
-                
+        
         temp(this%ids:this%ide,:,this%jds) = global_jacobian(this%ids:this%ide,:,this%jds)
         temp(this%ids:this%ide,:,this%jde+1) = global_jacobian(this%ids:this%ide,:,this%jde)
         temp(this%ids:this%ide,:,this%jds+1:this%jde) = (global_jacobian(this%ids:this%ide,:,this%jds+1:this%jde) + &
                                              global_jacobian(this%ids:this%ide,:,this%jds:this%jde-1))/2
         jacobian_v = temp(ims:ime,:,jms:jme+1)
-                
+
+        temp(this%ids:this%ide,this%kme,this%jds) = global_jacobian(this%ids:this%ide,this%kme,this%jds)
+        temp(this%ids:this%ide,this%kms:this%kme-1,this%jds:this%jde) = (global_jacobian(this%ids:this%ide,this%kms:this%kme-1,this%jds:this%jde) + &
+                                                                        global_jacobian(this%ids:this%ide,this%kms+1:this%kme,this%jds:this%jde))/2
+        jacobian_w = temp(ims:ime,:,jms:jme)
+
         call setup_dzdxy(this, options)
             
             ! technically these should probably be defined to the k+1 model top as well bu not used at present.
@@ -2162,7 +2172,6 @@ contains
 
         call read_forcing_terrain(this, options, forcing)
 
-        return
         allocate(this%zfr_u( this%u_grid2d_ext% ims : this%u_grid2d_ext% ime,   &  ! can go to calculate delta terrain ?
                              this%u_grid% kms : this%u_grid% kme,   &
                              this%u_grid2d_ext% jms : this%u_grid2d_ext% jme) )

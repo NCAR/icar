@@ -126,6 +126,7 @@ module domain_interface
     real,                       allocatable :: jacobian(:,:,:)
     real,                       allocatable :: jacobian_u(:,:,:)
     real,                       allocatable :: jacobian_v(:,:,:)
+    real,                       allocatable :: jacobian_w(:,:,:)
     real,                       allocatable :: zr_u(:,:,:)
     real,                       allocatable :: zr_v(:,:,:)
     real,                       allocatable :: dzdx(:,:,:) ! change in height with change in x/y position (used to calculate w_real vertical motions)
