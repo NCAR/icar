@@ -45,11 +45,11 @@ module initialization
     public::init_model, init_physics
 
 contains
-    subroutine init_model(options,domain,boundary)
+    subroutine init_model(options,domain,boundary,add_cond)
         implicit none
         type(options_t), intent(inout) :: options
         type(domain_t),  intent(inout) :: domain
-        type(boundary_t),intent(inout) :: boundary
+        type(boundary_t),intent(inout) :: boundary ,add_cond ! forcing and external file(s) for init conditions
 
         integer :: omp_get_max_threads, num_threads
 
@@ -75,14 +75,23 @@ contains
         if (this_image()==1) write(*,*) "Initializing boundary condition data structure"
         call boundary%init(options)
 
-        if (this_image()==1) write(*,*) "Reading Initial conditions from boundary dataset"
-        call domain%get_initial_conditions(boundary, options)
+        if(options%parameters%external_files/="MISSING") then
+            if (this_image()==1) write(*,*) "Initializing data structure for external starting conditions from file: ", trim(options%parameters%external_files)
+            call add_cond%init_external(options)
 
-           
+            if (this_image()==1) write(*,*) "Reading Initial conditions from boundary dataset(s)"
+            call domain%get_initial_conditions(boundary, options, add_cond)
+
+        else ! In the (standard) case that there are no additional conditions files for the initialization
+            if (this_image()==1) write(*,*) "Reading Initial conditions from boundary dataset"
+            call domain%get_initial_conditions(boundary, options)  ! same call as above, but without the (optional) add_cond
+
+        endif
+
         if(options%parameters%use_terrain_difference)  then
 
             if (this_image()==1 .AND. options%physics%windtype==kCONSERVE_MASS) then
-                write(*,*) "using the difference between hi- and lo-res terrain  for horizontal wind acceleration "
+                write(*,*) "Using the difference between hi- and lo-res terrain  for horizontal wind acceleration "
             ! elseif (this_image()==1) then
             !     write(*,*) "using the difference between hi- and lo-res terrain for u/v components of w_real "
             endif
