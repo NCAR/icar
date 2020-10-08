@@ -185,6 +185,18 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
+        !!  Brunt Vaisala frequency (squared)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%nsquared))
+            var%name        = "nsquared"
+            var%dimensions  = three_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "square_of_brunt_vaisala_frequency_in_air"),&
+                               attribute_t("long_name",     "Burnt Vaisala frequency squared"), &
+                               attribute_t("units",         "s-2"),                             &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
         !!  Air Pressure
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%pressure))

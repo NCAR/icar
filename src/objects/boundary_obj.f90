@@ -460,8 +460,9 @@ contains
 
         integer           :: err
         type(variable_t)  :: var, pvar, zvar, tvar, qvar
+        real, allocatable, target :: real_t(:,:,:)
 
-        if (options%parameters%t_is_potential) stop "Need real air temperature to compute height"
+        real, pointer :: t(:,:,:)
 
         qvar = list%get_var(options%parameters%qvvar)
         tvar = list%get_var(options%parameters%tvar)
@@ -470,18 +471,29 @@ contains
 
         pvar = list%get_var(options%parameters%pslvar, err)
 
+        if (options%parameters%t_is_potential) then
+            ! stop "Need real air temperature to compute height"
+            allocate(real_t, mold=tvar%data_3d)
+            real_t = exner_function(var%data_3d) * tvar%data_3d
+            t => real_t
+        else
+            t => tvar%data_3d
+        endif
+
         if (err == 0) then
-            call compute_3d_z(var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d)
+            call compute_3d_z(var%data_3d, pvar%data_2d, this%z, t, qvar%data_3d)
 
         else
             pvar = list%get_var(options%parameters%psvar, err)
             if (err == 0) then
-                call compute_3d_z(var%data_3d, pvar%data_2d, this%z, tvar%data_3d, qvar%data_3d, zvar%data_2d)
+                call compute_3d_z(var%data_3d, pvar%data_2d, this%z, t, qvar%data_3d, zvar%data_2d)
             else
                 write(*,*) "ERROR reading surface pressure or sea level pressure, variables not found"
                 error stop
             endif
         endif
+        zvar = list%get_var(options%parameters%zvar)
+        zvar%data_3d = this%z
 
     end subroutine compute_z_update
 

@@ -908,10 +908,10 @@
          RAINNC(i,j) = RAINNC(i,j) + pptrain + pptsnow + pptgraul + pptice
          IF ( PRESENT(SNOWNC) ) SNOWNC(i,j) = SNOWNC(i,j) + pptsnow + pptice
          IF ( PRESENT(SNOWNCV) )     SNOWNCV(i,j) = pptsnow + pptice
-         
+
          IF ( PRESENT(GRAUPELNC) ) GRAUPELNC(i,j) = GRAUPELNC(i,j) + pptgraul
          IF ( PRESENT(GRAUPELNCV) )    GRAUPELNCV(i,j) = pptgraul
-         
+
          SR(i,j) = (pptsnow + pptgraul + pptice)/(RAINNCV(i,j)+1.e-12)
 
          do k = kts, kte
@@ -1274,6 +1274,7 @@
             L_qi(k) = .false.
          endif
 
+         mvd_r(k) = 0.0 ! must be initialized or a later test can crash where qr1d(k)<=R1
          if (qr1d(k) .gt. R1) then
             no_micro = .false.
             rr(k) = qr1d(k)*rho(k)

@@ -16,6 +16,7 @@ submodule(options_interface) options_implementation
     use radiation,                  only : ra_var_request
     use microphysics,               only : mp_var_request
     use advection,                  only : adv_var_request
+    use wind,                       only : wind_var_request
 
     implicit none
 
@@ -93,6 +94,7 @@ contains
         call cu_var_request(options)
         call mp_var_request(options)
         call adv_var_request(options)
+        call wind_var_request(options)
 
     end subroutine
 
@@ -566,7 +568,7 @@ contains
                                         hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qgvar,qsvar,hgtvar,shvar,lhvar,pblhvar,   &
                                         psvar, pslvar, &
-                                        soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
+                                        soiltype_var, soil_t_var,soil_vwc_var,swe_var, soil_deept_var,           &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
                                         swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var
 
@@ -574,7 +576,7 @@ contains
                             landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar, &
                             psvar, pslvar, &
                             hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
-                            soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
+                            soiltype_var, soil_t_var,soil_vwc_var,swe_var,soil_deept_var,           &
                             vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
                             swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var
 
@@ -619,6 +621,7 @@ contains
         soiltype_var=""
         soil_t_var=""
         soil_vwc_var=""
+        swe_var=""
         soil_deept_var=""
         vegtype_var=""
         vegfrac_var=""
@@ -643,7 +646,7 @@ contains
         if ((pvar=="") .and. ((pslvar/="") .or. (psvar/=""))) options%compute_p = .True.
         if (options%compute_p) then
             if ((pslvar == "").and.(hgtvar == "")) then
-                print*, "ERROR: if surface pressure is used to compute air pressure, then surface height must be specified"
+                write(*,*) "ERROR: if surface pressure is used to compute air pressure, then surface height must be specified"
                 error stop
             endif
         endif
@@ -652,7 +655,7 @@ contains
         if ((zvar=="") .and. ((pslvar/="") .or. (psvar/=""))) options%compute_z = .True.
         if (options%compute_z) then
             if (pvar=="") then
-                if (this_image()==1) print*, "ERROR: either pressure (pvar) or atmospheric level height (zvar) must be specified"
+                if (this_image()==1) write(*,*) "ERROR: either pressure (pvar) or atmospheric level height (zvar) must be specified"
                 error stop
             endif
         endif
@@ -743,6 +746,7 @@ contains
         options%soiltype_var    = soiltype_var
         options%soil_t_var      = soil_t_var
         options%soil_vwc_var    = soil_vwc_var
+        options%swe_var         = swe_var
         options%soil_deept_var  = soil_deept_var
         options%vegtype_var     = vegtype_var
         options%vegfrac_var     = vegfrac_var
@@ -1650,8 +1654,8 @@ contains
 
             ! allocate(options%dz_levels(options%nz))
             if (minval(dz_levels(1:options%nz)) < 0) then
-                if (this_image()==1) print*, "WARNING: dz seems to be less than 0, this is not physical and is probably an error in the namelist"
-                if (this_image()==1) print*, "Note that the gfortran compiler will not read dz_levels spread across multiple lines. "
+                if (this_image()==1) write(*,*) "WARNING: dz seems to be less than 0, this is not physical and is probably an error in the namelist"
+                if (this_image()==1) write(*,*) "Note that the gfortran compiler will not read dz_levels spread across multiple lines. "
                 error stop
             endif
 
@@ -1679,14 +1683,14 @@ contains
         options%fixed_dz_advection = fixed_dz_advection
 
         if (fixed_dz_advection) then
-            print*, "WARNING: setting fixed_dz_advection to true is not recommended, use wind = 2 instead"
-            print*, "if you want to continue and enable this, you will need to change this code in the options_obj"
+            write(*,*) "WARNING: setting fixed_dz_advection to true is not recommended, use wind = 2 instead"
+            write(*,*) "if you want to continue and enable this, you will need to change this code in the options_obj"
             error stop
         endif
 
         if (dz_modifies_wind) then
-            print*, "WARNING: setting dz_modifies_wind to true is not recommended, use wind = 2 instead"
-            print*, "if you want to continue and enable this, you will need to change this code in the options_obj"
+            write(*,*) "WARNING: setting dz_modifies_wind to true is not recommended, use wind = 2 instead"
+            write(*,*) "if you want to continue and enable this, you will need to change this code in the options_obj"
             error stop
         endif
 
