@@ -480,7 +480,6 @@ contains
             t => tvar%data_3d
         endif
 
-
         if (err == 0) then
             call compute_3d_z(var%data_3d, pvar%data_2d, this%z, t, qvar%data_3d)
 
@@ -493,6 +492,8 @@ contains
                 error stop
             endif
         endif
+        zvar = list%get_var(options%parameters%zvar)
+        zvar%data_3d = this%z
 
     end subroutine compute_z_update
 

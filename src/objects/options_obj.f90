@@ -646,7 +646,7 @@ contains
         if ((pvar=="") .and. ((pslvar/="") .or. (psvar/=""))) options%compute_p = .True.
         if (options%compute_p) then
             if ((pslvar == "").and.(hgtvar == "")) then
-                print*, "ERROR: if surface pressure is used to compute air pressure, then surface height must be specified"
+                write(*,*) "ERROR: if surface pressure is used to compute air pressure, then surface height must be specified"
                 error stop
             endif
         endif
@@ -655,7 +655,7 @@ contains
         if ((zvar=="") .and. ((pslvar/="") .or. (psvar/=""))) options%compute_z = .True.
         if (options%compute_z) then
             if (pvar=="") then
-                if (this_image()==1) print*, "ERROR: either pressure (pvar) or atmospheric level height (zvar) must be specified"
+                if (this_image()==1) write(*,*) "ERROR: either pressure (pvar) or atmospheric level height (zvar) must be specified"
                 error stop
             endif
         endif
@@ -1654,8 +1654,8 @@ contains
 
             ! allocate(options%dz_levels(options%nz))
             if (minval(dz_levels(1:options%nz)) < 0) then
-                if (this_image()==1) print*, "WARNING: dz seems to be less than 0, this is not physical and is probably an error in the namelist"
-                if (this_image()==1) print*, "Note that the gfortran compiler will not read dz_levels spread across multiple lines. "
+                if (this_image()==1) write(*,*) "WARNING: dz seems to be less than 0, this is not physical and is probably an error in the namelist"
+                if (this_image()==1) write(*,*) "Note that the gfortran compiler will not read dz_levels spread across multiple lines. "
                 error stop
             endif
 
@@ -1683,14 +1683,14 @@ contains
         options%fixed_dz_advection = fixed_dz_advection
 
         if (fixed_dz_advection) then
-            print*, "WARNING: setting fixed_dz_advection to true is not recommended, use wind = 2 instead"
-            print*, "if you want to continue and enable this, you will need to change this code in the options_obj"
+            write(*,*) "WARNING: setting fixed_dz_advection to true is not recommended, use wind = 2 instead"
+            write(*,*) "if you want to continue and enable this, you will need to change this code in the options_obj"
             error stop
         endif
 
         if (dz_modifies_wind) then
-            print*, "WARNING: setting dz_modifies_wind to true is not recommended, use wind = 2 instead"
-            print*, "if you want to continue and enable this, you will need to change this code in the options_obj"
+            write(*,*) "WARNING: setting dz_modifies_wind to true is not recommended, use wind = 2 instead"
+            write(*,*) "if you want to continue and enable this, you will need to change this code in the options_obj"
             error stop
         endif
 

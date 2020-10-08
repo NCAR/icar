@@ -378,9 +378,7 @@ contains
 #ifdef __INTEL_COMPILER
         seconds = domain%dx / 100
 #endif
-        ! seconds = seconds/1.25
 
-        ! print*, seconds
         ! set an upper bound on dt to keep microphysics and convection stable (?)
         ! store this back in the dt time_delta data structure
         call dt%set(seconds=min(seconds,120.0D0))

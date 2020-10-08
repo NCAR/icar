@@ -547,8 +547,8 @@ contains
         xe_in=grid%ime; xe_out=nxo
         ye_in=grid%jme; ye_out=nyo
 
-        if ((ye_in-ys_in+1) /= nyo) print*, "subset_array ERROR in image:",this_image(),ye_in,ys_in,nyo
-        if ((xe_in-xs_in+1) /= nxo) print*, "subset_array ERROR in image:",this_image(),xe_in,xs_in,nxo
+        if ((ye_in-ys_in+1) /= nyo) write(*,*) "subset_array ERROR in image:",this_image(),ye_in,ys_in,nyo
+        if ((xe_in-xs_in+1) /= nxo) write(*,*) "subset_array ERROR in image:",this_image(),xe_in,xs_in,nxo
 
         !----------------------------------------------------
         ! This is the area of overlap
@@ -1172,7 +1172,7 @@ contains
 
         nsmooth = max(1, int(options%parameters%smooth_wind_distance / options%parameters%dx))
         this%nsmooth = nsmooth
-        if ((this_image()==1).and.(options%parameters%debug)) print*, "number of gridcells to smooth = ",nsmooth
+        if ((this_image()==1).and.(options%parameters%debug)) write(*,*) "number of gridcells to smooth = ",nsmooth
         ! This doesn't need to read in this variable, it could just request the dimensions
         ! but this is not a performance sensitive part of the code (for now)
         call io_read(options%parameters%init_conditions_file,   &
@@ -1267,7 +1267,7 @@ contains
         type(options_t), intent(in)     :: options
 
         type(interpolable_type) :: forc_u_from_mass, forc_v_from_mass
-        
+
         integer :: nx, ny, nz, i, ims, ime, jms, jme, AGL_top, AGL_nz
 
         ! this%geo and forcing%geo have to be of class interpolable
@@ -1289,7 +1289,7 @@ contains
             ! Find height of level closest to user-specified AGL_cap height
             AGL_top = 0
             AGL_nz = 1
-            do while (AGL_top < options%parameters%agl_cap) 
+            do while (AGL_top < options%parameters%agl_cap)
                 AGL_top = AGL_top + options%parameters%dz_levels(AGL_nz)
                 AGL_nz = AGL_nz + 1
             end do
@@ -1299,7 +1299,7 @@ contains
                 ! Multiply subtraction of base-topography by a factor that scales from 1 at surface to 0 at AGL_cap height
                 this%geo_u%z(:,i,:) = this%geo_u%z(:,i,:)-(this%geo_u%z(:,1,:)*((AGL_nz-i)/AGL_nz))
                 this%geo_v%z(:,i,:) = this%geo_v%z(:,i,:)-(this%geo_v%z(:,1,:)*((AGL_nz-i)/AGL_nz))
-                forcing%z(:,i,:) = forcing%z(:,i,:)-(forcing%original_geo%z(:,1,:)*((AGL_nz-i)/AGL_nz))    
+                forcing%z(:,i,:) = forcing%z(:,i,:)-(forcing%original_geo%z(:,1,:)*((AGL_nz-i)/AGL_nz))
             enddo
 
         endif
@@ -1318,14 +1318,14 @@ contains
         call vLUT(this%geo_v, forcing%geo_v)
 
         if (options%parameters%use_agl_height) then
-    
+
             !! Add back terrain-subtracted portions to forcing%z
 
             do i=AGL_nz,1,-1
                 forcing%z(:,i,:) = forcing%z(:,i,:)+(forcing%original_geo%z(:,1,:)*((AGL_nz-i)/AGL_nz))
             enddo
         endif
-        
+
         nx = size(this%geo%z, 1)
         ny = size(this%geo%z, 3)
         allocate(forcing%geo%z(nx, nz, ny))
