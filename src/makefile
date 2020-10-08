@@ -442,7 +442,7 @@ install:icar
 	${CP} icar ${INSTALLDIR}
 
 clean:
-	${RM} $(BUILD)*.o $(BUILD)*.mod *.i *.lst docs/doxygen_sqlite3.db 2>/dev/null ||:
+	${RM} $(BUILD)*.o $(BUILD)*.mod $(BUILD)*.smod *.i *.lst docs/doxygen_sqlite3.db 2>/dev/null ||:
 
 allclean:cleanall
 
