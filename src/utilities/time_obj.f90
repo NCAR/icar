@@ -320,7 +320,7 @@ contains
             end do
             day = floor(day_fraction - this%month_start(month))+1
             year = year + this%year_zero
-            mjd = mjd - this%hour_zero/24.0
+            mjd = mjd + this%hour_zero/24.0
         !------------------------------------------------------------
         !
         ! Calculate the dates for a 360-day Calendar
@@ -338,7 +338,7 @@ contains
 
             day = floor(day_fraction - this%month_start(month)) + 1
             year = year + this%year_zero
-            mjd = mjd - this%hour_zero/24.0
+            mjd = mjd + this%hour_zero/24.0
         end if
 
         !------------------------------------------------------------
