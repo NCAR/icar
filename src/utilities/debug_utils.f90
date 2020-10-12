@@ -79,7 +79,7 @@ contains
                             do i=lbound(var,1),ubound(var,1)
                                 if (var(i,k,j) < less_than) then
                                     print*, "First Error was in grid cell:", i,k,j, var(i,k,j)
-                                    error stop
+                                    !error stop
                                 endif
                             enddo
                         enddo
