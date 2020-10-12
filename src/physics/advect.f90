@@ -274,11 +274,11 @@ contains
     ! end subroutine advect_cu_winds
 
 
-    subroutine test_divergence(u, v, w, dz, dx, ims, ime, jms, jme, kms, kme)
+    subroutine test_divergence(u, v, w, dz, dx, jaco_u, jaco_v, jaco_w, ims, ime, jms, jme, kms, kme)
         implicit none
-        real, intent(in) :: u(ims:ime+1,kms:kme,jms:jme)
-        real, intent(in) :: v(ims:ime,kms:kme,jms:jme+1)
-        real, intent(in) :: w(ims:ime,kms:kme,jms:jme)
+        real, intent(in) :: u(ims:ime+1,kms:kme,jms:jme), jaco_u(ims:ime+1,kms:kme,jms:jme)
+        real, intent(in) :: v(ims:ime,kms:kme,jms:jme+1), jaco_v(ims:ime,kms:kme,jms:jme+1)
+        real, intent(in) :: w(ims:ime,kms:kme,jms:jme), jaco_w(ims:ime,kms:kme,jms:jme)
         real, intent(in) :: dz(ims:ime,kms:kme,jms:jme)
         real, intent(in) :: dx
         integer, intent(in) :: ims, ime, jms, jme, kms, kme
@@ -300,13 +300,13 @@ contains
         do i=ims+1,ime-1
             do j=jms+1,jme-1
                 do k=kms+1,kme
-                    dv(i,j) = v(i,k,j+1) * dzv(i,k,j+1) - v(i,k,j) * dzv(i,k,j)
-                    du(i,j) = u(i+1,k,j) * dzu(i+1,k,j) - u(i,k,j) * dzu(i,k,j)
-
-                    if (abs((dv(i,j) + du(i,j))/dx - (w(i,k-1,j)-w(i,k,j))) > 1e-3) then
-                        print*, this_image(), i,j,k, (dv(i,j) + du(i,j))/dx, w(i,k,j)-w(i,k-1,j)
+                    dv(i,j) = (v(i,k,j+1) * jaco_v(i,k,j+1) - v(i,k,j) * jaco_v(i,k,j))/dx
+                    du(i,j) = (u(i+1,k,j) * jaco_u(i+1,k,j) - u(i,k,j) * jaco_u(i,k,j))/dx
+                    
+                    if (abs(du(i,j) + dv(i,j) + (w(i,k,j)*jaco_w(i,k,j)-w(i,k-1,j)*jaco_w(i,k-1,j))/(dz(i,k,j))) > 1e-8) then
+                        print*, this_image(), i,j,k , abs(du(i,j) + dv(i,j) + (w(i,k,j)*jaco_w(i,k,j)-w(i,k-1,j)*jaco_w(i,k-1,j))/(dz(i,k,j)))
                         print*, "Winds are not balanced on entry to advect"
-                        error stop
+                        !error stop
                     endif
                 enddo
             enddo
@@ -418,7 +418,7 @@ contains
         ! lastqv_m=domain%qv
 
         if (options%parameters%debug) then
-            call test_divergence(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%advection_dz, domain%dx, domain%ims, domain%ime, domain%jms, domain%jme, domain%kms, domain%kme)
+            call test_divergence(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%advection_dz, domain%dx, domain%jacobian_u, domain%jacobian_v, domain%jacobian_w, domain%ims, domain%ime, domain%jms, domain%jme, domain%kms, domain%kme)
         endif
 
         if (options%vars_to_advect(kVARS%water_vapor)>0)                  call advect3d(domain%water_vapor%data_3d,             U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%jacobian, options)

@@ -309,7 +309,7 @@ contains
 
 
     end subroutine update_winds
-
+    
     subroutine iterative_winds(domain, options, update_in)
         implicit none
         type(domain_t), intent(inout) :: domain

@@ -128,8 +128,8 @@ contains
     !! -------------------------------
     module subroutine halo_retrieve(this)
       class(domain_t), intent(inout) :: this
-      if (associated(this%water_vapor%data_3d))           call this%water_vapor%retrieve() ! the first retrieve call will sync all
-      if (associated(this%potential_temperature%data_3d)) call this%potential_temperature%retrieve(no_sync=.True.)
+      if (associated(this%potential_temperature%data_3d)) call this%potential_temperature%retrieve()! the first retrieve call will sync all
+      if (associated(this%water_vapor%data_3d))           call this%water_vapor%retrieve(no_sync=.True.) 
       if (associated(this%cloud_water_mass%data_3d))      call this%cloud_water_mass%retrieve(no_sync=.True.)
       if (associated(this%cloud_number%data_3d))          call this%cloud_number%retrieve(no_sync=.True.)
       if (associated(this%cloud_ice_mass%data_3d))        call this%cloud_ice_mass%retrieve(no_sync=.True.)
