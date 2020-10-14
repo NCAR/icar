@@ -562,15 +562,14 @@ contains
         implicit none
         character(len=*),             intent(in)    :: filename
         type(parameter_options_type), intent(inout) :: options
-        integer :: name_unit, i, j
+        integer :: name_unit, i
         character(len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar,  &
                                         hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qgvar,qsvar,hgtvar,shvar,lhvar,pblhvar,   &
                                         psvar, pslvar, &
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
-                                        swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &
-                                        lat_ext, lon_ext, swe_ext, hs_ext, tss_ext, z_ext, time_ext
+                                        swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var
 
         namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qgvar,qsvar,hgtvar,shvar,lhvar,pblhvar,   &
                             landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar, &
@@ -578,8 +577,7 @@ contains
                             hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
                             soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
                             vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
-                            swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &
-                            lat_ext, lon_ext, swe_ext, hs_ext, tss_ext, z_ext, time_ext
+                            swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var
 
         ! no default values supplied for variable names
         hgtvar=""
@@ -630,13 +628,6 @@ contains
         rain_var=""
         sinalpha_var=""
         cosalpha_var=""
-        lat_ext=""
-        lon_ext=""
-        swe_ext=""
-        hs_ext=""
-        tss_ext=""
-        z_ext = ""
-        time_ext = ""
 
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=var_list)
@@ -760,21 +751,6 @@ contains
         ! optional calibration variables for linear wind solution
         options%linear_mask_var     = linear_mask_var
         options%nsq_calibration_var = nsq_calibration_var
-
-        !------------------------------------------------------
-        ! external variables for initialization  -  mainly snow-related, can be extended later on. swe only for now?
-        !------------------------------------------------------
-        options%ext_var_list(:) = ""
-        j=1
-        options%lat_ext    = lat_ext
-        options%lon_ext    = lon_ext
-        options%swe_ext    = swe_ext ; options%ext_var_list(j) = swe_ext;     options%ext_dim_list(j) = 2;    j = j + 1
-        options%hs_ext     = hs_ext  ; options%ext_var_list(j) = hs_ext;      options%ext_dim_list(j) = 2;    j = j + 1
-        options%tss_ext    = tss_ext ; options%ext_var_list(j) = tss_ext;     options%ext_dim_list(j) = 2;    j = j + 1
-        ! options%z_ext      = z_ext   ; options%ext_var_list(j) = z_ext;       options%ext_dim_list(j) = 3;    j = j + 1
-        options%time_ext      = time_ext   ; options%ext_var_list(j) = z_ext;       options%ext_dim_list(j) = 3;    j = j + 1
-    
-     
 
 
     end subroutine var_namelist
@@ -1797,13 +1773,13 @@ contains
         type(parameter_options_type), intent(inout) :: options
 
         character(len=MAXFILELENGTH) :: init_conditions_file, output_file, forcing_file_list, &
-                                        linear_mask_file, nsq_calibration_file, external_files
+                                        linear_mask_file, nsq_calibration_file
         character(len=MAXFILELENGTH), allocatable :: boundary_files(:), ext_wind_files(:)
         integer :: name_unit, nfiles, i
 
         ! set up namelist structures
         namelist /files_list/ init_conditions_file, output_file, boundary_files, forcing_file_list, &
-                              linear_mask_file, nsq_calibration_file, external_files
+                              linear_mask_file, nsq_calibration_file
         namelist /ext_winds_info/ ext_wind_files
 
         linear_mask_file="MISSING"
@@ -1811,13 +1787,10 @@ contains
         allocate(boundary_files(MAX_NUMBER_FILES))
         boundary_files="MISSING"
         forcing_file_list="MISSING"
-        external_files="MISSING"
 
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=files_list)
         close(name_unit)
-
-        options%external_files = external_files
 
         options%init_conditions_file=init_conditions_file
 
