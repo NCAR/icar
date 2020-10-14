@@ -112,19 +112,22 @@ contains
 
                 ! diffusion for scalars
                 Kq_m(its:ite,k,j) = K_m(its:ite,k,j) / prandtl_m(its:ite,k,j)
-
+                
+                ! rescale diffusion to cut down on excessive mixing
+                Kq_m(its:ite,k,j) = Kq_m(its:ite, k,j) / diffusion_reduction
+                Kq_m(its:ite,k,j) = Kq_m(its:ite, k,j) * dt / ((dz(its:ite,k,j) + dz(its:ite,k+1,j))/2)
+                
                 ! enforce limits specified in HP96
                 do i=its,ite
                     if (Kq_m(i,k,j)>1000) then
                         Kq_m(i,k,j)=1000
+                        write(*,*) "Got a big Kq_m, local ice is :", ice(i,k,j)
+                        write(*,*) "virt_pot_temp_zgradient_m :", virt_pot_temp_zgradient_m(i,k,j), " rig_m :", rig_m(i,k,j), " shear_m :", shear_m(i,k,j)
                     elseif (Kq_m(i,k,j)<1) then
                         Kq_m(i,k,j)=1
                     endif
                 enddo
 
-                ! rescale diffusion to cut down on excessive mixing
-                Kq_m(its:ite,k,j) = Kq_m(its:ite, k,j) / diffusion_reduction
-                Kq_m(its:ite,k,j) = Kq_m(its:ite, k,j) * dt / ((dz(its:ite,k,j) + dz(its:ite,k+1,j))/2)
             enddo
 
             call pbl_diffusion(qv, th, cloud, ice, qrain, qsnow, rho, dz, its, ite, kts, kte, j)
@@ -152,6 +155,7 @@ contains
         ! first layer assumes no flow through the surface, that comes from the LSM
         q(its:ite, kts,j) = q(its:ite, kts, j) - fluxes(its:ite,kts) / rho_dz(its:ite, kts)
         ! middle layers (no change for top layer assuming flux in = flux out)
+        if (ANY(rho_dz(its:ite,kts+1:kte)==0)) write(*,*) "Some rho_dz is 0"
         q(its:ite, kts+1:kte,j) = q(its:ite, kts+1:kte, j) - (fluxes(its:ite,kts+1:kte) - fluxes(its:ite,kts:kte-1)) / rho_dz(its:ite,kts+1:kte)
         ! make sure top fluxes end up in top layer
         q(its:ite, kte+1,j) = q(its:ite, kte+1, j) + fluxes(its:ite,kte) / rho_dz(its:ite, kte)
@@ -248,7 +252,11 @@ contains
         integer,intent(in) :: its, ite, k, j
         integer :: i
         ! HP96 eqn 13
-        stability_m(its:ite, k, j) = exp(-8.5 * rig_m(its:ite, k, j)) + 0.15 / (rig_m(its:ite, k, j)+3)
+        where (rig_m(its:ite,k,j) > 0) &
+            stability_m(its:ite, k, j) = exp(-8.5 * rig_m(its:ite, k, j)) + 0.15 / (rig_m(its:ite, k, j)+3)
+        where (rig_m(its:ite,k,j) <= 0) &
+            stability_m(its:ite, k, j) = 1 / (1-1.6*rig_m(its:ite,k,j))**0.5
+            
         ! HP96 eqn 13 continued
         prandtl_m(its:ite, k, j) = 1.5 + 3.08 * rig_m(its:ite, k, j)
 
@@ -280,7 +288,7 @@ contains
         temperature = (th(its:ite, k, j) * pii(its:ite, k, j) + th(its:ite, k+1, j) * pii(its:ite, k+1, j)) / 2
         rig_m(its:ite, k, j) =  gravity/temperature  &
                        * virt_pot_temp_zgradient_m(its:ite, k, j) * 1 / (shear_m(its:ite, k, j)**2)
-        where(rig_m(its:ite, k, j)<-2.9) rig_m(its:ite, k, j)=-2.9
+        where(rig_m(its:ite, k, j)<-100.0) rig_m(its:ite, k, j)=-100.0
 
     end subroutine calc_richardson_gradient
 

@@ -128,8 +128,8 @@ contains
     !! -------------------------------
     module subroutine halo_retrieve(this)
       class(domain_t), intent(inout) :: this
-      if (associated(this%water_vapor%data_3d))           call this%water_vapor%retrieve() ! the first retrieve call will sync all
-      if (associated(this%potential_temperature%data_3d)) call this%potential_temperature%retrieve(no_sync=.True.)
+      if (associated(this%potential_temperature%data_3d)) call this%potential_temperature%retrieve()! the first retrieve call will sync all
+      if (associated(this%water_vapor%data_3d))           call this%water_vapor%retrieve(no_sync=.True.) 
       if (associated(this%cloud_water_mass%data_3d))      call this%cloud_water_mass%retrieve(no_sync=.True.)
       if (associated(this%cloud_number%data_3d))          call this%cloud_number%retrieve(no_sync=.True.)
       if (associated(this%cloud_ice_mass%data_3d))        call this%cloud_ice_mass%retrieve(no_sync=.True.)
@@ -390,6 +390,8 @@ contains
             allocate(geo%z(1:g%ime-g%ims+1, 1:this%u_grid%kme-this%u_grid%kms+1, 1:g%jme-g%jms+1))
             geo%z(:,1,:) = temp_offset(g%ims:g%ime, g%jms:g%jme)
         end associate
+        
+        
 
         ! Read the latitude data
         call load_data(options%parameters%init_conditions_file,   &
@@ -692,19 +694,32 @@ contains
         implicit none
         class(domain_t), intent(inout)  :: this
 
-        allocate(this%z_level_ratio(this% ims : this% ime, &
+        allocate(this%jacobian(this% ims : this% ime, &
                                     this% kms : this% kme, &
                                     this% jms : this% jme) )
-
-        allocate(this%dzdx(this% ims+1 : this% ime, &
+                                    
+        allocate(this%jacobian_u(this% ims : this% ime+1, &
+                                    this% kms : this% kme, &
+                                    this% jms : this% jme) )
+                                    
+        allocate(this%jacobian_v(this% ims : this% ime, &
+                                    this% kms : this% kme, &
+                                    this% jms : this% jme+1) )
+                                    
+        allocate(this%jacobian_w(this% ims : this% ime, &
+                                    this% kms : this% kme, &
+                                    this% jms : this% jme) )
+                                                                
+        allocate(this%dzdx(this% ims : this% ime+1, &
                            this% kms : this% kme, &
                            this% jms : this% jme) )
 
         allocate(this%dzdy(this% ims : this% ime, &
                            this% kms : this% kme, &
-                           this% jms+1 : this% jme) )
+                           this% jms : this% jme+1) )
 
-
+        allocate(this%dz_scl( this%kms : this%kme))
+        
         allocate(this%zr_u( this%u_grid2d_ext% ims : this%u_grid2d_ext% ime,   &
                             this%u_grid%       kms : this%u_grid%       kme,   &
                             this%u_grid2d_ext% jms : this%u_grid2d_ext% jme) )
@@ -713,9 +728,7 @@ contains
                             this%v_grid%       kms : this%v_grid%       kme,   &
                             this%v_grid2d_ext% jms : this%v_grid2d_ext% jme) )
 
-        allocate(this%dz_scl( this%kms : this%kme))
-
-        allocate(this%global_z_level_ratio( this% ids : this% ide, &
+        allocate(this%global_jacobian( this% ids : this% ide, &
                                             this% kds : this% kde, &
                                             this% jds : this% jde) )
 
@@ -755,9 +768,9 @@ contains
         class(domain_t), intent(inout)  :: this
         type(options_t), intent(in)     :: options
 
-        real, allocatable :: temp(:,:,:) !, terrain_u(:,:), terrain_v(:,:)
-        integer :: i
-        real :: smooth_height, H, s, n, s1, s2, gamma
+        real, allocatable :: temp(:,:,:)
+        integer :: i, max_level
+        real :: s, n, s1, s2, gamma
         logical :: SLEVE  
         ! character :: filename, file_idS, file_idn
 
@@ -790,16 +803,18 @@ contains
                   global_z_interface    => this%global_z_interface,             &
                   global_dz_interface   => this%global_dz_interface,            &
                   global_terrain        => this%global_terrain,                 &
-                  global_z_level_ratio  => this%global_z_level_ratio,           &
+                  global_jacobian       => this%global_jacobian,                &
                   dzdx                  => this%dzdx,                           &
                   dzdy                  => this%dzdy,                           &
+                  jacobian              => this%jacobian,                       &
+                  jacobian_u                  => this%jacobian_u,                           &
+                  jacobian_v                  => this%jacobian_v,                           &
+                  jacobian_w                  => this%jacobian_w,                           &
+                  smooth_height         => this%smooth_height,                  &
                   dz_scl                => this%dz_scl,                         &
-                  H                     => this%H,                              &
-                  max_level             => this%max_level,                      &
-                  z_level_ratio         => this%z_level_ratio,                  &
                   zr_u                  => this%zr_u,                           &
                   zr_v                  => this%zr_v)
-
+                  
 
           ! _________ Hybrid coordinate Implementation  _______________________
           if (options%parameters%sleve) then  
@@ -814,25 +829,23 @@ contains
 
             max_level = find_flat_model_level(options, nz, dz)  
             
-            smooth_height = sum(global_terrain) / size(global_terrain) + sum(dz(1:max_level))
+            smooth_height = sum(dz(1:max_level)) !sum(global_terrain) / size(global_terrain) + sum(dz(1:max_level))
 
             ! Terminology from Schär et al 2002, Leuenberger 2009: (can be simpliied later on, but for clarity)
-            H  =  smooth_height  !sum(dz(1:max_level))  !
-            ! s  =  H / options%parameters%sleve_decay_factor  ! Need to split this up into a sleve_decay_factor_coarse (s1) and sleve_decay_factor_small (s2)
-            s1 = H / options%parameters%decay_rate_L_topo 
-            s2 = H / options%parameters%decay_rate_S_topo 
+            s1 = smooth_height / options%parameters%decay_rate_L_topo 
+            s2 = smooth_height / options%parameters%decay_rate_S_topo 
             n  =  options%parameters%sleve_n  ! this will have an effect on the z_level ratio throughout the vertical column, and thus on the terrain induced acceleration with wind=2 . Conceptually very nice, but for wind is 2 not ideal. Unless we let that acceleration depend on the difference between hi-res and lo-res terrain. 
             ! h = terrain(:,:) 
 
             ! Scale dz with smooth_height/sum(dz(1:max_level)) before calculating sleve levels. 
-            dz_scl(:)   =   dz(1:nz)  *  H / sum(dz(1:max_level))  ! this leads to a jump in dz thickness at max_level+1. Not sure if this is a problem. 
+            dz_scl(:)   =   dz(1:nz) ! *  smooth_height / sum(dz(1:max_level))  ! this leads to a jump in dz thickness at max_level+1. Not sure if this is a problem. 
             ! dz_scl(:)   =   dz(1:nz)  *  H / sum(dz(1:nz))  ! gives the same for flatz=0, but smoother otherwise? BAD idea
             ! dz_scl   =   dz(:)  *  smooth_height / sum(dz(1:max_level))
             ! H        =  sum(dz_scl(1:max_level))  ! should also lead to smooth_height, but more error proof?
 
 
             ! - - -   calculate invertibility parameter gamma (Schär et al 2002 eqn 20):  - - - - - -
-            gamma  =  1  -  MAXVAL(h1)/s1 * COSH(H/s1)/SINH(H/s1) - MAXVAL(h2)/s2 * COSH(H/s2)/SINH(H/s2)
+            gamma  =  1  -  MAXVAL(h1)/s1 * COSH(smooth_height/s1)/SINH(smooth_height/s1) - MAXVAL(h2)/s2 * COSH(smooth_height/s2)/SINH(smooth_height/s2)
 
 
             ! Decay Rate for Large-Scale Topography: svc1 = 10000.0000  COSMO1 operational setting (but model top is at ~22000 masl)
@@ -854,26 +867,31 @@ contains
 
             endif
 
-
             i=kms 
             
             ! - - - - -   Mass grid calculations for lowest level (i=kms)  - - - - -
-            z_interface(:,i,:)   = terrain
+            
+            !use temp to store global z-interface so that global-jacobian can be calculated
+            allocate(temp(this%ids:this%ide, this%kds:this%kde, this%jds:this%jde))
 
-            z_interface(:,i+1,:)  = dz_scl(i)   &
-                                    + h1  *  SINH( (H/s1)**n - (dz_scl(i)/s1)**n ) / SINH((H/s1)**n)  &! large-scale terrain
-                                    + h2  *  SINH( (H/s2)**n - (dz_scl(i)/s2)**n ) / SINH((H/s2)**n)   ! small terrain features
+            temp(:,i,:)   = global_terrain
+
+            temp(:,i+1,:)  = dz_scl(i)   &
+                                    + h1  *  SINH( (smooth_height/s1)**n - (dz_scl(i)/s1)**n ) / SINH((smooth_height/s1)**n)  &! large-scale terrain
+                                    + h2  *  SINH( (smooth_height/s2)**n - (dz_scl(i)/s2)**n ) / SINH((smooth_height/s2)**n)   ! small terrain features
                                      ! + terrain  *  SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  
-
+            
+            z_interface(:,i,:) = temp(ims:ime,i,jms:jme)
+            z_interface(:,i+1,:) = temp(ims:ime,i+1,jms:jme)
+            
+            global_dz_interface(:,i,:)  =  temp(:,i+1,:) - temp(:,i,:)  ! same for higher k
             dz_interface(:,i,:)  =  z_interface(:,i+1,:) - z_interface(:,i,:)  ! same for higher k
             
-            z_level_ratio(:,i,:) = dz_interface(:,i,:)  / dz_scl(i)  ! same for higher k
             dz_mass(:,i,:)       = dz_interface(:,i,:) / 2           ! Diff for k=1
             z(:,i,:)             = terrain + dz_mass(:,i,:)          ! Diff for k=1   
-
-            dzdx(:,i,:) = (z(ims+1:ime,i,:) - z(ims:ime-1,i,:)) / this%dx  ! same for higher k
-            dzdy(:,i,:) = (z(:,i,jms+1:jme) - z(:,i,jms:jme-1)) / this%dx
-
+            
+            jacobian(:,i,:) = dz_interface(:,i,:)/dz_scl(i)
+            global_jacobian(:,i,:) = global_dz_interface(:,i,:)/dz_scl(i)
 
             ! ! - - - - -   u/v grid calculations for lowest level (i=kms)  - - - - - 
             ! ! for the u and v grids, z(1) was already initialized with terrain.
@@ -888,12 +906,12 @@ contains
             ! Offset analogous to: z_u(:,i,:) = z_u(:,i,:) + dz(i) / 2 * zr_u(:,i,:)
             z_u(:,i,:)  = dz_scl(i)/2  &
                           ! + terrain_u  *  SINH( (H/s)**n - ( dz_scl(i)/2 /s)**n ) / SINH((H/s)**n)
-                          + h1_u  *  SINH( (H/s1)**n - (dz_scl(i)/2/s1)**n ) / SINH((H/s1)**n)  &! large-scale terrain
-                          + h2_u  *  SINH( (H/s2)**n - (dz_scl(i)/2/s2)**n ) / SINH((H/s2)**n)   ! small terrain features                                        
+                          + h1_u  *  SINH( (smooth_height/s1)**n - (dz_scl(i)/2/s1)**n ) / SINH((smooth_height/s1)**n)  &! large-scale terrain
+                          + h2_u  *  SINH( (smooth_height/s2)**n - (dz_scl(i)/2/s2)**n ) / SINH((smooth_height/s2)**n)   ! small terrain features                                        
             z_v(:,i,:)  = dz_scl(i)/2   & 
                           ! + terrain_v  *  SINH( (H/s)**n - ( dz_scl(i)/2 /s)**n ) / SINH((H/s)**n)                                        
-                          + h1_v  *  SINH( (H/s1)**n - (dz_scl(i)/2/s1)**n ) / SINH((H/s1)**n)  &! large-scale terrain
-                          + h2_v  *  SINH( (H/s2)**n - (dz_scl(i)/2/s2)**n ) / SINH((H/s2)**n)   ! small terrain features                                        
+                          + h1_v  *  SINH( (smooth_height/s1)**n - (dz_scl(i)/2/s1)**n ) / SINH((smooth_height/s1)**n)  &! large-scale terrain
+                          + h2_v  *  SINH( (smooth_height/s2)**n - (dz_scl(i)/2/s2)**n ) / SINH((smooth_height/s2)**n)   ! small terrain features                                        
 
             zr_u(:,i,:)  =  (z_u(:,i,:) - terrain_u) / ( dz_scl(i)/2 )
             zr_v(:,i,:)  =  (z_v(:,i,:) - terrain_v) / (dz_scl(i)/2 )
@@ -906,40 +924,41 @@ contains
                     if (i==this%grid%kme) then  ! if we are at the model top i+1 is not defined
 
                       dz_interface(:,i,:)  =  smooth_height - z_interface(:,i,:)  
-                    
+                      global_dz_interface(:,i,:)  =  smooth_height - temp(:,i,:) 
                     else  
-
-                      z_interface(:,i+1,:)  =  sum(dz_scl(1:i))    &
-                                     ! + terrain * SINH( (H/s)**n - (sum(dz_scl(1:i))/s)**n ) / SINH((H/s)**n)     
-                                    + h1  *  SINH( (H/s1)**n - (sum(dz_scl(1:i))/s1)**n ) / SINH((H/s1)**n)  &! large-scale terrain
-                                    + h2  *  SINH( (H/s2)**n - (sum(dz_scl(1:i))/s2)**n ) / SINH((H/s2)**n)   ! small terrain features
-                      dz_interface(:,i,:)  = z_interface(:,i+1,:) - z_interface(:,i,:)  
-
+                    
+                      temp(:,i+1,:)  = sum(dz_scl(1:i))   &
+                                    + h1  *  SINH( (smooth_height/s1)**n - (sum(dz_scl(1:i))/s1)**n ) / SINH((smooth_height/s1)**n)  &! large-scale terrain
+                                    + h2  *  SINH( (smooth_height/s2)**n - (sum(dz_scl(1:i))/s2)**n ) / SINH((smooth_height/s2)**n)   ! small terrain features
+                                     ! + terrain  *  SINH( (H/s)**n - (dz_scl(i)/s)**n ) / SINH((H/s)**n)  
+                      z_interface(:,i+1,:) = temp(ims:ime,i+1,jms:jme)
+            
+                      global_dz_interface(:,i,:)  =  temp(:,i+1,:) - temp(:,i,:)  
+                      dz_interface(:,i,:)  =  z_interface(:,i+1,:) - z_interface(:,i,:) 
+            
                     endif
                    
-                    z_level_ratio(:,i,:) = dz_interface(:,i,:) / dz_scl(i)
-
-                    if ( ANY(z_level_ratio(:,i,:)<0) ) then   ! Eror catching. Probably good to engage.
+                    if ( ANY(dz_interface(:,i,:)<0) ) then   ! Eror catching. Probably good to engage.
                       if (this_image()==1) then
-                        write(*,*) "Error: z_level_ratio below zero (for level  ",i,")"
+                        write(*,*) "Error: dz_interface below zero (for level  ",i,")"
                         print*, "min max dz_interface: ",MINVAL(dz_interface(:,i,:)),MAXVAL(dz_interface(:,i,:))
                         error stop
                         print*, dz_interface(:,i,:)
                         print*,""
                       endif
-                    else if ( ANY(z_level_ratio(:,i,:)<=0.01) ) then
-                      if (this_image()==1)  write(*,*) "WARNING: z_level_ratio very low (at level ",i,")"
+                    else if ( ANY(dz_interface(:,i,:)<=0.01) ) then
+                      if (this_image()==1)  write(*,*) "WARNING: dz_interface very low (at level ",i,")"
                     endif  
                     
                     ! - - - - -   u/v grid calculations - - - - -
                     z_u(:,i,:)   = (sum(dz_scl(1:(i-1))) + dz_scl(i)/2)   &
                                    ! + terrain_u  *  SINH( (H/s)**n - ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s)**n ) / SINH((H/s)**n) 
-                                   + h1_u  *  SINH( (H/s1)**n -  ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s1)**n ) / SINH((H/s1)**n)  &! large-scale terrain
-                                   + h2_u  *  SINH( (H/s2)**n -  ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s2)**n ) / SINH((H/s2)**n)   ! small terrain features     
+                                   + h1_u  *  SINH( (smooth_height/s1)**n -  ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s1)**n ) / SINH((smooth_height/s1)**n)  &! large-scale terrain
+                                   + h2_u  *  SINH( (smooth_height/s2)**n -  ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s2)**n ) / SINH((smooth_height/s2)**n)   ! small terrain features     
                     z_v(:,i,:)   = (sum(dz_scl(1:(i-1))) + dz_scl(i)/2)   &
                                   ! + terrain_v  *  SINH( (H/s)**n - ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s)**n ) / SINH((H/s)**n)  
-                                   + h1_v  *  SINH( (H/s1)**n -  ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s1)**n ) / SINH((H/s1)**n)  &! large-scale terrain
-                                   + h2_v  *  SINH( (H/s2)**n -  ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s2)**n ) / SINH((H/s2)**n)   ! small terrain features     
+                                   + h1_v  *  SINH( (smooth_height/s1)**n -  ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s1)**n ) / SINH((smooth_height/s1)**n)  &! large-scale terrain
+                                   + h2_v  *  SINH( (smooth_height/s2)**n -  ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s2)**n ) / SINH((smooth_height/s2)**n)   ! small terrain features     
 
                     zr_u(:,i,:)  = (z_u(:,i,:) - z_u(:,i-1,:)) / (dz_scl(i)/2 + dz_scl(i-1)/2 )  ! if dz_scl(i-1) = 0 (and no error)  k=1 can be included
                     zr_v(:,i,:)  = (z_v(:,i,:) - z_v(:,i-1,:)) / (dz_scl(i)/2 + dz_scl(i-1)/2 )
@@ -947,11 +966,11 @@ contains
                 
                 else ! above the flat_z_height
                     
-                    z_level_ratio(:,i,:) = 1   ! Not correct, there is still some stretch from dz_scl?
                     zr_u(:,i,:) = 1  
                     zr_v(:,i,:) = 1
 
-                    dz_interface(:,i,:) =  dz(i) !(dz(i) + dz_scl(i) )/2   ! to mitigate the jump in dz at max_level+1: (dz+dz_scl)/2 iso dz
+                    global_dz_interface(:,i,:) =  dz_scl(i)
+                    dz_interface(:,i,:) =  dz_scl(i) !(dz(i) + dz_scl(i) )/2   ! to mitigate the jump in dz at max_level+1: (dz+dz_scl)/2 iso dz
                     if (i/=this%grid%kme)   z_interface(:,i+1,:) = z_interface(:,i,:) + dz(i) ! (dz(i) + dz_scl( i) )/2 !test in icar_s5T
 
                     z_u(:,i,:)  = z_u(:,i-1,:)  + ((dz(i)/2 * zr_u(:,i,:) + dz(i-1)/2 * zr_u(:,i-1,:))) ! zr_u only relevant for first i above max level, aferwards both zr_u(i) AND zr_u(i-1) are 1
@@ -961,8 +980,9 @@ contains
                 
                 dz_mass(:,i,:)   =  dz_interface(:,i-1,:) / 2  +  dz_interface(:,i,:) / 2
                 z(:,i,:)         =  z(:,i-1,:)           + dz_mass(:,i,:)
-                dzdx(:,i,:)      =  (z(ims+1:ime,i,:) - z(ims:ime-1,i,:)) / this%dx
-                dzdy(:,i,:)      =  (z(:,i,jms+1:jme) - z(:,i,jms:jme-1)) / this%dx
+                
+                jacobian(:,i,:) = dz_interface(:,i,:)/dz_scl(i)
+                global_jacobian(:,i,:) = global_dz_interface(:,i,:)/dz_scl(i)
 
             enddo  ! ____ end SLEVE simple Implementation  _______
             
@@ -975,29 +995,26 @@ contains
             if (options%parameters%space_varying_dz) then
                 max_level = find_flat_model_level(options, nz, dz)
 
-                smooth_height = sum(global_terrain) / size(global_terrain) + sum(dz(1:max_level))
-                 H  =  smooth_height  !  
+                smooth_height = sum(dz(1:max_level)) !sum(global_terrain) / size(global_terrain) + sum(dz(1:max_level))
+                
+                jacobian(:,i,:) = (smooth_height - terrain) / smooth_height ! sum(dz(1:max_level))
+                global_jacobian(:,i,:) = (smooth_height - global_terrain) /smooth_height !sum(dz(1:max_level))
 
-                if ((this_image()==1)) write(*,*) "  model top ", smooth_height + sum(dz(max_level:nz))
-
-                z_level_ratio(:,i,:) = (smooth_height - terrain) / sum(dz(1:max_level))
-                global_z_level_ratio(:,i,:) = (smooth_height - global_terrain) / sum(dz(1:max_level))
-
-                zr_u(:,i,:) = (smooth_height - z_u(:,i,:)) / sum(dz(1:max_level))
-                zr_v(:,i,:) = (smooth_height - z_v(:,i,:)) / sum(dz(1:max_level))
+                zr_u(:,i,:) = (smooth_height - z_u(:,i,:)) / smooth_height !sum(dz(1:max_level))
+                zr_v(:,i,:) = (smooth_height - z_v(:,i,:)) / smooth_height !sum(dz(1:max_level))
             else
-                z_level_ratio = 1
-                global_z_level_ratio = 1
+                jacobian = 1
+                global_jacobian = 1
                 zr_u = 1
                 zr_v = 1
             endif
 
-            dz_mass(:,i,:)      = dz(i) / 2 * z_level_ratio(:,i,:)
-            dz_interface(:,i,:) = dz(i) * z_level_ratio(:,i,:)
+            dz_mass(:,i,:)      = dz(i) / 2 * jacobian(:,i,:)
+            dz_interface(:,i,:) = dz(i) * jacobian(:,i,:)
             z(:,i,:)            = terrain + dz_mass(:,i,:)
             z_interface(:,i,:)  = terrain
 
-            global_dz_interface(:,i,:) = dz(i) * global_z_level_ratio(:,i,:)
+            global_dz_interface(:,i,:) = dz(i) * global_jacobian(:,i,:)
             global_z_interface(:,i,:)  = global_terrain
 
 
@@ -1008,52 +1025,68 @@ contains
             ! but the first level needs to be offset, and the rest of the levels need to be created
             z_u(:,i,:)          = z_u(:,i,:) + dz(i) / 2 * zr_u(:,i,:)
             z_v(:,i,:)          = z_v(:,i,:) + dz(i) / 2 * zr_v(:,i,:)
-
-            dzdx(:,i,:) = (z(ims+1:ime,i,:) - z(ims:ime-1,i,:)) / this%dx
-            dzdy(:,i,:) = (z(:,i,jms+1:jme) - z(:,i,jms:jme-1)) / this%dx
-
+                        
             do i = this%grid%kms+1, this%grid%kme
                 if (i<=max_level) then
-                    z_level_ratio(:,i,:) = z_level_ratio(:,i-1,:)
+                    jacobian(:,i,:) = jacobian(:,i-1,:)
                     zr_u(:,i,:) = zr_u(:,i-1,:)
                     zr_v(:,i,:) = zr_v(:,i-1,:)
 
-                    global_z_level_ratio(:,i,:) = global_z_level_ratio(:,i-1,:)
+                    global_jacobian(:,i,:) = global_jacobian(:,i-1,:)
 
                 else
-                    z_level_ratio(:,i,:) = 1
+                    jacobian(:,i,:) = 1
                     zr_u(:,i,:) = 1
                     zr_v(:,i,:) = 1
 
-                    global_z_level_ratio(:,i,:) = 1
+                    global_jacobian(:,i,:) = 1
 
                 endif
 
-                dz_mass(:,i,:)     = (dz(i)/2 * z_level_ratio(:,i,:) + dz(i-1)/2 * z_level_ratio(:,i-1,:))
-                dz_interface(:,i,:)= dz(i) * z_level_ratio(:,i,:)
+                dz_mass(:,i,:)     = (dz(i)/2 * jacobian(:,i,:) + dz(i-1)/2 * jacobian(:,i-1,:))
+                dz_interface(:,i,:)= dz(i) * jacobian(:,i,:)
                 z(:,i,:)           = z(:,i-1,:)           + dz_mass(:,i,:)
                 z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i-1,:)
 
-                global_dz_interface(:,i,:) = dz(i) * global_z_level_ratio(:,i,:)
+                global_dz_interface(:,i,:) = dz(i) * global_jacobian(:,i,:)
                 global_z_interface(:,i,:)  = global_z_interface(:,i-1,:) + global_dz_interface(:,i-1,:)
 
                 z_u(:,i,:)         = z_u(:,i-1,:)         + ((dz(i)/2 * zr_u(:,i,:) + dz(i-1)/2 * zr_u(:,i-1,:)))
                 z_v(:,i,:)         = z_v(:,i-1,:)         + ((dz(i)/2 * zr_v(:,i,:) + dz(i-1)/2 * zr_v(:,i-1,:)))
-
-                dzdx(:,i,:) = (z(ims+1:ime,i,:) - z(ims:ime-1,i,:)) / this%dx
-                dzdy(:,i,:) = (z(:,i,jms+1:jme) - z(:,i,jms:jme-1)) / this%dx
+                
+                jacobian(:,i,:) = dz_interface(:,i,:)/dz(i)
+                global_jacobian(:,i,:) = global_dz_interface(:,i,:)/dz(i)
+                
             enddo
  
-          endif
-
             i = this%grid%kme + 1
             global_z_interface(:,i,:) = global_z_interface(:,i-1,:) + global_dz_interface(:,i-1,:)
 
+        endif
+                
+        if (allocated(temp)) deallocate(temp)
+        allocate(temp(this%ids:this%ide+1, this%kds:this%kde, this%jds:this%jde+1))
+        temp(this%ids,:,this%jds:this%jde) = global_jacobian(this%ids,:,this%jds:this%jde)
+        temp(this%ide+1,:,this%jds:this%jde) = global_jacobian(this%ide,:,this%jds:this%jde)
+        temp(this%ids+1:this%ide,:,this%jds:this%jde) = (global_jacobian(this%ids+1:this%ide,:,this%jds:this%jde) + &
+                                                             global_jacobian(this%ids:this%ide-1,:,this%jds:this%jde))/2
+        jacobian_u = temp(ims:ime+1,:,jms:jme)
+        
+        temp(this%ids:this%ide,:,this%jds) = global_jacobian(this%ids:this%ide,:,this%jds)
+        temp(this%ids:this%ide,:,this%jde+1) = global_jacobian(this%ids:this%ide,:,this%jde)
+        temp(this%ids:this%ide,:,this%jds+1:this%jde) = (global_jacobian(this%ids:this%ide,:,this%jds+1:this%jde) + &
+                                             global_jacobian(this%ids:this%ide,:,this%jds:this%jde-1))/2
+        jacobian_v = temp(ims:ime,:,jms:jme+1)
+
+        temp(this%ids:this%ide,this%kme,this%jds) = global_jacobian(this%ids:this%ide,this%kme,this%jds)
+        temp(this%ids:this%ide,this%kms:this%kme-1,this%jds:this%jde) = (global_jacobian(this%ids:this%ide,this%kms:this%kme-1,this%jds:this%jde) + &
+                                                                        global_jacobian(this%ids:this%ide,this%kms+1:this%kme,this%jds:this%jde))/2
+        jacobian_w = temp(ims:ime,:,jms:jme)
+
+        call setup_dzdxy(this, options)
+            
             ! technically these should probably be defined to the k+1 model top as well bu not used at present.
             ! z_interface(:,i,:) = z_interface(:,i-1,:) + dz_interface(:,i-1,:)
-            ! dz_mass(:,i,:)     = dz(i-1)/2 * z_level_ratio(:,i-1,:)
-          ! call io_write("zr_u.nc", "zr_u", zr_u(:,:,:) )  
-    
         end associate
 
         ! z_u and zr_u are on the v/u_grid2d_ext; move to vu_grid2d
@@ -1077,8 +1110,225 @@ contains
 
 
     end subroutine initialize_core_variables
+    
+    subroutine setup_dzdxy(this,options)
+        implicit none
+        class(domain_t), intent(inout)  :: this
+        type(options_t), intent(in)     :: options
+
+        real, allocatable :: global_z(:,:,:)
+        real, allocatable :: global_dzdx(:,:,:)
+        real, allocatable :: global_dzdy(:,:,:)
+        integer :: i
+        
+        allocate(global_z( this% ids : this% ide, this% kds : this% kde, this% jds : this% jde) )     
+        allocate(global_dzdx( this% ids : this% ide+1, this% kds : this% kde, this% jds : this% jde) )    
+        allocate(global_dzdy( this% ids : this% ide, this% kds : this% kde, this% jds : this% jde+1) )     
+
+        global_z(:,1,:) = this%global_terrain + (options%parameters%dz_levels(1)/2)*this%global_jacobian(:,1,:)
+        
+        do i=2,this%kme
+            global_z(:,i,:) = global_z(:,i-1,:) + (((options%parameters%dz_levels(i)) / 2)*this%global_jacobian(:,i,:)) + &
+                                                  (((options%parameters%dz_levels(i-1)) / 2)*this%global_jacobian(:,i-1,:))
+        enddo
+        
+        global_dzdx = 0
+        global_dzdy = 0
+        
+        global_dzdx(this%ids+1:this%ide,:,:) = (global_z(this%ids+1:this%ide,:,:) - global_z(this%ids:this%ide-1,:,:)) / this%dx
+        global_dzdy(:,:,this%jds+1:this%jde) = (global_z(:,:,this%jds+1:this%jde) - global_z(:,:,this%jds:this%jde-1)) / this%dx
+
+        this%dzdx(:,:,:) = global_dzdx(this%ims:this%ime+1,:,this%jms:this%jme)
+        this%dzdy(:,:,:) = global_dzdy(this%ims:this%ime,:,this%jms:this%jme+1)
+        
+        deallocate(global_z)
+        deallocate(global_dzdx)
+        deallocate(global_dzdy)
+        
+    end subroutine setup_dzdxy
+    
+    
+    !> -------------------------------
+    !!  Separate the terrain into large scale and small scale terrain for SLEVE coordinate calculation
+    !!  h(x,y) = h_1(x,y) + h_2(x,y) ; 
+    !!  where the subscripts 1 and 2 refer to large-scale and small-scale contributions, respectively. 
+    !!  The large-scale contribution h1 can be obtained from the full topography by an appropriate smoothing operation.
+    !!
+    !!  The smoothing is done over the entire (non-parallelized terrain, i.e. ids-ide). Afterwards the relevant variables
+    !!  are subset to the respective paralellized grids. This is not the most efficient, but it makes the smoothing easier. 
+    !!
+    !> -------------------------------
+    
+    subroutine split_topography(this, options)
+        implicit none
+        class(domain_t), intent(inout)  :: this
+        type(options_t), intent(in)     :: options
+
+        real, allocatable :: h_org(:,:), h_u(:,:), h_v(:,:), temp(:,:), temporary_data(:,:), temp_offset(:,:)  
+        integer :: i !, nflt, windowsize, 
+
+        allocate(h_org( this%grid2d% ids : this%grid2d% ide, &
+                        this%grid2d% jds : this%grid2d% jde) )  
+
+        allocate(h_u( this%u_grid2d% ids : this%u_grid2d% ide,   &  
+                      this%u_grid2d% jds : this%u_grid2d% jde) )
+
+        allocate(h_v( this%v_grid2d% ids : this%v_grid2d% ide,   &
+                      this%v_grid2d% jds : this%v_grid2d% jde) )
+
+        allocate(this%h1( this%grid2d% ids : this%grid2d% ide, &
+                          this%grid2d% jds : this%grid2d% jde) )        
+
+        allocate(this%h2( this%grid2d% ids : this%grid2d% ide, &
+                          this%grid2d% jds : this%grid2d% jde) )   
+
+        allocate(this%h1_u( this%u_grid2d% ids : this%u_grid2d% ide,   &  
+                            this%u_grid2d% jds : this%u_grid2d% jde) )
+
+        allocate(this%h1_v( this%v_grid2d% ids : this%v_grid2d% ide,   &
+                            this%v_grid2d% jds : this%v_grid2d% jde) )
+
+        allocate(this%h2_u( this%u_grid2d% ids : this%u_grid2d% ide,   &  
+                            this%u_grid2d% jds : this%u_grid2d% jde) )
+
+        allocate(this%h2_v( this%v_grid2d% ids : this%v_grid2d% ide,   &
+                            this%v_grid2d% jds : this%v_grid2d% jde) )
+
+        
+
+        associate(ims => this%ims,      ime => this%ime,                        &
+                  jms => this%jms,      jme => this%jme,                        &
+                  kms => this%kms,      kme => this%kme,                        &
+                  z_u                   => this%geo_u%z,                        &
+                  z_v                   => this%geo_v%z,                        &
+                  h1                    => this%h1,                             &  
+                  h2                    => this%h2,                             & 
+                  h1_u                  => this%h1_u,                           &  
+                  h2_u                  => this%h2_u,                           & 
+                  h1_v                  => this%h1_v,                           &  
+                  h2_v                  => this%h2_v,                           &  
+                  global_terrain        => this%global_terrain,                 &
+                  terrain               => this%terrain%data_2d)
 
 
+        ! ! ! ! Using the zr_u ratios to accelearte winds makes little sence with sleve coordinates, as these ratios are
+        !!!!!!!   all over the place due to excessive stretching.   (This warning can also go somewhere else)
+        if( (options%parameters%sleve) .and.                              & 
+            (options%parameters%use_terrain_difference.eqv..FALSE.) .and.    &
+            (options%physics%windtype==2) .and.                           &  ! kCONSERVE_MASS
+            (this_image()==1)) then
+          write(*,*) "  WARNING: When using SLEVE coordinates and wind=2 it is adviced to set  use_terrain_difference = TRUE"
+          ! error stop
+        endif
+
+        if ((this_image()==1)) then
+          print*, "  Setting up the SLEVE vertical coordinate:"
+          print*, "    Smoothing large-scale terrain (h1) with a windowsize of ", &
+                  options%parameters%terrain_smooth_windowsize, " for ",        &
+                  options%parameters%terrain_smooth_cycles, " smoothing cylces."
+        endif
+
+        
+        ! Read in terrain again:  This time onto the entire (ids-ide) 2d grid so we can smooth it. 
+        call load_data(options%parameters%init_conditions_file,   &
+                       options%parameters%hgt_hi,                 &
+                       temporary_data, this%grid2d )     
+        
+        h_org = temporary_data(this%grid2d%ids:this%grid2d%ide, this%grid2d%jds:this%grid2d%jde)  ! Smoothing over entire domain
+        h1 =  h_org 
+
+        call array_offset_x_2d(temporary_data, temp_offset)
+        h_u = temp_offset
+        h1_u = temp_offset
+        if (allocated(temp_offset)) deallocate(temp_offset)
+        
+        call array_offset_y_2d(temporary_data, temp_offset)
+        h_v = temp_offset
+        h1_v = temp_offset
+        
+        ! Smooth the terrain to attain the large-scale contribution h1 (_u/v):
+        do i =1,options%parameters%terrain_smooth_cycles
+          call smooth_array_2d( h1, windowsize  =  options%parameters%terrain_smooth_windowsize)
+          call smooth_array_2d( h1_u, windowsize = options%parameters%terrain_smooth_windowsize)
+          call smooth_array_2d( h1_v, windowsize = options%parameters%terrain_smooth_windowsize)
+        enddo
+
+        ! Subract the large-scale terrain from the full topography to attain the small-scale contribution:
+        h2   =  h_org - h1  
+        h2_u =  h_u  - h1_u
+        h2_v =  h_v  - h1_v
+        
+
+
+        if ((this_image()==1).and.(options%parameters%debug)) then
+        ! if (this_image()==1) then
+          call io_write("terrain_smooth_h1.nc", "h1", h1(:,:) ) 
+          call io_write("terrain_smooth_h2.nc", "h2", h2(:,:) ) 
+          call io_write("h1_u.nc", "h1_u", h1_u(:,:) ) 
+          call io_write("h2_u.nc", "h2_u", h2_u(:,:) ) 
+        endif
+        if (this_image()==1) then  
+           ! print*, "    global_terrain max ", MAXVAL(global_terrain)
+           print*, "    Max of full topography", MAXVAL(h_org)
+           print*, "    Max of large-scale topography (h1)  ", MAXVAL(h1)
+           print*, "    Max of small-scale topography (h2)  ", MAXVAL(h2)
+        end if
+
+        end associate
+
+
+        ! Subset onto paralellized 2d grid
+        !temp =  this%h1
+        !deallocate(this%h1)
+        !allocate(this%h1( this%grid2d% ims : this%grid2d% ime,   &
+        !                  this%grid2d% jms : this%grid2d% jme) )
+        !this%h1 = temp(this%grid2d%ims:this%grid2d%ime, this%grid2d%jms:this%grid2d%jme)
+        !deallocate(temp)
+
+
+        !temp =  this%h2
+        !deallocate(this%h2)
+        !allocate(this%h2( this%grid2d% ims : this%grid2d% ime,   &
+        !                  this%grid2d% jms : this%grid2d% jme) )
+        !this%h2 = temp(this%grid2d%ims:this%grid2d%ime, this%grid2d%jms:this%grid2d%jme)
+        !deallocate(temp)
+
+         ! same for u and v:
+        temp =  this%h1_u
+        deallocate(this%h1_u)
+        allocate(this%h1_u( this%u_grid2d_ext% ims : this%u_grid2d_ext% ime,   &
+                            this%u_grid2d_ext% jms : this%u_grid2d_ext% jme) )
+        this%h1_u = temp(this%u_grid2d_ext%ims:this%u_grid2d_ext%ime, this%u_grid2d_ext%jms:this%u_grid2d_ext%jme)
+        deallocate(temp)
+
+        temp =  this%h2_u
+        deallocate(this%h2_u)
+        allocate(this%h2_u( this%u_grid2d_ext% ims : this%u_grid2d_ext% ime,   &
+                            this%u_grid2d_ext% jms : this%u_grid2d_ext% jme) )
+        this%h2_u = temp(this%u_grid2d_ext%ims:this%u_grid2d_ext%ime, this%u_grid2d_ext%jms:this%u_grid2d_ext%jme)
+        deallocate(temp)
+
+
+        temp =  this%h1_v
+        deallocate(this%h1_v)
+        allocate(this%h1_v( this%v_grid2d_ext% ims : this%v_grid2d_ext% ime,   &
+                            this%v_grid2d_ext% jms : this%v_grid2d_ext% jme) )
+        this%h1_v = temp(this%v_grid2d_ext%ims:this%v_grid2d_ext%ime, this%v_grid2d_ext%jms:this%v_grid2d_ext%jme)
+        deallocate(temp)
+
+        temp =  this%h2_v
+        deallocate(this%h2_v)
+        allocate(this%h2_v( this%v_grid2d_ext% ims : this%v_grid2d_ext% ime,   &
+                            this%v_grid2d_ext% jms : this%v_grid2d_ext% jme) )
+        this%h2_v = temp(this%v_grid2d_ext%ims:this%v_grid2d_ext%ime, this%v_grid2d_ext%jms:this%v_grid2d_ext%jme)
+        deallocate(temp)
+
+        
+    end subroutine
+
+
+    
+    
     !>------------------------------------------------------------
     !! Calculate the ZNU and ZNW variables
     !!
@@ -1953,7 +2203,6 @@ contains
 
         call read_forcing_terrain(this, options, forcing)
 
-
         allocate(this%zfr_u( this%u_grid2d_ext% ims : this%u_grid2d_ext% ime,   &  ! can go to calculate delta terrain ?
                              this%u_grid% kms : this%u_grid% kme,   &
                              this%u_grid2d_ext% jms : this%u_grid2d_ext% jme) )
@@ -1961,7 +2210,7 @@ contains
         allocate(this%zfr_v( this%v_grid2d_ext% ims : this%v_grid2d_ext% ime,   &
                              this%v_grid% kms : this%v_grid% kme,   &
                              this%v_grid2d_ext% jms : this%v_grid2d_ext% jme) )
-
+                             
         associate(ims => this%ims,      ime => this%ime,                        &
                   jms => this%jms,      jme => this%jme,                        &
                   kms => this%kms,      kme => this%kme,                        &
@@ -1972,15 +2221,14 @@ contains
                   forcing_terrain       => this%forcing_terrain%data_2d,        &
                   forcing_terrain_u    => this%forcing_terrain_u,               &
                   forcing_terrain_v    => this%forcing_terrain_v,               &
-                  n                     => options%parameters%sleve_n,          & 
+                  n                     => options%parameters%sleve_n,          &
                   dz                    => options%parameters%dz_levels,        &
                   dzdx                  => this%dzdx,                           &
                   dzdy                  => this%dzdy,                           &
                   dz_scl                => this%dz_scl,                         &
-                  H                     => this%H,                              & !smooth_height  !sum(dz(1:max_level))  
-                  max_level             => this%max_level,                      &
-                  h1_u                  => this%h1_u,                           &  
-                  h2_u                  => this%h2_u,                           & 
+                  smooth_height         => this%smooth_height,                  &
+                  h1_u                  => this%h1_u,                           &
+                  h2_u                  => this%h2_u,                           &
                   h1_v                  => this%h1_v,                           &  
                   h2_v                  => this%h2_v,                           &  
                   ! delta_dzdx_lc         => this%delta_dzdx,                     & 
@@ -1992,8 +2240,8 @@ contains
  
         
         ! s  =  H / options%parameters%sleve_decay_factor  
-        s1 =  H / options%parameters%decay_rate_L_topo 
-        s2 =  H / options%parameters%decay_rate_S_topo  
+        s1 =  smooth_height / options%parameters%decay_rate_L_topo 
+        s2 =  smooth_height / options%parameters%decay_rate_S_topo  
         s = s1 ! only for the -currently unused- delta_dzdx_sc calculation (1B)
         ! wind_top = (s1+s2)/2 ! Experiment, lets see what this does. 
 
@@ -2052,10 +2300,10 @@ contains
             do  i = this%grid%kms, this%grid%kme
             
               delta_dzdx_sc(:,i,:) =   ( delta_terrain(ims+1:ime,:) - delta_terrain(ims:ime-1,:) )    &
-                                      * SINH( (H/s)**n - (sum(dz_scl(1:i))/s)**n ) / SINH((H/s)**n)  / this%dx  
+                                      * SINH( (smooth_height/s)**n - (sum(dz_scl(1:i))/s)**n ) / SINH((smooth_height/s)**n)  / this%dx  
 
               delta_dzdy_sc(:,i,:) =   ( delta_terrain(:,jms+1:jme) - delta_terrain(:, jms:jme-1) )    &
-                                      * SINH( (H/s)**n - (sum(dz_scl(1:i))/s)**n ) / SINH((H/s)**n)  / this%dx                                        
+                                      * SINH( (smooth_height/s)**n - (sum(dz_scl(1:i))/s)**n ) / SINH((smooth_height/s)**n)  / this%dx                                        
                    
                    !!! s no longer an input parameter in real SLEVE implementation ! ! ! ????
 
@@ -2101,8 +2349,8 @@ contains
 
           i=kms    
 
-          zfr_u(:,i,:) = (H - terrain_u(:,:)) / (H - forcing_terrain_u(:,:))
-          zfr_v(:,i,:) = (H - terrain_v(:,:)) / (H - forcing_terrain_v(:,:))
+          zfr_u(:,i,:) = (smooth_height - terrain_u(:,:)) / (smooth_height - forcing_terrain_u(:,:))
+          zfr_v(:,i,:) = (smooth_height - terrain_v(:,:)) / (smooth_height - forcing_terrain_v(:,:))
 
           do i = kms+1, kme
        
@@ -2165,7 +2413,7 @@ contains
         type(boundary_t), intent(in) :: forcing
         type(interpolable_type) :: forc_u_from_mass, forc_v_from_mass
 
-        real, allocatable :: temporary_data(:,:)
+        type(variable_t) :: forcing_terr
         
         allocate(this%forcing_terrain_u( this%u_grid2d_ext% ims : this%u_grid2d_ext% ime,   &  ! was u_grid2d_ext
                                          this%u_grid2d_ext% jms : this%u_grid2d_ext% jme) )
@@ -2184,201 +2432,17 @@ contains
         call geo_LUT(this%geo_v, forc_v_from_mass)
         
         ! Read the forcing terrain data
-        call load_data(options%parameters%boundary_files(1),   &
-                       options%parameters%hgtvar,                 &
-                       temporary_data, this%grid) ! grid not used(?)
-                 
+        forcing_terr = forcing%variables%get_var(options%parameters%hgtvar)
+
         !  ------- Interpolate onto (hi-res) u, v and mass grids:  ------
-        call geo_interp2d(this%forcing_terrain_u, temporary_data, forc_u_from_mass%geolut) ! interpolate onto u grid 
-        call geo_interp2d(this%forcing_terrain_v, temporary_data, forc_v_from_mass%geolut) ! interpolate onto v grid 
-        call geo_interp2d(this%forcing_terrain%data_2d, temporary_data, forcing%geo%geolut) ! interpolate onto mass grid 
+        call geo_interp2d(this%forcing_terrain_u, forcing_terr%data_2d, forc_u_from_mass%geolut) ! interpolate onto u grid 
+        call geo_interp2d(this%forcing_terrain_v, forcing_terr%data_2d, forc_v_from_mass%geolut) ! interpolate onto v grid 
+        call geo_interp2d(this%forcing_terrain%data_2d, forcing_terr%data_2d, forcing%geo%geolut) ! interpolate onto mass grid 
         
-        ! if ((this_image()==1).and.(options%parameters%debug))  call io_write("forcing_terrain.nc", "forcing_terrain", this%forcing_terrain%data_2d(:,:) ) 
-        ! if ((this_image()==1).and.(options%parameters%debug))  call io_write("forcing_terrain_u.nc", "forcing_terrain_u", this%forcing_terrain_u(:,:) ) ! check in plot
-        
-    end subroutine
-
-
-    !> -------------------------------
-    !!  Separate the terrain into large scale and small scale terrain for SLEVE coordinate calculation
-    !!  h(x,y) = h_1(x,y) + h_2(x,y) ; 
-    !!  where the subscripts 1 and 2 refer to large-scale and small-scale contributions, respectively. 
-    !!  The large-scale contribution h1 can be obtained from the full topography by an appropriate smoothing operation.
-    !!
-    !!  The smoothing is done over the entire (non-parallelized terrain, i.e. ids-ide). Afterwards the relevant variables
-    !!  are subset to the respective paralellized grids. This is not the most efficient, but it makes the smoothing easier. 
-    !!
-    !> -------------------------------
-    
-    subroutine split_topography(this, options)
-        implicit none
-        class(domain_t), intent(inout)  :: this
-        type(options_t), intent(in)     :: options
-
-        real, allocatable :: h_org(:,:), h_u(:,:), h_v(:,:), temp(:,:), temporary_data(:,:), temp_offset(:,:)  
-        integer :: i !, nflt, windowsize, 
-
-        allocate(h_org( this%grid2d% ids : this%grid2d% ide, &
-                        this%grid2d% jds : this%grid2d% jde) )  
-
-        allocate(h_u( this%u_grid2d% ids : this%u_grid2d% ide,   &  
-                      this%u_grid2d% jds : this%u_grid2d% jde) )
-
-        allocate(h_v( this%v_grid2d% ids : this%v_grid2d% ide,   &
-                      this%v_grid2d% jds : this%v_grid2d% jde) )
-
-        allocate(this%h1( this%grid2d% ids : this%grid2d% ide, &
-                          this%grid2d% jds : this%grid2d% jde) )        
-
-        allocate(this%h2( this%grid2d% ids : this%grid2d% ide, &
-                          this%grid2d% jds : this%grid2d% jde) )   
-
-        allocate(this%h1_u( this%u_grid2d% ids : this%u_grid2d% ide,   &  
-                            this%u_grid2d% jds : this%u_grid2d% jde) )
-
-        allocate(this%h1_v( this%v_grid2d% ids : this%v_grid2d% ide,   &
-                            this%v_grid2d% jds : this%v_grid2d% jde) )
-
-        allocate(this%h2_u( this%u_grid2d% ids : this%u_grid2d% ide,   &  
-                            this%u_grid2d% jds : this%u_grid2d% jde) )
-
-        allocate(this%h2_v( this%v_grid2d% ids : this%v_grid2d% ide,   &
-                            this%v_grid2d% jds : this%v_grid2d% jde) )
-
-        
-
-        associate(ims => this%ims,      ime => this%ime,                        &
-                  jms => this%jms,      jme => this%jme,                        &
-                  kms => this%kms,      kme => this%kme,                        &
-                  z_u                   => this%geo_u%z,                        &
-                  z_v                   => this%geo_v%z,                        &
-                  h1                    => this%h1,                             &  
-                  h2                    => this%h2,                             & 
-                  h1_u                  => this%h1_u,                           &  
-                  h2_u                  => this%h2_u,                           & 
-                  h1_v                  => this%h1_v,                           &  
-                  h2_v                  => this%h2_v,                           &  
-                  global_terrain        => this%global_terrain,                 &
-                  terrain               => this%terrain%data_2d)
-
-
-        ! ! ! ! Using the zr_u ratios to accelearte winds makes little sence with sleve coordinates, as these ratios are
-        !!!!!!!   all over the place due to excessive stretching.   (This warning can also go somewhere else)
-        if( (options%parameters%sleve) .and.                              & 
-            (options%parameters%use_terrain_difference.eqv..FALSE.) .and.    &
-            (options%physics%windtype==2) .and.                           &  ! kCONSERVE_MASS
-            (this_image()==1)) then
-          write(*,*) "  WARNING: When using SLEVE coordinates and wind=2 it is adviced to set  use_terrain_difference = TRUE"
-          ! error stop
-        endif
-
-        if ((this_image()==1)) then
-          print*, "  Setting up the SLEVE vertical coordinate:"
-          print*, "    Smoothing large-scale terrain (h1) with a windowsize of ", &
-                  options%parameters%terrain_smooth_windowsize, " for ",        &
-                  options%parameters%terrain_smooth_cycles, " smoothing cylces."
-        endif
-
-        
-        ! Read in terrain again:  This time onto the entire (ids-ide) 2d grid so we can smooth it. 
-        call load_data(options%parameters%init_conditions_file,   &
-                       options%parameters%hgt_hi,                 &
-                       temporary_data, this%grid2d )     
-        
-        h_org = temporary_data(this%grid2d%ids:this%grid2d%ide, this%grid2d%jds:this%grid2d%jde)  ! Smoothing over entire domain
-        h1 =  h_org 
-
-        call array_offset_x_2d(temporary_data, temp_offset)
-        h_u = temp_offset
-        h1_u = temp_offset
-        if (allocated(temp_offset)) deallocate(temp_offset)
-        
-        call array_offset_y_2d(temporary_data, temp_offset)
-        h_v = temp_offset
-        h1_v = temp_offset
-        
-        ! Smooth the terrain to attain the large-scale contribution h1 (_u/v):
-        do i =1,options%parameters%terrain_smooth_cycles
-          call smooth_array_2d( h1, windowsize  =  options%parameters%terrain_smooth_windowsize)
-          call smooth_array_2d( h1_u, windowsize = options%parameters%terrain_smooth_windowsize)
-          call smooth_array_2d( h1_v, windowsize = options%parameters%terrain_smooth_windowsize)
-        enddo
-
-        ! Subract the large-scale terrain from the full topography to attain the small-scale contribution:
-        h2   =  h_org - h1  
-        h2_u =  h_u  - h1_u
-        h2_v =  h_v  - h1_v
-        
-
-
-        if ((this_image()==1).and.(options%parameters%debug)) then
-        ! if (this_image()==1) then
-          call io_write("terrain_smooth_h1.nc", "h1", h1(:,:) ) 
-          call io_write("terrain_smooth_h2.nc", "h2", h2(:,:) ) 
-          call io_write("h1_u.nc", "h1_u", h1_u(:,:) ) 
-          call io_write("h2_u.nc", "h2_u", h2_u(:,:) ) 
-        endif
-        if (this_image()==1) then  
-           ! print*, "    global_terrain max ", MAXVAL(global_terrain)
-           print*, "    Max of full topography", MAXVAL(h_org)
-           print*, "    Max of large-scale topography (h1)  ", MAXVAL(h1)
-           print*, "    Max of small-scale topography (h2)  ", MAXVAL(h2)
-        end if
-
-        end associate
-
-
-        ! Subset onto paralellized 2d grid
-        temp =  this%h1
-        deallocate(this%h1)
-        allocate(this%h1( this%grid2d% ims : this%grid2d% ime,   &
-                          this%grid2d% jms : this%grid2d% jme) )
-        this%h1 = temp(this%grid2d%ims:this%grid2d%ime, this%grid2d%jms:this%grid2d%jme)
-        deallocate(temp)
-
-
-        temp =  this%h2
-        deallocate(this%h2)
-        allocate(this%h2( this%grid2d% ims : this%grid2d% ime,   &
-                          this%grid2d% jms : this%grid2d% jme) )
-        this%h2 = temp(this%grid2d%ims:this%grid2d%ime, this%grid2d%jms:this%grid2d%jme)
-        deallocate(temp)
-
-         ! same for u and v:
-        temp =  this%h1_u
-        deallocate(this%h1_u)
-        allocate(this%h1_u( this%u_grid2d_ext% ims : this%u_grid2d_ext% ime,   &
-                            this%u_grid2d_ext% jms : this%u_grid2d_ext% jme) )
-        this%h1_u = temp(this%u_grid2d_ext%ims:this%u_grid2d_ext%ime, this%u_grid2d_ext%jms:this%u_grid2d_ext%jme)
-        deallocate(temp)
-
-        temp =  this%h2_u
-        deallocate(this%h2_u)
-        allocate(this%h2_u( this%u_grid2d_ext% ims : this%u_grid2d_ext% ime,   &
-                            this%u_grid2d_ext% jms : this%u_grid2d_ext% jme) )
-        this%h2_u = temp(this%u_grid2d_ext%ims:this%u_grid2d_ext%ime, this%u_grid2d_ext%jms:this%u_grid2d_ext%jme)
-        deallocate(temp)
-
-
-        temp =  this%h1_v
-        deallocate(this%h1_v)
-        allocate(this%h1_v( this%v_grid2d_ext% ims : this%v_grid2d_ext% ime,   &
-                            this%v_grid2d_ext% jms : this%v_grid2d_ext% jme) )
-        this%h1_v = temp(this%v_grid2d_ext%ims:this%v_grid2d_ext%ime, this%v_grid2d_ext%jms:this%v_grid2d_ext%jme)
-        deallocate(temp)
-
-        temp =  this%h2_v
-        deallocate(this%h2_v)
-        allocate(this%h2_v( this%v_grid2d_ext% ims : this%v_grid2d_ext% ime,   &
-                            this%v_grid2d_ext% jms : this%v_grid2d_ext% jme) )
-        this%h2_v = temp(this%v_grid2d_ext%ims:this%v_grid2d_ext%ime, this%v_grid2d_ext%jms:this%v_grid2d_ext%jme)
-        deallocate(temp)
-
+        !if ((this_image()==1).and.(options%parameters%debug))  call io_write("forcing_terrain.nc", "forcing_terrain", this%forcing_terrain%data_2d(:,:) ) 
+        !if ((this_image()==1).and.(options%parameters%debug))  call io_write("forcing_terrain_u.nc", "forcing_terrain_u", this%forcing_terrain_u(:,:) ) ! check in plot
         
     end subroutine
-
-
-
 
 
     !> -------------------------------

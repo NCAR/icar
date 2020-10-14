@@ -389,7 +389,7 @@ contains
         ! This will be the netCDF ID for the file and data_in variable.
         integer :: ncid, varid,i, err
         real :: scale, offset
-
+            
         if (present(extradim)) then
             dimstart=extradim
             dimstart(1:2)=1

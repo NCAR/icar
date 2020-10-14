@@ -31,6 +31,8 @@ module exchangeable_interface
     procedure, public :: send
     procedure, public :: retrieve
     procedure, public :: exchange
+    procedure, public :: exchange_u
+    procedure, public :: exchange_v
     procedure, public :: set_outputdata
     generic,   public :: initialize=>const
 
@@ -85,6 +87,16 @@ module exchangeable_interface
       class(exchangeable_t), intent(inout) :: this
     end subroutine
 
+    module subroutine exchange_u(this)
+      implicit none
+      class(exchangeable_t), intent(inout) :: this
+    end subroutine
+    
+    module subroutine exchange_v(this)
+      implicit none
+      class(exchangeable_t), intent(inout) :: this
+    end subroutine
+    
     module subroutine put_north(this)
         implicit none
         class(exchangeable_t), intent(inout) :: this

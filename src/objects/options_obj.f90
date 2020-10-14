@@ -797,7 +797,7 @@ contains
         ! parameters to read
         real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance, frames_per_outfile, agl_cap
         real    :: cfl_reduction_factor
-        integer :: ntimesteps
+        integer :: ntimesteps, wind_iterations
         integer :: longitude_system
         integer :: nz, n_ext_winds,buffer, warning_level, cfl_strictness
         logical :: ideal, readz, readdz, interactive, debug, external_winds, surface_io_only, &
@@ -814,7 +814,7 @@ contains
                                         bias_options_filename, block_options_filename, &
                                         cu_options_filename
 
-        namelist /parameters/ ntimesteps, outputinterval, frames_per_outfile, inputinterval, surface_io_only,                &
+        namelist /parameters/ ntimesteps, wind_iterations, outputinterval, frames_per_outfile, inputinterval, surface_io_only,                &
                               dx, dxlow, ideal, readz, readdz, nz, t_offset,                             &
                               debug, warning_level, interactive, restart,                                &
                               external_winds, buffer, n_ext_winds, advect_density, smooth_wind_distance, &
@@ -846,6 +846,7 @@ contains
         qv_is_relative_humidity=.False.
         z_is_geopotential   = .False.
         z_is_on_interface   = .False.
+        wind_iterations     = 100
         dxlow               = 100000
         restart             = .False.
         ideal               = .False.
@@ -1002,7 +1003,7 @@ contains
         options%restart = restart
 
         options%nz = nz
-
+        options%wind_iterations = wind_iterations
         options%high_res_soil_state = high_res_soil_state
         options%time_varying_z = time_varying_z
 
@@ -1646,6 +1647,7 @@ contains
         real, allocatable, dimension(:) :: dz_levels
         real, dimension(45) :: fulldz
         logical :: space_varying, fixed_dz_advection, dz_modifies_wind, sleve, use_terrain_difference
+
         real :: flat_z_height, terrain_smooth_windowsize, terrain_smooth_cycles, decay_rate_L_topo, decay_rate_S_topo, sleve_n
 
         namelist /z_info/ dz_levels, space_varying, dz_modifies_wind, flat_z_height, fixed_dz_advection, sleve, terrain_smooth_windowsize, terrain_smooth_cycles, decay_rate_L_topo, decay_rate_S_topo, sleve_n, use_terrain_difference
@@ -1721,11 +1723,11 @@ contains
         options%sleve_n = sleve_n
         options%use_terrain_difference = use_terrain_difference 
 
-        if (fixed_dz_advection) then
-            print*, "WARNING: setting fixed_dz_advection to true is not recommended, use wind = 2 instead"
-            print*, "if you want to continue and enable this, you will need to change this code in the options_obj"
-            error stop
-        endif
+        !if (fixed_dz_advection) then
+        !    print*, "WARNING: setting fixed_dz_advection to true is not recommended, use wind = 2 instead"
+        !    print*, "if you want to continue and enable this, you will need to change this code in the options_obj"
+        !    error stop
+        !endif
 
         if (dz_modifies_wind) then
             print*, "WARNING: setting dz_modifies_wind to true is not recommended, use wind = 2 instead"
