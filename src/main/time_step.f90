@@ -470,8 +470,13 @@ contains
                 if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" rad(domain")
 
                 call lsm(domain, options, real(dt%seconds()))!, halo=1)
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" lsm")
+
                 call pbl(domain, options, real(dt%seconds()))!, halo=1)
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" pbl")
+
                 call convect(domain, options, real(dt%seconds()))!, halo=1)
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" convect")
 
                 call mp(domain, options, real(dt%seconds()), halo=1)
                 if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" mp_halo")
