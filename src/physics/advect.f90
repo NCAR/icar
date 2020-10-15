@@ -303,7 +303,7 @@ contains
                     dv(i,j) = (v(i,k,j+1) * jaco_v(i,k,j+1) - v(i,k,j) * jaco_v(i,k,j))/dx
                     du(i,j) = (u(i+1,k,j) * jaco_u(i+1,k,j) - u(i,k,j) * jaco_u(i,k,j))/dx
                     
-                    if (abs(du(i,j) + dv(i,j) + (w(i,k,j)*jaco_w(i,k,j)-w(i,k-1,j)*jaco_w(i,k-1,j))/(dz(i,k,j))) > 1e-8) then
+                    if (abs(du(i,j) + dv(i,j) + (w(i,k,j)*jaco_w(i,k,j)-w(i,k-1,j)*jaco_w(i,k-1,j))/(dz(i,k,j))) > 1e-3) then
                         print*, this_image(), i,j,k , abs(du(i,j) + dv(i,j) + (w(i,k,j)*jaco_w(i,k,j)-w(i,k-1,j)*jaco_w(i,k-1,j))/(dz(i,k,j)))
                         print*, "Winds are not balanced on entry to advect"
                         !error stop
