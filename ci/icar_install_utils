@@ -99,7 +99,7 @@ function icar_install {
     make -C src clean; make -C src -j4 CAF_MODE=single MODE=profile
     # make -C src clean; make -C src -j4 CAF_MODE=single MODE=fast
     make -C src clean; make -C src -j4 CAF_MODE=single
-    make -C src -j4 CAF_MODE=single test
+    # make -C src -j4 CAF_MODE=single test
     echo "icar install succeeded"
 
 }
