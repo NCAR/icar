@@ -99,7 +99,7 @@ contains
                              start_time = options%parameters%start_time,     &
                              lat_ext = options%parameters%lat_ext,        &  !lat_ext,
                              lon_ext = options%parameters%lon_ext,        &  !lon_ext      &
-                             ! zvar_ext      &  !,- include if statement for this??
+                             !zvar_ext = options%parameters%zvar_ext,      &  !,- include if statement for this??
                              time_ext = options%parameters%time_ext &
                              )
 
@@ -155,26 +155,26 @@ contains
         ! endif    
        
         ! read in the height coordinate of the input data
-        if (present(zvar_ext) .and. (trim(zvar_ext)/="") ) then
-            if (this_image()==1)  print *, " zvar_ext ", trim(zvar_ext)
-            if (.not. options%parameters%compute_z ) then ! .and. present(zvar_ext)
-                ! call io_read(file_list(this%curfile), z_var,   temp_z,   this%curstep)    
-                call io_read(file_list(1), zvar_ext,   temp_z,   1)
-                nx = size(temp_z,1)
-                ny = size(temp_z,2)
-                nz = size(temp_z,3)
-                if (allocated(this%z)) deallocate(this%z)
-                allocate(this%z(nx,nz,ny))
-                this%z = reshape(temp_z, shape=[nx,nz,ny], order=[1,3,2])
-            else
-                call io_read(file_list(this%curfile), file_list(1),   temp_z,   this%curstep)
-                nx = size(temp_z,1)
-                ny = size(temp_z,2)
-                ! nz = size(temp_z,3)
-                if (allocated(this%z)) deallocate(this%z)
-                allocate(this%z(nx,nz,ny))
-            endif
-        else    
+        ! if (present(zvar_ext) .and. (trim(zvar_ext)/="") ) then
+        !     if (this_image()==1)  print *, " zvar_ext ", trim(zvar_ext)
+        !     if (.not. options%parameters%compute_z ) then ! .and. present(zvar_ext)
+        !         ! call io_read(file_list(this%curfile), z_var,   temp_z,   this%curstep)    
+        !         call io_read(file_list(1), zvar_ext,   temp_z,   1)
+        !         nx = size(temp_z,1)
+        !         ny = size(temp_z,2)
+        !         nz = size(temp_z,3)
+        !         if (allocated(this%z)) deallocate(this%z)
+        !         allocate(this%z(nx,nz,ny))
+        !         this%z = reshape(temp_z, shape=[nx,nz,ny], order=[1,3,2])
+        !     else
+        !         call io_read(file_list(this%curfile), file_list(1),   temp_z,   this%curstep)
+        !         nx = size(temp_z,1)
+        !         ny = size(temp_z,2)
+        !         ! nz = size(temp_z,3)
+        !         if (allocated(this%z)) deallocate(this%z)
+        !         allocate(this%z(nx,nz,ny))
+        !     endif
+        ! else    
             ! print *, "  ext var = 2D"
             if ( (size(this%lat,2)==1) .and. (size(this%lon,2)==1) ) then 
                 if (this_image()==1) print*, "  external conditions provided on regular 1D grid"
@@ -187,7 +187,7 @@ contains
                 nz = 0
             endif
             
-        endif
+        ! endif
 
         ! ! call assert(size(var_list) == size(dim_list), "list of variable dimensions must match list of variables")
 

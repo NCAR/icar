@@ -104,6 +104,7 @@ contains
                          kVARS%sensible_heat, kVARS%latent_heat, kVARS%u_10m, kVARS%v_10m, kVARS%temperature_2m,        &
                          kVARS%humidity_2m, kVARS%surface_pressure, kVARS%longwave_up, kVARS%ground_heat_flux,          &
                          kVARS%soil_totalmoisture, kVARS%soil_deep_temperature, kVARS%roughness_z0, kVARS%ustar,        &
+                         kVARS%snow_height,                                                                             &  ! BK 2020/10/26
                          kVARS%veg_type, kVARS%soil_type, kVARS%land_mask])
 
              call options%advect_vars([kVARS%potential_temperature, kVARS%water_vapor])
@@ -114,6 +115,7 @@ contains
                          kVARS%longwave, kVARS%canopy_water, kVARS%snow_water_equivalent,    &
                          kVARS%skin_temperature, kVARS%soil_water_content, kVARS%soil_temperature, kVARS%terrain,       &
                          kVARS%sensible_heat, kVARS%latent_heat, kVARS%u_10m, kVARS%v_10m, kVARS%temperature_2m,        &
+                         kVARS%snow_height,                                                                             &  ! BK 2020/10/26
                          kVARS%humidity_2m, kVARS%surface_pressure, kVARS%longwave_up, kVARS%ground_heat_flux])
                          ! kVARS%soil_totalmoisture, kVARS%soil_deep_temperature, kVARS%roughness_z0, kVARS%veg_type,      &
                          ! kVARS%soil_type, kVARS%land_mask, kVARS%vegetation_fraction]
@@ -364,6 +366,8 @@ contains
 
         if (this_image()==1) write(*,*) "Initializing LSM"
 
+        if (this_image()==1) write(*,*) "  max soil_deep_temperature on init: ", maxval(domain%soil_deep_temperature%data_2d)
+
         exchange_term = 1
 
         ! module level variables for easy access... need to think about tiling to permit halo processing separately.
@@ -448,7 +452,14 @@ contains
             if (this_image()==1) write(*,*) "    Noah LSM"
 
             num_soil_layers=4
-            FNDSNOWH=.False. ! calculate SNOWH from SNOW
+            
+            if (options%parameters%rho_snow_ext /="" .AND. options%parameters%swe_ext /="") then ! calculate snowheight from external swe and density
+                FNDSNOWH = .True.
+            elseif(options%parameters%hsnow_ext /="" ) then  ! read in external snowheight if supplied
+                FNDSNOWH= .True.
+            else
+                FNDSNOWH=.False. ! calculate SNOWH from SNOW
+            endif
             FNDSOILW=.False. ! calculate SOILW (this parameter is ignored in LSM_NOAH_INIT)
             RDMAXALB=.False.
 
@@ -687,7 +698,8 @@ contains
                             lai,                                          &
                             qz0,                                          & !H
                             myj,frpcpn,                                   &
-                            SH2O,SNOWH,                                   & !H
+                            SH2O,                                         &      
+                            domain%snow_height%data_2d, &     !SNOWH,                                   & !H
                             SNOALB,SHDMIN,SHDMAX,                         & !I
                             SNOTIME,                                      & !?
                             ACSNOM,ACSNOW,                                & !O

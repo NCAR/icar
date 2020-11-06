@@ -570,7 +570,7 @@ contains
                                         soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
                                         swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &
-                                        lat_ext, lon_ext, swe_ext, hs_ext, tss_ext, z_ext, time_ext
+                                        lat_ext, lon_ext, swe_ext, hsnow_ext, rho_snow_ext, tss_ext, tsoil2D_ext, tsoil3D_ext, z_ext, time_ext
 
         namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qgvar,qsvar,hgtvar,shvar,lhvar,pblhvar,   &
                             landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar, &
@@ -579,7 +579,7 @@ contains
                             soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
                             vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
                             swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &
-                            lat_ext, lon_ext, swe_ext, hs_ext, tss_ext, z_ext, time_ext
+                            lat_ext, lon_ext, swe_ext, hsnow_ext, rho_snow_ext, tss_ext, tsoil2D_ext, tsoil3D_ext,  z_ext, time_ext
 
         ! no default values supplied for variable names
         hgtvar=""
@@ -633,8 +633,11 @@ contains
         lat_ext=""
         lon_ext=""
         swe_ext=""
-        hs_ext=""
+        hsnow_ext=""
+        rho_snow_ext=""
         tss_ext=""
+        tsoil2D_ext=""
+        tsoil3D_ext=""
         z_ext = ""
         time_ext = ""
 
@@ -766,13 +769,16 @@ contains
         !------------------------------------------------------
         options%ext_var_list(:) = ""
         j=1
-        options%lat_ext    = lat_ext
-        options%lon_ext    = lon_ext
-        options%swe_ext    = swe_ext ; options%ext_var_list(j) = swe_ext;     options%ext_dim_list(j) = 2;    j = j + 1
-        options%hs_ext     = hs_ext  ; options%ext_var_list(j) = hs_ext;      options%ext_dim_list(j) = 2;    j = j + 1
-        options%tss_ext    = tss_ext ; options%ext_var_list(j) = tss_ext;     options%ext_dim_list(j) = 2;    j = j + 1
+        options%lat_ext         = lat_ext
+        options%lon_ext         = lon_ext
+        options%swe_ext         = swe_ext      ; options%ext_var_list(j) = swe_ext;       options%ext_dim_list(j) = 2;    j = j + 1
+        options%rho_snow_ext    = rho_snow_ext ; options%ext_var_list(j) = rho_snow_ext;  options%ext_dim_list(j) = 2;    j = j + 1
+        options%hsnow_ext       = hsnow_ext    ; options%ext_var_list(j) = hsnow_ext;     options%ext_dim_list(j) = 2;    j = j + 1
+        options%tss_ext         = tss_ext      ; options%ext_var_list(j) = tss_ext;       options%ext_dim_list(j) = 2;    j = j + 1
+        options%tsoil2D_ext     = tsoil2D_ext    ; options%ext_var_list(j) = tsoil2D_ext;     options%ext_dim_list(j) = 2;    j = j + 1
+        options%tsoil3D_ext     = tsoil3D_ext    ; options%ext_var_list(j) = tsoil3D_ext;     options%ext_dim_list(j) = 3;    j = j + 1
         ! options%z_ext      = z_ext   ; options%ext_var_list(j) = z_ext;       options%ext_dim_list(j) = 3;    j = j + 1
-        options%time_ext      = time_ext   ; options%ext_var_list(j) = z_ext;       options%ext_dim_list(j) = 3;    j = j + 1
+        options%time_ext        = time_ext    ; options%ext_var_list(j) = z_ext;      options%ext_dim_list(j) = 3;    j = j + 1
     
      
 

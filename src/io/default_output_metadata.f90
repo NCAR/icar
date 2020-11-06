@@ -593,6 +593,17 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
+        !!  Snow height
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%snow_height))
+            var%name        = "snow_height"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "surface_snow_height"),                 &
+                               attribute_t("units",         "m"),                              &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
         !!  Soil water content
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%soil_water_content))

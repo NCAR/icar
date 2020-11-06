@@ -79,6 +79,7 @@ module icar_constants
         integer :: soil_deep_temperature
         integer :: roughness_z0
         integer :: snow_water_equivalent
+        integer :: snow_height              ! <____________ 
         integer :: soil_water_content
         integer :: soil_temperature
         integer :: skin_temperature
@@ -113,7 +114,7 @@ module icar_constants
                                                            41, 42, 43, 44, 45, 46, 47, 48, 49, 50,  &
                                                            51, 52, 53, 54, 55, 56, 57, 58, 59, 60,  &
                                                            61, 62, 63, 64, 65, 66, 67, 68, 69, 70,  &
-                                                           71, 72, 73, 74, 75, 76 )
+                                                           71, 72, 73, 74, 75, 76,77 )
 
     integer, parameter :: kINTEGER_BITS     = storage_size(kINTEGER_BITS)
     integer, parameter :: kMAX_STORAGE_VARS = storage_size(kVARS) / kINTEGER_BITS

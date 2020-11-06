@@ -88,6 +88,7 @@ module domain_interface
     type(variable_t) :: lai
     type(variable_t) :: canopy_water
     type(variable_t) :: snow_water_equivalent
+    type(variable_t) :: snow_height
     type(variable_t) :: skin_temperature
     type(variable_t) :: sst
     type(variable_t) :: soil_water_content
