@@ -212,6 +212,7 @@ contains
         if (0<opt%vars_to_allocate( kVARS%lai) )                        call setup(this%lai,                      this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%canopy_water) )               call setup(this%canopy_water,             this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%snow_water_equivalent) )      call setup(this%snow_water_equivalent,    this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%snow_height) )      call setup(this%snow_height,    this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%sst) )                        call setup(this%sst,                      this%grid2d,   forcing_var=opt%parameters%sst_var,     list=this%variables_to_force)
         if (0<opt%vars_to_allocate( kVARS%skin_temperature) )           call setup(this%skin_temperature,         this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%soil_water_content) )         call setup(this%soil_water_content,       this%grid_soil)
@@ -1446,6 +1447,7 @@ contains
             if (associated(this%soil_temperature%data_3d)) then
                 do i=1,nsoil
                     this%soil_temperature%data_3d(:,i,:) = this%soil_deep_temperature%data_2d
+                    if (this_image()==1) write(*,*) "  max soil_temperature in layer",i," on init: ", maxval(this%soil_temperature%data_3d(:,i,:))
                 enddo
             endif
         endif
@@ -1963,7 +1965,7 @@ contains
 
     !> -----------------------------------------------------------------------------------------------------------------
     !! Loop through external variables if supplied and interpolate the external data to the domain
-    !!  !! SWE only for now !!
+    !!  
     !! -----------------------------------------------------------------------------------------------------------------
     module subroutine interpolate_external(this, external_conditions, options)
         implicit none
@@ -1971,25 +1973,91 @@ contains
         type(boundary_t), intent(in)    :: external_conditions
         type(options_t), intent(in)     :: options
 
+        integer :: i, nsoil=4
         character(len=99) :: varname
-        type(variable_t) :: external_var
+        type(variable_t) :: external_var, external_var2
+        ! real, allocatable :: ext_snowheight_int(:,:)
 
         ! do i = 1, external_conditions%variables%n_vars
         !     print*, "    interpolating external_conditions for ", trim(external_conditions%variables%var_list(i)%name) 
         ! end do
+        ! nsoil=4
 
         ! -------  repeat this code block for other external variables?   -----------------
-        varname = options%parameters%swe_ext   !   options%ext_var_list(j)
-        
+        if(options%parameters%swe_ext/="") then
+          
+          varname = options%parameters%swe_ext   !   options%ext_var_list(j)
+          
+          if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " for initial conditions"
+          external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
 
-        if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " for initial conditions"
-        external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
+          ! if (this_image()==1) print*, "shape swe var: ",(shape(this%snow_water_equivalent%data_2d))
+          call geo_interp2d(  this%snow_water_equivalent%data_2d, & ! ( this%grid2d% ids : this%grid2d% ide, this%grid2d% jds : this%grid2d% jde)   ,            & 
+                              external_var%data_2d,               & 
+                              external_conditions%geo%geolut )
+          
+        endif
 
-        ! print*, " external var shape: ", shape(external_var%data_2d)
+        ! -------  external snow height   -----------------
+        if (options%parameters%hsnow_ext/="") then
 
-        call geo_interp2d(  this%snow_water_equivalent%data_2d, & ! ( this%grid2d% ids : this%grid2d% ide, this%grid2d% jds : this%grid2d% jde)   ,            & 
-                            external_var%data_2d,               & 
-                            external_conditions%geo%geolut )
+          varname = options%parameters%hsnow_ext   !   options%ext_var_list(j)
+          
+          if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " for initial conditions"
+          external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
+
+          call geo_interp2d(  this%snow_height%data_2d, & ! ( this%grid2d% ids : this%grid2d% ide, this%grid2d% jds : this%grid2d% jde)   ,            & 
+                              external_var%data_2d,               & 
+                              external_conditions%geo%geolut )
+        ! -------  external snow height from external swe and density  -----------------
+        elseif (options%parameters%swe_ext/="" .AND. options%parameters%rho_snow_ext/="") then
+
+          varname = options%parameters%rho_snow_ext   !   options%ext_var_list(j)
+          
+          if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " to calculate initial snow height"
+          external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
+          external_var2 =external_conditions%variables%get_var(trim(options%parameters%swe_ext))  ! the external swe
+          
+          call geo_interp2d(  this%snow_height%data_2d, & ! ( this%grid2d% ids : this%grid2d% ide, this%grid2d% jds : this%grid2d% jde)   ,            & 
+                              external_var2%data_2d / external_var%data_2d,               &  ! ext_swe / rho_snow_swe = hsnow_ext
+                              external_conditions%geo%geolut )
+        endif
+
+        ! ------ soil temperature  (2D or 3D)_______________________
+        if (options%parameters%tsoil2D_ext/="") then
+
+          varname = options%parameters%tsoil2D_ext   !   options%ext_var_list(j)
+          
+          if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " for initial conditions"
+          external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
+
+          call geo_interp2d(  this%soil_deep_temperature%data_2d, & ! ( this%grid2d% ids : this%grid2d% ide, this%grid2d% jds : this%grid2d% jde)   ,            & 
+                              external_var%data_2d,               & 
+                              external_conditions%geo%geolut )
+          do i=1,nsoil
+              this%soil_temperature%data_3d(:,i,:) = this%soil_deep_temperature%data_2d
+              if (this_image()==1) write(*,*) "  max soil_temperature in layer",i," on init: ", maxval(this%soil_temperature%data_3d(:,i,:))
+          enddo
+       
+        elseif (options%parameters%tsoil3D_ext/="") then  ! if 3D soil is provided we take the lowest level only. (can be expanded later)
+
+          varname = options%parameters%tsoil3D_ext   
+          
+          if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " for initial conditions"
+          external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
+
+          if (this_image()==1) print*, " shape ext soil 3D: ", shape(external_var%data_3d)
+          if (this_image()==1) print*, " maxval ext soil 3D: ", MAXVAL(external_var%data_3d(:,size(external_var%data_3d,2),:) )
+
+          call geo_interp2d(  this%soil_deep_temperature%data_2d, & ! ( this%grid2d% ids : this%grid2d% ide, this%grid2d% jds : this%grid2d% jde)   ,            & 
+                              external_var%data_3d(:,size(external_var%data_3d,2),:)  ,               & 
+                              external_conditions%geo%geolut )
+          do i=1,nsoil
+              this%soil_temperature%data_3d(:,i,:) = this%soil_deep_temperature%data_2d
+              if (this_image()==1) write(*,*) "  max soil_temperature in layer",i," on init: ", maxval(this%soil_temperature%data_3d(:,i,:))
+          enddo
+
+        endif
     
     end subroutine
 
