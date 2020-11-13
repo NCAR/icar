@@ -822,7 +822,8 @@ $(BUILD)options_obj.o: $(OBJECTS)options_obj.f90 $(BUILD)options_h.o $(BUILD)tim
 						$(BUILD)time_delta_obj.o $(BUILD)io_routines.o $(BUILD)opt_types.o	\
 						$(BUILD)time_io.o $(BUILD)string.o $(BUILD)model_tracking.o			\
 						$(BUILD)mp_driver.o $(BUILD)advection_driver.o $(BUILD)ra_driver.o	\
-						$(BUILD)lsm_driver.o $(BUILD)pbl_driver.o $(BUILD)cu_driver.o $(BUILD)wind.o
+						$(BUILD)lsm_driver.o $(BUILD)pbl_driver.o $(BUILD)cu_driver.o 		\
+						$(BUILD)wind.o $(BUILD)default_output_metadata.o
 
 ###################################################################
 #	Primary Data Objects
