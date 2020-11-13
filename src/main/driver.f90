@@ -38,15 +38,15 @@ program icar
     type(options_t) :: options
     type(domain_t)  :: domain
     type(boundary_t):: boundary
-    type(output_t)  :: dataset
-    ! type(output_t)  :: surface_dataset
+    type(output_t)  :: restart_dataset
+    type(output_t)  :: output_dataset
     type(timer_t)   :: initialization_timer, total_timer, input_timer, output_timer, physics_timer
     type(Time_type) :: next_output
     type(time_delta_t) :: small_time_delta
 
-    character(len=1024) :: file_name
+    character(len=1024) :: file_name, restart_file_name
     character(len=49)   :: file_date_format = '(I4,"-",I0.2,"-",I0.2,"_",I0.2,"-",I0.2,"-",I0.2)'
-    integer :: i
+    integer :: i, restart_counter
     integer :: output_vars(18)
 
 
@@ -62,22 +62,15 @@ program icar
 
     if (this_image()==1) write(*,*) "Setting up output files"
     ! should be combined into a single setup_output call
-    call dataset%set_domain(domain)
-    call dataset%add_variables(options%vars_for_restart, domain)
+    call restart_dataset%set_domain(domain)
+    call restart_dataset%add_variables(options%vars_for_restart, domain)
 
-    output_vars = [kVARS%precipitation, kVARS%snowfall, kVARS%graupel, kVARS%cloud_fraction, kVARS%shortwave, kVARS%longwave, &
-                   kVARS%sensible_heat, kVARS%latent_heat, kVARS%u_10m, kVARS%v_10m, kVARS%temperature_2m, kVARS%humidity_2m, &
-                   kVARS%surface_pressure, kVARS%soil_totalmoisture, kVARS%snow_water_equivalent, kVARS%skin_temperature,     &
-                   kVARS%latitude, kVARS%longitude]
-    do i=1,size(output_vars)
-        options%vars_for_output(output_vars)=1
-    enddo
-    ! call surface_dataset%set_domain(domain)
-    ! call surface_dataset%add_variables(options%vars_for_output, domain)
+    call output_dataset%set_domain(domain)
+    call output_dataset%add_variables(options%output_options%vars_for_output, domain)
 
     if (options%parameters%restart) then
         if (this_image()==1) write(*,*) "Reading restart data"
-        call restart_model(domain, dataset, options)
+        call restart_model(domain, restart_dataset, options)
     endif
 
     !-----------------------------------------
@@ -86,17 +79,25 @@ program icar
     !
     !   note that a timestep here is a forcing input timestep O(1-3hr), not a physics timestep O(20-100s)
     write(file_name, '(A,I6.6,"_",A,".nc")')      &
-            trim(options%parameters%output_file), &
+            trim(options%output_options%output_file), &
             this_image(),                         &
             trim(domain%model_time%as_string(file_date_format))
+
+    write(restart_file_name, '(A,I6.6,"_",A,".nc")')      &
+            trim(options%output_options%restart_file), &
+            this_image(),                         &
+            trim(domain%model_time%as_string(file_date_format))
+
 
     call initialization_timer%stop()
 
     i=1
     call output_timer%start()
-    call dataset%save_file(trim(file_name), i, domain%model_time)
-    ! call surface_dataset%save_file("surface_"//trim(file_name), i, domain%model_time)
-    next_output = domain%model_time + options%parameters%output_dt
+    call restart_dataset%save_file(trim(restart_file_name), i, domain%model_time)
+    restart_counter = 0
+    call output_dataset%save_file(trim(file_name), i, domain%model_time)
+
+    next_output = domain%model_time + options%output_options%output_dt
     call output_timer%stop()
     i = i + 1
 
@@ -156,17 +157,26 @@ program icar
             if (this_image()==1) write(*,*) "Writing output file"
             if (i>24) then
                 write(file_name, '(A,I6.6,"_",A,".nc")')    &
-                    trim(options%parameters%output_file),   &
+                    trim(options%output_options%output_file),   &
                     this_image(),                           &
                     trim(domain%model_time%as_string(file_date_format))
                 i = 1
             endif
+            call output_dataset%save_file(trim(file_name), i, next_output)
 
-            call dataset%save_file(trim(file_name), i, next_output)
-            ! call surface_dataset%save_file("surface_"//trim(file_name), i, domain%model_time)
+            restart_counter = restart_counter + 1
+            if (restart_counter == options%output_options%restart_count) then
+                restart_counter = 0
 
-            next_output = next_output + options%parameters%output_dt
+                write(restart_file_name, '(A,I6.6,"_",A,".nc")')      &
+                        trim(options%output_options%restart_file), &
+                        this_image(),                         &
+                        trim(domain%model_time%as_string(file_date_format))
 
+                call restart_dataset%save_file(trim(restart_file_name), 1, next_output)
+            endif
+
+            next_output = next_output + options%output_options%output_dt
             i = i + 1
         endif
 

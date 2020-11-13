@@ -471,7 +471,7 @@ mpdata_test: $(BUILD)test_mpdata.o $(BUILD)adv_mpdata.o
 	${LINKER} $^ -o $@ ${LFLAGS}
 
 point_in_on_test: $(BUILD)test_point_in_on.o $(BUILD)geo_reader.o $(BUILD)data_structures.o $(BUILD)icar_constants.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 blocking_test: $(BUILD)test_blocking.o $(BUILD)io_routines.o $(BUILD)winds_blocking.o \
 				$(BUILD)linear_winds.o $(BUILD)fftshift.o $(BUILD)string.o 		      \
