@@ -92,8 +92,6 @@
 
     !   The length of an input forcing time step
     inputinterval = 3600,   ! [s]
-    !   The output interval
-    outputinterval = 3600,  ! [s]
 
     !   The grid spacing of the high-resolution data
     dx = 4000.0,        ! [m]

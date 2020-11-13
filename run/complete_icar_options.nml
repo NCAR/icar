@@ -113,8 +113,6 @@
 
     !   The length of an input forcing time step
     inputinterval = 3600,   ! [s]
-    !   The output interval
-    outputinterval = 3600,  ! [s]
 
     !   Limit output data to near surface variables
     !   WARNING if true it is impossible to restart the run (for now)
