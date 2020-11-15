@@ -18,14 +18,15 @@ contains
     !! ----------------------------------------------------------------------------
     subroutine init_model_diffs()
         implicit none
-        integer :: n = 20
+        integer :: n = 21
 
         allocate( versionlist(n) )
         allocate( deltas(n) )
 
         versionlist = [character(len=1024) :: &
                        "0.5.1","0.5.2","0.6","0.7","0.7.1","0.7.2","0.7.3","0.8","0.8.1","0.8.2", &
-                       "0.9","0.9.1","0.9.2","0.9.3","0.9.4","0.9.5","1.0", "1.0.1","2.0a1","2.0a2"]
+                       "0.9","0.9.1","0.9.2","0.9.3","0.9.4","0.9.5","1.0", "1.0.1","2.0a1","2.0a2",&
+                       "2.0a3"]
 
         deltas = [ character(len=1024) :: &
         "Earliest version in git. ",                                                            &
@@ -59,7 +60,8 @@ contains
         "Significantly improved geographic interpolation, bug fixes, better time handling. ",   &
         "Added coarray fortran support, massive overhaul internally, lots of features."//       &
         "      Temporarily removed. ",                                                          &
-        "Added spatially variable dz coordinate system."                                        &
+        "Added spatially variable dz coordinate system.",                                       &
+        "Add option (and requirement) to specify output variables in namelist."                 &
         ]
 
     end subroutine init_model_diffs

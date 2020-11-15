@@ -25,12 +25,14 @@ contains
 
         if (.not.this%is_initialized) call this%init()
 
-        if (this%n_variables == size(this%variables)) call this%increase_var_capacity()
+        if (associated(variable%data_2d).or.associated(variable%data_3d)) then
 
+            if (this%n_variables == size(this%variables)) call this%increase_var_capacity()
 
-        this%n_variables = this%n_variables + 1
+            this%n_variables = this%n_variables + 1
 
-        this%variables(this%n_variables) = variable
+            this%variables(this%n_variables) = variable
+        endif
 
     end subroutine
 

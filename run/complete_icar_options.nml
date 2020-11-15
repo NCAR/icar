@@ -2,7 +2,7 @@
 !   Model and run meta-data
 !---------------------------------------------------------
 &model_version
-    version = "2.0a1",                    ! This must match the version of the compiled code
+    version = "2.0a3",                    ! This must match the version of the compiled code
     comment = "Add your comment here"     ! This will be stored in output files
 /
 
@@ -23,6 +23,36 @@
     dz_levels = 50.,   75.,  125.,  200.,  300.,  400.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,    ! 1-20
                500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.     ! 20-40
 /
+
+!---------------------------------------------------------
+!   Specify output and restart files and output frequencies
+!---------------------------------------------------------
+&output_list
+    ! this is a list of variable names to be written in each output file
+    names = "u","v","ta2m","hus2m", "precipitation", "swe"
+
+    ! These are the options for output variables.  Though they will only be output if they are computed internally
+    ! "u", "v", "w_grid", "w",
+    ! "nsquared", "pressure", "pressure_i", "psfc",
+    ! "potential_temperature", "temperature",
+    ! "qv", "qc", "nc", "qi", "ni", "qr", "nr", "qs", "ns", "qg", "ng",
+    ! "precipitation", "cu_precipitation", "snowfall", "graupel",
+    ! "exner", "density", "z", "z_i", "dz", "dz_i",
+    ! "clt", "rsds", "rlds", "rlus",
+    ! "ta2m", "hus2m", "v10m", "u10m", "ts",
+    ! "hfss", "hfls", "hfgs", "vegetation_fraction", "veg_type", "lai", "surface_roughness",
+    ! "canopy_water", "swe", "soil_water_content", "soil_column_total_water", "soil_temperature", "soil_deep_temperature",
+    ! "land_mask", "terrain", "lat", "lon", "u_lat", "u_lon", "v_lat", "v_lon"
+
+    outputinterval = 3600   ! number of seconds between output time slices
+    output_file = "output/icar_out_"    ! prefix name of output file (date will be appended)
+    ! output_file_frequency = "monthly"   ! eventually this will be used to specify how frequently to create new files (not implemented yet)
+
+    ! note that restart files will have ALL variables so that they can be used to restart ICAR
+    restartinterval = 24    ! number of outputs to skip restarts on
+    restart_file = "restart/icar_rst_"    ! prefix name of restart file (date will be appended)
+/
+
 
 !---------------------------------------------------------
 !   Specify physics options to use for the model run
@@ -52,9 +82,6 @@
     !   This is the high-resolution input filename
     !   primary inputs from this file are lat, lon, and terrain, optionally soil and veg types
     init_conditions_file="baseline/geo_4km_conus.nc",
-
-    !   This is the prefix for all output files (any directories must be created prior to running)
-    output_file="output/icar_out_",
 
     !   This is a list of the boundary conditions files number of files must match nfiles variable above
     boundary_files= "forcing/wrfout_d01_2001-04-01_03:00:00", "forcing/wrfout_d01_2001-06-30_03:00:00"
@@ -86,8 +113,6 @@
 
     !   The length of an input forcing time step
     inputinterval = 3600,   ! [s]
-    !   The output interval
-    outputinterval = 3600,  ! [s]
 
     !   Limit output data to near surface variables
     !   WARNING if true it is impossible to restart the run (for now)

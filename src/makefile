@@ -471,7 +471,7 @@ mpdata_test: $(BUILD)test_mpdata.o $(BUILD)adv_mpdata.o
 	${LINKER} $^ -o $@ ${LFLAGS}
 
 point_in_on_test: $(BUILD)test_point_in_on.o $(BUILD)geo_reader.o $(BUILD)data_structures.o $(BUILD)icar_constants.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 blocking_test: $(BUILD)test_blocking.o $(BUILD)io_routines.o $(BUILD)winds_blocking.o \
 				$(BUILD)linear_winds.o $(BUILD)fftshift.o $(BUILD)string.o 		      \
@@ -822,7 +822,8 @@ $(BUILD)options_obj.o: $(OBJECTS)options_obj.f90 $(BUILD)options_h.o $(BUILD)tim
 						$(BUILD)time_delta_obj.o $(BUILD)io_routines.o $(BUILD)opt_types.o	\
 						$(BUILD)time_io.o $(BUILD)string.o $(BUILD)model_tracking.o			\
 						$(BUILD)mp_driver.o $(BUILD)advection_driver.o $(BUILD)ra_driver.o	\
-						$(BUILD)lsm_driver.o $(BUILD)pbl_driver.o $(BUILD)cu_driver.o $(BUILD)wind.o
+						$(BUILD)lsm_driver.o $(BUILD)pbl_driver.o $(BUILD)cu_driver.o 		\
+						$(BUILD)wind.o $(BUILD)default_output_metadata.o
 
 ###################################################################
 #	Primary Data Objects
