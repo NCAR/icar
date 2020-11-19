@@ -1,9 +1,9 @@
 submodule(options_interface) options_implementation
 
-    use icar_constants,             only : kMAINTAIN_LON, MAXFILELENGTH, MAXVARLENGTH, MAX_NUMBER_FILES, MAXLEVELS, kNO_STOCHASTIC, kVERSION_STRING, pi
+    use icar_constants,             only : kMAINTAIN_LON, MAXFILELENGTH, MAXVARLENGTH, MAX_NUMBER_FILES, MAXLEVELS, kNO_STOCHASTIC, kVERSION_STRING, kMAX_FILE_LENGTH, kMAX_NAME_LENGTH, pi
     use options_types,              only : parameter_options_type, physics_type, mp_options_type, lt_options_type,      &
                                            block_options_type, adv_options_type, lsm_options_type, bias_options_type,   &
-                                           cu_options_type
+                                           cu_options_type, output_options_type
     use io_routines,                only : io_newunit
     use time_io,                    only : find_timestep_in_file
     use time_delta_object,          only : time_delta_t
@@ -16,6 +16,9 @@ submodule(options_interface) options_implementation
     use radiation,                  only : ra_var_request
     use microphysics,               only : mp_var_request
     use advection,                  only : adv_var_request
+    use wind,                       only : wind_var_request
+
+    use output_metadata,            only : get_varname
 
     implicit none
 
@@ -54,6 +57,7 @@ contains
         call physics_namelist(      options_filename,   this)
         call var_namelist(          options_filename,   this%parameters)
         call parameters_namelist(   options_filename,   this%parameters)
+        call output_namelist(       options_filename,   this%output_options)
         call model_levels_namelist( options_filename,   this%parameters)
 
         call lt_parameters_namelist(    this%parameters%lt_options_filename,    this)
@@ -93,6 +97,7 @@ contains
         call cu_var_request(options)
         call mp_var_request(options)
         call adv_var_request(options)
+        call wind_var_request(options)
 
     end subroutine
 
@@ -553,6 +558,81 @@ contains
     end subroutine require_var
 
     !> -------------------------------
+    !! Initialize the variable names to be written to standard output
+    !!
+    !! Reads the output_list namelist
+    !!
+    !! -------------------------------
+    subroutine output_namelist(filename, options)
+        implicit none
+        character(len=*),             intent(in)    :: filename
+        type(output_options_type), intent(inout) :: options
+
+        integer :: name_unit, i, j, status
+        real    :: outputinterval, restartinterval
+
+        character(len=kMAX_FILE_LENGTH) :: output_file, restart_file
+        character(len=kMAX_NAME_LENGTH) :: names(kMAX_STORAGE_VARS)
+        character (len=MAXFILELENGTH) :: output_file_frequency
+
+        namelist /output_list/ names, outputinterval, restartinterval, &
+                               output_file, restart_file, output_file_frequency
+
+        output_file         = "icar_out_"
+        restart_file        = "icar_rst_"
+        names(:)            = ""
+        outputinterval      =  3600
+        restartinterval     =  24 ! in units of outputintervals
+
+        open(io_newunit(name_unit), file=filename)
+        read(name_unit, nml=output_list)
+        close(name_unit)
+
+        do j=1, kMAX_STORAGE_VARS
+            if (trim(names(j)) /= "") then
+                do i=1, kMAX_STORAGE_VARS
+                    if (trim(get_varname(i)) == trim(names(j))) then
+                        call add_to_varlist(options%vars_for_output, [i])
+                    endif
+                enddo
+            endif
+        enddo
+
+        options%out_dt     = outputinterval
+        call options%output_dt%set(seconds=outputinterval)
+
+        if (trim(output_file_frequency) /= "") then
+            options%output_file_frequency = output_file_frequency
+        else
+            ! if outputing at half-day or longer intervals, create monthly files
+            if (outputinterval>=43200) then
+                options%output_file_frequency="monthly"
+            ! if outputing at half-hour or longer intervals, create daily files
+            else if (outputinterval>=1800) then
+                options%output_file_frequency="daily"
+            ! otherwise create a new output file every timestep
+            else
+                options%output_file_frequency="every step"
+            endif
+        endif
+
+        options%rst_dt = outputinterval * restartinterval
+        call options%restart_dt%set(seconds=options%rst_dt)
+
+        if (restartinterval<0) then
+            options%restart_count = restartinterval
+        else
+            options%restart_count = max(24, nint(restartinterval))
+        endif
+
+        options%output_file = output_file
+        options%restart_file = restart_file
+
+
+    end subroutine output_namelist
+
+
+    !> -------------------------------
     !! Initialize the variable names to be read
     !!
     !! Reads the var_list namelist
@@ -567,7 +647,7 @@ contains
                                         hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qgvar,qsvar,hgtvar,shvar,lhvar,pblhvar,   &
                                         psvar, pslvar, &
-                                        soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
+                                        soiltype_var, soil_t_var,soil_vwc_var,swe_var, soil_deept_var,           &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
                                         swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &
                                         lat_ext, lon_ext, swe_ext, hsnow_ext, rho_snow_ext, tss_ext, tsoil2D_ext, tsoil3D_ext, z_ext, time_ext
@@ -576,7 +656,7 @@ contains
                             landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar, &
                             psvar, pslvar, &
                             hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
-                            soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var,           &
+                            soiltype_var, soil_t_var,soil_vwc_var,swe_var,soil_deept_var,           &
                             vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
                             swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &
                             lat_ext, lon_ext, swe_ext, hsnow_ext, rho_snow_ext, tss_ext, tsoil2D_ext, tsoil3D_ext,  z_ext, time_ext
@@ -622,6 +702,7 @@ contains
         soiltype_var=""
         soil_t_var=""
         soil_vwc_var=""
+        swe_var=""
         soil_deept_var=""
         vegtype_var=""
         vegfrac_var=""
@@ -656,7 +737,7 @@ contains
         if ((pvar=="") .and. ((pslvar/="") .or. (psvar/=""))) options%compute_p = .True.
         if (options%compute_p) then
             if ((pslvar == "").and.(hgtvar == "")) then
-                print*, "ERROR: if surface pressure is used to compute air pressure, then surface height must be specified"
+                write(*,*) "ERROR: if surface pressure is used to compute air pressure, then surface height must be specified"
                 error stop
             endif
         endif
@@ -665,7 +746,7 @@ contains
         if ((zvar=="") .and. ((pslvar/="") .or. (psvar/=""))) options%compute_z = .True.
         if (options%compute_z) then
             if (pvar=="") then
-                if (this_image()==1) print*, "ERROR: either pressure (pvar) or atmospheric level height (zvar) must be specified"
+                if (this_image()==1) write(*,*) "ERROR: either pressure (pvar) or atmospheric level height (zvar) must be specified"
                 error stop
             endif
         endif
@@ -756,6 +837,7 @@ contains
         options%soiltype_var    = soiltype_var
         options%soil_t_var      = soil_t_var
         options%soil_vwc_var    = soil_vwc_var
+        options%swe_var         = swe_var
         options%soil_deept_var  = soil_deept_var
         options%vegtype_var     = vegtype_var
         options%vegfrac_var     = vegfrac_var
@@ -801,7 +883,8 @@ contains
         integer :: name_unit
         type(time_delta_t) :: dt
         ! parameters to read
-        real    :: dx, dxlow, outputinterval, inputinterval, t_offset, smooth_wind_distance, frames_per_outfile, agl_cap
+
+        real    :: dx, dxlow, outputinterval, restartinterval, inputinterval, t_offset, smooth_wind_distance, frames_per_outfile, agl_cap
         real    :: cfl_reduction_factor
         integer :: ntimesteps, wind_iterations
         integer :: longitude_system
@@ -820,7 +903,11 @@ contains
                                         bias_options_filename, block_options_filename, &
                                         cu_options_filename
 
+! <<<<<<< HEAD
         namelist /parameters/ ntimesteps, wind_iterations, outputinterval, frames_per_outfile, inputinterval, surface_io_only,                &
+! =======
+!         namelist /parameters/ ntimesteps, inputinterval,                &
+! >>>>>>> v2
                               dx, dxlow, ideal, readz, readdz, nz, t_offset,                             &
                               debug, warning_level, interactive, restart,                                &
                               external_winds, buffer, n_ext_winds, advect_density, smooth_wind_distance, &
@@ -864,6 +951,7 @@ contains
         nz                  =  MAXLEVELS
         smooth_wind_distance= -9999
         calendar            = "gregorian"
+        inputinterval       = 3600
         high_res_soil_state = .False.
         use_agl_height      = .False.
         agl_cap             = 300
@@ -947,6 +1035,7 @@ contains
 
         options%in_dt      = inputinterval
         call options%input_dt%set(seconds=inputinterval)
+
         options%out_dt     = outputinterval
         call options%output_dt%set(seconds=outputinterval)
         ! if outputing at half-day or longer intervals, create monthly files
@@ -964,6 +1053,7 @@ contains
         options%frames_per_outfile = frames_per_outfile 
 
         options%surface_io_only = surface_io_only
+
 
         options%calendar=calendar
 
@@ -1694,8 +1784,8 @@ contains
 
             ! allocate(options%dz_levels(options%nz))
             if (minval(dz_levels(1:options%nz)) < 0) then
-                if (this_image()==1) print*, "WARNING: dz seems to be less than 0, this is not physical and is probably an error in the namelist"
-                if (this_image()==1) print*, "Note that the gfortran compiler will not read dz_levels spread across multiple lines. "
+                if (this_image()==1) write(*,*) "WARNING: dz seems to be less than 0, this is not physical and is probably an error in the namelist"
+                if (this_image()==1) write(*,*) "Note that the gfortran compiler will not read dz_levels spread across multiple lines. "
                 error stop
             endif
 
@@ -1735,9 +1825,10 @@ contains
         !    error stop
         !endif
 
+
         if (dz_modifies_wind) then
-            print*, "WARNING: setting dz_modifies_wind to true is not recommended, use wind = 2 instead"
-            print*, "if you want to continue and enable this, you will need to change this code in the options_obj"
+            write(*,*) "WARNING: setting dz_modifies_wind to true is not recommended, use wind = 2 instead"
+            write(*,*) "if you want to continue and enable this, you will need to change this code in the options_obj"
             error stop
         endif
 
@@ -1804,12 +1895,18 @@ contains
 
         character(len=MAXFILELENGTH) :: init_conditions_file, output_file, forcing_file_list, &
                                         linear_mask_file, nsq_calibration_file, external_files
+
         character(len=MAXFILELENGTH), allocatable :: boundary_files(:), ext_wind_files(:)
         integer :: name_unit, nfiles, i
 
         ! set up namelist structures
+! <<<<<<< HEAD
         namelist /files_list/ init_conditions_file, output_file, boundary_files, forcing_file_list, &
                               linear_mask_file, nsq_calibration_file, external_files
+! =======
+!         namelist /files_list/ init_conditions_file, boundary_files, forcing_file_list, &
+!                               linear_mask_file, nsq_calibration_file
+! >>>>>>> v2
         namelist /ext_winds_info/ ext_wind_files
 
         linear_mask_file="MISSING"
@@ -1845,7 +1942,6 @@ contains
         options%boundary_files(1:nfiles) = boundary_files(1:nfiles)
         deallocate(boundary_files)
 
-        options%output_file=output_file
         if (trim(linear_mask_file)=="MISSING") then
             linear_mask_file = options%init_conditions_file
         endif

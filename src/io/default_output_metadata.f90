@@ -62,13 +62,15 @@ contains
 
         meta_data = var_meta(var_idx)
 
-        meta_data%data_2d   => input_data
-        meta_data%two_d     = .True.
-        meta_data%three_d   = .False.
-        local_shape(1) = size(input_data, 1)
-        local_shape(2) = size(input_data, 2)
-        ! for some reason if shape(input_data) is passed as source, then the dim_len bounds are (0:1) instead of 1:2
-        allocate(meta_data%dim_len, source=local_shape)
+        if (associated(input_data)) then
+            meta_data%data_2d   => input_data
+            meta_data%two_d     = .True.
+            meta_data%three_d   = .False.
+            local_shape(1) = size(input_data, 1)
+            local_shape(2) = size(input_data, 2)
+            ! for some reason if shape(input_data) is passed as source, then the dim_len bounds are (0:1) instead of 1:2
+            allocate(meta_data%dim_len, source=local_shape)
+        endif
 
     end function get_metadata_2d
 
@@ -94,17 +96,44 @@ contains
 
         meta_data = var_meta(var_idx)
 
-        meta_data%data_3d   => input_data
-        meta_data%two_d     = .False.
-        meta_data%three_d   = .True.
-        local_shape(1) = size(input_data, 1)
-        local_shape(2) = size(input_data, 3)
-        local_shape(3) = size(input_data, 2)
-        ! for some reason if shape(input_data) is passed as source, then the dim_len bounds are (0:1) instead of 1:2
-        allocate(meta_data%dim_len, source=local_shape)
-
+        if (associated(input_data)) then
+            meta_data%data_3d   => input_data
+            meta_data%two_d     = .False.
+            meta_data%three_d   = .True.
+            local_shape(1) = size(input_data, 1)
+            local_shape(2) = size(input_data, 3)
+            local_shape(3) = size(input_data, 2)
+            ! for some reason if shape(input_data) is passed as source, then the dim_len bounds are (0:1) instead of 1:2
+            allocate(meta_data%dim_len, source=local_shape)
+        endif
+        
     end function get_metadata_3d
 
+
+    !>------------------------------------------------------------
+    !! Get metadata variable name associated with a given index
+    !!
+    !! Sets the internal data pointer to point to the input data provided
+    !!------------------------------------------------------------
+    function get_varname(var_idx) result(name)
+        implicit none
+        integer, intent(in)             :: var_idx
+        character(len=kMAX_NAME_LENGTH) :: name       ! function result
+
+        type(variable_t) :: meta_data
+
+        if (var_idx>kMAX_STORAGE_VARS) then
+            stop "Invalid variable metadata requested"
+        endif
+
+        ! initialize the module level constant data structure
+        if (.not.allocated(var_meta)) call init_var_meta()
+
+        meta_data = var_meta(var_idx)
+
+        name = meta_data%name
+
+    end function get_varname
 
     !>------------------------------------------------------------
     !! Initialize the module level master data structure
@@ -182,6 +211,18 @@ contains
                                attribute_t("long_name",     "Vertical wind"),                   &
                                attribute_t("description",   "Vertical wind including u/v"),     &
                                attribute_t("units",         "m s-1"),                           &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Brunt Vaisala frequency (squared)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%nsquared))
+            var%name        = "nsquared"
+            var%dimensions  = three_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "square_of_brunt_vaisala_frequency_in_air"),&
+                               attribute_t("long_name",     "Burnt Vaisala frequency squared"), &
+                               attribute_t("units",         "s-2"),                             &
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------

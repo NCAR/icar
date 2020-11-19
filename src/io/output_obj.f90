@@ -25,12 +25,14 @@ contains
 
         if (.not.this%is_initialized) call this%init()
 
-        if (this%n_variables == size(this%variables)) call this%increase_var_capacity()
+        if (associated(variable%data_2d).or.associated(variable%data_3d)) then
 
+            if (this%n_variables == size(this%variables)) call this%increase_var_capacity()
 
-        this%n_variables = this%n_variables + 1
+            this%n_variables = this%n_variables + 1
 
-        this%variables(this%n_variables) = variable
+            this%variables(this%n_variables) = variable
+        endif
 
     end subroutine
 
@@ -83,6 +85,7 @@ contains
         if (0<var_list( kVARS%v) )                          call this%add_to_output( get_metadata( kVARS%v                            , domain%v%data_3d))
         if (0<var_list( kVARS%w) )                          call this%add_to_output( get_metadata( kVARS%w                            , domain%w%data_3d))
         if (0<var_list( kVARS%w) )                          call this%add_to_output( get_metadata( kVARS%w_real                       , domain%w_real%data_3d))
+        if (0<var_list( kVARS%nsquared) )                   call this%add_to_output( get_metadata( kVARS%nsquared                     , domain%nsquared%data_3d))
         if (0<var_list( kVARS%water_vapor) )                call this%add_to_output( get_metadata( kVARS%water_vapor                  , domain%water_vapor%data_3d))
         if (0<var_list( kVARS%potential_temperature) )      call this%add_to_output( get_metadata( kVARS%potential_temperature        , domain%potential_temperature%data_3d))
         if (0<var_list( kVARS%cloud_water) )                call this%add_to_output( get_metadata( kVARS%cloud_water                  , domain%cloud_water_mass%data_3d))

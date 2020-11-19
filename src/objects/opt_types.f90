@@ -1,6 +1,6 @@
 module options_types
 
-    use icar_constants,             only : kMAX_STRING_LENGTH, MAXLEVELS, MAXFILELENGTH, MAX_NUMBER_FILES, MAXVARLENGTH, kMAX_STORAGE_VARS
+    use icar_constants,             only : kMAX_STRING_LENGTH, MAXLEVELS, MAXFILELENGTH, MAX_NUMBER_FILES, MAXVARLENGTH, kMAX_STORAGE_VARS, kMAX_NAME_LENGTH
     use time_object,                only : Time_type
     use time_delta_object,          only : time_delta_t
 
@@ -140,6 +140,26 @@ module options_types
         logical :: monthly_vegfrac
     end type lsm_options_type
 
+    ! ------------------------------------------------
+    ! store output file related options
+    ! ------------------------------------------------
+    type output_options_type
+
+        ! file names
+        character (len=MAXFILELENGTH) :: output_file, restart_file
+        character (len=MAXFILELENGTH) :: output_file_frequency
+
+        real :: out_dt                  ! time step between output [s]
+        type(time_delta_t) :: output_dt ! store out_dt as a time delta object
+        real :: rst_dt                  ! time step between writing restart data [s]
+        type(time_delta_t) :: restart_dt! rst_dt as a time delta object
+        integer :: restart_count
+
+        ! these are the variables that need to be written and read from disk as primary output
+        integer :: vars_for_output( kMAX_STORAGE_VARS ) = 0
+
+    end type output_options_type
+
 
     ! ------------------------------------------------
     ! store all model options
@@ -148,9 +168,13 @@ module options_types
         character (len=MAXVARLENGTH) :: version,comment
 
         ! file names
-        character (len=MAXFILELENGTH) :: init_conditions_file, linear_mask_file, nsq_calibration_file, external_files
+        character (len=MAXFILELENGTH) :: init_conditions_file, linear_mask_file, nsq_calibration_file, external_files, restart_file
+! <<<<<<< HEAD
+!         character (len=MAXFILELENGTH) :: init_conditions_file, linear_mask_file, nsq_calibration_file, external_files
+! =======
+!         character (len=MAXFILELENGTH) :: init_conditions_file, linear_mask_file, nsq_calibration_file, restart_file
+! >>>>>>> v2
         character (len=MAXFILELENGTH), dimension(:), allocatable :: boundary_files, ext_wind_files
-        character (len=MAXFILELENGTH) :: output_file,restart_file,output_file_frequency
 
         ! variable names from init/BC/wind/... files
         character (len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
@@ -158,7 +182,7 @@ module options_types
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar,hgtvar, &
                                         pslvar, psvar, &
                                         shvar,lhvar,pblhvar,zvar,zbvar,&
-                                        soiltype_var, soil_t_var,soil_vwc_var,soil_deept_var, &
+                                        soiltype_var, soil_t_var,soil_vwc_var,swe_var,soil_deept_var, &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
                                         swdown_var, lwdown_var, &
                                         sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &
@@ -198,7 +222,6 @@ module options_types
         logical :: advect_density       ! properly incorporate density into the advection calculations.
                                         ! Doesn't play nice with linear winds
         logical :: high_res_soil_state  ! read the soil state from the high res input file not the low res file
-        logical :: surface_io_only      ! just output surface variables to speed up run and thin output
 
         integer :: buffer               ! buffer to remove from all sides of the high res grid supplied
         ! various integer parameters/options
@@ -206,6 +229,8 @@ module options_types
         integer :: nz                   ! number of model vertical levels
         integer :: wind_iterations      ! number of time to iterate for wind=3 option
         integer :: ext_winds_nfiles     ! number of extrenal wind filenames to read from namelist
+
+        ! restart information
         type(Time_type) :: restart_time ! Date of the restart time step
         ! integer :: restart_step         ! step in forcing data to begin running
         integer :: restart_date(6)      ! date to initialize from (y,m,d, h,m,s)
@@ -216,11 +241,13 @@ module options_types
         real :: dxlow                   ! forcing model grid cell width [m]
         real :: in_dt                   ! time step between forcing inputs [s]
         type(time_delta_t) :: input_dt  ! store in_dt as a time delta object
+
         real :: out_dt                  ! time step between output [s]
         type(time_delta_t) :: output_dt ! store out_dt as a time delta object
         real :: outputinterval          ! time steps per output
         real :: inputinterval           ! time steps per input
         real :: frames_per_outfile      ! frames (outputintervals) per out file
+
         real :: smooth_wind_distance    ! distance over which to smooth the forcing wind field (m)
         logical :: time_varying_z       ! read in a new z coordinate every time step and interpolate accordingly
         real :: cfl_reduction_factor    ! amount to multiple CFL by to improve stability (typically 1)
@@ -257,7 +284,7 @@ module options_types
         logical :: nudging   ! constrain the solution of certain variables (QV,QS,QC,QI,QR,QG) to be close (nudge_factor) to the forcing data
 
         real    :: agl_cap              ! height up to which AGL height is used for vertical interpolation
-        
+
         ! physics parameterization options
         logical :: use_mp_options
         logical :: use_cu_options

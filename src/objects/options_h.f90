@@ -3,7 +3,7 @@ module options_interface
     use icar_constants,             only : kMAX_STRING_LENGTH, kMAX_STORAGE_VARS
     use options_types,              only : parameter_options_type, physics_type, mp_options_type, lt_options_type,      &
                                            block_options_type, adv_options_type, lsm_options_type, bias_options_type,   &
-                                           cu_options_type
+                                           cu_options_type, output_options_type
 
     implicit none
 
@@ -21,8 +21,6 @@ module options_interface
         integer :: vars_to_allocate( kMAX_STORAGE_VARS ) = 0
         ! these are the variables that need to be written and read from disk for a model restart run
         integer :: vars_for_restart( kMAX_STORAGE_VARS ) = 0
-        ! these are the variables that need to be written and read from disk as primary output
-        integer :: vars_for_output( kMAX_STORAGE_VARS ) = 0
 
 
         type(parameter_options_type)    :: parameters
@@ -34,6 +32,8 @@ module options_interface
         type(mp_options_type)           :: mp_options
 
         type(lt_options_type)           :: lt_options
+
+        type(output_options_type)       :: output_options
 
         type(block_options_type)        :: block_options
 

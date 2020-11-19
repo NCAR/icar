@@ -258,9 +258,11 @@ contains
             date_to_mjd = date_to_mjd - gregorian_julian_day(this%year_zero, this%month_zero, this%day_zero, this%hour_zero, 0, 0)
 
         else if (this%calendar==NOLEAP) then
-            date_to_mjd = (year-this%year_zero)*365 + this%month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0
+            date_to_mjd = (year*365 + this%month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0) &
+                         - (this%year_zero*365 + this%month_start(this%month_zero)-1 + this%day_zero-1 + (this%hour_zero)/24d+0)
         else if (this%calendar==THREESIXTY) then
-            date_to_mjd = (year-this%year_zero)*360 + this%month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0
+            date_to_mjd = (year*360 + this%month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0) &
+                         - (this%year_zero*360 + this%month_start(this%month_zero)-1 + this%day_zero-1 + (this%hour_zero)/24d+0)
         end if
 
     end function date_to_mjd
@@ -307,6 +309,7 @@ contains
         !
         !------------------------------------------------------------
         else if (this%calendar==NOLEAP) then
+
             year = floor((mjd + (this%month_start(this%month_zero)-1) + (this%day_zero-1) + this%hour_zero/24.0) / 365)
             day_fraction = mjd - year*365+1 + (this%month_start(this%month_zero)-1) + (this%day_zero-1) + this%hour_zero/24.0
             month = 1
@@ -317,7 +320,7 @@ contains
             end do
             day = floor(day_fraction - this%month_start(month))+1
             year = year + this%year_zero
-
+            mjd = mjd + this%hour_zero/24.0
         !------------------------------------------------------------
         !
         ! Calculate the dates for a 360-day Calendar
@@ -335,7 +338,7 @@ contains
 
             day = floor(day_fraction - this%month_start(month)) + 1
             year = year + this%year_zero
-
+            mjd = mjd + this%hour_zero/24.0
         end if
 
         !------------------------------------------------------------
@@ -343,14 +346,14 @@ contains
         ! Calculate the hour/minute/second for any calendar
         !
         !------------------------------------------------------------
-        day_fraction=mod(mjd,1.0)
-        hour=floor(day_fraction*24)
+        day_fraction = mod(mjd, 1.0)
+        hour = floor(day_fraction * 24)
 
-        day_fraction=day_fraction*24-hour
-        minute=floor(day_fraction*60)
+        day_fraction = day_fraction * 24 - hour
+        minute = floor(day_fraction * 60)
 
-        day_fraction=day_fraction*60-minute
-        second = nint((day_fraction-(24d0*60*1d-5))*60)
+        day_fraction = day_fraction * 60 - minute
+        second = nint((day_fraction - (24d0*60*1d-5)) * 60)
 
     end subroutine calendar_date
 

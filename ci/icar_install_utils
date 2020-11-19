@@ -99,7 +99,7 @@ function icar_install {
     make -C src clean; make -C src -j4 CAF_MODE=single MODE=profile
     # make -C src clean; make -C src -j4 CAF_MODE=single MODE=fast
     make -C src clean; make -C src -j4 CAF_MODE=single
-    make -C src -j4 CAF_MODE=single test
+    # make -C src -j4 CAF_MODE=single test
     echo "icar install succeeded"
 
 }
@@ -113,10 +113,10 @@ function icar_script {
     export OMP_NUM_THREADS=2
 
     ./icar
-    for i in *_test; do
-        echo $i
-        ./${i}
-    done
+    # for i in *_test; do
+    #     echo $i
+    #     ./${i}
+    # done
 
     echo "icar script succeeded"
     cd ..

@@ -288,8 +288,6 @@ contains
         real,   allocatable :: layer_count(:,:), layer_fraction(:,:)
         real,   allocatable :: internal_z_top(:,:), internal_z_bottom(:,:)
 
-        ! if (this_image()==1) print*, "called", shape(z_bottom), buffer, shape(z_top)
-
         ! Handle the trivial case quickly
         if ((U==0).and.(V==0)) then
             lt_data%u_perturb = 0
@@ -300,18 +298,6 @@ contains
         start_z = minval(z_bottom)
         end_z = maxval(z_top)
 
-        ! if (this_image()==1) print*, "zbot(1,1), zbo(n/2,n/2)", z_bottom(1,1), z_bottom(size(z_bottom,1)/2, size(z_bottom,2)/2)
-        ! if (this_image()==1) print*, "ztop(1,1), ztop(n/2,n/2)", z_top(1,1), z_top(size(z_top,1)/2, size(z_top,2)/2)
-
-        ! if (this_image()==1) print*, "zbot(1:4,1)", z_bottom(1:4,1)
-        ! if (this_image()==1) print*, "zbot(1:4,2)", z_bottom(1:4,2)
-        ! if (this_image()==1) print*, "zbot(1:4,3)", z_bottom(1:4,3)
-        ! if (this_image()==1) print*, "zbot(1:4,4)", z_bottom(1:4,4)
-
-        ! if (this_image()==1) print*, "zbot(buffer-1:buffer+2,1)", z_bottom(buffer-1:buffer+2,1)
-        ! if (this_image()==1) print*, "zbot(buffer-1:buffer+2,2)", z_bottom(buffer-1:buffer+2,2)
-
-
         allocate(internal_z_top(size(lt_data%u_perturb,1),size(lt_data%u_perturb,2)))
         internal_z_top = maxval(z_top)
         internal_z_top(buffer:buffer+size(z_top,1)-1, buffer:buffer+size(z_top,2)-1) = z_top(:,:)
@@ -319,16 +305,10 @@ contains
         allocate(internal_z_bottom(size(lt_data%u_perturb,1),size(lt_data%u_perturb,2)), source=maxval(z_bottom))
         internal_z_bottom(buffer:buffer+size(z_bottom,1)-1, buffer:buffer+size(z_bottom,2)-1) = z_bottom
 
-        ! if (this_image()==1) print*, "inter_zbot(buffer-1:buffer+2,b+2)", internal_z_bottom(buffer+size(z_top,1)/2-1:size(z_top,1)/2+buffer+2,buffer+2)
-
-
-
         allocate(layer_count(size(lt_data%u_perturb,1), size(lt_data%u_perturb,2)))
         layer_count = 0
         allocate(layer_fraction, source=layer_count)
-        ! if (this_image()==1) print*, "LUT generation:",U, V, Nsq
-        ! if (this_image()==1) print*, minval(internal_z_top), maxval(internal_z_top), minval(z_top - z_bottom)
-        ! if (this_image()==1) print*, minval(internal_z_bottom), maxval(internal_z_bottom), minimum_step
+
 
         step_size = min(minimum_step, minval(z_top - z_bottom))
         current_z = start_z + step_size/2 ! we want the value in the middle of each theoretical layer
@@ -337,62 +317,20 @@ contains
         lt_data%u_accumulator = 0
         lt_data%v_accumulator = 0
 
-        ! if (debug_print) then
-        !     print*, "linear_perturbation_varyingz:", step_size, current_z
-        ! endif
-
-        ! if (this_image()==1) print*, "    start_z:", start_z, "    current_z:", current_z, "    end_z:", end_z !, "    internal_z_top:", internal_z_top(buffer+size(z_bottom,1)/2-1,buffer+size(z_bottom,2)/2-1)
         do while (current_z < end_z)
 
             call linear_perturbation_at_height(U,V,Nsq,current_z, fourier_terrain, lt_data)
-
-            ! if (this_image()==1) print*, minval(max(0.0, min(step_size/2, current_z - internal_z_bottom))), &
-            !                         minval(max(0.0, min(step_size/2, internal_z_top - current_z))),         &
-            !                         minval(max(0.0, min(step_size/2, current_z - internal_z_bottom)) + max(0.0, min(step_size/2, internal_z_top - current_z)))
 
             layer_fraction = max(0.0,                                                                                       &
                                 min(step_size/2, current_z - internal_z_bottom) + min(0.0, internal_z_top - current_z)      &
                               + min(step_size/2, internal_z_top - current_z)    + min(0.0, current_z - internal_z_bottom)   ) / step_size
 
-            ! if (this_image()==1) print*, minval(internal_z_top - current_z), minval(current_z - internal_z_bottom)
             layer_count = layer_count + layer_fraction
             lt_data%u_accumulator = lt_data%u_accumulator + lt_data%u_perturb * layer_fraction
             lt_data%v_accumulator = lt_data%v_accumulator + lt_data%v_perturb * layer_fraction
-            ! if (start_z > 17000) then
-            !     block
-            !         integer :: xs,xe
-            !         xs = buffer+size(z_bottom,1)/2-8
-            !         xe = buffer+size(z_bottom,1)/2+2
-            !         if (this_image()==1) print*, layer_fraction(buffer+size(z_bottom,1)/2+1,buffer+1),                    layer_fraction(xs:xe,buffer+1)
-            !         if (this_image()==1) print*, current_z - internal_z_bottom(buffer+size(z_bottom,1)/2+1, buffer+2),    current_z - internal_z_bottom(xs:xe, buffer+2)
-            !         if (this_image()==1) print*, internal_z_top(buffer+size(z_bottom,1)/2+1, buffer+2) - current_z,       internal_z_top(xs:xe, buffer+2) - current_z
-            !     end block
-            ! endif
-            ! if (start_z < 100) then
-            !     if (this_image()==1) print*, layer_fraction(1::53,buffer+1)
-            !     if (this_image()==1) print*, current_z - internal_z_bottom(1::53, buffer+2)
-            !     if (this_image()==1) print*, internal_z_top(1::53, buffer+2) - current_z
-            ! endif
-
-            ! if (this_image()==1) print*, current_z, layer_fraction(buffer+size(z_bottom,1)/2-1,buffer+size(z_bottom,2)/2-1), &
-            !                         layer_fraction(buffer+2,buffer+2), &! (current_z - internal_z_bottom(buffer+size(z_bottom,1)/2-1,buffer+size(z_bottom,2)/2-1)), internal_z_top(buffer+size(z_bottom,1)/2-1,buffer+size(z_bottom,2)/2-1) - current_z !, &
-            !                         minval(layer_fraction(buffer+1:buffer+size(z_bottom,1)-1,buffer+1:buffer+size(z_bottom,2)-1)), &
-            !                         maxval(layer_fraction(buffer+1:buffer+size(z_bottom,1)-1,buffer+1:buffer+size(z_bottom,2)-1))
-
-            ! if (debug_print) then
-            !     print*, minval(layer_fraction), maxval(layer_fraction)
-            ! endif
-
 
             current_z = current_z + step_size
         enddo
-
-        ! if (this_image()==1) print*, start_z, end_z, step_size, current_z
-        ! if (this_image()==1) print*, minval(layer_count), " :: ", maxval(layer_count)
-
-        ! if (debug_print) then
-        !         print*, "linear_perturbation_varyingz:", minval(layer_count), maxval(layer_count)
-        ! endif
 
         lt_data%u_perturb = lt_data%u_accumulator / layer_count
         lt_data%v_perturb = lt_data%v_accumulator / layer_count
@@ -911,12 +849,12 @@ contains
         integer :: north, south, east, west, top, bottom, n
         real :: u, v
         real,allocatable :: u1d(:),v1d(:)
-        integer :: ims, ime, jms, jme, ims_u, ime_u, jms_v, jme_v
+        integer :: ims, ime, jms, jme, ims_u, ime_u, jms_v, jme_v, kms, kme
         real :: dweight, nweight, sweight, curspd, curdir, curnsq, wind_first, wind_second
         real :: blocked
 
         ! pointers to the u/v data to be updated so they can point to different places depending on the update flag
-        real, pointer :: u3d(:,:,:), v3d(:,:,:)
+        real, pointer :: u3d(:,:,:), v3d(:,:,:), nsquared(:,:,:)
 
 
         if (update) then
@@ -926,6 +864,7 @@ contains
             u3d => domain%u%data_3d
             v3d => domain%v%data_3d
         endif
+        nsquared => domain%nsquared%data_3d
 
         ims_u = lbound(u3d,1)
         ime_u = ubound(u3d,1)
@@ -936,6 +875,9 @@ contains
         ime = ubound(v3d,1)
         jms_v = lbound(v3d,3)
         jme_v = ubound(v3d,3)
+
+        kms = lbound(u3d,2)
+        kme = ubound(u3d,2)
 
         nx  = size(domain%latitude%data_2d,1)
         ny  = size(domain%latitude%data_2d,2)
@@ -956,7 +898,7 @@ contains
         endif
 
         ! if (reverse) print*, "WARNING using fixed nsq for linear wind removal: 3e-6"
-        ! !$omp parallel firstprivate(nx,nxu,ny,nyv,nz, reverse, vsmooth, winsz, using_blocked_flow), default(none), &
+        ! !$omp parallel firstprivate(nx,nxu,ny,nyv,nz, kms, kme, reverse, vsmooth, winsz, using_blocked_flow), default(none), &
         ! !$omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom, u1d, v1d), &
         ! !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, smoothz, u, v, blocked), &
         ! !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
@@ -965,67 +907,71 @@ contains
         ! !$omp shared(min_stability, max_stability, n_dir_values, n_spd_values, n_nsq_values, smooth_nsq)
         !
         ! !$omp do
-        ! do k=1,ny
-        !
-        !     do j=1,nz
-        !         do i=1,nx
-        !
-        !             ! look up vsmooth gridcells up to nz at the maximum
-        !             top = min(j+vsmooth, nz)
-        !             ! if (top-j)/=vsmooth, then look down enough layers to make the window vsmooth in size
-        !             bottom = max(1, j - (vsmooth - (top-j)))
-        !
-        !             if (.not.reverse) then
-        !                 domain%nsquared(i,j,k) = calc_stability(domain%th(i,bottom,k), domain%th(i,top,k),  &
-        !                                                         domain%pii(i,bottom,k),domain%pii(i,top,k), &
-        !                                                         domain%z(i,bottom,k),  domain%z(i,top,k),   &
-        !                                                         domain%qv(i,bottom,k), domain%qv(i,top,k),  &
-        !                                                         domain%cloud(i,j,k)+domain%ice(i,j,k)       &
-        !                                                         +domain%qrain(i,j,k)+domain%qsnow(i,j,k))
-        !
-        !                 domain%nsquared(i,j,k) = max(min_stability, min(max_stability, &
-        !                                         domain%nsquared(i,j,k) * nsq_calibration(i,k)))
-        !             else
-        !                 ! Low-res boundary condition variables will be in a different array format.  It should be
-        !                 ! easy enough to call calc_stability after e.g. transposing z and y dimension, but some
-        !                 ! e.g. pii will not be set in the forcing data, so this may need a little thought.
-        !                 domain%nsquared(i,j,k) = 3e-6
-        !             endif
-        !         end do
-        !         ! look up table is computed in log space
-        !         domain%nsquared(:,j,k) = log(domain%nsquared(:,j,k))
-        !     end do
-        !
-        !     if (smooth_nsq) then
-        !         do j=1,nz
-        !             ! compute window as above.
-        !             top = min(j+vsmooth,nz)
-        !             bottom = max(1, j - (vsmooth - (top-j)) )
-        !
-        !             do smoothz = bottom, j-1
-        !                 domain%nsquared(:,j,k) = domain%nsquared(:,j,k) + domain%nsquared(:,smoothz,k)
-        !             end do
-        !             do smoothz = j+1, top
-        !                 domain%nsquared(:,j,k) = domain%nsquared(:,j,k) + domain%nsquared(:,smoothz,k)
-        !             end do
-        !             domain%nsquared(:,j,k) = domain%nsquared(:,j,k)/(top-bottom+1)
-        !         end do
-        !     endif
-        ! end do
+        do k=1,ny
+
+            do j=1,nz
+                do i=1,nx
+
+                    ! look up vsmooth gridcells up to nz at the maximum
+                    top = min(j+vsmooth, nz)
+                    ! if (top-j)/=vsmooth, then look down enough layers to make the window vsmooth in size
+                    bottom = max(1, j - (vsmooth - (top-j)))
+
+                    if (.not.reverse) then
+                        nsquared(i+ims-1,j+kms-1,k+jms-1) = calc_stability(domain%potential_temperature%data_3d(i+ims-1,bottom+kms-1,k+jms-1),                              &
+                                                         domain%potential_temperature%data_3d(i+ims-1,top+kms-1,k+jms-1),                                                   &
+                                                         domain%exner%data_3d(i+ims-1,bottom+kms-1,k+jms-1),domain%exner%data_3d(i+ims-1,top+kms-1,k+jms-1),                &
+                                                         domain%z%data_3d(i+ims-1,bottom+kms-1,k+jms-1),  domain%z%data_3d(i+ims-1,top+kms-1,k+jms-1),                      &
+                                                         domain%water_vapor%data_3d(i+ims-1,bottom+kms-1,k+jms-1), domain%water_vapor%data_3d(i+ims-1,top+kms-1,k+jms-1),   &
+                                                         domain%cloud_water_mass%data_3d(i+ims-1,j+kms-1,k+jms-1)     &
+                                                         +domain%cloud_ice_mass%data_3d(i+ims-1,j+kms-1,k+jms-1)      &
+                                                         +domain%rain_mass%data_3d(i+ims-1,j+kms-1,k+jms-1)           &
+                                                         +domain%snow_mass%data_3d(i+ims-1,j+kms-1,k+jms-1))
+
+                        nsquared(i+ims-1,j+kms-1,k+jms-1) = max(min_stability, min(max_stability, &
+                                                nsquared(i+ims-1,j+kms-1,k+jms-1) * nsq_calibration(i,k)))
+                    else
+                        ! Low-res boundary condition variables will be in a different array format.  It should be
+                        ! easy enough to call calc_stability after e.g. transposing z and y dimension, but some
+                        ! e.g. pii will not be set in the forcing data, so this may need a little thought.
+                        nsquared(i+ims-1,j+kms-1,k+jms-1) = 3e-6
+                    endif
+                end do
+                ! look up table is computed in log space
+                nsquared(:,j+kms-1,k+jms-1) = log(nsquared(:,j+kms-1,k+jms-1))
+            end do
+
+            if (smooth_nsq) then
+                do j=1,nz
+                    ! compute window as above.
+                    top = min(j+vsmooth,nz)
+                    bottom = max(1, j - (vsmooth - (top-j)) )
+
+                    do smoothz = bottom, j-1
+                        nsquared(:,j+kms-1,k+jms-1) = nsquared(:,j+kms-1,k+jms-1) + nsquared(:,smoothz+kms-1,k+jms-1)
+                    end do
+                    do smoothz = j+1, top
+                        nsquared(:,j+kms-1,k+jms-1) = nsquared(:,j+kms-1,k+jms-1) + nsquared(:,smoothz+kms-1,k+jms-1)
+                    end do
+                    nsquared(:,j+kms-1,k+jms-1) = nsquared(:,j+kms-1,k+jms-1)/(top-bottom+1)
+                end do
+            endif
+        end do
         ! !$omp end do
         ! !$omp end parallel
 
 
         ! smooth array has it's own parallelization, so this probably can't go in a critical section
         ! if (smooth_nsq) then
-        !     call smooth_array(domain%nsquared, winsz, ydim=3)
+        !     call smooth_array(nsquared, winsz, ydim=3)
         ! endif
 
-        !$omp parallel firstprivate(ims, ime, jms, jme, ims_u, ime_u, jms_v, jme_v, nx,nxu,ny,nyv,nz, reverse, vsmooth, winsz, using_blocked_flow), default(none), &
+        !$omp parallel firstprivate(ims, ime, jms, jme, ims_u, ime_u, jms_v, jme_v, kms, kme, nx,nxu,ny,nyv,nz), &
+        !$omp firstprivate(reverse, vsmooth, winsz, using_blocked_flow), default(none), &
         !$omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom, u1d, v1d), &
         !$omp private(spos, dpos, npos, nexts,nextd, nextn,n, smoothz, u, v, blocked), &
         !$omp private(wind_first, wind_second, curspd, curdir, curnsq, sweight,dweight, nweight), &
-        !$omp shared(domain, u3d,v3d, spd_values, dir_values, nsq_values, hi_u_LUT, hi_v_LUT, linear_mask), &
+        !$omp shared(domain, u3d,v3d, nsquared, spd_values, dir_values, nsq_values, hi_u_LUT, hi_v_LUT, linear_mask), &
         !$omp shared(u_perturbation, v_perturbation, linear_update_fraction, linear_contribution, nsq_calibration), &
         !$omp shared(min_stability, max_stability, n_dir_values, n_spd_values, n_nsq_values, smooth_nsq)
         allocate(u1d(nxu), v1d(nxu))
@@ -1103,7 +1049,8 @@ contains
 
                         ! Calculate the Brunt-Vaisalla frequency of the current grid cell
                         !   Then compute the mean in log space
-                        curnsq = log(2.75e-5) !sum(domain%nsquared(vi,bottom:top,uk)) / (top - bottom + 1)
+                        ! curnsq = log(2.75e-5)
+                        curnsq = sum(nsquared(vi+ims-1,bottom+kms-1:top+kms-1,uk+jms-1)) / (top - bottom + 1)
                         !   and find the corresponding position in the Look up Table
                         npos = 1
                         do step=1, n_nsq_values
@@ -1159,6 +1106,7 @@ contains
         end do
         !$omp end do
 
+        nsquared = exp(nsquared)
         deallocate(u1d, v1d)
         !$omp end parallel
     end subroutine spatial_winds
@@ -1267,7 +1215,6 @@ contains
         nz = size(domain%u%data_3d,       2)
         ny = size(domain%global_terrain, 2)
 
-        ! if (.not.allocated(domain%nsquared)) allocate(domain%nsquared(nx,nz,ny))
 
         ! set up linear_mask variable
         if (.not.reverse) then

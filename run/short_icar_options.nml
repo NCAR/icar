@@ -2,9 +2,26 @@
 !   Model and run meta-data
 !---------------------------------------------------------
 &model_version
-    version = "2.0a1",                    ! This must match the version of the compiled code
+    version = "2.0a3",                    ! This must match the version of the compiled code
     comment = "Add your comment here"     ! This will be stored in output files
 /
+
+!---------------------------------------------------------
+!   Specify output and restart files and output frequencies
+!---------------------------------------------------------
+&output_list
+    ! this is a list of variable names to be written in each output file
+    names = "u","v","ta2m","hus2m", "precipitation", "swe"
+
+    outputinterval = 3600   ! number of seconds between output time slices
+    !   This is the prefix for all output files (any directories must be created prior to running)
+    output_file = "output/icar_out_"    ! prefix name of output file (date will be appended)
+
+    ! note that restart files will have ALL variables so that they can be used to restart ICAR
+    restartinterval = 24    ! number of outputs to skip restarts on (restart file will only be written every n outputintervals)
+    restart_file = "restart/icar_rst_"    ! prefix name of restart file (date will be appended)
+/
+
 
 !---------------------------------------------------------
 !   Specify physics options to use for the model run
@@ -49,9 +66,6 @@
     !   primary inputs from this file are lat, lon, and terrain, optionally soil and veg types
     init_conditions_file="baseline/geo_4km_conus.nc",
 
-    !   This is the prefix for all output files (any directories must be created prior to running)
-    output_file="output/icar_out_",
-
     !   This is a list of the boundary conditions files number of files must match nfiles variable above
     boundary_files= "forcing/wrfout_d01_2001-04-01_03:00:00", "forcing/wrfout_d01_2001-06-30_03:00:00"
 
@@ -78,8 +92,6 @@
 
     !   The length of an input forcing time step
     inputinterval = 3600,   ! [s]
-    !   The output interval
-    outputinterval = 3600,  ! [s]
 
     !   The grid spacing of the high-resolution data
     dx = 4000.0,        ! [m]
