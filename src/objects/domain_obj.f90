@@ -1447,7 +1447,6 @@ contains
             if (associated(this%soil_temperature%data_3d)) then
                 do i=1,nsoil
                     this%soil_temperature%data_3d(:,i,:) = this%soil_deep_temperature%data_2d
-                    if (this_image()==1) write(*,*) "  max soil_temperature in layer",i," on init: ", maxval(this%soil_temperature%data_3d(:,i,:))
                 enddo
             endif
         endif
@@ -2018,7 +2017,7 @@ contains
           external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
           external_var2 =external_conditions%variables%get_var(trim(options%parameters%swe_ext))  ! the external swe
           
-          call geo_interp2d(  this%snow_height%data_2d, & ! ( this%grid2d% ids : this%grid2d% ide, this%grid2d% jds : this%grid2d% jde)   ,            & 
+          call geo_interp2d(  this%snow_height%data_2d, & 
                               external_var2%data_2d / external_var%data_2d,               &  ! ext_swe / rho_snow_swe = hsnow_ext
                               external_conditions%geo%geolut )
         endif
@@ -2031,30 +2030,30 @@ contains
           if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " for initial conditions"
           external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
 
-          call geo_interp2d(  this%soil_deep_temperature%data_2d, & ! ( this%grid2d% ids : this%grid2d% ide, this%grid2d% jds : this%grid2d% jde)   ,            & 
+          call geo_interp2d(  this%soil_deep_temperature%data_2d, & 
                               external_var%data_2d,               & 
                               external_conditions%geo%geolut )
           do i=1,nsoil
               this%soil_temperature%data_3d(:,i,:) = this%soil_deep_temperature%data_2d
-              if (this_image()==1) write(*,*) "  max soil_temperature in layer",i," on init: ", maxval(this%soil_temperature%data_3d(:,i,:))
+              ! if (this_image()==1) write(*,*) "  max soil_temperature in layer",i," on init: ", maxval(this%soil_temperature%data_3d(:,i,:))
           enddo
        
-        elseif (options%parameters%tsoil3D_ext/="") then  ! if 3D soil is provided we take the lowest level only. (can be expanded later)
+        elseif (options%parameters%tsoil3D_ext/="") then  ! if 3D soil is provided we take the lowest level only. (can/should be expanded later)
 
           varname = options%parameters%tsoil3D_ext   
           
           if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " for initial conditions"
           external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
 
-          if (this_image()==1) print*, " shape ext soil 3D: ", shape(external_var%data_3d)
-          if (this_image()==1) print*, " maxval ext soil 3D: ", MAXVAL(external_var%data_3d(:,size(external_var%data_3d,2),:) )
+          ! if (this_image()==1) print*, " shape ext soil 3D: ", shape(external_var%data_3d)
+          ! if (this_image()==1) print*, " maxval ext soil 3D: ", MAXVAL(external_var%data_3d(:,size(external_var%data_3d,2),:) )
 
-          call geo_interp2d(  this%soil_deep_temperature%data_2d, & ! ( this%grid2d% ids : this%grid2d% ide, this%grid2d% jds : this%grid2d% jde)   ,            & 
+          call geo_interp2d(  this%soil_deep_temperature%data_2d, & 
                               external_var%data_3d(:,size(external_var%data_3d,2),:)  ,               & 
                               external_conditions%geo%geolut )
           do i=1,nsoil
               this%soil_temperature%data_3d(:,i,:) = this%soil_deep_temperature%data_2d
-              if (this_image()==1) write(*,*) "  max soil_temperature in layer",i," on init: ", maxval(this%soil_temperature%data_3d(:,i,:))
+              ! if (this_image()==1) write(*,*) "  max soil_temperature in layer",i," on init: ", maxval(this%soil_temperature%data_3d(:,i,:))
           enddo
 
         endif
