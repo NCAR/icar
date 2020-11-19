@@ -177,9 +177,10 @@ contains
         if (0<opt%vars_to_allocate( kVARS%u) )                          call setup(this%u,                        this%u_grid,   forcing_var=opt%parameters%uvar,       list=this%variables_to_force, force_boundaries=.False.)
         if (0<opt%vars_to_allocate( kVARS%u) )                          call setup(this%u_mass,                   this%grid)
         if (0<opt%vars_to_allocate( kVARS%v) )                          call setup(this%v,                        this%v_grid,   forcing_var=opt%parameters%vvar,       list=this%variables_to_force, force_boundaries=.False.)
-        if (0<opt%vars_to_allocate( kVARS%v) )                          call setup(this%v_mass,                   this%grid)
+        if (0<opt%vars_to_allocate( kVARS%v) )                          call setup(this%v_mass,                   this%grid )
         if (0<opt%vars_to_allocate( kVARS%w) )                          call setup(this%w,                        this%grid )
         if (0<opt%vars_to_allocate( kVARS%w) )                          call setup(this%w_real,                   this%grid )
+        if (0<opt%vars_to_allocate( kVARS%nsquared) )                   call setup(this%nsquared,                 this%grid )
         if (0<opt%vars_to_allocate( kVARS%water_vapor) )                call setup(this%water_vapor,              this%grid,     forcing_var=opt%parameters%qvvar,      list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%potential_temperature) )      call setup(this%potential_temperature,    this%grid,     forcing_var=opt%parameters%tvar,       list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%cloud_water) )                call setup(this%cloud_water_mass,         this%grid,     forcing_var=opt%parameters%qcvar,      list=this%variables_to_force, force_boundaries=.True.)
@@ -572,8 +573,8 @@ contains
         xe_in=grid%ime; xe_out=nxo
         ye_in=grid%jme; ye_out=nyo
 
-        if ((ye_in-ys_in+1) /= nyo) print*, "subset_array ERROR in image:",this_image(),ye_in,ys_in,nyo
-        if ((xe_in-xs_in+1) /= nxo) print*, "subset_array ERROR in image:",this_image(),xe_in,xs_in,nxo
+        if ((ye_in-ys_in+1) /= nyo) write(*,*) "subset_array ERROR in image:",this_image(),ye_in,ys_in,nyo
+        if ((xe_in-xs_in+1) /= nxo) write(*,*) "subset_array ERROR in image:",this_image(),xe_in,xs_in,nxo
 
         !----------------------------------------------------
         ! This is the area of overlap
@@ -1451,6 +1452,22 @@ contains
             endif
         endif
 
+
+        if (options%parameters%swe_var /= "") then
+            call io_read(options%parameters%init_conditions_file,   &
+                           options%parameters%swe_var,         &
+                           temporary_data)
+            if (associated(this%snow_water_equivalent%data_2d)) then
+                this%snow_water_equivalent%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+            endif
+
+        else
+            if (associated(this%snow_water_equivalent%data_2d)) then
+                this%snow_water_equivalent%data_2d = 0
+            endif
+        endif
+
+
         if (options%parameters%soil_vwc_var /= "") then
             call io_read(options%parameters%init_conditions_file,   &
                            options%parameters%soil_vwc_var,         &
@@ -1685,7 +1702,7 @@ contains
 
         nsmooth = max(1, int(options%parameters%smooth_wind_distance / options%parameters%dx))
         this%nsmooth = nsmooth
-        if ((this_image()==1).and.(options%parameters%debug)) print*, "number of gridcells to smooth = ",nsmooth
+        if ((this_image()==1).and.(options%parameters%debug)) write(*,*) "number of gridcells to smooth = ",nsmooth
         ! This doesn't need to read in this variable, it could just request the dimensions
         ! but this is not a performance sensitive part of the code (for now)
         call io_read(options%parameters%init_conditions_file,   &
@@ -1781,7 +1798,7 @@ contains
         type(options_t), intent(in)     :: options
 
         type(interpolable_type) :: forc_u_from_mass, forc_v_from_mass
-        
+
         integer :: nx, ny, nz, i, ims, ime, jms, jme, AGL_top, AGL_nz
 
         ! this%geo and forcing%geo have to be of class interpolable
@@ -1791,6 +1808,7 @@ contains
         call geo_LUT(this%geo_v, forcing%geo_v)
         call geo_LUT(this%geo,   forcing%geo)
 
+! <<<<<<< HEAD
         if (allocated(forcing%z)) then  ! In case of external 2D forcing data, skip the VLUTs. 
 
             forc_u_from_mass%lat = forcing%geo%lat
@@ -1819,6 +1837,26 @@ contains
                     this%geo_v%z(:,i,:) = this%geo_v%z(:,i,:)-(this%geo_v%z(:,1,:)*((AGL_nz-i)/AGL_nz))
                     forcing%z(:,i,:) = forcing%z(:,i,:)-(forcing%original_geo%z(:,1,:)*((AGL_nz-i)/AGL_nz))    
                 enddo
+! =======
+!         if (options%parameters%use_agl_height) then
+
+!             !! Subtract off terrain from geo_u and geo_v
+!             ! Find height of level closest to user-specified AGL_cap height
+!             AGL_top = 0
+!             AGL_nz = 1
+!             do while (AGL_top < options%parameters%agl_cap)
+!                 AGL_top = AGL_top + options%parameters%dz_levels(AGL_nz)
+!                 AGL_nz = AGL_nz + 1
+!             end do
+
+!             ! Step in reverse so that the bottom level is preserved until it is no longer needed
+!             do i=AGL_nz,1,-1
+!                 ! Multiply subtraction of base-topography by a factor that scales from 1 at surface to 0 at AGL_cap height
+!                 this%geo_u%z(:,i,:) = this%geo_u%z(:,i,:)-(this%geo_u%z(:,1,:)*((AGL_nz-i)/AGL_nz))
+!                 this%geo_v%z(:,i,:) = this%geo_v%z(:,i,:)-(this%geo_v%z(:,1,:)*((AGL_nz-i)/AGL_nz))
+!                 forcing%z(:,i,:) = forcing%z(:,i,:)-(forcing%original_geo%z(:,1,:)*((AGL_nz-i)/AGL_nz))
+!             enddo
+! >>>>>>> v2
 
             endif
 
@@ -1835,6 +1873,7 @@ contains
             call geo_interp(forcing%geo_v%z, forcing%z, forc_v_from_mass%geolut)
             call vLUT(this%geo_v, forcing%geo_v)
 
+! <<<<<<< HEAD
             if (options%parameters%use_agl_height) then
         
                 !! Add back terrain-subtracted portions to forcing%z
@@ -1848,6 +1887,22 @@ contains
             allocate(forcing%geo%z(nx, nz, ny))
             call geo_interp(forcing%geo%z, forcing%z, forcing%geo%geolut)
             call vLUT(this%geo,   forcing%geo)
+! =======
+!         if (options%parameters%use_agl_height) then
+
+!             !! Add back terrain-subtracted portions to forcing%z
+
+!             do i=AGL_nz,1,-1
+!                 forcing%z(:,i,:) = forcing%z(:,i,:)+(forcing%original_geo%z(:,1,:)*((AGL_nz-i)/AGL_nz))
+!             enddo
+!         endif
+
+!         nx = size(this%geo%z, 1)
+!         ny = size(this%geo%z, 3)
+!         allocate(forcing%geo%z(nx, nz, ny))
+!         call geo_interp(forcing%geo%z, forcing%z, forcing%geo%geolut)
+!         call vLUT(this%geo,   forcing%geo)
+! >>>>>>> v2
 
         end if
 

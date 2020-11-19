@@ -61,8 +61,8 @@ contains
         if (this_image()==1) call welcome_message()
 
         if (this_image()==1) then
-            print*, "  Number of coarray image:",num_images()
-            print*, "  Max number of OpenMP Threads:",num_threads
+            write(*,*) "  Number of coarray image:",num_images()
+            write(*,*) "  Max number of OpenMP Threads:",num_threads
         endif
 
         ! read in options file

@@ -27,8 +27,7 @@
 # Variables that need to be set by the user:
 #
 # INSTALLDIR : default = ~/bin/
-# LIBFFT	 : location of fftw libraries		default = /usr/local/lib
-# INCFFT	 : location of fftw headers			default = /usr/local/include
+# FFTW       : location of fftw installation    default = $home/usr/local
 # LIBNETCDF	 : location of netdcdf libraries	default = compiler/machine dependant /usr/local/lib
 # INCNETCDF	 : location of netcdf headers		default = compiler/machine dependant /usr/local/include
 #
@@ -306,7 +305,7 @@ ifeq ($(COMPILER), intel)
 		CAF_FLAG=-coarray=single
 	else
 		CAF_FLAG=-coarray=distributed
-		LINKER=mpif90
+		LINKER=mpiifort
 	endif
 endif
 
@@ -443,7 +442,7 @@ install:icar
 	${CP} icar ${INSTALLDIR}
 
 clean:
-	${RM} $(BUILD)*.o $(BUILD)*.mod *.i *.lst docs/doxygen_sqlite3.db 2>/dev/null ||:
+	${RM} $(BUILD)*.o $(BUILD)*.mod $(BUILD)*.smod *.i *.lst docs/doxygen_sqlite3.db 2>/dev/null ||:
 
 allclean:cleanall
 
@@ -473,7 +472,7 @@ mpdata_test: $(BUILD)test_mpdata.o $(BUILD)adv_mpdata.o
 	${LINKER} $^ -o $@ ${LFLAGS}
 
 point_in_on_test: $(BUILD)test_point_in_on.o $(BUILD)geo_reader.o $(BUILD)data_structures.o $(BUILD)icar_constants.o
-	${F90} $^ -o $@ ${LFLAGS}
+	${LINKER} $^ -o $@ ${LFLAGS}
 
 blocking_test: $(BUILD)test_blocking.o $(BUILD)io_routines.o $(BUILD)winds_blocking.o \
 				$(BUILD)linear_winds.o $(BUILD)fftshift.o $(BUILD)string.o 		      \
@@ -824,7 +823,8 @@ $(BUILD)options_obj.o: $(OBJECTS)options_obj.f90 $(BUILD)options_h.o $(BUILD)tim
 						$(BUILD)time_delta_obj.o $(BUILD)io_routines.o $(BUILD)opt_types.o	\
 						$(BUILD)time_io.o $(BUILD)string.o $(BUILD)model_tracking.o			\
 						$(BUILD)mp_driver.o $(BUILD)advection_driver.o $(BUILD)ra_driver.o	\
-						$(BUILD)lsm_driver.o $(BUILD)pbl_driver.o $(BUILD)cu_driver.o
+						$(BUILD)lsm_driver.o $(BUILD)pbl_driver.o $(BUILD)cu_driver.o 		\
+						$(BUILD)wind.o $(BUILD)default_output_metadata.o
 
 ###################################################################
 #	Primary Data Objects
