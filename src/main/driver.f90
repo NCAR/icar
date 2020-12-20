@@ -76,13 +76,13 @@ program icar
     ! call dataset%set_domain(domain)
     ! call dataset%add_variables(options%vars_for_restart, domain)
 
-    output_vars = [kVARS%precipitation, kVARS%snowfall, kVARS%graupel, kVARS%cloud_fraction, kVARS%shortwave, kVARS%longwave, &
-                   kVARS%sensible_heat, kVARS%latent_heat, kVARS%u_10m, kVARS%v_10m, kVARS%temperature_2m, kVARS%humidity_2m, &
-                   kVARS%surface_pressure, kVARS%soil_totalmoisture, kVARS%snow_water_equivalent, kVARS%skin_temperature,     &
-                   kVARS%latitude, kVARS%longitude]
-    do i=1,size(output_vars)
-        options%vars_for_output(output_vars)=1
-    enddo
+    ! output_vars = [kVARS%precipitation, kVARS%snowfall, kVARS%graupel, kVARS%cloud_fraction, kVARS%shortwave, kVARS%longwave, &
+    !                kVARS%sensible_heat, kVARS%latent_heat, kVARS%u_10m, kVARS%v_10m, kVARS%temperature_2m, kVARS%humidity_2m, &
+    !                kVARS%surface_pressure, kVARS%soil_totalmoisture, kVARS%snow_water_equivalent, kVARS%skin_temperature,     &
+    !                kVARS%latitude, kVARS%longitude]
+    ! do i=1,size(output_vars)
+    !     options%vars_for_output(output_vars)=1
+    ! enddo
     ! call surface_dataset%set_domain(domain)
     ! call surface_dataset%add_variables(options%vars_for_output, domain)
 ! =======
