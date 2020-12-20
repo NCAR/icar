@@ -76,11 +76,18 @@ contains
         call boundary%init(options)
 
         if(options%parameters%external_files/="MISSING") then
-            if (this_image()==1) write(*,*) "Initializing data structure for external starting conditions from file: ", trim(options%parameters%external_files)
-            call add_cond%init_external(options)
+            if (options%parameters%restart) then  ! Do not overwrite restart if this is specified!
+                if (this_image()==1) write(*,*) "Restart requested, therefore ignoring external starting conditions! "
+                if (this_image()==1) write(*,*) "Reading Initial conditions from boundary dataset"
+                call domain%get_initial_conditions(boundary, options)  ! same call as above, but without the (optional) add_cond
 
-            if (this_image()==1) write(*,*) "Reading Initial conditions from boundary dataset(s)"
-            call domain%get_initial_conditions(boundary, options, add_cond)
+            else
+                if (this_image()==1) write(*,*) "Initializing data structure for external starting conditions from file: ", trim(options%parameters%external_files)
+                call add_cond%init_external(options)
+
+                if (this_image()==1) write(*,*) "Reading Initial conditions from boundary dataset(s)"
+                call domain%get_initial_conditions(boundary, options, add_cond)
+            endif
 
         else ! In the (standard) case that there are no additional conditions files for the initialization
             if (this_image()==1) write(*,*) "Reading Initial conditions from boundary dataset"

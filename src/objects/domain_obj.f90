@@ -2100,9 +2100,6 @@ contains
           if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " for initial conditions"
           external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
 
-          ! if (this_image()==1) print*, " shape ext soil 3D: ", shape(external_var%data_3d)
-          ! if (this_image()==1) print*, " maxval ext soil 3D: ", MAXVAL(external_var%data_3d(:,size(external_var%data_3d,2),:) )
-
           call geo_interp2d(  this%soil_deep_temperature%data_2d, & 
                               external_var%data_3d(:,size(external_var%data_3d,2),:)  ,               & 
                               external_conditions%geo%geolut )
