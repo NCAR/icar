@@ -860,7 +860,7 @@ contains
         options%tsoil2D_ext     = tsoil2D_ext    ; options%ext_var_list(j) = tsoil2D_ext;     options%ext_dim_list(j) = 2;    j = j + 1
         options%tsoil3D_ext     = tsoil3D_ext    ; options%ext_var_list(j) = tsoil3D_ext;     options%ext_dim_list(j) = 3;    j = j + 1
         ! options%z_ext      = z_ext   ; options%ext_var_list(j) = z_ext;       options%ext_dim_list(j) = 3;    j = j + 1
-        options%time_ext        = time_ext    ; options%ext_var_list(j) = z_ext;      options%ext_dim_list(j) = 3;    j = j + 1
+        options%time_ext        = time_ext    ; options%ext_var_list(j) = time_ext;      options%ext_dim_list(j) = 1;    j = j + 1
     
      
 
@@ -903,11 +903,8 @@ contains
                                         bias_options_filename, block_options_filename, &
                                         cu_options_filename
 
-! <<<<<<< HEAD
+
         namelist /parameters/ ntimesteps, wind_iterations, outputinterval, frames_per_outfile, inputinterval, surface_io_only,                &
-! =======
-!         namelist /parameters/ ntimesteps, inputinterval,                &
-! >>>>>>> v2
                               dx, dxlow, ideal, readz, readdz, nz, t_offset,                             &
                               debug, warning_level, interactive, restart,                                &
                               external_winds, buffer, n_ext_winds, advect_density, smooth_wind_distance, &
@@ -1900,13 +1897,10 @@ contains
         integer :: name_unit, nfiles, i
 
         ! set up namelist structures
-! <<<<<<< HEAD
+
         namelist /files_list/ init_conditions_file, output_file, boundary_files, forcing_file_list, &
                               linear_mask_file, nsq_calibration_file, external_files
-! =======
-!         namelist /files_list/ init_conditions_file, boundary_files, forcing_file_list, &
-!                               linear_mask_file, nsq_calibration_file
-! >>>>>>> v2
+
         namelist /ext_winds_info/ ext_wind_files
 
         linear_mask_file="MISSING"

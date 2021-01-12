@@ -1808,7 +1808,7 @@ contains
         call geo_LUT(this%geo_v, forcing%geo_v)
         call geo_LUT(this%geo,   forcing%geo)
 
-! <<<<<<< HEAD
+
         if (allocated(forcing%z)) then  ! In case of external 2D forcing data, skip the VLUTs. 
 
             forc_u_from_mass%lat = forcing%geo%lat
@@ -1837,26 +1837,6 @@ contains
                     this%geo_v%z(:,i,:) = this%geo_v%z(:,i,:)-(this%geo_v%z(:,1,:)*((AGL_nz-i)/AGL_nz))
                     forcing%z(:,i,:) = forcing%z(:,i,:)-(forcing%original_geo%z(:,1,:)*((AGL_nz-i)/AGL_nz))    
                 enddo
-! =======
-!         if (options%parameters%use_agl_height) then
-
-!             !! Subtract off terrain from geo_u and geo_v
-!             ! Find height of level closest to user-specified AGL_cap height
-!             AGL_top = 0
-!             AGL_nz = 1
-!             do while (AGL_top < options%parameters%agl_cap)
-!                 AGL_top = AGL_top + options%parameters%dz_levels(AGL_nz)
-!                 AGL_nz = AGL_nz + 1
-!             end do
-
-!             ! Step in reverse so that the bottom level is preserved until it is no longer needed
-!             do i=AGL_nz,1,-1
-!                 ! Multiply subtraction of base-topography by a factor that scales from 1 at surface to 0 at AGL_cap height
-!                 this%geo_u%z(:,i,:) = this%geo_u%z(:,i,:)-(this%geo_u%z(:,1,:)*((AGL_nz-i)/AGL_nz))
-!                 this%geo_v%z(:,i,:) = this%geo_v%z(:,i,:)-(this%geo_v%z(:,1,:)*((AGL_nz-i)/AGL_nz))
-!                 forcing%z(:,i,:) = forcing%z(:,i,:)-(forcing%original_geo%z(:,1,:)*((AGL_nz-i)/AGL_nz))
-!             enddo
-! >>>>>>> v2
 
             endif
 
@@ -1873,7 +1853,7 @@ contains
             call geo_interp(forcing%geo_v%z, forcing%z, forc_v_from_mass%geolut)
             call vLUT(this%geo_v, forcing%geo_v)
 
-! <<<<<<< HEAD
+
             if (options%parameters%use_agl_height) then
         
                 !! Add back terrain-subtracted portions to forcing%z
@@ -1887,22 +1867,6 @@ contains
             allocate(forcing%geo%z(nx, nz, ny))
             call geo_interp(forcing%geo%z, forcing%z, forcing%geo%geolut)
             call vLUT(this%geo,   forcing%geo)
-! =======
-!         if (options%parameters%use_agl_height) then
-
-!             !! Add back terrain-subtracted portions to forcing%z
-
-!             do i=AGL_nz,1,-1
-!                 forcing%z(:,i,:) = forcing%z(:,i,:)+(forcing%original_geo%z(:,1,:)*((AGL_nz-i)/AGL_nz))
-!             enddo
-!         endif
-
-!         nx = size(this%geo%z, 1)
-!         ny = size(this%geo%z, 3)
-!         allocate(forcing%geo%z(nx, nz, ny))
-!         call geo_interp(forcing%geo%z, forcing%z, forcing%geo%geolut)
-!         call vLUT(this%geo,   forcing%geo)
-! >>>>>>> v2
 
         end if
 

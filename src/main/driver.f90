@@ -64,7 +64,6 @@ program icar
 
     if (this_image()==1) write(*,*) "Setting up output files"
     ! should be combined into a single setup_output call
-! <<<<<<< HEAD
     
     if (this_image()==1 .and. options%parameters%frames_per_outfile<2) then
         print*,"  frames per output file should be 2 or more. Currently: ", options%parameters%frames_per_outfile
@@ -72,26 +71,11 @@ program icar
         if (this_image()==1) print*,"  frames per output file= ", options%parameters%frames_per_outfile
     end if    
     
-
-    ! call dataset%set_domain(domain)
-    ! call dataset%add_variables(options%vars_for_restart, domain)
-
-    ! output_vars = [kVARS%precipitation, kVARS%snowfall, kVARS%graupel, kVARS%cloud_fraction, kVARS%shortwave, kVARS%longwave, &
-    !                kVARS%sensible_heat, kVARS%latent_heat, kVARS%u_10m, kVARS%v_10m, kVARS%temperature_2m, kVARS%humidity_2m, &
-    !                kVARS%surface_pressure, kVARS%soil_totalmoisture, kVARS%snow_water_equivalent, kVARS%skin_temperature,     &
-    !                kVARS%latitude, kVARS%longitude]
-    ! do i=1,size(output_vars)
-    !     options%vars_for_output(output_vars)=1
-    ! enddo
-    ! call surface_dataset%set_domain(domain)
-    ! call surface_dataset%add_variables(options%vars_for_output, domain)
-! =======
     call restart_dataset%set_domain(domain)
     call restart_dataset%add_variables(options%vars_for_restart, domain)
 
     call output_dataset%set_domain(domain)
     call output_dataset%add_variables(options%output_options%vars_for_output, domain)
-! >>>>>>> v2
 
     if (options%parameters%restart) then
         if (this_image()==1) write(*,*) "Reading restart data"

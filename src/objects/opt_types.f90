@@ -169,11 +169,7 @@ module options_types
 
         ! file names
         character (len=MAXFILELENGTH) :: init_conditions_file, linear_mask_file, nsq_calibration_file, external_files, restart_file
-! <<<<<<< HEAD
-!         character (len=MAXFILELENGTH) :: init_conditions_file, linear_mask_file, nsq_calibration_file, external_files
-! =======
-!         character (len=MAXFILELENGTH) :: init_conditions_file, linear_mask_file, nsq_calibration_file, restart_file
-! >>>>>>> v2
+
         character (len=MAXFILELENGTH), dimension(:), allocatable :: boundary_files, ext_wind_files
 
         ! variable names from init/BC/wind/... files
