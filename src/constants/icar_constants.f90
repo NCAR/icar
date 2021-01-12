@@ -80,7 +80,7 @@ module icar_constants
         integer :: soil_deep_temperature
         integer :: roughness_z0
         integer :: snow_water_equivalent
-        integer :: snow_height              ! <____________ 
+        integer :: snow_height
         integer :: soil_water_content
         integer :: soil_temperature
         integer :: skin_temperature
