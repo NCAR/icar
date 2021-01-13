@@ -500,10 +500,9 @@ contains
                 ! ! apply/update boundary conditions including internal wind and pressure changes.
                 call domain%apply_forcing(dt)
                                 
-                !If we are in the last ~10 updates of a time step and a variable drops below 0, we have probably over-shot a value of 0. Force back to 0
-                if ((end_time%seconds() - domain%model_time%seconds()) < (dt%seconds()*10)) then
+                !If we are in the last 2 updates of a time step and a variable drops below 0, we have probably over-shot a value of 0. Force back to 0
+                if ((end_time%seconds() - domain%model_time%seconds()) < (dt%seconds()*2)) then
                     call domain%enforce_limits()
-                    !if (this_image()==1) write(*,*) 'Enforcing Limits'
                 endif
                 
 
