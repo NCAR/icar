@@ -1036,20 +1036,20 @@ contains
         options%out_dt     = outputinterval
         call options%output_dt%set(seconds=outputinterval)
         ! if outputing at half-day or longer intervals, create monthly files
-        if (outputinterval>=43200) then
-            options%output_file_frequency="monthly"
-        ! if outputing at half-hour or longer intervals, create daily files
-        else if (outputinterval>=1800) then
-            options%output_file_frequency="daily"
-        ! otherwise create a new output file every timestep
-        else
-            options%output_file_frequency="every step"
-        endif
+        ! if (outputinterval>=43200) then
+        !     options%output_file_frequency="monthly"
+        ! ! if outputing at half-hour or longer intervals, create daily files
+        ! else if (outputinterval>=1800) then
+        !     options%output_file_frequency="daily"
+        ! ! otherwise create a new output file every timestep
+        ! else
+        !     options%output_file_frequency="every step"
+        ! endif
 
         ! options%paramters%frames_per_outfile : this may cause trouble with the above, but a nicer way
         options%frames_per_outfile = frames_per_outfile 
 
-        options%surface_io_only = surface_io_only
+        ! options%surface_io_only = surface_io_only
 
 
         options%calendar=calendar
