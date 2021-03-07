@@ -393,6 +393,31 @@ contains
 
     end subroutine options_check
 
+
+    !> ------------------
+    !!  Determine the filename to be used for this particular image/process based on the restart filename, restart time, and image number
+    !!
+    !!  Uses the same calculation that is used to get the output filename when writing.
+    !! -------------------
+    function get_image_filename(image_number, initial_filename, restart_time) result(file_name)
+        implicit none
+        integer,            intent(in) :: image_number
+        character(len=*),   intent(in) :: initial_filename
+        type(Time_type),    intent(in) :: restart_time
+
+        character(len=kMAX_FILE_LENGTH) :: file_name
+        integer :: n, i
+
+        character(len=49)   :: file_date_format = '(I4,"-",I0.2,"-",I0.2,"_",I0.2,"-",I0.2,"-",I0.2)'
+
+        write(file_name, '(A,I6.6,"_",A,".nc")') trim(initial_filename), image_number, trim(restart_time%as_string(file_date_format))
+
+        n = len(trim(file_name))
+        file_name(n-10:n-9) = "00"
+
+    end function get_image_filename
+
+
     !> -------------------------------
     !! Initialize the restart options
     !!
@@ -433,6 +458,7 @@ contains
                               restart_date(4), restart_date(5), restart_date(6))
 
         ! find the time step that most closely matches the requested restart time (<=)
+        restart_file = get_image_filename(this_image(), restart_file, restart_time)
         restart_step = find_timestep_in_file(restart_file, 'time', restart_time, time_at_step)
 
         ! check to see if we actually udpated the restart date and print if in a more verbose mode
