@@ -18,8 +18,8 @@ module subroutine restart_model(domain, dataset, options)
     character(len=kMAX_FILE_LENGTH) :: restart_file
 
     ! options%parameters%restart_file,
-    restart_file = get_image_filename(this_image(), options%output_options%output_file, options%parameters%restart_time)
-
+    ! restart_file = get_image_filename(this_image(), options%output_options%restart_file, options%parameters%restart_time)
+    restart_file = options%parameters%restart_file
     call read_restart_data(domain, dataset, restart_file, options%parameters%restart_step_in_file)
 
 

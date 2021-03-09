@@ -2,7 +2,7 @@
 !   Model and run meta-data
 !---------------------------------------------------------
 &model_version
-    version = "2.0a3",                    ! This must match the version of the compiled code
+    version = "2.0",                      ! This must match the version of the compiled code
     comment = "Add your comment here"     ! This will be stored in output files
 /
 
@@ -10,10 +10,12 @@
 !   Model levels specification (may be optional, but should be specified)
 !---------------------------------------------------------
 &z_info
-    !   use dz_levels as a guide but allow dz to vary in space so that z is constant in space at flat_z_height
+    ! use dz_levels as a guide but allow dz to vary in space so that z is constant in space at flat_z_height
+    ! note spatially varying dz does not work well with linear_theory, use with wind=2 more options coming soon
     ! space_varying = .False.
     !   height at which the z coordinate value should be constant in space (if space_varying=True), if < 0 make the model top flat (computed as sum(dz_levels) + mean(terrain))
     ! flat_z_height = -1
+
 
     !   compensate for varying dz in advection, effectively speeding up air through smaller dz windows. This should be true with the new advection scheme (as of 2020-10) 
     ! fixed_dz_advection = .True.    
@@ -157,7 +159,7 @@
     !   this is now optional, if not supplied, ICAR will determine it from the number of levels specified
     !   if it is supplied it must be less than or equal to the number of levels specified below
     !   but it can be used to subset the number of levels used.
-    !   WARNING : ICAR can be surprisingly sensitive to this parameter
+    !   WARNING : ICAR can be surprisingly sensitive to this parameter see Horak et al 2019 and 2020
     nz = 15, ! []
 
     !   Set this to true of the zvar in the input data is actually in units of geopotential height (m/s^2)
@@ -215,12 +217,8 @@
     !   Use density in the advection step (violates linear theory assumptions)
     advect_density = false,
 
-    !   The number of grid cells to remove from all sides of the high-resolution grid
-    !   used primarily for faster test runs over a smaller domain
-    ! buffer = 0,   ! [n-gridcells]
-
-    !   Doesn't do much at the moment, increases output print at runtime
-    debug = true,
+    !   Increases output print at runtime and tests domain wide values for realistic values throughout the simulation.
+    debug = false,
     warning_level = 4, ! 0-10 increases the level of errors it warns about and quits over (slightly)
 
     ! controls printing of % completed for longer processes.  Nice if it is running in a console, not nice in a log file.
@@ -264,7 +262,7 @@
     sst_var = "TSK"         ! Water surface temperature [K]          OPTIONAL (used with water=2)
 
     ! WARNING, if U and V are "grid relative" (e.g. output from WRF) and on a skewed grid, this will cause problems
-    ! run the helpers/wrf2icar.sh script first to rotate the wind field to be east-west, north-south relative
+    ! run the helpers/wrf2icar.sh script first to rotate the wind field to be east-west, north-south relative or supply sinalpha cosalpha... this may be broken
     ! variables on the ew staggered (U) grid
     uvar    = "U",          ! East-West wind speed      [m/s]
 
@@ -295,8 +293,8 @@
     hgt_hi  = "HGT_M"       ! surface elevation             [m]
 
     ! used to rotate E-W/N-S wind fields into the ICAR high-res domain
-    sinalpha_var="SINALPHA"
-    cosalpha_var="COSALPHA"
+    ! sinalpha_var="SINALPHA"
+    ! cosalpha_var="COSALPHA"
 
 
     ! to use the Noah LSM the following fields should also be specified on the high-res grid

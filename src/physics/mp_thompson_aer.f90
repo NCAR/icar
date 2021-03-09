@@ -1899,8 +1899,16 @@
          if (temp(k).ge.270.65) k_0 = MAX(k_0, k)
       enddo
       do k = kte, kts, -1
-         if (k.gt.k_0 .and. L_qr(k) .and. mvd_r(k).gt.100.E-6) then
-            xslw1 = 4.01 + alog10(mvd_r(k))
+         if (k.gt.k_0) then
+             if (L_qr(k)) then
+                 if (mvd_r(k).gt.100.E-6) then
+                    xslw1 = 4.01 + alog10(mvd_r(k))
+                else
+                   xslw1 = 0.01
+                endif
+            else
+               xslw1 = 0.01
+            endif
          else
             xslw1 = 0.01
          endif
