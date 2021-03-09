@@ -6,7 +6,7 @@ module icar_constants
 
     implicit none
 
-    character(len=5) :: kVERSION_STRING = "2.0a3"
+    character(len=5) :: kVERSION_STRING = "2.0"
 
     ! string lengths
     integer, parameter :: kMAX_FILE_LENGTH = 1024
