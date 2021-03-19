@@ -24,7 +24,7 @@ program icar
     use boundary_interface, only : boundary_t
     use output_interface,   only : output_t
     use time_step,          only : step                               ! Advance the model forward in time
-    use initialization,     only : init_model
+    use initialization,     only : init_model, init_physics
     use timer_interface,    only : timer_t
     use time_object,        only : Time_type
     use time_delta_object,  only : time_delta_t
@@ -72,6 +72,9 @@ program icar
         if (this_image()==1) write(*,*) "Reading restart data"
         call restart_model(domain, restart_dataset, options)
     endif
+
+    ! physics drivers need to be initialized after restart data are potentially read in.
+    call init_physics(options, domain)
 
     !-----------------------------------------
     !-----------------------------------------
