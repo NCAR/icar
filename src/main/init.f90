@@ -75,13 +75,18 @@ contains
         if (this_image()==1) write(*,*) "Initializing boundary condition data structure"
         call boundary%init(options)
 
+        ! if (this_image()==1) then
+        !     write(*,*) "options%parameters%external_files: ", trim(options%parameters%external_files)
+        !     write(*,*) "options%parameters%restart: ", options%parameters%restart
+        ! endif            
+
         if(options%parameters%external_files/="MISSING") then
             if (options%parameters%restart) then  ! Do not overwrite restart if this is specified!
                 if (this_image()==1) write(*,*) "Restart requested, therefore ignoring external starting conditions! "
                 if (this_image()==1) write(*,*) "Reading Initial conditions from boundary dataset"
                 call domain%get_initial_conditions(boundary, options)  ! same call as above, but without the (optional) add_cond
 
-            else
+            else ! If not restarting, and external conditions are specified, init & read in the latter.
                 if (this_image()==1) write(*,*) "Initializing data structure for external starting conditions from file: ", trim(options%parameters%external_files)
                 call add_cond%init_external(options)
 
@@ -114,7 +119,7 @@ contains
         ! initialize the atmospheric helper utilities
         call init_atm_utilities(options)
 
-        call init_physics(options, domain)
+        ! call init_physics(options, domain)
 
         ! call setup_bias_correction(options,domain)
         if (this_image()==1) write(*,'(/ A)') "Finished basic initialization"

@@ -688,6 +688,7 @@ CONTAINS
 !        SOLNET=GSW(I,J)
 ! use mid-day albedo to determine net downward solar (no solar zenith angle correction)
         SOLNET=SOLDN*(1.-ALBEDO(I,J))
+        
         PRCP=RAINBL(i,j)/DT
         VEGTYP=IVGTYP(I,J)
         SOILTYP=ISLTYP(I,J)
@@ -701,7 +702,8 @@ CONTAINS
 ! snow depth in meters
         SNOWHK=SNOWH(I,J)
         SNCOVR=SNOWC(I,J)
-
+! if (this_image()==1) write(*,*) "       lsm_noah : SNEQV [m] max:", MAXVAL(SNEQV)
+! if (this_image()==1) write(*,*) "       lsm_noah : SNOWHK max:", MAXVAL(SNOWHK)
 ! if "SR" present, set frac of frozen precip ("FFROZP") = snow-ratio ("SR", range:0-1)
 ! SR from e.g. Ferrier microphysics
 ! otherwise define from 1st atmos level temperature
@@ -796,11 +798,13 @@ CONTAINS
             STC(NS)=TSLB(I,NS,J)                                          !STEMP
             SWC(NS)=SH2O(I,NS,J)
           ENDDO
-!
+          ! convert snow water equivalent from mm to meter  SNEQV  = SNOW(I,J)*0.001
+          ! snow depth in meters                            SNOWHK = SNOWH(I,J)
+          ! if snow depth is zero but SWE is not, OR snow depth is less then SWE (in same unit), then re-calculate HS from SWE (regardless of flag FNDSNOW on init)
           if ( (SNEQV.ne.0..AND.SNOWHK.eq.0.).or.(SNOWHK.le.SNEQV) )THEN
             SNOWHK= 5.*SNEQV
           endif
-!
+
 
 !Fei: urban. for urban surface, if calling UCM, redefine the natural surface in cities as
 ! the "NATURAL" category in the VEGPARM.TBL
@@ -851,7 +855,8 @@ CONTAINS
     ELSEIF (ICE == 0) THEN
 
        ! Non-glacial land
-
+       ! if (this_image()==1) write(*,*) "    noadrv: bef SPFLX: SNEQV=",SNEQV," i/j", i,j
+       
        CALL SFLX (I,J,FFROZP, ISURBAN, DT,ZLVL,NSOIL,SLDPTH,      &    !C
                  LOCAL,                                           &    !L
                  LUTYPE, SLTYPE,                                  &    !CL
@@ -877,6 +882,7 @@ CONTAINS
 !                  sfcheadrt(i,j),                                   &    !I
 !                  INFXSRT(i,j),ETPND1                          &    !O
                  )
+       ! if (this_image()==1) write(*,*) "    noadrv: aft SPFLX: SNEQV=",SNEQV," i/j", i,j
 
     ELSEIF (ICE == -1) THEN
 
@@ -1008,7 +1014,6 @@ CONTAINS
       ENDDO ILOOP                                                       ! of I loop
    ENDDO JLOOP                                                          ! of J loop
 
-
 !------------------------------------------------------
    END SUBROUTINE lsm_noah
 !------------------------------------------------------
@@ -1080,7 +1085,7 @@ CONTAINS
 
 ! initialize three Noah LSM related tables
    IF ( allowed_to_read ) THEN
-     if (this_image()==1) write(*,*) 'INITIALIZE THREE Noah LSM RELATED TABLES'
+     if (this_image()==1) write(*,*) '    INITIALIZE THREE Noah LSM RELATED TABLES'
      CALL  SOIL_VEG_GEN_PARM( MMINLU, MMINSL )
    ENDIF
 
@@ -1095,7 +1100,7 @@ CONTAINS
      DO i = its,itf
        IF ( ISLTYP( i,j ) .LT. 1 ) THEN
          errflag = 1
-         if (this_image()==1) WRITE(*,*)"module_sf_noahlsm.F: lsminit: out of range ISLTYP ",i,j,ISLTYP( i,j )
+         if (this_image()==1) WRITE(*,*)"    module_sf_noahlsm.F: lsminit: out of range ISLTYP ",i,j,ISLTYP( i,j )
 !          CALL wrf_message(err_message)
        ENDIF
        IF(.not.RDMAXALB) THEN
@@ -1104,7 +1109,7 @@ CONTAINS
      ENDDO
    ENDDO
    IF ( errflag .EQ. 1 ) THEN
-      WRITE(*,*) "module_sf_noahlsm.F: lsminit: out of range value "// &
+      WRITE(*,*) "    module_sf_noahlsm.F: lsminit: out of range value "// &
                             "of ISLTYP. Is this field in the input?"
       STOP
    ENDIF
@@ -1161,7 +1166,6 @@ CONTAINS
 !  ENDIF                       ! of IF(.NOT.FNDSOILW)THEN
 
 ! initialize physical snow height SNOWH
-
         IF(.NOT.FNDSNOWH)THEN
 ! If no SNOWH do the following
           ! write(*,*) 'SNOW HEIGHT NOT FOUND - VALUE DEFINED IN LSMINIT'
@@ -1170,8 +1174,9 @@ CONTAINS
             SNOWH(I,J)=SNOW(I,J)*0.005               ! SNOW in mm and SNOWH in m
           ENDDO
           ENDDO
+          if (this_image()==1) write(*,*) "    lsm_noah_init: calculate SNOWH from SNOW (HS from SWE)"
         ENDIF
-
+        
 ! initialize canopy water to ZERO
 
 !          GO TO 110
@@ -1247,11 +1252,11 @@ CONTAINS
            READ (19,*)LUCATS,IINDEX
 
            IF(LUTYPE.EQ.MMINLU)THEN
-              WRITE( mess , * ) 'LANDUSE TYPE = ' // TRIM ( LUTYPE ) // ' FOUND', LUCATS,' CATEGORIES'
+              WRITE( mess , * ) '    LANDUSE TYPE = ' // TRIM ( LUTYPE ) // ' FOUND', LUCATS,' CATEGORIES'
               if (this_image()==1) write(*,*) mess
               LUMATCH=1
            ELSE
-              if (this_image()==1) write(*,*) "Skipping over LUTYPE = " // TRIM ( LUTYPE )
+              if (this_image()==1) write(*,*) "    Skipping over LUTYPE = " // TRIM ( LUTYPE )
               DO LC = 1, LUCATS+12
                  read(19,*)
               ENDDO
@@ -1322,7 +1327,7 @@ CONTAINS
           if (this_image()==1) write(*,*) message
         END IF
 
-        WRITE(mess,*) 'INPUT SOIL TEXTURE CLASSIFICATION = ', TRIM ( MMINSL )
+        WRITE(mess,*) '    INPUT SOIL TEXTURE CLASSIFICATION = ', TRIM ( MMINSL )
         if (this_image()==1) write(*,*) mess
 
         LUMATCH=0
@@ -1332,7 +1337,7 @@ CONTAINS
  2000   FORMAT (A4)
         READ (19,*)SLCATS,IINDEX
         IF(SLTYPE.EQ.MMINSL)THEN
-            WRITE( mess , * ) 'SOIL TEXTURE CLASSIFICATION = ', TRIM ( SLTYPE ) , ' FOUND', &
+            WRITE( mess , * ) '    SOIL TEXTURE CLASSIFICATION = ', TRIM ( SLTYPE ) , ' FOUND', &
                   SLCATS,' CATEGORIES'
             if (this_image()==1) write(*,*) mess
           LUMATCH=1
@@ -1364,9 +1369,9 @@ CONTAINS
         CLOSE (19)
 
       IF(LUMATCH.EQ.0)THEN
-          write(*,*) 'SOIl TEXTURE IN INPUT FILE DOES NOT '
-          write(*,*) 'MATCH SOILPARM TABLE'
-          write(*,*) 'INCONSISTENT OR MISSING SOILPARM FILE'
+          write(*,*) '  SOIl TEXTURE IN INPUT FILE DOES NOT '
+          write(*,*) '  MATCH SOILPARM TABLE'
+          write(*,*) '  INCONSISTENT OR MISSING SOILPARM FILE'
 		  stop
       ENDIF
 

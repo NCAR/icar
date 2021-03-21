@@ -69,6 +69,7 @@ contains
         call bias_parameters_namelist(  this%parameters%bias_options_filename,  this)
 
         if (this%parameters%restart) then
+            ! if (this_image()==1) write(*,*) "  (opt) Restart = ", this%parameters%restart
             call init_restart_options(options_filename, this%parameters)
             this%parameters%start_time = this%parameters%restart_time
         endif

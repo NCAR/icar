@@ -478,6 +478,7 @@ CONTAINS
 !   SNOW THERMAL CONDUCTIVITY "SNCOND" (NOTE THAT CSNOW IS A FUNCTION
 !   SUBROUTINE)
 ! ----------------------------------------------------------------------
+         ! if (this_image()==1) write(*,*) "       lsm SFLX : SNEQV [m] max:", SNEQV
          IF ( SNEQV <= 1.E-7 ) THEN ! safer IF	kmh (2008/03/25)
             SNEQV = 0.0
             SNDENS = 0.0
@@ -516,7 +517,9 @@ CONTAINS
             SN_NEW = PRCP * DT * 0.001
             SNEQV = SNEQV + SN_NEW
             PRCPF = 0.0
-
+            ! if (this_image()==1) write(*,*) "         SFLX 520 SN_NEW [m]:", SN_NEW
+            ! if (this_image()==1) write(*,*) "         SFLX 520 PRCP [KG M-2 S-1]:", PRCP
+            ! if (this_image()==1) write(*,*) "         SFLX 520 DT [s]:", DT
 ! ----------------------------------------------------------------------
 ! UPDATE SNOW DENSITY BASED ON NEW SNOWFALL, USING OLD AND NEW SNOW.
 ! UPDATE SNOW THERMAL CONDUCTIVITY
@@ -532,6 +535,7 @@ CONTAINS
          ELSE
             PRCPF = PRCP
          ENDIF
+         ! if (this_image()==1) write(*,*) "         SFLX 536 SNEQV [m]:", SNEQV
 ! ----------------------------------------------------------------------
 ! DETERMINE SNOWCOVER AND ALBEDO OVER LAND.
 ! ----------------------------------------------------------------------
@@ -769,7 +773,7 @@ CONTAINS
 !                          SFHEAD1RT,INFXS1RT,ETPND1)
             ETA_KINEMATIC =  ESNOW + ETNS
          END IF
-
+         ! if (this_image()==1) write(*,*) "       SFLX 774: SNEQV [m]:", SNEQV
 !     Calculate effective mixing ratio at grnd level (skin)
 !
 !     Q1=Q2+ETA*CP/RCH
