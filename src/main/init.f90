@@ -84,7 +84,7 @@ contains
         ! initialize the atmospheric helper utilities
         call init_atm_utilities(options)
 
-        call init_physics(options, domain)
+        ! call init_physics(options, domain)
 
         ! call setup_bias_correction(options,domain)
         if (this_image()==1) write(*,'(/ A)') "Finished basic initialization"
