@@ -44,7 +44,7 @@ module boundary_interface
     contains
 
         procedure :: init
-
+        procedure :: init_external
         procedure :: update_forcing
 
         procedure :: distribute_update
@@ -52,6 +52,7 @@ module boundary_interface
 
         ! procedure :: find_start_time
         procedure :: init_local
+        procedure :: init_local2
 
     end type
 
@@ -62,6 +63,29 @@ module boundary_interface
         implicit none
         class(boundary_t), intent(inout) :: this
         type(options_t),   intent(inout) :: options
+    end subroutine
+
+    module subroutine init_external(this, options)
+        implicit none
+        class(boundary_t), intent(inout) :: this
+        type(options_t),   intent(inout) :: options
+    end subroutine
+
+    module subroutine init_local2(this, options, file_list, var_list, dim_list, start_time, &
+                                 lat_ext, lon_ext, zvar_ext, time_ext) !, p_var, ps_var)
+        implicit none
+        class(boundary_t),               intent(inout)          :: this
+        type(options_t),                 intent(inout)          :: options
+        character(len=kMAX_NAME_LENGTH), intent(in)             :: file_list(:)
+        character(len=kMAX_NAME_LENGTH), intent(in)             :: var_list (:)
+        integer,                         intent(in)             :: dim_list (:)
+        type(Time_type),                 intent(in), optional             :: start_time
+        character(len=kMAX_NAME_LENGTH), intent(in)             :: lat_ext 
+        character(len=kMAX_NAME_LENGTH), intent(in)             :: lon_ext
+        character(len=kMAX_NAME_LENGTH), intent(in), optional   :: zvar_ext
+        character(len=kMAX_NAME_LENGTH), intent(in), optional   :: time_ext
+        ! character(len=kMAX_NAME_LENGTH), intent(in)     :: p_var
+        ! character(len=kMAX_NAME_LENGTH), intent(in)     :: ps_var
     end subroutine
 
     module subroutine init_local(this, options, file_list, var_list, dim_list, start_time, &

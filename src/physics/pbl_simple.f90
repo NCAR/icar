@@ -95,7 +95,7 @@ contains
 
         !$omp do schedule(static, 2)
         do j = jts, jte
-            do k = kts, kte-1
+            do k = kts, kte
                 lastqv_m(:,k,j) = qv(:,k,j)
                 call calc_shear(um, vm, dz, its, ite, k, j)
                 call calc_virt_pot_temp_zgradient(th, qv, dz, cloud, ice, qrain, qsnow, its, ite, k, j)
@@ -113,6 +113,10 @@ contains
                 ! diffusion for scalars
                 Kq_m(its:ite,k,j) = K_m(its:ite,k,j) / prandtl_m(its:ite,k,j)
 
+                ! rescale diffusion to cut down on excessive mixing
+                Kq_m(its:ite,k,j) = Kq_m(its:ite, k,j) / diffusion_reduction
+                Kq_m(its:ite,k,j) = Kq_m(its:ite, k,j) * dt / ((dz(its:ite,k,j) + dz(its:ite,k+1,j))/2)
+                
                 ! enforce limits specified in HP96
                 do i=its,ite
                     if (Kq_m(i,k,j)>1000) then
@@ -121,10 +125,6 @@ contains
                         Kq_m(i,k,j)=1
                     endif
                 enddo
-
-                ! rescale diffusion to cut down on excessive mixing
-                Kq_m(its:ite,k,j) = Kq_m(its:ite, k,j) / diffusion_reduction
-                Kq_m(its:ite,k,j) = Kq_m(its:ite, k,j) * dt / ((dz(its:ite,k,j) + dz(its:ite,k+1,j))/2)
             enddo
 
             call pbl_diffusion(qv, th, cloud, ice, qrain, qsnow, rho, dz, its, ite, kts, kte, j)
@@ -248,7 +248,9 @@ contains
         integer,intent(in) :: its, ite, k, j
         integer :: i
         ! HP96 eqn 13
-        stability_m(its:ite, k, j) = exp(-8.5 * rig_m(its:ite, k, j)) + 0.15 / (rig_m(its:ite, k, j)+3)
+        where (rig_m(its:ite, k, j) > 0) stability_m(its:ite, k, j) = exp(-8.5 * rig_m(its:ite, k, j)) + 0.15 / (rig_m(its:ite, k, j)+3)
+        where (rig_m(its:ite, k, j) <= 0) stability_m(its:ite, k, j) = 1 / sqrt(1-1.6*rig_m(its:ite, k, j))
+        
         ! HP96 eqn 13 continued
         prandtl_m(its:ite, k, j) = 1.5 + 3.08 * rig_m(its:ite, k, j)
 
@@ -280,7 +282,7 @@ contains
         temperature = (th(its:ite, k, j) * pii(its:ite, k, j) + th(its:ite, k+1, j) * pii(its:ite, k+1, j)) / 2
         rig_m(its:ite, k, j) =  gravity/temperature  &
                        * virt_pot_temp_zgradient_m(its:ite, k, j) * 1 / (shear_m(its:ite, k, j)**2)
-        where(rig_m(its:ite, k, j)<-2.9) rig_m(its:ite, k, j)=-2.9
+        where(rig_m(its:ite, k, j)<-100.0) rig_m(its:ite, k, j)=-100.0
 
     end subroutine calc_richardson_gradient
 

@@ -11,3 +11,4 @@ docs/doxygen_sqlite3.db
 *.lst
 *~
 *.pyc
+*.ipynb

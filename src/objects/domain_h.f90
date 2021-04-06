@@ -19,7 +19,7 @@ module domain_interface
     type(meta_data_t)    :: info
     type(grid_t)         :: grid,   u_grid,   v_grid
     type(grid_t)         :: grid2d, u_grid2d, v_grid2d
-    type(grid_t)         :: u_grid2d_ext, v_grid2d_ext ! extended grids for u and v fields pre smoothing
+    type(grid_t)         :: u_grid2d_ext, v_grid2d_ext!, grid2d_ext ! extended grids for u and v fields pre smoothing (grid_2d_ext is for SLEVE topography smoothing)
     type(grid_t)         :: grid_monthly, grid_soil
 
     type(Time_type) :: model_time
@@ -68,6 +68,9 @@ module domain_interface
     type(variable_t) :: longwave
     type(variable_t) :: shortwave
     type(variable_t) :: terrain
+    type(variable_t) :: forcing_terrain  ! BK 05/2020: The forcing terrain interpolated 2d to the hi-res grid. In order to calculate difference in slope
+        type(variable_t) :: forcing_terrain2 ! test 9-6-2020
+        ! type(variable_t) :: forcing_terrain_u1 ! test 9-6-2020
     type(variable_t) :: u_10m
     type(variable_t) :: v_10m
     type(variable_t) :: temperature_2m
@@ -84,6 +87,7 @@ module domain_interface
     type(variable_t) :: lai
     type(variable_t) :: canopy_water
     type(variable_t) :: snow_water_equivalent
+    type(variable_t) :: snow_height
     type(variable_t) :: skin_temperature
     type(variable_t) :: sst
     type(variable_t) :: soil_water_content
@@ -111,7 +115,7 @@ module domain_interface
     type(interpolable_type) :: geo_u
     type(interpolable_type) :: geo_v
 
-    real :: dx
+    real :: smooth_height, dx
     integer :: nsmooth
 
     complex(C_DOUBLE_COMPLEX),  allocatable :: terrain_frequency(:,:) ! FFT(terrain)
@@ -119,11 +123,33 @@ module domain_interface
     double precision,           allocatable :: sintheta(:,:)
     real,                       allocatable :: advection_dz(:,:,:)
     ! store the ratio between the average dz and each grid cells topographically modified dz (for space varying dz only)
-    real,                       allocatable :: z_level_ratio(:,:,:)
+    real,                       allocatable :: jacobian(:,:,:)
+    real,                       allocatable :: jacobian_u(:,:,:)
+    real,                       allocatable :: jacobian_v(:,:,:)
+    real,                       allocatable :: jacobian_w(:,:,:)
     real,                       allocatable :: zr_u(:,:,:)
     real,                       allocatable :: zr_v(:,:,:)
     real,                       allocatable :: dzdx(:,:,:) ! change in height with change in x/y position (used to calculate w_real vertical motions)
     real,                       allocatable :: dzdy(:,:,:) ! change in height with change in x/y position (used to calculate w_real vertical motions)
+    ! BK 2020/05
+    real,                       allocatable :: delta_dzdx(:,:,:) ! change in height difference (between hi and lo-res data) with change in x/y position (used to calculate w_real vertical motions)
+    real,                       allocatable :: delta_dzdy(:,:,:) ! change in height difference (between hi and lo-res data) with change in x/y position (used to calculate w_real vertical motions)
+    real,                       allocatable :: zfr_u(:,:,:)     ! ratio between z levels (on grid)
+    real,                       allocatable :: zfr_v(:,:,:)
+    real,                       allocatable :: terrain_u(:,:)
+    real,                       allocatable :: terrain_v(:,:)
+    real,                       allocatable :: forcing_terrain_u(:,:)
+    real,                       allocatable :: forcing_terrain_v(:,:)
+    real,                       allocatable :: forc(:,:)
+    real,                       allocatable :: h1(:,:)     ! the large-scale terrain (h1) for the SLEVE coordinate (achieved by smoothin the org terrain)
+    real,                       allocatable :: h2(:,:)     ! the small-scale terrain (h2) for the SLEVE coordinate (difference org and h1 terrain)
+    real,                       allocatable :: h1_u(:,:)     ! the large-scale terrain (h1) on the u grid
+    real,                       allocatable :: h1_v(:,:)     ! the large-scale terrain (h1) on the v grid
+    real,                       allocatable :: h2_u(:,:)     ! the small-scale terrain (h2) on the u grid
+    real,                       allocatable :: h2_v(:,:)     ! the small-scale terrain (h2) on the v grid
+
+    real,                       allocatable :: dz_scl(:)  ! the scaled dz levels, required for delta terrain calculation
+    
     real,                       allocatable :: ustar(:,:)
     real,                       allocatable :: znu(:)
     real,                       allocatable :: znw(:)
@@ -133,7 +159,7 @@ module domain_interface
     real,                       allocatable :: global_terrain(:,:)
     real,                       allocatable :: global_z_interface(:,:,:)
     real,                       allocatable :: global_dz_interface(:,:,:)
-    real,                       allocatable :: global_z_level_ratio(:,:,:)
+    real,                       allocatable :: global_jacobian(:,:,:)
 
 
     ! these coarrays are used to send all data to/from a master image for IO... ?
@@ -169,8 +195,11 @@ module domain_interface
 
     procedure :: get_initial_conditions
     procedure :: interpolate_forcing
+    procedure :: interpolate_external
     procedure :: update_delta_fields
     procedure :: apply_forcing
+
+    procedure :: calculate_delta_terrain
 
   end type
 
@@ -186,10 +215,18 @@ module domain_interface
     end subroutine
 
     ! read initial atmospheric conditions from forcing data
-    module subroutine get_initial_conditions(this, forcing, options)
+    module subroutine get_initial_conditions(this, forcing, options, external_conditions)
         implicit none
         class(domain_t),  intent(inout) :: this
         type(boundary_t), intent(inout) :: forcing
+        type(boundary_t), intent(inout), optional :: external_conditions  ! external data such as SWE
+        type(options_t),  intent(in)    :: options
+    end subroutine
+
+    module subroutine interpolate_external(this, external_conditions, options)
+        implicit none
+        class(domain_t),  intent(inout) :: this
+        type(boundary_t), intent(in)    :: external_conditions
         type(options_t),  intent(in)    :: options
     end subroutine
 
@@ -241,6 +278,12 @@ module domain_interface
         type(time_delta_t), intent(in)    :: dt
     end subroutine
 
+    module subroutine calculate_delta_terrain(this, forcing, options)
+        implicit none
+        class(domain_t), intent(inout) :: this
+        type(boundary_t), intent(in)    :: forcing
+        type(options_t), intent(in) :: options
+    end subroutine
 
   end interface
 

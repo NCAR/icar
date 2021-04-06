@@ -9,7 +9,7 @@ module advection
     use data_structures
     use icar_constants
     use adv_upwind,                 only : upwind, upwind_init, upwind_var_request
-    ! use adv_mpdata,                 only : mpdata, mpdata_init
+    use adv_mpdata,                 only : mpdata, mpdata_init
     ! use debug_module,               only : domain_fix
     use options_interface,          only: options_t
     use domain_interface,           only: domain_t
@@ -29,10 +29,9 @@ contains
         if (options%physics%advection==kADV_UPWIND) then
             if (this_image()==1) write(*,*) "    Upwind"
             call upwind_init(domain,options)
-        elseif(options%physics%advection==kADV_MPDATA) then
+        else if(options%physics%advection==kADV_MPDATA) then
             if (this_image()==1) write(*,*) "    MP-DATA"
-            stop "MP-DATA not supported yet for ICAR 2.0"
-            ! call mpdata_init(domain,options)
+            call mpdata_init(domain,options)
         endif
 
     end subroutine adv_init
@@ -43,8 +42,8 @@ contains
 
         if (options%physics%advection==kADV_UPWIND) then
             call upwind_var_request(options)
-        ! if(options%physics%advection==kADV_MPDATA) then
-        !     call mpdata_var_request(domain,options)
+        else if (options%physics%advection==kADV_MPDATA) then
+            call upwind_var_request(options)
         endif
 
     end subroutine
@@ -68,8 +67,8 @@ contains
 
         if (options%physics%advection==kADV_UPWIND) then
             call upwind(domain,options,dt)
-        ! elseif(options%physics%advection==kADV_MPDATA) then
-        !     call mpdata(domain,options,dt)
+        else if(options%physics%advection==kADV_MPDATA) then
+            call mpdata(domain,options,dt)
         endif
 
         ! if (options%advect_density) then

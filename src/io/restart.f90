@@ -87,7 +87,7 @@ function get_image_filename(image_number, initial_filename, restart_time) result
     implicit none
     integer,            intent(in) :: image_number
     character(len=*),   intent(in) :: initial_filename
-    type(Time_type),    intent(in) :: restart_time
+    type(Time_type),    intent(in) :: restart_time  ! this is not the same as file name!
 
     character(len=kMAX_FILE_LENGTH) :: file_name
     integer :: n, i
@@ -97,7 +97,7 @@ function get_image_filename(image_number, initial_filename, restart_time) result
     write(file_name, '(A,I6.6,"_",A,".nc")') trim(initial_filename), image_number, trim(restart_time%as_string(file_date_format))
 
     n = len(trim(file_name))
-    file_name(n-10:n-9) = "00"
+    file_name(n-10:n-9) = "00"  ! BK: Commented out because restarting from a non-whole hour time should be possible - but weird behaviour when commented out???!
 
 end function get_image_filename
 

@@ -37,6 +37,10 @@ This namelist specifies the output and restart filenames, as well as output/rest
 ###z_info
 This namelist specifies the thickness of each model layer.  Technically this is optional as it will default to something reasonable, but it is recommended that it be set as the default uses too fine a discretization (and thus runs slower) than should be used.
 
+space_varying z levels can be chosen to enable a simple decay function for terrain, not unlike the sigma coordinate. This can be refined by choosing SLEVE coordinates, where the decay of the terrain is no longer linear with height but is controlled by the sleve decay factor. Furthermore (following Leuenberger et al 2009), a second parameter sleve_n determines where in the z column the compression of the layers is strongest, in order to to prevent excessive compression of the lowest layers (sleve_n=1). In the future a lowpass filter can be incorporated so that larger terrain features can be allowed to decay slower than small ones, thereby allowing for a true SLEVE coordinate as envisioned by Schär et al 2002 "A New Terrain-Following Vertical Coordinate Formulation for Atmospheric Prediction Models" and Leuenberger et al 2009: "A Generalization of the SLEVE Vertical Coordinate".
+
+use_terrain_difference. Enabling this setting allows for slopes to be calculated based on the difference between forcing terrain and hi-res terrain. Especially in simulations where the forcing data already has a high resolution, many terrain induced effects (wind acceleration for one) are partially resolved by the forcing data, and may lead to double counting of certain effects. This setting allows to correct for this by only incorporating the additonal terrain effects. 
+ 
 ###restart_info
 This optional namelist specifies the necessary input for a restart run.
 

@@ -81,6 +81,7 @@ contains
                         do k=lbound(var,2),ubound(var,2)
                             do i=lbound(var,1),ubound(var,1)
                                 if (var(i,k,j) < less_than) then
+
                                     if (.not.printed) then
                                         print*, "First Error was in grid cell:", i,k,j, var(i,k,j)
                                         printed = .True.

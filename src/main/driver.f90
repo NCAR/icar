@@ -32,12 +32,15 @@ program icar
     use restart_interface,  only : restart_model
     use icar_constants,     only : kVARS
 
+    use land_surface,               only : lsm_init
 
     implicit none
 
     type(options_t) :: options
     type(domain_t)  :: domain
-    type(boundary_t):: boundary
+    type(boundary_t):: boundary, add_cond
+    ! type(output_t)  :: dataset
+    ! type(output_t)  :: surface_dataset
     type(output_t)  :: restart_dataset
     type(output_t)  :: output_dataset
     type(timer_t)   :: initialization_timer, total_timer, input_timer, output_timer, physics_timer
@@ -58,10 +61,17 @@ program icar
     !  Model Initialization
     !
     ! Reads config options and initializes domain and boundary conditions
-    call init_model(options, domain, boundary)
+    call init_model(options, domain, boundary, add_cond)  ! added boundary structure for external files (additional conditions)
 
     if (this_image()==1) write(*,*) "Setting up output files"
     ! should be combined into a single setup_output call
+    
+    if (this_image()==1 .and. options%parameters%frames_per_outfile<2) then
+        print*,"  frames per output file should be 2 or more. Currently: ", options%parameters%frames_per_outfile
+    else
+        if (this_image()==1) print*,"  frames per output file= ", options%parameters%frames_per_outfile
+    end if    
+    
     call restart_dataset%set_domain(domain)
     call restart_dataset%add_variables(options%vars_for_restart, domain)
 
@@ -158,7 +168,8 @@ program icar
         call output_timer%start()
         if ((domain%model_time + small_time_delta) >= next_output) then
             if (this_image()==1) write(*,*) "Writing output file"
-            if (i>24) then
+            ! if (i>24) then
+            if (i>options%parameters%frames_per_outfile) then
                 write(file_name, '(A,I6.6,"_",A,".nc")')    &
                     trim(options%output_options%output_file),   &
                     this_image(),                           &

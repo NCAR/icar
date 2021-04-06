@@ -104,18 +104,20 @@ contains
                          kVARS%sensible_heat, kVARS%latent_heat, kVARS%u_10m, kVARS%v_10m, kVARS%temperature_2m,        &
                          kVARS%humidity_2m, kVARS%surface_pressure, kVARS%longwave_up, kVARS%ground_heat_flux,          &
                          kVARS%soil_totalmoisture, kVARS%soil_deep_temperature, kVARS%roughness_z0, kVARS%ustar,        &
+                         kVARS%snow_height,                                                                             &  ! BK 2020/10/26
                          kVARS%veg_type, kVARS%soil_type, kVARS%land_mask])
 
              call options%advect_vars([kVARS%potential_temperature, kVARS%water_vapor])
 
              call options%restart_vars( &
                          [kVARS%water_vapor, kVARS%potential_temperature, kVARS%precipitation, kVARS%temperature,       &
-                         kVARS%density, kVARS%pressure_interface, kVARS%shortwave,     &
-                         kVARS%longwave, kVARS%canopy_water, kVARS%snow_water_equivalent,    &
+                         kVARS%density, kVARS%pressure_interface, kVARS%shortwave,                                      &
+                         kVARS%longwave, kVARS%canopy_water, kVARS%snow_water_equivalent,                               &
                          kVARS%skin_temperature, kVARS%soil_water_content, kVARS%soil_temperature, kVARS%terrain,       &
                          kVARS%sensible_heat, kVARS%latent_heat, kVARS%u_10m, kVARS%v_10m, kVARS%temperature_2m,        &
-                         kVARS%humidity_2m, kVARS%surface_pressure, kVARS%longwave_up, kVARS%ground_heat_flux])
-                         ! kVARS%soil_totalmoisture, kVARS%soil_deep_temperature, kVARS%roughness_z0, kVARS%veg_type,      &
+                         kVARS%snow_height,                                                                             &  ! BK 2020/10/26
+                         kVARS%humidity_2m, kVARS%surface_pressure, kVARS%longwave_up, kVARS%ground_heat_flux,          &
+                         kVARS%soil_totalmoisture, kVARS%soil_deep_temperature, kVARS%roughness_z0, kVARS%veg_type])    ! BK uncommented 2021/03/20
                          ! kVARS%soil_type, kVARS%land_mask, kVARS%vegetation_fraction]
         endif
         if (options%physics%watersurface > 1) then
@@ -364,6 +366,8 @@ contains
 
         if (this_image()==1) write(*,*) "Initializing LSM"
 
+        if (this_image()==1) write(*,*) "    max soil_deep_temperature on init: ", maxval(domain%soil_deep_temperature%data_2d)
+
         exchange_term = 1
 
         ! module level variables for easy access... need to think about tiling to permit halo processing separately.
@@ -426,7 +430,7 @@ contains
         allocate(CQS2(ims:ime,jms:jme))
         CQS2 = 0.01
 
-
+        
         allocate(RAINBL(ims:ime,jms:jme))
         RAINBL = domain%accumulated_precipitation%data_2d  ! used to store last time step accumulated precip so that it can be subtracted from the current step
                             ! set to domain%rain incase this is a restart run and rain is non-zero to start
@@ -448,7 +452,27 @@ contains
             if (this_image()==1) write(*,*) "    Noah LSM"
 
             num_soil_layers=4
-            FNDSNOWH=.False. ! calculate SNOWH from SNOW
+
+            ! if (this_image()==1) then
+            !     write(*,*) "    options%parameters%external_files: ", trim(options%parameters%external_files)
+            !     write(*,*) "    options%parameters%restart: ", options%parameters%restart
+            !     write(*,*) "    options%parameters%rho_snow_ext ", trim(options%parameters%rho_snow_ext)
+            !     write(*,*) "    options%parameters%swe_ext ", trim(options%parameters%swe_ext )                
+            ! endif            
+            
+            if (options%parameters%rho_snow_ext /="" .AND. options%parameters%swe_ext /="") then ! calculate snowheight from external swe and density, but only if both are provided. (Swe alone will give FNDSNW = F)
+                FNDSNOWH = .True.
+                if (this_image()==1) write(*,*) "    Find snow height in file i.s.o. calculating them from SWE: FNDSNOWH=", FNDSNOWH
+            elseif(options%parameters%hsnow_ext /="" ) then  ! read in external snowheight if supplied
+                FNDSNOWH= .True.
+                if (this_image()==1) write(*,*) "    Find snow height in file i.s.o. calculating them from SWE: FNDSNOWH=", FNDSNOWH
+            elseif(options%parameters%restart) then   ! If restarting read in snow height, but only if this is in restart file?
+                FNDSNOWH= .True.
+                if (this_image()==1) write(*,*) "    Find snow height in file i.s.o. calculating them from SWE: FNDSNOWH=", FNDSNOWH
+            else
+                FNDSNOWH=.False. ! calculate SNOWH from SNOW
+            endif
+            
             FNDSOILW=.False. ! calculate SOILW (this parameter is ignored in LSM_NOAH_INIT)
             RDMAXALB=.False.
 
@@ -472,12 +496,12 @@ contains
             where(domain%soil_temperature%data_3d<200) domain%soil_temperature%data_3d=200
             where(domain%soil_water_content%data_3d<0.0001) domain%soil_water_content%data_3d=0.0001
 
-            call LSM_NOAH_INIT(VEGFRAC,                             &
-                                SNOW,                               &
+            call LSM_NOAH_INIT( VEGFRAC,                             &
+                                domain%snow_water_equivalent%data_2d,         & !SNOW, &  BK 18/03/2021
                                 SNOWC,                              &
-                                SNOWH,                              &
+                                domain%snow_height%data_2d,         & !SNOWH, &   BK 18/03/2021
                                 domain%canopy_water%data_2d,        &
-                                domain%soil_temperature%data_3d,    &
+                                domain%soil_temperature%data_3d,    & !-- SMSTAV      Soil moisture availability for evapotranspiration ( fraction between SMCWLT and SMCMXA)
                                 domain%soil_water_content%data_3d,  &
                                 SFCRUNOFF,                          &
                                 UDRUNOFF,                           &
@@ -540,6 +564,8 @@ contains
         if ((domain%model_time%seconds() - last_model_time) >= update_interval) then
             lsm_dt = domain%model_time%seconds() - last_model_time
             last_model_time = domain%model_time%seconds()
+
+            ! if (this_image()==1) write(*,*) "    lsm start: snow_water_equivalent max:", MAXVAL(domain%snow_water_equivalent%data_2d)
 
             ! exchange coefficients
             windspd = sqrt(domain%u_10m%data_2d**2 + domain%v_10m%data_2d**2)
@@ -633,6 +659,13 @@ contains
                     endif
                 endif
 
+                ! if (this_image()==1) write(*,*) "    lsm start: accumulated_precipitation max:", MAXVAL(domain%accumulated_precipitation%data_2d) 
+                ! if (this_image()==1) write(*,*) "    lsm start: RAINBL max:", MAXVAL(RAINBL)
+                ! if (this_image()==1) write(*,*) "    lsm start: domain%precipitation_bucket max:", MAXVAL(domain%precipitation_bucket)
+                ! if (this_image()==1) write(*,*) "    lsm start: rain_bucket max:", MAXVAL(rain_bucket)
+                
+
+                ! RAINBL(i,j) = [kg m-2]   RAINBL = domain%accumulated_precipitation%data_2d  ! used to store last time step accumulated precip so that it can be subtracted from the current step
                 current_precipitation = (domain%accumulated_precipitation%data_2d-RAINBL)+(domain%precipitation_bucket-rain_bucket)*kPRECIP_BUCKET_SIZE
                 call lsm_noah(domain%dz_interface%data_3d,                &
                             domain%water_vapor%data_3d,                   &
@@ -648,7 +681,7 @@ contains
                             domain%shortwave%data_2d,                     &
                             domain%longwave%data_2d,                      &
                             SMSTAV,                                       &
-                            domain%soil_totalmoisture%data_2d,            &
+                            domain%soil_totalmoisture%data_2d,            &  ! this is not defined on lsm_init (BK 2021/03/20)
                             SFCRUNOFF,                                    &
                             UDRUNOFF,                                     &
                             domain%veg_type,                              &
@@ -667,7 +700,7 @@ contains
                             EMBCK,                                        &
                             SNOWC,                                        &
                             QSFC,                                         &
-                            current_precipitation,                        &
+                            current_precipitation,                        &  ! RAINBL
                             MMINLU,                                       &
                             num_soil_layers,                              &
                             lsm_dt,                                       &
@@ -687,7 +720,8 @@ contains
                             lai,                                          &
                             qz0,                                          & !H
                             myj,frpcpn,                                   &
-                            SH2O,SNOWH,                                   & !H
+                            SH2O,                                         &      
+                            domain%snow_height%data_2d, &     !SNOWH,                                   & !H
                             SNOALB,SHDMIN,SHDMAX,                         & !I
                             SNOTIME,                                      & !?
                             ACSNOM,ACSNOW,                                & !O

@@ -11,7 +11,6 @@ module time_step
     use data_structures             ! *_type  types and kCONSTANTS
     use icar_constants,             only : Rd
     use microphysics,               only : mp
-    ! use wind,                       only : update_winds
     use advection,                  only : advect
     use mod_atm_utilities,          only : exner_function
     use convection,                 only : convect
@@ -51,6 +50,8 @@ contains
         type(domain_t),  intent(inout)   :: domain
         type(options_t), intent(in)      :: options
         integer :: z
+
+        logical :: use_delta_terrain
 
         associate(ims => domain%ims, ime => domain%ime,                         &
                   jms => domain%jms, jme => domain%jme,                         &
@@ -141,10 +142,21 @@ contains
         ! finally, calculate the real vertical motions (including U*dzdx + V*dzdy)
         lastw = 0
         do z = kms, kme
-            ! compute the U * dz/dx component of vertical motion
-            uw    = u(ims+1:ime,   z, jms+1:jme-1) * domain%dzdx(:,z,jms+1:jme-1)
-            ! compute the V * dz/dy component of vertical motion
-            vw    = v(ims+1:ime-1, z, jms+1:jme  ) * domain%dzdy(ims+1:ime-1,z,:)
+            
+            ! ! if(options%parameters%use_terrain_difference) then
+            !                 ! compute the U * dz/dx component of vertical motion
+            !     uw    = u(ims+1:ime,   z, jms+1:jme-1) * domain%delta_dzdx(:,z,jms+1:jme-1)
+            !     ! compute the V * dz/dy component of vertical motion
+            !     vw    = v(ims+1:ime-1, z, jms+1:jme  ) * domain%delta_dzdy(ims+1:ime-1,z,:)
+            ! else    
+                ! compute the U * dz/dx component of vertical motion
+                uw    = u(ims+1:ime,   z, jms+1:jme-1) * domain%dzdx(ims+1:ime,z,jms+1:jme-1)
+                ! compute the V * dz/dy component of vertical motion
+                vw    = v(ims+1:ime-1, z, jms+1:jme  ) * domain%dzdy(ims+1:ime-1,z,jms+1:jme)
+            ! endif    
+            ! ! convert the W grid relative motion to m/s
+            ! currw = w(ims+1:ime-1, z, jms+1:jme-1) * dz_interface(ims+1:ime-1, z, jms+1:jme-1) / domain%dx
+
             ! the W grid relative motion
             currw = w(ims+1:ime-1, z, jms+1:jme-1)
 
@@ -156,10 +168,10 @@ contains
             ! includes vertical interpolation between w_z-1/2 and w_z+1/2
             w_real(ims+1:ime-1, z, jms+1:jme-1) = (uw(ims+1:ime-1,:) + uw(ims+2:ime,:))*0.5 &
                                                  +(vw(:,jms+1:jme-1) + vw(:,jms+2:jme))*0.5 &
-                                                 +(lastw + currw) * 0.5
-
+                                                 +domain%jacobian(ims+1:ime-1,z,jms+1:jme-1)*(lastw + currw) * 0.5
             lastw = currw ! could avoid this memcopy cost using pointers or a single manual loop unroll
         end do
+
         end associate
 
     end subroutine diagnostic_update
@@ -183,7 +195,8 @@ contains
     !!------------------------------------------------------------
     function compute_dt(dx, u, v, w, rho, dz, CFL, cfl_strictness, use_density) result(dt)
         real,       intent(in)                   :: dx
-        real,       intent(in), dimension(:,:,:) :: u, v, w, rho, dz
+        real,       intent(in), dimension(:,:,:) :: u, v, w, rho
+        real,       intent(in), dimension(:)     :: dz
         real,       intent(in)                   :: CFL
         integer,    intent(in)                   :: cfl_strictness
         logical,    intent(in)                   :: use_density
@@ -206,8 +219,8 @@ contains
         if (cfl_strictness==1) then
             ! to ensure we are stable for 1D advection:
             if (use_density) then
-                maxwind1d = max( maxval(abs(u(2:,:,:) / (rho*dz*dx) )), maxval(abs(v(:,:,2:) / (rho*dz*dx))) )
-                maxwind1d = max( maxwind1d, maxval(abs(w/(rho*dz*dx))) )
+                !maxwind1d = max( maxval(abs(u(2:,:,:) / (rho*dz*dx) )), maxval(abs(v(:,:,2:) / (rho*dz*dx))) )
+                !maxwind1d = max( maxwind1d, maxval(abs(w/(rho*dz*dx))) )
             else
                 maxwind1d = max( maxval(abs(u)), maxval(abs(v)))
                 maxwind1d = max( maxwind1d, maxval(abs(w)))
@@ -217,9 +230,9 @@ contains
         else if (cfl_strictness==5) then
 
             if (use_density) then
-                maxwind1d = maxval(abs(u(2:,:,:) / (rho*dz*dx) )) &
-                          + maxval(abs(v(:,:,2:) / (rho*dz*dx) )) &
-                          + maxval(abs(w(:,:, :) / (rho*dz*dx) ))
+                !maxwind1d = maxval(abs(u(2:,:,:) / (rho*dz*dx) )) &
+                !          + maxval(abs(v(:,:,2:) / (rho*dz*dx) )) &
+                !          + maxval(abs(w(:,:, :) / (rho*dz*dx) ))
             else
                 maxwind3d = maxval(abs(u)) + maxval(abs(v)) + maxval(abs(w))
             endif
@@ -240,14 +253,14 @@ contains
                         ! faces of the grid cell (e.g. east and west sides)
                         ! this will be divided by 3 later by three_d_cfl
                         if (use_density) then
-                            current_wind = (max(abs(u(i,k,j)), abs(u(i+1,k,j))) &
-                                          + max(abs(v(i,k,j)), abs(v(i,k,j+1))) &
-                                          + max(abs(w(i,k,j)), abs(w(i,k+zoffset,j))) ) &
-                                          / (rho(i,k,j) * dz(i,k,j) * dx)
+                            !current_wind = (max(abs(u(i,k,j)), abs(u(i+1,k,j))) &
+                            !              + max(abs(v(i,k,j)), abs(v(i,k,j+1))) &
+                            !              + max(abs(w(i,k,j)), abs(w(i,k+zoffset,j))) ) &
+                            !              / (rho(i,k,j) * dz(i,k,j) * dx)
                         else
-                            current_wind = max(abs(u(i,k,j)), abs(u(i+1,k,j))) &
-                                          +max(abs(v(i,k,j)), abs(v(i,k,j+1))) &
-                                          +max(abs(w(i,k,j)), abs(w(i,k+zoffset,j)))
+                            current_wind = max(abs(u(i,k,j)), abs(u(i+1,k,j))) / dx &
+                                          +max(abs(v(i,k,j)), abs(v(i,k,j+1))) / dx &
+                                          +max(abs(w(i,k,j)), abs(w(i,k+zoffset,j))) / dz(k)
                         endif
                         maxwind3d = max(maxwind3d, current_wind)
                     ENDDO
@@ -260,8 +273,8 @@ contains
 
                 ! to ensure we are stable for 1D advection:
                 if (use_density) then
-                    maxwind1d = max( maxval(abs(u(2:,:,:) / (rho*dz*dx) )), maxval(abs(v(:,:,2:) / (rho*dz*dx))) )
-                    maxwind1d = max( maxwind1d, maxval(abs(w/(rho*dz*dx))) )
+                    !maxwind1d = max( maxval(abs(u(2:,:,:) / (rho*dz*dx) )), maxval(abs(v(:,:,2:) / (rho*dz*dx))) )
+                    !maxwind1d = max( maxwind1d, maxval(abs(w/(rho*dz*dx))) )
                 else
                     maxwind1d = max( maxval(abs(u)), maxval(abs(v)))
                     maxwind1d = max( maxwind1d, maxval(abs(w)))
@@ -278,7 +291,10 @@ contains
 
         endif
 
-        dt = CFL * dx / maxwind3d
+        !TESTING: Do we need to multiply maxwind3d by sqrt3 as the comment above suggests?
+        ! maxwind3d = maxwind3d * sqrt3
+
+        dt = CFL / maxwind3d
 
         ! If we have too small a time step throw an error
         ! something is probably wrong in the physics or input data
@@ -360,7 +376,7 @@ contains
                   v          => domain%v%data_3d,                       &
                   w          => domain%w%data_3d,                       &
                   density    => domain%density%data_3d,                 &
-                  dz         => domain%dz_interface%data_3d,            &
+                  dz         => options%parameters%dz_levels,           &
                   reduction  => options%parameters%cfl_reduction_factor,&
                   strictness => options%parameters%cfl_strictness       &
             )
@@ -422,11 +438,11 @@ contains
 
         last_print_time = 0.0
         time_step_size = end_time - domain%model_time
-
-        call update_dt(dt, options, domain, end_time)
-
+        
         ! now just loop over internal timesteps computing all physics in order (operator splitting...)
         do while (domain%model_time < end_time)
+
+            call update_dt(dt, options, domain, end_time)
 
             ! Make sure we don't over step the forcing or output period
             if ((domain%model_time + dt) > end_time) then
@@ -452,8 +468,13 @@ contains
                 if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" rad(domain", fix=.True.)
 
                 call lsm(domain, options, real(dt%seconds()))!, halo=1)
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" lsm")
+
                 call pbl(domain, options, real(dt%seconds()))!, halo=1)
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" pbl")
+
                 call convect(domain, options, real(dt%seconds()))!, halo=1)
+                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" convect")
 
                 call mp(domain, options, real(dt%seconds()), halo=1)
                 if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" mp_halo", fix=.True.)
@@ -478,6 +499,13 @@ contains
 
                 ! ! apply/update boundary conditions including internal wind and pressure changes.
                 call domain%apply_forcing(dt)
+                                
+                !If we are in the last 2 updates of a time step and a variable drops below 0, we have probably over-shot a value of 0. Force back to 0
+                if ((end_time%seconds() - domain%model_time%seconds()) < (dt%seconds()*2)) then
+                    call domain%enforce_limits()
+                endif
+                
+
                 if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" domain%apply_forcing", fix=.True.)
 
             endif

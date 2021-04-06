@@ -69,6 +69,7 @@ contains
         call bias_parameters_namelist(  this%parameters%bias_options_filename,  this)
 
         if (this%parameters%restart) then
+            ! if (this_image()==1) write(*,*) "  (opt) Restart = ", this%parameters%restart
             call init_restart_options(options_filename, this%parameters)
             this%parameters%start_time = this%parameters%restart_time
         endif
@@ -545,6 +546,7 @@ contains
 
         wind= 1 ! 0 = no LT,
                 ! 1 = linear theory wind perturbations
+                ! 2 = terrain induced horizontal accelleration
 
 !       read the namelist
         open(io_newunit(name_unit), file=filename)
@@ -667,14 +669,15 @@ contains
         implicit none
         character(len=*),             intent(in)    :: filename
         type(parameter_options_type), intent(inout) :: options
-        integer :: name_unit, i
+        integer :: name_unit, i, j
         character(len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar,  &
                                         hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qgvar,qsvar,hgtvar,shvar,lhvar,pblhvar,   &
                                         psvar, pslvar, &
                                         soiltype_var, soil_t_var,soil_vwc_var,swe_var, soil_deept_var,           &
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
-                                        swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var
+                                        swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &
+                                        lat_ext, lon_ext, swe_ext, hsnow_ext, rho_snow_ext, tss_ext, tsoil2D_ext, tsoil3D_ext, z_ext, time_ext
 
         namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qgvar,qsvar,hgtvar,shvar,lhvar,pblhvar,   &
                             landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar, &
@@ -682,7 +685,8 @@ contains
                             hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
                             soiltype_var, soil_t_var,soil_vwc_var,swe_var,soil_deept_var,           &
                             vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
-                            swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var
+                            swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &
+                            lat_ext, lon_ext, swe_ext, hsnow_ext, rho_snow_ext, tss_ext, tsoil2D_ext, tsoil3D_ext,  z_ext, time_ext
 
         ! no default values supplied for variable names
         hgtvar=""
@@ -734,6 +738,16 @@ contains
         rain_var=""
         sinalpha_var=""
         cosalpha_var=""
+        lat_ext=""
+        lon_ext=""
+        swe_ext=""
+        hsnow_ext=""
+        rho_snow_ext=""
+        tss_ext=""
+        tsoil2D_ext=""
+        tsoil3D_ext=""
+        z_ext = ""
+        time_ext = ""
 
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=var_list)
@@ -859,6 +873,24 @@ contains
         options%linear_mask_var     = linear_mask_var
         options%nsq_calibration_var = nsq_calibration_var
 
+        !------------------------------------------------------
+        ! external variables for initialization  -  mainly snow-related, can be extended later on. swe only for now?
+        !------------------------------------------------------
+        options%ext_var_list(:) = ""
+        j=1
+        options%lat_ext         = lat_ext
+        options%lon_ext         = lon_ext
+        options%swe_ext         = swe_ext      ; options%ext_var_list(j) = swe_ext;       options%ext_dim_list(j) = 2;    j = j + 1
+        options%rho_snow_ext    = rho_snow_ext ; options%ext_var_list(j) = rho_snow_ext;  options%ext_dim_list(j) = 2;    j = j + 1
+        options%hsnow_ext       = hsnow_ext    ; options%ext_var_list(j) = hsnow_ext;     options%ext_dim_list(j) = 2;    j = j + 1
+        options%tss_ext         = tss_ext      ; options%ext_var_list(j) = tss_ext;       options%ext_dim_list(j) = 2;    j = j + 1
+        options%tsoil2D_ext     = tsoil2D_ext    ; options%ext_var_list(j) = tsoil2D_ext;     options%ext_dim_list(j) = 2;    j = j + 1
+        options%tsoil3D_ext     = tsoil3D_ext    ; options%ext_var_list(j) = tsoil3D_ext;     options%ext_dim_list(j) = 3;    j = j + 1
+        ! options%z_ext      = z_ext   ; options%ext_var_list(j) = z_ext;       options%ext_dim_list(j) = 3;    j = j + 1
+        options%time_ext        = time_ext    ; options%ext_var_list(j) = time_ext;      options%ext_dim_list(j) = 1;    j = j + 1
+    
+     
+
 
     end subroutine var_namelist
 
@@ -878,9 +910,10 @@ contains
         integer :: name_unit
         type(time_delta_t) :: dt
         ! parameters to read
-        real    :: dx, dxlow, outputinterval, restartinterval, inputinterval, t_offset, smooth_wind_distance, agl_cap
+
+        real    :: dx, dxlow, outputinterval, restartinterval, inputinterval, t_offset, smooth_wind_distance, frames_per_outfile, agl_cap
         real    :: cfl_reduction_factor
-        integer :: ntimesteps
+        integer :: ntimesteps, wind_iterations
         integer :: longitude_system
         integer :: nz, n_ext_winds,buffer, warning_level, cfl_strictness
         logical :: ideal, readz, readdz, interactive, debug, external_winds, surface_io_only, &
@@ -897,7 +930,8 @@ contains
                                         bias_options_filename, block_options_filename, &
                                         cu_options_filename
 
-        namelist /parameters/ ntimesteps, inputinterval,                &
+
+        namelist /parameters/ ntimesteps, wind_iterations, outputinterval, frames_per_outfile, inputinterval, surface_io_only,                &
                               dx, dxlow, ideal, readz, readdz, nz, t_offset,                             &
                               debug, warning_level, interactive, restart,                                &
                               external_winds, buffer, n_ext_winds, advect_density, smooth_wind_distance, &
@@ -929,6 +963,7 @@ contains
         qv_is_relative_humidity=.False.
         z_is_geopotential   = .False.
         z_is_on_interface   = .False.
+        wind_iterations     = 100
         dxlow               = 100000
         restart             = .False.
         ideal               = .False.
@@ -951,6 +986,9 @@ contains
         time_varying_z      = .False.
         cfl_reduction_factor=  0.9
         cfl_strictness      =  3
+        inputinterval       =  3600
+        outputinterval      =  3600
+        frames_per_outfile  =  24
         longitude_system    = kMAINTAIN_LON
 
         ! flag set to read specific parameterization options
@@ -1022,6 +1060,25 @@ contains
         options%in_dt      = inputinterval
         call options%input_dt%set(seconds=inputinterval)
 
+        options%out_dt     = outputinterval
+        call options%output_dt%set(seconds=outputinterval)
+        ! if outputing at half-day or longer intervals, create monthly files
+        ! if (outputinterval>=43200) then
+        !     options%output_file_frequency="monthly"
+        ! ! if outputing at half-hour or longer intervals, create daily files
+        ! else if (outputinterval>=1800) then
+        !     options%output_file_frequency="daily"
+        ! ! otherwise create a new output file every timestep
+        ! else
+        !     options%output_file_frequency="every step"
+        ! endif
+
+        ! options%paramters%frames_per_outfile : this may cause trouble with the above, but a nicer way
+        options%frames_per_outfile = frames_per_outfile 
+
+        ! options%surface_io_only = surface_io_only
+
+
         options%calendar=calendar
 
         call options%initial_time%init(calendar)
@@ -1066,7 +1123,7 @@ contains
         options%restart = restart
 
         options%nz = nz
-
+        options%wind_iterations = wind_iterations
         options%high_res_soil_state = high_res_soil_state
         options%time_varying_z = time_varying_z
 
@@ -1709,16 +1766,24 @@ contains
         integer :: name_unit, this_level
         real, allocatable, dimension(:) :: dz_levels
         real, dimension(45) :: fulldz
-        logical :: space_varying, fixed_dz_advection, dz_modifies_wind
-        real :: flat_z_height
+        logical :: space_varying, fixed_dz_advection, dz_modifies_wind, sleve, use_terrain_difference
 
-        namelist /z_info/ dz_levels, space_varying, dz_modifies_wind, flat_z_height, fixed_dz_advection
+        real :: flat_z_height, terrain_smooth_windowsize, terrain_smooth_cycles, decay_rate_L_topo, decay_rate_S_topo, sleve_n
+
+        namelist /z_info/ dz_levels, space_varying, dz_modifies_wind, flat_z_height, fixed_dz_advection, sleve, terrain_smooth_windowsize, terrain_smooth_cycles, decay_rate_L_topo, decay_rate_S_topo, sleve_n, use_terrain_difference
 
         this_level=1
         space_varying = .False.
         fixed_dz_advection = .False.
         dz_modifies_wind = .False.
         flat_z_height = -1
+        sleve = .False.
+        terrain_smooth_windowsize = 3
+        terrain_smooth_cycles = 5
+        decay_rate_L_topo = 2.
+        decay_rate_S_topo = 6.
+        sleve_n = 1.2  
+        use_terrain_difference = .False.
 
         ! read the z_info namelist if requested
         if (options%readdz) then
@@ -1770,19 +1835,26 @@ contains
         options%space_varying_dz = space_varying
         options%flat_z_height = flat_z_height
         options%fixed_dz_advection = fixed_dz_advection
+        options%sleve = sleve
+        options%terrain_smooth_windowsize = terrain_smooth_windowsize
+        options%terrain_smooth_cycles = terrain_smooth_cycles
+        options%decay_rate_L_topo = decay_rate_L_topo  ! decay_rate_large_scale_topography
+        options%decay_rate_S_topo = decay_rate_S_topo ! decay_rate_small_scale_topography !
+        options%sleve_n = sleve_n
+        options%use_terrain_difference = use_terrain_difference 
 
-        if (fixed_dz_advection) then
-            write(*,*) "WARNING: setting fixed_dz_advection to true is not recommended, use wind = 2 instead"
-            write(*,*) "if you want to continue and enable this, you will need to change this code in the options_obj"
-            error stop
-        endif
+        !if (fixed_dz_advection) then
+        !    print*, "WARNING: setting fixed_dz_advection to true is not recommended, use wind = 2 instead"
+        !    print*, "if you want to continue and enable this, you will need to change this code in the options_obj"
+        !    error stop
+        !endif
+
 
         if (dz_modifies_wind) then
             write(*,*) "WARNING: setting dz_modifies_wind to true is not recommended, use wind = 2 instead"
             write(*,*) "if you want to continue and enable this, you will need to change this code in the options_obj"
             error stop
         endif
-
 
     end subroutine model_levels_namelist
 
@@ -1845,14 +1917,17 @@ contains
         character(len=*),             intent(in)    :: filename
         type(parameter_options_type), intent(inout) :: options
 
-        character(len=MAXFILELENGTH) :: init_conditions_file, forcing_file_list, &
-                                        linear_mask_file, nsq_calibration_file
+        character(len=MAXFILELENGTH) :: init_conditions_file, output_file, forcing_file_list, &
+                                        linear_mask_file, nsq_calibration_file, external_files
+
         character(len=MAXFILELENGTH), allocatable :: boundary_files(:), ext_wind_files(:)
         integer :: name_unit, nfiles, i
 
         ! set up namelist structures
-        namelist /files_list/ init_conditions_file, boundary_files, forcing_file_list, &
-                              linear_mask_file, nsq_calibration_file
+
+        namelist /files_list/ init_conditions_file, output_file, boundary_files, forcing_file_list, &
+                              linear_mask_file, nsq_calibration_file, external_files
+
         namelist /ext_winds_info/ ext_wind_files
 
         linear_mask_file="MISSING"
@@ -1860,10 +1935,13 @@ contains
         allocate(boundary_files(MAX_NUMBER_FILES))
         boundary_files="MISSING"
         forcing_file_list="MISSING"
+        external_files="MISSING"
 
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=files_list)
         close(name_unit)
+
+        options%external_files = external_files
 
         options%init_conditions_file=init_conditions_file
 
