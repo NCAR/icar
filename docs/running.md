@@ -1,20 +1,20 @@
-##Running ICAR
+## Running ICAR
 
-###Example
+### Example
 
-$ icar options_file_name.nml
+    $ icar options_file_name.nml
 
-###Input files
+### Input files
 
-####Primary settings file:
+#### Primary settings file:
 icar\_options.nml [other filename can be specified on the commandline e.g. icar your\_options\_file]
         This file specifies all other files and options.  See the example in run/complete\_icar\_options.nml for all options or run/short\_icar\_options.nml for the more common options.
 
-Other settings files can be defined in the primary settings file, or all settings can be included in one file.  
+Other settings files can be defined in the primary settings file, or all settings can be included in one file.
 
 Most settings are well documented in the sample settings files provided, additional documentation for all settings is provided in the [settings documentation](settings_documentation.md).
 
-####Necessary netcdf files:
+#### Necessary netcdf files:
 
 1) Boundary / Initial conditions file(s) (from e.g. wrf, reanalysis, or GCM output).  These files are specified in the options file as boundary\_files.
 

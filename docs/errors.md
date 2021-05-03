@@ -1,4 +1,4 @@
-##Common errors
+## Common errors
 
 1) **Segmentation fault**:
     Possibly due to your shell's stacksize limit (particularly with ifort).
@@ -26,7 +26,7 @@ Then ICAR is trying to write a variable (in this case nsq, the Brunt-Vaisala fre
 
 Then the dimensions of the model domain have changed since the last run, and it is not possible to write the output to the existing files.
 
-In both cases, the solution is to delete (or move) the existing output files, or to modify your options file so that the output will be consistent with existing files.  
+In both cases, the solution is to delete (or move) the existing output files, or to modify your options file so that the output will be consistent with existing files.
 
 
 3) **dz_levels namelist error**
@@ -36,7 +36,7 @@ In both cases, the solution is to delete (or move) the existing output files, or
 
 
 4) **other namelist error**
-    If a newer namelist is used with an older version of code, you may get errors telling you that a given variable is not supported.  You can probably remove that line from the namelist and it will run correctly, though you should think about the variable that is being removed to decide what it means.  
+    If a newer namelist is used with an older version of code, you may get errors telling you that a given variable is not supported.  You can probably remove that line from the namelist and it will run correctly, though you should think about the variable that is being removed to decide what it means.
 
 5) **Floating Point errors**
     Check your input data.  For example, if you are supplying Shortwave or longwave down at the surface, but those terms are 0, the LSM can cool off and the surface layer becomes too stable. This causes the surface fluxes to become numerically unstable, and eventually the system breaks.
