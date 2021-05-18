@@ -2,13 +2,15 @@
 
 > Note: This document has been conveniently adapted from the [Cookbook for working with Git and VIC](https://github.com/UW-Hydro/VIC/wiki/Git-Workflow)
 
-The basic workflow described here follows a workflow originally outlined by [Vincent Driessen](http://nvie.com/posts/a-successful-git-branching-model/). The workflow is built around the Git version control system. A basic description of the branching strategy and release management used for ICAR is presented here. We use a central truth repository (https://github.com/NCAR/icar) that contains our main branches and the official release version of ICAR. All active development takes place on forks and clones of this repo.
+The basic workflow described here follows a workflow originally outlined by [Vincent Driessen](http://nvie.com/posts/a-successful-git-branching-model/). The workflow is built around the Git version control system. A basic description of the branching strategy and release management used for ICAR is presented here. We use a central truth repository ([https://github.com/NCAR/icar](https://github.com/NCAR/icar)) that contains our main branches and the official release version of ICAR. All active development takes place on forks and clones of this repo.
 
-As you will note when reading below, this workflow can be a very branchy workflow.  Particularly if you work from multiple computers, this can lead to trying to remember a lot of git commands.  A useful tool to help with all these commands is called [git-flow](https://github.com/petervanderdoes/gitflow-avh). This allows you to do simpler things like: 
+As you will note when reading below, this workflow can be a very branchy workflow.  Particularly if you work from multiple computers, this can lead to trying to remember a lot of git commands.  A useful tool to help with all these commands is called [git-flow](https://github.com/petervanderdoes/gitflow-avh). This allows you to do simpler things like:
 
-    git flow feature start <some_new_feature>
-    <work work work>
-    git flow feature finish <some_new_feature>
+```shell
+git flow feature start <some_new_feature>
+<work work work>
+git flow feature finish <some_new_feature>
+```
 
 ## Main Branches
 
@@ -73,27 +75,33 @@ The process would be as follows:
 
  * Add the main ICAR repo as the upstream remote, so you can easily merge changes that are made in the main ICAR repo into your own local repo
 
-        git  remote add upstream ssh://git@github.com:NCAR/icar.git
+```shell
+git remote add upstream ssh://git@github.com:NCAR/icar.git
+```
 
  * Checkout the `develop` branch
-
-        git checkout develop
+```shell
+git checkout develop
+```
 
  * Create and checkout the `feature/crazy_convection` branch (or whatever the appropriate name would be). If you create this branch while you are on the `develop` branch, the new branch will be based on `develop` (you can also specify this explicitly to git).
-
-        git checkout -b feature/crazy_convection
-
+```shell
+git checkout -b feature/crazy_convection
+```
  * Push this new branch to your remote on GitHub
-
-        git push
+```shell
+git push
+```
 
  * Now make as many changes as you need to, commit them to your local repo and push them to your remote on GitHub. This is just like any other work you would do using Git. Once everything is working and everything is sufficiently tested, you will be ready to share your code with others.
 
 
  * Before you do that, merge any changes that have been made in the develop branch in the main ICAR repo into the `feature/crazy_convection` branch of your local repo. Assuming you are already on the `feature/crazy_convection` branch:
 
-        git fetch upstream
-        git merge upstream/develop
+```shell
+git fetch upstream
+git merge upstream/develop
+```
 
  * Resolve any merge conflicts
 

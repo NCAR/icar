@@ -1,14 +1,16 @@
 ## ICAR settings file documentation
 
 ### Main Namelists
-REQUIRED:
- * model_version
- * physics
- * parameters
- * files_list
- * z_info (technically optional)
+__REQUIRED__:
 
- OPTIONAL:
+* model_version
+* physics
+* parameters
+* files_list
+* z_info (technically optional)
+
+__OPTIONAL__:
+
  * restart_info
  * lt_parameters
  * lsm_parameters
