@@ -18,20 +18,24 @@ In general, if you plan to apply the model rather than work directly on the sour
 If you plan on contributing to model development or would like a systematic way to incorporate updates to the ICAR source code, we encourage you to use Git. The following sections are designed to get you started using Git and working with the ICAR source code repository.
 
 ## Quickstart Cheatsheet
-More details are provided below, but if you just want a reminder of the key commands to set up your repository (replace https:// with ssh://git@ if appropriate) here is the basic setup:
+More details are provided below, but if you just want a reminder of the key commands to set up your repository (replace `https://` with `ssh://git@` if appropriate) here is the basic setup:
 
-    git clone https://github.com/<username>/icar.git
-    cd icar
-    git remote add upstream https://github.com/NCAR/icar.git
+```bash
+$ git clone https://github.com/<username>/icar.git
+$ cd icar
+$ git remote add upstream https://github.com/NCAR/icar.git
+```
 
 Then from the develop or master branch, periodically run:
+```bash
+$ git fetch upstream
+$ git merge upstream/<branch_name>
+```
 
-    git fetch upstream
-    git merge upstream/<branch_name>
-    
 or:
-
-    git pull upstream <branch_name>
+```bash
+$ git pull upstream <branch_name>
+```
 
 ### Git resources
 If you are not familiar with Git yet, we encourage you to spend a few minutes getting acquainted with the system before you starting working with the ICAR source code and Git. It's not difficult to use and a few minutes of learning about Git will go along way in helping you manage your code development.
@@ -212,12 +216,12 @@ To make your changes visible to other users/developers, your changes must be inc
 The ICAR administrator and other developers will review your pull request and decide if/how they want to incorporate your changes into the code. They are likely to suggest some changes (code style, content, etc.).
 
 ##### Useful git configuration
-If you frequently make (and delete) remote branches and work from multiple computers, it might be useful to configure git to automatically prune remote branches when they have been deleted by running: 
+If you frequently make (and delete) remote branches and work from multiple computers, it might be useful to configure git to automatically prune remote branches when they have been deleted by running:
 
     git config --local fetch.prune true
 
-This prevents you from deleting a remote branch from computer A, then accidentally creating it again from computer B.  
+This prevents you from deleting a remote branch from computer A, then accidentally creating it again from computer B.
 
 ### Git workflow
 
-For us to leverage Git to its full potential, we have implemented a Git-oriented workflow. This requires developers to adhere to a few rules regarding branch names and merge requests. A full description of the workflow we use can be found [here](https://github.com/NCAR/icar/blob/master/docs/howto/icar_git_workflow.md).  A useful tool to help use this workflow is called [git-flow](https://github.com/petervanderdoes/gitflow-avh). 
+For us to leverage Git to its full potential, we have implemented a Git-oriented workflow. This requires developers to adhere to a few rules regarding branch names and merge requests. A full description of the workflow we use can be found [here](https://github.com/NCAR/icar/blob/master/docs/howto/icar_git_workflow.md).  A useful tool to help use this workflow is called [git-flow](https://github.com/petervanderdoes/gitflow-avh).
