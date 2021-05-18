@@ -75,6 +75,7 @@ The process would be as follows:
 
  * Add the main ICAR repo as the upstream remote, so you can easily merge changes that are made in the main ICAR repo into your own local repo
 
+
 ```shell
 git remote add upstream ssh://git@github.com:NCAR/icar.git
 ```

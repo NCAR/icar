@@ -1,5 +1,6 @@
 # ICAR Code Overview
 **NOTE** Documentation is slowly being built up within the code using doxygen. After installing doxygen and dot,
+
 run `make doc` to create the API documentation in `docs/html/`
 
 [Online ICAR docs](http://ncar.github.io/icar/ "ICAR docs")
