@@ -18,20 +18,24 @@ In general, if you plan to apply the model rather than work directly on the sour
 If you plan on contributing to model development or would like a systematic way to incorporate updates to the ICAR source code, we encourage you to use Git. The following sections are designed to get you started using Git and working with the ICAR source code repository.
 
 ## Quickstart Cheatsheet
-More details are provided below, but if you just want a reminder of the key commands to set up your repository (replace https:// with ssh://git@ if appropriate) here is the basic setup:
+More details are provided below, but if you just want a reminder of the key commands to set up your repository (replace `https://` with `ssh://git@` if appropriate) here is the basic setup:
 
-    git clone https://github.com/<username>/icar.git
-    cd icar
-    git remote add upstream https://github.com/NCAR/icar.git
+```shell
+git clone https://github.com/<username>/icar.git
+cd icar
+git remote add upstream https://github.com/NCAR/icar.git
+```
 
 Then from the develop or master branch, periodically run:
+```shell
+git fetch upstream
+git merge upstream/<branch_name>
+```
 
-    git fetch upstream
-    git merge upstream/<branch_name>
-    
 or:
-
-    git pull upstream <branch_name>
+```shell
+git pull upstream <branch_name>
+```
 
 ### Git resources
 If you are not familiar with Git yet, we encourage you to spend a few minutes getting acquainted with the system before you starting working with the ICAR source code and Git. It's not difficult to use and a few minutes of learning about Git will go along way in helping you manage your code development.
@@ -67,11 +71,15 @@ You've successfully forked the ICAR repository, but so far it only exists on Git
 
 Run the following code on your local machine:
 
-    git clone https://github.com/<username>/icar.git
+```shell
+git clone https://github.com/<username>/icar.git
+```
 
 or (depending on your setup)
 
-    git clone ssh://git@github.com/<username>/icar.git
+```shell
+git clone ssh://git@github.com/<username>/icar.git
+```
 
 where `<username>` is your GitHub username.
 This clones your fork of the repository into the current directory. The clone will live in a directory called "icar".
@@ -82,33 +90,44 @@ When a repository is cloned, it has a default remote called `origin` that points
 
 Change to the newly cloned "icar" directory:
 
-    cd icar
+```shell
+cd icar
+```
 
 If you type
 
-    git status
+```shell
+git status
+```
 
 you should get some informational message, such as
 
-    On branch master
-    Your branch is up-to-date with 'origin/master'.
+```shell
+On branch master
+Your branch is up-to-date with 'origin/master'.
 
-    nothing to commit, working directory clean
-
+nothing to commit, working directory clean
+```
 
 If instead, you get the message
 
-    fatal: Not a git repository (or any of the parent directories): .git
+```shell
+fatal: Not a git repository (or any of the parent directories): .git
+```
 
 then you are not in a Git repository (note that the top level directory in a Git repo will have a `.git` subdirectory). Make sure you are in the right place. If you are then proceed.
 
 Assign the truth repo to a remote tracking branch called `upstream`, which will allow you easily pull in changes that are made in the truth repo and keep your clone in-sync with that version. Once you get more familiar with Git, you will be able to control which updates to include:
 
-    git remote add upstream https://github.com/NCAR/icar.git
+```shell
+git remote add upstream https://github.com/NCAR/icar.git
+```
 
 or (depending on your setup):
 
-    git remote add upstream ssh://git@github.com/NCAR/icar.git
+```shell
+git remote add upstream ssh://git@github.com/NCAR/icar.git
+```
 
 #### Step 4. Sync your clone with the truth repo
 
@@ -116,7 +135,9 @@ or (depending on your setup):
 
 Before starting to edit the code, pull in any new changes to the truth repo that have been made by other people since you first created the clone. You may want to do this periodically.
 
-    git fetch upstream
+```shell
+git fetch upstream
+```
 
 If you have already made changes to the code, this command by itself will not overwrite your files. For updates from the truth repo to show up in your files, you must do a **merge**.
 
@@ -126,9 +147,11 @@ Determine which branches you will need to work with. At the very least, this wil
 
 For each branch, merge any changes from the truth repo into your local version:
 
-    git checkout <branchname>
+```shell
+git checkout <branchname>
 
-    git merge upstream/<branchname>
+git merge upstream/<branchname>
+```
 
 where `<branchname>` is the name of the branch you want to update. Note that merging can be intimidating at first, because you are likely to get some messages about merge conflicts. Don't despair, there are many good internet resources that will explain this in detail.
 
@@ -140,11 +163,15 @@ where `<branchname>` is the name of the branch you want to update. Note that mer
 
 Change your active branch to the desired branch:
 
-    git checkout <branchname>
+```shell
+git checkout <branchname>
+```
 
 where `<branchname>` is the name of the branch. If you are creating a new branch, you can create and change to the branch in one step:
 
-    git checkout -b <new-branchname>
+```shell
+git checkout -b <new-branchname>
+```
 
 where `<new-branchname>` is the name of your new branch.
 
@@ -164,23 +191,31 @@ Before committing your changes, remove any extraneous files that have been creat
 
 To register the changes to (or creation of) a specific file, there are two steps that need to be completed in Git. First, changes need to be moved to a staging area (staged) and then they all files in the changing area are committed. You cannot commit a change without staging first and staging alone does not commit your changes. To move the committed changes to a repo that is different from the clone you are working on (for example, your fork), you will need to do one more step and push the changes to the remote repo:
 
-    git add <filename(s)>
+```shell
+git add <filename(s)>
+```
 
 where `<filename(s)>` are the names of the files with changes you want to commit. You can use wildcards, but be careful, because this often results in including files that you did not mean to include.
 
 To register moving or renaming any files:
 
-    git mv <old> <new>
+```shell
+git mv <old> <new>
+```
 
 where `<old>` and `<new>` are the old and new filenames.
 
 To register the deletion of a file:
 
-    git rm <filename>
+```shell
+git rm <filename>
+```
 
 After you have added (staged) all the files that you want to include in a commit, check that what you have is all you want:
 
-    git status
+```shell
+git status
+```
 
 This will tell you which files have changed, but have not been staged and also tells you how to unstage files. Note that you do not need to include all the changes you have made in one single commit. It is often most useful if you keep your commits small and very specific, because it makes it easier to undo things if you later decide that a previous code change was not nearly as useful as you once thought.
 
@@ -188,7 +223,9 @@ This will tell you which files have changed, but have not been staged and also t
 
 Now that you have added (or staged) the changes you want to include, you have to actually commit them to your local repo:
 
-    git commit
+```shell
+git commit
+```
 
 This will bring up a commit log in your default editor. The list of files whose changes will be committed (i.e. were staged via `git add`) is shown in the header at the top of the file. If you disagree with this list, exit the editor and add and unstage files as necessary to correct the list. Then try "git commit" again. If satisfied with the list of changed files, add a description of the set of changes (including a brief description of the problem that motivated the changes). Save and exit.
 
@@ -198,7 +235,9 @@ Note: writing good commit messages is essential for making sense of your code ch
 
 After committing your changes, you should push them to your fork (which has the alias `origin`) stored on GitHub. If you don't remember what all your remotes are, simply type (`git remote -v`):
 
-    git push origin <branchname>
+```shell
+git push origin <branchname>
+```
 
 where `<branchname>` is the name of the branch where you made the commits.
 
@@ -212,12 +251,14 @@ To make your changes visible to other users/developers, your changes must be inc
 The ICAR administrator and other developers will review your pull request and decide if/how they want to incorporate your changes into the code. They are likely to suggest some changes (code style, content, etc.).
 
 ##### Useful git configuration
-If you frequently make (and delete) remote branches and work from multiple computers, it might be useful to configure git to automatically prune remote branches when they have been deleted by running: 
+If you frequently make (and delete) remote branches and work from multiple computers, it might be useful to configure git to automatically prune remote branches when they have been deleted by running:
 
-    git config --local fetch.prune true
+```shell
+git config --local fetch.prune true
+```
 
-This prevents you from deleting a remote branch from computer A, then accidentally creating it again from computer B.  
+This prevents you from deleting a remote branch from computer A, then accidentally creating it again from computer B.
 
 ### Git workflow
 
-For us to leverage Git to its full potential, we have implemented a Git-oriented workflow. This requires developers to adhere to a few rules regarding branch names and merge requests. A full description of the workflow we use can be found [here](https://github.com/NCAR/icar/blob/master/docs/howto/icar_git_workflow.md).  A useful tool to help use this workflow is called [git-flow](https://github.com/petervanderdoes/gitflow-avh). 
+For us to leverage Git to its full potential, we have implemented a Git-oriented workflow. This requires developers to adhere to a few rules regarding branch names and merge requests. A full description of the workflow we use can be found [here](https://github.com/NCAR/icar/blob/master/docs/howto/icar_git_workflow.md).  A useful tool to help use this workflow is called [git-flow](https://github.com/petervanderdoes/gitflow-avh).
