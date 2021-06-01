@@ -47,7 +47,8 @@ module linear_theory_winds
     use string,                     only: str
     use grid_interface,             only: grid_t
     use linear_theory_lut_disk_io,  only: read_LUT, write_LUT
-    use mod_atm_utilities
+    ! use mod_atm_utilities ! V2
+    use mod_atm_utilities,         only : calc_stability, calc_u, calc_v, calc_speed, calc_direction, blocking_fraction ! V1
     use array_utilities,            only: smooth_array, calc_weight, linear_space
     use icar_constants,             only: kMAX_FILE_LENGTH
 
@@ -843,6 +844,7 @@ contains
         integer,        intent(in)   :: winsz
         logical,        intent(in)   :: update
 
+        logical :: externalN ! flag whether N is read from a field in the forcing dataset
         integer :: nx,nxu, ny,nyv, nz, i,j,k, smoothz
         integer :: uk, vi !store a separate value of i for v and of k for u to we can handle nx+1, ny+1
         integer :: step, dpos, npos, spos, nexts, nextd, nextn
@@ -884,6 +886,21 @@ contains
         nz  = size(u3d,2)
         nxu = size(u3d,1)
         nyv = size(v3d,3)
+
+        ! Here we just set externalN based on two options.
+        ! if NfromForcing is True and nvar is defined then N is to be
+        ! read from the forcing data set instead of being calculated by ICAR,
+        ! meaning that externalN = True. If not both conditions are satisfied,
+        ! externalN is False.
+        if (trim(options%nvar)/="") then
+            if (options%lt_options%N_from_forcing) then
+                externalN = .True.
+            else
+                externalN = .False.
+            endif
+        else
+            externalN = .False.
+        endif
 
         if (reverse) then
             ! u_LUT=>rev_u_LUT
@@ -1337,6 +1354,7 @@ contains
         ! add the spatially variable linear field
         ! if we are reverseing the effects, that means we are in the low-res domain
         ! that domain does not have a spatial LUT calculated, so it can not be performed
+
         ! if (use_spatial_linear_fields)then
             call spatial_winds(domain,rev, vsmooth, stability_window_size, update=updt)
         ! else
