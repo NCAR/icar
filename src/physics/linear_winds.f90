@@ -36,10 +36,11 @@
 !!----------------------------------------------------------
 module linear_theory_winds
     use iso_c_binding
-    use fft,                        only: fftw_execute_dft,                      &
-                                            fftw_alloc_complex, fftw_free,       &
-                                            fftw_plan_dft_2d, fftw_destroy_plan, &
-                                            FFTW_FORWARD, FFTW_MEASURE, FFTW_BACKWARD, FFTW_ESTIMATE ! note fft module is defined in fftshift.f90
+    use fft,                        only: fftw_execute_dft,                    &
+                                          fftw_alloc_complex, fftw_free,       &
+                                          fftw_plan_dft_2d, fftw_destroy_plan, &
+                                          FFTW_FORWARD, FFTW_MEASURE,          &
+                                          FFTW_BACKWARD, FFTW_ESTIMATE ! note fft module is defined in fftshift.f90
     use fftshifter,                 only: ifftshift, fftshift
     use data_structures
     use domain_interface,           only: domain_t
@@ -47,9 +48,11 @@ module linear_theory_winds
     use string,                     only: str
     use grid_interface,             only: grid_t
     use linear_theory_lut_disk_io,  only: read_LUT, write_LUT
-    ! use mod_atm_utilities ! V2
-    use mod_atm_utilities,         only : calc_stability, calc_u, calc_v, calc_speed, calc_direction, blocking_fraction ! V1
-    use array_utilities,            only: smooth_array, calc_weight, linear_space
+    use mod_atm_utilities,         only : calc_stability, calc_u, calc_v, &
+                                          calc_speed, calc_direction,     &
+                                          blocking_fraction, options_t
+    use array_utilities,            only: smooth_array, calc_weight, &
+                                          linear_space
     use icar_constants,             only: kMAX_FILE_LENGTH
 
     implicit none
@@ -886,21 +889,6 @@ contains
         nz  = size(u3d,2)
         nxu = size(u3d,1)
         nyv = size(v3d,3)
-
-        ! Here we just set externalN based on two options.
-        ! if NfromForcing is True and nvar is defined then N is to be
-        ! read from the forcing data set instead of being calculated by ICAR,
-        ! meaning that externalN = True. If not both conditions are satisfied,
-        ! externalN is False.
-        if (trim(options%nvar)/="") then
-            if (options%lt_options%N_from_forcing) then
-                externalN = .True.
-            else
-                externalN = .False.
-            endif
-        else
-            externalN = .False.
-        endif
 
         if (reverse) then
             ! u_LUT=>rev_u_LUT
