@@ -1,17 +1,18 @@
-##ICAR settings file documentation
+## ICAR settings file documentation
 
-Reading the comments in the run/short_icar_options.nml or run/complete_icar_options.nml files may be some of the best documentation available. 
+Reading the comments in the run/short_icar_options.nml or run/complete_icar_options.nml files may be some of the best documentation available.
 
-###Main Namelists
-REQUIRED:
- * model_version
- * physics
- * parameters
- * files_list
- * output_options
- * z_info (technically optional)
+### Main Namelists
+__REQUIRED__:
 
- OPTIONAL:
+* model_version
+* physics
+* parameters
+* files_list
+* z_info (technically optional)
+
+__OPTIONAL__:
+
  * restart_info
  * lt_parameters
  * lsm_parameters
@@ -19,41 +20,41 @@ REQUIRED:
  * adv_parameters
 
 
-###model_version
+### model_version
 This namelist specifies the model version associated with the settings file, and provides a place to enter a comment into the output files.
 
-###physics
+### physics
 This namelist specifies which physics options will be used when the model runs.
 
-###parameters
+### parameters
 This namelist specifies various model settings.
 
-###files_list
+### files_list
 This namelist specifies the name of various files that will be used by ICAR.  The most important files are the forcing data files, and the ICAR hi-res grid file (akin to the WRF geogrid).  Additional files can be specified for spatially variable calibration input, and a file to list the input forcing file names.
 
-###output_options
+### output_options
 This namelist specifies the output and restart filenames, as well as output/restart time intervals, and the variables to be written to the output files.
 
-###z_info
+### z_info
 This namelist specifies the thickness of each model layer.  Technically this is optional as it will default to something reasonable, but it is recommended that it be set as the default uses too fine a discretization (and thus runs slower) than should be used.
 
 space_varying z levels can be chosen to enable a simple decay function for terrain, not unlike the sigma coordinate. This can be refined by choosing SLEVE coordinates, where the decay of the terrain is no longer linear with height but is controlled by the sleve decay factor. Furthermore (following Leuenberger et al 2009), a second parameter sleve_n determines where in the z column the compression of the layers is strongest, in order to to prevent excessive compression of the lowest layers (sleve_n=1). In the future a lowpass filter can be incorporated so that larger terrain features can be allowed to decay slower than small ones, thereby allowing for a true SLEVE coordinate as envisioned by Schär et al 2002 "A New Terrain-Following Vertical Coordinate Formulation for Atmospheric Prediction Models" and Leuenberger et al 2009: "A Generalization of the SLEVE Vertical Coordinate".
 
-use_terrain_difference. Enabling this setting allows for slopes to be calculated based on the difference between forcing terrain and hi-res terrain. Especially in simulations where the forcing data already has a high resolution, many terrain induced effects (wind acceleration for one) are partially resolved by the forcing data, and may lead to double counting of certain effects. This setting allows to correct for this by only incorporating the additonal terrain effects. 
- 
-###restart_info
+use_terrain_difference. Enabling this setting allows for slopes to be calculated based on the difference between forcing terrain and hi-res terrain. Especially in simulations where the forcing data already has a high resolution, many terrain induced effects (wind acceleration for one) are partially resolved by the forcing data, and may lead to double counting of certain effects. This setting allows to correct for this by only incorporating the additonal terrain effects.
+
+### restart_info
 This optional namelist specifies the necessary input for a restart run.
 
-###lt_parameters
+### lt_parameters
 This optional namelist specifies various parameters that are used in the linear theory calculations.
 
-###lsm_parameters
+### lsm_parameters
 This optional namelist specifies various parameters that are used in the land surface model.
 
-###mp_parameters
+### mp_parameters
 This optional namelist specifies various parameters that are used in the microphysics scheme.
 
-###adv_parameters
+### adv_parameters
 This optional namelist specifies various parameters that are used in the advection calculations.
 
 

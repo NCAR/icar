@@ -439,6 +439,7 @@ icar:${OBJS}
 all:icar test
 
 install:icar
+	mkdir -p ${INSTALLDIR}
 	${CP} icar ${INSTALLDIR}
 
 clean:

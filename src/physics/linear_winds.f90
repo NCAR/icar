@@ -36,10 +36,11 @@
 !!----------------------------------------------------------
 module linear_theory_winds
     use iso_c_binding
-    use fft,                        only: fftw_execute_dft,                      &
-                                            fftw_alloc_complex, fftw_free,       &
-                                            fftw_plan_dft_2d, fftw_destroy_plan, &
-                                            FFTW_FORWARD, FFTW_MEASURE, FFTW_BACKWARD, FFTW_ESTIMATE ! note fft module is defined in fftshift.f90
+    use fft,                        only: fftw_execute_dft,                    &
+                                          fftw_alloc_complex, fftw_free,       &
+                                          fftw_plan_dft_2d, fftw_destroy_plan, &
+                                          FFTW_FORWARD, FFTW_MEASURE,          &
+                                          FFTW_BACKWARD, FFTW_ESTIMATE ! note fft module is defined in fftshift.f90
     use fftshifter,                 only: ifftshift, fftshift
     use data_structures
     use domain_interface,           only: domain_t
@@ -47,8 +48,11 @@ module linear_theory_winds
     use string,                     only: str
     use grid_interface,             only: grid_t
     use linear_theory_lut_disk_io,  only: read_LUT, write_LUT
-    use mod_atm_utilities
-    use array_utilities,            only: smooth_array, calc_weight, linear_space
+    use mod_atm_utilities,         only : calc_stability, calc_u, calc_v, &
+                                          calc_speed, calc_direction,     &
+                                          blocking_fraction, options_t
+    use array_utilities,            only: smooth_array, calc_weight, &
+                                          linear_space
     use icar_constants,             only: kMAX_FILE_LENGTH
 
     implicit none
@@ -843,6 +847,7 @@ contains
         integer,        intent(in)   :: winsz
         logical,        intent(in)   :: update
 
+        logical :: externalN ! flag whether N is read from a field in the forcing dataset
         integer :: nx,nxu, ny,nyv, nz, i,j,k, smoothz
         integer :: uk, vi !store a separate value of i for v and of k for u to we can handle nx+1, ny+1
         integer :: step, dpos, npos, spos, nexts, nextd, nextn
@@ -1337,6 +1342,7 @@ contains
         ! add the spatially variable linear field
         ! if we are reverseing the effects, that means we are in the low-res domain
         ! that domain does not have a spatial LUT calculated, so it can not be performed
+
         ! if (use_spatial_linear_fields)then
             call spatial_winds(domain,rev, vsmooth, stability_window_size, update=updt)
         ! else
