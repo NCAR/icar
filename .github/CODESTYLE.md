@@ -1,4 +1,6 @@
 # WRF-Hydro Fortran Conventions Guide
+Note: the following does not apply to existing code in `src/physics`. That
+codes is from another code base and should remain as pristine as possible.
 
 # Fortran standard
 New code contributions should be written to at least
