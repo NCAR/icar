@@ -40,4 +40,3 @@ Merging the PR depends on following checklist being completed. Add `X` between
  - [ ] Backwards compatible
  - [ ] Requires new files? If so, how to generate them.
  - [ ] Fully documented
- - [ ] Short description in the Development section of `NEWS.md`
