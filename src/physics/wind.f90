@@ -254,7 +254,7 @@ contains
         do j = jms, jme
             do k = kms, kme
                 ! rotate wind field to the real grid
-                u_local = u(ims:ime,k,j) * costheta(:,j) + v(ims:ime,k,j) * sintheta(ims:ime,j)
+                u_local = u(ims:ime,k,j) * costheta(:,j) - v(ims:ime,k,j) * sintheta(ims:ime,j)
                 v_local = v(ims:ime,k,j) * costheta(:,j) + u(ims:ime,k,j) * sintheta(ims:ime,j)
                 u(:ime,k,j) = u_local
                 v(:ime,k,j) = v_local
