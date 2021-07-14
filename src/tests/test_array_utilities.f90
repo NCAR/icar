@@ -21,7 +21,7 @@ contains
         n    = 100
         vmin = 1e-4
         vmax = 3
-        
+
         call linear_space(test_array,vmin,vmax,n)
 
         if (.not.allocated(test_array)) then

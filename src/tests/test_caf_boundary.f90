@@ -64,7 +64,7 @@ program test_caf_boundary
     ! enddo
 
     sync all
-    
+
     if (this_image()==1) print*, "Done"
 
 

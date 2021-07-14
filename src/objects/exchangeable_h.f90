@@ -91,12 +91,12 @@ module exchangeable_interface
       implicit none
       class(exchangeable_t), intent(inout) :: this
     end subroutine
-    
+
     module subroutine exchange_v(this)
       implicit none
       class(exchangeable_t), intent(inout) :: this
     end subroutine
-    
+
     module subroutine put_north(this)
         implicit none
         class(exchangeable_t), intent(inout) :: this

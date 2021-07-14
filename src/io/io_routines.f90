@@ -389,18 +389,18 @@ contains
         ! This will be the netCDF ID for the file and data_in variable.
         integer :: ncid, varid,i, err
         real :: scale, offset
-            
+
         if (present(extradim)) then
             dimstart=extradim
             dimstart(1:2)=1
         else
             dimstart=1
         endif
-        
+
         diminfo = 1
         ! Read the dimension lengths
         call io_getdims(filename,varname,diminfo)
-        
+
         if (allocated(data_in)) deallocate(data_in)
         allocate(data_in(diminfo(2),diminfo(3)))
 

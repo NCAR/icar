@@ -1,6 +1,6 @@
 !>------------------------------------------------------------
 !!  Noah Land Surface Model (from WRF)
-!!  
+!!
 !!  @author
 !!  various (see Chen and Dudhia 2001)
 !!
@@ -20,7 +20,7 @@ MODULE module_sf_noahlsm
   REAL    , PARAMETER :: rhowater     = 1000.
   real, parameter :: R_D=RD
   real, parameter :: KARMAN=0.4
-  
+
 
 ! VEGETATION PARAMETERS
         INTEGER :: LUCATS , BARE
@@ -79,7 +79,7 @@ CONTAINS
                        EC,EDIR,ET,ETT,ESNOW,DRIP,DEW,                   &    !O
                        BETA,ETP,SSOIL,                                  &    !O
                        FLX1,FLX2,FLX3,                                  &    !O
-		       FLX4,FVB,FBUR,FGSN,UA_PHYS,                      &    !UA 
+		       FLX4,FVB,FBUR,FGSN,UA_PHYS,                      &    !UA
                        SNOMLT,SNCOVR,                                   &    !O
                        RUNOFF1,RUNOFF2,RUNOFF3,                         &    !O
                        RC,PC,RSMIN,XLAI,RCS,RCT,RCQ,RCSOIL,             &    !O
@@ -567,7 +567,7 @@ CONTAINS
               CH = CH/(1.+RU*CH)
             ENDIF
 
-            SNCOVR = MIN(SNCOVR,0.98) 
+            SNCOVR = MIN(SNCOVR,0.98)
 
             CALL ALCALC (ALB,SNOALB,EMBRD,SHDFAC,SHDMIN,SNCOVR,T1, &
                  ALBEDO,EMISSI,DT,SNOWNG,SNOTIME1,LVCOEF)
@@ -784,7 +784,7 @@ CONTAINS
 ! ----------------------------------------------------------------------
 
          SHEAT = - (CH * CP * SFCPRS)/ (R * T2V) * ( TH2- T1 )
-         IF(UA_PHYS) SHEAT = SHEAT + FLX4   
+         IF(UA_PHYS) SHEAT = SHEAT + FLX4
 
 ! ----------------------------------------------------------------------
 ! CONVERT EVAP TERMS FROM KINEMATIC (KG M-2 S-1) TO ENERGY UNITS (W M-2)
@@ -795,7 +795,7 @@ CONTAINS
       ET(K) = ET(K) * LVH2O
       ENDDO
       ETT = ETT * LVH2O
-      
+
 !       ETPND1=ETPND1 * LVH2O
 
       ESNOW = ESNOW * LSUBS
@@ -1380,7 +1380,7 @@ CONTAINS
 ! ----------------------------------------------------------------------
 
   SUBROUTINE FAC2MIT(SMCMAX,FLIMIT)
-    IMPLICIT NONE		
+    IMPLICIT NONE
     REAL, INTENT(IN)  :: SMCMAX
     REAL, INTENT(OUT) :: FLIMIT
 
@@ -2100,11 +2100,11 @@ CONTAINS
       FLX4 = 0.0
       IF(UA_PHYS) THEN
         IF(SNEQV > 0. .AND. FNET > 0. .AND. SOLDN > 0. ) THEN
-         TOTABS = (1.-ALBEDO)*SOLDN*FVB           ! solar radiation absorbed 
+         TOTABS = (1.-ALBEDO)*SOLDN*FVB           ! solar radiation absorbed
                                                   ! by vegetated fraction
          UCABS = MIN(TOTABS,((1.0-ALGDSN)*(1.0-ALVGSN)*SOLDN*GAMA)*FVB)
 !         print*,'penman',UCABS,TOTABS,SOLDN,GAMA,FVB
-!         UCABS = MIN(TOTABS,(0.44*SOLDN*GAMA)*FVB)  
+!         UCABS = MIN(TOTABS,(0.44*SOLDN*GAMA)*FVB)
                                                   ! UCABS -> solar radiation
 						  ! absorbed under canopy
          FLX4 = MIN(TOTABS - UCABS, MIN(250., 0.5*(1.-ALBEDO)*SOLDN))
@@ -2693,7 +2693,7 @@ CONTAINS
         END IF
 !------------------------------------------------------------------
 ! FBUR: VERTICAL FRACTION OF VEGETATION COVERED BY SNOW
-! GRASS, CROP, AND SHRUB: MULTIPLY 0.4 BY ZTOPV AND ZBOTV BECAUSE 
+! GRASS, CROP, AND SHRUB: MULTIPLY 0.4 BY ZTOPV AND ZBOTV BECAUSE
 ! THEY WILL BE PRESSED DOWN BY THE SNOW.
 ! FOREST: DON'T NEED TO CHANGE ZTOPV AND ZBOTV.
 
@@ -3379,10 +3379,10 @@ CONTAINS
           BURIAL = 7.0*Z0BRD - SNOWH
           IF(BURIAL.LE.0.0007) THEN
               Z0EFF = Z0S
-          ELSE      
+          ELSE
               Z0EFF = BURIAL/7.0
           ENDIF
-      
+
           Z0 = (1.- SNCOVR)* Z0BRD + SNCOVR * Z0EFF
 
       ENDIF

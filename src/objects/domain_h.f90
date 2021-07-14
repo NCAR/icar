@@ -149,7 +149,7 @@ module domain_interface
     real,                       allocatable :: h2_v(:,:)     ! the small-scale terrain (h2) on the v grid
 
     real,                       allocatable :: dz_scl(:)  ! the scaled dz levels, required for delta terrain calculation
-    
+
     real,                       allocatable :: ustar(:,:)
     real,                       allocatable :: znu(:)
     real,                       allocatable :: znw(:)

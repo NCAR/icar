@@ -10,13 +10,13 @@ program test_fftshift
     implicit none
 
     integer,parameter::n=5
-    
+
     real,dimension(:),allocatable::test1r
     real,dimension(:,:),allocatable::test2r
     complex,dimension(:),allocatable::test1c
     complex,dimension(:,:),allocatable::test2c
     integer::i,j
-    
+
     allocate(test1r(n))
     allocate(test2r(n,n))
     allocate(test1c(n))
@@ -69,5 +69,5 @@ program test_fftshift
     print*, " Reverted:"
     print*, aint(real(test2c))
 
-    
+
 end program test_fftshift

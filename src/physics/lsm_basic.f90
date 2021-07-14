@@ -2,13 +2,13 @@
 !! Not really a land surface model, use coarse model fluxes
 !!
 !! This code was used in very early versions
-!! of ICAR and is maintained for now just in case it becomes of interest again. 
+!! of ICAR and is maintained for now just in case it becomes of interest again.
 !! Takes sensible and latent heat fluxes supplied by coarse model and adds them in
-!! this code is generally deprecated. 
+!! this code is generally deprecated.
 !!
-!! Also provides simple PBL mixing, and radiative cooling 
-!!  (which shouldn't be here.) 
-!! 
+!! Also provides simple PBL mixing, and radiative cooling
+!!  (which shouldn't be here.)
+!!
 !! The entry point to the code is lsm_basic(domain,options,dt)
 !!
 !! <pre>
@@ -17,9 +17,9 @@
 !!  [->],
 !!  [->],
 !!  [->]
-!! 
+!!
 !! High level routine descriptions / purpose
-!! 
+!!
 !! Driver inputs: domain,options,dt
 !! </pre>
 !!
@@ -61,11 +61,11 @@ module module_lsm_basic
         real, dimension(ids:ide,kds:kde) :: rho
         real, dimension(ids+1:ide-1) :: temperature,dTemp,lhdQV
         real, dimension(kds:kde)::means,f1,f2,rhomean
-        
-        
+
+
 !       not really needed anymore variables for tracking statistics and modifying fluxes
         real :: factor,mxdT,mxdqv,temp,diffusionrate,coolingrate,sbconstant
-        
+
         temp=0.
         mxdT=0.
         mxdqv=0.
@@ -106,7 +106,7 @@ module module_lsm_basic
                 do j=ids+1,ide-1
                     rhomean(kds:kde-1)=(rho(j,kds:kde-1)+rho(j,kds+1:kde))/2
                     rhomean(kde)=rho(j,kde)
-                
+
                     means(kds:kde-1)=(qv(j,kds:kde-1,i)+qv(j,kds+1:kde,i))/2
     !               diffusion fluxes within the PBL
                     f1(1:pblh(j,i)-1)=(qv(j,1:pblh(j,i)-1,i)-means(1:pblh(j,i)-1))*diffusionrate
@@ -137,14 +137,14 @@ module module_lsm_basic
         !$omp end do
         !$omp end parallel
     end subroutine simple_land_surface_fluxes
-    
+
     subroutine calc_pbl_index(z,pblh,pblh_i)
         implicit none
         real, dimension(:,:,:),intent(in)::z
         real, dimension(:,:),intent(in)::pblh
         integer,dimension(:,:),intent(out)::pblh_i
         integer::nx,ny,nz,i,j,k
-        
+
         nx=size(z,1)
         nz=size(z,2)
         ny=size(z,3)
@@ -164,16 +164,16 @@ module module_lsm_basic
         enddo
         !$omp end do
         !$omp end parallel
-        
+
     end subroutine calc_pbl_index
-    
+
     subroutine lsm_basic(domain,options,dt)
         implicit none
         type(domain_type),intent(inout)::domain
         type(options_type),intent(in)::options
         real,intent(in)::dt
         integer::nx,ny,nz,j
-        
+
         nx=size(domain%p,1)
         nz=size(domain%p,2)
         ny=size(domain%p,3)
@@ -181,10 +181,10 @@ module module_lsm_basic
             allocate(pblh_i(nx,ny))
         endif
         call calc_pbl_index(domain%z,domain%pbl_height,pblh_i)
-        
+
         call simple_land_surface_fluxes(domain%th,domain%qv,domain%p,domain%dz,domain%pii,dt, &
                                         domain%sensible_heat,domain%latent_heat,pblh_i, &
                                         1,nx,1,nz,1,ny,options)
-        
+
     end subroutine lsm_basic
 end module module_lsm_basic

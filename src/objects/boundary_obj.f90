@@ -61,7 +61,7 @@ contains
         ! endif
         ! call this%distribute_initial_conditions()
 
-        
+
         call setup_boundary_geo(this, options%parameters%longitude_system)
 
     end subroutine
@@ -71,7 +71,7 @@ contains
     !!
     !>-----------------------------------------------------------
     module subroutine init_external(this, options)
-        class(boundary_t), intent(inout) :: this  ! the additional starting conditions 
+        class(boundary_t), intent(inout) :: this  ! the additional starting conditions
         type(options_t),   intent(inout) :: options
 
         character(len=kMAX_NAME_LENGTH), allocatable :: vars_to_read(:)
@@ -87,9 +87,9 @@ contains
         ! allocate(dim_list(1))
 
         this%file_list(1) = options%parameters%external_files
-        
+
         call setup_variable_lists(options%parameters%ext_var_list, options%parameters%ext_dim_list, vars_to_read, var_dimensions)  ! this simply copies o%p%ext_vars to vars_to_read and same for dims (+some checks)
-        
+
 
         if ( trim(options%parameters%z_ext) /= "") zvar_ext = options%parameters%z_ext
 
@@ -113,7 +113,7 @@ contains
     !! Set default component values
     !! Reads initial conditions from the external file
     !!
-    !!   For now this is only available for static data (no time component) 
+    !!   For now this is only available for static data (no time component)
     !!
     !!------------------------------------------------------------
     module subroutine init_local2(this, options, file_list, var_list, dim_list, start_time, &
@@ -143,7 +143,7 @@ contains
             this%curfile=1 !?
         endif
 
-        
+
         !  read in latitude and longitude coordinate data
         call io_read(file_list(this%curfile), lat_ext, this%lat, this%curstep)
         call io_read(file_list(this%curfile), lon_ext, this%lon, this%curstep)
@@ -152,13 +152,13 @@ contains
         ! if ( (size(this%lat,2)==1) .and. (size(this%lon,2)==1) ) then  !(size(this%lat,1)/=size(this%lon,1)) (shape(this%lat) /= shape(this%lon)) .and.
         !     this%lat = reshape(this%lat, (/size(this%lat,1), size(this%lon,1)/), pad=this%lat)
         !     this%lon = reshape(this%lon, (/size(this%lat,1), size(this%lon,1)/), pad=this%lon)
-        ! endif    
-       
+        ! endif
+
         ! read in the height coordinate of the input data
         ! if (present(zvar_ext) .and. (trim(zvar_ext)/="") ) then
         !     if (this_image()==1)  print *, " zvar_ext ", trim(zvar_ext)
         !     if (.not. options%parameters%compute_z ) then ! .and. present(zvar_ext)
-        !         ! call io_read(file_list(this%curfile), z_var,   temp_z,   this%curstep)    
+        !         ! call io_read(file_list(this%curfile), z_var,   temp_z,   this%curstep)
         !         call io_read(file_list(1), zvar_ext,   temp_z,   1)
         !         nx = size(temp_z,1)
         !         ny = size(temp_z,2)
@@ -174,19 +174,19 @@ contains
         !         if (allocated(this%z)) deallocate(this%z)
         !         allocate(this%z(nx,nz,ny))
         !     endif
-        ! else    
+        ! else
             ! print *, "  ext var = 2D"
-            if ( (size(this%lat,2)==1) .and. (size(this%lon,2)==1) ) then 
+            if ( (size(this%lat,2)==1) .and. (size(this%lon,2)==1) ) then
                 if (this_image()==1) print*, "  external conditions provided on regular 1D grid"
                 nx = size(this%lon,1)
                 ny = size(this%lat,1)
                 nz = 0
-            else    
+            else
                 nx = size(this%lat,1)
                 ny = size(this%lat,2)
                 nz = 0
             endif
-            
+
         ! endif
 
         ! ! call assert(size(var_list) == size(dim_list), "list of variable dimensions must match list of variables")
@@ -195,7 +195,7 @@ contains
 
             call add_var_to_dict(this%variables, file_list(this%curfile), var_list(i), dim_list(i), this%curstep, [nx, nz, ny])
             ! if (this_image()==1)  print*, i," var_list(i): ",trim(var_list(i)), " dim_list(i): ", dim_list(i), " this%curstep ", this%curstep
-            
+
         end do
 
     end subroutine
@@ -338,7 +338,7 @@ contains
         if (ndims==2) then
             call io_read(file_name, var_name, temp_2d_data, timestep)
             ! print*, "    file_name, var_name ", file_name, trim(var_name)
-            
+
             call new_variable%initialize( shape( temp_2d_data ) )
             new_variable%data_2d = temp_2d_data
 

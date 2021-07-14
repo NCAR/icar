@@ -283,9 +283,9 @@ contains
 !
 !     this code is a revised vertical diffusion package ("ysupbl")
 !     with a nonlocal turbulent mixing in the pbl after "mrfpbl".
-!     the ysupbl (hong et al. 2006) is based on the study of noh 
-!     et al.(2003) and accumulated realism of the behavior of the 
-!     troen and mahrt (1986) concept implemented by hong and pan(1996). 
+!     the ysupbl (hong et al. 2006) is based on the study of noh
+!     et al.(2003) and accumulated realism of the behavior of the
+!     troen and mahrt (1986) concept implemented by hong and pan(1996).
 !     the major ingredient of the ysupbl is the inclusion of an explicit
 !     treatment of the entrainment processes at the entrainment layer.
 !     this routine uses an implicit approach for vertical flux
@@ -304,7 +304,7 @@ contains
 !
 !     references:
 !
-!        hong, noh, and dudhia (2006), mon. wea. rev. 
+!        hong, noh, and dudhia (2006), mon. wea. rev.
 !        hong and pan (1996), mon. wea. rev.
 !        noh, chun, hong, and raasch (2003), boundary layer met.
 !        troen and mahrt (1986), boundary layer met.
@@ -435,7 +435,7 @@ contains
    real,    dimension( ims:ime, kms:kme )                                    , &
             intent(inout)   ::                                        exch_hx
 !
-   real,    dimension( ims:ime )                                             , & 
+   real,    dimension( ims:ime )                                             , &
             intent(in  )    ::                                            u10, &
                                                                           v10
    real,    dimension( its:ite )    ::                                         &

@@ -65,13 +65,13 @@ program icar
 
     if (this_image()==1) write(*,*) "Setting up output files"
     ! should be combined into a single setup_output call
-    
+
     if (this_image()==1 .and. options%parameters%frames_per_outfile<2) then
         print*,"  frames per output file should be 2 or more. Currently: ", options%parameters%frames_per_outfile
     else
         if (this_image()==1) print*,"  frames per output file= ", options%parameters%frames_per_outfile
-    end if    
-    
+    end if
+
     call restart_dataset%set_domain(domain)
     call restart_dataset%add_variables(options%vars_for_restart, domain)
 

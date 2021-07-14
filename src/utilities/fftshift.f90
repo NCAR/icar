@@ -5,8 +5,8 @@
 !! any variation of complex, real, 1D or 2D arrays
 !! 2D can also be called with C_DOUBLE_COMPLEX variables
 !!
-!! fftshift swaps the left and right sides of an array.  For a 
-!!  2D array, the top and bottom halves are also swapped. 
+!! fftshift swaps the left and right sides of an array.  For a
+!!  2D array, the top and bottom halves are also swapped.
 !!
 !!  @author
 !!  Ethan Gutmann (gutmann@ucar.edu)
@@ -30,7 +30,7 @@ contains
         integer::nx
         complex,allocatable,dimension(:) :: tmp
         integer::i,ii
-        
+
         nx=size(fftimage)
         allocate(tmp(nx))
         do i=1, nx
@@ -48,7 +48,7 @@ contains
         integer::nx
         real,allocatable,dimension(:) :: tmp
         integer::i,ii
-        
+
         nx=size(fftimage)
         allocate(tmp(nx))
         do i=1, nx
@@ -67,7 +67,7 @@ contains
         integer::nx,ny
         complex, allocatable,dimension(:,:) :: tmp
         integer::i,j,ii,jj
-        
+
         nx=size(fftimage,1)
         ny=size(fftimage,2)
         allocate(tmp(nx,ny))
@@ -90,7 +90,7 @@ contains
         integer::nx,ny
         complex, allocatable,dimension(:,:) :: tmp
         integer::i,j,ii,jj
-        
+
         nx=size(fftimage,1)
         ny=size(fftimage,2)
         allocate(tmp(nx,ny))
@@ -113,7 +113,7 @@ contains
         integer::nx,ny
         complex, allocatable,dimension(:,:) :: tmp
         integer::i,j,ii,jj
-        
+
         nx=size(fftimage,1)
         ny=size(fftimage,2)
         allocate(tmp(nx,ny))
@@ -136,7 +136,7 @@ contains
         integer::nx,ny
         real, allocatable,dimension(:,:) :: tmp
         integer::i,j,ii,jj
-        
+
         nx=size(fftimage,1)
         ny=size(fftimage,2)
         allocate(tmp(nx,ny))
@@ -153,14 +153,14 @@ contains
         fftimage = tmp
         deallocate(tmp)
     end subroutine fftshift2r
-    
+
     subroutine ifftshift1c(fftimage)
         implicit none
         complex, intent(inout),dimension(:):: fftimage
         integer::nx
         complex,allocatable,dimension(:) :: tmp
         integer::i,ii
-        
+
         nx=size(fftimage)
         allocate(tmp(nx))
         do i=1, nx
@@ -178,7 +178,7 @@ contains
         integer::nx
         real,allocatable,dimension(:) :: tmp
         integer::i,ii
-        
+
         nx=size(fftimage)
         allocate(tmp(nx))
         do i=1, nx
@@ -197,7 +197,7 @@ contains
         integer::nx,ny
         complex, allocatable,dimension(:,:) :: tmp
         integer::i,j,ii,jj
-        
+
         nx=size(fftimage,1)
         ny=size(fftimage,2)
         allocate(tmp(nx,ny))
@@ -220,7 +220,7 @@ contains
         integer::nx,ny
         complex, allocatable,dimension(:,:) :: tmp
         integer::i,j,ii,jj
-        
+
         nx=size(fftimage,1)
         ny=size(fftimage,2)
         allocate(tmp(nx,ny))
@@ -243,7 +243,7 @@ contains
         integer::nx,ny
         complex, allocatable,dimension(:,:) :: tmp
         integer::i,j,ii,jj
-        
+
         nx=size(fftimage,1)
         ny=size(fftimage,2)
         allocate(tmp(nx,ny))
@@ -266,7 +266,7 @@ contains
         integer::nx,ny
         real, allocatable,dimension(:,:) :: tmp
         integer::i,j,ii,jj
-        
+
         nx=size(fftimage,1)
         ny=size(fftimage,2)
         allocate(tmp(nx,ny))

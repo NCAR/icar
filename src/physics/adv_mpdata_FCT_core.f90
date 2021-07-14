@@ -9,7 +9,7 @@
 !
 ! It is stored in a separate file so that the same code can
 ! be used for advect_u, advect_v, and advect_w after l, r, etc. are set up
-! 
+!
 !     ! First Calculate the standard upwind advection
 !     call flux1(l,r,U2,f)
 !
@@ -40,10 +40,10 @@
 
 ! Fluxes are added to the original scalar field in the advect_u and advect_v subroutines
 
-! This is the Flux Corrected Transport option described in : 
+! This is the Flux Corrected Transport option described in :
 ! Smolarkiewicz and Grabowski (1990) J. of Comp. Phys. v86 p355-375
 
-! for now at least this is in a loop instead of vectorized.  I'm not sure how easy this would be to vectorize. 
+! for now at least this is in a loop instead of vectorized.  I'm not sure how easy this would be to vectorize.
     do i=1,n-1
         ! first find the min and max values allowable in the final field based on the initial (stored in l) and upwind (q1) fields
         ! min and max are taken from the grid cells on either side of the flux cell wall to be corrected
@@ -66,7 +66,7 @@
             qmax_i2=max(q1(i),q1(i+1),l(i))
             qmin_i2=min(q1(i),q1(i+1),l(i))
         endif
-        
+
         ! next compute the total fluxes into and out of the upwind and downwind cells
         ! these are the fluxes into and out of the "left-hand" cell (which is just the previous "right-hand" cell)
         if (i/=1) then
@@ -81,9 +81,9 @@
                 fin_i  = 0
                 fout_i = 0
             endif
-                
+
         endif
-        
+
         ! these are the fluxes into and out of the "right-hand" cell
         if (i/=(n-1)) then
             fin_i2 = max(0.,f(i)) - min(0.,f(i+1))
@@ -98,20 +98,19 @@
                 fout_i2 = 0
             endif
         endif
-        
+
         ! if wind is left to right we limit based on flow out of the left cell and into the right cell
         if (U2(i)>0) then
             beta_out_i = (q1(i)-qmin_i) / (fout_i+1e-15)
             beta_in_i2 = (qmax_i2-q1(i+1)) / (fin_i2+1e-15)
-            
+
             U2(i) = min(1.,beta_in_i2, beta_out_i) * U2(i)
-            
+
         ! if wind is right to left we limit based on flow out of the right cell and into the left cell
         elseif (U2(i)<0) then
             beta_in_i = (qmax_i-q1(i)) / (fin_i+1e-15)
             beta_out_i2 = (q1(i+1)-qmin_i2) / (fout_i2+1e-15)
-            
+
             U2(i) = min(1.,beta_in_i, beta_out_i2) * U2(i)
         endif
     end do
-    

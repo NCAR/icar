@@ -106,7 +106,7 @@ contains
             ! for some reason if shape(input_data) is passed as source, then the dim_len bounds are (0:1) instead of 1:2
             allocate(meta_data%dim_len, source=local_shape)
         endif
-        
+
     end function get_metadata_3d
 
 
