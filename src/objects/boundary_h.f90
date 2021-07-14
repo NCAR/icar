@@ -80,7 +80,7 @@ module boundary_interface
         character(len=kMAX_NAME_LENGTH), intent(in)             :: var_list (:)
         integer,                         intent(in)             :: dim_list (:)
         type(Time_type),                 intent(in), optional             :: start_time
-        character(len=kMAX_NAME_LENGTH), intent(in)             :: lat_ext 
+        character(len=kMAX_NAME_LENGTH), intent(in)             :: lat_ext
         character(len=kMAX_NAME_LENGTH), intent(in)             :: lon_ext
         character(len=kMAX_NAME_LENGTH), intent(in), optional   :: zvar_ext
         character(len=kMAX_NAME_LENGTH), intent(in), optional   :: time_ext

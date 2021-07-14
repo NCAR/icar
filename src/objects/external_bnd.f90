@@ -150,7 +150,7 @@ contains
         !     if (allocated(this%z)) deallocate(this%z)
         !     allocate(this%z(nx,nz,ny))
         !     this%z = reshape(temp_z, shape=[nx,nz,ny], order=[1,3,2])
-        ! ! what if ext_var is 2d?    
+        ! ! what if ext_var is 2d?
         ! else
         !     call io_read(file_list(this%curfile), file_list(1),   temp_z,   this%curstep)
         !     nx = size(temp_z,1)

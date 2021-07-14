@@ -688,7 +688,7 @@ CONTAINS
 !        SOLNET=GSW(I,J)
 ! use mid-day albedo to determine net downward solar (no solar zenith angle correction)
         SOLNET=SOLDN*(1.-ALBEDO(I,J))
-        
+
         PRCP=RAINBL(i,j)/DT
         VEGTYP=IVGTYP(I,J)
         SOILTYP=ISLTYP(I,J)
@@ -856,7 +856,7 @@ CONTAINS
 
        ! Non-glacial land
        ! if (this_image()==1) write(*,*) "    noadrv: bef SPFLX: SNEQV=",SNEQV," i/j", i,j
-       
+
        CALL SFLX (I,J,FFROZP, ISURBAN, DT,ZLVL,NSOIL,SLDPTH,      &    !C
                  LOCAL,                                           &    !L
                  LUTYPE, SLTYPE,                                  &    !CL
@@ -1176,7 +1176,7 @@ CONTAINS
           ENDDO
           if (this_image()==1) write(*,*) "    lsm_noah_init: calculate SNOWH from SNOW (HS from SWE)"
         ENDIF
-        
+
 ! initialize canopy water to ZERO
 
 !          GO TO 110

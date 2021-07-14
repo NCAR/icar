@@ -182,7 +182,7 @@ module options_types
                                         vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
                                         swdown_var, lwdown_var, &
                                         sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &
-                                        lat_ext, lon_ext, swe_ext, hsnow_ext, rho_snow_ext, tss_ext, & 
+                                        lat_ext, lon_ext, swe_ext, hsnow_ext, rho_snow_ext, tss_ext, &
                                         tsoil2D_ext, tsoil3D_ext, z_ext, time_ext
 
         character(len=MAXVARLENGTH) :: vars_to_read(kMAX_STORAGE_VARS)
@@ -271,11 +271,11 @@ module options_types
         integer :: terrain_smooth_windowsize
         integer :: terrain_smooth_cycles
         real    :: decay_rate_L_topo    !
-        real    :: decay_rate_S_topo    !        
+        real    :: decay_rate_S_topo    !
 
         ! real    :: sleve_decay_factor   ! The ratio H/s (model top or flat_z_height over decay height s). Schär: "the single scale parameter s plays the role of a scale height; that is, the underlying terrain features ap- proximately decay by a factor 1/e over a depth s. With s=H, the resulting coordinate structure is qualitatively comparable to sigma coordinates. With s < H, a hybridlike setting is obtained"
         real    :: sleve_n              ! Additional parameter introduced by Leuenberger 2009.
-        logical :: use_terrain_difference ! calculate dzdx from the differenec between hi- and lo-res terrain, rather than from hi-res terrain only. For use when forcing data is of a resolution that it resolves signigicant terrain influence (on wind field mainly) 
+        logical :: use_terrain_difference ! calculate dzdx from the differenec between hi- and lo-res terrain, rather than from hi-res terrain only. For use when forcing data is of a resolution that it resolves signigicant terrain influence (on wind field mainly)
 
         logical :: nudging   ! constrain the solution of certain variables (QV,QS,QC,QI,QR,QG) to be close (nudge_factor) to the forcing data
 

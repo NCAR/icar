@@ -888,8 +888,8 @@ contains
         options%tsoil3D_ext     = tsoil3D_ext    ; options%ext_var_list(j) = tsoil3D_ext;     options%ext_dim_list(j) = 3;    j = j + 1
         ! options%z_ext      = z_ext   ; options%ext_var_list(j) = z_ext;       options%ext_dim_list(j) = 3;    j = j + 1
         options%time_ext        = time_ext    ; options%ext_var_list(j) = time_ext;      options%ext_dim_list(j) = 1;    j = j + 1
-    
-     
+
+
 
 
     end subroutine var_namelist
@@ -1074,7 +1074,7 @@ contains
         ! endif
 
         ! options%paramters%frames_per_outfile : this may cause trouble with the above, but a nicer way
-        options%frames_per_outfile = frames_per_outfile 
+        options%frames_per_outfile = frames_per_outfile
 
         ! options%surface_io_only = surface_io_only
 
@@ -1782,7 +1782,7 @@ contains
         terrain_smooth_cycles = 5
         decay_rate_L_topo = 2.
         decay_rate_S_topo = 6.
-        sleve_n = 1.2  
+        sleve_n = 1.2
         use_terrain_difference = .False.
 
         ! read the z_info namelist if requested
@@ -1841,7 +1841,7 @@ contains
         options%decay_rate_L_topo = decay_rate_L_topo  ! decay_rate_large_scale_topography
         options%decay_rate_S_topo = decay_rate_S_topo ! decay_rate_small_scale_topography !
         options%sleve_n = sleve_n
-        options%use_terrain_difference = use_terrain_difference 
+        options%use_terrain_difference = use_terrain_difference
 
         !if (fixed_dz_advection) then
         !    print*, "WARNING: setting fixed_dz_advection to true is not recommended, use wind = 2 instead"

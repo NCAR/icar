@@ -206,12 +206,12 @@ contains
       this%ide = this%nx_global
       this%jde = this%ny_global
       this%kde = this%nz
-      
+
       this%halo_nz    = this%nz
-      
+
       this%halo_size = halo_size
       call update_with_halos(this, halo_size)
-      
+
       ! define the halo needed to manage communications between images
       ! perhaps this should be defined in exchangeable instead though?
       this%ns_halo_nx = this%nx !_global / this%ximages + 1 + nx_e  ! number of grid cells in x in the ns halo
