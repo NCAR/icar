@@ -607,7 +607,7 @@ contains
             var%name        = "lai"
             var%dimensions  = two_d_t_dimensions
             var%unlimited_dim=.True.
-            var%attributes  = [attribute_t("non_standard_name", "leaf_area_index"),                 &
+            var%attributes  = [attribute_t("standard_name", "leaf_area_index"),                     &
                                attribute_t("units",         "m2 m-2"),                              &
                                attribute_t("coordinates",   "lat lon")]
         end associate
@@ -619,6 +619,17 @@ contains
             var%dimensions  = two_d_t_dimensions
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "canopy_water_amount"),                 &
+                               attribute_t("units",         "kg m-2"),                              &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Canopy Ice Content
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%canopy_ice))
+            var%name        = "canopy_ice"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "canopy_snow_amount"),                  &
                                attribute_t("units",         "kg m-2"),                              &
                                attribute_t("coordinates",   "lat lon")]
         end associate
