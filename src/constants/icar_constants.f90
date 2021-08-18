@@ -105,7 +105,15 @@ module icar_constants
         integer :: tend_v
         integer :: znu
         integer :: znw
+        integer :: re_cloud
+        integer :: re_ice
+        integer :: re_snow
+        integer :: out_longwave_rad
+        integer :: longwave_cloud_forcing
+        integer :: land_emissivity
+        integer :: temperature_interface
         integer :: last_var
+
     end type var_constants_type
 
     type(var_constants_type) :: kVARS = var_constants_type( 1,  2,  3,  4,  5,  6,  7,  8,  9, 10,  &
@@ -115,7 +123,8 @@ module icar_constants
                                                            41, 42, 43, 44, 45, 46, 47, 48, 49, 50,  &
                                                            51, 52, 53, 54, 55, 56, 57, 58, 59, 60,  &
                                                            61, 62, 63, 64, 65, 66, 67, 68, 69, 70,  &
-                                                           71, 72, 73, 74, 75, 76, 77 ,78)
+                                                           71, 72, 73, 74, 75, 76, 77 ,78, 79, 80,  &
+                                                           81, 82, 83, 84, 85)
 
     integer, parameter :: kINTEGER_BITS     = storage_size(kINTEGER_BITS)
     integer, parameter :: kMAX_STORAGE_VARS = storage_size(kVARS) / kINTEGER_BITS
@@ -185,6 +194,7 @@ module icar_constants
 
     integer, parameter :: kRA_BASIC      = 1
     integer, parameter :: kRA_SIMPLE     = 2
+    integer, parameter :: kRA_RRTMG      = 3
 
     integer, parameter :: kADV_UPWIND    = 1
     integer, parameter :: kADV_MPDATA    = 2

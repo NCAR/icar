@@ -63,6 +63,7 @@ contains
                   psfc                  => domain%surface_pressure%data_2d,     &
                   density               => domain%density%data_3d,              &
                   temperature           => domain%temperature%data_3d,          &
+                  temperature_i         => domain%temperature_interface%data_3d,&
                   u                     => domain%u%data_3d,                    &
                   v                     => domain%v%data_3d,                    &
                   w                     => domain%w%data_3d,                    &
@@ -70,6 +71,7 @@ contains
                   u_mass                => domain%u_mass%data_3d,               &
                   v_mass                => domain%v_mass%data_3d,               &
                   potential_temperature => domain%potential_temperature%data_3d )
+
 
         exner = exner_function(pressure)
 
@@ -84,6 +86,8 @@ contains
         endif
 
         temperature = potential_temperature * exner
+        temperature_i(:,kms+1:kme, :) = (temperature(:,kms:kme-1, :) + temperature(:,kms+1:kme, :)) / 2
+        temperature_i(:, kms, :) = temperature(:, kms, :) + (temperature(:, kms, :) - temperature(:, kms+1, :)) / 2
 
         if (associated(domain%density%data_3d)) then
             density =  pressure / &

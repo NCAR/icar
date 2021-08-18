@@ -11,7 +11,7 @@
 !-----------------------------------------------------------------------
 MODULE module_ra_clWRF_support
 
-  USE module_wrf_error
+  !USE module_wrf_error
 
   IMPLICIT NONE
   PRIVATE
@@ -98,7 +98,7 @@ MODULE module_ra_clWRF_support
 CONTAINS
   
   SUBROUTINE read_CAMgases(yr, julian, model, co2vmr, n2ovmr, ch4vmr, cfc11vmr, cfc12vmr) 
-
+    USE io_routines , ONLY: io_newunit
     INTEGER, INTENT(IN)            :: yr
     REAL, INTENT(IN)               :: julian
     CHARACTER(LEN=*), INTENT(IN)   :: model           ! Radiation scheme name
@@ -109,8 +109,8 @@ CONTAINS
     INTEGER                                          :: yearIN, found_yearIN, iyear  &
                                                        ,yr1,yr2
     INTEGER                                         :: mondata(1:cyr)
-    LOGICAL, EXTERNAL                                :: wrf_dm_on_monitor
-    INTEGER, EXTERNAL                                :: get_unused_unit
+    !LOGICAL, EXTERNAL                                :: wrf_dm_on_monitor
+    !INTEGER, EXTERNAL                                :: get_unused_unit
       
     INTEGER                                          :: istatus, iunit, idata
 !ccc VARCAM_in_years is a module variable, needs something else here!        
@@ -130,11 +130,13 @@ CONTAINS
        INQUIRE(FILE='CAMtr_volume_mixing_ratio', EXIST=exists)
        
        IF (exists) THEN
-          iunit = get_unused_unit()
+          !iunit = get_unused_unit()
+          iunit = io_newunit()
           IF ( iunit <= 0 ) THEN
-             IF ( wrf_dm_on_monitor() ) THEN
-                CALL wrf_error_fatal('Error in module_ra_rrtm: could not find a free Fortran unit.')
-             END IF
+             !F ( wrf_dm_on_monitor() ) THEN
+                !CALL wrf_error_fatal('Error in module_ra_rrtm: could not find a free Fortran unit.')
+               error stop 'Error in module_ra_rrtm: could not find a free Fortran unit.'
+             !END IF
           END IF
           
           ! Read volume mixing ratio 
@@ -152,12 +154,13 @@ CONTAINS
                 READ(UNIT=iunit, FMT='(I4, 1x, F8.3,1x, 4(F10.3,1x))', IOSTAT=istatus)    &
                      yrdata(idata), co2r(idata), n2or(idata), ch4r(idata), cfc11r(idata), &
                      cfc12r(idata)
-                IF ( wrf_dm_on_monitor() ) THEN
+                !IF ( wrf_dm_on_monitor() ) THEN
                    WRITE(message,*)'CLWRF reading...: istatus:',istatus,' idata:',idata,   &
                         ' year:', yrdata(idata), ' co2: ',co2r(idata), ' n2o: ',&
                         n2or(idata),' ch4:',ch4r(idata)
-                   call wrf_debug( 0, message) 
-                ENDIF
+                   !call wrf_debug( 0, message)
+                   write(*,*) message
+                   !ENDIF
                 mondata(idata) = 6
                 
                 idata=idata+1
@@ -189,7 +192,8 @@ CONTAINS
              yrdata(1:max_years) = yr_CAM
              co2r(1:max_years)   = co2r_CAM
           ELSE
-             CALL wrf_error_fatal("CLWRF: 'CAMtr_volume_mixing_ratio' does not exist")
+             !CALL wrf_error_fatal("CLWRF: 'CAMtr_volume_mixing_ratio' does not exist")
+             error stop "CLWRF: 'CAMtr_volume_mixing_ratio' does not exist"
           ENDIF
 
        ENDIF ! CAMtr_volume_mixing_ratio exists
@@ -522,7 +526,7 @@ CONTAINS
     CHARACTER(LEN=*), INTENT(IN) :: model   ! The radiation scheme name
     REAL(r8), INTENT(INOUT)      :: out     ! The output value
 !Local
-    LOGICAL, EXTERNAL            :: wrf_dm_on_monitor
+    !LOGICAL, EXTERNAL            :: wrf_dm_on_monitor
     CHARACTER(LEN=256)           :: message
 
 
@@ -543,10 +547,11 @@ CONTAINS
           out = 0.503e-9
 
        ELSE
-          IF ( wrf_dm_on_monitor() ) THEN
+          !IF ( wrf_dm_on_monitor() ) THEN
              WRITE(message,*) 'CLWRF : Trace gas ',tracer,' not valid for scheme ',model
-             CALL wrf_error_fatal(message)
-          ENDIF
+             !CALL wrf_error_fatal(message)
+             error stop message
+          !ENDIF
        ENDIF
 
     ELSE IF ((model .eq. "RRTM") .or. &
@@ -567,17 +572,19 @@ CONTAINS
           out = 0.538e-9
 
        ELSE
-          IF ( wrf_dm_on_monitor() ) THEN
+          !IF ( wrf_dm_on_monitor() ) THEN
              WRITE(message,*) 'CLWRF : Trace gas ',tracer,' not valid for scheme ',model
-             CALL wrf_error_fatal(message)
-          ENDIF
+             !CALL wrf_error_fatal(message)
+             error stop message
+          !ENDIF
        ENDIF
 
     ELSE
-       IF ( wrf_dm_on_monitor() ) THEN
+       !IF ( wrf_dm_on_monitor() ) THEN
           WRITE(message,*) 'CLWRF not implemented for the ',model,' radiative scheme.'
-          CALL wrf_error_fatal(message)
-       ENDIF
+          !CALL wrf_error_fatal(message)
+          error stop message
+         !ENDIF
     ENDIF
 
   END SUBROUTINE orig_val

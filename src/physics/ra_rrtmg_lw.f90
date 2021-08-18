@@ -2537,8 +2537,8 @@ contains
 
          case(5)
             ! Exponential-random overlap:
-            call wrf_error_fatal("Cloud Overlap case 5: ER has not yet been implemented. Stopping...") 
-
+!            call wrf_error_fatal("Cloud Overlap case 5: ER has not yet been implemented. Stopping...")
+            error stop "Cloud Overlap case 5: ER has not yet been implemented. Stopping..."
       end select
 
  
@@ -2869,8 +2869,9 @@ contains
                          write(errmess,'(A,i5,i5,f8.2,f8.2)' )         &
                'ERROR: ICE GENERALIZED EFFECTIVE SIZE OUT OF BOUNDS'   &
                ,ig, lay, ciwpmc(ig,lay), radice
-                         call wrf_error_fatal(errmess)
-                     end if
+!                         call wrf_error_fatal(errmess)
+                         error stop errmess
+                  end if
                      ncbands = 16
                      factor = (radice - 2._rb)/3._rb
                      index = int(factor)
@@ -2891,8 +2892,9 @@ contains
                          write(errmess,'(A,i5,i5,f8.2,f8.2)' )         &
                'ERROR: SNOW GENERALIZED EFFECTIVE SIZE OUT OF BOUNDS'   &
                ,ig, lay, cswpmc(ig,lay), radsno
-                         call wrf_error_fatal(errmess)
-                     end if
+!                         call wrf_error_fatal(errmess)
+                        error stop errmess
+                  end if
                      ncbands = 16
                      factor = (radsno - 2._rb)/3._rb
                      index = int(factor)
@@ -11438,13 +11440,13 @@ contains
 !------------------------------------------------------------------
 MODULE module_ra_rrtmg_lw
 
-use module_model_constants, only : cp
-use module_wrf_error
-#if (HWRF == 1)
-   USE module_state_description, ONLY : FER_MP_HIRES, FER_MP_HIRES_ADVECT, ETAMP_HWRF 
-#else
-   USE module_state_description, ONLY : FER_MP_HIRES, FER_MP_HIRES_ADVECT
-#endif
+use icar_constants, only : cp
+!use module_wrf_error
+!#if (HWRF == 1)
+!   USE module_state_description, ONLY : FER_MP_HIRES, FER_MP_HIRES_ADVECT, ETAMP_HWRF
+!#else
+!   USE module_state_description, ONLY : FER_MP_HIRES, FER_MP_HIRES_ADVECT
+!#endif
 !use module_dm
 
 use parrrtm, only : nbndlw, ngptlw
@@ -11734,7 +11736,7 @@ CONTAINS
 !..We can use message interface regardless of what options are running,
 !.. so let us ask for it here.
       CHARACTER(LEN=256)                           :: message
-      LOGICAL, EXTERNAL                            :: wrf_dm_on_monitor
+!      LOGICAL, EXTERNAL                            :: wrf_dm_on_monitor
 
 !ccc To add time-varying trace gases (CO2, N2O and CH4). Read the conc.  from file
 ! then interpolate to date of run.
@@ -11875,8 +11877,9 @@ CONTAINS
         PRESENT(tauaerlw14) .AND. &
         PRESENT(tauaerlw15) .AND. &
         PRESENT(tauaerlw16) ) ) THEN
-      CALL wrf_error_fatal  &
-      ('Warning: missing fields required for aerosol radiation' )
+      !CALL wrf_error_fatal  &
+      !('Warning: missing fields required for aerosol radiation' )
+      error stop 'Warning: missing fields required for aerosol radiation'
       ENDIF
       ENDIF
 #endif
@@ -11896,11 +11899,14 @@ CONTAINS
 
    CALL read_CAMgases(yr,julian,"RRTMG",co2,n2o,ch4,cfc11,cfc12)
 
-   IF ( wrf_dm_on_monitor() ) THEN
+!   IF ( wrf_dm_on_monitor() ) THEN
+    IF (this_image()==1) THEN
      WRITE(message,*)'CAM-CLWRF interpolated values______ year:',yr,' julian day:',julian
-     call wrf_debug( 100, message)
+     !call wrf_debug( 100, message)
+     write(*,*) message
      WRITE(message,*)'  CAM-CLWRF co2vmr: ',co2,' n2ovmr:',n2o,' ch4vmr:',ch4,' cfc11vmr:',cfc11,' cfc12vmr:',cfc12
-     call wrf_debug( 100, message)
+     !call wrf_debug( 100, message)
+     write(*,*) message
    ENDIF
 
 #endif
@@ -12049,22 +12055,22 @@ CONTAINS
         ENDIF
 
 !   For mp option=5 or 85  (new Ferrier- Aligo or fer_hires scheme), QI3D saves all
-#if (HWRF == 1)
-        IF ( mp_physics == FER_MP_HIRES .OR. &
-             mp_physics == FER_MP_HIRES_ADVECT .OR. &
-             mp_physics == ETAMP_HWRF ) THEN
-#else
-        IF ( mp_physics == FER_MP_HIRES .OR. &
-             mp_physics == FER_MP_HIRES_ADVECT) THEN
-#endif
-                  DO K=kts,kte
-                     qi1d(k) = qi3d(i,k,j)
-                     qs1d(k) = 0.0
-                     qc1d(k) = qc3d(i,k,j)
-                     qi1d(k) = max(0.,qi1d(k))
-                     qc1d(k) = max(0.,qc1d(k))
-                  ENDDO
-        ENDIF
+!#if (HWRF == 1)
+!        IF ( mp_physics == FER_MP_HIRES .OR. &
+!             mp_physics == FER_MP_HIRES_ADVECT .OR. &
+!             mp_physics == ETAMP_HWRF ) THEN
+!#else
+!        IF ( mp_physics == FER_MP_HIRES .OR. &
+!             mp_physics == FER_MP_HIRES_ADVECT) THEN
+!#endif
+!                  DO K=kts,kte
+!                     qi1d(k) = qi3d(i,k,j)
+!                     qs1d(k) = 0.0
+!                     qc1d(k) = qc3d(i,k,j)
+!                     qi1d(k) = max(0.,qi1d(k))
+!                     qc1d(k) = max(0.,qc1d(k))
+!                  ENDDO
+!        ENDIF
 
 !         EMISS0=EMISS(I,J)
 !         GLW0=0. 
@@ -12434,10 +12440,12 @@ CONTAINS
                  if (resnow1d(ncol,k) .gt. 130.)then
                      snow_mass_factor = (130.0/resnow1d(ncol,k))*(130.0/resnow1d(ncol,k))
                      resnow1d(ncol,k)   = 130.0
-                     IF ( wrf_dm_on_monitor() ) THEN
+                     !IF ( wrf_dm_on_monitor() ) THEN
+                     IF (this_image()==1) then
                        WRITE(message,*)'RRTMG:  reducing snow mass (cloud path) to ', &
                                        nint(snow_mass_factor*100.), ' percent of full value'
-                       call wrf_debug(150, message)
+                       !call wrf_debug(150, message)
+                       write(*,*) message
                      ENDIF
                  endif
                  gsnowp = qs1d(k) * snow_mass_factor * pdel(ncol,k)*100.0 / gravmks * 1000.0     ! Grid box snow water path.
@@ -12660,18 +12668,22 @@ CONTAINS
          end do
          if( slope < 0. ) then
             write(msg,'("ERROR: Negative total lw optical depth of ",f8.2," at point i,j,nb=",3i5)') slope,i,j,nb
-            call wrf_error_fatal(msg)
+            !call wrf_error_fatal(msg)
+            error stop msg
          else if( slope > 5. ) then
-            call wrf_message("-------------------------")
+            !call wrf_message("-------------------------")
             write(msg,'("WARNING: Large total lw optical depth of ",f8.2," at point i,j,nb=",3i5)') slope,i,j,nb
-            call wrf_message(msg)
+            write(*,*) msg
+            !call wrf_message(msg)
 
-            call wrf_message("Diagnostics 1: k, tauaerlw1, tauaerlw16")
+            !call wrf_message("Diagnostics 1: k, tauaerlw1, tauaerlw16")
+            write(*,*) "Diagnostics 1: k, tauaerlw1, tauaerlw16"
             do k=kts,kte
                write(msg,'(i4,2f8.2)') k, tauaerlw1(i,k,j), tauaerlw16(i,k,j)
-               call wrf_message(msg)
+               write(*,*) msg
+               !call wrf_message(msg)
             end do
-            call wrf_message("-------------------------")
+            !call wrf_message("-------------------------")
          endif
       enddo  ! nb
       endif  ! aer_ra_feedback
@@ -12925,38 +12937,50 @@ CONTAINS
 ! **************************************************************************     
       SUBROUTINE rrtmg_lwlookuptable
 ! **************************************************************************     
-
+USE io_routines, ONLY: io_newunit
 IMPLICIT NONE
 
 ! Local                                    
       INTEGER :: i
       LOGICAL                 :: opened
-      LOGICAL , EXTERNAL      :: wrf_dm_on_monitor
+!      LOGICAL , EXTERNAL      :: wrf_dm_on_monitor
 
       CHARACTER*80 errmess
       INTEGER rrtmg_unit
+      INTEGER FILESIZE , recl
 
-      IF ( wrf_dm_on_monitor() ) THEN
-        DO i = 10,99
-          INQUIRE ( i , OPENED = opened )
-          IF ( .NOT. opened ) THEN
-            rrtmg_unit = i
-            GOTO 2010
-          ENDIF
-        ENDDO
-        rrtmg_unit = -1
- 2010   CONTINUE
-      ENDIF
-      CALL wrf_dm_bcast_bytes ( rrtmg_unit , IWORDSIZE )
+!      IF ( wrf_dm_on_monitor() ) THEN
+!        DO i = 10,99
+!          INQUIRE ( i , OPENED = opened )
+!          IF ( .NOT. opened ) THEN
+!            rrtmg_unit = i
+!            GOTO 2010
+!          ENDIF
+!        ENDDO
+!        rrtmg_unit = -1
+! 2010   CONTINUE
+!      ENDIF
+
+
+! trude
+!####### we will use icar get unit
+!      CALL wrf_dm_bcast_bytes ( rrtmg_unit , IWORDSIZE )
+      rrtmg_unit = io_newunit()
       IF ( rrtmg_unit < 0 ) THEN
-        CALL wrf_error_fatal ( 'module_ra_rrtmg_lw: rrtm_lwlookuptable: Can not '// &
-                               'find unused fortran unit to read in lookup table.' )
+        !CALL wrf_error_fatal ( 'module_ra_rrtmg_lw: rrtm_lwlookuptable: Can not '// &
+        !                       'find unused fortran unit to read in lookup table.' )
+         error stop 'module_ra_rrtmg_lw: rrtm_lwlookuptable: Can not '// &
+         'find unused fortran unit to read in lookup table.'
       ENDIF
 
-      IF ( wrf_dm_on_monitor() ) THEN
-        OPEN(rrtmg_unit,FILE='RRTMG_LW_DATA',                  &
-             FORM='UNFORMATTED',STATUS='OLD',ERR=9009)
-      ENDIF
+!      IF ( wrf_dm_on_monitor() ) THEN
+
+
+
+ ! ++ trude,  With gfrotran, symlink RRTMG_LW_DATA to RRTMG_LW_DATA_DBL
+      OPEN(rrtmg_unit,FILE='RRTMG_LW_DATA',                  &
+             FORM='UNFORMATTED',STATUS='OLD', ERR=9009, ACCESS="STREAM")
+!      ENDIF
 
       call lw_kgb01(rrtmg_unit)
       call lw_kgb02(rrtmg_unit)
@@ -12975,13 +12999,14 @@ IMPLICIT NONE
       call lw_kgb15(rrtmg_unit)
       call lw_kgb16(rrtmg_unit)
 
-     IF ( wrf_dm_on_monitor() ) CLOSE (rrtmg_unit)
+     !IF ( wrf_dm_on_monitor() )
+      CLOSE (rrtmg_unit)
 
      RETURN
 9009 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error opening RRTMG_LW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
-
+     !CALL wrf_error_fatal(errmess)
+     error stop errmess
      END SUBROUTINE rrtmg_lwlookuptable
 
 ! **************************************************************************     
@@ -13016,7 +13041,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+!      logical, external  :: wrf_dm_on_monitor
 
 !     Arrays fracrefao and fracrefbo are the Planck fractions for the lower
 !     and upper atmosphere.
@@ -13064,24 +13089,31 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
 
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         fracrefao, fracrefbo, kao, kbo, kao_mn2, kbo_mn2, selfrefo, forrefo
-      DM_BCAST_MACRO(fracrefao)
-      DM_BCAST_MACRO(fracrefbo)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(kao_mn2)
-      DM_BCAST_MACRO(kbo_mn2)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
+      READ (rrtmg_unit,ERR=9010) &
+      fracrefao, fracrefbo, kao, kbo, kao_mn2, kbo_mn2, selfrefo, forrefo
+
+
+
+
+
+         !IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+      !   fracrefao, fracrefbo, kao, kbo, kao_mn2, kbo_mn2, selfrefo, forrefo
+      !DM_BCAST_MACRO(fracrefao)
+      !DM_BCAST_MACRO(fracrefbo)
+      !DM_BCAST_MACRO(kao)
+      !DM_BCAST_MACRO(kbo)
+      !DM_BCAST_MACRO(kao_mn2)
+      !DM_BCAST_MACRO(kbo_mn2)
+      !DM_BCAST_MACRO(selfrefo)
+      !DM_BCAST_MACRO(forrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
-
+     !CALL wrf_error_fatal(errmess)
+     error stop errmess
       end subroutine lw_kgb01
 
 ! **************************************************************************
@@ -13098,7 +13130,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+!      logical, external  :: wrf_dm_on_monitor
 
 !     Arrays fracrefao and fracrefbo are the Planck fractions for the lower
 !     and upper atmosphere.
@@ -13142,22 +13174,24 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+      READ (rrtmg_unit,ERR=9010) &
+          fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
 
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
-      DM_BCAST_MACRO(fracrefao)
-      DM_BCAST_MACRO(fracrefbo)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
+!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!          fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
+!       DM_BCAST_MACRO(fracrefao)
+!       DM_BCAST_MACRO(fracrefbo)
+!       DM_BCAST_MACRO(kao)
+!       DM_BCAST_MACRO(kbo)
+!       DM_BCAST_MACRO(selfrefo)
+!       DM_BCAST_MACRO(forrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
-
+     !CALL wrf_error_fatal(errmess)
+     error stop errmess
       end subroutine lw_kgb02
 
 ! **************************************************************************
@@ -13175,7 +13209,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+!      logical, external  :: wrf_dm_on_monitor
 
 !     Arrays fracrefao and fracrefbo are the Planck fractions for the lower
 !     and upper atmosphere.
@@ -13258,23 +13292,26 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
 
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         fracrefao, fracrefbo, kao, kbo, kao_mn2o, kbo_mn2o, selfrefo, forrefo
-      DM_BCAST_MACRO(fracrefao)
-      DM_BCAST_MACRO(fracrefbo)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(kao_mn2o)
-      DM_BCAST_MACRO(kbo_mn2o)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
+       READ (rrtmg_unit,ERR=9010) &
+          fracrefao, fracrefbo, kao, kbo, kao_mn2o, kbo_mn2o, selfrefo, forrefo
+!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!          fracrefao, fracrefbo, kao, kbo, kao_mn2o, kbo_mn2o, selfrefo, forrefo
+!       DM_BCAST_MACRO(fracrefao)
+!       DM_BCAST_MACRO(fracrefbo)
+!       DM_BCAST_MACRO(kao)
+!       DM_BCAST_MACRO(kbo)
+!       DM_BCAST_MACRO(kao_mn2o)
+!       DM_BCAST_MACRO(kbo_mn2o)
+!       DM_BCAST_MACRO(selfrefo)
+!       DM_BCAST_MACRO(forrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
+     !CALL wrf_error_fatal(errmess)
+     error stop errmess
 
       end subroutine lw_kgb03 
 
@@ -13292,7 +13329,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+!      logical, external  :: wrf_dm_on_monitor
 
 !     Arrays fracrefao and fracrefbo are the Planck fractions for the lower
 !     and upper atmosphere.
@@ -13347,21 +13384,24 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
 
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
-      DM_BCAST_MACRO(fracrefao)
-      DM_BCAST_MACRO(fracrefbo)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
+       READ (rrtmg_unit,ERR=9010) &
+          fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
+!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!          fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
+!       DM_BCAST_MACRO(fracrefao)
+!       DM_BCAST_MACRO(fracrefbo)
+!       DM_BCAST_MACRO(kao)
+!       DM_BCAST_MACRO(kbo)
+!       DM_BCAST_MACRO(selfrefo)
+!       DM_BCAST_MACRO(forrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
+     !CALL wrf_error_fatal(errmess)
+     error stop errmess
 
       end subroutine lw_kgb04
 
@@ -13380,7 +13420,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+      ! logical, external  :: wrf_dm_on_monitor
 
 !     Arrays fracrefao and fracrefbo are the Planck fractions for the lower
 !     and upper atmosphere.
@@ -13453,23 +13493,25 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         fracrefao, fracrefbo, kao, kbo, kao_mo3, ccl4o, selfrefo, forrefo
-      DM_BCAST_MACRO(fracrefao)
-      DM_BCAST_MACRO(fracrefbo)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(kao_mo3)
-      DM_BCAST_MACRO(ccl4o)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
+! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+      READ (rrtmg_unit,ERR=9010) &
+      fracrefao, fracrefbo, kao, kbo, kao_mo3, ccl4o, selfrefo, forrefo
+!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!          fracrefao, fracrefbo, kao, kbo, kao_mo3, ccl4o, selfrefo, forrefo
+!       DM_BCAST_MACRO(fracrefao)
+!       DM_BCAST_MACRO(fracrefbo)
+!       DM_BCAST_MACRO(kao)
+!       DM_BCAST_MACRO(kbo)
+!       DM_BCAST_MACRO(kao_mo3)
+!       DM_BCAST_MACRO(ccl4o)
+!       DM_BCAST_MACRO(selfrefo)
+!       DM_BCAST_MACRO(forrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
+     !CALL wrf_error_fatal(errmess)
+     error stop errmess
 
       end subroutine lw_kgb05
 
@@ -13489,7 +13531,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+      ! logical, external  :: wrf_dm_on_monitor
 
 !     Arrays fracrefao and fracrefbo are the Planck fractions for the lower
 !     and upper atmosphere.
@@ -13535,22 +13577,24 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         fracrefao, kao, kao_mco2, cfc11adjo, cfc12o, selfrefo, forrefo
-      DM_BCAST_MACRO(fracrefao)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kao_mco2)
-      DM_BCAST_MACRO(cfc11adjo)
-      DM_BCAST_MACRO(cfc12o)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
+! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+      READ (rrtmg_unit,ERR=9010) &
+      fracrefao, kao, kao_mco2, cfc11adjo, cfc12o, selfrefo, forrefo
+!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!          fracrefao, kao, kao_mco2, cfc11adjo, cfc12o, selfrefo, forrefo
+!       DM_BCAST_MACRO(fracrefao)
+!       DM_BCAST_MACRO(kao)
+!       DM_BCAST_MACRO(kao_mco2)
+!       DM_BCAST_MACRO(cfc11adjo)
+!       DM_BCAST_MACRO(cfc12o)
+!       DM_BCAST_MACRO(selfrefo)
+!       DM_BCAST_MACRO(forrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
+     !CALL wrf_error_fatal(errmess)
+     !error stop errmess
 
       end subroutine lw_kgb06
 
@@ -13569,7 +13613,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+      ! logical, external  :: wrf_dm_on_monitor
 
 !     Arrays fracrefao and fracrefbo are the Planck fractions for the lower
 !     and upper atmosphere.
@@ -13638,23 +13682,25 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         fracrefao, fracrefbo, kao, kbo, kao_mco2, kbo_mco2, selfrefo, forrefo
-      DM_BCAST_MACRO(fracrefao)
-      DM_BCAST_MACRO(fracrefbo)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(kao_mco2)
-      DM_BCAST_MACRO(kbo_mco2)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
+! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+      READ (rrtmg_unit,ERR=9010) &
+      fracrefao, fracrefbo, kao, kbo, kao_mco2, kbo_mco2, selfrefo, forrefo
+!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!          fracrefao, fracrefbo, kao, kbo, kao_mco2, kbo_mco2, selfrefo, forrefo
+!       DM_BCAST_MACRO(fracrefao)
+!       DM_BCAST_MACRO(fracrefbo)
+!       DM_BCAST_MACRO(kao)
+!       DM_BCAST_MACRO(kbo)
+!       DM_BCAST_MACRO(kao_mco2)
+!       DM_BCAST_MACRO(kbo_mco2)
+!       DM_BCAST_MACRO(selfrefo)
+!       DM_BCAST_MACRO(forrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
+     !CALL wrf_error_fatal(errmess)
+     error stop errmess
 
       end subroutine lw_kgb07
 
@@ -13674,7 +13720,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+      ! logical, external  :: wrf_dm_on_monitor
 
 !     Arrays fracrefao and fracrefbo are the Planck fractions for the lower
 !     and upper atmosphere.
@@ -13746,29 +13792,32 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         fracrefao, fracrefbo, kao, kbo, kao_mco2, kbo_mco2, kao_mn2o, &
-         kbo_mn2o, kao_mo3, cfc12o, cfc22adjo, selfrefo, forrefo
-      DM_BCAST_MACRO(fracrefao)
-      DM_BCAST_MACRO(fracrefbo)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(kao_mco2)
-      DM_BCAST_MACRO(kbo_mco2)
-      DM_BCAST_MACRO(kao_mn2o)
-      DM_BCAST_MACRO(kbo_mn2o)
-      DM_BCAST_MACRO(kao_mo3)
-      DM_BCAST_MACRO(cfc12o)
-      DM_BCAST_MACRO(cfc22adjo)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
+! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+      READ (rrtmg_unit,ERR=9010) &
+      fracrefao, fracrefbo, kao, kbo, kao_mco2, kbo_mco2, kao_mn2o, &
+      kbo_mn2o, kao_mo3, cfc12o, cfc22adjo, selfrefo, forrefo
+!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!          fracrefao, fracrefbo, kao, kbo, kao_mco2, kbo_mco2, kao_mn2o, &
+!          kbo_mn2o, kao_mo3, cfc12o, cfc22adjo, selfrefo, forrefo
+!       DM_BCAST_MACRO(fracrefao)
+!       DM_BCAST_MACRO(fracrefbo)
+!       DM_BCAST_MACRO(kao)
+!       DM_BCAST_MACRO(kbo)
+!       DM_BCAST_MACRO(kao_mco2)
+!       DM_BCAST_MACRO(kbo_mco2)
+!       DM_BCAST_MACRO(kao_mn2o)
+!       DM_BCAST_MACRO(kbo_mn2o)
+!       DM_BCAST_MACRO(kao_mo3)
+!       DM_BCAST_MACRO(cfc12o)
+!       DM_BCAST_MACRO(cfc22adjo)
+!       DM_BCAST_MACRO(selfrefo)
+!       DM_BCAST_MACRO(forrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
+     !CALL wrf_error_fatal(errmess)
+     error stop errmess
 
       end subroutine lw_kgb08
 
@@ -13787,7 +13836,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+      ! logical, external  :: wrf_dm_on_monitor
 
 !     Arrays fracrefao and fracrefbo are the Planck fractions for the lower
 !     and upper atmosphere.
@@ -13856,23 +13905,25 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         fracrefao, fracrefbo, kao, kbo, kao_mn2o, kbo_mn2o, selfrefo, forrefo
-      DM_BCAST_MACRO(fracrefao)
-      DM_BCAST_MACRO(fracrefbo)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(kao_mn2o)
-      DM_BCAST_MACRO(kbo_mn2o)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
+! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+      READ (rrtmg_unit,ERR=9010) &
+      fracrefao, fracrefbo, kao, kbo, kao_mn2o, kbo_mn2o, selfrefo, forrefo
+!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!          fracrefao, fracrefbo, kao, kbo, kao_mn2o, kbo_mn2o, selfrefo, forrefo
+!       DM_BCAST_MACRO(fracrefao)
+!       DM_BCAST_MACRO(fracrefbo)
+!       DM_BCAST_MACRO(kao)
+!       DM_BCAST_MACRO(kbo)
+!       DM_BCAST_MACRO(kao_mn2o)
+!       DM_BCAST_MACRO(kbo_mn2o)
+!       DM_BCAST_MACRO(selfrefo)
+!       DM_BCAST_MACRO(forrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
+     !CALL wrf_error_fatal(errmess)
+     error stop errmess
 
       end subroutine lw_kgb09
 
@@ -13890,7 +13941,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+      ! logical, external  :: wrf_dm_on_monitor
 
 !     Arrays fracrefao and fracrefbo are the Planck fractions for the lower
 !     and upper atmosphere.
@@ -13934,21 +13985,23 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
-      DM_BCAST_MACRO(fracrefao)
-      DM_BCAST_MACRO(fracrefbo)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
+! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+      READ (rrtmg_unit,ERR=9010) &
+      fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
+!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!          fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
+!       DM_BCAST_MACRO(fracrefao)
+!       DM_BCAST_MACRO(fracrefbo)
+!       DM_BCAST_MACRO(kao)
+!       DM_BCAST_MACRO(kbo)
+!       DM_BCAST_MACRO(selfrefo)
+!       DM_BCAST_MACRO(forrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
+     !CALL wrf_error_fatal(errmess)
+     error stop errmess
 
       end subroutine lw_kgb10
 
@@ -13967,7 +14020,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+      ! logical, external  :: wrf_dm_on_monitor
 
 !     Arrays fracrefao and fracrefbo are the Planck fractions for the lower
 !     and upper atmosphere.
@@ -14025,23 +14078,25 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         fracrefao, fracrefbo, kao, kbo, kao_mo2, kbo_mo2, selfrefo, forrefo
-      DM_BCAST_MACRO(fracrefao)
-      DM_BCAST_MACRO(fracrefbo)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(kao_mo2)
-      DM_BCAST_MACRO(kbo_mo2)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
+! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+      READ (rrtmg_unit,ERR=9010) &
+      fracrefao, fracrefbo, kao, kbo, kao_mo2, kbo_mo2, selfrefo, forrefo
+!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!          fracrefao, fracrefbo, kao, kbo, kao_mo2, kbo_mo2, selfrefo, forrefo
+!       DM_BCAST_MACRO(fracrefao)
+!       DM_BCAST_MACRO(fracrefbo)
+!       DM_BCAST_MACRO(kao)
+!       DM_BCAST_MACRO(kbo)
+!       DM_BCAST_MACRO(kao_mo2)
+!       DM_BCAST_MACRO(kbo_mo2)
+!       DM_BCAST_MACRO(selfrefo)
+!       DM_BCAST_MACRO(forrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
+     !CALL wrf_error_fatal(errmess)
+     error stop errmess
 
       end subroutine lw_kgb11
 
@@ -14059,7 +14114,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+      ! logical, external  :: wrf_dm_on_monitor
 
 !     Arrays fracrefao and fracrefbo are the Planck fractions for the lower
 !     and upper atmosphere.
@@ -14096,19 +14151,21 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         fracrefao, kao, selfrefo, forrefo
-      DM_BCAST_MACRO(fracrefao)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
+! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+      READ (rrtmg_unit,ERR=9010) &
+      fracrefao, kao, selfrefo, forrefo
+!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!          fracrefao, kao, selfrefo, forrefo
+!       DM_BCAST_MACRO(fracrefao)
+!       DM_BCAST_MACRO(kao)
+!       DM_BCAST_MACRO(selfrefo)
+!       DM_BCAST_MACRO(forrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
+     !CALL wrf_error_fatal(errmess)
+     error stop errmess
 
       end subroutine lw_kgb12
 
@@ -14127,7 +14184,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+      ! logical, external  :: wrf_dm_on_monitor
 
 !     Arrays fracrefao and fracrefbo are the Planck fractions for the lower
 !     and upper atmosphere.
@@ -14184,23 +14241,25 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         fracrefao, fracrefbo, kao, kao_mco2, kao_mco, kbo_mo3, selfrefo, forrefo
-      DM_BCAST_MACRO(fracrefao)
-      DM_BCAST_MACRO(fracrefbo)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kao_mco2)
-      DM_BCAST_MACRO(kao_mco)
-      DM_BCAST_MACRO(kbo_mo3)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
+! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+      READ (rrtmg_unit,ERR=9010) &
+      fracrefao, fracrefbo, kao, kao_mco2, kao_mco, kbo_mo3, selfrefo, forrefo
+!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!          fracrefao, fracrefbo, kao, kao_mco2, kao_mco, kbo_mo3, selfrefo, forrefo
+!       DM_BCAST_MACRO(fracrefao)
+!       DM_BCAST_MACRO(fracrefbo)
+!       DM_BCAST_MACRO(kao)
+!       DM_BCAST_MACRO(kao_mco2)
+!       DM_BCAST_MACRO(kao_mco)
+!       DM_BCAST_MACRO(kbo_mo3)
+!       DM_BCAST_MACRO(selfrefo)
+!       DM_BCAST_MACRO(forrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
+     !CALL wrf_error_fatal(errmess)
+     error stop errmess
 
       end subroutine lw_kgb13
 
@@ -14218,7 +14277,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+      ! logical, external  :: wrf_dm_on_monitor
 
 !     Arrays fracrefao and fracrefbo are the Planck fractions for the lower
 !     and upper atmosphere.
@@ -14268,21 +14327,23 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
-      DM_BCAST_MACRO(fracrefao)
-      DM_BCAST_MACRO(fracrefbo)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
+! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+      READ (rrtmg_unit,ERR=9010) &
+      fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
+!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!          fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
+!       DM_BCAST_MACRO(fracrefao)
+!       DM_BCAST_MACRO(fracrefbo)
+!       DM_BCAST_MACRO(kao)
+!       DM_BCAST_MACRO(kbo)
+!       DM_BCAST_MACRO(selfrefo)
+!       DM_BCAST_MACRO(forrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
+     !CALL wrf_error_fatal(errmess)
+     error stop errmess
 
       end subroutine lw_kgb14
 
@@ -14300,7 +14361,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+      ! logical, external  :: wrf_dm_on_monitor
 
 !     Arrays fracrefao and fracrefbo are the Planck fractions for the lower
 !     and upper atmosphere.
@@ -14349,20 +14410,22 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         fracrefao, kao, kao_mn2, selfrefo, forrefo
-      DM_BCAST_MACRO(fracrefao)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kao_mn2)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
+! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+      READ (rrtmg_unit,ERR=9010) &
+      fracrefao, kao, kao_mn2, selfrefo, forrefo
+!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!          fracrefao, kao, kao_mn2, selfrefo, forrefo
+!       DM_BCAST_MACRO(fracrefao)
+!       DM_BCAST_MACRO(kao)
+!       DM_BCAST_MACRO(kao_mn2)
+!       DM_BCAST_MACRO(selfrefo)
+!       DM_BCAST_MACRO(forrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
+     !CALL wrf_error_fatal(errmess)
+     error stop errmess
 
       end subroutine lw_kgb15
 
@@ -14380,7 +14443,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+      ! logical, external  :: wrf_dm_on_monitor
 
 !     Arrays fracrefao and fracrefbo are the Planck fractions for the lower
 !     and upper atmosphere.
@@ -14430,21 +14493,23 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+      READ (rrtmg_unit,ERR=9010) &
          fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
-      DM_BCAST_MACRO(fracrefao)
-      DM_BCAST_MACRO(fracrefbo)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
+!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!         fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
+!      DM_BCAST_MACRO(fracrefao)
+!      DM_BCAST_MACRO(fracrefbo)
+!      DM_BCAST_MACRO(kao)
+!      DM_BCAST_MACRO(kbo)
+!      DM_BCAST_MACRO(selfrefo)
+!      DM_BCAST_MACRO(forrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
+     !CALL wrf_error_fatal(errmess)
+     error stop errmess
 
       end subroutine lw_kgb16
 

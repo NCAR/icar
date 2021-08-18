@@ -535,6 +535,94 @@ contains
                                attribute_t("units",         "1"),                                   &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+
+        !>------------------------------------------------------------
+        !!  Effective cloud droplet radius
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%re_cloud))
+            var%name        = "re_cloud"
+            var%dimensions  = three_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "effective_radius_of_cloud_liquid_water_particles"), &
+                               attribute_t("units",         "m"),                                                 &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+
+        !>------------------------------------------------------------
+        !!  Effective cloud ice radius
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%re_ice))
+            var%name        = "re_ice"
+            var%dimensions  = three_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "effective_radius_of_stratiform_cloud_ice_particles"), &
+                               attribute_t("units",         "m"),                                                 &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+
+        !>------------------------------------------------------------
+        !!  Effective snow radius
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%re_snow))
+            var%name        = "re_snow"
+            var%dimensions  = three_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "effective_radius_of_stratiform_snow_particles"), &
+                               attribute_t("units",         "m"),                                                 &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+
+        !>------------------------------------------------------------
+        !!  Outgoing longwave radiation
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%out_longwave_rad))
+            var%name        = "rlut"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "toa_outgoing_longwave_flux"), &
+                               attribute_t("units",         "W m-2"),                                                 &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+
+        !>------------------------------------------------------------
+        !!  Longwave cloud forcing
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%longwave_cloud_forcing))
+            var%name        = "lwcf"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "longwave_cloud_forcing"), &
+                               attribute_t("units",         "W m-2"),                                                 &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+
+        !>------------------------------------------------------------
+        !!  Surface emissivity
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%land_emissivity))
+            var%name        = "emiss"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "surface_longwave_emissivity"), &
+                               attribute_t("units",         " "),                                                 &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+
+        !>------------------------------------------------------------
+        !!  Temperature on interface
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%temperature_interface))
+            var%name        = "temperature_i"
+            var%dimensions  = three_d_t_interface_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "air_temperature"),                    &
+                               attribute_t("long_name",     "Temperature"),                        &
+                               attribute_t("units",         "K"),                              &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+
+
+
         !>------------------------------------------------------------
         !!  Downward Shortwave Radiation at the Surface (positive down)
         !!------------------------------------------------------------
