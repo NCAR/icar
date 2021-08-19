@@ -86,6 +86,9 @@ module domain_interface
     type(variable_t) :: vegetation_fraction
     type(variable_t) :: lai
     type(variable_t) :: canopy_water
+    type(variable_t) :: canopy_ice
+    type(variable_t) :: canopy_vapor_pressure
+    type(variable_t) :: canopy_temperature
     type(variable_t) :: snow_water_equivalent
     type(variable_t) :: snow_height
     type(variable_t) :: skin_temperature
