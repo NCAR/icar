@@ -339,6 +339,7 @@ OBJS=	$(BUILD)driver.o            \
 		$(BUILD)time_step.o			\
 		$(BUILD)debug_utils.o		\
 		$(BUILD)icar_constants.o	\
+		$(BUILD)wrf_constants.o	\
 		$(BUILD)model_tracking.o	\
 		$(BUILD)string.o        	\
 		$(BUILD)time_delta_obj.o	\
