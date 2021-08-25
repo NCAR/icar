@@ -9,13 +9,14 @@ on:
 jobs:
   run_fortran:
     env: TESTID='icar_linux'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
+    # runs-on: ubuntu-18.04
     steps:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Dependencies
-        run: bash ../scripts/icar_install_utils.sh icar_dependencies
+        run: bash .github/scripts/icar_install_utils.sh icar_dependencies
       - name: Install
-        run: bash ../scripts/icar_install_utils.sh icar_install
+        run: bash .github/scripts/icar_install_utils.sh icar_install
       - name: Run script
-        run: bash ../scripts/icar_install_utils.sh icar_script
+        run: bash .github/scripts/icar_install_utils.sh icar_script

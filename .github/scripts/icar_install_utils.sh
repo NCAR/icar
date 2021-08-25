@@ -4,6 +4,9 @@ set -e
 set -x
 
 export FC=gfortran-9
+# see link for size of runner
+# https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources
+export JN=-j2
 
 if [ -z "$WORKDIR" ]; then
     export WORKDIR=$HOME/workdir
@@ -23,7 +26,7 @@ function install_szip {
     cd szip-2.1.1
     ./configure --prefix=$INSTALLDIR &> config.log
     make &> make.log
-    make install
+    make install ${JN}
     export CPPFLAGS="$CPPFLAGS -I${INSTALLDIR}/include"
     export LDFLAGS="$LDFLAGS -L${INSTALLDIR}/lib"
 }
@@ -36,18 +39,18 @@ function install_hdf5 {
     cd hdf5-1.10.5
     ./configure --prefix=$INSTALLDIR &> config.log
     (make | awk 'NR%100 == 0')
-    make install
+    make install ${JN}
     export LIBDIR=${INSTALLDIR}/lib
 }
 
 function install_netcdf_c {
     echo install_netcdf_c
     cd $WORKDIR
-    wget --no-check-certificate -q ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-c-4.7.3.tar.gz
-    tar -xzf netcdf-c-4.7.3.tar.gz
-    cd netcdf-c-4.7.3
-    ./configure --prefix=$INSTALLDIR &> config.log
-    make &> make.log
+    wget --no-check-certificate -q ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-c-4.8.0.tar.gz
+    tar -xzf netcdf-c-4.8.0.tar.gz
+    cd netcdf-c-4.8.0
+    ./configure --prefix=$INSTALLDIR #&> config.log
+    make #&> make.log
     make install
     export LD_LIBRARY_PATH=${INSTALLDIR}/lib
 }
@@ -55,16 +58,19 @@ function install_netcdf_c {
 function install_netcdf_fortran {
     echo install_netcdf_fortran
     cd $WORKDIR
-    wget --no-check-certificate -q ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-fortran-4.5.2.tar.gz
-    tar -xzf netcdf-fortran-4.5.2.tar.gz
-    cd netcdf-fortran-4.5.2
-    ./configure --prefix=$INSTALLDIR &> config.log
-    make &> make.log
+    wget --no-check-certificate -q ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-fortran-4.5.3.tar.gz
+    tar -xzf netcdf-fortran-4.5.3.tar.gz
+    cd netcdf-fortran-4.5.3
+    ./configure --prefix=$INSTALLDIR #&> config.log
+    make #&> make.log
     make install
 }
 
 function icar_dependencies {
     echo icar_dependencies
+
+    sudo apt-get update
+    sudo apt-get install libcurl4-gnutls-dev
 
     # Install szip (used by hdf5)
     install_szip
@@ -130,3 +136,18 @@ function icar_after_failure {
   echo icar_after_failure
   echo "icar build failed"
 }
+
+
+for func in "$@"
+do
+    case $func in
+        icar_dependencies)
+            icar_dependencies;;
+        icar_install)
+            icar_install;;
+	icar_script)
+	    icar_script;;
+        *)
+            echo "$func unknown"
+    esac
+done
