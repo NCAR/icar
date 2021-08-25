@@ -1,15 +1,21 @@
 name: ICAR Actions
-on: [pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
 jobs:
-	run_fortran:
-		env: TESTID='icar_linux'
-		runs-on: ubuntu-latest
-		steps:
-			- name: Checkout
-			  uses: actions/checkout@v2
-			- name: Dependencies
-			  run: bash ../scripts/icar_install_utils.sh icar_dependencies
-			- name: Install
-			  run: bash ../scripts/icar_install_utils.sh icar_install
-			- name: Run script
-			  run: bash ../scripts/icar_install_utils.sh icar_script
+  run_fortran:
+    env: TESTID='icar_linux'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Dependencies
+        run: bash ../scripts/icar_install_utils.sh icar_dependencies
+      - name: Install
+        run: bash ../scripts/icar_install_utils.sh icar_install
+      - name: Run script
+        run: bash ../scripts/icar_install_utils.sh icar_script
