@@ -91,20 +91,21 @@ function icar_install {
 
     export NETCDF=${INSTALLDIR}
     export FFTW=/usr
+    export JN=-j1
 
     # CAF_MODE=single tells it to compile with gfortran -fcoarray=single
-    make -C src clean; make -C src -j4 icar CAF_MODE=single
+    make -C src clean; VERBOSE=1 make -C src ${JN} icar CAF_MODE=single
     # test serial build
-    make -C src clean; make -C src     CAF_MODE=single MODE=debugslow
+    make -C src clean; VERBOSE=1 make -C src     CAF_MODE=single MODE=debugslow
     # test parallel builds with different compile settings
-    make -C src clean; make -C src -j4 CAF_MODE=single MODE=debugslow
-    make -C src clean; make -C src -j4 CAF_MODE=single MODE=debug
-    make -C src clean; make -C src -j4 CAF_MODE=single MODE=debugompslow
-    make -C src clean; make -C src -j4 CAF_MODE=single MODE=debugomp
-    make -C src clean; make -C src -j4 CAF_MODE=single MODE=profile
-    # make -C src clean; make -C src -j4 CAF_MODE=single MODE=fast
-    make -C src clean; make -C src -j4 CAF_MODE=single
-    # make -C src -j4 CAF_MODE=single test
+    make -C src clean; VERBOSE=1 make -C src ${JN} CAF_MODE=single MODE=debugslow
+    make -C src clean; VERBOSE=1 make -C src ${JN} CAF_MODE=single MODE=debug
+    make -C src clean; VERBOSE=1 make -C src ${JN} CAF_MODE=single MODE=debugompslow
+    make -C src clean; VERBOSE=1 make -C src ${JN} CAF_MODE=single MODE=debugomp
+    make -C src clean; VERBOSE=1 make -C src -${JN} CAF_MODE=single MODE=profile
+    # make -C src clean; make -C src ${JN} CAF_MODE=single MODE=fast
+    make -C src clean; VERBOSE=1 make -C src ${JN} CAF_MODE=single
+    # make -C src ${JN} CAF_MODE=single test
     echo "icar install succeeded"
 
 }
