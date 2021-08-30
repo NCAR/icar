@@ -123,11 +123,9 @@ endif
 NODENAME := $(shell uname -n)
 
 ifndef COMPILER
-	ifeq ($(F90),gfortran-6)
-		COMPILER=gnu
-	endif
-	ifeq ($(F90),gfortran)
-		COMPILER=gnu
+	find_gfortran=$(findstring gfortran, $(filter gfortran%,$(F90)))
+	ifeq (gfortran, $(find_gfortran))
+	        COMPILER=gnu
 	endif
 	ifeq ($(F90),ifort)
 		COMPILER=intel
