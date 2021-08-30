@@ -71,6 +71,7 @@ function icar_dependencies {
 
     sudo apt-get update
     sudo apt-get install libcurl4-gnutls-dev
+    sudo apt-get install libfftw3-dev
 
     # Install szip (used by hdf5)
     install_szip
