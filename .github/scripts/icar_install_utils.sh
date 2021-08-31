@@ -17,6 +17,8 @@ if [ -z "$INSTALLDIR" ]; then
     export INSTALLDIR=$HOME/installdir
     mkdir -p $INSTALLDIR
 fi
+export LD_LIBRARY_PATH=${INSTALLDIR}/lib:${LD_LIBRARY_PATH}
+
 
 function install_szip {
     echo install_szip
@@ -52,7 +54,6 @@ function install_netcdf_c {
     ./configure --prefix=$INSTALLDIR #&> config.log
     make #&> make.log
     make install
-    export LD_LIBRARY_PATH=${INSTALLDIR}/lib
 }
 
 function install_netcdf_fortran {
