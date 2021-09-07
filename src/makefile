@@ -266,12 +266,12 @@ endif
 
 PROF=
 ifeq ($(MODE), profile)
-	ifeq ($(F90), ifort)
+	ifeq ($(COMPILER), intel)
 		PROF=-pg -debug inline-debug-info -shared-intel
 		COMP=-c -u -qopenmp -liomp5 -O3 -xHost -ftz #because -fast includes -static # not available in ifort <13 -align array64byte
 	endif
-	ifeq ($(F90), gfortran)
-		PROF=-g
+	ifeq ($(COMPILER), gnu)
+		PROF=-g -p
 	endif
 endif
 ifeq ($(MODE), fast) # WARNING -ipo (included in -fast) takes forever for very little gain, and this may be unstable
