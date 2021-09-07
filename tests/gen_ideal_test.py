@@ -42,6 +42,24 @@ class IdealTest:
         self.forcing.close()
 
 
+    def genHill(self):
+        k = 0
+        ids = 1
+        ide = self.nx + 1
+        jds = 1
+        jde = self.ny + 1
+        for i in range(ids,ide):
+            for j in range(jds,jde):
+                sine_curve = (math.sin((i-ids)/ \
+                              np.single((ide-ids)/self.n_hills) \
+                              * 2*3.14159 - 3.14159/2) + 1) / 2 \
+                              * (math.sin((j-jds)/np.single((jde-jds) \
+                                / self.n_hills) * 2*3.14159 - 3.14159/2)+1)/2
+                self.z_interface[i-1,k,j-1] = self.surface_z + sine_curve * self.hill_height
+        self.z[:,k,:] = self.z_interface[:,k,:] + self.dz_value/2
+
+
+
 def main():
 
     test = IdealTest(nx=10, ny=10)
@@ -70,24 +88,8 @@ if __name__ == "__main__":
 
 
 
-    def genHill(self):
-        k = 0
-        ids = 1
-        ide = self.nx + 1
-        jds = 1
-        jde = self.ny + 1
-        for i in range(ids,ide):
-            for j in range(jds,jde):
-                sine_curve = (math.sin((i-ids)/ \
-                              np.single((ide-ids)/self.n_hills) \
-                              * 2*3.14159 - 3.14159/2) + 1) / 2 \
-                              * (math.sin((j-jds)/np.single((jde-jds) \
-                                / self.n_hills) * 2*3.14159 - 3.14159/2)+1)/2
-                self.z_interface[i-1,k,j-1] = self.surface_z + sine_curve * self.hill_height
-        self.z[:,k,:] = self.z_interface[:,k,:] + self.dz_value/2
-
-    def forcingVariables(name):
-        print(name)
+    # def forcingVariables(name):
+    #     print(name)
 
 
         # double time(time) ;
