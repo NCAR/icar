@@ -3,7 +3,7 @@
 set -e
 set -x
 
-export FC=gfortran-11
+export FC=gfortran-9
 # see link for size of runner
 # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources
 export JN=-j
@@ -74,6 +74,8 @@ function icar_dependencies {
     sudo apt-get update
     sudo apt-get install libcurl4-gnutls-dev
     sudo apt-get install libfftw3-dev
+    # Installing HDF5 currently not working for NetCDF
+    # sudo apt-get install libhdf5-dev libhdf5-openmpi-dev
 
     export CPPFLAGS="$CPPFLAGS -I${INSTALLDIR}/include"
     export LDFLAGS="$LDFLAGS -L${INSTALLDIR}/lib"
@@ -82,6 +84,7 @@ function icar_dependencies {
     install_szip
     # Install HDF5
     install_hdf5
+
     # Install NetCDF-C
     install_netcdf_c
     # Install NetCDF fortran
