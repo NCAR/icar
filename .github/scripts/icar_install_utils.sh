@@ -74,7 +74,8 @@ function icar_dependencies {
     sudo apt-get update
     sudo apt-get install libcurl4-gnutls-dev
     sudo apt-get install libfftw3-dev
-    sudo apt-get install libhdf5-dev
+    sudo apt-get install libhdf5-dev libhdf5-openmpi-dev
+
 
     export CPPFLAGS="$CPPFLAGS -I${INSTALLDIR}/include"
     export LDFLAGS="$LDFLAGS -L${INSTALLDIR}/lib"
