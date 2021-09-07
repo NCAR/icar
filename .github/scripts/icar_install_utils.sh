@@ -17,6 +17,8 @@ if [ -z "$INSTALLDIR" ]; then
     export INSTALLDIR=$HOME/installdir
     mkdir -p $INSTALLDIR
 fi
+export LD_LIBRARY_PATH=${INSTALLDIR}/lib:${LD_LIBRARY_PATH}
+
 
 function install_szip {
     echo install_szip
@@ -53,7 +55,6 @@ function install_netcdf_c {
     ./configure --prefix=$INSTALLDIR #&> config.log
     make #&> make.log
     make install
-    export LD_LIBRARY_PATH=${INSTALLDIR}/lib
 }
 
 function install_netcdf_fortran {
@@ -72,6 +73,7 @@ function icar_dependencies {
 
     sudo apt-get update
     sudo apt-get install libcurl4-gnutls-dev
+    sudo apt-get install libfftw3-dev
 
     export CPPFLAGS="$CPPFLAGS -I${INSTALLDIR}/include"
     export LDFLAGS="$LDFLAGS -L${INSTALLDIR}/lib"
@@ -95,20 +97,21 @@ function icar_install {
 
     export NETCDF=${INSTALLDIR}
     export FFTW=/usr
-    export FFTW=/Users/soren/local/brew/3.1.7/Cellar/fftw/3.3.9_1
+    export JN=-j
 
     # CAF_MODE=single tells it to compile with gfortran -fcoarray=single
     # test serial build
-    make -C src clean; make -C src     CAF_MODE=single MODE=debugslow
-    # # test parallel builds with different compile settings
-    # make -C src clean; make -C src -j4 CAF_MODE=single MODE=debugslow
-    # make -C src clean; make -C src -j4 CAF_MODE=single MODE=debug
-    # make -C src clean; make -C src -j4 CAF_MODE=single MODE=debugompslow
-    # make -C src clean; make -C src -j4 CAF_MODE=single MODE=debugomp
-    # make -C src clean; make -C src -j4 CAF_MODE=single MODE=profile
-    # # make -C src clean; make -C src -j4 CAF_MODE=single MODE=fast
-    # make -C src clean; make -C src -j4 CAF_MODE=single
-    # make -C src -j4 CAF_MODE=single test
+    make -C src clean; VERBOSE=1 make -C src     CAF_MODE=single MODE=debugslow
+    # test parallel builds with different compile settings
+    # make -C src clean; VERBOSE=1 make -C src ${JN} CAF_MODE=single MODE=debugslow
+    # make -C src clean; VERBOSE=1 make -C src ${JN} CAF_MODE=single MODE=debug
+    # make -C src clean; VERBOSE=1 make -C src ${JN} CAF_MODE=single MODE=debugompslow
+    # make -C src clean; VERBOSE=1 make -C src ${JN} CAF_MODE=single MODE=debugomp
+    # make -C src clean; VERBOSE=1 make -C src ${JN} CAF_MODE=single MODE=profile
+    # # make -C src clean; make -C src ${JN} CAF_MODE=single MODE=fast
+    # make -C src clean; VERBOSE=1 make -C src ${JN} CAF_MODE=single
+    # make -C src ${JN} CAF_MODE=single test
+
     echo "icar install succeeded"
 
 }
