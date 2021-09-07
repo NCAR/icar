@@ -74,18 +74,16 @@ function icar_dependencies {
     sudo apt-get update
     sudo apt-get install libcurl4-gnutls-dev
     sudo apt-get install libfftw3-dev
-    sudo apt-get install libhdf5-dev libhdf5-openmpi-dev
-
+    # Installing HDF5 currently not working for NetCDF
+    # sudo apt-get install libhdf5-dev libhdf5-openmpi-dev
 
     export CPPFLAGS="$CPPFLAGS -I${INSTALLDIR}/include"
     export LDFLAGS="$LDFLAGS -L${INSTALLDIR}/lib"
 
-    # Szip and HDF5 are handeled by libhdf5-dev
-    # # Install szip (used by hdf5)
-    # install_szip
-    # # Install HDF5
-    # install_hdf5
-
+    # Install szip (used by hdf5)
+    install_szip
+    # Install HDF5
+    install_hdf5
 
     # Install NetCDF-C
     install_netcdf_c
