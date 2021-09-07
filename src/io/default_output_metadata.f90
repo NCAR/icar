@@ -634,6 +634,28 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
+        !!  Canopy Air Vapor Pressure
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%canopy_vapor_pressure))
+            var%name        = "canopy_vapor_pressure"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "canopy_air_vapor_pressure"),       &
+                               attribute_t("units",         "Pa"),                                  &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Canopy Air Temperature
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%canopy_temperature))
+            var%name        = "canopy_temperature"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "canopy_air_temperature"),          &
+                               attribute_t("units",         "K"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
         !!  Snow water equivalent on the surface
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%snow_water_equivalent))
