@@ -1,6 +1,5 @@
 submodule(output_interface) output_implementation
   use output_metadata,          only : get_metadata
-  use time_object,              only : Time_type
   implicit none
 
 contains

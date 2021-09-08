@@ -6,7 +6,7 @@ set -x
 export FC=gfortran-9
 # see link for size of runner
 # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources
-export JN=-j2
+export JN=-j
 
 if [ -z "$WORKDIR" ]; then
     export WORKDIR=$HOME/workdir
@@ -17,6 +17,8 @@ if [ -z "$INSTALLDIR" ]; then
     export INSTALLDIR=$HOME/installdir
     mkdir -p $INSTALLDIR
 fi
+export LD_LIBRARY_PATH=${INSTALLDIR}/lib:${LD_LIBRARY_PATH}
+
 
 function install_szip {
     echo install_szip
@@ -27,18 +29,19 @@ function install_szip {
     ./configure --prefix=$INSTALLDIR &> config.log
     make &> make.log
     make install ${JN}
-    export CPPFLAGS="$CPPFLAGS -I${INSTALLDIR}/include"
-    export LDFLAGS="$LDFLAGS -L${INSTALLDIR}/lib"
 }
 
 function install_hdf5 {
     echo install_hdf5
     cd $WORKDIR
-    wget --no-check-certificate -q https://support.hdfgroup.org/ftp/HDF5/current/src/hdf5-1.10.5.tar.gz
-    tar -xzf hdf5-1.10.5.tar.gz
-    cd hdf5-1.10.5
-    ./configure --prefix=$INSTALLDIR &> config.log
-    (make | awk 'NR%100 == 0')
+    wget --no-check-certificate -q https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.7/src/hdf5-1.10.7.tar.gz
+    tar -xzf hdf5-1.10.7.tar.gz
+    cd hdf5-1.10.7
+    # FCFLAGS="-DH5_USE_110_API" ./configure --prefix=$INSTALLDIR &> config.log
+    ./configure --prefix=$INSTALLDIR #&> config.log
+    make
+    # CFLAGS=-DH5_USE_110_API make
+    # (CFLAGS=-DH5_USE_110_API make | awk 'NR%100 == 0')
     make install ${JN}
     export LIBDIR=${INSTALLDIR}/lib
 }
@@ -52,7 +55,6 @@ function install_netcdf_c {
     ./configure --prefix=$INSTALLDIR #&> config.log
     make #&> make.log
     make install
-    export LD_LIBRARY_PATH=${INSTALLDIR}/lib
 }
 
 function install_netcdf_fortran {
@@ -71,11 +73,18 @@ function icar_dependencies {
 
     sudo apt-get update
     sudo apt-get install libcurl4-gnutls-dev
+    sudo apt-get install libfftw3-dev
+    # Installing HDF5 currently not working for NetCDF
+    # sudo apt-get install libhdf5-dev libhdf5-openmpi-dev
+
+    export CPPFLAGS="$CPPFLAGS -I${INSTALLDIR}/include"
+    export LDFLAGS="$LDFLAGS -L${INSTALLDIR}/lib"
 
     # Install szip (used by hdf5)
     install_szip
     # Install HDF5
     install_hdf5
+
     # Install NetCDF-C
     install_netcdf_c
     # Install NetCDF fortran
@@ -91,20 +100,21 @@ function icar_install {
 
     export NETCDF=${INSTALLDIR}
     export FFTW=/usr
+    export JN=-j
 
     # CAF_MODE=single tells it to compile with gfortran -fcoarray=single
-    make -C src clean; make -C src -j4 icar CAF_MODE=single
     # test serial build
-    make -C src clean; make -C src     CAF_MODE=single MODE=debugslow
+    make -C src clean; VERBOSE=1 make -C src     CAF_MODE=single MODE=debugslow
     # test parallel builds with different compile settings
-    make -C src clean; make -C src -j4 CAF_MODE=single MODE=debugslow
-    make -C src clean; make -C src -j4 CAF_MODE=single MODE=debug
-    make -C src clean; make -C src -j4 CAF_MODE=single MODE=debugompslow
-    make -C src clean; make -C src -j4 CAF_MODE=single MODE=debugomp
-    make -C src clean; make -C src -j4 CAF_MODE=single MODE=profile
-    # make -C src clean; make -C src -j4 CAF_MODE=single MODE=fast
-    make -C src clean; make -C src -j4 CAF_MODE=single
-    # make -C src -j4 CAF_MODE=single test
+    # make -C src clean; VERBOSE=1 make -C src ${JN} CAF_MODE=single MODE=debugslow
+    # make -C src clean; VERBOSE=1 make -C src ${JN} CAF_MODE=single MODE=debug
+    # make -C src clean; VERBOSE=1 make -C src ${JN} CAF_MODE=single MODE=debugompslow
+    # make -C src clean; VERBOSE=1 make -C src ${JN} CAF_MODE=single MODE=debugomp
+    # make -C src clean; VERBOSE=1 make -C src ${JN} CAF_MODE=single MODE=profile
+    # # make -C src clean; make -C src ${JN} CAF_MODE=single MODE=fast
+    # make -C src clean; VERBOSE=1 make -C src ${JN} CAF_MODE=single
+    # make -C src ${JN} CAF_MODE=single test
+
     echo "icar install succeeded"
 
 }
@@ -136,7 +146,6 @@ function icar_after_failure {
   echo icar_after_failure
   echo "icar build failed"
 }
-
 
 for func in "$@"
 do

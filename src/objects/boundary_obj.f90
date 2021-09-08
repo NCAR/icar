@@ -7,9 +7,7 @@
 !!------------------------------------------------------------
 submodule(boundary_interface) boundary_implementation
 
-    use icar_constants,         only : gravity, kPRIME_CENTERED, kDATELINE_CENTERED
     use array_utilities,        only : interpolate_in_z
-    use data_structures,        only : interpolable_type
     use io_routines,            only : io_getdims, io_read, io_maxDims, io_variable_is_present
     use time_io,                only : read_times, find_timestep_in_file
     use co_util,                only : broadcast
