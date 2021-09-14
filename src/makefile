@@ -333,11 +333,12 @@ $(info $$MODE        = ${MODE})
 
 
 
-OBJS=	$(BUILD)driver.o            \
+OBJS=	\
 		$(BUILD)init.o				\
 		$(BUILD)time_step.o			\
 		$(BUILD)debug_utils.o		\
 		$(BUILD)icar_constants.o	\
+		$(BUILD)wrf_constants.o	\
 		$(BUILD)model_tracking.o	\
 		$(BUILD)string.o        	\
 		$(BUILD)time_delta_obj.o	\
@@ -431,9 +432,9 @@ TEST_EXECUTABLES= 	fftshift_test			\
 #	User facing rules
 ###################################################################
 
-icar:${OBJS}
-	${LINKER} -o icar ${OBJS} ${LFLAGS}
-	${ECHO_MOVE} *.i ${BUILD}
+icar:${OBJS} $(BUILD)driver.o
+	${LINKER} $^ -o icar ${LFLAGS}
+	make move_i
 
 all:icar test
 
@@ -441,15 +442,18 @@ install:icar
 	mkdir -p ${INSTALLDIR}
 	${CP} icar ${INSTALLDIR}
 
+move_i:
+	$(ECHO_MOVE) *.i ${BUILD} 2>/dev/null || true
+
 clean:
 	${RM} $(BUILD)*.o $(BUILD)*.mod $(BUILD)*.smod *.i *.lst docs/doxygen_sqlite3.db 2>/dev/null ||:
 
 allclean:cleanall
 
-cleanall: clean
+cleanall:clean
 	${RM} icar $(TEST_EXECUTABLES) 2>/dev/null ||:
 
-test: $(TEST_EXECUTABLES)
+test: $(TEST_EXECUTABLES) move_i
 
 caf_tests:	$(CAF_TEST_EXECUTABLES)
 
@@ -459,10 +463,10 @@ doc:
 ###################################################################
 #	test cases
 ###################################################################
-fftw_test: $(BUILD)test_fftw.o
+fftw_test: $(BUILD)test_fftw.o $(OBJS)
 	${LINKER} $^ -o $@ ${LFLAGS}
 
-fftshift_test: $(BUILD)test_fftshift.o $(BUILD)fftshift.o
+fftshift_test: $(BUILD)test_fftshift.o $(OBJS)
 	${LINKER} $^ -o $@ ${LFLAGS}
 
 calendar_test: $(BUILD)test_calendar.o $(BUILD)time.o
@@ -471,7 +475,7 @@ calendar_test: $(BUILD)test_calendar.o $(BUILD)time.o
 mpdata_test: $(BUILD)test_mpdata.o $(BUILD)adv_mpdata.o
 	${LINKER} $^ -o $@ ${LFLAGS}
 
-point_in_on_test: $(BUILD)test_point_in_on.o $(BUILD)geo_reader.o $(BUILD)data_structures.o $(BUILD)icar_constants.o
+point_in_on_test: $(BUILD)test_point_in_on.o $(OBJS)
 	${LINKER} $^ -o $@ ${LFLAGS}
 
 blocking_test: $(BUILD)test_blocking.o $(BUILD)io_routines.o $(BUILD)winds_blocking.o \
@@ -479,7 +483,7 @@ blocking_test: $(BUILD)test_blocking.o $(BUILD)io_routines.o $(BUILD)winds_block
 				$(BUILD)lt_lut_io.o $(BUILD)atm_utilities.o $(BUILD)array_utilities.o
 	${LINKER} $^ -o $@ ${LFLAGS}
 
-array_util_test: $(BUILD)test_array_utilities.o $(BUILD)array_utilities.o
+array_util_test: $(BUILD)test_array_utilities.o $(OBJS)
 	${LINKER} $^ -o $@ ${LFLAGS}
 
 variable_dict_test: $(BUILD)test_variable_dict.o $(BUILD)co_utilities.o	 	\
@@ -491,64 +495,10 @@ variable_dict_test: $(BUILD)test_variable_dict.o $(BUILD)co_utilities.o	 	\
 	${LINKER} $^ -o $@ ${LFLAGS}
 
 
-caf_options_test: $(BUILD)test_caf_options.o				  	\
-				$(BUILD)options_h.o      $(BUILD)options_obj.o	\
-				$(BUILD)icar_constants.o $(BUILD)string.o     	\
-				$(BUILD)io_routines.o    $(BUILD)time_io.o  	\
-				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o 	\
-				$(BUILD)time_h.o		 $(BUILD)atm_utilities.o\
-				$(BUILD)model_tracking.o $(BUILD)opt_types.o	\
-				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
-				$(BUILD)ra_driver.o      $(BUILD)ra_simple.o	\
-				$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o	\
-				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o	\
-				$(BUILD)mp_thompson.o	 $(BUILD)mp_thompson_aer.o   $(BUILD)mp_wsm6.o\
-				$(BUILD)cu_driver.o		 $(BUILD)cu_tiedtke.o	\
-				$(BUILD)advection_driver.o						\
-				$(BUILD)advect.o		 $(BUILD)lsm_driver.o	\
-				$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
-				$(BUILD)water_simple.o
+caf_options_test: $(BUILD)test_caf_options.o $(OBJS)
 	${LINKER} $^ -o $@ ${LFLAGS}
 
-caf_output_test: $(BUILD)test_caf_output.o						\
-				$(BUILD)output_h.o		$(BUILD)output_obj.o	\
-				$(BUILD)variable_h.o 	$(BUILD)variable_obj.o  \
-				$(BUILD)grid_h.o 		$(BUILD)grid_obj.o  	\
-				$(BUILD)meta_data_h.o 	$(BUILD)meta_data_obj.o \
-				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o     \
-				$(BUILD)time_h.o	\
-				$(BUILD)icar_constants.o $(BUILD)io_routines.o  \
-				$(BUILD)assertions.o	$(BUILD)default_output_metadata.o
-	${LINKER} $^ -o $@ ${LFLAGS}
-
-caf_write_domain_test: $(BUILD)test_caf_write_domain.o					\
-	 				$(BUILD)domain_h.o		 $(BUILD)domain_obj.o		\
-					$(BUILD)boundary_h.o	 $(BUILD)boundary_obj.o		\
-					$(BUILD)options_h.o		 $(BUILD)options_obj.o		\
-					$(BUILD)opt_types.o      $(BUILD)time_io.o          \
-					$(BUILD)grid_h.o		 $(BUILD)grid_obj.o			\
-					$(BUILD)output_h.o		 $(BUILD)output_obj.o		\
-					$(BUILD)meta_data_h.o    $(BUILD)meta_data_obj.o	\
-					$(BUILD)variable_h.o	 $(BUILD)variable_obj.o		\
-					$(BUILD)variable_dict_h.o $(BUILD)variable_dict_obj.o	\
-					$(BUILD)time_delta_obj.o $(BUILD)time_obj.o    		\
-					$(BUILD)time_h.o	\
-					$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
-					$(BUILD)icar_constants.o $(BUILD)io_routines.o		\
-					$(BUILD)model_tracking.o $(BUILD)string.o           \
-					$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
-					$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o\
-					$(BUILD)ra_driver.o      $(BUILD)ra_simple.o		\
-					$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o		\
-					$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
-					$(BUILD)mp_thompson.o	 $(BUILD)mp_thompson_aer.o   $(BUILD)mp_wsm6.o\
-					$(BUILD)cu_driver.o		 $(BUILD)cu_tiedtke.o		\
-					$(BUILD)advection_driver.o							\
-					$(BUILD)advect.o		$(BUILD)data_structures.o	\
-					$(BUILD)geo_reader.o	$(BUILD)array_utilities.o	\
-					$(BUILD)vinterp.o		$(BUILD)lsm_driver.o		\
-					$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
-					$(BUILD)water_simple.o
+caf_write_domain_test: $(BUILD)test_caf_write_domain.o	$(OBJS)
 	${LINKER} $^ -o $@ ${LFLAGS}
 
 caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
@@ -581,188 +531,26 @@ caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
 					$(BUILD)water_simple.o
 	${LINKER} $^ -o $@ ${LFLAGS}
 
-caf_domain_init_test: $(BUILD)test_caf_domain_init.o                \
-				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
-				$(BUILD)model_tracking.o $(BUILD)string.o           \
-				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o         \
-				$(BUILD)time_h.o	\
-				$(BUILD)opt_types.o      $(BUILD)time_io.o          \
-				$(BUILD)options_h.o      $(BUILD)options_obj.o      \
-				$(BUILD)meta_data_h.o    $(BUILD)meta_data_obj.o    \
-				$(BUILD)variable_h.o     $(BUILD)variable_obj.o     \
-				$(BUILD)variable_dict_h.o $(BUILD)variable_dict_obj.o	\
-				$(BUILD)grid_h.o         $(BUILD)grid_obj.o         \
-				$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
-				$(BUILD)domain_h.o       $(BUILD)domain_obj.o		\
-				$(BUILD)boundary_h.o	 $(BUILD)boundary_obj.o		\
-				$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
-				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
-				$(BUILD)ra_driver.o      $(BUILD)ra_simple.o		\
-				$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o		\
-				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
-				$(BUILD)mp_thompson.o	 $(BUILD)mp_thompson_aer.o   $(BUILD)mp_wsm6.o\
-				$(BUILD)cu_driver.o		 $(BUILD)cu_tiedtke.o		\
-				$(BUILD)advection_driver.o							\
-				$(BUILD)advect.o		 $(BUILD)lsm_driver.o		\
-				$(BUILD)io_routines.o	 $(BUILD)data_structures.o	\
-				$(BUILD)geo_reader.o	 $(BUILD)array_utilities.o	\
-				$(BUILD)vinterp.o	\
-				$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
-				$(BUILD)water_simple.o
+caf_domain_init_test: $(BUILD)test_caf_domain_init.o $(OBJS)
 	${LINKER} $^ -o $@ ${LFLAGS}
 
-caf_init_test: $(BUILD)test_caf_init.o                              \
-				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
-				$(BUILD)model_tracking.o $(BUILD)string.o           \
-				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o         \
-				$(BUILD)time_h.o	\
-				$(BUILD)opt_types.o      $(BUILD)time_io.o          \
-				$(BUILD)options_h.o      $(BUILD)options_obj.o      \
-				$(BUILD)meta_data_h.o    $(BUILD)meta_data_obj.o    \
-				$(BUILD)variable_h.o     $(BUILD)variable_obj.o     \
-				$(BUILD)variable_dict_h.o $(BUILD)variable_dict_obj.o	\
-				$(BUILD)grid_h.o         $(BUILD)grid_obj.o         \
-				$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
-				$(BUILD)domain_h.o       $(BUILD)domain_obj.o		\
-				$(BUILD)boundary_h.o	 $(BUILD)boundary_obj.o		\
-				$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
-				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
-				$(BUILD)ra_driver.o      $(BUILD)ra_simple.o		\
-				$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o		\
-				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
-				$(BUILD)mp_thompson.o	 $(BUILD)mp_thompson_aer.o   $(BUILD)mp_wsm6.o\
-				$(BUILD)cu_driver.o		 $(BUILD)cu_tiedtke.o		\
-				$(BUILD)advection_driver.o							\
-				$(BUILD)advect.o		 $(BUILD)geo_reader.o		\
-				$(BUILD)io_routines.o	 $(BUILD)data_structures.o	\
-				$(BUILD)vinterp.o		 $(BUILD)array_utilities.o	\
-				$(BUILD)lsm_driver.o	\
-				$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
-				$(BUILD)water_simple.o
+caf_init_test: $(BUILD)test_caf_init.o $(OBJS)
 	${LINKER} $^ -o $@ ${LFLAGS}
 
-caf_init-write_test: $(BUILD)test_caf_init-write.o                  \
-				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
-				$(BUILD)model_tracking.o $(BUILD)string.o           \
-				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o         \
-				$(BUILD)time_h.o	\
-				$(BUILD)opt_types.o      $(BUILD)time_io.o          \
-				$(BUILD)options_h.o      $(BUILD)options_obj.o      \
-				$(BUILD)meta_data_h.o    $(BUILD)meta_data_obj.o    \
-				$(BUILD)variable_h.o     $(BUILD)variable_obj.o     \
-				$(BUILD)variable_dict_h.o $(BUILD)variable_dict_obj.o	\
-				$(BUILD)grid_h.o         $(BUILD)grid_obj.o         \
-				$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
-				$(BUILD)domain_h.o       $(BUILD)domain_obj.o		\
-				$(BUILD)boundary_h.o	 $(BUILD)boundary_obj.o		\
-				$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
-				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
-				$(BUILD)output_h.o		 $(BUILD)output_obj.o		\
-				$(BUILD)ra_driver.o      $(BUILD)ra_simple.o		\
-				$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o		\
-				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
-				$(BUILD)mp_thompson.o	 $(BUILD)mp_thompson_aer.o   $(BUILD)mp_wsm6.o\
-				$(BUILD)cu_driver.o		 $(BUILD)cu_tiedtke.o		\
-				$(BUILD)advection_driver.o							\
-				$(BUILD)advect.o		 $(BUILD)geo_reader.o		\
-				$(BUILD)io_routines.o	 $(BUILD)data_structures.o	\
-				$(BUILD)vinterp.o		 $(BUILD)array_utilities.o	\
-				$(BUILD)lsm_driver.o	\
-				$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
-				$(BUILD)water_simple.o
+caf_init-write_test: $(BUILD)test_caf_init-write.o $(OBJS)
 	${LINKER} $^ -o $@ ${LFLAGS}
 
 caf_bcast_test: $(BUILD)test_caf_bcast.o	\
-				$(BUILD)co_utilities.o
+				$(BUILD)co_utilities.o $(BUILD)icar_constants.o
 	${LINKER} $^ -o $@ ${LFLAGS}
 
-caf_boundary_test: $(BUILD)test_caf_boundary.o						\
-				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
-				$(BUILD)model_tracking.o $(BUILD)string.o           \
-				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o         \
-				$(BUILD)time_h.o	\
-				$(BUILD)opt_types.o      $(BUILD)time_io.o          \
-				$(BUILD)options_h.o      $(BUILD)options_obj.o      \
-				$(BUILD)meta_data_h.o    $(BUILD)meta_data_obj.o    \
-				$(BUILD)variable_h.o     $(BUILD)variable_obj.o     \
-				$(BUILD)variable_dict_h.o $(BUILD)variable_dict_obj.o\
-				$(BUILD)grid_h.o         $(BUILD)grid_obj.o         \
-				$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
-				$(BUILD)boundary_h.o     $(BUILD)boundary_obj.o		\
-				$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
-				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
-				$(BUILD)ra_driver.o      $(BUILD)ra_simple.o		\
-				$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o		\
-				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
-				$(BUILD)mp_thompson.o	 $(BUILD)mp_thompson_aer.o   $(BUILD)mp_wsm6.o\
-				$(BUILD)cu_driver.o		 $(BUILD)cu_tiedtke.o		\
-				$(BUILD)advection_driver.o							\
-				$(BUILD)advect.o		 $(BUILD)geo_reader.o		\
-				$(BUILD)io_routines.o	 $(BUILD)data_structures.o	\
-				$(BUILD)vinterp.o 		 $(BUILD)array_utilities.o	\
-				$(BUILD)lsm_driver.o								\
-				$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
-				$(BUILD)water_simple.o
+caf_boundary_test: $(BUILD)test_caf_boundary.o $(OBJS)
 	${LINKER} $^ -o $@ ${LFLAGS}
 
-caf_boundary_init_test: $(BUILD)test_caf_boundary_init.o				    \
-				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
-				$(BUILD)model_tracking.o $(BUILD)string.o           \
-				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o         \
-				$(BUILD)time_h.o	\
-				$(BUILD)opt_types.o      $(BUILD)time_io.o          \
-				$(BUILD)options_h.o      $(BUILD)options_obj.o      \
-				$(BUILD)meta_data_h.o    $(BUILD)meta_data_obj.o    \
-				$(BUILD)variable_h.o     $(BUILD)variable_obj.o     \
-				$(BUILD)variable_dict_h.o $(BUILD)variable_dict_obj.o\
-				$(BUILD)grid_h.o         $(BUILD)grid_obj.o         \
-				$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
-				$(BUILD)boundary_h.o     $(BUILD)boundary_obj.o		\
-				$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
-				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
-				$(BUILD)ra_driver.o      $(BUILD)ra_simple.o		\
-				$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o		\
-				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
-				$(BUILD)mp_thompson.o	 $(BUILD)mp_thompson_aer.o   $(BUILD)mp_wsm6.o\
-				$(BUILD)cu_driver.o		 $(BUILD)cu_tiedtke.o		\
-				$(BUILD)advection_driver.o							\
-				$(BUILD)advect.o		 $(BUILD)geo_reader.o		\
-				$(BUILD)io_routines.o	 $(BUILD)data_structures.o	\
-				$(BUILD)vinterp.o 		 $(BUILD)array_utilities.o	\
-				$(BUILD)lsm_driver.o								\
-				$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
-				$(BUILD)water_simple.o
+caf_boundary_init_test: $(BUILD)test_caf_boundary_init.o $(OBJS)
 	${LINKER} $^ -o $@ ${LFLAGS}
 
-caf_linear_winds_setup_test: $(BUILD)test_caf_linear_winds_setup.o	\
-				$(BUILD)icar_constants.o $(BUILD)io_routines.o      \
-				$(BUILD)model_tracking.o $(BUILD)string.o           \
-				$(BUILD)time_delta_obj.o $(BUILD)time_obj.o         \
-				$(BUILD)time_h.o	\
-				$(BUILD)opt_types.o      $(BUILD)time_io.o          \
-				$(BUILD)options_h.o      $(BUILD)options_obj.o      \
-				$(BUILD)meta_data_h.o    $(BUILD)meta_data_obj.o    \
-				$(BUILD)variable_h.o     $(BUILD)variable_obj.o     \
-				$(BUILD)variable_dict_h.o $(BUILD)variable_dict_obj.o	\
-				$(BUILD)grid_h.o         $(BUILD)grid_obj.o         \
-				$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
-				$(BUILD)domain_h.o       $(BUILD)domain_obj.o		\
-				$(BUILD)boundary_h.o	 $(BUILD)boundary_obj.o		\
-				$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
-				$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
-				$(BUILD)ra_driver.o      $(BUILD)ra_simple.o		\
-				$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o		\
-				$(BUILD)cu_driver.o		 $(BUILD)cu_tiedtke.o		\
-				$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
-				$(BUILD)mp_thompson.o	 $(BUILD)mp_thompson_aer.o   $(BUILD)mp_wsm6.o\
-				$(BUILD)advection_driver.o $(BUILD)advect.o			\
-				$(BUILD)data_structures.o							\
-				$(BUILD)geo_reader.o	 $(BUILD)array_utilities.o	\
-				$(BUILD)fftshift.o 		 $(BUILD)fftw.o  			\
-				$(BUILD)vinterp.o		 $(BUILD)linear_winds.o		\
-				$(BUILD)lt_lut_io.o		 $(BUILD)lsm_driver.o		\
-				$(BUILD)lsm_noahdrv.o	 $(BUILD)lsm_noahlsm.o \
-				$(BUILD)water_simple.o
+caf_linear_winds_setup_test: $(BUILD)test_caf_linear_winds_setup.o $(OBJS)
 	${LINKER} $^ -o $@ ${LFLAGS}
 
 
