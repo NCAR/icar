@@ -123,12 +123,10 @@ endif
 NODENAME := $(shell uname -n)
 
 ifndef COMPILER
-	ifeq ($(F90),gfortran-6)
-		COMPILER=gnu
-	endif
-	ifeq ($(F90),gfortran)
-		COMPILER=gnu
-	endif
+        find_gfortran=$(findstring gfortran, $(filter gfortran%,$(F90)))
+        ifeq (gfortran, $(find_gfortran))
+                COMPILER=gnu
+        endif
 	ifeq ($(F90),ifort)
 		COMPILER=intel
 	endif
@@ -279,6 +277,7 @@ ifeq ($(MODE), fast) # WARNING -ipo (included in -fast) takes forever for very l
 		COMP=-c -u -openmp -liomp5 -fast -ftz #-fast-transcendentals # not available in ifort <13: -align array64byte
 	endif
 endif
+
 
 LINKER=$(F90)
 ifeq ($(COMPILER), gnu)
