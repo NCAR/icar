@@ -51,6 +51,7 @@ def convert_sfc(data):
     output_data.tskin           = data.tskin[np.newaxis,::-1,:]             # K
     output_data.sw              = data.sw[np.newaxis,::-1,:] / dt   # convert from Joules to W /m^2
     output_data.lw              = data.lw[np.newaxis,::-1,:] / dt   # convert from Joules to W /m^2
+    output_data.cp              = data.cp[np.newaxis,::-1,:] * 1000 # convert m to mm
 
     # this is now handled in io so it can just use the last value in the file, much simple
     #  ... though in some ways what is below is better as it integrates over a longer time period
