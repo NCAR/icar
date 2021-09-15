@@ -66,6 +66,9 @@ def write_file(date,info,erai):
     atts=Bunch(long_name="Skin Temperature",units="K")
     extra_vars.append(Bunch(name="tskin",data=erai["tskin"],dims=dims2dt,dtype="f",attributes=atts))
 
+    atts=Bunch(long_name="Convective precipitation",units="mm")
+    extra_vars.append(Bunch(name="cp",data=erai["cp"],dims=dims2dt,dtype="f",attributes=atts))
+
     atts=Bunch(long_name="latitude",units="degrees_north")
     extra_vars.append(Bunch(name="lat",data=info.lat_data[:,0],dims=("lat",),dtype="f",attributes=atts))
 
