@@ -1,144 +1,64 @@
 from netCDF4 import Dataset
 import xarray as xr
+import pandas as pd
 import numpy as np
+import datetime
 import math
 from genNetCDF import fixType
 from sys import exit
 
+# Create NetCDF file containing the forcing data
 class Forcing:
-    nx = 2
-    ny = 2
-    nz = 10
     # from ideal test
-    sealevel_pressure = 100000.0 # pressure at sea level [Pa]
-    hill_height       = 1000.0   # height of the ideal hill(s) [m]
-    n_hills           = 1.0      # number of hills across the domain
-    dz_value          = 500.0    # thickness of each model gridcell   [m]
-    surface_z         = 500.0    # Wont work with dry bv test
-    z_interface       = None
-    z                 = None
-    dz_mass           = None
-    pressure          = None
-
-    attributes = {
-        "history": "Mon Dec 01 00:00:00 2020: ncrcat 2000-01-01_00:00:00 2000-01-31_0:00:00 "
-    }
-
-    variableNames = ["u", "v", "theta", "p", "lat", "lon"] # others
+    attributes = {"history": "Dec 01 00:00:00 2020"}
 
 
     def __init__(self, nz=10, nx=2, ny=2, sealevel_pressure=100000.0,
                  rh=0.9, u_val=0.5, v_val=0.5, w_val=0.0,
-                 water_vapor_val=0.001, theta_val=300.0):
+                 water_vapor_val=0.001, theta_val=300.0, nt=2,
+                 height_value=500, dx=10, dy=10, dz_value=500.0):
 
-        # self.forcing_f = Dataset("forcing.nc", "w", format="NETCDF4")
-        # self.createDimensions()
-        # self.createAttributes()
+        self.setup_class_variables(nz, nx, ny, nt, sealevel_pressure)
 
-        self.nz = nz
-        self.nx = nx
-        self.ny = ny
+        # --------------------------------------------------------------
+        # Create and define variables for datafile
+        # --------------------------------------------------------------
+        # create time
+        nt = 2
+        t0 = datetime.datetime(2020,12,1)
+        time = xr.DataArray([t0+datetime.timedelta(dt*100) for dt in range(nt)], name="time",
+                            dims=["time"])
 
-        dimensions3d = {
-            "level": nz,
-            "lat": nx,
-            "lon": ny
-        }
-        dimensions2d = {
-            "lat": nx,
-            "lon": ny
-        }
+        # create longitude and latitude
+        lat_tmp = np.zeros([nt, nx, ny])
+        lon_tmp = np.zeros([nt, nx, ny])
+        lat_flat = np.arange(39,39+nx*dx, dx)
+        lon_flat = np.arange(-107,-107+ny*dy, dy)
 
-        self.dimensions3d = dimensions3d
-        self.dimensions2d = dimensions2d
+        self.define_data_variables(nt, nz, nx, ny, height_value, lat_flat,
+                                   lon_flat, dz_value)
 
-        lon = xr.DataArray(np.arange(dimensions3d['lon']), dims=['lon'])
-        lat = xr.DataArray(np.arange(dimensions3d['lat']), dims=['lat'])
-
-        print(lon)
-        print("---")
-        print(lat)
-        print("---")
-        print("nznxny = ", nz,nx,ny)
-        # self.dz_mass = self.gen3dDataArray(self.dz_value)
-        # self.dz_mass[:,0,:] = self.dz_mass[:,0,:]/2
-
-        dz = self.gen3dDataArray(self.dz_value)
-        z = self.gen3dDataArray(0)
-        height = self.gen2dDataArray(0)
-        for i in range(1,nz):
-            z[i,:,:] = z[i-1,:,:] + dz[i,:,:]
-
-        # calc pressure
-        pressure = self.gen3dDataArray(0)
-        pressure = sealevel_pressure * (1 - 2.25577E-5 * z)**5.25588
-
-        # calc potential temperature
-        potential_temperature = self.gen3dDataArray(theta_val)
-
-        # copied from exner_function
-        exner = self.calc_exner(pressure)
-        temperature = exner * potential_temperature
-        water_vapor = self.gen3dDataArray(water_vapor_val)
-        water_vapor = self.set_water_vapor(water_vapor, temperature, pressure)
-
+        # --------------------------------------------------------------
+        # Combine variables, create dataset and write to file
+        # --------------------------------------------------------------
         data_vars = dict(
-            height = height,
-            dz = dz,
-            z = z,
-            pressure = pressure,
-            temperature = temperature,
-            potential_temperature = potential_temperature,
-            water_vapor = water_vapor,
-            u = self.gen3dDataArray(u_val),
-            v = self.gen3dDataArray(v_val),
-            w = self.gen3dDataArray(w_val),
-            lat = lat,
-            lon = lon
-            )
+            u = self.u,
+            v = self.v,
+            theta = self.theta,
+            qv = self.qv,
+            height = self.height,
+            z = self.z,
+            pressure = self.pressure,
+            lat_m = self.lat,
+            lon_m = self.lon,
+            time = time)
 
         ds = xr.Dataset(
             data_vars = data_vars,
             attrs = self.attributes
         )
-        ds.to_netcdf("forcing.nc", "w", "NETCDF4")
 
-
-    def gen3dDataArray(self, val):
-        data = xr.DataArray(np.full((self.nz,self.nx,self.ny), val),
-                            dims=self.dimensions3d.keys())
-        return data
-
-    def gen2dDataArray(self, val):
-        data = xr.DataArray(np.full((self.nx,self.ny), val),
-                            dims=self.dimensions2d.keys())
-        return data
-
-    def getDimension(self):
-        return self.dimensions
-
-    def getAttributes(self):
-        return self.attributes
-
-    def getVariableNames(self):
-        return self.variableNames
-
-    def createDimensions(self):
-        for name, val in self.dimensions.items():
-            self.forcing_f.createDimension(name,val)
-
-    def createAttributes(self):
-        for name, val in self.attributes.items():
-            fixed_val = fixType(val)
-            self.forcing_f.setncattr(name, fixed_val)
-
-    def createVariables(self):
-        for var in self.variableNames:
-            print(var)
-
-    def calc_exner(self,pressure):
-        po=100000; Rd=287.058; cp=1003.5
-        return (pressure / po) ** (Rd/cp)
+        ds.to_netcdf("forcing.nc", "w", "NETCDF4", unlimited_dims='time')
 
 
     def set_water_vapor(self, water_vapor, temperature, pressure):
@@ -148,6 +68,111 @@ class Forcing:
                     water_vapor[k,i,j] = sat_mr(temperature[k,i,j],
                                                 pressure[k,i,j])
         return water_vapor
+
+
+    def setup_class_variables(self, nz, nx, ny, nt, sealevel_pressure):
+        self.nt = nt
+        self.nz = nz
+        self.nx = nx
+        self.ny = ny
+        self.sealevel_pressure = sealevel_pressure
+        dimensions4d = {
+            "time": nt,
+            "level": nz,
+            "lat": nx,
+            "lon": ny
+        }
+        dimensions3d = {
+            "level": nz,
+            "lat": nx,
+            "lon": ny
+        }
+        dimensions3d_t = {
+            "time": nt,
+            "lat": nx,
+            "lon": ny
+        }
+        dimensions2d = {
+            "lat": nx,
+            "lon": ny
+        }
+        dimensions1d = {
+            "time": 1
+
+        }
+        self.dimensions4d = dimensions4d
+        self.dimensions3d = dimensions3d
+        self.dimensions3d_t = dimensions3d_t
+        self.dimensions2d = dimensions2d
+        self.dimensions1d = dimensions1d
+
+
+    def define_data_variables(self, nt, nz, nx, ny, height_value,lat_flat,
+                              lon_flat, dz_value):
+        dims2d = ["lat", "lon"]
+        dims4d = ["time","level","lat", "lon"]
+
+        # --- u variable
+        self.u = xr.Variable(dims4d,
+                             np.full([nt, nz, nx, ny], 0.5),
+                             {'long_name':'U (E/W) wind speed', 'units':"m s**-1"})
+        # --- v variable
+        self.v = xr.Variable(dims4d,
+                             np.full([nt, nz, nx, ny], 0.25),
+                             {'long_name':'V (N/S) wind speed', 'units':"m s**-1"})
+
+        # --- potential temperature variable
+        self.theta = xr.Variable(dims4d,
+                                 np.full([nt, nz, nx, ny], 270.),
+                                 {'long_name':'Potential Temperature', 'units':"K"})
+        # --- qv variable
+        self.qv = xr.Variable(dims4d,
+                              np.full([nt, nz, nx, ny], 0.1),
+                              {'long_name':'Relative Humidity', 'units':"kg kg**-1"})
+        # --- height
+        self.height = xr.Variable(dims2d,
+                                  np.full([nx, ny], height_value),
+                                  {'long_name':'Topographic Height',
+                                   'units':'m'})
+
+        # --- Atmospheric Elevation
+        dz = np.full([nz,nx,ny], dz_value)
+        z_data = np.full([nt,nz,nx,ny], height_value)
+        for k in range(1,nz):
+            for i in range(0,nx):
+                for j in range(0,ny):
+                    z_data[:,k,i,j] = z_data[:,k-1,i,j] + dz[k,i,j]
+                    self.z = xr.Variable(dims4d,
+                                         z_data,
+                                         {'long_name':'Atmospheric Elevation',
+                                          'units':'m',
+                                          'positive':'up'})
+
+        # --- Pressure
+        pressure_data = np.zeros([nt,nz,nx,ny])
+        for k in range(0,nz):
+            for i in range(0,nx):
+                for j in range(0,ny):
+                    pressure_data[:,k,i,j] = self.sealevel_pressure * \
+                        (1 - 2.25577E-5 * z_data[0,k,i,j])**5.25588
+                    self.pressure = xr.Variable(dims4d,
+                                                pressure_data,
+                                                {'long_name':'Pressure',
+                                                 'units':'Pa'})
+        del(pressure_data)
+
+        # --- Latitude
+        self.lat = xr.Variable(["lat"],
+                               lat_flat,
+                               {'long_name':'latitude',
+                                'units':'degree_north'}
+                               )
+        # --- Longitude
+        self.lon = xr.Variable(["lon"],
+                               lon_flat,
+                               {'long_name':'longitude',
+                                'units':'degree_east'}
+                               )
 
 
 # Taken from atm_utilities.f90
@@ -163,3 +188,7 @@ def sat_mr(temperature,pressure):
         e_s = pressure * 0.99999
     sat_mr_val = 0.6219907 * e_s / (pressure - e_s)
     return sat_mr_val
+
+def calc_exner(pressure):
+    po=100000; Rd=287.058; cp=1003.5
+    return (pressure / po) ** (Rd/cp)

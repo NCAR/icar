@@ -1,17 +1,20 @@
+import sys
 
+# class generates ICAR namelist file
 class ICARoptions:
     def __init__(self):
-        print("ICAR OPTIONS")
-
         self.f = open('icar_options.nm', 'w')
         self.gen(self.model_version)
         self.gen(self.output_list)
         self.gen(self.physics)
         self.gen(self.files_list)
         self.gen(self.parameters)
+        self.clean_var_list()
         self.gen(self.var_list)
         self.gen(self.z_info)
         self.close()
+        print("generated ICAR options")
+
 
     def gen(self, nml):
         f = self.f
@@ -32,6 +35,12 @@ class ICARoptions:
     def close(self):
         self.f.close()
 
+    def clean_var_list(self):
+        for name, val in self.var_list.items():
+            if name == 'name':
+                continue
+            self.var_list[name] = '"' + val + '"'
+            # print(name, val)
 
     # namelist options to write
     model_version = {
@@ -50,16 +59,16 @@ class ICARoptions:
     physics = {
         'name': 'physics',
         'pbl': 0,  'lsm': 0,
-        'water': 0, 'mp': 1,
+        'water': 0, 'mp': 2,
         'rad': 0, 'conv': 0,
-        'adv': 1, 'wind': 1
+        'adv': 1, 'wind': 0
     }
 
     files_list = {
         'name': 'files_list',
-        'init_conditions_file': '"topography.nc"'
+        'init_conditions_file': '"init.nc"',
         # 'boundary_files':'TBD',
-        # 'forcing_file_list': '"forcing.nc"'
+        'forcing_file_list': '"forcing.nc"'
     }
 
     z_info = {
@@ -69,33 +78,40 @@ class ICARoptions:
 
 
     var_list = {
+        # forcing variables
         'name': 'var_list',
-        'pvar': 'pressure',
-        'tvar': 'temperature',
-        'qvvar': 'water_vapor',
-        'hgtvar': 'height',
-        'zvar': 'z',
-        'latvar': 'lat',
-        'lonvar': 'lon',
         'uvar':'u',
         'vvar':'v',
-        'wvar':'w',
+        'pvar': 'pressure',
+        'tvar': 'theta',
+        'qvvar': 'qv', # water_vapor
+        'hgtvar': 'height',
+        'zvar': 'z',
+        'latvar': 'lat_m',
+        'lonvar': 'lon_m',
+        # init conditions variables
+        'lat_hi': 'lat_hi',
+        'lon_hi': 'lon_hi',
+        'hgt_hi': 'hgt_hi', # surface elevation
+        'time_var':'time'
     }
+        # 'wvar':'w'
+
 
     files_list = {
         'name': 'files_list',
-        'init_conditions_file': 'topography.nc',
-        'boundary_files': 'forcing.nc'
+        'init_conditions_file': '"init.nc"',
+        'boundary_files': '"forcing.nc"'
     }
 
     parameters = {
         'name': 'parameters',
-        'forcing_start_date': '2020-12-01 00:00:00',
-        # 'start_date': '2020-12-01 00:01:00',
-        'end_date': '2020-12-01 00:01:00',
-        'calendar': 'standard',
+        'forcing_start_date': '"2020-12-01 00:00:00"',
+        'end_date': '"2020-12-01 06:00:00"',
+        'calendar': '"standard"',
         'inputinterval': '3600',
         'dx': '4000.0',
+        'qv_is_relative_humidity':'true',
         'readdz': 'true',
         'nz': '15',
         'z_is_geopotential': 'True',
