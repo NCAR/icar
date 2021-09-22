@@ -2,9 +2,26 @@
 !   Model and run meta-data
 !---------------------------------------------------------
 &model_version
-    version = "1.0.1",                    ! This must match the version of the compiled code
+    version = "2.0",                      ! This must match the version of the compiled code
     comment = "Add your comment here"     ! This will be stored in output files
 /
+
+!---------------------------------------------------------
+!   Specify output and restart files and output frequencies
+!---------------------------------------------------------
+&output_list
+    ! this is a list of variable names to be written in each output file
+    names = "u","v","ta2m","hus2m", "precipitation", "swe"
+
+    outputinterval = 3600   ! number of seconds between output time slices
+    !   This is the prefix for all output files (any directories must be created prior to running)
+    output_file = "output/icar_out_"    ! prefix name of output file (date will be appended)
+
+    ! note that restart files will have ALL variables so that they can be used to restart ICAR
+    restartinterval = 24    ! number of outputs to skip restarts on (restart file will only be written every n outputintervals)
+    restart_file = "restart/icar_rst_"    ! prefix name of restart file (date will be appended)
+/
+
 
 !---------------------------------------------------------
 !   Specify physics options to use for the model run
@@ -27,8 +44,7 @@
     water=0,  ! 1=use prescribed (w/lsm=1) 2=Simple sea surface fluxes
 
     ! Microphysics Scheme
-    mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison                  4=WSM6
-
+    mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison                  4=WSM6      5=Thompson-Eidhammer
     ! Radiation Scheme
     rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG           (wishlist)
 
@@ -49,9 +65,6 @@
     !   This is the high-resolution input filename
     !   primary inputs from this file are lat, lon, and terrain, optionally soil and veg types
     init_conditions_file="baseline/geo_4km_conus.nc",
-
-    !   This is the prefix for all output files (any directories must be created prior to running)
-    output_file="output/icar_out_",
 
     !   This is a list of the boundary conditions files number of files must match nfiles variable above
     boundary_files= "forcing/wrfout_d01_2001-04-01_03:00:00", "forcing/wrfout_d01_2001-06-30_03:00:00"
@@ -79,8 +92,6 @@
 
     !   The length of an input forcing time step
     inputinterval = 3600,   ! [s]
-    !   The output interval
-    outputinterval = 3600,  ! [s]
 
     !   The grid spacing of the high-resolution data
     dx = 4000.0,        ! [m]
@@ -103,9 +114,6 @@
     !   Use height above ground level to interpolate the wind field instead of height above sea level.
     use_agl_height = False,
 
-    !   If the forcing data come from WRF, the temperature data probably have an offset applied
-    !   t_offset will be added to the forcing temperature data.  Defaults to 0
-    t_offset = 300, ! [K]
 
     !   Distance to smooth winds over [m] ~100000 is reasonable
     !   larger values result in less large scale convergence/divergence in the flow field
@@ -137,18 +145,24 @@
     ! run the helpers/wrf2icar.sh script first to rotate the wind field to be east-west, north-south relative
     ! variables on the ew staggered (U) grid
     uvar    = "U",          ! East-West wind speed      [m/s]
-    ulat    = "XLAT_U",     ! latitude                  [degrees]
-    ulon    = "XLONG_U",    ! longitude                 [degrees]
 
     ! variables on the NS staggered (V) grid
     vvar    = "V",          ! North-South wind speed    [m/s]
-    vlat    = "XLAT_V",     ! latitude                  [degrees]
-    vlon    = "XLONG_V",    ! longitude                 [degrees]
+
+    ! Used to rotate the a NS / EW wind field into the ICAR domain
+    sinalpha_var="SINALPHA"
+    cosalpha_var="COSALPHA"
 
     ! NOTE, these variables should be in the high-resolution initial conditions netcdf file
     lat_hi  = "XLAT_M",     ! latitude (mass grid)      [degrees]
     lon_hi  = "XLONG_M",    ! longitude (mass grid)     [degrees]
     hgt_hi  = "HGT_M"       ! surface elevation         [m]
+
+    ! specified with staggered U and V grids on the high-res domain
+    ulat_hi = "XLAT_U",     ! latitude  (ew-staggered grid) [degrees]
+    ulon_hi = "XLONG_U",    ! longitude (ew-staggered grid) [degrees]
+    vlat_hi = "XLAT_V",     ! latitude  (ns-staggered grid) [degrees]
+    vlon_hi = "XLONG_V",    ! longitude (ns-staggered grid) [degrees]
 
     ! To use the Noah LSM additional fields must be specified on the high-res grid, see complete_icar_options.nml
 
@@ -161,9 +175,13 @@
 !   If compiled with gfortran put all levels on one line.
 !---------------------------------------------------------
 &z_info
+    ! use dz_levels as a guide but allow dz to vary in space so that z is constant in space at flat_z_height
+    ! note spatially varying dz does not work well with linear_theory, use with wind=2 more options coming soon
+    ! space_varying = .False.
+    ! height at which the z coordinate value should be constant in space (if space_varying=True), if < 0 make the model top flat (computed as sum(dz_levels) + mean(terrain))
+    ! flat_z_height = -1
+
     !   Sample model level thickness [m]  Bottom levels could be thicker.
-    dz_levels = 50.,   75.,  125.,  200.,  300.,  400.,  500.,  500.,  500.,  500.,    !  1-10
-               500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,    ! 10-20
-               500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,    ! 20-30
-               500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.     ! 30-40
+    dz_levels = 50.,   75.,  125.,  200.,  300.,  400.,  500.,  500.,  500.,  500.,   500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,    ! 1-20
+               500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,   500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.     ! 20-40
 /

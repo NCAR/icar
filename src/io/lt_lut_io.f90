@@ -17,7 +17,10 @@ module linear_theory_lut_disk_io
     use data_structures
     use string,         only: str
     use netcdf
-    use io_routines,    only: file_exists, io_read, check, io_read_attribute, io_add_attribute, io_maxDims, io_getdims
+    use io_routines,    only: file_exists, io_read, check, &
+                              io_read_attribute, io_add_attribute, &
+                              io_maxDims, io_getdims
+    use options_types,  only: lt_options_type
     implicit none
 
     private
@@ -56,36 +59,36 @@ contains
     function write_lut(filename, uLUT, vLUT, dz, options) result(error)
         implicit none
         character(len=*), intent(in) :: filename
-        real, dimension(:,:,:,:,:,:), intent(in) :: uLUT, vLUT
+        real, dimension(:,:,:,:,:,:), intent(in) :: uLUT[*], vLUT[*]
         real, dimension(:),           intent(in) :: dz
         type(lt_options_type),        intent(in) :: options
         integer :: error
         error=0
 
         if (file_exists(filename)) then
-            write(*,*) "WARNING: Linear Theory look-up-table file already exists."
+            if (this_image()==1) write(*,*) "WARNING: Linear Theory look-up-table file already exists."
             error = 1
             if (.not.options%overwrite_lt_lut) then
-                write(*,*) "WARNING: Existing file will not be overwritten."
+                if (this_image()==1) write(*,*) "WARNING: Existing file will not be overwritten."
                 return
             endif
-            write(*,*) "WARNING: Existing file *will* be overwritten."
+            if (this_image()==1) write(*,*) "WARNING: Existing file *will* be overwritten."
         endif
         ! allocate(rev_u_LUT(n_spd_values,n_dir_values,n_nsq_values,nxu,nz,ny))
         error = write_var(filename,"uLUT",uLUT, dimnames=[character(len=4) :: "nspd","ndir","nnsq","nxu","nz","ny"], open_new_file=.True.)
         if (error/=0) then
-            write(*,*) "Error writing uLUT to file:"//trim(filename)//" Error code = "//trim(str(error))
+            if (this_image()==1) write(*,*) "Error writing uLUT to file:"//trim(filename)//" Error code = "//trim(str(error))
             return
         endif
         error = write_var(filename,"vLUT",vLUT, dimnames=[character(len=4) :: "nspd","ndir","nnsq","nx","nz","nyv"])
         if (error/=0) then
-            write(*,*) "Error writing vLUT to file:"//trim(filename)//" Error code = "//trim(str(error))
+            if (this_image()==1) write(*,*) "Error writing vLUT to file:"//trim(filename)//" Error code = "//trim(str(error))
             return
         endif
 
         error = write_var(filename,"dz",dz, dimnames=[character(len=4) :: "nz"])
         if (error/=0) then
-            write(*,*) "Error writing dz to LUT file:"//trim(filename)//" Error code = "//trim(str(error))
+            if (this_image()==1) write(*,*) "Error writing dz to LUT file:"//trim(filename)//" Error code = "//trim(str(error))
             return
         endif
 
@@ -131,7 +134,7 @@ contains
     function read_LUT(filename, uLUT, vLUT, dz, dims, options) result(error)
         implicit none
         character(len=*), intent(in) :: filename
-        real, allocatable, dimension(:,:,:,:,:,:), intent(inout) :: uLUT, vLUT
+        real, allocatable, dimension(:,:,:,:,:,:), intent(inout) :: uLUT[:], vLUT[:]
         real, dimension(:), intent(in) :: dz
         integer, dimension(3,2), intent(in) :: dims
         type(lt_options_type), intent(in) :: options
@@ -146,12 +149,12 @@ contains
         error = check_attribute(filename,lt_lut_version, "lt_LUT_version")
         if (error/=0) then
             error=4
-            write(*,*) "WARNING: LUT not read, file lt_LUT_version does not match code"
+            if (this_image()==1) write(*,*) "WARNING: LUT not read, file lt_LUT_version does not match code"
             return
         endif
         if (.not.dims_match(filename, dims)) then
             error = 2
-            write(*,*) "WARNING: LUT not read, LUT dims and specified dims do not match"
+            if (this_image()==1) write(*,*) "WARNING: LUT not read, LUT dims and specified dims do not match"
             return
         endif
 
@@ -521,7 +524,7 @@ contains
 
             if (dim_length/=n) then
                 error = 1
-                write(*,*) "Dim setup error: ", dimname, dimid, dim_length,"!=",n
+                if (this_image()==1) write(*,*) "Dim setup error: ", trim(dimname), dimid, dim_length,"!=",n
             endif
         endif
         ! return error
@@ -556,11 +559,11 @@ contains
         call io_read_attribute(filename, value_name, test_value, error=error)
         if (error/=NF90_NOERR) then
             error=1
-            write(*,*) "WARNING: Error reading attribute: ",trim(value_name)," from: ",trim(filename)
+            if (this_image()==1) write(*,*) "WARNING: Error reading attribute: ",trim(value_name)," from: ",trim(filename)
         else
             if (default_value/=test_value) then
                 error = 1
-                write(*,*) "WARNING parameter option: "//trim(value_name)//"  "//trim(str(default_value)), &
+                if (this_image()==1) write(*,*) "WARNING parameter option: "//trim(value_name)//"  "//trim(str(default_value)), &
                            " did not match file value: ",trim(str(test_value))
             endif
         endif
@@ -596,11 +599,11 @@ contains
         call io_read_attribute(filename, value_name, test_value, error=error)
         if (error/=NF90_NOERR) then
             error=1
-            write(*,*) "WARNING: Error reading attribute: ",trim(value_name)," from: ",trim(filename)
+            if (this_image()==1) write(*,*) "WARNING: Error reading attribute: ",trim(value_name)," from: ",trim(filename)
         else
             if (default_value/=test_value) then
                 error = 1
-                write(*,*) "WARNING parameter option: "//trim(value_name)//"  "//trim(str(default_value)), &
+                if (this_image()==1) write(*,*) "WARNING parameter option: "//trim(value_name)//"  "//trim(str(default_value)), &
                            " did not match file value: ",trim(str(test_value))
             endif
         endif
@@ -636,11 +639,11 @@ contains
         call io_read_attribute(filename, value_name, test_value, error=error)
         if (error/=NF90_NOERR) then
             error=1
-            write(*,*) "WARNING: Error reading attribute: ",trim(value_name)," from: ",trim(filename)
+            if (this_image()==1) write(*,*) "WARNING: Error reading attribute: ",trim(value_name)," from: ",trim(filename)
         else
             if (default_value/=test_value) then
                 error = 1
-                write(*,*) "WARNING parameter option: "//trim(value_name)//"  "//trim(default_value), &
+                if (this_image()==1) write(*,*) "WARNING parameter option: "//trim(value_name)//"  "//trim(default_value), &
                            " did not match file value: ",trim(test_value)
             endif
         endif

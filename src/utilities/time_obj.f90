@@ -10,77 +10,14 @@
 !!  Ethan Gutmann (gutmann@ucar.edu)
 !!
 !!------------------------------------------------------------
-module time_object
-    use time_delta_object, only : time_delta_t
+submodule(time_object) time_implementation
+    use co_util,           only : broadcast
+
     implicit none
-    private
 
-    integer, parameter :: MAXSTRINGLENGTH = 1024
-    integer, parameter, public :: GREGORIAN=0, NOLEAP=1, THREESIXTY=2, NOCALENDAR=-1
-    integer, parameter, public :: NON_VALID_YEAR = -9999
-
-    !>------------------------------------------------------------
-    !!  date / time Object
-    !!
-    !!  Time_type object stores date and time in a convenient object.
-    !!  datetime is stored internally as both a modified julian day (or days since a known date)
-    !!  and as a Y/M/D h:m:s integers
-    !!
-    !!------------------------------------------------------------
-    type, public :: Time_type
-        integer :: year_zero = 1800  ! reference date
-        integer :: month_zero= 1
-        integer :: day_zero  = 1
-        integer :: hour_zero = 0
-        integer :: calendar
-        integer, dimension(13) :: month_start
-        integer :: year, month, day, hour, minute, second
-
-        double precision :: current_date_time = 0
-
-      contains
-        procedure, public  :: date        => calendar_date
-        procedure, public  :: mjd         => get_mjd
-        procedure, public  :: seconds     => get_seconds
-        procedure, public  :: day_of_year => calc_day_of_year
-        procedure, public  :: year_fraction=>calc_year_fraction
-        procedure, public  :: date_to_mjd => date_to_mjd
-        procedure, public  :: as_string   => as_string
-        procedure, public  :: equals      => equals_with_precision
-        procedure, public  :: units       => units
-
-        generic,   public  :: init        => time_init_c
-        generic,   public  :: init        => time_init_i
-        generic,   public  :: set         => set_from_string
-        generic,   public  :: set         => set_from_date
-        generic,   public  :: set         => set_from_mjd
-        procedure, private :: time_init_c
-        procedure, private :: time_init_i
-        procedure, private :: set_from_string
-        procedure, private :: set_from_date
-        procedure, private :: set_from_mjd
-        procedure, private :: set_calendar
-
-        ! operator overloading to permit comparison of time objects as (t1 < t2), (t1 == t2) etc.
-        procedure, private :: equal
-        generic,   public  :: operator(==)   => equal
-        procedure, private :: not_equal
-        generic,   public  :: operator(/=)   => not_equal
-        procedure, private :: greater_than
-        generic,   public  :: operator(>)    => greater_than
-        procedure, private :: greater_or_eq
-        generic,   public  :: operator(>=)   => greater_or_eq
-        procedure, private :: less_than
-        generic,   public  :: operator(<)    => less_than
-        procedure, private :: less_or_eq
-        generic,   public  :: operator(<=)   => less_or_eq
-
-        procedure, private :: addition
-        generic,   public  :: operator(+)    => addition
-        procedure, private :: difference
-        generic,   public  :: operator(-)    => difference
-
-    end type Time_type
+    ! integer, parameter :: MAXSTRINGLENGTH = 1024
+    ! integer, parameter, public :: GREGORIAN=0, NOLEAP=1, THREESIXTY=2, NOCALENDAR=-1
+    ! integer, parameter, public :: NON_VALID_YEAR = -9999
 
 contains
 
@@ -89,43 +26,42 @@ contains
     !!
     !!  Set the object calendar and base year
     !!
-    !!------------------------------------------------------------   
+    !!------------------------------------------------------------
+    module subroutine time_init_c(this, calendar_name, year_zero, month_zero, day_zero, hour_zero)
+        implicit none
+        class(Time_type) :: this
+        character(len=*), intent(in) :: calendar_name
+        integer, intent(in), optional :: year_zero, month_zero, day_zero, hour_zero
 
-   subroutine time_init_c(this, calendar_name, year_zero, month_zero, day_zero, hour_zero)
-       implicit none
-       class(Time_type) :: this
-       character(len=*), intent(in) :: calendar_name
-       integer, intent(in), optional :: year_zero, month_zero, day_zero, hour_zero
+        integer :: i
 
-       integer :: i
+        ! zero based month_starts (will have 1 added below)
+        this%month_start = [0,31,59,90,120,151,181,212,243,273,304,334,365]
 
-       ! zero based month_starts (will have 1 added below)
-       this%month_start = [0,31,59,90,120,151,181,212,243,273,304,334,365]
+        call this%set_calendar(calendar_name)
 
-       call this%set_calendar(calendar_name)
+        if (this%calendar == THREESIXTY) then
+            do i=0,12
+                this%month_start(i+1) = i*30
+            end do
+        endif
 
-       if (this%calendar == THREESIXTY) then
-           do i=0,12
-               this%month_start(i+1) = i*30
-           end do
-       endif
+        this%month_start = this%month_start + 1
 
-       this%month_start = this%month_start + 1
+        if ( present(year_zero) ) then
+            this%year_zero = year_zero
+        endif
+        if ( present(month_zero) ) then
+            this%month_zero = month_zero
+        endif
+        if ( present(day_zero) ) then
+            this%day_zero = day_zero
+        endif
+        if ( present(hour_zero) ) then
+            this%hour_zero = hour_zero
+        endif
 
-       if ( present(year_zero) ) then
-           this%year_zero = year_zero
-       endif
-       if ( present(month_zero) ) then
-           this%month_zero = month_zero
-       endif
-       if ( present(day_zero) ) then
-           this%day_zero = day_zero
-       endif
-       if ( present(hour_zero) ) then
-           this%hour_zero = hour_zero
-       endif
-
-   end subroutine time_init_c
+    end subroutine time_init_c
 
 
     !>------------------------------------------------------------
@@ -134,7 +70,7 @@ contains
     !!  Set the object calendar and base year
     !!
     !!------------------------------------------------------------
-    subroutine time_init_i(this, calendar, year_zero, month_zero, day_zero, hour_zero)
+    module subroutine time_init_i(this, calendar, year_zero, month_zero, day_zero, hour_zero)
         implicit none
         class(Time_type) :: this
         integer, intent(in) :: calendar
@@ -167,6 +103,7 @@ contains
         if ( present(hour_zero) ) then
             this%hour_zero = hour_zero
         endif
+
     end subroutine time_init_i
 
     !>------------------------------------------------------------
@@ -179,7 +116,7 @@ contains
     !!  Sets the object calendar attribute.
     !!
     !!------------------------------------------------------------
-    subroutine set_calendar(this, calendar_name)
+    module subroutine set_calendar(this, calendar_name)
         implicit none
         class(Time_type) :: this
         character(len=*), intent(in) :: calendar_name
@@ -195,9 +132,13 @@ contains
                 this%calendar = GREGORIAN
             case("365-day")
                 this%calendar = NOLEAP
+            case("365_day")
+                this%calendar = NOLEAP
             case("noleap")
                 this%calendar = NOLEAP
             case("360-day")
+                this%calendar = THREESIXTY
+            case("360_day")
                 this%calendar = THREESIXTY
             case default
                 this%calendar = NOCALENDAR
@@ -214,14 +155,18 @@ contains
                     this%calendar = GREGORIAN
                 case("365-d")
                     this%calendar = NOLEAP
+                case("365_d")
+                    this%calendar = NOLEAP
                 case("nolea")
                     this%calendar = NOLEAP
                 case("360-d")
                     this%calendar = THREESIXTY
+                case("360_d")
+                    this%calendar = THREESIXTY
                 case default
                     write(*,*) "Unknown Calendar: '", trim(calendar_name),"'"
                     write(*,*) "Acceptable names = "
-                    write(*,*) "  'gregorian', 'standard', '365-day', 'noleap', '360-day'"
+                    write(*,*) "  'gregorian', 'standard', '365-day', '365_day', 'noleap', '360-day', '360_day'"
                     write(*,*) " "
                     stop
             end select
@@ -238,7 +183,7 @@ contains
     !!  seconds since startyear/startmonth/startday
     !!
     !!------------------------------------------------------------
-    function get_seconds(this) result(seconds)
+    module function get_seconds(this) result(seconds)
         implicit none
         class(Time_type) :: this
         double precision :: seconds
@@ -254,7 +199,7 @@ contains
     !!  a modified Julian day.  For all other calendars it will be days since 0-1-1
     !!
     !!------------------------------------------------------------
-    function get_mjd(this) result(mjd)
+    module function get_mjd(this) result(mjd)
         implicit none
         class(Time_type) :: this
         double precision :: mjd
@@ -301,7 +246,7 @@ contains
     !!  or it will be a number of days since whatever the initial year was
     !!
     !!------------------------------------------------------------
-    function date_to_mjd(this, year, month, day, hour, minute, second)
+    module function date_to_mjd(this, year, month, day, hour, minute, second)
         implicit none
         class(Time_type), intent(in) :: this
         integer, intent(in) :: year, month, day, hour, minute, second
@@ -313,9 +258,11 @@ contains
             date_to_mjd = date_to_mjd - gregorian_julian_day(this%year_zero, this%month_zero, this%day_zero, this%hour_zero, 0, 0)
 
         else if (this%calendar==NOLEAP) then
-            date_to_mjd = (year-this%year_zero)*365 + this%month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0
+            date_to_mjd = (year*365 + this%month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0) &
+                         - (this%year_zero*365 + this%month_start(this%month_zero)-1 + this%day_zero-1 + (this%hour_zero)/24d+0)
         else if (this%calendar==THREESIXTY) then
-            date_to_mjd = (year-this%year_zero)*360 + this%month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0
+            date_to_mjd = (year*360 + this%month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0) &
+                         - (this%year_zero*360 + this%month_start(this%month_zero)-1 + this%day_zero-1 + (this%hour_zero)/24d+0)
         end if
 
     end function date_to_mjd
@@ -327,7 +274,7 @@ contains
     !!  arguably, seconds should be a real number, not an integer...
     !!
     !!------------------------------------------------------------
-    subroutine calendar_date(this, year, month, day, hour, minute, second)
+    module subroutine calendar_date(this, year, month, day, hour, minute, second)
         implicit none
         class(Time_type), intent(in) :: this
         integer, intent(out) :: year, month, day, hour, minute, second
@@ -362,31 +309,36 @@ contains
         !
         !------------------------------------------------------------
         else if (this%calendar==NOLEAP) then
-            year=floor(mjd/365)
-            day_fraction=mjd - year*365+1
+
+            year = floor((mjd + (this%month_start(this%month_zero)-1) + (this%day_zero-1) + this%hour_zero/24.0) / 365)
+            day_fraction = mjd - year*365+1 + (this%month_start(this%month_zero)-1) + (this%day_zero-1) + this%hour_zero/24.0
+            month = 1
             do f=1,12
-                if (day_fraction>this%month_start(f)) then
-                    month=f
+                if (day_fraction >this%month_start(f)) then
+                    month = f
                 endif
             end do
             day = floor(day_fraction - this%month_start(month))+1
-            year=year+this%year_zero
-
+            year = year + this%year_zero
+            mjd = mjd + this%hour_zero/24.0
         !------------------------------------------------------------
         !
         ! Calculate the dates for a 360-day Calendar
         !
         !------------------------------------------------------------
         else if (this%calendar==THREESIXTY) then
-            year=floor(mjd/360)
-            day_fraction=mjd - year*360+1
+            year = floor((mjd + (this%month_zero-1) * 30 + (this%day_zero-1) + this%hour_zero/24.0) / 360)
+            day_fraction = mjd - year*360+1 + (this%month_zero-1) * 30 + (this%day_zero-1) + this%hour_zero/24.0
+            month = 1
             do f=1,12
-                if (day_fraction>this%month_start(f)) then
-                    month=f
+                if (day_fraction > this%month_start(f)) then
+                    month = f
                 endif
             end do
-            day = floor(day_fraction - this%month_start(month))+1
-            year=year+this%year_zero
+
+            day = floor(day_fraction - this%month_start(month)) + 1
+            year = year + this%year_zero
+            mjd = mjd + this%hour_zero/24.0
         end if
 
         !------------------------------------------------------------
@@ -394,14 +346,14 @@ contains
         ! Calculate the hour/minute/second for any calendar
         !
         !------------------------------------------------------------
-        day_fraction=mod(mjd,1.0)
-        hour=floor(day_fraction*24)
+        day_fraction = mod(mjd, 1.0)
+        hour = floor(day_fraction * 24)
 
-        day_fraction=day_fraction*24-hour
-        minute=floor(day_fraction*60)
+        day_fraction = day_fraction * 24 - hour
+        minute = floor(day_fraction * 60)
 
-        day_fraction=day_fraction*60-minute
-        second = nint((day_fraction-(24d0*60*1d-5))*60)
+        day_fraction = day_fraction * 60 - minute
+        second = nint((day_fraction - (24d0*60*1d-5)) * 60)
 
     end subroutine calendar_date
 
@@ -412,11 +364,11 @@ contains
     !!  Calculate the day of the year from a "modified julian day" or other days since date
     !!
     !!------------------------------------------------------------
-    function calc_day_of_year(this, lon)
+    module function calc_day_of_year(this, lon)
         implicit none
         real                        :: calc_day_of_year
-        class(Time_type)            :: this
-        real, intent(in), optional  :: lon
+        class(Time_type), intent(in):: this
+        real,             intent(in), optional :: lon
 
         real :: offset
         integer :: year, month, day, hour, minute, second
@@ -444,7 +396,7 @@ contains
     !!  "Dec 31, 24:00" is 1.0
     !!
     !!------------------------------------------------------------
-    function calc_year_fraction(this, lon)
+    module function calc_year_fraction(this, lon)
         implicit none
         real                        :: calc_year_fraction
         class(Time_type)            :: this
@@ -498,7 +450,7 @@ contains
     !!  Convert an input date string in the form YYYY/MM/DD or YYYY/MM/DD hh:mm:ss
     !!
     !!------------------------------------------------------------
-    subroutine set_from_string(this, date)
+    module subroutine set_from_string(this, date)
         implicit none
         class(Time_type), intent(inout) :: this
         character (len=*), intent(in) :: date
@@ -526,7 +478,7 @@ contains
     !!  Set the datetime object to a given input date (Year, Month, Day, Hour, Minute, second)
     !!
     !!------------------------------------------------------------
-    subroutine set_from_date(this, year, month, day, hour, minute, second)
+    module subroutine set_from_date(this, year, month, day, hour, minute, second)
         implicit none
         class(Time_type), intent(inout) :: this
         integer, intent(in) :: year, month, day
@@ -554,14 +506,14 @@ contains
     !!  Set the datetime object to a given input datetime number
     !!
     !!------------------------------------------------------------
-    subroutine set_from_mjd(this, days)
+    module subroutine set_from_mjd(this, days)
         implicit none
         class(Time_type), intent(inout) :: this
         double precision, intent(in) :: days
         integer :: year, month, day, hour, minute, second
 
-        this%current_date_time = days 
-        
+        this%current_date_time = days
+
         call this%date(year, month, day, hour, minute, second)
         this%year   = year
         this%month  = month
@@ -569,7 +521,7 @@ contains
         this%hour   = hour
         this%minute = minute
         this%second = second
-        
+
     end subroutine set_from_mjd
 
     !>------------------------------------------------------------
@@ -578,21 +530,53 @@ contains
     !!  For example "days since 1858-11-17 00:00:00"
     !!
     !!------------------------------------------------------------
-    function units(this)
+    module function units(this)
         implicit none
         class(Time_type), intent(in)   :: this
         character(len=MAXSTRINGLENGTH) :: units
 
         write(units, '("days since ",i4,"-",i2.2,"-",i2.2," ",i2.2,":00:00")') &
-                this%year_zero,this%month_zero,this%day_zero,this%hour_zero 
+                this%year_zero,this%month_zero,this%day_zero,this%hour_zero
 
     end function units
+
+    module subroutine bcast(this, source, first_image, last_image)
+        implicit none
+        class(Time_type), intent(inout) :: this
+        integer,          intent(in)    :: source
+        integer,          intent(in)    :: first_image
+        integer,          intent(in)    :: last_image
+
+        integer, allocatable :: as_array(:)[:]
+        allocate(as_array(10)[*])
+
+        as_array(1) = this%year_zero
+        as_array(2) = this%month_zero
+        as_array(3) = this%day_zero
+        as_array(4) = this%calendar
+        as_array(5) = this%year
+        as_array(6) = this%month
+        as_array(7) = this%day
+        as_array(8) = this%hour
+        as_array(9) = this%minute
+        as_array(10)= this%second
+
+        call broadcast(as_array, source, first_image, last_image)
+
+        if (this_image() /= source) then
+            call this%init(as_array(4), as_array(1), as_array(2), as_array(3))
+
+            call this%set_from_date(as_array(5), as_array(6), as_array(7), as_array(8), as_array(9), as_array(10))
+        endif
+
+    end subroutine
+
 
     !>------------------------------------------------------------
     !!  Convert the date object into a string in the 0-filled format : "YYYY/MM/DD hh:mm:ss"
     !!
     !!------------------------------------------------------------
-    function as_string(this, input_format) result(pretty_string)
+    module function as_string(this, input_format) result(pretty_string)
         implicit none
         class(Time_type), intent(in) :: this
         character(len=*), intent(in), optional :: input_format
@@ -612,21 +596,11 @@ contains
             format = input_format
         else
             ! this is the default format string to generate "YYYY/MM/DD hh:mm:ss"
-            format = '(I4,A1,I2,A1,I2,A1,I2,A1,I2,A1,I2)'
+            format = '(I4,"/",I0.2,"/",I0.2," ",I0.2,":",I0.2,":",I0.2)'
         endif
 
         ! this and the format statement above are the important bits
-        write(pretty_string, format) year,'/',month,'/',day,'_',hour,':',minute,":",second
-
-        ! fill missing digits with '0'
-        do i=1,len_trim(pretty_string)
-            select case (pretty_string(i:i))
-                case (' ')
-                    pretty_string(i:i) = '0'
-                case ('_')
-                    pretty_string(i:i) = ' '
-            end select
-        end do
+        write(pretty_string, format) year, month, day, hour, minute, second
 
         end associate
 
@@ -642,7 +616,7 @@ contains
     !!  > on all elements sequentially (year, then month, then day...)
     !!
     !!------------------------------------------------------------
-    function greater_than(t1, t2)
+    module function greater_than(t1, t2)
         implicit none
         class(Time_type), intent(in) :: t1, t2
         logical :: greater_than
@@ -695,7 +669,7 @@ contains
     !!  >= on all elements sequentially (year, then month, then day...)
     !!
     !!------------------------------------------------------------
-    function greater_or_eq(t1, t2)
+    module function greater_or_eq(t1, t2)
         implicit none
         class(Time_type), intent(in) :: t1, t2
         logical :: greater_or_eq
@@ -748,17 +722,16 @@ contains
     !!  equality on all elements
     !!
     !!------------------------------------------------------------
-    function equal(t1, t2)
+    module function equal(t1, t2)
         implicit none
         class(Time_type), intent(in) :: t1, t2
         logical :: equal
 
         equal = .False.
-
         ! note if calendars are the same, can just return mjd delta...
         if ((t1%calendar == t2%calendar).and.(t1%year_zero == t2%year_zero)) then
             if ((t1%month_zero == t2%month_zero).and.(t1%day_zero == t2%day_zero).and.(t1%hour_zero == t2%hour_zero))  then
-               equal = (abs(t1%current_date_time - t2%current_date_time) < 1.1575e-05)
+                equal = (abs(t1%current_date_time - t2%current_date_time) < 1.1575e-05)
                 return
             endif
         endif
@@ -778,7 +751,7 @@ contains
     !!  Simply returns not ==
     !!
     !!------------------------------------------------------------
-    function not_equal(t1, t2)
+    module function not_equal(t1, t2)
         implicit none
         class(Time_type), intent(in) :: t1, t2
         logical :: not_equal
@@ -795,7 +768,7 @@ contains
     !!  Simply returns not >
     !!
     !!------------------------------------------------------------
-    function less_or_eq(t1, t2)
+    module function less_or_eq(t1, t2)
         implicit none
         class(Time_type), intent(in) :: t1, t2
         logical :: less_or_eq
@@ -811,7 +784,7 @@ contains
     !!  Simply returns not >=
     !!
     !!------------------------------------------------------------
-    function less_than(t1, t2)
+    module function less_than(t1, t2)
         implicit none
         class(Time_type), intent(in) :: t1, t2
         logical :: less_than
@@ -827,10 +800,10 @@ contains
     !!  If precision is specified, returns true if abs(t1-t2) <= precision
     !!
     !!------------------------------------------------------------
-    function equals_with_precision(t1,t2, precision) result(equals)
+    module function equals_with_precision(t1,t2, precision) result(equals)
         implicit none
         class(Time_type),    intent(in) :: t1, t2
-        class(time_delta_t), intent(in), optional :: precision
+        type(time_delta_t),  intent(in), optional :: precision
         logical :: equals
         type(time_delta_t) :: dt
 
@@ -848,7 +821,7 @@ contains
     !!  Subtract two times and return a time_delta object
     !!
     !!------------------------------------------------------------
-    function difference(t1, t2) result(dt)
+    module function difference(t1, t2) result(dt)
         implicit none
         class(Time_type), intent(in) :: t1, t2
         type(time_delta_t) :: dt
@@ -879,7 +852,7 @@ contains
     !!  returns a new time object
     !!
     !!------------------------------------------------------------
-    function addition(t1, dt) result(t2)
+    module function addition(t1, dt) result(t2)
         implicit none
         class(Time_type),   intent(in) :: t1
         type(time_delta_t), intent(in) :: dt
@@ -891,4 +864,4 @@ contains
 
     end function addition
 
-end module time_object
+end submodule time_implementation

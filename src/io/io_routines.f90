@@ -184,7 +184,7 @@ contains
         implicit none
         ! This is the name of the data_in file and variable we will read.
         character(len=*),  intent(in)  :: filename, varname
-        real, allocatable, intent(out) :: data_in(:,:,:,:,:,:)
+        real, allocatable, intent(inout) :: data_in(:,:,:,:,:,:)[:]
         integer, optional, intent(in)  :: extradim
 
         integer, dimension(io_maxDims)  :: diminfo !will hold dimension lengths
@@ -201,7 +201,10 @@ contains
 
         ! Read the dimension lengths
         call io_getdims(filename,varname,diminfo)
-        allocate(data_in(diminfo(2),diminfo(3),diminfo(4),diminfo(5),diminfo(6),diminfo(7)))
+
+        if (allocated(data_in)) deallocate(data_in)
+        allocate(data_in(diminfo(2),diminfo(3),diminfo(4),diminfo(5),diminfo(6),diminfo(7))[*])
+
         ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to the file.
         call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
         ! Get the varid of the data_in variable, based on its name.
@@ -259,7 +262,10 @@ contains
 
         ! Read the dimension lengths
         call io_getdims(filename,varname,diminfo)
+
+        if (allocated(data_in)) deallocate(data_in)
         allocate(data_in(diminfo(2),diminfo(3),diminfo(4),diminfo(5),diminfo(6)))
+
         ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
         ! the file.
         call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
@@ -325,7 +331,10 @@ contains
 
         ! Read the dimension lengths
         call io_getdims(filename,varname,diminfo)
+
+        if (allocated(data_in)) deallocate(data_in)
         allocate(data_in(diminfo(2),diminfo(3),diminfo(4)))
+
         ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
         ! the file.
         call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
@@ -353,7 +362,6 @@ contains
         call check( nf90_close(ncid),filename)
 
     end subroutine io_read3d
-
 
     !>------------------------------------------------------------
     !! Same as io_read3d but for 2-dimensional data
@@ -392,7 +400,10 @@ contains
         diminfo = 1
         ! Read the dimension lengths
         call io_getdims(filename,varname,diminfo)
+
+        if (allocated(data_in)) deallocate(data_in)
         allocate(data_in(diminfo(2),diminfo(3)))
+
         ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
         ! the file.
         call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
@@ -460,7 +471,10 @@ contains
 
         ! Read the dimension lengths
         call io_getdims(filename,varname,diminfo)
+
+        if (allocated(data_in)) deallocate(data_in)
         allocate(data_in(diminfo(2),diminfo(3)))
+
         ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
         ! the file.
         call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
@@ -519,7 +533,10 @@ contains
 
         ! Read the dimension lengths
         call io_getdims(filename,varname,diminfo)
+
+        if (allocated(data_in)) deallocate(data_in)
         allocate(data_in(diminfo(2)))
+
         ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
         ! the file.
         call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
@@ -543,7 +560,6 @@ contains
 
     end subroutine io_read1d
 
-
     !>------------------------------------------------------------
     !! Same as io_read1d but for double precision data
     !!
@@ -556,15 +572,17 @@ contains
     !! @param   varname     Name of the NetCDF variable to read
     !! @param[out] data_in     Allocatable 1-dimensional array to store output
     !! @param   extradim    OPTIONAL: specify the position to read for any extra (e.g. time) dimension
+    !! @param   curstep     OPTIONAL: specify the position to read for the primary dimension
     !! @retval data_in     Allocated 1-dimensional array with the netCDF data
     !!
     !!------------------------------------------------------------
-    subroutine io_read1dd(filename,varname,data_in,extradim)
+    subroutine io_read1dd(filename, varname, data_in, extradim, curstep)
         implicit none
         ! This is the name of the data_in file and variable we will read.
         character(len=*), intent(in) :: filename, varname
         double precision,intent(out),allocatable :: data_in(:)
         integer, intent(in),optional :: extradim
+        integer, intent(in),optional :: curstep
         integer, dimension(io_maxDims)  :: diminfo ! will hold dimension lengths
         integer, dimension(io_maxDims)  :: dimstart
         ! This will be the netCDF ID for the file and data_in variable.
@@ -580,7 +598,15 @@ contains
         ! Read the dimension lengths
         diminfo = 1
         call io_getdims(filename,varname,diminfo)
-        allocate(data_in(diminfo(2)))
+
+        if (allocated(data_in)) deallocate(data_in)
+        if (present(curstep)) then
+            allocate(data_in(1))
+        else
+            allocate(data_in(diminfo(2)))
+        endif
+
+
         ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
         ! the file.
         call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
@@ -596,7 +622,12 @@ contains
                                     [ (1,            i=1,diminfo(1)) ] ), & ! for all dims, stride = 1      " implied do loop
                                     trim(filename)//":"//trim(varname)) !pass varname to check so it can give us more info
         else
-            call check(nf90_get_var(ncid, varid, data_in),trim(filename)//":"//trim(varname))
+            if (present(curstep)) then
+                call check(nf90_get_var(ncid, varid, data_in,   &
+                            [curstep], [1], [1] ),trim(filename)//":"//trim(varname))
+            else
+                call check(nf90_get_var(ncid, varid, data_in),trim(filename)//":"//trim(varname))
+            endif
         endif
 
         ! Close the file, freeing all resources.
@@ -604,6 +635,17 @@ contains
 
     end subroutine io_read1dd
 
+    !>------------------------------------------------------------
+    !! Read a double precision scalar
+    !!
+    !! Reads in a scalar variable from a netcdf file (primarily time).
+    !!
+    !! @param   filename    Name of NetCDF file to look at
+    !! @param   varname     Name of the NetCDF variable to read
+    !! @param[out] result   double precision scalar to store the data in
+    !! @param   step        specify the position to read from a 1D array
+    !!
+    !!------------------------------------------------------------
     subroutine io_read_scalar_d(filename, varname, result, step)
         implicit none
         ! This is the name of the data_in file and variable we will read.

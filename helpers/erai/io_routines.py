@@ -4,8 +4,8 @@ import mygis
 from bunch import Bunch
 
 
-sfcvarlist=["SSHF_GDS4_SFC","SLHF_GDS4_SFC","Z_GDS4_SFC","BLH_GDS4_SFC","SSRD_GDS4_SFC","STRD_GDS4_SFC", "SKT_GDS4_SFC"]
-icar_sfc_var=["sensible_heat","latent_heat","hgt_98","PBL_height","sw","lw", "tskin"]
+sfcvarlist=["SSHF_GDS4_SFC","SLHF_GDS4_SFC","Z_GDS4_SFC","BLH_GDS4_SFC","SSRD_GDS4_SFC","STRD_GDS4_SFC", "SKT_GDS4_SFC", "CP_GDS4_SFC"]
+icar_sfc_var=["sensible_heat","latent_heat","hgt_98","PBL_height","sw","lw", "tskin", "cp"]
 
 atmvarlist=["Z_GDS4_HYBL","T_GDS4_HYBL","Q_GDS4_HYBL","LNSP_GDS4_HYBL","CLWC_GDS4_HYBL","CIWC_GDS4_HYBL","lv_HYBL2_a","lv_HYBL2_b","P0"]
 icar_atm_var=["gph","t","qv","ln_p_sfc","cloud","ice","sigma_a","sigma_b","P0"]
@@ -19,7 +19,7 @@ sfc_ncfiles=dict()
 def grib2nc(erai_file,varlist,output_dir):
     """convert a grib file to a netcdf file"""
     print("Converting: "+erai_file.split("/")[-1])
-    # print("ncl_convert2nc "+erai_file+" -e grb -L -v "+",".join(varlist)+" -o "+output_dir)
+    print("ncl_convert2nc "+erai_file+" -e grb -L -v "+",".join(varlist)+" -o "+output_dir)
     outputfile=output_dir+erai_file.split("/")[-1]+".nc"
     if not os.path.isfile(outputfile):
         try:
@@ -65,7 +65,7 @@ def load_sfc(time,info):
     except KeyError:
         nc_file=grib2nc(inputfile,sfcvarlist,info.nc_file_dir)
         sfc_ncfiles[inputfile]=nc_file
-    
+
     outputdata=Bunch()
     for s,v in zip(icar_sfc_var,sfcvarlist):
         nc_data=mygis.read_nc(nc_file,v,returnNCvar=True)
@@ -79,10 +79,13 @@ def load_sfc(time,info):
                 input_data[offset,...]/2.0
             elif offset>=1:
                 input_data[offset,...]-=input_data[offset-1,...]
-                
+
+        if (s=="cp"):
+            input_data[1:,:,:]-=input_data[:-1,:,:]
+
         outputdata[s]=input_data[int(offset),:,:]
         nc_data.ncfile.close()
-    
+
     return outputdata
 
 def load_atm(time,info):
@@ -90,7 +93,7 @@ def load_atm(time,info):
     uvfile,scfile=find_atm_file(time,info)
     uvnc_file=grib2nc(uvfile,atmuvlist,info.nc_file_dir)
     scnc_file=grib2nc(scfile,atmvarlist,info.nc_file_dir)
-    
+
     outputdata=Bunch()
     for s,v in zip(icar_uv_var,atmuvlist):
         nc_data=mygis.read_nc(uvnc_file,v,returnNCvar=True)
@@ -102,7 +105,7 @@ def load_atm(time,info):
 
     for s,v in zip(icar_atm_var,atmvarlist):
         nc_data = mygis.read_nc(scnc_file,v,returnNCvar=True)
-        
+
         if len(nc_data.data.shape)==3:
             outputdata[s] = nc_data.data[:,info.ymin:info.ymax,info.xmin:info.xmax]
         elif len(nc_data.data.shape)==2:
@@ -114,9 +117,9 @@ def load_atm(time,info):
                 outputdata[s] = nc_data.data[:]
             except:
                 outputdata[s] = nc_data.data.get_value()
-                
+
         nc_data.ncfile.close()
-    
+
     return outputdata
 
 

@@ -1,9 +1,9 @@
 !>------------------------------------------------------------
 !!  date / time module
-!!  
-!!  Contains various utilities for working with dates and times. 
-!!  Utilities are capable of handling multiple model calendars. 
-!!  
+!!
+!!  Contains various utilities for working with dates and times.
+!!  Utilities are capable of handling multiple model calendars.
+!!
 !!  @author
 !!  Ethan Gutmann (gutmann@ucar.edu)
 !!
@@ -25,10 +25,10 @@ contains
         implicit none
         character(len=*), intent(in) :: calendar_name
         integer :: i
-        
+
         ! zero based month_starts (will have 1 added below)
         month_start=[0,31,59,90,120,151,181,212,243,273,304,334,365]
-        
+
         if (trim(calendar_name)=="gregorian") then
             calendar=GREGORIAN
         else if (trim(calendar_name)=="standard") then
@@ -46,7 +46,7 @@ contains
             write(*,*) " "
             stop
         endif
-        
+
         if (calendar==THREESIXTY) then
             do i=0,12
                 month_start(i+1)=i*30
@@ -55,13 +55,13 @@ contains
         do i=0,12
             month_start(i+1)=month_start(i+1)+1
         end do
-            
-            
+
+
     end subroutine time_init
-    
+
     !   algorithms from Wikipedia: http://en.wikipedia.org/wiki/Julian_day
-    !   originally from Richards, E. G. (2013). Calendars. In S. E. Urban & P. K. Seidelmann, eds. 
-    !                   Explanatory Supplement to the Astronomical Almanac, 3rd ed. (pp. 585–624). 
+    !   originally from Richards, E. G. (2013). Calendars. In S. E. Urban & P. K. Seidelmann, eds.
+    !                   Explanatory Supplement to the Astronomical Almanac, 3rd ed. (pp. 585–624).
     !                   Mill Valley, Calif.: University Science Books. ISBN 978-1-89138-985-6
     !                   p617-9
     function date_to_mjd(year, month, day, hour, minute, second)
@@ -131,16 +131,16 @@ contains
             day = floor(day_fraction - month_start(month))+1
             year=year+YEAR_ZERO
         end if
-        
+
         day_fraction=mod(mjd,1.0)
         hour=floor(day_fraction*24)
-        
+
         day_fraction=day_fraction*24-hour
         minute=floor(day_fraction*60)
-        
+
         day_fraction=day_fraction*60-minute
         second = nint((day_fraction-(24d0*60*1d-5))*60)
-        
+
     end subroutine
 
     ! calculate the day of the year from a "modified julian day"
@@ -149,9 +149,9 @@ contains
         implicit none
         real :: calc_day_of_year
         double precision, intent(in) :: mjd
-        
+
         integer :: year, month, day, hour, minute, second
-        
+
         if (calendar==GREGORIAN) then
             call calendar_date(mjd,year, month, day, hour, minute, second)
             calc_day_of_year = mjd - date_to_mjd(year, 1,1,0,0,0)
@@ -168,7 +168,7 @@ contains
         real :: calc_year_fraction
         double precision, intent(in) :: mjd
         double precision :: year_start
-        
+
         integer :: year, month, day, hour, minute, second
 
         if (calendar==GREGORIAN) then

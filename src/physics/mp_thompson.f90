@@ -11,7 +11,7 @@
 !!   Prior to WRFv3.1, this code was single-moment rain prediction as
 !!   described in the reference above, but in v3.1 and higher, the
 !!   scheme is two-moment rain (predicted rain number concentration).
-!!  
+!!
 !!   Most importantly, users may wish to modify the prescribed number of
 !!   cloud droplets (Nt_c; see guidelines mentioned below).  Otherwise,
 !!   users may alter the rain and graupel size distribution parameters
@@ -26,7 +26,7 @@
 !!   power law relations and assumed capacitances used in deposition/
 !!   sublimation/evaporation/melting.
 !!   Remaining values should probably be left alone.
-!!  
+!!
 !!  Modifications for ICAR include OPENMP paralellization and the ability
 !!  to input many important parameters so they are no longer hard coded
 !!
@@ -38,7 +38,7 @@
 !+---+-----------------------------------------------------------------+
 !
       MODULE module_mp_thompson
-	use data_structures    ! trude added
+	  use options_types, only: mp_options_type
 
 !       USE module_wrf_error
 ! 		USE module_mp_radar
@@ -50,12 +50,12 @@
       LOGICAL, PARAMETER, PRIVATE:: iiwarm = .false.
       INTEGER, PARAMETER, PRIVATE:: IFDRY = 0
       REAL, PARAMETER, PRIVATE:: T_0 = 273.15
-!      REAL, PARAMETER, PRIVATE:: PI = 3.1415926536  !trude added. Note, pi is defined in data_structures, and conflict with definition here. Need to determine what to to about it. 
-      REAL, PARAMETER, PRIVATE:: PI2 = 3.1415926536  !trude added. Note, pi is defined in data_structures, and conflict with definition here. Need to determine what to to about it. 
+!      REAL, PARAMETER, PRIVATE:: PI = 3.1415926536  !trude added. Note, pi is defined in data_structures, and conflict with definition here. Need to determine what to to about it.
+      REAL, PARAMETER, PRIVATE:: PI2 = 3.1415926536  !trude added. Note, pi is defined in data_structures, and conflict with definition here. Need to determine what to to about it.
 
 !..Densities of rain, snow, graupel, and cloud ice.
       REAL, PARAMETER, PRIVATE:: rho_w = 1000.0
-      REAL, PARAMETER, PRIVATE:: rho_s = 100.0  
+      REAL, PARAMETER, PRIVATE:: rho_s = 100.0
  !     REAL, PARAMETER, PRIVATE:: rho_g = 500.0   ! trude commented out for changing from parameter to input variable
       REAL, PARAMETER, PRIVATE:: rho_i = 890.0
 
@@ -109,11 +109,11 @@
       REAL, PARAMETER, PRIVATE:: av_r = 4854.0
       REAL, PARAMETER, PRIVATE:: bv_r = 1.0
       REAL, PARAMETER, PRIVATE:: fv_r = 195.0
-!      REAL, PARAMETER, PRIVATE:: av_s = 40.0 ! trude commented out.  Will be used as input vaiable. 
-!      REAL, PARAMETER, PRIVATE:: bv_s = 0.55 ! trude commented out.  Will be used as input vaiable. 
-!      REAL, PARAMETER, PRIVATE:: fv_s = 100.0 ! trude commented out.  Will be used as input vaiable. 
-!      REAL, PARAMETER, PRIVATE:: av_g = 442.0 ! trude commented out.  Will be used as input vaiable. 
-!      REAL, PARAMETER, PRIVATE:: bv_g = 0.89 ! trude commented out.  Will be used as input vaiable. 
+!      REAL, PARAMETER, PRIVATE:: av_s = 40.0 ! trude commented out.  Will be used as input vaiable.
+!      REAL, PARAMETER, PRIVATE:: bv_s = 0.55 ! trude commented out.  Will be used as input vaiable.
+!      REAL, PARAMETER, PRIVATE:: fv_s = 100.0 ! trude commented out.  Will be used as input vaiable.
+!      REAL, PARAMETER, PRIVATE:: av_g = 442.0 ! trude commented out.  Will be used as input vaiable.
+!      REAL, PARAMETER, PRIVATE:: bv_g = 0.89 ! trude commented out.  Will be used as input vaiable.
 !      REAL, PARAMETER, PRIVATE:: av_i = 1847.5
       REAL, PARAMETER, PRIVATE:: bv_i = 1.0
 
@@ -155,10 +155,10 @@
 !..Water vapor and air gas constants at constant pressure
       REAL, PARAMETER, PRIVATE:: Rv = 461.5
       REAL, PARAMETER, PRIVATE:: oRv = 1./Rv
-!      REAL, PARAMETER, PRIVATE:: R = 287.04 !trude added. Note, R = 287.058 is defined in data_structures, and conflict with definition here. Need to determine what to to about it. 
-      REAL, PARAMETER, PRIVATE:: RR2 = 287.04 !trude added. Note, R = 287.058 is defined in data_structures, and conflict with definition here. Need to determine what to to about it. 
-!      REAL, PARAMETER, PRIVATE:: Cp = 1004.0 !trude added. Note, Cp = 1012.0 is defined in data_structures, and conflict with definition here. Need to determine what to to about it. 
-      REAL, PARAMETER, PRIVATE:: Cp2 = 1004.0 !trude added. Note, Cp = 1012.0 is defined in data_structures, and conflict with definition here. Need to determine what to to about it. 
+!      REAL, PARAMETER, PRIVATE:: R = 287.04 !trude added. Note, R = 287.058 is defined in data_structures, and conflict with definition here. Need to determine what to to about it.
+      REAL, PARAMETER, PRIVATE:: RR2 = 287.04 !trude added. Note, R = 287.058 is defined in data_structures, and conflict with definition here. Need to determine what to to about it.
+!      REAL, PARAMETER, PRIVATE:: Cp = 1004.0 !trude added. Note, Cp = 1012.0 is defined in data_structures, and conflict with definition here. Need to determine what to to about it.
+      REAL, PARAMETER, PRIVATE:: Cp2 = 1004.0 !trude added. Note, Cp = 1012.0 is defined in data_structures, and conflict with definition here. Need to determine what to to about it.
 
 !..Enthalpy of sublimation, vaporization, and fusion at 0C.
       REAL, PARAMETER, PRIVATE:: lsub = 2.834E6
@@ -751,7 +751,7 @@
 
 !..Cloud water and rain freezing (Bigg, 1953).
       ! CALL wrf_debug(200, '  creating freezing of water drops table')
-      call freezeH2O  
+      call freezeH2O
 
 !..Conversion of some ice mass into snow category.
       ! CALL wrf_debug(200, '  creating ice converting to snow table')
@@ -832,7 +832,7 @@
 !     endif
 
       dt = dt_in
-   
+
       qc_max = 0.
       qr_max = 0.
       qs_max = 0.
@@ -906,15 +906,13 @@
 !          pcp_ic(i,j) = pptice
 !          RAINNCV(i,j) = pptrain + pptsnow + pptgraul + pptice
          RAINNC(i,j) = RAINNC(i,j) + pptrain + pptsnow + pptgraul + pptice
-!          IF ( PRESENT(snowncv) .AND. PRESENT(snownc) ) THEN
-!             SNOWNCV(i,j) = pptsnow + pptice
-            SNOWNC(i,j) = SNOWNC(i,j) + pptsnow + pptice
-!          ENDIF
-!          IF ( PRESENT(graupelncv) .AND. PRESENT(graupelnc) ) THEN
-!             GRAUPELNCV(i,j) = pptgraul
-            GRAUPELNC(i,j) = GRAUPELNC(i,j) + pptgraul
-!          ENDIF
-!          SR(i,j) = (pptsnow + pptgraul + pptice)/(RAINNCV(i,j)+1.e-12)
+         IF ( PRESENT(SNOWNC) ) SNOWNC(i,j) = SNOWNC(i,j) + pptsnow + pptice
+         IF ( PRESENT(SNOWNCV) )     SNOWNCV(i,j) = pptsnow + pptice
+
+         IF ( PRESENT(GRAUPELNC) ) GRAUPELNC(i,j) = GRAUPELNC(i,j) + pptgraul
+         IF ( PRESENT(GRAUPELNCV) )    GRAUPELNCV(i,j) = pptgraul
+
+         SR(i,j) = (pptsnow + pptgraul + pptice)/(RAINNCV(i,j)+1.e-12)
 
          do k = kts, kte
             qv(i,k,j) = qv1d(k)
@@ -1276,6 +1274,7 @@
             L_qi(k) = .false.
          endif
 
+         mvd_r(k) = 0.0 ! must be initialized or a later test can crash where qr1d(k)<=R1
          if (qr1d(k) .gt. R1) then
             no_micro = .false.
             rr(k) = qr1d(k)*rho(k)
@@ -2273,7 +2272,7 @@
          if ((qi1d(k) + qiten(k)*DT) .gt. R1) then
             ri(k) = (qi1d(k) + qiten(k)*DT)*rho(k)
             ni(k) = MAX(R2, (ni1d(k) + niten(k)*DT)*rho(k))
-            L_qi(k) = .true. 
+            L_qi(k) = .true.
          else
             ri(k) = R1
             ni(k) = R2
@@ -2300,7 +2299,7 @@
             nr(k) = R2
             L_qr(k) = .false.
          endif
-               
+
          if ((qs1d(k) + qsten(k)*DT) .gt. R1) then
             rs(k) = (qs1d(k) + qsten(k)*DT)*rho(k)
             L_qs(k) = .true.
@@ -2862,94 +2861,136 @@
       DOUBLE PRECISION, DIMENSION(nbr):: vr, N_r
       DOUBLE PRECISION:: N0_r, N0_g, lam_exp, lamg, lamr
       DOUBLE PRECISION:: massg, massr, dvg, dvr, t1, t2, z1, z2, y1, y2
+      logical :: lexist, lopen
+      integer :: good
 
-      do n2 = 1, nbr
-!        vr(n2) = av_r*Dr(n2)**bv_r * DEXP(-fv_r*Dr(n2))
-         vr(n2) = -0.1021 + 4.932E3*Dr(n2) - 0.9551E6*Dr(n2)*Dr(n2)     &
-              + 0.07934E9*Dr(n2)*Dr(n2)*Dr(n2)                          &
-              - 0.002362E12*Dr(n2)*Dr(n2)*Dr(n2)*Dr(n2)
-      enddo
-      do n = 1, nbg
-         vg(n) = av_g*Dg(n)**bv_g
-      enddo
+      good = 0
 
-!..Note values returned from wrf_dm_decomp1d are zero-based, add 1 for
-!.. fortran indices.  J. Michalakes, 2009Oct30.
 
-! #if ( defined( DM_PARALLEL ) && ( ! defined( STUBMPI ) ) )
-      ! CALL wrf_dm_decomp1d ( ntb_r*ntb_r1, km_s, km_e )
-! #else
-      km_s = 0
-      km_e = ntb_r*ntb_r1 - 1
-! #endif
+      INQUIRE(FILE="qr_acr_qg_mpt.dat",EXIST=lexist)
+      IF ( lexist ) THEN
+        if (this_image()==1) print *, "ThompMP: read qr_acr_qg_mpt.dat instead of computing"
+        OPEN(63,file="qr_acr_qg_mpt.dat",form="unformatted",err=1234)
+        READ(63,err=1234) tcg_racg
+        READ(63,err=1234) tmr_racg
+        READ(63,err=1234) tcr_gacr
+        READ(63,err=1234) tmg_gacr
+        READ(63,err=1234) tnr_racg
+        READ(63,err=1234) tnr_gacr
+        good = 1
+ 1234   CONTINUE
+        INQUIRE(63,opened=lopen)
+        IF (lopen) THEN
+          CLOSE(63)
+        ENDIF
 
-!$omp parallel  default(shared) & 
-!$omp private(km,i,j,k,m,n,n2,lam_exp,lamr,N0_r,N_r,lamg,N_g,N0_g,t1,t2,z1,z2,y1,y2,massr,massg,dvg,dvr) &
-!$omp shared(tcg_racg,tmr_racg,tcr_gacr,tmg_gacr,tnr_racg,tnr_gacr,mu_r,ef_rs,am_s) & 
-!$omp firstprivate(crg,cre,cge,cgg,ore1,oge1,org1,org2,ogg2,ogg1,obmg,obmr) &
-!$omp firstprivate(km_s,km_e,Dr,Dg,dtg,dtr,vr,vg)
-	  !$omp do
-      do km = km_s, km_e
-         m = km / ntb_r1 + 1
-         k = mod( km , ntb_r1 ) + 1
+      ENDIF
 
-         lam_exp = (N0r_exp(k)*am_r*crg(1)/r_r(m))**ore1
-         lamr = lam_exp * (crg(3)*org2*org1)**obmr
-         N0_r = N0r_exp(k)/(crg(2)*lam_exp) * lamr**cre(2)
-         do n2 = 1, nbr
-            N_r(n2) = N0_r*Dr(n2)**mu_r *DEXP(-lamr*Dr(n2))*dtr(n2)
-         enddo
+      if (good .NE. 1) then
 
-         do j = 1, ntb_g
-         do i = 1, ntb_g1
-            lam_exp = (N0g_exp(i)*am_g*cgg(1)/r_g(j))**oge1
-            lamg = lam_exp * (cgg(3)*ogg2*ogg1)**obmg
-            N0_g = N0g_exp(i)/(cgg(2)*lam_exp) * lamg**cge(2)
-            do n = 1, nbg
-               N_g(n) = N0_g*Dg(n)**mu_g * DEXP(-lamg*Dg(n))*dtg(n)
-            enddo
+          do n2 = 1, nbr
+    !        vr(n2) = av_r*Dr(n2)**bv_r * DEXP(-fv_r*Dr(n2))
+             vr(n2) = -0.1021 + 4.932E3*Dr(n2) - 0.9551E6*Dr(n2)*Dr(n2)     &
+                  + 0.07934E9*Dr(n2)*Dr(n2)*Dr(n2)                          &
+                  - 0.002362E12*Dr(n2)*Dr(n2)*Dr(n2)*Dr(n2)
+          enddo
+          do n = 1, nbg
+             vg(n) = av_g*Dg(n)**bv_g
+          enddo
 
-            t1 = 0.0d0
-            t2 = 0.0d0
-            z1 = 0.0d0
-            z2 = 0.0d0
-            y1 = 0.0d0
-            y2 = 0.0d0
-            do n2 = 1, nbr
-               massr = am_r * Dr(n2)**bm_r
-               do n = 1, nbg
-                  massg = am_g * Dg(n)**bm_g
+    !..Note values returned from wrf_dm_decomp1d are zero-based, add 1 for
+    !.. fortran indices.  J. Michalakes, 2009Oct30.
 
-                  dvg = 0.5d0*((vr(n2) - vg(n)) + DABS(vr(n2)-vg(n)))
-                  dvr = 0.5d0*((vg(n) - vr(n2)) + DABS(vg(n)-vr(n2)))
+    ! #if ( defined( DM_PARALLEL ) && ( ! defined( STUBMPI ) ) )
+          ! CALL wrf_dm_decomp1d ( ntb_r*ntb_r1, km_s, km_e )
+    ! #else
+          km_s = 0
+          km_e = ntb_r*ntb_r1 - 1
+    ! #endif
 
-                  t1 = t1+ PI2*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
-                      *dvg*massg * N_g(n)* N_r(n2)
-                  z1 = z1+ PI2*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
-                      *dvg*massr * N_g(n)* N_r(n2)
-                  y1 = y1+ PI2*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
-                      *dvg       * N_g(n)* N_r(n2)
+    !$omp parallel  default(shared) &
+    !$omp private(km,i,j,k,m,n,n2,lam_exp,lamr,N0_r,N_r,lamg,N_g,N0_g,t1,t2,z1,z2,y1,y2,massr,massg,dvg,dvr) &
+    !$omp shared(tcg_racg,tmr_racg,tcr_gacr,tmg_gacr,tnr_racg,tnr_gacr,mu_r,ef_rs,am_s) &
+    !$omp firstprivate(crg,cre,cge,cgg,ore1,oge1,org1,org2,ogg2,ogg1,obmg,obmr) &
+    !$omp firstprivate(km_s,km_e,Dr,Dg,dtg,dtr,vr,vg)
+    	  !$omp do
+          do km = km_s, km_e
+             m = km / ntb_r1 + 1
+             k = mod( km , ntb_r1 ) + 1
 
-                  t2 = t2+ PI2*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
-                      *dvr*massr * N_g(n)* N_r(n2)
-                  y2 = y2+ PI2*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
-                      *dvr       * N_g(n)* N_r(n2)
-                  z2 = z2+ PI2*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
-                      *dvr*massg * N_g(n)* N_r(n2)
-               enddo
- 97            continue
-            enddo
-            tcg_racg(i,j,k,m) = t1
-            tmr_racg(i,j,k,m) = DMIN1(z1, r_r(m)*1.0d0)
-            tcr_gacr(i,j,k,m) = t2
-            tmg_gacr(i,j,k,m) = z2
-            tnr_racg(i,j,k,m) = y1
-            tnr_gacr(i,j,k,m) = y2
-         enddo
-         enddo
-      enddo
-	  !$omp end do
-	  !$omp end parallel
+             lam_exp = (N0r_exp(k)*am_r*crg(1)/r_r(m))**ore1
+             lamr = lam_exp * (crg(3)*org2*org1)**obmr
+             N0_r = N0r_exp(k)/(crg(2)*lam_exp) * lamr**cre(2)
+             do n2 = 1, nbr
+                N_r(n2) = N0_r*Dr(n2)**mu_r *DEXP(-lamr*Dr(n2))*dtr(n2)
+             enddo
+
+             do j = 1, ntb_g
+             do i = 1, ntb_g1
+                lam_exp = (N0g_exp(i)*am_g*cgg(1)/r_g(j))**oge1
+                lamg = lam_exp * (cgg(3)*ogg2*ogg1)**obmg
+                N0_g = N0g_exp(i)/(cgg(2)*lam_exp) * lamg**cge(2)
+                do n = 1, nbg
+                   N_g(n) = N0_g*Dg(n)**mu_g * DEXP(-lamg*Dg(n))*dtg(n)
+                enddo
+
+                t1 = 0.0d0
+                t2 = 0.0d0
+                z1 = 0.0d0
+                z2 = 0.0d0
+                y1 = 0.0d0
+                y2 = 0.0d0
+                do n2 = 1, nbr
+                   massr = am_r * Dr(n2)**bm_r
+                   do n = 1, nbg
+                      massg = am_g * Dg(n)**bm_g
+
+                      dvg = 0.5d0*((vr(n2) - vg(n)) + DABS(vr(n2)-vg(n)))
+                      dvr = 0.5d0*((vg(n) - vr(n2)) + DABS(vg(n)-vr(n2)))
+
+                      t1 = t1+ PI2*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
+                          *dvg*massg * N_g(n)* N_r(n2)
+                      z1 = z1+ PI2*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
+                          *dvg*massr * N_g(n)* N_r(n2)
+                      y1 = y1+ PI2*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
+                          *dvg       * N_g(n)* N_r(n2)
+
+                      t2 = t2+ PI2*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
+                          *dvr*massr * N_g(n)* N_r(n2)
+                      y2 = y2+ PI2*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
+                          *dvr       * N_g(n)* N_r(n2)
+                      z2 = z2+ PI2*.25*Ef_rg*(Dg(n)+Dr(n2))*(Dg(n)+Dr(n2)) &
+                          *dvr*massg * N_g(n)* N_r(n2)
+                   enddo
+     97            continue
+                enddo
+                tcg_racg(i,j,k,m) = t1
+                tmr_racg(i,j,k,m) = DMIN1(z1, r_r(m)*1.0d0)
+                tcr_gacr(i,j,k,m) = t2
+                tmg_gacr(i,j,k,m) = z2
+                tnr_racg(i,j,k,m) = y1
+                tnr_gacr(i,j,k,m) = y2
+             enddo
+             enddo
+          enddo
+    	  !$omp end do
+    	  !$omp end parallel
+          IF ( this_image()==1 ) THEN
+            print *, "Writing qr_acr_qg_mpt.dat in Thompson MP init"
+            OPEN(63,file="qr_acr_qg_mpt.dat",form="unformatted",err=9234)
+            WRITE(63,err=9234) tcg_racg
+            WRITE(63,err=9234) tmr_racg
+            WRITE(63,err=9234) tcr_gacr
+            WRITE(63,err=9234) tmg_gacr
+            WRITE(63,err=9234) tnr_racg
+            WRITE(63,err=9234) tnr_gacr
+            CLOSE(63)
+            RETURN    ! ----- RETURN
+   9234     CONTINUE
+            print *, ("Error writing qr_acr_qg_mpt.dat")
+          ENDIF
+
+      endif
 
 !..Note wrf_dm_gatherv expects zero-based km_s, km_e (J. Michalakes, 2009Oct30).
 
@@ -2983,167 +3024,224 @@
       DOUBLE PRECISION:: dvs, dvr, masss, massr
       DOUBLE PRECISION:: t1, t2, t3, t4, z1, z2, z3, z4
       DOUBLE PRECISION:: y1, y2, y3, y4
+      LOGICAL lexist,lopen
+      INTEGER :: good
+    !   LOGICAL, EXTERNAL :: wrf_dm_on_monitor
 
 !+---+
-       do n2 = 1, nbr
-!        vr(n2) = av_r*Dr(n2)**bv_r * DEXP(-fv_r*Dr(n2))
-         vr(n2) = -0.1021 + 4.932E3*Dr(n2) - 0.9551E6*Dr(n2)*Dr(n2)     &
-              + 0.07934E9*Dr(n2)*Dr(n2)*Dr(n2)                          &
-              - 0.002362E12*Dr(n2)*Dr(n2)*Dr(n2)*Dr(n2)
-         D1(n2) = (vr(n2)/av_s)**(1./bv_s)
-      enddo
-      do n = 1, nbs
-         vs(n) = 1.5*av_s*Ds(n)**bv_s * DEXP(-fv_s*Ds(n))
-      enddo
 
-!..Note values returned from wrf_dm_decomp1d are zero-based, add 1 for
-!.. fortran indices.  J. Michalakes, 2009Oct30.
+    !   CALL nl_get_force_read_thompson(1,force_read_thompson)
+    !   CALL nl_get_write_thompson_tables(1,write_thompson_tables)
 
-! #if ( defined( DM_PARALLEL ) && ( ! defined( STUBMPI ) ) )
-      ! CALL wrf_dm_decomp1d ( ntb_r*ntb_r1, km_s, km_e )
-! #else
-      km_s = 0
-      km_e = ntb_r*ntb_r1 - 1
-! #endif
+      good = 0
+      INQUIRE(FILE="qr_acr_qs_mpt.dat",EXIST=lexist)
+      IF ( lexist ) THEN
+        IF ( this_image() == 1 ) print *, "ThompMP: read qr_acr_qs_mpt.dat instead of computing"
+        OPEN(63,file="qr_acr_qs_mpt.dat",form="unformatted",err=1234)
+        READ(63,err=1234)tcs_racs1
+        READ(63,err=1234)tmr_racs1
+        READ(63,err=1234)tcs_racs2
+        READ(63,err=1234)tmr_racs2
+        READ(63,err=1234)tcr_sacr1
+        READ(63,err=1234)tms_sacr1
+        READ(63,err=1234)tcr_sacr2
+        READ(63,err=1234)tms_sacr2
+        READ(63,err=1234)tnr_racs1
+        READ(63,err=1234)tnr_racs2
+        READ(63,err=1234)tnr_sacr1
+        READ(63,err=1234)tnr_sacr2
+        good = 1
+ 1234      CONTINUE
+        INQUIRE(63,opened=lopen)
+        IF (lopen) THEN
+          CLOSE(63)
+        ENDIF
+      ENDIF
 
-!$omp parallel default(private) & 
-!$omp shared(tcs_racs1,tmr_racs1,tcs_racs2,tmr_racs2,tcr_sacr1,tms_sacr1)&
-!$omp shared(tcr_sacr2,tms_sacr2,tnr_racs1,tnr_racs2,tnr_sacr1,tnr_sacr2,mu_r,ef_rs,am_s) & 
-!$omp private(second,a_,b_,n2,km,M2,M3,oM3,Mrat,M0,slam1,slam2,i,j,k,m,n,lam_exp,lamr,N0_r,N_r,loga_) &
-!$omp private(t1,t2,t3,t4,z1,z2,z3,z4,y1,y2,y3,y4,N_s,massr,masss,dvs,dvr) &
-!$omp firstprivate(km_s,km_e,vr,vs) &
-!$omp firstprivate(Dr,dtr,dts,Ds,crg,cre,cse,ore1,org2,org1,obmr,oams)
-	  !$omp do
-      do km = km_s, km_e
-         m = km / ntb_r1 + 1
-         k = mod( km , ntb_r1 ) + 1
+      if (good .NE. 1) then
+          if (this_image()==1) print *, "ThompMP: computing qr_acr_qs"
+    !+---+
+          do n2 = 1, nbr
+    !        vr(n2) = av_r*Dr(n2)**bv_r * DEXP(-fv_r*Dr(n2))
+             vr(n2) = -0.1021 + 4.932E3*Dr(n2) - 0.9551E6*Dr(n2)*Dr(n2)     &
+                  + 0.07934E9*Dr(n2)*Dr(n2)*Dr(n2)                          &
+                  - 0.002362E12*Dr(n2)*Dr(n2)*Dr(n2)*Dr(n2)
+             D1(n2) = (vr(n2)/av_s)**(1./bv_s)
+          enddo
+          do n = 1, nbs
+             vs(n) = 1.5*av_s*Ds(n)**bv_s * DEXP(-fv_s*Ds(n))
+          enddo
 
-         lam_exp = (N0r_exp(k)*am_r*crg(1)/r_r(m))**ore1
-         lamr = lam_exp * (crg(3)*org2*org1)**obmr
-         N0_r = N0r_exp(k)/(crg(2)*lam_exp) * lamr**cre(2)
-         do n2 = 1, nbr
-            N_r(n2) = N0_r*Dr(n2)**mu_r * DEXP(-lamr*Dr(n2))*dtr(n2)
-         enddo
+    !..Note values returned from wrf_dm_decomp1d are zero-based, add 1 for
+    !.. fortran indices.  J. Michalakes, 2009Oct30.
 
-         do j = 1, ntb_t
-            do i = 1, ntb_s
+    ! #if ( defined( DM_PARALLEL ) && ( ! defined( STUBMPI ) ) )
+          ! CALL wrf_dm_decomp1d ( ntb_r*ntb_r1, km_s, km_e )
+    ! #else
+          km_s = 0
+          km_e = ntb_r*ntb_r1 - 1
+    ! #endif
 
-!..From the bm_s moment, compute plus one moment.  If we are not
-!.. using bm_s=2, then we must transform to the pure 2nd moment
-!.. (variable called "second") and then to the bm_s+1 moment.
+    !$omp parallel default(private) &
+    !$omp shared(tcs_racs1,tmr_racs1,tcs_racs2,tmr_racs2,tcr_sacr1,tms_sacr1)&
+    !$omp shared(tcr_sacr2,tms_sacr2,tnr_racs1,tnr_racs2,tnr_sacr1,tnr_sacr2,mu_r,ef_rs,am_s) &
+    !$omp private(second,a_,b_,n2,km,M2,M3,oM3,Mrat,M0,slam1,slam2,i,j,k,m,n,lam_exp,lamr,N0_r,N_r,loga_) &
+    !$omp private(t1,t2,t3,t4,z1,z2,z3,z4,y1,y2,y3,y4,N_s,massr,masss,dvs,dvr) &
+    !$omp firstprivate(km_s,km_e,vr,vs) &
+    !$omp firstprivate(Dr,dtr,dts,Ds,crg,cre,cse,ore1,org2,org1,obmr,oams)
+    	  !$omp do
+          do km = km_s, km_e
+             m = km / ntb_r1 + 1
+             k = mod( km , ntb_r1 ) + 1
 
-               M2 = r_s(i)*oams *1.0d0
-               if (bm_s.gt.2.0-1.E-3 .and. bm_s.lt.2.0+1.E-3) then
-                  loga_ = sa(1) + sa(2)*Tc(j) + sa(3)*bm_s &
-                     + sa(4)*Tc(j)*bm_s + sa(5)*Tc(j)*Tc(j) &
-                     + sa(6)*bm_s*bm_s + sa(7)*Tc(j)*Tc(j)*bm_s &
-                     + sa(8)*Tc(j)*bm_s*bm_s + sa(9)*Tc(j)*Tc(j)*Tc(j) &
-                     + sa(10)*bm_s*bm_s*bm_s
-                  a_ = 10.0**loga_
-                  b_ = sb(1) + sb(2)*Tc(j) + sb(3)*bm_s &
-                     + sb(4)*Tc(j)*bm_s + sb(5)*Tc(j)*Tc(j) &
-                     + sb(6)*bm_s*bm_s + sb(7)*Tc(j)*Tc(j)*bm_s &
-                     + sb(8)*Tc(j)*bm_s*bm_s + sb(9)*Tc(j)*Tc(j)*Tc(j) &
-                     + sb(10)*bm_s*bm_s*bm_s
-                  second = (M2/a_)**(1./b_)
-               else
-                  second = M2
-               endif
+             lam_exp = (N0r_exp(k)*am_r*crg(1)/r_r(m))**ore1
+             lamr = lam_exp * (crg(3)*org2*org1)**obmr
+             N0_r = N0r_exp(k)/(crg(2)*lam_exp) * lamr**cre(2)
+             do n2 = 1, nbr
+                N_r(n2) = N0_r*Dr(n2)**mu_r * DEXP(-lamr*Dr(n2))*dtr(n2)
+             enddo
 
-               loga_ = sa(1) + sa(2)*Tc(j) + sa(3)*cse(1) &
-                  + sa(4)*Tc(j)*cse(1) + sa(5)*Tc(j)*Tc(j) &
-                  + sa(6)*cse(1)*cse(1) + sa(7)*Tc(j)*Tc(j)*cse(1) &
-                  + sa(8)*Tc(j)*cse(1)*cse(1) + sa(9)*Tc(j)*Tc(j)*Tc(j) &
-                  + sa(10)*cse(1)*cse(1)*cse(1)
-               a_ = 10.0**loga_
-               b_ = sb(1)+sb(2)*Tc(j)+sb(3)*cse(1) + sb(4)*Tc(j)*cse(1) &
-                  + sb(5)*Tc(j)*Tc(j) + sb(6)*cse(1)*cse(1) &
-                  + sb(7)*Tc(j)*Tc(j)*cse(1) + sb(8)*Tc(j)*cse(1)*cse(1) &
-                  + sb(9)*Tc(j)*Tc(j)*Tc(j)+sb(10)*cse(1)*cse(1)*cse(1)
-               M3 = a_ * second**b_
+             do j = 1, ntb_t
+                do i = 1, ntb_s
 
-               oM3 = 1./M3
-               Mrat = M2*(M2*oM3)*(M2*oM3)*(M2*oM3)
-               M0   = (M2*oM3)**mu_s
-               slam1 = M2 * oM3 * Lam0
-               slam2 = M2 * oM3 * Lam1
+    !..From the bm_s moment, compute plus one moment.  If we are not
+    !.. using bm_s=2, then we must transform to the pure 2nd moment
+    !.. (variable called "second") and then to the bm_s+1 moment.
 
-               do n = 1, nbs
-                  N_s(n) = Mrat*(Kap0*DEXP(-slam1*Ds(n)) &
-                      + Kap1*M0*Ds(n)**mu_s * DEXP(-slam2*Ds(n)))*dts(n)
-               enddo
+                   M2 = r_s(i)*oams *1.0d0
+                   if (bm_s.gt.2.0-1.E-3 .and. bm_s.lt.2.0+1.E-3) then
+                      loga_ = sa(1) + sa(2)*Tc(j) + sa(3)*bm_s &
+                         + sa(4)*Tc(j)*bm_s + sa(5)*Tc(j)*Tc(j) &
+                         + sa(6)*bm_s*bm_s + sa(7)*Tc(j)*Tc(j)*bm_s &
+                         + sa(8)*Tc(j)*bm_s*bm_s + sa(9)*Tc(j)*Tc(j)*Tc(j) &
+                         + sa(10)*bm_s*bm_s*bm_s
+                      a_ = 10.0**loga_
+                      b_ = sb(1) + sb(2)*Tc(j) + sb(3)*bm_s &
+                         + sb(4)*Tc(j)*bm_s + sb(5)*Tc(j)*Tc(j) &
+                         + sb(6)*bm_s*bm_s + sb(7)*Tc(j)*Tc(j)*bm_s &
+                         + sb(8)*Tc(j)*bm_s*bm_s + sb(9)*Tc(j)*Tc(j)*Tc(j) &
+                         + sb(10)*bm_s*bm_s*bm_s
+                      second = (M2/a_)**(1./b_)
+                   else
+                      second = M2
+                   endif
 
-               t1 = 0.0d0
-               t2 = 0.0d0
-               t3 = 0.0d0
-               t4 = 0.0d0
-               z1 = 0.0d0
-               z2 = 0.0d0
-               z3 = 0.0d0
-               z4 = 0.0d0
-               y1 = 0.0d0
-               y2 = 0.0d0
-               y3 = 0.0d0
-               y4 = 0.0d0
-               do n2 = 1, nbr
-                  massr = am_r * Dr(n2)**bm_r
-                  do n = 1, nbs
-                     masss = am_s * Ds(n)**bm_s
-      
-                     dvs = 0.5d0*((vr(n2) - vs(n)) + DABS(vr(n2)-vs(n)))
-                     dvr = 0.5d0*((vs(n) - vr(n2)) + DABS(vs(n)-vr(n2)))
+                   loga_ = sa(1) + sa(2)*Tc(j) + sa(3)*cse(1) &
+                      + sa(4)*Tc(j)*cse(1) + sa(5)*Tc(j)*Tc(j) &
+                      + sa(6)*cse(1)*cse(1) + sa(7)*Tc(j)*Tc(j)*cse(1) &
+                      + sa(8)*Tc(j)*cse(1)*cse(1) + sa(9)*Tc(j)*Tc(j)*Tc(j) &
+                      + sa(10)*cse(1)*cse(1)*cse(1)
+                   a_ = 10.0**loga_
+                   b_ = sb(1)+sb(2)*Tc(j)+sb(3)*cse(1) + sb(4)*Tc(j)*cse(1) &
+                      + sb(5)*Tc(j)*Tc(j) + sb(6)*cse(1)*cse(1) &
+                      + sb(7)*Tc(j)*Tc(j)*cse(1) + sb(8)*Tc(j)*cse(1)*cse(1) &
+                      + sb(9)*Tc(j)*Tc(j)*Tc(j)+sb(10)*cse(1)*cse(1)*cse(1)
+                   M3 = a_ * second**b_
 
-                     if (massr .gt. 1.5*masss) then
-                     t1 = t1+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
-                         *dvs*masss * N_s(n)* N_r(n2)
-                     z1 = z1+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
-                         *dvs*massr * N_s(n)* N_r(n2)
-                     y1 = y1+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
-                         *dvs       * N_s(n)* N_r(n2)
-                     else
-                     t3 = t3+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
-                         *dvs*masss * N_s(n)* N_r(n2)
-                     z3 = z3+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
-                         *dvs*massr * N_s(n)* N_r(n2)
-                     y3 = y3+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
-                         *dvs       * N_s(n)* N_r(n2)
-                     endif
+                   oM3 = 1./M3
+                   Mrat = M2*(M2*oM3)*(M2*oM3)*(M2*oM3)
+                   M0   = (M2*oM3)**mu_s
+                   slam1 = M2 * oM3 * Lam0
+                   slam2 = M2 * oM3 * Lam1
 
-                     if (massr .gt. 1.5*masss) then
-                     t2 = t2+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
-                         *dvr*massr * N_s(n)* N_r(n2)
-                     y2 = y2+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
-                         *dvr       * N_s(n)* N_r(n2)
-                     z2 = z2+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
-                         *dvr*masss * N_s(n)* N_r(n2)
-                     else
-                     t4 = t4+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
-                         *dvr*massr * N_s(n)* N_r(n2)
-                     y4 = y4+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
-                         *dvr       * N_s(n)* N_r(n2)
-                     z4 = z4+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
-                         *dvr*masss * N_s(n)* N_r(n2)
-                     endif
+                   do n = 1, nbs
+                      N_s(n) = Mrat*(Kap0*DEXP(-slam1*Ds(n)) &
+                          + Kap1*M0*Ds(n)**mu_s * DEXP(-slam2*Ds(n)))*dts(n)
+                   enddo
 
-                  enddo
-               enddo
-               tcs_racs1(i,j,k,m) = t1
-               tmr_racs1(i,j,k,m) = DMIN1(z1, r_r(m)*1.0d0)
-               tcs_racs2(i,j,k,m) = t3
-               tmr_racs2(i,j,k,m) = z3
-               tcr_sacr1(i,j,k,m) = t2
-               tms_sacr1(i,j,k,m) = z2
-               tcr_sacr2(i,j,k,m) = t4
-               tms_sacr2(i,j,k,m) = z4
-               tnr_racs1(i,j,k,m) = y1
-               tnr_racs2(i,j,k,m) = y3
-               tnr_sacr1(i,j,k,m) = y2
-               tnr_sacr2(i,j,k,m) = y4
-            enddo
-         enddo
-      enddo
-	  !$omp end do
-	  !$omp end parallel
+                   t1 = 0.0d0
+                   t2 = 0.0d0
+                   t3 = 0.0d0
+                   t4 = 0.0d0
+                   z1 = 0.0d0
+                   z2 = 0.0d0
+                   z3 = 0.0d0
+                   z4 = 0.0d0
+                   y1 = 0.0d0
+                   y2 = 0.0d0
+                   y3 = 0.0d0
+                   y4 = 0.0d0
+                   do n2 = 1, nbr
+                      massr = am_r * Dr(n2)**bm_r
+                      do n = 1, nbs
+                         masss = am_s * Ds(n)**bm_s
+
+                         dvs = 0.5d0*((vr(n2) - vs(n)) + DABS(vr(n2)-vs(n)))
+                         dvr = 0.5d0*((vs(n) - vr(n2)) + DABS(vs(n)-vr(n2)))
+
+                         if (massr .gt. 1.5*masss) then
+                         t1 = t1+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                             *dvs*masss * N_s(n)* N_r(n2)
+                         z1 = z1+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                             *dvs*massr * N_s(n)* N_r(n2)
+                         y1 = y1+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                             *dvs       * N_s(n)* N_r(n2)
+                         else
+                         t3 = t3+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                             *dvs*masss * N_s(n)* N_r(n2)
+                         z3 = z3+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                             *dvs*massr * N_s(n)* N_r(n2)
+                         y3 = y3+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                             *dvs       * N_s(n)* N_r(n2)
+                         endif
+
+                         if (massr .gt. 1.5*masss) then
+                         t2 = t2+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                             *dvr*massr * N_s(n)* N_r(n2)
+                         y2 = y2+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                             *dvr       * N_s(n)* N_r(n2)
+                         z2 = z2+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                             *dvr*masss * N_s(n)* N_r(n2)
+                         else
+                         t4 = t4+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                             *dvr*massr * N_s(n)* N_r(n2)
+                         y4 = y4+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                             *dvr       * N_s(n)* N_r(n2)
+                         z4 = z4+ PI2*.25*Ef_rs*(Ds(n)+Dr(n2))*(Ds(n)+Dr(n2)) &
+                             *dvr*masss * N_s(n)* N_r(n2)
+                         endif
+
+                      enddo
+                   enddo
+                   tcs_racs1(i,j,k,m) = t1
+                   tmr_racs1(i,j,k,m) = DMIN1(z1, r_r(m)*1.0d0)
+                   tcs_racs2(i,j,k,m) = t3
+                   tmr_racs2(i,j,k,m) = z3
+                   tcr_sacr1(i,j,k,m) = t2
+                   tms_sacr1(i,j,k,m) = z2
+                   tcr_sacr2(i,j,k,m) = t4
+                   tms_sacr2(i,j,k,m) = z4
+                   tnr_racs1(i,j,k,m) = y1
+                   tnr_racs2(i,j,k,m) = y3
+                   tnr_sacr1(i,j,k,m) = y2
+                   tnr_sacr2(i,j,k,m) = y4
+                enddo
+             enddo
+          enddo
+    	  !$omp end do
+    	  !$omp end parallel
+
+          IF ( this_image()==1 ) THEN
+            print *, "Writing qr_acr_qs_mpt.dat in Thompson MP init"
+            OPEN(63,file="qr_acr_qs_mpt.dat",form="unformatted",err=9234)
+            WRITE(63,err=9234)tcs_racs1
+            WRITE(63,err=9234)tmr_racs1
+            WRITE(63,err=9234)tcs_racs2
+            WRITE(63,err=9234)tmr_racs2
+            WRITE(63,err=9234)tcr_sacr1
+            WRITE(63,err=9234)tms_sacr1
+            WRITE(63,err=9234)tcr_sacr2
+            WRITE(63,err=9234)tms_sacr2
+            WRITE(63,err=9234)tnr_racs1
+            WRITE(63,err=9234)tnr_racs2
+            WRITE(63,err=9234)tnr_sacr1
+            WRITE(63,err=9234)tnr_sacr2
+            CLOSE(63)
+            RETURN    ! ----- RETURN
+   9234     CONTINUE
+            print*, "Error writing qr_acr_qs_mpt.dat"
+          ENDIF
+        ENDIF
 
 !..Note wrf_dm_gatherv expects zero-based km_s, km_e (J. Michalakes, 2009Oct30).
 
@@ -3172,7 +3270,7 @@
 !..the proportion of drops summing their masses.
 !+---+-----------------------------------------------------------------+
 
-      subroutine freezeH2O 
+      subroutine freezeH2O
 
       implicit none
 !..Local variables
@@ -3182,77 +3280,122 @@
       DOUBLE PRECISION:: sum1, sum2, sumn1, sumn2, &
                          prob, vol, Texp, orho_w, &
                          lam_exp, lamr, N0_r, lamc, N0_c, y
+      LOGICAL lexist,lopen
+      INTEGER :: good
+    !   LOGICAL, EXTERNAL :: wrf_dm_on_monitor
+
 !+---+
-      orho_w = 1./rho_w
 
-      do n2 = 1, nbr
-         massr(n2) = am_r*Dr(n2)**bm_r
-      enddo
-      do n = 1, nbc
-         massc(n) = am_r*Dc(n)**bm_r
-      enddo
+      good = 0
+      ! IF ( this_image() == 1 ) THEN
+        INQUIRE(FILE="freezeH2O_mpt.dat",EXIST=lexist)
+        IF ( lexist ) THEN
+          IF ( this_image() == 1 ) print *, "ThompMP: read freezeH2O_mpt.dat instead of computing"
+          OPEN(63,file="freezeH2O_mpt.dat",form="unformatted",err=1234)
+          READ(63,err=1234)tpi_qrfz
+          READ(63,err=1234)tni_qrfz
+          READ(63,err=1234)tpg_qrfz
+          READ(63,err=1234)tnr_qrfz
+          READ(63,err=1234)tpi_qcfz
+          READ(63,err=1234)tni_qcfz
+          good = 1
+ 1234     CONTINUE
+          INQUIRE(63,opened=lopen)
+          IF (lopen) THEN
+            CLOSE(63)
+          endif
+        ENDIF
 
-!..Freeze water (smallest drops become cloud ice, otherwise graupel).
-      do k = 1, 45
-!         print*, ' Freezing water for temp = ', -k
-! ++ trude, add tadjust, so to chane temperature for where Bigg freezing starts. Follow approach in WRFV3.6 with IN
-         Texp = DEXP( DFLOAT(k) -t_adjust*1.0D0) - 1.0D0  ! NB Trude. Check for when texp is negative.....
-!         Texp = DEXP( DFLOAT(k) ) - 1.0D0
-! -- trude
-         do j = 1, ntb_r1
-            do i = 1, ntb_r
-               lam_exp = (N0r_exp(j)*am_r*crg(1)/r_r(i))**ore1
-               lamr = lam_exp * (crg(3)*org2*org1)**obmr
-               N0_r = N0r_exp(j)/(crg(2)*lam_exp) * lamr**cre(2)
-               sum1 = 0.0d0
-               sum2 = 0.0d0
-               sumn1 = 0.0d0
-               sumn2 = 0.0d0
-               do n2 = nbr, 1, -1
-                  N_r(n2) = N0_r*Dr(n2)**mu_r*DEXP(-lamr*Dr(n2))*dtr(n2)
-                  vol = massr(n2)*orho_w
-                  prob = 1.0D0 - DEXP(-120.0D0*vol*5.2D-4 * Texp)
-!++ trude
-                  prob = MAX(prob, 0.0d0 )
-! -- trude
-                  if (massr(n2) .lt. xm0g) then
-                     sumn1 = sumn1 + prob*N_r(n2)
-                     sum1 = sum1 + prob*N_r(n2)*massr(n2)
-                  else
-                     sumn2 = sumn2 + prob*N_r(n2)
-                     sum2 = sum2 + prob*N_r(n2)*massr(n2)
-                  endif
-                  if ((sum1+sum2) .ge. r_r(i)) EXIT
-               enddo
-               tpi_qrfz(i,j,k) = sum1
-               tni_qrfz(i,j,k) = sumn1
-               tpg_qrfz(i,j,k) = sum2
-               tnr_qrfz(i,j,k) = sumn2
-            enddo
-       enddo
-         do i = 1, ntb_c
-            lamc = 1.0D-6 * (Nt_c*am_r* ccg(2) * ocg1 / r_c(i))**obmr
-            N0_c = 1.0D-18 * Nt_c*ocg1 * lamc**cce(1)
-            sum1 = 0.0d0
-            sumn2 = 0.0d0
-            do n = nbc, 1, -1
-               y = Dc(n)*1.0D6
-               vol = massc(n)*orho_w
-               prob = 1.0D0 - DEXP(-120.0D0*vol*5.2D-4 * Texp)
-!++ trude
-               prob = MAX(prob, 0.0d0 )
-! -- trude
-               N_c(n) = N0_c* y**mu_c * EXP(-lamc*y)*dtc(n)
-               N_c(n) = 1.0D24 * N_c(n)
-               sumn2 = sumn2 + prob*N_c(n)
-               sum1 = sum1 + prob*N_c(n)*massc(n)
-               if (sum1 .ge. r_c(i)) EXIT
-            enddo
-            tpi_qcfz(i,k) = sum1
-            tni_qcfz(i,k) = sumn2
-         enddo
-      enddo
 
+      IF ( good .NE. 1 ) THEN
+        if (this_image()==1) print *, "ThompMP: computing freezeH2O"
+    !+---+
+          orho_w = 1./rho_w
+
+          do n2 = 1, nbr
+             massr(n2) = am_r*Dr(n2)**bm_r
+          enddo
+          do n = 1, nbc
+             massc(n) = am_r*Dc(n)**bm_r
+          enddo
+
+    !..Freeze water (smallest drops become cloud ice, otherwise graupel).
+          do k = 1, 45
+    !         print*, ' Freezing water for temp = ', -k
+    ! ++ trude, add tadjust, so to chane temperature for where Bigg freezing starts. Follow approach in WRFV3.6 with IN
+             Texp = DEXP( DFLOAT(k) -t_adjust*1.0D0) - 1.0D0  ! NB Trude. Check for when texp is negative.....
+    !         Texp = DEXP( DFLOAT(k) ) - 1.0D0
+    ! -- trude
+             do j = 1, ntb_r1
+                do i = 1, ntb_r
+                   lam_exp = (N0r_exp(j)*am_r*crg(1)/r_r(i))**ore1
+                   lamr = lam_exp * (crg(3)*org2*org1)**obmr
+                   N0_r = N0r_exp(j)/(crg(2)*lam_exp) * lamr**cre(2)
+                   sum1 = 0.0d0
+                   sum2 = 0.0d0
+                   sumn1 = 0.0d0
+                   sumn2 = 0.0d0
+                   do n2 = nbr, 1, -1
+                      N_r(n2) = N0_r*Dr(n2)**mu_r*DEXP(-lamr*Dr(n2))*dtr(n2)
+                      vol = massr(n2)*orho_w
+                      prob = 1.0D0 - DEXP(-120.0D0*vol*5.2D-4 * Texp)
+    !++ trude
+                      prob = MAX(prob, 0.0d0 )
+    ! -- trude
+                      if (massr(n2) .lt. xm0g) then
+                         sumn1 = sumn1 + prob*N_r(n2)
+                         sum1 = sum1 + prob*N_r(n2)*massr(n2)
+                      else
+                         sumn2 = sumn2 + prob*N_r(n2)
+                         sum2 = sum2 + prob*N_r(n2)*massr(n2)
+                      endif
+                      if ((sum1+sum2) .ge. r_r(i)) EXIT
+                   enddo
+                   tpi_qrfz(i,j,k) = sum1
+                   tni_qrfz(i,j,k) = sumn1
+                   tpg_qrfz(i,j,k) = sum2
+                   tnr_qrfz(i,j,k) = sumn2
+                enddo
+           enddo
+             do i = 1, ntb_c
+                lamc = 1.0D-6 * (Nt_c*am_r* ccg(2) * ocg1 / r_c(i))**obmr
+                N0_c = 1.0D-18 * Nt_c*ocg1 * lamc**cce(1)
+                sum1 = 0.0d0
+                sumn2 = 0.0d0
+                do n = nbc, 1, -1
+                   y = Dc(n)*1.0D6
+                   vol = massc(n)*orho_w
+                   prob = 1.0D0 - DEXP(-120.0D0*vol*5.2D-4 * Texp)
+    !++ trude
+                   prob = MAX(prob, 0.0d0 )
+    ! -- trude
+                   N_c(n) = N0_c* y**mu_c * EXP(-lamc*y)*dtc(n)
+                   N_c(n) = 1.0D24 * N_c(n)
+                   sumn2 = sumn2 + prob*N_c(n)
+                   sum1 = sum1 + prob*N_c(n)*massc(n)
+                   if (sum1 .ge. r_c(i)) EXIT
+                enddo
+                tpi_qcfz(i,k) = sum1
+                tni_qcfz(i,k) = sumn2
+             enddo
+          enddo
+
+          IF ( this_image() == 1 ) THEN
+            print *, "Writing freezeH2O_mpt.dat in Thompson MP init"
+            OPEN(63,file="freezeH2O_mpt.dat",form="unformatted",err=9234)
+            WRITE(63,err=9234)tpi_qrfz
+            WRITE(63,err=9234)tni_qrfz
+            WRITE(63,err=9234)tpg_qrfz
+            WRITE(63,err=9234)tnr_qrfz
+            WRITE(63,err=9234)tpi_qcfz
+            WRITE(63,err=9234)tni_qcfz
+            CLOSE(63)
+            RETURN    ! ----- RETURN
+   9234     CONTINUE
+            print*, "Error writing freezeH2O_mpt.dat"
+          ENDIF
+
+        endif
       end subroutine freezeH2O
 !+---+-----------------------------------------------------------------+
 !ctrlL
@@ -3370,8 +3513,8 @@
 
          t_Efrw(i,j) = MAX(0.0, MIN(SNGL(Ef_rw), 0.95))
 ! ++ trude
-          if (Ef_rw_l) then 
-             if (Ef_rw.ne.0.0) then  
+          if (Ef_rw_l) then
+             if (Ef_rw.ne.0.0) then
                 t_Efrw(i,j) = 1.0
           endif
        endif
@@ -3420,8 +3563,8 @@
           t_Efsw(i,j) = MAX(0.0, MIN(SNGL(Ef_sw), 0.95))
 
 ! ++ trude
-          if (Ef_sw_l) then 
-             if (Ef_sw.ne.0.0) then  
+          if (Ef_sw_l) then
+             if (Ef_sw.ne.0.0) then
                 t_Efsw(i,j) = 1.0
           endif
        endif
@@ -3542,7 +3685,7 @@
 !+---+-----------------------------------------------------------------+
       SUBROUTINE GSER(GAMSER,A,X,GLN)
 !     --- RETURNS THE INCOMPLETE GAMMA FUNCTION P(A,X) EVALUATED BY ITS
-!     --- ITS SERIES REPRESENTATION AS GAMSER.  ALSO RETURNS LN(GAMMA(A)) 
+!     --- ITS SERIES REPRESENTATION AS GAMSER.  ALSO RETURNS LN(GAMMA(A))
 !     --- AS GLN.
 !     --- USES GAMMLN
       IMPLICIT NONE

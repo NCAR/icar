@@ -2,7 +2,7 @@
 !   Model and run meta-data
 !---------------------------------------------------------
 &model_version
-    version = "1.0.1",                    ! This must match the version of the compiled code
+    version = "2.0",                      ! This must match the version of the compiled code
     comment = "Add your comment here"     ! This will be stored in output files
 /
 
@@ -10,13 +10,65 @@
 !   Model levels specification (may be optional, but should be specified)
 !---------------------------------------------------------
 &z_info
+    ! use dz_levels as a guide but allow dz to vary in space so that z is constant in space at flat_z_height
+    ! note spatially varying dz does not work well with linear_theory, use with wind=2 more options coming soon
+    ! space_varying = .False.
+    !   height at which the z coordinate value should be constant in space (if space_varying=True), if < 0 make the model top flat (computed as sum(dz_levels) + mean(terrain))
+    ! flat_z_height = -1
+
+
+    !   compensate for varying dz in advection, effectively speeding up air through smaller dz windows. This should be true with the new advection scheme (as of 2020-10)
+
+    ! fixed_dz_advection = .True.
+
+    ! Use a SLEVE vertical coordinate, where the decay of the large- and small-scale terrain influence towards model top is controlled by the decay_rate_L_topo and decay_rate_S_topo respectively (=H/s1 and H/s2), and the exponential factor n that controls compression across the z column. For higher n values, the terrain compression happens more in the mid to upper z levels (but always below flat_z_height), whereas for n=1 it is mainly at the lower levels, which may cause numerical issues if these are very thin. By setting s1=s2 a standard hybrid coordinate is obtained.
+
+    sleve = .True.
+    terrain_smooth_windowsize = 4    ! Terrain is smoothed to obtain the large-scale terrain features
+    terrain_smooth_cycles = 5
+    decay_rate_L_topo = 2
+    decay_rate_S_topo = 6
+    sleve_n = 1.35
+
+    !   Option to use the difference between forcing (lo-res) and hi-res terrain for terrain induced wind speedup (wind=2)
+    use_terrain_difference = .True.
+
     !   Sample model level thickness [m]  Bottom levels could be thicker.
     !   NB: if using gfortran put all on one line
-    dz_levels = 50.,   75.,  125.,  200.,  300.,  400.,  500.,  500.,  500.,  500.,    !  1-10
-               500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,    ! 10-20
-               500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,    ! 20-30
-               500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.     ! 30-40
+    dz_levels = 50.,   75.,  125.,  200.,  300.,  400.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,    ! 1-20
+               500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.,  500.     ! 20-40
+
 /
+
+!---------------------------------------------------------
+!   Specify output and restart files and output frequencies
+!---------------------------------------------------------
+&output_list
+    ! this is a list of variable names to be written in each output file
+    names = "u","v","ta2m","hus2m", "precipitation", "swe"
+
+    ! These are the options for output variables.  Though they will only be output if they are computed internally
+    ! "u", "v", "w_grid", "w",
+    ! "nsquared", "pressure", "pressure_i", "psfc",
+    ! "potential_temperature", "temperature",
+    ! "qv", "qc", "nc", "qi", "ni", "qr", "nr", "qs", "ns", "qg", "ng",
+    ! "precipitation", "cu_precipitation", "snowfall", "graupel",
+    ! "exner", "density", "z", "z_i", "dz", "dz_i",
+    ! "clt", "rsds", "rlds", "rlus",
+    ! "ta2m", "hus2m", "v10m", "u10m", "ts",
+    ! "hfss", "hfls", "hfgs", "vegetation_fraction", "veg_type", "lai", "surface_roughness",
+    ! "canopy_water", "swe", "soil_water_content", "soil_column_total_water", "soil_temperature", "soil_deep_temperature",
+    ! "land_mask", "terrain", "lat", "lon", "u_lat", "u_lon", "v_lat", "v_lon"
+
+    outputinterval = 3600   ! number of seconds between output time slices
+    output_file = "output/icar_out_"    ! prefix name of output file (date will be appended)
+    ! output_file_frequency = "monthly"   ! eventually this will be used to specify how frequently to create new files (not implemented yet)
+
+    ! note that restart files will have ALL variables so that they can be used to restart ICAR
+    restartinterval = 24    ! number of outputs to skip restarts on
+    restart_file = "restart/icar_rst_"    ! prefix name of restart file (date will be appended)
+/
+
 
 !---------------------------------------------------------
 !   Specify physics options to use for the model run
@@ -32,7 +84,7 @@
     pbl = 0,  ! 1=legacy (deprecated)      2=Simple (Local HP96)        3=YSU             (N/A)
     lsm = 0,  ! 1=use prescribed fluxes    2=Simple LSM (N/A)           3=Noah LSM                  4=NoahMP (wishlist)
     water=2,  ! 1=use prescribed (w/lsm=1) 2=Simple sea surface fluxes
-    mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison                  4=WSM6
+    mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison                  4=WSM6      5=Thompson-Eidhammer
     rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG           (wishlist)
     conv= 0,  ! 1=Tiedke Scheme            2=Simple Scheme (wishlist)   3=Kain-Fritsch
     adv = 1,  ! 1=Upwind                   2=MPDATA                     3=Adams-Bashforth (wishlist)
@@ -47,11 +99,12 @@
     !   primary inputs from this file are lat, lon, and terrain, optionally soil and veg types
     init_conditions_file="baseline/geo_4km_conus.nc",
 
-    !   This is the prefix for all output files (any directories must be created prior to running)
-    output_file="output/icar_out_",
-
     !   This is a list of the boundary conditions files number of files must match nfiles variable above
     boundary_files= "forcing/wrfout_d01_2001-04-01_03:00:00", "forcing/wrfout_d01_2001-06-30_03:00:00"
+
+    !   This is a list of the external conditions files to be used for starting the model. Need to have same grid (!)
+    ! external_files= "swe_t3_CH_2D.nc"
+    external_files = "/scratch/snx3000/bkruyt/extraction_cosmo1/NC_INIT/laf2019030600.nc"
 
     !   Alternatively a separate file containing one forcing file name per line may be specified
     !   This file may be generated by :
@@ -80,8 +133,11 @@
 
     !   The length of an input forcing time step
     inputinterval = 3600,   ! [s]
+
     !   The output interval
-    outputinterval = 3600,  ! [s]
+    outputinterval = 10800,  ! [s]
+    !   The number of outputintervals (frames) that are written to one output file.
+    frames_per_outfile = 24
 
     !   Limit output data to near surface variables
     !   WARNING if true it is impossible to restart the run (for now)
@@ -89,6 +145,10 @@
 
     !   The grid spacing of the high-resolution data
     dx = 4000.0,        ! [m]
+
+    ! Specify the longitude coordinate system to use 0 = (default) don't change inputs, 1 = -180 to 180, 2 = 0 to 360, 3 = guess an appropriate value
+    longitude_system = 0  ! [0,1,2,3]
+
     !   The approximate grid spacing of the forcing data
     !   only used in rm_linear_winds?
     ! dxlow = 20000.0,    ! [m]
@@ -100,7 +160,7 @@
     !   this is now optional, if not supplied, ICAR will determine it from the number of levels specified
     !   if it is supplied it must be less than or equal to the number of levels specified below
     !   but it can be used to subset the number of levels used.
-    !   WARNING : ICAR can be surprisingly sensitive to this parameter
+    !   WARNING : ICAR can be surprisingly sensitive to this parameter see Horak et al 2019 and 2020
     nz = 15, ! []
 
     !   Set this to true of the zvar in the input data is actually in units of geopotential height (m/s^2)
@@ -111,6 +171,7 @@
     time_varying_z = True,
     !   Use height above ground layer to interpolate the wind field instead of height above sea level.
     use_agl_height = False,
+    agl_cap = 300, !  height up to which AGL height is used for vertical interpolation (default = 300m)
 
     !   Multiplier on CFL number to increase stability if unstable (make it <1 to increase stability, >1 to increase model speed)
     ! cfl_reduction_factor = 1.0  ! default=0.9
@@ -157,12 +218,8 @@
     !   Use density in the advection step (violates linear theory assumptions)
     advect_density = false,
 
-    !   The number of grid cells to remove from all sides of the high-resolution grid
-    !   used primarily for faster test runs over a smaller domain
-    ! buffer = 0,   ! [n-gridcells]
-
-    !   Doesn't do much at the moment, increases output print at runtime
-    debug = true,
+    !   Increases output print at runtime and tests domain wide values for realistic values throughout the simulation.
+    debug = false,
     warning_level = 4, ! 0-10 increases the level of errors it warns about and quits over (slightly)
 
     ! controls printing of % completed for longer processes.  Nice if it is running in a console, not nice in a log file.
@@ -181,6 +238,8 @@
     use_bias_correction = false
     !   Read parameters for experimental blocked flow parameterization
     use_block_options = false
+
+    use_cu_options = false
 /
 
 !---------------------------------------------------------
@@ -189,36 +248,32 @@
 &var_list
     ! These are the names of the variables in the forcing data files
     ! variables on the mass / center grid
-    time_var= "XTIME",      ! Time                      [defined in netcdf attributes]
+    time_var= "time",       ! Time                      [defined in netcdf attributes] OPTIONAL
     latvar  = "XLAT",       ! latitude                  [degrees]
     lonvar  = "XLONG",      ! longitude                 [degrees]
     pvar    = "P",          ! pressure                  [Pa]
-    ! pbvar   = "PB",         ! base pressure state       [Pa]        OPTIONAL
+    pbvar   = "PB",         ! base pressure state       [Pa]        OPTIONAL
     tvar    = "T",          ! temperature               [K]   (with optional offset)
     qvvar   = "QVAPOR",     ! water vapor mixing ratio  [kg/kg]
-    ! qcvar   = "QCLOUD",     ! cloud water mixing ratio  [kg/kg]     OPTIONAL
-    ! qrvar   = "QRAIN",      ! rain water mixing ratio   [kg/kg]     OPTIONAL
-    ! qsvar   = "QSNOW",      ! snow mixing ratio         [kg/kg]     OPTIONAL
-    ! qnrvar  = "QNRAIN",     ! rain number concentration [kg^-1]     OPTIONAL
-    ! qgvar   = "QGRAUP",     ! graupel mixing ratio      [kg/kg]     OPTIONAL
-    ! qnivar  = "QNICE",      ! ice number concentration  [kg^-1]     OPTIONAL
-    ! qivar   = "QICE",       ! cloud ice mixing ratio    [kg/kg]     OPTIONAL
+    qcvar   = "QCLOUD",     ! cloud water mixing ratio  [kg/kg]     OPTIONAL
+    qrvar   = "QRAIN",      ! rain water mixing ratio   [kg/kg]     OPTIONAL
+    qsvar   = "QSNOW",      ! snow mixing ratio         [kg/kg]     OPTIONAL
+    qnrvar  = "QNRAIN",     ! rain number concentration [kg^-1]     OPTIONAL
+    qgvar   = "QGRAUP",     ! graupel mixing ratio      [kg/kg]     OPTIONAL
+    qnivar  = "QNICE",      ! ice number concentration  [kg^-1]     OPTIONAL
+    qivar   = "QICE",       ! cloud ice mixing ratio    [kg/kg]     OPTIONAL
     hgtvar  = "HGT",        ! surface elevation         [m]
     zvar    = "PH",         ! model level elevations    [m or m/s^2 if z_is_geopotential]
-    ! zbvar   = "PHB",        ! base height state         [m or m/s^2] OPTIONAL
-    ! sst_var = "TSK"         ! Water surface temperature [K]          OPTIONAL (used with water=2)
+    zbvar   = "PHB",        ! base height state         [m or m/s^2] OPTIONAL
+    sst_var = "TSK"         ! Water surface temperature [K]          OPTIONAL (used with water=2)
 
     ! WARNING, if U and V are "grid relative" (e.g. output from WRF) and on a skewed grid, this will cause problems
-    ! run the helpers/wrf2icar.sh script first to rotate the wind field to be east-west, north-south relative
+    ! run the helpers/wrf2icar.sh script first to rotate the wind field to be east-west, north-south relative or supply sinalpha cosalpha... this may be broken
     ! variables on the ew staggered (U) grid
     uvar    = "U",          ! East-West wind speed      [m/s]
-    ulat    = "XLAT_U",     ! latitude                  [degrees]
-    ulon    = "XLONG_U",    ! longitude                 [degrees]
 
     ! variables on the NS staggered (V) grid
     vvar    = "V",          ! North-South wind speed    [m/s]
-    vlat    = "XLAT_V",     ! latitude                  [degrees]
-    vlon    = "XLONG_V",    ! longitude                 [degrees]
 
     ! these are only used with lsm=1 (pbl should also be >0)
     ! shvar = "HFX",        ! sensible heat flux        [W/m^2]
@@ -243,6 +298,11 @@
     vlon_hi = "XLONG_V",    ! longitude (ns-staggered grid) [degrees]
     hgt_hi  = "HGT_M"       ! surface elevation             [m]
 
+    ! used to rotate E-W/N-S wind fields into the ICAR high-res domain
+    ! sinalpha_var="SINALPHA"
+    ! cosalpha_var="COSALPHA"
+
+
     ! to use the Noah LSM the following fields should also be specified on the high-res grid
     ! vegtype_var    = "IVGTYP",    ! vegetation type index (classification to match VEGPARM.TBL file)
     ! vegfrac_var    = "VEGFRA",    ! vegetation cover fraction
@@ -256,6 +316,14 @@
     ! variables to read from calibration files, both default to "data"
     ! nsq_calibration_var = "data",
     ! linear_mask_var = "data"
+
+    ! variables to read from optional external_start_file(s)
+    lat_ext      =  "lat_1",        !
+    lon_ext      =  "lon_1",        !
+    swe_ext      =  "W_SNOW"        !
+    rho_snow_ext =  "RHO_SNOW"      !
+    ! tsoil2D_ext  =  "T_SO"        ! N.B. This will overwrite any input from soil_t_var or soil_deept_var  !!
+    tsoil3D_ext  =  "T_SO"          ! N.B. This will overwrite any input from soil_t_var or soil_deept_var  !!
 /
 
 
@@ -292,6 +360,19 @@
     top_mp_level = 0    ! if <=0 stop that many levels below the model top
     local_precip_fraction = 1.0 ! Fraction of micrphysics derived precipitation to deposit in the local grid cell
                                 ! the remaining precip is distributed to the surrounding grid cells.
+/
+
+
+!---------------------------------------------------------
+!   Optionally specified convection parameters
+!---------------------------------------------------------
+&cu_parameters
+    stochastic_cu = 0
+    tendency_fraction = 1.0
+    tend_qv_fraction = 1.0
+    tend_qc_fraction = 1.0
+    tend_th_fraction = 1.0
+    tend_qi_fraction = 1.0
 /
 
 !---------------------------------------------------------

@@ -18,7 +18,7 @@
 !!------------------------------------------------------------
 module geo
     use data_structures
-    use icar_constants, only : kDATELINE_CENTERED, kPRIME_CENTERED
+    use icar_constants, only : kMAINTAIN_LON, kDATELINE_CENTERED, kPRIME_CENTERED, kGUESS_LON
 
     implicit none
 
@@ -132,7 +132,7 @@ contains
             write(*,*) x1, y1
             write(*,*) x2, y2
             write(*,*) x3, y3
-            stop "Denominator in triangulation is broken"
+            error stop "Denominator in triangulation is broken"
         endif
 
         ! This is the core of the algorithm weights for Barycentric coordinates.
@@ -145,7 +145,7 @@ contains
 
         w3 = 1 - w1 - w2
 
-        if (minval([w1,w2,w3]) < -1e-3) then
+        if (minval([w1,w2,w3]) < -1e-2) then
             write(*,*) "ERROR: Point not located in bounding triangle"
             write(*,*) xi, yi
             write(*,*) "Triangle vertices"
@@ -153,11 +153,11 @@ contains
             write(*,*) x2, y2
             write(*,*) x3, y3
             write(*,*) w1, w2, w3
-            stop "Triangulation is broken"
+            error stop "Triangulation is broken"
         endif
         w1=max(0.,w1); w2=max(0.,w2); w3=max(0.,w3);
 
-        if (abs((w1+w2+w3)-1)>1e-3) then
+        if (abs((w1+w2+w3)-1)>1e-2) then
             write(*,*) "Error, w1+w2+w3 != 1"
             write(*,*) w1,w2,w3
             write(*,*) "Point"
@@ -212,16 +212,7 @@ contains
     end function idw_weights
 
     !>------------------------------------------------------------
-    !! Find the minimum x
-    !! Takes a point (yi,xi) and a set of 4 surrounding points (y[4],x[4]) as input
-    !!
-    !! Example : xw = minxw(xw,lo%lon,xc,yc,lon)
-    !!
-    !! @param   real    yi  input y location to interpolate to.
-    !! @param   real    y   Array of surrounding y-locations to interpolate from.
-    !! @param   real    xi  input x location to interpolate to.
-    !! @param   real    x   Array of surrounding x-locations to interpolate from.
-    !! @retval  real    weights
+    !! Find the minimum x step
     !!
     !!------------------------------------------------------------
     integer function minxw(xw,longrid,xpos,ypos,lon)
@@ -301,7 +292,7 @@ contains
     !!------------------------------------------------------------
     type(position) function find_location(lo,lat,lon,lastpos)
         implicit none
-        class(interpolable_type),intent(inout)::lo      ! input interpolable object to search
+        type(interpolable_type),intent(inout)::lo      ! input interpolable object to search
         real,intent(in)::lat,lon                        ! input position to find
         type(position),intent(in)::lastpos              ! position to start search from
         ! locals
@@ -317,7 +308,7 @@ contains
         jms = lbound(lo%lat,2)
         jme = ubound(lo%lat,2)
 
-        ! calcualte dx/dy at the middle of the grid
+        ! calculate dx/dy of the grid
         dx = lo%lon(ims+1,jms) - lo%lon(ims,jms)
         dy = lo%lat(ims,jms+1) - lo%lat(ims,jms)
 
@@ -725,7 +716,7 @@ contains
     function test_surrounding(lat,lon, lo, positions, nx, ny, n, error) result(surrounded)
         implicit none
         real,                    intent(in) :: lat, lon
-        class(interpolable_type),intent(in) :: lo
+        type(interpolable_type),intent(in) :: lo
         type(fourpos),           intent(inout) :: positions
         integer,                 intent(in) :: nx, ny, n
         real,                    intent(out), optional :: error
@@ -759,7 +750,7 @@ contains
     function test_triangle(lat,lon, lo, positions, nx, ny, error) result(surrounded)
         implicit none
         real,                    intent(in) :: lat, lon
-        class(interpolable_type),intent(in) :: lo
+        type(interpolable_type),intent(in) :: lo
         type(fourpos),           intent(inout) :: positions
         integer,                 intent(in) :: nx, ny
         real,                    intent(out), optional :: error
@@ -801,7 +792,7 @@ contains
     !!------------------------------------------------------------
     type(fourpos) function find_surrounding(lo,lat,lon,pos,nx,ny)
         implicit none
-        class(interpolable_type),intent(in)::lo
+        type(interpolable_type),intent(in)::lo
         real,intent(in)::lat,lon
         type(position),intent(in)::pos
         integer,intent(in) :: nx,ny
@@ -900,7 +891,7 @@ contains
         write(*,*) lo%lon(pos%x, pos%y), lo%lat(pos%x, pos%y)
         write(*,*) pos
         write(*,*) nx, ny
-        stop "Failed to find point"
+        error stop "Failed to find point"
         ! enforce that surround points fall within the bounds of the full domain
 
     end function find_surrounding
@@ -911,8 +902,8 @@ contains
     !!------------------------------------------------------------
     subroutine geo_LUT(hi, lo)
         implicit none
-        class(interpolable_type), intent(in)    :: hi
-        class(interpolable_type), intent(inout) :: lo
+        type(interpolable_type), intent(in)    :: hi
+        type(interpolable_type), intent(inout) :: lo
         type(fourpos) :: xy
         type(position) :: curpos, lastpos
         integer :: nx, ny, i, j, k, lo_nx, lo_ny
@@ -947,7 +938,7 @@ contains
                 ! lastpos%x = 1
                 ! lastpos%y = 1
                 write(*,*) "Error in Geographic interpolation, check input lat / lon grids", ims,j
-                stop
+                error stop
             endif
 
             do i = ims, ime
@@ -1249,25 +1240,26 @@ contains
         endif
 
         if (present(longitude_system)) then
-            if (longitude_system == kPRIME_CENTERED) then
-                where(domain%lon<0) domain%lon = 360+domain%lon
+            if (longitude_system == kMAINTAIN_LON) then
+                ! break
             elseif (longitude_system == kDATELINE_CENTERED) then
+                where(domain%lon<0) domain%lon = 360+domain%lon
+            elseif (longitude_system == kPRIME_CENTERED) then
                 where(domain%lon>180) domain%lon = domain%lon - 360
+            elseif (longitude_system == kGUESS_LON) then
+                ! try to guess which coordinate system to use
+                ! first convert all domains into -180 to +180 coordinates
+                where(domain%lon>180) domain%lon = domain%lon - 360
+                ! also convert from a -180 to 180 coordinate system into a 0-360 coordinate system if closer to the dateline
+                if ((minval(domain%lon) < -150) .or. (maxval(domain%lon) > 150)) then
+                    where(domain%lon<0) domain%lon = 360+domain%lon
+                endif
             else
                 write(*,*) "Unknown longitude system of coordinates:", longitude_system
                 write(*,*) " Set options%parameters%longitude_system to either:"
                 write(*,*) " Prime meridian centered (0 to 360): ", kPRIME_CENTERED
                 write(*,*) " Dateline meridian centered (-180 to 180): ", kDATELINE_CENTERED
-                stop
-            endif
-        else
-            ! try to guess which coordinate system to use
-
-            ! first convert all domains into -180 to +180 coordinates
-            where(domain%lon>180) domain%lon = domain%lon - 360
-            ! also convert from a -180 to 180 coordinate system into a 0-360 coordinate system if closer to the dateline
-            if ((minval(domain%lon) < -150) .or. (maxval(domain%lon) > 150)) then
-                where(domain%lon<0) domain%lon = 360+domain%lon
+                error stop
             endif
         endif
 

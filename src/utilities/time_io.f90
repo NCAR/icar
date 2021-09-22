@@ -143,7 +143,7 @@ contains
         character(len=*), intent(in) :: units
         integer, intent(out), optional :: error
         integer :: hour
-        
+
         integer :: since_loc, hour_loc
         if (present(error)) error = 0
 
@@ -164,13 +164,14 @@ contains
         endif
 
     end function hour_from_units
-  
 
-    subroutine read_times(filename, varname, times, timezone_offset)
+
+    subroutine read_times(filename, varname, times, timezone_offset, curstep)
         implicit none
         character(len=*),   intent(in) :: filename, varname
         type(Time_type),    intent(inout), allocatable, dimension(:) :: times
-        double precision, optional :: timezone_offset
+        double precision,   intent(in), optional :: timezone_offset
+        integer,            intent(in), optional :: curstep
 
         double precision, allocatable, dimension(:) :: temp_times
         integer :: time_idx, error
@@ -179,13 +180,17 @@ contains
         double precision :: calendar_gain
 
         ! first read the time variable (presumebly a 1D double precision array)
-        call io_read(trim(filename), trim(varname), temp_times)
-         
+        if (present(curstep)) then
+            call io_read(trim(filename), trim(varname), temp_times, curstep=curstep)
+        else
+            call io_read(trim(filename), trim(varname), temp_times)
+        endif
+
         ! attempt to read the calendar attribute from the time variable
         call io_read_attribute(trim(filename),"calendar", calendar, var_name=trim(varname), error=error)
         ! if time attribute it not present, set calendar to one specified in the config file
         if (error/=0) then
-            write(*,*) "WARNING: assuming standard/gregorian calendar for file "//trim(filename)
+            if (this_image()==1) write(*,*) "WARNING: assuming standard/gregorian calendar for file "//trim(filename)
             calendar = "standard"
         endif
 
@@ -197,7 +202,7 @@ contains
             start_year    = year_from_units(units)
             start_month   = month_from_units(units)
             start_day     = day_from_units(units)
-            start_hour    = hour_from_units(units)            
+            start_hour    = hour_from_units(units)
             ! based off of the string "Days since" (or "seconds" or...)
             calendar_gain = time_gain_from_units(units)
         else
@@ -207,7 +212,7 @@ contains
         ! converts the input units to "days since ..."
         ! in case it is in units of e.g. "hours since" or "seconds since"
         temp_times = temp_times / calendar_gain
-                
+
         if (present(timezone_offset)) then
             temp_times = temp_times + timezone_offset / 24.0
         endif

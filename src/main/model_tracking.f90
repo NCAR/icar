@@ -12,16 +12,23 @@ module model_tracking
     character(len=1024),allocatable,dimension(:)::versionlist,deltas
 contains
 
+    !> ----------------------------------------------------------------------------
+    !! Initialize the model version data structures
+    !!
+    !! ----------------------------------------------------------------------------
     subroutine init_model_diffs()
         implicit none
-        integer::n=18
+        integer :: n = 21
 
-        allocate(versionlist(n))
-        allocate(deltas(n))
-        versionlist=[character(len=1024) :: &
-                     "0.5.1","0.5.2","0.6","0.7","0.7.1","0.7.2","0.7.3","0.8","0.8.1","0.8.2", &
-                     "0.9","0.9.1","0.9.2","0.9.3","0.9.4","0.9.5", "1.0", "1.0.1"]
-        deltas=[ character(len=1024) :: &
+        allocate( versionlist(n) )
+        allocate( deltas(n) )
+
+        versionlist = [character(len=1024) :: &
+                       "0.5.1","0.5.2","0.6","0.7","0.7.1","0.7.2","0.7.3","0.8","0.8.1","0.8.2", &
+                       "0.9","0.9.1","0.9.2","0.9.3","0.9.4","0.9.5","1.0", "1.0.1","2.0a1","2.0a2",&
+                       "2.0a3"]
+
+        deltas = [ character(len=1024) :: &
         "Earliest version in git. ",                                                            &
         "Added dxlow and variable name definitions pvar,tvar,qvvar,qcvar,qivar,"//              &
         "      U/V:lat/lon:high/low res. ",                                                     &
@@ -49,13 +56,20 @@ contains
         "      resolution linear wind field.  Lots of smaller tweaks and bug fixes."//          &
         "      Also added online bias correction option. ",                                     &
         "Added convective wind advection and improved Linear wind LUT. ",                       &
-        "Relatively stable checkpoint widely used. "//                                          &
-        "      Bugfixes also improved time handling (use time_var for forcing data)",           &
-        "Significantly improved geographic interpolation bug fixes. "                           &
+        "Relatively stable checkpoint widely used. ",                                           &
+        "Significantly improved geographic interpolation, bug fixes, better time handling. ",   &
+        "Added coarray fortran support, massive overhaul internally, lots of features."//       &
+        "      Temporarily removed. ",                                                          &
+        "Added spatially variable dz coordinate system.",                                       &
+        "Add option (and requirement) to specify output variables in namelist."                 &
         ]
 
     end subroutine init_model_diffs
 
+    !> ----------------------------------------------------------------------------
+    !!  Print all changes to the model since the version specified
+    !!
+    !! ----------------------------------------------------------------------------
     subroutine print_model_diffs(version)
         implicit none
         character(len=*), intent(in) :: version
@@ -92,6 +106,10 @@ contains
         endif
     end subroutine print_model_diffs
 
+    !> ----------------------------------------------------------------------------
+    !! Deallocate module data structures
+    !!
+    !! ----------------------------------------------------------------------------
     subroutine finalize_model_diffs()
         implicit none
         if (allocated(versionlist)) then

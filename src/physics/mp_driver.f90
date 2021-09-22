@@ -26,14 +26,18 @@
 !!
 !!----------------------------------------------------------
 module microphysics
-    use data_structures
+    ! use data_structures
+    use icar_constants
     use mod_wrf_constants
+    use module_mp_thompson_aer,     only: mp_gt_driver_aer, thompson_aer_init
     use module_mp_thompson,         only: mp_gt_driver, thompson_init
-    use module_mp_morr_two_moment,  only: MORR_TWO_MOMENT_INIT, MP_MORR_TWO_MOMENT
-    use module_mp_wsm6,             only: wsm6, wsm6init
-    use module_mp_simple,           only: mp_simple_driver
-    use mod_wrf_constants !,          only: rhoair0, rhowater, rhosnow, cliq, cpv
+    ! use module_mp_morr_two_moment,  only: MORR_TWO_MOMENT_INIT, MP_MORR_TWO_MOMENT
+     use module_mp_wsm6,             only: wsm6, wsm6init
+    use module_mp_simple,           only: mp_simple_driver, mp_simple_var_request
     use time_object,                only: Time_type
+    use options_interface,          only: options_t
+    use domain_interface,           only: domain_t
+
     implicit none
 
     ! permit the microphysics to update on a longer time step than the advection
@@ -52,6 +56,8 @@ module microphysics
     real,    dimension(npoints) :: dist_fraction = [ 0.1,0.15,0.1, 0.15,0.15, 0.1,0.15,0.1]
     integer, dimension(npoints) :: x_list = [ -1,0,1, -1,1, -1,0,1]
     integer, dimension(npoints) :: y_list = [ 1,1,1, 0,0, -1,-1,-1]
+
+    public :: mp, mp_var_request
 contains
 
 
@@ -66,28 +72,163 @@ contains
     !!----------------------------------------------------------
     subroutine mp_init(options)
         implicit none
-        type(options_type), intent(in)::options
+        type(options_t), intent(inout) :: options
 
-        write(*,*) "Initializing Microphysics"
-        if (options%physics%microphysics==kMP_THOMPSON) then
-            write(*,*) "    Thompson Microphysics"
+        if (this_image()==1) write(*,*) ""
+        if (this_image()==1) write(*,*) "Initializing Microphysics"
+        if (options%physics%microphysics    == kMP_THOMPSON) then
+            if (this_image()==1) write(*,*) "    Thompson Microphysics"
             call thompson_init(options%mp_options)
             precip_delta=.True.
-        elseif (options%physics%microphysics==kMP_SB04) then
-            write(*,*) "    Simple Microphysics"
+
+        elseif (options%physics%microphysics    == kMP_THOMP_AER) then
+            if (this_image()==1) write(*,*) "    Thompson Eidhammer Microphysics"
+            call thompson_aer_init()
             precip_delta=.True.
-        elseif (options%physics%microphysics==kMP_MORRISON) then
-            write(*,*) "    Morrison Microphysics"
-            call MORR_TWO_MOMENT_INIT(hail_opt=0)
-            precip_delta=.False.
+
+        elseif (options%physics%microphysics == kMP_SB04) then
+            if (this_image()==1) write(*,*) "    Simple Microphysics"
+            precip_delta=.True.
+        ! elseif (options%physics%microphysics==kMP_MORRISON) then
+        !     write(*,*) "    Morrison Microphysics"
+        !     call MORR_TWO_MOMENT_INIT(hail_opt=0)
+        !     precip_delta=.False.
         elseif (options%physics%microphysics==kMP_WSM6) then
-            write(*,*) "    WSM6 Microphysics"
+            if (this_image()==1) write(*,*) "    WSM6 Microphysics"
             call wsm6init(rhoair0,rhowater,rhosnow,cliq,cpv)
         endif
 
         update_interval = options%mp_options%update_interval
         last_model_time = -999
+
     end subroutine mp_init
+
+
+    subroutine mp_thompson_aer_var_request(options)
+        implicit none
+        type(options_t), intent(inout) :: options
+
+        ! List the variables that are required to be allocated for the simple microphysics
+        call options%alloc_vars( &
+                     [kVARS%pressure,    kVARS%potential_temperature,   kVARS%exner,        kVARS%density,      &
+                      kVARS%water_vapor, kVARS%cloud_water,             kVARS%rain_in_air,  kVARS%rain_number_concentration, &
+                      kVARS%snow_in_air, kVARS%cloud_ice,               kVARS%w,            kVARS%ice_number_concentration,      &
+                      kVARS%snowfall,    kVARS%precipitation,           kVARS%graupel,      kVARS%graupel_in_air,     &
+                      kVARS%dz ])
+
+        ! List the variables that are required to be advected for the simple microphysics
+        call options%advect_vars( &
+                      [kVARS%potential_temperature, kVARS%water_vapor, kVARS%cloud_water,  kVARS%rain_number_concentration, &
+                       kVARS%snow_in_air,           kVARS%cloud_ice,   &
+                       kVARS%rain_in_air,           kVARS%ice_number_concentration, kVARS%graupel_in_air   ] )
+
+        ! List the variables that are required to be allocated for the simple microphysics
+        call options%restart_vars( &
+                       [kVARS%pressure,     kVARS%potential_temperature,    kVARS%water_vapor,   &
+                        kVARS%cloud_water,  kVARS%rain_in_air,              kVARS%snow_in_air,   &
+                        kVARS%precipitation,kVARS%snowfall,                 kVARS%graupel,       &
+                        kVARS%dz,           kVARS%snow_in_air,              kVARS%cloud_ice,     &
+                        kVARS%rain_number_concentration, kVARS%rain_in_air,  &
+                        kVARS%ice_number_concentration,  kVARS%graupel_in_air ] )
+
+
+    end subroutine
+
+    subroutine mp_wsm6_var_request(options)
+        implicit none
+        type(options_t), intent(inout) :: options
+
+        ! List the variables that are required to be allocated for the simple microphysics
+        call options%alloc_vars( &
+                     [kVARS%pressure,    kVARS%potential_temperature,   kVARS%exner,        kVARS%density,      &
+                      kVARS%water_vapor, kVARS%cloud_water,             kVARS%rain_in_air,  &
+                      kVARS%snow_in_air, kVARS%cloud_ice,               kVARS%w,            &
+                      kVARS%snowfall,    kVARS%precipitation,           kVARS%graupel,      kVARS%graupel_in_air,     &
+                      kVARS%dz ])
+
+        ! List the variables that are required to be advected for the simple microphysics
+        call options%advect_vars( &
+                      [kVARS%potential_temperature, kVARS%water_vapor, kVARS%cloud_water,  &
+                       kVARS%snow_in_air,           kVARS%cloud_ice,   &
+                       kVARS%rain_in_air,           kVARS%graupel_in_air   ] )
+
+        ! List the variables that are required to be allocated for the simple microphysics
+        call options%restart_vars( &
+                       [kVARS%pressure,     kVARS%potential_temperature,    kVARS%water_vapor,   &
+                        kVARS%cloud_water,  kVARS%rain_in_air,              kVARS%snow_in_air,   &
+                        kVARS%precipitation,kVARS%snowfall,                 kVARS%graupel,       &
+                        kVARS%dz,           kVARS%snow_in_air,              kVARS%cloud_ice,     &
+                        kVARS%rain_in_air,  kVARS%graupel_in_air ] )
+
+
+    end subroutine
+
+
+    subroutine mp_var_request(options)
+        implicit none
+        type(options_t), intent(inout) :: options
+
+        if (options%physics%microphysics    == kMP_THOMPSON) then
+            call mp_thompson_aer_var_request(options)
+
+        elseif (options%physics%microphysics    == kMP_THOMP_AER) then
+            call mp_thompson_aer_var_request(options)
+
+        elseif (options%physics%microphysics == kMP_SB04) then
+            call mp_simple_var_request(options)
+
+        elseif (options%physics%microphysics==kMP_MORRISON) then
+            stop "Morrison physics not re-implemented yet"
+        elseif (options%physics%microphysics==kMP_WSM6) then
+            call mp_wsm6_var_request(options)
+        endif
+
+    end subroutine mp_var_request
+
+
+    subroutine allocate_module_variables(ims,ime,jms,jme,kms,kme)
+        implicit none
+        integer, intent(in) :: ims,ime,jms,jme,kms,kme
+
+        ! snow rain ratio
+        if (.not.allocated(SR)) then
+            allocate(SR(ims:ime,jms:jme))
+            SR=0
+        endif
+        ! last snow amount
+        if (.not.allocated(last_snow)) then
+            allocate(last_snow(ims:ime,jms:jme))
+            last_snow=0
+        endif
+        ! last rain amount
+        if (.not.allocated(last_rain)) then
+            allocate(last_rain(ims:ime,jms:jme))
+            last_rain=0
+        endif
+        ! temporary precip amount
+        if (.not.allocated(this_precip)) then
+            allocate(this_precip(ims:ime,jms:jme))
+            this_precip=0
+        endif
+        if (.not.allocated(refl_10cm)) then
+            allocate(refl_10cm(ims:ime,jms:jme))
+            refl_10cm=0
+        endif
+        ! if (.not.allocated(domain%tend%qr)) then
+        !     allocate(domain%tend%qr(nx,nz,ny))
+        !     domain%tend%qr=0
+        ! endif
+        ! if (.not.allocated(domain%tend%qs)) then
+        !     allocate(domain%tend%qs(nx,nz,ny))
+        !     domain%tend%qs=0
+        ! endif
+        ! if (.not.allocated(domain%tend%qi)) then
+        !     allocate(domain%tend%qi(nx,nz,ny))
+        !     domain%tend%qi=0
+        ! endif
+
+
+    end subroutine
 
     !>----------------------------------------------------------
     !! Distribute the microphysics precipitation to neighboring grid cells
@@ -144,6 +285,20 @@ contains
 
     end subroutine distribute_precip
 
+    !>----------------------------------------------------------
+    !! Bias correct the precipitation
+    !!
+    !! Apply a pre-computed bias correction multiplier to the currently predicted precipitation
+    !! rain_fraction should be 3D where the last dimension corresponds to some fractional distance
+    !! through the year.
+    !!
+    !! @param   [in]current_date        Current date-time in the model simulation (used to compute time in rain_fraction)
+    !! @param   [in]rain_fraction       Multiplier to apply to the current precipitation
+    !! @param   [inout]current_precip   The current (potentially accumulated) predicted precipitation
+    !! @param   [inout]last_precip      The last value of current_precip (in case it is accumulated)
+    !! @param   [in]precip_delta        Flag that current_precip is an accumulation
+    !!
+    !!----------------------------------------------------------
     subroutine apply_rain_fraction(current_date, rain_fraction, current_precip, last_precip, precip_delta)
         implicit none
         type(Time_type),        intent(in)      :: current_date
@@ -173,9 +328,11 @@ contains
                 end do
             end do
         else
+            ! In this case, last_precip is actually the current precip delta
             do j=2,ny-1
                 do i=2,nx-1
                     this_precip(i,j)    = last_precip(i,j)
+                    ! We have to remove the currently predicted precip from the accumulated precip
                     current_precip(i,j) = current_precip(i,j)-last_precip(i,j)
                 end do
             end do
@@ -190,6 +347,221 @@ contains
     end subroutine apply_rain_fraction
 
 
+    subroutine process_subdomain(domain, options, dt,       &
+                                its,ite, jts,jte, kts,kte,  &
+                                ims,ime, jms,jme, kms,kme,  &
+                                ids,ide, jds,jde, kds,kde)
+        implicit none
+        type(domain_t), intent(inout) :: domain
+        type(options_t),intent(in)    :: options
+        real,           intent(in)    :: dt
+        integer,        intent(in)    :: its,ite, jts,jte, kts,kte
+        integer,        intent(in)    :: ims,ime, jms,jme, kms,kme
+        integer,        intent(in)    :: ids,ide, jds,jde, kds,kde
+
+
+        ! run the thompson microphysics
+        if (options%physics%microphysics==kMP_THOMPSON) then
+            ! call the thompson microphysics
+            call mp_gt_driver(qv = domain%water_vapor%data_3d,                      &
+                              th = domain%potential_temperature%data_3d,            &
+                              qc = domain%cloud_water_mass%data_3d,                 &
+                              qi = domain%cloud_ice_mass%data_3d,                   &
+                              ni = domain%cloud_ice_number%data_3d,                 &
+                              qr = domain%rain_mass%data_3d,                        &
+                              nr = domain%rain_number%data_3d,                      &
+                              qs = domain%snow_mass%data_3d,                        &
+                              qg = domain%graupel_mass%data_3d,                     &
+                              pii= domain%exner%data_3d,                            &
+                              p =  domain%pressure%data_3d,                         &
+                              dz = domain%dz_mass%data_3d,                          &
+                              dt_in = dt,                                           &
+                              itimestep = 1,                                        & ! not used in thompson
+                              RAINNC = domain%accumulated_precipitation%data_2d,    &
+                              RAINNCV = this_precip,                                & ! not used outside thompson (yet)
+                              SR = SR,                                              & ! not used outside thompson (yet)
+                              SNOWNC = domain%accumulated_snowfall%data_2d,         &
+                              GRAUPELNC = domain%graupel%data_2d,       &
+                              ids = ids, ide = ide,                   & ! domain dims
+                              jds = jds, jde = jde,                   &
+                              kds = kds, kde = kde,                   &
+                              ims = ims, ime = ime,                   & ! memory dims
+                              jms = jms, jme = jme,                   &
+                              kms = kms, kme = kme,                   &
+                              its = its, ite = ite,                   & ! tile dims
+                              jts = jts, jte = jte,                   &
+                              kts = kts, kte = kte)
+
+        elseif (options%physics%microphysics==kMP_THOMP_AER) then
+            ! call the thompson microphysics
+            call mp_gt_driver_aer(qv = domain%water_vapor%data_3d,                      &
+                                  th = domain%potential_temperature%data_3d,            &
+                                  qc = domain%cloud_water_mass%data_3d,                 &
+                                  qi = domain%cloud_ice_mass%data_3d,                   &
+                                  ni = domain%cloud_ice_number%data_3d,                 &
+                                  qr = domain%rain_mass%data_3d,                        &
+                                  nr = domain%rain_number%data_3d,                      &
+                                  qs = domain%snow_mass%data_3d,                        &
+                                  qg = domain%graupel_mass%data_3d,                     &
+                                  pii= domain%exner%data_3d,                            &
+                                  p =  domain%pressure%data_3d,                         &
+                                  w =  domain%w%data_3d,                                &
+                                  dz = domain%dz_mass%data_3d,                          &
+                                  dt_in = dt,                                           &
+                                  RAINNC = domain%accumulated_precipitation%data_2d,    &
+                                  SNOWNC = domain%accumulated_snowfall%data_2d,         &
+                                  GRAUPELNC = domain%graupel%data_2d,       &
+                                  has_reqc=0, has_reqi=0, has_reqs=0,                   &
+                                  ids = ids, ide = ide,                   & ! domain dims
+                                  jds = jds, jde = jde,                   &
+                                  kds = kds, kde = kde,                   &
+                                  ims = ims, ime = ime,                   & ! memory dims
+                                  jms = jms, jme = jme,                   &
+                                  kms = kms, kme = kme,                   &
+                                  its = its, ite = ite,                   & ! tile dims
+                                  jts = jts, jte = jte,                   &
+                                  kts = kts, kte = kte)
+
+        elseif (options%physics%microphysics==kMP_SB04) then
+            ! call the simple microphysics routine of SB04
+            call mp_simple_driver(domain%pressure%data_3d,                  &
+                                  domain%potential_temperature%data_3d,     &
+                                  domain%exner%data_3d,                     &
+                                  domain%density%data_3d,                   &
+                                  domain%water_vapor%data_3d,               &
+                                  domain%cloud_water_mass%data_3d,          &
+                                  domain%rain_mass%data_3d,                 &
+                                  domain%snow_mass%data_3d,                 &
+                                  domain%accumulated_precipitation%data_2d, &
+                                  domain%accumulated_snowfall%data_2d,      &
+                                  dt,                                       &
+                                  domain%dz_mass%data_3d,                   &
+                                  ims = ims, ime = ime,                   & ! memory dims
+                                  jms = jms, jme = jme,                   &
+                                  kms = kms, kme = kme,                   &
+                                  its = its, ite = ite,                   & ! tile dims
+                                  jts = jts, jte = jte,                   &
+                                  kts = kts, kte = kte)
+
+        ! elseif (options%physics%microphysics==kMP_MORRISON) then
+        !     call MP_MORR_TWO_MOMENT(itimestep,                         &
+        !                     domain%th, domain%qv, domain%cloud,     &
+        !                     domain%qrain, domain%ice, domain%qsnow, &
+        !                     domain%qgrau, domain%nice, domain%nsnow,&
+        !                     domain%nrain, domain%ngraupel,          &
+        !                     domain%rho, domain%pii, domain%p,       &
+        !                     mp_dt, domain%dz_inter, domain%w,       &
+        !                     domain%rain, last_rain, SR,             &
+        !                     domain%snow, last_snow, domain%graupel, &
+        !                     this_precip,                            & ! hm added 7/13/13
+        !                     refl_10cm, .False., 0,                  & ! GT added for reflectivity calcs
+        !                     domain%tend%qr, domain%tend%qs,         &
+        !                     domain%tend%qi                          &
+        !                    ,IDS,IDE, JDS,JDE, KDS,KDE               & ! domain dims
+        !                    ,IDS,IDE, JDS,JDE, KDS,KDE               & ! memory dims
+        !                    ,ITS,ITE, JTS,JTE, KTS,KTE               & ! tile   dims            )
+        !                )
+        elseif (options%physics%microphysics==kMP_WSM6) then
+            call wsm6(q = domain%water_vapor%data_3d,                      &
+                              th = domain%potential_temperature%data_3d,            &
+                              qc = domain%cloud_water_mass%data_3d,                 &
+                              qi = domain%cloud_ice_mass%data_3d,                   &
+                              qr = domain%rain_mass%data_3d,                        &
+                              qs = domain%snow_mass%data_3d,                        &
+                              qg = domain%graupel_mass%data_3d,                     &
+                              pii= domain%exner%data_3d,                            &
+                              p =  domain%pressure%data_3d,                         &
+                              delz = domain%dz_mass%data_3d,                          &
+                              den = domain%density%data_3d,                   &
+                              delt = dt,                                           &
+                              g = gravity,                                          &
+                              cpd = cp, cpv = cpv, rd = Rd, rv = Rw, t0c = 273.15,          &
+                              ep1 = EP1, ep2 = EP2, qmin = epsilon,                                &
+                              XLS = XLS, XLV0 = XLV, XLF0 = XLF,                    &
+                              den0 = rhoair0, denr = rhowater,                  &
+                              cliq = cliq, cice = cice, psat = psat,                                   &
+                              rain = domain%accumulated_precipitation%data_2d,    &
+                              rainncv = this_precip,                                & ! not used outside thompson (yet)
+                              sr = SR,                                              & ! not used outside thompson (yet)
+                              snow = domain%accumulated_snowfall%data_2d,         &
+                              graupel = domain%graupel%data_2d,       &
+                              ids = ids, ide = ide,                   & ! domain dims
+                              jds = jds, jde = jde,                   &
+                              kds = kds, kde = kde,                   &
+                              ims = ims, ime = ime,                   & ! memory dims
+                              jms = jms, jme = jme,                   &
+                              kms = kms, kme = kme,                   &
+                              its = its, ite = ite,                   & ! tile dims
+                              jts = jts, jte = jte,                   &
+                              kts = kts, kte = kte)
+
+        endif
+
+        ! needs to be converted to work on specified tile or better, maybe moved out of microphysics driver entirely...
+        ! if (options%use_bias_correction) then
+        !     call apply_rain_fraction(domain%model_time, domain%rain_fraction, domain%rain, last_rain, precip_delta)
+        !     call apply_rain_fraction(domain%model_time, domain%rain_fraction, domain%snow, last_snow, precip_delta)
+        ! endif
+        !
+        ! if (options%mp_options%local_precip_fraction<1) then
+        !     call distribute_precip(domain%rain, last_rain, options%mp_options%local_precip_fraction, precip_delta)
+        !     call distribute_precip(domain%snow, last_snow, options%mp_options%local_precip_fraction, precip_delta)
+        ! endif
+
+    end subroutine process_subdomain
+
+    subroutine process_halo(domain, options, dt, halo,  &
+                            its,ite, jts,jte, kts,kte,  &
+                            ims,ime, jms,jme, kms,kme,  &
+                            ids,ide, jds,jde, kds,kde)
+        implicit none
+        type(domain_t), intent(inout) :: domain
+        type(options_t),intent(in)    :: options
+        real,           intent(in)    :: dt
+        integer,        intent(in)    :: halo
+        integer,        intent(in)    :: its,ite, jts,jte, kts,kte
+        integer,        intent(in)    :: ims,ime, jms,jme, kms,kme
+        integer,        intent(in)    :: ids,ide, jds,jde, kds,kde
+        integer :: halo_its,halo_ite, halo_jts,halo_jte, halo_kts,halo_kte
+
+        ! process the western halo
+        halo_ite = its+halo-1
+        call process_subdomain(domain, options, dt, &
+                    its,halo_ite, jts,jte, kts,kte, &
+                    ims,ime, jms,jme, kms,kme,      &
+                    ids,ide, jds,jde, kds,kde)
+
+
+        ! process the eastern halo
+        halo_its = ite-halo+1
+        call process_subdomain(domain, options, dt, &
+                    halo_its,ite, jts,jte, kts,kte, &
+                    ims,ime, jms,jme, kms,kme,      &
+                    ids,ide, jds,jde, kds,kde)
+
+        ! for the top and bottom halos, we no longer process the corner elements, so subset i tile
+        halo_its = its+halo
+        halo_ite = ite-halo
+
+        ! process the southern halo
+        halo_jte = jts+halo-1
+        call process_subdomain(domain, options, dt,           &
+                    halo_its,halo_ite, jts,halo_jte, kts,kte, &
+                    ims,ime, jms,jme, kms,kme,                &
+                    ids,ide, jds,jde, kds,kde)
+
+
+        ! process the northern halo
+        halo_jts = jte-halo+1
+        call process_subdomain(domain, options, dt,           &
+                    halo_its,halo_ite, halo_jts,jte, kts,kte, &
+                    ims,ime, jms,jme, kms,kme,                &
+                    ids,ide, jds,jde, kds,kde)
+
+
+    end subroutine process_halo
+
+
     !>----------------------------------------------------------
     !! Microphysical driver
     !!
@@ -200,164 +572,105 @@ contains
     !! @param   domain      ICAR model domain structure
     !! @param   options     ICAR model options structure
     !! @param   dt_in       Current driving time step (this is the advection step)
-    !! @param   model_time  Current model time (to check if it will exceed the update_interval)
     !!
     !!----------------------------------------------------------
-    subroutine mp(domain,options,dt_in)
+    subroutine mp(domain, options, dt_in, halo, subset)
         implicit none
-        type(domain_type),intent(inout)::domain
-        type(options_type),intent(in)::options
-        real,intent(in)::dt_in
+        type(domain_t), intent(inout) :: domain
+        type(options_t),intent(in)    :: options
+        real,           intent(in)    :: dt_in
+        integer,        intent(in),   optional :: halo, subset
 
         real :: mp_dt
-        integer ::ids,ide,jds,jde,kds,kde,itimestep=1
+        integer ::ids,ide,jds,jde,kds,kde, itimestep=1
+        integer ::ims,ime,jms,jme,kms,kme
         integer ::its,ite,jts,jte,kts,kte, nx,ny,nz
 
-        ids=1
-        ide=size(domain%qv,1)
-        nx=ide
-        kds=1
-        kde=size(domain%qv,2)
-        nz=kde
-        jds=1
-        jde=size(domain%qv,3)
-        ny=jde
+        ids = domain%grid%ids;   ims = domain%grid%ims;   its = domain%grid%its
+        ide = domain%grid%ide;   ime = domain%grid%ime;   ite = domain%grid%ite
+        nx  = domain%grid%nx
+        kds = domain%grid%kds;   kms = domain%grid%kms;   kts = domain%grid%kts
+        kde = domain%grid%kde;   kme = domain%grid%kme;   kte = domain%grid%kte
+        nz  = domain%grid%nz
+        jds = domain%grid%jds;   jms = domain%grid%jms;   jts = domain%grid%jts
+        jde = domain%grid%jde;   jme = domain%grid%jme;   jte = domain%grid%jte
+        ny  = domain%grid%ny
+
+        if (.not.allocated(SR)) call allocate_module_variables(ims, ime, jms, jme, kms, kme)
 
         ! if this is the first time mp is called, set last time such that mp will update
         if (last_model_time==-999) then
             last_model_time = (domain%model_time%seconds() - max(real(update_interval), dt_in))
         endif
 
-        ! snow rain ratio
-        if (.not.allocated(SR)) then
-            allocate(SR(nx,ny))
-            SR=0
-        endif
-        ! last snow amount
-        if (.not.allocated(last_snow)) then
-            allocate(last_snow(nx,ny))
-            last_snow=0
-        endif
-        ! last rain amount
-        if (.not.allocated(last_rain)) then
-            allocate(last_rain(nx,ny))
-            last_rain=0
-        endif
-        ! temporary precip amount
-        if (.not.allocated(this_precip)) then
-            allocate(this_precip(nx,ny))
-            this_precip=0
-        endif
-        if (.not.allocated(refl_10cm)) then
-            allocate(refl_10cm(nx,ny))
-            refl_10cm=0
-        endif
-        if (.not.allocated(domain%tend%qr)) then
-            allocate(domain%tend%qr(nx,nz,ny))
-            domain%tend%qr=0
-        endif
-        if (.not.allocated(domain%tend%qs)) then
-            allocate(domain%tend%qs(nx,nz,ny))
-            domain%tend%qs=0
-        endif
-        if (.not.allocated(domain%tend%qi)) then
-            allocate(domain%tend%qi(nx,nz,ny))
-            domain%tend%qi=0
-        endif
 
         ! only run the microphysics if the next time step would put it over the update_interval time
         if (((domain%model_time%seconds() + dt_in)-last_model_time)>=update_interval) then
+
             ! calculate the actual time step for the microphysics
             mp_dt = domain%model_time%seconds()-last_model_time
+
             ! reset the counter so we know that *this* is the last time we've run the microphysics
-            last_model_time = domain%model_time%seconds()
+            ! NOTE, ONLY reset this when running the inner subset... ideally probably need a separate counter for the halo and subset
+            if (.not.present(halo)) then
+                last_model_time = domain%model_time%seconds()
+            endif
 
             ! If we are going to distribute the current precip over a few grid cells, we need to keep track of
             ! the last_precip so we know how much fell
-            if ((options%mp_options%local_precip_fraction<1).or.(options%use_bias_correction)) then
-                last_rain=domain%rain
-                last_snow=domain%snow
+            if ((options%mp_options%local_precip_fraction<1).or.(options%parameters%use_bias_correction)) then
+                last_rain = domain%accumulated_precipitation%data_2d
+                last_snow = domain%accumulated_snowfall%data_2d
             endif
 
-            kts=kds
-            kte=kde
             ! set the current tile to the top layer to process microphysics for
             if (options%mp_options%top_mp_level>0) then
-                kte=min(kte, options%mp_options%top_mp_level)
+                kte = min(kte, options%mp_options%top_mp_level)
             endif
-            if (options%ideal) then
-                ! for ideal runs process the boundaries as well to be consistent with WRF
-                its=ids;ite=ide
-                jts=jds;jte=jde
-            else
-                its=ids+1;ite=ide-1
-                jts=jds+1;jte=jde-1
-            endif
-            ! run the thompson microphysics
-            if (options%physics%microphysics==kMP_THOMPSON) then
-                ! call the thompson microphysics
-                call mp_gt_driver(domain%qv, domain%cloud, domain%qrain, domain%ice, &
-                                domain%qsnow, domain%qgrau, domain%nice, domain%nrain, &
-                                domain%th, domain%pii, domain%p, domain%dz_inter, mp_dt, itimestep, &
-                                domain%rain, last_rain, &       ! last_rain is not used in thompson
-                                domain%snow, last_snow, &       ! last_snow is not used in thompson
-                                domain%graupel, this_precip, &  ! this_precip is not used in thompson
-                                SR, &
-                                ids,ide, jds,jde, kds,kde, &    ! domain dims
-                                ids,ide, jds,jde, kds,kde, &    ! memory dims
-                                its,ite, jts,jte, kts,kte)      ! tile dims
 
-            elseif (options%physics%microphysics==kMP_SB04) then
-                ! call the simple microphysics routine of SB04
-                call mp_simple_driver(domain%p,domain%th,domain%pii,domain%rho,domain%qv,domain%cloud, &
-                                domain%qrain,domain%qsnow,domain%rain,domain%snow,&
-                                mp_dt,domain%dz_inter,ide,jde,kde)
-            elseif (options%physics%microphysics==kMP_MORRISON) then
-                call MP_MORR_TWO_MOMENT(itimestep,                         &
-                                domain%th, domain%qv, domain%cloud,     &
-                                domain%qrain, domain%ice, domain%qsnow, &
-                                domain%qgrau, domain%nice, domain%nsnow,&
-                                domain%nrain, domain%ngraupel,          &
-                                domain%rho, domain%pii, domain%p,       &
-                                mp_dt, domain%dz_inter, domain%w,       &
-                                domain%rain, last_rain, SR,             &
-                                domain%snow, last_snow, domain%graupel, &
-                                this_precip,                            & ! hm added 7/13/13
-                                refl_10cm, .False., 0,                  & ! GT added for reflectivity calcs
-                                domain%tend%qr, domain%tend%qs,         &
-                                domain%tend%qi                          &
-                               ,IDS,IDE, JDS,JDE, KDS,KDE               & ! domain dims
-                               ,IDS,IDE, JDS,JDE, KDS,KDE               & ! memory dims
-                               ,ITS,ITE, JTS,JTE, KTS,KTE               & ! tile   dims            )
-                           )
-            elseif (options%physics%microphysics==kMP_WSM6) then
-                call wsm6(domain%th, domain%qv, domain%cloud, domain%qrain,      &
-                                domain%ice, domain%qsnow, domain%qgrau           & ! check these, should p and dz be between interfaces or levels?
-                               ,domain%rho, domain%pii, domain%p, domain%dz_inter&
-                               ,mp_dt,gravity, cp, cpv, rd, rw, 273.15          &
-                               ,ep1, ep2, epsilon                                &
-                               ,XLS, XLV, XLF, rhoair0,rhowater                  &
-                               ,cliq,cice,psat                                   &
-                               ,domain%rain, last_rain                           &
-                               ,domain%snow, last_snow                           &
-                               ,sr                                               &
-                               ,domain%graupel, this_precip                      &
-                               ,ids,ide, jds,jde, kds,kde                        &
-                               ,ids,ide, jds,jde, kds,kde                        &
-                               ,its,ite, jts,jte, kts,kte                        &
-                                                                                 )
+
+            if (present(subset)) then
+                call process_subdomain(domain, options, mp_dt,                 &
+                                       its = its + subset, ite = ite - subset, &
+                                       jts = jts + subset, jte = jte - subset, &
+                                       kts = kts,          kte = kte,          &
+                                       ims = ims, ime = ime,                   & ! memory dims
+                                       jms = jms, jme = jme,                   &
+                                       kms = kms, kme = kme,                   &
+                                       ids = ids, ide = ide,                   & ! domain dims
+                                       jds = jds, jde = jde,                   &
+                                       kds = kds, kde = kde)
+            endif
+
+            if (present(halo)) then
+                call process_halo(domain, options, mp_dt, halo, &
+                                       its = its, ite = ite,    &
+                                       jts = jts, jte = jte,    &
+                                       kts = kts, kte = kte,    &
+                                       ims = ims, ime = ime,    & ! memory dims
+                                       jms = jms, jme = jme,    &
+                                       kms = kms, kme = kme,    &
+                                       ids = ids, ide = ide,    & ! domain dims
+                                       jds = jds, jde = jde,    &
+                                       kds = kds, kde = kde)
 
             endif
 
-            if (options%use_bias_correction) then
-                call apply_rain_fraction(domain%model_time, domain%rain_fraction, domain%rain, last_rain, precip_delta)
-                call apply_rain_fraction(domain%model_time, domain%rain_fraction, domain%snow, last_snow, precip_delta)
+            if ((.not.present(halo)).and.(.not.present(subset))) then
+
+                call process_subdomain(domain, options, mp_dt,  &
+                                        its = its, ite = ite,    &
+                                        jts = jts, jte = jte,    &
+                                        kts = kts, kte = kte,    &
+                                        ims = ims, ime = ime,    & ! memory dims
+                                        jms = jms, jme = jme,    &
+                                        kms = kms, kme = kme,    &
+                                        ids = ids, ide = ide,    & ! domain dims
+                                        jds = jds, jde = jde,    &
+                                        kds = kds, kde = kde)
+
             endif
 
-            if (options%mp_options%local_precip_fraction<1) then
-                call distribute_precip(domain%rain, last_rain, options%mp_options%local_precip_fraction, precip_delta)
-                call distribute_precip(domain%snow, last_snow, options%mp_options%local_precip_fraction, precip_delta)
-            endif
         endif
 
     end subroutine mp
@@ -373,7 +686,7 @@ contains
     !!----------------------------------------------------------
     subroutine mp_finish(options)
         implicit none
-        type(options_type),intent(in)::options
+        type(options_t),intent(in)::options
 
         if (allocated(SR)) then
             deallocate(SR)

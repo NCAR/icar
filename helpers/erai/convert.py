@@ -31,11 +31,11 @@ def convert_atm(data):
 
     pii=(100000.0/output_data.p)**(R/cp)
     output_data.t=data.t[np.newaxis,::-1,::-1,:]*pii                    # K (converted to potential temperature)
-    
+
     output_data.qv    = data.qv[np.newaxis,::-1,::-1,:]                 # kg/kg
     output_data.cloud = data.cloud[np.newaxis,::-1,::-1,:]              # kg/kg
     output_data.ice   = data.ice[np.newaxis,::-1,::-1,:]                # kg/kg
-    
+
     return output_data
 
 # icar_sfc_var=["sensible_heat","latent_heat","hgt_98","PBL_height"]
@@ -50,8 +50,9 @@ def convert_sfc(data):
     output_data.PBL_height      = data.PBL_height[np.newaxis,::-1,:]        # m
     output_data.tskin           = data.tskin[np.newaxis,::-1,:]             # K
     output_data.sw              = data.sw[np.newaxis,::-1,:] / dt   # convert from Joules to W /m^2
-    output_data.lw              = data.lw[np.newaxis,::-1,:] / dt   # convert from Joules to W /m^2 
-    
+    output_data.lw              = data.lw[np.newaxis,::-1,:] / dt   # convert from Joules to W /m^2
+    output_data.cp              = data.cp[np.newaxis,::-1,:] * 1000 # convert m to mm
+
     # this is now handled in io so it can just use the last value in the file, much simple
     #  ... though in some ways what is below is better as it integrates over a longer time period
     # if last_longwave==None:
@@ -80,10 +81,10 @@ def era2icar(data):
     output_data=Bunch()
     atm=convert_atm(data.atm)
     sfc=convert_sfc(data.sfc)
-    
+
     for k in atm.keys():
         output_data[k]=atm[k]
     for k in sfc.keys():
         output_data[k]=sfc[k]
-    
+
     return output_data

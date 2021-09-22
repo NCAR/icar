@@ -20,9 +20,9 @@ def set_bounds(info):
     except:
         pass
 
-    ncfile=io.grib2nc(erai_file,varlist,output_dir)
-    lat=mygis.read_nc(ncfile,varlist[0]).data
-    lon=mygis.read_nc(ncfile,varlist[1]).data-360
+    ncfile = io.grib2nc(erai_file,varlist,output_dir)
+    lat = mygis.read_nc(ncfile,varlist[0]).data
+    lon = mygis.read_nc(ncfile,varlist[1]).data - 360
 
     # print(lon, info.lon[0])
     lon[lon<-180]+=360
@@ -43,6 +43,10 @@ def set_bounds(info):
     lon,lat=np.meshgrid(lon[info.xmin:info.xmax],lat[info.ymin:info.ymax][::-1])
     info.lat_data=lat
     info.lon_data=lon
+
+    # important to remove this file so that if this temporary date overlaps the actual time period we want to run,
+    # later steps won't break when they try to use this temporary file by mistake
+    os.remove(ncfile)
 
 def make_timelist(info):
     hrs=6.0

@@ -27,7 +27,7 @@ def main():
     filename="init"
     nx,nz,ny=(20.,10.,19)
     dims=[nx,nz,ny]
-    
+
     # po=np.log(100000.0)
     # p1=np.log(50000.0)
     # dp=(po-p1)/nz
@@ -46,7 +46,7 @@ def main():
         nz=base.th.size
         dims=[nx,nz,ny]
     # base.p=base.p[:nz]
-    
+
     u=np.zeros(dims,dtype="f")+base.u
     w=np.zeros(dims,dtype="f")+base.w
     v=np.zeros(dims,dtype="f")+base.v
@@ -56,23 +56,23 @@ def main():
     coscurve=np.cos(np.arange(dims[0])/dims[0]*2*np.pi+np.pi)+1
     # p-=coscurve.reshape((nx,1,1))*15000
     hgt=(coscurve*1000).reshape((nx,1)).repeat(ny,axis=1)
-    
+
     lon=np.arange(lonmin,lonmax,dlon)
     lat=np.arange(latmin,latmax,dlat)
     lat,lon=np.meshgrid(lat,lon) #note that this appears "backwards" but these are C-style, fortran will be reversed
     dz=np.zeros(dims)+base.dz
     z=np.zeros(dims,dtype="f")+base.z.reshape((1,nz,1))+hgt.reshape((nx,1,ny))
-    
+
     layer1=(dz[:,0,:]/2)
     z[:,0,:]+=layer1
     for i in range(1,int(nz)):
         z[:,i,:]=z[:,i-1,:]+(dz[:,i-1,:]+dz[:,i,:])/2.0
-    
+
     p=np.zeros(dims,dtype="f")+base.p# .reshape((1,nz,1))
     adjust_p(p,0.0,z)
     th=np.zeros(dims,dtype="f")+base.th.reshape((1,nz,1))
-    
-    
+
+
     d3dname=("x","z","y")
     d2dname=("x","y")
     othervars=[Bunch(data=lat,name="XLAT", dims=d2dname,dtype="f",attributes=dict(units="deg",  description="Latitude")),
