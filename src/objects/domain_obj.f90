@@ -1262,15 +1262,13 @@ contains
         h2_u =  h_u  - h1_u
         h2_v =  h_v  - h1_v
 
-
-
-        if ((this_image()==1).and.(options%parameters%debug)) then
+        ! if ((this_image()==1).and.(options%parameters%debug)) then
         ! if (this_image()==1) then
-          call io_write("terrain_smooth_h1.nc", "h1", h1(:,:) )
-          call io_write("terrain_smooth_h2.nc", "h2", h2(:,:) )
-          call io_write("h1_u.nc", "h1_u", h1_u(:,:) )
-          call io_write("h2_u.nc", "h2_u", h2_u(:,:) )
-        endif
+        !   call io_write("terrain_smooth_h1.nc", "h1", h1(:,:) )
+        !   call io_write("terrain_smooth_h2.nc", "h2", h2(:,:) )
+        !   call io_write("h1_u.nc", "h1_u", h1_u(:,:) )
+        !   call io_write("h2_u.nc", "h2_u", h2_u(:,:) )
+        ! endif
         if (this_image()==1) then
            ! print*, "    global_terrain max ", MAXVAL(global_terrain)
            print*, "    Max of full topography", MAXVAL(h_org)
