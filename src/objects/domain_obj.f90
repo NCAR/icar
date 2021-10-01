@@ -196,6 +196,7 @@ contains
         if (0<opt%vars_to_allocate( kVARS%graupel_number_concentration))call setup(this%graupel_number,           this%grid )
         if (0<opt%vars_to_allocate( kVARS%precipitation) )              call setup(this%accumulated_precipitation,this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%convective_precipitation) )   call setup(this%accumulated_convective_pcp,this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%external_precipitation) )     call setup(this%external_precipitation,   this%grid2d,   forcing_var=opt%parameters%rain_var,  list=this%variables_to_force)
         if (0<opt%vars_to_allocate( kVARS%snowfall) )                   call setup(this%accumulated_snowfall,     this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%pressure) )                   call setup(this%pressure,                 this%grid,     forcing_var=opt%parameters%pvar,       list=this%variables_to_force, force_boundaries=.False.)
         if (0<opt%vars_to_allocate( kVARS%temperature) )                call setup(this%temperature,              this%grid )
@@ -214,7 +215,7 @@ contains
         if (0<opt%vars_to_allocate( kVARS%lai) )                        call setup(this%lai,                      this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%canopy_water) )               call setup(this%canopy_water,             this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%snow_water_equivalent) )      call setup(this%snow_water_equivalent,    this%grid2d )
-        if (0<opt%vars_to_allocate( kVARS%snow_height) )      call setup(this%snow_height,    this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%snow_height) )                call setup(this%snow_height,              this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%sst) )                        call setup(this%sst,                      this%grid2d,   forcing_var=opt%parameters%sst_var,     list=this%variables_to_force)
         if (0<opt%vars_to_allocate( kVARS%skin_temperature) )           call setup(this%skin_temperature,         this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%soil_water_content) )         call setup(this%soil_water_content,       this%grid_soil)
@@ -1261,15 +1262,13 @@ contains
         h2_u =  h_u  - h1_u
         h2_v =  h_v  - h1_v
 
-
-
-        if ((this_image()==1).and.(options%parameters%debug)) then
+        ! if ((this_image()==1).and.(options%parameters%debug)) then
         ! if (this_image()==1) then
-          call io_write("terrain_smooth_h1.nc", "h1", h1(:,:) )
-          call io_write("terrain_smooth_h2.nc", "h2", h2(:,:) )
-          call io_write("h1_u.nc", "h1_u", h1_u(:,:) )
-          call io_write("h2_u.nc", "h2_u", h2_u(:,:) )
-        endif
+        !   call io_write("terrain_smooth_h1.nc", "h1", h1(:,:) )
+        !   call io_write("terrain_smooth_h2.nc", "h2", h2(:,:) )
+        !   call io_write("h1_u.nc", "h1_u", h1_u(:,:) )
+        !   call io_write("h2_u.nc", "h2_u", h2_u(:,:) )
+        ! endif
         if (this_image()==1) then
            ! print*, "    global_terrain max ", MAXVAL(global_terrain)
            print*, "    Max of full topography", MAXVAL(h_org)
@@ -1677,6 +1676,8 @@ contains
                       kVARS%u_latitude,             kVARS%u_longitude,              &
                       kVARS%v_latitude,             kVARS%v_longitude               ])
 
+        if (trim(options%parameters%rain_var) /= "") call options%alloc_vars([kVARS%external_precipitation])
+
         ! List the variables that are required for any restart
         call options%restart_vars(                                                  &
                      [kVARS%z,                                                      &
@@ -1979,6 +1980,11 @@ contains
         ! actually read from disk. Note that if we move to balancing winds every timestep, then it doesn't matter.
         var_to_update = this%w%meta_data
         var_to_update%data_3d = var_to_update%data_3d + (var_to_update%dqdt_3d * dt%seconds())
+
+        if (associated(this%external_precipitation%data_2d)) then
+            this%accumulated_precipitation%data_2d = this%accumulated_precipitation%data_2d + (this%external_precipitation%data_2d * dt%seconds())
+        endif
+
 
     end subroutine
 
