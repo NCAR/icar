@@ -2448,7 +2448,7 @@ contains
               zfr_v(:,i,:) = zfr_v(:,i-1,:)
           enddo
 
-          if ((this_image()==1))  call io_write("zfr_u_ns.nc", "zfr_u", zfr_u(:,:,:) ) ! check in plot
+          ! if ((this_image()==1))  call io_write("zfr_u_ns.nc", "zfr_u", zfr_u(:,:,:) ) ! check in plot
           ! if ((this_image()==1).and.(options%parameters%debug))  call io_write("zfr_u_ns.nc", "zfr_u", zfr_u(:,:,:) ) ! check in plot
 
         endif
