@@ -1,10 +1,12 @@
 from netCDF4 import Dataset
 import numpy as np
 import math
+from sys import exit, path
+from os import getcwd
+path.insert(0, getcwd()+'/../helpers/genNetCDF')
 import Topography as tg
 import Forcing as fc
 import ICARoptions as opt
-from sys import exit
 
 # Python program generates an ideal case
 class IdealTest:
@@ -32,6 +34,7 @@ class IdealTest:
 
 
 def main():
+    # ICAR Options generate the ICAR namelist
     options = opt.ICARoptions()
     test = IdealTest(nz=40, nx=40, ny=40, n_hills=1.0)
 

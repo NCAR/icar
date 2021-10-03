@@ -137,6 +137,20 @@ function icar_script {
     cd ..
 }
 
+function gen_test_run_data {
+    cd ${GITHUB_WORKSPACE}/tests
+    python --version
+    python -m pip install --upgrade pip
+    pip install setuptools numpy pandas netCDF4 xarray
+    python gen_ideal_test.py
+}
+
+function execute_test_run {
+    cp ${GITHUB_WORKSPACE}/src/icar ${GITHUB_WORKSPACE}/tests/
+    cd ${GITHUB_WORKSPACE}/tests
+    ./icar icar_options.nm
+}
+
 function icar_after_success {
   echo icar_after_success
   echo "icar build succeeded"
@@ -156,6 +170,10 @@ do
             icar_install;;
 	icar_script)
 	    icar_script;;
+	gen_test_run_data)
+	    gen_test_run_data;;
+	execute_test_run)
+	    execute_test_run;;
         *)
             echo "$func unknown"
     esac
