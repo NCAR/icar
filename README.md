@@ -1,9 +1,5 @@
 # The Intermediate Complexity Atmospheric Research Model (ICAR)
 
-[//]: # (Once Gist is setup for NCAR account, these badges will be added back in)
-[//]: # ( [![Build Status](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/ncar/[FUTURE_GIST_KEY]/raw/build.json)](https://github.com/NCAR/icar/actions/workflows/github-actions-icar.yml))
-[//]: # ( [![Run Status](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/ncar/[FUTURE_GIST_KEY]/raw/build.json)](https://github.com/NCAR/icar/actions/workflows/github-actions-icar.yml))
-
 [![main](https://github.com/NCAR/icar/actions/workflows/icar-main-commit.yml/badge.svg)](https://github.com/NCAR/icar/actions/workflows/icar-main-commit.yml)
 [![develop](https://github.com/NCAR/icar/actions/workflows/icar-develop-commit.yml/badge.svg)](https://github.com/NCAR/icar/actions/workflows/icar-develop-commit.yml)
 [![Documentation Status](https://readthedocs.org/projects/icar/badge/)](http://icar.readthedocs.org/en/develop/)
@@ -20,7 +16,7 @@ To run the model 3D time-varying atmospheric data are required, though an ideal 
 To run ICAR on more than one compute node requires a fortran compiler that supports the use of coarrays.  This includes ifort >= ~18, gfortran >= ~6.3 (with opencoarrays), and cray's fortran compiler. Note that ifort has often been extremely slow, cray's implementation is excellent but ICAR is not well tested with it, gfortran works very well, but some combinations of gfortran and opencoarrays may not work.
 
 #### Developing
-If you plan to make any major additions to ICAR, please get in touch, for minor changes feel free to just submit a pull request.
+If you plan to make any major additions to ICAR, please get in touch, for minor changes feel free to just submit a pull request. The current workflow is to make changes and pull requests to the `develop` branch.
 
 For an outline of the basic code structure see the [ICAR code overview](docs/icar_code_overview.md)
 
