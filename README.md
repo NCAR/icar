@@ -1,8 +1,11 @@
 # The Intermediate Complexity Atmospheric Research Model (ICAR)
 
+[//]: # (Once Gist is setup for NCAR account, these badges will be added back in)
+[//]: # ( [![Build Status](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/ncar/[FUTURE_GIST_KEY]/raw/build.json)](https://github.com/NCAR/icar/actions/workflows/github-actions-icar.yml))
+[//]: # ( [![Run Status](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/ncar/[FUTURE_GIST_KEY]/raw/build.json)](https://github.com/NCAR/icar/actions/workflows/github-actions-icar.yml))
 
-[![Build Status](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/scrasmussen/4f0cf076055d12564693853a57f95614/raw/build.json)](https://github.com/NCAR/icar/actions/workflows/github-actions-icar.yml)
-[![Run Status](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/scrasmussen/4f0cf076055d12564693853a57f95614/raw/run.json)](https://github.com/NCAR/icar/actions/workflows/github-actions-icar.yml)
+[![main](https://github.com/NCAR/icar/actions/workflows/icar-main-commit.yml/badge.svg)](https://github.com/NCAR/icar/actions/workflows/icar-main-commit.yml)
+[![develop](https://github.com/NCAR/icar/actions/workflows/icar-develop-commit.yml/badge.svg)](https://github.com/NCAR/icar/actions/workflows/icar-develop-commit.yml)
 [![Documentation Status](https://readthedocs.org/projects/icar/badge/)](http://icar.readthedocs.org/en/develop/)
 
 ICAR is a simplified atmospheric model designed primarily for climate downscaling, atmospheric sensitivity tests, and hopefully educational uses. ICAR combines an analytical solution for flow over mountains (linear mountain wave theory) with the large scale flow for a driving model to predict the high resolution wind field. It then advects and heat and moisture through the domain while computing cloud microphysical effects. ICAR has includes a land surface model as well for land atmosphere interactions; ICAR can simulate open water fluxes, PBL mixing, surface radiation, and even parameterized convection.

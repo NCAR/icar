@@ -1,9 +1,9 @@
 # except for the badge creation, keep icar-pull-request.yml jobs in parity
-name: main
+name: develop
 on:
   push:
     branches:
-      - main
+      - develop
   workflow_dispatch:
 
 jobs:

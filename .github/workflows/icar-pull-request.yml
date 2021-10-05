@@ -2,7 +2,7 @@
 name: ICAR Pull Request Actions
 on:
   pull_request:
-    branches: [main]
+    branches: [main, develop]
   workflow_dispatch:
 
 jobs:
