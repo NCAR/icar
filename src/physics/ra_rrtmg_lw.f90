@@ -263,11 +263,17 @@
 
       integer(kind=im), parameter :: no1  = 16
 
-      real(kind=rb) :: fracrefao(no1)  , fracrefbo(no1)
-      real(kind=rb) :: kao(5,13,no1)
-      real(kind=rb) :: kbo(5,13:59,no1)
-      real(kind=rb) :: kao_mn2(19,no1) , kbo_mn2(19,no1)
-      real(kind=rb) :: selfrefo(10,no1), forrefo(4,no1)
+      !real,allocatable, dimension(:) :: fracrefao(no1)  , fracrefbo(no1)
+      !real :: kao(5,13,no1)
+      !real :: kbo(5,13:59,no1)
+      !real :: kao_mn2(19,no1) , kbo_mn2(19,no1)
+      !real :: selfrefo(10,no1), forrefo(4,no1)
+
+      real,allocatable, dimension(:) :: fracrefao(:)  , fracrefbo(:)
+      real,allocatable, dimension(:,:,:)  :: kao(:,:,:)
+      real,allocatable, dimension(:,:,:)  :: kbo(:,:,:)
+      real,allocatable, dimension(:,:)  :: kao_mn2(:,:) , kbo_mn2(:,:)
+      real,allocatable, dimension(:,:)  :: selfrefo(:,:), forrefo(:,:)
 
 !-----------------------------------------------------------------
 ! rrtmg_lw COMBINED abs. coefficients for interval 1
@@ -294,11 +300,11 @@
 
       integer(kind=im), parameter :: ng1  = 10
 
-      real(kind=rb) :: fracrefa(ng1)  , fracrefb(ng1)
-      real(kind=rb) :: ka(5,13,ng1)   , absa(65,ng1)
-      real(kind=rb) :: kb(5,13:59,ng1), absb(235,ng1)
-      real(kind=rb) :: ka_mn2(19,ng1) , kb_mn2(19,ng1)
-      real(kind=rb) :: selfref(10,ng1), forref(4,ng1)
+      real*8 :: fracrefa(ng1)  , fracrefb(ng1)
+      real*8 :: ka(5,13,ng1)   , absa(65,ng1)
+      real*8 :: kb(5,13:59,ng1), absb(235,ng1)
+      real*8 :: ka_mn2(19,ng1) , kb_mn2(19,ng1)
+      real*8 :: selfref(10,ng1), forref(4,ng1)
 
       equivalence (ka(1,1,1),absa(1,1)), (kb(1,13,1),absb(1,1))
 
@@ -332,10 +338,10 @@
 
       integer(kind=im), parameter :: no2  = 16
 
-      real(kind=rb) :: fracrefao(no2)   , fracrefbo(no2)
-      real(kind=rb) :: kao(5,13,no2)
-      real(kind=rb) :: kbo(5,13:59,no2)
-      real(kind=rb) :: selfrefo(10,no2) , forrefo(4,no2)
+      real,allocatable, dimension(:) :: fracrefao   , fracrefbo
+      real,allocatable, dimension(:,:,:) :: kao
+      real,allocatable, dimension(:,:,:) :: kbo
+      real,allocatable, dimension(:,:) :: selfrefo, forrefo
 
 !-----------------------------------------------------------------
 ! rrtmg_lw COMBINED abs. coefficients for interval 2
@@ -362,12 +368,12 @@
 
       integer(kind=im), parameter :: ng2  = 12
 
-      real(kind=rb) :: fracrefa(ng2)  , fracrefb(ng2)
-      real(kind=rb) :: ka(5,13,ng2)   , absa(65,ng2)
-      real(kind=rb) :: kb(5,13:59,ng2), absb(235,ng2)
-      real(kind=rb) :: selfref(10,ng2), forref(4,ng2)
+      real*8 :: fracrefa(ng2)  , fracrefb(ng2)
+      real*8 :: ka(5,13,ng2)   , absa(65,ng2)
+      real*8 :: kb(5,13:59,ng2), absb(235,ng2)
+      real*8 :: selfref(10,ng2), forref(4,ng2)
 
-      real(kind=rb) :: refparam(13)
+      real*8 :: refparam(13)
 
       equivalence (ka(1,1,1),absa(1,1)),(kb(1,13,1),absb(1,1))
 
@@ -403,12 +409,12 @@
 
       integer(kind=im), parameter :: no3  = 16
 
-      real(kind=rb) :: fracrefao(no3,9) ,fracrefbo(no3,5)
-      real(kind=rb) :: kao(9,5,13,no3)
-      real(kind=rb) :: kbo(5,5,13:59,no3)
-      real(kind=rb) :: kao_mn2o(9,19,no3), kbo_mn2o(5,19,no3)
-      real(kind=rb) :: selfrefo(10,no3)
-      real(kind=rb) :: forrefo(4,no3)
+      real,allocatable, dimension(:,:) :: fracrefao ,fracrefbo
+      real,allocatable, dimension(:,:,:,:) :: kao
+      real,allocatable, dimension(:,:,:,:) :: kbo
+      real,allocatable, dimension(:,:,:) :: kao_mn2o, kbo_mn2o
+      real,allocatable, dimension(:,:) :: selfrefo
+      real,allocatable, dimension(:,:) :: forrefo
 
 !-----------------------------------------------------------------
 ! rrtmg_lw COMBINED abs. coefficients for interval 3
@@ -436,12 +442,12 @@
 
       integer(kind=im), parameter :: ng3  = 16
 
-      real(kind=rb) :: fracrefa(ng3,9) ,fracrefb(ng3,5)
-      real(kind=rb) :: ka(9,5,13,ng3)  ,absa(585,ng3)
-      real(kind=rb) :: kb(5,5,13:59,ng3),absb(1175,ng3)
-      real(kind=rb) :: ka_mn2o(9,19,ng3), kb_mn2o(5,19,ng3)
-      real(kind=rb) :: selfref(10,ng3)
-      real(kind=rb) :: forref(4,ng3)
+      real*8 :: fracrefa(ng3,9) ,fracrefb(ng3,5)
+      real*8 :: ka(9,5,13,ng3)  ,absa(585,ng3)
+      real*8 :: kb(5,5,13:59,ng3),absb(1175,ng3)
+      real*8 :: ka_mn2o(9,19,ng3), kb_mn2o(5,19,ng3)
+      real*8 :: selfref(10,ng3)
+      real*8 :: forref(4,ng3)
 
       equivalence (ka(1,1,1,1),absa(1,1)),(kb(1,1,13,1),absb(1,1))
 
@@ -475,10 +481,10 @@
 
       integer(kind=im), parameter :: no4  = 16
 
-      real(kind=rb) :: fracrefao(no4,9)  ,fracrefbo(no4,5)
-      real(kind=rb) :: kao(9,5,13,no4)
-      real(kind=rb) :: kbo(5,5,13:59,no4)
-      real(kind=rb) :: selfrefo(10,no4)  ,forrefo(4,no4)
+      real,allocatable, dimension(:,:) :: fracrefao  ,fracrefbo
+      real,allocatable, dimension(:,:,:,:) :: kao
+      real,allocatable, dimension(:,:,:,:) :: kbo
+      real,allocatable, dimension(:,:) :: selfrefo  ,forrefo
 
 !-----------------------------------------------------------------
 ! rrtmg_lw COMBINED abs. coefficients for interval 4
@@ -503,10 +509,10 @@
 
       integer(kind=im), parameter :: ng4  = 14
 
-      real(kind=rb) :: fracrefa(ng4,9)  ,fracrefb(ng4,5)
-      real(kind=rb) :: ka(9,5,13,ng4)   ,absa(585,ng4)
-      real(kind=rb) :: kb(5,5,13:59,ng4),absb(1175,ng4)
-      real(kind=rb) :: selfref(10,ng4)  ,forref(4,ng4)
+      real*8 :: fracrefa(ng4,9)  ,fracrefb(ng4,5)
+      real*8 :: ka(9,5,13,ng4)   ,absa(585,ng4)
+      real*8 :: kb(5,5,13:59,ng4),absb(1175,ng4)
+      real*8 :: selfref(10,ng4)  ,forref(4,ng4)
 
       equivalence (ka(1,1,1,1),absa(1,1)),(kb(1,1,13,1),absb(1,1))
 
@@ -542,13 +548,13 @@
 
       integer(kind=im), parameter :: no5  = 16
 
-      real(kind=rb) :: fracrefao(no5,9) ,fracrefbo(no5,5)
-      real(kind=rb) :: kao(9,5,13,no5)
-      real(kind=rb) :: kbo(5,5,13:59,no5)
-      real(kind=rb) :: kao_mo3(9,19,no5)
-      real(kind=rb) :: selfrefo(10,no5)
-      real(kind=rb) :: forrefo(4,no5)
-      real(kind=rb) :: ccl4o(no5)
+      real,allocatable, dimension(:,:) :: fracrefao ,fracrefbo
+      real,allocatable, dimension(:,:,:,:) :: kao
+      real,allocatable, dimension(:,:,:,:) :: kbo
+      real,allocatable, dimension(:,:,:) :: kao_mo3
+      real,allocatable, dimension(:,:) :: selfrefo
+      real,allocatable, dimension(:,:) :: forrefo
+      real,allocatable, dimension(:) :: ccl4o
 
 !-----------------------------------------------------------------
 ! rrtmg_lw COMBINED abs. coefficients for interval 5
@@ -576,13 +582,13 @@
 
       integer(kind=im), parameter :: ng5  = 16
 
-      real(kind=rb) :: fracrefa(ng5,9) ,fracrefb(ng5,5)
-      real(kind=rb) :: ka(9,5,13,ng5)   ,absa(585,ng5)
-      real(kind=rb) :: kb(5,5,13:59,ng5),absb(1175,ng5)
-      real(kind=rb) :: ka_mo3(9,19,ng5)
-      real(kind=rb) :: selfref(10,ng5)
-      real(kind=rb) :: forref(4,ng5)
-      real(kind=rb) :: ccl4(ng5)
+      real*8 :: fracrefa(ng5,9) ,fracrefb(ng5,5)
+      real*8 :: ka(9,5,13,ng5)   ,absa(585,ng5)
+      real*8 :: kb(5,5,13:59,ng5),absb(1175,ng5)
+      real*8 :: ka_mo3(9,19,ng5)
+      real*8 :: selfref(10,ng5)
+      real*8 :: forref(4,ng5)
+      real*8 :: ccl4(ng5)
       
       equivalence (ka(1,1,1,1),absa(1,1)),(kb(1,1,13,1),absb(1,1))
 
@@ -617,14 +623,14 @@
 
       integer(kind=im), parameter :: no6  = 16
 
-      real(kind=rb) , dimension(no6) :: fracrefao
-      real(kind=rb) :: kao(5,13,no6)
-      real(kind=rb) :: kao_mco2(19,no6)
-      real(kind=rb) :: selfrefo(10,no6)
-      real(kind=rb) :: forrefo(4,no6)
+      real,allocatable, dimension(:) :: fracrefao
+      real,allocatable, dimension(:,:,:) :: kao
+      real,allocatable, dimension(:,:) :: kao_mco2
+      real,allocatable, dimension(:,:) :: selfrefo
+      real,allocatable, dimension(:,:) :: forrefo
 
-      real(kind=rb) , dimension(no6) :: cfc11adjo
-      real(kind=rb) , dimension(no6) :: cfc12o
+      real,allocatable, dimension(:) :: cfc11adjo
+      real,allocatable, dimension(:) :: cfc12o
 
 !-----------------------------------------------------------------
 ! rrtmg_lw COMBINED abs. coefficients for interval 6
@@ -650,14 +656,14 @@
 
       integer(kind=im), parameter :: ng6  = 8
 
-      real(kind=rb) , dimension(ng6) :: fracrefa
-      real(kind=rb) :: ka(5,13,ng6),absa(65,ng6)
-      real(kind=rb) :: ka_mco2(19,ng6)
-      real(kind=rb) :: selfref(10,ng6)
-      real(kind=rb) :: forref(4,ng6)
+      real*8 , dimension(ng6) :: fracrefa
+      real*8 :: ka(5,13,ng6),absa(65,ng6)
+      real*8 :: ka_mco2(19,ng6)
+      real*8 :: selfref(10,ng6)
+      real*8 :: forref(4,ng6)
 
-      real(kind=rb) , dimension(ng6) :: cfc11adj
-      real(kind=rb) , dimension(ng6) :: cfc12
+      real*8 , dimension(ng6) :: cfc11adj
+      real*8 , dimension(ng6) :: cfc12
 
       equivalence (ka(1,1,1),absa(1,1))
 
@@ -693,14 +699,14 @@
 
       integer(kind=im), parameter :: no7  = 16
 
-      real(kind=rb) , dimension(no7) :: fracrefbo
-      real(kind=rb) :: fracrefao(no7,9)
-      real(kind=rb) :: kao(9,5,13,no7)
-      real(kind=rb) :: kbo(5,13:59,no7)
-      real(kind=rb) :: kao_mco2(9,19,no7)
-      real(kind=rb) :: kbo_mco2(19,no7)
-      real(kind=rb) :: selfrefo(10,no7)
-      real(kind=rb) :: forrefo(4,no7)
+      real,allocatable, dimension(:) :: fracrefbo
+      real,allocatable, dimension(:,:) :: fracrefao
+      real,allocatable, dimension(:,:,:,:) :: kao
+      real,allocatable, dimension(:,:,:) :: kbo
+      real,allocatable, dimension(:,:,:) :: kao_mco2
+      real,allocatable, dimension(:,:) :: kbo_mco2
+      real,allocatable, dimension(:,:) :: selfrefo
+      real,allocatable, dimension(:,:) :: forrefo
 
 !-----------------------------------------------------------------
 ! rrtmg_lw COMBINED abs. coefficients for interval 7
@@ -727,14 +733,14 @@
 
       integer(kind=im), parameter :: ng7  = 12
 
-      real(kind=rb) , dimension(ng7) :: fracrefb
-      real(kind=rb) :: fracrefa(ng7,9)
-      real(kind=rb) :: ka(9,5,13,ng7) ,absa(585,ng7)
-      real(kind=rb) :: kb(5,13:59,ng7),absb(235,ng7)
-      real(kind=rb) :: ka_mco2(9,19,ng7)
-      real(kind=rb) :: kb_mco2(19,ng7)
-      real(kind=rb) :: selfref(10,ng7)
-      real(kind=rb) :: forref(4,ng7)
+      real*8 , dimension(ng7) :: fracrefb
+      real*8 :: fracrefa(ng7,9)
+      real*8 :: ka(9,5,13,ng7) ,absa(585,ng7)
+      real*8 :: kb(5,13:59,ng7),absb(235,ng7)
+      real*8 :: ka_mco2(9,19,ng7)
+      real*8 :: kb_mco2(19,ng7)
+      real*8 :: selfref(10,ng7)
+      real*8 :: forref(4,ng7)
 
       equivalence (ka(1,1,1,1),absa(1,1)),(kb(1,13,1),absb(1,1))
 
@@ -775,20 +781,20 @@
 
       integer(kind=im), parameter :: no8  = 16
 
-      real(kind=rb) , dimension(no8) :: fracrefao
-      real(kind=rb) , dimension(no8) :: fracrefbo
-      real(kind=rb) , dimension(no8) :: cfc12o
-      real(kind=rb) , dimension(no8) :: cfc22adjo
+      real,allocatable, dimension(:) :: fracrefao
+      real,allocatable, dimension(:) :: fracrefbo
+      real,allocatable, dimension(:) :: cfc12o
+      real,allocatable, dimension(:) :: cfc22adjo
 
-      real(kind=rb) :: kao(5,13,no8)
-      real(kind=rb) :: kao_mco2(19,no8)
-      real(kind=rb) :: kao_mn2o(19,no8)
-      real(kind=rb) :: kao_mo3(19,no8)
-      real(kind=rb) :: kbo(5,13:59,no8)
-      real(kind=rb) :: kbo_mco2(19,no8)
-      real(kind=rb) :: kbo_mn2o(19,no8)
-      real(kind=rb) :: selfrefo(10,no8)
-      real(kind=rb) :: forrefo(4,no8)
+      real,allocatable, dimension(:,:,:) :: kao
+      real,allocatable, dimension(:,:) :: kao_mco2
+      real,allocatable, dimension(:,:) :: kao_mn2o
+      real,allocatable, dimension(:,:) :: kao_mo3
+      real,allocatable, dimension(:,:,:) :: kbo
+      real,allocatable, dimension(:,:) :: kbo_mco2
+      real,allocatable, dimension(:,:) :: kbo_mn2o
+      real,allocatable, dimension(:,:) :: selfrefo
+      real,allocatable, dimension(:,:) :: forrefo
 
 !-----------------------------------------------------------------
 ! rrtmg_lw COMBINED abs. coefficients for interval 8
@@ -821,20 +827,20 @@
 
       integer(kind=im), parameter :: ng8  = 8
 
-      real(kind=rb) , dimension(ng8) :: fracrefa
-      real(kind=rb) , dimension(ng8) :: fracrefb
-      real(kind=rb) , dimension(ng8) :: cfc12
-      real(kind=rb) , dimension(ng8) :: cfc22adj
+      real*8 , dimension(ng8) :: fracrefa
+      real*8 , dimension(ng8) :: fracrefb
+      real*8 , dimension(ng8) :: cfc12
+      real*8 , dimension(ng8) :: cfc22adj
 
-      real(kind=rb) :: ka(5,13,ng8)    ,absa(65,ng8)
-      real(kind=rb) :: kb(5,13:59,ng8) ,absb(235,ng8)
-      real(kind=rb) :: ka_mco2(19,ng8)
-      real(kind=rb) :: ka_mn2o(19,ng8)
-      real(kind=rb) :: ka_mo3(19,ng8)
-      real(kind=rb) :: kb_mco2(19,ng8)
-      real(kind=rb) :: kb_mn2o(19,ng8)
-      real(kind=rb) :: selfref(10,ng8)
-      real(kind=rb) :: forref(4,ng8)
+      real*8 :: ka(5,13,ng8)    ,absa(65,ng8)
+      real*8 :: kb(5,13:59,ng8) ,absb(235,ng8)
+      real*8 :: ka_mco2(19,ng8)
+      real*8 :: ka_mn2o(19,ng8)
+      real*8 :: ka_mo3(19,ng8)
+      real*8 :: kb_mco2(19,ng8)
+      real*8 :: kb_mn2o(19,ng8)
+      real*8 :: selfref(10,ng8)
+      real*8 :: forref(4,ng8)
 
       equivalence (ka(1,1,1),absa(1,1)),(kb(1,13,1),absb(1,1))
 
@@ -870,15 +876,15 @@
 
       integer(kind=im), parameter :: no9  = 16
 
-      real(kind=rb) , dimension(no9) :: fracrefbo
+      real,allocatable, dimension(:) :: fracrefbo
 
-      real(kind=rb) :: fracrefao(no9,9)
-      real(kind=rb) :: kao(9,5,13,no9)
-      real(kind=rb) :: kbo(5,13:59,no9)
-      real(kind=rb) :: kao_mn2o(9,19,no9)
-      real(kind=rb) :: kbo_mn2o(19,no9)
-      real(kind=rb) :: selfrefo(10,no9)
-      real(kind=rb) :: forrefo(4,no9)
+      real,allocatable, dimension(:,:) :: fracrefao
+      real,allocatable, dimension(:,:,:,:) :: kao
+      real,allocatable, dimension(:,:,:) :: kbo
+      real,allocatable, dimension(:,:,:) :: kao_mn2o
+      real,allocatable, dimension(:,:) :: kbo_mn2o
+      real,allocatable, dimension(:,:) :: selfrefo
+      real,allocatable, dimension(:,:) :: forrefo
 
 !-----------------------------------------------------------------
 ! rrtmg_lw COMBINED abs. coefficients for interval 9
@@ -906,14 +912,14 @@
 
       integer(kind=im), parameter :: ng9  = 12
 
-      real(kind=rb) , dimension(ng9) :: fracrefb
-      real(kind=rb) :: fracrefa(ng9,9)
-      real(kind=rb) :: ka(9,5,13,ng9) ,absa(585,ng9)
-      real(kind=rb) :: kb(5,13:59,ng9) ,absb(235,ng9)
-      real(kind=rb) :: ka_mn2o(9,19,ng9)
-      real(kind=rb) :: kb_mn2o(19,ng9)
-      real(kind=rb) :: selfref(10,ng9)
-      real(kind=rb) :: forref(4,ng9)
+      real*8 , dimension(ng9) :: fracrefb
+      real*8 :: fracrefa(ng9,9)
+      real*8 :: ka(9,5,13,ng9) ,absa(585,ng9)
+      real*8 :: kb(5,13:59,ng9) ,absb(235,ng9)
+      real*8 :: ka_mn2o(9,19,ng9)
+      real*8 :: kb_mn2o(19,ng9)
+      real*8 :: selfref(10,ng9)
+      real*8 :: forref(4,ng9)
 
       equivalence (ka(1,1,1,1),absa(1,1)),(kb(1,13,1),absb(1,1))
 
@@ -947,13 +953,13 @@
 
       integer(kind=im), parameter :: no10 = 16
 
-      real(kind=rb) , dimension(no10) :: fracrefao
-      real(kind=rb) , dimension(no10) :: fracrefbo
+      real,allocatable, dimension(:) :: fracrefao
+      real,allocatable, dimension(:) :: fracrefbo
 
-      real(kind=rb) :: kao(5,13,no10)
-      real(kind=rb) :: kbo(5,13:59,no10)
-      real(kind=rb) :: selfrefo(10,no10)
-      real(kind=rb) :: forrefo(4,no10)
+      real,allocatable, dimension(:,:,:) :: kao
+      real,allocatable, dimension(:,:,:) :: kbo
+      real,allocatable, dimension(:,:) :: selfrefo
+      real,allocatable, dimension(:,:) :: forrefo
 
 !-----------------------------------------------------------------
 ! rrtmg_lw COMBINED abs. coefficients for interval 10
@@ -979,13 +985,13 @@
 
       integer(kind=im), parameter :: ng10 = 6
 
-      real(kind=rb) , dimension(ng10) :: fracrefa
-      real(kind=rb) , dimension(ng10) :: fracrefb
+      real*8 , dimension(ng10) :: fracrefa
+      real*8 , dimension(ng10) :: fracrefb
 
-      real(kind=rb) :: ka(5,13,ng10)   , absa(65,ng10)
-      real(kind=rb) :: kb(5,13:59,ng10), absb(235,ng10)
-      real(kind=rb) :: selfref(10,ng10)
-      real(kind=rb) :: forref(4,ng10)
+      real*8 :: ka(5,13,ng10)   , absa(65,ng10)
+      real*8 :: kb(5,13:59,ng10), absb(235,ng10)
+      real*8 :: selfref(10,ng10)
+      real*8 :: forref(4,ng10)
 
       equivalence (ka(1,1,1),absa(1,1)),(kb(1,13,1),absb(1,1))
 
@@ -1021,15 +1027,15 @@
 
       integer(kind=im), parameter :: no11 = 16
 
-      real(kind=rb) , dimension(no11) :: fracrefao
-      real(kind=rb) , dimension(no11) :: fracrefbo
+      real,allocatable, dimension(:) :: fracrefao
+      real,allocatable, dimension(:) :: fracrefbo
 
-      real(kind=rb) :: kao(5,13,no11)
-      real(kind=rb) :: kbo(5,13:59,no11)
-      real(kind=rb) :: kao_mo2(19,no11)
-      real(kind=rb) :: kbo_mo2(19,no11)
-      real(kind=rb) :: selfrefo(10,no11)
-      real(kind=rb) :: forrefo(4,no11)
+      real,allocatable, dimension(:,:,:) :: kao
+      real,allocatable, dimension(:,:,:) :: kbo
+      real,allocatable, dimension(:,:) :: kao_mo2
+      real,allocatable, dimension(:,:) :: kbo_mo2
+      real,allocatable, dimension(:,:) :: selfrefo
+      real,allocatable, dimension(:,:) :: forrefo
 
 !-----------------------------------------------------------------
 ! rrtmg_lw COMBINED abs. coefficients for interval 11
@@ -1057,15 +1063,15 @@
 
       integer(kind=im), parameter :: ng11 = 8
 
-      real(kind=rb) , dimension(ng11) :: fracrefa
-      real(kind=rb) , dimension(ng11) :: fracrefb
+      real*8 , dimension(ng11) :: fracrefa
+      real*8 , dimension(ng11) :: fracrefb
 
-      real(kind=rb) :: ka(5,13,ng11)   , absa(65,ng11)
-      real(kind=rb) :: kb(5,13:59,ng11), absb(235,ng11)
-      real(kind=rb) :: ka_mo2(19,ng11)
-      real(kind=rb) :: kb_mo2(19,ng11)
-      real(kind=rb) :: selfref(10,ng11)
-      real(kind=rb) :: forref(4,ng11)
+      real*8 :: ka(5,13,ng11)   , absa(65,ng11)
+      real*8 :: kb(5,13:59,ng11), absb(235,ng11)
+      real*8 :: ka_mo2(19,ng11)
+      real*8 :: kb_mo2(19,ng11)
+      real*8 :: selfref(10,ng11)
+      real*8 :: forref(4,ng11)
 
       equivalence (ka(1,1,1),absa(1,1)),(kb(1,13,1),absb(1,1))
 
@@ -1097,10 +1103,10 @@
 
       integer(kind=im), parameter :: no12 = 16
 
-      real(kind=rb) :: fracrefao(no12,9)
-      real(kind=rb) :: kao(9,5,13,no12)
-      real(kind=rb) :: selfrefo(10,no12)
-      real(kind=rb) :: forrefo(4,no12)
+      real,allocatable, dimension(:,:) :: fracrefao
+      real,allocatable, dimension(:,:,:,:) :: kao
+      real,allocatable, dimension(:,:) :: selfrefo
+      real,allocatable, dimension(:,:) :: forrefo
 
 !-----------------------------------------------------------------
 ! rrtmg_lw COMBINED abs. coefficients for interval 12
@@ -1123,10 +1129,10 @@
 
       integer(kind=im), parameter :: ng12 = 8
 
-      real(kind=rb) :: fracrefa(ng12,9)
-      real(kind=rb) :: ka(9,5,13,ng12) ,absa(585,ng12)
-      real(kind=rb) :: selfref(10,ng12)
-      real(kind=rb) :: forref(4,ng12)
+      real*8 :: fracrefa(ng12,9)
+      real*8 :: ka(9,5,13,ng12) ,absa(585,ng12)
+      real*8 :: selfref(10,ng12)
+      real*8 :: forref(4,ng12)
 
       equivalence (ka(1,1,1,1),absa(1,1))
 
@@ -1161,15 +1167,15 @@
 
       integer(kind=im), parameter :: no13 = 16
 
-      real(kind=rb) , dimension(no13) :: fracrefbo
+      real,allocatable, dimension(:) :: fracrefbo
 
-      real(kind=rb) :: fracrefao(no13,9)
-      real(kind=rb) :: kao(9,5,13,no13)
-      real(kind=rb) :: kao_mco2(9,19,no13)
-      real(kind=rb) :: kao_mco(9,19,no13)
-      real(kind=rb) :: kbo_mo3(19,no13)
-      real(kind=rb) :: selfrefo(10,no13)
-      real(kind=rb) :: forrefo(4,no13)
+      real,allocatable, dimension(:,:) :: fracrefao
+      real,allocatable, dimension(:,:,:,:) :: kao
+      real,allocatable, dimension(:,:,:) :: kao_mco2
+      real,allocatable, dimension(:,:,:) :: kao_mco
+      real,allocatable, dimension(:,:) :: kbo_mo3
+      real,allocatable, dimension(:,:) :: selfrefo
+      real,allocatable, dimension(:,:) :: forrefo
 
 !-----------------------------------------------------------------
 ! rrtmg_lw COMBINED abs. coefficients for interval 13
@@ -1195,15 +1201,15 @@
 
       integer(kind=im), parameter :: ng13 = 4
 
-      real(kind=rb) , dimension(ng13) :: fracrefb
+      real*8 , dimension(ng13) :: fracrefb
 
-      real(kind=rb) :: fracrefa(ng13,9)
-      real(kind=rb) :: ka(9,5,13,ng13) ,absa(585,ng13)
-      real(kind=rb) :: ka_mco2(9,19,ng13)
-      real(kind=rb) :: ka_mco(9,19,ng13)
-      real(kind=rb) :: kb_mo3(19,ng13)
-      real(kind=rb) :: selfref(10,ng13)
-      real(kind=rb) :: forref(4,ng13)
+      real*8 :: fracrefa(ng13,9)
+      real*8 :: ka(9,5,13,ng13) ,absa(585,ng13)
+      real*8 :: ka_mco2(9,19,ng13)
+      real*8 :: ka_mco(9,19,ng13)
+      real*8 :: kb_mo3(19,ng13)
+      real*8 :: selfref(10,ng13)
+      real*8 :: forref(4,ng13)
 
       equivalence (ka(1,1,1,1),absa(1,1))
 
@@ -1237,13 +1243,13 @@
 
       integer(kind=im), parameter :: no14 = 16
 
-      real(kind=rb) , dimension(no14) :: fracrefao
-      real(kind=rb) , dimension(no14) :: fracrefbo
+      real,allocatable,  dimension(:) :: fracrefao
+      real,allocatable,  dimension(:) :: fracrefbo
 
-      real(kind=rb) :: kao(5,13,no14)
-      real(kind=rb) :: kbo(5,13:59,no14)
-      real(kind=rb) :: selfrefo(10,no14)
-      real(kind=rb) :: forrefo(4,no14)
+      real,allocatable, dimension(:,:,:) :: kao
+      real,allocatable, dimension(:,:,:) :: kbo
+      real,allocatable, dimension(:,:) :: selfrefo
+      real,allocatable, dimension(:,:) :: forrefo
 
 !-----------------------------------------------------------------
 ! rrtmg_lw COMBINED abs. coefficients for interval 14
@@ -1269,13 +1275,13 @@
 
       integer(kind=im), parameter :: ng14 = 2
 
-      real(kind=rb) , dimension(ng14) :: fracrefa
-      real(kind=rb) , dimension(ng14) :: fracrefb
+      real*8 , dimension(ng14) :: fracrefa
+      real*8 , dimension(ng14) :: fracrefb
 
-      real(kind=rb) :: ka(5,13,ng14)   ,absa(65,ng14)
-      real(kind=rb) :: kb(5,13:59,ng14),absb(235,ng14)
-      real(kind=rb) :: selfref(10,ng14)
-      real(kind=rb) :: forref(4,ng14)
+      real*8 :: ka(5,13,ng14)   ,absa(65,ng14)
+      real*8 :: kb(5,13:59,ng14),absb(235,ng14)
+      real*8 :: selfref(10,ng14)
+      real*8 :: forref(4,ng14)
 
       equivalence (ka(1,1,1),absa(1,1)), (kb(1,13,1),absb(1,1))
 
@@ -1308,11 +1314,11 @@
 
       integer(kind=im), parameter :: no15 = 16
 
-      real(kind=rb) :: fracrefao(no15,9)
-      real(kind=rb) :: kao(9,5,13,no15)
-      real(kind=rb) :: kao_mn2(9,19,no15)
-      real(kind=rb) :: selfrefo(10,no15)
-      real(kind=rb) :: forrefo(4,no15)
+      real,allocatable, dimension(:,:) :: fracrefao
+      real,allocatable, dimension(:,:,:,:) :: kao
+      real,allocatable, dimension(:,:,:) :: kao_mn2
+      real,allocatable, dimension(:,:) :: selfrefo
+      real,allocatable, dimension(:,:) :: forrefo
 
 
 !-----------------------------------------------------------------
@@ -1337,11 +1343,11 @@
 
       integer(kind=im), parameter :: ng15 = 2
 
-      real(kind=rb) :: fracrefa(ng15,9)
-      real(kind=rb) :: ka(9,5,13,ng15) ,absa(585,ng15)
-      real(kind=rb) :: ka_mn2(9,19,ng15)
-      real(kind=rb) :: selfref(10,ng15)
-      real(kind=rb) :: forref(4,ng15)
+      real*8 :: fracrefa(ng15,9)
+      real*8 :: ka(9,5,13,ng15) ,absa(585,ng15)
+      real*8 :: ka_mn2(9,19,ng15)
+      real*8 :: selfref(10,ng15)
+      real*8 :: forref(4,ng15)
 
       equivalence (ka(1,1,1,1),absa(1,1))
 
@@ -1374,13 +1380,13 @@
 
       integer(kind=im), parameter :: no16 = 16
 
-      real(kind=rb) , dimension(no16) :: fracrefbo
+      real,allocatable,  dimension(:) :: fracrefbo
 
-      real(kind=rb) :: fracrefao(no16,9)
-      real(kind=rb) :: kao(9,5,13,no16)
-      real(kind=rb) :: kbo(5,13:59,no16)
-      real(kind=rb) :: selfrefo(10,no16)
-      real(kind=rb) :: forrefo(4,no16)
+      real,allocatable, dimension(:,:) :: fracrefao
+      real,allocatable, dimension(:,:,:,:) :: kao
+      real,allocatable, dimension(:,:,:) :: kbo
+      real,allocatable, dimension(:,:) :: selfrefo
+      real,allocatable, dimension(:,:) :: forrefo
 
 !-----------------------------------------------------------------
 ! rrtmg_lw COMBINED abs. coefficients for interval 16
@@ -1405,13 +1411,13 @@
 
       integer(kind=im), parameter :: ng16 = 2
 
-      real(kind=rb) , dimension(ng16) :: fracrefb
+      real*8 , dimension(ng16) :: fracrefb
 
-      real(kind=rb) :: fracrefa(ng16,9)
-      real(kind=rb) :: ka(9,5,13,ng16) ,absa(585,ng16)
-      real(kind=rb) :: kb(5,13:59,ng16), absb(235,ng16)
-      real(kind=rb) :: selfref(10,ng16)
-      real(kind=rb) :: forref(4,ng16)
+      real*8 :: fracrefa(ng16,9)
+      real*8 :: ka(9,5,13,ng16) ,absa(585,ng16)
+      real*8 :: kb(5,13:59,ng16), absb(235,ng16)
+      real*8 :: selfref(10,ng16)
+      real*8 :: forref(4,ng16)
 
       equivalence (ka(1,1,1,1),absa(1,1)), (kb(1,13,1),absb(1,1))
 
@@ -3673,6 +3679,7 @@ contains
 !  layer pressure.  Store them in JP and JP1.  Store in FP the
 !  fraction of the difference (in ln(pressure)) between these
 !  two values that the layer pressure lies.
+ 
          plog = log(pavel(lay))
 !         plog = dlog(pavel(lay))
          jp(lay) = int(36._rb - 5*(plog+0.04_rb))
@@ -8281,7 +8288,9 @@ contains
                sumk = 0.
                do ipr = 1, ngn(igc)
                   iprsm = iprsm + 1
-                  sumk = sumk + kbo(jt,jp,iprsm)*rwgt(iprsm)
+                  !++ trude
+                  sumk = sumk + kbo(jt,jp-12,iprsm)*rwgt(iprsm)
+                  !sumk = sumk + kbo(jt,jp,iprsm)*rwgt(iprsm)
                enddo
                kb(jt,jp,igc) = sumk
             enddo
@@ -8379,7 +8388,7 @@ contains
                sumk = 0.
                do ipr = 1, ngn(ngs(1)+igc)
                   iprsm = iprsm + 1
-                  sumk = sumk + kbo(jt,jp,iprsm)*rwgt(iprsm+16)
+                  sumk = sumk + kbo(jt,jp-12,iprsm)*rwgt(iprsm+16)
                enddo
                kb(jt,jp,igc) = sumk
             enddo
@@ -8453,7 +8462,7 @@ contains
                do igc = 1,ngc(3)
                  sumk = 0.
                   do ipr = 1, ngn(ngs(2)+igc)
-                     iprsm = iprsm + 1
+                     iprsm = iprsm + 1                                          
                      sumk = sumk + kao(jn,jt,jp,iprsm)*rwgt(iprsm+32)
                   enddo
                   ka(jn,jt,jp,igc) = sumk
@@ -8469,7 +8478,7 @@ contains
                   sumk = 0.
                   do ipr = 1, ngn(ngs(2)+igc)
                      iprsm = iprsm + 1
-                     sumk = sumk + kbo(jn,jt,jp,iprsm)*rwgt(iprsm+32)
+                     sumk = sumk + kbo(jn,jt,jp-12,iprsm)*rwgt(iprsm+32)
                   enddo
                   kb(jn,jt,jp,igc) = sumk
                enddo
@@ -8596,7 +8605,7 @@ contains
                   sumk = 0.
                   do ipr = 1, ngn(ngs(3)+igc)
                      iprsm = iprsm + 1
-                     sumk = sumk + kbo(jn,jt,jp,iprsm)*rwgt(iprsm+48)
+                     sumk = sumk + kbo(jn,jt,jp-12,iprsm)*rwgt(iprsm+48)
                   enddo
                   kb(jn,jt,jp,igc) = sumk
                enddo
@@ -8698,7 +8707,7 @@ contains
                   sumk = 0.
                   do ipr = 1, ngn(ngs(4)+igc)
                      iprsm = iprsm + 1
-                     sumk = sumk + kbo(jn,jt,jp,iprsm)*rwgt(iprsm+64)
+                     sumk = sumk + kbo(jn,jt,jp-12,iprsm)*rwgt(iprsm+64)
                   enddo
                   kb(jn,jt,jp,igc) = sumk
                enddo
@@ -8914,7 +8923,7 @@ contains
                sumk = 0.
                do ipr = 1, ngn(ngs(6)+igc)
                   iprsm = iprsm + 1
-                  sumk = sumk + kbo(jt,jp,iprsm)*rwgt(iprsm+96)
+                  sumk = sumk + kbo(jt,jp-12,iprsm)*rwgt(iprsm+96)
                enddo
                kb(jt,jp,igc) = sumk
             enddo
@@ -9038,7 +9047,7 @@ contains
                sumk = 0.
                do ipr = 1, ngn(ngs(7)+igc)
                   iprsm = iprsm + 1
-                  sumk = sumk + kbo(jt,jp,iprsm)*rwgt(iprsm+112)
+                  sumk = sumk + kbo(jt,jp-12,iprsm)*rwgt(iprsm+112)
                enddo
                kb(jt,jp,igc) = sumk
             enddo
@@ -9158,7 +9167,7 @@ contains
                sumk = 0.
                do ipr = 1, ngn(ngs(8)+igc)
                   iprsm = iprsm + 1
-                  sumk = sumk + kbo(jt,jp,iprsm)*rwgt(iprsm+128)
+                  sumk = sumk + kbo(jt,jp-12,iprsm)*rwgt(iprsm+128)
                enddo
                kb(jt,jp,igc) = sumk
             enddo
@@ -9280,7 +9289,7 @@ contains
                sumk = 0.
                do ipr = 1, ngn(ngs(9)+igc)
                   iprsm = iprsm + 1
-                  sumk = sumk + kbo(jt,jp,iprsm)*rwgt(iprsm+144)
+                  sumk = sumk + kbo(jt,jp-12,iprsm)*rwgt(iprsm+144)
                enddo
                kb(jt,jp,igc) = sumk
             enddo
@@ -9368,7 +9377,7 @@ contains
                sumk = 0.
                do ipr = 1, ngn(ngs(10)+igc)
                   iprsm = iprsm + 1
-                  sumk = sumk + kbo(jt,jp,iprsm)*rwgt(iprsm+160)
+                  sumk = sumk + kbo(jt,jp-12,iprsm)*rwgt(iprsm+160)
                enddo
                kb(jt,jp,igc) = sumk
             enddo
@@ -9655,7 +9664,7 @@ contains
                sumk = 0.
                do ipr = 1, ngn(ngs(13)+igc)
                   iprsm = iprsm + 1
-                  sumk = sumk + kbo(jt,jp,iprsm)*rwgt(iprsm+208)
+                  sumk = sumk + kbo(jt,jp-12,iprsm)*rwgt(iprsm+208)
                enddo
                kb(jt,jp,igc) = sumk
             enddo
@@ -9829,7 +9838,7 @@ contains
                sumk = 0.
                do ipr = 1, ngn(ngs(15)+igc)
                   iprsm = iprsm + 1
-                  sumk = sumk + kbo(jt,jp,iprsm)*rwgt(iprsm+240)
+                  sumk = sumk + kbo(jt,jp-12,iprsm)*rwgt(iprsm+240)
                enddo
                kb(jt,jp,igc) = sumk
             enddo
@@ -11261,7 +11270,7 @@ contains
 
 ! Add one to nlayers here to include extra model layer at top of atmosphere
       nlayers = nlay
-
+     
 !  Initialize all molecular amounts and cloud properties to zero here, then pass input amounts
 !  into RRTM arrays below.
 
@@ -12052,7 +12061,11 @@ CONTAINS
                ENDIF
             ENDIF
 
-        ENDIF
+         ELSE
+            reice1d   = 10
+            recloud1d = 5
+            resnow1d  = 10
+         ENDIF
 
 !   For mp option=5 or 85  (new Ferrier- Aligo or fer_hires scheme), QI3D saves all
 !#if (HWRF == 1)
@@ -12103,6 +12116,8 @@ CONTAINS
          liqflglw = 1
 
 !Mukul change the flags here with reference to the new effective cloud/ice/snow radius
+ 
+         
          IF (ICLOUD .ne. 0) THEN
             IF ( has_reqc .ne. 0) THEN
                inflglw = 3
@@ -12253,8 +12268,10 @@ CONTAINS
 !  Steven Cavallo, NCAR/MMM, December 2010
        ! Calculate the column pressure buffer levels above the 
        ! model top       
-       do L=kte+1,nlayers,1
-          plev(ncol,L+1) = plev(ncol,L) - deltap
+
+      
+         do L=kte+1,nlayers,1
+         plev(ncol,L+1) = plev(ncol,L) - deltap
           play(ncol,L) = 0.5*(plev(ncol,L) + plev(ncol,L+1))
 ! Fill in height array above model top to top of atmosphere using
 ! dz from model top layer for completeness, though this information is not
@@ -12445,7 +12462,6 @@ CONTAINS
                        WRITE(message,*)'RRTMG:  reducing snow mass (cloud path) to ', &
                                        nint(snow_mass_factor*100.), ' percent of full value'
                        !call wrf_debug(150, message)
-                       write(*,*) message
                      ENDIF
                  endif
                  gsnowp = qs1d(k) * snow_mass_factor * pdel(ncol,k)*100.0 / gravmks * 1000.0     ! Grid box snow water path.
@@ -12922,7 +12938,12 @@ CONTAINS
                                               ! nlayers will subsequently 
                                               ! replace kte+1
 
-! Read in absorption coefficients and other data
+   !++ trude test
+   !NLAYERS=NLAYERS-1
+  !-- trude test
+   
+  
+   ! Read in absorption coefficients and other data
    IF ( allowed_to_read ) THEN
      CALL rrtmg_lwlookuptable
    ENDIF
@@ -12937,7 +12958,7 @@ CONTAINS
 ! **************************************************************************     
       SUBROUTINE rrtmg_lwlookuptable
 ! **************************************************************************     
-USE io_routines, ONLY: io_newunit
+USE io_routines, ONLY: io_newunit, io_read
 IMPLICIT NONE
 
 ! Local                                    
@@ -12948,7 +12969,7 @@ IMPLICIT NONE
       CHARACTER*80 errmess
       INTEGER rrtmg_unit
       INTEGER FILESIZE , recl
-
+      REAL :: foo
 !      IF ( wrf_dm_on_monitor() ) THEN
 !        DO i = 10,99
 !          INQUIRE ( i , OPENED = opened )
@@ -12960,8 +12981,7 @@ IMPLICIT NONE
 !        rrtmg_unit = -1
 ! 2010   CONTINUE
 !      ENDIF
-
-
+   
 ! trude
 !####### we will use icar get unit
 !      CALL wrf_dm_bcast_bytes ( rrtmg_unit , IWORDSIZE )
@@ -12977,10 +12997,10 @@ IMPLICIT NONE
 
 
 
- ! ++ trude,  With gfrotran, symlink RRTMG_LW_DATA to RRTMG_LW_DATA_DBL
-      OPEN(rrtmg_unit,FILE='RRTMG_LW_DATA',                  &
-             FORM='UNFORMATTED',STATUS='OLD', ERR=9009, ACCESS="STREAM")
-!      ENDIF
+ !! ++ trude,  With gfrotran, symlink RRTMG_LW_DATA to RRTMG_LW_DATA_DBL
+ !     OPEN(rrtmg_unit,FILE='RRTMG_LW_DATA',                  &
+ !            FORM='UNFORMATTED',STATUS='OLD', ERR=9009, ACCESS="STREAM")
+!!      ENDIF
 
       call lw_kgb01(rrtmg_unit)
       call lw_kgb02(rrtmg_unit)
@@ -13028,7 +13048,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb01(rrtmg_unit)
 ! **************************************************************************
-
+      USE io_routines!, ONLY: io_newunit, io_read
       use rrlw_kg01, only : fracrefao, fracrefbo, kao, kbo, kao_mn2, kbo_mn2, &
                            absa, absb, &
                       selfrefo, forrefo
@@ -13091,10 +13111,20 @@ IMPLICIT NONE
 
 !#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
 
-      READ (rrtmg_unit,ERR=9010) &
-      fracrefao, fracrefbo, kao, kbo, kao_mn2, kbo_mn2, selfrefo, forrefo
+     call io_read1d("fracrefao_1.nc", "fracrefao", fracrefao)
+     call io_read1d("fracrefbo_1.nc", "fracrefbo", fracrefbo)
+     call io_read3d("kao_1.nc", "kao", kao)
+     call io_read3d("kbo_1.nc", "kbo", kbo)
+     call io_read2d("kao_mn2_1.nc", "kao_mn2", kao_mn2)
+     call io_read2d("kbo_mn2_1.nc", "kbo_mn2", kbo_mn2)
+     call io_read2d("selfrefo_1.nc", "selfrefo", selfrefo)
+     call io_read2d("forrefo_1.nc", "forrefo", forrefo)
 
+     ! READ (rrtmg_unit,ERR=9010) &
+      !fracrefao, fracrefbo, kao, kbo, kao_mn2, kbo_mn2, selfrefo, forrefo
+   
 
+      
 
 
 
@@ -13119,7 +13149,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb02(rrtmg_unit)
 ! **************************************************************************
-
+      USE io_routines
       use rrlw_kg02, only : fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
 
       implicit none
@@ -13175,8 +13205,15 @@ IMPLICIT NONE
 !     etc.  The second index runs over the g-channel (1 to 16).
 
 ! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-      READ (rrtmg_unit,ERR=9010) &
-          fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
+      call io_read1d("fracrefao_2.nc", "fracrefao", fracrefao)
+      call io_read1d("fracrefbo_2.nc", "fracrefbo", fracrefbo)
+      call io_read3d("kao_2.nc", "kao", kao)
+      call io_read3d("kbo_2.nc", "kbo", kbo)
+      call io_read2d("selfrefo_2.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_2.nc", "forrefo", forrefo)
+      
+      !READ (rrtmg_unit,ERR=9010) &
+      !    fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
 
 !       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
 !          fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
@@ -13197,7 +13234,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb03(rrtmg_unit)
 ! **************************************************************************
-
+      USE io_routines
       use rrlw_kg03, only : fracrefao, fracrefbo, kao, kbo, kao_mn2o, &
                             kbo_mn2o, selfrefo, forrefo
 
@@ -13294,8 +13331,8 @@ IMPLICIT NONE
 
 ! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
 
-       READ (rrtmg_unit,ERR=9010) &
-          fracrefao, fracrefbo, kao, kbo, kao_mn2o, kbo_mn2o, selfrefo, forrefo
+       !READ (rrtmg_unit,ERR=9010) &
+       !   fracrefao, fracrefbo, kao, kbo, kao_mn2o, kbo_mn2o, selfrefo, forrefo
 !       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
 !          fracrefao, fracrefbo, kao, kbo, kao_mn2o, kbo_mn2o, selfrefo, forrefo
 !       DM_BCAST_MACRO(fracrefao)
@@ -13306,8 +13343,17 @@ IMPLICIT NONE
 !       DM_BCAST_MACRO(kbo_mn2o)
 !       DM_BCAST_MACRO(selfrefo)
 !       DM_BCAST_MACRO(forrefo)
-
-     RETURN
+          
+      call io_read2d("fracrefao_3.nc", "fracrefao", fracrefao)
+          call io_read2d("fracrefbo_3.nc", "fracrefbo", fracrefbo)
+          call io_read4d("kao_3.nc", "kao", kao)
+          call io_read4d("kbo_3.nc", "kbo", kbo)
+          call io_read3d("kao_mn2o_3.nc", "kao_mn2o", kao_mn2o)
+          call io_read3d("kbo_mn2o_3.nc", "kbo_mn2o", kbo_mn2o)
+          call io_read2d("selfrefo_3.nc", "selfrefo", selfrefo)
+          call io_read2d("forrefo_3.nc", "forrefo", forrefo)
+     
+          RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
      !CALL wrf_error_fatal(errmess)
@@ -13318,7 +13364,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb04(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrlw_kg04, only : fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
 
       implicit none
@@ -13386,8 +13432,8 @@ IMPLICIT NONE
 
 ! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
 
-       READ (rrtmg_unit,ERR=9010) &
-          fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
+ !      READ (rrtmg_unit,ERR=9010) &
+ !         fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
 !       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
 !          fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
 !       DM_BCAST_MACRO(fracrefao)
@@ -13396,6 +13442,14 @@ IMPLICIT NONE
 !       DM_BCAST_MACRO(kbo)
 !       DM_BCAST_MACRO(selfrefo)
 !       DM_BCAST_MACRO(forrefo)
+
+          call io_read2d("fracrefao_4.nc", "fracrefao", fracrefao)
+          call io_read2d("fracrefbo_4.nc", "fracrefbo", fracrefbo)
+          call io_read4d("kao_4.nc", "kao", kao)
+          call io_read4d("kbo_4.nc", "kbo", kbo)
+          call io_read2d("selfrefo_4.nc", "selfrefo", selfrefo)
+          call io_read2d("forrefo_4.nc", "forrefo", forrefo)
+       
 
      RETURN
 9010 CONTINUE
@@ -13408,7 +13462,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb05(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrlw_kg05, only : fracrefao, fracrefbo, kao, kbo, kao_mo3, &
                             selfrefo, forrefo, ccl4o
 
@@ -13494,8 +13548,8 @@ IMPLICIT NONE
 !     etc.  The second index runs over the g-channel (1 to 16).
 
 ! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-      READ (rrtmg_unit,ERR=9010) &
-      fracrefao, fracrefbo, kao, kbo, kao_mo3, ccl4o, selfrefo, forrefo
+!      READ (rrtmg_unit,ERR=9010) &
+!      fracrefao, fracrefbo, kao, kbo, kao_mo3, ccl4o, selfrefo, forrefo
 !       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
 !          fracrefao, fracrefbo, kao, kbo, kao_mo3, ccl4o, selfrefo, forrefo
 !       DM_BCAST_MACRO(fracrefao)
@@ -13506,6 +13560,14 @@ IMPLICIT NONE
 !       DM_BCAST_MACRO(ccl4o)
 !       DM_BCAST_MACRO(selfrefo)
 !       DM_BCAST_MACRO(forrefo)
+      call io_read2d("fracrefao_5.nc", "fracrefao", fracrefao)
+      call io_read2d("fracrefbo_5.nc", "fracrefbo", fracrefbo)
+      call io_read4d("kao_5.nc", "kao", kao)
+      call io_read4d("kbo_5.nc", "kbo", kbo)
+      call io_read3d("kao_mo3_5.nc", "kao_mo3", kao_mo3)
+      call io_read1d("ccl4o_5.nc", "ccl4o", ccl4o)
+      call io_read2d("selfrefo_5.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_5.nc", "forrefo", forrefo)
 
      RETURN
 9010 CONTINUE
@@ -13518,7 +13580,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb06(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrlw_kg06
 !     use rrlw_kg06, only : fracrefao, kao, kao_mco2, selfrefo, forrefo, &
 !                           cfc11adjo, cfc12o
@@ -13578,8 +13640,8 @@ IMPLICIT NONE
 !     etc.  The second index runs over the g-channel (1 to 16).
 
 ! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-      READ (rrtmg_unit,ERR=9010) &
-      fracrefao, kao, kao_mco2, cfc11adjo, cfc12o, selfrefo, forrefo
+ !     READ (rrtmg_unit,ERR=9010) &
+ !     fracrefao, kao, kao_mco2, cfc11adjo, cfc12o, selfrefo, forrefo
 !       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
 !          fracrefao, kao, kao_mco2, cfc11adjo, cfc12o, selfrefo, forrefo
 !       DM_BCAST_MACRO(fracrefao)
@@ -13589,7 +13651,14 @@ IMPLICIT NONE
 !       DM_BCAST_MACRO(cfc12o)
 !       DM_BCAST_MACRO(selfrefo)
 !       DM_BCAST_MACRO(forrefo)
-
+      call io_read1d("fracrefao_6.nc", "fracrefao", fracrefao)
+      call io_read3d("kao_6.nc", "kao", kao)
+      call io_read2d("kao_mco2_6.nc", "kao_mco2", kao_mco2)
+      call io_read1d("cfc11adjo_6.nc", "cfc11adjo", cfc11adjo)
+      call io_read1d("cfc12o_6.nc", "cfc12o", cfc12o)
+      call io_read2d("selfrefo_6.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_6.nc", "forrefo", forrefo)
+ 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
@@ -13601,7 +13670,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb07(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrlw_kg07, only : fracrefao, fracrefbo, kao, kbo, kao_mco2, &
                             kbo_mco2, selfrefo, forrefo
 
@@ -13683,8 +13752,8 @@ IMPLICIT NONE
 !     etc.  The second index runs over the g-channel (1 to 16).
 
 ! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-      READ (rrtmg_unit,ERR=9010) &
-      fracrefao, fracrefbo, kao, kbo, kao_mco2, kbo_mco2, selfrefo, forrefo
+  !    READ (rrtmg_unit,ERR=9010) &
+  !    fracrefao, fracrefbo, kao, kbo, kao_mco2, kbo_mco2, selfrefo, forrefo
 !       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
 !          fracrefao, fracrefbo, kao, kbo, kao_mco2, kbo_mco2, selfrefo, forrefo
 !       DM_BCAST_MACRO(fracrefao)
@@ -13695,7 +13764,14 @@ IMPLICIT NONE
 !       DM_BCAST_MACRO(kbo_mco2)
 !       DM_BCAST_MACRO(selfrefo)
 !       DM_BCAST_MACRO(forrefo)
-
+      call io_read2d("fracrefao_7.nc", "fracrefao", fracrefao)
+      call io_read1d("fracrefbo_7.nc", "fracrefbo", fracrefbo)
+      call io_read4d("kao_7.nc", "kao", kao)
+      call io_read3d("kbo_7.nc", "kbo", kbo)
+      call io_read3d("kao_mco2_7.nc", "kao_mco2", kao_mco2)
+      call io_read2d("kbo_mco2_7.nc", "kbo_mco2", kbo_mco2)
+      call io_read2d("selfrefo_7.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_7.nc", "forrefo", forrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
@@ -13707,7 +13783,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb08(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrlw_kg08, only : fracrefao, fracrefbo, kao, kao_mco2, kao_mn2o, &
                             kao_mo3, kbo, kbo_mco2, kbo_mn2o, selfrefo, forrefo, &
                             cfc12o, cfc22adjo
@@ -13793,9 +13869,9 @@ IMPLICIT NONE
 !     etc.  The second index runs over the g-channel (1 to 16).
 
 ! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-      READ (rrtmg_unit,ERR=9010) &
-      fracrefao, fracrefbo, kao, kbo, kao_mco2, kbo_mco2, kao_mn2o, &
-      kbo_mn2o, kao_mo3, cfc12o, cfc22adjo, selfrefo, forrefo
+ !    READ (rrtmg_unit,ERR=9010) &
+ !     fracrefao, fracrefbo, kao, kbo, kao_mco2, kbo_mco2, kao_mn2o, &
+ !     kbo_mn2o, kao_mo3, cfc12o, cfc22adjo, selfrefo, forrefo
 !       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
 !          fracrefao, fracrefbo, kao, kbo, kao_mco2, kbo_mco2, kao_mn2o, &
 !          kbo_mn2o, kao_mo3, cfc12o, cfc22adjo, selfrefo, forrefo
@@ -13812,7 +13888,19 @@ IMPLICIT NONE
 !       DM_BCAST_MACRO(cfc22adjo)
 !       DM_BCAST_MACRO(selfrefo)
 !       DM_BCAST_MACRO(forrefo)
-
+      call io_read1d("fracrefao_8.nc", "fracrefao", fracrefao)
+      call io_read1d("fracrefbo_8.nc", "fracrefbo", fracrefbo)
+      call io_read3d("kao_8.nc", "kao", kao)
+      call io_read3d("kbo_8.nc", "kbo", kbo)
+      call io_read2d("kao_mco2_8.nc", "kao_mco2", kao_mco2)
+      call io_read2d("kbo_mco2_8.nc", "kbo_mco2", kbo_mco2)
+      call io_read2d("kao_mn2o_8.nc", "kao_mn2o", kao_mn2o)
+      call io_read2d("kbo_mn2o_8.nc", "kbo_mn2o", kbo_mn2o)
+      call io_read2d("kao_mo3_8.nc", "kao_mo3", kao_mo3)
+      call io_read2d("selfrefo_8.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_8.nc", "forrefo", forrefo)
+      call io_read1d("cfc12o_8.nc", "cfc12o", cfc12o)
+      call io_read1d("cfc22adjo_8.nc", "cfc22adjo", cfc22adjo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
@@ -13824,7 +13912,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb09(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrlw_kg09, only : fracrefao, fracrefbo, kao, kbo, kao_mn2o, &
                             kbo_mn2o, selfrefo, forrefo
 
@@ -13906,8 +13994,8 @@ IMPLICIT NONE
 !     etc.  The second index runs over the g-channel (1 to 16).
 
 ! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-      READ (rrtmg_unit,ERR=9010) &
-      fracrefao, fracrefbo, kao, kbo, kao_mn2o, kbo_mn2o, selfrefo, forrefo
+  !    READ (rrtmg_unit,ERR=9010) &
+  !    fracrefao, fracrefbo, kao, kbo, kao_mn2o, kbo_mn2o, selfrefo, forrefo
 !       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
 !          fracrefao, fracrefbo, kao, kbo, kao_mn2o, kbo_mn2o, selfrefo, forrefo
 !       DM_BCAST_MACRO(fracrefao)
@@ -13918,7 +14006,14 @@ IMPLICIT NONE
 !       DM_BCAST_MACRO(kbo_mn2o)
 !       DM_BCAST_MACRO(selfrefo)
 !       DM_BCAST_MACRO(forrefo)
-
+      call io_read2d("fracrefao_9.nc", "fracrefao", fracrefao)
+      call io_read1d("fracrefbo_9.nc", "fracrefbo", fracrefbo)
+      call io_read4d("kao_9.nc", "kao", kao)
+      call io_read3d("kbo_9.nc", "kbo", kbo)
+      call io_read3d("kao_mn2o_9.nc", "kao_mn2o", kao_mn2o)
+      call io_read2d("kbo_mn2o_9.nc", "kbo_mn2o", kbo_mn2o)
+      call io_read2d("selfrefo_9.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_9.nc", "forrefo", forrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
@@ -13930,7 +14025,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb10(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrlw_kg10, only : fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
 
       implicit none
@@ -13986,8 +14081,8 @@ IMPLICIT NONE
 !     etc.  The second index runs over the g-channel (1 to 16).
 
 ! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-      READ (rrtmg_unit,ERR=9010) &
-      fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
+ !     READ (rrtmg_unit,ERR=9010) &
+ !     fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
 !       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
 !          fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
 !       DM_BCAST_MACRO(fracrefao)
@@ -13996,7 +14091,12 @@ IMPLICIT NONE
 !       DM_BCAST_MACRO(kbo)
 !       DM_BCAST_MACRO(selfrefo)
 !       DM_BCAST_MACRO(forrefo)
-
+      call io_read1d("fracrefao_10.nc", "fracrefao", fracrefao)
+      call io_read1d("fracrefbo_10.nc", "fracrefbo", fracrefbo)
+      call io_read3d("kao_10.nc", "kao", kao)
+      call io_read3d("kbo_10.nc", "kbo", kbo)
+      call io_read2d("selfrefo_10.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_10.nc", "forrefo", forrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
@@ -14008,7 +14108,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb11(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrlw_kg11, only : fracrefao, fracrefbo, kao, kbo, kao_mo2, &
                             kbo_mo2, selfrefo, forrefo
 
@@ -14079,8 +14179,8 @@ IMPLICIT NONE
 !     etc.  The second index runs over the g-channel (1 to 16).
 
 ! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-      READ (rrtmg_unit,ERR=9010) &
-      fracrefao, fracrefbo, kao, kbo, kao_mo2, kbo_mo2, selfrefo, forrefo
+ !     READ (rrtmg_unit,ERR=9010) &
+ !     fracrefao, fracrefbo, kao, kbo, kao_mo2, kbo_mo2, selfrefo, forrefo
 !       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
 !          fracrefao, fracrefbo, kao, kbo, kao_mo2, kbo_mo2, selfrefo, forrefo
 !       DM_BCAST_MACRO(fracrefao)
@@ -14091,7 +14191,14 @@ IMPLICIT NONE
 !       DM_BCAST_MACRO(kbo_mo2)
 !       DM_BCAST_MACRO(selfrefo)
 !       DM_BCAST_MACRO(forrefo)
-
+      call io_read1d("fracrefao_11.nc", "fracrefao", fracrefao)
+      call io_read1d("fracrefbo_11.nc", "fracrefbo", fracrefbo)
+      call io_read3d("kao_11.nc", "kao", kao)
+      call io_read3d("kbo_11.nc", "kbo", kbo)
+      call io_read2d("kao_mo2_11.nc", "kao_mo2", kao_mo2)
+      call io_read2d("kbo_mo2_11.nc", "kbo_mo2", kbo_mo2)
+      call io_read2d("selfrefo_11.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_11.nc", "forrefo", forrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
@@ -14103,7 +14210,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb12(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrlw_kg12, only : fracrefao, kao, selfrefo, forrefo
 
       implicit none
@@ -14152,14 +14259,18 @@ IMPLICIT NONE
 !     etc.  The second index runs over the g-channel (1 to 16).
 
 ! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-      READ (rrtmg_unit,ERR=9010) &
-      fracrefao, kao, selfrefo, forrefo
+ !     READ (rrtmg_unit,ERR=9010) &
+ !     fracrefao, kao, selfrefo, forrefo
 !       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
 !          fracrefao, kao, selfrefo, forrefo
 !       DM_BCAST_MACRO(fracrefao)
 !       DM_BCAST_MACRO(kao)
 !       DM_BCAST_MACRO(selfrefo)
 !       DM_BCAST_MACRO(forrefo)
+      call io_read2d("fracrefao_12.nc", "fracrefao", fracrefao)
+      call io_read4d("kao_12.nc", "kao", kao)
+      call io_read2d("selfrefo_12.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_12.nc", "forrefo", forrefo)
 
      RETURN
 9010 CONTINUE
@@ -14172,7 +14283,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb13(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrlw_kg13, only : fracrefao, fracrefbo, kao, kao_mco2, kao_mco, &
                             kbo_mo3, selfrefo, forrefo
 
@@ -14242,8 +14353,8 @@ IMPLICIT NONE
 !     etc.  The second index runs over the g-channel (1 to 16).
 
 ! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-      READ (rrtmg_unit,ERR=9010) &
-      fracrefao, fracrefbo, kao, kao_mco2, kao_mco, kbo_mo3, selfrefo, forrefo
+!      READ (rrtmg_unit,ERR=9010) &
+!      fracrefao, fracrefbo, kao, kao_mco2, kao_mco, kbo_mo3, selfrefo, forrefo
 !       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
 !          fracrefao, fracrefbo, kao, kao_mco2, kao_mco, kbo_mo3, selfrefo, forrefo
 !       DM_BCAST_MACRO(fracrefao)
@@ -14254,7 +14365,14 @@ IMPLICIT NONE
 !       DM_BCAST_MACRO(kbo_mo3)
 !       DM_BCAST_MACRO(selfrefo)
 !       DM_BCAST_MACRO(forrefo)
-
+      call io_read2d("fracrefao_13.nc", "fracrefao", fracrefao)
+      call io_read1d("fracrefbo_13.nc", "fracrefbo", fracrefbo)
+      call io_read4d("kao_13.nc", "kao", kao)
+      call io_read3d("kao_mco2_13.nc", "kao_mco2", kao_mco2)
+      call io_read3d("kao_mco_13.nc", "kao_mco", kao_mco)
+      call io_read2d("kbo_mo3_13.nc", "kbo_mo3", kbo_mo3)
+      call io_read2d("selfrefo_13.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_13.nc", "forrefo", forrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
@@ -14266,7 +14384,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb14(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrlw_kg14, only : fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
 
       implicit none
@@ -14328,8 +14446,8 @@ IMPLICIT NONE
 !     etc.  The second index runs over the g-channel (1 to 16).
 
 ! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-      READ (rrtmg_unit,ERR=9010) &
-      fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
+ !     READ (rrtmg_unit,ERR=9010) &
+ !     fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
 !       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
 !          fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
 !       DM_BCAST_MACRO(fracrefao)
@@ -14338,7 +14456,12 @@ IMPLICIT NONE
 !       DM_BCAST_MACRO(kbo)
 !       DM_BCAST_MACRO(selfrefo)
 !       DM_BCAST_MACRO(forrefo)
-
+      call io_read1d("fracrefao_14.nc", "fracrefao", fracrefao)
+      call io_read1d("fracrefbo_14.nc", "fracrefbo", fracrefbo)
+      call io_read3d("kao_14.nc", "kao", kao)
+      call io_read3d("kbo_14.nc", "kbo", kbo)
+      call io_read2d("selfrefo_14.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_14.nc", "forrefo", forrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
@@ -14350,7 +14473,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb15(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrlw_kg15, only : fracrefao, kao, kao_mn2, selfrefo, forrefo
 
       implicit none
@@ -14411,8 +14534,8 @@ IMPLICIT NONE
 !     etc.  The second index runs over the g-channel (1 to 16).
 
 ! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-      READ (rrtmg_unit,ERR=9010) &
-      fracrefao, kao, kao_mn2, selfrefo, forrefo
+ !     READ (rrtmg_unit,ERR=9010) &
+ !     fracrefao, kao, kao_mn2, selfrefo, forrefo
 !       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
 !          fracrefao, kao, kao_mn2, selfrefo, forrefo
 !       DM_BCAST_MACRO(fracrefao)
@@ -14420,6 +14543,11 @@ IMPLICIT NONE
 !       DM_BCAST_MACRO(kao_mn2)
 !       DM_BCAST_MACRO(selfrefo)
 !       DM_BCAST_MACRO(forrefo)
+      call io_read2d("fracrefao_15.nc", "fracrefao", fracrefao)
+      call io_read4d("kao_15.nc", "kao", kao)
+      call io_read3d("kao_mn2_15.nc", "kao_mn2", kao_mn2)
+      call io_read2d("selfrefo_15.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_15.nc", "forrefo", forrefo)
 
      RETURN
 9010 CONTINUE
@@ -14432,7 +14560,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb16(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrlw_kg16, only : fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
 
       implicit none
@@ -14494,8 +14622,8 @@ IMPLICIT NONE
 !     etc.  The second index runs over the g-channel (1 to 16).
 
 !#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-      READ (rrtmg_unit,ERR=9010) &
-         fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
+ !     READ (rrtmg_unit,ERR=9010) &
+ !        fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
 !      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
 !         fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
 !      DM_BCAST_MACRO(fracrefao)
@@ -14504,6 +14632,12 @@ IMPLICIT NONE
 !      DM_BCAST_MACRO(kbo)
 !      DM_BCAST_MACRO(selfrefo)
 !      DM_BCAST_MACRO(forrefo)
+      call io_read2d("fracrefao_16.nc", "fracrefao", fracrefao)
+      call io_read1d("fracrefbo_16.nc", "fracrefbo", fracrefbo)
+      call io_read4d("kao_16.nc", "kao", kao)
+      call io_read3d("kbo_16.nc", "kbo", kbo)
+      call io_read2d("selfrefo_16.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_16.nc", "forrefo", forrefo)
 
      RETURN
 9010 CONTINUE

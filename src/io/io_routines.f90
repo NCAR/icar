@@ -2,7 +2,7 @@
 !!  Basic file input/output routines
 !!
 !!  @details
-!!  Primary use is io_read2d/3d
+!!  Primary use is io_read 2d/3d
 !!  io_write* routines are more used for debugging
 !!  model output is performed in the output module
 !!
@@ -27,7 +27,7 @@ module io_routines
     !! Generic interface to the netcdf read routines
     !!------------------------------------------------------------
     interface io_read
-        module procedure io_read6d, io_read5d, io_read3d, io_read2d, io_read1d, io_read2di, io_read1dd, io_read_scalar_d
+        module procedure io_read6d, io_read5d, io_read4d, io_read3d, io_read2d, io_read1d, io_read2di, io_read1dd, io_read_scalar_d
     end interface
 
     !>------------------------------------------------------------
@@ -294,6 +294,75 @@ contains
         call check( nf90_close(ncid),filename)
 
     end subroutine io_read5d
+
+    !>------------------------------------------------------------
+    !! Same as io_read6d but for 4-dimensional data
+    !!
+    !! Reads in a variable from a netcdf file, allocating memory in data_in for it.
+    !!
+    !! if extradim is provided specifies this index for any extra dimensions (dims>3)
+    !!   e.g. we may only want one time slice from a 3d variable
+    !!
+    !! @param   filename    Name of NetCDF file to look at
+    !! @param   varname     Name of the NetCDF variable to read
+    !! @param[out] data_in     Allocatable 3-dimensional array to store output
+    !! @param   extradim    OPTIONAL: specify the position to read for any extra (e.g. time) dimension
+    !! @retval data_in     Allocated 3-dimensional array with the netCDF data
+    !!
+    !!------------------------------------------------------------
+    subroutine io_read4d(filename,varname,data_in,extradim)
+        implicit none
+        ! This is the name of the data_in file and variable we will read.
+        character(len=*), intent(in) :: filename, varname
+        real,intent(out),allocatable :: data_in(:,:,:,:)
+        integer, intent(in),optional :: extradim
+        integer, dimension(io_maxDims)  :: diminfo !will hold dimension lengths
+        integer, dimension(io_maxDims)  :: dimstart
+        ! This will be the netCDF ID for the file and data_in variable.
+        integer :: ncid, varid,i, err
+        real :: scale, offset
+
+        if (present(extradim)) then
+            dimstart=extradim
+            dimstart(1:4)=1
+        else
+            dimstart=1
+        endif
+
+        ! Read the dimension lengths
+        call io_getdims(filename,varname,diminfo)
+
+        if (allocated(data_in)) deallocate(data_in)
+        allocate(data_in(diminfo(2),diminfo(3),diminfo(4),diminfo(5)))
+
+        ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
+        ! the file.
+        call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
+        ! Get the varid of the data_in variable, based on its name.
+        call check(nf90_inq_varid(ncid, varname, varid),trim(filename)//":"//trim(varname))
+        err = nf90_get_att(ncid,varid,'scale_factor', scale)
+        if (err/=0) scale=1
+        err = nf90_get_att(ncid,varid,'add_offset', offset)
+        if (err/=0) offset=0
+
+
+        ! Read the data_in. skip the slowest varying indices if there are more than 3 dimensions (typically this will be time)
+        if (diminfo(1)>4) then
+            diminfo(6:diminfo(1)+1)=1 ! set count for extra dims to 1
+            call check(nf90_get_var(ncid, varid, data_in,&
+                                    dimstart(1:diminfo(1)), &               ! start  = 1 or extradim
+                                    [ (diminfo(i+1), i=1,diminfo(1)) ],&    ! count=n or 1 created through an implied do loop
+                                    [ (1,            i=1,diminfo(1)) ]),&   ! for all dims, stride = 1     "  implied do loop
+                                    trim(filename)//":"//trim(varname)) !pass file:var to check so it can give us more info
+        else
+            call check(nf90_get_var(ncid, varid, data_in),trim(filename)//":"//trim(varname))
+        endif
+
+        data_in = data_in * scale + offset
+        ! Close the file, freeing all resources.
+        call check( nf90_close(ncid),filename)
+
+    end subroutine io_read4d
 
     !>------------------------------------------------------------
     !! Same as io_read6d but for 3-dimensional data

@@ -52,7 +52,7 @@ contains
             if(.not.allocated(domain%tend%th_lwrad)) &
                 allocate(domain%tend%th_lwrad(domain%ims:domain%ime,domain%kms:domain%kme,domain%jms:domain%jme))
             call rrtmg_lwinit(                           &
-                p_top=domain%pressure_interface%data_3d(domain%ims,domain%kme,domain%jms), allowed_to_read=.TRUE. ,                     &
+                p_top=minval(domain%pressure_interface%data_3d(:,domain%kme,:)), allowed_to_read=.TRUE. ,                     &
                 ids=domain%ids, ide=domain%ide, jds=domain%jds, jde=domain%jde, kds=domain%kds, kde=domain%kde,                &
                 ims=domain%ims, ime=domain%ime, jms=domain%jms, jme=domain%jme, kms=domain%kms, kme=domain%kme,                &
                 its=domain%its, ite=domain%ite, jts=domain%jts, jte=domain%jte, kts=domain%kts, kte=domain%kte                 )
@@ -249,9 +249,12 @@ contains
                             mp_physics=0,                                          &
                             ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde,  &
                             ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme,  &
+!                            its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte &
                             its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte-1 &
 !                            lwupflx, lwupflxc, lwdnflx, lwdnflxc       &
-                                                           )
+                            )
+            domain%temperature%data_3d = domain%temperature%data_3d+domain%tend%th_lwrad*dt
+            domain%potential_temperature%data_3d = domain%temperature%data_3d/domain%exner%data_3d
         endif
 
     end subroutine rad
