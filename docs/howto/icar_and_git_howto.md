@@ -26,7 +26,7 @@ cd icar
 git remote add upstream https://github.com/NCAR/icar.git
 ```
 
-Then from the develop or master branch, periodically run:
+Then from the develop or main branch, periodically run:
 ```shell
 git fetch upstream
 git merge upstream/<branch_name>
@@ -51,7 +51,7 @@ The basics steps to get the ICAR source code repository are as follows. This is 
 
 Using Git involves a few different copies of the archive (there is more than one way to use Git -- this is how we propose you use it):
 
-1. **Truth repo:** this is the master copy of the archive, maintained on the GitHub server at https://github.com/NCAR/icar. You will not be able to edit this or push code to it directly. We don't either, we work on our own copy of this repo and only integrate the changes into the truth repo when they have been tested and reviewed.
+1. **Truth repo:** this is the main copy of the archive, maintained on the GitHub server at https://github.com/NCAR/icar. You will not be able to edit this or push code to it directly. We don't either, we work on our own copy of this repo and only integrate the changes into the truth repo when they have been tested and reviewed.
 
 2. **Your fork of the truth repo:** this is your version of the archive, maintained on the GitHub server by you. This is generally **not** where you edit code; it is more of a transfer point between your clone (see below) and the truth repo. Git keeps track of the differences between your fork and the truth repo. To move code changes from your fork to the truth repo, you must make a "pull request" to the ICAR truth repo. If it's decided that your code has been sufficiently tested and reviewed and that it is a useful addition to ICAR, then the administrators of the truth repo will do the actual pull (don't worry if some of the terminology does not yet make sense at this point).
 
@@ -103,8 +103,8 @@ git status
 you should get some informational message, such as
 
 ```shell
-On branch master
-Your branch is up-to-date with 'origin/master'.
+On branch main
+Your branch is up-to-date with 'origin/main'.
 
 nothing to commit, working directory clean
 ```
@@ -143,7 +143,7 @@ If you have already made changes to the code, this command by itself will not ov
 
 ##### 4.b. Merge changes
 
-Determine which branches you will need to work with. At the very least, this will include the master branch. If you are working on a hotfix or a feature branch that already exists, you will need this branch as well; the ICAR administrator has likely given you the name of the appropriate branch to use. Alternatively, you may want to create a new branch (e.g., if you are the first person to work on a new feature or bug fix). For more information about the branches in the ICAR archive, see the [Git workflow for ICAR](https://github.com/NCAR/icar/blob/master/docs/howto/icar_git_workflow.md).
+Determine which branches you will need to work with. At the very least, this will include the main branch. If you are working on a hotfix or a feature branch that already exists, you will need this branch as well; the ICAR administrator has likely given you the name of the appropriate branch to use. Alternatively, you may want to create a new branch (e.g., if you are the first person to work on a new feature or bug fix). For more information about the branches in the ICAR archive, see the [Git workflow for ICAR](https://github.com/NCAR/icar/blob/main/docs/howto/icar_git_workflow.md).
 
 For each branch, merge any changes from the truth repo into your local version:
 
@@ -261,4 +261,4 @@ This prevents you from deleting a remote branch from computer A, then accidental
 
 ### Git workflow
 
-For us to leverage Git to its full potential, we have implemented a Git-oriented workflow. This requires developers to adhere to a few rules regarding branch names and merge requests. A full description of the workflow we use can be found [here](https://github.com/NCAR/icar/blob/master/docs/howto/icar_git_workflow.md).  A useful tool to help use this workflow is called [git-flow](https://github.com/petervanderdoes/gitflow-avh).
+For us to leverage Git to its full potential, we have implemented a Git-oriented workflow. This requires developers to adhere to a few rules regarding branch names and merge requests. A full description of the workflow we use can be found [here](https://github.com/NCAR/icar/blob/main/docs/howto/icar_git_workflow.md).  A useful tool to help use this workflow is called [git-flow](https://github.com/petervanderdoes/gitflow-avh).

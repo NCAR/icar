@@ -1,3 +1,5 @@
+IMPORTANT: current procedure is to make changes to the develop branch and create pull requests into the develop branch. When making this Pull Reqest make sure to change the base branch to "develop".
+
 Use this template to give a detailed message describing the change you want to
   make to the code.
 
