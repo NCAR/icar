@@ -110,8 +110,10 @@ module icar_constants
         integer :: re_snow
         integer :: out_longwave_rad
         integer :: longwave_cloud_forcing
+        integer :: shortwave_cloud_forcing
         integer :: land_emissivity
         integer :: temperature_interface
+        integer :: cosine_zenith_angle
         integer :: last_var
 
     end type var_constants_type
@@ -124,7 +126,7 @@ module icar_constants
                                                            51, 52, 53, 54, 55, 56, 57, 58, 59, 60,  &
                                                            61, 62, 63, 64, 65, 66, 67, 68, 69, 70,  &
                                                            71, 72, 73, 74, 75, 76, 77 ,78, 79, 80,  &
-                                                           81, 82, 83, 84, 85)
+                                                           81, 82, 83, 84, 85, 86, 87)
 
     integer, parameter :: kINTEGER_BITS     = storage_size(kINTEGER_BITS)
     integer, parameter :: kMAX_STORAGE_VARS = storage_size(kVARS) / kINTEGER_BITS
@@ -222,6 +224,8 @@ module icar_constants
     real, parameter :: pi  = 3.1415927 ! pi
     real, parameter :: stefan_boltzmann = 5.67e-8 ! the Stefan-Boltzmann constant
     real, parameter :: karman = 0.41   ! the von Karman constant
+    real, parameter :: solar_constant=1366 ! W/m^2
+  
 
     ! convenience parameters for various physics packages
     real, parameter :: rovcp = Rd/cp

@@ -102,8 +102,10 @@ module domain_interface
 
     type(variable_t) :: out_longwave_rad
     type(variable_t) :: longwave_cloud_forcing
+    type(variable_t) :: shortwave_cloud_forcing
     type(variable_t) :: land_emissivity
     type(variable_t) :: temperature_interface
+    type(variable_t) :: cosine_zenith_angle
 
     integer,allocatable :: land_mask(:,:)
     type(variable_t) :: latitude

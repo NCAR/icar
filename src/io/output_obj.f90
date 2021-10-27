@@ -146,9 +146,11 @@ contains
         if (0<var_list( kVARS%re_snow) )                    call this%add_to_output( get_metadata( kVARS%re_snow                      , domain%re_snow%data_3d))
         if (0<var_list( kVARS%out_longwave_rad) )           call this%add_to_output( get_metadata( kVARS%out_longwave_rad             , domain%out_longwave_rad%data_2d))
         if (0<var_list( kVARS%longwave_cloud_forcing) )     call this%add_to_output( get_metadata( kVARS%longwave_cloud_forcing       , domain%longwave_cloud_forcing%data_2d))
+        if (0<var_list( kVARS%shortwave_cloud_forcing) )    call this%add_to_output( get_metadata( kVARS%shortwave_cloud_forcing      , domain%shortwave_cloud_forcing%data_2d))
+        if (0<var_list( kVARS%cosine_zenith_angle) )        call this%add_to_output( get_metadata( kVARS%cosine_zenith_angle          , domain%cosine_zenith_angle%data_2d))
         if (0<var_list( kVARS%land_emissivity) )            call this%add_to_output( get_metadata( kVARS%land_emissivity              , domain%land_emissivity%data_2d))
         if (0<var_list( kVARS%temperature_interface) )      call this%add_to_output( get_metadata( kVARS%temperature_interface        , domain%temperature_interface%data_3d))
-
+        
     end subroutine
 
     subroutine add_global_attributes(this)

@@ -597,6 +597,30 @@ contains
         end associate
 
         !>------------------------------------------------------------
+        !!  Shorwave cloud forcing
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%shortwave_cloud_forcing))
+            var%name        = "swcf"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "shortwave_cloud_forcing"), &
+                               attribute_t("units",         "W m-2"),                                                 &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+
+!>------------------------------------------------------------
+        !!  Cosine solar zenith angle
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%cosine_zenith_angle))
+            var%name        = "cosz"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "cosine_zenith_angle"), &
+                               attribute_t("units",         " "),                                                 &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+
+        !>------------------------------------------------------------
         !!  Surface emissivity
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%land_emissivity))

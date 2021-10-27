@@ -159,7 +159,6 @@ contains
         real, dimension(ims:ime) :: declination, day_of_year, hour_angle
 
         calc_solar_elevation = 0
-
         do i = its, ite
             day_of_year(i) = date%day_of_year(lon=lon(i,j))
 

@@ -244,6 +244,8 @@ contains
         if (0<opt%vars_to_allocate( kVARS%re_snow) )                    call setup(this%re_snow,                  this%grid)
         if (0<opt%vars_to_allocate( kVARS%out_longwave_rad) )           call setup(this%out_longwave_rad,         this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%longwave_cloud_forcing) )     call setup(this%longwave_cloud_forcing,   this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%shortwave_cloud_forcing) )    call setup(this%shortwave_cloud_forcing,  this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%cosine_zenith_angle) )        call setup(this%cosine_zenith_angle,      this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%temperature_interface) )      call setup(this%temperature_interface,    this%grid)
         if (0<opt%vars_to_allocate( kVARS%land_emissivity) )            call setup(this%land_emissivity,          this%grid2d)
 
@@ -1556,6 +1558,7 @@ contains
         associate(pressure              => this%pressure%data_3d,               &
                   exner                 => this%exner%data_3d,                  &
                   pressure_interface    => this%pressure_interface%data_3d,     &
+                  temperature_interface => this%temperature_interface%data_3d,     &
                   psfc                  => this%surface_pressure%data_2d,       &
                   temperature           => this%temperature%data_3d,            &
                   potential_temperature => this%potential_temperature%data_3d )
@@ -1580,6 +1583,15 @@ contains
                       temperature = potential_temperature * exner
                   endif
 
+                  if (associated(this%temperature_interface%data_3d)) then
+                    ! this isn't exactly correct, should be distance weighted...
+                    ! weight one = (dz2) / (dz1+dz2)
+                    ! weight two = (dz1) / (dz1+dz2)
+                    temperature_interface(:,1,:) = ( temperature(:,1,:) * 2 - temperature(:,2,:) )
+                    do i = 2, size(temperature_interface, 2)
+                        temperature_interface(:,i,:) = ( temperature(:,i-1,:) + temperature(:,i,:) ) / 2
+                    enddo
+                ENDIF
         end associate
 
         if (allocated(this%znw).or.allocated(this%znu)) call init_znu(this)
@@ -1676,13 +1688,14 @@ contains
                      [kVARS%z,                      kVARS%z_interface,              &
                       kVARS%dz,                     kVARS%dz_interface,             &
                       kVARS%u,                      kVARS%v,                        &
-                      kVARS%surface_pressure,       kVARS%roughness_z0,              &
+                      kVARS%surface_pressure,       kVARS%roughness_z0,             &
                       kVARS%terrain,                kVARS%pressure,                 &
                       kVARS%temperature,            kVARS%pressure_interface,       &
                       kVARS%exner,                  kVARS%potential_temperature,    &
                       kVARS%latitude,               kVARS%longitude,                &
                       kVARS%u_latitude,             kVARS%u_longitude,              &
-                      kVARS%v_latitude,             kVARS%v_longitude               ])
+                      kVARS%v_latitude,             kVARS%v_longitude,              &
+                      kVars%temperature_interface                                   ])
 
         ! List the variables that are required for any restart
         call options%restart_vars(                                                  &

@@ -289,13 +289,13 @@
 
       integer(kind=im), parameter :: no16 = 16
 
-      real(kind=rb) :: kao(9,5,13,no16)
-      real(kind=rb) :: kbo(5,13:59,no16)
-      real(kind=rb) :: selfrefo(10,no16), forrefo(3,no16)
-      real(kind=rb) :: sfluxrefo(no16)
+      real,allocatable, dimension(:,:,:,:) :: kao(:,:,:,:)
+      real,allocatable, dimension(:,:,:) :: kbo(:,:,:)
+      real,allocatable, dimension(:,:) :: selfrefo(:,:), forrefo(:,:)
+      real,allocatable, dimension(:) :: sfluxrefo(:)
 
       integer(kind=im) :: layreffr
-      real(kind=rb) :: rayl, strrat1
+      real :: rayl, strrat1
 
 !-----------------------------------------------------------------
 ! rrtmg_sw COMBINED abs. coefficients for interval 16
@@ -354,13 +354,13 @@
 
       integer(kind=im), parameter :: no17 = 16
 
-      real(kind=rb) :: kao(9,5,13,no17)
-      real(kind=rb) :: kbo(5,5,13:59,no17)
-      real(kind=rb) :: selfrefo(10,no17), forrefo(4,no17)
-      real(kind=rb) :: sfluxrefo(no17,5)
+      real,allocatable, dimension(:,:,:,:) :: kao(:,:,:,:)
+      real,allocatable, dimension(:,:,:,:) :: kbo(:,:,:,:)
+      real,allocatable, dimension(:,:) :: selfrefo(:,:), forrefo(:,:)
+      real,allocatable, dimension(:,:) :: sfluxrefo(:,:)
 
       integer(kind=im) :: layreffr
-      real(kind=rb) :: rayl, strrat
+      real :: rayl, strrat
 
 !-----------------------------------------------------------------
 ! rrtmg_sw COMBINED abs. coefficients for interval 17
@@ -419,13 +419,13 @@
 
       integer(kind=im), parameter :: no18 = 16
 
-      real(kind=rb) :: kao(9,5,13,no18)
-      real(kind=rb) :: kbo(5,13:59,no18)
-      real(kind=rb) :: selfrefo(10,no18), forrefo(3,no18)
-      real(kind=rb) :: sfluxrefo(no18,9)
+      real,allocatable, dimension(:,:,:,:) :: kao(:,:,:,:)
+      real,allocatable, dimension(:,:,:) :: kbo(:,:,:)
+      real,allocatable, dimension(:,:) :: selfrefo(:,:), forrefo(:,:)
+      real,allocatable, dimension(:,:) :: sfluxrefo(:,:)
 
       integer(kind=im) :: layreffr
-      real(kind=rb) :: rayl, strrat
+      real :: rayl, strrat
 
 !-----------------------------------------------------------------
 ! rrtmg_sw COMBINED abs. coefficients for interval 18
@@ -484,13 +484,13 @@
 
       integer(kind=im), parameter :: no19 = 16
 
-      real(kind=rb) :: kao(9,5,13,no19)
-      real(kind=rb) :: kbo(5,13:59,no19)
-      real(kind=rb) :: selfrefo(10,no19), forrefo(3,no19)
-      real(kind=rb) :: sfluxrefo(no19,9)
+      real,allocatable, dimension(:,:,:,:) :: kao(:,:,:,:)
+      real,allocatable, dimension(:,:,:) :: kbo(:,:,:)
+      real,allocatable, dimension(:,:) :: selfrefo(:,:), forrefo(:,:)
+      real,allocatable, dimension(:,:) :: sfluxrefo(:,:)
 
       integer(kind=im) :: layreffr
-      real(kind=rb) :: rayl, strrat
+      real :: rayl, strrat
 
 !-----------------------------------------------------------------
 ! rrtmg_sw COMBINED abs. coefficients for interval 19
@@ -550,14 +550,14 @@
 
       integer(kind=im), parameter :: no20 = 16
 
-      real(kind=rb) :: kao(5,13,no20)
-      real(kind=rb) :: kbo(5,13:59,no20)
-      real(kind=rb) :: selfrefo(10,no20), forrefo(4,no20)
-      real(kind=rb) :: sfluxrefo(no20)
-      real(kind=rb) :: absch4o(no20)
+      real,allocatable, dimension(:,:,:) :: kao(:,:,:)
+      real,allocatable, dimension(:,:,:) :: kbo(:,:,:)
+      real,allocatable, dimension(:,:) :: selfrefo(:,:), forrefo(:,:)
+      real,allocatable, dimension(:) :: sfluxrefo(:)
+      real,allocatable, dimension(:) :: absch4o(:)
 
       integer(kind=im) :: layreffr
-      real(kind=rb) :: rayl 
+      real :: rayl 
 
 !-----------------------------------------------------------------
 ! rrtmg_sw COMBINED abs. coefficients for interval 20
@@ -618,13 +618,13 @@
 
       integer(kind=im), parameter :: no21 = 16
 
-      real(kind=rb) :: kao(9,5,13,no21)
-      real(kind=rb) :: kbo(5,5,13:59,no21)
-      real(kind=rb) :: selfrefo(10,no21), forrefo(4,no21)
-      real(kind=rb) :: sfluxrefo(no21,9)
+      real,allocatable, dimension(:,:,:,:) :: kao(:,:,:,:)
+      real,allocatable, dimension(:,:,:,:) :: kbo(:,:,:,:)
+      real,allocatable, dimension(:,:) :: selfrefo(:,:), forrefo(:,:)
+      real,allocatable, dimension(:,:) :: sfluxrefo(:,:)
 
       integer(kind=im) :: layreffr
-      real(kind=rb) :: rayl, strrat
+      real :: rayl, strrat
 
 !-----------------------------------------------------------------
 ! rrtmg_sw COMBINED abs. coefficients for interval 21
@@ -683,13 +683,13 @@
 
       integer(kind=im), parameter :: no22 = 16
 
-      real(kind=rb) :: kao(9,5,13,no22)
-      real(kind=rb) :: kbo(5,13:59,no22)
-      real(kind=rb) :: selfrefo(10,no22), forrefo(3,no22)
-      real(kind=rb) :: sfluxrefo(no22,9)
+      real,allocatable, dimension(:,:,:,:) :: kao(:,:,:,:)
+      real,allocatable, dimension(:,:,:) :: kbo(:,:,:)
+      real,allocatable, dimension(:,:) :: selfrefo(:,:), forrefo(:,:)
+      real,allocatable, dimension(:,:) :: sfluxrefo(:,:)
 
       integer(kind=im) :: layreffr
-      real(kind=rb) :: rayl, strrat
+      real :: rayl, strrat
 
 !-----------------------------------------------------------------
 ! rrtmg_sw COMBINED abs. coefficients for interval 22
@@ -748,13 +748,13 @@
 
       integer(kind=im), parameter :: no23 = 16
 
-      real(kind=rb) :: kao(5,13,no23)
-      real(kind=rb) :: selfrefo(10,no23), forrefo(3,no23)
-      real(kind=rb) :: sfluxrefo(no23)
-      real(kind=rb) :: raylo(no23)
+      real,allocatable, dimension(:,:,:) :: kao(:,:,:)
+      real,allocatable, dimension(:,:) :: selfrefo(:,:), forrefo(:,:)
+      real,allocatable, dimension(:) :: sfluxrefo(:)
+      real,allocatable, dimension(:) :: raylo(:)
 
       integer(kind=im) :: layreffr
-      real(kind=rb) :: givfac
+      real :: givfac
 
 !-----------------------------------------------------------------
 ! rrtmg_sw COMBINED abs. coefficients for interval 23
@@ -816,15 +816,15 @@
 
       integer(kind=im), parameter :: no24 = 16
 
-      real(kind=rb) :: kao(9,5,13,no24)
-      real(kind=rb) :: kbo(5,13:59,no24)
-      real(kind=rb) :: selfrefo(10,no24), forrefo(3,no24)
-      real(kind=rb) :: sfluxrefo(no24,9)
-      real(kind=rb) :: abso3ao(no24), abso3bo(no24)
-      real(kind=rb) :: raylao(no24,9), raylbo(no24)
+      real,allocatable, dimension(:,:,:,:) :: kao(:,:,:,:)
+      real,allocatable, dimension(:,:,:) :: kbo(:,:,:)
+      real,allocatable, dimension(:,:) :: selfrefo(:,:), forrefo(:,:)
+      real,allocatable, dimension(:,:) :: sfluxrefo(:,:)
+      real,allocatable, dimension(:) :: abso3ao(:), abso3bo(:), raylbo(:)
+      real,allocatable, dimension(:,:) :: raylao(:,:)
 
       integer(kind=im) :: layreffr
-      real(kind=rb) :: strrat
+      real :: strrat
 
 !-----------------------------------------------------------------
 ! rrtmg_sw COMBINED abs. coefficients for interval 24
@@ -889,10 +889,10 @@
 
       integer(kind=im), parameter :: no25 = 16
 
-      real(kind=rb) :: kao(5,13,no25)
-      real(kind=rb) :: sfluxrefo(no25)
-      real(kind=rb) :: abso3ao(no25), abso3bo(no25)
-      real(kind=rb) :: raylo(no25)
+      real,allocatable, dimension(:,:,:) :: kao(:,:,:)
+      real,allocatable, dimension(:) :: sfluxrefo(:)
+      real,allocatable, dimension(:) :: abso3ao(:), abso3bo(:)
+      real,allocatable, dimension(:) :: raylo(:)
 
       integer(kind=im) :: layreffr
 
@@ -949,8 +949,8 @@
 
       integer(kind=im), parameter :: no26 = 16
 
-      real(kind=rb) :: sfluxrefo(no26)
-      real(kind=rb) :: raylo(no26)
+      real,allocatable, dimension(:) :: sfluxrefo(:)
+      real,allocatable, dimension(:) :: raylo(:)
 
 !-----------------------------------------------------------------
 ! rrtmg_sw COMBINED abs. coefficients for interval 26
@@ -999,13 +999,13 @@
 
       integer(kind=im), parameter :: no27 = 16
 
-      real(kind=rb) :: kao(5,13,no27)
-      real(kind=rb) :: kbo(5,13:59,no27)
-      real(kind=rb) :: sfluxrefo(no27)
-      real(kind=rb) :: raylo(no27)
+      real,allocatable, dimension(:,:,:) :: kao(:,:,:)
+      real,allocatable, dimension(:,:,:) :: kbo(:,:,:)
+      real,allocatable, dimension(:) :: sfluxrefo(:)
+      real,allocatable, dimension(:) :: raylo(:)
 
       integer(kind=im) :: layreffr
-      real(kind=rb) :: scalekur
+      real :: scalekur
 
 !-----------------------------------------------------------------
 ! rrtmg_sw COMBINED abs. coefficients for interval 27
@@ -1061,12 +1061,12 @@
 
       integer(kind=im), parameter :: no28 = 16
 
-      real(kind=rb) :: kao(9,5,13,no28)
-      real(kind=rb) :: kbo(5,5,13:59,no28)
-      real(kind=rb) :: sfluxrefo(no28,5)
+      real,allocatable, dimension(:,:,:,:) :: kao(:,:,:,:)
+      real,allocatable, dimension(:,:,:,:) :: kbo(:,:,:,:)
+      real,allocatable, dimension(:,:) :: sfluxrefo(:,:)
 
       integer(kind=im) :: layreffr
-      real(kind=rb) :: rayl, strrat
+      real :: rayl, strrat
 
 !-----------------------------------------------------------------
 ! rrtmg_sw COMBINED abs. coefficients for interval 28
@@ -1122,14 +1122,14 @@
 
       integer(kind=im), parameter :: no29 = 16
 
-      real(kind=rb) :: kao(5,13,no29)
-      real(kind=rb) :: kbo(5,13:59,no29)
-      real(kind=rb) :: selfrefo(10,no29), forrefo(4,no29)
-      real(kind=rb) :: sfluxrefo(no29)
-      real(kind=rb) :: absh2oo(no29), absco2o(no29)
+      real,allocatable, dimension(:,:,:):: kao(:,:,:)
+      real,allocatable, dimension(:,:,:) :: kbo(:,:,:)
+      real,allocatable, dimension(:,:) :: selfrefo(:,:), forrefo(:,:)
+      real,allocatable, dimension(:) :: sfluxrefo(:)
+      real,allocatable, dimension(:) :: absh2oo(:), absco2o(:)
 
       integer(kind=im) :: layreffr
-      real(kind=rb) :: rayl
+      real :: rayl
 
 !-----------------------------------------------------------------
 ! rrtmg_sw COMBINED abs. coefficients for interval 29
@@ -1846,8 +1846,8 @@
 ! mji - Exponential-random cloud overlap option
          case(5)
             ! Exponential-random overlap:
-            call wrf_error_fatal("Cloud Overlap case 5: ER has not yet been implemented. Stopping...") 
-
+ !           call wrf_error_fatal("Cloud Overlap case 5: ER has not yet been implemented. Stopping...") 
+            error stop "Cloud Overlap case 5: ER has not yet been implemented. Stopping..."
       end select
 
  
@@ -2186,8 +2186,9 @@
                          write(errmess,'(A,i5,i5,f8.2,f8.2)' )         &
                'ERROR: ICE GENERALIZED EFFECTIVE SIZE OUT OF BOUNDS'   &
                ,ig, lay, ciwpmc(ig,lay), radice
-                         call wrf_error_fatal(errmess)
-                     end if
+!                         call wrf_error_fatal(errmess)
+                  error stop errmess   
+                  end if
                      factor = (radice - 2._rb)/3._rb
                      index = int(factor)
                      if (index .eq. 46) index = 45
@@ -2203,11 +2204,13 @@
                                  (fdlice3(index+1,ib) - fdlice3(index,ib))
                      if (fdelta(ig) .lt. 0.0_rb) then
                       write(errmess, *) 'FDELTA LESS THAN 0.0'
-                      call wrf_error_fatal(errmess)
+                      !call wrf_error_fatal(errmess)
+                      error stop errmess
                      end if
                      if (fdelta(ig) .gt. 1.0_rb) then
                       write(errmess, *) 'FDELTA GT THAN 1.0'
-                      call wrf_error_fatal(errmess)
+!                      call wrf_error_fatal(errmess)
+                      error stop errmess
                      end if
                      forwice(ig) = fdelta(ig) + 0.5_rb / ssacoice(ig)
 ! See Fu 1996 p. 2067 
@@ -2235,7 +2238,8 @@
                          write(errmess,'(A,i5,i5,f8.2,f8.2)' )         &
                'ERROR: SNOW GENERALIZED EFFECTIVE SIZE OUT OF BOUNDS'   &
                ,ig, lay, cswpmc(ig,lay), radsno
-                         call wrf_error_fatal(errmess)
+                        ! call wrf_error_fatal(errmess)
+                         error stop errmess
                      end if
                      factor = (radsno - 2._rb)/3._rb
                      index = int(factor)
@@ -2252,11 +2256,13 @@
                                  (fdlice3(index+1,ib) - fdlice3(index,ib))
                      if (fdelta(ig) .lt. 0.0_rb) then
                       write(errmess, *) 'FDELTA LESS THAN 0.0'
-                      call wrf_error_fatal(errmess)
+                      !call wrf_error_fatal(errmess)
+                      error stop errmess
                      end if
                      if (fdelta(ig) .gt. 1.0_rb) then
                       write(errmess, *) 'FDELTA GT THAN 1.0'
-                      call wrf_error_fatal(errmess)
+                      !call wrf_error_fatal(errmess)
+                      error stop errmess
                      end if
                      forwsno(ig) = fdelta(ig) + 0.5_rb / ssacosno(ig)
 ! See Fu 1996 p. 2067
@@ -2264,23 +2270,28 @@
 ! Check to ensure all calculated quantities are within physical limits.  
                      if (extcosno(ig) .lt. 0.0_rb) then
                       write(errmess, *) 'SNOW EXTINCTION LESS THAN 0.0'
-                      call wrf_error_fatal(errmess)
+                      !call wrf_error_fatal(errmess)
+                      error stop errmess
                      end if
                      if (ssacosno(ig) .gt. 1.0_rb) then
                       write(errmess, *) 'SNOW SSA GRTR THAN 1.0'
-                      call wrf_error_fatal(errmess)
+                      !call wrf_error_fatal(errmess)
+                      error stop errmess
                      end if
                      if (ssacosno(ig) .lt. 0.0_rb)  then
                       write(errmess, *) 'SNOW SSA LESS THAN 0.0'
-                      call wrf_error_fatal(errmess)
+!                      call wrf_error_fatal(errmess)
+                      error stop errmess
                      end if
                      if (gsno(ig) .gt. 1.0_rb)  then
                       write(errmess, *) 'SNOW ASYM GRTR THAN 1.0'
-                      call wrf_error_fatal(errmess)
+                      !call wrf_error_fatal(errmess)
+                      error stop errmess
                      end if
                      if (gsno(ig) .lt. 0.0_rb)  then
                       write(errmess, *) 'SNOW ASYM LESS THAN 0.0'
-                      call wrf_error_fatal(errmess)
+                      !call wrf_error_fatal(errmess)
+                      error stop errmess
                      end if
                   else
                      extcosno(ig) = 0.0_rb
@@ -3291,7 +3302,7 @@
 !jm not thread safe      hvrtau = '$Revision: 1.3 $'
 
 ! Calculate gaseous optical depth and planck fractions for each spectral band.
-
+      
       call taumol16
       call taumol17
       call taumol18
@@ -3399,7 +3410,7 @@
                  fac01(lay) * absb(ind1  ,ig) + &
                  fac11(lay) * absb(ind1+1,ig)) 
 !            ssa(lay,ig) = tauray/taug(lay,ig)
-            if (lay .eq. laysolfr) sfluxzen(ig) = sfluxref(ig) 
+                 if (lay .eq. laysolfr) sfluxzen(ig) = sfluxref(ig) 
             taur(lay,ig) = tauray  
          enddo
       enddo
@@ -5091,7 +5102,7 @@
                sumk = 0.
                do ipr = 1, ngn(igc)
                   iprsm = iprsm + 1
-                  sumk = sumk + kbo(jt,jp,iprsm)*rwgt(iprsm)
+                  sumk = sumk + kbo(jt,jp-12,iprsm)*rwgt(iprsm)
                enddo
                kb(jt,jp,igc) = sumk
             enddo
@@ -5173,7 +5184,7 @@
                   sumk = 0.
                   do ipr = 1, ngn(ngs(1)+igc)
                      iprsm = iprsm + 1
-                     sumk = sumk + kbo(jn,jt,jp,iprsm)*rwgt(iprsm+16)
+                     sumk = sumk + kbo(jn,jt,jp-12,iprsm)*rwgt(iprsm+16)
                   enddo
                   kb(jn,jt,jp,igc) = sumk
                enddo
@@ -5257,7 +5268,7 @@
                sumk = 0.
                do ipr = 1, ngn(ngs(2)+igc)
                   iprsm = iprsm + 1
-                  sumk = sumk + kbo(jt,jp,iprsm)*rwgt(iprsm+32)
+                  sumk = sumk + kbo(jt,jp-12,iprsm)*rwgt(iprsm+32)
                enddo
                kb(jt,jp,igc) = sumk
             enddo
@@ -5340,7 +5351,7 @@
                sumk = 0.
                do ipr = 1, ngn(ngs(3)+igc)
                   iprsm = iprsm + 1
-                  sumk = sumk + kbo(jt,jp,iprsm)*rwgt(iprsm+48)
+                  sumk = sumk + kbo(jt,jp-12,iprsm)*rwgt(iprsm+48)
                enddo
                kb(jt,jp,igc) = sumk
             enddo
@@ -5418,7 +5429,7 @@
                sumk = 0.
                do ipr = 1, ngn(ngs(4)+igc)
                   iprsm = iprsm + 1
-                  sumk = sumk + kbo(jt,jp,iprsm)*rwgt(iprsm+64)
+                  sumk = sumk + kbo(jt,jp-12,iprsm)*rwgt(iprsm+64)
                enddo
                kb(jt,jp,igc) = sumk
             enddo
@@ -5503,7 +5514,7 @@
                   sumk = 0.
                   do ipr = 1, ngn(ngs(5)+igc)
                      iprsm = iprsm + 1
-                     sumk = sumk + kbo(jn,jt,jp,iprsm)*rwgt(iprsm+80)
+                     sumk = sumk + kbo(jn,jt,jp-12,iprsm)*rwgt(iprsm+80)
                   enddo
                   kb(jn,jt,jp,igc) = sumk
                enddo
@@ -5587,7 +5598,7 @@
                sumk = 0.
                do ipr = 1, ngn(ngs(6)+igc)
                   iprsm = iprsm + 1
-                  sumk = sumk + kbo(jt,jp,iprsm)*rwgt(iprsm+96)
+                  sumk = sumk + kbo(jt,jp-12,iprsm)*rwgt(iprsm+96)
                enddo
                kb(jt,jp,igc) = sumk
             enddo
@@ -5740,7 +5751,7 @@
                sumk = 0.
                do ipr = 1, ngn(ngs(8)+igc)
                   iprsm = iprsm + 1
-                  sumk = sumk + kbo(jt,jp,iprsm)*rwgt(iprsm+128)
+                  sumk = sumk + kbo(jt,jp-12,iprsm)*rwgt(iprsm+128)
                enddo
                kb(jt,jp,igc) = sumk
             enddo
@@ -5919,7 +5930,7 @@
                sumk = 0.
                do ipr = 1, ngn(ngs(11)+igc)
                   iprsm = iprsm + 1
-                  sumk = sumk + kbo(jt,jp,iprsm)*rwgt(iprsm+176)
+                  sumk = sumk + kbo(jt,jp-12,iprsm)*rwgt(iprsm+176)
                enddo
                kb(jt,jp,igc) = sumk
             enddo
@@ -5980,7 +5991,7 @@
                   sumk = 0.
                   do ipr = 1, ngn(ngs(12)+igc)
                      iprsm = iprsm + 1
-                     sumk = sumk + kbo(jn,jt,jp,iprsm)*rwgt(iprsm+192)
+                     sumk = sumk + kbo(jn,jt,jp-12,iprsm)*rwgt(iprsm+192)
                   enddo
                   kb(jn,jt,jp,igc) = sumk
                enddo
@@ -6037,7 +6048,7 @@
                sumk = 0.
                do ipr = 1, ngn(ngs(13)+igc)
                   iprsm = iprsm + 1
-                  sumk = sumk + kbo(jt,jp,iprsm)*rwgt(iprsm+208)
+                  sumk = sumk + kbo(jt,jp-12,iprsm)*rwgt(iprsm+208)
                enddo
                kb(jt,jp,igc) = sumk
             enddo
@@ -8352,7 +8363,6 @@
 
 
 ! Calculate the optical depths for gaseous absorption and Rayleigh scattering
-
       call taumol_sw(klev, &
                      colh2o, colco2, colch4, colo2, colo3, colmol, &
                      laytrop, jp, jt, jt1, &
@@ -9894,13 +9904,14 @@
 !------------------------------------------------------------------
 MODULE module_ra_rrtmg_sw
 
-use module_model_constants, only : cp
-USE module_wrf_error
-#if (HWRF == 1)
-USE module_state_description, ONLY : FER_MP_HIRES, FER_MP_HIRES_ADVECT, ETAMP_HWRF 
-#else
-USE module_state_description, ONLY : FER_MP_HIRES, FER_MP_HIRES_ADVECT
-#endif
+!use module_model_constants, only : cp
+use icar_constants, only : cp
+!USE module_wrf_error
+!#if (HWRF == 1)
+!USE module_state_description, ONLY : FER_MP_HIRES, FER_MP_HIRES_ADVECT, ETAMP_HWRF 
+!#else
+!USE module_state_description, ONLY : FER_MP_HIRES, FER_MP_HIRES_ADVECT
+!#endif
 !USE module_dm
 
 use parrrsw, only : nbndsw, ngptsw, naerec
@@ -10025,7 +10036,7 @@ CONTAINS
 !
 
 ! ------------------------ jararias 2013/08/10 -----------------
-   real, dimension(ims:ime,jms:jme), intent(out) :: &
+   real, dimension(ims:ime,jms:jme), intent(out), optional :: &
             swddir,  &  ! All-sky broadband surface direct horiz irradiance
             swddni,  &  ! All-sky broadband surface direct normal irradiance
             swddif,  &  ! All-sky broadband surface diffuse irradiance
@@ -10094,7 +10105,7 @@ CONTAINS
          INTENT(IN   ) :: O33D
    INTEGER, OPTIONAL, INTENT(IN ) :: o3input
 !  EC aerosol: no_src = naerec = 6
-   INTEGER,           INTENT(IN ) :: no_src
+   INTEGER, INTENT(IN ) :: no_src
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme, 1:no_src )       , &
          OPTIONAL                                               , &
          INTENT(IN   ) :: aerod
@@ -10331,8 +10342,9 @@ CONTAINS
         PRESENT(waer400) .AND. &
         PRESENT(waer600) .AND. &
         PRESENT(waer999) ) ) THEN
-      CALL wrf_error_fatal  &
-      ('Warning: missing fields required for aerosol radiation' )
+      !CALL wrf_error_fatal  &
+!      ('Warning: missing fields required for aerosol radiation' )
+         error stop 'Warning: missing fields required for aerosol radiation'
       ENDIF
       ENDIF
 #endif
@@ -10496,27 +10508,33 @@ CONTAINS
                   ENDDO
                ENDIF
             ENDIF
-
+         ELSE
+            reice1d   = 10
+            recloud1d = 5
+            resnow1d  = 10
          ENDIF
+
 ! For mp option=5 or 85  (new Ferrier- Aligo or called fer_hires
 ! scheme), QI3D saves all frozen water (ice+snow)
-#if (HWRF == 1)
-           IF ( mp_physics == FER_MP_HIRES .OR. &
-                mp_physics == FER_MP_HIRES_ADVECT .OR. &
-                mp_physics == ETAMP_HWRF ) THEN
-#else
-           IF ( mp_physics == FER_MP_HIRES .OR. &
-                mp_physics == FER_MP_HIRES_ADVECT) THEN
-#endif
-                  DO K=kts,kte
-                     qi1d(k) = qi3d(i,k,j)
-                     qs1d(k) = 0.0
-                     qc1d(k) = qc3d(i,k,j)
-                     qi1d(k) = max(0.,qi1d(k))
-                     qc1d(k) = max(0.,qc1d(k))
-                  ENDDO
-           ENDIF
-!
+! ++ trude, remove this test, we will not use mp option 5 or 85. 
+!#if (HWRF == 1)
+!           IF ( mp_physics == FER_MP_HIRES .OR. &
+!                mp_physics == FER_MP_HIRES_ADVECT .OR. &
+!                mp_physics == ETAMP_HWRF ) THEN
+!#else
+!           IF ( mp_physics == FER_MP_HIRES .OR. &
+!                mp_physics == FER_MP_HIRES_ADVECT) THEN
+!#endif
+!                  DO K=kts,kte
+!                     qi1d(k) = qi3d(i,k,j)
+!                     qs1d(k) = 0.0
+!                     qc1d(k) = qc3d(i,k,j)
+!                     qi1d(k) = max(0.,qi1d(k))
+!                     qc1d(k) = max(0.,qc1d(k))
+!                  ENDDO
+!           ENDIF
+!-- Trude
+
 !         EMISS0=EMISS(I,J)
 !         GLW0=0. 
 !         OLR0=0. 
@@ -11071,42 +11089,53 @@ CONTAINS
          end do
          if( slope < 0. ) then
             write(msg,'("ERROR: Negative total optical depth of ",f8.2," at point i,j,nb=",3i5)') slope,i,j,nb
-            call wrf_error_fatal(msg)
+            !call wrf_error_fatal(msg)
+            error stop msg
          else if( slope > 6. ) then
-            call wrf_message("-------------------------")
+            !call wrf_message("-------------------------")
+            write(*,*) "-------------------------"
             write(msg,'("WARNING: Large total sw optical depth of ",f8.2," at point i,j,nb=",3i5)') slope,i,j,nb
-            call wrf_message(msg)
-
-            call wrf_message("Diagnostics 1: k, tauaer300, tauaer400, tauaer600, tauaer999, tauaer")
+            write(*,*) msg
+            !call wrf_message(msg)
+            !call wrf_message("Diagnostics 1: k, tauaer300, tauaer400, tauaer600, tauaer999, tauaer")
+            wrirte(*,*) "Diagnostics 1: k, tauaer300, tauaer400, tauaer600, tauaer999, tauaer"
             do k=kts,kte
                write(msg,'(i4,5f8.2)') k, tauaer300(i,k,j), tauaer400(i,k,j), &
                     tauaer600(i,k,j), tauaer999(i,k,j),tauaer(ncol,k,nb)
-               call wrf_message(msg)
-               !czhao set an up-limit here to avoid segmentation fault 
+               !call wrf_message(msg)
+               write(*,*) msg
+                    !czhao set an up-limit here to avoid segmentation fault 
                !from extreme AOD
                tauaer(ncol,k,nb)=tauaer(ncol,k,nb)*6.0/slope 
             end do
 
-            call wrf_message("Diagnostics 2: k, gaer300, gaer400, gaer600, gaer999")
+            !call wrf_message("Diagnostics 2: k, gaer300, gaer400, gaer600, gaer999")
+            write(*,*) "Diagnostics 2: k, gaer300, gaer400, gaer600, gaer999"
             do k=kts,kte
                write(msg,'(i4,4f8.2)') k, gaer300(i,k,j), gaer400(i,k,j), &
                     gaer600(i,k,j), gaer999(i,k,j)
-               call wrf_message(msg)
+               !call wrf_message(msg)
+               write(*,*) msg
             end do
 
-            call wrf_message("Diagnostics 3: k, waer300, waer400, waer600, waer999")
+            !call wrf_message("Diagnostics 3: k, waer300, waer400, waer600, waer999")
+            write(*,*) "Diagnostics 3: k, waer300, waer400, waer600, waer999"
             do k=kts,kte
                write(msg,'(i4,4f8.2)') k, waer300(i,k,j), waer400(i,k,j), &
                     waer600(i,k,j), waer999(i,k,j)
-               call wrf_message(msg)
+               !call wrf_message(msg)
+               write(*,*) msg
             end do
 
-            call wrf_message("Diagnostics 4: k, ssaal, asyal, taual")
+            !call wrf_message("Diagnostics 4: k, ssaal, asyal, taual")
+            write(*,*) "Diagnostics 4: k, ssaal, asyal, taual"
             do k=kts-1,kte
                write(msg,'(i4,3f8.2)') k, ssaaer(i,k,nb), asmaer(i,k,nb), tauaer(i,k,nb)
-               call wrf_message(msg)
+!               call wrf_message(msg)
+               write(*,*) msg
             end do
-            call wrf_message("-------------------------")
+!            call wrf_message("-------------------------")
+            write(*,*) "-------------------------"
          endif
       enddo  ! nb
       endif  ! aer_ra_feedback
@@ -11191,13 +11220,14 @@ CONTAINS
             	swdnbcln(i,j)  = swdflxcln(1,1)
             end if
          endif
+         if (present(swddir)) then
             swddir(i,j)    = swdkdir(1,1)          ! jararias 2013/08/10
             swddni(i,j)    = swddir(i,j) / coszrs  ! jararias 2013/08/10
             swddif(i,j)    = swdkdif(1,1)          ! jararias 2013/08/10
             swdownc(i, j)  = swdflxc(1,1)          ! PAJ: clear-sky GHI
             swddirc(i,j)   = swdkdirc(1,1)         ! PAJ: clear-sky direct normal irradiance
             swddnic(i,j)   = swddirc(i,j) / coszrs ! PAJ: clear-sky direct normal irradiance
-
+         endif
 ! Output up and down layer fluxes for total and clear sky.
 ! Vertical ordering is from bottom to top in units of W m-2. 
          if ( present (swupflx) ) then
@@ -11212,7 +11242,7 @@ CONTAINS
 ! Output heating rate tendency; convert heating rate from K/d to K/s
 ! Heating rate arrays are ordered vertically from bottom to top here. 
          do k=kts,kte 
-            tten1d(k) = swhr(ncol,k)/86400.
+            tten1d(k) = swhr(ncol,k)/86400.     
             rthratensw(i,k,j) = tten1d(k)/pi3d(i,k,j)
          enddo
       else
@@ -11238,6 +11268,7 @@ CONTAINS
 				swdnbcln(i,j)  = 0.
             end if
          endif
+         if (present(swddir)) then
             swddir(i,j)    = 0.  ! jararias 2013/08/10
             swddni(i,j)    = 0.  ! jararias 2013/08/10
             swddif(i,j)    = 0.  ! jararias 2013/08/10
@@ -11245,7 +11276,7 @@ CONTAINS
             swddnic(i,j)   = 0.0 ! PAJ
             swddirc(i,j)   = 0.0 ! PAJ
             swcf(i,j)      = 0.
-
+         endif
       endif
 !
       end do i_loop
@@ -11287,7 +11318,7 @@ CONTAINS
 ! **************************************************************************     
       SUBROUTINE rrtmg_swlookuptable
 ! **************************************************************************     
-
+USE io_routines, ONLY: io_newunit, io_read
 IMPLICIT NONE
 
 ! Local                                    
@@ -11298,27 +11329,30 @@ IMPLICIT NONE
       CHARACTER*80 errmess
       INTEGER rrtmg_unit
 
-      IF ( wrf_dm_on_monitor() ) THEN
-        DO i = 10,99
-          INQUIRE ( i , OPENED = opened )
-          IF ( .NOT. opened ) THEN
-            rrtmg_unit = i
-            GOTO 2010
-          ENDIF
-        ENDDO
-        rrtmg_unit = -1
- 2010   CONTINUE
-      ENDIF
-      CALL wrf_dm_bcast_bytes ( rrtmg_unit , IWORDSIZE )
+!!      IF ( wrf_dm_on_monitor() ) THEN
+!        DO i = 10,99
+!          INQUIRE ( i , OPENED = opened )
+!          IF ( .NOT. opened ) THEN
+!            rrtmg_unit = i
+!            GOTO 2010
+!          ENDIF
+!        ENDDO
+!        rrtmg_unit = -1
+! 2010   CONTINUE
+!      ENDIF
+!      CALL wrf_dm_bcast_bytes ( rrtmg_unit , IWORDSIZE )
+
+      rrtmg_unit = io_newunit()
       IF ( rrtmg_unit < 0 ) THEN
-        CALL wrf_error_fatal ( 'module_ra_rrtmg_sw: rrtm_swlookuptable: Can not '// &
-                               'find unused fortran unit to read in lookup table.' )
+!        CALL wrf_error_fatal ( 'module_ra_rrtmg_sw: rrtm_swlookuptable: Can not '// &
+!                               'find unused fortran unit to read in lookup table.' )
+         error stop 'module_ra_rrtmg_sw: rrtm_swlookuptable: Can not find unused fortran unit to read in lookup table.'
       ENDIF
 
-      IF ( wrf_dm_on_monitor() ) THEN
-        OPEN(rrtmg_unit,FILE='RRTMG_SW_DATA',                  &
-             FORM='UNFORMATTED',STATUS='OLD',ERR=9009)
-      ENDIF
+!      IF ( wrf_dm_on_monitor() ) THEN
+!        OPEN(rrtmg_unit,FILE='RRTMG_SW_DATA',                  &
+!             FORM='UNFORMATTED',STATUS='OLD',ERR=9009)
+!      ENDIF
 
       call sw_kgb16(rrtmg_unit)
       call sw_kgb17(rrtmg_unit)
@@ -11335,13 +11369,14 @@ IMPLICIT NONE
       call sw_kgb28(rrtmg_unit)
       call sw_kgb29(rrtmg_unit)
 
-     IF ( wrf_dm_on_monitor() ) CLOSE (rrtmg_unit)
+    ! IF ( wrf_dm_on_monitor() ) 
+     CLOSE (rrtmg_unit)
 
      RETURN
 9009 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error opening RRTMG_SW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
-
+     !CALL wrf_error_fatal(errmess)
+     error stop errmess
      END SUBROUTINE rrtmg_swlookuptable
 
 ! **************************************************************************
@@ -11364,7 +11399,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine sw_kgb16(rrtmg_unit)
 ! **************************************************************************
-
+      USE io_routines
       use rrsw_kg16, only : kao, kbo, selfrefo, forrefo, sfluxrefo, &
                             rayl, strrat1, layreffr
 
@@ -11376,7 +11411,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+!      logical, external  :: wrf_dm_on_monitor
 
 !     Array sfluxrefo contains the Kurucz solar source function for this band. 
 
@@ -11422,32 +11457,41 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
+!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
+!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
 
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         rayl, strrat1, layreffr, kao, kbo, selfrefo, forrefo, sfluxrefo
-      DM_BCAST_REAL(rayl)
-      DM_BCAST_REAL(strrat1)
-      DM_BCAST_INTEGER(layreffr)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
-      DM_BCAST_MACRO(sfluxrefo)
+!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!         rayl, strrat1, layreffr, kao, kbo, selfrefo, forrefo, sfluxrefo
+!      DM_BCAST_REAL(rayl)
+!      DM_BCAST_REAL(strrat1)
+!      DM_BCAST_INTEGER(layreffr)
+!      DM_BCAST_MACRO(kao)
+!      DM_BCAST_MACRO(kbo)
+!      DM_BCAST_MACRO(selfrefo)
+!      DM_BCAST_MACRO(forrefo)
+!      DM_BCAST_MACRO(sfluxrefo)
+
+      call io_read0d("rayl_16_sw.nc", "rayl", rayl)
+      call io_read0d("strrat1_16_sw.nc", "strrat1", strrat1)
+      call io_read0di("layreffr_16_sw.nc", "layreffr", layreffr)
+      call io_read4d("kao_16_sw.nc", "kao", kao)
+      call io_read3d("kbo_16_sw.nc", "kbo", kbo)
+      call io_read2d("selfrefo_16_sw.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_16_sw.nc", "forrefo", forrefo)
+      call io_read1d("sfluxrefo_16_sw.nc", "sfluxrefo", sfluxrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
-
+!     CALL wrf_error_fatal(errmess)
+     error stop errmess
       end subroutine sw_kgb16
 
 ! **************************************************************************
       subroutine sw_kgb17(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrsw_kg17, only : kao, kbo, selfrefo, forrefo, sfluxrefo, &
                             rayl, strrat, layreffr
 
@@ -11459,7 +11503,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+!      logical, external  :: wrf_dm_on_monitor
 
 !     Array sfluxrefo contains the Kurucz solar source function for this band. 
 
@@ -11505,32 +11549,41 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
+!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
+!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
 
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         rayl, strrat, layreffr, kao, kbo, selfrefo, forrefo, sfluxrefo
-      DM_BCAST_REAL(rayl)
-      DM_BCAST_REAL(strrat)
-      DM_BCAST_INTEGER(layreffr)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
-      DM_BCAST_MACRO(sfluxrefo)
+
+      call io_read0d("rayl_17_sw.nc", "rayl", rayl)
+      call io_read0d("strrat_17_sw.nc", "strrat", strrat)
+      call io_read0di("layreffr_17_sw.nc", "layreffr", layreffr)
+      call io_read4d("kao_17_sw.nc", "kao", kao)
+      call io_read4d("kbo_17_sw.nc", "kbo", kbo)
+      call io_read2d("selfrefo_17_sw.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_17_sw.nc", "forrefo", forrefo)
+      call io_read2d("sfluxrefo_17_sw.nc", "sfluxrefo", sfluxrefo)
+!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!         rayl, strrat, layreffr, kao, kbo, selfrefo, forrefo, sfluxrefo
+!      DM_BCAST_REAL(rayl)
+!      DM_BCAST_REAL(strrat)
+!      DM_BCAST_INTEGER(layreffr)
+!      DM_BCAST_MACRO(kao)
+!      DM_BCAST_MACRO(kbo)
+!      DM_BCAST_MACRO(selfrefo)
+!      DM_BCAST_MACRO(forrefo)
+!      DM_BCAST_MACRO(sfluxrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
-
+!     CALL wrf_error_fatal(errmess)
+      error stop errmess
       end subroutine sw_kgb17
 
 ! **************************************************************************
       subroutine sw_kgb18(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrsw_kg18, only : kao, kbo, selfrefo, forrefo, sfluxrefo, &
                             rayl, strrat, layreffr
 
@@ -11542,7 +11595,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+!      logical, external  :: wrf_dm_on_monitor
 
 !     Array sfluxrefo contains the Kurucz solar source function for this band. 
 
@@ -11588,32 +11641,40 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
+!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
+!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
 
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         rayl, strrat, layreffr, kao, kbo, selfrefo, forrefo, sfluxrefo
-      DM_BCAST_REAL(rayl)
-      DM_BCAST_REAL(strrat)
-      DM_BCAST_INTEGER(layreffr)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
-      DM_BCAST_MACRO(sfluxrefo)
+!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!         rayl, strrat, layreffr, kao, kbo, selfrefo, forrefo, sfluxrefo
+!      DM_BCAST_REAL(rayl)
+!      DM_BCAST_REAL(strrat)
+!      DM_BCAST_INTEGER(layreffr)
+!      DM_BCAST_MACRO(kao)
+!      DM_BCAST_MACRO(kbo)
+!      DM_BCAST_MACRO(selfrefo)
+!      DM_BCAST_MACRO(forrefo)
+!      DM_BCAST_MACRO(sfluxrefo)
+      call io_read0d("rayl_18_sw.nc", "rayl", rayl)
+      call io_read0d("strrat_18_sw.nc", "strrat", strrat)
+      call io_read0di("layreffr_18_sw.nc", "layreffr", layreffr)
+      call io_read4d("kao_18_sw.nc", "kao", kao)
+      call io_read3d("kbo_18_sw.nc", "kbo", kbo)
+      call io_read2d("selfrefo_18_sw.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_18_sw.nc", "forrefo", forrefo)
+      call io_read2d("sfluxrefo_18_sw.nc", "sfluxrefo", sfluxrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
-
+!     CALL wrf_error_fatal(errmess)
+     error stop errmess
       end subroutine sw_kgb18 
 
 ! **************************************************************************
       subroutine sw_kgb19(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrsw_kg19, only : kao, kbo, selfrefo, forrefo, sfluxrefo, &
                             rayl, strrat, layreffr
 
@@ -11625,7 +11686,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+!      logical, external  :: wrf_dm_on_monitor
 
 !     Array sfluxrefo contains the Kurucz solar source function for this band. 
 
@@ -11671,32 +11732,41 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
+!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
+!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
 
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         rayl, strrat, layreffr, kao, kbo, selfrefo, forrefo, sfluxrefo
-      DM_BCAST_REAL(rayl)
-      DM_BCAST_REAL(strrat)
-      DM_BCAST_INTEGER(layreffr)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
-      DM_BCAST_MACRO(sfluxrefo)
+      call io_read0d("rayl_19_sw.nc", "rayl", rayl)
+      call io_read0d("strrat_19_sw.nc", "strrat", strrat)
+      call io_read0di("layreffr_19_sw.nc", "layreffr", layreffr)
+      call io_read4d("kao_19_sw.nc", "kao", kao)
+      call io_read3d("kbo_19_sw.nc", "kbo", kbo)
+      call io_read2d("selfrefo_19_sw.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_19_sw.nc", "forrefo", forrefo)
+      call io_read2d("sfluxrefo_19_sw.nc", "sfluxrefo", sfluxrefo)
+
+!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!         rayl, strrat, layreffr, kao, kbo, selfrefo, forrefo, sfluxrefo
+!      DM_BCAST_REAL(rayl)
+!      DM_BCAST_REAL(strrat)
+!      DM_BCAST_INTEGER(layreffr)
+!      DM_BCAST_MACRO(kao)
+!      DM_BCAST_MACRO(kbo)
+!      DM_BCAST_MACRO(selfrefo)
+!      DM_BCAST_MACRO(forrefo)
+!      DM_BCAST_MACRO(sfluxrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
-
+!     CALL wrf_error_fatal(errmess)
+     error stop errmess
       end subroutine sw_kgb19
 
 ! **************************************************************************
       subroutine sw_kgb20(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrsw_kg20, only : kao, kbo, selfrefo, forrefo, sfluxrefo, &
                             absch4o, rayl, layreffr
 
@@ -11708,7 +11778,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+!      logical, external  :: wrf_dm_on_monitor
 
 !     Array sfluxrefo contains the Kurucz solar source function for this band. 
 
@@ -11756,32 +11826,42 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
+!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
+!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
 
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         rayl, layreffr, absch4o, kao, kbo, selfrefo, forrefo, sfluxrefo
-      DM_BCAST_REAL(rayl)
-      DM_BCAST_INTEGER(layreffr)
-      DM_BCAST_MACRO(absch4o)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
-      DM_BCAST_MACRO(sfluxrefo)
+ !     IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+ !        rayl, layreffr, absch4o, kao, kbo, selfrefo, forrefo, sfluxrefo
+!      DM_BCAST_REAL(rayl)
+!      DM_BCAST_INTEGER(layreffr)
+!      DM_BCAST_MACRO(absch4o)
+!      DM_BCAST_MACRO(kao)
+!      DM_BCAST_MACRO(kbo)
+!      DM_BCAST_MACRO(selfrefo)
+!      DM_BCAST_MACRO(forrefo)
+!      DM_BCAST_MACRO(sfluxrefo)
+
+      call io_read0d("rayl_20_sw.nc", "rayl", rayl)
+      call io_read1d("absch4o_20_sw.nc", "absch4o", absch4o)
+      call io_read0di("layreffr_20_sw.nc", "layreffr", layreffr)
+      call io_read3d("kao_20_sw.nc", "kao", kao)
+      call io_read3d("kbo_20_sw.nc", "kbo", kbo)
+      call io_read2d("selfrefo_20_sw.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_20_sw.nc", "forrefo", forrefo)
+      call io_read1d("sfluxrefo_20_sw.nc", "sfluxrefo", sfluxrefo)
+
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
-
+!     CALL wrf_error_fatal(errmess)
+     error stop errmess
       end subroutine sw_kgb20
 
 ! **************************************************************************
       subroutine sw_kgb21(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrsw_kg21, only : kao, kbo, selfrefo, forrefo, sfluxrefo, &
                             rayl, strrat, layreffr
 
@@ -11793,7 +11873,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+!      logical, external  :: wrf_dm_on_monitor
 
 !     Array sfluxrefo contains the Kurucz solar source function for this band. 
 
@@ -11839,32 +11919,41 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
+!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
+!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
 
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         rayl, strrat, layreffr, kao, kbo, selfrefo, forrefo, sfluxrefo
-      DM_BCAST_REAL(rayl)
-      DM_BCAST_REAL(strrat)
-      DM_BCAST_INTEGER(layreffr)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
-      DM_BCAST_MACRO(sfluxrefo)
+!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!         rayl, strrat, layreffr, kao, kbo, selfrefo, forrefo, sfluxrefo
+!      DM_BCAST_REAL(rayl)
+!      DM_BCAST_REAL(strrat)
+!      DM_BCAST_INTEGER(layreffr)
+!      DM_BCAST_MACRO(kao)
+!      DM_BCAST_MACRO(kbo)
+!      DM_BCAST_MACRO(selfrefo)
+!      DM_BCAST_MACRO(forrefo)
+!      DM_BCAST_MACRO(sfluxrefo)
+
+      call io_read0d("rayl_21_sw.nc", "rayl", rayl)
+      call io_read0d("strrat_21_sw.nc", "strrat", strrat)
+      call io_read0di("layreffr_21_sw.nc", "layreffr", layreffr)
+      call io_read4d("kao_21_sw.nc", "kao", kao)
+      call io_read4d("kbo_21_sw.nc", "kbo", kbo)
+      call io_read2d("selfrefo_21_sw.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_21_sw.nc", "forrefo", forrefo)
+      call io_read2d("sfluxrefo_21_sw.nc", "sfluxrefo", sfluxrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
-
+!     CALL wrf_error_fatal(errmess)
+     error stop errmess
       end subroutine sw_kgb21
 
 ! **************************************************************************
       subroutine sw_kgb22(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrsw_kg22, only : kao, kbo, selfrefo, forrefo, sfluxrefo, &
                             rayl, strrat, layreffr
 
@@ -11876,7 +11965,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+!      logical, external  :: wrf_dm_on_monitor
 
 !     Array sfluxrefo contains the Kurucz solar source function for this band. 
 
@@ -11922,32 +12011,41 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
+!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
+!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
 
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         rayl, strrat, layreffr, kao, kbo, selfrefo, forrefo, sfluxrefo
-      DM_BCAST_REAL(rayl)
-      DM_BCAST_REAL(strrat)
-      DM_BCAST_INTEGER(layreffr)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
-      DM_BCAST_MACRO(sfluxrefo)
+!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!         rayl, strrat, layreffr, kao, kbo, selfrefo, forrefo, sfluxrefo
+!      DM_BCAST_REAL(rayl)
+!      DM_BCAST_REAL(strrat)
+!      DM_BCAST_INTEGER(layreffr)
+!      DM_BCAST_MACRO(kao)
+!      DM_BCAST_MACRO(kbo)
+!      DM_BCAST_MACRO(selfrefo)
+!      DM_BCAST_MACRO(forrefo)
+!      DM_BCAST_MACRO(sfluxrefo)
+      call io_read0d("rayl_22_sw.nc", "rayl", rayl)
+      call io_read0d("strrat_22_sw.nc", "strrat", strrat)
+      call io_read0di("layreffr_22_sw.nc", "layreffr", layreffr)
+      call io_read4d("kao_22_sw.nc", "kao", kao)
+      call io_read3d("kbo_22_sw.nc", "kbo", kbo)
+      call io_read2d("selfrefo_22_sw.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_22_sw.nc", "forrefo", forrefo)
+      call io_read2d("sfluxrefo_22_sw.nc", "sfluxrefo", sfluxrefo)
+
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
-
+!     CALL wrf_error_fatal(errmess)
+     error stop errmess
       end subroutine sw_kgb22
 
 ! **************************************************************************
       subroutine sw_kgb23(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrsw_kg23, only : kao, selfrefo, forrefo, sfluxrefo, &
                             raylo, givfac, layreffr
 
@@ -11959,7 +12057,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+!      logical, external  :: wrf_dm_on_monitor
 
 !     Array sfluxrefo contains the Kurucz solar source function for this band. 
 
@@ -11995,31 +12093,38 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
+!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
+!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
 
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         raylo, givfac, layreffr, kao, selfrefo, forrefo, sfluxrefo
-      DM_BCAST_MACRO(raylo)
-      DM_BCAST_REAL(givfac)
-      DM_BCAST_INTEGER(layreffr)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
-      DM_BCAST_MACRO(sfluxrefo)
+!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!         raylo, givfac, layreffr, kao, selfrefo, forrefo, sfluxrefo
+!      DM_BCAST_MACRO(raylo)
+!      DM_BCAST_REAL(givfac)
+!      DM_BCAST_INTEGER(layreffr)
+!      DM_BCAST_MACRO(kao)
+!      DM_BCAST_MACRO(selfrefo)
+!      DM_BCAST_MACRO(forrefo)
+!      DM_BCAST_MACRO(sfluxrefo)
+      call io_read1d("raylo_23_sw.nc", "raylo", raylo)
+      call io_read0d("givfac_23_sw.nc", "givfac", givfac)
+      call io_read0di("layreffr_23_sw.nc", "layreffr", layreffr)
+      call io_read3d("kao_23_sw.nc", "kao", kao)
+      call io_read2d("selfrefo_23_sw.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_23_sw.nc", "forrefo", forrefo)
+      call io_read1d("sfluxrefo_23_sw.nc", "sfluxrefo", sfluxrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
-
+!     CALL wrf_error_fatal(errmess)
+     error stop errmess
       end subroutine sw_kgb23
 
 ! **************************************************************************
       subroutine sw_kgb24(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrsw_kg24, only : kao, kbo, selfrefo, forrefo, sfluxrefo, &
                             raylao, raylbo, abso3ao, abso3bo, strrat, layreffr
 
@@ -12031,7 +12136,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+!      logical, external  :: wrf_dm_on_monitor
 
 !     Array sfluxrefo contains the Kurucz solar source function for this band. 
 
@@ -12081,36 +12186,46 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
-
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         raylao, raylbo, strrat, layreffr, abso3ao, abso3bo, kao, kbo, selfrefo, &
-         forrefo, sfluxrefo
-      DM_BCAST_MACRO(raylao)
-      DM_BCAST_MACRO(raylbo)
-      DM_BCAST_REAL(strrat)
-      DM_BCAST_INTEGER(layreffr)
-      DM_BCAST_MACRO(abso3ao)
-      DM_BCAST_MACRO(abso3bo)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
-      DM_BCAST_MACRO(sfluxrefo)
+!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
+!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
+      call io_read2d("raylao_24_sw.nc", "raylao", raylao)
+      call io_read1d("raylbo_24_sw.nc", "raylbo", raylbo)
+      call io_read1d("abso3ao_24_sw.nc", "abso3ao", abso3ao)
+      call io_read1d("abso3bo_24_sw.nc", "abso3bo", abso3bo)
+      call io_read0d("strrat_24_sw.nc", "strrat", strrat)
+      call io_read0di("layreffr_24_sw.nc", "layreffr", layreffr)
+      call io_read4d("kao_24_sw.nc", "kao", kao)
+      call io_read3d("kbo_24_sw.nc", "kbo", kbo)
+      call io_read2d("selfrefo_24_sw.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_24_sw.nc", "forrefo", forrefo)
+      call io_read2d("sfluxrefo_24_sw.nc", "sfluxrefo", sfluxrefo)
+!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!         raylao, raylbo, strrat, layreffr, abso3ao, abso3bo, kao, kbo, selfrefo, &
+!         forrefo, sfluxrefo
+!      DM_BCAST_MACRO(raylao)
+!      DM_BCAST_MACRO(raylbo)
+!      DM_BCAST_REAL(strrat)
+!      DM_BCAST_INTEGER(layreffr)
+!      DM_BCAST_MACRO(abso3ao)
+!      DM_BCAST_MACRO(abso3bo)
+!      DM_BCAST_MACRO(kao)
+!      DM_BCAST_MACRO(kbo)
+!      DM_BCAST_MACRO(selfrefo)
+!      DM_BCAST_MACRO(forrefo)
+!      DM_BCAST_MACRO(sfluxrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
-
+!     CALL wrf_error_fatal(errmess)
+     error stop errmess
       end subroutine sw_kgb24
 
 ! **************************************************************************
       subroutine sw_kgb25(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrsw_kg25, only : kao, sfluxrefo, &
                             raylo, abso3ao, abso3bo, layreffr
 
@@ -12122,7 +12237,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+!      logical, external  :: wrf_dm_on_monitor
 
 !     Array sfluxrefo contains the Kurucz solar source function for this band. 
 
@@ -12147,29 +12262,34 @@ IMPLICIT NONE
 !     in mb).  The fourth index, IG, goes from 1 to 16, and indicates
 !     which g-interval the absorption coefficients are for.
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
+!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
 
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         raylo, layreffr, abso3ao, abso3bo, kao, sfluxrefo
-      DM_BCAST_MACRO(raylo)
-      DM_BCAST_INTEGER(layreffr)
-      DM_BCAST_MACRO(abso3ao)
-      DM_BCAST_MACRO(abso3bo)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(sfluxrefo)
-
+!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!         raylo, layreffr, abso3ao, abso3bo, kao, sfluxrefo
+!      DM_BCAST_MACRO(raylo)
+!      DM_BCAST_INTEGER(layreffr)
+!      DM_BCAST_MACRO(abso3ao)
+!      DM_BCAST_MACRO(abso3bo)
+!      DM_BCAST_MACRO(kao)
+!      DM_BCAST_MACRO(sfluxrefo)
+      call io_read1d("raylo_25_sw.nc", "raylo", raylo)
+      call io_read1d("abso3ao_25_sw.nc", "abso3ao", abso3ao)
+      call io_read1d("abso3bo_25_sw.nc", "abso3bo", abso3bo)
+      call io_read0di("layreffr_25_sw.nc", "layreffr", layreffr)
+      call io_read3d("kao_25_sw.nc", "kao", kao)
+      call io_read1d("sfluxrefo_25_sw.nc", "sfluxrefo", sfluxrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
-
+!     CALL wrf_error_fatal(errmess)
+     error stop errmess
       end subroutine sw_kgb25
 
 ! **************************************************************************
       subroutine sw_kgb26(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrsw_kg26, only : sfluxrefo, raylo
 
       implicit none
@@ -12180,30 +12300,31 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+!      logical, external  :: wrf_dm_on_monitor
 
 !     Array sfluxrefo contains the Kurucz solar source function for this band. 
 
 !     Array raylo contains the Rayleigh extinction coefficient at all v for this band.
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
 
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         raylo, sfluxrefo
-      DM_BCAST_MACRO(raylo)
-      DM_BCAST_MACRO(sfluxrefo)
-
+!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!         raylo, sfluxrefo
+      !DM_BCAST_MACRO(raylo)
+      !DM_BCAST_MACRO(sfluxrefo)
+      call io_read1d("raylo_26_sw.nc", "raylo", raylo)
+      call io_read1d("sfluxrefo_26_sw.nc", "sfluxrefo", sfluxrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
-
+ !    CALL wrf_error_fatal(errmess)
+     error stop errmess
       end subroutine sw_kgb26
 
 ! **************************************************************************
       subroutine sw_kgb27(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrsw_kg27, only : kao, kbo, sfluxrefo, raylo, &
                             scalekur, layreffr
 
@@ -12215,7 +12336,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+!      logical, external  :: wrf_dm_on_monitor
 
 !     Array sfluxrefo contains the Kurucz solar source function for this band. 
 !     The values in array sfluxrefo were obtained using the "low resolution"
@@ -12254,30 +12375,35 @@ IMPLICIT NONE
 !     pressure levels in mb).  The third index, IG, goes from 1 to 16,
 !     and tells us which g-interval the absorption coefficients are for.
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
+!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
+!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
 
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         raylo, scalekur, layreffr, kao, kbo, sfluxrefo
-      DM_BCAST_MACRO(raylo)
-      DM_BCAST_REAL(scalekur)
-      DM_BCAST_INTEGER(layreffr)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(sfluxrefo)
-
+!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!         raylo, scalekur, layreffr, kao, kbo, sfluxrefo
+!      DM_BCAST_MACRO(raylo)
+!      DM_BCAST_REAL(scalekur)
+!      DM_BCAST_INTEGER(layreffr)
+!      DM_BCAST_MACRO(kao)
+!      DM_BCAST_MACRO(kbo)
+!      DM_BCAST_MACRO(sfluxrefo)
+      call io_read1d("raylo_27_sw.nc", "raylo", raylo)
+      call io_read0di("layreffr_27_sw.nc", "layreffr", layreffr)
+      call io_read0d("scalekur_27_sw.nc", "scalekur", scalekur)
+      call io_read3d("kao_27_sw.nc", "kao", kao)
+      call io_read3d("kbo_27_sw.nc", "kbo", kbo)
+      call io_read1d("sfluxrefo_27_sw.nc", "sfluxrefo", sfluxrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
-
+!     CALL wrf_error_fatal(errmess)
+     error stop errmess
       end subroutine sw_kgb27
 
 ! **************************************************************************
       subroutine sw_kgb28(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrsw_kg28, only : kao, kbo, sfluxrefo, &
                             rayl, strrat, layreffr
 
@@ -12289,7 +12415,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+!      logical, external  :: wrf_dm_on_monitor
 
 !     Array sfluxrefo contains the Kurucz solar source function for this band. 
 
@@ -12323,30 +12449,35 @@ IMPLICIT NONE
 !     pressure levels in mb).  The third index, IG, goes from 1 to 16,
 !     and tells us which g-interval the absorption coefficients are for.
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
+!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
+!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
 
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         rayl, strrat, layreffr, kao, kbo, sfluxrefo
-      DM_BCAST_REAL(rayl)
-      DM_BCAST_REAL(strrat)
-      DM_BCAST_INTEGER(layreffr)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(sfluxrefo)
-
+!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!         rayl, strrat, layreffr, kao, kbo, sfluxrefo
+!!      DM_BCAST_REAL(rayl)
+ !     DM_BCAST_REAL(strrat)
+ !     DM_BCAST_INTEGER(layreffr)
+ !     DM_BCAST_MACRO(kao)
+ !     DM_BCAST_MACRO(kbo)
+ !     DM_BCAST_MACRO(sfluxrefo)
+      call io_read0d("rayl_28_sw.nc", "rayl", rayl)
+      call io_read0d("strrat_28_sw.nc", "strrat", strrat)
+      call io_read0di("layreffr_28_sw.nc", "layreffr", layreffr)
+      call io_read4d("kao_28_sw.nc", "kao", kao)
+      call io_read4d("kbo_28_sw.nc", "kbo", kbo)
+      call io_read2d("sfluxrefo_28_sw.nc", "sfluxrefo", sfluxrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
-
+!     CALL wrf_error_fatal(errmess)
+     error stop errmess
       end subroutine sw_kgb28
 
 ! **************************************************************************
       subroutine sw_kgb29(rrtmg_unit)
 ! **************************************************************************
-
+         USE io_routines
       use rrsw_kg29, only : kao, kbo, selfrefo, forrefo, sfluxrefo, &
                             absh2oo, absco2o, rayl, layreffr
 
@@ -12358,7 +12489,7 @@ IMPLICIT NONE
 
 ! Local                                    
       character*80 errmess
-      logical, external  :: wrf_dm_on_monitor
+!      logical, external  :: wrf_dm_on_monitor
 
 !     Array sfluxrefo contains the Kurucz solar source function for this band. 
 
@@ -12408,26 +12539,35 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
-
-      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-         rayl, layreffr, absh2oo, absco2o, kao, kbo, selfrefo, forrefo, sfluxrefo
-      DM_BCAST_REAL(rayl)
-      DM_BCAST_INTEGER(layreffr)
-      DM_BCAST_MACRO(absh2oo)
-      DM_BCAST_MACRO(absco2o)
-      DM_BCAST_MACRO(kao)
-      DM_BCAST_MACRO(kbo)
-      DM_BCAST_MACRO(selfrefo)
-      DM_BCAST_MACRO(forrefo)
-      DM_BCAST_MACRO(sfluxrefo)
+!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
+!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
+!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
+      call io_read0d("rayl_29_sw.nc", "rayl", rayl)
+      call io_read1d("absh2oo_29_sw.nc", "absh2oo", absh2oo)
+      call io_read1d("absco2o_29_sw.nc", "absco2o", absco2o)
+      call io_read0di("layreffr_29_sw.nc", "layreffr", layreffr)
+      call io_read3d("kao_29_sw.nc", "kao", kao)
+      call io_read3d("kbo_29_sw.nc", "kbo", kbo)
+      call io_read2d("selfrefo_29_sw.nc", "selfrefo", selfrefo)
+      call io_read2d("forrefo_29_sw.nc", "forrefo", forrefo)
+      call io_read1d("sfluxrefo_29_sw.nc", "sfluxrefo", sfluxrefo)
+!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
+!         rayl, layreffr, absh2oo, absco2o, kao, kbo, selfrefo, forrefo, sfluxrefo
+!      DM_BCAST_REAL(rayl)
+!      DM_BCAST_INTEGER(layreffr)
+!      DM_BCAST_MACRO(absh2oo)
+!      DM_BCAST_MACRO(absco2o)
+!      DM_BCAST_MACRO(kao)
+!      DM_BCAST_MACRO(kbo)
+!      DM_BCAST_MACRO(selfrefo)
+!      DM_BCAST_MACRO(forrefo)
+!      DM_BCAST_MACRO(sfluxrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-     CALL wrf_error_fatal(errmess)
+!     CALL wrf_error_fatal(errmess)
+     error stop errmess
 
       end subroutine sw_kgb29
 
