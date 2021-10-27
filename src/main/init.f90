@@ -78,7 +78,7 @@ contains
         ! if (this_image()==1) then
         !     write(*,*) "options%parameters%external_files: ", trim(options%parameters%external_files)
         !     write(*,*) "options%parameters%restart: ", options%parameters%restart
-        ! endif            
+        ! endif
 
         if(options%parameters%external_files/="MISSING") then
             if (options%parameters%restart) then  ! Do not overwrite restart if this is specified!
@@ -107,11 +107,11 @@ contains
             ! elseif (this_image()==1) then
             !     write(*,*) "using the difference between hi- and lo-res terrain for u/v components of w_real "
             endif
-                        
+
             call domain%calculate_delta_terrain(boundary, options)
 
         endif
-        
+
 
         if (this_image()==1) write(*,*) "Updating initial winds"
         call update_winds(domain, options)

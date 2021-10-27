@@ -18,7 +18,7 @@ module output_interface
   use variable_interface, only : variable_t
   use domain_interface,   only : domain_t
   use meta_data_interface,only : meta_data_t
-  use time_object,        only : Time_type
+  use time_object,        only : Time_type, THREESIXTY, GREGORIAN, NOCALENDAR, NOLEAP
 
   implicit none
 

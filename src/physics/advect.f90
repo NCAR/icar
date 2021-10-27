@@ -119,7 +119,7 @@ contains
         real, dimension(1:nx-1,1:nz)    :: f1   ! historical note, there used to be an f2 to store f[x+1]
         real, dimension(1:nx-2,1:nz)    :: f3,f4
         real, dimension(1:nx-2,1:nz-1)  :: f5
-        
+
         ! Multiply dz by jacobian so that all advection terms will be divided by mass-centered jacobian
 
         !$omp parallel shared(qin,q,u,v,w,rho,dz,jaco) firstprivate(nx,ny,nz) private(i,f1,f3,f4,f5)
@@ -167,7 +167,7 @@ contains
            !                          / rho(2:nx-1,nz,i) / dz(2:nx-1,nz,i)
            ! else
                ! perform horizontal advection, from difference terms
-               q(2:nx-1,:,i)      = q(2:nx-1,:,i)       - ((f1(2:nx-1,:) - f1(1:nx-2,:)) + (f3 - f4)) /(dx*dz(2:nx-1,:,i)*jaco(2:nx-1,:,i))                      
+               q(2:nx-1,:,i)      = q(2:nx-1,:,i)       - ((f1(2:nx-1,:) - f1(1:nx-2,:)) + (f3 - f4)) /(dx*dz(2:nx-1,:,i)*jaco(2:nx-1,:,i))
                ! then vertical (order doesn't matter because fluxes f1-6 are calculated before applying them)
                ! add fluxes to middle layers
                q(2:nx-1,2:nz-1,i) = q(2:nx-1,2:nz-1,i)  - (f5(:,2:nz-1) - f5(:,1:nz-2)) / (dz(2:nx-1,2:nz-1,i)*jaco(2:nx-1,2:nz-1,i))
@@ -302,7 +302,7 @@ contains
                 do k=kms+1,kme
                     dv(i,j) = (v(i,k,j+1) * jaco_v(i,k,j+1) - v(i,k,j) * jaco_v(i,k,j))/dx
                     du(i,j) = (u(i+1,k,j) * jaco_u(i+1,k,j) - u(i,k,j) * jaco_u(i,k,j))/dx
-                    
+
                     if (abs(du(i,j) + dv(i,j) + (w(i,k,j)*jaco_w(i,k,j)-w(i,k-1,j)*jaco_w(i,k-1,j))/(dz(i,k,j))) > 1e-3) then
                         print*, this_image(), i,j,k , abs(du(i,j) + dv(i,j) + (w(i,k,j)*jaco_w(i,k,j)-w(i,k-1,j)*jaco_w(i,k-1,j))/(dz(i,k,j)))
                         print*, "Winds are not balanced on entry to advect"
@@ -342,7 +342,7 @@ contains
             allocate(W_m     (nx,  nz,ny  ))
             allocate(lastqv_m(nx,  nz,ny  ))
         endif
-        
+
         ! calculate U,V,W normalized for dt/dx (dx**2 for density advection so we can skip a /dx in the actual advection code)
         ! if (options%parameters%advect_density) then
         !     U_m = domain%ur(2:nx,:,:) * (dt/dx**2)

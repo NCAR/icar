@@ -40,7 +40,7 @@ program other_image_grids
     enddo
 
     sync all
-    
+
     if (this_image() == 1) then
         do i = 1, num_images()
             passed = passed .and. passed[i]

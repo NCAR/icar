@@ -14,33 +14,33 @@ module adv_mpdata
     private
     real,dimension(:,:,:),allocatable::U_m,V_m,W_m
     integer :: order
-    
+
     public:: mpdata, mpdata_init
     public:: advect3d ! for test_mpdata testing only!
-    
+
 
 contains
 
     subroutine flux1(l,r,U,f)
     !     Calculate the donor cell flux function
-    !     l = left gridcell scalar 
+    !     l = left gridcell scalar
     !     r = right gridcell scalar
     !     U = Courant number (u*dt/dx)
-    !     
+    !
     !     If U is positive, return l*U if U is negative return r*U
-    !     By using the mathematical form instead of the logical form, 
+    !     By using the mathematical form instead of the logical form,
     !     we can run on the entire grid simultaneously, and avoid branches
 
     !   arguments
         implicit none
         real, dimension(:), intent(in) :: l,r,U
         real, dimension(:), intent(inout) :: f
-        
+
         !   main code
         f= ((U+ABS(U)) * l + (U-ABS(U)) * r)/2
 
     end subroutine flux1
-    
+
     subroutine upwind_advection(qin, u, v, w, q, dx,dz,nx,nz,ny,jaco)
         implicit none
         real,dimension(1:nx,1:nz,1:ny),  intent(in) :: qin
@@ -52,7 +52,7 @@ contains
         real,dimension(1:nx,1:nz,1:ny),  intent(in) :: dz
         integer, intent(in) :: ny,nz,nx
         real, intent(in) :: dx
-        
+
         ! interal parameters
         integer :: i
         real, dimension(1:nx-1,1:nz) :: f1 ! there used to be an f2 to store f[x+1]
@@ -103,7 +103,7 @@ contains
            !                          / rho(2:nx-1,nz,i) / dz(2:nx-1,nz,i)
            ! else
                ! perform horizontal advection, from difference terms
-               q(2:nx-1,:,i)      = q(2:nx-1,:,i)       - ((f1(2:nx-1,:) - f1(1:nx-2,:)) + (f3 - f4)) /(dx*dz(2:nx-1,:,i)*jaco(2:nx-1,:,i))                      
+               q(2:nx-1,:,i)      = q(2:nx-1,:,i)       - ((f1(2:nx-1,:) - f1(1:nx-2,:)) + (f3 - f4)) /(dx*dz(2:nx-1,:,i)*jaco(2:nx-1,:,i))
                ! then vertical (order doesn't matter because fluxes f1-6 are calculated before applying them)
                ! add fluxes to middle layers
                q(2:nx-1,2:nz-1,i) = q(2:nx-1,2:nz-1,i)  - (f5(:,2:nz-1) - f5(:,1:nz-2)) / (dz(2:nx-1,2:nz-1,i)*jaco(2:nx-1,2:nz-1,i))
@@ -115,7 +115,7 @@ contains
         enddo
         !$omp end do
         !$omp end parallel
-        
+
     end subroutine upwind_advection
 
     subroutine mpdata_fluxes(q,u,v,w,u2,v2,w2, nx,nz,ny)
@@ -127,12 +127,12 @@ contains
         real, dimension(nx,nz,ny-1), intent(out) :: v2
         real, dimension(nx,nz,ny),   intent(out) :: w2
         integer, intent(in) :: nx,ny,nz
-        
+
         real, dimension(nx-1) :: rx, lx, denomx
         real, dimension(nx) :: r, l, denom
         integer :: i, j
-        
-        ! This might run faster if tiled over x and y to be more cache friendly. 
+
+        ! This might run faster if tiled over x and y to be more cache friendly.
         !$omp parallel shared(q,u,v,w,u2,v2,w2) firstprivate(nx,ny,nz) &
         !$omp private(i,j, rx,lx,r,l, denomx,denom)
         !$omp do schedule(static)
@@ -154,7 +154,7 @@ contains
                 else
                     u2(:,j,i)=0
                 endif
-                
+
 
                 ! next compute the V and W components
                 if (i==1) then
@@ -172,8 +172,8 @@ contains
                     ! U2 is the diffusive pseudo-velocity
                     v2(:,j,i-1) = abs(v(:,j,i-1)) - v(:,j,i-1)**2
                     v2(:,j,i-1) = v2(:,j,i-1) * (r-l) / denom
-                    
-                    
+
+
                     ! -----------------------
                     ! compute the w component
                     ! -----------------------
@@ -194,13 +194,13 @@ contains
                             w2(:,j,i) = 0
                         endif
                     endif
-                    
+
                 endif
             end do
         end do
         !$omp end do
         !$omp end parallel
-        
+
     end subroutine mpdata_fluxes
 
     subroutine flux_limiter(q, q2, u,v,w, nx,nz,ny)
@@ -210,7 +210,7 @@ contains
         real,dimension(1:nx,1:nz,1:ny-1),intent(inout) :: v
         real,dimension(1:nx,1:nz,1:ny),  intent(inout) :: w
         integer, intent(in) :: nx,nz,ny
-        
+
         integer :: i,j,k,n
         real, dimension(:), pointer :: q1, U2, l, f
         ! q1 = q after applying previous iteration advection
@@ -224,12 +224,12 @@ contains
         real, dimension(nz),   target :: q1z,lz
         real, dimension(nz-1), target :: fz, U2z
         logical :: flux_is_w
-        
+
         real :: qmax_i,qmin_i,qmax_i2,qmin_i2
         real :: beta_in_i, beta_out_i, beta_in_i2, beta_out_i2
         real :: fin_i, fout_i, fin_i2, fout_i2
-        
-        ! NOTE: before inclusion of FCT_core the following variables must be setup: 
+
+        ! NOTE: before inclusion of FCT_core the following variables must be setup:
         ! q1 and l (l=q0)
         !$omp parallel shared(q2,q,u,v,w) firstprivate(nx,ny,nz) default(private)
         !$omp do schedule(static)
@@ -246,11 +246,11 @@ contains
                 U2=u(:,k,j)
                 l =q(:,k,j)
                 call flux1(q1(1:n-1),q1(2:n),U2,f)
-                
+
                 include "adv_mpdata_FCT_core.f90"
                 u(:,k,j)=U2
             end do
-            
+
             n=nz
             q1=>q1z
             l =>lz
@@ -268,10 +268,10 @@ contains
                 w(k,1:n-1,j)=U2
                 w(k,n,j)=0
             end do
-            
+
         end do
         !$omp end do
-        
+
         flux_is_w=.False.
         n=ny
         q1=>q1y
@@ -289,14 +289,14 @@ contains
                 U2=v(j,k,:)
                 l =q(j,k,:)
                 call flux1(q1(1:n-1),q1(2:n),U2,f)
-                
+
                 include "adv_mpdata_FCT_core.f90"
                 v(j,k,:)=U2
             end do
         end do
         !$omp end do
         !$omp end parallel
-        
+
     end subroutine flux_limiter
 
     subroutine advect3d(q,u,v,w,rho,dz,dx,nx,nz,ny,jaco,options,err)
@@ -318,9 +318,9 @@ contains
         real,dimension(1:nx-1,1:nz,1:ny) :: u2
         real,dimension(1:nx,1:nz,1:ny-1) :: v2
         real,dimension(1:nx,1:nz,1:ny)   :: w2
-        
+
         integer :: iord, i
-        
+
         do iord=1,options%adv_options%mpdata_order
             if (iord==1) then
                 call upwind_advection(q, u, v, w, q2, dx,dz,nx,nz,ny,jaco)
@@ -335,8 +335,8 @@ contains
                 if ( (sum(abs(u2))+sum(abs(v2))+sum(abs(w2)) < 0.01)) write(*,*) "no ADV corr--2"
                 call upwind_advection(q2, u2, v2, w2, q, dx,dz,nx,nz,ny,jaco)
             endif
-            
-            ! 
+
+            !
             if (iord/=options%adv_options%mpdata_order) then
                 if (iord>1) then
                     !$omp parallel shared(q,q2) firstprivate(ny) private(i)
@@ -347,7 +347,7 @@ contains
                     !$omp end do
                     !$omp end parallel
                 endif
-            else 
+            else
                 if (iord==1) then
                     !$omp parallel shared(q,q2) firstprivate(ny) private(i)
                     !$omp do schedule(static)
@@ -357,28 +357,28 @@ contains
                     !$omp end do
                     !$omp end parallel
                 endif
-                
+
             endif
         end do
-        
+
 
     end subroutine advect3d
-    
+
     subroutine mpdata_init(domain,options)
         type(domain_t), intent(in) :: domain
         type(options_t), intent(in) :: options
-        
+
         ! originally used to permit the order of dimensions in advection to be rotated
         order    = 0
     end subroutine mpdata_init
-    
+
 !   primary entry point, advect all scalars in domain
     subroutine mpdata(domain,options,dt)
         implicit none
         type(domain_t),intent(inout)::domain
         type(options_t), intent(in)::options
         real,intent(in)::dt
-        
+
         real::dx
         integer::nx,nz,ny,i, error
         integer :: ims, ime, jms, jme, kms, kme
@@ -394,21 +394,21 @@ contains
         nx = domain%grid%nx
         nz = domain%grid%nz
         ny = domain%grid%ny
-        
+
         if (.not.allocated(domain%advection_dz)) then
             allocate(domain%advection_dz(ims:ime,kms:kme,jms:jme))
             do i=kms,kme
                 domain%advection_dz(:,i,:) = options%parameters%dz_levels(i)
             enddo
         endif
-        
+
 !       if this if the first time we are called, we need to allocate the module level arrays
         if (.not.allocated(U_m)) then
             allocate(U_m(nx-1,nz,ny))
             allocate(V_m(nx,nz,ny-1))
             allocate(W_m(nx,nz,ny))
         endif
-        
+
 !       calculate U,V,W normalized for dt/dx
         !if (options%advect_density) then
         !    U_m=domain%ur(2:nx,:,:)*(dt/dx**2)
@@ -423,9 +423,9 @@ contains
             W_m(:,kms,:) = W_m(:,kms,:) * domain%jacobian(:,kms,:)
             W_m(:,kms+1:kme,:) = W_m(:,kms+1:kme,:) * (domain%jacobian(:,kms:kme-1,:) + domain%jacobian(:,kms+1:kme,:))/2
         !endif
-        
+
         error=0
-        
+
         if (options%vars_to_advect(kVARS%water_vapor)>0)                  call advect3d(domain%water_vapor%data_3d,             U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%jacobian, options,error)
         if (options%vars_to_advect(kVARS%cloud_water)>0)                  call advect3d(domain%cloud_water_mass%data_3d,        U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%jacobian, options,error)
         if (options%vars_to_advect(kVARS%rain_in_air)>0)                  call advect3d(domain%rain_mass%data_3d,               U_m,V_m,W_m, domain%density%data_3d, domain%advection_dz, domain%dx, nx,nz,ny, domain%jacobian, options,error)
@@ -440,6 +440,6 @@ contains
 
 
         order=mod(order+1,3)
-        
+
     end subroutine mpdata
 end module adv_mpdata

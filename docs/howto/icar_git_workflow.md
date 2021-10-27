@@ -2,19 +2,21 @@
 
 > Note: This document has been conveniently adapted from the [Cookbook for working with Git and VIC](https://github.com/UW-Hydro/VIC/wiki/Git-Workflow)
 
-The basic workflow described here follows a workflow originally outlined by [Vincent Driessen](http://nvie.com/posts/a-successful-git-branching-model/). The workflow is built around the Git version control system. A basic description of the branching strategy and release management used for ICAR is presented here. We use a central truth repository (https://github.com/NCAR/icar) that contains our main branches and the official release version of ICAR. All active development takes place on forks and clones of this repo.
+The basic workflow described here follows a workflow originally outlined by [Vincent Driessen](http://nvie.com/posts/a-successful-git-branching-model/). The workflow is built around the Git version control system. A basic description of the branching strategy and release management used for ICAR is presented here. We use a central truth repository ([https://github.com/NCAR/icar](https://github.com/NCAR/icar)) that contains our main branches and the official release version of ICAR. All active development takes place on forks and clones of this repo.
 
-As you will note when reading below, this workflow can be a very branchy workflow.  Particularly if you work from multiple computers, this can lead to trying to remember a lot of git commands.  A useful tool to help with all these commands is called [git-flow](https://github.com/petervanderdoes/gitflow-avh). This allows you to do simpler things like: 
+As you will note when reading below, this workflow can be a very branchy workflow.  Particularly if you work from multiple computers, this can lead to trying to remember a lot of git commands.  A useful tool to help with all these commands is called [git-flow](https://github.com/petervanderdoes/gitflow-avh). This allows you to do simpler things like:
 
-    git flow feature start <some_new_feature>
-    <work work work>
-    git flow feature finish <some_new_feature>
+```shell
+git flow feature start <some_new_feature>
+<work work work>
+git flow feature finish <some_new_feature>
+```
 
 ## Main Branches
 
-There are two main branches: **master** and **develop**. The first one is the official release, the second one is the one undergoing active development.
+There are two main branches: **main** and **develop**. The first one is the official release, the second one is the one undergoing active development.
 
- 1. **master** -- The master branch represents the official release of the code. This branch is updated by new releases from the develop/release branches and by hotfixes. If you are not directly interested in model development, but want to use ICAR for your own modeling project, then this is typically the branch that you want to use.
+ 1. **main** -- The main branch represents the official release of the code. This branch is updated by new releases from the develop/release branches and by hotfixes. If you are not directly interested in model development, but want to use ICAR for your own modeling project, then this is typically the branch that you want to use.
 
  2. **develop** -– The develop branch represents the bleeding edge of the code. We recommend that all new development begins by branching from the develop branch.
 
@@ -30,14 +32,14 @@ Sometimes ICAR development is driven by projects that require very specific modi
 
 ## Admin Branches
 
-Although anyone could create these branches, they are designed for the preparation of a release of the master branch or a hotfix that cannot wait to the next major release. These branches should therefore only be used by members of the admin group.
+Although anyone could create these branches, they are designed for the preparation of a release of the main branch or a hotfix that cannot wait to the next major release. These branches should therefore only be used by members of the admin group.
 
  1. **release** -– The release branch supports the preparation of a new release. It includes any changes needed for the next public release or minor bug fixes.
 
- 2. **hotfix** -- The hotfix branch facilitates mid-release bug fixes of the master branch. The key point of the hotfix branch is that it does not incorporate any new features from the develop branch, rather it is a branch off the master that addresses a specific issue or set of issues. When the hotfix is applied, the development branch is updated to reflect the hotfix changes.
+ 2. **hotfix** -- The hotfix branch facilitates mid-release bug fixes of the main branch. The key point of the hotfix branch is that it does not incorporate any new features from the develop branch, rather it is a branch off the main that addresses a specific issue or set of issues. When the hotfix is applied, the development branch is updated to reflect the hotfix changes.
 
 ## Naming Conventions
- * Master branch – master
+ * Main branch – main
  * Develop branch – develop
  * Feature branch – feature/{feature_name}
  * Hotfix branch – hotfix/{hotfix_name}
@@ -73,27 +75,34 @@ The process would be as follows:
 
  * Add the main ICAR repo as the upstream remote, so you can easily merge changes that are made in the main ICAR repo into your own local repo
 
-        git  remote add upstream ssh://git@github.com:NCAR/icar.git
+
+```shell
+git remote add upstream ssh://git@github.com:NCAR/icar.git
+```
 
  * Checkout the `develop` branch
-
-        git checkout develop
+```shell
+git checkout develop
+```
 
  * Create and checkout the `feature/crazy_convection` branch (or whatever the appropriate name would be). If you create this branch while you are on the `develop` branch, the new branch will be based on `develop` (you can also specify this explicitly to git).
-
-        git checkout -b feature/crazy_convection
-
+```shell
+git checkout -b feature/crazy_convection
+```
  * Push this new branch to your remote on GitHub
-
-        git push
+```shell
+git push
+```
 
  * Now make as many changes as you need to, commit them to your local repo and push them to your remote on GitHub. This is just like any other work you would do using Git. Once everything is working and everything is sufficiently tested, you will be ready to share your code with others.
 
 
  * Before you do that, merge any changes that have been made in the develop branch in the main ICAR repo into the `feature/crazy_convection` branch of your local repo. Assuming you are already on the `feature/crazy_convection` branch:
 
-        git fetch upstream
-        git merge upstream/develop
+```shell
+git fetch upstream
+git merge upstream/develop
+```
 
  * Resolve any merge conflicts
 

@@ -116,7 +116,7 @@ contains
                 ! rescale diffusion to cut down on excessive mixing
                 Kq_m(its:ite,k,j) = Kq_m(its:ite, k,j) / diffusion_reduction
                 Kq_m(its:ite,k,j) = Kq_m(its:ite, k,j) * dt / ((dz(its:ite,k,j) + dz(its:ite,k+1,j))/2)
-                
+
                 ! enforce limits specified in HP96
                 do i=its,ite
                     if (Kq_m(i,k,j)>1000) then
@@ -250,7 +250,7 @@ contains
         ! HP96 eqn 13
         where (rig_m(its:ite, k, j) > 0) stability_m(its:ite, k, j) = exp(-8.5 * rig_m(its:ite, k, j)) + 0.15 / (rig_m(its:ite, k, j)+3)
         where (rig_m(its:ite, k, j) <= 0) stability_m(its:ite, k, j) = 1 / sqrt(1-1.6*rig_m(its:ite, k, j))
-        
+
         ! HP96 eqn 13 continued
         prandtl_m(its:ite, k, j) = 1.5 + 3.08 * rig_m(its:ite, k, j)
 

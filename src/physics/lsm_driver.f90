@@ -430,7 +430,7 @@ contains
         allocate(CQS2(ims:ime,jms:jme))
         CQS2 = 0.01
 
-        
+
         allocate(RAINBL(ims:ime,jms:jme))
         RAINBL = domain%accumulated_precipitation%data_2d  ! used to store last time step accumulated precip so that it can be subtracted from the current step
                             ! set to domain%rain incase this is a restart run and rain is non-zero to start
@@ -457,9 +457,9 @@ contains
             !     write(*,*) "    options%parameters%external_files: ", trim(options%parameters%external_files)
             !     write(*,*) "    options%parameters%restart: ", options%parameters%restart
             !     write(*,*) "    options%parameters%rho_snow_ext ", trim(options%parameters%rho_snow_ext)
-            !     write(*,*) "    options%parameters%swe_ext ", trim(options%parameters%swe_ext )                
-            ! endif            
-            
+            !     write(*,*) "    options%parameters%swe_ext ", trim(options%parameters%swe_ext )
+            ! endif
+
             if (options%parameters%rho_snow_ext /="" .AND. options%parameters%swe_ext /="") then ! calculate snowheight from external swe and density, but only if both are provided. (Swe alone will give FNDSNW = F)
                 FNDSNOWH = .True.
                 if (this_image()==1) write(*,*) "    Find snow height in file i.s.o. calculating them from SWE: FNDSNOWH=", FNDSNOWH
@@ -472,7 +472,7 @@ contains
             else
                 FNDSNOWH=.False. ! calculate SNOWH from SNOW
             endif
-            
+
             FNDSOILW=.False. ! calculate SOILW (this parameter is ignored in LSM_NOAH_INIT)
             RDMAXALB=.False.
 
@@ -659,11 +659,11 @@ contains
                     endif
                 endif
 
-                ! if (this_image()==1) write(*,*) "    lsm start: accumulated_precipitation max:", MAXVAL(domain%accumulated_precipitation%data_2d) 
+                ! if (this_image()==1) write(*,*) "    lsm start: accumulated_precipitation max:", MAXVAL(domain%accumulated_precipitation%data_2d)
                 ! if (this_image()==1) write(*,*) "    lsm start: RAINBL max:", MAXVAL(RAINBL)
                 ! if (this_image()==1) write(*,*) "    lsm start: domain%precipitation_bucket max:", MAXVAL(domain%precipitation_bucket)
                 ! if (this_image()==1) write(*,*) "    lsm start: rain_bucket max:", MAXVAL(rain_bucket)
-                
+
 
                 ! RAINBL(i,j) = [kg m-2]   RAINBL = domain%accumulated_precipitation%data_2d  ! used to store last time step accumulated precip so that it can be subtracted from the current step
                 current_precipitation = (domain%accumulated_precipitation%data_2d-RAINBL)+(domain%precipitation_bucket-rain_bucket)*kPRECIP_BUCKET_SIZE
@@ -720,7 +720,7 @@ contains
                             lai,                                          &
                             qz0,                                          & !H
                             myj,frpcpn,                                   &
-                            SH2O,                                         &      
+                            SH2O,                                         &
                             domain%snow_height%data_2d, &     !SNOWH,                                   & !H
                             SNOALB,SHDMIN,SHDMAX,                         & !I
                             SNOTIME,                                      & !?

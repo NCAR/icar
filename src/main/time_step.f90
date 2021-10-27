@@ -146,18 +146,18 @@ contains
         ! finally, calculate the real vertical motions (including U*dzdx + V*dzdy)
         lastw = 0
         do z = kms, kme
-            
+
             ! ! if(options%parameters%use_terrain_difference) then
             !                 ! compute the U * dz/dx component of vertical motion
             !     uw    = u(ims+1:ime,   z, jms+1:jme-1) * domain%delta_dzdx(:,z,jms+1:jme-1)
             !     ! compute the V * dz/dy component of vertical motion
             !     vw    = v(ims+1:ime-1, z, jms+1:jme  ) * domain%delta_dzdy(ims+1:ime-1,z,:)
-            ! else    
+            ! else
                 ! compute the U * dz/dx component of vertical motion
                 uw    = u(ims+1:ime,   z, jms+1:jme-1) * domain%dzdx(ims+1:ime,z,jms+1:jme-1)
                 ! compute the V * dz/dy component of vertical motion
                 vw    = v(ims+1:ime-1, z, jms+1:jme  ) * domain%dzdy(ims+1:ime-1,z,jms+1:jme)
-            ! endif    
+            ! endif
             ! ! convert the W grid relative motion to m/s
             ! currw = w(ims+1:ime-1, z, jms+1:jme-1) * dz_interface(ims+1:ime-1, z, jms+1:jme-1) / domain%dx
 
@@ -442,7 +442,7 @@ contains
 
         last_print_time = 0.0
         time_step_size = end_time - domain%model_time
-        
+
         ! now just loop over internal timesteps computing all physics in order (operator splitting...)
         do while (domain%model_time < end_time)
 
@@ -503,12 +503,12 @@ contains
 
                 ! ! apply/update boundary conditions including internal wind and pressure changes.
                 call domain%apply_forcing(dt)
-                                
+
                 !If we are in the last 2 updates of a time step and a variable drops below 0, we have probably over-shot a value of 0. Force back to 0
                 if ((end_time%seconds() - domain%model_time%seconds()) < (dt%seconds()*2)) then
                     call domain%enforce_limits()
                 endif
-                
+
 
                 if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" domain%apply_forcing", fix=.True.)
 

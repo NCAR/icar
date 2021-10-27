@@ -64,6 +64,7 @@ module domain_interface
     integer,allocatable :: cu_precipitation_bucket(:,:)
     type(variable_t) :: accumulated_snowfall
     integer,allocatable :: snowfall_bucket(:,:)
+    type(variable_t) :: external_precipitation
     type(variable_t) :: cloud_fraction
     type(variable_t) :: longwave
     type(variable_t) :: shortwave
@@ -161,7 +162,7 @@ module domain_interface
     real,                       allocatable :: h2_v(:,:)     ! the small-scale terrain (h2) on the v grid
 
     real,                       allocatable :: dz_scl(:)  ! the scaled dz levels, required for delta terrain calculation
-    
+
     real,                       allocatable :: ustar(:,:)
     real,                       allocatable :: znu(:)
     real,                       allocatable :: znw(:)

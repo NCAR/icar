@@ -2,7 +2,7 @@
 !! Fortran interface to FFTW
 !!
 !!  @author
-!!  The FFTW team. 
+!!  The FFTW team.
 !!
 !!------------------------------------------------------------
 module fft
