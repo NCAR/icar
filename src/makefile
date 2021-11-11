@@ -394,6 +394,8 @@ OBJS=	$(BUILD)driver.o            \
 		$(BUILD)lsm_driver.o		\
 		$(BUILD)lsm_noahdrv.o		\
 		$(BUILD)lsm_noahlsm.o		\
+		$(BUILD)lsm_noahmpdrv.o  \
+		$(BUILD)lsm_noahmplsm.o  \
 		$(BUILD)water_simple.o		\
 		$(BUILD)geo_reader.o		\
 		$(BUILD)io_routines.o		\
