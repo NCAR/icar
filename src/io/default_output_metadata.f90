@@ -558,6 +558,50 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
+        !!  Total Absorbed Solar Radiation
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%rad_absorbed_total))
+            var%name        = "rad_absorbed_total"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "total_absorbed_radiation"),             &
+                               attribute_t("units",         "W m-2"),                                    &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Solar Radiation Absorbed by Vegetation
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%rad_absorbed_veg))
+            var%name        = "rad_absorbed_veg"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "radiation_absorbed_by_vegetation"),     &
+                               attribute_t("units",         "W m-2"),                                    &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Solar Radiation Absorbed by Bare Ground
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%rad_absorbed_bare))
+            var%name        = "rad_absorbed_bare"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "radiation_absorbed_by_bare_ground"),    &
+                               attribute_t("units",         "W m-2"),                                    &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Net Longwave Radiation (positive up)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%rad_net_longwave))
+            var%name        = "rad_net_longwave"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "net_upward_longwave_flux_in_air"),          &
+                               attribute_t("units",         "W m-2"),                                    &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
         !!  Upward Longwave Radiation at the Surface (positive up)
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%longwave_up))
@@ -586,7 +630,18 @@ contains
             var%name        = "vegetation_fraction"
             var%dimensions  = two_d_t_dimensions
             var%unlimited_dim=.True.
-            var%attributes  = [attribute_t("standard_name", "vegetation_fraction"),                 &
+            var%attributes  = [attribute_t("standard_name", "vegetation_area_fraction"),            &
+                               attribute_t("units",         "m2 m-2"),                              &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Annual Maximum Vegetation Fraction
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%vegetation_fraction_max))
+            var%name        = "vegetation_fraction_max"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "max_vegetation_area_fraction"),    &
                                attribute_t("units",         "m2 m-2"),                              &
                                attribute_t("coordinates",   "lat lon")]
         end associate
@@ -601,6 +656,46 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
+        !!  Leaf Mass
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%mass_leaf))
+            var%name        = "mass_leaf"
+            var%dimensions  = two_d_dimensions
+            var%attributes  = [attribute_t("non_standard_name", "leaf_mass"),                      &
+                               attribute_t("units",      "g m-2"),                                 &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Root Mass
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%mass_root))
+            var%name        = "mass_root"
+            var%dimensions  = two_d_dimensions
+            var%attributes  = [attribute_t("non_standard_name", "root_mass"),                      &
+                               attribute_t("units",      "g m-2"),                                 &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Stem Mass
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%mass_stem))
+            var%name        = "mass_stem"
+            var%dimensions  = two_d_dimensions
+            var%attributes  = [attribute_t("non_standard_name", "stem_mass"),                      &
+                               attribute_t("units",      "g m-2"),                                 &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Wood Mass
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%mass_wood))
+            var%name        = "mass_wood"
+            var%dimensions  = two_d_dimensions
+            var%attributes  = [attribute_t("non_standard_name", "wood_mass"),                      &
+                               attribute_t("units",      "g m-2"),                                 &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
         !!  Leaf Area Index
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%lai))
@@ -612,7 +707,348 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
-        !!  Canopy Water Content
+        !!  Stem Area Index
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%sai))
+            var%name        = "sai"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "stem_area_index"),                 &
+                               attribute_t("units",         "m2 m-2"),                              &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Planting Date
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%date_planting))
+            var%name        = "date_planting"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "planting_date"),                   &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Harvesting Date
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%date_harvest))
+            var%name        = "date_harvest"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "harvest_date"),                    &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Crop Category
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%crop_category))
+            var%name        = "crop_category"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "crop_category"),                   &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Growing Season Growing Degree Days
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%growing_season_gdd))
+            var%name        = "growing_season_gdd"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "growing_season_gdd"),              &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Irrigation Event Number, Sprinkler
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%irr_eventno_sprinkler))
+            var%name        = "irr_eventno_sprinkler"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "irr_eventno_sprinkler"),           &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Irrigation Fraction
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%irr_frac_total))
+            var%name        = "irr_frac_total"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "irr_frac_total"),                  &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Irrigation Fraction, Sprinkler
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%irr_frac_sprinkler))
+            var%name        = "irr_frac_sprinkler"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "irr_frac_sprinkler"),              &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Irrigation Fraction, Micro
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%irr_frac_micro))
+            var%name        = "irr_frac_micro"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "irr_frac_micro"),                  &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Irrigation Fraction, Flood
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%irr_frac_flood))
+            var%name        = "irr_frac_flood"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "irr_frac_flood"),                  &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Irrigation Event Number, Micro
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%irr_eventno_micro))
+            var%name        = "irr_eventno_micro"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "irr_eventno_micro"),               &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Irrigation Event Number, Flood
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%irr_eventno_flood))
+            var%name        = "irr_eventno_flood"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "irr_eventno_flood"),               &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Irrigation Water Amount to be Applied, Sprinkler
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%irr_alloc_sprinkler))
+            var%name        = "irr_alloc_sprinkler"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "irr_alloc_sprinkler"),             &
+                               attribute_t("units",         "m"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Irrigation Water Amount to be Applied, Micro
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%irr_alloc_micro))
+            var%name        = "irr_alloc_micro"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "irr_alloc_micro"),                 &
+                               attribute_t("units",         "m"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Irrigation Water Amount to be Applied, Flood
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%irr_alloc_flood))
+            var%name        = "irr_alloc_flood"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "irr_alloc_flood"),                 &
+                               attribute_t("units",         "m"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Loss of Sprinkler Irrigation Water to Evaporation
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%irr_evap_loss_sprinkler))
+            var%name        = "irr_evap_loss_sprinkler"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "irr_evap_loss_sprinkler"),         &
+                               attribute_t("units",         "m timestep-1"),                        &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Amount of Irrigation, Sprinkler
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%irr_amt_sprinkler))
+            var%name        = "irr_amt_sprinkler"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "irr_amt_sprinkler"),               &
+                               attribute_t("units",         "mm"),                                  &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Amount of Irrigation, Micro
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%irr_amt_micro))
+            var%name        = "irr_amt_micro"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "irr_amt_micro"),                   &
+                               attribute_t("units",         "mm"),                                  &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Amount of Irrigation, Flood
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%irr_amt_flood))
+            var%name        = "irr_amt_flood"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "irr_amt_flood"),                   &
+                               attribute_t("units",         "mm"),                                  &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Growing Season Growing Degree Days
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%growing_season_gdd))
+            var%name        = "growing_season_gdd"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "growing_season_gdd"),              &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Mass of Agricultural Grain Produced
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%mass_ag_grain))
+            var%name        = "mass_ag_grain"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "mass_agricultural_grain"),         &
+                               attribute_t("units",         "g m-2"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Growing Degree Days (based on 10C)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%growing_degree_days))
+            var%name        = "growing_degree_days"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "growing_degree_days"),             &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Plant Growth Stage
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%plant_growth_stage))
+            var%name        = "plant_growth_stage"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "plant_growth_stage"),              &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Net Ecosystem Exchange
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%net_ecosystem_exchange))
+            var%name        = "net_ecosystem_exchange"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "net_ecosystem_exchange_expressed_as_carbon_dioxide"), &
+                               attribute_t("units",         "g m-2 s-1"),                                              &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Gross Primary Productivity
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%gross_primary_prod))
+            var%name        = "gross_primary_prod"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "gross_primary_productivity_of_biomass_expressed_as_carbon"), &
+                               attribute_t("units",         "g m-2 s-1"),                                                 &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Net Primary Productivity
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%net_primary_prod))
+            var%name        = "net_primary_prod"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "net_primary_productivity_of_biomass_expressed_as_carbon"), &
+                               attribute_t("units",         "g m-2 s-1"),                                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Absorbed Photosynthetically Active Radiation
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%apar))
+            var%name        = "apar"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "absorbed_photosynthetically_active_radiation"), &
+                               attribute_t("units",         "W m-2"),                                            &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Total Photosynthesis
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%photosynthesis_total))
+            var%name        = "photosynthesis_total"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "total_photosynthesis_expressed_as_carbon_dioxide"), &
+                               attribute_t("units",         "mmol m-2 s-1"),                                         &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Total Leaf Stomatal Resistance
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%stomatal_resist_total))
+            var%name        = "stomatal_resist_total"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "total_leaf_stomatal_resistance"),                   &
+                               attribute_t("units",         "s m-1"),                                                &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Sunlit Leaf Stomatal Resistance
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%stomatal_resist_sun))
+            var%name        = "stomatal_resist_sun"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "sunlif_leaf_stomatal_resistance"),                  &
+                               attribute_t("units",         "s m-1"),                                                &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Shaded Leaf Stomatal Resistance
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%stomatal_resist_shade))
+            var%name        = "stomatal_resist_shade"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "shaded_leaf_stomatal_resistance"),                 &
+                               attribute_t("units",         "s m-1"),                                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Canopy Total Water Content
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%canopy_water))
             var%name        = "canopy_water"
@@ -623,13 +1059,24 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
-        !!  Canopy Ice Content
+        !!  Canopy Frozen Water Content
         !!------------------------------------------------------------
-        associate(var=>var_meta(kVARS%canopy_ice))
+        associate(var=>var_meta(kVARS%canopy_water_ice))
             var%name        = "canopy_ice"
             var%dimensions  = two_d_t_dimensions
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "canopy_snow_amount"),                  &
+                               attribute_t("units",         "kg m-2"),                              &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Canopy Liquid Water Content
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%canopy_water_liquid))
+            var%name        = "canopy_ice"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "canopy_liquid_water_amount"),      &
                                attribute_t("units",         "kg m-2"),                              &
                                attribute_t("coordinates",   "lat lon")]
         end associate
@@ -656,6 +1103,116 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
+        !!  Canopy Wetted/Snowed Fraction
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%canopy_fwet))
+            var%name        = "canopy_fwet"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "canopy_wetted_fraction"),          &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Vegetation Leaf Temperature
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%veg_leaf_temperature))
+            var%name        = "veg_leaf_temperature"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "veg_leaf_temperature"),            &
+                               attribute_t("units",         "K"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Ground Surface Temperature
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%ground_surf_temperature))
+            var%name        = "ground_surf_temperature"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "ground_surface_temperature"),      &
+                               attribute_t("units",         "K"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Between Gap Fraction
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%frac_between_gap))
+            var%name        = "frac_between_gap"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "between_gap_fraction"),            &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Within Gap Fraction
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%frac_within_gap))
+            var%name        = "frac_within_gap"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "within_gap_fraction"),             &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Under-Canopy Ground Temperature
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%ground_temperature_canopy))
+            var%name        = "ground_temperature_canopy"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "under_canopy_ground_temperature"), &
+                               attribute_t("units",         "K"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Bare Ground Temperature
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%ground_temperature_bare))
+            var%name        = "ground_temperature_bare"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "bare_ground_temperature"),         &
+                               attribute_t("units",         "K"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !! Total Input Precipitation
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%precip_in_total))
+            var%name        = "precip_in_total"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "total_input_precip"),              &
+                               attribute_t("units",         "mm"),                                  &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Snowfall on the Ground
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%snowfall_ground))
+            var%name        = "snowfall_ground"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "ground_snow_rate"),                &
+                               attribute_t("units",         "mm s-1"),                              &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Rainfall on the Ground
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%rainfall_ground))
+            var%name        = "rainfall_ground"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "ground_rain_rate"),                &
+                               attribute_t("units",         "mm s-1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
         !!  Snow water equivalent on the surface
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%snow_water_equivalent))
@@ -667,6 +1224,39 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
+        !!  Snow water equivalent from previous timestep
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%snow_water_eq_prev))
+            var%name        = "swe_0"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "surface_snow_amount_prev"),        &
+                               attribute_t("units",         "kg m-2"),                              &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Snow albedo from previous timestep
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%snow_albedo_prev))
+            var%name        = "snow_albedo_0"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "snowpack_albedo_prev"),            &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Snow Age Factor
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%snow_age_factor))
+            var%name        = "tau_ss"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "snow_age_factor"),                 &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
         !!  Snow height
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%snow_height))
@@ -674,7 +1264,18 @@ contains
             var%dimensions  = two_d_t_dimensions
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "surface_snow_height"),                 &
-                               attribute_t("units",         "m"),                              &
+                               attribute_t("units",         "m"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Number of Snowpack Layers
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%snow_nlayers))
+            var%name        = "snow_nlayers"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "snow_nlayers"),                    &
+                               attribute_t("units",         "1"),                                   &
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
@@ -686,6 +1287,303 @@ contains
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "moisture_content_of_soil_layer"),      &
                                attribute_t("units",         "kg m-2"),                              &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Equilibrium Volumetric Soil Moisture
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%eq_soil_moisture))
+            var%name        = "eq_soil_moisture"
+            var%dimensions  = three_d_t_soil_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "equilibrium_volumetric_soil_moisture"), &
+                               attribute_t("units",         "m3 m-3"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Soil Moisture Content in the Layer Draining to Water Table when Deep
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%smc_watertable_deep))
+            var%name        = "smc_watertable_deep"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "soil_moisture_content_in_layer_to_water_table_when_deep"), &
+                               attribute_t("units",         "m3 m-3"),                                                      & !units not defined in noahmpdrv (guess)
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Groundwater Recharge
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%recharge))
+            var%name        = "recharge"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "groundwater_recharge"),            &
+                               attribute_t("units",         "mm"),                                  & !units not defined in noahmpdrv (guess)
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Groundwater Recharge when Water Table is Deep
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%recharge_deep))
+            var%name        = "recharge_deep"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "groundwater_recharge_deep"),           &
+                               attribute_t("units",         "mm"),                                  & !units not defined in noahmpdrv (guess)
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Canopy Evaporation Rate
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%evap_canopy))
+            var%name        = "evap_canopy"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "water_evaporation_flux_from_canopy"),  &
+                               attribute_t("units",         "mm s-1"),                              &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Soil Surface Evaporation Rate
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%evap_soil_surface))
+            var%name        = "evap_soil_surface"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "water_evaporation_flux_from_soil"),    &
+                               attribute_t("units",         "mm s-1"),                              &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Transpiration Rate
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%transpiration))
+            var%name        = "transpiration"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "transpiration_rate"),              &
+                               attribute_t("units",         "mm s-1"),                              &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Sensible Heat Exchange Coefficient, Vegetated
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%ch_veg))
+            var%name        = "ch_veg"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "ch_vegetated"),                    &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Sensible Heat Exchange Coefficient at 2m, Vegetated
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%ch_veg_2m))
+            var%name        = "ch_veg_2m"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "ch_vegetated_2m"),                 &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Sensible Heat Exchange Coefficient, Bare
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%ch_bare))
+            var%name        = "ch_bare"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "ch_bare_ground"),                  &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Sensible Heat Exchange Coefficient at 2m, Bare
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%ch_bare_2m))
+            var%name        = "ch_bare_2m"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "ch_bare_2m"),                      &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Sensible Heat Exchange Coefficient, Under Canopy
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%ch_under_canopy))
+            var%name        = "ch_under_canopy"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "ch_under_canopy"),                 &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Sensible Heat Exchange Coefficient, Leaf
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%ch_leaf))
+            var%name        = "ch_leaf"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "ch_leaf"),                         &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Sensible Heat Flux, Vegetated Ground (+ to atmosphere)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%sensible_heat_veg))
+            var%name        = "sensible_heat_veg"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "sensible_heat_veg"),               &
+                               attribute_t("units",         "W m-2"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Sensible Heat Flux, Bare Ground (+ to atmosphere)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%sensible_heat_bare))
+            var%name        = "sensible_heat_bare"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "sensible_heat_bare"),              &
+                               attribute_t("units",         "W m-2"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Sensible Heat Flux, Canopy (+ to atmosphere)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%sensible_heat_canopy))
+            var%name        = "sensible_heat_canopy"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "sensible_heat_canopy"),            &
+                               attribute_t("units",         "W m-2"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Evaporation Heat Flux, Vegetated Ground (+ to atmosphere)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%evap_heat_veg))
+            var%name        = "evap_heat_veg"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "evap_heat_veg"),                   &
+                               attribute_t("units",         "W m-2"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Evaporation Heat Flux, Bare Ground (+ to atmosphere)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%evap_heat_bare))
+            var%name        = "evap_heat_bare"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "evap_heat_bare"),                  &
+                               attribute_t("units",         "W m-2"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !! Evaporation Heat Flux, Canopy (+ to atmosphere)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%evap_heat_canopy))
+            var%name        = "evap_heat_canopy"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "evap_heat_canopy"),                &
+                               attribute_t("units",         "W m-2"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Transpiration Heat Flux (+ to atmosphere)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%transpiration_heat))
+            var%name        = "transpiration_heat"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "transpiration_heat"),              &
+                               attribute_t("units",         "W m-2"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Ground Heat Flux, Vegetated Ground (+ to soil)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%ground_heat_veg))
+            var%name        = "ground_heat_veg"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "ground_heat_veg"),                 &
+                               attribute_t("units",         "W m-2"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Ground Heat Flux, Bare Ground (+ to soil)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%ground_heat_bare))
+            var%name        = "ground_heat_bare"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "ground_heat_bare"),                &
+                               attribute_t("units",         "W m-2"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Net Longwave Radiation Flux, Vegetated Ground (+ to atmosphere)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%net_longwave_veg))
+            var%name        = "net_longwave_veg"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "net_longwave_veg"),                &
+                               attribute_t("units",         "W m-2"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Net Longwave Radiation Flux, Bare Ground (+ to atmosphere)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%net_longwave_bare))
+            var%name        = "net_longwave_bare"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "net_longwave_bare"),               &
+                               attribute_t("units",         "W m-2"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Net Longwave Radiation Flux, Canopy (+ to atmosphere)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%net_longwave_canopy))
+            var%name        = "net_longwave_canopy"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "net_longwave_canopy"),             &
+                               attribute_t("units",         "W m-2"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Surface Runoff Rate
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%runoff_surface))
+            var%name        = "runoff_surface"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "surface_runoff_flux"),                 &
+                               attribute_t("units",         "mm s-1"),                              &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Subsurface Runoff Rate
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%runoff_subsurface))
+            var%name        = "runoff_subsurface"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "subsurface_runoff_flux"),          &
+                               attribute_t("units",         "mm s-1"),                              &
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
@@ -721,6 +1619,66 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
+        !!  Stable Carbon Mass in Deep Soil
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%soil_carbon_stable))
+            var%name        = "soil_carbon_stable"
+            var%dimensions  = two_d_t_dimensions
+            var%attributes  = [attribute_t("standard_name", "slow_soil_pool_mass_content_of_carbon"), &
+                               attribute_t("units",         "g m-2"),                                 &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Short-lived Carbon Mass in Shallow Soil
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%soil_carbon_fast))
+            var%name        = "soil_carbon_fast"
+            var%dimensions  = two_d_t_dimensions
+            var%attributes  = [attribute_t("standard_name", "fast_soil_pool_mass_content_of_carbon"), &
+                               attribute_t("units",         "g m-2"),                                 &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Water Table Depth
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%water_table_depth))
+            var%name        = "water_table_depth"
+            var%dimensions  = two_d_t_dimensions
+            var%attributes  = [attribute_t("standard_name", "water_table_depth"),                   &
+                               attribute_t("units",         "m"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Water in Aquifer
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%water_aquifer))
+            var%name        = "water_aquifer"
+            var%dimensions  = two_d_t_dimensions
+            var%attributes  = [attribute_t("non_standard_name", "water_in_aquifer"),                &
+                               attribute_t("units",         "mm"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Groundwater Storage
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%storage_gw))
+            var%name        = "storage_gw"
+            var%dimensions  = two_d_t_dimensions
+            var%attributes  = [attribute_t("non_standard_name", "groundwater_storage"),              &
+                               attribute_t("units",         "mm"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Lake Storage
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%storage_lake))
+            var%name        = "storage_lake"
+            var%dimensions  = two_d_t_dimensions
+            var%attributes  = [attribute_t("non_standard_name", "lake_storage"),              &
+                               attribute_t("units",         "mm"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
         !!  Surface roughness length z0
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%roughness_z0))
@@ -733,6 +1691,17 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
+        !!  Surface Radiative Temperature
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%surface_rad_temperature))
+            var%name        = "surface_rad_temperature"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "surface_radiative_temperature"),       &
+                               attribute_t("units",         "K"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
         !!  2 meter air temperture
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%temperature_2m))
@@ -742,6 +1711,50 @@ contains
             var%attributes  = [attribute_t("standard_name", "air_temperature"),                     &
                                attribute_t("long_name",     "Bulk air temperature at 2m"),          &
                                attribute_t("units",         "K"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  2 meter Air Temperature over Vegetation
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%temperature_2m_veg))
+            var%name        = "temperature_2m_veg"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "air_temperature"),                     &
+                               attribute_t("units",         "K"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  2 meter Air Temperature over Bare Ground
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%temperature_2m_bare))
+            var%name        = "temperature_2m_bare"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "air_temperature"),                     &
+                               attribute_t("units",         "K"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  2 meter Mixing Ratio over Vegetation
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%mixing_ratio_2m_veg))
+            var%name        = "mixing_ratio_2m_veg"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "mixing_ratio"),                    &
+                               attribute_t("units",         "kg kg-1"),                             &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  2 meter Mixing Ratio over Bare Ground
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%mixing_ratio_2m_bare))
+            var%name        = "mixing_ratio_2m_bare"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "mixing_ratio"),                    &
+                               attribute_t("units",         "kg kg-1"),                             &
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
@@ -775,6 +1788,28 @@ contains
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "eastward_10m_wind_speed"),             &
                                attribute_t("units",         "m s-1"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Momentum Drag Coefficient
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%coeff_momentum_drag))
+            var%name        = "coeff_momentum_drag"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "surface_drag_coefficient_for_momentum_in_air"), &
+                               attribute_t("units",         "1"),                                            &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Sensible Heat Exchange Coefficient
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%coeff_heat_exchange))
+            var%name        = "coeff_heat_exchange"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "sensible_heat_exchange_coefficient"), &
+                               attribute_t("units",         "1"),                                      &
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
