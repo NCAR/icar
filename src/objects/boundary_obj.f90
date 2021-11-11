@@ -7,9 +7,7 @@
 !!------------------------------------------------------------
 submodule(boundary_interface) boundary_implementation
 
-    use icar_constants,         only : gravity, kPRIME_CENTERED, kDATELINE_CENTERED
     use array_utilities,        only : interpolate_in_z
-    use data_structures,        only : interpolable_type
     use io_routines,            only : io_getdims, io_read, io_maxDims, io_variable_is_present
     use time_io,                only : read_times, find_timestep_in_file
     use co_util,                only : broadcast
@@ -267,7 +265,7 @@ contains
 
         end do
 
-        call update_computed_vars(this, options)
+        call update_computed_vars(this, options, update=options%parameters%time_varying_z)
 
     end subroutine
 
@@ -292,13 +290,6 @@ contains
         this%geo_u = this%geo
         this%geo_v = this%geo
 
-        ! ! print*, "lon shape", shape(this%lon)
-        ! ! ! print*, "lat shape", shape(this%lat)
-        ! print*, "    z shape", shape(this%z)
-        ! print*, "    size z shape", size(shape(this%z))
-        ! ! print*, "size z, 2", size(this%z,2)
-        ! print*, "    this z allocated? :", allocated(this%z)
-        ! ! print *, " z dim", dimensions(this%z)
 
         if ( allocated(this%z) )  then
             ! geo%z will be interpolated from this%z to the high-res grids for vinterp in domain... not a great separation

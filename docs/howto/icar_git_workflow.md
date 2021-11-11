@@ -14,9 +14,9 @@ git flow feature finish <some_new_feature>
 
 ## Main Branches
 
-There are two main branches: **master** and **develop**. The first one is the official release, the second one is the one undergoing active development.
+There are two main branches: **main** and **develop**. The first one is the official release, the second one is the one undergoing active development.
 
- 1. **master** -- The master branch represents the official release of the code. This branch is updated by new releases from the develop/release branches and by hotfixes. If you are not directly interested in model development, but want to use ICAR for your own modeling project, then this is typically the branch that you want to use.
+ 1. **main** -- The main branch represents the official release of the code. This branch is updated by new releases from the develop/release branches and by hotfixes. If you are not directly interested in model development, but want to use ICAR for your own modeling project, then this is typically the branch that you want to use.
 
  2. **develop** -– The develop branch represents the bleeding edge of the code. We recommend that all new development begins by branching from the develop branch.
 
@@ -32,14 +32,14 @@ Sometimes ICAR development is driven by projects that require very specific modi
 
 ## Admin Branches
 
-Although anyone could create these branches, they are designed for the preparation of a release of the master branch or a hotfix that cannot wait to the next major release. These branches should therefore only be used by members of the admin group.
+Although anyone could create these branches, they are designed for the preparation of a release of the main branch or a hotfix that cannot wait to the next major release. These branches should therefore only be used by members of the admin group.
 
  1. **release** -– The release branch supports the preparation of a new release. It includes any changes needed for the next public release or minor bug fixes.
 
- 2. **hotfix** -- The hotfix branch facilitates mid-release bug fixes of the master branch. The key point of the hotfix branch is that it does not incorporate any new features from the develop branch, rather it is a branch off the master that addresses a specific issue or set of issues. When the hotfix is applied, the development branch is updated to reflect the hotfix changes.
+ 2. **hotfix** -- The hotfix branch facilitates mid-release bug fixes of the main branch. The key point of the hotfix branch is that it does not incorporate any new features from the develop branch, rather it is a branch off the main that addresses a specific issue or set of issues. When the hotfix is applied, the development branch is updated to reflect the hotfix changes.
 
 ## Naming Conventions
- * Master branch – master
+ * Main branch – main
  * Develop branch – develop
  * Feature branch – feature/{feature_name}
  * Hotfix branch – hotfix/{hotfix_name}

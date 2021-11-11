@@ -1,6 +1,5 @@
 submodule(output_interface) output_implementation
   use output_metadata,          only : get_metadata
-  use time_object,              only : Time_type
   implicit none
 
 contains
@@ -313,11 +312,24 @@ contains
         class(output_t), intent(inout) :: this
         type(Time_type), intent(in)    :: time
         integer :: err
+        character(len=kMAX_NAME_LENGTH) :: calendar
 
         associate(var => this%time)
         var%name = "time"
         var%dimensions = [ "time" ]
         var%n_dimensions = 1
+
+        select case (time%calendar)
+            case(GREGORIAN)
+                calendar = "proleptic_gregorian"
+            case(NOLEAP)
+                calendar = "noleap"
+            case(THREESIXTY)
+                calendar = "360-day"
+            case default
+                calendar = "standard"
+        end select
+
 
         err = nf90_inq_varid(this%ncfile_id, var%name, var%var_id)
 
@@ -338,6 +350,7 @@ contains
 
             call check( nf90_def_var(this%ncfile_id, var%name, NF90_DOUBLE, var%dim_ids(1), var%var_id), "Defining time" )
             call check( nf90_put_att(this%ncfile_id, var%var_id,"standard_name","time"))
+            call check( nf90_put_att(this%ncfile_id, var%var_id,"calendar",trim(calendar)))
             call check( nf90_put_att(this%ncfile_id, var%var_id,"units",time%units()))
             call check( nf90_put_att(this%ncfile_id, var%var_id,"UTCoffset","0"))
 

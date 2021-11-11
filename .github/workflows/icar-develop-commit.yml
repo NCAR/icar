@@ -1,0 +1,87 @@
+# except for the badge creation, keep icar-pull-request.yml jobs in parity
+name: develop
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+jobs:
+  build_and_test_ICAR:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # Create Processing Badges
+      # - name: Create Processing Build Badge
+      #   uses: Schneegans/dynamic-badges-action@v1.1.0
+      #   with:
+      #     auth: ${{ secrets.ACTIONS_WORKFLOW }}
+      #     gistID: 4f0cf076055d12564693853a57f95614
+      #     filename: build.json
+      #     label: build
+      #     message: processing
+      #     color: lightgrey
+      # - name: Create Success Run Badge
+      #   uses: Schneegans/dynamic-badges-action@v1.1.0
+      #   with:
+      #     auth: ${{ secrets.ACTIONS_WORKFLOW }}
+      #     gistID: 4f0cf076055d12564693853a57f95614
+      #     filename: run.json
+      #     label: run
+      #     message: processing
+      #     color: lightgrey
+
+      # Build Dependencies then ICAR
+      - name: Dependencies
+        run: bash .github/scripts/icar_install_utils.sh icar_dependencies
+      - name: Build
+        run: bash .github/scripts/icar_install_utils.sh icar_install
+
+      # Create Build Badge
+      # - name: Create Failure Build Badge
+      #   if: failure()
+      #   uses: Schneegans/dynamic-badges-action@v1.1.0
+      #   with:
+      #     auth: ${{ secrets.ACTIONS_WORKFLOW }}
+      #     gistID: 4f0cf076055d12564693853a57f95614
+      #     filename: build.json
+      #     label: build
+      #     message: failed
+      #     color: critical
+      # - name: Create Success Build Badge
+      #   uses: Schneegans/dynamic-badges-action@v1.1.0
+      #   with:
+      #     auth: ${{ secrets.ACTIONS_WORKFLOW }}
+      #     gistID: 4f0cf076055d12564693853a57f95614
+      #     filename: build.json
+      #     label: build
+      #     message: passing
+      #     color: success
+
+      # Run ICAR with generated test data
+      - name: Generate Test Run Data
+        run: bash .github/scripts/icar_install_utils.sh gen_test_run_data
+      - name: Execute Test Run
+        run: bash .github/scripts/icar_install_utils.sh execute_test_run
+      # Create Run Badge
+      # - name: Create Failure Run Badge
+      #   if: failure()
+      #   uses: Schneegans/dynamic-badges-action@v1.1.0
+      #   with:
+      #     auth: ${{ secrets.ACTIONS_WORKFLOW }}
+      #     gistID: 4f0cf076055d12564693853a57f95614
+      #     filename: run.json
+      #     label: run
+      #     message: failed
+      #     color: critical
+      # - name: Create Success Run Badge
+      #   uses: Schneegans/dynamic-badges-action@v1.1.0
+      #   with:
+      #     auth: ${{ secrets.ACTIONS_WORKFLOW }}
+      #     gistID: 4f0cf076055d12564693853a57f95614
+      #     filename: run.json
+      #     label: run
+      #     message: passing
+      #     color: success

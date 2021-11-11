@@ -131,7 +131,7 @@ for f in ${input_dir}/${prefix}*; do
 
         # Finally, we get rid of the time dimension to XLAT and XLONG to save more space
         # Create a new file without lat and long (which otherwise have a time dimension)
-        ncks -x -v XLAT,XLONG $output_file ${output_file}.temp
+        ncks -C -x -v XLAT,XLONG $output_file ${output_file}.temp
         # Put lat and long WITHOUT a time dimension into a temp file
         ncwa -d Time,0 -a Time -v XLAT,XLONG $output_file ${output_file}.temp2
         # then recombine lat/lon back into the main file so there is no time dimension to them
