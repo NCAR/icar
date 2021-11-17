@@ -3396,6 +3396,7 @@
       laysolfr = nlayers
 
 ! Upper atmosphere loop
+
       do lay = laytrop+1, nlayers
          if (jp(lay-1) .lt. layreffr .and. jp(lay) .ge. layreffr) &
             laysolfr = lay

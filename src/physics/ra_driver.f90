@@ -32,8 +32,11 @@ module radiation
     use icar_constants, only : kVARS, cp, Rd, gravity, solar_constant
 
     implicit none
-
+    integer :: update_interval
+    real*8  :: last_model_time
 contains
+    
+
     subroutine radiation_init(domain,options)
         type(domain_t), intent(inout) :: domain
         type(options_t),intent(in) :: options
@@ -69,8 +72,12 @@ contains
                 ids=domain%ids, ide=domain%ide, jds=domain%jds, jde=domain%jde, kds=domain%kds, kde=domain%kde,                &
                 ims=domain%ims, ime=domain%ime, jms=domain%jms, jme=domain%jme, kms=domain%kms, kme=domain%kme,                &
                 its=domain%its, ite=domain%ite, jts=domain%jts, jte=domain%jte, kts=domain%kts, kte=domain%kte                 )
+                domain%tend%th_swrad = 0
+                domain%tend%th_lwrad = 0
         endif
-
+        update_interval=600 ! 10 min (600 s)
+        last_model_time=-999
+        
     end subroutine radiation_init
 
 
@@ -168,6 +175,7 @@ contains
         real, allocatable :: day_frac(:), solar_elevation(:)
         real, allocatable:: albedo(:,:)
         integer :: j
+        real ::ra_dt
 
         ims = domain%grid%ims
         ime = domain%grid%ime
@@ -223,9 +231,15 @@ contains
                                 j=j, ims=ims,ime=ime,jms=jms,jme=jme,its=its,ite=ite,day_frac=day_frac)                
                 domain%cosine_zenith_angle%data_2d(its:ite,j)=sin(solar_elevation(its:ite))
             enddo  
-        
-        write(*,*) 'call rrtmg_swrad'
-        call RRTMG_SWRAD(rthratensw=domain%tend%th_swrad,                 &
+
+            if (last_model_time==-999) then
+                last_model_time = domain%model_time%seconds()-update_interval
+            endif
+            if ((domain%model_time%seconds() - last_model_time) >= update_interval) then
+                ra_dt = domain%model_time%seconds() - last_model_time
+                last_model_time = domain%model_time%seconds()
+
+                call RRTMG_SWRAD(rthratensw=domain%tend%th_swrad,                 &
 !                swupt, swuptc, swuptcln, swdnt, swdntc, swdntcln, &
 !                swupb, swupbc, swupbcln, swdnb, swdnbc, swdnbcln, &
 !                      swupflx, swupflxc, swdnflx, swdnflxc,      &            
@@ -310,11 +324,8 @@ contains
                     yr=domain%model_time%year,                             &
                     julian=domain%model_time%day_of_year()                 &
                                                    )
-
-        
-        
-            write(*,*) 'call rrtmg_lwrad'                        
-            call RRTMG_LWRAD(rthratenlw=domain%tend%th_lwrad,                     &
+                      
+                call RRTMG_LWRAD(rthratenlw=domain%tend%th_lwrad,                     &
 !                lwupt, lwuptc, lwuptcln, lwdnt, lwdntc, lwdntcln, &        !if lwupt defined, all MUST be defined
 !                lwupb, lwupbc, lwupbcln, lwdnb, lwdnbc, lwdnbcln, &
                             glw = domain%longwave%data_2d,                        &
@@ -376,10 +387,11 @@ contains
                             its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte-1 &
 !                            lwupflx, lwupflxc, lwdnflx, lwdnflxc       &
                             )
-!            domain%temperature%data_3d = domain%temperature%data_3d+domain%tend%th_lwrad*dt+domain%tend%th_swrad*dt
-!            domain%potential_temperature%data_3d = domain%temperature%data_3d/domain%exner%data_3d
+            endif
+            domain%temperature%data_3d = domain%temperature%data_3d+domain%tend%th_lwrad*dt+domain%tend%th_swrad*dt
+            domain%potential_temperature%data_3d = domain%temperature%data_3d/domain%exner%data_3d
         
-         endif
+        endif
 
     end subroutine rad
 end module radiation
