@@ -133,7 +133,7 @@ contains
                          kVARS%soil_totalmoisture, kVARS%soil_deep_temperature, kVARS%roughness_z0, kVARS%ustar,        &
                          kVARS%snow_height, kVARS%canopy_vapor_pressure, kVARS%canopy_temperature,                      &
                          kVARS%veg_leaf_temperature, kVARS%coeff_momentum_drag, kVARS%coeff_heat_exchange,              &
-                         kVARS%canopy_fwet, kVARS%snow_water_eq_prev, kVARS&water_table_depth, kVARS&water_aquifer,     &
+                         kVARS%canopy_fwet, kVARS%snow_water_eq_prev, kVARS%water_table_depth, kVARS%water_aquifer,     &
                          kVARS%mass_leaf, kVARS%mass_root, kVARS%mass_stem, kVARS%mass_wood, kVARS%soil_carbon_fast,    &
                          kVARS%soil_carbon_stable, kVARS%eq_soil_moisture, kVARS%smc_watertable_deep, kVARS%recharge,   &
                          kVARS%recharge_deep, kVARS%storage_lake, kVARS%storage_gw, kVARS%mass_ag_grain,                &
@@ -158,7 +158,9 @@ contains
                          kVARS%irr_alloc_sprinkler, kVARS%irr_alloc_micro, kVARS%irr_alloc_flood, kVARS%irr_amt_flood,  &
                          kVARS%irr_evap_loss_sprinkler, kVARS%irr_amt_sprinkler, kVARS%irr_amt_micro,                   &
                          kVARS%evap_heat_sprinkler, kVARS%snowfall_ground, kVARS%rainfall_ground,                       &
-                         kVARS%ground_surf_temperature, &
+                         kVARS%ground_surf_temperature, kVARS%snow_temperature, kVARS%snow_layer_depth,                 &
+                         kVARS%snow_layer_ice, kVARS%snow_layer_liquid_water, kVARS%soil_texture_1,                     &
+                         kVARS%soil_texture_2, kVARS%soil_texture_3, kVARS%soil_texture_4, kVARS%soil_sand_and_clay,    &
                          kVARS%veg_type, kVARS%soil_type, kVARS%land_mask])
 
              call options%advect_vars([kVARS%potential_temperature, kVARS%water_vapor])
@@ -665,7 +667,10 @@ contains
                                 domain%water_table_depth%data_2d,       &
                                 domain%water_aquifer%data_2d,           &
                                 domain%storage_gw%data_2d,              &
-                                tsnoxy   ,zsnsoxy  ,snicexy, snliqxy, &
+                                domain%snow_temperature%data_3d,        &
+                                domain%snow_layer_depth%data_3d,        &
+                                domain%snow_layer_ice%data_3d,          &
+                                domain%snow_layer_liquid_water,         &
                                 domain%mass_leaf%data_2d,               &
                                 domain%mass_root%data_2d,               &
                                 domain%mass_stem%data_2d,               &
@@ -981,14 +986,17 @@ contains
                              YR,   JULIAN,   COSZIN,XLAT,XLONG,        &
                              domain%dz_interface%data_3d,              &
                              lsm_dt,                                   &
-                             DZS,    NSOIL,       DX,                  &
+                             DZS,                                      &
+                             num_soil_layers,                          &
+                             DX,                                       &
                              domain%veg_type,                          &
                              domain%soil_type,                         &
               	             VEGFRAC,                                  &
                              domain%vegetation_fraction_max%data_2d,   &
                              domain%soil_deep_temperature,             &
                              domain%land_mask,                         &
-                             XICE,XICE_THRES,                          &
+                             XICE,                                     &
+                             ICE_THRESHOLD,                            &
                              domain%crop_category%data_2d,             &
                              domain%date_planting%data_2d,             &
                              domain%date_harvest%data_2d,              &
@@ -998,20 +1006,25 @@ contains
                              IOPT_GLA, IOPT_RSF, IOPT_SOIL,IOPT_PEDO,IOPT_CROP, IOPT_IRR,  &
                              IOPT_IRRM,                                                     &
                              IZ0TLND, SF_URBAN_PHYSICS,                                    &
-              	             SOILCOMP,  SOILCL1,  SOILCL2,   SOILCL3,  SOILCL4,            &
+                             domain%soil_sand_and_clay%data_3d,        &
+                             domain%soil_texture_1%data_2d,            &
+                             domain%soil_texture_2%data_2d,            &
+                             domain%soil_texture_3%data_2d,            &
+                             domain%soil_texture_4%data_2d,            &
                              domain%temperature%data_3d,               &
                              domain%water_vapor%data_3d,               &
-                             U_PHY,    V_PHY,                          &
+                             U_PHY,                                    &
+                             V_PHY,                                    &
                              domain%shortwave%data_2d,                 &
-                             SWDDIR,   &
-                             SWDDIF,      &
+                             SWDDIR,                                   &
+                             SWDDIF,                                   &
                              domain%longwave%data_2d,                  &
                              domain%pressure_interface%data_3d,        &
                              domain%precip_in_total,                   &
-                             SR,                                &
+                             SR,                                       &
                              domain%irr_frac_total%data_2d,            &
                              domain%irr_frac_sprinkler%data_2d,        &
-                             domain&irr_frac_micro%data_2d,            &
+                             domain%irr_frac_micro%data_2d,            &
                              domain%irr_frac_flood%data_2d,            &
                              domain%skin_temperature%data_2d,          &
                              domain%sensible_heat%data_2d,             &
@@ -1060,7 +1073,10 @@ contains
                              domain%water_table_depth%data_2d,         &
                              domain%water_aquifer%data_2d,             &
                              domain%storage_gw%data_2d,                &
-                             tsnoxy   ,zsnsoxy  ,snicexy, snliqxy,   &
+                             domain%snow_temperature%data_3d,          &
+                             domain%snow_layer_depth%data_3d,          &
+                             domain%snow_layer_ice%data_3d,            &
+                             domain%snow_layer_liquid_water%data_3d,   &
                              domain%mass_leaf%data_2d,                 &
                              domain%mass_root%data_2d,                 &
                              domain%mass_stem%data_2d,                 &

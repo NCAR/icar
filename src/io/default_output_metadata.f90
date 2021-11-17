@@ -1246,6 +1246,50 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
+        !!  Snow Temperature
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%snow_temperature))
+            var%name        = "snow_temperature"
+            var%dimensions  = three_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "temperature_in_surface_snow"),         &
+                               attribute_t("units",         "K"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Snow Layer Depth
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%snow_layer_depth))
+            var%name        = "snow_layer_depth"
+            var%dimensions  = three_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "snow_layer_depth"),                &
+                               attribute_t("units",         "m"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Snow Layer Ice
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%snow_layer_ice))
+            var%name        = "snow_layer_ice"
+            var%dimensions  = three_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "snow_layer_ice_content"),          &
+                               attribute_t("units",         "mm"),                                  &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Snow Layer Liquid Water
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%snow_layer_liquid_water))
+            var%name        = "snow_layer_liquid_water"
+            var%dimensions  = three_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "snow_layer_liquid_water_content"), &
+                               attribute_t("units",         "mm"),                                  &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
         !!  Snow Age Factor
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%snow_age_factor))
@@ -1639,13 +1683,63 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
+        !!  Soil Class, Layer 1
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%soil_texture_1))
+            var%name        = "soil_class_1"
+            var%dimensions  = two_d_dimensions
+            var%attributes  = [attribute_t("non_standard_name", "soil_class_layer1"),                 &
+                               attribute_t("units",         "1"),                                     &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Soil Class, Layer 2
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%soil_texture_2))
+            var%name        = "soil_class_2"
+            var%dimensions  = two_d_dimensions
+            var%attributes  = [attribute_t("non_standard_name", "soil_class_layer2"),                 &
+                               attribute_t("units",         "1"),                                     &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Soil Class, Layer 3
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%soil_texture_3))
+            var%name        = "soil_class_3"
+            var%dimensions  = two_d_dimensions
+            var%attributes  = [attribute_t("non_standard_name", "soil_class_layer3"),                 &
+                               attribute_t("units",         "1"),                                     &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Soil Class, Layer 4
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%soil_texture_4))
+            var%name        = "soil_class_4"
+            var%dimensions  = two_d_dimensions
+            var%attributes  = [attribute_t("non_standard_name", "soil_class_layer4"),                 &
+                               attribute_t("units",         "1"),                                     &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Soil Sand and Clay Composition by Layer
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%soil_sand_and_clay))
+            var%name        = "soil_sand_and_clay_composition"
+            var%dimensions  = three_d_dimensions
+            var%attributes  = [attribute_t("non_standard_name", "soil_sand_and_clay_composition"),    &
+                               attribute_t("units",         "1"),                                     &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
         !!  Water Table Depth
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%water_table_depth))
             var%name        = "water_table_depth"
             var%dimensions  = two_d_t_dimensions
-            var%attributes  = [attribute_t("standard_name", "water_table_depth"),                   &
-                               attribute_t("units",         "m"),                                   &
+            var%attributes  = [attribute_t("standard_name", "water_table_depth"),                    &
+                               attribute_t("units",         "m"),                                    &
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
@@ -1654,7 +1748,7 @@ contains
         associate(var=>var_meta(kVARS%water_aquifer))
             var%name        = "water_aquifer"
             var%dimensions  = two_d_t_dimensions
-            var%attributes  = [attribute_t("non_standard_name", "water_in_aquifer"),                &
+            var%attributes  = [attribute_t("non_standard_name", "water_in_aquifer"),                 &
                                attribute_t("units",         "mm"),                                   &
                                attribute_t("coordinates",   "lat lon")]
         end associate
@@ -1674,7 +1768,7 @@ contains
         associate(var=>var_meta(kVARS%storage_lake))
             var%name        = "storage_lake"
             var%dimensions  = two_d_t_dimensions
-            var%attributes  = [attribute_t("non_standard_name", "lake_storage"),              &
+            var%attributes  = [attribute_t("non_standard_name", "lake_storage"),                     &
                                attribute_t("units",         "mm"),                                   &
                                attribute_t("coordinates",   "lat lon")]
         end associate

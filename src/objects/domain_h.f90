@@ -21,7 +21,8 @@ module domain_interface
     type(grid_t)         :: grid2d, u_grid2d, v_grid2d
     type(grid_t)         :: u_grid2d_ext, v_grid2d_ext!, grid2d_ext ! extended grids for u and v fields pre smoothing (grid_2d_ext is for SLEVE topography smoothing)
     type(grid_t)         :: grid_monthly, grid_soil
-    type(grid_t)         :: grid_snow
+    type(grid_t)         :: grid_snow, grid_snowsoil
+    type(grid_t)         :: grid_soilcomp
 
     type(Time_type) :: model_time
 
@@ -101,6 +102,11 @@ module domain_interface
     type(variable_t) :: mass_stem
     type(variable_t) :: mass_wood
     integer,allocatable :: soil_type(:,:)
+    type(variable_t) :: soil_texture_1
+    type(variable_t) :: soil_texture_2
+    type(variable_t) :: soil_texture_3
+    type(variable_t) :: soil_texture_4
+    type(variable_t) :: soil_sand_and_clay
     type(variable_t) :: soil_carbon_stable
     type(variable_t) :: soil_carbon_fast
     type(variable_t) :: roughness_z0
@@ -153,6 +159,10 @@ module domain_interface
     type(variable_t) :: snow_water_equivalent
     type(variable_t) :: snow_water_eq_prev
     type(variable_t) :: snow_albedo_prev
+    type(variable_t) :: snow_temperature
+    type(variable_t) :: snow_layer_depth
+    type(variable_t) :: snow_layer_ice
+    type(variable_t) :: snow_layer_liquid_water
     type(variable_t) :: snow_age_factor
     type(variable_t) :: snow_height
     type(variable_t) :: snow_nlayers

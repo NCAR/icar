@@ -242,6 +242,11 @@ contains
         if (0<var_list( kVARS%mass_wood) )                  call this%add_to_output( get_metadata( kVARS%mass_wood                    , domain%mass_wood%data_2d))
         if (0<var_list( kVARS%soil_carbon_fast) )           call this%add_to_output( get_metadata( kVARS%soil_carbon_fast             , domain%soil_carbon_fast%data_2d))
         if (0<var_list( kVARS%soil_carbon_stable) )         call this%add_to_output( get_metadata( kVARS%soil_carbon_stable           , domain%soil_carbon_stable%data_2d))
+        if (0<var_list( kVARS%soil_texture_1) )             call this%add_to_output( get_metadata( kVARS%soil_texture_1               , domain%soil_texture_1%data_2d))
+        if (0<var_list( kVARS%soil_texture_2) )             call this%add_to_output( get_metadata( kVARS%soil_texture_2               , domain%soil_texture_2%data_2d))
+        if (0<var_list( kVARS%soil_texture_3) )             call this%add_to_output( get_metadata( kVARS%soil_texture_3               , domain%soil_texture_3%data_2d))
+        if (0<var_list( kVARS%soil_texture_4) )             call this%add_to_output( get_metadata( kVARS%soil_texture_4               , domain%soil_texture_4%data_2d))
+        if (0<var_list( kVARS%soil_sand_and_clay) )         call this%add_to_output( get_metadata( kVARS%soil_sand_and_clay           , domain%soil_sand_and_clay%data_3d))
 
 
     end subroutine

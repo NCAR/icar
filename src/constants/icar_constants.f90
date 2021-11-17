@@ -72,6 +72,11 @@ module icar_constants
         integer :: mass_stem
         integer :: mass_wood
         integer :: soil_type
+        integer :: soil_texture_1
+        integer :: soil_texture_2
+        integer :: soil_texture_3
+        integer :: soil_texture_4
+        integer :: soil_sand_and_clay
         integer :: soil_carbon_stable
         integer :: soil_carbon_fast
         integer :: lai
@@ -227,7 +232,8 @@ module icar_constants
                                                             141, 142, 143, 144, 145, 146, 147, 148, 149, 150,  &
                                                             151, 152, 153, 154, 155, 156, 157, 158, 159, 160,  &
                                                             161, 162, 163, 164, 165, 166, 167, 168, 169, 170,  &
-                                                            171, 172, 173, 174, 175, 176, 177, 178)
+                                                            171, 172, 173, 174, 175, 176, 177, 178, 179, 180,  &
+                                                            181, 182, 183)
 
     integer, parameter :: kINTEGER_BITS     = storage_size(kINTEGER_BITS)
     integer, parameter :: kMAX_STORAGE_VARS = storage_size(kVARS) / kINTEGER_BITS

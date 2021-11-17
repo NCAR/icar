@@ -262,6 +262,10 @@ contains
         if (0<opt%vars_to_allocate( kVARS%snow_water_equivalent) )      call setup(this%snow_water_equivalent,    this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%snow_water_eq_prev) )         call setup(this%snow_water_eq_prev,       this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%snow_albedo_prev) )           call setup(this%snow_albedo_prev,         this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%snow_temperature) )           call setup(this%snow_temperature,         this%grid_snow )
+        if (0<opt%vars_to_allocate( kVARS%snow_layer_depth) )           call setup(this%snow_layer_depth,         this%grid_snowsoil )
+        if (0<opt%vars_to_allocate( kVARS%snow_layer_ice) )             call setup(this%snow_layer_ice,           this%grid_snow )
+        if (0<opt%vars_to_allocate( kVARS%snow_layer_liquid_water) )    call setup(this%snow_layer_liquid_water,  this%grid_snow )
         if (0<opt%vars_to_allocate( kVARS%snow_age_factor) )            call setup(this%snow_age_factor,          this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%snow_height) )                call setup(this%snow_height,              this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%snow_nlayers) )               call setup(this%snow_nlayers,             this%grid2d )
@@ -337,6 +341,11 @@ contains
         if (0<opt%vars_to_allocate( kVARS%mass_wood) )                  call setup(this%mass_wood,                this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%soil_carbon_fast) )           call setup(this%soil_carbon_fast,         this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%soil_carbon_stable) )         call setup(this%soil_carbon_stable,       this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%soil_texture_1) )             call setup(this%soil_texture_1,           this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%soil_texture_2) )             call setup(this%soil_texture_2,           this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%soil_texture_3) )             call setup(this%soil_texture_3,           this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%soil_texture_4) )             call setup(this%soil_texture_4,           this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%soil_sand_and_clay) )         call setup(this%soil_sand_and_clay,       this%grid_soilcomp)
 
         ! integer variable_t types aren't available (yet...)
         if (0<opt%vars_to_allocate( kVARS%convective_precipitation) )   allocate(this%cu_precipitation_bucket  (ims:ime, jms:jme),          source=0)
@@ -1843,6 +1852,8 @@ contains
 
         call this%grid_soil%set_grid_dimensions(    nx_global, ny_global, 4)
         call this%grid_snow%set_grid_dimensions(    nx_global, ny_global, 3)
+        call this%grid_snowsoil%set_grid_dimensions(nx_global, ny_global, 7)
+        call this%grid_soilcomp%set_grid_dimensions(nx_global, ny_global, 8)
         call this%grid_monthly%set_grid_dimensions( nx_global, ny_global, 12)
 
 
