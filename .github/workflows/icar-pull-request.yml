@@ -1,0 +1,25 @@
+# except for the badge creation, keep icar-main-commit.yml jobs in parity
+name: ICAR Pull Request Actions
+on:
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  build_and_test_ICAR:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # Build Dependencies then ICAR
+      - name: Dependencies
+        run: bash .github/scripts/icar_install_utils.sh icar_dependencies
+      - name: Build
+        run: bash .github/scripts/icar_install_utils.sh icar_install
+
+      # Run ICAR with generated test data
+      - name: Generate Test Run Data
+        run: bash .github/scripts/icar_install_utils.sh gen_test_run_data
+      - name: Execute Test Run
+        run: bash .github/scripts/icar_install_utils.sh execute_test_run

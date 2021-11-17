@@ -78,3 +78,13 @@ There are two options :
    (which is useful for the linear wind look up table).  To do this, simply
    change `or(NF90_CLOBBER,NF90_NETCDF4)` to `NF90_CLOBBER` in
   `io/lt_lut_io.f90`
+
+
+10) **Coarrays Seemingly Running Slow**
+    One possibility, if the coarray implementation is built with MPI, is
+that the MPI implementation has not been configured correctly. A good way to
+test if performance is meeting expectations is to download and run MVAPICH's
+[micro-benchmark](https://mvapich.cse.ohio-state.edu/benchmarks/).
+After configuring and building the benchmark, running the tests
+`mpi/one-sided/osu_put_latency` and `mpi/pt2pt/osu_latency` should give an
+indication of performance.
