@@ -1,11 +1,8 @@
-from netCDF4 import Dataset
-import xarray as xr
+import datetime
 import pandas as pd
 import numpy as np
-import datetime
-import math
-from genNetCDF import fixType
-from sys import exit
+import xarray as xr
+# import math
 
 # Create NetCDF file containing the forcing data
 class Forcing:
@@ -62,11 +59,8 @@ class Forcing:
 
 
     def set_water_vapor(self, water_vapor, temperature, pressure):
-        for k in range(1,self.nz):
-            for i in range(0,self.nx):
-                for j in range(0,self.ny):
-                    water_vapor[k,i,j] = sat_mr(temperature[k,i,j],
-                                                pressure[k,i,j])
+        water_vapor = sat_mr(temperature, pressure)
+
         return water_vapor
 
 
@@ -142,11 +136,11 @@ class Forcing:
             for i in range(0,nx):
                 for j in range(0,ny):
                     z_data[:,k,i,j] = z_data[:,k-1,i,j] + dz[k,i,j]
-                    self.z = xr.Variable(dims4d,
-                                         z_data,
-                                         {'long_name':'Atmospheric Elevation',
-                                          'units':'m',
-                                          'positive':'up'})
+        self.z = xr.Variable(dims4d,
+                             z_data,
+                             {'long_name':'Atmospheric Elevation',
+                              'units':'m',
+                              'positive':'up'})
 
         # --- Pressure
         pressure_data = np.zeros([nt,nz,nx,ny])
@@ -155,11 +149,10 @@ class Forcing:
                 for j in range(0,ny):
                     pressure_data[:,k,i,j] = self.sealevel_pressure * \
                         (1 - 2.25577E-5 * z_data[0,k,i,j])**5.25588
-                    self.pressure = xr.Variable(dims4d,
-                                                pressure_data,
-                                                {'long_name':'Pressure',
-                                                 'units':'Pa'})
-        del(pressure_data)
+        self.pressure = xr.Variable(dims4d,
+                                    pressure_data,
+                                    {'long_name':'Pressure',
+                                     'units':'Pa'})
 
         # --- Latitude
         self.lat = xr.Variable(["lat"],
@@ -175,18 +168,27 @@ class Forcing:
                                )
 
 
-# Taken from atm_utilities.f90
+# Modified from atm_utilities.f90
 def sat_mr(temperature,pressure):
-    if (temperature < 273.15):
-        a = 21.8745584
-        b = 7.66
-    else:
-        a = 17.2693882
-        b = 35.86
-    e_s = 610.78 * math.exp(a * (temperature - 273.16) / (temperature - b))
-    if ((pressure - e_s) <= 0):
-        e_s = pressure * 0.99999
+
+    e_s = np.zeros(temperature.shape)
+
+    freezing = (temperature < 273.16)
+    a = 21.8745584
+    b = 7.66
+    e_s[freezing] = 610.78 * np.exp(a * (temperature[freezing] - 273.16) / (temperature[freezing] - b))
+
+    a = 17.2693882
+    b = 35.86
+    freezing = not freezing
+    e_s[freezing] = 610.78 * np.exp(a * (temperature[freezing] - 273.16) / (temperature[freezing] - b))
+
+    # not quite sure what this is needed for, maybe very low pressure rounding errors?
+    high_es = e_s > pressure
+    e_s[high_es] = pressure[high_es] * 0.9999
+
     sat_mr_val = 0.6219907 * e_s / (pressure - e_s)
+
     return sat_mr_val
 
 def calc_exner(pressure):

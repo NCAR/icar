@@ -107,16 +107,16 @@ class ICARoptions:
     parameters = {
         'name': 'parameters',
         'forcing_start_date': '"2020-12-01 00:00:00"',
-        'end_date': '"2020-12-01 06:00:00"',
+        'end_date': '"2020-12-02 00:00:00"',
         'calendar': '"standard"',
-        'inputinterval': '3600',
-        'dx': '4000.0',
+        'dx': '1000.0',
         'qv_is_relative_humidity':'true',
+        't_is_potential':'true',
         'readdz': 'true',
         'nz': '15',
-        'z_is_geopotential': 'True',
-        'z_is_on_interface': 'True',
+        'z_is_geopotential': 'False',
+        'z_is_on_interface': 'False',
         'time_varying_z': 'False',
         'use_agl_height': 'False',
-        'smooth_wind_distance': '72000'
+        'smooth_wind_distance': '2000'
     }
