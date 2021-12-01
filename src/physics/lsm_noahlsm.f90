@@ -366,6 +366,7 @@ CONTAINS
       PARAMETER (LSUBS = 2.83E+6)
       PARAMETER (R = 287.04)
 
+
 ! ----------------------------------------------------------------------
 !   INITIALIZATION
 ! ----------------------------------------------------------------------
@@ -417,6 +418,8 @@ CONTAINS
               SMCDRY = 0.40
          ENDIF
 
+       
+ 
          IF ( SHDFAC >= SHDMAX ) THEN
             EMBRD = EMISSMAX
             IF (.NOT. RDLAI2D) THEN
@@ -467,7 +470,8 @@ CONTAINS
             ENDIF
 
          ENDIF
-! ----------------------------------------------------------------------
+
+         ! ----------------------------------------------------------------------
 !  INITIALIZE PRECIPITATION LOGICALS.
 ! ----------------------------------------------------------------------
          SNOWNG = .FALSE.
@@ -728,6 +732,7 @@ CONTAINS
 !  FROZEN GROUND EXTENSION: TOTAL SOIL WATER "SMC" WAS REPLACED
 !  BY UNFROZEN SOIL WATER "SH2O" IN CALL TO CANRES BELOW
 ! ----------------------------------------------------------------------
+
          IF ( (SHDFAC > 0.) .AND. (XLAI > 0.) ) THEN
             CALL CANRES (SOLDN,CH,SFCTMP,Q2,SFCPRS,SH2O,ZSOIL,NSOIL,     &
                           SMCWLT,SMCREF,RSMIN,RC,PC,NROOT,Q2SAT,DQSDT2,  &

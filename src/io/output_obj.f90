@@ -149,7 +149,8 @@ contains
         if (0<var_list( kVARS%cosine_zenith_angle) )        call this%add_to_output( get_metadata( kVARS%cosine_zenith_angle          , domain%cosine_zenith_angle%data_2d))
         if (0<var_list( kVARS%land_emissivity) )            call this%add_to_output( get_metadata( kVARS%land_emissivity              , domain%land_emissivity%data_2d))
         if (0<var_list( kVARS%temperature_interface) )      call this%add_to_output( get_metadata( kVARS%temperature_interface        , domain%temperature_interface%data_3d))
-        
+        if (0<var_list( kVARS%tend_swrad) )                 call this%add_to_output( get_metadata( kVARS%tend_swrad                  , domain%tend_swrad%data_3d))
+
     end subroutine
 
     subroutine add_global_attributes(this)

@@ -8362,8 +8362,12 @@
          pnifddir(jk)=0._rb
       enddo
 
-
-! Calculate the optical depths for gaseous absorption and Rayleigh scattering
+! ++ trude
+      zsflxzen = 0._rb
+      ztaug = 0._rb
+      ztaur = 0._rb
+! -- trude
+      ! Calculate the optical depths for gaseous absorption and Rayleigh scattering
       call taumol_sw(klev, &
                      colh2o, colco2, colch4, colo2, colo3, colmol, &
                      laytrop, jp, jt, jt1, &

@@ -115,6 +115,7 @@ module icar_constants
         integer :: land_emissivity
         integer :: temperature_interface
         integer :: cosine_zenith_angle
+        integer :: tend_swrad
         integer :: last_var
 
     end type var_constants_type
@@ -127,7 +128,7 @@ module icar_constants
                                                            51, 52, 53, 54, 55, 56, 57, 58, 59, 60,  &
                                                            61, 62, 63, 64, 65, 66, 67, 68, 69, 70,  &
                                                            71, 72, 73, 74, 75, 76, 77, 78, 79, 80,  &
-                                                           81, 82, 83, 84, 85, 86, 87, 88)
+                                                           81, 82, 83, 84, 85, 86, 87, 88, 89)
 
     integer, parameter :: kINTEGER_BITS     = storage_size(kINTEGER_BITS)
     integer, parameter :: kMAX_STORAGE_VARS = storage_size(kVARS) / kINTEGER_BITS

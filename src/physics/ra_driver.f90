@@ -62,7 +62,10 @@ contains
             call ra_simple_init(domain, options)
 
             call rrtmg_lwinit(                           &
-                p_top=minval(domain%pressure_interface%data_3d(:,domain%kme,:)), allowed_to_read=.TRUE. ,                     &
+                !p_top=minval(domain%pressure_interface%data_3d(:,domain%kme,:)), allowed_to_read=.TRUE. ,                     &
+                !++ trude test    
+                p_top=(minval(domain%pressure_interface%data_3d(:,domain%kme,:)))*0.8, allowed_to_read=.TRUE. ,                     &
+                !-- trude test
                 ids=domain%ids, ide=domain%ide, jds=domain%jds, jde=domain%jde, kds=domain%kds, kde=domain%kde,                &
                 ims=domain%ims, ime=domain%ime, jms=domain%jms, jme=domain%jme, kms=domain%kms, kme=domain%kme,                &
                 its=domain%its, ite=domain%ite, jts=domain%jts, jte=domain%jte, kts=domain%kts, kte=domain%kte                 )
@@ -140,7 +143,7 @@ contains
                       kVARS%land_mask,    kVARS%snow_water_equivalent,  &
                       kVARS%dz_interface, kVARS%skin_temperature,      kVARS%temperature,             kVARS%density,          &
                       kVARS%longwave_cloud_forcing,                    kVARS%land_emissivity,         kVARS%temperature_interface,  &
-                      kVARS%cosine_zenith_angle,                       kVARS%shortwave_cloud_forcing                          &
+                      kVARS%cosine_zenith_angle,                       kVARS%shortwave_cloud_forcing, kVARS%tend_swrad           &
                       ])
 
 
@@ -153,7 +156,7 @@ contains
                       kVARS%snow_water_equivalent,                                                                            &
                       kVARS%dz_interface, kVARS%skin_temperature,      kVARS%temperature,             kVARS%density,          &
                       kVARS%longwave_cloud_forcing,                    kVARS%land_emissivity, kVARS%temperature_interface,    &
-                      kVARS%cosine_zenith_angle,                       kVARS%shortwave_cloud_forcing                          &
+                      kVARS%cosine_zenith_angle,                       kVARS%shortwave_cloud_forcing, kVars%tend_swrad          &
                       ] )
 
     end subroutine ra_rrtmg_var_request
@@ -238,7 +241,9 @@ contains
             if ((domain%model_time%seconds() - last_model_time) >= update_interval) then
                 ra_dt = domain%model_time%seconds() - last_model_time
                 last_model_time = domain%model_time%seconds()
-
+                ! trude, test if reseting th_swrad to zero helps
+                domain%tend%th_swrad = 0
+                domain%shortwave%data_2d = 0
                 call RRTMG_SWRAD(rthratensw=domain%tend%th_swrad,                 &
 !                swupt, swuptc, swuptcln, swdnt, swdntc, swdntcln, &
 !                swupb, swupbc, swupbcln, swdnb, swdnbc, swdnbcln, &
@@ -390,7 +395,7 @@ contains
             endif
             domain%temperature%data_3d = domain%temperature%data_3d+domain%tend%th_lwrad*dt+domain%tend%th_swrad*dt
             domain%potential_temperature%data_3d = domain%temperature%data_3d/domain%exner%data_3d
-        
+            domain%tend_swrad%data_3d = domain%tend%th_swrad
         endif
 
     end subroutine rad

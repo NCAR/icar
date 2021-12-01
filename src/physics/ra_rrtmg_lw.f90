@@ -3679,7 +3679,7 @@ contains
 !  layer pressure.  Store them in JP and JP1.  Store in FP the
 !  fraction of the difference (in ln(pressure)) between these
 !  two values that the layer pressure lies.
- 
+
          plog = log(pavel(lay))
 !         plog = dlog(pavel(lay))
          jp(lay) = int(36._rb - 5*(plog+0.04_rb))
@@ -12938,9 +12938,6 @@ CONTAINS
                                               ! nlayers will subsequently 
                                               ! replace kte+1
 
-   !++ trude test
-   !NLAYERS=NLAYERS-1
-  !-- trude test
    
   
    ! Read in absorption coefficients and other data

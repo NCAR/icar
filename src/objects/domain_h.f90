@@ -107,6 +107,7 @@ module domain_interface
     type(variable_t) :: land_emissivity
     type(variable_t) :: temperature_interface
     type(variable_t) :: cosine_zenith_angle
+    type(variable_t) :: tend_swrad
 
     integer,allocatable :: land_mask(:,:)
     type(variable_t) :: latitude

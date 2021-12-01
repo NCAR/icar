@@ -608,7 +608,7 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
 
-!>------------------------------------------------------------
+        !>------------------------------------------------------------
         !!  Cosine solar zenith angle
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%cosine_zenith_angle))
@@ -619,6 +619,21 @@ contains
                                attribute_t("units",         " "),                                                 &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+
+        !>------------------------------------------------------------
+        !!  Tendency from short wave radiation
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%tend_swrad))
+            var%name        = "tend_swrad"
+            var%dimensions  = three_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "sw_rad_tend"), &
+                               attribute_t("units",         " "),                                                 &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+
+
+
 
         !>------------------------------------------------------------
         !!  Surface emissivity
