@@ -646,6 +646,17 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
+        !!  Noah-MP Output Vegetation Fraction
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%vegetation_fraction_out))
+            var%name        = "vegetation_fraction_out"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "vegetation_fraction_out"),         &
+                               attribute_t("units",         "m2 m-2"),                              &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
         !!  Land cover type
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%veg_type))
@@ -1402,8 +1413,8 @@ contains
         !>------------------------------------------------------------
         !!  Transpiration Rate
         !!------------------------------------------------------------
-        associate(var=>var_meta(kVARS%transpiration))
-            var%name        = "transpiration"
+        associate(var=>var_meta(kVARS%transpiration_rate))
+            var%name        = "transpiration_rate"
             var%dimensions  = two_d_t_dimensions
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("non_standard_name", "transpiration_rate"),              &
@@ -1957,6 +1968,16 @@ contains
             var%attributes  = [attribute_t("standard_name", "height_above_reference_ellipsoid"),    &
                                attribute_t("units",         "m"),                                   &
                                attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Cosine of Zenith Angle
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%cos_zenith))
+            var%name        = "cos_zenith"
+            var%dimensions  = two_d_dimensions
+            var%attributes  = [attribute_t("non_standard_name", "cosine_zenith_angle"),             &
+                               attribute_t("units",             "degrees"),                         &
+                               attribute_t("coordinates",       "lat lon")]
         end associate
         !>------------------------------------------------------------
         !!  Latitude y coordinate

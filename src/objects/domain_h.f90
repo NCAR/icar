@@ -90,7 +90,7 @@ module domain_interface
     type(variable_t) :: surface_pressure
     type(variable_t) :: rad_absorbed_total
     type(variable_t) :: rad_absorbed_veg
-    type(variable_t) :; rad_absorbed_bare
+    type(variable_t) :: rad_absorbed_bare
     type(variable_t) :: rad_net_longwave
     type(variable_t) :: longwave_up
     type(variable_t) :: ground_heat_flux
@@ -112,6 +112,7 @@ module domain_interface
     type(variable_t) :: roughness_z0
     type(variable_t) :: vegetation_fraction
     type(variable_t) :: vegetation_fraction_max
+    type(variable_t) :: vegetation_fraction_out
     type(variable_t) :: lai
     type(variable_t) :: sai
     type(variable_t) :: crop_category
@@ -205,6 +206,7 @@ module domain_interface
     type(variable_t) :: storage_lake
 
     integer,allocatable :: land_mask(:,:)
+    type(variable_t) :: cos_zenith
     type(variable_t) :: latitude
     type(variable_t) :: longitude
     type(variable_t) :: u_latitude

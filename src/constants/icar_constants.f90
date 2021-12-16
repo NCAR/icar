@@ -66,6 +66,7 @@ module icar_constants
         integer :: longwave
         integer :: vegetation_fraction
         integer :: vegetation_fraction_max
+        integer :: vegetation_fraction_out
         integer :: veg_type
         integer :: mass_leaf
         integer :: mass_root
@@ -139,7 +140,7 @@ module icar_constants
         integer :: mixing_ratio_2m_bare
         integer :: surface_pressure
         integer :: rad_absorbed_total
-        integer :; rad_absorbed_veg
+        integer :: rad_absorbed_veg
         integer :: rad_absorbed_bare
         integer :: rad_net_longwave
         integer :: longwave_up
@@ -194,6 +195,7 @@ module icar_constants
         integer :: sst
         integer :: land_mask
         integer :: terrain
+        integer :: cos_zenith
         integer :: latitude
         integer :: longitude
         integer :: u_latitude
@@ -233,7 +235,7 @@ module icar_constants
                                                             151, 152, 153, 154, 155, 156, 157, 158, 159, 160,  &
                                                             161, 162, 163, 164, 165, 166, 167, 168, 169, 170,  &
                                                             171, 172, 173, 174, 175, 176, 177, 178, 179, 180,  &
-                                                            181, 182, 183)
+                                                            181, 182, 183, 184, 185, 186, 187)
 
     integer, parameter :: kINTEGER_BITS     = storage_size(kINTEGER_BITS)
     integer, parameter :: kMAX_STORAGE_VARS = storage_size(kVARS) / kINTEGER_BITS
