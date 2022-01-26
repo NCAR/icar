@@ -225,7 +225,7 @@ module icar_constants
     real, parameter :: pi  = 3.1415927 ! pi
     real, parameter :: stefan_boltzmann = 5.67e-8 ! the Stefan-Boltzmann constant
     real, parameter :: karman = 0.41   ! the von Karman constant
-    real, parameter :: solar_constant=1366 ! W/m^2
+    real, parameter :: solar_constant = 1366 ! W/m^2
 
     ! convenience parameters for various physics packages
     real, parameter :: rovcp = Rd/cp

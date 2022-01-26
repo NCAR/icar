@@ -411,11 +411,9 @@ contains
                                   RAINNC = domain%accumulated_precipitation%data_2d,    &
                                   SNOWNC = domain%accumulated_snowfall%data_2d,         &
                                   GRAUPELNC = domain%graupel%data_2d,       &
-! ++ trude
                                   re_cloud = domain%re_cloud%data_3d,                   &
                                   re_ice   = domain%re_ice%data_3d,                     &
                                   re_snow  = domain%re_snow%data_3d,                    &
-! -- trude
                                   has_reqc=1, has_reqi=1, has_reqs=1,                   &
                                   ids = ids, ide = ide,                   & ! domain dims
                                   jds = jds, jde = jde,                   &

@@ -34,8 +34,7 @@ module radiation
     implicit none
     integer :: update_interval
     real*8  :: last_model_time
-contains
-    
+contains    
 
     subroutine radiation_init(domain,options)
         type(domain_t), intent(inout) :: domain
@@ -57,15 +56,14 @@ contains
                 allocate(domain%tend%th_lwrad(domain%ims:domain%ime,domain%kms:domain%kme,domain%jms:domain%jme))
             if(.not.allocated(domain%tend%th_swrad)) &
                 allocate(domain%tend%th_swrad(domain%ims:domain%ime,domain%kms:domain%kme,domain%jms:domain%jme))
- 
-                
+                 
             call ra_simple_init(domain, options)
 
             call rrtmg_lwinit(                           &
                 !p_top=minval(domain%pressure_interface%data_3d(:,domain%kme,:)), allowed_to_read=.TRUE. ,                     &
-                !++ trude test    
-                p_top=(minval(domain%pressure_interface%data_3d(:,domain%kme,:)))*0.8, allowed_to_read=.TRUE. ,                     &
-                !-- trude test
+                ! Added 0.8 factor to make sure p_top is low enough. This value can be changed if code crashes. 
+                ! Code will crash because of negative log value
+                p_top=(minval(domain%pressure_interface%data_3d(:,domain%kme,:)))*0.8, allowed_to_read=.TRUE. ,                &
                 ids=domain%ids, ide=domain%ide, jds=domain%jds, jde=domain%jde, kds=domain%kds, kde=domain%kde,                &
                 ims=domain%ims, ime=domain%ime, jms=domain%jms, jme=domain%jme, kms=domain%kms, kme=domain%kme,                &
                 its=domain%its, ite=domain%ite, jts=domain%jts, jte=domain%jte, kts=domain%kts, kte=domain%kte                 )
@@ -125,14 +123,13 @@ contains
     end subroutine ra_simple_var_request
 
 
-!> ----------------------------------------------
+    !> ----------------------------------------------
     !! Communicate to the master process requesting the variables requred to be allocated, used for restart files, and advected
     !!
     !! ----------------------------------------------
     subroutine ra_rrtmg_var_request(options)
         implicit none
         type(options_t), intent(inout) :: options
-
 
         ! List the variables that are required to be allocated for the simple radiation code
         call options%alloc_vars( &
@@ -204,6 +201,7 @@ contains
         allocate(solar_elevation(ims:ime))
         allocate(albedo(ims:ime,jms:jme))
 
+        ! Note, need to link NoahMP to update albedo
         albedo=0.17
 
         if (options%physics%radiation==kRA_SIMPLE) then

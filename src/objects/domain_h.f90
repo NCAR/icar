@@ -100,7 +100,6 @@ module domain_interface
     type(variable_t) :: re_cloud
     type(variable_t) :: re_ice
     type(variable_t) :: re_snow
-
     type(variable_t) :: out_longwave_rad
     type(variable_t) :: longwave_cloud_forcing
     type(variable_t) :: shortwave_cloud_forcing

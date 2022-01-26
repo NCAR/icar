@@ -2,7 +2,7 @@
 !!  Basic file input/output routines
 !!
 !!  @details
-!!  Primary use is io_read 2d/3d
+!!  Primary use is io_read2d/3d
 !!  io_write* routines are more used for debugging
 !!  model output is performed in the output module
 !!
@@ -665,26 +665,13 @@ contains
         ! Read the dimension lengths
         call io_getdims(filename,varname,diminfo)
 
-    !    if (allocated(data_in)) deallocate(data_in)
-    !    allocate(data_in(diminfo(2)))
-
         ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
         ! the file.
         call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
         ! Get the varid of the data_in variable, based on its name.
         call check(nf90_inq_varid(ncid, varname, varid),trim(filename)//":"//trim(varname))
 
-        ! Read the data_in. skip the slowest varying indices if there are more than 1 dimensions (typically this will be time)
-!        if (diminfo(1)>1) then
-!            diminfo(3:diminfo(1)+1)=1 ! set count for extra dims to 1
-!            call check(nf90_get_var(ncid, varid, data_in,&
-!                                    dimstart(1:diminfo(1)), &               ! start  = 1 or extradim
-!                                    [ (diminfo(i+1), i=1,diminfo(1)) ],&    ! count=n or 1 created through an implied do loop
-!                                    [ (1,            i=1,diminfo(1)) ] ), & ! for all dims, stride = 1      " implied do loop
-!                                    trim(filename)//":"//trim(varname)) !pass varname to check so it can give us more info
-!        else
-            call check(nf90_get_var(ncid, varid, data_in),trim(filename)//":"//trim(varname))
-!        endif
+        call check(nf90_get_var(ncid, varid, data_in),trim(filename)//":"//trim(varname))
 
         ! Close the file, freeing all resources.
         call check( nf90_close(ncid),filename)
@@ -727,8 +714,6 @@ contains
         ! Read the dimension lengths
         call io_getdims(filename,varname,diminfo)
 
-    !    if (allocated(data_in)) deallocate(data_in)
-    !    allocate(data_in(diminfo(2)))
 
         ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to
         ! the file.
@@ -736,25 +721,12 @@ contains
         ! Get the varid of the data_in variable, based on its name.
         call check(nf90_inq_varid(ncid, varname, varid),trim(filename)//":"//trim(varname))
 
-        ! Read the data_in. skip the slowest varying indices if there are more than 1 dimensions (typically this will be time)
-!        if (diminfo(1)>1) then
-!            diminfo(3:diminfo(1)+1)=1 ! set count for extra dims to 1
-!            call check(nf90_get_var(ncid, varid, data_in,&
-!                                    dimstart(1:diminfo(1)), &               ! start  = 1 or extradim
-!                                    [ (diminfo(i+1), i=1,diminfo(1)) ],&    ! count=n or 1 created through an implied do loop
-!                                    [ (1,            i=1,diminfo(1)) ] ), & ! for all dims, stride = 1      " implied do loop
-!                                    trim(filename)//":"//trim(varname)) !pass varname to check so it can give us more info
-!        else
-            call check(nf90_get_var(ncid, varid, data_in),trim(filename)//":"//trim(varname))
-!        endif
+        call check(nf90_get_var(ncid, varid, data_in),trim(filename)//":"//trim(varname))
 
         ! Close the file, freeing all resources.
         call check( nf90_close(ncid),filename)
 
     end subroutine io_read0di
-
-
-
 
     !>------------------------------------------------------------
     !! Same as io_read1d but for double precision data
