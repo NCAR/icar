@@ -544,7 +544,7 @@ contains
             var%dimensions  = three_d_t_dimensions
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "effective_radius_of_cloud_liquid_water_particles"), &
-                               attribute_t("units",         "m"),                                                 &
+                               attribute_t("units",         "m"),                                                &
                                attribute_t("coordinates",   "lat lon")]
         end associate
 
@@ -556,7 +556,7 @@ contains
             var%dimensions  = three_d_t_dimensions
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "effective_radius_of_stratiform_cloud_ice_particles"), &
-                               attribute_t("units",         "m"),                                                 &
+                               attribute_t("units",         "m"),                                                  &
                                attribute_t("coordinates",   "lat lon")]
         end associate
 
@@ -580,7 +580,7 @@ contains
             var%dimensions  = two_d_t_dimensions
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "toa_outgoing_longwave_flux"), &
-                               attribute_t("units",         "W m-2"),                                                 &
+                               attribute_t("units",         "W m-2"),                      &
                                attribute_t("coordinates",   "lat lon")]
         end associate
 
@@ -592,7 +592,7 @@ contains
             var%dimensions  = two_d_t_dimensions
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("non_standard_name", "longwave_cloud_forcing"), &
-                               attribute_t("units",         "W m-2"),                                                 &
+                               attribute_t("units",         "W m-2"),                      &
                                attribute_t("coordinates",   "lat lon")]
         end associate
 
@@ -604,7 +604,7 @@ contains
             var%dimensions  = two_d_t_dimensions
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("non_standard_name", "shortwave_cloud_forcing"), &
-                               attribute_t("units",         "W m-2"),                                                 &
+                               attribute_t("units",         "W m-2"),                       &
                                attribute_t("coordinates",   "lat lon")]
         end associate
 
@@ -616,7 +616,7 @@ contains
             var%dimensions  = two_d_t_dimensions
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("non_standard_name", "cosine_zenith_angle"), &
-                               attribute_t("units",         " "),                                                 &
+                               attribute_t("units",         " "),                       &
                                attribute_t("coordinates",   "lat lon")]
         end associate
 
@@ -628,7 +628,7 @@ contains
             var%dimensions  = three_d_t_dimensions
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("non_standard_name", "sw_rad_tend"), &
-                               attribute_t("units",         " "),                                                 &
+                               attribute_t("units",         " "),               &
                                attribute_t("coordinates",   "lat lon")]
         end associate
 
@@ -643,7 +643,7 @@ contains
             var%dimensions  = two_d_t_dimensions
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "surface_longwave_emissivity"), &
-                               attribute_t("units",         " "),                                                 &
+                               attribute_t("units",         " "),                           &
                                attribute_t("coordinates",   "lat lon")]
         end associate
 
@@ -656,7 +656,7 @@ contains
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "air_temperature"),                    &
                                attribute_t("long_name",     "Temperature"),                        &
-                               attribute_t("units",         "K"),                              &
+                               attribute_t("units",         "K"),                                  &
                                attribute_t("coordinates",   "lat lon")]
         end associate
 

@@ -241,7 +241,6 @@ contains
             if ((domain%model_time%seconds() - last_model_time) >= update_interval) then
                 ra_dt = domain%model_time%seconds() - last_model_time
                 last_model_time = domain%model_time%seconds()
-                ! trude, test if reseting th_swrad to zero helps
                 domain%tend%th_swrad = 0
                 domain%shortwave%data_2d = 0
                 call RRTMG_SWRAD(rthratensw=domain%tend%th_swrad,                 &

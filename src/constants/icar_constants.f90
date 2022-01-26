@@ -117,7 +117,6 @@ module icar_constants
         integer :: cosine_zenith_angle
         integer :: tend_swrad
         integer :: last_var
-
     end type var_constants_type
 
     type(var_constants_type) :: kVARS = var_constants_type( 1,  2,  3,  4,  5,  6,  7,  8,  9, 10,  &
@@ -227,7 +226,6 @@ module icar_constants
     real, parameter :: stefan_boltzmann = 5.67e-8 ! the Stefan-Boltzmann constant
     real, parameter :: karman = 0.41   ! the von Karman constant
     real, parameter :: solar_constant=1366 ! W/m^2
-  
 
     ! convenience parameters for various physics packages
     real, parameter :: rovcp = Rd/cp
