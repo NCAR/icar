@@ -11333,30 +11333,10 @@ IMPLICIT NONE
       CHARACTER*80 errmess
       INTEGER rrtmg_unit
 
-!!      IF ( wrf_dm_on_monitor() ) THEN
-!        DO i = 10,99
-!          INQUIRE ( i , OPENED = opened )
-!          IF ( .NOT. opened ) THEN
-!            rrtmg_unit = i
-!            GOTO 2010
-!          ENDIF
-!        ENDDO
-!        rrtmg_unit = -1
-! 2010   CONTINUE
-!      ENDIF
-!      CALL wrf_dm_bcast_bytes ( rrtmg_unit , IWORDSIZE )
-
       rrtmg_unit = io_newunit()
       IF ( rrtmg_unit < 0 ) THEN
-!        CALL wrf_error_fatal ( 'module_ra_rrtmg_sw: rrtm_swlookuptable: Can not '// &
-!                               'find unused fortran unit to read in lookup table.' )
          error stop 'module_ra_rrtmg_sw: rrtm_swlookuptable: Can not find unused fortran unit to read in lookup table.'
       ENDIF
-
-!      IF ( wrf_dm_on_monitor() ) THEN
-!        OPEN(rrtmg_unit,FILE='RRTMG_SW_DATA',                  &
-!             FORM='UNFORMATTED',STATUS='OLD',ERR=9009)
-!      ENDIF
 
       call sw_kgb16(rrtmg_unit)
       call sw_kgb17(rrtmg_unit)
@@ -11373,13 +11353,11 @@ IMPLICIT NONE
       call sw_kgb28(rrtmg_unit)
       call sw_kgb29(rrtmg_unit)
 
-    ! IF ( wrf_dm_on_monitor() ) 
      CLOSE (rrtmg_unit)
 
      RETURN
 9009 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error opening RRTMG_SW_DATA on unit ',rrtmg_unit
-     !CALL wrf_error_fatal(errmess)
      error stop errmess
      END SUBROUTINE rrtmg_swlookuptable
 
@@ -11461,21 +11439,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
-
-!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!         rayl, strrat1, layreffr, kao, kbo, selfrefo, forrefo, sfluxrefo
-!      DM_BCAST_REAL(rayl)
-!      DM_BCAST_REAL(strrat1)
-!      DM_BCAST_INTEGER(layreffr)
-!      DM_BCAST_MACRO(kao)
-!      DM_BCAST_MACRO(kbo)
-!      DM_BCAST_MACRO(selfrefo)
-!      DM_BCAST_MACRO(forrefo)
-!      DM_BCAST_MACRO(sfluxrefo)
-
       call io_read0d("rayl_16_sw.nc", "rayl", rayl)
       call io_read0d("strrat1_16_sw.nc", "strrat1", strrat1)
       call io_read0di("layreffr_16_sw.nc", "layreffr", layreffr)
@@ -11488,14 +11451,13 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-!     CALL wrf_error_fatal(errmess)
      error stop errmess
       end subroutine sw_kgb16
 
 ! **************************************************************************
       subroutine sw_kgb17(rrtmg_unit)
 ! **************************************************************************
-         USE io_routines
+      USE io_routines
       use rrsw_kg17, only : kao, kbo, selfrefo, forrefo, sfluxrefo, &
                             rayl, strrat, layreffr
 
@@ -11553,11 +11515,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
-
-
       call io_read0d("rayl_17_sw.nc", "rayl", rayl)
       call io_read0d("strrat_17_sw.nc", "strrat", strrat)
       call io_read0di("layreffr_17_sw.nc", "layreffr", layreffr)
@@ -11566,28 +11523,17 @@ IMPLICIT NONE
       call io_read2d("selfrefo_17_sw.nc", "selfrefo", selfrefo)
       call io_read2d("forrefo_17_sw.nc", "forrefo", forrefo)
       call io_read2d("sfluxrefo_17_sw.nc", "sfluxrefo", sfluxrefo)
-!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!         rayl, strrat, layreffr, kao, kbo, selfrefo, forrefo, sfluxrefo
-!      DM_BCAST_REAL(rayl)
-!      DM_BCAST_REAL(strrat)
-!      DM_BCAST_INTEGER(layreffr)
-!      DM_BCAST_MACRO(kao)
-!      DM_BCAST_MACRO(kbo)
-!      DM_BCAST_MACRO(selfrefo)
-!      DM_BCAST_MACRO(forrefo)
-!      DM_BCAST_MACRO(sfluxrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-!     CALL wrf_error_fatal(errmess)
-      error stop errmess
-      end subroutine sw_kgb17
+     error stop errmess
+     end subroutine sw_kgb17
 
 ! **************************************************************************
       subroutine sw_kgb18(rrtmg_unit)
 ! **************************************************************************
-         USE io_routines
+      USE io_routines
       use rrsw_kg18, only : kao, kbo, selfrefo, forrefo, sfluxrefo, &
                             rayl, strrat, layreffr
 
@@ -11645,20 +11591,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
-
-!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!         rayl, strrat, layreffr, kao, kbo, selfrefo, forrefo, sfluxrefo
-!      DM_BCAST_REAL(rayl)
-!      DM_BCAST_REAL(strrat)
-!      DM_BCAST_INTEGER(layreffr)
-!      DM_BCAST_MACRO(kao)
-!      DM_BCAST_MACRO(kbo)
-!      DM_BCAST_MACRO(selfrefo)
-!      DM_BCAST_MACRO(forrefo)
-!      DM_BCAST_MACRO(sfluxrefo)
       call io_read0d("rayl_18_sw.nc", "rayl", rayl)
       call io_read0d("strrat_18_sw.nc", "strrat", strrat)
       call io_read0di("layreffr_18_sw.nc", "layreffr", layreffr)
@@ -11671,7 +11603,6 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-!     CALL wrf_error_fatal(errmess)
      error stop errmess
       end subroutine sw_kgb18 
 
@@ -11736,10 +11667,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
-
       call io_read0d("rayl_19_sw.nc", "rayl", rayl)
       call io_read0d("strrat_19_sw.nc", "strrat", strrat)
       call io_read0di("layreffr_19_sw.nc", "layreffr", layreffr)
@@ -11749,21 +11676,9 @@ IMPLICIT NONE
       call io_read2d("forrefo_19_sw.nc", "forrefo", forrefo)
       call io_read2d("sfluxrefo_19_sw.nc", "sfluxrefo", sfluxrefo)
 
-!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!         rayl, strrat, layreffr, kao, kbo, selfrefo, forrefo, sfluxrefo
-!      DM_BCAST_REAL(rayl)
-!      DM_BCAST_REAL(strrat)
-!      DM_BCAST_INTEGER(layreffr)
-!      DM_BCAST_MACRO(kao)
-!      DM_BCAST_MACRO(kbo)
-!      DM_BCAST_MACRO(selfrefo)
-!      DM_BCAST_MACRO(forrefo)
-!      DM_BCAST_MACRO(sfluxrefo)
-
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-!     CALL wrf_error_fatal(errmess)
      error stop errmess
       end subroutine sw_kgb19
 
@@ -11830,21 +11745,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
-
- !     IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
- !        rayl, layreffr, absch4o, kao, kbo, selfrefo, forrefo, sfluxrefo
-!      DM_BCAST_REAL(rayl)
-!      DM_BCAST_INTEGER(layreffr)
-!      DM_BCAST_MACRO(absch4o)
-!      DM_BCAST_MACRO(kao)
-!      DM_BCAST_MACRO(kbo)
-!      DM_BCAST_MACRO(selfrefo)
-!      DM_BCAST_MACRO(forrefo)
-!      DM_BCAST_MACRO(sfluxrefo)
-
       call io_read0d("rayl_20_sw.nc", "rayl", rayl)
       call io_read1d("absch4o_20_sw.nc", "absch4o", absch4o)
       call io_read0di("layreffr_20_sw.nc", "layreffr", layreffr)
@@ -11854,11 +11754,9 @@ IMPLICIT NONE
       call io_read2d("forrefo_20_sw.nc", "forrefo", forrefo)
       call io_read1d("sfluxrefo_20_sw.nc", "sfluxrefo", sfluxrefo)
 
-
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-!     CALL wrf_error_fatal(errmess)
      error stop errmess
       end subroutine sw_kgb20
 
@@ -11923,21 +11821,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
-
-!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!         rayl, strrat, layreffr, kao, kbo, selfrefo, forrefo, sfluxrefo
-!      DM_BCAST_REAL(rayl)
-!      DM_BCAST_REAL(strrat)
-!      DM_BCAST_INTEGER(layreffr)
-!      DM_BCAST_MACRO(kao)
-!      DM_BCAST_MACRO(kbo)
-!      DM_BCAST_MACRO(selfrefo)
-!      DM_BCAST_MACRO(forrefo)
-!      DM_BCAST_MACRO(sfluxrefo)
-
       call io_read0d("rayl_21_sw.nc", "rayl", rayl)
       call io_read0d("strrat_21_sw.nc", "strrat", strrat)
       call io_read0di("layreffr_21_sw.nc", "layreffr", layreffr)
@@ -11950,7 +11833,6 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-!     CALL wrf_error_fatal(errmess)
      error stop errmess
       end subroutine sw_kgb21
 
@@ -12015,20 +11897,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
-
-!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!         rayl, strrat, layreffr, kao, kbo, selfrefo, forrefo, sfluxrefo
-!      DM_BCAST_REAL(rayl)
-!      DM_BCAST_REAL(strrat)
-!      DM_BCAST_INTEGER(layreffr)
-!      DM_BCAST_MACRO(kao)
-!      DM_BCAST_MACRO(kbo)
-!      DM_BCAST_MACRO(selfrefo)
-!      DM_BCAST_MACRO(forrefo)
-!      DM_BCAST_MACRO(sfluxrefo)
       call io_read0d("rayl_22_sw.nc", "rayl", rayl)
       call io_read0d("strrat_22_sw.nc", "strrat", strrat)
       call io_read0di("layreffr_22_sw.nc", "layreffr", layreffr)
@@ -12042,7 +11910,6 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-!     CALL wrf_error_fatal(errmess)
      error stop errmess
       end subroutine sw_kgb22
 
@@ -12097,19 +11964,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
-
-!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!         raylo, givfac, layreffr, kao, selfrefo, forrefo, sfluxrefo
-!      DM_BCAST_MACRO(raylo)
-!      DM_BCAST_REAL(givfac)
-!      DM_BCAST_INTEGER(layreffr)
-!      DM_BCAST_MACRO(kao)
-!      DM_BCAST_MACRO(selfrefo)
-!      DM_BCAST_MACRO(forrefo)
-!      DM_BCAST_MACRO(sfluxrefo)
       call io_read1d("raylo_23_sw.nc", "raylo", raylo)
       call io_read0d("givfac_23_sw.nc", "givfac", givfac)
       call io_read0di("layreffr_23_sw.nc", "layreffr", layreffr)
@@ -12121,7 +11975,6 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-!     CALL wrf_error_fatal(errmess)
      error stop errmess
       end subroutine sw_kgb23
 
@@ -12190,9 +12043,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
       call io_read2d("raylao_24_sw.nc", "raylao", raylao)
       call io_read1d("raylbo_24_sw.nc", "raylbo", raylbo)
       call io_read1d("abso3ao_24_sw.nc", "abso3ao", abso3ao)
@@ -12204,25 +12054,10 @@ IMPLICIT NONE
       call io_read2d("selfrefo_24_sw.nc", "selfrefo", selfrefo)
       call io_read2d("forrefo_24_sw.nc", "forrefo", forrefo)
       call io_read2d("sfluxrefo_24_sw.nc", "sfluxrefo", sfluxrefo)
-!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!         raylao, raylbo, strrat, layreffr, abso3ao, abso3bo, kao, kbo, selfrefo, &
-!         forrefo, sfluxrefo
-!      DM_BCAST_MACRO(raylao)
-!      DM_BCAST_MACRO(raylbo)
-!      DM_BCAST_REAL(strrat)
-!      DM_BCAST_INTEGER(layreffr)
-!      DM_BCAST_MACRO(abso3ao)
-!      DM_BCAST_MACRO(abso3bo)
-!      DM_BCAST_MACRO(kao)
-!      DM_BCAST_MACRO(kbo)
-!      DM_BCAST_MACRO(selfrefo)
-!      DM_BCAST_MACRO(forrefo)
-!      DM_BCAST_MACRO(sfluxrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-!     CALL wrf_error_fatal(errmess)
      error stop errmess
       end subroutine sw_kgb24
 
@@ -12266,17 +12101,6 @@ IMPLICIT NONE
 !     in mb).  The fourth index, IG, goes from 1 to 16, and indicates
 !     which g-interval the absorption coefficients are for.
 
-!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
-
-!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!         raylo, layreffr, abso3ao, abso3bo, kao, sfluxrefo
-!      DM_BCAST_MACRO(raylo)
-!      DM_BCAST_INTEGER(layreffr)
-!      DM_BCAST_MACRO(abso3ao)
-!      DM_BCAST_MACRO(abso3bo)
-!      DM_BCAST_MACRO(kao)
-!      DM_BCAST_MACRO(sfluxrefo)
       call io_read1d("raylo_25_sw.nc", "raylo", raylo)
       call io_read1d("abso3ao_25_sw.nc", "abso3ao", abso3ao)
       call io_read1d("abso3bo_25_sw.nc", "abso3bo", abso3bo)
@@ -12286,7 +12110,6 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-!     CALL wrf_error_fatal(errmess)
      error stop errmess
       end subroutine sw_kgb25
 
@@ -12310,18 +12133,11 @@ IMPLICIT NONE
 
 !     Array raylo contains the Rayleigh extinction coefficient at all v for this band.
 
-!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-
-!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!         raylo, sfluxrefo
-      !DM_BCAST_MACRO(raylo)
-      !DM_BCAST_MACRO(sfluxrefo)
       call io_read1d("raylo_26_sw.nc", "raylo", raylo)
       call io_read1d("sfluxrefo_26_sw.nc", "sfluxrefo", sfluxrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
- !    CALL wrf_error_fatal(errmess)
      error stop errmess
       end subroutine sw_kgb26
 
@@ -12379,18 +12195,6 @@ IMPLICIT NONE
 !     pressure levels in mb).  The third index, IG, goes from 1 to 16,
 !     and tells us which g-interval the absorption coefficients are for.
 
-!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
-
-!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!         raylo, scalekur, layreffr, kao, kbo, sfluxrefo
-!      DM_BCAST_MACRO(raylo)
-!      DM_BCAST_REAL(scalekur)
-!      DM_BCAST_INTEGER(layreffr)
-!      DM_BCAST_MACRO(kao)
-!      DM_BCAST_MACRO(kbo)
-!      DM_BCAST_MACRO(sfluxrefo)
       call io_read1d("raylo_27_sw.nc", "raylo", raylo)
       call io_read0di("layreffr_27_sw.nc", "layreffr", layreffr)
       call io_read0d("scalekur_27_sw.nc", "scalekur", scalekur)
@@ -12400,7 +12204,6 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-!     CALL wrf_error_fatal(errmess)
      error stop errmess
       end subroutine sw_kgb27
 
@@ -12453,18 +12256,6 @@ IMPLICIT NONE
 !     pressure levels in mb).  The third index, IG, goes from 1 to 16,
 !     and tells us which g-interval the absorption coefficients are for.
 
-!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
-
-!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!         rayl, strrat, layreffr, kao, kbo, sfluxrefo
-!!      DM_BCAST_REAL(rayl)
- !     DM_BCAST_REAL(strrat)
- !     DM_BCAST_INTEGER(layreffr)
- !     DM_BCAST_MACRO(kao)
- !     DM_BCAST_MACRO(kbo)
- !     DM_BCAST_MACRO(sfluxrefo)
       call io_read0d("rayl_28_sw.nc", "rayl", rayl)
       call io_read0d("strrat_28_sw.nc", "strrat", strrat)
       call io_read0di("layreffr_28_sw.nc", "layreffr", layreffr)
@@ -12474,7 +12265,6 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-!     CALL wrf_error_fatal(errmess)
      error stop errmess
       end subroutine sw_kgb28
 
@@ -12543,9 +12333,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-!#define DM_BCAST_REAL(A) CALL wrf_dm_bcast_real ( A , 1 )
-!#define DM_BCAST_INTEGER(A) CALL wrf_dm_bcast_integer ( A , 1 )
       call io_read0d("rayl_29_sw.nc", "rayl", rayl)
       call io_read1d("absh2oo_29_sw.nc", "absh2oo", absh2oo)
       call io_read1d("absco2o_29_sw.nc", "absco2o", absco2o)
@@ -12555,22 +12342,10 @@ IMPLICIT NONE
       call io_read2d("selfrefo_29_sw.nc", "selfrefo", selfrefo)
       call io_read2d("forrefo_29_sw.nc", "forrefo", forrefo)
       call io_read1d("sfluxrefo_29_sw.nc", "sfluxrefo", sfluxrefo)
-!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!         rayl, layreffr, absh2oo, absco2o, kao, kbo, selfrefo, forrefo, sfluxrefo
-!      DM_BCAST_REAL(rayl)
-!      DM_BCAST_INTEGER(layreffr)
-!      DM_BCAST_MACRO(absh2oo)
-!      DM_BCAST_MACRO(absco2o)
-!      DM_BCAST_MACRO(kao)
-!      DM_BCAST_MACRO(kbo)
-!      DM_BCAST_MACRO(selfrefo)
-!      DM_BCAST_MACRO(forrefo)
-!      DM_BCAST_MACRO(sfluxrefo)
 
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
-!     CALL wrf_error_fatal(errmess)
      error stop errmess
 
       end subroutine sw_kgb29

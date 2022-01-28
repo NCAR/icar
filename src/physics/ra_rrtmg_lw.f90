@@ -8288,9 +8288,7 @@ contains
                sumk = 0.
                do ipr = 1, ngn(igc)
                   iprsm = iprsm + 1
-                  !++ trude
                   sumk = sumk + kbo(jt,jp-12,iprsm)*rwgt(iprsm)
-                  !sumk = sumk + kbo(jt,jp,iprsm)*rwgt(iprsm)
                enddo
                kb(jt,jp,igc) = sumk
             enddo
@@ -12967,37 +12965,12 @@ IMPLICIT NONE
       INTEGER rrtmg_unit
       INTEGER FILESIZE , recl
       REAL :: foo
-!      IF ( wrf_dm_on_monitor() ) THEN
-!        DO i = 10,99
-!          INQUIRE ( i , OPENED = opened )
-!          IF ( .NOT. opened ) THEN
-!            rrtmg_unit = i
-!            GOTO 2010
-!          ENDIF
-!        ENDDO
-!        rrtmg_unit = -1
-! 2010   CONTINUE
-!      ENDIF
-   
-! trude
-!####### we will use icar get unit
-!      CALL wrf_dm_bcast_bytes ( rrtmg_unit , IWORDSIZE )
+
       rrtmg_unit = io_newunit()
       IF ( rrtmg_unit < 0 ) THEN
-        !CALL wrf_error_fatal ( 'module_ra_rrtmg_lw: rrtm_lwlookuptable: Can not '// &
-        !                       'find unused fortran unit to read in lookup table.' )
          error stop 'module_ra_rrtmg_lw: rrtm_lwlookuptable: Can not '// &
          'find unused fortran unit to read in lookup table.'
       ENDIF
-
-!      IF ( wrf_dm_on_monitor() ) THEN
-
-
-
- !! ++ trude,  With gfrotran, symlink RRTMG_LW_DATA to RRTMG_LW_DATA_DBL
- !     OPEN(rrtmg_unit,FILE='RRTMG_LW_DATA',                  &
- !            FORM='UNFORMATTED',STATUS='OLD', ERR=9009, ACCESS="STREAM")
-!!      ENDIF
 
       call lw_kgb01(rrtmg_unit)
       call lw_kgb02(rrtmg_unit)
@@ -13016,7 +12989,6 @@ IMPLICIT NONE
       call lw_kgb15(rrtmg_unit)
       call lw_kgb16(rrtmg_unit)
 
-     !IF ( wrf_dm_on_monitor() )
       CLOSE (rrtmg_unit)
 
      RETURN
@@ -13106,7 +13078,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
 
      call io_read1d("fracrefao_1.nc", "fracrefao", fracrefao)
      call io_read1d("fracrefbo_1.nc", "fracrefbo", fracrefbo)
@@ -13117,29 +13088,9 @@ IMPLICIT NONE
      call io_read2d("selfrefo_1.nc", "selfrefo", selfrefo)
      call io_read2d("forrefo_1.nc", "forrefo", forrefo)
 
-     ! READ (rrtmg_unit,ERR=9010) &
-      !fracrefao, fracrefbo, kao, kbo, kao_mn2, kbo_mn2, selfrefo, forrefo
-   
-
-      
-
-
-
-         !IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-      !   fracrefao, fracrefbo, kao, kbo, kao_mn2, kbo_mn2, selfrefo, forrefo
-      !DM_BCAST_MACRO(fracrefao)
-      !DM_BCAST_MACRO(fracrefbo)
-      !DM_BCAST_MACRO(kao)
-      !DM_BCAST_MACRO(kbo)
-      !DM_BCAST_MACRO(kao_mn2)
-      !DM_BCAST_MACRO(kbo_mn2)
-      !DM_BCAST_MACRO(selfrefo)
-      !DM_BCAST_MACRO(forrefo)
-
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     !CALL wrf_error_fatal(errmess)
      error stop errmess
       end subroutine lw_kgb01
 
@@ -13201,7 +13152,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
       call io_read1d("fracrefao_2.nc", "fracrefao", fracrefao)
       call io_read1d("fracrefbo_2.nc", "fracrefbo", fracrefbo)
       call io_read3d("kao_2.nc", "kao", kao)
@@ -13209,22 +13159,9 @@ IMPLICIT NONE
       call io_read2d("selfrefo_2.nc", "selfrefo", selfrefo)
       call io_read2d("forrefo_2.nc", "forrefo", forrefo)
       
-      !READ (rrtmg_unit,ERR=9010) &
-      !    fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
-
-!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!          fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
-!       DM_BCAST_MACRO(fracrefao)
-!       DM_BCAST_MACRO(fracrefbo)
-!       DM_BCAST_MACRO(kao)
-!       DM_BCAST_MACRO(kbo)
-!       DM_BCAST_MACRO(selfrefo)
-!       DM_BCAST_MACRO(forrefo)
-
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     !CALL wrf_error_fatal(errmess)
      error stop errmess
       end subroutine lw_kgb02
 
@@ -13326,22 +13263,7 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-
-       !READ (rrtmg_unit,ERR=9010) &
-       !   fracrefao, fracrefbo, kao, kbo, kao_mn2o, kbo_mn2o, selfrefo, forrefo
-!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!          fracrefao, fracrefbo, kao, kbo, kao_mn2o, kbo_mn2o, selfrefo, forrefo
-!       DM_BCAST_MACRO(fracrefao)
-!       DM_BCAST_MACRO(fracrefbo)
-!       DM_BCAST_MACRO(kao)
-!       DM_BCAST_MACRO(kbo)
-!       DM_BCAST_MACRO(kao_mn2o)
-!       DM_BCAST_MACRO(kbo_mn2o)
-!       DM_BCAST_MACRO(selfrefo)
-!       DM_BCAST_MACRO(forrefo)
-          
-      call io_read2d("fracrefao_3.nc", "fracrefao", fracrefao)
+          call io_read2d("fracrefao_3.nc", "fracrefao", fracrefao)
           call io_read2d("fracrefbo_3.nc", "fracrefbo", fracrefbo)
           call io_read4d("kao_3.nc", "kao", kao)
           call io_read4d("kbo_3.nc", "kbo", kbo)
@@ -13353,7 +13275,6 @@ IMPLICIT NONE
           RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     !CALL wrf_error_fatal(errmess)
      error stop errmess
 
       end subroutine lw_kgb03 
@@ -13361,7 +13282,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb04(rrtmg_unit)
 ! **************************************************************************
-         USE io_routines
+      USE io_routines
       use rrlw_kg04, only : fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
 
       implicit none
@@ -13427,19 +13348,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-
- !      READ (rrtmg_unit,ERR=9010) &
- !         fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
-!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!          fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
-!       DM_BCAST_MACRO(fracrefao)
-!       DM_BCAST_MACRO(fracrefbo)
-!       DM_BCAST_MACRO(kao)
-!       DM_BCAST_MACRO(kbo)
-!       DM_BCAST_MACRO(selfrefo)
-!       DM_BCAST_MACRO(forrefo)
-
           call io_read2d("fracrefao_4.nc", "fracrefao", fracrefao)
           call io_read2d("fracrefbo_4.nc", "fracrefbo", fracrefbo)
           call io_read4d("kao_4.nc", "kao", kao)
@@ -13451,7 +13359,6 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     !CALL wrf_error_fatal(errmess)
      error stop errmess
 
       end subroutine lw_kgb04
@@ -13544,19 +13451,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-!      READ (rrtmg_unit,ERR=9010) &
-!      fracrefao, fracrefbo, kao, kbo, kao_mo3, ccl4o, selfrefo, forrefo
-!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!          fracrefao, fracrefbo, kao, kbo, kao_mo3, ccl4o, selfrefo, forrefo
-!       DM_BCAST_MACRO(fracrefao)
-!       DM_BCAST_MACRO(fracrefbo)
-!       DM_BCAST_MACRO(kao)
-!       DM_BCAST_MACRO(kbo)
-!       DM_BCAST_MACRO(kao_mo3)
-!       DM_BCAST_MACRO(ccl4o)
-!       DM_BCAST_MACRO(selfrefo)
-!       DM_BCAST_MACRO(forrefo)
       call io_read2d("fracrefao_5.nc", "fracrefao", fracrefao)
       call io_read2d("fracrefbo_5.nc", "fracrefbo", fracrefbo)
       call io_read4d("kao_5.nc", "kao", kao)
@@ -13569,7 +13463,6 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     !CALL wrf_error_fatal(errmess)
      error stop errmess
 
       end subroutine lw_kgb05
@@ -13577,7 +13470,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb06(rrtmg_unit)
 ! **************************************************************************
-         USE io_routines
+      USE io_routines
       use rrlw_kg06
 !     use rrlw_kg06, only : fracrefao, kao, kao_mco2, selfrefo, forrefo, &
 !                           cfc11adjo, cfc12o
@@ -13636,18 +13529,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
- !     READ (rrtmg_unit,ERR=9010) &
- !     fracrefao, kao, kao_mco2, cfc11adjo, cfc12o, selfrefo, forrefo
-!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!          fracrefao, kao, kao_mco2, cfc11adjo, cfc12o, selfrefo, forrefo
-!       DM_BCAST_MACRO(fracrefao)
-!       DM_BCAST_MACRO(kao)
-!       DM_BCAST_MACRO(kao_mco2)
-!       DM_BCAST_MACRO(cfc11adjo)
-!       DM_BCAST_MACRO(cfc12o)
-!       DM_BCAST_MACRO(selfrefo)
-!       DM_BCAST_MACRO(forrefo)
       call io_read1d("fracrefao_6.nc", "fracrefao", fracrefao)
       call io_read3d("kao_6.nc", "kao", kao)
       call io_read2d("kao_mco2_6.nc", "kao_mco2", kao_mco2)
@@ -13659,15 +13540,13 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     !CALL wrf_error_fatal(errmess)
-     !error stop errmess
 
       end subroutine lw_kgb06
 
 ! **************************************************************************
       subroutine lw_kgb07(rrtmg_unit)
 ! **************************************************************************
-         USE io_routines
+      USE io_routines
       use rrlw_kg07, only : fracrefao, fracrefbo, kao, kbo, kao_mco2, &
                             kbo_mco2, selfrefo, forrefo
 
@@ -13748,19 +13627,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-  !    READ (rrtmg_unit,ERR=9010) &
-  !    fracrefao, fracrefbo, kao, kbo, kao_mco2, kbo_mco2, selfrefo, forrefo
-!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!          fracrefao, fracrefbo, kao, kbo, kao_mco2, kbo_mco2, selfrefo, forrefo
-!       DM_BCAST_MACRO(fracrefao)
-!       DM_BCAST_MACRO(fracrefbo)
-!       DM_BCAST_MACRO(kao)
-!       DM_BCAST_MACRO(kbo)
-!       DM_BCAST_MACRO(kao_mco2)
-!       DM_BCAST_MACRO(kbo_mco2)
-!       DM_BCAST_MACRO(selfrefo)
-!       DM_BCAST_MACRO(forrefo)
       call io_read2d("fracrefao_7.nc", "fracrefao", fracrefao)
       call io_read1d("fracrefbo_7.nc", "fracrefbo", fracrefbo)
       call io_read4d("kao_7.nc", "kao", kao)
@@ -13772,7 +13638,6 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     !CALL wrf_error_fatal(errmess)
      error stop errmess
 
       end subroutine lw_kgb07
@@ -13780,7 +13645,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb08(rrtmg_unit)
 ! **************************************************************************
-         USE io_routines
+      USE io_routines
       use rrlw_kg08, only : fracrefao, fracrefbo, kao, kao_mco2, kao_mn2o, &
                             kao_mo3, kbo, kbo_mco2, kbo_mn2o, selfrefo, forrefo, &
                             cfc12o, cfc22adjo
@@ -13865,26 +13730,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
- !    READ (rrtmg_unit,ERR=9010) &
- !     fracrefao, fracrefbo, kao, kbo, kao_mco2, kbo_mco2, kao_mn2o, &
- !     kbo_mn2o, kao_mo3, cfc12o, cfc22adjo, selfrefo, forrefo
-!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!          fracrefao, fracrefbo, kao, kbo, kao_mco2, kbo_mco2, kao_mn2o, &
-!          kbo_mn2o, kao_mo3, cfc12o, cfc22adjo, selfrefo, forrefo
-!       DM_BCAST_MACRO(fracrefao)
-!       DM_BCAST_MACRO(fracrefbo)
-!       DM_BCAST_MACRO(kao)
-!       DM_BCAST_MACRO(kbo)
-!       DM_BCAST_MACRO(kao_mco2)
-!       DM_BCAST_MACRO(kbo_mco2)
-!       DM_BCAST_MACRO(kao_mn2o)
-!       DM_BCAST_MACRO(kbo_mn2o)
-!       DM_BCAST_MACRO(kao_mo3)
-!       DM_BCAST_MACRO(cfc12o)
-!       DM_BCAST_MACRO(cfc22adjo)
-!       DM_BCAST_MACRO(selfrefo)
-!       DM_BCAST_MACRO(forrefo)
       call io_read1d("fracrefao_8.nc", "fracrefao", fracrefao)
       call io_read1d("fracrefbo_8.nc", "fracrefbo", fracrefbo)
       call io_read3d("kao_8.nc", "kao", kao)
@@ -13901,7 +13746,6 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     !CALL wrf_error_fatal(errmess)
      error stop errmess
 
       end subroutine lw_kgb08
@@ -13990,19 +13834,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-  !    READ (rrtmg_unit,ERR=9010) &
-  !    fracrefao, fracrefbo, kao, kbo, kao_mn2o, kbo_mn2o, selfrefo, forrefo
-!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!          fracrefao, fracrefbo, kao, kbo, kao_mn2o, kbo_mn2o, selfrefo, forrefo
-!       DM_BCAST_MACRO(fracrefao)
-!       DM_BCAST_MACRO(fracrefbo)
-!       DM_BCAST_MACRO(kao)
-!       DM_BCAST_MACRO(kbo)
-!       DM_BCAST_MACRO(kao_mn2o)
-!       DM_BCAST_MACRO(kbo_mn2o)
-!       DM_BCAST_MACRO(selfrefo)
-!       DM_BCAST_MACRO(forrefo)
       call io_read2d("fracrefao_9.nc", "fracrefao", fracrefao)
       call io_read1d("fracrefbo_9.nc", "fracrefbo", fracrefbo)
       call io_read4d("kao_9.nc", "kao", kao)
@@ -14014,7 +13845,6 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     !CALL wrf_error_fatal(errmess)
      error stop errmess
 
       end subroutine lw_kgb09
@@ -14077,17 +13907,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
- !     READ (rrtmg_unit,ERR=9010) &
- !     fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
-!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!          fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
-!       DM_BCAST_MACRO(fracrefao)
-!       DM_BCAST_MACRO(fracrefbo)
-!       DM_BCAST_MACRO(kao)
-!       DM_BCAST_MACRO(kbo)
-!       DM_BCAST_MACRO(selfrefo)
-!       DM_BCAST_MACRO(forrefo)
       call io_read1d("fracrefao_10.nc", "fracrefao", fracrefao)
       call io_read1d("fracrefbo_10.nc", "fracrefbo", fracrefbo)
       call io_read3d("kao_10.nc", "kao", kao)
@@ -14097,7 +13916,6 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     !CALL wrf_error_fatal(errmess)
      error stop errmess
 
       end subroutine lw_kgb10
@@ -14105,7 +13923,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb11(rrtmg_unit)
 ! **************************************************************************
-         USE io_routines
+      USE io_routines
       use rrlw_kg11, only : fracrefao, fracrefbo, kao, kbo, kao_mo2, &
                             kbo_mo2, selfrefo, forrefo
 
@@ -14175,19 +13993,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
- !     READ (rrtmg_unit,ERR=9010) &
- !     fracrefao, fracrefbo, kao, kbo, kao_mo2, kbo_mo2, selfrefo, forrefo
-!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!          fracrefao, fracrefbo, kao, kbo, kao_mo2, kbo_mo2, selfrefo, forrefo
-!       DM_BCAST_MACRO(fracrefao)
-!       DM_BCAST_MACRO(fracrefbo)
-!       DM_BCAST_MACRO(kao)
-!       DM_BCAST_MACRO(kbo)
-!       DM_BCAST_MACRO(kao_mo2)
-!       DM_BCAST_MACRO(kbo_mo2)
-!       DM_BCAST_MACRO(selfrefo)
-!       DM_BCAST_MACRO(forrefo)
       call io_read1d("fracrefao_11.nc", "fracrefao", fracrefao)
       call io_read1d("fracrefbo_11.nc", "fracrefbo", fracrefbo)
       call io_read3d("kao_11.nc", "kao", kao)
@@ -14199,7 +14004,6 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     !CALL wrf_error_fatal(errmess)
      error stop errmess
 
       end subroutine lw_kgb11
@@ -14207,7 +14011,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb12(rrtmg_unit)
 ! **************************************************************************
-         USE io_routines
+      USE io_routines
       use rrlw_kg12, only : fracrefao, kao, selfrefo, forrefo
 
       implicit none
@@ -14255,15 +14059,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
- !     READ (rrtmg_unit,ERR=9010) &
- !     fracrefao, kao, selfrefo, forrefo
-!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!          fracrefao, kao, selfrefo, forrefo
-!       DM_BCAST_MACRO(fracrefao)
-!       DM_BCAST_MACRO(kao)
-!       DM_BCAST_MACRO(selfrefo)
-!       DM_BCAST_MACRO(forrefo)
       call io_read2d("fracrefao_12.nc", "fracrefao", fracrefao)
       call io_read4d("kao_12.nc", "kao", kao)
       call io_read2d("selfrefo_12.nc", "selfrefo", selfrefo)
@@ -14272,7 +14067,6 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     !CALL wrf_error_fatal(errmess)
      error stop errmess
 
       end subroutine lw_kgb12
@@ -14349,19 +14143,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
-!      READ (rrtmg_unit,ERR=9010) &
-!      fracrefao, fracrefbo, kao, kao_mco2, kao_mco, kbo_mo3, selfrefo, forrefo
-!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!          fracrefao, fracrefbo, kao, kao_mco2, kao_mco, kbo_mo3, selfrefo, forrefo
-!       DM_BCAST_MACRO(fracrefao)
-!       DM_BCAST_MACRO(fracrefbo)
-!       DM_BCAST_MACRO(kao)
-!       DM_BCAST_MACRO(kao_mco2)
-!       DM_BCAST_MACRO(kao_mco)
-!       DM_BCAST_MACRO(kbo_mo3)
-!       DM_BCAST_MACRO(selfrefo)
-!       DM_BCAST_MACRO(forrefo)
       call io_read2d("fracrefao_13.nc", "fracrefao", fracrefao)
       call io_read1d("fracrefbo_13.nc", "fracrefbo", fracrefbo)
       call io_read4d("kao_13.nc", "kao", kao)
@@ -14373,7 +14154,6 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     !CALL wrf_error_fatal(errmess)
      error stop errmess
 
       end subroutine lw_kgb13
@@ -14381,7 +14161,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb14(rrtmg_unit)
 ! **************************************************************************
-         USE io_routines
+      USE io_routines
       use rrlw_kg14, only : fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
 
       implicit none
@@ -14442,17 +14222,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
- !     READ (rrtmg_unit,ERR=9010) &
- !     fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
-!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!          fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
-!       DM_BCAST_MACRO(fracrefao)
-!       DM_BCAST_MACRO(fracrefbo)
-!       DM_BCAST_MACRO(kao)
-!       DM_BCAST_MACRO(kbo)
-!       DM_BCAST_MACRO(selfrefo)
-!       DM_BCAST_MACRO(forrefo)
       call io_read1d("fracrefao_14.nc", "fracrefao", fracrefao)
       call io_read1d("fracrefbo_14.nc", "fracrefbo", fracrefbo)
       call io_read3d("kao_14.nc", "kao", kao)
@@ -14462,7 +14231,6 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     !CALL wrf_error_fatal(errmess)
      error stop errmess
 
       end subroutine lw_kgb14
@@ -14470,7 +14238,7 @@ IMPLICIT NONE
 ! **************************************************************************
       subroutine lw_kgb15(rrtmg_unit)
 ! **************************************************************************
-         USE io_routines
+      USE io_routines
       use rrlw_kg15, only : fracrefao, kao, kao_mn2, selfrefo, forrefo
 
       implicit none
@@ -14530,16 +14298,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-! #define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
- !     READ (rrtmg_unit,ERR=9010) &
- !     fracrefao, kao, kao_mn2, selfrefo, forrefo
-!       IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!          fracrefao, kao, kao_mn2, selfrefo, forrefo
-!       DM_BCAST_MACRO(fracrefao)
-!       DM_BCAST_MACRO(kao)
-!       DM_BCAST_MACRO(kao_mn2)
-!       DM_BCAST_MACRO(selfrefo)
-!       DM_BCAST_MACRO(forrefo)
       call io_read2d("fracrefao_15.nc", "fracrefao", fracrefao)
       call io_read4d("kao_15.nc", "kao", kao)
       call io_read3d("kao_mn2_15.nc", "kao_mn2", kao_mn2)
@@ -14549,7 +14307,6 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     !CALL wrf_error_fatal(errmess)
      error stop errmess
 
       end subroutine lw_kgb15
@@ -14618,17 +14375,6 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-!#define DM_BCAST_MACRO(A) CALL wrf_dm_bcast_bytes ( A , size ( A ) * RWORDSIZE )
- !     READ (rrtmg_unit,ERR=9010) &
- !        fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
-!      IF ( wrf_dm_on_monitor() ) READ (rrtmg_unit,ERR=9010) &
-!         fracrefao, fracrefbo, kao, kbo, selfrefo, forrefo
-!      DM_BCAST_MACRO(fracrefao)
-!      DM_BCAST_MACRO(fracrefbo)
-!      DM_BCAST_MACRO(kao)
-!      DM_BCAST_MACRO(kbo)
-!      DM_BCAST_MACRO(selfrefo)
-!      DM_BCAST_MACRO(forrefo)
       call io_read2d("fracrefao_16.nc", "fracrefao", fracrefao)
       call io_read1d("fracrefbo_16.nc", "fracrefbo", fracrefbo)
       call io_read4d("kao_16.nc", "kao", kao)
@@ -14639,7 +14385,6 @@ IMPLICIT NONE
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
-     !CALL wrf_error_fatal(errmess)
      error stop errmess
 
       end subroutine lw_kgb16

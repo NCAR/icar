@@ -62,7 +62,8 @@ contains
             call rrtmg_lwinit(                           &
                 !p_top=minval(domain%pressure_interface%data_3d(:,domain%kme,:)), allowed_to_read=.TRUE. ,                     &
                 ! Added 0.8 factor to make sure p_top is low enough. This value can be changed if code crashes. 
-                ! Code will crash because of negative log value
+                ! Code will crash because of negative log value in this expression in ra_rrtmg_lw and ra_rrtmg_sw:
+                !        plog = log(pavel(lay))
                 p_top=(minval(domain%pressure_interface%data_3d(:,domain%kme,:)))*0.8, allowed_to_read=.TRUE. ,                &
                 ids=domain%ids, ide=domain%ide, jds=domain%jds, jde=domain%jde, kds=domain%kds, kde=domain%kde,                &
                 ims=domain%ims, ime=domain%ime, jms=domain%jms, jme=domain%jme, kms=domain%kms, kme=domain%kme,                &
