@@ -13079,14 +13079,14 @@ IMPLICIT NONE
 !     etc.  The second index runs over the g-channel (1 to 16).
 
 
-     call io_read1d("fracrefao_1.nc", "fracrefao", fracrefao)
-     call io_read1d("fracrefbo_1.nc", "fracrefbo", fracrefbo)
-     call io_read3d("kao_1.nc", "kao", kao)
-     call io_read3d("kbo_1.nc", "kbo", kbo)
-     call io_read2d("kao_mn2_1.nc", "kao_mn2", kao_mn2)
-     call io_read2d("kbo_mn2_1.nc", "kbo_mn2", kbo_mn2)
-     call io_read2d("selfrefo_1.nc", "selfrefo", selfrefo)
-     call io_read2d("forrefo_1.nc", "forrefo", forrefo)
+     call io_read1d("rrtmg_support/fracrefao_1.nc", "fracrefao", fracrefao)
+     call io_read1d("rrtmg_support/fracrefbo_1.nc", "fracrefbo", fracrefbo)
+     call io_read3d("rrtmg_support/kao_1.nc", "kao", kao)
+     call io_read3d("rrtmg_support/kbo_1.nc", "kbo", kbo)
+     call io_read2d("rrtmg_support/kao_mn2_1.nc", "kao_mn2", kao_mn2)
+     call io_read2d("rrtmg_support/kbo_mn2_1.nc", "kbo_mn2", kbo_mn2)
+     call io_read2d("rrtmg_support/selfrefo_1.nc", "selfrefo", selfrefo)
+     call io_read2d("rrtmg_support/forrefo_1.nc", "forrefo", forrefo)
 
      RETURN
 9010 CONTINUE
@@ -13152,12 +13152,12 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read1d("fracrefao_2.nc", "fracrefao", fracrefao)
-      call io_read1d("fracrefbo_2.nc", "fracrefbo", fracrefbo)
-      call io_read3d("kao_2.nc", "kao", kao)
-      call io_read3d("kbo_2.nc", "kbo", kbo)
-      call io_read2d("selfrefo_2.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_2.nc", "forrefo", forrefo)
+      call io_read1d("rrtmg_support/fracrefao_2.nc", "fracrefao", fracrefao)
+      call io_read1d("rrtmg_support/fracrefbo_2.nc", "fracrefbo", fracrefbo)
+      call io_read3d("rrtmg_support/kao_2.nc", "kao", kao)
+      call io_read3d("rrtmg_support/kbo_2.nc", "kbo", kbo)
+      call io_read2d("rrtmg_support/selfrefo_2.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_2.nc", "forrefo", forrefo)
       
      RETURN
 9010 CONTINUE
@@ -13263,14 +13263,14 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-          call io_read2d("fracrefao_3.nc", "fracrefao", fracrefao)
-          call io_read2d("fracrefbo_3.nc", "fracrefbo", fracrefbo)
-          call io_read4d("kao_3.nc", "kao", kao)
-          call io_read4d("kbo_3.nc", "kbo", kbo)
-          call io_read3d("kao_mn2o_3.nc", "kao_mn2o", kao_mn2o)
-          call io_read3d("kbo_mn2o_3.nc", "kbo_mn2o", kbo_mn2o)
-          call io_read2d("selfrefo_3.nc", "selfrefo", selfrefo)
-          call io_read2d("forrefo_3.nc", "forrefo", forrefo)
+          call io_read2d("rrtmg_support/fracrefao_3.nc", "fracrefao", fracrefao)
+          call io_read2d("rrtmg_support/fracrefbo_3.nc", "fracrefbo", fracrefbo)
+          call io_read4d("rrtmg_support/kao_3.nc", "kao", kao)
+          call io_read4d("rrtmg_support/kbo_3.nc", "kbo", kbo)
+          call io_read3d("rrtmg_support/kao_mn2o_3.nc", "kao_mn2o", kao_mn2o)
+          call io_read3d("rrtmg_support/kbo_mn2o_3.nc", "kbo_mn2o", kbo_mn2o)
+          call io_read2d("rrtmg_support/selfrefo_3.nc", "selfrefo", selfrefo)
+          call io_read2d("rrtmg_support/forrefo_3.nc", "forrefo", forrefo)
      
           RETURN
 9010 CONTINUE
@@ -13348,12 +13348,12 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-          call io_read2d("fracrefao_4.nc", "fracrefao", fracrefao)
-          call io_read2d("fracrefbo_4.nc", "fracrefbo", fracrefbo)
-          call io_read4d("kao_4.nc", "kao", kao)
-          call io_read4d("kbo_4.nc", "kbo", kbo)
-          call io_read2d("selfrefo_4.nc", "selfrefo", selfrefo)
-          call io_read2d("forrefo_4.nc", "forrefo", forrefo)
+          call io_read2d("rrtmg_support/fracrefao_4.nc", "fracrefao", fracrefao)
+          call io_read2d("rrtmg_support/fracrefbo_4.nc", "fracrefbo", fracrefbo)
+          call io_read4d("rrtmg_support/kao_4.nc", "kao", kao)
+          call io_read4d("rrtmg_support/kbo_4.nc", "kbo", kbo)
+          call io_read2d("rrtmg_support/selfrefo_4.nc", "selfrefo", selfrefo)
+          call io_read2d("rrtmg_support/forrefo_4.nc", "forrefo", forrefo)
        
 
      RETURN
@@ -13451,14 +13451,14 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read2d("fracrefao_5.nc", "fracrefao", fracrefao)
-      call io_read2d("fracrefbo_5.nc", "fracrefbo", fracrefbo)
-      call io_read4d("kao_5.nc", "kao", kao)
-      call io_read4d("kbo_5.nc", "kbo", kbo)
-      call io_read3d("kao_mo3_5.nc", "kao_mo3", kao_mo3)
-      call io_read1d("ccl4o_5.nc", "ccl4o", ccl4o)
-      call io_read2d("selfrefo_5.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_5.nc", "forrefo", forrefo)
+      call io_read2d("rrtmg_support/fracrefao_5.nc", "fracrefao", fracrefao)
+      call io_read2d("rrtmg_support/fracrefbo_5.nc", "fracrefbo", fracrefbo)
+      call io_read4d("rrtmg_support/kao_5.nc", "kao", kao)
+      call io_read4d("rrtmg_support/kbo_5.nc", "kbo", kbo)
+      call io_read3d("rrtmg_support/kao_mo3_5.nc", "kao_mo3", kao_mo3)
+      call io_read1d("rrtmg_support/ccl4o_5.nc", "ccl4o", ccl4o)
+      call io_read2d("rrtmg_support/selfrefo_5.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_5.nc", "forrefo", forrefo)
 
      RETURN
 9010 CONTINUE
@@ -13529,13 +13529,13 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read1d("fracrefao_6.nc", "fracrefao", fracrefao)
-      call io_read3d("kao_6.nc", "kao", kao)
-      call io_read2d("kao_mco2_6.nc", "kao_mco2", kao_mco2)
-      call io_read1d("cfc11adjo_6.nc", "cfc11adjo", cfc11adjo)
-      call io_read1d("cfc12o_6.nc", "cfc12o", cfc12o)
-      call io_read2d("selfrefo_6.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_6.nc", "forrefo", forrefo)
+      call io_read1d("rrtmg_support/fracrefao_6.nc", "fracrefao", fracrefao)
+      call io_read3d("rrtmg_support/kao_6.nc", "kao", kao)
+      call io_read2d("rrtmg_support/kao_mco2_6.nc", "kao_mco2", kao_mco2)
+      call io_read1d("rrtmg_support/cfc11adjo_6.nc", "cfc11adjo", cfc11adjo)
+      call io_read1d("rrtmg_support/cfc12o_6.nc", "cfc12o", cfc12o)
+      call io_read2d("rrtmg_support/selfrefo_6.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_6.nc", "forrefo", forrefo)
  
      RETURN
 9010 CONTINUE
@@ -13627,14 +13627,14 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read2d("fracrefao_7.nc", "fracrefao", fracrefao)
-      call io_read1d("fracrefbo_7.nc", "fracrefbo", fracrefbo)
-      call io_read4d("kao_7.nc", "kao", kao)
-      call io_read3d("kbo_7.nc", "kbo", kbo)
-      call io_read3d("kao_mco2_7.nc", "kao_mco2", kao_mco2)
-      call io_read2d("kbo_mco2_7.nc", "kbo_mco2", kbo_mco2)
-      call io_read2d("selfrefo_7.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_7.nc", "forrefo", forrefo)
+      call io_read2d("rrtmg_support/fracrefao_7.nc", "fracrefao", fracrefao)
+      call io_read1d("rrtmg_support/fracrefbo_7.nc", "fracrefbo", fracrefbo)
+      call io_read4d("rrtmg_support/kao_7.nc", "kao", kao)
+      call io_read3d("rrtmg_support/kbo_7.nc", "kbo", kbo)
+      call io_read3d("rrtmg_support/kao_mco2_7.nc", "kao_mco2", kao_mco2)
+      call io_read2d("rrtmg_support/kbo_mco2_7.nc", "kbo_mco2", kbo_mco2)
+      call io_read2d("rrtmg_support/selfrefo_7.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_7.nc", "forrefo", forrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
@@ -13730,19 +13730,19 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read1d("fracrefao_8.nc", "fracrefao", fracrefao)
-      call io_read1d("fracrefbo_8.nc", "fracrefbo", fracrefbo)
-      call io_read3d("kao_8.nc", "kao", kao)
-      call io_read3d("kbo_8.nc", "kbo", kbo)
-      call io_read2d("kao_mco2_8.nc", "kao_mco2", kao_mco2)
-      call io_read2d("kbo_mco2_8.nc", "kbo_mco2", kbo_mco2)
-      call io_read2d("kao_mn2o_8.nc", "kao_mn2o", kao_mn2o)
-      call io_read2d("kbo_mn2o_8.nc", "kbo_mn2o", kbo_mn2o)
-      call io_read2d("kao_mo3_8.nc", "kao_mo3", kao_mo3)
-      call io_read2d("selfrefo_8.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_8.nc", "forrefo", forrefo)
-      call io_read1d("cfc12o_8.nc", "cfc12o", cfc12o)
-      call io_read1d("cfc22adjo_8.nc", "cfc22adjo", cfc22adjo)
+      call io_read1d("rrtmg_support/fracrefao_8.nc", "fracrefao", fracrefao)
+      call io_read1d("rrtmg_support/fracrefbo_8.nc", "fracrefbo", fracrefbo)
+      call io_read3d("rrtmg_support/kao_8.nc", "kao", kao)
+      call io_read3d("rrtmg_support/kbo_8.nc", "kbo", kbo)
+      call io_read2d("rrtmg_support/kao_mco2_8.nc", "kao_mco2", kao_mco2)
+      call io_read2d("rrtmg_support/kbo_mco2_8.nc", "kbo_mco2", kbo_mco2)
+      call io_read2d("rrtmg_support/kao_mn2o_8.nc", "kao_mn2o", kao_mn2o)
+      call io_read2d("rrtmg_support/kbo_mn2o_8.nc", "kbo_mn2o", kbo_mn2o)
+      call io_read2d("rrtmg_support/kao_mo3_8.nc", "kao_mo3", kao_mo3)
+      call io_read2d("rrtmg_support/selfrefo_8.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_8.nc", "forrefo", forrefo)
+      call io_read1d("rrtmg_support/cfc12o_8.nc", "cfc12o", cfc12o)
+      call io_read1d("rrtmg_support/cfc22adjo_8.nc", "cfc22adjo", cfc22adjo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
@@ -13834,14 +13834,14 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read2d("fracrefao_9.nc", "fracrefao", fracrefao)
-      call io_read1d("fracrefbo_9.nc", "fracrefbo", fracrefbo)
-      call io_read4d("kao_9.nc", "kao", kao)
-      call io_read3d("kbo_9.nc", "kbo", kbo)
-      call io_read3d("kao_mn2o_9.nc", "kao_mn2o", kao_mn2o)
-      call io_read2d("kbo_mn2o_9.nc", "kbo_mn2o", kbo_mn2o)
-      call io_read2d("selfrefo_9.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_9.nc", "forrefo", forrefo)
+      call io_read2d("rrtmg_support/fracrefao_9.nc", "fracrefao", fracrefao)
+      call io_read1d("rrtmg_support/fracrefbo_9.nc", "fracrefbo", fracrefbo)
+      call io_read4d("rrtmg_support/kao_9.nc", "kao", kao)
+      call io_read3d("rrtmg_support/kbo_9.nc", "kbo", kbo)
+      call io_read3d("rrtmg_support/kao_mn2o_9.nc", "kao_mn2o", kao_mn2o)
+      call io_read2d("rrtmg_support/kbo_mn2o_9.nc", "kbo_mn2o", kbo_mn2o)
+      call io_read2d("rrtmg_support/selfrefo_9.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_9.nc", "forrefo", forrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
@@ -13907,12 +13907,12 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read1d("fracrefao_10.nc", "fracrefao", fracrefao)
-      call io_read1d("fracrefbo_10.nc", "fracrefbo", fracrefbo)
-      call io_read3d("kao_10.nc", "kao", kao)
-      call io_read3d("kbo_10.nc", "kbo", kbo)
-      call io_read2d("selfrefo_10.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_10.nc", "forrefo", forrefo)
+      call io_read1d("rrtmg_support/fracrefao_10.nc", "fracrefao", fracrefao)
+      call io_read1d("rrtmg_support/fracrefbo_10.nc", "fracrefbo", fracrefbo)
+      call io_read3d("rrtmg_support/kao_10.nc", "kao", kao)
+      call io_read3d("rrtmg_support/kbo_10.nc", "kbo", kbo)
+      call io_read2d("rrtmg_support/selfrefo_10.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_10.nc", "forrefo", forrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
@@ -13993,14 +13993,14 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read1d("fracrefao_11.nc", "fracrefao", fracrefao)
-      call io_read1d("fracrefbo_11.nc", "fracrefbo", fracrefbo)
-      call io_read3d("kao_11.nc", "kao", kao)
-      call io_read3d("kbo_11.nc", "kbo", kbo)
-      call io_read2d("kao_mo2_11.nc", "kao_mo2", kao_mo2)
-      call io_read2d("kbo_mo2_11.nc", "kbo_mo2", kbo_mo2)
-      call io_read2d("selfrefo_11.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_11.nc", "forrefo", forrefo)
+      call io_read1d("rrtmg_support/fracrefao_11.nc", "fracrefao", fracrefao)
+      call io_read1d("rrtmg_support/fracrefbo_11.nc", "fracrefbo", fracrefbo)
+      call io_read3d("rrtmg_support/kao_11.nc", "kao", kao)
+      call io_read3d("rrtmg_support/kbo_11.nc", "kbo", kbo)
+      call io_read2d("rrtmg_support/kao_mo2_11.nc", "kao_mo2", kao_mo2)
+      call io_read2d("rrtmg_support/kbo_mo2_11.nc", "kbo_mo2", kbo_mo2)
+      call io_read2d("rrtmg_support/selfrefo_11.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_11.nc", "forrefo", forrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
@@ -14059,10 +14059,10 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read2d("fracrefao_12.nc", "fracrefao", fracrefao)
-      call io_read4d("kao_12.nc", "kao", kao)
-      call io_read2d("selfrefo_12.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_12.nc", "forrefo", forrefo)
+      call io_read2d("rrtmg_support/fracrefao_12.nc", "fracrefao", fracrefao)
+      call io_read4d("rrtmg_support/kao_12.nc", "kao", kao)
+      call io_read2d("rrtmg_support/selfrefo_12.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_12.nc", "forrefo", forrefo)
 
      RETURN
 9010 CONTINUE
@@ -14143,14 +14143,14 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read2d("fracrefao_13.nc", "fracrefao", fracrefao)
-      call io_read1d("fracrefbo_13.nc", "fracrefbo", fracrefbo)
-      call io_read4d("kao_13.nc", "kao", kao)
-      call io_read3d("kao_mco2_13.nc", "kao_mco2", kao_mco2)
-      call io_read3d("kao_mco_13.nc", "kao_mco", kao_mco)
-      call io_read2d("kbo_mo3_13.nc", "kbo_mo3", kbo_mo3)
-      call io_read2d("selfrefo_13.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_13.nc", "forrefo", forrefo)
+      call io_read2d("rrtmg_support/fracrefao_13.nc", "fracrefao", fracrefao)
+      call io_read1d("rrtmg_support/fracrefbo_13.nc", "fracrefbo", fracrefbo)
+      call io_read4d("rrtmg_support/kao_13.nc", "kao", kao)
+      call io_read3d("rrtmg_support/kao_mco2_13.nc", "kao_mco2", kao_mco2)
+      call io_read3d("rrtmg_support/kao_mco_13.nc", "kao_mco", kao_mco)
+      call io_read2d("rrtmg_support/kbo_mo3_13.nc", "kbo_mo3", kbo_mo3)
+      call io_read2d("rrtmg_support/selfrefo_13.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_13.nc", "forrefo", forrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
@@ -14222,12 +14222,12 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read1d("fracrefao_14.nc", "fracrefao", fracrefao)
-      call io_read1d("fracrefbo_14.nc", "fracrefbo", fracrefbo)
-      call io_read3d("kao_14.nc", "kao", kao)
-      call io_read3d("kbo_14.nc", "kbo", kbo)
-      call io_read2d("selfrefo_14.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_14.nc", "forrefo", forrefo)
+      call io_read1d("rrtmg_support/fracrefao_14.nc", "fracrefao", fracrefao)
+      call io_read1d("rrtmg_support/fracrefbo_14.nc", "fracrefbo", fracrefbo)
+      call io_read3d("rrtmg_support/kao_14.nc", "kao", kao)
+      call io_read3d("rrtmg_support/kbo_14.nc", "kbo", kbo)
+      call io_read2d("rrtmg_support/selfrefo_14.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_14.nc", "forrefo", forrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_lw: error reading RRTMG_LW_DATA on unit ',rrtmg_unit
@@ -14298,11 +14298,11 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read2d("fracrefao_15.nc", "fracrefao", fracrefao)
-      call io_read4d("kao_15.nc", "kao", kao)
-      call io_read3d("kao_mn2_15.nc", "kao_mn2", kao_mn2)
-      call io_read2d("selfrefo_15.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_15.nc", "forrefo", forrefo)
+      call io_read2d("rrtmg_support/fracrefao_15.nc", "fracrefao", fracrefao)
+      call io_read4d("rrtmg_support/kao_15.nc", "kao", kao)
+      call io_read3d("rrtmg_support/kao_mn2_15.nc", "kao_mn2", kao_mn2)
+      call io_read2d("rrtmg_support/selfrefo_15.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_15.nc", "forrefo", forrefo)
 
      RETURN
 9010 CONTINUE
@@ -14375,12 +14375,12 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read2d("fracrefao_16.nc", "fracrefao", fracrefao)
-      call io_read1d("fracrefbo_16.nc", "fracrefbo", fracrefbo)
-      call io_read4d("kao_16.nc", "kao", kao)
-      call io_read3d("kbo_16.nc", "kbo", kbo)
-      call io_read2d("selfrefo_16.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_16.nc", "forrefo", forrefo)
+      call io_read2d("rrtmg_support/fracrefao_16.nc", "fracrefao", fracrefao)
+      call io_read1d("rrtmg_support/fracrefbo_16.nc", "fracrefbo", fracrefbo)
+      call io_read4d("rrtmg_support/kao_16.nc", "kao", kao)
+      call io_read3d("rrtmg_support/kbo_16.nc", "kbo", kbo)
+      call io_read2d("rrtmg_support/selfrefo_16.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_16.nc", "forrefo", forrefo)
 
      RETURN
 9010 CONTINUE

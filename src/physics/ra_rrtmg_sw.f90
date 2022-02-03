@@ -11439,14 +11439,14 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read0d("rayl_16_sw.nc", "rayl", rayl)
-      call io_read0d("strrat1_16_sw.nc", "strrat1", strrat1)
-      call io_read0di("layreffr_16_sw.nc", "layreffr", layreffr)
-      call io_read4d("kao_16_sw.nc", "kao", kao)
-      call io_read3d("kbo_16_sw.nc", "kbo", kbo)
-      call io_read2d("selfrefo_16_sw.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_16_sw.nc", "forrefo", forrefo)
-      call io_read1d("sfluxrefo_16_sw.nc", "sfluxrefo", sfluxrefo)
+      call io_read0d("rrtmg_support/rayl_16_sw.nc", "rayl", rayl)
+      call io_read0d("rrtmg_support/strrat1_16_sw.nc", "strrat1", strrat1)
+      call io_read0di("rrtmg_support/layreffr_16_sw.nc", "layreffr", layreffr)
+      call io_read4d("rrtmg_support/kao_16_sw.nc", "kao", kao)
+      call io_read3d("rrtmg_support/kbo_16_sw.nc", "kbo", kbo)
+      call io_read2d("rrtmg_support/selfrefo_16_sw.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_16_sw.nc", "forrefo", forrefo)
+      call io_read1d("rrtmg_support/sfluxrefo_16_sw.nc", "sfluxrefo", sfluxrefo)
 
      RETURN
 9010 CONTINUE
@@ -11515,14 +11515,14 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read0d("rayl_17_sw.nc", "rayl", rayl)
-      call io_read0d("strrat_17_sw.nc", "strrat", strrat)
-      call io_read0di("layreffr_17_sw.nc", "layreffr", layreffr)
-      call io_read4d("kao_17_sw.nc", "kao", kao)
-      call io_read4d("kbo_17_sw.nc", "kbo", kbo)
-      call io_read2d("selfrefo_17_sw.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_17_sw.nc", "forrefo", forrefo)
-      call io_read2d("sfluxrefo_17_sw.nc", "sfluxrefo", sfluxrefo)
+      call io_read0d("rrtmg_support/rayl_17_sw.nc", "rayl", rayl)
+      call io_read0d("rrtmg_support/strrat_17_sw.nc", "strrat", strrat)
+      call io_read0di("rrtmg_support/layreffr_17_sw.nc", "layreffr", layreffr)
+      call io_read4d("rrtmg_support/kao_17_sw.nc", "kao", kao)
+      call io_read4d("rrtmg_support/kbo_17_sw.nc", "kbo", kbo)
+      call io_read2d("rrtmg_support/selfrefo_17_sw.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_17_sw.nc", "forrefo", forrefo)
+      call io_read2d("rrtmg_support/sfluxrefo_17_sw.nc", "sfluxrefo", sfluxrefo)
 
      RETURN
 9010 CONTINUE
@@ -11591,14 +11591,14 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read0d("rayl_18_sw.nc", "rayl", rayl)
-      call io_read0d("strrat_18_sw.nc", "strrat", strrat)
-      call io_read0di("layreffr_18_sw.nc", "layreffr", layreffr)
-      call io_read4d("kao_18_sw.nc", "kao", kao)
-      call io_read3d("kbo_18_sw.nc", "kbo", kbo)
-      call io_read2d("selfrefo_18_sw.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_18_sw.nc", "forrefo", forrefo)
-      call io_read2d("sfluxrefo_18_sw.nc", "sfluxrefo", sfluxrefo)
+      call io_read0d("rrtmg_support/rayl_18_sw.nc", "rayl", rayl)
+      call io_read0d("rrtmg_support/strrat_18_sw.nc", "strrat", strrat)
+      call io_read0di("rrtmg_support/layreffr_18_sw.nc", "layreffr", layreffr)
+      call io_read4d("rrtmg_support/kao_18_sw.nc", "kao", kao)
+      call io_read3d("rrtmg_support/kbo_18_sw.nc", "kbo", kbo)
+      call io_read2d("rrtmg_support/selfrefo_18_sw.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_18_sw.nc", "forrefo", forrefo)
+      call io_read2d("rrtmg_support/sfluxrefo_18_sw.nc", "sfluxrefo", sfluxrefo)
 
      RETURN
 9010 CONTINUE
@@ -11667,14 +11667,14 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read0d("rayl_19_sw.nc", "rayl", rayl)
-      call io_read0d("strrat_19_sw.nc", "strrat", strrat)
-      call io_read0di("layreffr_19_sw.nc", "layreffr", layreffr)
-      call io_read4d("kao_19_sw.nc", "kao", kao)
-      call io_read3d("kbo_19_sw.nc", "kbo", kbo)
-      call io_read2d("selfrefo_19_sw.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_19_sw.nc", "forrefo", forrefo)
-      call io_read2d("sfluxrefo_19_sw.nc", "sfluxrefo", sfluxrefo)
+      call io_read0d("rrtmg_support/rayl_19_sw.nc", "rayl", rayl)
+      call io_read0d("rrtmg_support/strrat_19_sw.nc", "strrat", strrat)
+      call io_read0di("rrtmg_support/layreffr_19_sw.nc", "layreffr", layreffr)
+      call io_read4d("rrtmg_support/kao_19_sw.nc", "kao", kao)
+      call io_read3d("rrtmg_support/kbo_19_sw.nc", "kbo", kbo)
+      call io_read2d("rrtmg_support/selfrefo_19_sw.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_19_sw.nc", "forrefo", forrefo)
+      call io_read2d("rrtmg_support/sfluxrefo_19_sw.nc", "sfluxrefo", sfluxrefo)
 
      RETURN
 9010 CONTINUE
@@ -11745,14 +11745,14 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read0d("rayl_20_sw.nc", "rayl", rayl)
-      call io_read1d("absch4o_20_sw.nc", "absch4o", absch4o)
-      call io_read0di("layreffr_20_sw.nc", "layreffr", layreffr)
-      call io_read3d("kao_20_sw.nc", "kao", kao)
-      call io_read3d("kbo_20_sw.nc", "kbo", kbo)
-      call io_read2d("selfrefo_20_sw.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_20_sw.nc", "forrefo", forrefo)
-      call io_read1d("sfluxrefo_20_sw.nc", "sfluxrefo", sfluxrefo)
+      call io_read0d("rrtmg_support/rayl_20_sw.nc", "rayl", rayl)
+      call io_read1d("rrtmg_support/absch4o_20_sw.nc", "absch4o", absch4o)
+      call io_read0di("rrtmg_support/layreffr_20_sw.nc", "layreffr", layreffr)
+      call io_read3d("rrtmg_support/kao_20_sw.nc", "kao", kao)
+      call io_read3d("rrtmg_support/kbo_20_sw.nc", "kbo", kbo)
+      call io_read2d("rrtmg_support/selfrefo_20_sw.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_20_sw.nc", "forrefo", forrefo)
+      call io_read1d("rrtmg_support/sfluxrefo_20_sw.nc", "sfluxrefo", sfluxrefo)
 
      RETURN
 9010 CONTINUE
@@ -11821,14 +11821,14 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read0d("rayl_21_sw.nc", "rayl", rayl)
-      call io_read0d("strrat_21_sw.nc", "strrat", strrat)
-      call io_read0di("layreffr_21_sw.nc", "layreffr", layreffr)
-      call io_read4d("kao_21_sw.nc", "kao", kao)
-      call io_read4d("kbo_21_sw.nc", "kbo", kbo)
-      call io_read2d("selfrefo_21_sw.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_21_sw.nc", "forrefo", forrefo)
-      call io_read2d("sfluxrefo_21_sw.nc", "sfluxrefo", sfluxrefo)
+      call io_read0d("rrtmg_support/rayl_21_sw.nc", "rayl", rayl)
+      call io_read0d("rrtmg_support/strrat_21_sw.nc", "strrat", strrat)
+      call io_read0di("rrtmg_support/layreffr_21_sw.nc", "layreffr", layreffr)
+      call io_read4d("rrtmg_support/kao_21_sw.nc", "kao", kao)
+      call io_read4d("rrtmg_support/kbo_21_sw.nc", "kbo", kbo)
+      call io_read2d("rrtmg_support/selfrefo_21_sw.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_21_sw.nc", "forrefo", forrefo)
+      call io_read2d("rrtmg_support/sfluxrefo_21_sw.nc", "sfluxrefo", sfluxrefo)
 
      RETURN
 9010 CONTINUE
@@ -11897,14 +11897,14 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read0d("rayl_22_sw.nc", "rayl", rayl)
-      call io_read0d("strrat_22_sw.nc", "strrat", strrat)
-      call io_read0di("layreffr_22_sw.nc", "layreffr", layreffr)
-      call io_read4d("kao_22_sw.nc", "kao", kao)
-      call io_read3d("kbo_22_sw.nc", "kbo", kbo)
-      call io_read2d("selfrefo_22_sw.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_22_sw.nc", "forrefo", forrefo)
-      call io_read2d("sfluxrefo_22_sw.nc", "sfluxrefo", sfluxrefo)
+      call io_read0d("rrtmg_support/rayl_22_sw.nc", "rayl", rayl)
+      call io_read0d("rrtmg_support/strrat_22_sw.nc", "strrat", strrat)
+      call io_read0di("rrtmg_support/layreffr_22_sw.nc", "layreffr", layreffr)
+      call io_read4d("rrtmg_support/kao_22_sw.nc", "kao", kao)
+      call io_read3d("rrtmg_support/kbo_22_sw.nc", "kbo", kbo)
+      call io_read2d("rrtmg_support/selfrefo_22_sw.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_22_sw.nc", "forrefo", forrefo)
+      call io_read2d("rrtmg_support/sfluxrefo_22_sw.nc", "sfluxrefo", sfluxrefo)
 
 
      RETURN
@@ -11964,13 +11964,13 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read1d("raylo_23_sw.nc", "raylo", raylo)
-      call io_read0d("givfac_23_sw.nc", "givfac", givfac)
-      call io_read0di("layreffr_23_sw.nc", "layreffr", layreffr)
-      call io_read3d("kao_23_sw.nc", "kao", kao)
-      call io_read2d("selfrefo_23_sw.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_23_sw.nc", "forrefo", forrefo)
-      call io_read1d("sfluxrefo_23_sw.nc", "sfluxrefo", sfluxrefo)
+      call io_read1d("rrtmg_support/raylo_23_sw.nc", "raylo", raylo)
+      call io_read0d("rrtmg_support/givfac_23_sw.nc", "givfac", givfac)
+      call io_read0di("rrtmg_support/layreffr_23_sw.nc", "layreffr", layreffr)
+      call io_read3d("rrtmg_support/kao_23_sw.nc", "kao", kao)
+      call io_read2d("rrtmg_support/selfrefo_23_sw.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_23_sw.nc", "forrefo", forrefo)
+      call io_read1d("rrtmg_support/sfluxrefo_23_sw.nc", "sfluxrefo", sfluxrefo)
 
      RETURN
 9010 CONTINUE
@@ -12043,17 +12043,17 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read2d("raylao_24_sw.nc", "raylao", raylao)
-      call io_read1d("raylbo_24_sw.nc", "raylbo", raylbo)
-      call io_read1d("abso3ao_24_sw.nc", "abso3ao", abso3ao)
-      call io_read1d("abso3bo_24_sw.nc", "abso3bo", abso3bo)
-      call io_read0d("strrat_24_sw.nc", "strrat", strrat)
-      call io_read0di("layreffr_24_sw.nc", "layreffr", layreffr)
-      call io_read4d("kao_24_sw.nc", "kao", kao)
-      call io_read3d("kbo_24_sw.nc", "kbo", kbo)
-      call io_read2d("selfrefo_24_sw.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_24_sw.nc", "forrefo", forrefo)
-      call io_read2d("sfluxrefo_24_sw.nc", "sfluxrefo", sfluxrefo)
+      call io_read2d("rrtmg_support/raylao_24_sw.nc", "raylao", raylao)
+      call io_read1d("rrtmg_support/raylbo_24_sw.nc", "raylbo", raylbo)
+      call io_read1d("rrtmg_support/abso3ao_24_sw.nc", "abso3ao", abso3ao)
+      call io_read1d("rrtmg_support/abso3bo_24_sw.nc", "abso3bo", abso3bo)
+      call io_read0d("rrtmg_support/strrat_24_sw.nc", "strrat", strrat)
+      call io_read0di("rrtmg_support/layreffr_24_sw.nc", "layreffr", layreffr)
+      call io_read4d("rrtmg_support/kao_24_sw.nc", "kao", kao)
+      call io_read3d("rrtmg_support/kbo_24_sw.nc", "kbo", kbo)
+      call io_read2d("rrtmg_support/selfrefo_24_sw.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_24_sw.nc", "forrefo", forrefo)
+      call io_read2d("rrtmg_support/sfluxrefo_24_sw.nc", "sfluxrefo", sfluxrefo)
 
      RETURN
 9010 CONTINUE
@@ -12101,12 +12101,12 @@ IMPLICIT NONE
 !     in mb).  The fourth index, IG, goes from 1 to 16, and indicates
 !     which g-interval the absorption coefficients are for.
 
-      call io_read1d("raylo_25_sw.nc", "raylo", raylo)
-      call io_read1d("abso3ao_25_sw.nc", "abso3ao", abso3ao)
-      call io_read1d("abso3bo_25_sw.nc", "abso3bo", abso3bo)
-      call io_read0di("layreffr_25_sw.nc", "layreffr", layreffr)
-      call io_read3d("kao_25_sw.nc", "kao", kao)
-      call io_read1d("sfluxrefo_25_sw.nc", "sfluxrefo", sfluxrefo)
+      call io_read1d("rrtmg_support/raylo_25_sw.nc", "raylo", raylo)
+      call io_read1d("rrtmg_support/abso3ao_25_sw.nc", "abso3ao", abso3ao)
+      call io_read1d("rrtmg_support/abso3bo_25_sw.nc", "abso3bo", abso3bo)
+      call io_read0di("rrtmg_support/layreffr_25_sw.nc", "layreffr", layreffr)
+      call io_read3d("rrtmg_support/kao_25_sw.nc", "kao", kao)
+      call io_read1d("rrtmg_support/sfluxrefo_25_sw.nc", "sfluxrefo", sfluxrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
@@ -12133,8 +12133,8 @@ IMPLICIT NONE
 
 !     Array raylo contains the Rayleigh extinction coefficient at all v for this band.
 
-      call io_read1d("raylo_26_sw.nc", "raylo", raylo)
-      call io_read1d("sfluxrefo_26_sw.nc", "sfluxrefo", sfluxrefo)
+      call io_read1d("rrtmg_support/raylo_26_sw.nc", "raylo", raylo)
+      call io_read1d("rrtmg_support/sfluxrefo_26_sw.nc", "sfluxrefo", sfluxrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
@@ -12195,12 +12195,12 @@ IMPLICIT NONE
 !     pressure levels in mb).  The third index, IG, goes from 1 to 16,
 !     and tells us which g-interval the absorption coefficients are for.
 
-      call io_read1d("raylo_27_sw.nc", "raylo", raylo)
-      call io_read0di("layreffr_27_sw.nc", "layreffr", layreffr)
-      call io_read0d("scalekur_27_sw.nc", "scalekur", scalekur)
-      call io_read3d("kao_27_sw.nc", "kao", kao)
-      call io_read3d("kbo_27_sw.nc", "kbo", kbo)
-      call io_read1d("sfluxrefo_27_sw.nc", "sfluxrefo", sfluxrefo)
+      call io_read1d("rrtmg_support/raylo_27_sw.nc", "raylo", raylo)
+      call io_read0di("rrtmg_support/layreffr_27_sw.nc", "layreffr", layreffr)
+      call io_read0d("rrtmg_support/scalekur_27_sw.nc", "scalekur", scalekur)
+      call io_read3d("rrtmg_support/kao_27_sw.nc", "kao", kao)
+      call io_read3d("rrtmg_support/kbo_27_sw.nc", "kbo", kbo)
+      call io_read1d("rrtmg_support/sfluxrefo_27_sw.nc", "sfluxrefo", sfluxrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
@@ -12256,12 +12256,12 @@ IMPLICIT NONE
 !     pressure levels in mb).  The third index, IG, goes from 1 to 16,
 !     and tells us which g-interval the absorption coefficients are for.
 
-      call io_read0d("rayl_28_sw.nc", "rayl", rayl)
-      call io_read0d("strrat_28_sw.nc", "strrat", strrat)
-      call io_read0di("layreffr_28_sw.nc", "layreffr", layreffr)
-      call io_read4d("kao_28_sw.nc", "kao", kao)
-      call io_read4d("kbo_28_sw.nc", "kbo", kbo)
-      call io_read2d("sfluxrefo_28_sw.nc", "sfluxrefo", sfluxrefo)
+      call io_read0d("rrtmg_support/rayl_28_sw.nc", "rayl", rayl)
+      call io_read0d("rrtmg_support/strrat_28_sw.nc", "strrat", strrat)
+      call io_read0di("rrtmg_support/layreffr_28_sw.nc", "layreffr", layreffr)
+      call io_read4d("rrtmg_support/kao_28_sw.nc", "kao", kao)
+      call io_read4d("rrtmg_support/kbo_28_sw.nc", "kbo", kbo)
+      call io_read2d("rrtmg_support/sfluxrefo_28_sw.nc", "sfluxrefo", sfluxrefo)
      RETURN
 9010 CONTINUE
      WRITE( errmess , '(A,I4)' ) 'module_ra_rrtmg_sw: error reading RRTMG_SW_DATA on unit ',rrtmg_unit
@@ -12333,15 +12333,15 @@ IMPLICIT NONE
 !     JT = 1 refers to a temperature of 245.6, JT = 2 refers to 252.8,
 !     etc.  The second index runs over the g-channel (1 to 16).
 
-      call io_read0d("rayl_29_sw.nc", "rayl", rayl)
-      call io_read1d("absh2oo_29_sw.nc", "absh2oo", absh2oo)
-      call io_read1d("absco2o_29_sw.nc", "absco2o", absco2o)
-      call io_read0di("layreffr_29_sw.nc", "layreffr", layreffr)
-      call io_read3d("kao_29_sw.nc", "kao", kao)
-      call io_read3d("kbo_29_sw.nc", "kbo", kbo)
-      call io_read2d("selfrefo_29_sw.nc", "selfrefo", selfrefo)
-      call io_read2d("forrefo_29_sw.nc", "forrefo", forrefo)
-      call io_read1d("sfluxrefo_29_sw.nc", "sfluxrefo", sfluxrefo)
+      call io_read0d("rrtmg_support/rayl_29_sw.nc", "rayl", rayl)
+      call io_read1d("rrtmg_support/absh2oo_29_sw.nc", "absh2oo", absh2oo)
+      call io_read1d("rrtmg_support/absco2o_29_sw.nc", "absco2o", absco2o)
+      call io_read0di("rrtmg_support/layreffr_29_sw.nc", "layreffr", layreffr)
+      call io_read3d("rrtmg_support/kao_29_sw.nc", "kao", kao)
+      call io_read3d("rrtmg_support/kbo_29_sw.nc", "kbo", kbo)
+      call io_read2d("rrtmg_support/selfrefo_29_sw.nc", "selfrefo", selfrefo)
+      call io_read2d("rrtmg_support/forrefo_29_sw.nc", "forrefo", forrefo)
+      call io_read1d("rrtmg_support/sfluxrefo_29_sw.nc", "sfluxrefo", sfluxrefo)
 
      RETURN
 9010 CONTINUE

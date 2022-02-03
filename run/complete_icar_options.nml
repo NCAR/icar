@@ -85,7 +85,7 @@
     lsm = 0,  ! 1=use prescribed fluxes    2=Simple LSM (N/A)           3=Noah LSM                  4=NoahMP (wishlist)
     water=2,  ! 1=use prescribed (w/lsm=1) 2=Simple sea surface fluxes
     mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison                  4=WSM6      5=Thompson-Eidhammer
-    rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG           (wishlist)
+    rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG       
     conv= 0,  ! 1=Tiedke Scheme            2=Simple Scheme (wishlist)   3=Kain-Fritsch
     adv = 1,  ! 1=Upwind                   2=MPDATA                     3=Adams-Bashforth (wishlist)
     wind= 1   ! 1=Linear Theory
