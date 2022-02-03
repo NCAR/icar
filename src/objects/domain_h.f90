@@ -70,7 +70,7 @@ module domain_interface
     type(variable_t) :: shortwave
     type(variable_t) :: terrain
     type(variable_t) :: forcing_terrain  ! BK 05/2020: The forcing terrain interpolated 2d to the hi-res grid. In order to calculate difference in slope
-        type(variable_t) :: forcing_terrain2 ! test 9-6-2020
+    type(variable_t) :: forcing_terrain2 ! test 9-6-2020
         ! type(variable_t) :: forcing_terrain_u1 ! test 9-6-2020
     type(variable_t) :: u_10m
     type(variable_t) :: v_10m
@@ -95,6 +95,18 @@ module domain_interface
     type(variable_t) :: soil_temperature
     type(variable_t) :: soil_totalmoisture
     type(variable_t) :: soil_deep_temperature
+
+    ! link effective radius from microphysics to radiation scheme
+    type(variable_t) :: re_cloud
+    type(variable_t) :: re_ice
+    type(variable_t) :: re_snow
+    type(variable_t) :: out_longwave_rad
+    type(variable_t) :: longwave_cloud_forcing
+    type(variable_t) :: shortwave_cloud_forcing
+    type(variable_t) :: land_emissivity
+    type(variable_t) :: temperature_interface
+    type(variable_t) :: cosine_zenith_angle
+    type(variable_t) :: tend_swrad
 
     integer,allocatable :: land_mask(:,:)
     type(variable_t) :: latitude

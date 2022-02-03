@@ -381,6 +381,9 @@ OBJS=	\
 		$(BUILD)pbl_simple.o		\
 		$(BUILD)ra_driver.o			\
 		$(BUILD)ra_simple.o			\
+		$(BUILD)ra_rrtmg_lw.o           \
+		$(BUILD)ra_rrtmg_sw.o           \
+		$(BUILD)ra_clWRF_support.o      \
 		$(BUILD)mp_driver.o			\
 		$(BUILD)mp_simple.o			\
 		$(BUILD)mp_thompson.o		\
@@ -768,7 +771,13 @@ $(BUILD)cu_kf.o:$(PHYS)cu_kf.f90
 #	Radiation code
 ###################################################################
 
-$(BUILD)ra_driver.o:$(PHYS)ra_driver.f90 $(BUILD)ra_simple.o $(BUILD)data_structures.o $(BUILD)icar_constants.o $(BUILD)options_h.o $(BUILD)domain_h.o
+$(BUILD)ra_driver.o:$(PHYS)ra_driver.f90 $(BUILD)ra_simple.o $(BUILD)ra_rrtmg_lw.o $(BUILD)ra_rrtmg_sw.o $(BUILD)data_structures.o $(BUILD)icar_constants.o $(BUILD)options_h.o $(BUILD)domain_h.o
+
+$(BUILD)ra_rrtmg_lw.o:$(PHYS)ra_rrtmg_lw.f90 $(BUILD)ra_clWRF_support.o $(BUILD)io_routines.o
+
+$(BUILD)ra_rrtmg_sw.o:$(PHYS)ra_rrtmg_sw.f90 $(BUILD)ra_clWRF_support.o $(BUILD)io_routines.o $(BUILD)ra_rrtmg_lw.o  
+
+$(BUILD)ra_clWRF_support.o:$(PHYS)ra_clWRF_support.f90 $(BUILD)io_routines.o
 
 $(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o $(BUILD)time.o $(BUILD)atm_utilities.o $(BUILD)options_h.o $(BUILD)domain_h.o
 

@@ -46,7 +46,7 @@
     ! Microphysics Scheme
     mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison                  4=WSM6      5=Thompson-Eidhammer
     ! Radiation Scheme
-    rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG           (wishlist)
+    rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG   
 
     ! Convection / Cumulus Scheme
     conv= 0,  ! 1=Tiedke Scheme            2=Simple Scheme (wishlist)   3=Kain-Fritsch
