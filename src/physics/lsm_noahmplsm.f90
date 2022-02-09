@@ -450,9 +450,9 @@ contains
 		   GHB     , IRG     , IRC     , IRB     , TR      , EVC     , & ! OUT :
 		   CHLEAF  , CHUC    , CHV2    , CHB2    , FPICE   , PAHV    , &
                    PAHG    , PAHB    , PAH     , LAISUN  , LAISHA  , RB        & ! OUT
-#ifdef WRF_HYDRO
-                   ,SFCHEADRT                                                  & ! IN/OUT :
-#endif
+! #ifdef WRF_HYDRO
+!                   ,SFCHEADRT                                                  & ! IN/OUT :
+!#endif
                    )
 
 ! --------------------------------------------------------------------------------------------------
@@ -507,9 +507,9 @@ contains
   REAL                           , INTENT(IN)    :: SHDMAX  !yearly max vegetation fraction
 !jref:end
 
-#ifdef WRF_HYDRO
-  REAL                           , INTENT(INOUT)    :: sfcheadrt
-#endif
+!#ifdef WRF_HYDRO
+!  REAL                           , INTENT(INOUT)    :: sfcheadrt
+!#endif
 
 ! input/output : need arbitary intial values
   REAL                           , INTENT(INOUT) :: QSNOW  !snowfall [mm/s]
@@ -797,8 +797,12 @@ contains
         FVEG = SHDMAX
         IF(FVEG <= 0.05) FVEG = 0.05
      ELSE
-        WRITE(*,*) "-------- FATAL CALLED IN SFLX -----------"
-        CALL wrf_error_fatal("Namelist parameter DVEG unknown")
+       IF (this_image()==1) THEN
+         WRITE(*,*) "-------- FATAL CALLED IN SFLX -----------"
+         WRITE(*,*) "Namelist parameter DVEG unknown"
+         STOP
+         !CALL wrf_error_fatal("Namelist parameter DVEG unknown")
+       ENDIF
      ENDIF
      IF(OPT_CROP > 0 .and. CROPTYPE > 0) THEN
         FVEG = SHDMAX
@@ -818,10 +822,15 @@ contains
      MIFAC = MIFRA
      FIFAC = FIFRA
 
+
 ! If OPT_IRRM = 0 and if methods are unknown for certain area, then use sprinkler irrigation method
-     IF((OPT_IRRM .EQ. 0) .AND. (SIFAC .EQ. 0.) .AND. (MIFAC .EQ. 0.) .AND. (FIFAC .EQ. 0.) &
-         .AND. (IRRFRA .GE. parameters%IRR_FRAC)) THEN
-          SIFAC = 1.0
+     IF (OPT_IRR .GT. 0) THEN
+       IF (OPT_IRRM .EQ. 0) THEN
+         IF ((SIFAC .EQ. 0.) .AND. (MIFAC .EQ. 0.) .AND. (FIFAC .EQ. 0.) &
+           .AND. (IRRFRA .GE. parameters%IRR_FRAC)) THEN
+            SIFAC = 1.0
+         ENDIF
+       ENDIF
      END IF
 ! choose method based on user namelist choice
      IF(OPT_IRRM .EQ. 1) THEN
@@ -837,19 +846,26 @@ contains
         MIFAC = 0.
         FIFAC = 1.
      END IF
+
 ! Call triggering function
-     IF((CROPLU .EQV. .TRUE.) .AND. (IRRFRA .GE. parameters%IRR_FRAC) .AND. &
+    IF(OPT_IRR .GT. 0) THEN
+     IF (CROPLU .EQV. .TRUE.) THEN
+       IF ((IRRFRA .GE. parameters%IRR_FRAC) .AND. &
        (RAIN .LT. (parameters%IR_RAIN/3600.)) .AND. ((IRAMTSI+IRAMTMI+IRAMTFI) .EQ. 0.0) )THEN
         CALL TRIGGER_IRRIGATION(parameters,NSOIL,ZSOIL,SH2O,FVEG,JULIAN,IRRFRA,LAI, & !in
                                   SIFAC,MIFAC,FIFAC,                                & !in
                                   IRCNTSI,IRCNTMI,IRCNTFI,                          & !inout
                                   IRAMTSI,IRAMTMI,IRAMTFI)                            !inout
+       END IF
      END IF
+   END IF
 ! set irrigation off if parameters%IR_RAIN mm/h for this time step and irr triggered last time step
-     IF((RAIN .GE. (parameters%IR_RAIN/3600.)) .OR. (IRRFRA .LT. parameters%IRR_FRAC))THEN
+     IF(OPT_IRR .GT. 0) THEN
+       IF((RAIN .GE. (parameters%IR_RAIN/3600.)) .OR. (IRRFRA .LT. parameters%IRR_FRAC))THEN
         IRAMTSI = 0.
         IRAMTMI = 0.
         IRAMTFI = 0.
+      END IF
      END IF
 ! call sprinkler irrigation before CANWAT/PRECIP_HEAT to have canopy interception
      IF((CROPLU .EQV. .TRUE.) .AND. (IRAMTSI .GT. 0.0)) THEN
@@ -926,9 +942,9 @@ contains
                  CMC    ,ECAN   ,ETRAN  ,FWET   ,RUNSRF ,RUNSUB , & !out
                  QIN    ,QDIS   ,PONDING1       ,PONDING2,&
                  QSNBOT                             &
-#ifdef WRF_HYDRO
-                        ,sfcheadrt                     &
-#endif
+!#ifdef WRF_HYDRO
+!                        ,sfcheadrt                     &
+!#endif
                  )  !out
 
 !     write(*,'(a20,10F15.5)') 'SFLX:RUNOFF=',RUNSRF*DT,RUNSUB*DT,EDIR*DT
@@ -963,9 +979,14 @@ contains
    END IF
 
 ! before waterbalance check add irrigation water to precipitation
-IF((CROPLU .EQV. .TRUE.) .AND. (IRRFRA .GE. parameters%IRR_FRAC))THEN
-   PRCP = PRCP + ((IRSIRATE+IRMIRATE+IRFIRATE)*1000./DT)  ! irrigation
-   FSH  = FSH - FIRR                                      ! (W/m2)
+
+IF (OPT_IRR .GT. 0) THEN
+  IF (CROPLU .EQV. .TRUE.) THEN
+    IF (IRRFRA .GE. parameters%IRR_FRAC) THEN
+     PRCP = PRCP + ((IRSIRATE+IRMIRATE+IRFIRATE)*1000./DT)  ! irrigation
+     FSH  = FSH - FIRR                                      ! (W/m2)
+   END IF
+  END IF
 END IF
 
 ! water and energy balance check
@@ -1167,6 +1188,10 @@ END IF
 
      RAIN   = PRCP * (1.-FPICE)
      SNOW   = PRCP * FPICE
+
+!     IF(SFCTMP < TFRZ+2.5) THEN
+!       print *, 'FPICE = ', FPICE, '; PRCP = ', PRCP
+!     ENDIF
 
 
   END SUBROUTINE ATM
@@ -1595,39 +1620,43 @@ ENDIF   ! CROPTYPE == 0
    WRITE(*,*) "FSA    =",FSA
 !jref:end
       WRITE(message,*) 'ERRSW =',ERRSW
-      call wrf_message(trim(message))
-      call wrf_error_fatal("Stop in Noah-MP")
+      WRITE(*,*) "Stop in Noah-MP"
+      STOP
+!      call wrf_message(trim(message))
+!      call wrf_error_fatal("Stop in Noah-MP")
    END IF
 
    ERRENG = SAV+SAG-(FIRA+FSH+FCEV+FGEV+FCTR+SSOIL+FIRR) +PAH
 !   ERRENG = FVEG*SAV+SAG-(FIRA+FSH+FCEV+FGEV+FCTR+SSOIL)
 !   WRITE(*,*) "ERRENG =",ERRENG
    IF(ABS(ERRENG) > 0.01) THEN
-      write(message,*) 'ERRENG =',ERRENG,' at i,j: ',ILOC,JLOC
-      call wrf_message(trim(message))
+      WRITE(message,*) 'ERRENG =',ERRENG,' at i,j: ',ILOC,JLOC
+!      call wrf_message(trim(message))
       WRITE(message,'(a17,F10.4)') "Net solar:       ",FSA
-      call wrf_message(trim(message))
+!      call wrf_message(trim(message))
       WRITE(message,'(a17,F10.4)') "Net longwave:    ",FIRA
-      call wrf_message(trim(message))
+!      call wrf_message(trim(message))
       WRITE(message,'(a17,F10.4)') "Total sensible:  ",FSH
-      call wrf_message(trim(message))
+!      call wrf_message(trim(message))
       WRITE(message,'(a17,F10.4)') "Canopy evap:     ",FCEV
-      call wrf_message(trim(message))
+!      call wrf_message(trim(message))
       WRITE(message,'(a17,F10.4)') "Ground evap:     ",FGEV
-      call wrf_message(trim(message))
+!      call wrf_message(trim(message))
       WRITE(message,'(a17,F10.4)') "Transpiration:   ",FCTR
-      call wrf_message(trim(message))
+!      call wrf_message(trim(message))
       WRITE(message,'(a17,F10.4)') "Total ground:    ",SSOIL
-      call wrf_message(trim(message))
+!      call wrf_message(trim(message))
       WRITE(message,'(a17,F10.4)') "Sprinkler:       ",FIRR
-      call wrf_message(trim(message))
+!      call wrf_message(trim(message))
       WRITE(message,'(a17,4F10.4)') "Precip advected: ",PAH,PAHV,PAHG,PAHB
-      call wrf_message(trim(message))
+!      call wrf_message(trim(message))
       WRITE(message,'(a17,F10.4)') "Precip: ",PRCP
-      call wrf_message(trim(message))
+!      call wrf_message(trim(message))
       WRITE(message,'(a17,F10.4)') "Veg fraction: ",FVEG
-      call wrf_message(trim(message))
-      call wrf_error_fatal("Energy budget problem in NOAHMP LSM")
+!      call wrf_message(trim(message))
+      WRITE(*,*) "Energy budget problem in Noah-MP LSM"
+      STOP
+!      call wrf_error_fatal("Energy budget problem in NOAHMP LSM")
    END IF
 
    IF (IST == 1) THEN                                       !soil
@@ -1637,24 +1666,24 @@ ENDIF   ! CROPTYPE == 0
         END DO
         ERRWAT = END_WB-BEG_WB-(PRCP-ECAN-ETRAN-EDIR-RUNSRF-RUNSUB)*DT
 
-#ifndef WRF_HYDRO
-        IF(ABS(ERRWAT) > 0.1) THEN
-           if (ERRWAT > 0) then
-              call wrf_message ('The model is gaining water (ERRWAT is positive)')
-           else
-              call wrf_message('The model is losing water (ERRWAT is negative)')
-           endif
-           write(message, *) 'ERRWAT =',ERRWAT, "kg m{-2} timestep{-1}"
-           call wrf_message(trim(message))
-           WRITE(message, &
-           '("    I      J     END_WB     BEG_WB       PRCP       ECAN       EDIR      ETRAN      RUNSRF     RUNSUB")')
-           call wrf_message(trim(message))
-           WRITE(message,'(i6,1x,i6,1x,2f15.3,9f11.5)')ILOC,JLOC,END_WB,BEG_WB,PRCP*DT,ECAN*DT,&
-                EDIR*DT,ETRAN*DT,RUNSRF*DT,RUNSUB*DT,ZWT
-           call wrf_message(trim(message))
-           call wrf_error_fatal("Water budget problem in NOAHMP LSM")
-        END IF
-#endif
+!#ifndef WRF_HYDRO
+!        IF(ABS(ERRWAT) > 0.1) THEN
+!           if (ERRWAT > 0) then
+!              call wrf_message ('The model is gaining water (ERRWAT is positive)')
+!           else
+!              call wrf_message('The model is losing water (ERRWAT is negative)')
+!           endif
+!           write(message, *) 'ERRWAT =',ERRWAT, "kg m{-2} timestep{-1}"
+!           call wrf_message(trim(message))
+!           WRITE(message, &
+!           '("    I      J     END_WB     BEG_WB       PRCP       ECAN       EDIR      ETRAN      RUNSRF     RUNSUB")')
+!           call wrf_message(trim(message))
+!           WRITE(message,'(i6,1x,i6,1x,2f15.3,9f11.5)')ILOC,JLOC,END_WB,BEG_WB,PRCP*DT,ECAN*DT,&
+!                EDIR*DT,ETRAN*DT,RUNSRF*DT,RUNSUB*DT,ZWT
+!           call wrf_message(trim(message))
+!           call wrf_error_fatal("Water budget problem in NOAHMP LSM")
+!        END IF
+!#endif
    ELSE                 !KWM
       ERRWAT = 0.0      !KWM
    ENDIF
@@ -2248,7 +2277,8 @@ ENDIF   ! CROPTYPE == 0
        WRITE(6,*) 'input of SHDFAC with LAI'
        WRITE(6,*) ILOC, JLOC, 'SHDFAC=',FVEG,'VAI=',VAI,'TV=',TV,'TG=',TG
        WRITE(6,*) 'LWDN=',LWDN,'FIRA=',FIRA,'SNOWH=',SNOWH
-       call wrf_error_fatal("STOP in Noah-MP")
+       WRITE(*,*) "STOP in Noah-MP"
+!       call wrf_error_fatal("STOP in Noah-MP")
     END IF
 
     ! Compute a net emissivity
@@ -3775,16 +3805,18 @@ ENDIF   ! CROPTYPE == 0
         UC = UR*LOG((HCAN-ZPD+Z0M)/Z0M)/LOG(ZLVL/Z0M)   ! MB: add ZPD v3.7
         IF((HCAN-ZPD) <= 0.) THEN
           WRITE(message,*) "CRITICAL PROBLEM: HCAN <= ZPD"
-          call wrf_message ( message )
+      !    call wrf_message ( message )
           WRITE(message,*) 'i,j point=',ILOC, JLOC
-          call wrf_message ( message )
+      !    call wrf_message ( message )
           WRITE(message,*) 'HCAN  =',HCAN
-          call wrf_message ( message )
+      !    call wrf_message ( message )
           WRITE(message,*) 'ZPD   =',ZPD
-          call wrf_message ( message )
+      !    call wrf_message ( message )
           write (message, *) 'SNOWH =',SNOWH
-          call wrf_message ( message )
-          call wrf_error_fatal ( "CRITICAL PROBLEM IN MODULE_SF_NOAHMPLSM:VEGEFLUX" )
+      !    call wrf_message ( message )
+          WRITE(*,*) "FATAL ERROR: CRITICAL PROBLEM IN MODULE_SF_NOAHMPLSM: VEGEFLUX"
+          STOP
+      !    call wrf_error_fatal ( "CRITICAL PROBLEM IN MODULE_SF_NOAHMPLSM:VEGEFLUX" )
         END IF
 
 ! prepare for longwave rad.
@@ -4560,7 +4592,8 @@ ENDIF   ! CROPTYPE == 0
 
     IF(ZLVL <= ZPD) THEN
        write(*,*) 'WARNING: critical problem: ZLVL <= ZPD; model stops'
-       call wrf_error_fatal("STOP in Noah-MP")
+       STOP
+  !     call wrf_error_fatal("STOP in Noah-MP")
     ENDIF
 
     TMPCM = LOG((ZLVL-ZPD) / Z0M)
@@ -5271,13 +5304,16 @@ ENDIF   ! CROPTYPE == 0
        ERR_EST = ERR_EST - (SSOIL2+EFLXB2)
     ENDIF
 
-    IF (ABS(ERR_EST) > 1.) THEN    ! W/m2
-       WRITE(message,*) 'TSNOSOI is losing(-)/gaining(+) false energy',ERR_EST,' W/m2'
-       call wrf_message(trim(message))
-       WRITE(message,'(i6,1x,i6,1x,i3,F18.13,5F20.12)') &
-            ILOC, JLOC, IST,ERR_EST,SSOIL,SNOWH,TG,STC(ISNOW+1),EFLXB
-       call wrf_message(trim(message))
+    IF (ABS(ERR_EST) > 1.) THEN
+       IF (this_image()==1) THEN
+         ! W/m2
+         WRITE(message,*) 'TSNOSOI is losing(-)/gaining(+) false energy',ERR_EST,' W/m2'
+!        call wrf_message(trim(message))
+         WRITE(message,'(i6,1x,i6,1x,i3,F18.13,5F20.12)') &
+              ILOC, JLOC, IST,ERR_EST,SSOIL,SNOWH,TG,STC(ISNOW+1),EFLXB
+!         call wrf_message(trim(message))
        !niu      STOP
+       ENDIF
     END IF
 
   END SUBROUTINE TSNOSOI
@@ -5841,8 +5877,10 @@ ENDIF   ! CROPTYPE == 0
 ! APPLY PHYSICAL BOUNDS TO FLERCHINGER SOLUTION
 ! ----------------------------------------------------------------------
        IF (KCOUNT == 0) THEN
-          write(message, '("Flerchinger used in NEW version. Iterations=", I6)') NLOG
-          call wrf_message(trim(message))
+          IF (this_image()==1) THEN
+            write(message, '("Flerchinger used in NEW version. Iterations=", I6)') NLOG
+          ENDIF
+  !        call wrf_message(trim(message))
           FK = ( ( (HFUS / (GRAV * ( - parameters%PSISAT(ISOIL))))*                    &
                ( (TKELV - TFRZ)/ TKELV))** ( -1/ BX))* parameters%SMCMAX(ISOIL)
           IF (FK < 0.02) FK = 0.02
@@ -5876,9 +5914,9 @@ ENDIF   ! CROPTYPE == 0
                     CMC    ,ECAN   ,ETRAN  ,FWET   ,RUNSRF ,RUNSUB , & !out
                     QIN    ,QDIS   ,PONDING1       ,PONDING2,        &
                     QSNBOT                                           &
-#ifdef WRF_HYDRO
-                        ,sfcheadrt                     &
-#endif
+!#ifdef WRF_HYDRO
+!                        ,sfcheadrt                     &
+!#endif
                     )  !out
 ! ----------------------------------------------------------------------
 ! Code history:
@@ -5989,9 +6027,9 @@ ENDIF   ! CROPTYPE == 0
 
   REAL, PARAMETER ::  WSLMAX = 5000.      !maximum lake water storage (mm)
 
-#ifdef WRF_HYDRO
-  REAL                           , INTENT(INOUT)    :: sfcheadrt
-#endif
+!#ifdef WRF_HYDRO
+!  REAL                           , INTENT(INOUT)    :: sfcheadrt
+!#endif
 
 ! ----------------------------------------------------------------------
 ! initialize
@@ -6060,9 +6098,9 @@ ENDIF   ! CROPTYPE == 0
        ETRANI(IZ) = ETRAN * BTRANI(IZ) * 0.001
     ENDDO
 
-#ifdef WRF_HYDRO
-       QINSUR = QINSUR+sfcheadrt/DT*0.001  !sfcheadrt units (m)
-#endif
+!#ifdef WRF_HYDRO
+!       QINSUR = QINSUR+sfcheadrt/DT*0.001  !sfcheadrt units (m)
+!#endif
 
 ! irrigation: call flood irrigation-pvk
     IF((CROPLU .EQV. .TRUE.) .AND. (IRAMTFI .GT. 0.0))THEN
@@ -10123,7 +10161,9 @@ CONTAINS
 
     if (ierr /= 0) then
        write(*,'("WARNING: Cannot find file MPTABLE.TBL")')
-       call wrf_error_fatal("STOP in Noah-MP read_mp_veg_parameters")
+       WRITE(*,*) "STOP in Noah-MP read_mp_veg_parameters"
+       STOP
+  !     call wrf_error_fatal("STOP in Noah-MP read_mp_veg_parameters")
     endif
 
     if ( trim(DATASET_IDENTIFIER) == "USGS" ) then
@@ -10135,7 +10175,9 @@ CONTAINS
     else
        write(*,'("WARNING: Unrecognized DATASET_IDENTIFIER in subroutine READ_MP_VEG_PARAMETERS")')
        write(*,'("WARNING: DATASET_IDENTIFIER = ''", A, "''")') trim(DATASET_IDENTIFIER)
-       call wrf_error_fatal("STOP in Noah-MP read_mp_veg_parameters")
+       WRITE(*,*) "STOP in Noah-MP read_mp_veg_parameters"
+       STOP
+  !     call wrf_error_fatal("STOP in Noah-MP read_mp_veg_parameters")
     endif
     close(15)
 
@@ -10281,15 +10323,18 @@ CONTAINS
 
     IF(ierr .NE. 0 ) THEN
       WRITE(message,FMT='(A)') 'module_sf_noahmpdrv.F: read_mp_soil_parameters: failure opening SOILPARM.TBL'
-      CALL wrf_error_fatal ( message )
+      STOP
+!      CALL wrf_error_fatal ( message )
     END IF
 
     READ (21,*)
     READ (21,*) SLTYPE
     READ (21,*) SLCATS
-    WRITE( message , * ) 'SOIL TEXTURE CLASSIFICATION = ', TRIM ( SLTYPE ) , ' FOUND', &
+    IF (this_image()==1) THEN
+      WRITE( message , * ) 'SOIL TEXTURE CLASSIFICATION = ', TRIM ( SLTYPE ) , ' FOUND', &
                SLCATS,' CATEGORIES'
-    CALL wrf_message ( message )
+    ENDIF
+!    CALL wrf_message ( message )
 
     DO LC=1,SLCATS
       READ (21,*) ITMP,BEXP_TABLE(LC),SMCDRY_TABLE(LC),F1_TABLE(LC),SMCMAX_TABLE(LC),    &
@@ -10311,7 +10356,8 @@ CONTAINS
 
     IF(ierr .NE. 0 ) THEN
       WRITE(message,FMT='(A)') 'module_sf_noahlsm.F: read_mp_soil_parameters: failure opening GENPARM.TBL'
-      CALL wrf_error_fatal ( message )
+      STOP
+!      CALL wrf_error_fatal ( message )
     END IF
 
     READ (22,*)
@@ -10382,7 +10428,9 @@ CONTAINS
 
     if (ierr /= 0) then
        write(*,'("WARNING: Cannot find file MPTABLE.TBL")')
-       call wrf_error_fatal("STOP in Noah-MP read_mp_rad_parameters")
+       write(*,*) "STOP in Noah-MP read_mp_rad_parameters"
+       STOP
+  !     call wrf_error_fatal("STOP in Noah-MP read_mp_rad_parameters")
     endif
 
     read(15,noahmp_rad_parameters)
@@ -10450,7 +10498,9 @@ RSURF_SNOW_TABLE     = -1.E36
 
     if (ierr /= 0) then
        write(*,'("WARNING: Cannot find file MPTABLE.TBL")')
-       call wrf_error_fatal("STOP in Noah-MP read_mp_global_parameters")
+       WRITE(*,*) "STOP in Noah-MP read_mp_global_parameters"
+       STOP
+!       call wrf_error_fatal("STOP in Noah-MP read_mp_global_parameters")
     endif
 
     read(15,noahmp_global_parameters)
@@ -10631,7 +10681,9 @@ RSURF_SNOW_TABLE     = RSURF_SNOW
 
     if (ierr /= 0) then
        write(*,'("WARNING: Cannot find file MPTABLE.TBL")')
-       call wrf_error_fatal("STOP in Noah-MP read_mp_crop_parameters")
+       write(*,*) "STOP in Noah-MP read_mp_crop_parameters"
+       STOP
+       !call wrf_error_fatal("STOP in Noah-MP read_mp_crop_parameters")
     endif
 
     read(15,noahmp_crop_parameters)
@@ -10814,7 +10866,9 @@ RSURF_SNOW_TABLE     = RSURF_SNOW
 
     if (ierr /= 0) then
        write(*,'("WARNING: Cannot find file MPTABLE.TBL")')
-       call wrf_error_fatal("STOP in Noah-MP read_mp_crop_parameters")
+       write(*,*) "STOP in Noah-MP read_mp_crop_parameters"
+       STOP
+!       call wrf_error_fatal("STOP in Noah-MP read_mp_crop_parameters")
     endif
 
     read(15,noahmp_irrigation_parameters)
@@ -10865,7 +10919,9 @@ RSURF_SNOW_TABLE     = RSURF_SNOW
 
     if (ierr /= 0) then
        write(*,'("WARNING: Cannot find file MPTABLE.TBL")')
-       call wrf_error_fatal("STOP in Noah-MP read_mp_optional_parameters")
+       WRITE(*,*) "STOP in Noah-MP read_mp_optional_parameters"
+       STOP
+!       call wrf_error_fatal("STOP in Noah-MP read_mp_optional_parameters")
     endif
 
     read(15,noahmp_optional_parameters)

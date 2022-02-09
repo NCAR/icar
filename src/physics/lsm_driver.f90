@@ -90,6 +90,12 @@ module land_surface
     integer :: exchange_term
     real*8  :: last_model_time
 
+    !Noah-MP specific
+    integer :: IDVEG,IOPT_CRS,IOPT_BTR,IOPT_RUN,IOPT_SFC,IOPT_FRZ,IOPT_INF,IOPT_RAD,IOPT_ALB,IOPT_SNF,IOPT_TBOT
+    integer :: IOPT_STC, IOPT_GLA, IOPT_RSF, IOPT_SOIL, IOPT_PEDO, IOPT_CROP, IOPT_IRR, IOPT_IRRM, IZ0TLND, SF_URBAN_PHYSICS
+    real,allocatable,dimension(:,:) :: chstarxy
+    character(len=MAXVARLENGTH) :: landuse_name
+
 contains
 
 
@@ -106,7 +112,7 @@ contains
                          kVARS%sensible_heat, kVARS%latent_heat, kVARS%u_10m, kVARS%v_10m, kVARS%temperature_2m,        &
                          kVARS%humidity_2m, kVARS%surface_pressure, kVARS%longwave_up, kVARS%ground_heat_flux,          &
                          kVARS%soil_totalmoisture, kVARS%soil_deep_temperature, kVARS%roughness_z0, kVARS%ustar,        &
-                         kVARS%snow_height,                                                                             &  ! BK 2020/10/26
+                         kVARS%snow_height, kVARS%lai,                                                                  &  ! BK 2020/10/26
                          kVARS%veg_type, kVARS%soil_type, kVARS%land_mask])
 
              call options%advect_vars([kVARS%potential_temperature, kVARS%water_vapor])
@@ -141,14 +147,14 @@ contains
                          kVARS%growing_degree_days, kVARS%plant_growth_stage, kVARS%temperature_2m_veg,                 &
                          kVARS%temperature_2m_bare, kVARS%mixing_ratio_2m_veg, kVARS%mixing_ratio_2m_bare,              &
                          kVARS%surface_rad_temperature, kVARS%net_ecosystem_exchange, kVARS%gross_primary_prod,         &
-                         kVARS%net_primary_prod, kVARS%runoff_surface, kVARS%runoff_subsurface, kVARS%precip_in_total,  &
+                         kVARS%net_primary_prod, kVARS%runoff_surface, kVARS%runoff_subsurface,                         &
                          kVARS%evap_canopy, kVARS%evap_soil_surface, kVARS%rad_absorbed_total, kVARS%rad_net_longwave,  &
                          kVARS%apar, kVARS%photosynthesis_total, kVARS%rad_absorbed_veg, kVARS%rad_absorbed_bare,       &
                          kVARS%stomatal_resist_total, kVARS%stomatal_resist_sun, kVARS%stomatal_resist_shade,           &
                          kVARS%lai, kVARS%sai, kVARS%snow_albedo_prev, kVARS%snow_age_factor, kVARS%canopy_water_ice,   &
                          kVARS%canopy_water_liquid, kVARS%vegetation_fraction_max, kVARS%crop_category,                 &
                          kVARS%date_planting, kVARS%date_harvest, kVARS%growing_season_gdd, kVARS%transpiration_rate,   &
-                         kVARS%frac_within_gap, kVARS%frac_between_gap, kVARS%ground_temperature_canopy,        &
+                         kVARS%frac_within_gap, kVARS%frac_between_gap, kVARS%ground_temperature_canopy,                &
                          kVARS%ground_temperature_bare, kVARS%ch_veg, kVARS%ch_veg_2m, kVARS%ch_bare, kVARS%ch_bare_2m, &
                          kVARS%ch_under_canopy, kVARS%ch_leaf, kVARS%sensible_heat_veg, kVARS%sensible_heat_bare,       &
                          kVARS%sensible_heat_canopy, kVARS%evap_heat_veg, kVARS%evap_heat_bare, kVARS%evap_heat_canopy, &
@@ -158,11 +164,11 @@ contains
                          kVARS%irr_eventno_sprinkler, kVARS%irr_eventno_micro, kVARS%irr_eventno_flood,                 &
                          kVARS%irr_alloc_sprinkler, kVARS%irr_alloc_micro, kVARS%irr_alloc_flood, kVARS%irr_amt_flood,  &
                          kVARS%irr_evap_loss_sprinkler, kVARS%irr_amt_sprinkler, kVARS%irr_amt_micro,                   &
-                         kVARS%evap_heat_sprinkler, kVARS%snowfall_ground, kVARS%rainfall_ground,                       &
+                         kVARS%evap_heat_sprinkler, kVARS%snowfall_ground, kVARS%rainfall_ground, kVARS%crop_type,      &
                          kVARS%ground_surf_temperature, kVARS%snow_temperature, kVARS%snow_layer_depth,                 &
-                         kVARS%snow_layer_ice, kVARS%snow_layer_liquid_water, kVARS%soil_texture_1,                     &
+                         kVARS%snow_layer_ice, kVARS%snow_layer_liquid_water, kVARS%soil_texture_1, kVARS%gecros_state, &
                          kVARS%soil_texture_2, kVARS%soil_texture_3, kVARS%soil_texture_4, kVARS%soil_sand_and_clay,    &
-                         kVARS%vegetation_fraction_out, kVARS%latitude, kVARS%longitude, kVARS%cos_zenith, &
+                         kVARS%vegetation_fraction_out, kVARS%latitude, kVARS%longitude, kVARS%cos_zenith,              &
                          kVARS%veg_type, kVARS%soil_type, kVARS%land_mask])
 
              call options%advect_vars([kVARS%potential_temperature, kVARS%water_vapor])
@@ -638,8 +644,6 @@ contains
             where(domain%soil_water_content%data_3d<0.0001) domain%soil_water_content%data_3d=0.0001
 
             ! Hard-coded Noah-MP input options (read in from namelist in future); TLE
-            integer :: IDVEG,IOPT_CRS,IOPT_BTR,IOPT_RUN,IOPT_SFC,IOPT_FRZ,IOPT_INF,IOPT_RAD,IOPT_ALB,IOPT_SNF,IOPT_TBOT
-            integer :: IOPT_STC, IOPT_GLA, IOPT_RSF, IOPT_SOIL, IOPT_PEDO, IOPT_CROP, IOPT_IRR, IOPT_IRRM, IZ0TLND, SF_URBAN_PHYSICS
             IDVEG = 1            ! dynamic vegetation (1 = OFF; 2 = ON)
             IOPT_CRS = 1         ! canopy stomatal resistance (1 = Ball-Berry; 2 = Jarvis)
             IOPT_BTR = 1         ! soil moisture factor for stomatal resistance (1 = Noah; 2 = CLM; 3 = SSiB)
@@ -658,10 +662,13 @@ contains
             IOPT_PEDO = 1        ! soil pedotransfer function option
             IOPT_CROP = 0        ! crop model option (0 = none; 1 = Liu et al.; 2 = Gecros)
             IOPT_IRR = 0         ! irrigation scheme (0 = OFF; 1 = ON)
-            IOPT_IRRM = 1        ! irrigation method
+            IOPT_IRRM = 0        ! irrigation method
             IZ0TLND = 0          ! option of Chen adjustment of Czil (not used)
             SF_URBAN_PHYSICS = 0 ! urban physics (0 = off (I think))
 
+            !allocate dummy variable that doesn't do anything
+            allocate(chstarxy(ims:ime,jms:jme))
+            chstarxy = 0
 
             call NOAHMP_INIT ( MMINLU,                                  &
                                 domain%snow_water_equivalent%data_2d,   &
@@ -669,19 +676,19 @@ contains
                                 domain%canopy_water%data_2d,            &
                                 domain%soil_type,                       &
                                 domain%veg_type,                        &
-                                XLAT,                                   &
+                                domain%latitude%data_2d,                &
                                 domain%soil_temperature%data_3d,        &
                                 domain%soil_water_content%data_3d,      &
-                                SH2O , DZS ,                    &
+                                SH2O , DZS ,                            &
                                 FNDSOILW , FNDSNOWH ,                   &
                                 domain%skin_temperature%data_2d,        &
                                 domain%snow_nlayers,                    &
                                 domain%veg_leaf_temperature%data_2d,    &
-                                domain%ground_surf_temperature,         &
+                                domain%ground_surf_temperature%data_2d, &
                                 domain%canopy_water_ice%data_2d,        &
                                 domain%soil_deep_temperature%data_2d,   &
-                                  XICE,   &
-                                domain%canopy_water_liquid,             &
+                                XICE,                                   &
+                                domain%canopy_water_liquid%data_2d,     &
                                 domain%canopy_vapor_pressure%data_2d,   &
                                 domain%canopy_temperature%data_2d,      &
                                 domain%coeff_momentum_drag%data_2d,     &
@@ -690,7 +697,7 @@ contains
                                 domain%snow_water_eq_prev%data_2d,      &
                                 domain%snow_albedo_prev%data_2d,        &
                                 domain%snowfall_ground%data_2d,         &
-                                domain%rainfall_ground,                 &
+                                domain%rainfall_ground%data_2d,         &
                                 domain%storage_lake%data_2d,            &
                                 domain%water_table_depth%data_2d,       &
                                 domain%water_aquifer%data_2d,           &
@@ -698,7 +705,7 @@ contains
                                 domain%snow_temperature%data_3d,        &
                                 domain%snow_layer_depth%data_3d,        &
                                 domain%snow_layer_ice%data_3d,          &
-                                domain%snow_layer_liquid_water,         &
+                                domain%snow_layer_liquid_water%data_3d, &
                                 domain%mass_leaf%data_2d,               &
                                 domain%mass_root%data_2d,               &
                                 domain%mass_stem%data_2d,               &
@@ -709,11 +716,11 @@ contains
                                 domain%sai%data_2d,                     &
                                 domain%mass_ag_grain%data_2d,           &
                                 domain%growing_degree_days%data_2d,     &
-                                croptype , &
-                                domain%crop_category%data_2d,           &
-                                domain%irr_eventno_sprinkler%data_2d,   &
-                                domain%irr_eventno_micro%data_2d,       &
-                                domain%irr_eventno_flood%data_2d,       &
+                                domain%crop_type%data_3d,               &
+                                domain%crop_category,                   &
+                                domain%irr_eventno_sprinkler,           &
+                                domain%irr_eventno_micro,               &
+                                domain%irr_eventno_flood        ,       &
                                 domain%irr_alloc_sprinkler%data_2d,     &
                                 domain%irr_alloc_micro%data_2d,         &
                                 domain%irr_alloc_flood%data_2d,         &
@@ -932,11 +939,11 @@ contains
                             ROVCP,                                        &
                             SR,                                           &
                             chklowq,                                      &
-                            domain%lai%data_2d,                                          &
+                            domain%lai%data_2d,                           &
                             qz0,                                          & !H
                             myj,frpcpn,                                   &
                             SH2O,                                         &
-                            domain%snow_height%data_2d, &     !SNOWH,                                   & !H
+                            domain%snow_height%data_2d,                   &     !SNOWH,                                   & !H
                             SNOALB,SHDMIN,SHDMAX,                         & !I
                             SNOTIME,                                      & !?
                             ACSNOM,ACSNOW,                                & !O
@@ -982,22 +989,24 @@ contains
                 endif
 
                 !more parameters
-                landuse_name = MMINLU            !test whether this works or if we need something separate
-                DX = 1000                        !grid spacing in m; this should be read in from somewhere
-                year = domain%model_time%year    !check with EG that this will work
-                julian_day = 100                 !calculate based on input
-                if (IOPT_IRR /= 2) then
-                  GECROS_STATE = 0
-                endif
+                landuse_name = options%lsm_options%LU_Categories            !test whether this works or if we need something separate
+
                 ! if (this_image()==1) write(*,*) "    lsm start: accumulated_precipitation max:", MAXVAL(domain%accumulated_precipitation%data_2d)
                 ! if (this_image()==1) write(*,*) "    lsm start: RAINBL max:", MAXVAL(RAINBL)
                 ! if (this_image()==1) write(*,*) "    lsm start: domain%precipitation_bucket max:", MAXVAL(domain%precipitation_bucket)
                 ! if (this_image()==1) write(*,*) "    lsm start: rain_bucket max:", MAXVAL(rain_bucket)
 
+                current_precipitation = (domain%accumulated_precipitation%data_2d-RAINBL)+(domain%precipitation_bucket-rain_bucket)*kPRECIP_BUCKET_SIZE
+
+                do I = ims,ime
+                  do J = jms,jme
+                    call calc_declin(domain%model_time%day_of_year(),real(domain%model_time%hour),real(domain%model_time%minute),real(domain%model_time%second),domain%latitude%data_2d(I,J),domain%longitude%data_2d(I,J),domain%cos_zenith%data_2d(I,J))
+                  enddo
+                enddo
 
                 call noahmplsm(ITIMESTEP,                              &
-                             year,                                     &
-                             julian_day,                               &
+                             domain%model_time%year,                   &
+                             domain%model_time%day_of_year(),          &
                              domain%cos_zenith%data_2d,                &
                              domain%latitude%data_2d,                  &
                              domain%longitude%data_2d,                 &
@@ -1005,22 +1014,22 @@ contains
                              lsm_dt,                                   &
                              DZS,                                      &
                              num_soil_layers,                          &
-                             DX,                                       &
+                             domain%dx,                                &
                              domain%veg_type,                          &
                              domain%soil_type,                         &
               	             VEGFRAC,                                  &
                              domain%vegetation_fraction_max%data_2d,   &
-                             domain%soil_deep_temperature,             &
-                             domain%land_mask,                         &
+                             domain%soil_deep_temperature%data_2d,     &
+                             real(domain%land_mask),                   &
                              XICE,                                     &
-                             ICE_THRESHOLD,                            &
-                             domain%crop_category%data_2d,             &
+                             XICE_THRESHOLD,                           &
+                             domain%crop_category,                     &
                              domain%date_planting%data_2d,             &
                              domain%date_harvest%data_2d,              &
                              domain%growing_season_gdd%data_2d,        &
                              IDVEG, IOPT_CRS,  IOPT_BTR, IOPT_RUN,     &
                              IOPT_SFC, IOPT_FRZ, IOPT_INF, IOPT_RAD,   &
-                             IOPT_ALB, IOPT_SNF, OPT_TBOT, IOPT_STC,   &
+                             IOPT_ALB, IOPT_SNF, IOPT_TBOT, IOPT_STC,  &
                              IOPT_GLA, IOPT_RSF, IOPT_SOIL,IOPT_PEDO,  &
                              IOPT_CROP, IOPT_IRR, IOPT_IRRM, IZ0TLND,  &
                              SF_URBAN_PHYSICS,                         &
@@ -1031,14 +1040,14 @@ contains
                              domain%soil_texture_4%data_2d,            &
                              domain%temperature%data_3d,               &
                              domain%water_vapor%data_3d,               &
-                             U_PHY,                                    &
-                             V_PHY,                                    &
+                             domain%u%data_3d,                         &
+                             domain%v%data_3d,                         &
                              domain%shortwave%data_2d,                 &
-                             SWDDIR,                                   &
-                             SWDDIF,                                   &
+                             domain%shortwave_direct%data_2d,          &
+                             domain%shortwave_diffuse%data_2d,         &
                              domain%longwave%data_2d,                  &
                              domain%pressure_interface%data_3d,        &
-                             domain%precip_in_total,                   &
+                             current_precipitation,                    &
                              SR,                                       &
                              domain%irr_frac_total%data_2d,            &
                              domain%irr_frac_sprinkler%data_2d,        &
@@ -1060,9 +1069,9 @@ contains
                              domain%canopy_water%data_2d,              &
                              ACSNOM, ACSNOW,    EMISS,     QSFC,   Z0, &
                              domain%roughness_z0%data_2d,              &
-                             domain%irr_eventno_sprinkler%data_2d,     &
-                             domain%irr_eventno_micro%data_2d,         &
-                             domain%irr_eventno_flood%data_2d,         &
+                             domain%irr_eventno_sprinkler,             &
+                             domain%irr_eventno_micro,                 &
+                             domain%irr_eventno_flood,                 &
                              domain%irr_alloc_sprinkler%data_2d,       &
                              domain%irr_alloc_micro%data_2d,           &
                              domain%irr_alloc_flood%data_2d,           &
@@ -1072,9 +1081,9 @@ contains
                              domain%irr_amt_flood%data_2d,             &
                              domain%evap_heat_sprinkler%data_2d,       &
                              landuse_name,                             &
-                             domain%snow_nlayers%data_2d,              &
+                             domain%snow_nlayers,                      &
                              domain%veg_leaf_temperature%data_2d,      &
-                             domain%ground_surf_temperature,           &
+                             domain%ground_surf_temperature%data_2d,   &
                              domain%canopy_water_ice%data_2d,          &
                              domain%canopy_water_liquid%data_2d,       &
                              domain%canopy_vapor_pressure%data_2d,     &
@@ -1083,7 +1092,7 @@ contains
                              domain%coeff_heat_exchange%data_2d,       &
                              domain%canopy_fwet%data_2d,               &
                              domain%snow_water_eq_prev%data_2d,        &
-                             domain%snow_albedo_prev,                  &
+                             domain%snow_albedo_prev%data_2d,          &
                              domain%snowfall_ground%data_2d,           &
                              domain%rainfall_ground%data_2d,           &
                              domain%storage_lake%data_2d,              &
@@ -1109,8 +1118,8 @@ contains
                              domain%recharge%data_2d,                  &
                              domain%mass_ag_grain%data_2d,             &
                              domain%growing_degree_days%data_2d,       &
-                             domain%plant_growth_stage%data_2d,        &
-                             GECROS_STATE,                             &
+                             domain%plant_growth_stage,                &
+                             domain%gecros_state%data_3d,              &
                              domain%temperature_2m_veg%data_2d,        &
                              domain%temperature_2m_bare%data_2d,       &
                              domain%mixing_ratio_2m_veg%data_2d,       &
@@ -1133,8 +1142,8 @@ contains
                              domain%rad_absorbed_bare%data_2d,         &
                              domain%stomatal_resist_sun%data_2d,       &
                              domain%stomatal_resist_shade%data_2d,     &
-                             domain%between_gap_fraction%data_2d,      &
-                             domain%within_gap_fraction%data_2d,       &
+                             domain%frac_between_gap%data_2d,          &
+                             domain%frac_within_gap%data_2d,           &
                              domain%ground_temperature_canopy%data_2d, &
                              domain%ground_temperature_bare%data_2d,   &
                              domain%ch_veg%data_2d,                    &
@@ -1160,20 +1169,21 @@ contains
                              ims,ime,  jms,jme,  kms,kme,              &
                              its,ite,  jts,jte,  kts,kte)
 
+
     !         TLE: OMITTING OPTIONAL PRECIP INPUTS FOR NOW
     !                         MP_RAINC, MP_RAINNC, MP_SHCV, MP_SNOW, MP_GRAUP, MP_HAIL     )
 
-            ! now that znt (roughness_z0) has been updated, we need to recalculate terms
-            lnz_atm_term = log((z_atm+domain%roughness_z0%data_2d)/domain%roughness_z0%data_2d)
-            if (exchange_term==1) then
-                base_exchange_term=(75*karman**2 * sqrt((z_atm+domain%roughness_z0%data_2d)/domain%roughness_z0%data_2d)) / (lnz_atm_term**2)
-                lnz_atm_term=(karman/lnz_atm_term)**2
-            endif
+                 ! now that znt (roughness_z0) has been updated, we need to recalculate terms
+                lnz_atm_term = log((z_atm+domain%roughness_z0%data_2d)/domain%roughness_z0%data_2d)
+                if (exchange_term==1) then
+                    base_exchange_term=(75*karman**2 * sqrt((z_atm+domain%roughness_z0%data_2d)/domain%roughness_z0%data_2d)) / (lnz_atm_term**2)
+                    lnz_atm_term=(karman/lnz_atm_term)**2
+                endif
 
-            ! note this is more or less just diagnostic and could be removed
-            domain%longwave_up%data_2d = stefan_boltzmann * EMISS * domain%skin_temperature%data_2d**4
-            RAINBL = domain%accumulated_precipitation%data_2d
-            rain_bucket = domain%precipitation_bucket
+                ! note this is more or less just diagnostic and could be removed
+                domain%longwave_up%data_2d = stefan_boltzmann * EMISS * domain%skin_temperature%data_2d**4
+                RAINBL = domain%accumulated_precipitation%data_2d
+                rain_bucket = domain%precipitation_bucket
             endif
 
 
@@ -1201,4 +1211,36 @@ contains
         endif
 
     end subroutine lsm
+
+    subroutine calc_declin (julian,hour,minute,second,latitude,longitude,cosz)
+      !calculate cosine of solar zenith angle (from noahmp hrldas driver)
+      real, parameter :: degrad = 3.14159265/180
+      real, parameter :: dpd = 360./365.
+      real, intent(in)  :: julian
+      real, intent(in)  :: hour
+      real, intent(in)  :: minute
+      real, intent(in)  :: second
+      real, intent(in)  :: latitude
+      real, intent(in)  :: longitude
+      real, intent(out) :: cosz
+      real :: obecl, sinob, declin, sxlong, arg, tloctim, hrang
+
+      obecl = 23.5*degrad
+      sinob = sin(obecl)
+
+      if (julian.ge.80.) then
+        sxlong = dpd * (julian-80.) * degrad
+      elseif (julian.lt.80.) then
+        sxlong = dpd * (julian+285.) * degrad
+      endif
+
+      arg = sinob * sin(sxlong)
+      declin = asin(arg)
+
+      tloctim = hour + (minute/60.0) + (second/3600.0) + (longitude/15.0)
+      tloctim = amod(tloctim + 24.0, 24.0)
+      hrang = 15. * (tloctim - 12.) * degrad
+      cosz = sin(latitude*degrad) * sin(declin) + cos(latitude*degrad) * cos(declin) *cos(hrang)
+
+    end subroutine calc_declin
 end module land_surface

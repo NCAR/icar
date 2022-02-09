@@ -63,6 +63,8 @@ module icar_constants
         integer :: dz_interface
         integer :: cloud_fraction
         integer :: shortwave
+        integer :: shortwave_direct
+        integer :: shortwave_diffuse
         integer :: longwave
         integer :: vegetation_fraction
         integer :: vegetation_fraction_max
@@ -83,6 +85,7 @@ module icar_constants
         integer :: lai
         integer :: sai
         integer :: crop_category
+        integer :: crop_type
         integer :: date_planting
         integer :: date_harvest
         integer :: growing_season_gdd
@@ -112,6 +115,7 @@ module icar_constants
         integer :: stomatal_resist_total
         integer :: stomatal_resist_sun
         integer :: stomatal_resist_shade
+        integer :: gecros_state
         integer :: canopy_water
         integer :: canopy_water_ice
         integer :: canopy_water_liquid
@@ -235,7 +239,8 @@ module icar_constants
                                                             151, 152, 153, 154, 155, 156, 157, 158, 159, 160,  &
                                                             161, 162, 163, 164, 165, 166, 167, 168, 169, 170,  &
                                                             171, 172, 173, 174, 175, 176, 177, 178, 179, 180,  &
-                                                            181, 182, 183, 184, 185, 186, 187)
+                                                            181, 182, 183, 184, 185, 186, 187, 188, 189, 190,  &
+                                                            191)
 
     integer, parameter :: kINTEGER_BITS     = storage_size(kINTEGER_BITS)
     integer, parameter :: kMAX_STORAGE_VARS = storage_size(kVARS) / kINTEGER_BITS

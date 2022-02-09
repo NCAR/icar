@@ -7,11 +7,11 @@
 !*                Wageningen University & Research Centre              *
 !*               PO Box 430, 6700 AK Wageningen, Netherlands           *
 !*                                                                     *
-!*                Modified and extended for winter crops               * 
+!*                Modified and extended for winter crops               *
 !*                         by Joachim INGWERSEN                        *
 !*                         Biogeophysics Group                         *
 !*                       University of Hohenheim                       *
-!*                                                                     *   
+!*                                                                     *
 !***********************************************************************
 
 MODULE module_sf_gecros
@@ -23,9 +23,9 @@ implicit none
 REAL, PARAMETER :: EG = 1.        !Efficiency of germination
 REAL, PARAMETER :: CFV = 0.48     !Carbon fraction in vegetative organs
 REAL, PARAMETER :: YGV = 0.81     !Grwoth efficiency for vegetative growth
-REAL, PARAMETER :: FFAT = 0.02    !Fraction of fat in storage organs 
+REAL, PARAMETER :: FFAT = 0.02    !Fraction of fat in storage organs
 REAL, PARAMETER :: FLIG = 0.06    !Fraction of lignin in storage organs
-REAL, PARAMETER :: FOAC = 0.02    !Fraction of organic acids in storage organs 
+REAL, PARAMETER :: FOAC = 0.02    !Fraction of organic acids in storage organs
 REAL, PARAMETER :: FMIN = 0.02    !Fraction of minerals in storage organs
 REAL, PARAMETER :: LNCI = 0.03586 !Initial value of LNC (g N g-1)
 REAL, PARAMETER :: TBD = 0.0      !Base temperature of phenology (C)
@@ -36,19 +36,19 @@ REAL, PARAMETER :: SPSP = 0.2     !DS for start of photoperiod-sensitive phase
 REAL, PARAMETER :: EPSP = 0.7     !DS for end of photoperiod-sensitive phase
 REAL, PARAMETER :: CDMHT = 492.6  !Stem dry weight per unit plant height (g m-2 m2)
 REAL, PARAMETER :: PMEH = 0.6468  !Fraction of sigmoid curve inflexion in plant height growth period (1)
-REAL, PARAMETER :: ESDI = 1.35    !ESD for indeterminate crops 
-REAL, PARAMETER :: PMES = 0.50    !Fraction of sigmoid curve inflexion in seed growth growth period (1) 
+REAL, PARAMETER :: ESDI = 1.35    !ESD for indeterminate crops
+REAL, PARAMETER :: PMES = 0.50    !Fraction of sigmoid curve inflexion in seed growth growth period (1)
 REAL, PARAMETER :: TBDV = -1.3    !Base temperature of vernalization (C)
 REAL, PARAMETER :: TODV = 4.9     !Optimum temperature of vernalization (C)
 REAL, PARAMETER :: TCDV = 15.7    !Ceiling temperature of vernalization (C)
-REAL, PARAMETER :: NUPTX = 0.5/24./3600.    !Maximum crop nitrogen uptake (g N m-2 s-1) 
+REAL, PARAMETER :: NUPTX = 0.5/24./3600.    !Maximum crop nitrogen uptake (g N m-2 s-1)
 REAL, PARAMETER :: SLA0 = 0.0237  !Specific leaf area constant (m2 leaf g-1)
 REAL, PARAMETER :: SLNMIN = 0.35  !Base SLN for photosynthesis (g N m-2 leaf)
 REAL, PARAMETER :: RNCMIN = 0.005 !Minimum N concentration in roots (g N g-1)
 REAL, PARAMETER :: STEMNC = 0.01  !Minimum N concentration in stem (g N g-1)
-REAL, PARAMETER :: RLVDS = 0.0904 !Rate of C turnover from dead leaves to litter (d-1) 
-REAL, PARAMETER :: DSCRIT = 0.225 !DS at which winter dormancy ends (1) 
-REAL, PARAMETER :: EAJMAX = 48270.!Energy of activation for JMAX (J mol-1) 
+REAL, PARAMETER :: RLVDS = 0.0904 !Rate of C turnover from dead leaves to litter (d-1)
+REAL, PARAMETER :: DSCRIT = 0.225 !DS at which winter dormancy ends (1)
+REAL, PARAMETER :: EAJMAX = 48270.!Energy of activation for JMAX (J mol-1)
 REAL, PARAMETER :: XVN = 24.96    !Slope of linear relationship between JMAX and leaf N (mu-mol CO2 s-1 g-1 N)
 REAL, PARAMETER :: XJN = 49.92    !Slope of linear relationship between VCMX and leaf N (mu-mol e- s-1 g-1 N)
 REAL, PARAMETER :: NPL = 390.0    !Number of plants per m2
@@ -69,7 +69,7 @@ REAL, PARAMETER :: NSUP1 = 0.   !NH4-N supply in g/m2/s
 REAL, PARAMETER :: NSUP2 = 1./172800. !NO3-N supply in g/m2/s
 REAL, PARAMETER :: CO2A=350.    !Atmospherric CO2 concentration (ppm)
 REAL, PARAMETER :: FCRSH=0.5    !Initial fraction of C in shoot (-)
-REAL, PARAMETER :: FNRSH=0.63   !Initial fraction of N in shoot (-) 
+REAL, PARAMETER :: FNRSH=0.63   !Initial fraction of N in shoot (-)
 REAL, PARAMETER :: PNPRE=0.7    !Proportion of seed N that comes from non-structural stems during seed fill
 REAL, PARAMETER :: CB=0.75      !Factor for initial N concentration of seed fill
 REAL, PARAMETER :: CX=1.00      !Factor for final N concentration of seed fill
@@ -103,14 +103,14 @@ LOGICAL :: debugging=.false.
 CONTAINS
 
 SUBROUTINE gecros (DOY, DT, CROP, RB, RT, RTS, FB, SNOWH,        & !I
-           WN, SFCTMP, EAIR, RSD, RLD, PRCP, WUL, WLL, WCMIN, LWIDTH,     & !I                                                     &  !I  
+           WN, SFCTMP, EAIR, RSD, RLD, PRCP, WUL, WLL, WCMIN, LWIDTH,     & !I                                                     &  !I
            STATE_GECROS,                                                  & !H
            ATRJC, ATRJS, FSR, FRSU, ARSWSU, ARSWSH)  !O
 
 IMPLICIT NONE
 
 !    character(len=19), INTENT(IN)  :: nowdate ! string of current date e.g. 2012-30-10_12:00:00
-    INTEGER, INTENT(IN) :: CROP     !CROP=1 -> early-covering crop, CROP=2 -> later covering crop         
+    INTEGER, INTENT(IN) :: CROP     !CROP=1 -> early-covering crop, CROP=2 -> later covering crop
     REAL, INTENT(IN)    :: DOY      !Julian day of the current time step
     REAL, INTENT(IN)    :: DT       !Integration time step (s)
     REAL, INTENT(IN)    :: RB       !Leaf boundary layer resistance (s/m)
@@ -132,7 +132,7 @@ IMPLICIT NONE
     REAL, INTENT(OUT)   :: ATRJS    !Absorbed global radiation by soil (W/m2)
     REAL, INTENT(OUT)   :: FSR      !Reflected shortwave radiation (W/m2)
     REAL, INTENT(OUT)   :: FRSU     !Fraction of sunlit leaves in the canopy
-    REAL, INTENT(OUT)   :: ARSWSU   !Actual stomatal resistance of sunlit leaves (s/m) 
+    REAL, INTENT(OUT)   :: ARSWSU   !Actual stomatal resistance of sunlit leaves (s/m)
     REAL, INTENT(OUT)   :: ARSWSH   !Actual stomatal resistance of shaded leaves (s/m)
     REAL, DIMENSION(1:60), INTENT(INOUT) ::  STATE_GECROS !Array with Gecros state variables
 
@@ -140,7 +140,7 @@ IMPLICIT NONE
     REAL :: DS     !Development stage
     REAL :: LAI    !Green leaf area index
     REAL :: TLAI   !Total leaf area index
-    REAL :: CTDU   !Cumulative thermal day unit (d) 
+    REAL :: CTDU   !Cumulative thermal day unit (d)
     REAL :: CVDU   !Cumulative thermal day unit of vernalization (d)
     REAL :: CLV    !Carbon in living leaves (g C/m2)
     REAL :: CLVD   !Carbon in dead leaves (g C/m2)
@@ -180,10 +180,10 @@ IMPLICIT NONE
     REAL :: GrainNC !Nitrogen in grain (kg N/ha)
     REAL :: StrawNC !Nitrogen in straw (kg N/ha)
     REAL :: APCAN   !Actual gross canopy photosynthesis (g CO2/m2/d)
-    
+
     character(Len=12)  :: inputstring
     INTEGER :: nowday, minutes
-    REAL :: SC     !Solar constant (W/m2) 
+    REAL :: SC     !Solar constant (W/m2)
     REAL :: SINLD  !Seasonal offset of sine of solar height (-)
     REAL :: COSLD  !Amplitude of sine of solar height (-)
     REAL :: DAYL   !Day length (h)
@@ -225,7 +225,7 @@ IMPLICIT NONE
     REAL :: TSN    !Total seed number (seeds/m2)
     REAL :: HNC    !Actural N concentration in living shoot (g N/g)
     REAL :: PSO    !Protein content in storage organs (g protein/m2)
-    REAL :: KLN    !Intermediate variable to compute KN (g N/m2 leaf) 
+    REAL :: KLN    !Intermediate variable to compute KN (g N/m2 leaf)
     REAL :: NBK    !Intermediate variable to compute KN (g N/m2 leaf)
     REAL :: KW     !Wind speed extinction coefficient in canopy (m2/m2 leaf)
     REAL :: WTOT   !Dry weight of total living plant parts (g/m2)
@@ -250,7 +250,7 @@ IMPLICIT NONE
     REAL :: SLA    !Specific leaf area (m2 leaf/g)
     REAL :: LWLV   !Rate of loss of leaf weight because of leaf senescence (g/m2/s)
     REAL :: AESOIL !Actual soil evaporation (mm/s)
-    REAL :: APCANN !APCANS with small plant-N increment (g CO2/m2/s) 
+    REAL :: APCANN !APCANS with small plant-N increment (g CO2/m2/s)
     REAL :: APCANS !Actual standing canopy CO2 assimilation (g CO2/m2/s)
     REAL :: ATCAN  !Actual canopy transpiration (mm/s)
     REAL :: DAPAR  !PAR absorbed by canopy (J/m2/s)
@@ -259,16 +259,16 @@ IMPLICIT NONE
     REAL :: DIFSU  !Daytime average sunlit leaf-air temperature difference (C)
     REAL :: FRSH   !Fraction of shaded leaves in the canopy
     REAL :: HOD    !Hour of the day
-    REAL :: PESOIL !Potential soil evaporation (mm/s) 
+    REAL :: PESOIL !Potential soil evaporation (mm/s)
     REAL :: PPCAN  !Potential canopy assimilation (g CO2/m2/s)
     REAL :: PTCAN  !Potential canopy transpiration (mm/s)
-    REAL :: RCAN   !Canopy resistance (s/m) 
+    REAL :: RCAN   !Canopy resistance (s/m)
     REAL :: RSLNB  !Rate of change in SLNB (g N/m2 leaf/s)
     REAL :: LNLV   !Rate of loss of leaf N because of senescence (g N/m2/s)
     REAL :: LCLV   !Rate of loss of leaf C because of senescence (g C/m2/s)
     REAL :: RMRE   !Residual maintenance respiration (g CO2/m2/s)
     REAL :: TAVSS  !Soil surface temperature (C)
-    REAL :: RMN    !RM calculated with a small increment in plant N (g CO2/m2/s) 
+    REAL :: RMN    !RM calculated with a small increment in plant N (g CO2/m2/s)
     REAL :: VDU    !Rate of Vernalization day unit increase (d/s)
     REAL :: TDU    !Rate of thermal day unit increase (d/s)
     REAL :: RM     !Non-growth components of respiration, excluding the cost of N fixation (g CO2/m2/s)
@@ -307,7 +307,7 @@ IMPLICIT NONE
     REAL :: NUPT   !Crop N uptake (g N/m2/s)
     REAL :: DCDSC  !C demand for seed filling at current time step (g C/m2/s)
     REAL :: DCDS   !C demand for filling of storage organgs at current time step (g C/m2/s)
-    REAL :: FLWCS  !Flow of current assimilated C to storage organs (g C/m2/s) 
+    REAL :: FLWCS  !Flow of current assimilated C to storage organs (g C/m2/s)
     REAL :: DCSS   !C supply from current photosynthesis for shoot growth (g C/m2/s)
     REAL :: DCST   !C suppyl from current photosynthesis for structural stem growth (g C/m2/s)
     REAL :: FCSO   !Fraction of new C partitioned to storage organs (g C/m2/s)
@@ -346,18 +346,18 @@ IMPLICIT NONE
     REAL :: RNRT   !Rate of change in NRT (g N/m2/s)
     REAL :: RNSO   !Rate of change in NSO (g N/m2/s)
     REAL :: RNST   !Rate of change in NSZ (g N/m2/s)
-    REAL :: RRP    !Respiration/photosynthesis ratio (-) 
+    REAL :: RRP    !Respiration/photosynthesis ratio (-)
     REAL :: RTNLV  !Rate of change in TNLV (g N/m2/s)
     REAL :: RWLV   !Rate of change in WLV (g/m2/s)
-    REAL :: RWST   !Rate of change in WST (g/m2/s) 
-    REAL :: GLAT   !Latitude (degree)   
+    REAL :: RWST   !Rate of change in WST (g/m2/s)
+    REAL :: GLAT   !Latitude (degree)
     REAL :: SD1    !Thickness of upper evaporative soil layer (cm) (equals RDI)
-    
+
     !*** write STATE_GECROS array into Gecros variables
     DS     = STATE_GECROS(1)
     CTDU   = STATE_GECROS(2)
     CVDU   = STATE_GECROS(3)
-    CLV    = STATE_GECROS(4)   
+    CLV    = STATE_GECROS(4)
     CLVD   = STATE_GECROS(5)
     CSST   = STATE_GECROS(6)
     CSO    = STATE_GECROS(7)
@@ -391,7 +391,7 @@ IMPLICIT NONE
     TRESP  = STATE_GECROS(35)
     TNUPT  = STATE_GECROS(36)
     LITNT  = STATE_GECROS(37)
-    GLAT   = STATE_GECROS(44)   
+    GLAT   = STATE_GECROS(44)
     WSO      = STATE_GECROS(45)
     WSTRAW   = STATE_GECROS(46)
     GrainNC  = STATE_GECROS(47)
@@ -401,7 +401,7 @@ IMPLICIT NONE
     SD1      = STATE_GECROS(52)
 
     ! Used for debugging
-!    if (nowdate(9:12).eq.'2500') then 
+!    if (nowdate(9:12).eq.'2500') then
 !    write(*,*) nowdate, ' 1 ', DS
 !    write(*,*) nowdate, ' 2 ', CTDU
 !    write(*,*) nowdate, ' 3 ', CVDU
@@ -441,7 +441,7 @@ IMPLICIT NONE
 !    write(*,*) nowdate, ' 37 ', LITNT
 !    read(*,*)
 !    endif
-    
+
     PPCAN=0.
     APCANS=0.
     APCANN=0.
@@ -459,94 +459,94 @@ IMPLICIT NONE
 
     nowday = INT(DOY)
     HOD = float(nint((DOY-int(DOY))*86400.))/3600.
-    
+
     ! Conversion from K to C
     TAIR   = SFCTMP - 273.15
 
     ! Conversion of rel. humidity into VP (kPa)
     DVP    = EAIR*0.001    !Converts EAIR from Pa to kPa
     WNM    = MAX (0.1, WN)
-       
+
     ! Photoperiod, solar constant and daily extraterrestrial radiation
-    CALL ASTRO(aint(DOY),GLAT,INSP,SC,SINLD,COSLD,DAYL,DDLP,DSINBE)  
-       
-    ! Plant weights (g/m2) 
-    WLV    = CLV  / CFV 
+    CALL ASTRO(aint(DOY),GLAT,INSP,SC,SINLD,COSLD,DAYL,DDLP,DSINBE)
+
+    ! Plant weights (g/m2)
+    WLV    = CLV  / CFV
     WST    = CSST / CFV + CRVS/0.444
     WSO    = CSO  / CFO
     WRT    = CSRT / CFV + CRVR/0.444
     WLVD   = CLVD / CFV
     WRTD   = CRTD / CFV
-    
-    ! Carbon in shoot and root (g C/m2) 
+
+    ! Carbon in shoot and root (g C/m2)
     CSH    = CLV + CSST + CRVS + CSO
     CRT    = CSRT + CRVR
 
-    ! Nitrogen in shoot (g C/m2) 
+    ! Nitrogen in shoot (g C/m2)
     NSH    = NST + NLV + NSO
- 
+
     ! Extinction coefficient of root nitrogen (m2/g C)
     KCRN   = -LOG005/6.3424/CFV/WRB/RDMX
-      
+
     ! DS for end of seed number determining period
     ESD    = INSW(DETER, ESDI, 1.)
-     
+
     ! Dead leaves still hanging on the plant (m2/m2
     DLAI   = (CLVD-CLVDS)/CFV*SLA0
 
     ! Total leaf area index (dead plus living leaves)
-    TLAI   = MAX(0.01,LAI + DLAI)            
-    
+    TLAI   = MAX(0.01,LAI + DLAI)
+
     ! Crop demand-determined NFIX
     NFIXD  = MAX(0., NDEMP - NSUPP)
 
     ! Critical shoot nitrogen concentration g N g-1
     HNCCR  = LNCI*EXP(-.4*DS)
-    
+
     !Extinction coefficient of root weight density over the soil depth cm-1
     KR     = -LOG005/RDMX  !cm-1
-    
+
     ! Slope of linear effect of VPD on intercelluar to ambient CO2 ratio (1/kPa)
     FVPD   = INSW (C3C4, 0.195127, 0.116214)
-     
+
     ! Total crop-residue nitrogen returned to soil (g N/m2)
     NRETS  = LITNT+INSW(DS-2.,0.,NLV+NST+NRT+NFIXR+(CLVD-CLVDS)/ &
     CFV*LNCMIN*(1.+PNLS)/2.)
 
-    !if (nowdate(1:12).eq.'201110061930') then  
+    !if (nowdate(1:12).eq.'201110061930') then
     !write(*,*) 'Bis hier her bin ich gekommen', ROOTD
     !endif
- 
+
     ! Soil water content of the upper and lower layer (m3/m3)
     WCUL   = (WUL+WCMIN*10.*ROOTD)/10./ROOTD
-        
+
     ! Daily water supply for evapotranspiration (mm/s)
     DWSUP  = MAX(.1/TCP,WUL/TCP+.1/TCP)
-    
+
     ! Nitrogen-determined CSRT (g C/m2)
     CSRTN  = 1./KCRN*LOG(1.+KCRN*MAX(0.,(NRT*CFV-CRVR*RNCMIN))/RNCMIN)
-    
+
     ! Straw weight (g/m2)
-    WSTRAW = WLV + WST + (WLVD - CLVDS/CFV)                            
+    WSTRAW = WLV + WST + (WLVD - CLVDS/CFV)
 
     ! Shoot weight (g/m2)
-    WSH    = WLV  + WST + WSO       
+    WSH    = WLV  + WST + WSO
 
     ! Estimated vegetative-organ N remobilizable for seed growth (g N/m2)
     NRES   = NREOF + (NREOE-NREOF)*(ESD-1.)/NOTNUL(MIN(DS,ESD)-1.)
-   
+
     ! Nitrogen concentration in living leaves LAI(g N/m2)
     LNC    = NLV / NOTNUL(WLV)
-    
+
     ! Nitrogen concentration in roots (g N/m2)
     RNC    = NRT / NOTNUL(WRT)
-    
+
     ! Nitrogen concentration seeds (g N/m2)
     ONC    = INSW(-WSO, NSO/NOTNUL(WSO), 0.)
 
     ! Nitrogen in grain and straw in kg N per ha
-    GrainNC = NSO*10.                       
-    StrawNC = (NLV+NST)*10.                 
+    GrainNC = NSO*10.
+    StrawNC = (NLV+NST)*10.
 
     ! Extinction coefficient of nitrogen and wind
     CALL KDIFF (TLAI,BLD*3.141592654/180.,0.2, KL)
@@ -557,64 +557,64 @@ IMPLICIT NONE
     WSHH   = WSH  + (WLVD-CLVDS/CFV)
     TSN    = NRES/PNPRE/SEEDNC/SEEDW
     HNC    = NSH / NOTNUL(WSH)
-    
+
     ! Amount of seed protein
     PSO    = 6.25*WSO*ONC
 
-    KLN    = KL*(TNLV-SLNMIN*TLAI)  
+    KLN    = KL*(TNLV-SLNMIN*TLAI)
 
-    NBK    = SLNMIN*(1.-EXP(-KL*TLAI))  
+    NBK    = SLNMIN*(1.-EXP(-KL*TLAI))
     KW     = KL
     WTOT   = WSH  + WRT
- 
+
     ! Crop carbon balance check
     CCHKIN = CTOT + CLVD + CRTD -CLVI-CRTI
-      
+
     ! Crop nitrogen balance check
     NCHKIN = NTOT + NLVD + NRTD -NLVI-NRTI
-    
-    LCRT   = MAX(MIN(CSRT-1.E-4,CSRT-MIN(CSRTN,CSRT)),0.)/TCP !Eq. 43, p. 38, DELT ok, gC m-2 s-1 
+
+    LCRT   = MAX(MIN(CSRT-1.E-4,CSRT-MIN(CSRTN,CSRT)),0.)/TCP !Eq. 43, p. 38, DELT ok, gC m-2 s-1
 
     FCRVR  = INSW(CSRTN-CSRT, 1., 0.)
     PNC    = NTOT / NOTNUL(WTOT)
-        
+
     KN     = 1./TLAI*LOG(MAX(1.001,(KLN+NBK)/(KLN*EXP(-KL*TLAI)+NBK)))
-    
+
     TSW    = WSO/NOTNUL(TSN)*1000.
-     
+
     NDEMD  = INSW(DS-1., WSH*(HNCCR-HNC)*(1.+NRT/MAX(1E-2,NSH))/TCP, 0.)  !Eq. 20, p.25, DELT ok, g N m-2 s-1
-    
+
     ! Biomass formation
     HI     = WSO  / NOTNUL(WSHH)
     CCHK   = (CCHKIN-(TPCAN-TRESP)*Z1244)/NOTNUL(CCHKIN)*100.
     NCHK   = (NCHKIN-TNUPT)/NOTNUL(TNUPT)*100.
     LWRT   = LCRT/CFV   !g m-2 s-1
-  
+
     ! Leaf area development
     LAIN   = LOG(1.+ KN*MAX(0.,NLV)/SLNMIN)/KN
     LNRT   = LWRT*RNCMIN  !g N m-2 s-1
 
     ! Green leaves still hanging on the plant (m2/m2)
     LAI    = MAX(0.01,MIN(LAIN, LAIC))
-   
+
     ! Leaf senescence
     ! The equation differs somewhat from Yin. The right hand side is not divided by deltaT
     ! This is done by computing LWLV
     ! LWLVM  = (LAIC-MIN(LAIC,LAIN))/SLA0/DELT !Eq. 42, p.36, DELT ok, g m-2 s-1
 
     LWLVM  = (LAIC-MIN(LAIC,LAIN))/SLA0 !Eq. 42, p.36, DELT ok, g m-2 s-1
-    
+
     ! Specific leaf nitrogen and its profile in the canopy
     SLN    = NLV/LAI
     SLNT   = NLV*KN/(1.-EXP(-KN*LAI))
     SLNBC  = NLV*KN*EXP(-KN*LAI)/(1.-EXP(-KN*LAI))
     SLNNT  = (NLV+0.001*NLV)*KN /(1.-EXP(-KN*LAI))
     SLA    = LAI/NOTNUL(WLV)
-    
+
     ! ji, 1402, Stay-green maize -> no senescense
     LWLV = MIN((WLV-1.E-5)/TCP, (LWLVM+REANOR(ESD-DS,LWLVM)*0.03*WLV)/TCP)   !g m-2 s-1, gecheckt ok
-    
-    !write(*,*) nowdate, DWSUP,CO2A,LS,EAJMAX,XVN,XJN,THETA,WCUL,FVPD,RB,RT,RTS 
+
+    !write(*,*) nowdate, DWSUP,CO2A,LS,EAJMAX,XVN,XJN,THETA,WCUL,FVPD,RB,RT,RTS
     !read(*,*)
     ! Call TOTPT: Computes daily total photosynthesis and stomatal resistance
     CALL TOTPT(HOD,DS,SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR,DVP,WNM,C3C4,LAI, &
@@ -622,16 +622,16 @@ IMPLICIT NONE
          DWSUP,CO2A,LS,EAJMAX,XVN,XJN,THETA,WCUL,FVPD,RB,RT,RTS, &
          PPCAN,APCANS,APCANN,APCAN,PTCAN,ATCAN,PESOIL,AESOIL,DIFS,DIFSU, &
          DIFSH,DAPAR,RCAN,ATRJC,ATRJS,FSR,FRSU,FRSH,ARSWSU,ARSWSH)
-      
+
     RSLNB  = (SLNBC-SLNB)/TCP !!Eq. 38, p. 35, DELT ok, g N m-2 leaf s-1
 
     LNLV   = MIN(LWLV,LWLVM)*LNCMIN + (LWLV-MIN(LWLV,LWLVM))*LNC  !g m-2 s-1
     LCLV   = LWLV*CFV  !g m-2 s-1
-    
+
     ! Residual maintenance respiration g m-2 s-1
     RMRE   = MAX(MIN(44./12.*0.218*(NTOT-WSH*LNCMIN-WRT*RNCMIN)/TCP &
     ,APCAN-(1.E-5+RMUL)/TCP), 0.)  !0.218 has the unit g C g-1 N d-1!
-      
+
     TAVSS  = TAIR + DIFS
 
     ! Call TUNIT: Computes cumulative thermal units (CTDU)
@@ -648,55 +648,55 @@ IMPLICIT NONE
     ! CLVDS: Amount of carbon in dead leaves that have become litter in soil
 
     IF(DS.lt.0.25) THEN
-       LVDS   = (CLVD-CLVDS)/TCP  !gC m-2 s-1 
+       LVDS   = (CLVD-CLVDS)/TCP  !gC m-2 s-1
     ELSE
        LVDS   = RLVDS*(CLVD-CLVDS)*(TAVSS-TBD)/(TOD-TBD)/TCP  !gC m-2 s-1
     ENDIF
-    
+
     CALL PHENO (1.*CROP,DS,SLP,DDLP,SPSP,EPSP,PSEN,MTDV,MTDR,TDU,CVDU,DVR)
 
     NFIXE  = MAX(0., APCAN-(1.E-5+RM)/TCP)/CCFIX*Z1244
 
     ! Daily carbon flow for seed filling
     CALL BETAF(DVR,1.,PMES,LIMIT(1.,2.,DS)-1., FDS)
-            
+
     LITC   =  LCRT + LVDS                  !gC m-2 s-1
     LITN   =  LNRT + LVDS/CFV *LNCMIN*PNLS !gN m-2 s-1
- 
+
     CALL BETAF(DVR,(1.+ESD)/2.,PMEH*(1.+ESD)/2.,MIN((1.+ESD)/2.,DS), FDH)
-     
+
     NSUP   = NSUP1 + NSUP2 !gN m-2 s-1
-      
+
     NFIX   = INSW (LEGUME, 0., MIN(NFIXE, NFIXD)) !N fixation
 
     RNSUPP = (NSUP - NSUPP)/DT         !RNSUPP g N m-2 s-2
     RX     = 44./12.*(CCFIX*NFIX)
-  
+
 !*** Current photo-assimilates (g CO2 m-2 s-1) for growth, and R/P ratio
     ASSA   = APCAN - RM - RX
-      
+
 !*** Crop nitrogen demand and uptake (g N m-2 s-1)
 
     SHSA   = Z1244 * YGV*MAX(1E-16,APCAN -RM -RX)/ MAX(0.1,CSH)
     SHSAN  = Z1244 * YGV*(APCANN-RMN-RX)/ MAX(0.1,CSH)
     DERI   = MAX(0.,(SHSAN - SHSA)/(0.001*MAX(0.01,NTOT)/MAX(0.1,CTOT)))
-     
+
     RMUS   = 0.06*0.05/0.454*YGV*ASSA
     NDEMA  = CRT * SHSA**2/NOTNUL(DERI)
     NCR    = INSW(SLNT-SLNMIN,0.,MIN(NUPTX,NDEMA))/(YGV*MAX(1E-16,APCANS-RM-RX)*Z1244)
     NDEMAD = INSW(LNC-1.5*LNCI, MAX(NDEMA, NDEMD), 0.)
-    
+
 !*** Nitrogen partitioning between shoots and roots
     FNSH   = 1./(1.+NCR*DERI/SHSA*CSH/MAX(1E-2,CRT)*NRT/MAX(1E-2,NSH))
-       
+
 !*** Carbon partitioning among organs and reserve pools
     FCSH   = 1./(1.+NCR*DERI/SHSA)
 
 !*** ji 10.02.14, winter dormancy
-!*** ji 16.06.15, ecc/lcc switch     
+!*** ji 16.06.15, ecc/lcc switch
     IF (CROP==1) THEN
         NDEM   = INSW(DS-DSCRIT,INSW(SLNMIN-SLN+1.E-5, MIN(NUPTX,.01*NDEMAD), 0.), &
-                                    INSW(SLNMIN-SLN+1.E-5, MIN(NUPTX,NDEMAD), 0.)) 
+                                    INSW(SLNMIN-SLN+1.E-5, MIN(NUPTX,NDEMAD), 0.))
     ELSE
         NDEM   = INSW(SLNMIN-SLN+1.E-5, MIN(NUPTX,NDEMAD), 0.)
     ENDIF
@@ -708,7 +708,7 @@ IMPLICIT NONE
     RMLD   = 0.06*(1.-FCSH)*ASSA
     RNDEMP = (NDEM - NDEMP)/DT         !as for RNSUPP, DELT ok
     NUPTA  = MIN(NSUP1, NSUP1/NOTNUL(NSUP)*MAX(0.,NDEM-NFIXR/TCP))
-    
+
     ! Carbon supply from current photo-assimilates for shoot & root growth
     DCSS   = Z1244*    FCSH *ASSA
     NUPT   = MAX(0., NUPTA + NUPTN + MIN(NDEM, NFIXR/TCP))
@@ -716,25 +716,25 @@ IMPLICIT NONE
 
     CALL SINKG(DS,1.,TSN*SEEDW*CFO,YGO,FDS,DCDSR,DCSS,DT,&
     DCDSC,DCDS,FLWCS)
- 
+
     ! Maintenance and total respiration (g CO2 m-2 d-1)
     RMUN   = 44./12.*2.05*NUPTN
- 
+
     ! Daily carbon flow for structural stem growth
     DCST   = DCSS - FLWCS
     FCSO   = FLWCS/DCSS
 
     RRMUL  = (RMUN+RMUA+RMUS+RMLD-RMUL)/DT
-         
+
     GAP    = MAX(0., DCDS-DCSS)
-  
-    !*** ji, 16.06.15, ecc/lcc switch     
+
+    !*** ji, 16.06.15, ecc/lcc switch
     IF (CROP==1) THEN
        IFSH   = INSW(DCST-1E-11, 1., LIMIT(0.,1.,DCST/NOTNUL(DCDTP)))
     ELSE
        IFSH   = LIMIT(0.,1.,DCST/NOTNUL(DCDTP))
-    ENDIF  
-     
+    ENDIF
+
     CREMSI = MIN(0.94*CRVS, CRVS/NOTNUL(CRVS+CRVR)*GAP)/0.94
     CREMRI = MIN(0.94*CRVR, CRVR/NOTNUL(CRVS+CRVR)*GAP)/0.94
     CREMS  = INSW(DCDS-DCSS, 0., CREMSI)
@@ -745,7 +745,7 @@ IMPLICIT NONE
     ELSE
         RHT    = MIN(HTMX-HT, FDH*HTMX*INSW(DCST-1E-4, 1., LIMIT(0.,1.,DCST/NOTNUL(DCDTP))))
     ENDIF
-    
+
     IF (CROP==1) THEN
         CALL SINKG(DS,.1,CDMHT*HTMX*CFV,YGV,FDH*IFSH,DCDTR,DCST,DT, &
         DCDTC,DCDT,FLWCT)
@@ -753,9 +753,9 @@ IMPLICIT NONE
         CALL SINKG(DS,.0,CDMHT*HTMX*CFV,YGV,FDH*IFSH,DCDTR,DCST,DT, &
         DCDTC,DCDT,FLWCT)
     ENDIF
-     
+
     RCRVR  = FCRVR*DCSR - CREMR
-     
+
     IF (CROP==1) THEN
        RDCDTP = (DCDTC-DCDTP)/DT
     ELSE
@@ -768,39 +768,39 @@ IMPLICIT NONE
     IF (CROP==1) THEN
         FCSST  = MIN(.85,INSW(DS-(ESD+0.2), FLWCT/MAX(1E-16,DCSS), 0.))
         !FCSST  = INSW(DS-(ESD+0.2), FLWCT/DCSS, 0.) original version
-     ELSE     
+     ELSE
         FCSST  = MIN(.85,INSW(DS-(ESD+0.2), FLWCT/MAX(1E-16,DCSS), 0.))
     ENDIF
-    
+
     RCSO   = Z1244*ASSA*FCSH*FCSO*YGO + 0.94*(CREMS+CREMR)*YGO
     RWSO   = RCSO / CFO
     RDCDSR = MAX(0., (DCDSC-RCSO/YGO))-(FLWCS-MIN(DCDSC,DCSS))
     RWRT   = RCSRT/CFV + RCRVR/0.444
     RCSST  = Z1244*ASSA*    FCSH *    FCSST *YGV
-   
+
     FCLV   = REAAND(LAIN-LAIC,ESD-DS)*(1.-FCSO-FCSST)
-      
+
     RRD    = INSW(ROOTD-RDMX, MIN((RDMX-ROOTD)/TCP,(RWRT+LWRT)/(WRB+KR* &
     (WRT+WRTD))), 0.)
-    
+
     RCLV   = Z1244*ASSA*    FCSH *    FCLV  *  YGV - LCLV
-   
+
     FCRVS  = 1. - FCLV - FCSO - FCSST
- 
+
     RDCDTR = MAX(0., (DCDTC-RCSST/YGV))-(FLWCT-MIN(DCDTC,DCST))
     RCRVS  = FCRVS*DCSS - CREMS
     RWLV   = RCLV / CFV
-     
+
     RNRES  = NUPT-(LNCMIN*(RCLV+LCLV)+RNCMIN*(RCSRT+LCRT)+STEMNC* &
     RCSST)/CFV
- 
+
     RG     = 44./12.*((1.-YGV)/YGV*(RCLV+RCSST+RCSRT+LCLV+LCRT)+ &
     (1.-YGO)/YGO* RCSO)
- 
+
     RWST   = RCSST/ CFV + RCRVS/0.444
     RNREOF = INSW (DS-1.0, RNRES, 0.)
     RNREOE = INSW (DS-ESD, RNRES, 0.)
- 
+
     RESTOT = RM+RX+RG + 44./12.*0.06*(CREMS+CREMR)
 
     CALL RNACC (FNSH,NUPT,RWST,STEMNC,LNCMIN,RNCMIN,LNC,RNC,NLV,NRT,WLV,WRT, &
@@ -809,13 +809,13 @@ IMPLICIT NONE
     RRP = RESTOT / APCAN
 
     CALL RLAIC(1.*CROP,DS,SLA0,RWLV,LAIC,KN,NLV,RNLV,SLNB,RSLNB, RLAI)
-    
+
     ! Used for debugging
-!    if (nowdate(9:12).eq.'2500') then 
+!    if (nowdate(9:12).eq.'2500') then
 !    write(*,*) nowdate, ' 1 ', DVR
 !    write(*,*) nowdate, ' 2 ', TDU
 !    write(*,*) nowdate, ' 3 ', VDU
-!    write(*,*) nowdate, ' 4 ' 
+!    write(*,*) nowdate, ' 4 '
 !    write(*,*) nowdate, ' 5 ', RCLV
 !    write(*,*) nowdate, ' 6 ', LCLV
 !    write(*,*) nowdate, ' 7 ', RCSST
@@ -853,7 +853,7 @@ IMPLICIT NONE
 !    write(*,*) nowdate, ' 38 ',LITN
 !    read(*,*)
 !    endif
-    
+
     ! Integration of ODEs
     DS     = MAX(0., INTGRL(DS, DVR, DT))
     CTDU   = MAX(0., INTGRL(CTDU, TDU, DT))
@@ -896,37 +896,37 @@ IMPLICIT NONE
     ! Write updated Gecros variables into STATE_GECROS array
     STATE_GECROS(1) = DS
     STATE_GECROS(2) = CTDU
-    STATE_GECROS(3) = CVDU 
-    STATE_GECROS(4) = CLV     
-    STATE_GECROS(5) = CLVD 
-    STATE_GECROS(6) = CSST 
-    STATE_GECROS(7) = CSO 
-    STATE_GECROS(8) = CSRT 
-    STATE_GECROS(9) = CRTD 
-    STATE_GECROS(10) = CLVDS 
-    STATE_GECROS(11) = NRT 
-    STATE_GECROS(12) = NST 
-    STATE_GECROS(13) = NLV 
-    STATE_GECROS(14) = NSO 
-    STATE_GECROS(15) = TNLV 
-    STATE_GECROS(16) = NLVD 
-    STATE_GECROS(17) = NRTD 
-    STATE_GECROS(18) = CRVS 
-    STATE_GECROS(19) = CRVR 
-    STATE_GECROS(20) = NREOE 
-    STATE_GECROS(21) = NREOF 
-    STATE_GECROS(22) = DCDSR 
-    STATE_GECROS(23) = DCDTR 
-    STATE_GECROS(24) = SLNB 
+    STATE_GECROS(3) = CVDU
+    STATE_GECROS(4) = CLV
+    STATE_GECROS(5) = CLVD
+    STATE_GECROS(6) = CSST
+    STATE_GECROS(7) = CSO
+    STATE_GECROS(8) = CSRT
+    STATE_GECROS(9) = CRTD
+    STATE_GECROS(10) = CLVDS
+    STATE_GECROS(11) = NRT
+    STATE_GECROS(12) = NST
+    STATE_GECROS(13) = NLV
+    STATE_GECROS(14) = NSO
+    STATE_GECROS(15) = TNLV
+    STATE_GECROS(16) = NLVD
+    STATE_GECROS(17) = NRTD
+    STATE_GECROS(18) = CRVS
+    STATE_GECROS(19) = CRVR
+    STATE_GECROS(20) = NREOE
+    STATE_GECROS(21) = NREOF
+    STATE_GECROS(22) = DCDSR
+    STATE_GECROS(23) = DCDTR
+    STATE_GECROS(24) = SLNB
     STATE_GECROS(25) = LAIC
     STATE_GECROS(26) = RMUL
-    STATE_GECROS(27) = NDEMP 
+    STATE_GECROS(27) = NDEMP
     STATE_GECROS(28) = NSUPP
     STATE_GECROS(29) = NFIXT
     STATE_GECROS(30) = NFIXR
     STATE_GECROS(31) = DCDTP
-    STATE_GECROS(32) = HT 
-    STATE_GECROS(33) = ROOTD 
+    STATE_GECROS(32) = HT
+    STATE_GECROS(33) = ROOTD
     STATE_GECROS(34) = TPCAN
     STATE_GECROS(35) = TRESP
     STATE_GECROS(36) = TNUPT
@@ -937,10 +937,10 @@ IMPLICIT NONE
     STATE_GECROS(48) = StrawNC
     STATE_GECROS(49) = LAI
     STATE_GECROS(50) = TLAI
-        
+
     ! Used for debugging
-!    if(debugging) then 
-!    if (nowdate(9:12).eq.'1200') then 
+!    if(debugging) then
+!    if (nowdate(9:12).eq.'1200') then
 !    write(*,*) nowdate, RSD
 !    write(*,*) "DS:  ", DS
 !    write(*,*) "CTDU:  ",CTDU
@@ -965,7 +965,7 @@ IMPLICIT NONE
 !    read(*,*)
 !    endif
 !    endif
-    
+
 ! ----------------------------------------------------------------------
 END SUBROUTINE gecros
 ! ----------------------------------------------------------------------
@@ -994,7 +994,7 @@ END SUBROUTINE gecros
       SUBROUTINE TUNIT(CROP,DS,TAIR,DIF,DAYL,TBD,TOD,TCD,TBDV,TODV,TCDV,TSEN,TDU,VDU)
       IMPLICIT REAL (A-Z)
       INTEGER I
-      
+
 !*---assuming development rate at supra-optimum temperatures during
 !*   the reproductive phase equals that at the optimum temperature
       IF (DS.GT.1.) THEN
@@ -1026,7 +1026,7 @@ END SUBROUTINE gecros
          TDU = INSW(DS-2.,TU/TCP,0.)
       ENDIF
       VDU = TUV/TCP
-      	
+
       RETURN
       END SUBROUTINE TUNIT
 
@@ -1053,7 +1053,7 @@ END SUBROUTINE gecros
 !*----------------------------------------------------------------------*
       SUBROUTINE PHENO (CROP,DS,SLP,DDLP,SPSP,EPSP,PSEN,MTDV,MTDR,TDU,CVDU,DVR)
       IMPLICIT REAL (A-Z)
-      
+
 !*---determining if it is for short-day or long-day crop
       IF (SLP.LT.0.) THEN
           MOP = 18.     !minimum optimum photoperiod for long-day crop
@@ -1068,7 +1068,7 @@ END SUBROUTINE gecros
           EFP = 1.
       ELSE
           EFP = MAX(0., 1.-PSEN*(DLP-MOP))
-      ENDIF	
+      ENDIF
 
 !*---effect of vernalization (ji, 21.6.10)
 !*** ji, 16.6.15, ecc/lcc switch
@@ -1077,7 +1077,7 @@ END SUBROUTINE gecros
      ELSE
         EFV = 1.0
      ENDIF
-          
+
 !*---development rate of vegetative and reproductive phases
 !*---extended for vernalization according to Lenz (2007); ji: 21.6.2010
       IF (DS.LE.0.4) THEN
@@ -1135,14 +1135,14 @@ END SUBROUTINE gecros
                         NLV,NRT,WLV,WRT,DELT,CB,CX,TM,DS,SEEDNC, &
                         RWSO,LNLV,LNRT, RNRT,RNST,RNLV,RTNLV,RNSO)
       IMPLICIT REAL (A-Z)
-      
+
 !*---amount of N partitioned to shoot
       NSHN   = FNSH * NUPT
 
 !*---leaf N (NLVA) or root N (NRTA) available for remobilization within a day
       NLVA   = INSW(LNCMIN-LNC, NLV-WLV*LNCMIN, 0.)/TCP
       NRTA   = INSW(RNCMIN-RNC, NRT-WRT*RNCMIN, 0.)/TCP
-      
+
       NTA    = NLVA + NRTA
 
 !*---rate of N accumulation in stem
@@ -1169,7 +1169,7 @@ END SUBROUTINE gecros
               NUPT-NSHN-NRTA/NOTNUL(NTA)*(-NGS)-LNRT)
       GNRT   = INSW(NGS, NRTN, NUPT-NSHN-LNRT)
       RNRT   = MAX (-NRT+5.E-8, GNRT)
-   	
+
       RETURN
       END SUBROUTINE RNACC
 
@@ -1196,18 +1196,18 @@ END SUBROUTINE gecros
 !*----------------------------------------------------------------------*
       SUBROUTINE RLAIC(CROP,DS,SLA0,RWLV,LAI,KN,NLV,RNLV,SLNB,RSLNB, RLAI)
       IMPLICIT REAL (A-Z)
-      
+
       SLNB = MAX(1E-2, SLNB)
       !*---rate of LAI driven by carbon supply
       RLAI   =  INSW(RWLV, MAX(-LAI+1.E-5,SLA0*RWLV), SLA0*RWLV)
-      
+
 	  !*---rate of LAI driven by nitrogen during juvenile phase
       !*** ji, 16.6.15, ecc/lcc switch
       IF ((CROP==2) .AND. (LAI.LT.1.5) .AND. (DS.LT.0.75)) THEN
            RLAI  = MAX(0.,(SLNB*RNLV-NLV*RSLNB)/SLNB/(SLNB+KN*NLV))
       ENDIF
-  
-      
+
+
       RETURN
       END SUBROUTINE RLAIC
 
@@ -1228,13 +1228,13 @@ END SUBROUTINE gecros
 !*  FD      R4  Relative expected growth of a sink at a day s-1      O  *
 !*----------------------------------------------------------------------*
       SUBROUTINE BETAF(DVRX,TE,TX,TI, FD)
-      
+
             REAL, INTENT(IN)  :: DVRX, TE, TX, TI
             REAL, INTENT(OUT) :: FD
-      
+
       FD    = DVRX*(2.*TE-TX)*(TE-TI)/TE/(TE-TX)**2*(TI/TE)**(TX/(TE-TX))
       !FD    = DVRX*(TE-TI)/(TE-TX)*(TI/TX)**(TX/(TE-TX)) !Eq. a 1a Yin et al 2003
-      
+
       END SUBROUTINE BETAF
 
 
@@ -1260,16 +1260,16 @@ END SUBROUTINE gecros
 !*----------------------------------------------------------------------*
       SUBROUTINE SINKG(DS,SSG,TOTC,YG,FD,DCDR,DCS,DELT,DCDC,DCD,FLWC)
       IMPLICIT REAL (A-Z)
-      
+
 !*---expected demand for C of the current time step
       DCDC   = INSW (DS-SSG, 0., TOTC/YG*FD)
 
 !*---total demand for C at the time step considered
       DCD    = DCDC + MAX(0.,DCDR)/DELT
-      
+
 !*---flow of current assimilated carbon to sink
       FLWC   = MIN(DCD, DCS)
-  
+
       RETURN
       END SUBROUTINE SINKG
 
@@ -1280,7 +1280,7 @@ END SUBROUTINE gecros
 !*           diurnal radiation characteristics such as the daily        *
 !*           integral of sine of solar elevation and solar constant.    *
 !*                                                                      *
-!*  FORMAL PARAMETERS:  (I=input,O=output,C=control,IN=init,T=time)     * 
+!*  FORMAL PARAMETERS:  (I=input,O=output,C=control,IN=init,T=time)     *
 !*  name   type meaning                                    units  class *
 !*  ----   ---- -------                                    -----  ----- *
 !*  DOY     R4  Daynumber (Jan 1st = 1)                       -      I  *
@@ -1300,7 +1300,7 @@ END SUBROUTINE gecros
 !*----------------------------------------------------------------------*
       SUBROUTINE ASTRO (DOY,LAT,INSP,SC,SINLD,COSLD,DAYL,DDLP,DSINBE)
       IMPLICIT REAL (A-Z)
-      
+
 !*---PI and conversion factor from degrees to radians
       PI    = 3.141592654
       RAD   = PI/180.
@@ -1397,7 +1397,7 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
                  XVN,XJN,THETA,WCUL,FVPD,RB,RT,RTS,PPCAN,APCANS, &
                  APCANN,APCAN,PTCAN,ATCAN,PESOIL,AESOIL,DIFS,DIFSU,DIFSH,DAPAR, &
                  RCAN, ATRJC, ATRJS, FSR, FRSU, FRSH, ARSWSU, ARSWSH)
-      
+
             REAL, INTENT(IN) :: HOD,DS,SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
                                 WNM,C3C4,LAI,TLAI,HT,LWIDTH,RD,SD1,RSS,BLD,KN,KW, &
                                 SLN,SLNT,SLNN,SLNMIN,FB,DWSUP,CO2A,LS,EAJMAX, &
@@ -1441,17 +1441,17 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
       AV_RSWSH = 0.
       AV_Albedo = 0.
       CUMRSD = 0.
-            
+
 !*---sine of solar elevation
       SINB  = MAX (.01, SINLD+COSLD*COS(2.*PI*(HOD-12.)/24.))
-      
+
 !*---daytime course of water supply
-    WSUP = DWSUP      
-    WSUP1 = WSUP*SD1/RD 
- 
+    WSUP = DWSUP
+    WSUP1 = WSUP*SD1/RD
+
 !*---daytime course of wind speed
       WND   = WNM         !m s-1
-            
+
 !*---total incoming PAR and NIR
       PAR   = (1.-FB)*0.5*RSD  !J m-2 s-1
       NIR   = (1.-FB)*0.5*RSD  !J m-2 s-1
@@ -1491,7 +1491,7 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
 
       PCDPAR = 0.057          !canopy diffuse PAR reflection coefficient
       PCDNIR = 0.389          !canopy diffuse NIR reflection coefficient
-      
+
 !*---fraction of sunlit and shaded components in canopy
 !* ji 4.7.11 LAI -> TLAI
       FRSU   = 1./KB/TLAI*(1.-EXP(-KB*TLAI))
@@ -1511,30 +1511,30 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
 
 !*---photosynthetically active nitrogen for sunlit and shaded leaves
      CALL PAN (SLNT,SLNMIN,LAI,KN,KB, NPSU,NPSH)
-     CALL PAN (SLNN,SLNMIN,LAI,KN,KB, NPSUN,NPSHN)  
+     CALL PAN (SLNN,SLNMIN,LAI,KN,KB, NPSUN,NPSHN)
 
 !*---absorbed PAR and NIR by sunlit leaves and shaded leaves
 !* ji 4.7.11 LAI->TLAI
 !* Ansonsten fuehrt es dazu, dass nach dem Abreifen die Albedo auf >0.7 ansteigt und vom Bestand viel
 !* zu wenig Energie mehr absorbiert wird
       CALL LIGAB (SCPPAR,KB,KBPPAR,KDPPAR,PCBPAR,PCDPAR,PARDR,PARDF,TLAI,APARSU,APARSH)
-      CALL LIGAB (SCPNIR,KB,KBPNIR,KDPNIR,PCBNIR,PCDNIR,NIRDR,NIRDF,TLAI,ANIRSU,ANIRSH)	
+      CALL LIGAB (SCPNIR,KB,KBPNIR,KDPNIR,PCBNIR,PCDNIR,NIRDR,NIRDF,TLAI,ANIRSU,ANIRSH)
       APAR   = APARSU+APARSH !J m-2 s-1
 
 !*---absorbed total radiation (PAR+NIR) by sunlit and shaded leaves
       ATRJSU = APARSU+ANIRSU    !J m-2 s-1
       ATRJSH = APARSH+ANIRSH    !J m-2 s-1
-      ATRJC  = ATRJSH + ATRJSU  !J m-2 s-1 
+      ATRJC  = ATRJSH + ATRJSU  !J m-2 s-1
 
 !*---absorbed total radiation (PAR+NIR) by soil
       PSPAR  = 0.1                                  !soil PAR reflection
       PSNIR  = INSW(WCUL-0.5, 0.52-0.68*WCUL, 0.18) !soil NIR reflection
       ATRJS=(1.-PSPAR)*(PARDR*EXP(-KBPPAR*TLAI)+PARDF*EXP(-KDPPAR*TLAI)) &
            +(1.-PSNIR)*(NIRDR*EXP(-KBPNIR*TLAI)+NIRDF*EXP(-KDPNIR*TLAI))
-      
-!* ji 4.7.11 Berechnung der Albedo eingefuegt. Nachts wird die Albedo auf einen Durchschnittswert gesetzt (.2)	
+
+!* ji 4.7.11 Berechnung der Albedo eingefuegt. Nachts wird die Albedo auf einen Durchschnittswert gesetzt (.2)
      FSR = RSD-ATRJC-ATRJS
-    
+
      if (RSD.gt.0) then
          Albedo = (RSD-ATRJC-ATRJS)/RSD
      else
@@ -1570,17 +1570,17 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
       IAT    = MIN (IPT,PT1/(PT1+IPE)*WSUP1+WSUP-WSUP1) !actual transpiration mm s-1
       ATSU   = PTSU/IPT*IAT                             !actual transpiration of sunlit leaves mm s-1
       ATSH   = PTSH/IPT*IAT                             !actual transpiration of shaded leaves mm s-1
-   
+
       CALL DIFLA (NRADS,IAE,RBHS,RTS, ADIFS)
 
       CALL APHTR (TAIR,APARSU,DVP,CO2A,C3C4,FVPD,NRADSU,ATSU,PTSU, &
                   RT*FRSU,RBHSU,RBWSU,RSWSU,SLOPSU,NPSU,NPSUN, &
                   EAJMAX,XVN,XJN,THETA,PASSU,PANSU,ADIFSU,ARSWSU)
-      
+
       CALL APHTR (TAIR,APARSH,DVP,CO2A,C3C4,FVPD,NRADSH,ATSH,PTSH, &
                   RT*FRSH,RBHSH,RBWSH,RSWSH,SLOPSH,NPSH,NPSHN, &
                   EAJMAX,XVN,XJN,THETA,PASSH,PANSH,ADIFSH,ARSWSH)
-      
+
       IAPS   = PASSU + PASSH !actual canopy photosynthesis gCO2 m-2 s-1
       IAPN   = PANSU + PANSH !actual canopy photosynthesis with a small N increment gCO2 m-2 s-1
       IAP    = IAPS
@@ -1588,25 +1588,25 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
 
 !*---integration of assimilation and transpiration to a daily total
       PPCAN  = IPP
-      APCANS = IAPS  
-      APCANN = IAPNN 
+      APCANS = IAPS
+      APCANN = IAPNN
       APCAN  = IAP
-      PTCAN  = IPT   
-      PHCAN  = IPH   
-      ATCAN  = IAT   
-      PESOIL = IPE   
-      AESOIL = IAE   
+      PTCAN  = IPT
+      PHCAN  = IPH
+      ATCAN  = IAT
+      PESOIL = IPE
+      AESOIL = IAE
       PHSOIL = IPHSOIL
-      DIFS   = ADIFS 
+      DIFS   = ADIFS
       DIFSU  = ADIFSU
       DIFSH  = ADIFSH
-      DAPAR  = APAR  
+      DAPAR  = APAR
       DNRAD  = ANRAD    !net absorbed radiation by canopy
       DATRJC = ATRJC    !absorbed radiation by canopy
       DATRJS = ATRJS    !absorbed radiation by soil
       CUMRSD = RSD      !incoming solar radiation
       AV_RSWSU = RSWSU
-      AV_RSWSH = RSWSH 
+      AV_RSWSH = RSWSH
       AV_Albedo = Albedo
       TLEAFSU = TAIR + DIFSU
       TLEAFSH = TAIR + DIFSH
@@ -1656,11 +1656,11 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
 
       CALL PHOTO(C3C4,PAR,TAIR,FCO2I,NP,EAJMAX,XVN,XJN,THETA,FPLF, &
                  FLRD)
-    
+
       VPD    = MAX (0., SVP- DVP)
       SLOPE  = 4158.6 * SVP/(TAIR + 239.)**2
       CALL GCRSW(FPLF,FLRD,TAIR,CO2A,FCO2I,RBW,RT, FRSW)
- 
+
       CALL PTRAN(FRSW,RT,RBW,RBH,ATRJ,ATMTR,FRAC,TAIR,DVP, &
                  SLOPE, VPD, FPT, FPH, FNRADC)
 
@@ -1678,7 +1678,7 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
       CALL GCRSW (PLF,LRD,TLEAF,CO2A,CO2I,RBW,RT, RSW)
       CALL PTRAN (RSW,RT,RBW,RBH,ATRJ,ATMTR,FRAC,TLEAF,DVP, &
                   SLOPEL,VPD, PT, PH, NRADC)
-      
+
       CALL DIFLA (FNRADC,FPT,RBH,RT, FDIF)
 
       TLEAF  = TAIR + FDIF
@@ -1693,7 +1693,7 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
       CALL GCRSW (PLF,LRD,TLEAF,CO2A,CO2I,RBW,RT, RSW)
       CALL PTRAN (RSW,RT,RBW,RBH,ATRJ,ATMTR,FRAC,TLEAF,DVP, &
                   SLOPEL,VPD, PT, PH, NRADC)
-  
+
       CALL DIFLA (FNRADC,FPT,RBH,RT, FDIF)
 
       TLEAF  = TAIR + FDIF
@@ -1708,14 +1708,14 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
       CALL GCRSW (PLF,LRD,TLEAF,CO2A,CO2I,RBW,RT, RSW)
       CALL PTRAN (RSW,RT,RBW,RBH,ATRJ,ATMTR,FRAC,TLEAF,DVP, &
                   SLOPEL,VPD, PT, PH, NRADC)
-      
+
       RETURN
       END SUBROUTINE PPHTR
 
 
 !*----------------------------------------------------------------------*
 !* SUBROUTINE PEVAP                                                     *
-!* Purpose: This subroutine calculates potential soil evaporation.      * 
+!* Purpose: This subroutine calculates potential soil evaporation.      *
 !*                                                                      *
 !*  FORMAL PARAMETERS:  (I=input,O=output,C=control,IN=init,T=time)     *
 !*  name   type meaning                                    units  class *
@@ -1759,7 +1759,7 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
                  SLOPES,VPD, PE, PH, NRADS)
       PESOIL = MAX(0., PE)
       PHSOIL = PH
-      
+
       RETURN
       END SUBROUTINE PEVAP
 
@@ -1818,7 +1818,7 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
 !*---actual photosynthesis under water stress condition
       PLFAS  = (1.6*RSW+1.3*RBW+RT)/(1.6*ARSW+1.3*RBW+RT)*(APLF-ARD)+ARD
       PLFAN  = (1.6*RSW+1.3*RBW+RT)/(1.6*ARSW+1.3*RBW+RT)*(APLFN-ARDN)+ARDN
-      
+
       RETURN
       END SUBROUTINE APHTR
 
@@ -1843,7 +1843,7 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
 !*  SLOPE   R4  Slope of saturated vapour pressure curve   kPa oC-1  I  *
 !*  VPD     R4  Saturation vapour pressure deficit of air  kPa       I  *
 !*  PT      R4  Potential leaf transpiration               mm s-1    O  *
-!*  PH      R4  Potential leaf sensible heat flux          J m-2 s-1 O  * 
+!*  PH      R4  Potential leaf sensible heat flux          J m-2 s-1 O  *
 !*  NRADC   R4  Net leaf absorbed radiation                J m-2 s-1 O  *
 !*----------------------------------------------------------------------*
       SUBROUTINE PTRAN (RSW,RT,RBW,RBH,ATRJ, &
@@ -1871,7 +1871,7 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
 
 !*---vapour pressure-determined term
       PTD    = (VHCA*VPD/(RBH+RT))/(SLOPE+PSR)/LHVAP
-      
+
 !*---potential evaporation or transpiration
       PT     = MAX(1.E-10,PTR+PTD)
 
@@ -1906,7 +1906,7 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
 !*----------------------------------------------------------------------*
       SUBROUTINE DIFLA (NRADC,PT,RBH,RT, DIF)
       IMPLICIT REAL  (A-Z)
-      
+
       LHVAP  = 2.4E6            !latent heat of water vaporization(J/kg)
       VHCA   = 1200.            !volumetric heat capacity (J/m3/oC)
 
@@ -1932,7 +1932,7 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
 !*----------------------------------------------------------------------*
       SUBROUTINE ICO2  (TLEAF,DVP,FVPD,CO2A,C3C4, SVPL,CO2I)
       IMPLICIT REAL (A-Z)
-      
+
 !*---air-to-leaf vapour pressure deficit
       SVPL   = 0.611 * EXP(17.4 * TLEAF / (TLEAF + 239.))
       VPDL   = MAX  (0., SVPL - DVP)
@@ -1966,7 +1966,7 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
 
 !*---intercellular CO2 concentration
       CO2I   = RCICA * CO2A
-      
+
       RETURN
       END SUBROUTINE ICO2
 
@@ -1990,7 +1990,7 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
 !*----------------------------------------------------------------------*
       SUBROUTINE GCRSW (PLEAF,RDLEAF,TLEAF,CO2A,CO2I,RBW,RT, RSW)
       IMPLICIT REAL (A-Z)
-      
+
 !*---potential conductance for CO2
 !*ji 13.7.11 MAX routine faengt negative Leitfaehigkeiten ab
       GC  = MAX(1E-6,(PLEAF-RDLEAF)*(273.+TLEAF)/0.53717/(CO2A-CO2I))
@@ -2020,14 +2020,14 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
 !*----------------------------------------------------------------------*
       SUBROUTINE PAN(SLNT,SLNMIN,LAI,KN,KB, NPSU,NPSH)
       IMPLICIT REAL (A-Z)
-      
+
 !*---total photosynthetic nitrogen in canopy
       NPC   = SLNT*(1.-EXP(-KN*LAI))/KN-SLNMIN*LAI
 
 !*---photosynthetic nitrogen for sunlit and shaded parts of canopy
       NPSU  = SLNT*(1.-EXP(-(KN+KB)*LAI))/(KN+KB)-SLNMIN*(1.-EXP(-KB*LAI))/KB
       NPSH  = NPC-NPSU
-      
+
       RETURN
       END SUBROUTINE PAN
 
@@ -2056,7 +2056,7 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
       SUBROUTINE PHOTO(C3C4,PAR,TLEAF,CO2I,NP,EAJMAX,XVN,XJN, &
                        THETA,PLEAF,RDLEAF)
       IMPLICIT REAL (A-Z)
-      
+
 !*---Michaelis-Menten constants for CO2 and O2 at 25oC
       IF (C3C4.LT.0.) THEN
         KMC25  = 650.   !greater KMC25 for C4 than C3; unit:(umol/mol)
@@ -2079,7 +2079,7 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
       KTMP   = 1.0     !Factor for reducing photosynthesis in case of T<5C
       JTMAX  = 3.12
       TO     = 298.15
-      
+
 !*---PAR photon flux in umol/m2/s absorbed by leaf photo-systems
       UPAR   = 4.56*PAR !4.56 conversion factor in umol/J
 
@@ -2100,7 +2100,7 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
 
      VCMX   = XVN*VCT*NP
      JMAX   = XJN*JT *NP
-  
+
 !*---CO2 concentration at carboxylation site & electron pathways and
 !*   their stoichiometries
       FPSEUD = 0.           !assuming no pseudocyclic e- transport
@@ -2154,7 +2154,7 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
 !*----------------------------------------------------------------------*
       SUBROUTINE REFL (SCP,KB, KBP,PCB)
       IMPLICIT REAL (A-Z)
-      
+
 !*--- scattered beam radiation extinction coefficient
       KBP    = KB*SQRT(1.-SCP)
 
@@ -2190,11 +2190,11 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
 !*----------------------------------------------------------------------*
       SUBROUTINE LIGAB (SCP,KB,KBP,KDP,PCB,PCD,IB0,ID0,LAI, ISU,ISH)
       IMPLICIT REAL (A-Z)
-      
+
 !*---total absorbed light by canopy
       IC     = (1.-PCB)*MAX(1e-30,IB0)*(1.-EXP(-KBP*LAI))+ &
                (1.-PCD)*MAX(1e-30,ID0)*(1.-EXP(-KDP*LAI))
-      
+
 !*---absorbed light by sunlit and shaded fractions of canopy
       ISU    = (1.-SCP)*MAX(1e-30,IB0)*(1.-EXP(-KB *LAI))+(1.-PCD)*MAX(1e-30,ID0)/(KDP+KB)* &
                KDP*(1.-EXP(-(KDP+KB)*LAI))+MAX(1e-30,IB0)*((1.-PCB)/(KBP+KB)*KBP* &
@@ -2220,10 +2220,10 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
 !*----------------------------------------------------------------------*
       SUBROUTINE KBEAM (SINB,BL, KB)
       IMPLICIT REAL (A-Z)
-      
+
 !*---solar elevation in radians
       B      = ASIN(SINB)
-      
+
 !*---average projection of leaves in the direction of a solar beam
       IF (SINB.GE.SIN(BL)) THEN
           OAV = SINB*COS(BL)
@@ -2254,7 +2254,7 @@ SUBROUTINE TOTPT(HOD,DS, SC,SINLD,COSLD,DAYL,DSINBE,RSD,TAIR, DVP, &
 !*----------------------------------------------------------------------*
       SUBROUTINE KDIFF (LAI,BL,SCP, KDP)
       IMPLICIT REAL (A-Z)
-      
+
       PI    = 3.141592654
 
 !*---extinction coefficient of beam lights from 15, 45 and 75 elevations
@@ -2333,7 +2333,7 @@ else
       LIMIT = XH
    else
       LIMIT = XL
-   endif 
+   endif
 endif
 
 RETURN
@@ -2345,7 +2345,7 @@ END FUNCTION LIMIT
 !*  Input switch. Y is set equal to Y1 orY2 depending on the value of X *
 !*  Y - Returned as either Y1 or Y2                                     *
 !*  X - Control variable                                                *
-!*  Y1- Returned value of Y if X<0                                      * 
+!*  Y1- Returned value of Y if X<0                                      *
 !*  Y2- Returned value of Y if X>=0                                     *
 !*  ----   ---- -------                                                 *
 !*  X       R4  Variable to be checken                               I  *

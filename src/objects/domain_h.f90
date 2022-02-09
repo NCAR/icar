@@ -22,7 +22,7 @@ module domain_interface
     type(grid_t)         :: u_grid2d_ext, v_grid2d_ext!, grid2d_ext ! extended grids for u and v fields pre smoothing (grid_2d_ext is for SLEVE topography smoothing)
     type(grid_t)         :: grid_monthly, grid_soil
     type(grid_t)         :: grid_snow, grid_snowsoil
-    type(grid_t)         :: grid_soilcomp
+    type(grid_t)         :: grid_soilcomp, grid_gecros, grid_croptype
 
     type(Time_type) :: model_time
 
@@ -72,6 +72,8 @@ module domain_interface
     type(variable_t) :: cloud_fraction
     type(variable_t) :: longwave
     type(variable_t) :: shortwave
+    type(variable_t) :: shortwave_direct
+    type(variable_t) :: shortwave_diffuse
     type(variable_t) :: terrain
     type(variable_t) :: forcing_terrain  ! BK 05/2020: The forcing terrain interpolated 2d to the hi-res grid. In order to calculate difference in slope
         type(variable_t) :: forcing_terrain2 ! test 9-6-2020
@@ -115,7 +117,8 @@ module domain_interface
     type(variable_t) :: vegetation_fraction_out
     type(variable_t) :: lai
     type(variable_t) :: sai
-    type(variable_t) :: crop_category
+    integer,allocatable :: crop_category(:,:)
+    type(variable_t) :: crop_type
     type(variable_t) :: date_planting
     type(variable_t) :: date_harvest
     type(variable_t) :: growing_season_gdd
@@ -123,9 +126,9 @@ module domain_interface
     type(variable_t) :: irr_frac_sprinkler
     type(variable_t) :: irr_frac_micro
     type(variable_t) :: irr_frac_flood
-    type(variable_t) :: irr_eventno_sprinkler
-    type(variable_t) :: irr_eventno_micro
-    type(variable_t) :: irr_eventno_flood
+    integer,allocatable :: irr_eventno_sprinkler(:,:)
+    integer,allocatable :: irr_eventno_micro(:,:)
+    integer,allocatable :: irr_eventno_flood(:,:)
     type(variable_t) :: irr_alloc_sprinkler
     type(variable_t) :: irr_alloc_micro
     type(variable_t) :: irr_alloc_flood
@@ -136,7 +139,7 @@ module domain_interface
     type(variable_t) :: evap_heat_sprinkler
     type(variable_t) :: mass_ag_grain
     type(variable_t) :: growing_degree_days
-    type(variable_t) :: plant_growth_stage
+    integer,allocatable :: plant_growth_stage(:,:)
     type(variable_t) :: net_ecosystem_exchange
     type(variable_t) :: gross_primary_prod
     type(variable_t) :: net_primary_prod
@@ -145,6 +148,7 @@ module domain_interface
     type(variable_t) :: stomatal_resist_total
     type(variable_t) :: stomatal_resist_sun
     type(variable_t) :: stomatal_resist_shade
+    type(variable_t) :: gecros_state
     type(variable_t) :: canopy_water
     type(variable_t) :: canopy_water_ice
     type(variable_t) :: canopy_water_liquid
@@ -166,7 +170,7 @@ module domain_interface
     type(variable_t) :: snow_layer_liquid_water
     type(variable_t) :: snow_age_factor
     type(variable_t) :: snow_height
-    type(variable_t) :: snow_nlayers
+    integer,allocatable :: snow_nlayers(:,:)
     type(variable_t) :: skin_temperature
     type(variable_t) :: sst
     type(variable_t) :: soil_water_content

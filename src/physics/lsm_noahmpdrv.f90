@@ -1,9 +1,9 @@
 MODULE module_sf_noahmpdrv
 
 !-------------------------------
-#if ( WRF_CHEM == 1 )
-  USE module_data_gocart_dust
-#endif
+!#if ( WRF_CHEM == 1 )
+!  USE module_data_gocart_dust
+!#endif
 !-------------------------------
 
 !
@@ -59,8 +59,8 @@ CONTAINS
                its,ite,  jts,jte,  kts,kte,                    &
                MP_RAINC, MP_RAINNC, MP_SHCV, MP_SNOW, MP_GRAUP, MP_HAIL     )
 !----------------------------------------------------------------
-    USE MODULE_SF_NOAHMPLSM
-!    USE MODULE_SF_NOAHMPLSM, only: noahmp_options, NOAHMP_SFLX, noahmp_parameters
+!    USE MODULE_SF_NOAHMPLSM
+    USE MODULE_SF_NOAHMPLSM, only: noahmp_options, NOAHMP_SFLX, noahmp_parameters
     USE module_sf_noahmp_glacier
     USE NOAHMP_TABLES, ONLY: ISICE_TABLE, CO2_TABLE, O2_TABLE, DEFAULT_CROP_TABLE, ISCROP_TABLE, ISURBAN_TABLE, NATURAL_TABLE, &
                              LCZ_1_TABLE,LCZ_2_TABLE,LCZ_3_TABLE,LCZ_4_TABLE,LCZ_5_TABLE,LCZ_6_TABLE,LCZ_7_TABLE,LCZ_8_TABLE,  &
@@ -796,7 +796,7 @@ CONTAINS
 	clay = 0.01 * soilcomp(i,5:8,j)
         orgm = 0.0
 
-        if(opt_pedo == 1) call pedotransfer_sr2006(nsoil,sand,clay,orgm,parameters)
+        if(iopt_pedo == 1) call pedotransfer_sr2006(nsoil,sand,clay,orgm,parameters)
 
        end if
 
@@ -822,11 +822,11 @@ CONTAINS
 !=== hydrological processes for vegetation in urban model ===
 !=== irrigate vegetaion only in urban area, MAY-SEP, 9-11pm
 
-         IF( IVGTYP(I,J) == ISURBAN_TABLE    .or. IVGTYP(I,J) == LCZ_1_TABLE .or. IVGTYP(I,J) == LCZ_2_TABLE .or. &
-               IVGTYP(I,J) == LCZ_3_TABLE      .or. IVGTYP(I,J) == LCZ_4_TABLE .or. IVGTYP(I,J) == LCZ_5_TABLE .or. &
-               IVGTYP(I,J) == LCZ_6_TABLE      .or. IVGTYP(I,J) == LCZ_7_TABLE .or. IVGTYP(I,J) == LCZ_8_TABLE .or. &
-               IVGTYP(I,J) == LCZ_9_TABLE      .or. IVGTYP(I,J) == LCZ_10_TABLE .or. IVGTYP(I,J) == LCZ_11_TABLE ) THEN
-
+        ! IF( IVGTYP(I,J) == ISURBAN_TABLE    .or. IVGTYP(I,J) == LCZ_1_TABLE .or. IVGTYP(I,J) == LCZ_2_TABLE .or. &
+        !       IVGTYP(I,J) == LCZ_3_TABLE      .or. IVGTYP(I,J) == LCZ_4_TABLE .or. IVGTYP(I,J) == LCZ_5_TABLE .or. &
+        !       IVGTYP(I,J) == LCZ_6_TABLE      .or. IVGTYP(I,J) == LCZ_7_TABLE .or. IVGTYP(I,J) == LCZ_8_TABLE .or. &
+        !       IVGTYP(I,J) == LCZ_9_TABLE      .or. IVGTYP(I,J) == LCZ_10_TABLE .or. IVGTYP(I,J) == LCZ_11_TABLE ) THEN
+        !
 !!!TLE: commenting this block so as to remove necessity for module_ra_gfdleta and module_sf_urban.
 !!!     Can be reinstated at a later date.
 !         IF(SF_URBAN_PHYSICS > 0 .AND. IRI_SCHEME == 1 ) THEN
@@ -875,9 +875,9 @@ CONTAINS
                                TRAD,   ESOIL,   RUNSF,   RUNSB,     SAG,    SALB, & ! OUT :
                               QSNBOT,PONDING,PONDING1,PONDING2,    T2MB,    Q2MB, & ! OUT :
 			      EMISSI,  FPICE,    CHB2 &                             ! OUT :
-#ifdef WRF_HYDRO
-                              , sfcheadrt(i,j)                                      &
-#endif
+!#ifdef WRF_HYDRO
+!                              , sfcheadrt(i,j)                                      &
+!#endif
                               )
 
          FSNO   = 1.0
@@ -984,9 +984,9 @@ CONTAINS
 	    GHB     , IRG     , IRC     , IRB     , TR      , EVC     , & ! OUT :
 	    CHLEAF  , CHUC    , CHV2    , CHB2    , FPICE   , PAHV    , &
             PAHG    , PAHB    , PAH     , LAISUN  , LAISHA  , RB        &
-#ifdef WRF_HYDRO
-            , sfcheadrt(i,j)                               &
-#endif
+!#ifdef WRF_HYDRO
+!            , sfcheadrt(i,j)                               &
+!#endif
             )            ! OUT :
 
             QFX(I,J) = ECAN + ESOIL + ETRAN + EIRR
@@ -1719,7 +1719,8 @@ SUBROUTINE PEDOTRANSFER_SR2006(nsoil,sand,clay,orgm,parameters)
        !
        IF(.NOT.FNDSNOWH)THEN
           ! If no SNOWH do the following
-          CALL wrf_message( 'SNOW HEIGHT NOT FOUND - VALUE DEFINED IN LSMINIT' )
+        !  CALL wrf_message( 'SNOW HEIGHT NOT FOUND - VALUE DEFINED IN LSMINIT' )
+          WRITE(*,*) 'SNOW HEIGHT NOT FOUND - VALUE DEFINED IN LSMINIT'
           DO J = jts,jtf
              DO I = its,itf
                 SNOWH(I,J)=SNOW(I,J)*0.005               ! SNOW in mm and SNOWH in m
@@ -1733,9 +1734,11 @@ SUBROUTINE PEDOTRANSFER_SR2006(nsoil,sand,clay,orgm,parameters)
        DO J = jts,jtf
           DO I = its,itf
              IF ( SNOW(i,j) > 0. .AND. SNOWH(i,j) == 0. .OR. SNOWH(i,j) > 0. .AND. SNOW(i,j) == 0.) THEN
-               WRITE(err_message,*)"problem with initial snow fields: snow/snowh>0 while snowh/snow=0 at i,j" &
+               IF (this_image()==1) THEN
+                 WRITE(err_message,*)"problem with initial snow fields: snow/snowh>0 while snowh/snow=0 at i,j" &
                                      ,i,j,snow(i,j),snowh(i,j)
-               CALL wrf_message(err_message)
+               ENDIF
+!               CALL wrf_message(err_message)
              ENDIF
              IF ( SNOW( i,j ) > 5000. ) THEN
                SNOWH(I,J) = SNOWH(I,J) * 5000. / SNOW(I,J)      ! SNOW in mm and SNOWH in m
@@ -1749,14 +1752,19 @@ SUBROUTINE PEDOTRANSFER_SR2006(nsoil,sand,clay,orgm,parameters)
           DO i = its,itf
              IF ( ISLTYP( i,j ) .LT. 1 ) THEN
                 errflag = 1
-                WRITE(err_message,*)"module_sf_noahlsm.F: lsminit: out of range ISLTYP ",i,j,ISLTYP( i,j )
-                CALL wrf_message(err_message)
+                IF (this_image()==1) THEN
+                  WRITE(err_message,*)"module_sf_noahlsm.F: lsminit: out of range ISLTYP ",i,j,ISLTYP( i,j )
+                ENDIF
+    !            CALL wrf_message(err_message)
              ENDIF
           ENDDO
        ENDDO
        IF ( errflag .EQ. 1 ) THEN
-          CALL wrf_error_fatal( "module_sf_noahlsm.F: lsminit: out of range value "// &
-               "of ISLTYP. Is this field in the input?" )
+         WRITE(*,*) "FATAL ERROR: module_sf_noahlsm.F: lsminit: out of range value "// &
+              "of ISLTYP. Is this field in the input?"
+         STOP
+  !        CALL wrf_error_fatal( "module_sf_noahlsm.F: lsminit: out of range value "// &
+  !             "of ISLTYP. Is this field in the input?" )
        ENDIF
 ! GAC-->LATERALFLOW
 ! 20130219 - No longer need this - see module_data_gocart_dust
@@ -2015,7 +2023,9 @@ SUBROUTINE PEDOTRANSFER_SR2006(nsoil,sand,clay,orgm,parameters)
              STEPWTD = max(STEPWTD,1)
 
           ELSE
-             CALL wrf_error_fatal ('Not enough fields to use groundwater option in Noah-MP')
+             WRITE(*,*) "FATAL ERROR: Not enough fields to use groundwater option in Noah-MP"
+             STOP
+             !CALL wrf_error_fatal ('Not enough fields to use groundwater option in Noah-MP')
           END IF
        endif
 
@@ -2093,7 +2103,9 @@ SUBROUTINE PEDOTRANSFER_SR2006(nsoil,sand,clay,orgm,parameters)
                 DZSNO(-1) = 0.20
                 DZSNO( 0) = SNODEP(I,J) - DZSNO(-1) - DZSNO(-2)
              ELSE
-                CALL wrf_error_fatal("Problem with the logic assigning snow layers.")
+                WRITE(*,*) "FATAL ERROR: Problem with the logic assigning snow layers."
+                STOP
+                !CALL wrf_error_fatal("Problem with the logic assigning snow layers.")
              END IF
           END IF
 

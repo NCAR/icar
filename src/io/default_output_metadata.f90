@@ -547,6 +547,28 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
+        !!  Downward Direct Shortwave Radiation at the Surface (positive down)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%shortwave_direct))
+            var%name        = "shortwave_direct"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "surface_direct_downwelling_shortwave_flux_in_air"), &
+                               attribute_t("units",         "W m-2"),                                            &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Downward Diffuse Shortwave Radiation at the Surface (positive down)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%shortwave))
+            var%name        = "shortwave_diffuse"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "surface_diffuse_downwelling_shortwave_flux_in_air"), &
+                               attribute_t("units",         "W m-2"),                                             &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
         !!  Downward Longwave Radiation at the Surface (positive down)
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%longwave))
@@ -758,6 +780,17 @@ contains
             var%dimensions  = two_d_t_dimensions
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("non_standard_name", "crop_category"),                   &
+                               attribute_t("units",         "1"),                                   &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Crop Type (Noah-MP initialization variable)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%crop_type))
+            var%name        = "crop_type"
+            var%dimensions  = three_d_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "crop_type"),                       &
                                attribute_t("units",         "1"),                                   &
                                attribute_t("coordinates",   "lat lon")]
         end associate
@@ -1059,6 +1092,17 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
+        !!  GECROS (Genotype-by-Envrionment interaction on CROp growth Simulator [Yin and van Laar, 2005]) crop model state
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%gecros_state))
+            var%name        = "gecros_state"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "gecros_state"),                                    &
+                               attribute_t("units",         "N/A"),                                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
         !!  Canopy Total Water Content
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%canopy_water))
@@ -1081,10 +1125,10 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
-        !!  Canopy Liquid Water Content
+        !!  Canopy Liquid Water Content (in snow)
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%canopy_water_liquid))
-            var%name        = "canopy_ice"
+            var%name        = "canopy_liquid"
             var%dimensions  = two_d_t_dimensions
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("non_standard_name", "canopy_liquid_water_amount"),      &
@@ -1188,17 +1232,6 @@ contains
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("non_standard_name", "bare_ground_temperature"),         &
                                attribute_t("units",         "K"),                                   &
-                               attribute_t("coordinates",   "lat lon")]
-        end associate
-        !>------------------------------------------------------------
-        !! Total Input Precipitation
-        !!------------------------------------------------------------
-        associate(var=>var_meta(kVARS%precip_in_total))
-            var%name        = "precip_in_total"
-            var%dimensions  = two_d_t_dimensions
-            var%unlimited_dim=.True.
-            var%attributes  = [attribute_t("non_standard_name", "total_input_precip"),              &
-                               attribute_t("units",         "mm"),                                  &
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
@@ -1974,7 +2007,7 @@ contains
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%cos_zenith))
             var%name        = "cos_zenith"
-            var%dimensions  = two_d_dimensions
+            var%dimensions  = two_d_t_dimensions
             var%attributes  = [attribute_t("non_standard_name", "cosine_zenith_angle"),             &
                                attribute_t("units",             "degrees"),                         &
                                attribute_t("coordinates",       "lat lon")]

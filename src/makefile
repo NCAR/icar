@@ -800,9 +800,10 @@ $(BUILD)lsm_noahdrv.o: $(PHYS)lsm_noahdrv.f90 $(BUILD)lsm_noahlsm.o
 $(BUILD)lsm_noahlsm.o: $(PHYS)lsm_noahlsm.f90
 
 $(BUILD)lsm_noahmpdrv.o: $(PHYS)lsm_noahmpdrv.f90 $(BUILD)lsm_noahmplsm.o \
-	          $(BUILD)lsm_noahmp_gecros.o $(BUILD)lsm_noahmp_glacier.o 
+	          $(BUILD)lsm_noahmp_gecros.o $(BUILD)lsm_noahmp_glacier.o
 
-$(BUILD)lsm_noahmplsm.o: $(PHYS)lsm_noahmplsm.f90
+$(BUILD)lsm_noahmplsm.o: $(PHYS)lsm_noahmplsm.f90 $(BUILD)lsm_noahmp_gecros.o \
+	          $(BUILD)lsm_noahmp_glacier.o
 
 $(BUILD)lsm_noahmp_gecros.o: $(PHYS)lsm_noahmp_gecros.f90
 
