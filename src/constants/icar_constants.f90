@@ -49,7 +49,7 @@ module icar_constants
         integer :: graupel_number_concentration
         integer :: precipitation
         integer :: convective_precipitation
-        integer :: precip_in_total
+        integer :: external_precipitation
         integer :: snowfall
         integer :: graupel
         integer :: snowfall_ground
@@ -218,8 +218,19 @@ module icar_constants
         integer :: tend_v
         integer :: znu
         integer :: znw
+        integer :: re_cloud
+        integer :: re_ice
+        integer :: re_snow
+        integer :: out_longwave_rad
+        integer :: longwave_cloud_forcing
+        integer :: shortwave_cloud_forcing
+        integer :: land_emissivity
+        integer :: temperature_interface
+        integer :: cosine_zenith_angle
+        integer :: tend_swrad
         integer :: last_var
     end type var_constants_type
+
 
     type(var_constants_type) :: kVARS = var_constants_type(   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  &
                                                              11,  12,  13,  14,  15,  16,  17,  18,  19,  20,  &
@@ -311,6 +322,7 @@ module icar_constants
 
     integer, parameter :: kRA_BASIC      = 1
     integer, parameter :: kRA_SIMPLE     = 2
+    integer, parameter :: kRA_RRTMG      = 3
 
     integer, parameter :: kADV_UPWIND    = 1
     integer, parameter :: kADV_MPDATA    = 2
@@ -338,6 +350,7 @@ module icar_constants
     real, parameter :: pi  = 3.1415927 ! pi
     real, parameter :: stefan_boltzmann = 5.67e-8 ! the Stefan-Boltzmann constant
     real, parameter :: karman = 0.41   ! the von Karman constant
+    real, parameter :: solar_constant = 1366 ! W/m^2
 
     ! convenience parameters for various physics packages
     real, parameter :: rovcp = Rd/cp

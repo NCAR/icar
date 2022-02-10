@@ -204,6 +204,7 @@ module data_structures
 
         ! advection and pbl tendencies that need to be saved for the cumulus scheme
         real, allocatable, dimension(:,:,:) :: qv_adv,qv_pbl
+        real, allocatable, dimension(:,:,:) :: th_lwrad, th_swrad
     end type tendencies_type
 
     ! ------------------------------------------------

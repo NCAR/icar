@@ -4,8 +4,8 @@ import mygis
 from bunch import Bunch
 
 
-sfcvarlist=["SSHF_GDS4_SFC","SLHF_GDS4_SFC","Z_GDS4_SFC","BLH_GDS4_SFC","SSRD_GDS4_SFC","STRD_GDS4_SFC", "SKT_GDS4_SFC", "CP_GDS4_SFC"]
-icar_sfc_var=["sensible_heat","latent_heat","hgt_98","PBL_height","sw","lw", "tskin", "cp"]
+sfcvarlist=["SSHF_GDS4_SFC","SLHF_GDS4_SFC","Z_GDS4_SFC","BLH_GDS4_SFC","SSRD_GDS4_SFC","STRD_GDS4_SFC", "SSTK_GDS4_SFC", "CP_GDS4_SFC", "LSM_GDS4_SFC"]
+icar_sfc_var=["sensible_heat","latent_heat","hgt_98","PBL_height","sw","lw", "tskin", "cp","landmask"]
 
 atmvarlist=["Z_GDS4_HYBL","T_GDS4_HYBL","Q_GDS4_HYBL","LNSP_GDS4_HYBL","CLWC_GDS4_HYBL","CIWC_GDS4_HYBL","lv_HYBL2_a","lv_HYBL2_b","P0"]
 icar_atm_var=["gph","t","qv","ln_p_sfc","cloud","ice","sigma_a","sigma_b","P0"]

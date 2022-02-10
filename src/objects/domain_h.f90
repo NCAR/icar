@@ -69,6 +69,7 @@ module domain_interface
     type(variable_t) :: snowfall_ground
     type(variable_t) :: rainfall_ground
     integer,allocatable :: snowfall_bucket(:,:)
+    type(variable_t) :: external_precipitation
     type(variable_t) :: cloud_fraction
     type(variable_t) :: longwave
     type(variable_t) :: shortwave
@@ -76,7 +77,7 @@ module domain_interface
     type(variable_t) :: shortwave_diffuse
     type(variable_t) :: terrain
     type(variable_t) :: forcing_terrain  ! BK 05/2020: The forcing terrain interpolated 2d to the hi-res grid. In order to calculate difference in slope
-        type(variable_t) :: forcing_terrain2 ! test 9-6-2020
+    type(variable_t) :: forcing_terrain2 ! test 9-6-2020
         ! type(variable_t) :: forcing_terrain_u1 ! test 9-6-2020
     type(variable_t) :: u_10m
     type(variable_t) :: v_10m
@@ -208,6 +209,18 @@ module domain_interface
     type(variable_t) :: water_aquifer
     type(variable_t) :: storage_gw
     type(variable_t) :: storage_lake
+
+    ! link effective radius from microphysics to radiation scheme
+    type(variable_t) :: re_cloud
+    type(variable_t) :: re_ice
+    type(variable_t) :: re_snow
+    type(variable_t) :: out_longwave_rad
+    type(variable_t) :: longwave_cloud_forcing
+    type(variable_t) :: shortwave_cloud_forcing
+    type(variable_t) :: land_emissivity
+    type(variable_t) :: temperature_interface
+    type(variable_t) :: cosine_zenith_angle
+    type(variable_t) :: tend_swrad
 
     integer,allocatable :: land_mask(:,:)
     type(variable_t) :: cos_zenith

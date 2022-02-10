@@ -159,7 +159,6 @@ contains
         if (0<var_list( kVARS%frac_between_gap) )           call this%add_to_output( get_metadata( kVARS%frac_between_gap             , domain%frac_between_gap%data_2d))
         if (0<var_list( kVARS%ground_temperature_bare) )    call this%add_to_output( get_metadata( kVARS%ground_temperature_bare      , domain%ground_temperature_bare%data_2d))
         if (0<var_list( kVARS%ground_temperature_canopy) )  call this%add_to_output( get_metadata( kVARS%ground_temperature_canopy    , domain%ground_temperature_canopy%data_2d))
-        if (0<var_list( kVARS%precip_in_total) )            call this%add_to_output( get_metadata( kVARS%precip_in_total              , domain%precip_in_total%data_2d))
         if (0<var_list( kVARS%snowfall_ground) )            call this%add_to_output( get_metadata( kVARS%snowfall_ground              , domain%snowfall_ground%data_2d))
         if (0<var_list( kVARS%rainfall_ground) )            call this%add_to_output( get_metadata( kVARS%rainfall_ground              , domain%rainfall_ground%data_2d))
         if (0<var_list( kVARS%snow_water_equivalent) )      call this%add_to_output( get_metadata( kVARS%snow_water_equivalent        , domain%snow_water_equivalent%data_2d))
@@ -247,7 +246,16 @@ contains
         if (0<var_list( kVARS%soil_texture_3) )             call this%add_to_output( get_metadata( kVARS%soil_texture_3               , domain%soil_texture_3%data_2d))
         if (0<var_list( kVARS%soil_texture_4) )             call this%add_to_output( get_metadata( kVARS%soil_texture_4               , domain%soil_texture_4%data_2d))
         if (0<var_list( kVARS%soil_sand_and_clay) )         call this%add_to_output( get_metadata( kVARS%soil_sand_and_clay           , domain%soil_sand_and_clay%data_3d))
-
+        if (0<var_list( kVARS%re_cloud) )                   call this%add_to_output( get_metadata( kVARS%re_cloud                     , domain%re_cloud%data_3d))
+        if (0<var_list( kVARS%re_ice) )                     call this%add_to_output( get_metadata( kVARS%re_ice                       , domain%re_ice%data_3d))
+        if (0<var_list( kVARS%re_snow) )                    call this%add_to_output( get_metadata( kVARS%re_snow                      , domain%re_snow%data_3d))
+        if (0<var_list( kVARS%out_longwave_rad) )           call this%add_to_output( get_metadata( kVARS%out_longwave_rad             , domain%out_longwave_rad%data_2d))
+        if (0<var_list( kVARS%longwave_cloud_forcing) )     call this%add_to_output( get_metadata( kVARS%longwave_cloud_forcing       , domain%longwave_cloud_forcing%data_2d))
+        if (0<var_list( kVARS%shortwave_cloud_forcing) )    call this%add_to_output( get_metadata( kVARS%shortwave_cloud_forcing      , domain%shortwave_cloud_forcing%data_2d))
+        if (0<var_list( kVARS%cosine_zenith_angle) )        call this%add_to_output( get_metadata( kVARS%cosine_zenith_angle          , domain%cosine_zenith_angle%data_2d))
+        if (0<var_list( kVARS%land_emissivity) )            call this%add_to_output( get_metadata( kVARS%land_emissivity              , domain%land_emissivity%data_2d))
+        if (0<var_list( kVARS%temperature_interface) )      call this%add_to_output( get_metadata( kVARS%temperature_interface        , domain%temperature_interface%data_3d))
+        if (0<var_list( kVARS%tend_swrad) )                 call this%add_to_output( get_metadata( kVARS%tend_swrad                  , domain%tend_swrad%data_3d))
 
     end subroutine
 

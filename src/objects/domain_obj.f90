@@ -196,6 +196,7 @@ contains
         if (0<opt%vars_to_allocate( kVARS%graupel_number_concentration))call setup(this%graupel_number,           this%grid )
         if (0<opt%vars_to_allocate( kVARS%precipitation) )              call setup(this%accumulated_precipitation,this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%convective_precipitation) )   call setup(this%accumulated_convective_pcp,this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%external_precipitation) )     call setup(this%external_precipitation,   this%grid2d,   forcing_var=opt%parameters%rain_var,  list=this%variables_to_force)
         if (0<opt%vars_to_allocate( kVARS%snowfall) )                   call setup(this%accumulated_snowfall,     this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%pressure) )                   call setup(this%pressure,                 this%grid,     forcing_var=opt%parameters%pvar,       list=this%variables_to_force, force_boundaries=.False.)
         if (0<opt%vars_to_allocate( kVARS%temperature) )                call setup(this%temperature,              this%grid )
@@ -346,6 +347,16 @@ contains
         if (0<opt%vars_to_allocate( kVARS%soil_texture_3) )             call setup(this%soil_texture_3,           this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%soil_texture_4) )             call setup(this%soil_texture_4,           this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%soil_sand_and_clay) )         call setup(this%soil_sand_and_clay,       this%grid_soilcomp)
+        if (0<opt%vars_to_allocate( kVARS%re_cloud) )                   call setup(this%re_cloud,                 this%grid)
+        if (0<opt%vars_to_allocate( kVARS%re_ice) )                     call setup(this%re_ice,                   this%grid)
+        if (0<opt%vars_to_allocate( kVARS%re_snow) )                    call setup(this%re_snow,                  this%grid)
+        if (0<opt%vars_to_allocate( kVARS%out_longwave_rad) )           call setup(this%out_longwave_rad,         this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%longwave_cloud_forcing) )     call setup(this%longwave_cloud_forcing,   this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%shortwave_cloud_forcing) )    call setup(this%shortwave_cloud_forcing,  this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%cosine_zenith_angle) )        call setup(this%cosine_zenith_angle,      this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%temperature_interface) )      call setup(this%temperature_interface,    this%grid)
+        if (0<opt%vars_to_allocate( kVARS%land_emissivity) )            call setup(this%land_emissivity,          this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%tend_swrad) )                 call setup(this%tend_swrad,               this%grid)
 
         ! integer variable_t types aren't available (yet...)
         if (0<opt%vars_to_allocate( kVARS%convective_precipitation) )   allocate(this%cu_precipitation_bucket  (ims:ime, jms:jme),          source=0)
@@ -1374,15 +1385,13 @@ contains
         h2_u =  h_u  - h1_u
         h2_v =  h_v  - h1_v
 
-
-
-        if ((this_image()==1).and.(options%parameters%debug)) then
+        ! if ((this_image()==1).and.(options%parameters%debug)) then
         ! if (this_image()==1) then
-          call io_write("terrain_smooth_h1.nc", "h1", h1(:,:) )
-          call io_write("terrain_smooth_h2.nc", "h2", h2(:,:) )
-          call io_write("h1_u.nc", "h1_u", h1_u(:,:) )
-          call io_write("h2_u.nc", "h2_u", h2_u(:,:) )
-        endif
+        !   call io_write("terrain_smooth_h1.nc", "h1", h1(:,:) )
+        !   call io_write("terrain_smooth_h2.nc", "h2", h2(:,:) )
+        !   call io_write("h1_u.nc", "h1_u", h1_u(:,:) )
+        !   call io_write("h2_u.nc", "h2_u", h2_u(:,:) )
+        ! endif
         if (this_image()==1) then
            ! print*, "    global_terrain max ", MAXVAL(global_terrain)
            print*, "    Max of full topography", MAXVAL(h_org)
@@ -1662,6 +1671,7 @@ contains
         associate(pressure              => this%pressure%data_3d,               &
                   exner                 => this%exner%data_3d,                  &
                   pressure_interface    => this%pressure_interface%data_3d,     &
+                  temperature_interface => this%temperature_interface%data_3d,     &
                   psfc                  => this%surface_pressure%data_2d,       &
                   temperature           => this%temperature%data_3d,            &
                   potential_temperature => this%potential_temperature%data_3d )
@@ -1686,6 +1696,15 @@ contains
                       temperature = potential_temperature * exner
                   endif
 
+                  if (associated(this%temperature_interface%data_3d)) then
+                    ! this isn't exactly correct, should be distance weighted...
+                    ! weight one = (dz2) / (dz1+dz2)
+                    ! weight two = (dz1) / (dz1+dz2)
+                    temperature_interface(:,1,:) = ( temperature(:,1,:) * 2 - temperature(:,2,:) )
+                    do i = 2, size(temperature_interface, 2)
+                        temperature_interface(:,i,:) = ( temperature(:,i-1,:) + temperature(:,i,:) ) / 2
+                    enddo
+                ENDIF
         end associate
 
         if (allocated(this%znw).or.allocated(this%znu)) call init_znu(this)
@@ -1782,13 +1801,16 @@ contains
                      [kVARS%z,                      kVARS%z_interface,              &
                       kVARS%dz,                     kVARS%dz_interface,             &
                       kVARS%u,                      kVARS%v,                        &
-                      kVARS%surface_pressure,       kVARS%roughness_z0,              &
+                      kVARS%surface_pressure,       kVARS%roughness_z0,             &
                       kVARS%terrain,                kVARS%pressure,                 &
                       kVARS%temperature,            kVARS%pressure_interface,       &
                       kVARS%exner,                  kVARS%potential_temperature,    &
                       kVARS%latitude,               kVARS%longitude,                &
                       kVARS%u_latitude,             kVARS%u_longitude,              &
-                      kVARS%v_latitude,             kVARS%v_longitude               ])
+                      kVARS%v_latitude,             kVARS%v_longitude,              &
+                      kVars%temperature_interface                                   ])
+
+        if (trim(options%parameters%rain_var) /= "") call options%alloc_vars([kVARS%external_precipitation])
 
         ! List the variables that are required for any restart
         call options%restart_vars(                                                  &
@@ -2098,6 +2120,11 @@ contains
         var_to_update = this%w%meta_data
         var_to_update%data_3d = var_to_update%data_3d + (var_to_update%dqdt_3d * dt%seconds())
 
+        if (associated(this%external_precipitation%data_2d)) then
+            this%accumulated_precipitation%data_2d = this%accumulated_precipitation%data_2d + (this%external_precipitation%data_2d * dt%seconds())
+        endif
+
+
     end subroutine
 
     !> -----------------------------------------------------------------------------------------------------------------
@@ -2211,13 +2238,16 @@ contains
         ! temporary to hold the variable to be interpolated to
         type(variable_t) :: var_to_interpolate
         ! temporary to hold the forcing variable to be interpolated from
-        type(variable_t) :: input_data
+        type(variable_t) :: input_data, forcing_temperature
+        real, allocatable, dimension(:,:,:) :: potential_temperature
         ! number of layers has to be used when subsetting for update_pressure (for now)
         integer :: nz
         logical :: var_is_u, var_is_v
 
         update_only = .False.
         if (present(update)) update_only = update
+
+        forcing_temperature = forcing%variables%get_var(this%potential_temperature%meta_data%forcing_var)
 
         ! make sure the dictionary is reset to point to the first variable
         call this%variables_to_force%reset_iterator()
@@ -2251,18 +2281,29 @@ contains
 
                     call interpolate_variable(var_to_interpolate%dqdt_3d, input_data, forcing, this, &
                                     vert_interp=var_is_not_pressure, var_is_u=var_is_u, var_is_v=var_is_v, nsmooth=this%nsmooth)
+
+                    ! because pressure needs to be adjusted for grid points that fall below the forcing lowest level, we adjust it separately.
                     if (.not.var_is_not_pressure) then
-                        nz = min(size(this%geo%z, 2), size(forcing%geo%z, 2))
-                        call update_pressure(var_to_interpolate%dqdt_3d, forcing%geo%z(:,:nz,:), this%geo%z)
+                        allocate(potential_temperature, mold=var_to_interpolate%dqdt_3d)
+                        ! to improve the pressure adjustment, we need to get forcing potential temperature on the ICAR grid WITHOUT vertical interpolation
+                        call interpolate_variable(potential_temperature, forcing_temperature, forcing, this, &
+                                        vert_interp=.False., var_is_u=.False., var_is_v=.False., nsmooth=this%nsmooth)
+
+                        call adjust_pressure(var_to_interpolate%dqdt_3d, forcing%geo%z, this%geo%z, potential_temperature)
                     endif
 
                 else
                     call interpolate_variable(var_to_interpolate%data_3d, input_data, forcing, this, &
                                     vert_interp=var_is_not_pressure, var_is_u=var_is_u, var_is_v=var_is_v, nsmooth=this%nsmooth)
 
+                    ! because pressure needs to be adjusted for grid points that fall below the forcing lowest level, we adjust it separately.
                     if (.not.var_is_not_pressure) then
-                        nz = min(size(this%geo%z, 2), size(forcing%geo%z, 2))
-                        call update_pressure(var_to_interpolate%data_3d, forcing%geo%z(:,:nz,:), this%geo%z)
+                        allocate(potential_temperature, mold=var_to_interpolate%dqdt_3d)
+                        ! to improve the pressure adjustment, we need to get forcing potential temperature on the ICAR grid WITHOUT vertical interpolation
+                        call interpolate_variable(potential_temperature, forcing_temperature, forcing, this, &
+                                        vert_interp=.False., var_is_u=.False., var_is_v=.False., nsmooth=this%nsmooth)
+
+                        call adjust_pressure(var_to_interpolate%data_3d, forcing%geo%z, this%geo%z, potential_temperature)
                     endif
                 endif
 
@@ -2271,6 +2312,64 @@ contains
 
     end subroutine
 
+    !> -------------------------------
+    !! Adjust a 3d pressure field from the forcing data to the ICAR model grid
+    !!
+    !! Because the GCM grid can be very different from the ICAR grid, we first roughly match up
+    !! the GCM level that is closest to the ICAR level. This has to be done grid cell by gridcell.
+    !! This still is not ideal, in that it has already subset the GCM levels to the same number as are in ICAR
+    !! If the GCM has a LOT of fine layers ICAR will not be getting layers higher up in the atmosphere.
+    !! It would be nice to first use vinterp to get as close as we can, then update pressure only for grid cells below.
+    !! Uses update_pressure to make a final adjustment (including below the lowest model level).
+    !!
+    !! -------------------------------
+    subroutine adjust_pressure(pressure, input_z, output_z, potential_temperature)
+        implicit none
+        real, intent(inout), dimension(:,:,:) :: pressure !> Pressure on the forcing model levels [Pa]
+        real, intent(in), dimension(:,:,:) :: input_z, output_z !> z on the forcing and ICAR model levels [m]
+        real, intent(in), dimension(:,:,:) :: potential_temperature !> potential temperature of the forcing data [K]
+
+        ! store a temporary copy of P and Z from the forcing data after selecting the closest GCM level to the ICAR data
+        real, allocatable, dimension(:,:,:) :: temp_z, temp_p, temp_t
+        ! loop counter variables
+        integer :: k, nz, in_z_idx
+        integer :: i,j, nx, ny
+
+        allocate(temp_z, temp_p, temp_t, mold=pressure)
+
+        nx = size(pressure, 1)
+        nz = size(pressure, 2)
+        ny = size(pressure, 3)
+
+        do j = 1, ny
+            do i = 1, nx
+                ! keep track of the nearest z level from the forcing data
+                in_z_idx = 1
+                do k = 1, nz
+                    ! if the ICAR z level is more than half way to the next forcing z level, then increment the GCM z
+                    findz: do while (output_z(i,k,j) > ((input_z(i,in_z_idx,j) + input_z(i,min(nz,in_z_idx+1),j)) / 2))
+                        in_z_idx = min(nz, in_z_idx + 1)
+
+                        if (in_z_idx == nz) then
+                            exit findz
+                        endif
+                    end do findz
+                    ! make a new copy of the pressure and z data from the closest GCM model level
+                    temp_z(i,k,j) = input_z(i,in_z_idx,j)
+                    temp_p(i,k,j) = pressure(i,in_z_idx,j)
+                    temp_t(i,k,j) = exner_function(pressure(i,in_z_idx,j)) * potential_temperature(i,in_z_idx,j)
+                end do
+            enddo
+        enddo
+
+        ! put the updated pressure data into the pressure variable prior to adjustments
+        pressure = temp_p
+
+        ! update pressure for the change in height between the closest GCM model level and each ICAR level.
+        call update_pressure(pressure, temp_z, output_z, temp_t)
+
+        deallocate(temp_p, temp_z)
+    end subroutine
 
     !> -------------------------------
     !! Interpolate one variable by requesting the forcing data from the boundary data structure then
@@ -2560,7 +2659,7 @@ contains
               zfr_v(:,i,:) = zfr_v(:,i-1,:)
           enddo
 
-          if ((this_image()==1))  call io_write("zfr_u_ns.nc", "zfr_u", zfr_u(:,:,:) ) ! check in plot
+          ! if ((this_image()==1))  call io_write("zfr_u_ns.nc", "zfr_u", zfr_u(:,:,:) ) ! check in plot
           ! if ((this_image()==1).and.(options%parameters%debug))  call io_write("zfr_u_ns.nc", "zfr_u", zfr_u(:,:,:) ) ! check in plot
 
         endif
