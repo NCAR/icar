@@ -44,6 +44,7 @@ module land_surface
     use icar_constants,      only : kVARS, kLSM_SIMPLE, kLSM_NOAH, kLSM_NOAHMP
     use options_interface,   only : options_t
     use domain_interface,    only : domain_t
+    use module_ra_simple, only: calc_solar_elevation
 
     implicit none
 
@@ -95,6 +96,7 @@ module land_surface
     integer :: IOPT_STC, IOPT_GLA, IOPT_RSF, IOPT_SOIL, IOPT_PEDO, IOPT_CROP, IOPT_IRR, IOPT_IRRM, IZ0TLND, SF_URBAN_PHYSICS
     real,allocatable,dimension(:,:) :: chstarxy
     character(len=MAXVARLENGTH) :: landuse_name
+    real, allocatable :: day_frac(:), solar_elevation(:)
 
 contains
 
@@ -168,7 +170,7 @@ contains
                          kVARS%ground_surf_temperature, kVARS%snow_temperature, kVARS%snow_layer_depth,                 &
                          kVARS%snow_layer_ice, kVARS%snow_layer_liquid_water, kVARS%soil_texture_1, kVARS%gecros_state, &
                          kVARS%soil_texture_2, kVARS%soil_texture_3, kVARS%soil_texture_4, kVARS%soil_sand_and_clay,    &
-                         kVARS%vegetation_fraction_out, kVARS%latitude, kVARS%longitude, kVARS%cos_zenith,              &
+                         kVARS%vegetation_fraction_out, kVARS%latitude, kVARS%longitude, kVARS%cosine_zenith_angle,     &
                          kVARS%veg_type, kVARS%soil_type, kVARS%land_mask])
 
              call options%advect_vars([kVARS%potential_temperature, kVARS%water_vapor])
@@ -398,6 +400,8 @@ contains
         allocate(VEGFRAC(ims:ime,jms:jme))
         VEGFRAC = 50
 
+        allocate(day_frac(ims:ime))
+        allocate(solar_elevation(ims:ime))
 
         XICE_THRESHOLD = 1
         RDLAI2D = .false. !TLE check back on this one
@@ -731,7 +735,7 @@ contains
                                 domain%evap_heat_sprinkler%data_2d,     &
                                 domain%temperature_2m_veg%data_2d,      &
                                 domain%temperature_2m_bare%data_2d,     &
-                                chstarxy,             &                      !!! WHAT IS THIS
+                                chstarxy,                               &   !doesn't do anything -_-
                                 num_soil_layers,                        &
                                 .False.,                                &    !restart
                                 .True.,                                 &    !allowed_to_read
@@ -998,16 +1002,23 @@ contains
 
                 current_precipitation = (domain%accumulated_precipitation%data_2d-RAINBL)+(domain%precipitation_bucket-rain_bucket)*kPRECIP_BUCKET_SIZE
 
-                do I = ims,ime
-                  do J = jms,jme
-                    call calc_declin(domain%model_time%day_of_year(),real(domain%model_time%hour),real(domain%model_time%minute),real(domain%model_time%second),domain%latitude%data_2d(I,J),domain%longitude%data_2d(I,J),domain%cos_zenith%data_2d(I,J))
-                  enddo
+!                do I = ims,ime
+!                  do J = jms,jme
+!                    call calc_declin(domain%model_time%day_of_year(),real(domain%model_time%hour),real(domain%model_time%minute),real(domain%model_time%second),domain%latitude%data_2d(I,J),domain%longitude%data_2d(I,J),domain%cos_zenith%data_2d(I,J))
+!                  enddo
+!                enddo
+
+
+                do j = jms,jme
+                    solar_elevation  = calc_solar_elevation(date=domain%model_time, lon=domain%longitude%data_2d, &
+                                    j=j, ims=ims,ime=ime,jms=jms,jme=jme,its=its,ite=ite,day_frac=day_frac)
+                    domain%cosine_zenith_angle%data_2d(its:ite,j)=sin(solar_elevation(its:ite))
                 enddo
 
                 call noahmplsm(ITIMESTEP,                              &
                              domain%model_time%year,                   &
                              domain%model_time%day_of_year(),          &
-                             domain%cos_zenith%data_2d,                &
+                             domain%cosine_zenith_angle%data_2d,       &
                              domain%latitude%data_2d,                  &
                              domain%longitude%data_2d,                 &
                              domain%dz_interface%data_3d,              &
@@ -1060,14 +1071,14 @@ contains
                              domain%ground_heat_flux%data_2d,          &
                              SMSTAV,                                   &
                              domain%soil_totalmoisture%data_2d,        &
-                             SFCRUNOFF, UDRUNOFF,    ALBEDO,   SNOWC,  &
+                             SFCRUNOFF, UDRUNOFF, ALBEDO, SNOWC,       &
                              domain%soil_water_content%data_3d,        &
                              SH2O,                                     &
                              domain%soil_temperature%data_3d,          &
                              domain%snow_water_equivalent%data_2d,     &
                              domain%snow_height%data_2d,               &
                              domain%canopy_water%data_2d,              &
-                             ACSNOM, ACSNOW,    EMISS,     QSFC,   Z0, &
+                             ACSNOM, ACSNOW, EMISS, QSFC, Z0,          &
                              domain%roughness_z0%data_2d,              &
                              domain%irr_eventno_sprinkler,             &
                              domain%irr_eventno_micro,                 &
@@ -1211,36 +1222,4 @@ contains
         endif
 
     end subroutine lsm
-
-    subroutine calc_declin (julian,hour,minute,second,latitude,longitude,cosz)
-      !calculate cosine of solar zenith angle (from noahmp hrldas driver)
-      real, parameter :: degrad = 3.14159265/180
-      real, parameter :: dpd = 360./365.
-      real, intent(in)  :: julian
-      real, intent(in)  :: hour
-      real, intent(in)  :: minute
-      real, intent(in)  :: second
-      real, intent(in)  :: latitude
-      real, intent(in)  :: longitude
-      real, intent(out) :: cosz
-      real :: obecl, sinob, declin, sxlong, arg, tloctim, hrang
-
-      obecl = 23.5*degrad
-      sinob = sin(obecl)
-
-      if (julian.ge.80.) then
-        sxlong = dpd * (julian-80.) * degrad
-      elseif (julian.lt.80.) then
-        sxlong = dpd * (julian+285.) * degrad
-      endif
-
-      arg = sinob * sin(sxlong)
-      declin = asin(arg)
-
-      tloctim = hour + (minute/60.0) + (second/3600.0) + (longitude/15.0)
-      tloctim = amod(tloctim + 24.0, 24.0)
-      hrang = 15. * (tloctim - 12.) * degrad
-      cosz = sin(latitude*degrad) * sin(declin) + cos(latitude*degrad) * cos(declin) *cos(hrang)
-
-    end subroutine calc_declin
 end module land_surface

@@ -177,7 +177,6 @@ contains
         if (0<var_list( kVARS%recharge) )                   call this%add_to_output( get_metadata( kVARS%recharge                     , domain%recharge%data_2d))
         if (0<var_list( kVARS%recharge_deep) )              call this%add_to_output( get_metadata( kVARS%recharge_deep                , domain%recharge_deep%data_2d))
         if (0<var_list( kVARS%soil_temperature) )           call this%add_to_output( get_metadata( kVARS%soil_temperature             , domain%soil_temperature%data_3d))
-        if (0<var_list( kVARS%cos_zenith) )                 call this%add_to_output( get_metadata( kVARS%cos_zenith                   , domain%cos_zenith%data_2d))
         if (0<var_list( kVARS%latitude) )                   call this%add_to_output( get_metadata( kVARS%latitude                     , domain%latitude%data_2d))
         if (0<var_list( kVARS%longitude) )                  call this%add_to_output( get_metadata( kVARS%longitude                    , domain%longitude%data_2d))
         if (0<var_list( kVARS%u_latitude) )                 call this%add_to_output( get_metadata( kVARS%u_latitude                   , domain%u_latitude%data_2d))

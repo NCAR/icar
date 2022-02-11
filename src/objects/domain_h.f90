@@ -223,7 +223,6 @@ module domain_interface
     type(variable_t) :: tend_swrad
 
     integer,allocatable :: land_mask(:,:)
-    type(variable_t) :: cos_zenith
     type(variable_t) :: latitude
     type(variable_t) :: longitude
     type(variable_t) :: u_latitude

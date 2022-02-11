@@ -2128,16 +2128,6 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
-        !!  Cosine of Zenith Angle
-        !!------------------------------------------------------------
-        associate(var=>var_meta(kVARS%cos_zenith))
-            var%name        = "cos_zenith"
-            var%dimensions  = two_d_t_dimensions
-            var%attributes  = [attribute_t("non_standard_name", "cosine_zenith_angle"),             &
-                               attribute_t("units",             "degrees"),                         &
-                               attribute_t("coordinates",       "lat lon")]
-        end associate
-        !>------------------------------------------------------------
         !!  Latitude y coordinate
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%latitude))
