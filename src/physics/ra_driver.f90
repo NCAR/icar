@@ -77,7 +77,7 @@ contains
                 domain%tend%th_swrad = 0
                 domain%tend%th_lwrad = 0
         endif
-        update_interval=600 ! 10 min (600 s)
+        update_interval=1800 ! 30 min, 1800 s   600 ! 10 min (600 s)
         last_model_time=-999
         
     end subroutine radiation_init
@@ -173,6 +173,7 @@ contains
         integer :: ids, ide, jds, jde, kds, kde
 
         real, dimension(:,:,:,:), pointer :: tauaer_sw=>null(), ssaaer_sw=>null(), asyaer_sw=>null() 
+        real, allocatable :: cldfra3d(:,:,:)
         real, allocatable :: day_frac(:), solar_elevation(:)
         real, allocatable:: albedo(:,:)
         integer :: j
@@ -201,6 +202,9 @@ contains
         allocate(day_frac(ims:ime))
         allocate(solar_elevation(ims:ime))
         allocate(albedo(ims:ime,jms:jme))
+        allocate(cldfra3d(ims:ime,kms:kme,jms:jme))
+
+        where(domain%cloud_water_mass%data_3d+domain%snow_mass%data_3d+domain%cloud_ice_mass%data_3d>0) cldfra3d=1
 
         ! Note, need to link NoahMP to update albedo
         albedo=0.17
@@ -264,7 +268,7 @@ contains
                     pi3d = domain%exner%data_3d,                          &
                     rho3d = domain%density%data_3d,                       &
                     dz8w = domain%dz_interface%data_3d,                   &
-                    !cldfra3d
+                    cldfra3d = cldfra3d,                                  &
                     !, lradius, iradius,          & 
                     is_cammgmp_used = .False.,                            &
                     r = Rd,                                               &
@@ -347,7 +351,7 @@ contains
                             g = gravity,                                          &
                             icloud = 0,                                           & ! set to nonzero if effective radius is available from microphysics
                             warm_rain = .False.,                                  & ! when a dding WSM3scheme, add option for .True.
-!                            cldfra3d  ,                                          & ! if icloud > 0, include this
+                            cldfra3d = cldfra3d,                                 & ! if icloud > 0, include this
                             cldovrlp=1,                                           & ! set to 1 for now. Could make this ICAR namelist option
 !                            lradius,iradius,                                     & !goes with CAMMGMP (Morrison Gettelman CAM mp)
                             is_cammgmp_used = .False.,                            & !goes with CAMMGMP (Morrison Gettelman CAM mp)
