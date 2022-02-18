@@ -1,4 +1,4 @@
-!>----------------------------------------------------------
+ !>----------------------------------------------------------
 !! This module provides a wrapper to call various radiation models
 !! It sets up variables specific to the physics package to be used
 !!
@@ -77,7 +77,7 @@ contains
                 domain%tend%th_swrad = 0
                 domain%tend%th_lwrad = 0
         endif
-        update_interval=1800 ! 30 min, 1800 s   600 ! 10 min (600 s)
+        update_interval=options%parameters%update_interval_rrtmg ! 30 min, 1800 s   600 ! 10 min (600 s)
         last_model_time=-999
         
     end subroutine radiation_init
@@ -279,7 +279,7 @@ contains
                     has_reqc=1,                                           & ! use with icloud > 0
                     has_reqi=1,                                           & ! use with icloud > 0
                     has_reqs=1,                                           & ! use with icloud > 0 ! G. Thompson
-                    icloud = 0,                                           & ! set to nonzero if effective radius is available from microphysics
+                    icloud = options%parameters%icloud,                  & ! set to nonzero if effective radius is available from microphysics
                     warm_rain = .False.,                                  & ! when a dding WSM3scheme, add option for .True.
                     cldovrlp=1,                                  & ! J. Henderson AER: cldovrlp namelist value
                 !f_ice_phy, f_rain_phy,                     &
@@ -349,9 +349,9 @@ contains
                             rho3d = domain%density%data_3d,                       &
                             r = Rd,                                               &
                             g = gravity,                                          &
-                            icloud = 0,                                           & ! set to nonzero if effective radius is available from microphysics
+                            icloud = options%parameters%icloud,                  & ! set to nonzero if effective radius is available from microphysics
                             warm_rain = .False.,                                  & ! when a dding WSM3scheme, add option for .True.
-                            cldfra3d = cldfra3d,                                 & ! if icloud > 0, include this
+                            cldfra3d = cldfra3d,                                  & ! if icloud > 0, include this
                             cldovrlp=1,                                           & ! set to 1 for now. Could make this ICAR namelist option
 !                            lradius,iradius,                                     & !goes with CAMMGMP (Morrison Gettelman CAM mp)
                             is_cammgmp_used = .False.,                            & !goes with CAMMGMP (Morrison Gettelman CAM mp)
