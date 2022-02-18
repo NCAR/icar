@@ -30,7 +30,7 @@ module radiation
     use domain_interface,   only : domain_t
     use data_structures
     use icar_constants, only : kVARS, cp, Rd, gravity, solar_constant
-
+    use mod_atm_utilities, only : cal_cldfra3
     implicit none
     integer :: update_interval
     real*8  :: last_model_time
@@ -179,6 +179,12 @@ contains
         integer :: j
         real ::ra_dt
 
+        real :: gridkm
+        integer :: i, k
+        real, allocatable:: t_1d(:), p_1d(:), Dz_1d(:), qv_1d(:), qc_1d(:), qi_1d(:), qs_1d(:), cf_1d(:)
+        real, allocatable :: qc(:,:,:),qi(:,:,:), qs(:,:,:), cldfra(:,:,:)
+        real, allocatable :: xland(:,:)
+
         ims = domain%grid%ims
         ime = domain%grid%ime
         jms = domain%grid%jms
@@ -198,6 +204,21 @@ contains
         jde = domain%grid%jde
         kds = domain%grid%kds
         kde = domain%grid%kde
+
+        allocate(t_1d(kms:kme))
+        allocate(p_1d(kms:kme))
+        allocate(Dz_1d(kms:kme))
+        allocate(qv_1d(kms:kme))
+        allocate(qc_1d(kms:kme))
+        allocate(qi_1d(kms:kme))
+        allocate(qs_1d(kms:kme))
+        allocate(cf_1d(kms:kme))
+
+        allocate(qc(ims:ime,kms:kme,jms:jme))
+        allocate(qi(ims:ime,kms:kme,jms:jme))
+        allocate(qs(ims:ime,kms:kme,jms:jme))
+        allocate(cldfra(ims:ime,kms:kme,jms:jme))
+        allocate(xland(ims:ime,jms:jme))
 
         allocate(day_frac(ims:ime))
         allocate(solar_elevation(ims:ime))
@@ -246,6 +267,37 @@ contains
                 last_model_time = domain%model_time%seconds()
                 domain%tend%th_swrad = 0
                 domain%shortwave%data_2d = 0
+                ! Calculate cloud fraction
+                If (options%parameters%icloud == 3) THEN
+                    DO j = jts,jte
+                        DO i = its,ite
+                            DO k = kts,kte
+                                p_1d(k) = domain%pressure%data_3d(i,k,j) !p(i,k,j)
+                                t_1d(k) = domain%temperature%data_3d(i,k,j)
+                                qv_1d(k) = domain%water_vapor%data_3d(i,k,j)
+                                qc_1d(k) = domain%cloud_water_mass%data_3d(i,k,j)
+                                qi_1d(k) = domain%cloud_ice_mass%data_3d(i,k,j)
+                                qs_1d(k) = domain%snow_mass%data_3d(i,k,j)
+                                Dz_1d(k) = domain%dz_interface%data_3d(i,k,j)
+                                cf_1d(k) = cldfra(i,k,j)
+                            ENDDO
+                            gridkm = domain%dx*1000
+                            XLAND = domain%land_mask
+                            CALL cal_cldfra3(cf_1d, qv_1d, qc_1d, qi_1d, qs_1d, Dz_1d, &
+                 &                          p_1d, t_1d, XLAND(i,j), gridkm,        &
+                 &                          .false., 1.5, kts, kte)
+
+                            DO k = kts,kte
+                                qc(i,k,j) = qc_1d(k)
+                                qi(i,k,j) = qi_1d(k)
+                                qs(i,k,j) = qs_1d(k)
+                                cldfra(i,k,j) = cf_1d(k)
+                            ENDDO
+                        ENDDO
+                    ENDDO
+                END IF
+
+
                 call RRTMG_SWRAD(rthratensw=domain%tend%th_swrad,                 &
 !                swupt, swuptc, swuptcln, swdnt, swdntc, swdntcln, &
 !                swupb, swupbc, swupbcln, swdnb, swdnbc, swdnbcln, &
@@ -268,7 +320,7 @@ contains
                     pi3d = domain%exner%data_3d,                          &
                     rho3d = domain%density%data_3d,                       &
                     dz8w = domain%dz_interface%data_3d,                   &
-                    cldfra3d = cldfra3d,                                  &
+                    cldfra3d=cldfra,                                      &
                     !, lradius, iradius,          & 
                     is_cammgmp_used = .False.,                            &
                     r = Rd,                                               &
@@ -287,10 +339,10 @@ contains
                     xice=real(domain%land_mask)*0,                        & ! should add a variable for sea ice fraction
                     snow=domain%snow_water_equivalent%data_2d,            &
                     qv3d=domain%water_vapor%data_3d,                      &
-                    qc3d=domain%cloud_water_mass%data_3d,                 &
+                    qc3d=qc,                                              &
                     qr3d=domain%rain_mass%data_3d,                        &
-                    qi3d=domain%cloud_ice_mass%data_3d,                   &
-                    qs3d=domain%snow_mass%data_3d,                        &
+                    qi3d=qi,                                              &
+                    qs3d=qs,                                              &
                     qg3d=domain%graupel_mass%data_3d,                     &
                     !o3input, o33d,                             &
                     aer_opt=0,                                            & 
@@ -300,7 +352,7 @@ contains
 !                        alswnirdir, alswnirdif,                    &  !Zhenxin ssib alb comp (06/20/2011)
 !                        swvisdir, swvisdif,                        &  !Zhenxin ssib swr comp (06/20/2011)
 !                        swnirdir, swnirdif,                        &  !Zhenxin ssib swi comp (06/20/2011)
-                    sf_surface_physics=1,                        &  !Zhenxin
+                    sf_surface_physics=1,                                 &  !Zhenxin
                     !f_qv, f_qc, f_qr, f_qi, f_qs, f_qg,        &
                 !tauaer300,tauaer400,tauaer600,tauaer999,   & ! czhao 
                 !gaer300,gaer400,gaer600,gaer999,           & ! czhao 
@@ -349,9 +401,9 @@ contains
                             rho3d = domain%density%data_3d,                       &
                             r = Rd,                                               &
                             g = gravity,                                          &
-                            icloud = options%parameters%icloud,                  & ! set to nonzero if effective radius is available from microphysics
+                            icloud = options%parameters%icloud,                   & ! set to nonzero if effective radius is available from microphysics
                             warm_rain = .False.,                                  & ! when a dding WSM3scheme, add option for .True.
-                            cldfra3d = cldfra3d,                                  & ! if icloud > 0, include this
+                            cldfra3d = cldfra,                                    &
                             cldovrlp=1,                                           & ! set to 1 for now. Could make this ICAR namelist option
 !                            lradius,iradius,                                     & !goes with CAMMGMP (Morrison Gettelman CAM mp)
                             is_cammgmp_used = .False.,                            & !goes with CAMMGMP (Morrison Gettelman CAM mp)
@@ -360,10 +412,10 @@ contains
                             xice=real(domain%land_mask)*0,                        & ! should add a variable for sea ice fraction
                             snow=domain%snow_water_equivalent%data_2d,            &
                             qv3d=domain%water_vapor%data_3d,                      &
-                            qc3d=domain%cloud_water_mass%data_3d,                 &
+                            qc3d=qc,                                              &
                             qr3d=domain%rain_mass%data_3d,                        &
-                            qi3d=domain%cloud_ice_mass%data_3d,                   &
-                            qs3d=domain%snow_mass%data_3d,                        &
+                            qi3d=qi,                                              &
+                            qs3d=qs,                                              &
                             qg3d=domain%graupel_mass%data_3d,                     &
 !                            o3input, o33d,                             &
 !                            f_qv, f_qc, f_qr, f_qi, f_qs, f_qg,                  & ! if icloud > 0, these can be set to true
