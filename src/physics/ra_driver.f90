@@ -230,6 +230,11 @@ contains
         where(domain%cloud_water_mass%data_3d+domain%snow_mass%data_3d+domain%cloud_ice_mass%data_3d>0) cldfra3d=1
 
         ! Note, need to link NoahMP to update albedo
+        
+        qc = 0
+        qi = 0
+        qs = 0
+
         albedo=0.17
         F_QI=.false.
         F_QC=.false.
@@ -244,7 +249,7 @@ contains
         F_QR=associated(domain%rain_mass%data_3d )
         F_QS=associated(domain%snow_mass%data_3d )
         F_QV=associated(domain%water_vapor%data_3d )
-        F_QG=associated(domain%graupel_mass%data_3d )
+        !F_QG=associated(domain%graupel_mass%data_3d )
         F_QNDROP=associated(domain%cloud_number%data_3d)
 
         if (F_QC) qc(:,:,:) = domain%cloud_water_mass%data_3d
@@ -384,7 +389,7 @@ contains
 !                   aer_ra_feedback,                                      &
 !jdfcz              progn,prescribe,                                      &
                     calc_clean_atm_diag=0,                                &
-                    qndrop3d=domain%cloud_number%data_3d,                 &
+!                    qndrop3d=domain%cloud_number%data_3d,                 &
                     f_qndrop=f_qndrop,                                    & !czhao
                     mp_physics=0,                                         & !wang 2014/12
                     ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, &
@@ -455,7 +460,7 @@ contains
 !                           aer_ra_feedback,                                      & !czhao
 !                    !jdfcz progn,prescribe,                                      & !czhao
                             calc_clean_atm_diag=0,                                & ! used with wrf_chem !czhao
-                            qndrop3d=domain%cloud_number%data_3d,                 & ! used with icould > 0
+!                            qndrop3d=domain%cloud_number%data_3d,                 & ! used with icould > 0
                             f_qndrop=f_qndrop,                                    & ! if icloud > 0, use this
                         !ccc added for time varying gases.
                             yr=domain%model_time%year,                             &
