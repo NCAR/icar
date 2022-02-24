@@ -915,7 +915,6 @@ contains
         integer :: ntimesteps, wind_iterations
         integer :: longitude_system
         integer :: nz, n_ext_winds,buffer, warning_level, cfl_strictness
-        integer :: update_interval_rrtmg, icloud
         logical :: ideal, readz, readdz, interactive, debug, external_winds, surface_io_only, &
                    mean_winds, mean_fields, restart, advect_density, z_is_geopotential, z_is_on_interface,&
                    high_res_soil_state, use_agl_height, time_varying_z, t_is_potential, qv_is_spec_humidity, &
@@ -948,8 +947,7 @@ contains
                               adv_options_filename,     use_adv_options,    &
                               bias_options_filename,    use_bias_correction,&
                               cu_options_filename,      use_cu_options,     &
-                              rad_options_filename,     use_rad_options,    &
-                              update_interval_rrtmg,    icloud
+                              rad_options_filename,     use_rad_options
 
 !       default parameters
         surface_io_only     = .False.
@@ -992,8 +990,6 @@ contains
         outputinterval      =  3600
         frames_per_outfile  =  24
         longitude_system    = kMAINTAIN_LON
-        update_interval_rrtmg = 1800
-        icloud             =  3
 
         ! flag set to read specific parameterization options
         use_mp_options=.False.
@@ -1136,9 +1132,6 @@ contains
 
         options%cfl_reduction_factor = cfl_reduction_factor
         options%cfl_strictness = cfl_strictness
-
-        options%update_interval_rrtmg = update_interval_rrtmg
-        options%icloud                = icloud
 
         options%use_mp_options      = use_mp_options
         options%mp_options_filename = mp_options_filename

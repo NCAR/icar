@@ -824,12 +824,12 @@ contains
     86  continue
         k_tropo = MAX(kts+2, MIN(k+2, kte-1))
 
-        if (k_tropo.gt.kte-2) then
-            WRITE (*,*) 'DEBUG-GT: CAUTION, tropopause appears to be very high up: ', k_tropo
-            do k = kte, kts, -1
-                WRITE (*,*) 'DEBUG-GT,   P, T : ', k,P1d(k)*0.01,T1d(k)-273.16
-            enddo
-        endif
+        !if (k_tropo.gt.kte-2) then
+        !    WRITE (*,*) 'DEBUG-GT: CAUTION, tropopause appears to be very high up: ', k_tropo
+        !    do k = kte, kts, -1
+        !        WRITE (*,*) 'DEBUG-GT,   P, T : ', k,P1d(k)*0.01,T1d(k)-273.16
+        !    enddo
+        !endif
 
        !..Eliminate possible fractional clouds above supposed tropopause.
         DO k = k_tropo+1, kte
@@ -939,7 +939,7 @@ contains
         do k = k1, k2
             tdz = tdz + dz(k)
         enddo
-        ax_iwc = ABS(qvs(k2)-qvs(k1))
+        max_iwc = ABS(qvs(k2)-qvs(k1))
 
         do k = k1, k2
             max_iwc = MAX(1.E-6, max_iwc - (qi(k)+qs(k)))

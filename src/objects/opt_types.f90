@@ -290,8 +290,6 @@ module options_types
 
         real    :: agl_cap              ! height up to which AGL height is used for vertical interpolation
 
-        integer :: update_interval_rrtmg !How often to update the RRTMG scheme
-        integer :: icloud               ! How to treat clouds in RRTMG scheme
 
         ! physics parameterization options
         logical :: use_mp_options
