@@ -64,6 +64,7 @@ contains
         call lsm_parameters_namelist(   this%parameters%lsm_options_filename,   this)
         call cu_parameters_namelist(    this%parameters%cu_options_filename,    this)
         call bias_parameters_namelist(  this%parameters%bias_options_filename,  this)
+        call rad_parameters_namelist(   this%parameters%rad_options_filename,   this)
 
         if (this%parameters%restart) then
             ! if (this_image()==1) write(*,*) "  (opt) Restart = ", this%parameters%restart
@@ -532,6 +533,7 @@ contains
         rad = 0 ! 0 = no RAD,
                 ! 1 = Surface fluxes from GCM, (radiative cooling ~1K/day in LSM=1 module),
                 ! 2 = cloud fraction based radiation + radiative cooling
+                ! 3 = RRTMG
 
         conv= 0 ! 0 = no CONV,
                 ! 1 = Tiedke scheme
@@ -918,14 +920,14 @@ contains
                    high_res_soil_state, use_agl_height, time_varying_z, t_is_potential, qv_is_spec_humidity, &
                    qv_is_relative_humidity, &
                    use_mp_options, use_lt_options, use_adv_options, use_lsm_options, use_bias_correction, &
-                   use_block_options, use_cu_options
+                   use_block_options, use_cu_options, use_rad_options
 
         character(len=MAXFILELENGTH) :: date, calendar, start_date, forcing_start_date, end_date
         integer :: year, month, day, hour, minute, second
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, &
                                         adv_options_filename, lsm_options_filename, &
                                         bias_options_filename, block_options_filename, &
-                                        cu_options_filename
+                                        cu_options_filename, rad_options_filename
 
 
         namelist /parameters/ ntimesteps, wind_iterations, outputinterval, frames_per_outfile, inputinterval, surface_io_only,                &
@@ -944,7 +946,8 @@ contains
                               lsm_options_filename,     use_lsm_options,    &
                               adv_options_filename,     use_adv_options,    &
                               bias_options_filename,    use_bias_correction,&
-                              cu_options_filename,      use_cu_options
+                              cu_options_filename,      use_cu_options,     &
+                              rad_options_filename,     use_rad_options
 
 !       default parameters
         surface_io_only     = .False.
@@ -1003,6 +1006,9 @@ contains
 
         use_lsm_options=.False.
         lsm_options_filename = filename
+
+        use_rad_options=.False.
+        rad_options_filename = filename
 
         use_bias_correction=.False.
         bias_options_filename = filename
@@ -1127,7 +1133,6 @@ contains
         options%cfl_reduction_factor = cfl_reduction_factor
         options%cfl_strictness = cfl_strictness
 
-
         options%use_mp_options      = use_mp_options
         options%mp_options_filename = mp_options_filename
 
@@ -1142,6 +1147,9 @@ contains
 
         options%use_lsm_options     = use_lsm_options
         options%lsm_options_filename= lsm_options_filename
+
+        options%use_rad_options     = use_rad_options
+        options%rad_options_filename= rad_options_filename
 
         options%use_bias_correction  = use_bias_correction
         options%bias_options_filename= bias_options_filename
@@ -1747,6 +1755,56 @@ contains
         ! copy the data back into the global options data structure
         options%lsm_options = lsm_options
     end subroutine lsm_parameters_namelist
+
+
+    !> -------------------------------
+    !! Initialize the radiation model options
+    !!
+    !! Reads the rad_parameters namelist or sets default values
+    !! Perhaps not use this subroutine, since icloud and update_interval_rrtmg is set in icar_options
+    !! -------------------------------
+    subroutine rad_parameters_namelist(filename, options)
+        implicit none
+        character(len=*),   intent(in)   :: filename
+        type(options_t),    intent(inout)::options
+
+        type(rad_options_type) :: rad_options
+        integer :: name_unit
+
+        integer :: update_interval_rrtmg             ! minimum number of seconds between RRTMG updates
+        integer :: icloud                            ! how RRTMG interacts with clouds
+
+        ! define the namelist
+        namelist /rad_parameters/ update_interval_rrtmg, icloud
+
+
+         ! because adv_options could be in a separate file
+         if (options%parameters%use_rad_options) then
+             if (trim(filename)/=trim(get_options_file())) then
+                 call version_check(filename,options%parameters)
+             endif
+         endif
+
+
+        ! set default values
+        update_interval_rrtmg = 1800 ! 30 minutes
+        icloud          = 3    ! effective radius from microphysics scheme
+
+        ! read the namelist options
+        if (options%parameters%use_rad_options) then
+            open(io_newunit(name_unit), file=filename)
+            read(name_unit,nml=rad_parameters)
+            close(name_unit)
+        endif
+
+        ! store everything in the radiation_options structure
+        rad_options%update_interval_rrtmg = update_interval_rrtmg
+        rad_options%icloud                = icloud
+
+        ! copy the data back into the global options data structure
+        options%rad_options = rad_options
+    end subroutine rad_parameters_namelist
+
 
 
     !> -------------------------------
