@@ -227,8 +227,6 @@ contains
         allocate(albedo(ims:ime,jms:jme))
         allocate(cldfra3d(ims:ime,kms:kme,jms:jme))
 
-        where(domain%cloud_water_mass%data_3d+domain%snow_mass%data_3d+domain%cloud_ice_mass%data_3d>0) cldfra3d=1
-
         ! Note, need to link NoahMP to update albedo
         
         qc = 0
