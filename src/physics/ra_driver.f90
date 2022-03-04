@@ -467,8 +467,9 @@ contains
                             mp_physics=0,                                          &
                             ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde,  &
                             ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme,  &
-                            its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte-1 &
-!                           lwupflx, lwupflxc, lwdnflx, lwdnflxc                   &
+                            its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte-1,&
+!                           lwupflx, lwupflxc, lwdnflx, lwdnflxc,                  &
+                            read_ghg=options%rad_options%read_ghg                  &
                             )
             endif
             domain%temperature%data_3d = domain%temperature%data_3d+domain%tend%th_lwrad*dt+domain%tend%th_swrad*dt

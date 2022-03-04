@@ -1761,7 +1761,6 @@ contains
     !! Initialize the radiation model options
     !!
     !! Reads the rad_parameters namelist or sets default values
-    !! Perhaps not use this subroutine, since icloud and update_interval_rrtmg is set in icar_options
     !! -------------------------------
     subroutine rad_parameters_namelist(filename, options)
         implicit none
@@ -1773,9 +1772,9 @@ contains
 
         integer :: update_interval_rrtmg             ! minimum number of seconds between RRTMG updates
         integer :: icloud                            ! how RRTMG interacts with clouds
-
+        logical :: read_ghg
         ! define the namelist
-        namelist /rad_parameters/ update_interval_rrtmg, icloud
+        namelist /rad_parameters/ update_interval_rrtmg, icloud, read_ghg
 
 
          ! because adv_options could be in a separate file
@@ -1789,6 +1788,7 @@ contains
         ! set default values
         update_interval_rrtmg = 1800 ! 30 minutes
         icloud          = 3    ! effective radius from microphysics scheme
+        read_ghg        = .false.
 
         ! read the namelist options
         if (options%parameters%use_rad_options) then
@@ -1800,6 +1800,7 @@ contains
         ! store everything in the radiation_options structure
         rad_options%update_interval_rrtmg = update_interval_rrtmg
         rad_options%icloud                = icloud
+        rad_options%read_ghg              = read_ghg
 
         ! copy the data back into the global options data structure
         options%rad_options = rad_options
