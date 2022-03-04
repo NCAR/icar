@@ -147,6 +147,8 @@ module options_types
        integer :: update_interval_rrtmg                ! how ofen to update the radiation in seconds.
                                                        ! RRTMG scheme is expensive. Default is 1800s (30 minutes)
        integer :: icloud                               ! How RRTMG interact with clouds
+       logical :: read_ghg                             ! Eihter use default green house gas mixing ratio, or read the in from file
+
     end type rad_options_type
 
     ! ------------------------------------------------
