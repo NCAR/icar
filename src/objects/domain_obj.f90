@@ -1513,6 +1513,8 @@ contains
 
         soil_thickness = 1.0
         soil_thickness(1:4) = [0.1, 0.2, 0.5, 1.0]
+
+        if (this_image()==1) write (*,*) "Reading Land Variables"
         if (associated(this%soil_water_content%data_3d)) then
             nsoil = size(this%soil_water_content%data_3d, 2)
         elseif (associated(this%soil_temperature%data_3d)) then
@@ -1588,6 +1590,19 @@ contains
             endif
         endif
 
+        if (options%parameters%snowh_var /= "") then
+            call io_read(options%parameters%init_conditions_file,   &
+                           options%parameters%snowh_var,         &
+                           temporary_data)
+            if (associated(this%snow_height%data_2d)) then
+                this%snow_height%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+            endif
+
+        else
+            if (associated(this%snow_height%data_2d)) then
+                this%snow_height%data_2d = 0
+            endif
+        endif
 
         if (options%parameters%soil_vwc_var /= "") then
             call io_read(options%parameters%init_conditions_file,   &
@@ -1639,6 +1654,48 @@ contains
             endif
         endif
 
+        if (options%parameters%vegfracmax_var /= "") then
+            call io_read(options%parameters%init_conditions_file,   &
+                           options%parameters%vegfracmax_var,       &
+                           temporary_data)
+            if (associated(this%vegetation_fraction_max%data_2d)) then
+                this%vegetation_fraction_max%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+            endif
+        else
+            if (associated(this%vegetation_fraction_max%data_2d)) then
+                if (this_image()==1) write(*,*) "    VEGMAX not specified; using default value of 0.8"
+                this%vegetation_fraction_max%data_2d = 0.8
+            endif
+        endif
+
+        if (options%parameters%lai_var /= "") then
+            call io_read(options%parameters%init_conditions_file,   &
+                           options%parameters%lai_var,              &
+                           temporary_data)
+            if (associated(this%lai%data_2d)) then
+                this%lai%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+            endif
+        else
+            if (associated(this%lai%data_2d)) then
+                if (this_image()==1) write(*,*) "    LAI not specified; using default value of 1"
+                this%lai%data_2d = 1
+            endif
+        endif
+
+        if (options%parameters%canwat_var /= "") then
+            call io_read(options%parameters%init_conditions_file,   &
+                           options%parameters%canwat_var,              &
+                           temporary_data)
+            if (associated(this%canopy_water%data_2d)) then
+                this%canopy_water%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+            endif
+        else
+            if (associated(this%canopy_water%data_2d)) then
+                if (this_image()==1) write(*,*) "    CANWAT not specified; using default value of 0"
+                this%canopy_water%data_2d = 0
+            endif
+        endif
+
         ! these will all be udpated by either forcing data or the land model, but initialize to sensible values to avoid breaking other initialization routines
         if (associated(this%skin_temperature%data_2d)) this%skin_temperature%data_2d = 280
         if (associated(this%roughness_z0%data_2d)) this%roughness_z0%data_2d = 0.001
@@ -1651,6 +1708,19 @@ contains
         if (associated(this%surface_pressure%data_2d)) this%surface_pressure%data_2d=102000
         if (associated(this%longwave_up%data_2d)) this%longwave_up%data_2d=0
         if (associated(this%ground_heat_flux%data_2d)) this%ground_heat_flux%data_2d=0
+        if (associated(this%veg_leaf_temperature%data_2d)) this%veg_leaf_temperature%data_2d=280
+        if (associated(this%ground_surf_temperature%data_2d)) this%ground_surf_temperature%data_2d=280
+        if (associated(this%canopy_vapor_pressure%data_2d)) this%canopy_vapor_pressure%data_2d=2000
+        if (associated(this%canopy_temperature%data_2d)) this%canopy_temperature%data_2d=280
+        if (associated(this%coeff_momentum_drag%data_2d)) this%coeff_momentum_drag%data_2d=0
+        if (associated(this%coeff_heat_exchange%data_2d)) this%coeff_heat_exchange%data_2d=0
+        if (associated(this%canopy_fwet%data_2d)) this%canopy_fwet%data_2d=0
+        if (associated(this%snow_water_eq_prev%data_2d)) this%snow_water_eq_prev%data_2d=0
+        if (associated(this%snow_albedo_prev%data_2d)) this%snow_albedo_prev%data_2d=0.65
+        if (associated(this%storage_lake%data_2d)) this%storage_lake%data_2d=0
+
+
+
 
 
     end subroutine read_land_variables

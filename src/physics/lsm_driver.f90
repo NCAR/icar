@@ -434,6 +434,7 @@ contains
         if (this_image()==1) write(*,*) "Initializing LSM"
 
         if (this_image()==1) write(*,*) "    max soil_deep_temperature on init: ", maxval(domain%soil_deep_temperature%data_2d)
+        if (this_image()==1) write(*,*) "    max skin_temperature on init: ", maxval(domain%skin_temperature%data_2d)
 
         exchange_term = 1
 
@@ -662,13 +663,13 @@ contains
             IOPT_STC = 1         ! snow/soil temp. time scheme
             IOPT_GLA = 1         ! glacier option (1 = phase change; 2 = simple)
             IOPT_RSF = 1         ! surface resistance (1 = Sakaguchi/Zeng; 2 = Sellers; 3 = modified Sellers; 4 = 1+snow)
-            IOPT_SOIL = 1        ! soil config. option
+            IOPT_SOIL = 1        ! soil config. option (1 = homogeneous with depth; 2 & 3 = variable with depth--not currently set up)
             IOPT_PEDO = 1        ! soil pedotransfer function option
             IOPT_CROP = 0        ! crop model option (0 = none; 1 = Liu et al.; 2 = Gecros)
             IOPT_IRR = 0         ! irrigation scheme (0 = OFF; 1 = ON)
             IOPT_IRRM = 0        ! irrigation method
             IZ0TLND = 0          ! option of Chen adjustment of Czil (not used)
-            SF_URBAN_PHYSICS = 0 ! urban physics (0 = off (I think))
+            SF_URBAN_PHYSICS = 0 ! urban physics (0 = off)
 
             !allocate dummy variable that doesn't do anything
             allocate(chstarxy(ims:ime,jms:jme))
@@ -724,7 +725,7 @@ contains
                                 domain%crop_category,                   &
                                 domain%irr_eventno_sprinkler,           &
                                 domain%irr_eventno_micro,               &
-                                domain%irr_eventno_flood        ,       &
+                                domain%irr_eventno_flood,               &
                                 domain%irr_alloc_sprinkler%data_2d,     &
                                 domain%irr_alloc_micro%data_2d,         &
                                 domain%irr_alloc_flood%data_2d,         &
@@ -1034,36 +1035,36 @@ contains
                              real(domain%land_mask),                   &
                              XICE,                                     &
                              XICE_THRESHOLD,                           &
-                             domain%crop_category,                     &
-                             domain%date_planting%data_2d,             &
-                             domain%date_harvest%data_2d,              &
-                             domain%growing_season_gdd%data_2d,        &
+                             domain%crop_category,                     &  !only used if iopt_crop>0; not currently set up
+                             domain%date_planting%data_2d,             &  !only used if iopt_crop>0; not currently set up
+                             domain%date_harvest%data_2d,              &  !only used if iopt_crop>0; not currently set up
+                             domain%growing_season_gdd%data_2d,        &  !only used if iopt_crop>0; not currently set up
                              IDVEG, IOPT_CRS,  IOPT_BTR, IOPT_RUN,     &
                              IOPT_SFC, IOPT_FRZ, IOPT_INF, IOPT_RAD,   &
                              IOPT_ALB, IOPT_SNF, IOPT_TBOT, IOPT_STC,  &
                              IOPT_GLA, IOPT_RSF, IOPT_SOIL,IOPT_PEDO,  &
                              IOPT_CROP, IOPT_IRR, IOPT_IRRM, IZ0TLND,  &
                              SF_URBAN_PHYSICS,                         &
-                             domain%soil_sand_and_clay%data_3d,        &
-                             domain%soil_texture_1%data_2d,            &
-                             domain%soil_texture_2%data_2d,            &
-                             domain%soil_texture_3%data_2d,            &
-                             domain%soil_texture_4%data_2d,            &
+                             domain%soil_sand_and_clay%data_3d,        &  ! only used if iopt_soil = 3
+                             domain%soil_texture_1%data_2d,            &  ! only used if iopt_soil = 2
+                             domain%soil_texture_2%data_2d,            &  ! only used if iopt_soil = 2
+                             domain%soil_texture_3%data_2d,            &  ! only used if iopt_soil = 2
+                             domain%soil_texture_4%data_2d,            &  ! only used if iopt_soil = 2
                              domain%temperature%data_3d,               &
                              domain%water_vapor%data_3d,               &
                              domain%u%data_3d,                         &
                              domain%v%data_3d,                         &
                              domain%shortwave%data_2d,                 &
-                             domain%shortwave_direct%data_2d,          &
-                             domain%shortwave_diffuse%data_2d,         &
+                             domain%shortwave_direct%data_2d,          &  ! only used in urban modules, which are currently disabled
+                             domain%shortwave_diffuse%data_2d,         &  ! only used in urban modules, which are currently disabled
                              domain%longwave%data_2d,                  &
                              domain%pressure_interface%data_3d,        &
                              current_precipitation,                    &
                              SR,                                       &
-                             domain%irr_frac_total%data_2d,            &
-                             domain%irr_frac_sprinkler%data_2d,        &
-                             domain%irr_frac_micro%data_2d,            &
-                             domain%irr_frac_flood%data_2d,            &
+                             domain%irr_frac_total%data_2d,            &  ! only used if iopt_irr > 0
+                             domain%irr_frac_sprinkler%data_2d,        &  ! only used if iopt_irr > 0
+                             domain%irr_frac_micro%data_2d,            &  ! only used if iopt_irr > 0
+                             domain%irr_frac_flood%data_2d,            &  ! only used if iopt_irr > 0
                              domain%skin_temperature%data_2d,          &
                              domain%sensible_heat%data_2d,             &
                              QFX,                                      &
@@ -1080,17 +1081,17 @@ contains
                              domain%canopy_water%data_2d,              &
                              ACSNOM, ACSNOW, EMISS, QSFC, Z0,          &
                              domain%roughness_z0%data_2d,              &
-                             domain%irr_eventno_sprinkler,             &
-                             domain%irr_eventno_micro,                 &
-                             domain%irr_eventno_flood,                 &
-                             domain%irr_alloc_sprinkler%data_2d,       &
-                             domain%irr_alloc_micro%data_2d,           &
-                             domain%irr_alloc_flood%data_2d,           &
-                             domain%irr_evap_loss_sprinkler%data_2d,   &
-                             domain%irr_amt_sprinkler%data_2d,         &
-                             domain%irr_amt_micro%data_2d,             &
-                             domain%irr_amt_flood%data_2d,             &
-                             domain%evap_heat_sprinkler%data_2d,       &
+                             domain%irr_eventno_sprinkler,             &  ! only used if iopt_irr > 0
+                             domain%irr_eventno_micro,                 &  ! only used if iopt_irr > 0
+                             domain%irr_eventno_flood,                 &  ! only used if iopt_irr > 0
+                             domain%irr_alloc_sprinkler%data_2d,       &  ! only used if iopt_irr > 0
+                             domain%irr_alloc_micro%data_2d,           &  ! only used if iopt_irr > 0
+                             domain%irr_alloc_flood%data_2d,           &  ! only used if iopt_irr > 0
+                             domain%irr_evap_loss_sprinkler%data_2d,   &  ! only used if iopt_irr > 0
+                             domain%irr_amt_sprinkler%data_2d,         &  ! only used if iopt_irr > 0
+                             domain%irr_amt_micro%data_2d,             &  ! only used if iopt_irr > 0
+                             domain%irr_amt_flood%data_2d,             &  ! only used if iopt_irr > 0
+                             domain%evap_heat_sprinkler%data_2d,       &  ! only used if iopt_irr > 0
                              landuse_name,                             &
                              domain%snow_nlayers,                      &
                              domain%veg_leaf_temperature%data_2d,      &
@@ -1127,10 +1128,10 @@ contains
                              domain%smc_watertable_deep%data_2d,       &
                              domain%recharge_deep%data_2d,             &
                              domain%recharge%data_2d,                  &
-                             domain%mass_ag_grain%data_2d,             &
-                             domain%growing_degree_days%data_2d,       &
-                             domain%plant_growth_stage,                &
-                             domain%gecros_state%data_3d,              &
+                             domain%mass_ag_grain%data_2d,             &  ! currently left as zeroes; not used if iopt_crop = 0?
+                             domain%growing_degree_days%data_2d,       &  ! currently left as zeroes; not used if iopt_crop = 0?
+                             domain%plant_growth_stage,                &  ! currently left as zeroes; not used if iopt_crop = 0?
+                             domain%gecros_state%data_3d,              &  ! not set up; only used if iopt_crop = 2
                              domain%temperature_2m_veg%data_2d,        &
                              domain%temperature_2m_bare%data_2d,       &
                              domain%mixing_ratio_2m_veg%data_2d,       &

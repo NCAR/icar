@@ -685,7 +685,7 @@ contains
         !>------------------------------------------------------------
         !!  Downward Diffuse Shortwave Radiation at the Surface (positive down)
         !!------------------------------------------------------------
-        associate(var=>var_meta(kVARS%shortwave))
+        associate(var=>var_meta(kVARS%shortwave_diffuse))
             var%name        = "shortwave_diffuse"
             var%dimensions  = two_d_t_dimensions
             var%unlimited_dim=.True.
