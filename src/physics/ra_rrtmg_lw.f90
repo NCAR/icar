@@ -11913,10 +11913,10 @@ if (read_ghg) then
     IF (this_image()==1) THEN
      WRITE(message,*)'CAM-CLWRF interpolated values______ year:',yr,' julian day:',julian
      !call wrf_debug( 100, message)
-     write(*,*) message
+     ! write(*,*) message
      WRITE(message,*)'  CAM-CLWRF co2vmr: ',co2,' n2ovmr:',n2o,' ch4vmr:',ch4,' cfc11vmr:',cfc11,' cfc12vmr:',cfc12
      !call wrf_debug( 100, message)
-     write(*,*) message
+     ! write(*,*) message
    ENDIF
 endif
 !#endif
