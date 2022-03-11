@@ -114,7 +114,7 @@ contains
                          kVARS%sensible_heat, kVARS%latent_heat, kVARS%u_10m, kVARS%v_10m, kVARS%temperature_2m,        &
                          kVARS%humidity_2m, kVARS%surface_pressure, kVARS%longwave_up, kVARS%ground_heat_flux,          &
                          kVARS%soil_totalmoisture, kVARS%soil_deep_temperature, kVARS%roughness_z0, kVARS%ustar,        &
-                         kVARS%snow_height, kVARS%lai,                                                                  &  ! BK 2020/10/26
+                         kVARS%snow_height, kVARS%lai, kVARS%temperature_2m_veg,                                        &
                          kVARS%veg_type, kVARS%soil_type, kVARS%land_mask])
 
              call options%advect_vars([kVARS%potential_temperature, kVARS%water_vapor])
@@ -258,32 +258,54 @@ contains
         where(exchange_C < MIN_EXCHANGE_C) exchange_C=MIN_EXCHANGE_C
     end subroutine calc_mahrt_holtslag_exchange_coefficient
 
-    subroutine surface_diagnostics(HFX, QFX, TSK, QSFC, CHS2, CQS2,T2, Q2, PSFC)
+    subroutine surface_diagnostics(HFX, QFX, TSK, QSFC, CHS2, CQS2,T2, Q2, PSFC, &
+                                    VEGFRAC, veg_type, land_mask, T2veg, T2bare, Q2veg, Q2bare)
         ! taken almost directly / exactly from WRF's module_sf_sfcdiags.F
         implicit none
         REAL, DIMENSION(ims:ime, jms:jme ), INTENT(IN)    ::  HFX, QFX, TSK, QSFC
         REAL, DIMENSION(ims:ime, jms:jme ), INTENT(INOUT) ::  Q2, T2
         REAL, DIMENSION(ims:ime, jms:jme ), INTENT(IN)    ::  PSFC, CHS2, CQS2
+        REAL, DIMENSION(ims:ime, jms:jme ), INTENT(IN)    ::  T2veg, T2bare, Q2veg, Q2bare, VEGFRAC
+        INTEGER, DIMENSION(ims:ime, jms:jme ), INTENT(IN) ::  land_mask, veg_type
         integer :: i,j, nx,ny
         real :: rho
 
-        !$omp parallel default(shared), private(nx,ny,i,j,rho)
+        !$omp parallel default(shared), private(i,j,rho)
         nx=size(HFX,1)
         ny=size(HFX,2)
         !$omp do
         do j=jts,jte
             do i=its,ite
                 RHO = PSFC(I,J)/(Rd * TSK(I,J))
-                if(CQS2(I,J).lt.1.E-3) then
-                   Q2(I,J) = QSFC(I,J)
+
+                ! if ((domain%veg_type(i,j)/=13).and.(domain%veg_type(i,j)/=15).and.(domain%veg_type(i,j)/=16).and.(domain%veg_type(i,j)/=21)) then
+                ! over glacier, urban and barren, noahmp veg 2m T is 0 or -9999e35
+                if ((T2veg(i,j) > 200).and.(land_mask(i,j)==kLC_LAND)) then
+                    T2(i,j) = VEGFRAC(i,j) * T2veg(i,j) &
+                        + (1-VEGFRAC(i,j)) * T2bare(i,j)
+                    Q2(i,j) = VEGFRAC(i,j) * Q2veg(i,j) &
+                        + (1-VEGFRAC(i,j)) * Q2bare(i,j)
                 else
-                   Q2(I,J) = QSFC(I,J) - QFX(I,J)/(RHO*CQS2(I,J))
+                    ! over glacier we don't want to use the bare ground temperature though
+                    if ((veg_type(i,j)/=15)              &
+                        .and.(veg_type(i,j)/=21)         &
+                        .and.(land_mask(i,j)==kLC_LAND)) then
+                        T2(i,j) = T2bare(i,j)
+                        Q2(i,j) = Q2bare(i,j)
+                    else
+                        if(CQS2(I,J).lt.1.E-3) then
+                           Q2(I,J) = QSFC(I,J)
+                        else
+                           Q2(I,J) = QSFC(I,J) - QFX(I,J)/(RHO*CQS2(I,J))
+                        endif
+                        if(CHS2(I,J).lt.1.E-3) then
+                           T2(I,J) = TSK(I,J)
+                        else
+                           T2(I,J) = TSK(I,J) - HFX(I,J)/(RHO*CP*CHS2(I,J))
+                        endif
+                    endif
                 endif
-                if(CHS2(I,J).lt.1.E-3) then
-                   T2(I,J) = TSK(I,J)
-                else
-                   T2(I,J) = TSK(I,J) - HFX(I,J)/(RHO*CP*CHS2(I,J))
-                endif
+
                 ! TH2(I,J) = T2(I,J)*(1.E5/PSFC(I,J))**ROVCP
             enddo
         enddo
@@ -1204,19 +1226,27 @@ contains
                 ! accumulate soil moisture over the entire column
                 domain%soil_totalmoisture%data_2d = domain%soil_water_content%data_3d(:,1,:) * DZS(1) * 1000
                 do i = 2,num_soil_layers
-                    domain%soil_totalmoisture%data_2d = domain%soil_totalmoisture%data_2d + domain%soil_water_content%data_3d(:,i,:) * DZS(i)
+                    domain%soil_totalmoisture%data_2d = domain%soil_totalmoisture%data_2d + domain%soil_water_content%data_3d(:,i,:) * DZS(i) * 1000
                 enddo
 
                 ! 2m Air T and Q are not well defined if Tskin is not coupled with the surface fluxes
-                call surface_diagnostics(domain%sensible_heat%data_2d,    &
-                                         QFX,                             &
-                                         domain%skin_temperature%data_2d, &
-                                         QSFC,                            &
-                                         CHS2,                            &
-                                         CQS2,                            &
-                                         domain%temperature_2m%data_2d,   &
-                                         domain%humidity_2m%data_2d,      &
-                                         domain%surface_pressure%data_2d)
+                call surface_diagnostics(domain%sensible_heat%data_2d,          &
+                                         QFX,                                   &
+                                         domain%skin_temperature%data_2d,       &
+                                         QSFC,                                  &
+                                         CHS2,                                  &
+                                         CQS2,                                  &
+                                         domain%temperature_2m%data_2d,         &
+                                         domain%humidity_2m%data_2d,            &
+                                         domain%surface_pressure%data_2d,       &
+                                         VEGFRAC,                               &
+                                         domain%veg_type,                       &
+                                         domain%land_mask,                      &
+                                         domain%temperature_2m_veg%data_2d,     &
+                                         domain%temperature_2m_bare%data_2d,    &
+                                         domain%mixing_ratio_2m_veg%data_2d,    &
+                                         domain%mixing_ratio_2m_bare%data_2d)
+
             endif
         endif
         if (options%physics%landsurface>0) then
