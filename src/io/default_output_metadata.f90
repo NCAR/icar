@@ -153,8 +153,13 @@ contains
         character(len=16) :: two_d_t_dimensions(3)              = [character(len=16) :: "lon_x","lat_y","time"]
         character(len=16) :: two_d_u_dimensions(2)              = [character(len=16) :: "lon_u","lat_y"]
         character(len=16) :: two_d_v_dimensions(2)              = [character(len=16) :: "lon_x","lat_v"]
-        character(len=16) :: three_d_soil_dimensions(3)         = [character(len=16) :: "lon_x","lat_y","nsoil"]
         character(len=16) :: three_d_t_soil_dimensions(4)       = [character(len=16) :: "lon_x","lat_y","nsoil","time"]
+        character(len=16) :: three_d_t_snow_dimensions(4)       = [character(len=16) :: "lon_x","lat_y","nsnow","time"]
+        character(len=16) :: three_d_t_snowsoil_dimensions(4)   = [character(len=16) :: "lon_x","lat_y","nsnowsoil","time"]
+        character(len=16) :: three_d_soilcomp_dimensions(3)     = [character(len=16) :: "lon_x","lat_y","nsoil_composition"]
+        character(len=16) :: three_d_crop_dimensions(3)         = [character(len=16) :: "lon_x","lat_y","crop"]
+        character(len=16) :: three_d_t_gecros_dimensions(4)     = [character(len=16) :: "lon_x","lat_y","gecros","time"]
+        character(len=16) :: two_d_month_dimensions(3)          = [character(len=16) :: "lon_x","lat_y","month"]
 
         if (allocated(var_meta)) deallocate(var_meta)
 
@@ -775,8 +780,7 @@ contains
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%vegetation_fraction))
             var%name        = "vegetation_fraction"
-            var%dimensions  = two_d_t_dimensions
-            var%unlimited_dim=.True.
+            var%dimensions  = two_d_month_dimensions
             var%attributes  = [attribute_t("standard_name", "vegetation_area_fraction"),            &
                                attribute_t("units",         "m2 m-2"),                              &
                                attribute_t("coordinates",   "lat lon")]
@@ -902,8 +906,7 @@ contains
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%crop_category))
             var%name        = "crop_category"
-            var%dimensions  = two_d_t_dimensions
-            var%unlimited_dim=.True.
+            var%dimensions  = two_d_dimensions
             var%attributes  = [attribute_t("non_standard_name", "crop_category"),                   &
                                attribute_t("units",         "1"),                                   &
                                attribute_t("coordinates",   "lat lon")]
@@ -913,8 +916,7 @@ contains
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%crop_type))
             var%name        = "crop_type"
-            var%dimensions  = three_d_dimensions
-            var%unlimited_dim=.True.
+            var%dimensions  = three_d_crop_dimensions
             var%attributes  = [attribute_t("non_standard_name", "crop_type"),                       &
                                attribute_t("units",         "1"),                                   &
                                attribute_t("coordinates",   "lat lon")]
@@ -1221,7 +1223,7 @@ contains
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%gecros_state))
             var%name        = "gecros_state"
-            var%dimensions  = two_d_t_dimensions
+            var%dimensions  = three_d_t_gecros_dimensions
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("non_standard_name", "gecros_state"),                                    &
                                attribute_t("units",         "N/A"),                                               &
@@ -1419,7 +1421,7 @@ contains
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%snow_temperature))
             var%name        = "snow_temperature"
-            var%dimensions  = three_d_t_dimensions
+            var%dimensions  = three_d_t_snow_dimensions
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "temperature_in_surface_snow"),         &
                                attribute_t("units",         "K"),                                   &
@@ -1430,7 +1432,7 @@ contains
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%snow_layer_depth))
             var%name        = "snow_layer_depth"
-            var%dimensions  = three_d_t_dimensions
+            var%dimensions  = three_d_t_snowsoil_dimensions
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("non_standard_name", "snow_layer_depth"),                &
                                attribute_t("units",         "m"),                                   &
@@ -1441,7 +1443,7 @@ contains
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%snow_layer_ice))
             var%name        = "snow_layer_ice"
-            var%dimensions  = three_d_t_dimensions
+            var%dimensions  = three_d_t_snow_dimensions
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("non_standard_name", "snow_layer_ice_content"),          &
                                attribute_t("units",         "mm"),                                  &
@@ -1452,7 +1454,7 @@ contains
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%snow_layer_liquid_water))
             var%name        = "snow_layer_liquid_water"
-            var%dimensions  = three_d_t_dimensions
+            var%dimensions  = three_d_t_snow_dimensions
             var%unlimited_dim=.True.
             var%attributes  = [attribute_t("non_standard_name", "snow_layer_liquid_water_content"), &
                                attribute_t("units",         "mm"),                                  &
@@ -1896,7 +1898,7 @@ contains
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%soil_sand_and_clay))
             var%name        = "soil_sand_and_clay_composition"
-            var%dimensions  = three_d_dimensions
+            var%dimensions  = three_d_soilcomp_dimensions
             var%attributes  = [attribute_t("non_standard_name", "soil_sand_and_clay_composition"),    &
                                attribute_t("units",         "1"),                                     &
                                attribute_t("coordinates",   "lat lon")]
