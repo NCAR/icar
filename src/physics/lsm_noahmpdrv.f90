@@ -1720,7 +1720,7 @@ SUBROUTINE PEDOTRANSFER_SR2006(nsoil,sand,clay,orgm,parameters)
        IF(.NOT.FNDSNOWH)THEN
           ! If no SNOWH do the following
         !  CALL wrf_message( 'SNOW HEIGHT NOT FOUND - VALUE DEFINED IN LSMINIT' )
-          WRITE(*,*) 'SNOW HEIGHT NOT FOUND - VALUE DEFINED IN LSMINIT'
+          if (this_image()==1) WRITE(*,*) 'SNOW HEIGHT NOT FOUND - VALUE DEFINED IN LSMINIT'
           DO J = jts,jtf
              DO I = its,itf
                 SNOWH(I,J)=SNOW(I,J)*0.005               ! SNOW in mm and SNOWH in m
