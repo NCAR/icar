@@ -293,6 +293,9 @@ contains
                 ! Calculate cloud fraction
                 If (options%rad_options%icloud == 3) THEN
                     IF ( F_QC .AND. F_QI ) THEN
+                        gridkm = domain%dx/1000
+                        XLAND = domain%land_mask
+
                         DO j = jts,jte
                             DO i = its,ite
                                 DO k = kts,kte
@@ -305,8 +308,6 @@ contains
                                     Dz_1d(k) = domain%dz_interface%data_3d(i,k,j)
                                     cf_1d(k) = cldfra(i,k,j)
                                 ENDDO
-                                gridkm = domain%dx/1000
-                                XLAND = domain%land_mask
                                 CALL cal_cldfra3(cf_1d, qv_1d, qc_1d, qi_1d, qs_1d, Dz_1d, &
                  &                              p_1d, t_1d, XLAND(i,j), gridkm,        &
                  &                              .false., 1.5, kms, kme)
