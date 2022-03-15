@@ -254,26 +254,26 @@ contains
         
     end subroutine mpdata_fluxes
 
-    subroutine flux_limiter(q, q2, u,v,w, nx,nz,ny)
+    subroutine flux_limiter(q, q2, u,v,w, ims,ime,kms,kme,jms,jme)
         implicit none
-        real,dimension(1:nx,1:nz,1:ny),  intent(in)    :: q, q2
-        real,dimension(1:nx-1,1:nz,1:ny),intent(inout) :: u
-        real,dimension(1:nx,1:nz,1:ny-1),intent(inout) :: v
-        real,dimension(1:nx,1:nz,1:ny),  intent(inout) :: w
-        integer, intent(in) :: nx,nz,ny
+        real,dimension(ims:ime,kms:kme,jms:jme),  intent(in)    :: q, q2
+        real,dimension(ims:ime-1,kms:kme,jms:jme),intent(inout) :: u
+        real,dimension(ims:ime,kms:kme,jms:jme-1),intent(inout) :: v
+        real,dimension(ims:ime,kms:kme,jms:jme),  intent(inout) :: w
+        integer, intent(in) :: ims, ime, kms, kme, jms, jme
         
-        integer :: i,j,k,n
+        integer :: i,j,k,n,n_s
         real, dimension(:), pointer :: q1, U2, l, f
         ! q1 = q after applying previous iteration advection
         ! l  = q before applying previous iteration
         ! U2 is the anti-diffusion pseudo-velocity
         ! f is the first pass calculation of MPDATA fluxes
-        real, dimension(nx),   target :: q1x,lx
-        real, dimension(nx-1), target :: fx, U2x
-        real, dimension(ny),   target :: q1y,ly
-        real, dimension(ny-1), target :: fy, U2y
-        real, dimension(nz),   target :: q1z,lz
-        real, dimension(nz-1), target :: fz, U2z
+        real, dimension(ims:ime),   target :: q1x,lx
+        real, dimension(ims:ime-1), target :: fx, U2x
+        real, dimension(jms:jme),   target :: q1y,ly
+        real, dimension(jms:jme-1), target :: fy, U2y
+        real, dimension(kms:kme),   target :: q1z,lz
+        real, dimension(kms:kme-1), target :: fz, U2z
         logical :: flux_is_w
         
         real :: qmax_i,qmin_i,qmax_i2,qmin_i2
@@ -282,64 +282,67 @@ contains
         
         ! NOTE: before inclusion of FCT_core the following variables must be setup: 
         ! q1 and l (l=q0)
-        !$omp parallel shared(q2,q,u,v,w) firstprivate(nx,ny,nz) default(private)
+        !$omp parallel shared(q2,q,u,v,w) firstprivate(ims,ime,kms,kme,jms,jme) default(private)
         !$omp do schedule(static)
-        do j=2,ny-1
+        do j=jms+1,jme-1
             flux_is_w=.False.
-            n=nx
             q1=>q1x
             l =>lx
             U2=>U2x
             f=>fx
-            do k=1,nz
+            n=ime
+            n_s=ims
+            do k=kms,kme
                 ! setup u
                 q1=q2(:,k,j)
                 U2=u(:,k,j)
                 l =q(:,k,j)
-                call flux1(q1(1:n-1),q1(2:n),U2,f)
+                call flux1(q1(ims:ime-1),q1(ims+1:ime),U2,f)
                 
                 include "adv_mpdata_FCT_core.f90"
                 u(:,k,j)=U2
             end do
             
-            n=nz
             q1=>q1z
             l =>lz
             U2=>U2z
             f=>fz
+            n=kme
+            n_s=kms
             flux_is_w=.True.
-            do k=2,nx-1
+            do k=ims+1,ime-1
                 ! setup w
                 q1=q2(k,:,j)
-                U2=w(k,1:n-1,j)
+                U2=w(k,kms:kme-1,j)
                 l =q(k,:,j)
-                call flux1(q1(1:n-1),q1(2:n),U2,f)
+                call flux1(q1(kms:kme-1),q1(kms+1:kme),U2,f)
                 ! NOTE: need to check this a little more
                 include "adv_mpdata_FCT_core.f90"
-                w(k,1:n-1,j)=U2
-                w(k,n,j)=0
+                w(k,kms:kme-1,j)=U2
+                w(k,kme,j)=0
             end do
             
         end do
         !$omp end do
         
         flux_is_w=.False.
-        n=ny
         q1=>q1y
         l =>ly
         U2=>U2y
         f=>fy
+        n=jme
+        n_s=jms
         ! NOTE: This it typically not the correct order for the loop variables
         ! but in this case it permits parallelization over a larger number (nx instead of nz)
         ! and because all data are copied from an oddly spaced grid regardless, it *probably* doesn't slow it down
         ! I'd like to re-write the v-flux delimiter to operate on all x simulataneously at some point...
         !$omp do
-        do j=1,nx
-            do k=1,nz
+        do j=ims,ime
+            do k=kms,kme
                 q1=q2(j,k,:)
                 U2=v(j,k,:)
                 l =q(j,k,:)
-                call flux1(q1(1:n-1),q1(2:n),U2,f)
+                call flux1(q1(jms:jme-1),q1(jms+1:jme),U2,f)
                 
                 include "adv_mpdata_FCT_core.f90"
                 v(j,k,:)=U2
@@ -377,7 +380,13 @@ contains
                 ! and un-normalize, since upwind advection scheme includes dz
                 ! Since pseudo-velocities cannot be gaurenteed to be non-divergent, we assume worst-case and multiply by 0.5 to
                 ! ensure stability (from Smolarkiewicz 1984, after Eq. 24)
-                call upwind_advection(q2, 0.5*u2, 0.5*v2, 0.5*(w2*dz), rho, q,dz,ims,ime,kms,kme,jms,jme,jaco)
+                u2 = u2*0.5
+                v2 = v2*0.5
+                w2 = w2*0.5*dz
+                if (options%adv_options%flux_corrected_transport) then
+                    call flux_limiter(q, q2, u2,v2,w2, ims,ime,kms,kme,jms,jme)
+                endif
+                call upwind_advection(q2, u2,v2,w2, rho, q,dz,ims,ime,kms,kme,jms,jme,jaco)
             endif
             
             !  
