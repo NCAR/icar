@@ -1249,6 +1249,7 @@ CONTAINS
         FIND_LUTYPE : DO WHILE (LUMATCH == 0)
            READ (19,*,END=2002)
            READ (19,*,END=2002)LUTYPE
+           print *, LUTYPE 
            READ (19,*)LUCATS,IINDEX
 
            IF(LUTYPE.EQ.MMINLU)THEN

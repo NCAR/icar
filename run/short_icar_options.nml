@@ -38,7 +38,7 @@
     pbl = 0,  ! 1=legacy (deprecated)      2=Simple (Local HP96)        3=YSU             (N/A)
 
     ! Land Surface Model
-    lsm = 0,  ! 1=use prescribed fluxes    2=Simple LSM (N/A)           3=Noah LSM                  4=NoahMP (wishlist)
+    lsm = 0,  ! 1=use prescribed fluxes    2=Simple LSM (N/A)           3=Noah LSM                  4=NoahMP
 
     ! Open water fluxes
     water=0,  ! 1=use prescribed (w/lsm=1) 2=Simple sea surface fluxes
@@ -46,7 +46,7 @@
     ! Microphysics Scheme
     mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison                  4=WSM6      5=Thompson-Eidhammer
     ! Radiation Scheme
-    rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG   
+    rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG
 
     ! Convection / Cumulus Scheme
     conv= 0,  ! 1=Tiedke Scheme            2=Simple Scheme (wishlist)   3=Kain-Fritsch
@@ -164,7 +164,7 @@
     vlat_hi = "XLAT_V",     ! latitude  (ns-staggered grid) [degrees]
     vlon_hi = "XLONG_V",    ! longitude (ns-staggered grid) [degrees]
 
-    ! To use the Noah LSM additional fields must be specified on the high-res grid, see complete_icar_options.nml
+    ! To use the Noah or NoahMP LSMs, additional fields must be specified on the high-res grid, see complete_icar_options.nml
 
     ! only required for some physics code (Noah LSM, water, Tiedke, KF(?))
     landvar = "LANDMASK",   ! land-water mask (as in WRF) 1=land, 0 or 2=water

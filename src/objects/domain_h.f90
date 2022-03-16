@@ -21,6 +21,8 @@ module domain_interface
     type(grid_t)         :: grid2d, u_grid2d, v_grid2d
     type(grid_t)         :: u_grid2d_ext, v_grid2d_ext!, grid2d_ext ! extended grids for u and v fields pre smoothing (grid_2d_ext is for SLEVE topography smoothing)
     type(grid_t)         :: grid_monthly, grid_soil
+    type(grid_t)         :: grid_snow, grid_snowsoil
+    type(grid_t)         :: grid_soilcomp, grid_gecros, grid_croptype
 
     type(Time_type) :: model_time
 
@@ -63,38 +65,150 @@ module domain_interface
     type(variable_t) :: accumulated_convective_pcp
     integer,allocatable :: cu_precipitation_bucket(:,:)
     type(variable_t) :: accumulated_snowfall
+    type(variable_t) :: precip_in_total
+    type(variable_t) :: snowfall_ground
+    type(variable_t) :: rainfall_ground
     integer,allocatable :: snowfall_bucket(:,:)
     type(variable_t) :: external_precipitation
     type(variable_t) :: cloud_fraction
     type(variable_t) :: longwave
     type(variable_t) :: shortwave
+    type(variable_t) :: shortwave_direct
+    type(variable_t) :: shortwave_diffuse
     type(variable_t) :: terrain
     type(variable_t) :: forcing_terrain  ! BK 05/2020: The forcing terrain interpolated 2d to the hi-res grid. In order to calculate difference in slope
     type(variable_t) :: forcing_terrain2 ! test 9-6-2020
         ! type(variable_t) :: forcing_terrain_u1 ! test 9-6-2020
     type(variable_t) :: u_10m
     type(variable_t) :: v_10m
+    type(variable_t) :: coeff_momentum_drag
+    type(variable_t) :: coeff_heat_exchange
+    type(variable_t) :: surface_rad_temperature
     type(variable_t) :: temperature_2m
     type(variable_t) :: humidity_2m
+    type(variable_t) :: temperature_2m_veg
+    type(variable_t) :: temperature_2m_bare
+    type(variable_t) :: mixing_ratio_2m_veg
+    type(variable_t) :: mixing_ratio_2m_bare
     type(variable_t) :: surface_pressure
+    type(variable_t) :: rad_absorbed_total
+    type(variable_t) :: rad_absorbed_veg
+    type(variable_t) :: rad_absorbed_bare
+    type(variable_t) :: rad_net_longwave
     type(variable_t) :: longwave_up
     type(variable_t) :: ground_heat_flux
     type(variable_t) :: sensible_heat
     type(variable_t) :: latent_heat
     integer,allocatable :: veg_type(:,:)
+    type(variable_t) :: mass_leaf
+    type(variable_t) :: mass_root
+    type(variable_t) :: mass_stem
+    type(variable_t) :: mass_wood
     integer,allocatable :: soil_type(:,:)
+    type(variable_t) :: soil_texture_1
+    type(variable_t) :: soil_texture_2
+    type(variable_t) :: soil_texture_3
+    type(variable_t) :: soil_texture_4
+    type(variable_t) :: soil_sand_and_clay
+    type(variable_t) :: soil_carbon_stable
+    type(variable_t) :: soil_carbon_fast
     type(variable_t) :: roughness_z0
     type(variable_t) :: vegetation_fraction
+    type(variable_t) :: vegetation_fraction_max
+    type(variable_t) :: vegetation_fraction_out
     type(variable_t) :: lai
+    type(variable_t) :: sai
+    integer,allocatable :: crop_category(:,:)
+    type(variable_t) :: crop_type
+    type(variable_t) :: date_planting
+    type(variable_t) :: date_harvest
+    type(variable_t) :: growing_season_gdd
+    type(variable_t) :: irr_frac_total
+    type(variable_t) :: irr_frac_sprinkler
+    type(variable_t) :: irr_frac_micro
+    type(variable_t) :: irr_frac_flood
+    integer,allocatable :: irr_eventno_sprinkler(:,:)
+    integer,allocatable :: irr_eventno_micro(:,:)
+    integer,allocatable :: irr_eventno_flood(:,:)
+    type(variable_t) :: irr_alloc_sprinkler
+    type(variable_t) :: irr_alloc_micro
+    type(variable_t) :: irr_alloc_flood
+    type(variable_t) :: irr_evap_loss_sprinkler
+    type(variable_t) :: irr_amt_sprinkler
+    type(variable_t) :: irr_amt_micro
+    type(variable_t) :: irr_amt_flood
+    type(variable_t) :: evap_heat_sprinkler
+    type(variable_t) :: mass_ag_grain
+    type(variable_t) :: growing_degree_days
+    integer,allocatable :: plant_growth_stage(:,:)
+    type(variable_t) :: net_ecosystem_exchange
+    type(variable_t) :: gross_primary_prod
+    type(variable_t) :: net_primary_prod
+    type(variable_t) :: apar
+    type(variable_t) :: photosynthesis_total
+    type(variable_t) :: stomatal_resist_total
+    type(variable_t) :: stomatal_resist_sun
+    type(variable_t) :: stomatal_resist_shade
+    type(variable_t) :: gecros_state
     type(variable_t) :: canopy_water
+    type(variable_t) :: canopy_water_ice
+    type(variable_t) :: canopy_water_liquid
+    type(variable_t) :: canopy_vapor_pressure
+    type(variable_t) :: canopy_temperature
+    type(variable_t) :: canopy_fwet
+    type(variable_t) :: veg_leaf_temperature
+    type(variable_t) :: ground_surf_temperature
+    type(variable_t) :: frac_between_gap
+    type(variable_t) :: frac_within_gap
+    type(variable_t) :: ground_temperature_bare
+    type(variable_t) :: ground_temperature_canopy
     type(variable_t) :: snow_water_equivalent
+    type(variable_t) :: snow_water_eq_prev
+    type(variable_t) :: snow_albedo_prev
+    type(variable_t) :: snow_temperature
+    type(variable_t) :: snow_layer_depth
+    type(variable_t) :: snow_layer_ice
+    type(variable_t) :: snow_layer_liquid_water
+    type(variable_t) :: snow_age_factor
     type(variable_t) :: snow_height
+    integer,allocatable :: snow_nlayers(:,:)
     type(variable_t) :: skin_temperature
     type(variable_t) :: sst
     type(variable_t) :: soil_water_content
+    type(variable_t) :: eq_soil_moisture
+    type(variable_t) :: smc_watertable_deep
+    type(variable_t) :: recharge
+    type(variable_t) :: recharge_deep
     type(variable_t) :: soil_temperature
+    type(variable_t) :: runoff_subsurface
+    type(variable_t) :: runoff_surface
+    type(variable_t) :: evap_canopy
+    type(variable_t) :: evap_soil_surface
+    type(variable_t) :: transpiration_rate
+    type(variable_t) :: ch_veg
+    type(variable_t) :: ch_veg_2m
+    type(variable_t) :: ch_bare
+    type(variable_t) :: ch_bare_2m
+    type(variable_t) :: ch_under_canopy
+    type(variable_t) :: ch_leaf
+    type(variable_t) :: sensible_heat_veg
+    type(variable_t) :: sensible_heat_bare
+    type(variable_t) :: sensible_heat_canopy
+    type(variable_t) :: evap_heat_veg
+    type(variable_t) :: evap_heat_bare
+    type(variable_t) :: evap_heat_canopy
+    type(variable_t) :: transpiration_heat
+    type(variable_t) :: ground_heat_veg
+    type(variable_t) :: ground_heat_bare
+    type(variable_t) :: net_longwave_veg
+    type(variable_t) :: net_longwave_bare
+    type(variable_t) :: net_longwave_canopy
     type(variable_t) :: soil_totalmoisture
     type(variable_t) :: soil_deep_temperature
+    type(variable_t) :: water_table_depth
+    type(variable_t) :: water_aquifer
+    type(variable_t) :: storage_gw
+    type(variable_t) :: storage_lake
 
     ! link effective radius from microphysics to radiation scheme
     type(variable_t) :: re_cloud
