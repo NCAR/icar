@@ -141,8 +141,8 @@ contains
                       kVARS%land_mask,    kVARS%snow_water_equivalent,  &
                       kVARS%dz_interface, kVARS%skin_temperature,      kVARS%temperature,             kVARS%density,          &
                       kVARS%longwave_cloud_forcing,                    kVARS%land_emissivity,         kVARS%temperature_interface,  &
-                      kVARS%cosine_zenith_angle,                       kVARS%shortwave_cloud_forcing, kVARS%tend_swrad           &
-                      ])
+                      kVARS%cosine_zenith_angle,                       kVARS%shortwave_cloud_forcing, kVARS%tend_swrad,           &
+                      kVARS%cloud_fraction])
 
 
         ! List the variables that are required when restarting for the simple radiation code
@@ -295,7 +295,7 @@ contains
                     IF ( F_QC .AND. F_QI ) THEN
                         gridkm = domain%dx/1000
                         XLAND = domain%land_mask
-
+                        domain%cloud_fraction%data_2d = 0
                         DO j = jts,jte
                             DO i = its,ite
                                 DO k = kts,kte
@@ -318,6 +318,7 @@ contains
                                     qi(i,k,j) = qi_1d(k)
                                     qs(i,k,j) = qs_1d(k)
                                     cldfra(i,k,j) = cf_1d(k)
+                                    domain%cloud_fraction%data_2d(i,j) = max(domain%cloud_fraction%data_2d(i,j), cf_1d(k))
                                 ENDDO
                             ENDDO
                         ENDDO
