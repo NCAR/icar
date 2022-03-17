@@ -602,7 +602,7 @@ contains
         end associate
 
         !>------------------------------------------------------------
-        !!  Shorwave cloud forcing
+        !!  Shortwave cloud forcing
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%shortwave_cloud_forcing))
             var%name        = "swcf"
