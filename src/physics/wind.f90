@@ -75,11 +75,11 @@ contains
     !! Starts by setting w out of the ground=0 then works through layers
     !!
     !!------------------------------------------------------------
-    subroutine balance_uvw(u,v,w, jaco_u,jaco_v,jaco_w,dz,dx,jaco,smooth_height, options)
+    subroutine balance_uvw(u,v,w, jaco_u,jaco_v,jaco_w,dz,dx,jaco, options)
         implicit none
         real,           intent(inout) :: u(:,:,:), v(:,:,:), w(:,:,:)
         real,           intent(in)    :: jaco_u(:,:,:), jaco_v(:,:,:), jaco_w(:,:,:), dz(:,:,:), jaco(:,:,:)
-        real,           intent(in)    :: dx, smooth_height
+        real,           intent(in)    :: dx
         type(options_t),intent(in)    :: options
 
         real, allocatable, dimension(:,:) :: rhou, rhov, rhow
@@ -112,7 +112,7 @@ contains
 
         allocate(divergence(ims:ime,kms:kme,jms:jme))
 
-        call calc_divergence(divergence,u,v,w,jaco_u,jaco_v,jaco_w,dz,dx,jaco,smooth_height,horz_only=.True.)
+        call calc_divergence(divergence,u,v,w,jaco_u,jaco_v,jaco_w,dz,dx,jaco,horz_only=.True.)
 
         ! If this becomes a bottle neck in the code it could be parallelized over y
         ! loop over domain levels
@@ -166,11 +166,11 @@ contains
     end subroutine balance_uvw
 
 
-    subroutine calc_divergence(div, u, v, w, jaco_u, jaco_v, jaco_w, dz, dx, jaco, smooth_height,horz_only)
+    subroutine calc_divergence(div, u, v, w, jaco_u, jaco_v, jaco_w, dz, dx, jaco,horz_only)
         implicit none
         real,           intent(inout) :: div(:,:,:)
         real,           intent(in)    :: u(:,:,:), v(:,:,:), w(:,:,:), dz(:,:,:), jaco_u(:,:,:), jaco_v(:,:,:), jaco_w(:,:,:), jaco(:,:,:)
-        real,           intent(in)    :: dx, smooth_height
+        real,           intent(in)    :: dx
         logical, optional, intent(in)  :: horz_only
         ! type(options_t),intent(in)    :: options
 
@@ -207,8 +207,7 @@ contains
         div(ims:ime,kms:kme,jms:jme) = (diff_U+diff_V)/(dx)
 
         if (.NOT.(horz)) then
-            w_met = w * jaco_w !(:,kms:kme-1,:) = w(:,kms:kme-1,:) * (jaco(:,kms:kme-1,:)+jaco(:,kms+1:kme,:))/2
-            !w_met(:,kme,:) = w(:,kme,:) * jaco(:,kme,:)
+            w_met = w * jaco_w
 
             do k = kms,kme
                 if (k == kms) then
@@ -218,6 +217,8 @@ contains
                                    (w_met(ims:ime,k,jms:jme)-w_met(ims:ime,k-1,jms:jme))/(dz(ims:ime,k,jms:jme))
                 endif
             enddo
+            ! If we are doing a full calculation of divergence, and not just U+V differencing for balance_uvw, then divide by
+            ! jacobian at the end
             div = div/jaco
         endif
 
@@ -319,7 +320,7 @@ contains
             ! else assumes even flow over the mountains
 
             ! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
-            call balance_uvw(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%jacobian_u, domain%jacobian_v, domain%jacobian_w, domain%advection_dz, domain%dx, domain%jacobian, domain%smooth_height, options)
+            call balance_uvw(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%jacobian_u, domain%jacobian_v, domain%jacobian_w, domain%advection_dz, domain%dx, domain%jacobian, options)
 
         else
 
@@ -348,7 +349,7 @@ contains
                              domain% w %meta_data%dqdt_3d,      &
                              domain%jacobian_u, domain%jacobian_v, domain%jacobian_w,         &
                              domain%advection_dz, domain%dx,    &
-                             domain%jacobian, domain%smooth_height, options)
+                             domain%jacobian, options)
 
         endif
 
@@ -395,7 +396,7 @@ contains
 
         !First call bal_uvw to generate an initial-guess for vertical winds
         call balance_uvw(domain%u%data_3d,domain%v%data_3d,domain%w%data_3d,domain%jacobian_u,domain%jacobian_v,domain%jacobian_w,domain%advection_dz,&
-                         domain%dx,domain%jacobian,domain%smooth_height,options)
+                         domain%dx,domain%jacobian,options)
 
         allocate(div(ims:ime,kms:kme,jms:jme))
         allocate(ADJ_coef(ims:ime,kms:kme,jms:jme))
@@ -441,7 +442,7 @@ contains
         do it = 0,options%parameters%wind_iterations
             !Compute divergence in new wind field
             call calc_divergence(div,domain%u%data_3d,domain%v%data_3d,domain%w%data_3d,domain%jacobian_u,domain%jacobian_v,domain%jacobian_w, &
-                                domain%advection_dz,domain%dx,domain%jacobian,domain%smooth_height)
+                                domain%advection_dz,domain%dx,domain%jacobian)
 
             !Compute adjustment based on divergence
             ADJ = div/ADJ_coef
