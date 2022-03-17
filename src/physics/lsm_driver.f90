@@ -1075,8 +1075,8 @@ contains
                              domain%soil_texture_4%data_2d,            &  ! only used if iopt_soil = 2
                              domain%temperature%data_3d,               &
                              domain%water_vapor%data_3d,               &
-                             domain%u_mass%data_3d,                         &
-                             domain%v_mass%data_3d,                         &
+                             domain%u_mass%data_3d,                    &
+                             domain%v_mass%data_3d,                    &
                              domain%shortwave%data_2d,                 &
                              domain%shortwave_direct%data_2d,          &  ! only used in urban modules, which are currently disabled
                              domain%shortwave_diffuse%data_2d,         &  ! only used in urban modules, which are currently disabled
