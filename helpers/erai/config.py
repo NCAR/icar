@@ -13,7 +13,7 @@ version="1.1"
 def set_bounds(info):
     atm_file=info.atmdir+info.atmfile
     erai_file=atm_file.replace("_Y_","2000").replace("_M_","01").replace("_D_","01").replace("_h_","00")
-    varlist=["g4_lat_0","g4_lon_1"]
+    varlist=["g4_lat_0","g4_lon_1","Z_GDS4_HYBL","T_GDS4_HYBL","Q_GDS4_HYBL","LNSP_GDS4_HYBL","CLWC_GDS4_HYBL","CIWC_GDS4_HYBL","lv_HYBL2_a","lv_HYBL2_b","P0"]
     output_dir=info.nc_file_dir
     try:
         os.mkdir(output_dir)

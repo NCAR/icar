@@ -92,7 +92,7 @@ def load_atm(time,info):
     """Load atmospheric variable from a GRIB file"""
     uvfile,scfile=find_atm_file(time,info)
     uvnc_file=grib2nc(uvfile,atmuvlist,info.nc_file_dir)
-    scnc_file=grib2nc(scfile,atmvarlist,info.nc_file_dir)
+    scnc_file=grib2nc(scfile,atmvarlist+["g4_lat_0","g4_lon_1"],info.nc_file_dir)
 
     outputdata=Bunch()
     for s,v in zip(icar_uv_var,atmuvlist):
