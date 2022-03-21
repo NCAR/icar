@@ -34,7 +34,7 @@ module radiation
     implicit none
     integer :: update_interval
     real*8  :: last_model_time
-contains    
+contains
 
     subroutine radiation_init(domain,options)
         type(domain_t), intent(inout) :: domain
@@ -51,17 +51,17 @@ contains
         endif
 
         if (options%physics%radiation==kRA_RRTMG) then
-            if (this_image()==1) write(*,*) "    RRTMG" 
+            if (this_image()==1) write(*,*) "    RRTMG"
             if(.not.allocated(domain%tend%th_lwrad)) &
                 allocate(domain%tend%th_lwrad(domain%ims:domain%ime,domain%kms:domain%kme,domain%jms:domain%jme))
             if(.not.allocated(domain%tend%th_swrad)) &
                 allocate(domain%tend%th_swrad(domain%ims:domain%ime,domain%kms:domain%kme,domain%jms:domain%jme))
-                 
+
             call ra_simple_init(domain, options)
 
             call rrtmg_lwinit(                           &
                 !p_top=minval(domain%pressure_interface%data_3d(:,domain%kme,:)), allowed_to_read=.TRUE. ,                     &
-                ! Added 0.8 factor to make sure p_top is low enough. This value can be changed if code crashes. 
+                ! Added 0.8 factor to make sure p_top is low enough. This value can be changed if code crashes.
                 ! Code will crash because of negative log value in this expression in ra_rrtmg_lw and ra_rrtmg_sw:
                 !        plog = log(pavel(lay))
                 p_top=(minval(domain%pressure_interface%data_3d(:,domain%kme,:)))*0.8, allowed_to_read=.TRUE. ,                &
@@ -79,7 +79,7 @@ contains
         endif
         update_interval=options%rad_options%update_interval_rrtmg ! 30 min, 1800 s   600 ! 10 min (600 s)
         last_model_time=-999
-        
+
     end subroutine radiation_init
 
 
@@ -141,8 +141,8 @@ contains
                       kVARS%land_mask,    kVARS%snow_water_equivalent,  &
                       kVARS%dz_interface, kVARS%skin_temperature,      kVARS%temperature,             kVARS%density,          &
                       kVARS%longwave_cloud_forcing,                    kVARS%land_emissivity,         kVARS%temperature_interface,  &
-                      kVARS%cosine_zenith_angle,                       kVARS%shortwave_cloud_forcing, kVARS%tend_swrad           &
-                      ])
+                      kVARS%cosine_zenith_angle,                       kVARS%shortwave_cloud_forcing, kVARS%tend_swrad,           &
+                      kVARS%cloud_fraction])
 
 
         ! List the variables that are required when restarting for the simple radiation code
@@ -172,8 +172,7 @@ contains
         integer :: its, ite, jts, jte, kts, kte
         integer :: ids, ide, jds, jde, kds, kde
 
-        real, dimension(:,:,:,:), pointer :: tauaer_sw=>null(), ssaaer_sw=>null(), asyaer_sw=>null() 
-        real, allocatable :: cldfra3d(:,:,:)
+        real, dimension(:,:,:,:), pointer :: tauaer_sw=>null(), ssaaer_sw=>null(), asyaer_sw=>null()
         real, allocatable :: day_frac(:), solar_elevation(:)
         real, allocatable:: albedo(:,:)
         integer :: j
@@ -225,14 +224,14 @@ contains
         allocate(day_frac(ims:ime))
         allocate(solar_elevation(ims:ime))
         allocate(albedo(ims:ime,jms:jme))
-        allocate(cldfra3d(ims:ime,kms:kme,jms:jme))
 
         ! Note, need to link NoahMP to update albedo
-        
+
         qc = 0
         qi = 0
         qs = 0
 
+        cldfra=0
         albedo=0.17
         F_QI=.false.
         F_QC=.false.
@@ -279,9 +278,9 @@ contains
         if (options%physics%radiation==kRA_RRTMG) then
             do j = jms,jme
                 solar_elevation  = calc_solar_elevation(date=domain%model_time, lon=domain%longitude%data_2d, &
-                                j=j, ims=ims,ime=ime,jms=jms,jme=jme,its=its,ite=ite,day_frac=day_frac)                
+                                j=j, ims=ims,ime=ime,jms=jms,jme=jme,its=its,ite=ite,day_frac=day_frac)
                 domain%cosine_zenith_angle%data_2d(its:ite,j)=sin(solar_elevation(its:ite))
-            enddo  
+            enddo
 
             if (last_model_time==-999) then
                 last_model_time = domain%model_time%seconds()-update_interval
@@ -294,6 +293,9 @@ contains
                 ! Calculate cloud fraction
                 If (options%rad_options%icloud == 3) THEN
                     IF ( F_QC .AND. F_QI ) THEN
+                        gridkm = domain%dx/1000
+                        XLAND = domain%land_mask
+                        domain%cloud_fraction%data_2d = 0
                         DO j = jts,jte
                             DO i = its,ite
                                 DO k = kts,kte
@@ -306,11 +308,9 @@ contains
                                     Dz_1d(k) = domain%dz_interface%data_3d(i,k,j)
                                     cf_1d(k) = cldfra(i,k,j)
                                 ENDDO
-                                gridkm = domain%dx*1000
-                                XLAND = domain%land_mask
                                 CALL cal_cldfra3(cf_1d, qv_1d, qc_1d, qi_1d, qs_1d, Dz_1d, &
                  &                              p_1d, t_1d, XLAND(i,j), gridkm,        &
-                 &                              .false., 1.5, kts, kte)
+                 &                              .false., 1.5, kms, kme)
 
                                 DO k = kts,kte
                                     ! qc, qi and qs are locally recalculated in cal_cldfra3 base on RH to account for subgrid clouds                                     qc(i,k,j) = qc_1d(k)
@@ -318,6 +318,7 @@ contains
                                     qi(i,k,j) = qi_1d(k)
                                     qs(i,k,j) = qs_1d(k)
                                     cldfra(i,k,j) = cf_1d(k)
+                                    domain%cloud_fraction%data_2d(i,j) = max(domain%cloud_fraction%data_2d(i,j), cf_1d(k))
                                 ENDDO
                             ENDDO
                         ENDDO
@@ -327,19 +328,19 @@ contains
                 call RRTMG_SWRAD(rthratensw=domain%tend%th_swrad,         &
 !                swupt, swuptc, swuptcln, swdnt, swdntc, swdntcln, &
 !                swupb, swupbc, swupbcln, swdnb, swdnbc, swdnbcln, &
-!                      swupflx, swupflxc, swdnflx, swdnflxc,      &            
+!                      swupflx, swupflxc, swdnflx, swdnflxc,      &
                     swcf = domain%shortwave_cloud_forcing%data_2d,        &
                     gsw = domain%shortwave%data_2d,                       &
-                    xtime = 0., gmt = 0.,                                 &  ! not used  
+                    xtime = 0., gmt = 0.,                                 &  ! not used
                     xlat = domain%latitude%data_2d,                       &  ! not used
                     xlong = domain%longitude%data_2d,                     &  ! not used
-                    radt = 0., degrad = 0., declin = 0.,                  &  ! not used                        
-                    coszr = domain%cosine_zenith_angle%data_2d,           & 
+                    radt = 0., degrad = 0., declin = 0.,                  &  ! not used
+                    coszr = domain%cosine_zenith_angle%data_2d,           &
                     julday = 0,                                           &  ! not used
                     solcon = solar_constant,                              &
                     albedo = albedo,                                      &
                     t3d = domain%temperature%data_3d,                     &
-                    t8w = domain%temperature_interface%data_3d,           & 
+                    t8w = domain%temperature_interface%data_3d,           &
                     tsk = domain%skin_temperature%data_2d,                &
                     p3d = domain%pressure%data_3d,                        &
                     p8w = domain%pressure_interface%data_3d,              &
@@ -371,7 +372,7 @@ contains
                     qs3d=qs,                                              &
                     qg3d=domain%graupel_mass%data_3d,                     &
                     !o3input, o33d,                                       &
-                    aer_opt=0,                                            & 
+                    aer_opt=0,                                            &
                     !aerod,                                               &
                     no_src = 1,                                           &
 !                   alswvisdir, alswvisdif,                               &  !Zhenxin ssib alb comp (06/20/2011)
@@ -408,7 +409,7 @@ contains
                     yr=domain%model_time%year,                            &
                     julian=domain%model_time%day_of_year()                &
                                                    )
-                      
+
                 call RRTMG_LWRAD(rthratenlw=domain%tend%th_lwrad,                 &
 !                           lwupt, lwuptc, lwuptcln, lwdnt, lwdntc, lwdntcln,     &        !if lwupt defined, all MUST be defined
 !                           lwupb, lwupbc, lwupbcln, lwdnb, lwdnbc, lwdnbcln,     &

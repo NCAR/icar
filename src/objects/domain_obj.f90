@@ -884,7 +884,7 @@ contains
 
 
     !> -------------------------------
-    !! Setup the SLEVE vertical grid structure. 
+    !! Setup the SLEVE vertical grid structure.
     !!   This basically entails 2 transformations: First a linear one so that sum(dz) ranges from 0 to smooth_height H.
     !!   (boundary cnd (3) in Schär et al 2002)  Next, the nonlinear SLEVE transformation
     !!    eqn (2) from Leuenberger et al 2009 z_sleve = Z + terrain * sinh((H/s)**n - (Z/s)**n) / SINH((H/s)**n) (for both smallscale and largescale terrain)
@@ -938,14 +938,14 @@ contains
 
             ! Still not 100% convinced this works well in cases other than flat_z_height = 0 (w sleve). So for now best to keep at 0 when using sleve?
             max_level = find_flat_model_level(options, nz, dz)
-            
+
             if(max_level /= nz) then
                 if (this_image()==1) then
                     print*, "    flat z height ", options%parameters%flat_z_height
                     print*, "    flat z height set to 0 to comply with SLEVE coordinate calculation "
                     print*, "    flat z height now", nz
                 end if
-                max_level = nz  
+                max_level = nz
             end if
 
             smooth_height = sum(dz(1:max_level)) !sum(global_terrain) / size(global_terrain) + sum(dz(1:max_level))
@@ -954,17 +954,17 @@ contains
             s1 = smooth_height / options%parameters%decay_rate_L_topo
             s2 = smooth_height / options%parameters%decay_rate_S_topo
             n  =  options%parameters%sleve_n  ! this will have an effect on the z_level ratio throughout the vertical column, and thus on the terrain induced acceleration with wind=2 . Conceptually very nice, but for wind is 2 not ideal. Unless we let that acceleration depend on the difference between hi-res and lo-res terrain.
-            
+
 
             ! Scale dz with smooth_height/sum(dz(1:max_level)) before calculating sleve levels.
             dz_scl(:)   =   dz(1:nz) ! *  smooth_height / sum(dz(1:max_level))  ! this leads to a jump in dz thickness at max_level+1. Not sure if this is a problem.
-            
+
 
             ! - - -   calculate invertibility parameter gamma (Schär et al 2002 eqn 20):  - - - - - -
             gamma  =  1  -  MAXVAL(h1)/s1 * COSH(smooth_height/s1)/SINH(smooth_height/s1) - MAXVAL(h2)/s2 * COSH(smooth_height/s2)/SINH(smooth_height/s2)
 
             ! COSMO1 operational setting (but model top is at ~22000 masl):
-            !    Decay Rate for Large-Scale Topography: svc1 = 10000.0000  
+            !    Decay Rate for Large-Scale Topography: svc1 = 10000.0000
             !    Decay Rate for Small-Scale Topography: svc2 =  3300.0000
             if ((this_image()==1)) then
                 print*, "    Using a SLEVE coordinate with a Decay height for Large-Scale Topography: (s1) of ", s1, " m."
@@ -994,7 +994,7 @@ contains
             ! this is on the subset grid:
             z_interface(:,i,:) = temp(ims:ime,i,jms:jme)
             z_interface(:,i+1,:) = temp(ims:ime,i+1,jms:jme)
-           
+
             dz_interface(:,i,:)  =  z_interface(:,i+1,:) - z_interface(:,i,:)  ! same for higher k
 
             dz_mass(:,i,:)       = dz_interface(:,i,:) / 2           ! Diff for k=1
@@ -1037,7 +1037,7 @@ contains
                     temp(:,i+1,:)  = sum(dz_scl(1:i))   &
                                     + h1  *  SINH( (smooth_height/s1)**n - (sum(dz_scl(1:i))/s1)**n ) / SINH((smooth_height/s1)**n)  &! large-scale terrain
                                     + h2  *  SINH( (smooth_height/s2)**n - (sum(dz_scl(1:i))/s2)**n ) / SINH((smooth_height/s2)**n)   ! small terrain features
-                                    
+
                     z_interface(:,i+1,:) = temp(ims:ime,i+1,jms:jme)
 
                     global_dz_interface(:,i,:)  =  temp(:,i+1,:) - temp(:,i,:)
@@ -1089,11 +1089,11 @@ contains
                 jacobian(:,i,:) = dz_interface(:,i,:)/dz_scl(i)
                 global_jacobian(:,i,:) = global_dz_interface(:,i,:)/dz_scl(i)
 
-            enddo  
+            enddo
 
         end associate
 
-    end subroutine setup_sleve 
+    end subroutine setup_sleve
 
 
 
@@ -1101,7 +1101,7 @@ contains
     !! Setup the vertical grid structure, in case SLEVE coordinates are not used.
     !!    This means either constant vertical height, or a simple terrain following coordinate (Gal-Chen)
     !!
-    !! -------------------------------- 
+    !! --------------------------------
     subroutine setup_simple_z(this, options)
         implicit none
         class(domain_t), intent(inout)  :: this
@@ -1217,7 +1217,7 @@ contains
             i = this%grid%kme + 1
             global_z_interface(:,i,:) = global_z_interface(:,i-1,:) + global_dz_interface(:,i-1,:)
         end associate
-        
+
     end subroutine setup_simple_z
 
 
@@ -1238,16 +1238,16 @@ contains
         call allocate_z_arrays(this)
 
         ! Setup the vertical grid structure, either as a SLEVE coordinate, or a more 'simple' vertical structure:
-        if (options%parameters%sleve) then 
-            
+        if (options%parameters%sleve) then
+
             call split_topography(this, options)  ! here h1 and h2 are calculated
             call setup_sleve(this, options)
-       
-        else  
-       
+
+        else
+
             call setup_simple_z(this, options)
-        
-        endif 
+
+        endif
 
         associate(ims => this%ims,      ime => this%ime,                        &
                   jms => this%jms,      jme => this%jme,                        &
@@ -1364,7 +1364,7 @@ contains
         class(domain_t), intent(inout)  :: this
         type(options_t), intent(in)     :: options
 
-        real, allocatable :: h_org(:,:), h_u(:,:), h_v(:,:), temp(:,:), temp_offset(:,:)  ! temporary_data(:,:), 
+        real, allocatable :: h_org(:,:), h_u(:,:), h_v(:,:), temp(:,:), temp_offset(:,:)  ! temporary_data(:,:),
         integer :: i !, nflt, windowsize,
 
         allocate(h_org( this%grid2d% ids : this%grid2d% ide, &
@@ -1616,7 +1616,12 @@ contains
             if (associated(this%soil_deep_temperature%data_2d)) then
                 this%soil_deep_temperature%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
             endif
-
+            if (minval(temporary_data)< 200) then
+                if (this_image()==1) print*, "WARNING, VERY COLD SOIL TEMPERATURES SPECIFIED:", minval(temporary_data)
+            endif
+            if (minval(this%soil_deep_temperature%data_2d)< 200) then
+                where(this%soil_deep_temperature%data_2d<200) this%soil_deep_temperature%data_2d=280 ! <200 is just broken, set to mean annual air temperature at mid-latidudes
+            endif
         else
             if (associated(this%soil_deep_temperature%data_2d)) then
                 this%soil_deep_temperature%data_2d = 280
