@@ -397,6 +397,10 @@ OBJS=	\
 		$(BUILD)lsm_driver.o		\
 		$(BUILD)lsm_noahdrv.o		\
 		$(BUILD)lsm_noahlsm.o		\
+		$(BUILD)lsm_noahmpdrv.o  \
+		$(BUILD)lsm_noahmplsm.o  \
+		$(BUILD)lsm_noahmp_glacier.o \
+		$(BUILD)lsm_noahmp_gecros.o \
 		$(BUILD)water_simple.o		\
 		$(BUILD)geo_reader.o		\
 		$(BUILD)io_routines.o		\
@@ -531,6 +535,7 @@ caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
 					$(BUILD)vinterp.o		 $(BUILD)array_utilities.o	\
 					$(BUILD)lsm_driver.o	\
 					$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
+					$(BUILD)lsm_noahmpdrv.o  $(BUILD)lsm_noahmplsm.o \
 					$(BUILD)water_simple.o
 	${LINKER} $^ -o $@ ${LFLAGS}
 
@@ -713,7 +718,7 @@ $(BUILD)string.o:$(UTIL)string.f90
 $(BUILD)array_utilities.o:$(UTIL)array_utilities.f90
 
 $(BUILD)atm_utilities.o:$(UTIL)atm_utilities.f90 $(BUILD)icar_constants.o 	\
-					$(BUILD)data_structures.o $(BUILD)options_h.o
+					$(BUILD)data_structures.o $(BUILD)options_h.o $(BUILD)mp_thompson.o
 
 
 ###################################################################
@@ -775,7 +780,7 @@ $(BUILD)ra_driver.o:$(PHYS)ra_driver.f90 $(BUILD)ra_simple.o $(BUILD)ra_rrtmg_lw
 
 $(BUILD)ra_rrtmg_lw.o:$(PHYS)ra_rrtmg_lw.f90 $(BUILD)ra_clWRF_support.o $(BUILD)io_routines.o
 
-$(BUILD)ra_rrtmg_sw.o:$(PHYS)ra_rrtmg_sw.f90 $(BUILD)ra_clWRF_support.o $(BUILD)io_routines.o $(BUILD)ra_rrtmg_lw.o  
+$(BUILD)ra_rrtmg_sw.o:$(PHYS)ra_rrtmg_sw.f90 $(BUILD)ra_clWRF_support.o $(BUILD)io_routines.o $(BUILD)ra_rrtmg_lw.o
 
 $(BUILD)ra_clWRF_support.o:$(PHYS)ra_clWRF_support.f90 $(BUILD)io_routines.o
 
@@ -786,9 +791,10 @@ $(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o $(BUILD)time.
 ###################################################################
 $(BUILD)lsm_driver.o: $(PHYS)lsm_driver.f90 $(BUILD)data_structures.o \
 						$(BUILD)lsm_noahdrv.o $(BUILD)lsm_noahlsm.o \
+						$(BUILD)lsm_noahmpdrv.o $(BUILD)lsm_noahmplsm.o \
 						$(BUILD)water_simple.o $(BUILD)icar_constants.o \
 						$(BUILD)domain_h.o $(BUILD)options_h.o			\
-						$(BUILD)atm_utilities.o
+						$(BUILD)atm_utilities.o $(BUILD)ra_simple.o
 
 # $(BUILD)lsm_basic.o $(BUILD)lsm_simple.o
 
@@ -802,6 +808,15 @@ $(BUILD)lsm_noahdrv.o: $(PHYS)lsm_noahdrv.f90 $(BUILD)lsm_noahlsm.o
 
 $(BUILD)lsm_noahlsm.o: $(PHYS)lsm_noahlsm.f90
 
+$(BUILD)lsm_noahmpdrv.o: $(PHYS)lsm_noahmpdrv.f90 $(BUILD)lsm_noahmplsm.o \
+	          $(BUILD)lsm_noahmp_gecros.o $(BUILD)lsm_noahmp_glacier.o
+
+$(BUILD)lsm_noahmplsm.o: $(PHYS)lsm_noahmplsm.f90 $(BUILD)lsm_noahmp_gecros.o \
+	          $(BUILD)lsm_noahmp_glacier.o
+
+$(BUILD)lsm_noahmp_gecros.o: $(PHYS)lsm_noahmp_gecros.f90
+
+$(BUILD)lsm_noahmp_glacier.o: $(PHYS)lsm_noahmp_glacier.f90
 
 ###################################################################
 #	Planetary Boundary Layer code
