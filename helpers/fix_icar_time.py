@@ -49,9 +49,7 @@ def main(argv):
             inputfile = arg
         elif opt in ("-o", "--ofile"):
             outputfile = arg
-        # else: 
-        #     print( 'usage: fix_icar_time.py -i <inputfile> -o <outputfile>' ) 
-        #     sys.exit()
+
     print( 'Input file is ', inputfile)
     print( 'Output file is ', outputfile)
 
@@ -70,9 +68,7 @@ def main(argv):
     
     
     #_______ Write the fixed Dataset to nc file:  _________
-    
-    # path =  icar_path.replace("work", "scratch")
-    
+   
     if outputfile == '':
         out_path = inputfile
     else:
