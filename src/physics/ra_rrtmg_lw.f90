@@ -11523,8 +11523,9 @@ CONTAINS
                        ids,ide, jds,jde, kds,kde,                 & 
                        ims,ime, jms,jme, kms,kme,                 &
                        its,ite, jts,jte, kts,kte,                 &
-                       lwupflx, lwupflxc, lwdnflx, lwdnflxc       &
-                                                                  )
+                       lwupflx, lwupflxc, lwdnflx, lwdnflxc,      &
+                       read_ghg                                   &
+                       )
 !------------------------------------------------------------------
 !ccc To use clWRF time varying trace gases
    USE MODULE_RA_CLWRF_SUPPORT, ONLY : read_CAMgases
@@ -11643,7 +11644,9 @@ CONTAINS
          OPTIONAL, INTENT(OUT) ::                                 &
                                LWUPFLX,LWUPFLXC,LWDNFLX,LWDNFLXC
 
-!  LOCAL VARS
+   LOGICAL, INTENT(IN) ::  read_ghg
+
+   !  LOCAL VARS
  
    REAL, DIMENSION( kts:kte+1 ) ::                          Pw1D, &
                                                             Tw1D
@@ -11754,19 +11757,19 @@ CONTAINS
 
 ! Set trace gas volume mixing ratios, 2005 values, IPCC (2007)
 ! carbon dioxide (379 ppmv) - this is being replaced by an annual function in v4.2
-    real :: co2
+    real(8) :: co2
 !   data co2 / 379.e-6 / 
 ! methane (1774 ppbv)
-    real :: ch4
+    real(8) :: ch4
     data ch4 / 1774.e-9 / 
 ! nitrous oxide (319 ppbv)
-    real :: n2o
+    real(8) :: n2o
     data n2o / 319.e-9 / 
 ! cfc-11 (251 ppt)
-    real :: cfc11
+    real(8) :: cfc11
     data cfc11 / 0.251e-9 / 
 ! cfc-12 (538 ppt)
-    real :: cfc12
+    real(8) :: cfc12
     data cfc12 / 0.538e-9 / 
 #endif
 ! cfc-22 (169 ppt)
@@ -11902,8 +11905,8 @@ CONTAINS
 
 !ccc Read time-varying trace gases concentrations and interpolate them to run date.
 !
-#ifdef CLWRFGHG
-
+!#ifdef CLWRFGHG
+if (read_ghg) then
    CALL read_CAMgases(yr,julian,"RRTMG",co2,n2o,ch4,cfc11,cfc12)
 
 !   IF ( wrf_dm_on_monitor() ) THEN
@@ -11915,8 +11918,8 @@ CONTAINS
      !call wrf_debug( 100, message)
      write(*,*) message
    ENDIF
-
-#endif
+endif
+!#endif
 !ccc
 
 ! latitude loop
@@ -12074,13 +12077,13 @@ CONTAINS
 !        IF ( mp_physics == FER_MP_HIRES .OR. &
 !             mp_physics == FER_MP_HIRES_ADVECT) THEN
 !#endif
-!                  DO K=kts,kte
-!                     qi1d(k) = qi3d(i,k,j)
-!                     qs1d(k) = 0.0
-!                     qc1d(k) = qc3d(i,k,j)
-!                     qi1d(k) = max(0.,qi1d(k))
-!                     qc1d(k) = max(0.,qc1d(k))
-!                  ENDDO
+                  DO K=kts,kte
+                     qi1d(k) = qi3d(i,k,j)
+                     qs1d(k) = 0.0
+                     qc1d(k) = qc3d(i,k,j)
+                     qi1d(k) = max(0.,qi1d(k))
+                     qc1d(k) = max(0.,qc1d(k))
+                  ENDDO
 !        ENDIF
 
 !         EMISS0=EMISS(I,J)
@@ -12565,6 +12568,7 @@ CONTAINS
                rel(ncol,k) = reliq(ncol,k)
                rei(ncol,k) = reice(ncol,k)
             enddo
+
 
 !Mukul
             if (inflglw .eq. 5) then
