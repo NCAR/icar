@@ -106,9 +106,15 @@ ifndef NETCDF
 		NETCDF=${NETCDF_DIR}
 	endif
 endif
+
 NCDF_PATH = ${NETCDF}
 LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 INCNETCDF = -I$(NCDF_PATH)/include
+
+ifdef NETCDFF
+       LIBNETCDF += -L$(NETCDFF)/lib
+       INCNETCDF += -I$(NETCDFF)/include
+endif
 
 USE_ASSERTIONS:=.false.
 
