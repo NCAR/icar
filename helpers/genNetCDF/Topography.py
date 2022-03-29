@@ -6,9 +6,20 @@ import numpy as np
 # Create NetCDF file containing the initial conditions topography
 # Currently creates flat domain
 class Topography:
-    hill_height = 2000.0   # height of the ideal hill(s) [m]
-    def __init__(self, nx=100, ny=100, mult_factor=1, dx=0.01, dy=0.01,
-                 n_hills=1.0, height_value=500, f_name="init.nc"):
+    def __init__(self,
+                 nz=32,
+                 nx=100,
+                 ny=100,
+                 f_name="init.nc",
+                 mult_factor=1,
+                 dx=0.01,
+                 dy=0.01,
+                 n_hills=0.0,
+                 height_value=500,
+                 hill_height = 2000.0,
+                 time_start = 20010101,
+                 lat0 = 39.5,
+                 lon0 = -105):
         print("todo: nx and ny because of C")
 
         # initialize program variables
@@ -22,22 +33,19 @@ class Topography:
         # Create and define variables for datafile
         # --------------------------------------------------------------
         # create time
-        time_start = 20010101
         time_end   = time_start
         time_series = pd.date_range(start=str(time_start),
                                     end=str(time_end),
                                     freq='D').strftime('%Y-%m-%d_%H:%M:%S')
         time = time_series.astype(np.unicode_)
 
-        lat0 = 39.5
-        lon0 = -105
         # create longitude and latitude
         lon_tmp = np.arange(lon0,lon0+(nx*dx),dx)[:nx] #[np.newaxis,:nx].repeat(ny,axis=0)
         lat_tmp = np.arange(lat0,lat0+(ny*dy),dy)[:ny] #[:ny,np.newaxis].repeat(nx,axis=1)
 
         lon_tmp, lat_tmp = np.meshgrid(lon_tmp, lat_tmp)
 
-        self.define_data_variables(lat_tmp, lon_tmp, height_value)
+        self.define_data_variables(lat_tmp, lon_tmp, height_value, hill_height)
 
         # --------------------------------------------------------------
         # Combine variables, create dataset and write to file
@@ -58,7 +66,8 @@ class Topography:
 
 
     # Define individual variables for datafile
-    def define_data_variables(self, lat_tmp, lon_tmp, height_value):
+    def define_data_variables(self, lat_tmp, lon_tmp, height_value,
+                              hill_height):
         # dimensions of variables
         dims2d = ["lat", "lon"]
         # dims3d = ["time","lat", "lon"]
@@ -81,7 +90,7 @@ class Topography:
 
         # --- hgt_m
         # hgt = np.full([self.nt,self.nx,self.ny], height_value)
-        hgt = self.genHill()
+        hgt = self.genHill(hill_height)
         self.hgt_m = xr.Variable(dims2d,
                                  hgt,
                                  {'units':'meters MSL',
@@ -102,13 +111,13 @@ class Topography:
 
 
     # hasn't been integrated and tested
-    def genHill(self):
+    def genHill(self, hill_height):
         i = (np.arange(self.nx) - self.nx/2) / self.nx * np.pi * 2
         j = (np.arange(self.nx) - self.ny/2) / self.ny * np.pi * 2
 
         ig, jg = np.meshgrid(i,j)
 
-        hgt = ((np.cos(ig)+1) * (np.cos(jg)+1))/4 * self.hill_height
+        hgt = ((np.cos(ig)+1) * (np.cos(jg)+1))/4 * hill_height
 
         return hgt
 

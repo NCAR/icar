@@ -1,42 +1,60 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+from netCDF4 import Dataset
 import numpy as np
 from sys import exit, path
 from os import getcwd
-
 path.insert(0, getcwd()+'/../helpers/genNetCDF')
 import Topography as tg
 import Forcing as fc
 import ICARoptions as opt
 
-# Python program generates an ideal case
-class IdealTest:
-    # from ideal test
-    sealevel_pressure = 100000.0 # pressure at sea level [Pa]
-    dz_value          = 500.0    # thickness of each model gridcell   [m]
-    # hill values currently do nothing
-    hill_height       = 2000.0   # height of the ideal hill(s) [m]
-    n_hills           = 1.0      # number of hills across the domain
+# ---------------------------------------
+# ----- Settings For Generate Files -----
+# ---------------------------------------
+# choose dimensions
+nz = 32
+nx = ny = 40
 
-    def __init__(self, nz=10, nx=2, ny=2, n_hills=1.0):
-        rh = 0.9
-        u_test_val = 10
-        v_test_val = 5
-        w_test_val = 0.0
-        water_vapor_test_val = 0.01
-        theta_test_val = 300.0
+# from ideal test
+dz_value          = 500.0    # thickness of each model gridcell   [m]
+# hill values currently do nothing
+# hill_height       = 1000.0   # height of the ideal hill(s) [m]
+# n_hills           = 1.0      # number of hills across the domain
 
-        self.forcing = fc.Forcing(nz, nx, ny, self.sealevel_pressure,
-                                  rh, u_test_val, v_test_val, w_test_val,
-                                  water_vapor_test_val, theta_test_val,
-                                  dz_value=self.dz_value)
+# relative_humidity = 0.01
+u_test_val = v_test_val = w_test_val = 0.0
+water_vapor_test_val = 0.000
+mixing_ratio = 0.00 # water vapor # not if constant
+qv_val = mixing_ratio
 
-        self.init = tg.Topography(nx, ny)
+# --- choose function for creating pressure ---
+pressure_func = 'calc_pressure_from_sea'
+# pressure_func = 'calc_pressure_dz_iter'
+# pressure_func = 'calc_pressure_1m_iter'
+# --- choose weather model ---
+# weather_model = 'basic'
+weather_model = 'WeismanKlemp'
 
 
 def main():
     # ICAR Options generate the ICAR namelist
-    options = opt.ICARoptions()
-    test = IdealTest(nz=40, nx=40, ny=40, n_hills=1.0)
+    opt.ICARoptions(nz=nz, output_vars=['pressure','temperature'])
+    print("Generated icar_options.nml")
+
+    tg.Topography(nz, nx, ny)
+    print("Generated init.nc")
+
+    # double check all passed variable get used
+    forcing = fc.Forcing(nz, nx, ny,
+                         u_val=u_test_val,
+                         v_val=v_test_val,
+                         w_val=w_test_val,
+                         water_vapor_val=water_vapor_test_val,
+                         dz_value=dz_value,
+                         qv_val=qv_val,
+                         weather_model=weather_model,
+                         pressure_func=pressure_func)
+    print("Generated forcing.nc")
 
 if __name__ == "__main__":
     main()
