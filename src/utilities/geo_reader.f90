@@ -1204,7 +1204,7 @@ contains
     !! ----------------------------------------------------------------------------
     subroutine standardize_coordinates(domain, longitude_system)
         implicit none
-        class(interpolable_type), intent(inout) :: domain
+        type(interpolable_type), intent(inout) :: domain
         integer,                  intent(in), optional :: longitude_system
 
         real, dimension(:,:), allocatable :: temporary_geo_data
