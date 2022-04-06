@@ -56,6 +56,10 @@ contains
                 allocate(domain%tend%th_lwrad(domain%ims:domain%ime,domain%kms:domain%kme,domain%jms:domain%jme))
             if(.not.allocated(domain%tend%th_swrad)) &
                 allocate(domain%tend%th_swrad(domain%ims:domain%ime,domain%kms:domain%kme,domain%jms:domain%jme))
+
+            if (options%physics%microphysics .ne. kMP_THOMP_AER) then
+               if (this_image()==1)write(*,*) 'WARNING: When running RRTMG, microphysics option 5 should be used'
+            endif
                  
             call ra_simple_init(domain, options)
 
@@ -186,6 +190,7 @@ contains
         real, allocatable :: xland(:,:)
 
         logical :: f_qr, f_qc, f_qi, f_qs, f_qg, f_qv, f_qndrop
+        integer :: mp_options
 
         ims = domain%grid%ims
         ime = domain%grid%ime
@@ -255,6 +260,8 @@ contains
         if (F_QI) qi(:,:,:) = domain%cloud_ice_mass%data_3d
         if (F_QS) qs(:,:,:) = domain%snow_mass%data_3d
 
+        mp_options=0
+
         if (options%physics%radiation==kRA_SIMPLE) then
             call ra_simple(theta = domain%potential_temperature%data_3d,         &
                            pii= domain%exner%data_3d,                            &
@@ -278,10 +285,6 @@ contains
         endif
 
         if (options%physics%radiation==kRA_RRTMG) then
-           if (options%physics%microphysics .ne. kMP_THOMP_AER) then
-              if (this_image()==1)write(*,*) 'WARNING: When running RRTMG, microphysics option 5 should be used'
-           endif
-
             do j = jms,jme
                 solar_elevation  = calc_solar_elevation(date=domain%model_time, lon=domain%longitude%data_2d, &
                                 j=j, ims=ims,ime=ime,jms=jms,jme=jme,its=its,ite=ite,day_frac=day_frac)                
@@ -413,7 +416,7 @@ contains
                     xcoszen = domain%cosine_zenith_angle%data_2d,         &  ! NEED TO CALCULATE THIS.
                     yr=domain%model_time%year,                            &
                     julian=domain%model_time%day_of_year()                &
-                                                   )
+                    ,mp_options=mp_options                               )
                       
                 call RRTMG_LWRAD(rthratenlw=domain%tend%th_lwrad,                 &
 !                           lwupt, lwuptc, lwuptcln, lwdnt, lwdntc, lwdntcln,     &        !if lwupt defined, all MUST be defined
