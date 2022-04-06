@@ -11200,30 +11200,29 @@ CONTAINS
          gsw(i,j) = swdflx(1,1) - swuflx(1,1)
          swcf(i,j) = (swdflx(1,kte+2) - swuflx(1,kte+2)) - (swdflxc(1,kte+2) - swuflxc(1,kte+2))
 
-         if (present(swupt)) then 
 ! Output up and down toa fluxes for total and clear sky
-            swupt(i,j)     = swuflx(1,kte+2)
-            swuptc(i,j)    = swuflxc(1,kte+2)
-            swdnt(i,j)     = swdflx(1,kte+2)
-            swdntc(i,j)    = swdflxc(1,kte+2)
+         if (present(swupt))  swupt(i,j)     = swuflx(1,kte+2)
+         if (present(swuptc)) swuptc(i,j)    = swuflxc(1,kte+2)
+         if (present(swdnt))  swdnt(i,j)     = swdflx(1,kte+2)
+         if (present(swdntc)) swdntc(i,j)    = swdflxc(1,kte+2)
 ! Output up and down surface fluxes for total and clear sky
-            swupb(i,j)     = swuflx(1,1)
-            swupbc(i,j)    = swuflxc(1,1)
-            swdnb(i,j)     = swdflx(1,1)
+         if (present(swupb))  swupb(i,j)     = swuflx(1,1)
+         if (present(swupbc)) swupbc(i,j)    = swuflxc(1,1)
+         if (present(swdnb))  swdnb(i,j)     = swdflx(1,1)
 ! Added by Zhenxin for 4 compenants of swdown radiation
-            swvisdir(i,j)  = sibvisdir(1,1)
-            swvisdif(i,j)  = sibvisdif(1,1)
-            swnirdir(i,j)  = sibnirdir(1,1)
-            swnirdif(i,j)  = sibnirdif(1,1)
+         if (present(swvisdir)) swvisdir(i,j)  = sibvisdir(1,1)
+         if (present(swvisdif)) swvisdif(i,j)  = sibvisdif(1,1)
+         if (present(swnirdir)) swnirdir(i,j)  = sibnirdir(1,1)
+         if (present(swnirdif)) swnirdif(i,j)  = sibnirdif(1,1)
 !  Ended, Zhenxin (2011/06/20)
-            swdnbc(i,j)    = swdflxc(1,1)
+         if (present(swdnbc))   swdnbc(i,j)    = swdflxc(1,1)
             if(calc_clean_atm_diag .gt. 0)then
             	swuptcln(i,j)  = swuflxcln(1,kte+2)
             	swdntcln(i,j)  = swdflxcln(1,kte+2)
             	swupbcln(i,j)  = swuflxcln(1,1)
             	swdnbcln(i,j)  = swdflxcln(1,1)
             end if
-         endif
+!         endif
          if (present(swddir)) then
             swddir(i,j)    = swdkdir(1,1)          ! jararias 2013/08/10
             swddni(i,j)    = swddir(i,j) / coszrs  ! jararias 2013/08/10

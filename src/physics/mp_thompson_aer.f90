@@ -1091,6 +1091,7 @@
      !$omp shared(tcg_racg,tmr_racg,tcr_gacr,tmg_gacr,tnr_racg,tnr_gacr)            &
      !$OMP SHARED(RAINNC,SNOWNC,RAINNCV,SNOWNCV,GRAUPELNCV,GRAUPELNC,SR)                            &
      !$OMP SHARED(w,th,pii,p,dz,qv,qc)                                                              &
+     !$OMP SHARED(has_reqi,has_reqs,has_reqc)                                                       &
      !$OMP SHARED(qi,qr,qs,qg,ni,nr,nc,nwfa,nifa,nwfa2d,refl_10cm,re_cloud,re_ice,re_snow, is_aerosol_aware)
 
      ! parameter list : Nt_c,TNO,rho_g,av_s,bv_s,fv_s,av_g,bv_g,EF_si,Ef_ri

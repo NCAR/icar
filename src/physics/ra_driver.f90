@@ -175,7 +175,7 @@ contains
         real, dimension(:,:,:,:), pointer :: tauaer_sw=>null(), ssaaer_sw=>null(), asyaer_sw=>null() 
         real, allocatable :: cldfra3d(:,:,:)
         real, allocatable :: day_frac(:), solar_elevation(:)
-        real, allocatable:: albedo(:,:)
+        real, allocatable:: albedo(:,:),gsw(:,:)
         integer :: j
         real ::ra_dt
 
@@ -225,6 +225,7 @@ contains
         allocate(day_frac(ims:ime))
         allocate(solar_elevation(ims:ime))
         allocate(albedo(ims:ime,jms:jme))
+        allocate(gsw(ims:ime,jms:jme))
         allocate(cldfra3d(ims:ime,kms:kme,jms:jme))
 
         ! Note, need to link NoahMP to update albedo
@@ -277,6 +278,10 @@ contains
         endif
 
         if (options%physics%radiation==kRA_RRTMG) then
+           if (options%physics%microphysics .ne. kMP_THOMP_AER) then
+              if (this_image()==1)write(*,*) 'WARNING: When running RRTMG, microphysics option 5 should be used'
+           endif
+
             do j = jms,jme
                 solar_elevation  = calc_solar_elevation(date=domain%model_time, lon=domain%longitude%data_2d, &
                                 j=j, ims=ims,ime=ime,jms=jms,jme=jme,its=its,ite=ite,day_frac=day_frac)                
@@ -328,8 +333,9 @@ contains
 !                swupt, swuptc, swuptcln, swdnt, swdntc, swdntcln, &
 !                swupb, swupbc, swupbcln, swdnb, swdnbc, swdnbcln, &
 !                      swupflx, swupflxc, swdnflx, swdnflxc,      &            
+                    swdnb = domain%shortwave%data_2d,                     &
                     swcf = domain%shortwave_cloud_forcing%data_2d,        &
-                    gsw = domain%shortwave%data_2d,                       &
+                    gsw = gsw,                                            &
                     xtime = 0., gmt = 0.,                                 &  ! not used  
                     xlat = domain%latitude%data_2d,                       &  ! not used
                     xlong = domain%longitude%data_2d,                     &  ! not used
