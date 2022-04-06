@@ -38,6 +38,29 @@ def convert_atm(data):
 
     return output_data
 
+def bfill(arr):
+    ''' from https://stackoverflow.com/questions/41190852/most-efficient-way-to-forward-fill-nan-values-in-numpy-array
+    '''
+    mask = np.isnan(arr)
+    idx = np.where(~mask, np.arange(mask.shape[1]), mask.shape[1] - 1)
+    idx = np.minimum.accumulate(idx[:, ::-1], axis=1)[:, ::-1]
+    out = arr[np.arange(idx.shape[0])[:,None], idx]
+    return out
+
+
+def numpy_fill(arr):
+    '''modified from Solution provided by Divakar.
+    from https://stackoverflow.com/questions/41190852/most-efficient-way-to-forward-fill-nan-values-in-numpy-array
+    '''
+    for i in range(arr.shape[0]):
+        mask = np.isnan(arr[i])
+        idx = np.where(~mask,np.arange(mask.shape[1]),0)
+        np.maximum.accumulate(idx,axis=1, out=idx)
+        out = arr[i,np.arange(idx.shape[0])[:,None], idx]
+        arr[i] = bfill(out) # in case there are still missing values on the left side
+
+    return arr
+
 # icar_sfc_var=["sensible_heat","latent_heat","hgt_98","PBL_height"]
 def convert_sfc(data):
     global last_longwave
@@ -53,6 +76,13 @@ def convert_sfc(data):
     output_data.lw              = data.lw[np.newaxis,::-1,:] / dt   # convert from Joules to W /m^2
     output_data.cp              = data.cp[np.newaxis,::-1,:] * 1000 # convert m to mm
 
+    output_data.landmask = data.landmask[np.newaxis,::-1,:]
+    # landval = data.tskin[np.argmax(data.landmask)] # ~273.15, alternatively, tskin[landmask>0.99].mean()
+    #  above seems to always create an array, and sometimes with very different values in it ... e.g. >300...
+    landval = 273.16
+    output_data["sst"]           = (data.tskin[np.newaxis,::-1,:] - (output_data.landmask * landval)) / (1 - output_data.landmask)
+    output_data["sst"][output_data.landmask>0.25] =np.nan
+    output_data["sst"] = numpy_fill(output_data["sst"])
     # this is now handled in io so it can just use the last value in the file, much simple
     #  ... though in some ways what is below is better as it integrates over a longer time period
     # if last_longwave==None:

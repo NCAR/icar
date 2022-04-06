@@ -60,6 +60,14 @@
     ! "canopy_water", "swe", "soil_water_content", "soil_column_total_water", "soil_temperature", "soil_deep_temperature",
     ! "land_mask", "terrain", "lat", "lon", "u_lat", "u_lon", "v_lat", "v_lon"
 
+    !additional output variable options for NoahMP (check default_output_metadata for complete list)
+    ! "snowfall_ground","rainfall_ground","snow_temperature","snow_layer_depth","snow_layer_ice",
+    ! "snow_layer_liquid_water","canopy_ice","canopy_liquid","snow_height",
+    ! "snow_nlayers","eq_soil_moisture",
+    ! "smc_watertable_deep","recharge","recharge_deep","evap_canopy","evap_soil_surface",
+    ! "transpiration_rate","ground_surf_temperature","runoff_surface","runoff_subsurface"
+    !
+
     outputinterval = 3600   ! number of seconds between output time slices
     output_file = "output/icar_out_"    ! prefix name of output file (date will be appended)
     ! output_file_frequency = "monthly"   ! eventually this will be used to specify how frequently to create new files (not implemented yet)
@@ -82,10 +90,10 @@
     ! wishlist = No Code Present yet
 
     pbl = 0,  ! 1=legacy (deprecated)      2=Simple (Local HP96)        3=YSU             (N/A)
-    lsm = 0,  ! 1=use prescribed fluxes    2=Simple LSM (N/A)           3=Noah LSM                  4=NoahMP (wishlist)
+    lsm = 0,  ! 1=use prescribed fluxes    2=Simple LSM (N/A)           3=Noah LSM                  4=NoahMP
     water=2,  ! 1=use prescribed (w/lsm=1) 2=Simple sea surface fluxes
     mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison                  4=WSM6      5=Thompson-Eidhammer
-    rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG       
+    rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG
     conv= 0,  ! 1=Tiedke Scheme            2=Simple Scheme (wishlist)   3=Kain-Fritsch
     adv = 1,  ! 1=Upwind                   2=MPDATA                     3=Adams-Bashforth (wishlist)
     wind= 1   ! 1=Linear Theory
@@ -313,6 +321,11 @@
     ! soil_t_var   = "TSLB",        ! soil temperature (4 levels)   [K]
     ! soil_vwc_var = "SMOIS",       ! soil water content (4 levels) [m^3/m^3]
 
+    ! to use the NoahMP LSM, the following additional fields must be specified or default values will be applied
+    !vegfracmax_var = "VEGMAX", ! maximum annual vegetation fraction (default = 0.8)
+    !lai_var = "LAI",           ! leaf area index (default = 1)
+    !canwat_var = "CANWAT",     ! total canopy water (liquid + ice) (default = 0)
+
     ! variables to read from calibration files, both default to "data"
     ! nsq_calibration_var = "data",
     ! linear_mask_var = "data"
@@ -511,6 +524,11 @@
 
 !---------------------------------------------------------
 !   Optionally specified Restart information
+!
+!   NOTE: If the (original) output file corresponding to the restart time is not removed before restarting, its 'time:units' parameter (i.e.
+!    time:units = "days since 2000-01-01 00:00:00") - is not overwritten, resulting in wrong timestamp for that first file after restart. 
+!   CURE: remove output files of the restart time from initial simulation before restarting. Or use the fix_icar_time.py script in icar/helpers/
+!
 !---------------------------------------------------------
 &restart_info
     ! file to read for initial conditions (an ICAR output file will work)
