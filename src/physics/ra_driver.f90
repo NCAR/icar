@@ -230,7 +230,6 @@ contains
         allocate(solar_elevation(ims:ime))
         allocate(albedo(ims:ime,jms:jme))
         allocate(gsw(ims:ime,jms:jme))
-        allocate(cldfra3d(ims:ime,kms:kme,jms:jme))
 
         ! Note, need to link NoahMP to update albedo
 
