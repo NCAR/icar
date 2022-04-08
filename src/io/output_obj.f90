@@ -409,7 +409,7 @@ contains
             end associate
         end do
 
-        call check( nf90_put_var(this%ncfile_id, this%time%var_id, time%mjd(), [current_step] ),   &
+        call check( nf90_put_var(this%ncfile_id, this%time%var_id, dble(time%mjd()), [current_step] ),   &
                     "saving:"//trim(this%time%name) )
 
 

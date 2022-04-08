@@ -16,6 +16,7 @@
 !!------------------------------------------------------------
 module io_routines
     use netcdf
+    use iso_fortran_env, only: real64, real128
 
     implicit none
     ! maximum number of dimensions for a netCDF file
@@ -103,8 +104,8 @@ contains
     !!------------------------------------------------------------
     integer function io_nearest_time_step(filename, mjd)
         character(len=*),intent(in) :: filename
-        double precision, intent(in) :: mjd
-        double precision, allocatable, dimension(:) :: time_data
+        real(real128), intent(in) :: mjd
+        real(real64), allocatable, dimension(:) :: time_data
         integer :: ncid,varid,dims(1),ntimes,i
 
         call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
@@ -679,7 +680,7 @@ contains
     end subroutine io_read0d
 
 !>------------------------------------------------------------
-    !! Same as io_read3d but for 0-dimensional integer 
+    !! Same as io_read3d but for 0-dimensional integer
     !!
     !! Reads in a variable from a netcdf file, allocating memory in data_in for it.
     !!
@@ -729,7 +730,7 @@ contains
     end subroutine io_read0di
 
     !>------------------------------------------------------------
-    !! Same as io_read1d but for double precision data
+    !! Same as io_read1d but for real(real64) data
     !!
     !! Reads in a variable from a netcdf file, allocating memory in data_in for it.
     !!
@@ -748,7 +749,7 @@ contains
         implicit none
         ! This is the name of the data_in file and variable we will read.
         character(len=*), intent(in) :: filename, varname
-        double precision,intent(out),allocatable :: data_in(:)
+        real(real64),intent(out),allocatable :: data_in(:)
         integer, intent(in),optional :: extradim
         integer, intent(in),optional :: curstep
         integer, dimension(io_maxDims)  :: diminfo ! will hold dimension lengths
@@ -804,13 +805,13 @@ contains
     end subroutine io_read1dd
 
     !>------------------------------------------------------------
-    !! Read a double precision scalar
+    !! Read a real(real64) scalar
     !!
     !! Reads in a scalar variable from a netcdf file (primarily time).
     !!
     !! @param   filename    Name of NetCDF file to look at
     !! @param   varname     Name of the NetCDF variable to read
-    !! @param[out] result   double precision scalar to store the data in
+    !! @param[out] result   real(real64) scalar to store the data in
     !! @param   step        specify the position to read from a 1D array
     !!
     !!------------------------------------------------------------
@@ -818,10 +819,10 @@ contains
         implicit none
         ! This is the name of the data_in file and variable we will read.
         character(len=*), intent(in)  :: filename, varname
-        double precision, intent(out) :: result
+        real(real64), intent(out) :: result
         integer,          intent(in)  :: step
 
-        double precision, allocatable :: data_in(:)
+        real(real64), allocatable :: data_in(:)
         ! This will be the netCDF ID for the file and data_in variable.
         integer :: ncid, varid,i
 
