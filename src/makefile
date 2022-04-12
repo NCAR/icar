@@ -434,6 +434,7 @@ TEST_EXECUTABLES= 	fftshift_test			\
 	  				array_util_test 		\
 					variable_dict_test		\
 					caf_threads_test		\
+					time_obj_test			\
 					$(CAF_TEST_EXECUTABLES)
 
 # Pre-Coarray Tests that we may want to re-implement
@@ -480,6 +481,9 @@ fftw_test: $(BUILD)test_fftw.o $(OBJS)
 	${LINKER} $^ -o $@ ${LFLAGS}
 
 fftshift_test: $(BUILD)test_fftshift.o $(OBJS)
+	${LINKER} $^ -o $@ ${LFLAGS}
+
+time_obj_test: $(BUILD)test_time_obj.o $(BUILD)time_obj.o $(BUILD)time_h.o $(BUILD)time_delta_obj.o $(BUILD)co_utilities.o
 	${LINKER} $^ -o $@ ${LFLAGS}
 
 calendar_test: $(BUILD)test_calendar.o $(BUILD)time_obj.o $(BUILD)time_h.o $(BUILD)time_delta_obj.o $(BUILD)co_utilities.o

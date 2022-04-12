@@ -65,10 +65,10 @@ contains
 
         dt=0
         if (present(days)) dt = dt + days
-        if (present(hours)) dt = dt + hours / 24.0
-        if (present(minutes)) dt = dt + minutes / 1440.0
+        if (present(hours)) dt = dt + hours / 24.0D0
+        if (present(minutes)) dt = dt + minutes / 1440.0D0
 
-        dt = dt + seconds / 86400.0
+        dt = dt + seconds / 86400.0D0
 
         self%delta = dt
 
@@ -83,10 +83,10 @@ contains
 
         dt=0
         if (present(days)) dt = dt + days
-        if (present(hours)) dt = dt + hours / 24.0
-        if (present(minutes)) dt = dt + minutes / 1440.0
+        if (present(hours)) dt = dt + hours / 24.0D0
+        if (present(minutes)) dt = dt + minutes / 1440.0D0
 
-        dt = dt + seconds / 86400.0
+        dt = dt + seconds / 86400.0D0
 
         self%delta = dt
 
