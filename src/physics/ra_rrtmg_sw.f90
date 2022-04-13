@@ -9975,7 +9975,8 @@ CONTAINS
                        tauaer3d_sw,ssaaer3d_sw,asyaer3d_sw,       & ! jararias 2013/11
                        swddir, swddni, swddif,                    & ! jararias 2013/08
                        swdownc, swddnic, swddirc,                 & ! PAJ
-                       xcoszen,yr,julian                          & ! jararias 2013/08
+                       xcoszen,yr,julian,                         & ! jararias 2013/08
+                       mp_options                                 &
                                                                   )
 !------------------------------------------------------------------
    IMPLICIT NONE
@@ -10036,6 +10037,8 @@ CONTAINS
                                                         SWNIRDIF        ! ssib sw dir and diff rad
    INTEGER, INTENT(IN) :: sf_surface_physics                            ! ssib para
 
+   INTEGER, INTENT(in)    :: mp_options
+
 !  ----------------------- end Zhenxin --------------------------
 !
 
@@ -10075,7 +10078,7 @@ CONTAINS
                                                         QNDROP3D
 
 !..Added by G. Thompson to couple cloud physics effective radii.
-   REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(IN)::       &
+   REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(INOUT)::       &
                                                         RE_CLOUD, &
                                                           RE_ICE, &
                                                          RE_SNOW
@@ -10571,6 +10574,9 @@ CONTAINS
                inflgsw = 3
                DO K=kts,kte
                   recloud1D(ncol,K) = MAX(2.5, re_cloud(I,K,J)*1.E6)
+                  if (mp_options.ne.5) then
+                     recloud1D(ncol,K)=10.5
+                  endif
                   if (recloud1D(ncol,K).LE.2.5.AND.cldfra3d(i,k,j).gt.0. &
      &                            .AND. (XLAND(I,J)-1.5).GT.0.) then      !--- Ocean
                      recloud1D(ncol,K) = 10.5
@@ -10594,6 +10600,9 @@ CONTAINS
                iceflgsw = 4
                DO K=kts,kte
                   reice1D(ncol,K) = MAX(5., re_ice(I,K,J)*1.E6)
+                  if (mp_options.ne.5) then
+                     reice1D(ncol,K)=30
+                  endif
                   if (reice1D(ncol,K).LE.5..AND.cldfra3d(i,k,j).gt.0.) then
                      idx_rei = int(t3d(i,k,j)-179.)
                      idx_rei = min(max(idx_rei,1),75)
@@ -10614,6 +10623,9 @@ CONTAINS
                iceflgsw = 5
                DO K=kts,kte
                   resnow1D(ncol,K) = MAX(10., re_snow(I,K,J)*1.E6)
+                  if (mp_options.ne.5) then
+                     resnow1D(ncol,K)=500
+                  endif
                ENDDO
             ELSE
                DO K=kts,kte
@@ -11200,30 +11212,29 @@ CONTAINS
          gsw(i,j) = swdflx(1,1) - swuflx(1,1)
          swcf(i,j) = (swdflx(1,kte+2) - swuflx(1,kte+2)) - (swdflxc(1,kte+2) - swuflxc(1,kte+2))
 
-         if (present(swupt)) then 
 ! Output up and down toa fluxes for total and clear sky
-            swupt(i,j)     = swuflx(1,kte+2)
-            swuptc(i,j)    = swuflxc(1,kte+2)
-            swdnt(i,j)     = swdflx(1,kte+2)
-            swdntc(i,j)    = swdflxc(1,kte+2)
+         if (present(swupt))  swupt(i,j)     = swuflx(1,kte+2)
+         if (present(swuptc)) swuptc(i,j)    = swuflxc(1,kte+2)
+         if (present(swdnt))  swdnt(i,j)     = swdflx(1,kte+2)
+         if (present(swdntc)) swdntc(i,j)    = swdflxc(1,kte+2)
 ! Output up and down surface fluxes for total and clear sky
-            swupb(i,j)     = swuflx(1,1)
-            swupbc(i,j)    = swuflxc(1,1)
-            swdnb(i,j)     = swdflx(1,1)
+         if (present(swupb))  swupb(i,j)     = swuflx(1,1)
+         if (present(swupbc)) swupbc(i,j)    = swuflxc(1,1)
+         if (present(swdnb))  swdnb(i,j)     = swdflx(1,1)
 ! Added by Zhenxin for 4 compenants of swdown radiation
-            swvisdir(i,j)  = sibvisdir(1,1)
-            swvisdif(i,j)  = sibvisdif(1,1)
-            swnirdir(i,j)  = sibnirdir(1,1)
-            swnirdif(i,j)  = sibnirdif(1,1)
+         if (present(swvisdir)) swvisdir(i,j)  = sibvisdir(1,1)
+         if (present(swvisdif)) swvisdif(i,j)  = sibvisdif(1,1)
+         if (present(swnirdir)) swnirdir(i,j)  = sibnirdir(1,1)
+         if (present(swnirdif)) swnirdif(i,j)  = sibnirdif(1,1)
 !  Ended, Zhenxin (2011/06/20)
-            swdnbc(i,j)    = swdflxc(1,1)
+         if (present(swdnbc))   swdnbc(i,j)    = swdflxc(1,1)
             if(calc_clean_atm_diag .gt. 0)then
             	swuptcln(i,j)  = swuflxcln(1,kte+2)
             	swdntcln(i,j)  = swdflxcln(1,kte+2)
             	swupbcln(i,j)  = swuflxcln(1,1)
             	swdnbcln(i,j)  = swdflxcln(1,1)
             end if
-         endif
+!         endif
          if (present(swddir)) then
             swddir(i,j)    = swdkdir(1,1)          ! jararias 2013/08/10
             swddni(i,j)    = swddir(i,j) / coszrs  ! jararias 2013/08/10

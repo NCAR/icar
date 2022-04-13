@@ -6,6 +6,7 @@ module time_io
     use time_delta_object,  only : time_delta_t
     use string,             only : get_integer
     use io_routines,        only : io_read, io_read_attribute
+    use iso_fortran_env, only: real64, real128
 
     implicit none
 
@@ -73,16 +74,16 @@ contains
     function time_gain_from_units(units) result(gain)
         implicit none
         character(len=*), intent(in) :: units
-        double precision :: gain
+        real(real128) :: gain
 
         if ((units(1:4)=="days").or.(units(1:4)=="Days")) then
-            gain = 1.0D0
+            gain = 1.0Q0
         else if ((units(1:4)=="hour").or.(units(1:4)=="Hour")) then
-            gain = 24.0D0
+            gain = 24.0Q0
         else if ((units(1:3)=="min").or.(units(1:3)=="Min")) then
-            gain = 1440.0D0
+            gain = 1440.0Q0
         else if ((units(1:3)=="sec").or.(units(1:3)=="Sec")) then
-            gain = 86400.0D0
+            gain = 86400.0Q0
         else
             write(*,*) trim(units)
             stop "Error: unknown units"
@@ -170,20 +171,21 @@ contains
         implicit none
         character(len=*),   intent(in) :: filename, varname
         type(Time_type),    intent(inout), allocatable, dimension(:) :: times
-        double precision,   intent(in), optional :: timezone_offset
+        real(real128),      intent(in), optional :: timezone_offset
         integer,            intent(in), optional :: curstep
 
-        double precision, allocatable, dimension(:) :: temp_times
+        real(real64),  allocatable, dimension(:) :: temp_times_64
+        real(real128), allocatable, dimension(:) :: temp_times_128
         integer :: time_idx, error
         integer :: start_year, start_month, start_day, start_hour
         character(len=MAXSTRINGLENGTH) :: calendar, units
-        double precision :: calendar_gain
+        real(real128) :: calendar_gain
 
-        ! first read the time variable (presumebly a 1D double precision array)
+        ! first read the time variable (presumebly a 1D real(real64) array)
         if (present(curstep)) then
-            call io_read(trim(filename), trim(varname), temp_times, curstep=curstep)
+            call io_read(trim(filename), trim(varname), temp_times_64, curstep=curstep)
         else
-            call io_read(trim(filename), trim(varname), temp_times)
+            call io_read(trim(filename), trim(varname), temp_times_64)
         endif
 
         ! attempt to read the calendar attribute from the time variable
@@ -211,21 +213,22 @@ contains
 
         ! converts the input units to "days since ..."
         ! in case it is in units of e.g. "hours since" or "seconds since"
-        temp_times = temp_times / calendar_gain
+        allocate(temp_times_128(size(temp_times_64)))
+        temp_times_128 = temp_times_64 / calendar_gain
 
         if (present(timezone_offset)) then
-            temp_times = temp_times + timezone_offset / 24.0
+            temp_times_128 = temp_times_128 + timezone_offset / 24.0
         endif
 
         if (allocated(times)) deallocate(times)
-        allocate(times(size(temp_times)))
+        allocate(times(size(temp_times_128)))
 
-        do time_idx = 1, size(temp_times,1)
+        do time_idx = 1, size(temp_times_128,1)
             call times(time_idx)%init(calendar, start_year, start_month, start_day, start_hour)
-            call times(time_idx)%set(days=temp_times(time_idx))
+            call times(time_idx)%set(days=temp_times_128(time_idx))
         end do
 
-        deallocate(temp_times)
+        deallocate(temp_times_64, temp_times_128)
 
     end subroutine read_times
 

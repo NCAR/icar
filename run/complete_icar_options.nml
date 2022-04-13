@@ -524,6 +524,11 @@
 
 !---------------------------------------------------------
 !   Optionally specified Restart information
+!
+!   NOTE: If the (original) output file corresponding to the restart time is not removed before restarting, its 'time:units' parameter (i.e.
+!    time:units = "days since 2000-01-01 00:00:00") - is not overwritten, resulting in wrong timestamp for that first file after restart. 
+!   CURE: remove output files of the restart time from initial simulation before restarting. Or use the fix_icar_time.py script in icar/helpers/
+!
 !---------------------------------------------------------
 &restart_info
     ! file to read for initial conditions (an ICAR output file will work)
