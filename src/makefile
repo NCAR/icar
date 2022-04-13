@@ -207,7 +207,7 @@ ifeq ($(MODE), debugslow)
 		LINK=
 	endif
 	ifeq ($(COMPILER), gnu)
-		COMP= -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
+		COMP= -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none -Wconversion
 		LINK=
 	endif
 	ifeq ($(COMPILER), cray)
@@ -223,7 +223,7 @@ ifeq ($(MODE), debug)
 		LINK=
 	endif
 	ifeq ($(COMPILER), gnu)
-		COMP= -c -O2 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
+		COMP= -c -O2 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none -Wconversion
 		LINK=
 	endif
 	ifeq ($(COMPILER), cray)
@@ -240,7 +240,7 @@ ifeq ($(MODE), debugompslow)
 		LINK= -qopenmp -liomp5
 	endif
 	ifeq ($(COMPILER), gnu)
-		COMP= -fopenmp -lgomp -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none -ffpe-trap=invalid
+		COMP= -fopenmp -lgomp -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none -ffpe-trap=invalid -Wconversion
 		LINK= -fopenmp -lgomp
 	endif
 	ifeq ($(COMPILER), cray)
@@ -256,7 +256,7 @@ ifeq ($(MODE), debugomp)
 		LINK= -qopenmp -liomp5
 	endif
 	ifeq ($(COMPILER), gnu)
-		COMP= -fopenmp -lgomp -c -O2 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none -fimplicit-none # -ftree-vectorize -funroll-loops -march=native  -fno-protect-parens
+		COMP= -fopenmp -lgomp -c -O2 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none -fimplicit-none -Wconversion # -ftree-vectorize -funroll-loops -march=native  -fno-protect-parens
 		LINK= -fopenmp -lgomp
 		 # -Wall -Wno-unused-variable -Wno-unused-dummy-argument
 	endif
@@ -429,11 +429,12 @@ CAF_TEST_EXECUTABLES = 	caf_options_test 				\
 
 TEST_EXECUTABLES= 	fftshift_test			\
 	  				calendar_test			\
-	  				fftw_test				\
+	  				fftw_test			\
 					point_in_on_test		\
 	  				array_util_test 		\
 					variable_dict_test		\
 					caf_threads_test		\
+					time_obj_test			\
 					$(CAF_TEST_EXECUTABLES)
 
 # Pre-Coarray Tests that we may want to re-implement
@@ -482,7 +483,10 @@ fftw_test: $(BUILD)test_fftw.o $(OBJS)
 fftshift_test: $(BUILD)test_fftshift.o $(OBJS)
 	${LINKER} $^ -o $@ ${LFLAGS}
 
-calendar_test: $(BUILD)test_calendar.o $(BUILD)time.o
+time_obj_test: $(BUILD)test_time_obj.o $(BUILD)time_obj.o $(BUILD)time_h.o $(BUILD)time_delta_obj.o $(BUILD)co_utilities.o
+	${LINKER} $^ -o $@ ${LFLAGS}
+
+calendar_test: $(BUILD)test_calendar.o $(BUILD)time_obj.o $(BUILD)time_h.o $(BUILD)time_delta_obj.o $(BUILD)co_utilities.o
 	${LINKER} $^ -o $@ ${LFLAGS}
 
 mpdata_test: $(BUILD)test_mpdata.o $(BUILD)adv_mpdata.o
@@ -702,8 +706,6 @@ $(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.
 #	Utility Routines
 ###################################################################
 
-# $(BUILD)time.o:$(UTIL)time.f90
-
 $(BUILD)co_utilities.o:$(UTIL)co_utilities.f90 $(BUILD)icar_constants.o
 
 $(BUILD)time_delta_obj.o:$(UTIL)time_delta_obj.f90 $(BUILD)icar_constants.o
@@ -731,8 +733,6 @@ $(BUILD)atm_utilities.o:$(UTIL)atm_utilities.f90 $(BUILD)icar_constants.o 	\
 #	I/O routines
 ###################################################################
 
-$(BUILD)output.o:$(IO)output.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)time.o $(BUILD)string.o
-
 $(BUILD)io_routines.o:$(IO)io_routines.f90 $(BUILD)data_structures.o
 
 $(BUILD)lt_lut_io.o: $(IO)lt_lut_io.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o \
@@ -751,11 +751,11 @@ $(BUILD)vinterp.o: $(UTIL)vinterp.f90 $(BUILD)data_structures.o
 #	Microphysics code
 ###################################################################
 $(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_simple.o $(BUILD)mp_thompson_aer.o $(BUILD)mp_thompson.o $(BUILD)mp_wsm6.o\
-					$(BUILD)data_structures.o $(BUILD)time.o $(BUILD)domain_h.o  $(BUILD)icar_constants.o\
+					$(BUILD)data_structures.o $(BUILD)domain_h.o  $(BUILD)icar_constants.o\
 					$(BUILD)wrf_constants.o
 
 # $(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_thompson.o $(BUILD)mp_simple.o \
-# 					$(BUILD)mp_morrison.o $(BUILD)data_structures.o $(BUILD)mp_wsm6.o $(BUILD)time.o
+# 					$(BUILD)mp_morrison.o $(BUILD)data_structures.o $(BUILD)mp_wsm6.o
 # 	${F90} ${FFLAGS} $(PHYS)mp_driver.f90 -o $(BUILD)mp_driver.o
 
 $(BUILD)mp_morrison.o:$(PHYS)mp_morrison.f90 $(BUILD)data_structures.o
@@ -790,7 +790,7 @@ $(BUILD)ra_rrtmg_sw.o:$(PHYS)ra_rrtmg_sw.f90 $(BUILD)ra_clWRF_support.o $(BUILD)
 
 $(BUILD)ra_clWRF_support.o:$(PHYS)ra_clWRF_support.f90 $(BUILD)io_routines.o
 
-$(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o $(BUILD)time.o $(BUILD)atm_utilities.o $(BUILD)options_h.o $(BUILD)domain_h.o
+$(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o $(BUILD)atm_utilities.o $(BUILD)options_h.o $(BUILD)domain_h.o
 
 ###################################################################
 #	Surface code
@@ -930,7 +930,7 @@ $(BUILD)test_fftw.o: $(TESTS)test_fftw.f90 $(BUILD)fftw.o
 
 $(BUILD)test_fftshift.o:$(TESTS)test_fftshift.f90 $(BUILD)fftshift.o
 
-$(BUILD)test_calendar.o:$(TESTS)test_calendar.f90 $(BUILD)time.o
+$(BUILD)test_calendar.o:$(TESTS)test_calendar.f90  $(BUILD)time_obj.o $(BUILD)time_h.o $(BUILD)time_delta_obj.o
 
 $(BUILD)test_point_in_on.o:$(TESTS)test_point_in_on.f90 $(BUILD)geo_reader.o
 

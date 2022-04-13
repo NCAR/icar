@@ -12,13 +12,14 @@
 !!------------------------------------------------------------
 module time_delta_object
     use icar_constants, only : MAXSTRINGLENGTH
+    use iso_fortran_env, only: real64
 
     implicit none
     private
 
     type, public :: time_delta_t
         private
-        double precision :: delta = 0
+        real(real64) :: delta = 0
     contains
         procedure, public :: days
         procedure, public :: hours
@@ -40,9 +41,9 @@ contains
     subroutine set_time_delta_d(self, seconds, days, hours, minutes)
         implicit none
         class(time_delta_t) :: self
-        double precision, intent(in) :: seconds
-        double precision, intent(in), optional :: days, hours, minutes
-        double precision :: dt
+        real(real64), intent(in) :: seconds
+        real(real64), intent(in), optional :: days, hours, minutes
+        real(real64) :: dt
 
         dt=0
         if (present(days)) dt = dt + days
@@ -60,14 +61,14 @@ contains
         class(time_delta_t) :: self
         real, intent(in) :: seconds
         real, intent(in), optional :: days, hours, minutes
-        double precision :: dt
+        real(real64) :: dt
 
         dt=0
         if (present(days)) dt = dt + days
-        if (present(hours)) dt = dt + hours / 24.0
-        if (present(minutes)) dt = dt + minutes / 1440.0
+        if (present(hours)) dt = dt + hours / 24.0D0
+        if (present(minutes)) dt = dt + minutes / 1440.0D0
 
-        dt = dt + seconds / 86400.0
+        dt = dt + seconds / 86400.0D0
 
         self%delta = dt
 
@@ -78,14 +79,14 @@ contains
         class(time_delta_t) :: self
         integer, intent(in) :: seconds
         integer, intent(in), optional :: days, hours, minutes
-        double precision :: dt
+        real(real64) :: dt
 
         dt=0
         if (present(days)) dt = dt + days
-        if (present(hours)) dt = dt + hours / 24.0
-        if (present(minutes)) dt = dt + minutes / 1440.0
+        if (present(hours)) dt = dt + hours / 24.0D0
+        if (present(minutes)) dt = dt + minutes / 1440.0D0
 
-        dt = dt + seconds / 86400.0
+        dt = dt + seconds / 86400.0D0
 
         self%delta = dt
 
@@ -95,7 +96,7 @@ contains
     function days(self)
         implicit none
         class(time_delta_t), intent(in) :: self
-        double precision :: days
+        real(real64) :: days
 
         days = self%delta
 
@@ -104,7 +105,7 @@ contains
     function hours(self)
         implicit none
         class(time_delta_t), intent(in) :: self
-        double precision :: hours
+        real(real64) :: hours
 
         hours = self%delta * 24
 
@@ -113,7 +114,7 @@ contains
     function minutes(self)
         implicit none
         class(time_delta_t), intent(in) :: self
-        double precision :: minutes
+        real(real64) :: minutes
 
         minutes = self%delta * 1440
 
@@ -122,7 +123,7 @@ contains
     function seconds(self)
         implicit none
         class(time_delta_t), intent(in) :: self
-        double precision :: seconds
+        real(real64) :: seconds
 
         seconds = self%delta * 86400
 
