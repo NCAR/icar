@@ -58,9 +58,10 @@ contains
                 allocate(domain%tend%th_swrad(domain%ims:domain%ime,domain%kms:domain%kme,domain%jms:domain%jme))
 
             if (options%physics%microphysics .ne. kMP_THOMP_AER) then
-               if (this_image()==1)write(*,*) 'WARNING: When running RRTMG, microphysics option 5 should be used'
+               if (this_image()==1)write(*,*) '    NOTE: When running RRTMG, microphysics option 5 works best.'
             endif
 
+            ! needed to allocate module variables so ra_driver can use calc_solar_elevation
             call ra_simple_init(domain, options)
 
             call rrtmg_lwinit(                           &
@@ -418,7 +419,7 @@ contains
                     yr=domain%model_time%year,                            &
                     julian=domain%model_time%day_of_year(),               &
                     mp_options=mp_options                               )
-                      
+
                 call RRTMG_LWRAD(rthratenlw=domain%tend%th_lwrad,                 &
 !                           lwupt, lwuptc, lwuptcln, lwdnt, lwdntc, lwdntcln,     &        !if lwupt defined, all MUST be defined
 !                           lwupb, lwupbc, lwupbcln, lwdnb, lwdnbc, lwdnbcln,     &
