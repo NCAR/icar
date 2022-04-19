@@ -156,12 +156,14 @@ CONTAINS
                      cfc12r(idata)
                 if (istatus==0) then
                     !IF ( wrf_dm_on_monitor() ) THEN
-                    WRITE(message,*)'CLWRF reading...: istatus:',istatus,' idata:',idata,   &
-                        ' year:', yrdata(idata), ' co2: ',co2r(idata), ' n2o: ',&
-                        n2or(idata),' ch4:',ch4r(idata)
-                    !call wrf_debug( 0, message)
-                    if (this_image()==1) write(*,*) message
-                    !ENDIF
+                    if (idata==1) then
+                        WRITE(message,*)'CLWRF reading...: istatus:',istatus,' idata:',idata,   &
+                            ' year:', yrdata(idata), ' co2: ',co2r(idata), ' n2o: ',&
+                            n2or(idata),' ch4:',ch4r(idata)
+                            !call wrf_debug( 0, message)
+                        if (this_image()==1) write(*,*) trim(message)
+                    endif
+                    ! ENDIF
                     mondata(idata) = 6
 
                     idata=idata+1
