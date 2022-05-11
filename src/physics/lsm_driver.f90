@@ -217,8 +217,8 @@ contains
 
         Ri = gravity/airt(:,1,:) * (airt(:,1,:)-tskin)*z_atm/(wind**2)
 
-        ! print*,"--------------------------------------------------"
-        ! print*, "Surface Richardson number"
+        ! "--------------------------------------------------"
+        !  "Surface Richardson number"
         where(Ri<0)  exchange_C = lnz_atm_term * (1.0-(15.0*Ri)/(1.0+(base_exchange_term * sqrt((-1.0)*Ri))))
         where(Ri>=0) exchange_C = lnz_atm_term * 1.0/((1.0+15.0*Ri)*sqrt(1.0+5.0*Ri))
 
@@ -265,22 +265,20 @@ contains
         REAL, DIMENSION(ims:ime, jms:jme ), INTENT(IN)    ::  HFX, QFX, TSK, QSFC
         REAL, DIMENSION(ims:ime, jms:jme ), INTENT(INOUT) ::  Q2, T2
         REAL, DIMENSION(ims:ime, jms:jme ), INTENT(IN)    ::  PSFC, CHS2, CQS2
-        REAL, DIMENSION(ims:ime, jms:jme ), INTENT(IN)    ::  T2veg, T2bare, Q2veg, Q2bare, VEGFRAC
+        REAL, DIMENSION( : , : ),  POINTER, INTENT(IN)    ::  T2veg, T2bare, Q2veg, Q2bare
+        REAL, DIMENSION(ims:ime, jms:jme ), INTENT(IN)    ::  VEGFRAC
         INTEGER, DIMENSION(ims:ime, jms:jme ), INTENT(IN) ::  land_mask, veg_type
-        integer :: i,j, nx,ny
+        integer :: i,j
         real :: rho
 
         !$omp parallel default(shared), private(i,j,rho)
-        nx=size(HFX,1)
-        ny=size(HFX,2)
         !$omp do
         do j=jts,jte
             do i=its,ite
-                RHO = PSFC(I,J)/(Rd * TSK(I,J))
 
                 ! if ((domain%veg_type(i,j)/=13).and.(domain%veg_type(i,j)/=15).and.(domain%veg_type(i,j)/=16).and.(domain%veg_type(i,j)/=21)) then
                 ! over glacier, urban and barren, noahmp veg 2m T is 0 or -9999e35
-                if ((T2veg(i,j) > 200).and.(land_mask(i,j)==kLC_LAND)) then
+                if ((T2veg(i,j) > 200).and.(land_mask(i,j)==kLC_LAND).and.(associated(T2bare))) then
                     T2(i,j) = VEGFRAC(i,j) * T2veg(i,j) &
                         + (1-VEGFRAC(i,j)) * T2bare(i,j)
                     Q2(i,j) = VEGFRAC(i,j) * Q2veg(i,j) &
@@ -289,10 +287,13 @@ contains
                     ! over glacier we don't want to use the bare ground temperature though
                     if ((veg_type(i,j)/=15)              &
                         .and.(veg_type(i,j)/=21)         &
-                        .and.(land_mask(i,j)==kLC_LAND)) then
+                        .and.(land_mask(i,j)==kLC_LAND)  &
+                        .and.(associated(T2bare))) then
                         T2(i,j) = T2bare(i,j)
                         Q2(i,j) = Q2bare(i,j)
                     else
+                        RHO = PSFC(I,J)/(Rd * TSK(I,J))
+
                         if(CQS2(I,J).lt.1.E-3) then
                            Q2(I,J) = QSFC(I,J)
                         else

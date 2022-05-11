@@ -624,7 +624,7 @@ CONTAINS
 !     CONVERT MODEL VARIABLES FOR MFLUX SCHEME
 
       DO 10 k=1,km
-        DO 10 j=1,lq
+        DO j=1,lq
           PTTE(j,k)=0.0
           PCTE(j,k)=0.0
           PVOM(j,k)=0.0
@@ -644,6 +644,7 @@ CONTAINS
           ZQSAT(j,k)=ZQSAT(j,k)/(1.-VTMPC1*ZQSAT(j,k))
           PQTE(j,k)=pqvf(j,k)+pqvbl(j,k)
           ZQQ(j,k)=PQTE(j,k)
+        end do
    10 CONTINUE
 !
 !-----------------------------------------------------------------------
@@ -664,7 +665,7 @@ CONTAINS
 !
       IF(fdbk.ge.1.0e-9) THEN
       DO 20 K=1,km
-      DO 20 j=1,lq
+      DO j=1,lq
       If(PCTE(j,k).GT.0.0) then
         ZTPP1=pt(j,k)+PTTE(j,k)*ZTMST
         if(ZTPP1.ge.t000) then
@@ -683,23 +684,26 @@ CONTAINS
         pqi(j,k)=pqi(j,k)+fice*PCTE(j,k)*ZTMST
         PTTE(j,k)=PTTE(j,k)-ZALF*RCPD*fliq*PCTE(j,k)
       Endif
+      end do
    20 CONTINUE
       ENDIF
 !
       DO 75 k=1,km
-        DO 75 j=1,lq
+        DO j=1,lq
           pt(j,k)=ZTP1(j,k)+PTTE(j,k)*ZTMST
           ZQP1(j,k)=ZQP1(j,k)+(PQTE(j,k)-ZQQ(j,k))*ZTMST
           pqv(j,k)=ZQP1(j,k)/(1.0-ZQP1(j,k))
+        end do
    75 CONTINUE
       DO 85 j=1,lq
         zprecc(j)=amax1(0.0,(PRSFC(j)+PSSFC(j))*ZTMST)
    85 CONTINUE
       IF (LMFDUDV) THEN
         DO 100 k=1,km
-          DO 100 j=1,lq
+          DO j=1,lq
             pu(j,k)=pu(j,k)+PVOM(j,k)*ZTMST
             pv(j,k)=pv(j,k)+PVOL(j,k)*ZTMST
+          end do
   100   CONTINUE
       ENDIF
 !
@@ -947,15 +951,16 @@ CONTAINS
       ZALVDCP=ALV/CPD
       ZQALV=1./ALV
       DO 420 JK=KLEVM1,3,-1
-      DO 420 JL=1,KLON
-      ZHSAT=CPD*ZTENH(JL,JK)+ZGEOH(JL,JK)+ALV*ZQSENH(JL,JK)
-      ZGAM=C5LES*ZALVDCP*ZQSENH(JL,JK)/  &
-          ((1.-VTMPC1*ZQSENH(JL,JK))*(ZTENH(JL,JK)-C4LES)**2)
-      ZZZ=CPD*ZTENH(JL,JK)*0.608
-      ZHHAT=ZHSAT-(ZZZ+ZGAM*ZZZ)/(1.+ZGAM*ZZZ*ZQALV)* &
-                 MAX(ZQSENH(JL,JK)-ZQENH(JL,JK),0.)
-      ZHHATT(JL,JK)=ZHHAT
-      IF(JK.LT.ICTOP0(JL).AND.ZHCBASE(JL).GT.ZHHAT) ICTOP0(JL)=JK
+          DO JL=1,KLON
+              ZHSAT=CPD*ZTENH(JL,JK)+ZGEOH(JL,JK)+ALV*ZQSENH(JL,JK)
+              ZGAM=C5LES*ZALVDCP*ZQSENH(JL,JK)/  &
+                  ((1.-VTMPC1*ZQSENH(JL,JK))*(ZTENH(JL,JK)-C4LES)**2)
+              ZZZ=CPD*ZTENH(JL,JK)*0.608
+              ZHHAT=ZHSAT-(ZZZ+ZGAM*ZZZ)/(1.+ZGAM*ZZZ*ZQALV)* &
+                         MAX(ZQSENH(JL,JK)-ZQENH(JL,JK),0.)
+              ZHHATT(JL,JK)=ZHHAT
+              IF(JK.LT.ICTOP0(JL).AND.ZHCBASE(JL).GT.ZHHAT) ICTOP0(JL)=JK
+          enddo
   420 CONTINUE
       DO 430 JL=1,KLON
       JK=KCBOT(JL)
@@ -981,21 +986,22 @@ CONTAINS
 !
       ZBI = 1./(25.*G)
       DO 450 JK = KLEV, 1, -1
-      DO 450 JL = 1, KLON
-      LLO1 = LDCUM(JL).AND.KTYPE(JL).EQ.1.AND.IHMIN(JL).EQ.KCBOT(JL)
-      IF (LLO1.AND.JK.LT.KCBOT(JL).AND.JK.GE.ICTOP0(JL)) THEN
-        IKB = KCBOT(JL)
-        ZRO = RD*ZTENH(JL,JK)/(G*PAPH(JL,JK))
-        ZDZ = (PAPH(JL,JK)-PAPH(JL,JK-1))*ZRO
-        ZDHDZ=(CPD*(PTEN(JL,JK-1)-PTEN(JL,JK))+ALV*(PQEN(JL,JK-1)-   &
-          PQEN(JL,JK))+(PGEO(JL,JK-1)-PGEO(JL,JK)))*G/(PGEO(JL,      &
-          JK-1)-PGEO(JL,JK))
-        ZDEPTH = ZGEOH(JL,JK) - ZGEOH(JL,IKB)
-        ZFAC = SQRT(1.+ZDEPTH*ZBI)
-        ZHMIN(JL) = ZHMIN(JL) + ZDHDZ*ZFAC*ZDZ
-        ZRH = -ALV*(ZQSENH(JL,JK)-ZQENH(JL,JK))*ZFAC
-        IF (ZHMIN(JL).GT.ZRH) IHMIN(JL) = JK
-      END IF
+          DO JL = 1, KLON
+              LLO1 = LDCUM(JL).AND.KTYPE(JL).EQ.1.AND.IHMIN(JL).EQ.KCBOT(JL)
+              IF (LLO1.AND.JK.LT.KCBOT(JL).AND.JK.GE.ICTOP0(JL)) THEN
+                IKB = KCBOT(JL)
+                ZRO = RD*ZTENH(JL,JK)/(G*PAPH(JL,JK))
+                ZDZ = (PAPH(JL,JK)-PAPH(JL,JK-1))*ZRO
+                ZDHDZ=(CPD*(PTEN(JL,JK-1)-PTEN(JL,JK))+ALV*(PQEN(JL,JK-1)-   &
+                  PQEN(JL,JK))+(PGEO(JL,JK-1)-PGEO(JL,JK)))*G/(PGEO(JL,      &
+                  JK-1)-PGEO(JL,JK))
+                ZDEPTH = ZGEOH(JL,JK) - ZGEOH(JL,IKB)
+                ZFAC = SQRT(1.+ZDEPTH*ZBI)
+                ZHMIN(JL) = ZHMIN(JL) + ZDHDZ*ZFAC*ZDZ
+                ZRH = -ALV*(ZQSENH(JL,JK)-ZQENH(JL,JK))*ZFAC
+                IF (ZHMIN(JL).GT.ZRH) IHMIN(JL) = JK
+              END IF
+          end do
  450  CONTINUE
       DO 460 JL = 1, KLON
       IF (LDCUM(JL).AND.KTYPE(JL).EQ.1) THEN
@@ -1035,8 +1041,9 @@ CONTAINS
       ZRFL(JL)=ZDMFUP(JL,1)
   480 CONTINUE
       DO 490 JK=2,KLEV
-      DO 490 JL=1,KLON
+      DO JL=1,KLON
           ZRFL(JL)=ZRFL(JL)+ZDMFUP(JL,JK)
+      end do
   490 CONTINUE
 !-----------------------------------------
 !*    5.0   CUMULUS DOWNDRAFT CALCULATIONS
@@ -1157,7 +1164,7 @@ CONTAINS
         END IF
   512   CONTINUE
         DO 530 JK=1,KLEV
-        DO 530 JL=1,KLON
+        DO JL=1,KLON
         IF(LDCUM(JL)) THEN
            ZFAC=ZMFUB1(JL)/MAX(ZMFUB(JL),1.E-10)
            PMFD(JL,JK)=PMFD(JL,JK)*ZFAC
@@ -1170,6 +1177,7 @@ CONTAINS
            ZMFDQ(JL,JK)=0.0
            ZDMFDP(JL,JK)=0.0
         ENDIF
+        end do
   530   CONTINUE
         DO 538 JL=1,KLON
            IF(LDCUM(JL)) THEN
@@ -1457,8 +1465,9 @@ CONTAINS
 !              CHECK FOR BUOYANCY AND SET FLAGS
 !-------------------------------------------------------
       DO 200 JK=1,KLEV
-      DO 200 JL=1,KLON
+      DO JL=1,KLON
         ZQOLD(JL,JK)=0.0
+      end do
   200 CONTINUE
       DO 290 JK=KLEVM1,2,-1
         IS=0
@@ -2007,7 +2016,7 @@ CONTAINS
         IF(.NOT.LDCUM(JL)) KTYPE(JL)=0
   210 CONTINUE
       DO 230 JK=1,KLEV
-      DO 230 JL=1,KLON
+      DO JL=1,KLON
           PLU(JL,JK)=0.
           PMFU(JL,JK)=0.
           PMFUS(JL,JK)=0.
@@ -2019,6 +2028,7 @@ CONTAINS
           ZODETR(JL,JK)=0.
           IF(.NOT.LDCUM(JL).OR.KTYPE(JL).EQ.3) KLAB(JL,JK)=0
           IF(.NOT.LDCUM(JL).AND.PAPH(JL,JK).LT.4.E4) KCTOP0(JL)=JK
+      end do
   230 CONTINUE
 !------------------------------------------------
 !     3.0      INITIALIZE VALUES AT LIFTING LEVEL

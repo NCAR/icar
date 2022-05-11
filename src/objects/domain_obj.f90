@@ -1616,12 +1616,14 @@ contains
                            temporary_data)
             if (associated(this%soil_deep_temperature%data_2d)) then
                 this%soil_deep_temperature%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
-            endif
-            if (minval(temporary_data)< 200) then
-                if (this_image()==1) print*, "WARNING, VERY COLD SOIL TEMPERATURES SPECIFIED:", minval(temporary_data)
-            endif
-            if (minval(this%soil_deep_temperature%data_2d)< 200) then
-                where(this%soil_deep_temperature%data_2d<200) this%soil_deep_temperature%data_2d=280 ! <200 is just broken, set to mean annual air temperature at mid-latidudes
+
+                if (minval(temporary_data)< 200) then
+                    if (this_image()==1) print*, "WARNING, VERY COLD SOIL TEMPERATURES SPECIFIED:", minval(temporary_data)
+                    if (this_image()==1) print*, trim(options%parameters%init_conditions_file),"  ",trim(options%parameters%soil_deept_var)
+                endif
+                if (minval(this%soil_deep_temperature%data_2d)< 200) then
+                    where(this%soil_deep_temperature%data_2d<200) this%soil_deep_temperature%data_2d=280 ! <200 is just broken, set to mean annual air temperature at mid-latidudes
+                endif
             endif
         else
             if (associated(this%soil_deep_temperature%data_2d)) then
@@ -1638,15 +1640,19 @@ contains
                     this%soil_temperature%data_3d(:,i,:) = temporary_data_3d(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme, i)
                 enddo
                 if (options%parameters%soil_deept_var == "") then
-                    this%soil_deep_temperature%data_2d = this%soil_temperature%data_3d(:,nsoil,:)
+                    if (associated(this%soil_deep_temperature%data_2d)) then
+                        this%soil_deep_temperature%data_2d = this%soil_temperature%data_3d(:,nsoil,:)
+                    endif
                 endif
             endif
 
         else
             if (associated(this%soil_temperature%data_3d)) then
-                do i=1,nsoil
-                    this%soil_temperature%data_3d(:,i,:) = this%soil_deep_temperature%data_2d
-                enddo
+                if (associated(this%soil_deep_temperature%data_2d)) then
+                    do i=1,nsoil
+                        this%soil_temperature%data_3d(:,i,:) = this%soil_deep_temperature%data_2d
+                    enddo
+                endif
             endif
         endif
 
@@ -2298,10 +2304,11 @@ contains
             if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " for initial conditions"
             external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
 
-            ! if (this_image()==1) print*, "shape swe var: ",(shape(this%snow_water_equivalent%data_2d))
-            call geo_interp2d(  this%snow_water_equivalent%data_2d, & ! ( this%grid2d% ids : this%grid2d% ide, this%grid2d% jds : this%grid2d% jde)   ,            &
-                                external_var%data_2d,               &
-                                external_conditions%geo%geolut )
+            if (associated(this%snow_water_equivalent%data_2d)) then
+                call geo_interp2d(  this%snow_water_equivalent%data_2d, & ! ( this%grid2d% ids : this%grid2d% ide, this%grid2d% jds : this%grid2d% jde)   ,            &
+                                    external_var%data_2d,               &
+                                    external_conditions%geo%geolut )
+            endif
 
           endif
 
@@ -2313,9 +2320,11 @@ contains
             if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " for initial conditions"
             external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
 
-            call geo_interp2d(  this%snow_height%data_2d, & ! ( this%grid2d% ids : this%grid2d% ide, this%grid2d% jds : this%grid2d% jde)   ,            &
-                                external_var%data_2d,               &
-                                external_conditions%geo%geolut )
+            if (associated(this%snow_height%data_2d)) then
+                call geo_interp2d(  this%snow_height%data_2d, & ! ( this%grid2d% ids : this%grid2d% ide, this%grid2d% jds : this%grid2d% jde)   ,            &
+                                    external_var%data_2d,               &
+                                    external_conditions%geo%geolut )
+            endif
           ! -------  external snow height from external swe and density  -----------------
           elseif (options%parameters%swe_ext/="" .AND. options%parameters%rho_snow_ext/="") then
 
@@ -2324,10 +2333,11 @@ contains
             if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " to calculate initial snow height"
             external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
             external_var2 =external_conditions%variables%get_var(trim(options%parameters%swe_ext))  ! the external swe
-
-            call geo_interp2d(  this%snow_height%data_2d, &
-                                external_var2%data_2d / external_var%data_2d,               &  ! ext_swe / rho_snow_swe = hsnow_ext
-                                external_conditions%geo%geolut )
+            if (associated(this%snow_height%data_2d)) then
+                call geo_interp2d(  this%snow_height%data_2d, &
+                                    external_var2%data_2d / external_var%data_2d,               &  ! ext_swe / rho_snow_swe = hsnow_ext
+                                    external_conditions%geo%geolut )
+            endif
           endif
 
           ! ------ soil temperature  (2D or 3D)_______________________
@@ -2338,13 +2348,17 @@ contains
             if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " for initial conditions"
             external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
 
-            call geo_interp2d(  this%soil_deep_temperature%data_2d, &
-                                external_var%data_2d,               &
-                                external_conditions%geo%geolut )
-            do i=1,nsoil
-                this%soil_temperature%data_3d(:,i,:) = this%soil_deep_temperature%data_2d
-                ! if (this_image()==1) write(*,*) "  max soil_temperature in layer",i," on init: ", maxval(this%soil_temperature%data_3d(:,i,:))
-            enddo
+            if (associated(this%soil_deep_temperature%data_2d)) then
+
+                call geo_interp2d(  this%soil_deep_temperature%data_2d, &
+                                    external_var%data_2d,               &
+                                    external_conditions%geo%geolut )
+                if (associated(this%soil_temperature%data_3d)) then
+                    do i=1,nsoil
+                        this%soil_temperature%data_3d(:,i,:) = this%soil_deep_temperature%data_2d
+                    enddo
+                endif
+            endif
 
           elseif (options%parameters%tsoil3D_ext/="") then  ! if 3D soil is provided we take the lowest level only. (can/should be expanded later)
 
@@ -2353,14 +2367,16 @@ contains
             if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " for initial conditions"
             external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
 
-            call geo_interp2d(  this%soil_deep_temperature%data_2d, &
-                                external_var%data_3d(:,size(external_var%data_3d,2),:)  ,               &
-                                external_conditions%geo%geolut )
-            do i=1,nsoil
-                this%soil_temperature%data_3d(:,i,:) = this%soil_deep_temperature%data_2d
-                ! if (this_image()==1) write(*,*) "  max soil_temperature in layer",i," on init: ", maxval(this%soil_temperature%data_3d(:,i,:))
-            enddo
-
+            if (associated(this%soil_deep_temperature%data_2d)) then
+                call geo_interp2d(  this%soil_deep_temperature%data_2d, &
+                                    external_var%data_3d(:,size(external_var%data_3d,2),:)  ,               &
+                                    external_conditions%geo%geolut )
+                if (associated(this%soil_temperature%data_3d)) then
+                    do i=1,nsoil
+                        this%soil_temperature%data_3d(:,i,:) = this%soil_deep_temperature%data_2d
+                    enddo
+                endif
+            endif
           endif
         endif
     end subroutine
