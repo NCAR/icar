@@ -10,27 +10,44 @@ class Forcing:
     attributes = {"history": "Dec 01 00:00:00 2020"}
 
 
-    def __init__(self, nz=10, nx=2, ny=2, sealevel_pressure=100000.0,
+    def __init__(self,nt=10, nz=10, nx=2, ny=2, sealevel_pressure=100000.0,
                  u_val=0.5, v_val=0.5, w_val=0.0,
-                 water_vapor_val=0.001, theta_val=300.0, nt=2,
+                 water_vapor_val=0.001, theta_val=300.0, 
                  height_value=500, dx=10, dy=10, dz_value=500.0,
                  qv_val=0.1, weather_model='basic',
-                 pressure_func='calc_pressure_from_sea'):
+                 pressure_func='calc_pressure_from_sea',
+                 hill_height=0, lat0 = 39.5,
+                 lon0 = -105,
+                 Schaer_test=False):
         print(weather_model.capitalize(), "weather model in use")
         self.setup_class_variables(nz, nx, ny, nt, sealevel_pressure)
 
         # --- Create and define variables for datafile
         # TODO make these values passed i
-        lat_flat = np.arange(39,39+nx*dx, dx)
-        lon_flat = np.arange(-107,-107+ny*dy, dy)
+        # lat_flat = np.arange(39,39+nx*dx, dx)
+        # lon_flat = np.arange(-107,-107+ny*dy, dy)
+
+        # center around lat0, lon0 (iso corner)
+        lon_flat = np.arange(lon0-(nx/2*dx/111111/np.cos(np.radians(lat0))),
+                    lon0+(nx/2*dx/111111/np.cos(np.radians(lat0))),
+                    dx/111111/np.cos(np.radians(lat0)) 
+                   )[:nx]
+        lat_flat = np.arange(lat0-(ny/2*dy/111111),
+                            lat0+(ny/2*dy/111111),
+                            dy/111111
+                        )[:ny]
+
+        print(" lat_flat min/max: ", np.amin(lat_flat), np.amax(lat_flat))
+        # lon_flat, lat_flat = np.meshgrid(lon_tmp, lat_tmp)
 
         self.define_data_variables(nt, nz, nx, ny, height_value, lat_flat,
                                    lon_flat, dz_value, theta_val, u_val,
-                                   v_val, qv_val, weather_model, pressure_func)
+                                   v_val, qv_val, weather_model, pressure_func, 
+                                   hill_height, Schaer_test, dx)
 
         # define time
         t0 = datetime.datetime(2020,12,1)
-        time = xr.DataArray([t0+datetime.timedelta(dt*100) for dt in range(nt)], name="time",
+        time = xr.DataArray([t0+datetime.timedelta(hours=dt) for dt in range(nt)], name="time",
                             dims=["time"])
 
         # --- Write all variable to netcdf file
@@ -57,7 +74,7 @@ class Forcing:
             attrs = self.attributes
         )
 
-        ds.to_netcdf("forcing.nc", "w", "NETCDF4", unlimited_dims='time')
+        ds.to_netcdf("forcing.nc", "w", "NETCDF4", unlimited_dims='time', encoding={'time': {'dtype': 'i4'}})
 
 
     def set_water_vapor(self, water_vapor, temperature, pressure):
@@ -74,22 +91,22 @@ class Forcing:
         dimensions4d = {
             "time": nt,
             "level": nz,
-            "lat": nx,
-            "lon": ny
+            "lat": ny,
+            "lon": nx
         }
         dimensions3d = {
             "level": nz,
-            "lat": nx,
-            "lon": ny
+            "lat": ny,
+            "lon": nx
         }
         dimensions3d_t = {
             "time": nt,
-            "lat": nx,
-            "lon": ny
+            "lat": ny,
+            "lon": nx
         }
         dimensions2d = {
-            "lat": nx,
-            "lon": ny
+            "lat": ny,
+            "lon": nx
         }
         dimensions1d = {
             "time": 1
@@ -109,12 +126,38 @@ class Forcing:
 
     def define_data_variables(self, nt, nz, nx, ny, height_value,lat_flat,
                               lon_flat, dz_value, theta_val, u_val, v_val,
-                              qv_val, weather_model, pressure_func):
+                              qv_val, weather_model, pressure_func, hill_height,
+                              Schaer_test, dx):
+        
         # --- u variable
+        # if uval is given as a single float, make a uniform windfield:
+        if Schaer_test==True:
+            z1 = 4000. ; z2 = 5000. ; hill_height = 3000.0  ; u0=10
+            u_val = np.array( [0]* int(z1/dz_value)
+                + [u0* (np.sin(np.pi/2*(z1/dz_value+1 - z1/dz_value) / ((z2-z1)/dz_value) ))**2 ]   
+                + [u0* (np.sin(np.pi/2*(z1/dz_value+2 - z1/dz_value) / ((z2-z1)/dz_value) ))**2 ]
+                + [u0] * nz #int(nz-z2/dz_value)
+            )
+            print("  Adv_test: u(z): ", u_val[:nz])
+            u_array=np.tile(u_val[:nz], (nt,nx,ny,1) )
+            u_array = np.transpose(u_array,(0,3,1,2) )
+            print("   u(z) shape: ", u_array.shape)
+
+        elif isinstance(u_val, float):
+            u_array= np.full([nt, nz, nx, ny], u_val[:nz])
+        # if u_val is given as a vector, interpret this a vector in the z direction (bottom-top):
+        elif isinstance(u_val, np.ndarray):
+            u_array=np.tile(u_val[:nz], (nt,nx,ny,1) )
+            u_array = np.transpose(u_array,(0,3,1,2) )
+            # print(U.shape)
+            print("   Treating u_test_val as a u field in z-direction")
+        
         self.u = xr.Variable(self.dims4d,
-                             np.full([nt, nz, nx, ny], u_val),
+                             u_array,
                              {'long_name':'U (E/W) wind speed', 'units':"m s**-1"})
+
         # --- v variable
+        if Schaer_test==True: v_val=0.
         self.v = xr.Variable(self.dims4d,
                              np.full([nt, nz, nx, ny], v_val),
                              {'long_name':'V (N/S) wind speed', 'units':"m s**-1"})
@@ -169,8 +212,60 @@ class Forcing:
         self.set_temperature(weather_model)
 
         # --- qv variable
+        if Schaer_test==True:
+            # print("  setting up advection test with qv_val ", qv_val)
+            qv_arr = np.zeros([nt,nz,nx,ny])            
+            # create a small blob of moisture, in an otherwise dry environment.
+            #  TODO scale blob size relative to nx/y/x            
+            # TODO maybe make a separate forcing script for this test, so it can be expanded. 
+            u_nx = int( (u0 *3600 )/dx ) # speed in nx cells per timestep (1h)
+            z0 = 9000
+
+            print( "   u speed is ",u_nx," grid cells per time step (h)")
+            # i_s1 = int((nx-10)/3)-int((nx-10)/10 ; i_s2 = int((nx-10)/3)+int((nx-10)/10,
+            for t in range(0,nt):
+                qv_arr[
+                    t, 
+                    int(z0/dz_value)-5:int(z0/dz_value)+5,
+                    int(ny/2)-5:int(ny/2)+5,
+                    t*u_nx+5:t*u_nx+15
+                    ] = qv_val 
+
+
+
+            # [qv_arr[
+            #     t, 
+            #     int(hill_height/dz_value)+1:int(hill_height/dz_value)+5,
+            #     int(ny/2)-5:int(ny/2)+5,
+            #     t*u_nx+5:t*u_nx+15
+            #     ] = qv_val for t in range(0,nt) ]              
+                            
+            # qv_arr[
+            #     0, 
+            #     int(hill_height/dz_value)+1:int(hill_height/dz_value)+5,
+            #     int(ny/2)-5:int(ny/2)+5,
+            #     5:15,
+            # ] = qv_val
+            # qv_arr[
+            #     1, 
+            #     int(hill_height/dz_value)+1:int(hill_height/dz_value)+5,
+            #     int(ny/2)-5:int(ny/2)+5,
+            #     # int(nx/2)-5:int(nx/2)+5,
+            #     u_nx+5:u_nx+15
+            #     ] = qv_val
+            # qv_arr[
+            #     2, 
+            #     int(hill_height/dz_value)+1:int(hill_height/dz_value)+5,
+            #     int(ny/2)-5:int(ny/2)+5,
+            #     -15:-5,
+            # ] = qv_val
+            print("qv_arr min: ",np.amin(qv_arr), "  max:", np.amax(qv_arr))
+        else:  # homogenous qv throughout domain
+            qv_arr = np.full([nt,nz,nx,ny], qv_val)            
+
         self.qv = xr.Variable(self.dims4d,
-                              np.full([nt, nz, nx, ny], qv_val),
+                            #   np.full([nt, nz, nx, ny], ),
+                            qv_arr,
                               {'long_name':'Relative Humidity',
                                'units':"kg kg**-1"})
 

@@ -1,3 +1,4 @@
+from urllib.parse import non_hierarchical
 import pandas as pd
 import xarray as xr
 import numpy as np
@@ -46,15 +47,15 @@ class Topography:
         ## If your displacements aren't too great (less than a few kilometers) and you're not right at the poles, 
         # use the quick and dirty estimate that 111,111 meters (111.111 km) in the y direction is 1 degree 
         # (of latitude) and 111,111 * cos(latitude) meters in the x direction is 1 degree (of longitude).
-        lon_tmp = np.arange(lon0,
-                    lon0+(nx*dx/111111/np.cos(np.radians(lat0))),
+        lon_tmp = np.arange(lon0-(nx/2*dx/111111/np.cos(np.radians(lat0))),
+                    lon0+(nx/2*dx/111111/np.cos(np.radians(lat0))),
                     dx/111111/np.cos(np.radians(lat0)) 
                    )[:nx]
-        lat_tmp = np.arange(lat0,
-                            lat0+(ny*dy/111111),
+        lat_tmp = np.arange(lat0-(ny/2*dy/111111),
+                            lat0+(ny/2*dy/111111),
                             dy/111111
                         )[:ny]
-
+        # print(" lat_hi min/max: ", np.amin(lat_tmp),  np.amax(lat_tmp))    
         lon_tmp, lat_tmp = np.meshgrid(lon_tmp, lat_tmp)
 
         self.define_data_variables(lat_tmp, lon_tmp, height_value, hill_height, n_hills)
@@ -100,7 +101,7 @@ class Topography:
                                   'description':'Longitude on mass grid',
                                   })
 
-        print( "lon/lat min/max:  ", np.min(lon_tmp), np.max(lon_tmp), np.min(lat_tmp), np.max(lat_tmp) )                                  
+        print( " hires lon/lat min/max:  ", np.min(lon_tmp), np.max(lon_tmp), np.min(lat_tmp), np.max(lat_tmp) )                                  
 
         # --- hgt_m
         # hgt = np.full([self.nt,self.nx,self.ny], height_value)
@@ -140,7 +141,7 @@ class Topography:
         ig, jg = np.meshgrid(i,j)
 
         hgt = ((np.cos(ig)+1) * (np.cos(jg)+1))/4 * hill_height
-
+        
         return hgt
 
 
@@ -159,7 +160,7 @@ class Topography:
             ( np.cos(ig/c) )**2 * np.exp(-(ig/c)**2/sigma) *
             ( np.cos(jg/c) )**2 * np.exp(-(jg/c)**2/sigma)
         ) * hill_height
-
+        print("  generated ", n_hills," hills w max hgt: ", np.amax(hgt), " (hh=", hill_height, ")")
         return hgt        
 
 
