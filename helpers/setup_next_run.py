@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-### /glade/u/apps/opt/conda/envs/npl/bin/python ??
+
 """
 SYNOPSIS
 
@@ -38,7 +38,6 @@ import traceback
 import argparse
 
 global verbose
-verbose=True
 
 import glob,os,re,sys, fnmatch
 from math import floor
