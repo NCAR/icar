@@ -20,7 +20,8 @@ class Topography:
                  hill_height = 2000.0,
                  time_start = 20010101,
                  lat0 = 39.5,
-                 lon0 = -105):
+                 lon0 = -105,
+                 Schaer_test=False):
         print("todo: nx and ny because of C")
 
         # initialize program variables
@@ -58,7 +59,12 @@ class Topography:
         # print(" lat_hi min/max: ", np.amin(lat_tmp),  np.amax(lat_tmp))    
         lon_tmp, lat_tmp = np.meshgrid(lon_tmp, lat_tmp)
 
-        self.define_data_variables(lat_tmp, lon_tmp, height_value, hill_height, n_hills)
+
+        i = (np.arange(self.nx) - self.nx/2) * dx   
+        j = (np.arange(self.nx) - self.ny/2) * dy    # dx=dy
+        X, Y = np.meshgrid(i,j)
+
+        self.define_data_variables(lat_tmp, lon_tmp, X, Y, height_value, hill_height, n_hills, Schaer_test, dx)
 
         # --------------------------------------------------------------
         # Combine variables, create dataset and write to file
@@ -66,6 +72,7 @@ class Topography:
         data_vars = dict(
             lat_hi = self.lat_m,
             lon_hi = self.lon_m,
+            x_m = self.x_m,
             hgt_hi = self.hgt_m,
             Times = time)
 
@@ -79,8 +86,8 @@ class Topography:
 
 
     # Define individual variables for datafile
-    def define_data_variables(self, lat_tmp, lon_tmp, height_value,
-                              hill_height, n_hills):
+    def define_data_variables(self, lat_tmp, lon_tmp, X, Y, height_value,
+                              hill_height, n_hills, Schaer_test, dx):
         # dimensions of variables
         dims2d = ["lat", "lon"]
         # dims3d = ["time","lat", "lon"]
@@ -101,12 +108,21 @@ class Topography:
                                   'description':'Longitude on mass grid',
                                   })
 
+               # --- x_m
+        self.x_m = xr.Variable(dims2d,
+                                 X,
+                                 {'units':'meters ',
+                                  'description':'meters from center',
+                                  })                                  
+
         print( " hires lon/lat min/max:  ", np.min(lon_tmp), np.max(lon_tmp), np.min(lat_tmp), np.max(lat_tmp) )                                  
 
         # --- hgt_m
         # hgt = np.full([self.nt,self.nx,self.ny], height_value)
         # hgt = self.genHill(hill_height)
-        if n_hills == 1:
+        if Schaer_test==True:
+            hgt=self.gen_adv_test_topo(hill_height, dx)
+        elif n_hills == 1:
             hgt = self.genHill(hill_height)
         elif n_hills >1:
             hgt = self.gen_n_Hills(hill_height, n_hills)
@@ -145,7 +161,7 @@ class Topography:
         return hgt
 
 
-    # generate a simple mountain range
+    # # generate a simple mountain range
     def gen_n_Hills(self, hill_height, n_hills):
         i = (np.arange(self.nx) - self.nx/2) / self.nx * np.pi * 2
         j = (np.arange(self.nx) - self.ny/2) / self.ny * np.pi * 2
@@ -161,7 +177,42 @@ class Topography:
             ( np.cos(jg/c) )**2 * np.exp(-(jg/c)**2/sigma)
         ) * hill_height
         print("  generated ", n_hills," hills w max hgt: ", np.amax(hgt), " (hh=", hill_height, ")")
-        return hgt        
+        return hgt   
+
+
+    # Topo for Schär's advection test
+    def gen_adv_test_topo(self, hill_height, dx):
+        i = (np.arange(self.nx) - self.nx/2) * dx  # / self.nx * np.pi * 2  
+        j = (np.arange(self.nx) - self.ny/2) * dx  # / self.ny * np.pi * 2  # dx=dy
+        ig, jg = np.meshgrid(i,j)
+        
+        lmbda = 8000
+        a     = 25000
+
+        hgt = (
+            hill_height *
+            self.h_x(ig,  lmbda) * self.h_x_star( ig,  a) 
+            * self.h_x(jg, lmbda) * self.h_x_star( jg,  a)
+        )
+
+        # satisfy the hgt=0 for |x|>a  condition  (eqn 26b): (could be done more elegantly)
+        i_a =  np.where(abs(i)>a)[0]
+        j_a =  np.where(abs(j)>a)[0]
+
+        hgt[:,i_a] = 0
+        hgt[j_a] = 0
+        
+        print("  generated Schaer Topo w max hgt: ", np.amax(hgt), " (hh=", hill_height, ")")
+        return hgt    
+
+    def h_x(self, x,lmbda):   
+        h_x = (np.cos(np.pi*x /lmbda))**2
+        return h_x
+        
+    def h_x_star(self, x, a):
+
+        h_x = (np.cos(np.pi*x/2/a))**2
+        return h_x            
 
 
 
