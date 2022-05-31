@@ -42,9 +42,9 @@ EXE=$HOME/bin/icar_dbs
 
 
 # various useful helper scripts (SETUP_RUN is critical)
-SETUP_RUN=/global/homes/b/bkruyt/icar/helpers/setup_next_run.py
-MAKE_TEMPLATE=/global/homes/b/bkruyt/icar/helpers/make_template.py
-# MKOUTDIR=/glade/u/home/gutmann/bin/python/mkscratch.py # mkscratch creates the directory on scratch and links to it
+SETUP_RUN=${HOME}/icar/helpers/setup_next_run.py
+MAKE_TEMPLATE=${HOME}/icar/helpers/make_template.py
+MKOUTDIR=mkdir #<user_defined_path>/mkscratch.py # mkscratch creates the directory on scratch and links to it
 
 
 

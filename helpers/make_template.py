@@ -42,7 +42,7 @@ import re
 
 
 def main (options_file, template_file):
-    verbose=True
+    
     entered_restart_section=False
 
     with open(options_file,"r") as opt:
@@ -60,9 +60,6 @@ def main (options_file, template_file):
                 if key == "restart_date":
                     if verbose: print("Writing restart_date line")
                     tmpl.write('    restart_date= __RESTART_DATE__,\n')
-                # elif key == "restart_step":
-                #     if verbose: print("Removing restart_step line")
-                #     pass
                 elif key == "restart":
                     if verbose: print("Writing restart=true line")
                     tmpl.write('    restart=true,\n')
