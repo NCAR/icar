@@ -966,6 +966,9 @@ contains
                           - MAXVAL(h2)/s2 * COSH(smooth_height/s2)/SINH(smooth_height/s2)
 
             ! with the new (leuenberger et al 2010) Sleve formulation, the inveribiltiy criterion is as follows:
+            ! ( Although an argument could be made to calculate this on the offset (u/v) grid b/c that is most
+            !   relevant for advection? In reality this is probably a sufficient approximation, as long as we
+            !   aren't pushing the gamma factor too close to zero )
             allocate(gamma_n(this%kds : this%kde+1))
             i=kms                          
             gamma_n(i) =  1                                                     &    
@@ -998,8 +1001,8 @@ contains
                 print*, "    Using a sleve_n of ", options%parameters%sleve_n
                 write(*,*) "    Smooth height is ", smooth_height, "m.a.s.l     (model top ", sum(dz(1:nz)), "m.a.s.l.)"
                 write(*,*) "    invertibility parameter gamma is: ", gamma_min
-                if(gamma_min <= 0) print*, " CAUTION: coordinate transformation is not invertible (gamma <= 0 ) !!! reduce decay rate(s)!"
-                if(options%parameters%debug)  write(*,*) "   (btw: for (debugging) reference, 'gamma(n=1)'= ", gamma,")"
+                if(gamma_min <= 0) print*, " CAUTION: coordinate transformation is not invertible (gamma <= 0 ) !!! reduce decay rate(s), and/or increase flat_z_height!"
+                ! if(options%parameters%debug)  write(*,*) "   (for (debugging) reference: 'gamma(n=1)'= ", gamma,")"
                 print*, ""
             endif
 
@@ -1085,6 +1088,7 @@ contains
                     endif
 
                     ! - - - - -   u/v grid calculations - - - - - 
+                    ! contrary to the calculations above, these all take place on the parallelized terrain
                     z_u(:,i,:)   = (sum(dz_scl(1:(i-1))) + dz_scl(i)/2)   &
                                 + h1_u  *  SINH( (smooth_height/s1)**n -  ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s1)**n ) / SINH((smooth_height/s1)**n)  &! large-scale terrain
                                 + h2_u  *  SINH( (smooth_height/s2)**n -  ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s2)**n ) / SINH((smooth_height/s2)**n)   ! small terrain features
@@ -1095,8 +1099,7 @@ contains
                     zr_u(:,i,:)  = (z_u(:,i,:) - z_u(:,i-1,:)) / (dz_scl(i)/2 + dz_scl(i-1)/2 )  ! if dz_scl(i-1) = 0 (and no error)  k=1 can be included
                     zr_v(:,i,:)  = (z_v(:,i,:) - z_v(:,i-1,:)) / (dz_scl(i)/2 + dz_scl(i-1)/2 )
 
-                    ! TODO does this need to go the parallelized grid (i.e ims:ime like line 1060??)
-
+                    
                 else ! above the flat_z_height
 
                     zr_u(:,i,:) = 1
@@ -1272,17 +1275,17 @@ contains
             call setup_sleve(this, options)
 
         else
-
+            ! This will set up either a Gal-Chen terrainfollowing coordinate, or no terrain following. 
             call setup_simple_z(this, options)
 
         endif
 
         !! To allow for development and debugging of coordinate transformations:            
-        if ((this_image()==1).and.(options%parameters%debug)) then
-            call io_write("global_jacobian.nc", "global_jacobian", this%global_jacobian(:,:,:) )
-            write(*,*) "    global jacobian minmax: ", MINVAL(this%global_jacobian) , MAXVAL(this%global_jacobian)
-            write(*,*) ""
-        endif
+        ! if ((this_image()==1).and.(options%parameters%debug)) then
+        !     ! call io_write("global_jacobian.nc", "global_jacobian", this%global_jacobian(:,:,:) )
+        !     write(*,*) "    global jacobian minmax: ", MINVAL(this%global_jacobian) , MAXVAL(this%global_jacobian)
+        !     write(*,*) ""
+        ! endif
 
 
         associate(ims => this%ims,      ime => this%ime,                        &
@@ -1491,12 +1494,12 @@ contains
         h2_v =  h_v  - h1_v
 
         ! In case one wants to see how the terrain is split by smoothing, activate the block below and run in debug:
-        if ((this_image()==1).and.(options%parameters%debug)) then
-          call io_write("terrain_smooth_h1.nc", "h1", h1(:,:) )
-          call io_write("terrain_smooth_h2.nc", "h2", h2(:,:) )
+        ! if ((this_image()==1).and.(options%parameters%debug)) then
+        !   call io_write("terrain_smooth_h1.nc", "h1", h1(:,:) )
+        !   call io_write("terrain_smooth_h2.nc", "h2", h2(:,:) )
         !   call io_write("h1_u.nc", "h1_u", h1_u(:,:) )
         !   call io_write("h2_u.nc", "h2_u", h2_u(:,:) )
-        endif
+        ! endif
 
         if (this_image()==1) then
            print*, "       Max of full topography", MAXVAL(global_terrain )
