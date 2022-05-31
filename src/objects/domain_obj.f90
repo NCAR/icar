@@ -900,9 +900,9 @@ contains
         class(domain_t), intent(inout)  :: this
         type(options_t), intent(in)     :: options
 
-        real, allocatable :: temp(:,:,:)
+        real, allocatable :: temp(:,:,:), gamma_n(:)
         integer :: i, max_level
-        real :: s, n, s1, s2, gamma
+        real :: s, n, s1, s2, gamma, gamma_min        
         logical :: SLEVE
 
         associate(ims => this%ims,      ime => this%ime,                        &
@@ -960,11 +960,36 @@ contains
             ! Scale dz with smooth_height/sum(dz(1:max_level)) before calculating sleve levels.
             dz_scl(:)   =   dz(1:nz) ! *  smooth_height / sum(dz(1:max_level))  ! this leads to a jump in dz thickness at max_level+1. Not sure if this is a problem.
 
-
+            
             ! - - -   calculate invertibility parameter gamma (Schär et al 2002 eqn 20):  - - - - - -
-            gamma  =  1  -  MAXVAL(h1)/s1 * COSH(smooth_height/s1)/SINH(smooth_height/s1) - MAXVAL(h2)/s2 * COSH(smooth_height/s2)/SINH(smooth_height/s2)
+            gamma  =  1  -  MAXVAL(h1)/s1 * COSH(smooth_height/s1)/SINH(smooth_height/s1) & 
+                          - MAXVAL(h2)/s2 * COSH(smooth_height/s2)/SINH(smooth_height/s2)
 
-            ! COSMO1 operational setting (but model top is at ~22000 masl):
+            ! with the new (leuenberger et al 2010) Sleve formulation, the inveribiltiy criterion is as follows:
+            allocate(gamma_n(this%kds : this%kde+1))
+            i=kms                          
+            gamma_n(i) =  1                                                     &    
+                - MAXVAL(h1) * n/(s1**n)                                        &
+                * COSH((smooth_height/s1)**n) / SINH((smooth_height/s1)**n)     &
+                - MAXVAL(h2) * n/(s2**n)                                        & 
+                * COSH((smooth_height/s2)**n) / SINH((smooth_height/s2)**n)     
+
+            do i = this%grid%kds, this%grid%kde
+                gamma_n(i+1)  =  1                                    &    ! # for i != kds !!
+                - MAXVAL(h1) * n/(s1**n) * sum(dz_scl(1:i))**(n-1)                                             &
+                * COSH((smooth_height/s1)**n -(sum(dz_scl(1:i))/s1)**n ) / SINH((smooth_height/s1)**n)    &
+                - MAXVAL(h2) * n/(s2**n) *  sum(dz_scl(1:i))**(n-1)                                            & 
+                * COSH((smooth_height/s2)**n -(sum(dz_scl(1:i))/s2)**n ) / SINH((smooth_height/s2)**n)    
+            enddo
+
+            if (n==1) then
+                gamma_min = gamma
+            else
+                gamma_min = MINVAL(gamma_n)
+            endif
+            
+
+            ! For reference: COSMO1 operational setting (but model top is at ~22000 masl):
             !    Decay Rate for Large-Scale Topography: svc1 = 10000.0000
             !    Decay Rate for Small-Scale Topography: svc2 =  3300.0000
             if ((this_image()==1)) then
@@ -972,8 +997,9 @@ contains
                 print*, "    Using a SLEVE coordinate with a Decay height for Small-Scale Topography: (s2) of ", s2, " m."
                 print*, "    Using a sleve_n of ", options%parameters%sleve_n
                 write(*,*) "    Smooth height is ", smooth_height, "m.a.s.l     (model top ", sum(dz(1:nz)), "m.a.s.l.)"
-                write(*,*) "    invertibility parameter gamma is: ", gamma
-                if(gamma <= 0) print*, " CAUTION: coordinate transformation is not invertible (gamma <= 0 ) !!! reduce decay rate(s)!"
+                write(*,*) "    invertibility parameter gamma is: ", gamma_min
+                if(gamma_min <= 0) print*, " CAUTION: coordinate transformation is not invertible (gamma <= 0 ) !!! reduce decay rate(s)!"
+                if(options%parameters%debug)  write(*,*) "   (btw: for (debugging) reference, 'gamma(n=1)'= ", gamma,")"
                 print*, ""
             endif
 
@@ -1054,11 +1080,11 @@ contains
                         print*, dz_interface(:,i,:)
                         print*,""
                     endif
-                    else if ( ANY(dz_interface(:,i,:)<=0.01) ) then
+                    else if ( ANY(global_dz_interface(:,i,:)<=0.01) ) then
                     if (this_image()==1)  write(*,*) "WARNING: dz_interface very low (at level ",i,")"
                     endif
 
-                    ! - - - - -   u/v grid calculations - - - - -
+                    ! - - - - -   u/v grid calculations - - - - - 
                     z_u(:,i,:)   = (sum(dz_scl(1:(i-1))) + dz_scl(i)/2)   &
                                 + h1_u  *  SINH( (smooth_height/s1)**n -  ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s1)**n ) / SINH((smooth_height/s1)**n)  &! large-scale terrain
                                 + h2_u  *  SINH( (smooth_height/s2)**n -  ( (sum(dz_scl(1:(i-1)))+dz_scl(i)/2) /s2)**n ) / SINH((smooth_height/s2)**n)   ! small terrain features
@@ -1069,6 +1095,7 @@ contains
                     zr_u(:,i,:)  = (z_u(:,i,:) - z_u(:,i-1,:)) / (dz_scl(i)/2 + dz_scl(i-1)/2 )  ! if dz_scl(i-1) = 0 (and no error)  k=1 can be included
                     zr_v(:,i,:)  = (z_v(:,i,:) - z_v(:,i-1,:)) / (dz_scl(i)/2 + dz_scl(i-1)/2 )
 
+                    ! TODO does this need to go the parallelized grid (i.e ims:ime like line 1060??)
 
                 else ! above the flat_z_height
 
@@ -1249,6 +1276,14 @@ contains
             call setup_simple_z(this, options)
 
         endif
+
+        !! To allow for development and debugging of coordinate transformations:            
+        if ((this_image()==1).and.(options%parameters%debug)) then
+            call io_write("global_jacobian.nc", "global_jacobian", this%global_jacobian(:,:,:) )
+            write(*,*) "    global jacobian minmax: ", MINVAL(this%global_jacobian) , MAXVAL(this%global_jacobian)
+            write(*,*) ""
+        endif
+
 
         associate(ims => this%ims,      ime => this%ime,                        &
                   jms => this%jms,      jme => this%jme,                        &
@@ -1456,12 +1491,12 @@ contains
         h2_v =  h_v  - h1_v
 
         ! In case one wants to see how the terrain is split by smoothing, activate the block below and run in debug:
-        ! if ((this_image()==1).and.(options%parameters%debug)) then
-        !   call io_write("terrain_smooth_h1.nc", "h1", h1(:,:) )
-        !   call io_write("terrain_smooth_h2.nc", "h2", h2(:,:) )
+        if ((this_image()==1).and.(options%parameters%debug)) then
+          call io_write("terrain_smooth_h1.nc", "h1", h1(:,:) )
+          call io_write("terrain_smooth_h2.nc", "h2", h2(:,:) )
         !   call io_write("h1_u.nc", "h1_u", h1_u(:,:) )
         !   call io_write("h2_u.nc", "h2_u", h2_u(:,:) )
-        ! endif
+        endif
 
         if (this_image()==1) then
            print*, "       Max of full topography", MAXVAL(global_terrain )
