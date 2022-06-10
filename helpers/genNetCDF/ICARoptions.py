@@ -62,6 +62,7 @@ class ICARoptions:
                  z_is_on_interface = 'False',
                  t_is_potential = 'True',
                  time_varying_z = 'False',
+                 ideal='True',
                  debug='True',        # currently this writes the global jacobian to a netcdf file, and gives min/max values of the jacobian on runtime.  
                  smooth_wind_distance = '72000',
                  use_agl_height = True,   #  Use height above ground level to interpolate the wind field instead of height above sea level.
@@ -133,6 +134,7 @@ class ICARoptions:
                                               dx=dx,
                                               qv_is_relative_humidity =\
                                               qv_is_relative_humidity,
+                                              ideal=ideal,
                                               debug=debug,
                                               readdz=readdz,
                                               nz=nz,
