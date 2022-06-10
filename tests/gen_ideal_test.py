@@ -16,7 +16,7 @@ nz = 40
 nx = ny = 100
 dx=dy=1000
 # from ideal test
-dz_value          = 200.0    # thickness of each (Forcing?) model gridcell   [m]  
+dz_value          = 200.0    # thickness of each (Forcing?) model gridcell   [m]
 # hill values currently do amazing things :)
 hill_height       = 2000.0   # height of the ideal hill(s) [m]
 n_hills           = 5.0      # number of hills across the domain
@@ -38,7 +38,7 @@ weather_model = 'WeismanKlemp'
 
 def main():
     # ICAR Options generate the ICAR namelist
-    opt.ICARoptions(nz=nz, 
+    opt.ICARoptions(nz=nz,
                     output_vars=['pressure','temperature', 'lon', 'lat', 'z', 'dz_i', 'u', 'v', 'w', 'w_grid', ],
                     sleve= ".True.",
                     space_varying = ".True.")
