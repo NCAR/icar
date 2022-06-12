@@ -15,7 +15,7 @@ submodule(domain_interface) domain_implementation
     use co_util,              only : broadcast
     use io_routines,          only : io_read, io_write
     use geo,                  only : geo_lut, geo_interp, geo_interp2d, standardize_coordinates
-    use array_utilities,      only : array_offset_x, array_offset_y, smooth_array, smooth_array_2d, array_offset_x_2d, array_offset_y_2d
+    use array_utilities,      only : array_offset_x, array_offset_y, smooth_array, make_2d_x, make_2d_y
     use vertical_interpolation,only : vinterp, vLUT
 
     implicit none
@@ -522,12 +522,15 @@ contains
         call load_data(options%parameters%init_conditions_file,   &
                        options%parameters%lat_hi,                 &
                        temporary_data, this%grid)
+
+        call make_2d_y(temporary_data, this%grid%ims, this%grid%ime)
         this%latitude%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
 
         ! Read the longitude data
         call load_data(options%parameters%init_conditions_file,   &
                        options%parameters%lon_hi,                 &
                        temporary_data, this%grid)
+        call make_2d_x(temporary_data, this%grid%jms, this%grid%jme)
         this%longitude%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
 
 
@@ -543,6 +546,7 @@ contains
                            options%parameters%ulon_hi,                &
                            temporary_data, this%u_grid)
 
+            call make_2d_y(temporary_data, 1, size(this%global_terrain,2))
             call subset_array(temporary_data, this%u_longitude%data_2d, this%u_grid)
 
             associate(g=>this%u_grid2d_ext, var=>this%geo_u%lon)
@@ -555,6 +559,7 @@ contains
                            options%parameters%lon_hi,                 &
                            temporary_data, this%grid)
 
+            call make_2d_y(temporary_data, 1, size(this%global_terrain,2))
             call array_offset_x(temporary_data, temp_offset)
             call subset_array(temp_offset, this%u_longitude%data_2d, this%u_grid)
             associate(g=>this%u_grid2d_ext, var=>this%geo_u%lon)
@@ -569,6 +574,7 @@ contains
                            options%parameters%ulat_hi,                &
                            temporary_data, this%u_grid)
 
+            call make_2d_x(temporary_data, 1, size(this%global_terrain,1)+1)
             call subset_array(temporary_data, this%u_latitude%data_2d, this%u_grid)
             associate(g=>this%u_grid2d_ext, var=>this%geo_u%lat)
                 allocate(this%geo_u%lat(1:g%ime-g%ims+1, 1:g%jme-g%jms+1))
@@ -580,6 +586,7 @@ contains
                            options%parameters%lat_hi,                 &
                            temporary_data, this%grid)
 
+            call make_2d_x(temporary_data, 1, size(this%global_terrain,1)+1)
             call array_offset_x(temporary_data, temp_offset)
             call subset_array(temp_offset, this%u_latitude%data_2d, this%u_grid)
             associate(g=>this%u_grid2d_ext, var=>this%geo_u%lat)
@@ -595,6 +602,7 @@ contains
                            options%parameters%vlon_hi,                &
                            temporary_data, this%v_grid)
 
+            call make_2d_y(temporary_data, 1, size(this%global_terrain,2)+1)
             call subset_array(temporary_data, this%v_longitude%data_2d, this%v_grid)
             associate(g=>this%v_grid2d_ext, var=>this%geo_v%lon)
                 allocate(this%geo_v%lon(1:g%ime-g%ims+1, 1:g%jme-g%jms+1))
@@ -606,6 +614,7 @@ contains
                            options%parameters%lon_hi,                 &
                            temporary_data, this%grid)
 
+            call make_2d_y(temporary_data, 1, size(this%global_terrain,2)+1)
             call array_offset_y(temporary_data, temp_offset)
             call subset_array(temp_offset, this%v_longitude%data_2d, this%v_grid)
             associate(g=>this%v_grid2d_ext, var=>this%geo_v%lon)
@@ -620,6 +629,7 @@ contains
                            options%parameters%vlat_hi,                &
                            temporary_data, this%v_grid)
 
+            call make_2d_x(temporary_data, 1, size(this%global_terrain,1))
             call subset_array(temporary_data, this%v_latitude%data_2d, this%v_grid)
             associate(g=>this%v_grid2d_ext, var=>this%geo_v%lat)
                 allocate(this%geo_v%lat(1:g%ime-g%ims+1, 1:g%jme-g%jms+1))
@@ -632,6 +642,7 @@ contains
                            options%parameters%lat_hi,                 &
                            temporary_data, this%grid)
 
+            call make_2d_x(temporary_data, 1, size(this%global_terrain,1))
             call array_offset_y(temporary_data, temp_offset)
             call subset_array(temp_offset, this%v_latitude%data_2d, this%v_grid)
             associate(g=>this%v_grid2d_ext, var=>this%geo_v%lat)
@@ -939,14 +950,14 @@ contains
             ! Still not 100% convinced this works well in cases other than flat_z_height = 0 (w sleve). So for now best to keep at 0 when using sleve?
             max_level = find_flat_model_level(options, nz, dz)
 
-            if(max_level /= nz) then
-                if (this_image()==1) then
-                    print*, "    flat z height ", options%parameters%flat_z_height
-                    print*, "    flat z height set to 0 to comply with SLEVE coordinate calculation "
-                    print*, "    flat z height now", nz
-                end if
-                max_level = nz
-            end if
+            ! if(max_level /= nz) then
+            !     if (this_image()==1) then
+            !         print*, "    flat z height ", options%parameters%flat_z_height
+            !         print*, "    flat z height set to 0 to comply with SLEVE coordinate calculation "
+            !         print*, "    flat z height now", nz
+            !     end if
+            !     max_level = nz
+            ! end if
 
             smooth_height = sum(dz(1:max_level)) !sum(global_terrain) / size(global_terrain) + sum(dz(1:max_level))
 
@@ -957,7 +968,7 @@ contains
 
 
             ! Scale dz with smooth_height/sum(dz(1:max_level)) before calculating sleve levels.
-            dz_scl(:)   =   dz(1:nz) ! *  smooth_height / sum(dz(1:max_level))  ! this leads to a jump in dz thickness at max_level+1. Not sure if this is a problem.
+            dz_scl(:)   =   dz(1:nz) *  smooth_height / sum(dz(1:max_level))  ! this leads to a jump in dz thickness at max_level+1. Not sure if this is a problem.
 
 
             ! - - -   calculate invertibility parameter gamma (Schär et al 2002 eqn 20):  - - - - - -
@@ -989,6 +1000,7 @@ contains
                                     + h2  *  SINH( (smooth_height/s2)**n - (dz_scl(i)/s2)**n ) / SINH((smooth_height/s2)**n)   ! small terrain features
 
             global_dz_interface(:,i,:)  =  temp(:,i+1,:) - temp(:,i,:)  ! same for higher k
+            global_z_interface(:,i,:)  = global_terrain
             global_jacobian(:,i,:) = global_dz_interface(:,i,:)/dz_scl(i)
 
             ! this is on the subset grid:
@@ -1041,6 +1053,7 @@ contains
                     z_interface(:,i+1,:) = temp(ims:ime,i+1,jms:jme)
 
                     global_dz_interface(:,i,:)  =  temp(:,i+1,:) - temp(:,i,:)
+                    global_z_interface(:,i,:)  = global_z_interface(:,i-1,:) + global_dz_interface(:,i-1,:)
                     dz_interface(:,i,:)  =  z_interface(:,i+1,:) - z_interface(:,i,:)
 
                     endif
@@ -1075,6 +1088,7 @@ contains
                     zr_v(:,i,:) = 1
 
                     global_dz_interface(:,i,:) =  dz_scl(i)
+                    global_z_interface(:,i,:)  = global_z_interface(:,i-1,:) + global_dz_interface(:,i-1,:)
                     dz_interface(:,i,:) =  dz_scl(i) !(dz(i) + dz_scl(i) )/2   ! to mitigate the jump in dz at max_level+1: (dz+dz_scl)/2 iso dz
                     if (i/=this%grid%kme)   z_interface(:,i+1,:) = z_interface(:,i,:) + dz(i) ! (dz(i) + dz_scl( i) )/2 !test in icar_s5T
 
@@ -1090,7 +1104,8 @@ contains
                 global_jacobian(:,i,:) = global_dz_interface(:,i,:)/dz_scl(i)
 
             enddo
-
+            i=kme+1
+            global_z_interface(:,i,:)  = global_z_interface(:,i-1,:) + global_dz_interface(:,i-1,:)
         end associate
 
     end subroutine setup_sleve
@@ -1433,20 +1448,20 @@ contains
         h1 =  global_terrain(this%grid2d%ids:this%grid2d%ide, this%grid2d%jds:this%grid2d%jde)
 
         ! offset the global terrain for the h_(u/v) calculations:
-        call array_offset_x_2d(global_terrain, temp_offset)
+        call array_offset_x(global_terrain, temp_offset)
         h_u = temp_offset
         h1_u = temp_offset
         if (allocated(temp_offset)) deallocate(temp_offset)
 
-        call array_offset_y_2d(global_terrain, temp_offset)
+        call array_offset_y(global_terrain, temp_offset)
         h_v = temp_offset
         h1_v = temp_offset
 
         ! Smooth the terrain to attain the large-scale contribution h1 (_u/v):
         do i =1,options%parameters%terrain_smooth_cycles
-          call smooth_array_2d( h1, windowsize  =  options%parameters%terrain_smooth_windowsize)
-          call smooth_array_2d( h1_u, windowsize = options%parameters%terrain_smooth_windowsize)
-          call smooth_array_2d( h1_v, windowsize = options%parameters%terrain_smooth_windowsize)
+          call smooth_array( h1, windowsize  =  options%parameters%terrain_smooth_windowsize)
+          call smooth_array( h1_u, windowsize = options%parameters%terrain_smooth_windowsize)
+          call smooth_array( h1_v, windowsize = options%parameters%terrain_smooth_windowsize)
         enddo
 
         ! Subract the large-scale terrain from the full topography to attain the small-scale contribution:
@@ -1799,11 +1814,8 @@ contains
         if (associated(this%snow_albedo_prev%data_2d)) this%snow_albedo_prev%data_2d=0.65
         if (associated(this%storage_lake%data_2d)) this%storage_lake%data_2d=0
 
-
-
-
-
     end subroutine read_land_variables
+
 
     !> -------------------------------
     !! Initialize various internal variables that need forcing data first, e.g. temperature, pressure on interface, exner, ...
