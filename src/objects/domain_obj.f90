@@ -947,9 +947,10 @@ contains
             zr_u                  => this%zr_u,                           &
             zr_v                  => this%zr_v)
 
-            ! Still not 100% convinced this works well in cases other than flat_z_height = 0 (w sleve). So for now best to keep at 0 when using sleve?
+
             max_level = find_flat_model_level(options, nz, dz)
 
+            ! Still not 100% convinced this works well in cases other than flat_z_height = 0 (w sleve). So for now best to keep at 0 when using sleve?
             ! if(max_level /= nz) then
             !     if (this_image()==1) then
             !         print*, "    flat z height ", options%parameters%flat_z_height
