@@ -26,6 +26,15 @@ class ICARoptions:
                  forcing_file_list = [],
                  # z_info namelist
                  dz_levels = [50., 75., 125., 200., 300., 400.] + [500.] * 50,
+                 space_varying = ".True.",
+                 flat_z_height = -1,
+                 fixed_dz_advection = ".True.",
+                 sleve=".True.",
+                 terrain_smooth_windowsize = 4,
+                 terrain_smooth_cycles = 5,
+                 decay_rate_L_topo = 1.0,
+                 decay_rate_S_topo = 5.0,
+                 sleve_n = 1.35,
                  # forcing variables namelist
                  forc_u_var = 'u',
                  forc_v_var = 'v',
@@ -87,7 +96,17 @@ class ICARoptions:
                                     forcing_file_list=forcing_file_list)
 
         self.z_info_list = ZInfoList(filename=f,
-                                     dz_levels=dz_levels)
+                                     dz_levels=dz_levels,
+                                     space_varying = space_varying,
+                                     flat_z_height = flat_z_height ,
+                                     fixed_dz_advection = fixed_dz_advection,
+                                     sleve=sleve,
+                                     terrain_smooth_windowsize = terrain_smooth_windowsize,
+                                     terrain_smooth_cycles = terrain_smooth_cycles ,
+                                     decay_rate_L_topo = decay_rate_L_topo,
+                                     decay_rate_S_topo = decay_rate_S_topo,
+                                     sleve_n = sleve_n
+                                    )
 
         self.forcing_var_list = ForcingVarList(filename=f,
                                                uvar=forc_u_var,
