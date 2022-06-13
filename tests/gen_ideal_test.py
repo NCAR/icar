@@ -16,6 +16,7 @@ import ICARoptions as opt
 nz = 80
 nx = ny = 100
 dx=dy=1000
+
 dz_levels= [50., 75., 125., 200., 300., 400.] + [500.] * 50
 decay_rate_L_topo = 2.0
 decay_rate_S_topo = 5.0

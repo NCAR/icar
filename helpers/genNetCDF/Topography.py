@@ -1,4 +1,3 @@
-from urllib.parse import non_hierarchical
 import pandas as pd
 import xarray as xr
 import numpy as np
@@ -45,13 +44,13 @@ class Topography:
         # lon_tmp = np.arange(lon0,lon0+(nx*dx),dx)[:nx] #[np.newaxis,:nx].repeat(ny,axis=0)
         # lat_tmp = np.arange(lat0,lat0+(ny*dy),dy)[:ny] #[:ny,np.newaxis].repeat(nx,axis=1)
 
-        ## If your displacements aren't too great (less than a few kilometers) and you're not right at the poles, 
-        # use the quick and dirty estimate that 111,111 meters (111.111 km) in the y direction is 1 degree 
+        ## If your displacements aren't too great (less than a few kilometers) and you're not right at the poles,
+        # use the quick and dirty estimate that 111,111 meters (111.111 km) in the y direction is 1 degree
         # (of latitude) and 111,111 * cos(latitude) meters in the x direction is 1 degree (of longitude).
         lon_tmp = np.arange(lon0-(nx/2*dx/111111/np.cos(np.radians(lat0))),
                     lon0+(nx/2*dx/111111/np.cos(np.radians(lat0))),
                     dx/111111/np.cos(np.radians(lat0)) 
-                   )[:nx]
+                  )[:nx]
         lat_tmp = np.arange(lat0-(ny/2*dy/111111),
                             lat0+(ny/2*dy/111111),
                             dy/111111
@@ -73,7 +72,6 @@ class Topography:
         data_vars = dict(
             lat_hi = self.lat_m,
             lon_hi = self.lon_m,
-            # x_m = self.x_m,
             hgt_hi = self.hgt_m,
             Times = time)
 
@@ -107,13 +105,6 @@ class Topography:
                                   'description':'Longitude on mass grid',
                                   })
 
-        # --- x_m
-        self.x_m = xr.Variable(dims2d,
-                                 X,
-                                 {'units':'meters ',
-                                  'description':'meters from center',
-                                  })                                  
-
         print("   hires lon/lat min/max:  ", np.min(lon_tmp), np.max(lon_tmp), np.min(lat_tmp), np.max(lat_tmp) )                                  
 
         # --- hgt_m
@@ -126,7 +117,7 @@ class Topography:
         elif n_hills >1:
             hgt = self.gen_n_Hills(hill_height, n_hills)
         elif n_hills ==0:
-            hgt = self.genHill(hill_height=0)                        
+            hgt = self.genHill(hill_height=0)
 
 
         self.hgt_m = xr.Variable(dims2d,
@@ -218,8 +209,7 @@ class Topography:
     def h_x_star(self, x, a):
 
         h_x = (np.cos(np.pi*x/2/a))**2
-        return h_x            
-
+        return h_x
 
 
     def setup_attributes(self,nx,ny):
