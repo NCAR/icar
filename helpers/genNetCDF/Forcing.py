@@ -10,27 +10,47 @@ class Forcing:
     attributes = {"history": "Dec 01 00:00:00 2020"}
 
 
-    def __init__(self, nz=10, nx=2, ny=2, sealevel_pressure=100000.0,
+    def __init__(self,nt=10, nz=10, nx=2, ny=2, sealevel_pressure=100000.0,
                  u_val=0.5, v_val=0.5, w_val=0.0,
-                 water_vapor_val=0.001, theta_val=300.0, nt=2,
+                 water_vapor_val=0.001, theta_val=300.0, 
                  height_value=500, dx=10, dy=10, dz_value=500.0,
                  qv_val=0.1, weather_model='basic',
-                 pressure_func='calc_pressure_from_sea'):
+                 pressure_func='calc_pressure_from_sea',
+                 hill_height=0, lat0 = 39.5,
+                 lon0 = -105,
+                 Schaer_test=False):
         print(weather_model.capitalize(), "weather model in use")
         self.setup_class_variables(nz, nx, ny, nt, sealevel_pressure)
 
         # --- Create and define variables for datafile
-        # TODO make these values passed i
-        lat_flat = np.arange(39,39+nx*dx, dx)
-        lon_flat = np.arange(-107,-107+ny*dy, dy)
+        # lat_flat = np.arange(39,39+nx*dx, dx)
+        # lon_flat = np.arange(-107,-107+ny*dy, dy)
+
+        # center around lat0, lon0 (i.s.o. corner), so we can align with hi-res grid.
+        lon_flat = np.arange(lon0-(nx/2*dx/111111/np.cos(np.radians(lat0))),
+                    lon0+(nx/2*dx/111111/np.cos(np.radians(lat0))),
+                    dx/111111/np.cos(np.radians(lat0)) 
+                   )[:nx]
+        lat_flat = np.arange(lat0-(ny/2*dy/111111),
+                            lat0+(ny/2*dy/111111),
+                            dy/111111
+                        )[:ny]
+
+        x_m = np.arange(-nx*dx/2,nx*dx/2, dx)
+
+
+        print( "   forcing lon/lat min/max:  ", np.min(lon_flat), np.max(lon_flat), np.min(lat_flat), np.max(lat_flat) )                                  
+        # print(" forcing lat min/max: ", np.amin(lat_flat), np.amax(lat_flat))
+        # lon_flat, lat_flat = np.meshgrid(lon_tmp, lat_tmp)
 
         self.define_data_variables(nt, nz, nx, ny, height_value, lat_flat,
                                    lon_flat, dz_value, theta_val, u_val,
-                                   v_val, qv_val, weather_model, pressure_func)
+                                   v_val, qv_val, weather_model, pressure_func, 
+                                   hill_height, Schaer_test, dx, x_m)
 
         # define time
         t0 = datetime.datetime(2020,12,1)
-        time = xr.DataArray([t0+datetime.timedelta(dt*100) for dt in range(nt)], name="time",
+        time = xr.DataArray([t0+datetime.timedelta(hours=dt) for dt in range(nt)], name="time",
                             dims=["time"])
 
         # --- Write all variable to netcdf file
@@ -50,6 +70,7 @@ class Forcing:
             temperature = self.temperature,
             lat_m = self.lat,
             lon_m = self.lon,
+            x_m = self.x_m,
             time = time)
 
         ds = xr.Dataset(
@@ -57,7 +78,7 @@ class Forcing:
             attrs = self.attributes
         )
 
-        ds.to_netcdf("forcing.nc", "w", "NETCDF4", unlimited_dims='time')
+        ds.to_netcdf("forcing.nc", "w", "NETCDF4", unlimited_dims='time', encoding={'time': {'dtype': 'i4'}})
 
 
     def set_water_vapor(self, water_vapor, temperature, pressure):
@@ -74,22 +95,22 @@ class Forcing:
         dimensions4d = {
             "time": nt,
             "level": nz,
-            "lat": nx,
-            "lon": ny
+            "lat": ny,
+            "lon": nx
         }
         dimensions3d = {
             "level": nz,
-            "lat": nx,
-            "lon": ny
+            "lat": ny,
+            "lon": nx
         }
         dimensions3d_t = {
             "time": nt,
-            "lat": nx,
-            "lon": ny
+            "lat": ny,
+            "lon": nx
         }
         dimensions2d = {
-            "lat": nx,
-            "lon": ny
+            "lat": ny,
+            "lon": nx
         }
         dimensions1d = {
             "time": 1
@@ -109,25 +130,50 @@ class Forcing:
 
     def define_data_variables(self, nt, nz, nx, ny, height_value,lat_flat,
                               lon_flat, dz_value, theta_val, u_val, v_val,
-                              qv_val, weather_model, pressure_func):
+                              qv_val, weather_model, pressure_func, hill_height,
+                              Schaer_test, dx, x_m):
+        
         # --- u variable
+        # if advection test is selected, set the appropriate windfield:
+        if Schaer_test==True:
+            z1 = 4000. ; z2 = 5000. ; hill_height = 3000.0  ; u0=10
+            u_val = np.array( [0]* int(z1/dz_value)
+                + [u0* (np.sin(np.pi/2*(z1/dz_value+1 - z1/dz_value) / ((z2-z1)/dz_value) ))**2 ]   
+                + [u0* (np.sin(np.pi/2*(z1/dz_value+2 - z1/dz_value) / ((z2-z1)/dz_value) ))**2 ]
+                + [u0] * nz #int(nz-z2/dz_value)
+            )
+            u_array=np.tile(u_val[:nz], (nt,nx,ny,1) )
+            u_array = np.transpose(u_array,(0,3,2,1) )  # order?
+            
+        # if uval is given as a single float, make a uniform windfield:
+        elif isinstance(u_val, float):
+            u_array= np.full([nt, nz, ny, nx], u_val[:nz])
+        # if u_val is given as a vector, interpret this a vector in the z direction (bottom-top):
+        elif isinstance(u_val, np.ndarray):
+            u_array=np.tile(u_val[:nz], (nt,nx,ny,1) )
+            u_array = np.transpose(u_array,(0,3,2,1) )
+            # print(U.shape)
+            print("   Treating u_test_val as a u field in z-direction")
+        
         self.u = xr.Variable(self.dims4d,
-                             np.full([nt, nz, nx, ny], u_val),
+                             u_array,
                              {'long_name':'U (E/W) wind speed', 'units':"m s**-1"})
+
         # --- v variable
+        if Schaer_test==True: v_val=0.
         self.v = xr.Variable(self.dims4d,
-                             np.full([nt, nz, nx, ny], v_val),
+                             np.full([nt, nz, ny, nx], v_val),
                              {'long_name':'V (N/S) wind speed', 'units':"m s**-1"})
 
         # --- height
         self.height = xr.Variable(self.dims2d,
-                                  np.full([nx, ny], height_value),
+                                  np.full([ny, nx], height_value),
                                   {'long_name':'Topographic Height',
                                    'units':'m'})
 
         # --- Atmospheric Elevation
-        dz = np.full([nz,nx,ny], dz_value)
-        z_data = np.full([nt,nz,nx,ny], height_value)
+        dz = np.full([nz,ny,nx], dz_value)
+        z_data = np.full([nt,nz,ny,nx], height_value)
         # dz[0,:,:] = [50.]
         # dz[1,:,:] = [75.]
         # dz[2,:,:] = [125.]
@@ -159,6 +205,14 @@ class Forcing:
                                 'units':'degree_east'}
                                )
 
+        # --- x_m
+        self.x_m = xr.Variable(["x_m"],
+                                x_m,
+                                {'long_name':'x distance from domain center',
+                                'units':'meters'}
+                                )
+
+
         # --- potential temperature variable
         self.set_theta(theta_val, weather_model)
 
@@ -169,8 +223,32 @@ class Forcing:
         self.set_temperature(weather_model)
 
         # --- qv variable
+        if Schaer_test==True:
+            # create a small blob of moisture, in an otherwise dry environment. Values from Schaer et al 2002            
+            qv_arr = np.zeros([nt,nz,ny,nx])            
+            z0 = int(9000/dz_value) 
+            x0 = int(-50000/dx + nx/2)  # -50km 
+            Ax = int(25000/dx)
+            Az = int(3000/dz_value)
+            print("   setting up advection test with a cloud of qv with half-width ",Ax,"km")
+            if x0-Ax<0: 
+                print("   QV blob outside forcing domain; increase nx_lo and or dx_lo (currently",nx, " and ", dx)
+                print("   x0-Ax=", x0-Ax)
+            for r in np.arange(1,0,-0.05):
+                for t in np.arange(0,np.pi*2,0.1):
+                    qv_arr[0,
+                            z0-int(r*Az*np.sin(t)):z0+int(r*Az*np.sin(t)),
+                            :,
+                            x0-int(np.cos(t)*r*Ax):x0+int(np.cos(t)*r*Ax),
+                        ] = (np.cos(np.pi*r/2))**2 *qv_val
+            print("   qv_arr min: ",np.amin(qv_arr), "  max:", np.amax(qv_arr))
+
+        else:  # homogenous qv throughout domain
+            qv_arr = np.full([nt,nz,ny,nx], qv_val)            
+
         self.qv = xr.Variable(self.dims4d,
-                              np.full([nt, nz, nx, ny], qv_val),
+                            #   np.full([nt, nz, nx, ny], ),
+                            qv_arr,
                               {'long_name':'Relative Humidity',
                                'units':"kg kg**-1"})
 
@@ -178,12 +256,12 @@ class Forcing:
 
     def set_theta(self, theta_val, model='basic'):
         if model in ['basic']:
-            theta = np.full([self.nt, self.nz, self.nx, self.ny], theta_val)
+            theta = np.full([self.nt, self.nz, self.ny, self.nx], theta_val)
         elif model in ['WeismanKlemp']:
             print('Note: theta value of', theta_val,
                   'has been replaced with a profile generated for', model,
                   'model')
-            theta = np.zeros([self.nt, self.nz, self.nx, self.ny])
+            theta = np.zeros([self.nt, self.nz, self.ny, self.nx])
             theta[0,:,:,:] = np.vectorize(calc_wk_theta)(self.z_data[0,:,:,:])
             theta[:,:,:,:] = theta[0,:,:,:]
         self.theta = xr.Variable(self.dims4d, theta,
@@ -194,7 +272,7 @@ class Forcing:
                      pressure_func='calc_pressure_from_sea'):
         print('Pressure function used is', pressure_func)
         # basic is defined in ICAR's atm_utilities
-        pressure_data = np.zeros([self.nt,self.nz,self.nx,self.ny])
+        pressure_data = np.zeros([self.nt,self.nz,self.ny,self.nx])
         # print(self.z_data[0,:,0,0])
         if model in ['basic', 'WeismanKlemp']:
             if pressure_func == 'calc_pressure_from_sea':
@@ -221,12 +299,12 @@ class Forcing:
         else:
              print("Error: ", pressure_model, " is not defined")
              exit()
-        print("NX NY", self.nx, self.ny)
+        # print("NX NY", self.nx, self.ny)
         for t in range(self.nt):
             for i in range(self.nx):
                 for j in range(self.ny):
                     if not np.array_equal(pressure_data[t,:,0,0],
-                                          pressure_data[t,:,i,j]):
+                                          pressure_data[t,:,j,i]):
                         print("ERROR: PRESSURE DATA NOT EQUAL THROUGHOUT")
                         sys.exit()
         # print("--- PRESSURE DATA EQUAL THROUGHOUT ---")
@@ -240,7 +318,7 @@ class Forcing:
             # --TODO--
             # get better equation with temp and humidity
             # look at ICAR
-            temp = np.zeros([self.nt, self.nz, self.nx, self.ny])
+            temp = np.zeros([self.nt, self.nz, self.ny, self.nx])
             temp = np.vectorize(calc_temp)(self.pressure.values,
                                            self.theta.values)
         else:
