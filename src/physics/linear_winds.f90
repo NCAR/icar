@@ -287,7 +287,7 @@ contains
         complex(C_DOUBLE_COMPLEX),intent(in)    :: fourier_terrain(:,:) ! FFT(terrain)
         type(linear_theory_type), intent(inout) :: lt_data          ! intermediate arrays needed for LT calc
 
-        integer :: n_steps, i
+        integer :: n_steps, i, nx,ny
         real    :: step_size, current_z, start_z, end_z
         real,   allocatable :: layer_count(:,:), layer_fraction(:,:)
         real,   allocatable :: internal_z_top(:,:), internal_z_bottom(:,:)
@@ -299,14 +299,21 @@ contains
             return
         endif
 
-        start_z = minval(z_bottom)
-        end_z = maxval(z_top)
+        nx = size(z_top,1)
+        ny = size(z_top,2)
 
-        allocate(internal_z_top(size(lt_data%u_perturb,1),size(lt_data%u_perturb,2)))
-        internal_z_top = maxval(z_top)
-        internal_z_top(buffer:buffer+size(z_top,1)-1, buffer:buffer+size(z_top,2)-1) = z_top(:,:)
+        ! print*, this_image(), "minval(z_bottom), maxval(z_top)", minval(z_bottom), maxval(z_top)
 
-        allocate(internal_z_bottom(size(lt_data%u_perturb,1),size(lt_data%u_perturb,2)), source=maxval(z_bottom))
+        start_z = minval(z_bottom(2:nx-1,2:ny-1))
+        end_z = maxval(z_top(2:nx-1,2:ny-1))
+        ! print*, this_image(), start_z, end_z
+        allocate(internal_z_top(size(lt_data%u_perturb,1),size(lt_data%u_perturb,2)), source=maxval(z_top))
+        ! internal_z_top = maxval(z_top(2:nx-1,2:ny-1))
+        ! internal_z_top(buffer+1:buffer+size(z_top,1)-2, buffer+1:buffer+size(z_top,2)-2) = z_top(2:nx-1,2:ny-1)
+        internal_z_top(buffer:buffer+size(z_top,1)-1, buffer:buffer+size(z_top,2)-1) = z_top
+
+        allocate(internal_z_bottom(size(lt_data%u_perturb,1),size(lt_data%u_perturb,2)), source=minval(z_bottom))
+        ! internal_z_bottom(buffer+1:buffer+size(z_bottom,1)-2, buffer+1:buffer+size(z_bottom,2)-2) = z_bottom(2:nx-1,2:ny-1)
         internal_z_bottom(buffer:buffer+size(z_bottom,1)-1, buffer:buffer+size(z_bottom,2)-1) = z_bottom
 
         allocate(layer_count(size(lt_data%u_perturb,1), size(lt_data%u_perturb,2)))
@@ -314,27 +321,32 @@ contains
         allocate(layer_fraction, source=layer_count)
 
 
-        step_size = min(minimum_step, minval(z_top - z_bottom))
+        step_size = max(50.0, min(minimum_step, minval(z_top - z_bottom)))
         current_z = start_z + step_size/2 ! we want the value in the middle of each theoretical layer
+        ! print*, this_image(), "step_size", step_size, current_z, end_z
 
         ! sum up u/v perturbations over all layers evaluated
         lt_data%u_accumulator = 0
         lt_data%v_accumulator = 0
 
         do while (current_z < end_z)
-
+            ! print*, this_image(), current_z, end_z
             call linear_perturbation_at_height(U,V,Nsq,current_z, fourier_terrain, lt_data)
 
             layer_fraction = max(0.0,                                                                                       &
                                 min(step_size/2, current_z - internal_z_bottom) + min(0.0, internal_z_top - current_z)      &
                               + min(step_size/2, internal_z_top - current_z)    + min(0.0, current_z - internal_z_bottom)   ) / step_size
 
+            ! where(layer_fraction==0) layer_fraction=1
             layer_count = layer_count + layer_fraction
             lt_data%u_accumulator = lt_data%u_accumulator + lt_data%u_perturb * layer_fraction
             lt_data%v_accumulator = lt_data%v_accumulator + lt_data%v_perturb * layer_fraction
 
             current_z = current_z + step_size
         enddo
+        ! print*, layer_count
+        ! print*, minval(layer_count), maxval(layer_count)
+
 
         lt_data%u_perturb = lt_data%u_accumulator / layer_count
         lt_data%v_perturb = lt_data%v_accumulator / layer_count
@@ -675,12 +687,12 @@ contains
             endif
         endif
 
-        if (options%parameters%debug) then
+        ! if (options%parameters%debug) then
             if (this_image()==1) write(*,*) "Local Look up Table size:", 4*product(shape(hi_u_LUT))/real(2**20), "MB"
             if (this_image()==1) write(*,*) "Wind Speeds:",spd_values
             if (this_image()==1) write(*,*) "Directions:",360*dir_values/(2*pi)
             if (this_image()==1) write(*,*) "Stabilities:",exp(nsq_values)
-        endif
+        ! endif
 
 
         if (reverse.or.(.not.((options%lt_options%read_LUT).and.(error==0)))) then
@@ -701,10 +713,12 @@ contains
             this_n = stop_pos-start_pos+1
             ! $omp do
 
-            if (this_image()==1) print*, "Starting"
-            if (this_image()==1) print*, maxval(domain%z_interface%data_3d(:,nz,:)), maxval(domain%global_terrain), maxval(domain%z_interface%data_3d(:,nz,:)-domain%global_terrain)
-            if (this_image()==1) print*, minval(domain%z_interface%data_3d(:,nz,:)), minval(domain%global_terrain), minval(domain%z_interface%data_3d(:,nz,:)-domain%global_terrain)
-            if (this_image()==1) print*, shape(domain%z_interface%data_3d), shape(domain%global_terrain)
+            ! if (this_image()==1) print*, "Starting"
+            ! if (this_image()==1) print*, "Starting", shape(domain%z_interface%data_3d)
+            ! if (this_image()==1) print*, "Starting", shape(domain%global_terrain)
+            ! if (this_image()==1) print*, "Starting", shape(domain%global_z_interface), shape(domain%global_terrain)
+            ! if (this_image()==1) print*, "Starting", maxval(domain%global_z_interface(:,nz,:)), maxval(domain%global_terrain), maxval(domain%global_z_interface(:,nz,:)-domain%global_terrain)
+            ! if (this_image()==1) print*, "Starting", minval(domain%global_z_interface(:,nz,:)), minval(domain%global_terrain), minval(domain%global_z_interface(:,nz,:)-domain%global_terrain)
 
             do ijk = start_pos, stop_pos
                 ! loop over the combined ijk space to improve parallelization (more granular parallelization)
@@ -774,6 +788,13 @@ contains
                                 ( lt_data_m%v_perturb(1+buffer:fftnx-buffer,     buffer:fftny-buffer)         &
                                 + lt_data_m%v_perturb(1+buffer:fftnx-buffer,     1+buffer:fftny-buffer+1)) )) / 2
 
+                        ! if (this_image()==3) then
+                        !     if ((z==3).and.(i==2).and.(j==2).and.(k==2)) then
+                        !         print*, buffer, shape(temporary_v)
+                        !         print*, lt_data_m%v_perturb(fftnx/2, buffer+45:buffer+55)
+                        !     endif
+                        !
+                        ! endif
                         call copy_data_to_remote(temporary_u, u_grids, hi_u_LUT, i,j,k, z)
                         call copy_data_to_remote(temporary_v, v_grids, hi_v_LUT, i,j,k, z)
 
@@ -791,9 +812,12 @@ contains
                     !$omp end critical (print_lock)
 
                     ! for now sync all has to be inside the z loop to conserve memory for large domains
-                    !$omp critical
+
+                    !$omp critical (print_lock)
+                    ! print*, "pre-sync", this_image()
                     sync all
-                    !$omp end critical
+                    ! print*, "post-sync", this_image()
+                    !$omp end critical (print_lock)
                 enddo
 
             end do
@@ -856,7 +880,7 @@ contains
         real,allocatable :: u1d(:),v1d(:)
         integer :: ims, ime, jms, jme, ims_u, ime_u, jms_v, jme_v, kms, kme
         real :: dweight, nweight, sweight, curspd, curdir, curnsq, wind_first, wind_second
-        real :: blocked
+        real :: blocked, hydrometeors
 
         ! pointers to the u/v data to be updated so they can point to different places depending on the update flag
         real, pointer :: u3d(:,:,:), v3d(:,:,:), nsquared(:,:,:)
@@ -917,29 +941,41 @@ contains
             do j=1,nz
                 do i=1,nx
 
-                    ! look up vsmooth gridcells up to nz at the maximum
-                    top = min(j+vsmooth, nz)
-                    ! if (top-j)/=vsmooth, then look down enough layers to make the window vsmooth in size
-                    bottom = max(1, j - (vsmooth - (top-j)))
+                    if (variable_N) then
+                        ! look up vsmooth gridcells up to nz at the maximum
+                        top = min(j+vsmooth, nz)
+                        ! if (top-j)/=vsmooth, then look down enough layers to make the window vsmooth in size
+                        bottom = max(1, j - (vsmooth - (top-j)))
 
-                    if (.not.reverse) then
-                        nsquared(i+ims-1,j+kms-1,k+jms-1) = calc_stability(domain%potential_temperature%data_3d(i+ims-1,bottom+kms-1,k+jms-1),                              &
-                                                         domain%potential_temperature%data_3d(i+ims-1,top+kms-1,k+jms-1),                                                   &
-                                                         domain%exner%data_3d(i+ims-1,bottom+kms-1,k+jms-1),domain%exner%data_3d(i+ims-1,top+kms-1,k+jms-1),                &
-                                                         domain%z%data_3d(i+ims-1,bottom+kms-1,k+jms-1),  domain%z%data_3d(i+ims-1,top+kms-1,k+jms-1),                      &
-                                                         domain%water_vapor%data_3d(i+ims-1,bottom+kms-1,k+jms-1), domain%water_vapor%data_3d(i+ims-1,top+kms-1,k+jms-1),   &
-                                                         domain%cloud_water_mass%data_3d(i+ims-1,j+kms-1,k+jms-1)     &
-                                                         +domain%cloud_ice_mass%data_3d(i+ims-1,j+kms-1,k+jms-1)      &
-                                                         +domain%rain_mass%data_3d(i+ims-1,j+kms-1,k+jms-1)           &
-                                                         +domain%snow_mass%data_3d(i+ims-1,j+kms-1,k+jms-1))
+                        hydrometeors = 0
+                        if (associated(domain%cloud_water_mass%data_3d)) &
+                            hydrometeors = hydrometeors + domain%cloud_water_mass%data_3d(i+ims-1,j+kms-1,k+jms-1)
+                        if (associated(domain%cloud_ice_mass%data_3d)) &
+                            hydrometeors = hydrometeors + domain%cloud_ice_mass%data_3d(i+ims-1,j+kms-1,k+jms-1)
+                        if (associated(domain%rain_mass%data_3d)) &
+                            hydrometeors = hydrometeors + domain%rain_mass%data_3d(i+ims-1,j+kms-1,k+jms-1)
+                        if (associated(domain%snow_mass%data_3d)) &
+                            hydrometeors = hydrometeors + domain%snow_mass%data_3d(i+ims-1,j+kms-1,k+jms-1)
 
-                        nsquared(i+ims-1,j+kms-1,k+jms-1) = max(min_stability, min(max_stability, &
-                                                nsquared(i+ims-1,j+kms-1,k+jms-1) * nsq_calibration(i,k)))
+
+                        if (.not.reverse) then
+                            nsquared(i+ims-1,j+kms-1,k+jms-1) = calc_stability(domain%potential_temperature%data_3d(i+ims-1,bottom+kms-1,k+jms-1),                              &
+                                                             domain%potential_temperature%data_3d(i+ims-1,top+kms-1,k+jms-1),                                                   &
+                                                             domain%exner%data_3d(i+ims-1,bottom+kms-1,k+jms-1),domain%exner%data_3d(i+ims-1,top+kms-1,k+jms-1),                &
+                                                             domain%z%data_3d(i+ims-1,bottom+kms-1,k+jms-1),  domain%z%data_3d(i+ims-1,top+kms-1,k+jms-1),                      &
+                                                             domain%water_vapor%data_3d(i+ims-1,bottom+kms-1,k+jms-1), domain%water_vapor%data_3d(i+ims-1,top+kms-1,k+jms-1),   &
+                                                             hydrometeors)
+
+                            nsquared(i+ims-1,j+kms-1,k+jms-1) = max(min_stability, min(max_stability, &
+                                                    nsquared(i+ims-1,j+kms-1,k+jms-1)))! * nsq_calibration(i,k)))
+                        else
+                            ! Low-res boundary condition variables will be in a different array format.  It should be
+                            ! easy enough to call calc_stability after e.g. transposing z and y dimension, but some
+                            ! e.g. pii will not be set in the forcing data, so this may need a little thought.
+                            nsquared(i+ims-1,j+kms-1,k+jms-1) = 3e-6
+                        endif
                     else
-                        ! Low-res boundary condition variables will be in a different array format.  It should be
-                        ! easy enough to call calc_stability after e.g. transposing z and y dimension, but some
-                        ! e.g. pii will not be set in the forcing data, so this may need a little thought.
-                        nsquared(i+ims-1,j+kms-1,k+jms-1) = 3e-6
+                        nsquared(i+ims-1,j+kms-1,k+jms-1) = N_squared
                     endif
                 end do
                 ! look up table is computed in log space
@@ -962,15 +998,19 @@ contains
                 end do
             endif
         end do
+        ! nsquared(:,:,:) = log(6e-4)
+        ! nsquared(:,:,:) = log(1e-7)
+        ! nsquared(:,:,:) = log(7.73310239E-06)
         ! !$omp end do
         ! !$omp end parallel
 
 
         ! smooth array has it's own parallelization, so this probably can't go in a critical section
-        ! if (smooth_nsq) then
-        !     call smooth_array(nsquared, winsz, ydim=3)
-        ! endif
-
+        if (smooth_nsq) then
+            call smooth_array(nsquared, winsz, ydim=3)
+        endif
+        ! if (this_image()==3) print*, ims, ims_u, nxu,"lbound(u3d)",lbound(u3d,1),lbound(u3d,2),lbound(u3d,3)
+        ! if (this_image()==3) print*, jms, jms_v, nyv,"ubound(u3d)",ubound(u3d,1),ubound(u3d,2),ubound(u3d,3)
         !$omp parallel firstprivate(ims, ime, jms, jme, ims_u, ime_u, jms_v, jme_v, kms, kme, nx,nxu,ny,nyv,nz), &
         !$omp firstprivate(reverse, vsmooth, winsz, using_blocked_flow), default(none), &
         !$omp private(i,j,k,step, uk, vi, east, west, north, south, top, bottom, u1d, v1d), &
@@ -989,8 +1029,10 @@ contains
                 u1d(i)  = sum(u3d(i+ims_u-1,:,uk+jms-1)) / nz
                 v1d(i)  = sum(v3d(vi+ims-1, :,k+jms_v-1)) / nz
             enddo
-
-
+            ! if (this_image()==5) then
+            !     if (k==nyv/2) print*, u1d(1:3)
+            !     if (k==nyv/2) print*, v1d(1:3)
+            ! endif
             do j=1, nz
                 do i=1, nxu
 
@@ -1070,6 +1112,12 @@ contains
                         sweight = calc_weight(spd_values, spos, nexts, curspd)
                         nweight = calc_weight(nsq_values, npos, nextn, curnsq)
 
+                        ! if (this_image()==5) then
+                        !     if ((k==nyv/2).and.(i==nxu/2)) then
+                        !         print*, j, npos, dpos, spos, nweight, dweight, sweight
+                        !     endif
+                        ! endif
+
                         ! perform linear interpolation between LUT values
                         if (k<=ny) then
                             wind_first =      nweight  * (dweight * hi_u_LUT(spos, dpos,npos, i,j,k) + (1-dweight) * hi_u_LUT(spos, nextd,npos, i,j,k))   &
@@ -1084,7 +1132,12 @@ contains
                             ! if (reverse) then
                             !     u3d(i,j,k) = u3d(i,j,k) - u_perturbation(i,j,k) * linear_contribution
                             ! else
-                                u3d(i+ims_u-1,j,k+jms-1) = u3d(i+ims_u-1,j,k+jms-1) + u_perturbation(i,j,k) * linear_mask(min(nx,i),min(ny,k)) * (1-blocked)
+                                ! if (this_image()==3) then
+                                !     if ((j==4).and.(i>13).and.(k>16)) then
+                                !         print*, "i,j",i,k, u_perturbation(i,j,k)
+                                !     endif
+                                ! endif
+                                u3d(i+ims_u-1,j,k+jms-1) = u3d(i+ims_u-1,j,k+jms-1) + u_perturbation(i,j,k) *linear_contribution ! * linear_mask(min(nx,i),min(ny,k)) * (1-blocked)
                             ! endif
                         endif
                         if (i<=nx) then
@@ -1101,7 +1154,7 @@ contains
                             !     v3d(i,j,k) = v3d(i,j,k) - v_perturbation(i,j,k) * linear_contribution
                             ! else
                                 ! for the high res domain, linear_mask should incorporate linear_contribution
-                                v3d(i+ims-1,j,k+jms_v-1) = v3d(i+ims-1,j,k+jms_v-1) + v_perturbation(i,j,k) * linear_mask(min(nx,i),min(ny,k)) * (1-blocked)
+                                v3d(i+ims-1,j,k+jms_v-1) = v3d(i+ims-1,j,k+jms_v-1) + v_perturbation(i,j,k) *linear_contribution! * linear_mask(min(nx,i),min(ny,k)) * (1-blocked)
                             ! endif
                         endif
 
@@ -1111,9 +1164,13 @@ contains
         end do
         !$omp end do
 
-        nsquared = exp(nsquared)
         deallocate(u1d, v1d)
         !$omp end parallel
+        nsquared = exp(nsquared)
+        ! if (this_image()==3) then
+        !     print*, domain%u%data_3d(:ims+4,4,jme-4)
+        !     print*, domain%u%data_3d(ime-4:,4,jme-4)
+        ! endif
     end subroutine spatial_winds
 
 
@@ -1240,9 +1297,9 @@ contains
             ! If we are using density in the advection calculations, modify the linear perturbation
             ! to get the vertical velocities closer to what they would be without density (boussinesq)
             ! need to check if this makes the most sense when close to the surface
-            if (useDensity) then
-                linear_mask = linear_mask * 2
-            endif
+            ! if (useDensity) then
+                ! linear_mask = linear_mask * 2
+            ! endif
         endif
 
         ! set up nsq_calibration variable
