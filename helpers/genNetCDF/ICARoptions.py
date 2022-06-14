@@ -26,6 +26,15 @@ class ICARoptions:
                  forcing_file_list = [],
                  # z_info namelist
                  dz_levels = [50., 75., 125., 200., 300., 400.] + [500.] * 50,
+                 space_varying = ".True.",
+                 flat_z_height = -1,
+                 fixed_dz_advection = ".True.",
+                 sleve=".True.",
+                 terrain_smooth_windowsize = 4,
+                 terrain_smooth_cycles = 5,
+                 decay_rate_L_topo = 1.0,
+                 decay_rate_S_topo = 5.0,
+                 sleve_n = 1.35,
                  # forcing variables namelist
                  forc_u_var = 'u',
                  forc_v_var = 'v',
@@ -53,8 +62,11 @@ class ICARoptions:
                  z_is_on_interface = 'False',
                  t_is_potential = 'True',
                  time_varying_z = 'False',
-                 use_agl_height = 'False',
+                 ideal='True',
+                 debug='True',        # currently this writes the global jacobian to a netcdf file, and gives min/max values of the jacobian on runtime.  
                  smooth_wind_distance = '72000',
+                 use_agl_height = True,   #  Use height above ground level to interpolate the wind field instead of height above sea level.
+                 agl_cap = 400,  #   Height at which we switch from AGL-interpolation to using ASL-interpolation
                  # parcels namelist
                  total_parcels = 0):
 
@@ -87,7 +99,17 @@ class ICARoptions:
                                     forcing_file_list=forcing_file_list)
 
         self.z_info_list = ZInfoList(filename=f,
-                                     dz_levels=dz_levels)
+                                     dz_levels=dz_levels,
+                                     space_varying = space_varying,
+                                     flat_z_height = flat_z_height ,
+                                     fixed_dz_advection = fixed_dz_advection,
+                                     sleve=sleve,
+                                     terrain_smooth_windowsize = terrain_smooth_windowsize,
+                                     terrain_smooth_cycles = terrain_smooth_cycles ,
+                                     decay_rate_L_topo = decay_rate_L_topo,
+                                     decay_rate_S_topo = decay_rate_S_topo,
+                                     sleve_n = sleve_n
+                                    )
 
         self.forcing_var_list = ForcingVarList(filename=f,
                                                uvar=forc_u_var,
@@ -112,6 +134,8 @@ class ICARoptions:
                                               dx=dx,
                                               qv_is_relative_humidity =\
                                               qv_is_relative_humidity,
+                                              ideal=ideal,
+                                              debug=debug,
                                               readdz=readdz,
                                               nz=nz,
                                               z_is_geopotential =\
@@ -124,6 +148,7 @@ class ICARoptions:
                                               time_varying_z,
                                               use_agl_height =\
                                               use_agl_height,
+                                              agl_cap=agl_cap,
                                               smooth_wind_distance =\
                                               smooth_wind_distance)
 

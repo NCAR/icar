@@ -1029,7 +1029,7 @@ contains
         close(name_unit)
 
         if (ideal) then
-            if (this_image()==1) write(*,*) " Running Idealized simulation (time step does not advance)"
+            if (this_image()==1) write(*,*) " Running Idealized simulation " 
         endif
 
         if ((trim(date)=="").and.(trim(start_date)/="")) date = start_date

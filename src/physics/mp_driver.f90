@@ -179,8 +179,15 @@ contains
 
         elseif (options%physics%microphysics==kMP_MORRISON) then
             stop "Morrison physics not re-implemented yet"
+        
         elseif (options%physics%microphysics==kMP_WSM6) then
             call mp_wsm6_var_request(options)
+        
+        ! For the ideal test case(s), we need to be able to advect qv, without initializing microphysics:
+        elseif (options%parameters%ideal) then
+                if (this_image()==1) write(*,*) "    allocating water vapor for ideal test case."
+                call options%alloc_vars( [kVARS%water_vapor] )    
+                call options%advect_vars( [kVARS%water_vapor] )    
         endif
 
     end subroutine mp_var_request
