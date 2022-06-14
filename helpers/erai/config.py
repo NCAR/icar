@@ -21,7 +21,6 @@ def set_bounds(info):
         pass
 
     ncfile = io.grib2nc(erai_file,varlist,output_dir)
-    print(ncfile)
     lat = mygis.read_nc(ncfile,varlist[0]).data
     lon = mygis.read_nc(ncfile,varlist[1]).data - 360
 

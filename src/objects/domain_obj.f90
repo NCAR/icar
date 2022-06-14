@@ -1122,6 +1122,12 @@ contains
 
             enddo
 
+
+            if ((this_image()==1).and.(options%parameters%debug)) then
+                call io_write("global_jacobian.nc", "global_jacobian", global_jacobian(:,:,:) )
+                write(*,*) "  global jacobian minmax: ", MINVAL(global_jacobian) , MAXVAL(global_jacobian)
+            endif
+
         end associate
 
     end subroutine setup_sleve

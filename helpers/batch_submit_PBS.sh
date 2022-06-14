@@ -40,7 +40,7 @@ BATCHFILE=${PREFIX}_batch_submit.sh
 TEMPLATE=${PREFIX}_template.nml
 
 # specify the location of the icar executable to use:
-EXE=/glade/u/home/bkruyt/usr/local/bin/icar_dbs
+EXE=${HOME}/bin/icar
 
 # various useful helper scripts (SETUP_RUN is critical)
 SETUP_RUN=${HOME}/icar/helpers/setup_next_run.py
@@ -65,7 +65,6 @@ fi
 # if we didn't finish yet we have to continue -BK: but we print this in line 87, so 2 jobs max?
 if [[ ! -e ${PREFIX}_finished ]]; then
     # first submit the next job dependant on this one
-    # sub -w "ended(${PBS_JOBID})" < $BATCHFILE
     qsub -W depend=afterany:${PBS_JOBID} ${BATCHFILE}
 
     # if we have run before, setup the appropriate restart options
