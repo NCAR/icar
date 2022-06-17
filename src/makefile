@@ -397,6 +397,7 @@ OBJS=	\
 		$(BUILD)mp_wsm6.o		\
 		$(BUILD)cu_driver.o			\
 		$(BUILD)cu_tiedtke.o		\
+		$(BUILD)cu_nsas.o		\
 		$(BUILD)advection_driver.o	\
 		$(BUILD)advect.o			\
 		$(BUILD)adv_mpdata.o                        \
@@ -539,7 +540,7 @@ caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
 					$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o		\
 					$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 					$(BUILD)mp_thompson.o	 $(BUILD)mp_thompson_aer.o   $(BUILD)mp_wsm6.o\
-					$(BUILD)cu_driver.o		 $(BUILD)cu_tiedtke.o		\
+					$(BUILD)cu_driver.o		 $(BUILD)cu_tiedtke.o      $(BUILD)cu_nsas.o		\
 					$(BUILD)advection_driver.o $(BUILD)geo_reader.o		\
 					$(BUILD)advect.o		 $(BUILD)data_structures.o	\
 					$(BUILD)vinterp.o		 $(BUILD)array_utilities.o	\
@@ -771,12 +772,14 @@ $(BUILD)mp_simple.o:$(PHYS)mp_simple.f90 $(BUILD)data_structures.o $(BUILD)optio
 ###################################################################
 #	Convection code
 ###################################################################
-$(BUILD)cu_driver.o:$(PHYS)cu_driver.f90 $(BUILD)cu_tiedtke.o  \
+$(BUILD)cu_driver.o:$(PHYS)cu_driver.f90 $(BUILD)cu_tiedtke.o $(BUILD)cu_nsas.o  \
 					$(BUILD)data_structures.o $(BUILD)icar_constants.o $(BUILD)domain_h.o
 
 $(BUILD)cu_tiedtke.o:$(PHYS)cu_tiedtke.f90
 
 $(BUILD)cu_kf.o:$(PHYS)cu_kf.f90
+
+$(BUILD)cu_nsas.o:$(PHYS)cu_nsas.f90
 
 ###################################################################
 #	Radiation code

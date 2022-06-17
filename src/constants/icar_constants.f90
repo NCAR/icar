@@ -300,6 +300,7 @@ module icar_constants
     integer, parameter :: kCU_TIEDTKE    = 1
     integer, parameter :: kCU_SIMPLE     = 2
     integer, parameter :: kCU_KAINFR     = 3
+    integer, parameter :: kCU_NSAS       = 4
 
     integer, parameter :: kMP_THOMPSON   = 1
     integer, parameter :: kMP_SB04       = 2
