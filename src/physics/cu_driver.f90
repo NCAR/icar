@@ -143,7 +143,7 @@ contains
          !                 NCA,W0AVG,1,1,                   & !...,P_QI,P_QS
          !                 0,.false.,.true.,                & ! P_FIRST_SCALAR, restart, allowed_to_read
          !                 ids, ide, jds, jde, kds, kde,  &
-         !                 ids, ide, jds, jde, kds, kde,    &
+         !                 ids, ide, jds, jde, kds, kde,    &  ! !!!!!!!!!!!! kme iso kde!
          !                 ids, ide, jds, jde, kds, kde-1)
 
 
@@ -280,12 +280,12 @@ subroutine convect(domain,options,dt_in)
     !           ,domain%tend%qv, domain%tend%qc                &
     !           ,domain%tend%qr, domain%tend%qi                &
     !           ,domain%tend%qs, domain%tend%th)
+
     elseif (options%physics%convection==kCU_NSAS) then
 
         ! TO DO:
         !  - calculate height of PBL
         !  - use wrf_constants.f90 ?
-
 
         ! set dx_factor_nsas (cu_nsas.f90 line 567):
         if (domain%dx.le.1000) then
@@ -369,7 +369,8 @@ subroutine convect(domain,options,dt_in)
     ! use a separate dt to make it easier to apply on a different dt
     internal_dt = dt_in
 
-    if (options%physics%convection==kCU_TIEDTKE) then
+    ! if (options%physics%convection==kCU_TIEDTKE) then
+    if ((options%physics%convection==kCU_TIEDTKE) .or. (options%physics%convection==kCU_NSAS)) then
         ! $omp parallel private(j) &
         ! $omp default(shared)
         ! $omp do schedule(static)

@@ -626,6 +626,7 @@ MODULE module_cu_nsas
            if(prsl(i,k).gt.prsi(i,1)*0.04) kmax  = k + 1 
          enddo 
        enddo 
+       kbmax = min(kbmax,kte)  ! BK added after 'outo of bounds' error in ln 761 (maybe should even be kte-1 to accomodate zi(k+2) ln 893?)
        kmax = min(kmax,kte)
        kmax1 = kmax - 1
        kbm = min(kbm,kte)
