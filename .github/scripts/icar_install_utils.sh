@@ -74,21 +74,24 @@ function icar_dependencies {
     sudo apt-get update
     sudo apt-get install libcurl4-gnutls-dev
     sudo apt-get install libfftw3-dev
+    sudo apt-get install netcdf-bin
+    sudo apt-get install libnetcdff-dev
+
     # Installing HDF5 currently not working for NetCDF
     # sudo apt-get install libhdf5-dev libhdf5-openmpi-dev
 
     export CPPFLAGS="$CPPFLAGS -I${INSTALLDIR}/include"
     export LDFLAGS="$LDFLAGS -L${INSTALLDIR}/lib"
 
-    # Install szip (used by hdf5)
-    install_szip
-    # Install HDF5
-    install_hdf5
+    # # Install szip (used by hdf5)
+    # install_szip
+    # # Install HDF5
+    # install_hdf5
 
-    # Install NetCDF-C
-    install_netcdf_c
-    # Install NetCDF fortran
-    install_netcdf_fortran
+    # # Install NetCDF-C
+    # install_netcdf_c
+    # # Install NetCDF fortran
+    # install_netcdf_fortran
 
     # put installed bin directory in PATH
     export PATH=${INSTALLDIR}/bin:$PATH
@@ -148,7 +151,17 @@ function gen_test_run_data {
 function execute_test_run {
     cp ${GITHUB_WORKSPACE}/src/icar ${GITHUB_WORKSPACE}/tests/
     cd ${GITHUB_WORKSPACE}/tests
-    ./icar icar_options.nm
+    echo "Starting ICAR run"
+    ./icar icar_options.nml
+    time_dim=$(ncdump -v time icar_out_000001_2020-12-01_00-00-00.nc | grep "time = UNLIMITED" | sed 's/[^0-9]*//g')
+
+    if [[ ${time_dim} == "1" ]]; then
+	echo "FAILURE: ICAR output time dimension should not be equal to one, it was ${time_dim}"
+	exit 1
+    else
+	echo "SUCCESS: time dimension is equal to ${time_dim}"
+	exit 0
+    fi
 }
 
 function icar_after_success {
