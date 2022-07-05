@@ -329,6 +329,7 @@ module icar_constants
     integer, parameter :: kWIND_LINEAR   = 1
     integer, parameter :: kCONSERVE_MASS = 2
     integer, parameter :: kITERATIVE_WINDS = 3
+    integer, parameter :: kLINEAR_ITERATIVE_WINDS = 5
 
     integer, parameter :: kLC_LAND       = 1
     integer, parameter :: kLC_WATER      = 2
