@@ -732,6 +732,7 @@ contains
                         if (RH_00 .ge. 1.5) then
                             WRITE (*,*) ' FATAL: RH_00 too large (1.5): ', RH_00, RH_00L, tc
                         endif
+                        RH_00 = min(RH_00, 1.45)
                         CLDFRA(K) = MAX(0., 1.0-SQRT((1.5-RHUM)/(1.5-RH_00)))
                     else
    !..but for the GFS model, RH is way lower.
