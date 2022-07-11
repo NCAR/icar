@@ -7,7 +7,9 @@
     MODULE MODULE_CU_BMJ
     !
     !-----------------------------------------------------------------------
-            USE MODULE_MODEL_CONSTANTS
+        !   USE MODULE_MODEL_CONSTANTS
+        use mod_wrf_constants
+        ! use options_interface,   only : options_t ! for debugging.
     !-----------------------------------------------------------------------
     !
             REAL,PARAMETER ::                                                 &
@@ -1321,7 +1323,7 @@
     !***
     !***  CLOUD MUST BE AT LEAST TWO LAYERS THICK
     !***
-    !        IF(LBOT-LTOP<2)LTOP=LBOT-2  (eliminate this criterion)
+        !    IF(LBOT-LTOP<2)LTOP=LBOT-2  (eliminate this criterion)
     !
     !-- End: Buoyancy check (24 Aug 2006)
     !
@@ -1433,10 +1435,18 @@
     !-- End: Raise cloud top if avg RH>RHSHmax and CAPE>0
     !
     !---------------------------SHALLOW CLOUD TOP---------------------------
+            ! BK 2022/06/28: Warning and adjustment in case of low model top:
+            if (LTOP<2) then 
+                write(*,*) "   CU_BMJ WARNING: model top likely too low for correct convection simulation."!, LTOP, LBOT, LTP1,"[", this_image(),"]"
+                LTOP=max(LTOP, 2)
+            endif
             LBM1=LBOT-1
             PTPK=PTOP
             LTP1=LTOP-1
             DEPTH=PBOT-PTOP
+
+            ! BK 2022/06/28: Prevent LTP1 from going to zero:
+        !   LTP1=max(LTP1,1) ! No longer needed with the above 'if' statement.
     !-----------------------------------------------------------------------
     !***  Begin debugging convection
             IF(PRINT_DIAG)THEN
@@ -1526,7 +1536,7 @@
             APEKXY=APEK(LBOT)
     !
             LMID=.5*(LBOT+LTOP)
-    !
+            ! if((LTOP<2).OR.(LBOT<2)) write(*,*)"   LBOT,LTOP   ",LBOT,LTOP
             DO L=LBOT,LTOP,-1
             TREFKX=((PKXXXY-PKXXXX)*SMIX                                    &
             &          +TREFKX*APEKXX)/APEKXY
@@ -1534,7 +1544,7 @@
             IF(L<=LMID) TREFK(L)=MAX(TREFK(L), TK(L)+DTSHAL)
             APEKXX=APEKXY
             PKXXXX=PKXXXY
-            APEKXY=APEK(L-1)
+            APEKXY=APEK(L-1)  ! error in ICAR; index below lower bound of 1
             PKXXXY=PK(L-1)
             ENDDO
     !
@@ -2192,3 +2202,4 @@
             END MODULE MODULE_CU_BMJ
     !
     !-----------------------------------------------------------------------
+    
