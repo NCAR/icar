@@ -76,7 +76,7 @@
    ! REAL    , PARAMETER ::  SVP2=17.67
    ! REAL    , PARAMETER ::  SVP3=29.65
    ! REAL    , PARAMETER ::  SVPT0=273.15
-   REAL    , PARAMETER ::  EP_1=R_v/R_d-1.
+   ! REAL    , PARAMETER ::  EP_1=R_v/R_d-1.
    ! REAL    , PARAMETER ::  EP_2=R_d/R_v
    ! REAL    , PARAMETER ::  KARMAN=0.4
    REAL    , PARAMETER ::  EOMEG=7.2921E-5
