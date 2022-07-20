@@ -794,13 +794,13 @@ contains
         ENDDO
         if (k_m12C .le. kts) k_m12C = kts
 
-        if (k_m12C.gt.kte-3) then
-            WRITE (*,*) 'DEBUG-GT: WARNING, no possible way neg12C can occur this high up: ', k_m12C
-            do k = kte, kts, -1
-                WRITE (*,*) 'DEBUG-GT,  k,  P, T : ', k,P1d(k)*0.01,T1d(k)-273.15
-            enddo
-            write(*,*) ('FATAL ERROR, problem in temperature profile.')
-        endif
+        ! if (k_m12C.gt.kte-3) then
+        !     WRITE (*,*) 'DEBUG-GT: WARNING, no possible way neg12C can occur this high up: ', k_m12C
+        !     do k = kte, kts, -1
+        !         WRITE (*,*) 'DEBUG-GT,  k,  P, T : ', k,P1d(k)*0.01,T1d(k)-273.15
+        !     enddo
+        !     write(*,*) ('FATAL ERROR, problem in temperature profile.')
+        ! endif
 
        !..Find tropopause height, best surrogate, because we would not really
        !.. wish to put fake clouds into the stratosphere.  The 10/1500 ratio
