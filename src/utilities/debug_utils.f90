@@ -1,6 +1,7 @@
 module debug_module
     use domain_interface, only  : domain_t
     use string,           only  : str
+    use ieee_arithmetic
 
     implicit none
 contains
@@ -38,6 +39,7 @@ contains
         character(len=*),   intent(in)                      :: name, msg
         real,               intent(in),    optional         :: greater_than, less_than
         logical,            intent(in),    optional         :: fix
+        integer :: n
         real :: vmax, vmin
         logical :: printed
 
@@ -45,6 +47,14 @@ contains
 
         if (.not.associated(var)) then
             return
+        endif
+
+        if (any(ieee_is_nan(var))) then
+            n = COUNT(ieee_is_nan(var))
+            ! ALLOCATE(IsNanIdx(n))
+            ! IsNanIdx = PACK( (/(i,i=1,SIZE(var))/), MASK=IsNan(var) )  ! if someone can get this to work it would be nice to have.
+            write(*,*) trim(msg)
+            write(*,*) trim(name)//" has", n," NaN(s) "
         endif
 
         if (present(greater_than)) then
