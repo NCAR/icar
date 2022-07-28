@@ -10,7 +10,7 @@
 submodule(domain_interface) domain_implementation
     use assertions_mod,       only : assert, assertions
     use mod_atm_utilities,    only : exner_function, update_pressure
-    use icar_constants,       only : kVARS, kLC_LAND
+    use icar_constants,       !only : kVARS, kLC_LAND
     use string,               only : str
     use co_util,              only : broadcast
     use io_routines,          only : io_read, io_write
@@ -355,6 +355,7 @@ contains
         if (0<opt%vars_to_allocate( kVARS%temperature_interface) )      call setup(this%temperature_interface,    this%grid)
         if (0<opt%vars_to_allocate( kVARS%land_emissivity) )            call setup(this%land_emissivity,          this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%tend_swrad) )                 call setup(this%tend_swrad,               this%grid)
+        if (0<opt%vars_to_allocate( kVARS%lake_depth) )                 call setup(this%lake_depth,              this%grid2d)
 
         ! integer variable_t types aren't available (yet...)
         if (0<opt%vars_to_allocate( kVARS%convective_precipitation) )   allocate(this%cu_precipitation_bucket  (ims:ime, jms:jme),          source=0)
@@ -363,6 +364,10 @@ contains
         if (0<opt%vars_to_allocate( kVARS%veg_type) )                   allocate(this%veg_type                 (ims:ime, jms:jme),          source=7)
         if (0<opt%vars_to_allocate( kVARS%soil_type) )                  allocate(this%soil_type                (ims:ime, jms:jme),          source=3)
         if (0<opt%vars_to_allocate( kVARS%land_mask) )                  allocate(this%land_mask                (ims:ime, jms:jme),          source=kLC_LAND)
+        ! lake depth for new lake model. Source=?
+        ! if (0<opt%vars_to_allocate( kVARS%lake_depth) )                 allocate(this%lake_depth               (ims:ime, jms:jme),          source=0)
+        
+
         if (0<opt%vars_to_allocate( kVARS%snow_nlayers) )               allocate(this%snow_nlayers             (ims:ime, jms:jme),          source=0)
         if (0<opt%vars_to_allocate( kVARS%crop_category) )              allocate(this%crop_category            (ims:ime, jms:jme),          source=0)
         if (0<opt%vars_to_allocate( kVARS%irr_eventno_sprinkler) )      allocate(this%irr_eventno_sprinkler    (ims:ime, jms:jme),          source=0)
@@ -1658,6 +1663,20 @@ contains
             endif
         endif
 
+        ! BK 2022 07: read in lake depth:
+        ! if (this_image()==1) write(*,*) "options%parameters%init_conditions_file",options%parameters%init_conditions_file
+        ! if (this_image()==1) write(*,*) "options%parameters%lakedepthvar",options%parameters%lakedepthvar
+        if ((options%physics%watersurface==kWATER_LAKE) .AND.(options%parameters%lakedepthvar /= "")) then
+            if (this_image()==1) write(*,*) "   reading lake depth data from hi-res file"
+            
+            call io_read(options%parameters%init_conditions_file,   &
+                           options%parameters%lakedepthvar,         &
+                           temporary_data)
+            if (associated(this%lake_depth%data_2d)) then
+                this%lake_depth%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+            endif
+            
+        endif
 
         if (options%parameters%soiltype_var /= "") then
             call io_read(options%parameters%init_conditions_file,   &

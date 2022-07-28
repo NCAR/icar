@@ -410,6 +410,7 @@ OBJS=	\
 		$(BUILD)lsm_noahmp_glacier.o \
 		$(BUILD)lsm_noahmp_gecros.o \
 		$(BUILD)water_simple.o		\
+		$(BUILD)water_lake.o		\
 		$(BUILD)geo_reader.o		\
 		$(BUILD)io_routines.o		\
 		$(BUILD)data_structures.o	\
@@ -548,7 +549,7 @@ caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
 					$(BUILD)lsm_driver.o	\
 					$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
 					$(BUILD)lsm_noahmpdrv.o  $(BUILD)lsm_noahmplsm.o \
-					$(BUILD)water_simple.o
+					$(BUILD)water_simple.o   $(BUILD)water_lake.o
 	${LINKER} $^ -o $@ ${LFLAGS}
 
 caf_domain_init_test: $(BUILD)test_caf_domain_init.o $(OBJS)
@@ -804,13 +805,15 @@ $(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o $(BUILD)atm_u
 $(BUILD)lsm_driver.o: $(PHYS)lsm_driver.f90 $(BUILD)data_structures.o \
 						$(BUILD)lsm_noahdrv.o $(BUILD)lsm_noahlsm.o \
 						$(BUILD)lsm_noahmpdrv.o $(BUILD)lsm_noahmplsm.o \
-						$(BUILD)water_simple.o $(BUILD)icar_constants.o \
+						$(BUILD)water_simple.o $(BUILD)water_lake.o	$(BUILD)icar_constants.o \
 						$(BUILD)domain_h.o $(BUILD)options_h.o			\
 						$(BUILD)atm_utilities.o $(BUILD)ra_simple.o
 
 # $(BUILD)lsm_basic.o $(BUILD)lsm_simple.o
 
 $(BUILD)water_simple.o: $(PHYS)water_simple.f90 $(BUILD)data_structures.o
+
+$(BUILD)water_lake.o: $(PHYS)water_lake.f90 $(BUILD)data_structures.o
 
 $(BUILD)lsm_simple.o: $(PHYS)lsm_simple.f90 $(BUILD)data_structures.o
 

@@ -95,7 +95,7 @@
 
     pbl = 0,  ! 1=legacy (deprecated)      2=Simple (Local HP96)        3=YSU             (N/A)
     lsm = 0,  ! 1=use prescribed fluxes    2=Simple LSM (N/A)           3=Noah LSM                  4=NoahMP
-    water=2,  ! 1=use prescribed (w/lsm=1) 2=Simple sea surface fluxes
+    water=2,  ! 1=use prescribed (w/lsm=1) 2=Simple sea surface fluxes  3=Lake model (uses 2 for ocean??)
     mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison                  4=WSM6      5=Thompson-Eidhammer
     rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG
     conv= 0,  ! 1=Tiedke Scheme            2=Simple Scheme (wishlist)   3=Kain-Fritsch (N/A)        4=NSAS      5=BMJ
@@ -299,7 +299,8 @@
     lwdown_var = "GLW",     ! Longwave down             [W/m^2]
 
     ! only required for some physics code (Noah LSM, water, Tiedke, KF(?))
-    landvar = "LANDMASK",   ! land-water mask (as in WRF) 1=land, 0 or 2=water
+    landvar = "LANDMASK",          ! land-water mask (as in WRF) 1=land, 0 or 2=water
+    lakedepthvar = "LAKE_DEPTH",   ! depth of the lake [m]
 
     ! NOTE, these variables should be in the high-resolution initial conditions netcdf file
     lat_hi  = "XLAT_M",     ! latitude  (mass grid)         [degrees]
@@ -426,6 +427,7 @@
     ! urban_category = -1             ! Int: index that defines the urban category in LU_Categories
     ! ice_category   = -1             ! Int: index that defines the ice category in LU_Categories
     ! water_category = -1             ! Int: index that defines the water category in LU_Categories
+    ! lake_category  = -1             ! Int: index that defines the lake(s) category in LU_Categories
 /
 
 

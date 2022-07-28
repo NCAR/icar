@@ -223,6 +223,7 @@ module domain_interface
     type(variable_t) :: tend_swrad
 
     integer,allocatable :: land_mask(:,:)
+    type(variable_t) :: lake_depth
     type(variable_t) :: latitude
     type(variable_t) :: longitude
     type(variable_t) :: u_latitude
@@ -280,7 +281,7 @@ module domain_interface
     real,                       allocatable :: ustar(:,:)
     real,                       allocatable :: znu(:)
     real,                       allocatable :: znw(:)
-
+    ! real,                       allocatable :: lake_depth(:,:)
     ! these data are stored on the domain wide grid even if this process is only looking at a subgrid
     ! these variables are necessary with linear winds, especially with spatially variable dz, to compute the LUT
     real,                       allocatable :: global_terrain(:,:)
