@@ -892,7 +892,7 @@ contains
 
         k_cldb = k_m12C + 3
         in_cloud = .false.
-        k = k_m12C + 2
+        k = min(size(cfr1d), k_m12C + 2)
         DO WHILE (.not. in_cloud .AND. k.gt.kbot)
             k_cldt = 0
             if (cfr1d(k).ge.0.01) then
