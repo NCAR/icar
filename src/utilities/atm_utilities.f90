@@ -732,6 +732,7 @@ contains
                         if (RH_00 .ge. 1.5) then
                             WRITE (*,*) ' FATAL: RH_00 too large (1.5): ', RH_00, RH_00L, tc
                         endif
+                        RH_00 = min(RH_00, 1.45)
                         CLDFRA(K) = MAX(0., 1.0-SQRT((1.5-RHUM)/(1.5-RH_00)))
                     else
    !..but for the GFS model, RH is way lower.
@@ -891,7 +892,7 @@ contains
 
         k_cldb = k_m12C + 3
         in_cloud = .false.
-        k = k_m12C + 2
+        k = min(size(cfr1d), k_m12C + 2)
         DO WHILE (.not. in_cloud .AND. k.gt.kbot)
             k_cldt = 0
             if (cfr1d(k).ge.0.01) then
