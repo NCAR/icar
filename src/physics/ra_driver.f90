@@ -147,7 +147,7 @@ contains
                       kVARS%dz_interface, kVARS%skin_temperature,      kVARS%temperature,             kVARS%density,          &
                       kVARS%longwave_cloud_forcing,                    kVARS%land_emissivity,         kVARS%temperature_interface,  &
                       kVARS%cosine_zenith_angle,                       kVARS%shortwave_cloud_forcing, kVARS%tend_swrad,           &
-                      kVARS%cloud_fraction])
+                      kVARS%cloud_fraction, kVARS%albedo])
 
 
         ! List the variables that are required when restarting for the simple radiation code
@@ -239,7 +239,13 @@ contains
         qs = 0
 
         cldfra=0
-        albedo=0.17
+
+        if (options%lsm_options%monthly_albedo) then
+            ALBEDO = domain%albedo%data_3d(:, domain%model_time%month, :)
+        else
+            ALBEDO = domain%albedo%data_3d(:, 1, :)
+        endif
+
         F_QI=.false.
         F_QC=.false.
         F_QR=.false.
