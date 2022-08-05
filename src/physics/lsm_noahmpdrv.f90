@@ -547,7 +547,10 @@ CONTAINS
 
        IF(ITIMESTEP == 1)THEN
           DO I=its,ite
-             IF((XLAND(I,J)-1.5) >= 0.) THEN    ! Open water case
+            !  IF((XLAND(I,J)-1.5) >= 0.) THEN    ! Open water case
+            IF(   ((XLAND(I,J)-1.5) >= 0.) .OR.             & ! skip if XLAND = 2
+                  ((XLAND(I,J)-0.5) < 0.)                   & ! skip if XLAND = 0
+            ) THEN
                 IF(XICE(I,J) == 1. .AND. IPRINT) PRINT *,' sea-ice at water point, I=',I,'J=',J
                 SMSTAV(I,J) = 1.0
                 SMSTOT(I,J) = 1.0
@@ -581,7 +584,12 @@ CONTAINS
 
     ELSE
 
-       IF((XLAND(I,J)-1.5) >= 0.) CYCLE ILOOP   ! Open water case
+      !  IF((XLAND(I,J)-1.5) >= 0.) CYCLE ILOOP       ! Open water case  (BK: should also skip in the case landmask =0, which this doesnt)
+      IF(   ((XLAND(I,J)-1.5) >= 0.) .OR.             & ! skip if XLAND = 2
+            ((XLAND(I,J)-0.5) < 0.)                   & ! skip if XLAND = 0
+      ) THEN
+         CYCLE ILOOP                                  ! Open water case
+      ENDIF
 
 !     2D to 1D
 

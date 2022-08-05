@@ -1633,7 +1633,9 @@ contains
             if (ice_category==-1)   ice_category = -1
             if (water_category==-1) water_category = 16
             ! if (lake_category==-1) lake_category = 16  ! No separate lake category!
-            ! if(options%physics%watersurface==3) write(*,*) "WARNING: Lake model selected (water=3), but USGS LU-categories has no lake category"
+            if((options%physics%watersurface==3) .AND. (this_image()==1)) then
+                write(*,*) "WARNING: Lake model selected (water=3), but USGS LU-categories has no lake category"
+            endif
 
         elseif (trim(LU_Categories)=="USGS-RUC") then
             if (urban_category==-1) urban_category = 1

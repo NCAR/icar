@@ -15,8 +15,23 @@ MODULE module_water_lake
 !   Earth Syst., 4, M02001. DOI:10.1029/2011MS000072; 
 !   Gu et al. 2013: Calibration and validation of lake surface temperature simulations 
 !   with the coupled WRF-Lake model. Climatic Change, 1-13, 10.1007/s10584-013-0978-y. 
-!   Supporting info to Subin et al 2012: 
+!   Supporting info to Subin et al 2012:
 !   https://agupubs.onlinelibrary.wiley.com/action/downloadSupplement?doi=10.1029%2F2011MS000072&file=jame53-sup-0003-txts02.pdf
+!
+!_____________________________________________________________________________________________________________
+!
+!   Adapted for use in ICAR by Bert Kruyt, august 2022. Modifications include:
+!     - reduction of nr of soil layers (and modification of the code where this was hardcoded/shared
+!        with nlevlake, as they used to have the same value)
+!     - the clause(s) in lakeini that determine wether a gridpoint is lake or not.
+!        (also commented out any overwriting of the vegtype and xland pars.)
+!     - original code has been left in place, but commented out for documentation.
+!   ToDo:
+!     - test lakeflag = 0 case (no LU lake cat provided, lakeini deteremines lakes by vegtype==water & ht>lake_min_elev)
+!     - reduce nr of lake levels (nlakelev), and make nsoillev, nlakelev, and nsnowlev namelist arguments.
+!     - lakedepth_default and  lake_min_elev should become namelist options.
+!_____________________________________________________________________________________________________________
+
 
 !  USE module_wrf_error
  USE mod_wrf_constants, ONLY : rcp
@@ -24,8 +39,8 @@ MODULE module_water_lake
     implicit none 
     integer, parameter ::      r8 = selected_real_kind(12) 
 
-    integer, parameter :: nlevsoil     =  10   ! number of soil layers
-    integer, parameter :: nlevlake     =  10   ! number of lake layers
+    integer, parameter :: nlevsoil     =  4  ! was 10 ! number of soil layers 
+    integer, parameter :: nlevlake     =  10   ! number of lake layers -> line 5165 and below have hardcoded values that need to be revised before changing nlevlake
     integer, parameter :: nlevsnow     =   5   ! maximum number of snow layers
 
     integer,parameter  ::     lbp = 1                        ! pft-index bounds
@@ -52,7 +67,7 @@ MODULE module_water_lake
 
     integer,parameter  ::     column    =1
     logical,parameter  ::     lakpoi(1) = .true.
-   
+
 
 
 
@@ -135,10 +150,11 @@ MODULE module_water_lake
                      dz3d         ,zi3d           ,h2osoi_vol3d ,h2osoi_liq3d    ,&
                      h2osoi_ice3d ,t_grnd2d       ,t_soisno3d   ,t_lake3d        ,&
                      savedtke12d  ,lake_icefrac3d                                ,& 
-#if (EM_CORE==1)
-             !        lakemask     ,lakeflag                                      ,&
-                     lakemask                                          ,&
-#endif
+! #if (EM_CORE==1)
+                    lakemask     ,lakeflag                                      ,&
+! #endif
+                     ! lakemask                                          ,&
+
                      hfx          ,lh             ,grdflx       ,tsk             ,&  !o
                      qfx          ,t2             ,th2          ,q2 )
 
@@ -156,10 +172,10 @@ MODULE module_water_lake
     INTEGER , INTENT (IN) :: iswater
     REAL,     INTENT(IN)  :: xice_threshold
     REAL, DIMENSION( ims:ime , jms:jme ), INTENT(INOUT)::   XICE
-#if (EM_CORE==1)
+! #if (EM_CORE==1)
     REAL, DIMENSION( ims:ime , jms:jme ), INTENT(INOUT)::   LAKEMASK
- !   INTEGER, INTENT(IN)::   LAKEFLAG
-#endif
+   INTEGER, INTENT(IN)::   LAKEFLAG
+! #endif
     
     REAL,           DIMENSION( ims:ime, kms:kme, jms:jme ),INTENT(IN)  :: t_phy  
     REAL,           DIMENSION( ims:ime, kms:kme, jms:jme ),INTENT(IN)  :: p8w    
@@ -301,14 +317,15 @@ MODULE module_water_lake
        !   lake_icefrac3d(i,1,j) = xice(i,j)
        !   endif
 
-#if (EM_CORE==1)
+! #if (EM_CORE==1)
         if (lakemask(i,j).eq.1) THEN
-#else
-        if (ivgtyp(i,j)==iswater.and.ht(i,j)>= lake_min_elev ) THEN
-#endif
-    
+      !   if((lakemask(i,j).eq.1) .or. (ivgtyp(i,j)==iswater.and.ht(i,j)>=lake_min_elev)) then  ! BK modified cause lake cat is not always water cat.
+! #else
+      !   if (ivgtyp(i,j)==iswater.and.ht(i,j)>= lake_min_elev ) THEN
+! #endif
+
            do c = 1,column
-     
+
             forc_t(c)          = SFCTMP           ! [K]
             forc_pbot(c)       = PBOT 
             forc_psrf(c)       = PSFC
@@ -356,8 +373,9 @@ MODULE module_water_lake
                tkdry(c,k)         = tkdry3d(i,k,j)
                tksatu(c,k)        = tksatu3d(i,k,j)
             enddo
-            
+
           enddo
+
             CALL LakeMain(forc_t,forc_pbot,forc_psrf,forc_hgt,forc_hgt_q,   & !I  
                           forc_hgt_t,forc_hgt_u,forc_q, forc_u,         &
                           forc_v,forc_lwrad,prec, sabg,lat,             &
@@ -804,7 +822,6 @@ SUBROUTINE ShalLakeFluxes(forc_t,forc_pbot,forc_psrf,forc_hgt,forc_hgt_q,       
 !           call endrun()
 !       end if
        jtop(c) = snl(c) + 1
-
 
        if (snl(c) < 0) then
            betaprime(c) = 1._r8  !Assume all solar rad. absorbed at the surface of the top snow layer. 
@@ -1368,7 +1385,6 @@ SUBROUTINE ShalLakeTemperature(t_grnd,h2osno,sabg,dz,dz_lake,z,zi,           & !
 !   that deserves more attention.
 !   Some radiation will be allowed to reach the soil.
 !-----------------------------------------------------------------------
-
 
     ! 1!) Initialization
     ! Determine step size
@@ -4893,9 +4909,10 @@ end subroutine LakeDebug
                     h2osoi_liq3d,   h2osoi_vol3d,    z3d,             dz3d,           &
                     zi3d,           watsat3d,        csol3d,          tkmg3d,         &
                     iswater,        xice,            xice_threshold,  xland,   tsk,   &
-#if (EM_CORE == 1)
+                  !   lakemask,                                                          &  ! BK added
+! #if (EM_CORE == 1)
                     lakemask,       lakeflag,                                         &
-#endif
+! #endif
                     lake_depth_flag, use_lakedepth,                                   &
                     tkdry3d,        tksatu3d,        lake,            its, ite, jts, jte, &
                     ims,ime, jms,jme)
@@ -4915,10 +4932,10 @@ end subroutine LakeDebug
 !   REAL, DIMENSION( ims:ime, jms:jme )  ,INTENT(INOUT)  :: XLAND
   INTEGER, DIMENSION( ims:ime, jms:jme )  ,INTENT(INOUT)  :: XLAND
 
-#if (EM_CORE == 1)
+! #if (EM_CORE == 1)
   REAL, DIMENSION( ims:ime , jms:jme ) ::   LAKEMASK
   INTEGER , INTENT (IN) :: lakeflag
-#endif
+! #endif
   INTEGER , INTENT (INOUT) :: lake_depth_flag
   INTEGER , INTENT (IN) ::   use_lakedepth
 
@@ -5019,12 +5036,13 @@ end subroutine LakeDebug
    numb_lak = 0
        do i=its,ite
          do j=jts,jte
-#if (EM_CORE==1)
-         IF (lakeflag.eq.0) THEN    
+! #if (EM_CORE==1)
+         IF (lakeflag.eq.0) THEN    ! No lake cat in LU data provided : not properly tested for iCAR!
+            ! write(*,*)"   lakeflag=0 ???"
             if(ht(i,j)>=lake_min_elev) then 
               if ( xice(i,j).gt.xice_threshold) then   !mchen
-                   ivgtyp(i,j) = iswater
-                   xland(i,j) = 2
+                  !  ivgtyp(i,j) = iswater   ! BK dont overwrite this for now, need to properly test the ice scenario
+                  !  xland(i,j) = 2
                    lake_icefrac3d(i,1,j) = xice(i,j)
                    xice(i,j)=0.0
                endif
@@ -5038,38 +5056,39 @@ end subroutine LakeDebug
                 lake(i,j)  = .false.
                 lakemask(i,j) = 0
             end if
-          ELSE
+         ELSE  ! i.e. we have a lakemask from LU lake cat data: 
             if(lakemask(i,j).eq.1) then 
                 lake(i,j)  = .true.
                 numb_lak   = numb_lak + 1
                 if ( xice(i,j).gt.xice_threshold) then   !mchen
-                   ivgtyp(i,j) = iswater
-                   xland(i,j) = 2
+                  !  ivgtyp(i,j) = iswater ! BK: dont overwrite this, we want to keep the lake category ?
+                  !  xland(i,j) = 2
                    lake_icefrac3d(i,1,j) = xice(i,j)
                    xice(i,j)=0.0
                 endif
-             else  
+             else
                 lake(i,j)  = .false.
              endif
          ENDIF   ! end if lakeflag=0
-#else 
-   ! Below is the ICAR case:
-            if(ht(i,j)>=lake_min_elev) then 
-              if ( xice(i,j).gt.xice_threshold) then   !mchen
-                   ivgtyp(i,j) = iswater
-                   xland(i,j) = 2
-                   lake_icefrac3d(i,1,j) = xice(i,j)
-                   xice(i,j)=0.0
-               endif
-            endif
-            if(ivgtyp(i,j)==iswater.and.ht(i,j)>=lake_min_elev) then 
-                lake(i,j)  = .true.
-                numb_lak   = numb_lak + 1
-            else
-                lake(i,j)  = .false.  
-            end if
+! #else 
+            ! if(ht(i,j)>=lake_min_elev) then 
+            !   if ( xice(i,j).gt.xice_threshold) then   !mchen
+            !       !  ivgtyp(i,j) = iswater  ! BK debug, lets not overwrite this? ...
+            !       !  xland(i,j) = 2
+            !        lake_icefrac3d(i,1,j) = xice(i,j)
+            !        xice(i,j)=0.0
+            !    endif
+            ! endif
+            ! if((lakemask(i,j).eq.1) .or. (ivgtyp(i,j)==iswater.and.ht(i,j)>=lake_min_elev)) then  ! BK modified cause lake cat is not always water cat.
+            ! ! if(ivgtyp(i,j)==iswater.and.ht(i,j)>=lake_min_elev) then 
+            !     lake(i,j)  = .true.
+            !     numb_lak   = numb_lak + 1
+            !    !   xland(i,j) = 2  ! BK commented out. If anything this should become kLC_WATER
+            ! else
+            !     lake(i,j)  = .false.  
+            ! end if
 
-#endif
+! #endif
         end do
        end do
     write(message,*) "the total number of lake grid is :", numb_lak
@@ -5126,7 +5145,7 @@ end subroutine LakeDebug
   ENDDO
   ENDDO 
 
-  
+  !! BK: the lines below should become a function of nlevlake!
 #ifndef EXTRALAKELAYERS   
 !  dzlak(1) = 0.1_r8
 !  dzlak(2) = 1._r8
@@ -5276,13 +5295,22 @@ end subroutine LakeDebug
         t_grnd2d(i,j)          = 277.0
         do k = 2, nlevlake
         if(z_lake3d(i,k,j).le.depth_c) then 
-         t_soisno3d(i,k,j)=tsk(i,j)+(277.0-tsk(i,j))/depth_c*z_lake3d(i,k,j)
+         ! t_soisno3d(i,k,j)=tsk(i,j)+(277.0-tsk(i,j))/depth_c*z_lake3d(i,k,j)  ! BK commented out; dims incorrect: dimension( ims:ime,-nlevsnow+1:nlevsoil, jms:jme ),INTENT(out)   :: t_soisno3d, This works only when nlevsoil=nlevlake. Sloppy coding!
          t_lake3d(i,k,j)=tsk(i,j)+(277.0-tsk(i,j))/depth_c*z_lake3d(i,k,j)
         else
-	t_soisno3d(i,k,j)      = 277.0
+	! t_soisno3d(i,k,j)      = 277.0
         t_lake3d(i,k,j)        = 277.0
         end if 
         enddo
+        ! BK added for nlevsoil !=nlevlake:
+        do k = 2, nlevsoil
+         if(z_lake3d(i,k,j).le.depth_c) then 
+            t_soisno3d(i,k,j)=tsk(i,j)+(277.0-tsk(i,j))/depth_c*z_lake3d(i,k,j)  
+         else
+            t_soisno3d(i,k,j)      = 277.0
+         end if 
+         enddo  ! END BK addition
+
 !end initial t_lake3d here
          z3d(i,1:nlevsoil,j) = zsoi(1:nlevsoil)
          zi3d(i,0:nlevsoil,j) = zisoi(0:nlevsoil)
@@ -5374,7 +5402,7 @@ end subroutine LakeDebug
               end if
            end if
         end do
-        
+
         do k = 1,nlevsoil
            if (arbinit .or. h2osoi_vol3d(i,k,j) > 10._r8 .or. h2osoi_vol3d(i,k,j) < 0._r8) h2osoi_vol3d(i,k,j) = 1.0_r8
            h2osoi_vol3d(i,k,j) = min(h2osoi_vol3d(i,k,j),watsat3d(i,k,j))

@@ -137,6 +137,7 @@ module options_types
         integer :: ice_category
         integer :: water_category
         integer :: lake_category
+        ! integer :: snow_category ! = ice cat
         ! use monthly vegetation fraction data, not just a single value
         logical :: monthly_vegfrac
     end type lsm_options_type

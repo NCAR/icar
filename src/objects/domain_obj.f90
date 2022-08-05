@@ -1142,10 +1142,10 @@ contains
             i=kme+1
             global_z_interface(:,i,:)  = global_z_interface(:,i-1,:) + global_dz_interface(:,i-1,:)
 
-            if ((this_image()==1).and.(options%parameters%debug)) then
-                call io_write("global_jacobian.nc", "global_jacobian", global_jacobian(:,:,:) )
-                write(*,*) "  global jacobian minmax: ", MINVAL(global_jacobian) , MAXVAL(global_jacobian)
-            endif
+            ! if ((this_image()==1).and.(options%parameters%debug)) then
+            !     call io_write("global_jacobian.nc", "global_jacobian", global_jacobian(:,:,:) )
+            !     write(*,*) "  global jacobian minmax: ", MINVAL(global_jacobian) , MAXVAL(global_jacobian)
+            ! endif
 
         end associate
 
@@ -1661,21 +1661,19 @@ contains
             if (allocated(this%land_mask)) then
                 this%land_mask = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
             endif
+            where(this%land_mask==0) this%land_mask = kLC_WATER  ! To ensure conisitency. land_mask can be 0 or 2 for water, enforce a single value.
         endif
 
-        ! BK 2022 07: read in lake depth:
-        ! if (this_image()==1) write(*,*) "options%parameters%init_conditions_file",options%parameters%init_conditions_file
-        ! if (this_image()==1) write(*,*) "options%parameters%lakedepthvar",options%parameters%lakedepthvar
         if ((options%physics%watersurface==kWATER_LAKE) .AND.(options%parameters%lakedepthvar /= "")) then
             if (this_image()==1) write(*,*) "   reading lake depth data from hi-res file"
-            
+
             call io_read(options%parameters%init_conditions_file,   &
                            options%parameters%lakedepthvar,         &
                            temporary_data)
             if (associated(this%lake_depth%data_2d)) then
                 this%lake_depth%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
             endif
-            
+
         endif
 
         if (options%parameters%soiltype_var /= "") then

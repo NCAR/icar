@@ -337,7 +337,7 @@ module icar_constants
     integer, parameter :: kLINEAR_ITERATIVE_WINDS = 5
 
     integer, parameter :: kLC_LAND       = 1
-    integer, parameter :: kLC_WATER      = 2
+    integer, parameter :: kLC_WATER      = 2 ! 0  ! This should maybe become an argument in the namelist if we use different hi-es files?
 
     ! mm of accumulated precip before "tipping" into the bucket
     ! only performed on output operations
