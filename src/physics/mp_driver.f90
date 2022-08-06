@@ -45,7 +45,7 @@ module microphysics
     integer :: update_interval
     real*8 :: last_model_time
     ! temporary variables
-    real,allocatable,dimension(:,:) :: SR, last_rain, last_snow, this_precip,refl_10cm
+    real,allocatable,dimension(:,:) :: SR, last_rain, last_snow, this_precip, this_snow,refl_10cm
 
 
     ! microphysics specific flag.  If it returns the current hourly precip (e.g. Morrison), then set this to false.
@@ -102,7 +102,7 @@ contains
 
         elseif (options%physics%microphysics==kMP_WSM3) then
             if (this_image()==1) write(*,*) "    WSM3 Microphysics"
-            call wsm3init(rhoair0,rhowater,rhosnow,cliq,cpv, .True.)
+            call wsm3init(rhoair0,rhowater,rhosnow,cliq,cpv, allowed_to_read=.True.)
             precip_delta=.True.
         endif
 
@@ -253,6 +253,11 @@ contains
             allocate(this_precip(ims:ime,jms:jme))
             this_precip=0
         endif
+        if (.not.allocated(this_snow)) then
+            allocate(this_snow(ims:ime,jms:jme))
+            this_snow=0
+        endif
+
         if (.not.allocated(refl_10cm)) then
             allocate(refl_10cm(ims:ime,jms:jme))
             refl_10cm=0
@@ -563,6 +568,7 @@ contains
                               rainncv = this_precip,                                & ! not used outside thompson (yet)
                               sr = SR,                                              & ! not used outside thompson (yet)
                               snow = domain%accumulated_snowfall%data_2d,           &
+                              snowncv = this_snow,                                  &
                               has_reqc=0, has_reqi=0, has_reqs=0,     &
                               ids = ids, ide = ide,                   & ! domain dims
                               jds = jds, jde = jde,                   &
@@ -777,6 +783,9 @@ contains
         endif
         if (allocated(this_precip)) then
             deallocate(this_precip)
+        endif
+        if (allocated(this_snow)) then
+            deallocate(this_snow)
         endif
     end subroutine mp_finish
 end module microphysics
