@@ -44,7 +44,7 @@
     water=0,  ! 1=use prescribed (w/lsm=1) 2=Simple sea surface fluxes
 
     ! Microphysics Scheme
-    mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison                  4=WSM6      5=Thompson-Eidhammer
+    mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison                  4=WSM6      5=Thompson-Eidhammer    6=WSM3
     ! Radiation Scheme
     rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG
 
