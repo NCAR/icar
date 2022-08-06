@@ -2,32 +2,32 @@
 #  include "module_mp_wsm3_accel.F"
 #else
 ! #if ( RWORDSIZE == 4 )
-#  define VREC vsrec
-#  define VSQRT vssqrt
+! #  define VREC vsrec
+! #  define VSQRT vssqrt
 ! #else
 ! #  define VREC vrec
 ! #  define VSQRT vsqrt
 ! #endif
 
-subroutine vssqrt(y,x,n)
-    real, intent(inout) :: y(n)
-    real, intent(in) :: x(n)
-    integer, intent(in) :: n
-    integer :: j
-    do j=1,n
-        y(j)=sqrt(x(j))
-    enddo
-end
-
-subroutine vsrec(y,x,n)
-    real, intent(inout) :: y(n)
-    real, intent(in) :: x(n)
-    integer, intent(in) :: n
-    integer :: j
-    do j=1,n
-        y(j)=1.0/(x(j))
-    enddo
-end
+! subroutine vssqrt(y,x,n)
+!     real, intent(inout) :: y(n)
+!     real, intent(in) :: x(n)
+!     integer, intent(in) :: n
+!     integer :: j
+!     do j=1,n
+!         y(j)=sqrt(x(j))
+!     enddo
+! end
+!
+! subroutine vsrec(y,x,n)
+!     real, intent(inout) :: y(n)
+!     real, intent(in) :: x(n)
+!     integer, intent(in) :: n
+!     integer :: j
+!     do j=1,n
+!         y(j)=1.0/(x(j))
+!     enddo
+! end
 
 
 MODULE module_mp_wsm3
@@ -126,7 +126,7 @@ CONTAINS
   REAL, DIMENSION( ims:ime , jms:jme ),                                        &
         INTENT(INOUT) ::                                                 rain, &
                                                                       rainncv
-  REAL, DIMENSION( ims:ime , jms:jme ), OPTIONAL,                              &
+  REAL, DIMENSION( ims:ime , jms:jme ),                                        &
         INTENT(INOUT) ::                                                 snow, &
                                                                       snowncv, &
                                                                            sr
@@ -440,11 +440,15 @@ CONTAINS
       enddo
 !
       do k = kts, kte
-        CALL VREC( tvec1(its), den(its,k), ite-its+1)
+        ! CALL VREC( tvec1(its), den(its,k), ite-its+1)
+        ! tvec1(its:ite) = 1/(den(its:ite,k))
         do i = its, ite
+          tvec1(i) = 1.0/(den(i,k))
           tvec1(i) = tvec1(i)*den0
+          denfac(i,k) = sqrt(tvec1(i))
         enddo
-        CALL VSQRT( denfac(its,k), tvec1(its), ite-its+1)
+        ! CALL VSQRT( denfac(its,k), tvec1(its), ite-its+1)
+        ! denfac(its:ite,k) = sqrt(tvec1(its:ite))
       enddo
 !
 ! Inline expansion for fpvs
