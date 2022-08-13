@@ -114,7 +114,7 @@ contains
                          kVARS%sensible_heat, kVARS%latent_heat, kVARS%u_10m, kVARS%v_10m, kVARS%temperature_2m,        &
                          kVARS%humidity_2m, kVARS%surface_pressure, kVARS%longwave_up, kVARS%ground_heat_flux,          &
                          kVARS%soil_totalmoisture, kVARS%soil_deep_temperature, kVARS%roughness_z0, kVARS%ustar,        &
-                         kVARS%snow_height, kVARS%lai, kVARS%temperature_2m_veg,                                        &
+                         kVARS%snow_height, kVARS%lai, kVARS%temperature_2m_veg, kVARS%albedo,                          &
                          kVARS%veg_type, kVARS%soil_type, kVARS%land_mask])
 
              call options%advect_vars([kVARS%potential_temperature, kVARS%water_vapor])
@@ -135,7 +135,7 @@ contains
             call options%alloc_vars( &
                          [kVARS%water_vapor, kVARS%potential_temperature, kVARS%precipitation, kVARS%temperature,       &
                          kVARS%exner, kVARS%dz_interface, kVARS%density, kVARS%pressure_interface, kVARS%shortwave,     &
-                         kVARS%shortwave_direct, kVARS%shortwave_diffuse,                                               &
+                         kVARS%shortwave_direct, kVARS%shortwave_diffuse, kVARS%albedo,                                 &
                          kVARS%longwave, kVARS%vegetation_fraction, kVARS%canopy_water, kVARS%snow_water_equivalent,    &
                          kVARS%skin_temperature, kVARS%soil_water_content, kVARS%soil_temperature, kVARS%terrain,       &
                          kVARS%sensible_heat, kVARS%latent_heat, kVARS%u_10m, kVARS%v_10m, kVARS%temperature_2m,        &
@@ -575,6 +575,15 @@ contains
 
             call allocate_noah_data(num_soil_layers)
 
+            if (options%lsm_options%monthly_albedo) then
+                if (.not.options%lsm_options%monthly_vegfrac) Then
+                    print*, "ERROR, monthly albedo requires monthly vegfrac"
+                    error stop
+                endif
+                ALBEDO = domain%albedo%data_3d(:, domain%model_time%month, :)
+            else
+                ALBEDO = domain%albedo%data_3d(:, 1, :)
+            endif
             if (options%lsm_options%monthly_vegfrac) then
                 VEGFRAC = domain%vegetation_fraction%data_3d(:, domain%model_time%month, :)
             else
@@ -659,6 +668,15 @@ contains
 
             call allocate_noah_data(num_soil_layers)
 
+            if (options%lsm_options%monthly_albedo) then
+                if (.not.options%lsm_options%monthly_vegfrac) Then
+                    print*, "ERROR, monthly albedo requires monthly vegfrac"
+                    error stop
+                endif
+                ALBEDO = domain%albedo%data_3d(:, domain%model_time%month, :)
+            else
+                ALBEDO = domain%albedo%data_3d(:, 1, :)
+            endif
             if (options%lsm_options%monthly_vegfrac) then
                 VEGFRAC = domain%vegetation_fraction%data_3d(:, domain%model_time%month, :)
             else
@@ -903,6 +921,11 @@ contains
                         endif
                     enddo
                 enddo
+                if (options%lsm_options%monthly_albedo) then
+                    if (cur_vegmonth /= domain%model_time%month) then
+                        ALBEDO = domain%albedo%data_3d(:, domain%model_time%month, :)
+                    endif
+                endif
                 if (options%lsm_options%monthly_vegfrac) then
                     if (cur_vegmonth /= domain%model_time%month) then
                         VEGFRAC = domain%vegetation_fraction%data_3d(:, domain%model_time%month, :)
@@ -1010,6 +1033,11 @@ contains
                         endif
                     enddo
                 enddo
+                if (options%lsm_options%monthly_albedo) then
+                    if (cur_vegmonth /= domain%model_time%month) then
+                        ALBEDO = domain%albedo%data_3d(:, domain%model_time%month, :)
+                    endif
+                endif
                 if (options%lsm_options%monthly_vegfrac) then
                     if (cur_vegmonth /= domain%model_time%month) then
                         VEGFRAC = domain%vegetation_fraction%data_3d(:, domain%model_time%month, :)
