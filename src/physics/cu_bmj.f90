@@ -1437,7 +1437,8 @@
     !---------------------------SHALLOW CLOUD TOP---------------------------
             ! BK 2022/06/28: Warning and adjustment in case of low model top:
             if (LTOP<2) then 
-                write(*,*) "   CU_BMJ WARNING: model top likely too low for correct convection simulation."!, LTOP, LBOT, LTP1,"[", this_image(),"]"
+                ! commented out the warning below because it clogs up the log files. 
+                ! write(*,*) "   CU_BMJ WARNING: model top likely too low for correct convection simulation."!, LTOP, LBOT, LTP1,"[", this_image(),"]"
                 LTOP=max(LTOP, 2)
             endif
             LBM1=LBOT-1
