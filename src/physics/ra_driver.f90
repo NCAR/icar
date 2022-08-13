@@ -240,12 +240,6 @@ contains
 
         cldfra=0
 
-        if (options%lsm_options%monthly_albedo) then
-            ALBEDO = domain%albedo%data_3d(:, domain%model_time%month, :)
-        else
-            ALBEDO = domain%albedo%data_3d(:, 1, :)
-        endif
-
         F_QI=.false.
         F_QC=.false.
         F_QR=.false.
@@ -291,6 +285,13 @@ contains
         endif
 
         if (options%physics%radiation==kRA_RRTMG) then
+
+            if (options%lsm_options%monthly_albedo) then
+                ALBEDO = domain%albedo%data_3d(:, domain%model_time%month, :)
+            else
+                ALBEDO = domain%albedo%data_3d(:, 1, :)
+            endif
+
             do j = jms,jme
                 solar_elevation  = calc_solar_elevation(date=domain%model_time, lon=domain%longitude%data_2d, &
                                 j=j, ims=ims,ime=ime,jms=jms,jme=jme,its=its,ite=ite,day_frac=day_frac)
@@ -488,10 +489,12 @@ contains
 !                           lwupflx, lwupflxc, lwdnflx, lwdnflxc,                  &
                             read_ghg=options%rad_options%read_ghg                  &
                             )
+                domain%tend_swrad%data_3d = domain%tend%th_swrad
             endif
-            domain%temperature%data_3d = domain%temperature%data_3d+domain%tend%th_lwrad*dt+domain%tend%th_swrad*dt
-            domain%potential_temperature%data_3d = domain%temperature%data_3d/domain%exner%data_3d
-            domain%tend_swrad%data_3d = domain%tend%th_swrad
+            domain%potential_temperature%data_3d = domain%potential_temperature%data_3d + domain%tend%th_lwrad*dt + domain%tend%th_swrad*dt
+            domain%temperature%data_3d = domain%potential_temperature%data_3d * domain%exner%data_3d
+            ! domain%temperature%data_3d = domain%temperature%data_3d + domain%tend%th_lwrad*dt + domain%tend%th_swrad*dt
+            ! domain%potential_temperature%data_3d = domain%temperature%data_3d / domain%exner%data_3d
         endif
 
     end subroutine rad
