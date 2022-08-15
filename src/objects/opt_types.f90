@@ -140,6 +140,7 @@ module options_types
         ! integer :: snow_category ! = ice cat
         ! use monthly vegetation fraction data, not just a single value
         logical :: monthly_vegfrac
+        logical :: monthly_albedo
     end type lsm_options_type
 
     ! ------------------------------------------------
@@ -192,7 +193,7 @@ module options_types
                                         pslvar, psvar, snowh_var, &
                                         shvar,lhvar,pblhvar,zvar,zbvar,&
                                         soiltype_var, soil_t_var,soil_vwc_var,swe_var,soil_deept_var, &
-                                        vegtype_var,vegfrac_var, vegfracmax_var, lai_var, canwat_var, &
+                                        vegtype_var,vegfrac_var, albedo_var, vegfracmax_var, lai_var, canwat_var, &
                                         linear_mask_var, nsq_calibration_var, &
                                         swdown_var, lwdown_var, &
                                         sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &

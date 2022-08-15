@@ -675,7 +675,7 @@ contains
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qgvar,qsvar,hgtvar,shvar,lhvar,pblhvar,   &
                                         psvar, pslvar, snowh_var, &
                                         soiltype_var, soil_t_var,soil_vwc_var,swe_var, soil_deept_var,           &
-                                        vegtype_var,vegfrac_var, vegfracmax_var, lai_var, canwat_var, linear_mask_var, nsq_calibration_var,  &
+                                        vegtype_var,vegfrac_var, vegfracmax_var, albedo_var, lai_var, canwat_var, linear_mask_var, nsq_calibration_var,  &
                                         swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &
                                         lat_ext, lon_ext, swe_ext, hsnow_ext, rho_snow_ext, tss_ext, tsoil2D_ext, tsoil3D_ext, z_ext, time_ext
 
@@ -684,7 +684,7 @@ contains
                             psvar, pslvar, snowh_var, &
                             hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
                             soiltype_var, soil_t_var,soil_vwc_var,swe_var,soil_deept_var,           &
-                            vegtype_var,vegfrac_var, vegfracmax_var, lai_var, canwat_var, linear_mask_var, nsq_calibration_var,  &
+                            vegtype_var,vegfrac_var, vegfracmax_var, albedo_var, lai_var, canwat_var, linear_mask_var, nsq_calibration_var,  &
                             swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &
                             lat_ext, lon_ext, swe_ext, hsnow_ext, rho_snow_ext, tss_ext, tsoil2D_ext, tsoil3D_ext,  z_ext, time_ext
 
@@ -736,6 +736,7 @@ contains
         vegtype_var=""
         vegfrac_var=""
         vegfracmax_var=""
+        albedo_var=""
         lai_var=""
         canwat_var=""
         linear_mask_var=""
@@ -876,6 +877,7 @@ contains
         options%vegtype_var        = vegtype_var
         options%vegfrac_var        = vegfrac_var
         options%vegfracmax_var     = vegfracmax_var
+        options%albedo_var         = albedo_var
         options%lai_var            = lai_var
         options%canwat_var         = canwat_var
 
@@ -1032,7 +1034,7 @@ contains
         close(name_unit)
 
         if (ideal) then
-            if (this_image()==1) write(*,*) " Running Idealized simulation " 
+            if (this_image()==1) write(*,*) " Running Idealized simulation "
         endif
 
         if ((trim(date)=="").and.(trim(start_date)/="")) date = start_date
@@ -1728,6 +1730,7 @@ contains
 
         character(len=MAXVARLENGTH) :: LU_Categories ! Category definitions (e.g. USGS, MODIFIED_IGBP_MODIS_NOAH)
         logical :: monthly_vegfrac                   ! read in 12 months of vegfrac data
+        logical :: monthly_albedo                    ! same for albedo (requires vegfrac be monthly)
         integer :: update_interval                   ! minimum number of seconds between LSM updates
         integer :: urban_category                    ! index that defines the urban category in LU_Categories
         integer :: ice_category                      ! index that defines the ice category in LU_Categories
@@ -1736,7 +1739,7 @@ contains
 
         ! define the namelist
         namelist /lsm_parameters/ LU_Categories, update_interval, monthly_vegfrac, &
-                                  urban_category, ice_category, water_category, lake_category
+                                  urban_category, ice_category, water_category, lake_category, monthly_albedo
 
          ! because adv_options could be in a separate file
          if (options%parameters%use_lsm_options) then
@@ -1750,6 +1753,7 @@ contains
         LU_Categories   = "MODIFIED_IGBP_MODIS_NOAH"
         update_interval = 300 ! 5 minutes
         monthly_vegfrac = .False.
+        monthly_albedo = .False.
 
         ! default values for these will be set after reading LU_Categories
         urban_category  = -1
@@ -1769,6 +1773,7 @@ contains
         ! store everything in the lsm_options structure
         lsm_options%LU_Categories   = LU_Categories
         lsm_options%monthly_vegfrac = monthly_vegfrac
+        lsm_options%monthly_albedo  = monthly_albedo
         lsm_options%update_interval = update_interval
         lsm_options%urban_category  = urban_category
         lsm_options%ice_category    = ice_category

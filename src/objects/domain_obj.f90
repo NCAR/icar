@@ -213,6 +213,7 @@ contains
         if (0<opt%vars_to_allocate( kVARS%shortwave_direct) )           call setup(this%shortwave_direct,         this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%shortwave_diffuse) )          call setup(this%shortwave_diffuse,        this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%longwave) )                   call setup(this%longwave,                 this%grid2d,   forcing_var=opt%parameters%lwdown_var,  list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%albedo) )                     call setup(this%albedo,                   this%grid_monthly )
         if (0<opt%vars_to_allocate( kVARS%vegetation_fraction) )        call setup(this%vegetation_fraction,      this%grid_monthly )
         if (0<opt%vars_to_allocate( kVARS%vegetation_fraction_max) )    call setup(this%vegetation_fraction_max,  this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%vegetation_fraction_out) )    call setup(this%vegetation_fraction_out,  this%grid2d )
@@ -1785,14 +1786,66 @@ contains
             endif
         endif
 
+        if (options%parameters%albedo_var /= "") then
+            if (options%lsm_options%monthly_albedo) then
+                call io_read(options%parameters%init_conditions_file,   &
+                            options%parameters%albedo_var,          &
+                            temporary_data_3d)
+
+                if (associated(this%albedo%data_3d)) then
+                    do i=1,size(this%albedo%data_3d, 2)
+                        this%albedo%data_3d(:,i,:) = temporary_data_3d(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme,i)
+                    enddo
+                endif
+
+                if (maxval(temporary_data_3d) > 1) then
+                    if (this_image()==1) print*, "Changing input ALBEDO % to fraction"
+                    this%albedo%data_3d = this%albedo%data_3d / 100
+                endif
+
+            else
+                call io_read(options%parameters%init_conditions_file,   &
+                               options%parameters%albedo_var,          &
+                               temporary_data)
+                if (associated(this%albedo%data_3d)) then
+                    do i=1,size(this%albedo%data_3d, 2)
+                        this%albedo%data_3d(:,i,:) = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+                    enddo
+                endif
+
+                if (maxval(temporary_data) > 1) then
+                    if (this_image()==1) print*, "Changing input ALBEDO % to fraction"
+                    this%albedo%data_3d = this%albedo%data_3d / 100
+                endif
+            endif
+
+        else
+            if (associated(this%albedo%data_3d)) then
+                this%albedo%data_3d = 0.17
+            endif
+        endif
+
+
         if (options%parameters%vegfrac_var /= "") then
-            call io_read(options%parameters%init_conditions_file,   &
-                           options%parameters%vegfrac_var,          &
-                           temporary_data)
-            if (associated(this%vegetation_fraction%data_3d)) then
-                do i=1,size(this%vegetation_fraction%data_3d, 2)
-                    this%vegetation_fraction%data_3d(:,i,:) = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
-                enddo
+            if (options%lsm_options%monthly_albedo) then
+                call io_read(options%parameters%init_conditions_file,   &
+                            options%parameters%vegfrac_var,          &
+                            temporary_data_3d)
+
+                if (associated(this%vegetation_fraction%data_3d)) then
+                    do i=1,size(this%vegetation_fraction%data_3d, 2)
+                        this%vegetation_fraction%data_3d(:,i,:) = temporary_data_3d(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme,i)
+                    enddo
+                endif
+            else
+                call io_read(options%parameters%init_conditions_file,   &
+                               options%parameters%vegfrac_var,          &
+                               temporary_data)
+                if (associated(this%vegetation_fraction%data_3d)) then
+                    do i=1,size(this%vegetation_fraction%data_3d, 2)
+                        this%vegetation_fraction%data_3d(:,i,:) = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+                    enddo
+                endif
             endif
 
         else

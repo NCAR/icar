@@ -128,7 +128,7 @@ contains
                          kVARS%sensible_heat, kVARS%latent_heat, kVARS%u_10m, kVARS%v_10m, kVARS%temperature_2m,        &
                          kVARS%humidity_2m, kVARS%surface_pressure, kVARS%longwave_up, kVARS%ground_heat_flux,          &
                          kVARS%soil_totalmoisture, kVARS%soil_deep_temperature, kVARS%roughness_z0, kVARS%ustar,        &
-                         kVARS%snow_height, kVARS%lai, kVARS%temperature_2m_veg,                                        &
+                         kVARS%snow_height, kVARS%lai, kVARS%temperature_2m_veg, kVARS%albedo,                          &
                          kVARS%veg_type, kVARS%soil_type, kVARS%land_mask])
 
              call options%advect_vars([kVARS%potential_temperature, kVARS%water_vapor])
@@ -149,7 +149,7 @@ contains
             call options%alloc_vars( &
                          [kVARS%water_vapor, kVARS%potential_temperature, kVARS%precipitation, kVARS%temperature,       &
                          kVARS%exner, kVARS%dz_interface, kVARS%density, kVARS%pressure_interface, kVARS%shortwave,     &
-                         kVARS%shortwave_direct, kVARS%shortwave_diffuse,                                               &
+                         kVARS%shortwave_direct, kVARS%shortwave_diffuse, kVARS%albedo,                                 &
                          kVARS%longwave, kVARS%vegetation_fraction, kVARS%canopy_water, kVARS%snow_water_equivalent,    &
                          kVARS%skin_temperature, kVARS%soil_water_content, kVARS%soil_temperature, kVARS%terrain,       &
                          kVARS%sensible_heat, kVARS%latent_heat, kVARS%u_10m, kVARS%v_10m, kVARS%temperature_2m,        &
@@ -600,6 +600,15 @@ contains
 
             call allocate_noah_data(num_soil_layers)
 
+            if (options%lsm_options%monthly_albedo) then
+                if (.not.options%lsm_options%monthly_vegfrac) Then
+                    print*, "ERROR, monthly albedo requires monthly vegfrac"
+                    error stop
+                endif
+                ALBEDO = domain%albedo%data_3d(:, domain%model_time%month, :)
+            else
+                ALBEDO = domain%albedo%data_3d(:, 1, :)
+            endif
             if (options%lsm_options%monthly_vegfrac) then
                 VEGFRAC = domain%vegetation_fraction%data_3d(:, domain%model_time%month, :)
             else
@@ -686,6 +695,15 @@ contains
 
             call allocate_noah_data(num_soil_layers)
 
+            if (options%lsm_options%monthly_albedo) then
+                if (.not.options%lsm_options%monthly_vegfrac) Then
+                    print*, "ERROR, monthly albedo requires monthly vegfrac"
+                    error stop
+                endif
+                ALBEDO = domain%albedo%data_3d(:, domain%model_time%month, :)
+            else
+                ALBEDO = domain%albedo%data_3d(:, 1, :)
+            endif
             if (options%lsm_options%monthly_vegfrac) then
                 VEGFRAC = domain%vegetation_fraction%data_3d(:, domain%model_time%month, :)
             else
@@ -704,13 +722,13 @@ contains
             IOPT_CRS = 1         ! canopy stomatal resistance (1 = Ball-Berry; 2 = Jarvis)
             IOPT_BTR = 1         ! soil moisture factor for stomatal resistance (1 = Noah; 2 = CLM; 3 = SSiB)
             IOPT_RUN = 1         ! runoff and gw (1 = SIMGM; 2 = SIMTOP; 3 = Schaake96; 4 = BATS)
-            IOPT_SFC = 1         ! surface layer drag coefficient (CH & CM) (1 = M-O; 2 = Chen97)
+            IOPT_SFC = 2         ! surface layer drag coefficient (CH & CM) (1 = M-O; 2 = Chen97)
             IOPT_FRZ = 1         ! supercooled liquid water (1 = NY06; 2 = Koren99)
             IOPT_INF = 1         ! frozen soil permeability (1 = NY06; 2 = Koren99)
             IOPT_RAD = 1         ! radiation transfer (1 = gap=F(3D,cosz); 2 = gap=0; 3 = gap=1-Fveg)
             IOPT_ALB = 1         ! snow surface albedo (1 = BATS; 2 = CLASS; 3 = Noah)
             IOPT_SNF = 1         ! rain/snow partitioning (1 = Jordan91; 2 = BATS; 3 = CLASS)
-            IOPT_TBOT = 1        ! lower boundary of soil temperature (1 = zero-flux; 2 = Noah)
+            IOPT_TBOT = 2        ! lower boundary of soil temperature (1 = zero-flux; 2 = Noah)
             IOPT_STC = 1         ! snow/soil temp. time scheme
             IOPT_GLA = 1         ! glacier option (1 = phase change; 2 = simple)
             IOPT_RSF = 1         ! surface resistance (1 = Sakaguchi/Zeng; 2 = Sellers; 3 = modified Sellers; 4 = 1+snow)
@@ -1126,6 +1144,11 @@ contains
                         endif
                     enddo
                 enddo
+                if (options%lsm_options%monthly_albedo) then
+                    if (cur_vegmonth /= domain%model_time%month) then
+                        ALBEDO = domain%albedo%data_3d(:, domain%model_time%month, :)
+                    endif
+                endif
                 if (options%lsm_options%monthly_vegfrac) then
                     if (cur_vegmonth /= domain%model_time%month) then
                         VEGFRAC = domain%vegetation_fraction%data_3d(:, domain%model_time%month, :)
@@ -1234,6 +1257,11 @@ contains
                         endif
                     enddo
                 enddo
+                if (options%lsm_options%monthly_albedo) then
+                    if (cur_vegmonth /= domain%model_time%month) then
+                        ALBEDO = domain%albedo%data_3d(:, domain%model_time%month, :)
+                    endif
+                endif
                 if (options%lsm_options%monthly_vegfrac) then
                     if (cur_vegmonth /= domain%model_time%month) then
                         VEGFRAC = domain%vegetation_fraction%data_3d(:, domain%model_time%month, :)

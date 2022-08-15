@@ -113,6 +113,7 @@ module domain_interface
     type(variable_t) :: soil_carbon_stable
     type(variable_t) :: soil_carbon_fast
     type(variable_t) :: roughness_z0
+    type(variable_t) :: albedo
     type(variable_t) :: vegetation_fraction
     type(variable_t) :: vegetation_fraction_max
     type(variable_t) :: vegetation_fraction_out

@@ -66,6 +66,7 @@ module icar_constants
         integer :: shortwave_direct
         integer :: shortwave_diffuse
         integer :: longwave
+        integer :: albedo
         integer :: vegetation_fraction
         integer :: vegetation_fraction_max
         integer :: vegetation_fraction_out
