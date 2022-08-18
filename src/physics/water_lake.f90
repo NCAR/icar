@@ -5013,20 +5013,20 @@ end subroutine LakeDebug
   DO j = jts,jte
   DO i = its,ite
 
-    lakedepth2d(i,j)             = defval
-    snl2d(i,j)                   = defval
+    lakedepth2d(i,j)             = defval ! lake depth
+    snl2d(i,j)                   = defval ! snow level (?)
     do k = -nlevsnow+1,nlevsoil
-        h2osoi_liq3d(i,k,j)      = defval
-        h2osoi_ice3d(i,k,j)      = defval
-	t_soisno3d(i,k,j)        = defval
-        z3d(i,k,j)               = defval 
-        dz3d(i,k,j)              = defval                           
+        h2osoi_liq3d(i,k,j)      = defval ! soil liquid water?
+        h2osoi_ice3d(i,k,j)      = defval ! soil ice?
+	     t_soisno3d(i,k,j)        = defval ! soil/snow temperature ?
+        z3d(i,k,j)               = defval ! 
+        dz3d(i,k,j)              = defval
     enddo
-    do k = 1,nlevlake 
-	t_lake3d(i,k,j)          = defval
-        lake_icefrac3d(i,k,j)    = defval
-        z_lake3d(i,k,j)          = defval
-        dz_lake3d(i,k,j)         = defval
+    do k = 1,nlevlake
+	     t_lake3d(i,k,j)          = defval ! lake temperature?
+        lake_icefrac3d(i,k,j)    = defval ! lake icefraction
+        z_lake3d(i,k,j)          = defval ! depth 3d?
+        dz_lake3d(i,k,j)         = defval ! dz
     enddo
 
   ENDDO

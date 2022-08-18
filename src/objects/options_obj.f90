@@ -1,6 +1,6 @@
 submodule(options_interface) options_implementation
 
-    use icar_constants,             only : kMAINTAIN_LON, MAXFILELENGTH, MAXVARLENGTH, MAX_NUMBER_FILES, MAXLEVELS, kNO_STOCHASTIC, kVERSION_STRING, kMAX_FILE_LENGTH, kMAX_NAME_LENGTH, pi
+    use icar_constants,             only : kMAINTAIN_LON, MAXFILELENGTH, MAXVARLENGTH, MAX_NUMBER_FILES, MAXLEVELS, kNO_STOCHASTIC, kVERSION_STRING, kMAX_FILE_LENGTH, kMAX_NAME_LENGTH, pi, kWATER_LAKE
     use io_routines,                only : io_newunit
     use time_io,                    only : find_timestep_in_file
     use time_delta_object,          only : time_delta_t
@@ -1635,7 +1635,7 @@ contains
             if (ice_category==-1)   ice_category = -1
             if (water_category==-1) water_category = 16
             ! if (lake_category==-1) lake_category = 16  ! No separate lake category!
-            if((options%physics%watersurface==3) .AND. (this_image()==1)) then
+            if((options%physics%watersurface==kWATER_LAKE) .AND. (this_image()==1)) then
                 write(*,*) "WARNING: Lake model selected (water=3), but USGS LU-categories has no lake category"
             endif
 
@@ -1659,7 +1659,7 @@ contains
             if (urban_category==-1) urban_category = 13
             if (ice_category==-1)   ice_category = 15 ! and 22?
             ! if (water_category==-1) water_category = 17 ! and 21 'Open Water'
-            if(options%physics%watersurface==3) write(*,*) "WARNING: Lake model selected (water=3), but NLCD40 LU-categories has no lake category"
+            if(options%physics%watersurface==kWATER_LAKE) write(*,*) "WARNING: Lake model selected (water=3), but NLCD40 LU-categories has no lake category"
             write(*,*) "WARNING: not handling all varients of categories (e.g. permanent_snow=15 is, but permanent_snow_ice=22 is not)"
         endif
 

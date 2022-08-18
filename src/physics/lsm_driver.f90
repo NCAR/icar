@@ -47,6 +47,7 @@ module land_surface
     use domain_interface,    only : domain_t
     use module_ra_simple, only: calc_solar_elevation
     use io_routines,          only : io_read, io_write
+    use ieee_arithmetic
 
     implicit none
 
@@ -101,13 +102,7 @@ module land_surface
     real, allocatable :: day_frac(:), solar_elevation(:)
 
     ! Lake model: (allocated on lake init)
-    real, allocatable, dimension (:,:)      ::  lakedepth2d,   savedtke12d,                                         &
-                                                snowdp2d, h2osno2d, snl2d,  t_grnd2d,                               &
-                                                lakemask, TH2
-    real, allocatable, dimension (:,:,:)    ::  t_lake3d,  lake_icefrac3d, z_lake3d, dz_lake3d,                     &
-                                                t_soisno3d, h2osoi_ice3d, h2osoi_liq3d, h2osoi_vol3d, z3d,dz3d,     &
-                                                watsat3d, csol3d, tkmg3d, tkdry3d, tksatu3d,                        &
-                                                zi3d
+    real, allocatable, dimension (:,:)      ::      TH2 !, savedtke12d  lakedepth2d,
     integer :: lakeflag, lake_depth_flag, use_lakedepth, lake_count
     LOGICAL, allocatable, DIMENSION( :,: ) :: lake_or_not
 
@@ -216,11 +211,32 @@ contains
                          kVARS%humidity_2m, kVARS%temperature_2m])
         endif
 
-        if (options%physics%watersurface > 2) then
-            call options%alloc_vars( [kVARS%lake_depth] )
-            call options%restart_vars( [kVARS%lake_depth] )
+        if (options%physics%watersurface == kWATER_LAKE ) then
+            call options%alloc_vars( &
+            [kVARS%lake_depth,kVARS%veg_type,kVARS%soil_type, kVARS%land_mask,kVARS%terrain,                        &
+            kVARS%temperature,kVARS%pressure_interface, kVARS%dz_interface, kVARS%shortwave,  kVARS%longwave,       &
+            kVARS%water_vapor, kVARS%latitude, kVARS%longitude, kVARS%sensible_heat, kVARS%latent_heat,             &
+            kVARS%ground_heat_flux, kVARS%snow_water_equivalent, kVARS%t_lake3d, kVARS%dz_lake3d,                   &
+            kVARS%t_soisno3d, kVARS%h2osoi_ice3d, kVARS%h2osoi_liq3d, kVARS%h2osoi_vol3d, kVARS%z3d,                &
+            kVARS%dz3d, kVARS%watsat3d, kVARS%csol3d, kVARS%tkmg3d, kVARS%lakemask, kVARS%zi3d,                     &
+            kVARS%tksatu3d, kVARS%tkdry3d, kVARS%snl2d, kVARS%t_grnd2d,  kVARS%savedtke12d, kVARS%lakedepth2d,      & !  kVARS%snowdp2d, kVARS%h2osno2d,
+            kVARS%lake_icefrac3d, kVARS%z_lake3d,kVARS%water_vapor, kVARS%potential_temperature     ])
+
+            ! call options%advect_vars([kVARS%potential_temperature, kVARS%water_vapor])
+
+            call options%restart_vars( &
+            [kVARS%lake_depth,kVARS%veg_type,kVARS%soil_type, kVARS%land_mask,kVARS%terrain,                        &
+            kVARS%temperature,kVARS%pressure_interface, kVARS%dz_interface, kVARS%shortwave,  kVARS%longwave,       &
+            kVARS%water_vapor, kVARS%latitude, kVARS%longitude, kVARS%sensible_heat, kVARS%latent_heat,             &
+            kVARS%ground_heat_flux, kVARS%snow_water_equivalent, kVARS%t_lake3d, kVARS%dz_lake3d,                   &
+            kVARS%t_soisno3d, kVARS%h2osoi_ice3d, kVARS%h2osoi_liq3d, kVARS%h2osoi_vol3d, kVARS%z3d,                &
+            kVARS%dz3d, kVARS%watsat3d, kVARS%csol3d, kVARS%tkmg3d, kVARS%lakemask, kVARS%zi3d,                     &
+            kVARS%tksatu3d, kVARS%tkdry3d, kVARS%snl2d, kVARS%t_grnd2d, kVARS%savedtke12d, kVARS%lakedepth2d,       & !kVARS%snowdp2d, kVARS%h2osno2d, 
+            kVARS%lake_icefrac3d, kVARS%z_lake3d,kVARS%water_vapor, kVARS%potential_temperature ])
         endif
 
+        
+        
     end subroutine lsm_var_request
 
     subroutine calc_exchange_coefficient(wind,tskin,airt,exchange_C)
@@ -842,38 +858,9 @@ contains
 
             if (this_image()==1) write(*,*) "Initializing Lake model"
 
-            ! allocate arrays:  ( Could become separate subroutine)
-            allocate( lakedepth2d(ims:ime,jms:jme ) )
-            allocate( savedtke12d(ims:ime,jms:jme ) )
-            allocate( snowdp2d(ims:ime,jms:jme ) )
-            allocate( h2osno2d(ims:ime,jms:jme ) )
-            allocate( snl2d(ims:ime,jms:jme ) )
-            allocate( t_grnd2d(ims:ime,jms:jme ) )
-
-            allocate( t_lake3d( ims:ime,1:nlevlake, jms:jme ) )
-            allocate( lake_icefrac3d( ims:ime,1:nlevlake, jms:jme ) )
-            allocate( z_lake3d( ims:ime,1:nlevlake, jms:jme ) )
-            allocate( dz_lake3d( ims:ime,1:nlevlake, jms:jme ) )
-
-            allocate(  t_soisno3d( ims:ime,-nlevsnow+1:nlevsoil, jms:jme))
-            allocate(  h2osoi_ice3d( ims:ime,-nlevsnow+1:nlevsoil, jms:jme))
-            allocate(  h2osoi_liq3d( ims:ime,-nlevsnow+1:nlevsoil, jms:jme))
-            allocate(  h2osoi_vol3d( ims:ime,-nlevsnow+1:nlevsoil, jms:jme))
-            allocate(  z3d( ims:ime,-nlevsnow+1:nlevsoil, jms:jme))
-            allocate(  dz3d( ims:ime,-nlevsnow+1:nlevsoil, jms:jme))
-
-            allocate(  watsat3d( ims:ime,1:nlevsoil, jms:jme ))
-            allocate(  csol3d( ims:ime,1:nlevsoil, jms:jme ))
-            allocate(  tkmg3d( ims:ime,1:nlevsoil, jms:jme ))
-            allocate(  tkdry3d( ims:ime,1:nlevsoil, jms:jme ))
-            allocate(  tksatu3d( ims:ime,1:nlevsoil, jms:jme ))
-
-            allocate(  zi3d( ims:ime,-nlevsnow+0:nlevsoil, jms:jme ))
-
+            ! allocate arrays:
             allocate( lake_or_not(ims:ime, jms:jme))
             allocate( TH2( ims:ime, jms:jme ))
-            allocate( lakemask( ims:ime , jms:jme ))
-
             if( .not.(allocated(XICE))) then
                 allocate(XICE(ims:ime,jms:jme))   ! already allocated for NoahMP, so check?
                 XICE = 0
@@ -902,9 +889,9 @@ contains
                     DO i = its, MIN(ide-1,ite)
                     !    IF ( grid%lu_index(i,j) .NE. grid%islake ) THEN
                         if(domain%veg_type(i,j) .NE. ISLAKE ) then
-                            lakemask(i,j) = 0       ! grid%lakemask(i,j) = 0
+                            domain%lakemask%data_2d(i,j) = 0       ! grid%lakemask(i,j) = 0
                         ELSE
-                            lakemask(i,j) = 1       ! grid%lakemask(i,j) = 1
+                            domain%lakemask%data_2d(i,j) = 1       ! grid%lakemask(i,j) = 1
                             lake_count= lake_count + 1
                         end if
                     END DO
@@ -928,33 +915,42 @@ contains
                 ,HT=domain%terrain%data_2d                      & ! terrain height [m] if ht(i,j)>=lake_min_elev -> lake  (grid%ht in WRF)
                 ,SNOW=domain%snow_water_equivalent%data_2d      & !i  ! SNOW in kg/m^2  (NoahLSM: SNOW liquid water-equivalent snow depth (m)
                 ,lake_min_elev=5.                               & ! minimum elevation of lakes. May be used to determine whether a water point is a lake in the absence of lake category. If the landuse type includes 'lake' (i.e. Modis_lake and USGS_LAKE), this variable is of no effects.
-                ,restart=.false.                                &
+                ,restart=options%parameters%restart             & ! if restart, this (lakeini) subroutine is simply skipped.
                 ,lakedepth_default=50.                          & ! default lake depth (If there is no lake_depth information in the input data, then lake depth is assumed to be 50m)
                 ,lake_depth=domain%lake_depth%data_2d           & !INTENT(IN)
-                ,lakedepth2d=lakedepth2d                        & !INTENT(OUT) (will be equal to lake_depth if lake_depth data is provided in hi-res input, otherwise lakedepth_default)
-                ,savedtke12d=savedtke12d                        & !INTENT(OUT)
-                ,snowdp2d=snowdp2d,      h2osno2d=h2osno2d      & !INTENT(OUT)
-                ,snl2d=snl2d,          t_grnd2d=t_grnd2d        &
-                ,t_lake3d=t_lake3d,      lake_icefrac3d=lake_icefrac3d, z_lake3d=z_lake3d,       dz_lake3d=dz_lake3d          &
-                ,t_soisno3d=t_soisno3d,    h2osoi_ice3d=h2osoi_ice3d,   h2osoi_liq3d=h2osoi_liq3d,   h2osoi_vol3d=h2osoi_vol3d,    z3d=z3d,      dz3d=dz3d             &
-                ,zi3d=zi3d,          watsat3d=watsat3d,       csol3d=csol3d,          tkmg3d=tkmg3d                                    &
+                ,lakedepth2d=domain%lakedepth2d%data_2d         & !INTENT(OUT) (will be equal to lake_depth if lake_depth data is provided in hi-res input, otherwise lakedepth_default)
+                ,savedtke12d=domain%savedtke12d%data_2d         & !INTENT(OUT)
+                ,snowdp2d=domain%snow_height%data_2d            & ! domain%snowdp2d%data_2d
+                ,h2osno2d=domain%snow_water_equivalent%data_2d  & !domain%h2osno2d%data_2d
+                ,snl2d=domain%snl2d%data_2d                     & ! snowlevel 2d?
+                ,t_grnd2d=domain%t_grnd2d%data_2d               & ! ground temperature?
+                ,t_lake3d=domain%t_lake3d%data_3d               & ! lake temperature 3d
+                ,lake_icefrac3d=domain%lake_icefrac3d%data_3d   & ! lake ice fraction ?
+                ,z_lake3d=domain%z_lake3d%data_3d               & !
+                ,dz_lake3d=domain%dz_lake3d%data_3d             &
+                ,t_soisno3d=domain%t_soisno3d%data_3d           & ! temperature of both soil and snow
+                ,h2osoi_ice3d=domain%h2osoi_ice3d%data_3d       & !  ice lens (kg/m2)
+                ,h2osoi_liq3d=domain%h2osoi_liq3d%data_3d       & ! liquid water (kg/m2)
+                ,h2osoi_vol3d=domain%h2osoi_vol3d%data_3d       & ! volumetric soil water (0<=h2osoi_vol<=watsat)[m3/m3]
+                ,z3d=domain%z3d%data_3d                         & ! layer depth for snow & soil (m)
+                ,dz3d=domain%dz3d%data_3d                       & ! layer thickness for soil or snow (m)
+                ,zi3d=domain%zi3d%data_3d                                              &
+                ,watsat3d=domain%watsat3d%data_3d               &
+                ,csol3d=domain%csol3d%data_3d                   &
+                ,tkmg3d=domain%tkmg3d%data_3d                   &
                 ,iswater=iswater,       xice=xice,           xice_threshold=xice_threshold                                              &
                 ,xland=domain%land_mask                         & !-- XLAND         land mask (1 for land, 2 for water)  i/o
                 ,tsk=domain%skin_temperature%data_2d            &
-                ,lakemask=lakemask                              & ! 2d var that says lake(1) or not lake(0)
+                ,lakemask=domain%lakemask%data_2d               & ! 2d var that says lake(1) or not lake(0)
                 ,lakeflag=lakeflag                              & ! flag to read in lakemask (lakeflag=1), or to determine lakemask from ivgtyp(i,j)==iswater.and.ht(i,j)>=lake_min_elev (lakeflag=0)
                 ,lake_depth_flag=lake_depth_flag,   use_lakedepth=use_lakedepth               & ! flags to use the provided lake depth data (in hi-res input domain file) or not.
-                ,tkdry3d=tkdry3d,           tksatu3d=tksatu3d                    &
-                ,lake=lake_or_not                               & ! Logical (:,:) if gridpoint is lake or not (INTENT(OUT))
+                ,tkdry3d=domain%tkdry3d%data_3d                  &
+                ,tksatu3d=domain%tksatu3d%data_3d                  &
+                ,lake=lake_or_not                               & ! Logical (:,:) if gridpoint is lake or not (INTENT(OUT)) not used further?
                 ,its=its, ite=ite, jts=jts, jte=jte             &
                 ,ims=ims, ime=ime, jms=jms, jme=jme             &
                 )
         endif
-
-        ! if ((this_image()==1).and.(options%parameters%debug)) then
-        !     call io_write("lakemask.nc", "lakemask", lakemask(:,:) )
-        !     write(*,*) "   writing lakemask to file "
-        ! endif
 
         ! defines the height of the middle of the first model level
         z_atm = domain%z%data_3d(:,kts,:) - domain%terrain%data_2d
@@ -1036,9 +1032,7 @@ contains
                                   QFX,                                  &
                                   domain%skin_temperature%data_2d       &
                                   ,domain%veg_type                      &
-                                  ,domain%terrain%data_2d               & ! terrain height [m] if ht(i,j)>=lake_min_elev -> lake (in case no lake category is provided, but lake model is selected, we need to not run the simple water as well )
-                                !   ,lake_min_elev                        &
-                                !   ,lakeflag                             &
+                                !   ,domain%terrain%data_2d               & ! terrain height [m] if ht(i,j)>=lake_min_elev -> lake (in case no lake category is provided, but lake model is selected, we need to not run the simple water as well - left comment in for future reference)
                                   )
             endif
 
@@ -1053,7 +1047,7 @@ contains
 
                 call lake( &
                     t_phy=domain%temperature%data_3d                            & !-- t_phy         temperature (K)     !Temprature at the mid points (K)
-                    ,p8w=domain%pressure_interface%data_3d                      & !-- p8w           pressure at full levels (Pa)
+                    ,p8w=domain%pressure_interface%data_3d                      & !-- p8w           pressure at full levels (Pa) ! Naming convention: 8~at => p8w reads as "p-at-w" (w=full levels)
                     ,dz8w=domain%dz_interface%data_3d                           & !-- dz8w          dz between full levels (m)
                     ,qvcurr=domain%water_vapor%data_3d                          &  !i
                     ,u_phy=domain%u_mass%data_3d                                & !-- u_phy         u-velocity interpolated to theta points (m/s)
@@ -1065,10 +1059,14 @@ contains
                     ,swdown=domain%shortwave%data_2d                            & !-- SWDOWN        downward short wave flux at ground surface (W/m^2)
                     ,albedo=ALBEDO                                              & ! albedo? fixed at 0.17?
                     ,xlat_urb2d=domain%latitude%data_2d                         & ! optional ?
-                    ,z_lake3d=z_lake3d      ,dz_lake3d=dz_lake3d                &
-                    ,lakedepth2d=lakedepth2d                                    &
-                    ,watsat3d=watsat3d      ,csol3d=csol3d      ,tkmg3d=tkmg3d  &
-                    ,tkdry3d=tkdry3d        ,tksatu3d=tksatu3d                  &
+                    ,z_lake3d=domain%z_lake3d%data_3d                           &
+                    ,dz_lake3d=domain%dz_lake3d%data_3d                         &
+                    ,lakedepth2d=domain%lakedepth2d%data_2d                     &
+                    ,watsat3d=domain%watsat3d%data_3d                           &
+                    ,csol3d=domain%csol3d%data_3d                               &
+                    ,tkmg3d=domain%tkmg3d%data_3d                               &
+                    ,tkdry3d=domain%tkdry3d%data_3d        &
+                    ,tksatu3d=domain%tksatu3d%data_3d                  &
                     ,ivgtyp=domain%veg_type                                     &
                     ,HT=domain%terrain%data_2d                                  &
                     ,xland=real(domain%land_mask)                               & !-- XLAND         land mask (1 for land, 2 OR 0 for water)  i/o
@@ -1077,14 +1075,21 @@ contains
                     ,ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde       &
                     ,ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme       &
                     ,its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte       &
-                    ,h2osno2d=h2osno2d,         snowdp2d=snowdp2d               &
-                    ,snl2d=snl2d               ,z3d=z3d                         &
-                    ,dz3d=dz3d                 ,zi3d=zi3d                       &
-                    ,h2osoi_vol3d=h2osoi_vol3d ,h2osoi_liq3d=h2osoi_liq3d       &
-                    ,h2osoi_ice3d=h2osoi_ice3d ,t_grnd2d=t_grnd2d               &
-                    ,t_soisno3d=t_soisno3d   ,t_lake3d=t_lake3d                 &
-                    ,savedtke12d=savedtke12d  ,lake_icefrac3d=lake_icefrac3d    &
-                    ,lakemask=lakemask                                          &
+                    ,h2osno2d=domain%snow_water_equivalent%data_2d             & !domain%h2osno2d%data_2d
+                    ,snowdp2d=domain%snow_height%data_2d                        & ! domain%snowdp2d%data_2d
+                    ,snl2d=domain%snl2d%data_2d                                 &
+                    ,z3d=domain%z3d%data_3d                                     &
+                    ,dz3d=domain%dz3d%data_3d                                   &
+                    ,zi3d=domain%zi3d%data_3d                                   &
+                    ,h2osoi_vol3d=domain%h2osoi_vol3d%data_3d           &
+                    ,h2osoi_liq3d=domain%h2osoi_liq3d%data_3d       &
+                    ,h2osoi_ice3d=domain%h2osoi_ice3d%data_3d           &
+                    ,t_grnd2d=domain%t_grnd2d%data_2d               &
+                    ,t_soisno3d=domain%t_soisno3d%data_3d                                      &
+                    ,t_lake3d=domain%t_lake3d%data_3d                           & ! 3d lake temperature (K)
+                    ,savedtke12d=domain%savedtke12d%data_2d                &
+                    ,lake_icefrac3d=domain%lake_icefrac3d%data_3d    &
+                    ,lakemask=domain%lakemask%data_2d                                        &
                     ,lakeflag=lakeflag                                          &
                     ,hfx= domain%sensible_heat%data_2d                          & !(OUT)-- HFX         upward heat flux at the surface (W/m^2)   (INTENT:OUT)
                     ,lh=domain%latent_heat%data_2d                              & !(OUT)-- LH          net upward latent heat flux at surface (W/m^2)
@@ -1502,7 +1507,8 @@ contains
 
             endif
         endif
-        if (options%physics%landsurface>0) then
+        ! if (options%physics%landsurface>0) then
+        if (options%physics%landsurface>0 .OR. options%physics%watersurface>0) then
             call apply_fluxes(domain, dt)
         endif
 

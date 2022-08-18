@@ -83,12 +83,12 @@ contains
     module subroutine water_simple(options, sst, psfc, wind, ustar, qv, temperature,  &
                             sensible_heat, latent_heat, &
                             z_atm, Z0, landmask, &
-                            qv_surf, evap_flux, tskin, vegtype, hgt ) !,lake_min_elev, lakeflag)
+                            qv_surf, evap_flux, tskin, vegtype ) 
         implicit none
         type(options_t),intent(in)    :: options
         real,    dimension(:,:,:),intent(in)    :: qv, temperature
         real,    dimension(:,:),  intent(inout) :: sensible_heat, latent_heat, Z0, qv_surf, evap_flux, tskin
-        real,    dimension(:,:),  intent(in)    :: sst, psfc, wind, ustar, z_atm, hgt
+        real,    dimension(:,:),  intent(in)    :: sst, psfc, wind, ustar, z_atm
         integer, dimension(:,:),  intent(in)    :: landmask
         integer, dimension(:,:),  intent(in), optional    :: vegtype
         ! real,    dimension(:),    intent(in)    :: lake_min_elev
@@ -102,36 +102,16 @@ contains
 
         do j=2,ny-1
             do i=2,nx-1
-                ! if (landmask(i,j)==kLC_WATER) then
-                ! if (options%lsm_options%lake_category/=-1) then
                 if(                                                                         &
                     ( (options%physics%watersurface==kWATER_SIMPLE) .AND.                   &   ! If lakemodel is not selected, use this
                       (landmask(i,j)==kLC_WATER)                                            & !(n.b. in case noah (mp or lsm) is not used, landmask may not be set correctly!)
-                    ! ((vegtype(i,j).eq.options%lsm_options%water_category) .OR.              &   !   for every gridcell that is water
-                    ! (vegtype(i,j).eq.options%lsm_options%lake_category))                    &   !   or lake
                     )                                                                       &
                     .OR.                                                                    &
                     ( (options%physics%watersurface==kWATER_LAKE) .AND.                     &    ! if lake model is selected, and
                       (vegtype(i,j).eq.options%lsm_options%water_category) .AND.            &    !   gridcell is water,
                       (vegtype(i,j).ne.options%lsm_options%lake_category)                   &    !   but not lake (i.e ocean)
-                    )                                                                       &
-                    ! .OR.  &
-                    ! ((options%physics%watersurface==kWATER_LAKE) .AND.                      &    ! if lake model is selected, and
-                    ! ! (landmask(i,j)==kLC_WATER) .and.                                       &
-                    !     ((vegtype(i,j).eq.options%lsm_options%water_category) .AND.         &    !   gridcell is water,
-                    !      (vegtype(i,j).ne.options%lsm_options%lake_category) .AND.          &    !   but not lake (i.e ocean)
-                    !      (lakeflag/=0)                                                      & ! if lakeflag=0, then lake_cat=-1 and the simple_water and lake-model are both run for lake cells.
-                    !     )                                                                   &
-                    !     .OR.                                                                & !
-                    !     (lakeflag==0 .AND.                                                  &
-                    !      vegtype(i,j).eq.options%lsm_options%water_category .AND.          &
-                    !      hgt(i,j)<lake_min_elev                                             &
-                    !     )                                                                   &
-                        ! If no lake cat is provided (lakeflag=0), the lake model will determine lakes based on the criterion (ivgtyp(i,j)==iswater .and. ht(i,j)>=lake_min_elev))
-                    ! )                                                                       &
+                    )                                                                         &
                 )then
-
-                    ! if(options%parameters%debug) write(*,*)"  simple water running for gridpt.",i,j,"in image",this_image()
 
                     qv_surf(i,j) = 0.98 * sat_mr(sst(i,j),psfc(i,j)) ! multiply by 0.98 to account for salinity
 
