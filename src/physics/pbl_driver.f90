@@ -33,7 +33,7 @@ module planetary_boundary_layer
     implicit none
 
     private
-    public :: pbl_init, pbl, pbl_finalize
+    public :: pbl_var_request, pbl_init, pbl, pbl_finalize
 
     integer :: ids, ide, jds, jde, kds, kde,  &
                ims, ime, jms, jme, kms, kme,  &
@@ -42,6 +42,29 @@ module planetary_boundary_layer
     logical :: allowed_to_read, restart, flag_qi
 
 contains
+
+
+    subroutine pbl_var_request(options)
+        implicit none
+        type(options_t),intent(inout) :: options
+
+        if (options%physics%landsurface == kPBL_SIMPLE) then
+            call options%alloc_vars( &
+                         [kVARS%water_vapor, kVARS%potential_temperature, &
+                         kVARS%cloud_water, kVARS%cloud_ice,              &
+                         kVARS%rain_in_air, kVARS%snow_in_air,            &
+                         kVARS%exner, kVARS%dz_interface, kVARS%density,  &
+                         kVARS%u, kVARS%v, kVARS%land_mask])
+
+             call options%advect_vars([kVARS%potential_temperature, kVARS%water_vapor])
+
+             call options%restart_vars( &
+                         [kVARS%water_vapor, kVARS%potential_temperature, &
+                         kVARS%exner, kVARS%dz_interface, kVARS%density,  &
+                         kVARS%u, kVARS%v, kVARS%land_mask])
+        endif
+    end subroutine pbl_var_request
+
     subroutine pbl_init(domain,options)
         implicit none
         type(domain_t),     intent(inout)   :: domain
@@ -99,6 +122,7 @@ contains
                             domain% z                     %data_3d,     &
                             domain% dz_mass               %data_3d,     &
                             domain% terrain               %data_2d,     &
+                            domain% land_mask,                          &
                             its, ite, jts, jte, kts, kte,               &
                             dt_in)
                             ! domain% qv_pbl_tendency     %data_3d)

@@ -14,6 +14,7 @@ submodule(options_interface) options_implementation
     use microphysics,               only : mp_var_request
     use advection,                  only : adv_var_request
     use wind,                       only : wind_var_request
+    use planetary_boundary_layer,   only : pbl_var_request
 
     use output_metadata,            only : get_varname
 
@@ -97,6 +98,7 @@ contains
         call mp_var_request(options)
         call adv_var_request(options)
         call wind_var_request(options)
+        call pbl_var_request(options)
 
     end subroutine
 
