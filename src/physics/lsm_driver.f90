@@ -299,6 +299,7 @@ contains
                         else
                            Q2(I,J) = QSFC(I,J) - QFX(I,J)/(RHO*CQS2(I,J))
                         endif
+
                         if(CHS2(I,J).lt.1.E-3) then
                            T2(I,J) = TSK(I,J)
                         else
@@ -306,6 +307,7 @@ contains
                         endif
                     endif
                 endif
+                if (Q2(i,j) < SMALL_QV) Q2(i,j) = SMALL_QV
 
                 ! TH2(I,J) = T2(I,J)*(1.E5/PSFC(I,J))**ROVCP
             enddo
@@ -314,37 +316,64 @@ contains
         !$omp end parallel
     end subroutine surface_diagnostics
 
-    subroutine apply_fluxes(domain,dt)
+        subroutine apply_fluxes(domain,dt)
         ! add sensible and latent heat fluxes to the first atm level
         implicit none
         type(domain_t), intent(inout) :: domain
         real, intent(in) :: dt
+        integer :: i,j,k, sfc_layer
+        integer, SAVE :: nz = 0
+        real :: layer_fraction
 
-        associate(density       => domain%density%data_3d,       &
-                  sensible_heat => domain%sensible_heat%data_2d, &
-                  latent_heat   => domain%latent_heat%data_2d,   &
-                  dz            => domain%dz_interface%data_3d,  &
-                  pii           => domain%exner%data_3d,         &
+        sfc_layer = 400 ! meters
+        if (nz==0) then
+            layer_fraction = 0
+            do k=kts, kte
+                layer_fraction = maxval(domain%dz_interface%data_3d(:,k,:)) + layer_fraction
+                if (layer_fraction < sfc_layer) nz=k
+            end do
+        end if
+
+        associate(density       => domain%density%data_3d,             &
+                  sensible_heat => domain%sensible_heat%data_2d,           &
+                  latent_heat   => domain%latent_heat%data_2d,             &
+                  dz            => domain%dz_interface%data_3d,        &
+                  pii           => domain%exner%data_3d,               &
                   th            => domain%potential_temperature%data_3d, &
-                  qv            => domain%water_vapor%data_3d    &
+                  qv            => domain%water_vapor%data_3d          &
             )
 
-        ! convert sensible heat flux to a temperature delta term
-        ! (J/(s*m^2) * s / (J/(kg*K)) => kg*K/m^2) ... /((kg/m^3) * m) => K
-        dTemp=(sensible_heat(its:ite,jts:jte) * dt/cp)  &
-             / (density(its:ite,kts,jts:jte) * dz(its:ite,kts,jts:jte))
-        ! add temperature delta and convert back to potential temperature
-        th(its:ite,kts,jts:jte) = th(its:ite,kts,jts:jte) + (dTemp / pii(its:ite,kts,jts:jte))
 
-        ! convert latent heat flux to a mixing ratio tendancy term
-        ! (J/(s*m^2) * s / (J/kg) => kg/m^2) ... / (kg/m^3 * m) => kg/kg
-        lhdQV=(latent_heat(its:ite,jts:jte) / LH_vaporization * dt) &
-             / (density(its:ite,kts,jts:jte) * dz(its:ite,kts,jts:jte))
-        ! add water vapor in kg/kg
-        qv(its:ite,kts,jts:jte) = qv(its:ite,kts,jts:jte) + lhdQV
+        do j = jts, jte
+        do k = kts, kts + nz
+        do i = its, ite
+            ! compute the fraction of the current gridcell that is within the surface layer
+            if (k==kts) Then
+                layer_fraction = min(1.0, sfc_layer / dz(i,k,j))
+            else
+                layer_fraction = max(0.0, min(1.0, (sfc_layer - sum(dz(i,kts:k-1,j))) / dz(i,k,j) ) )
+            endif
+
+            ! convert sensible heat flux to a temperature delta term
+            ! (J/(s*m^2) * s / (J/(kg*K)) => kg*K/m^2) ... /((kg/m^3) * m) => K
+            dTemp(i,j) = (sensible_heat(i,j) * dt/cp)  &
+                     / (density(i,k,j) * sfc_layer * 1.6)
+            ! add temperature delta converted back to potential temperature
+            th(i,k,j) = th(i,k,j) + (dTemp(i,j) / pii(i,k,j)) * layer_fraction
+
+            ! convert latent heat flux to a mixing ratio tendancy term
+            ! (J/(s*m^2) * s / (J/kg) => kg/m^2) ... / (kg/m^3 * m) => kg/kg
+            lhdQV(i,j) = (latent_heat(i,j) / LH_vaporization * dt) &
+                    / (density(i,k,j) * sfc_layer)
+            ! add water vapor in kg/kg
+            qv(i,k,j) = qv(i,k,j) + lhdQV(i,j) * layer_fraction
+
+        end do ! i
+        end do ! k
+        end do ! j
 
         ! enforce some minimum water vapor content... just in case
-        where(qv(its:ite,kts,jts:jte) < SMALL_QV) qv(its:ite,kts,jts:jte) = SMALL_QV
+        where(qv < SMALL_QV) qv = SMALL_QV
 
         end associate
 
@@ -388,9 +417,9 @@ contains
         allocate(XICE(ims:ime,jms:jme))
         XICE = 0
         allocate(EMISS(ims:ime,jms:jme))
-        EMISS = 0.95
+        EMISS = 0.99
         allocate(EMBCK(ims:ime,jms:jme))
-        EMBCK = 0.95
+        EMBCK = 0.99
         allocate(CPM(ims:ime,jms:jme))
         CPM = 0
         allocate(SR(ims:ime,jms:jme))
@@ -695,7 +724,7 @@ contains
             IOPT_CRS = 1         ! canopy stomatal resistance (1 = Ball-Berry; 2 = Jarvis)
             IOPT_BTR = 1         ! soil moisture factor for stomatal resistance (1 = Noah; 2 = CLM; 3 = SSiB)
             IOPT_RUN = 1         ! runoff and gw (1 = SIMGM; 2 = SIMTOP; 3 = Schaake96; 4 = BATS)
-            IOPT_SFC = 2         ! surface layer drag coefficient (CH & CM) (1 = M-O; 2 = Chen97)
+            IOPT_SFC = 1         ! surface layer drag coefficient (CH & CM) (1 = M-O; 2 = Chen97)
             IOPT_FRZ = 1         ! supercooled liquid water (1 = NY06; 2 = Koren99)
             IOPT_INF = 1         ! frozen soil permeability (1 = NY06; 2 = Koren99)
             IOPT_RAD = 1         ! radiation transfer (1 = gap=F(3D,cosz); 2 = gap=0; 3 = gap=1-Fveg)
@@ -1074,7 +1103,7 @@ contains
                              domain%cosine_zenith_angle%data_2d,       &
                              domain%latitude%data_2d,                  &
                              domain%longitude%data_2d,                 &
-                             domain%dz_interface%data_3d,              &
+                             domain%dz_interface%data_3d/2,              &
                              lsm_dt,                                   &
                              DZS,                                      &
                              num_soil_layers,                          &
@@ -1104,8 +1133,8 @@ contains
                              domain%soil_texture_4%data_2d,            &  ! only used if iopt_soil = 2
                              domain%temperature%data_3d,               &
                              domain%water_vapor%data_3d,               &
-                             domain%u_mass%data_3d,                    &
-                             domain%v_mass%data_3d,                    &
+                             domain%u_mass%data_3d*1.5,                    &
+                             domain%v_mass%data_3d*1.5,                    &
                              domain%shortwave%data_2d,                 &
                              domain%shortwave_direct%data_2d,          &  ! only used in urban modules, which are currently disabled
                              domain%shortwave_diffuse%data_2d,         &  ! only used in urban modules, which are currently disabled
