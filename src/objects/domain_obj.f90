@@ -10,7 +10,7 @@
 submodule(domain_interface) domain_implementation
     use assertions_mod,       only : assert, assertions
     use mod_atm_utilities,    only : exner_function, update_pressure
-    use icar_constants,       only : kVARS, kLC_LAND
+    use icar_constants,       only : kVARS, kLC_LAND, kLC_WATER
     use string,               only : str
     use co_util,              only : broadcast
     use io_routines,          only : io_read, io_write
@@ -1656,6 +1656,7 @@ contains
                            temporary_data)
             if (allocated(this%land_mask)) then
                 this%land_mask = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+                where(this%land_mask==0) this%land_mask = kLC_WATER
             endif
         endif
 
@@ -1756,7 +1757,7 @@ contains
 
         else
             if (associated(this%soil_water_content%data_3d)) then
-                this%soil_water_content%data_3d = 0.2
+                this%soil_water_content%data_3d = 0.4
             endif
         endif
 
@@ -1779,13 +1780,12 @@ contains
                     do i=1,size(this%albedo%data_3d, 2)
                         this%albedo%data_3d(:,i,:) = temporary_data_3d(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme,i)
                     enddo
-                endif
 
-                if (maxval(temporary_data_3d) > 1) then
-                    if (this_image()==1) print*, "Changing input ALBEDO % to fraction"
-                    this%albedo%data_3d = this%albedo%data_3d / 100
+                    if (maxval(temporary_data_3d) > 1) then
+                        if (this_image()==1) print*, "Changing input ALBEDO % to fraction"
+                        this%albedo%data_3d = this%albedo%data_3d / 100
+                    endif
                 endif
-
             else
                 call io_read(options%parameters%init_conditions_file,   &
                                options%parameters%albedo_var,          &
@@ -1794,11 +1794,11 @@ contains
                     do i=1,size(this%albedo%data_3d, 2)
                         this%albedo%data_3d(:,i,:) = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
                     enddo
-                endif
 
-                if (maxval(temporary_data) > 1) then
-                    if (this_image()==1) print*, "Changing input ALBEDO % to fraction"
-                    this%albedo%data_3d = this%albedo%data_3d / 100
+                    if (maxval(temporary_data) > 1) then
+                        if (this_image()==1) print*, "Changing input ALBEDO % to fraction"
+                        this%albedo%data_3d = this%albedo%data_3d / 100
+                    endif
                 endif
             endif
 
@@ -2334,7 +2334,7 @@ contains
         ! make sure the dictionary is reset to point to the first variable
         call this%variables_to_force%reset_iterator()
 
-        ! No iterate through the dictionary as long as there are more elements present
+        ! Now iterate through the dictionary as long as there are more elements present
         do while (this%variables_to_force%has_more_elements())
             ! get the next variable
             var_to_update = this%variables_to_force%next()
@@ -2378,7 +2378,9 @@ contains
         var_to_update%data_3d = var_to_update%data_3d + (var_to_update%dqdt_3d * dt%seconds())
 
         if (associated(this%external_precipitation%data_2d)) then
-            this%accumulated_precipitation%data_2d = this%accumulated_precipitation%data_2d + (this%external_precipitation%data_2d * dt%seconds())
+            if (associated(this%accumulated_precipitation%data_2d)) then
+                this%accumulated_precipitation%data_2d = this%accumulated_precipitation%data_2d + (this%external_precipitation%data_2d * dt%seconds())
+            endif
         endif
 
 
