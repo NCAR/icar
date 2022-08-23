@@ -23,6 +23,7 @@ module domain_interface
     type(grid_t)         :: grid_monthly, grid_soil
     type(grid_t)         :: grid_snow, grid_snowsoil
     type(grid_t)         :: grid_soilcomp, grid_gecros, grid_croptype
+    type(grid_t)         :: grid_lake , grid_lake_soisno, grid_lake_soi, grid_lake_soisno_1
 
     type(Time_type) :: model_time
 
@@ -210,6 +211,29 @@ module domain_interface
     type(variable_t) :: water_aquifer
     type(variable_t) :: storage_gw
     type(variable_t) :: storage_lake
+    ! lake model vars:
+    type(variable_t) :: lake_depth
+    type(variable_t) :: t_lake3d
+    type(variable_t) :: snl2d
+    type(variable_t) :: t_grnd2d
+    type(variable_t) :: lake_icefrac3d
+    type(variable_t) :: z_lake3d
+    type(variable_t) :: dz_lake3d
+    type(variable_t) :: t_soisno3d
+    type(variable_t) :: h2osoi_ice3d
+    type(variable_t) :: h2osoi_liq3d! liquid water (kg/m2)
+    type(variable_t) :: h2osoi_vol3d! volumetric soil water (0<=h2osoi_vol<=watsat)[m3/m3]
+    type(variable_t) :: z3d ! layer depth for snow & soil (m)
+    type(variable_t) :: dz3d
+    type(variable_t) :: watsat3d
+    type(variable_t) :: csol3d
+    type(variable_t) :: tkmg3d
+    type(variable_t) :: lakemask
+    type(variable_t) :: tksatu3d
+    type(variable_t) :: tkdry3d
+    type(variable_t) :: zi3d
+    type(variable_t) :: savedtke12d
+    type(variable_t) :: lakedepth2d
 
     ! link effective radius from microphysics to radiation scheme
     type(variable_t) :: re_cloud
@@ -281,7 +305,6 @@ module domain_interface
     real,                       allocatable :: ustar(:,:)
     real,                       allocatable :: znu(:)
     real,                       allocatable :: znw(:)
-
     ! these data are stored on the domain wide grid even if this process is only looking at a subgrid
     ! these variables are necessary with linear winds, especially with spatially variable dz, to compute the LUT
     real,                       allocatable :: global_terrain(:,:)

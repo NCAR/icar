@@ -48,6 +48,10 @@ subroutine read_restart_data(domain, dataset, filename, time_step)
                 if (associated(var%data_3d)) then
 
                     if (size(var%data_3d) /= size(data_3d)) then
+
+                        write(*,*) var%name, var%dim_len(1), var%dim_len(2), var%dim_len(3)
+                        write(*,*) "size(var%data_3d) , size(data_3d): ", size(var%data_3d) , size(data_3d)
+
                         call restart_domain_error(var%name)
                     endif
 
