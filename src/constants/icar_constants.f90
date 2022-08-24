@@ -228,6 +228,28 @@ module icar_constants
         integer :: temperature_interface
         integer :: cosine_zenith_angle
         integer :: tend_swrad
+        integer :: lake_depth
+        integer :: t_lake3d
+        integer :: snl2d
+        integer :: t_grnd2d
+        integer :: lake_icefrac3d
+        integer :: z_lake3d
+        integer :: dz_lake3d
+        integer :: t_soisno3d
+        integer :: h2osoi_ice3d
+        integer :: h2osoi_liq3d! liquid water (kg/m2)
+        integer :: h2osoi_vol3d! volumetric soil water (0<=h2osoi_vol<=watsat)[m3/m3]
+        integer :: z3d ! layer depth for snow & soil (m)
+        integer :: dz3d
+        integer :: watsat3d
+        integer :: csol3d
+        integer :: tkmg3d
+        integer :: lakemask
+        integer :: zi3d
+        integer :: tksatu3d
+        integer :: tkdry3d
+        integer :: savedtke12d
+        integer :: lakedepth2d
         integer :: last_var
     end type var_constants_type
 
@@ -252,7 +274,9 @@ module icar_constants
                                                             171, 172, 173, 174, 175, 176, 177, 178, 179, 180,  &
                                                             181, 182, 183, 184, 185, 186, 187, 188, 189, 190,  &
                                                             191, 192, 193, 194, 195, 196, 197, 198, 199, 200,  &
-                                                            201)
+                                                            201, 202, 203, 204, 205, 206, 207, 208, 209, 210,  &
+                                                            211, 212, 213, 214, 215, 216, 217, 218, 219, 220,  &
+                                                            221, 222, 223)
 
     integer, parameter :: kINTEGER_BITS     = storage_size(kINTEGER_BITS)
     integer, parameter :: kMAX_STORAGE_VARS = storage_size(kVARS) / kINTEGER_BITS
@@ -317,6 +341,7 @@ module icar_constants
 
     integer, parameter :: kWATER_BASIC   = 1
     integer, parameter :: kWATER_SIMPLE  = 2
+    integer, parameter :: kWATER_LAKE    = 3
 
     integer, parameter :: kLSM_BASIC     = 1
     integer, parameter :: kLSM_SIMPLE    = 2
@@ -336,7 +361,7 @@ module icar_constants
     integer, parameter :: kLINEAR_ITERATIVE_WINDS = 5
 
     integer, parameter :: kLC_LAND       = 1
-    integer, parameter :: kLC_WATER      = 2
+    integer, parameter :: kLC_WATER      = 2 ! 0  ! This should maybe become an argument in the namelist if we use different hi-es files?
 
     ! mm of accumulated precip before "tipping" into the bucket
     ! only performed on output operations
