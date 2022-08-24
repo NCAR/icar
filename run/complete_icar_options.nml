@@ -70,7 +70,10 @@
     ! "snow_nlayers","eq_soil_moisture",
     ! "smc_watertable_deep","recharge","recharge_deep","evap_canopy","evap_soil_surface",
     ! "transpiration_rate","ground_surf_temperature","runoff_surface","runoff_subsurface"
-    !
+
+    !! additional output variable options for water_lake
+    ! "t_lake3d" , "lake_icefrac3d", "snl2d", "t_grnd2d",lake_icefrac3d,z_lake3d,dz_lake3d,t_soisno3d,h2osoi_ice3d
+    ! ,h2osoi_liq3d,h2osoi_vol3d ,z3d,dz3d,watsat3d,csol3d,tkmg3d,lakemask,zi3d,tksatu3d,tkdry3d,lakedepth2d
 
     outputinterval = 3600   ! number of seconds between output time slices
     output_file = "output/icar_out_"    ! prefix name of output file (date will be appended)
@@ -88,14 +91,14 @@
 &physics
     ! Common precipitation downscaling run use pbl=0 lsm=0 mp=1 rad=0 conv=0 adv=1 wind=1
     ! For a FASTER run (simpler physics), set mp=2
-    ! If surface air temperature is important use pbl=2 lsm=3 rad=2 water=2 this requires Noah LSM data
+    ! If surface air temperature is important use pbl=2 lsm=4 rad=3 water=3 this requires Noah MP and lake data
     ! N/A = Not Available or Not fully implemented
     ! Warning, convection can be unstable.
     ! wishlist = No Code Present yet
 
     pbl = 0,  ! 1=legacy (deprecated)      2=Simple (Local HP96)        3=YSU             (N/A)
     lsm = 0,  ! 1=use prescribed fluxes    2=Simple LSM (N/A)           3=Noah LSM                  4=NoahMP
-    water=2,  ! 1=use prescribed (w/lsm=1) 2=Simple sea surface fluxes
+    water=2,  ! 1=use prescribed (w/lsm=1) 2=Simple sea surface fluxes  3=Lake model (simple ocean)
     mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison                  4=WSM6      5=Thompson-Eidhammer    6=WSM3
     rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG
     conv= 0,  ! 1=Tiedke Scheme            2=Simple Scheme (wishlist)   3=Kain-Fritsch (N/A)        4=NSAS      5=BMJ
@@ -299,7 +302,8 @@
     lwdown_var = "GLW",     ! Longwave down             [W/m^2]
 
     ! only required for some physics code (Noah LSM, water, Tiedke, KF(?))
-    landvar = "LANDMASK",   ! land-water mask (as in WRF) 1=land, 0 or 2=water
+    landvar = "LANDMASK",          ! land-water mask (as in WRF) 1=land, 0 or 2=water
+    lakedepthvar = "LAKE_DEPTH",   ! depth of the lake [m]
 
     ! NOTE, these variables should be in the high-resolution initial conditions netcdf file
     lat_hi  = "XLAT_M",     ! latitude  (mass grid)         [degrees]
@@ -426,6 +430,7 @@
     ! urban_category = -1             ! Int: index that defines the urban category in LU_Categories
     ! ice_category   = -1             ! Int: index that defines the ice category in LU_Categories
     ! water_category = -1             ! Int: index that defines the water category in LU_Categories
+    ! lake_category  = -1             ! Int: index that defines the lake(s) category in LU_Categories
 /
 
 

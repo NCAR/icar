@@ -136,8 +136,11 @@ module options_types
         integer :: urban_category                       ! LU index value that equals "urban"
         integer :: ice_category
         integer :: water_category
+        integer :: lake_category
+        ! integer :: snow_category ! = ice cat
         ! use monthly vegetation fraction data, not just a single value
         logical :: monthly_vegfrac
+        logical :: monthly_albedo
     end type lsm_options_type
 
     ! ------------------------------------------------
@@ -184,13 +187,13 @@ module options_types
         character (len=MAXFILELENGTH), dimension(:), allocatable :: boundary_files, ext_wind_files
 
         ! variable names from init/BC/wind/... files
-        character (len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
+        character (len=MAXVARLENGTH) :: landvar,lakedepthvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
                                         hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi, &
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar,hgtvar, &
                                         pslvar, psvar, snowh_var, &
                                         shvar,lhvar,pblhvar,zvar,zbvar,&
                                         soiltype_var, soil_t_var,soil_vwc_var,swe_var,soil_deept_var, &
-                                        vegtype_var,vegfrac_var, vegfracmax_var, lai_var, canwat_var, &
+                                        vegtype_var,vegfrac_var, albedo_var, vegfracmax_var, lai_var, canwat_var, &
                                         linear_mask_var, nsq_calibration_var, &
                                         swdown_var, lwdown_var, &
                                         sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &

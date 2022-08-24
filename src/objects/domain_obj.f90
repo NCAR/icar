@@ -10,7 +10,7 @@
 submodule(domain_interface) domain_implementation
     use assertions_mod,       only : assert, assertions
     use mod_atm_utilities,    only : exner_function, update_pressure
-    use icar_constants,       only : kVARS, kLC_LAND
+    use icar_constants,       only : kVARS, kLC_LAND, kLC_WATER, kWATER_LAKE
     use string,               only : str
     use co_util,              only : broadcast
     use io_routines,          only : io_read, io_write
@@ -213,6 +213,7 @@ contains
         if (0<opt%vars_to_allocate( kVARS%shortwave_direct) )           call setup(this%shortwave_direct,         this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%shortwave_diffuse) )          call setup(this%shortwave_diffuse,        this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%longwave) )                   call setup(this%longwave,                 this%grid2d,   forcing_var=opt%parameters%lwdown_var,  list=this%variables_to_force)
+        if (0<opt%vars_to_allocate( kVARS%albedo) )                     call setup(this%albedo,                   this%grid_monthly )
         if (0<opt%vars_to_allocate( kVARS%vegetation_fraction) )        call setup(this%vegetation_fraction,      this%grid_monthly )
         if (0<opt%vars_to_allocate( kVARS%vegetation_fraction_max) )    call setup(this%vegetation_fraction_max,  this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%vegetation_fraction_out) )    call setup(this%vegetation_fraction_out,  this%grid2d )
@@ -355,6 +356,29 @@ contains
         if (0<opt%vars_to_allocate( kVARS%temperature_interface) )      call setup(this%temperature_interface,    this%grid)
         if (0<opt%vars_to_allocate( kVARS%land_emissivity) )            call setup(this%land_emissivity,          this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%tend_swrad) )                 call setup(this%tend_swrad,               this%grid)
+        ! lake vars:
+        if (0<opt%vars_to_allocate( kVARS%lake_depth) )                 call setup(this%lake_depth,              this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%t_lake3d) )                   call setup(this%t_lake3d,                this%grid_lake )
+        if (0<opt%vars_to_allocate( kVARS%lake_icefrac3d) )             call setup(this%lake_icefrac3d,          this%grid_lake )
+        if (0<opt%vars_to_allocate( kVARS%z_lake3d) )                   call setup(this%z_lake3d,                this%grid_lake )
+        if (0<opt%vars_to_allocate( kVARS%dz_lake3d) )                   call setup(this%dz_lake3d,              this%grid_lake )
+        if (0<opt%vars_to_allocate( kVARS%snl2d) )                      call setup(this%snl2d,                   this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%t_grnd2d) )                   call setup(this%t_grnd2d,                this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%t_soisno3d) )                 call setup(this%t_soisno3d,              this%grid_lake_soisno )
+        if (0<opt%vars_to_allocate( kVARS%h2osoi_ice3d) )               call setup(this%h2osoi_ice3d,            this%grid_lake_soisno )
+        if (0<opt%vars_to_allocate( kVARS%h2osoi_liq3d) )               call setup(this%h2osoi_liq3d,            this%grid_lake_soisno )
+        if (0<opt%vars_to_allocate( kVARS%h2osoi_vol3d) )               call setup(this%h2osoi_vol3d,            this%grid_lake_soisno )
+        if (0<opt%vars_to_allocate( kVARS%z3d) )                        call setup(this%z3d,                     this%grid_lake_soisno )
+        if (0<opt%vars_to_allocate( kVARS%dz3d) )                       call setup(this%dz3d,                    this%grid_lake_soisno )
+        if (0<opt%vars_to_allocate( kVARS%zi3d) )                       call setup(this%zi3d,                    this%grid_lake_soisno_1 )
+        if (0<opt%vars_to_allocate( kVARS%watsat3d) )                   call setup(this%watsat3d,                this%grid_lake_soi )
+        if (0<opt%vars_to_allocate( kVARS%csol3d) )                     call setup(this%csol3d,                  this%grid_lake_soi )
+        if (0<opt%vars_to_allocate( kVARS%tkmg3d) )                     call setup(this%tkmg3d,                  this%grid_lake_soi )
+        if (0<opt%vars_to_allocate( kVARS%tksatu3d) )                   call setup(this%tksatu3d,                this%grid_lake_soi )
+        if (0<opt%vars_to_allocate( kVARS%tkdry3d) )                    call setup(this%tkdry3d,                 this%grid_lake_soi )
+        if (0<opt%vars_to_allocate( kVARS%lakemask) )                   call setup(this%lakemask,                this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%savedtke12d) )                call setup(this%savedtke12d,             this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%lakedepth2d) )                call setup(this%lakedepth2d,             this%grid2d )
 
         ! integer variable_t types aren't available (yet...)
         if (0<opt%vars_to_allocate( kVARS%convective_precipitation) )   allocate(this%cu_precipitation_bucket  (ims:ime, jms:jme),          source=0)
@@ -1137,10 +1161,10 @@ contains
             i=kme+1
             global_z_interface(:,i,:)  = global_z_interface(:,i-1,:) + global_dz_interface(:,i-1,:)
 
-            if ((this_image()==1).and.(options%parameters%debug)) then
-                call io_write("global_jacobian.nc", "global_jacobian", global_jacobian(:,:,:) )
-                write(*,*) "  global jacobian minmax: ", MINVAL(global_jacobian) , MAXVAL(global_jacobian)
-            endif
+            ! if ((this_image()==1).and.(options%parameters%debug)) then
+            !     call io_write("global_jacobian.nc", "global_jacobian", global_jacobian(:,:,:) )
+            !     write(*,*) "  global jacobian minmax: ", MINVAL(global_jacobian) , MAXVAL(global_jacobian)
+            ! endif
 
         end associate
 
@@ -1656,8 +1680,20 @@ contains
             if (allocated(this%land_mask)) then
                 this%land_mask = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
             endif
+            where(this%land_mask==0) this%land_mask = kLC_WATER  ! To ensure conisitency. land_mask can be 0 or 2 for water, enforce a single value.
         endif
 
+        if ((options%physics%watersurface==kWATER_LAKE) .AND.(options%parameters%lakedepthvar /= "")) then
+            if (this_image()==1) write(*,*) "   reading lake depth data from hi-res file"
+
+            call io_read(options%parameters%init_conditions_file,   &
+                           options%parameters%lakedepthvar,         &
+                           temporary_data)
+            if (associated(this%lake_depth%data_2d)) then
+                this%lake_depth%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+            endif
+
+        endif
 
         if (options%parameters%soiltype_var /= "") then
             call io_read(options%parameters%init_conditions_file,   &
@@ -1768,14 +1804,66 @@ contains
             endif
         endif
 
+        if (options%parameters%albedo_var /= "") then
+            if (options%lsm_options%monthly_albedo) then
+                call io_read(options%parameters%init_conditions_file,   &
+                            options%parameters%albedo_var,          &
+                            temporary_data_3d)
+
+                if (associated(this%albedo%data_3d)) then
+                    do i=1,size(this%albedo%data_3d, 2)
+                        this%albedo%data_3d(:,i,:) = temporary_data_3d(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme,i)
+                    enddo
+                endif
+
+                if (maxval(temporary_data_3d) > 1) then
+                    if (this_image()==1) print*, "Changing input ALBEDO % to fraction"
+                    this%albedo%data_3d = this%albedo%data_3d / 100
+                endif
+
+            else
+                call io_read(options%parameters%init_conditions_file,   &
+                               options%parameters%albedo_var,          &
+                               temporary_data)
+                if (associated(this%albedo%data_3d)) then
+                    do i=1,size(this%albedo%data_3d, 2)
+                        this%albedo%data_3d(:,i,:) = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+                    enddo
+                endif
+
+                if (maxval(temporary_data) > 1) then
+                    if (this_image()==1) print*, "Changing input ALBEDO % to fraction"
+                    this%albedo%data_3d = this%albedo%data_3d / 100
+                endif
+            endif
+
+        else
+            if (associated(this%albedo%data_3d)) then
+                this%albedo%data_3d = 0.17
+            endif
+        endif
+
+
         if (options%parameters%vegfrac_var /= "") then
-            call io_read(options%parameters%init_conditions_file,   &
-                           options%parameters%vegfrac_var,          &
-                           temporary_data)
-            if (associated(this%vegetation_fraction%data_3d)) then
-                do i=1,size(this%vegetation_fraction%data_3d, 2)
-                    this%vegetation_fraction%data_3d(:,i,:) = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
-                enddo
+            if (options%lsm_options%monthly_albedo) then
+                call io_read(options%parameters%init_conditions_file,   &
+                            options%parameters%vegfrac_var,          &
+                            temporary_data_3d)
+
+                if (associated(this%vegetation_fraction%data_3d)) then
+                    do i=1,size(this%vegetation_fraction%data_3d, 2)
+                        this%vegetation_fraction%data_3d(:,i,:) = temporary_data_3d(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme,i)
+                    enddo
+                endif
+            else
+                call io_read(options%parameters%init_conditions_file,   &
+                               options%parameters%vegfrac_var,          &
+                               temporary_data)
+                if (associated(this%vegetation_fraction%data_3d)) then
+                    do i=1,size(this%vegetation_fraction%data_3d, 2)
+                        this%vegetation_fraction%data_3d(:,i,:) = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+                    enddo
+                endif
             endif
 
         else
@@ -2082,15 +2170,17 @@ contains
         this%v_grid2d_ext%jme = min(this%v_grid2d%jme + nsmooth, this%v_grid2d%jde)
 
 
-        call this%grid_soil%set_grid_dimensions(     nx_global, ny_global, 4)
-        call this%grid_snow%set_grid_dimensions(     nx_global, ny_global, 3)
-        call this%grid_snowsoil%set_grid_dimensions( nx_global, ny_global, 7)
-        call this%grid_soilcomp%set_grid_dimensions( nx_global, ny_global, 8)
-        call this%grid_gecros%set_grid_dimensions(  nx_global, ny_global, 60)
-        call this%grid_croptype%set_grid_dimensions(  nx_global, ny_global, 5)
-        call this%grid_monthly%set_grid_dimensions( nx_global, ny_global, 12)
-
-
+        call this%grid_soil%set_grid_dimensions(         nx_global, ny_global, 4)
+        call this%grid_snow%set_grid_dimensions(         nx_global, ny_global, 3)
+        call this%grid_snowsoil%set_grid_dimensions(     nx_global, ny_global, 7)
+        call this%grid_soilcomp%set_grid_dimensions(     nx_global, ny_global, 8)
+        call this%grid_gecros%set_grid_dimensions(       nx_global, ny_global, 60)
+        call this%grid_croptype%set_grid_dimensions(     nx_global, ny_global, 5)
+        call this%grid_monthly%set_grid_dimensions(      nx_global, ny_global, 12)
+        call this%grid_lake%set_grid_dimensions(         nx_global, ny_global, 10) ! nlevlake=10 (in water_lake.f90: should become nml option?)
+        call this%grid_lake_soisno%set_grid_dimensions(  nx_global, ny_global, 9)! nlevsoil=4; nlevsnow=5   real, dimension( ims:ime,-nlevsnow+1:nlevsoil, jms:jme )  ,INTENT(inout)  :: t_soisno3d,   h2osoi_ice3d, h2osoi_liq3d, h2osoi_vol3d, z3d,   dz3d 
+        call this%grid_lake_soi%set_grid_dimensions(     nx_global, ny_global, 4) ! separate from grid_soil in case we want fewer layers under the lake. 
+        call this%grid_lake_soisno_1%set_grid_dimensions(nx_global, ny_global, 10) !soisno+1 (for layer interface depth zi3d)
         deallocate(temporary_data)
 
 
