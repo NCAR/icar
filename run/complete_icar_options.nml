@@ -21,9 +21,9 @@
 
     ! fixed_dz_advection = .True.
 
-    ! Use a SLEVE vertical coordinate, where the decay of the large- and small-scale terrain influence towards model top is controlled by the 
-    !   decay_rate_L_topo and decay_rate_S_topo respectively (=H/s1 and H/s2), and the exponential factor n that controls compression across the z column. 
-    !   For higher n values, the terrain compression happens more in the mid to upper z levels (but always below flat_z_height), 
+    ! Use a SLEVE vertical coordinate, where the decay of the large- and small-scale terrain influence towards model top is controlled by the
+    !   decay_rate_L_topo and decay_rate_S_topo respectively (=H/s1 and H/s2), and the exponential factor n that controls compression across the z column.
+    !   For higher n values, the terrain compression happens more in the mid to upper z levels (but always below flat_z_height),
     !   whereas for n=1 it is mainly at the lower levels, which may cause numerical issues if these are very thin. By setting s1=s2 a standard hybrid coordinate is obtained.
     !   For many atmospheric applications it appears optimal to choose s1 ~10 km and, subsequently, to minimize s2     for a specified value of gamma > 0"
 
@@ -91,15 +91,15 @@
 &physics
     ! Common precipitation downscaling run use pbl=0 lsm=0 mp=1 rad=0 conv=0 adv=1 wind=1
     ! For a FASTER run (simpler physics), set mp=2
-    ! If surface air temperature is important use pbl=2 lsm=3 rad=2 water=2 this requires Noah LSM data
+    ! If surface air temperature is important use pbl=2 lsm=4 rad=3 water=3 this requires Noah MP and lake data
     ! N/A = Not Available or Not fully implemented
     ! Warning, convection can be unstable.
     ! wishlist = No Code Present yet
 
     pbl = 0,  ! 1=legacy (deprecated)      2=Simple (Local HP96)        3=YSU             (N/A)
     lsm = 0,  ! 1=use prescribed fluxes    2=Simple LSM (N/A)           3=Noah LSM                  4=NoahMP
-    water=2,  ! 1=use prescribed (w/lsm=1) 2=Simple sea surface fluxes  3=Lake model (uses 2 for ocean)
-    mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison                  4=WSM6      5=Thompson-Eidhammer
+    water=2,  ! 1=use prescribed (w/lsm=1) 2=Simple sea surface fluxes  3=Lake model (simple ocean)
+    mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison                  4=WSM6      5=Thompson-Eidhammer    6=WSM3
     rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG
     conv= 0,  ! 1=Tiedke Scheme            2=Simple Scheme (wishlist)   3=Kain-Fritsch (N/A)        4=NSAS      5=BMJ
     adv = 1,  ! 1=Upwind                   2=MPDATA                     3=Adams-Bashforth (wishlist)
@@ -535,7 +535,7 @@
 !   Optionally specified Restart information
 !
 !   NOTE: If the (original) output file corresponding to the restart time is not removed before restarting, its 'time:units' parameter (i.e.
-!    time:units = "days since 2000-01-01 00:00:00") - is not overwritten, resulting in wrong timestamp for that first file after restart. 
+!    time:units = "days since 2000-01-01 00:00:00") - is not overwritten, resulting in wrong timestamp for that first file after restart.
 !   CURE: remove output files of the restart time from initial simulation before restarting. Or use the fix_icar_time.py script in icar/helpers/
 !
 !---------------------------------------------------------
