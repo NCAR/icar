@@ -2078,6 +2078,17 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
         !>------------------------------------------------------------
+        !!  Sensible Heat Exchange Coefficient 3d
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%coeff_heat_exchange_3d))
+            var%name        = "coeff_heat_exchange_3d"
+            var%dimensions  = three_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "sensible_heat_exchange_coefficient_3d"), &
+                               attribute_t("units",         "1"),                                      &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
         !!  Land surface radiative skin temperature
         !!------------------------------------------------------------
         associate(var=>var_meta(kVARS%skin_temperature))

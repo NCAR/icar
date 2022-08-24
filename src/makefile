@@ -374,6 +374,7 @@ OBJS=	\
 		$(BUILD)boundary_obj.o		\
 		$(BUILD)assertions.o		\
 		$(BUILD)atm_utilities.o		\
+		$(BUILD)pbl_utilities.o		\
 		$(BUILD)co_utilities.o		\
 		$(BUILD)default_output_metadata.o\
 		$(BUILD)output_h.o			\
@@ -385,6 +386,7 @@ OBJS=	\
 		$(BUILD)lt_lut_io.o			\
 		$(BUILD)pbl_driver.o		\
 		$(BUILD)pbl_simple.o		\
+		$(BUILD)pbl_ysu.o			\
 		$(BUILD)ra_driver.o			\
 		$(BUILD)ra_simple.o			\
 		$(BUILD)ra_rrtmg_lw.o           \
@@ -535,10 +537,10 @@ caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
 					$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
 					$(BUILD)icar_constants.o $(BUILD)io_routines.o		\
 					$(BUILD)model_tracking.o $(BUILD)string.o           \
-					$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
+					$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \ $(BUILD)pbl_utilities.o		\
 					$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
 					$(BUILD)ra_driver.o      $(BUILD)ra_simple.o		\
-					$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o		\
+					$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o		$(BUILD)pbl_ysu.o		\
 					$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
 					$(BUILD)mp_thompson.o	 $(BUILD)mp_thompson_aer.o   $(BUILD)mp_wsm6.o\
 					$(BUILD)cu_driver.o		 $(BUILD)cu_tiedtke.o      $(BUILD)cu_nsas.o	$(BUILD)cu_bmj.o			\
@@ -730,6 +732,9 @@ $(BUILD)array_utilities.o:$(UTIL)array_utilities.f90
 $(BUILD)atm_utilities.o:$(UTIL)atm_utilities.f90 $(BUILD)icar_constants.o 	\
 					$(BUILD)data_structures.o $(BUILD)options_h.o $(BUILD)mp_thompson.o
 
+$(BUILD)pbl_utilities.o:$(UTIL)pbl_utilities.f90 $(BUILD)icar_constants.o 	\
+					$(BUILD)data_structures.o 
+
 
 ###################################################################
 #	I/O routines
@@ -833,7 +838,8 @@ $(BUILD)lsm_noahmp_glacier.o: $(PHYS)lsm_noahmp_glacier.f90
 ###################################################################
 #	Planetary Boundary Layer code
 ###################################################################
-$(BUILD)pbl_driver.o: $(PHYS)pbl_driver.f90 $(BUILD)pbl_simple.o $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)data_structures.o
+$(BUILD)pbl_driver.o: $(PHYS)pbl_driver.f90 $(BUILD)pbl_simple.o $(BUILD)pbl_ysu.o $(BUILD)domain_h.o \
+					$(BUILD)options_h.o $(BUILD)lsm_driver.o $(BUILD)data_structures.o $(BUILD)atm_utilities.o $(BUILD)pbl_utilities.o 
 
 $(BUILD)pbl_simple.o: $(PHYS)pbl_simple.f90 $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)data_structures.o
 

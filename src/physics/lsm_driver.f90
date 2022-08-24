@@ -45,11 +45,13 @@ module land_surface
     use options_interface,   only : options_t
     use domain_interface,    only : domain_t
     use module_ra_simple, only: calc_solar_elevation
+    use mod_atm_utilities, only : calc_Richardson_nr ! Ri number now a function
+    use ieee_arithmetic
 
     implicit none
 
     private
-    public :: lsm_init, lsm, lsm_var_request
+    public :: lsm_init, lsm, lsm_var_request, calc_exchange_coefficient
 
     ! Noah LSM required variables.  Some of these should be stored in domain, but tested here for now
     integer :: ids,ide,jds,jde,kds,kde ! Domain dimensions
@@ -142,7 +144,7 @@ contains
                          kVARS%humidity_2m, kVARS%surface_pressure, kVARS%longwave_up, kVARS%ground_heat_flux,          &
                          kVARS%soil_totalmoisture, kVARS%soil_deep_temperature, kVARS%roughness_z0, kVARS%ustar,        &
                          kVARS%snow_height, kVARS%canopy_vapor_pressure, kVARS%canopy_temperature,                      &
-                         kVARS%veg_leaf_temperature, kVARS%coeff_momentum_drag, kVARS%coeff_heat_exchange,              &
+                         kVARS%veg_leaf_temperature, kVARS%coeff_momentum_drag, kVARS%coeff_heat_exchange,              & ! kVARS%coeff_heat_exchange_3d, & ! 
                          kVARS%canopy_fwet, kVARS%snow_water_eq_prev, kVARS%water_table_depth, kVARS%water_aquifer,     &
                          kVARS%mass_leaf, kVARS%mass_root, kVARS%mass_stem, kVARS%mass_wood, kVARS%soil_carbon_fast,    &
                          kVARS%soil_carbon_stable, kVARS%eq_soil_moisture, kVARS%smc_watertable_deep, kVARS%recharge,   &
@@ -205,7 +207,7 @@ contains
 
     end subroutine lsm_var_request
 
-    subroutine calc_exchange_coefficient(wind,tskin,airt,exchange_C)
+    subroutine calc_exchange_coefficient(wind,tskin,airt,exchange_C)  ! BK maybe move this to atm_utilities b/c YSU pbl also wants to use this??
         implicit none
         real, dimension(:,:),intent(inout) :: wind,tskin
         real, dimension(:,:,:),intent(inout) :: airt
@@ -216,6 +218,8 @@ contains
         exchange_C = 0
 
         Ri = gravity/airt(:,1,:) * (airt(:,1,:)-tskin)*z_atm/(wind**2)
+        ! Ri now is a function in atm_utlilities: 
+        ! Ri = calc_Richardson_nr(airt, tskin, z_atm, wind) 
 
         ! "--------------------------------------------------"
         !  "Surface Richardson number"
@@ -328,6 +332,10 @@ contains
                   th            => domain%potential_temperature%data_3d, &
                   qv            => domain%water_vapor%data_3d    &
             )
+        ! if (options%parameters%debug) then
+        !     if(this_image()==1) write(*,*) "   B_Fx: nr Nans in th, dz_i: ", COUNT(ieee_is_nan(th)) , COUNT(ieee_is_nan(dz))!,  COUNT(ieee_is_nan(domain%potential_temperature%data_3d))
+        !     if(this_image()==1) write(*,*) "   B_Fx: nr Nans in  hfx, qfx: ",  COUNT(ieee_is_nan(sensible_heat)),   COUNT(ieee_is_nan(domain%latent_heat%data_2d))
+        ! endif    
 
         ! convert sensible heat flux to a temperature delta term
         ! (J/(s*m^2) * s / (J/(kg*K)) => kg*K/m^2) ... /((kg/m^3) * m) => K
@@ -345,6 +353,11 @@ contains
 
         ! enforce some minimum water vapor content... just in case
         where(qv(its:ite,kts,jts:jte) < SMALL_QV) qv(its:ite,kts,jts:jte) = SMALL_QV
+
+        ! if (options%parameters%debug) then
+        !     if(this_image()==1) write(*,*) "   A_Fx: nr Nans in th, dz_i: ", COUNT(ieee_is_nan(th)) , COUNT(ieee_is_nan(dz))!,  COUNT(ieee_is_nan(domain%potential_temperature%data_3d))
+        !     if(this_image()==1) write(*,*) "   A_Fx: nr Nans in  hfx, qfx: ",  COUNT(ieee_is_nan(sensible_heat)),   COUNT(ieee_is_nan(domain%latent_heat%data_2d))
+        ! endif
 
         end associate
 
@@ -457,6 +470,7 @@ contains
 
         if (this_image()==1) write(*,*) "Initializing LSM"
 
+        
         if (this_image()==1) write(*,*) "    max soil_deep_temperature on init: ", maxval(domain%soil_deep_temperature%data_2d)
         if (this_image()==1) write(*,*) "    max skin_temperature on init: ", maxval(domain%skin_temperature%data_2d)
 
@@ -739,7 +753,7 @@ contains
                                 domain%canopy_vapor_pressure%data_2d,   &
                                 domain%canopy_temperature%data_2d,      &
                                 domain%coeff_momentum_drag%data_2d,     &
-                                domain%coeff_heat_exchange%data_2d,     &
+                                domain%coeff_heat_exchange%data_2d,     & !domain%coeff_heat_exchange_3d%data_3d(:,1,:),     & !
                                 domain%canopy_fwet%data_2d,             &
                                 domain%snow_water_eq_prev%data_2d,      &
                                 domain%snow_albedo_prev%data_2d,        &
@@ -1153,7 +1167,7 @@ contains
                              domain%canopy_vapor_pressure%data_2d,     &
                              domain%canopy_temperature%data_2d,        &
                              domain%coeff_momentum_drag%data_2d,       &
-                             domain%coeff_heat_exchange%data_2d,       &
+                             domain%coeff_heat_exchange%data_2d,     & ! domain%coeff_heat_exchange_3d%data_3d(:,1,:),     & !
                              domain%canopy_fwet%data_2d,               &
                              domain%snow_water_eq_prev%data_2d,        &
                              domain%snow_albedo_prev%data_2d,          &
@@ -1233,11 +1247,10 @@ contains
                              ims,ime,  jms,jme,  kms,kme,              &
                              its,ite,  jts,jte,  kts,kte)
 
-
     !         TLE: OMITTING OPTIONAL PRECIP INPUTS FOR NOW
     !                         MP_RAINC, MP_RAINNC, MP_SHCV, MP_SNOW, MP_GRAUP, MP_HAIL     )
 
-                 ! now that znt (roughness_z0) has been updated, we need to recalculate terms
+                ! now that znt (roughness_z0) has been updated, we need to recalculate terms
                 lnz_atm_term = log((z_atm+domain%roughness_z0%data_2d)/domain%roughness_z0%data_2d)
                 if (exchange_term==1) then
                     base_exchange_term=(75*karman**2 * sqrt((z_atm+domain%roughness_z0%data_2d)/domain%roughness_z0%data_2d)) / (lnz_atm_term**2)

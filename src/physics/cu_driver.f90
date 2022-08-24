@@ -411,8 +411,8 @@ subroutine convect(domain,options,dt_in)
             ,xlv=2.5E6                                           & ! from wrf_constants.f90
             ,r_d=287.                                            & ! from wrf_constants.f90
             ,r_v=461.6                                           & ! from wrf_constants.f90
-            ,ep_1=461.6/287.-1.                                  & ! EP_1=R_v/R_d-1. (wrf_constants.f90)
-            ,ep_2=287./461.6                                     & ! EP_2=R_d/R_v
+            ,ep_1=EP1                                  & ! EP_1=R_v/R_d-1. (wrf_constants.f90) 461.6/287.-1.
+            ,ep_2=EP2                                     & ! EP_2=R_d/R_v  = 287./461.6
             ,cice=2106.                                           & ! from wrf_constants.f90                                          &
             ,xls=2.85E6                                           & ! from wrf_constants.f90
             ,psat=610.78                                           & ! from wrf_constants.f90
@@ -452,7 +452,7 @@ subroutine convect(domain,options,dt_in)
                 ,PMID=domain%pressure%data_3d                   &!-- Pcps        3D hydrostatic pressure at half levels (Pa)
                 ,PI=domain%exner%data_3d                        &   ! exner
                 ,CP=cp ,R=r_d ,ELWV=xlv ,ELIV=xls ,G=gravity    &
-                ,TFRZ=svpt0 ,D608=ep_1 ,CLDEFI=cldefi           &
+                ,TFRZ=svpt0 ,D608=EP1 ,CLDEFI=cldefi           &
                 ,LOWLYR=lowlyr                                  &
                 ,XLAND=XLAND                                    &
                 ,CU_ACT_FLAG=CU_ACT_FLAG                        &

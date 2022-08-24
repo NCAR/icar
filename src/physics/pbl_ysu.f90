@@ -9,6 +9,7 @@
 !
 !
 module module_bl_ysu
+  use ieee_arithmetic
 contains
 !
 !-------------------------------------------------------------------
@@ -153,7 +154,7 @@ contains
 !
    real,     dimension( ims:ime, jms:jme )                                   , &
              intent(in   )   ::                                         xland, &
-     			                                                  hfx, &
+     			                                                                hfx, &
                                                                           qfx, &
                                                                          psim, &
                                                                          psih, &
@@ -200,9 +201,13 @@ contains
 !
 !local
    integer ::  i,j,k
-   real,     dimension( its:ite, kts:kte )  ::                       rqibl2dt, &
+   real,     dimension( its:ite, kts:kte )  ::                       rqibl2dt, & ! org
                                                                           pdh
    real,     dimension( its:ite, kts:kte+1 )  ::                         pdhi
+  !  real,     dimension( ims:ime, kts:kte )  ::                       rqibl2dt, &
+  !                                                                         pdh
+  !  real,     dimension( ims:ime, kts:kte+1 )  ::                         pdhi
+
 !
    do j = jts,jte
       if(present(mut))then
@@ -214,13 +219,15 @@ contains
           enddo
         enddo
       else
-        do k = kts,kte+1
+        do k = kts,kte+1 
           do i = its,ite
              if(k.le.kte)pdh(i,k) = p3d(i,k,j)
              pdhi(i,k) = p3di(i,k,j)
           enddo
         enddo
       endif
+      ! write(*,*)" pdhi(its,kts) shape:", shape(pdhi(its,kts))
+      ! write(*,*)" pdhi(i,k) shape:", shape(pdhi(i,k))
       call ysu2d(J=j,ux=u3d(ims,kms,j),vx=v3d(ims,kms,j)                       &
               ,tx=t3d(ims,kms,j)                                               &
               ,qx=qv3d(ims,kms,j),qcx=qc3d(ims,kms,j)                          &
@@ -533,6 +540,7 @@ contains
           dzq(i,k) = zq(i,k+1)-zq(i,k)
           del(i,k) = p2di(i,k)-p2di(i,k+1)
         enddo
+        ! if(this_image()==1) write(*,*) "   541: nr Nans in del(:,k), k: ", COUNT(ieee_is_nan(del(:,k))), k 
       enddo
 !
       do i = its,ite
@@ -879,6 +887,7 @@ contains
        endif
      enddo
    enddo
+  !  write(*,*)"   min/max xkzh (below pbl)", minval(xkzh),maxval(xkzh) !BK debug
 !
 !     compute diffusion coefficients over pbl (free atmosphere)
 !
@@ -910,12 +919,14 @@ contains
            sri = sqrt(-ri)
            xkzm(i,k) = xkzo+dk*(1+8.*(-ri)/(1+1.746*sri))
            xkzh(i,k) = xkzo+dk*(1+8.*(-ri)/(1+1.286*sri))
+          !  write(*,*)"   unstable xkzh (above pbl)", xkzh(i,k) !BK debug
          else
 ! stable regime
            xkzh(i,k) = xkzo+dk/(1+5.*ri)**2
            prnum = 1.0+2.1*ri
            prnum = min(prnum,prmax)
            xkzm(i,k) = (xkzh(i,k)-xkzo)*prnum+xkzo
+          !  write(*,*)"   stable xkzh", xkzh(i,k)!BK debug
          endif
 !
          xkzm(i,k) = min(xkzm(i,k),xkzmax)
@@ -965,7 +976,7 @@ contains
      enddo
    endif
 !
-   do k = kts,kte-1
+   do k = kts,kte -1
      do i = its,ite
        dtodsd = dt2/del(i,k)
        dtodsu = dt2/del(i,k+1)
@@ -997,7 +1008,13 @@ contains
        ad(i,k+1) = 1.-al(i,k)
        exch_hx(i,k) = xkzh(i,k)
      enddo
+    !  if(this_image()==1) write(*,*) "   1009: nr Nans in al (k): ", COUNT(ieee_is_nan(al(:,k))) ,k
+    !  if(this_image()==1) write(*,*) "   1009: nr Nans in del (k): ", COUNT(ieee_is_nan(del(:,k))) ,k
+    !  if(this_image()==1) write(*,*) "   1009: nr Nans in dsdz2 (k): ", COUNT(ieee_is_nan(dsdz2(:,k))) ,k
+
+    !  dtodsd*dsdz2
    enddo
+   
 !
    if(ncloud.ge.2) then
      do ic = 2,ncloud
@@ -1036,14 +1053,20 @@ contains
 !
 !     recover tendencies of heat and moisture
 !
+  ! if(this_image()==1) write(*,*) "   1049: nr Nans in f3: ", COUNT(ieee_is_nan(f3)) ! yes
+  ! if(this_image()==1) write(*,*) "   1049: nr Nans in qx: ", COUNT(ieee_is_nan(qx)) ! no
+    
    do k = kte,kts,-1
      do i = its,ite
        ttend = (f1(i,k)-thx(i,k)+300.)*rdt*pi2d(i,k)
        qtend = (f3(i,k,1)-qx(i,k))*rdt
        ttnp(i,k) = ttnp(i,k)+ttend
        qtnp(i,k) = qtnp(i,k)+qtend
+      !  if(this_image()==1) write(*,*) "   1055: qtend isNan: ", (ieee_is_nan(qtend)) ! yes
      enddo
    enddo
+  !  if(this_image()==1) write(*,*) "   1055: nr Nans in qtnp: ", COUNT(ieee_is_nan(qtnp)) 
+   
 !
    if(ncloud.ge.2) then
      do ic = 2,ncloud

@@ -83,6 +83,7 @@ module domain_interface
     type(variable_t) :: v_10m
     type(variable_t) :: coeff_momentum_drag
     type(variable_t) :: coeff_heat_exchange
+    type(variable_t) :: coeff_heat_exchange_3d ! used in YSU pbl
     type(variable_t) :: surface_rad_temperature
     type(variable_t) :: temperature_2m
     type(variable_t) :: humidity_2m
