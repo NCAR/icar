@@ -1088,7 +1088,7 @@ contains
                              domain%cosine_zenith_angle%data_2d,       &
                              domain%latitude%data_2d,                  &
                              domain%longitude%data_2d,                 &
-                             domain%dz_interface%data_3d,              &
+                             domain%dz_interface%data_3d/2.,              &
                              lsm_dt,                                   &
                              DZS,                                      &
                              num_soil_layers,                          &

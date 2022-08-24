@@ -35,14 +35,15 @@ module planetary_boundary_layer
     use icar_constants !, only : karman,stefan_boltzmann
     use land_surface, only : calc_exchange_coefficient   ! maybe move this to atm_utilities? (some work)
     use mod_pbl_utilities, only : da_sfc_wtq
-    use ieee_arithmetic
+    use ieee_arithmetic ! for debugging 
+    use array_utilities, only : array_offset_x_3d, array_offset_y_3d
 
 
     implicit none
     real,allocatable, dimension(:,:)    ::  windspd, Ri, z_atm, zol, hol, hpbl, psim, &
                                             psih, u10d, v10d, t2d, q2d, gz1oz0, CHS, xland_real,regime
     integer, allocatable, dimension(:,:) :: kpbl2d
-    ! real   ::  regime
+    real, allocatable, dimension(:,:,:) :: tend_u_ugrid, tend_v_vgrid
 
     private
     public :: pbl_init, pbl, pbl_finalize, pbl_var_request
@@ -140,6 +141,8 @@ contains
             allocate(xland_real(ims:ime,jms:jme))
             xland_real=real(domain%land_mask)
             allocate(regime(ims:ime,jms:jme))
+            allocate(tend_u_ugrid(ims:ime+1, kms:kme, jms:jme)) ! to add the calculated u/v tendencies to the u/v grid
+            allocate(tend_v_vgrid(ims:ime, kms:kme, jms:jme+1))
 
             ! initialize tendencies (this is done in ysu init but only for tiles, not mem (ie its vs ims))
             ! BK: check if this actually matters ???
@@ -158,8 +161,6 @@ contains
                 enddo
               endif
 
-
-            if(this_image()==1) write(*,*) "ims, ime, its, ite, kms, kme, kts, kte:",ims, ime, its, ite, kms, kme, kts, kte 
 
             call ysuinit(rublten=domain%tend%u                  &
                         ,rvblten=domain%tend%v                  &
@@ -228,7 +229,7 @@ contains
             !     if(this_image()==1) write(*,*) "min max coeff_heat_exchange_3d", minval(domain%coeff_heat_exchange_3d%data_3d), maxval(domain%coeff_heat_exchange_3d%data_3d)
             !     if(this_image()==1) write(*,*) "   B_ysu: nr Nans in domain%tend%qv_pbl: ", COUNT(ieee_is_nan(domain%tend%qv_pbl)) !
             ! endif
-            ! Copied from WRF, to calc psim and psih. ( Not sure about this)
+            ! Copied from WRF, to calc psim and psih. ( Not 100% sure this is the way to go)
             call da_sfc_wtq ( psfc=domain%surface_pressure%data_2d           &
                             , tg=domain%ground_surf_temperature%data_2d     & !?
                             , ps=domain%pressure%data_3d(:,1,:)             &
@@ -333,30 +334,56 @@ contains
 
             ! ! ---------  add tendency terms  -------
             !
-            ! ! use a separate dt to make it easier to apply on a different dt        ! internal_dt = dt_in
+            ! gutmann: "Probably best would just be to call balance_uvw,
+            !           then in the timestep code have it recompute the optimal dt. "
 
-            ! $omp parallel private(j) &
-            ! $omp default(shared)
-            ! $omp do schedule(static)
-            do j=jts,jte ! OMP  loop
 
-                ! Offset u/v tendencies to u and v grid, then add
-                ! domain%u_mass%data_3d(:,:,j)            =  domain%u_mass%data_3d(:,:,j)       + domain%tend%u(:,:,j) * dt_in
-                ! domain%v%data_3d(:,:,j)            =  domain%v%data_3d(:,:,j)       + domain%tend%v(:,:,j) * dt_in
+            ! Offset u/v tendencies to u and v grid, then add
+            call array_offset_x_3d(domain%tend%u , tend_u_ugrid)
+            call array_offset_y_3d(domain%tend%v , tend_v_vgrid)
 
-                domain%water_vapor%data_3d(:,:,j)  =  domain%water_vapor%data_3d(:,:,j)  +  domain%tend%qv_pbl(:,:,j) * dt_in
-                domain%cloud_water_mass%data_3d(:,:,j)      = domain%cloud_water_mass%data_3d(:,:,j)      + domain%tend%qc_pbl(:,:,j) * dt_in
-                domain%potential_temperature%data_3d(:,:,j) = domain%potential_temperature%data_3d(:,:,j) + domain%tend%th_pbl(:,:,j) * dt_in
-                domain%cloud_ice_mass%data_3d(:,:,j)        = domain%cloud_ice_mass%data_3d(:,:,j)        + domain%tend%qi_pbl(:,:,j) * dt_in
+            domain%u%data_3d   =  domain%u%data_3d  +  tend_u_ugrid  * dt_in
+            domain%v%data_3d   =  domain%v%data_3d  +  tend_v_vgrid  * dt_in
 
-                ! Reset tendencies before the next pbl call. (necessary?)
-                domain%tend%qv_pbl(:,:,j)   = 0
-                domain%tend%th_pbl(:,:,j)   = 0
-                domain%tend%qc_pbl(:,:,j)   = 0
-                domain%tend%qi_pbl(:,:,j)   = 0
-            enddo
-            ! $omp end do
-            ! $omp end parallel
+            ! add mass grid tendencies
+            domain%water_vapor%data_3d            =  domain%water_vapor%data_3d            + domain%tend%qv_pbl  * dt_in
+            domain%cloud_water_mass%data_3d       =  domain%cloud_water_mass%data_3d       + domain%tend%qc_pbl  * dt_in
+            domain%potential_temperature%data_3d  =  domain%potential_temperature%data_3d  + domain%tend%th_pbl  * dt_in
+            domain%cloud_ice_mass%data_3d         =  domain%cloud_ice_mass%data_3d         + domain%tend%qi_pbl  * dt_in
+
+            ! Reset tendencies before the next pbl call. (not sure if necessary)
+            domain%tend%qv_pbl    = 0
+            domain%tend%th_pbl    = 0
+            domain%tend%qc_pbl    = 0
+            domain%tend%qi_pbl    = 0
+            domain%tend%u         = 0
+            domain%tend%v         = 0
+
+
+
+            ! -------------------- omp loop   - how to deal with offset (v) grid??   ---------------
+            ! ! $omp parallel private(j) &
+            ! ! $omp default(shared)
+            ! ! $omp do schedule(static)
+            ! do j=jts,jte ! OMP  loop
+
+                ! domain%u%data_3d(:,:,j)  =  domain%u%data_3d(:,:,j) + tend_u_ugrid(:,:,j) * dt_in
+                ! ! domain%v%data_3d(:,:,j)            =  domain%v%data_3d(:,:,j)       + domain%tend%v(:,:,j) * dt_in
+
+                ! domain%water_vapor%data_3d(:,:,j)  =  domain%water_vapor%data_3d(:,:,j)  +  domain%tend%qv_pbl(:,:,j) * dt_in
+                ! domain%cloud_water_mass%data_3d(:,:,j)      = domain%cloud_water_mass%data_3d(:,:,j)      + domain%tend%qc_pbl(:,:,j) * dt_in
+                ! domain%potential_temperature%data_3d(:,:,j) = domain%potential_temperature%data_3d(:,:,j) + domain%tend%th_pbl(:,:,j) * dt_in
+                ! domain%cloud_ice_mass%data_3d(:,:,j)        = domain%cloud_ice_mass%data_3d(:,:,j)        + domain%tend%qi_pbl(:,:,j) * dt_in
+
+                ! ! Reset tendencies before the next pbl call. (necessary?)
+                ! domain%tend%qv_pbl(:,:,j)   = 0
+                ! domain%tend%th_pbl(:,:,j)   = 0
+                ! domain%tend%qc_pbl(:,:,j)   = 0
+                ! domain%tend%qi_pbl(:,:,j)   = 0
+
+            ! enddo
+            ! ! $omp end do
+            ! ! $omp end parallel
 
         endif ! End YSU call
 
