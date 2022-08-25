@@ -206,29 +206,15 @@ contains
         endif
 
         if (options%physics%boundarylayer==kPBL_YSU) then
-            ! stop "YSU PBL not implemented yet"
 
             ! windspd=sqrt(  domain%u_mass%data_3d(ims:ime, 1, jms:jme)**2 +     &
             !             domain%v_mass%data_3d(ims:ime, 1, jms:jme)**2   )
             windspd = sqrt(domain%u_10m%data_2d**2 + domain%v_10m%data_2d**2) ! as it is done in lsm_driver.
             where(windspd==0) windspd=1e-5
 
-            ! domain%tend%qv_pbl(ims:ime, kms:kme, jms:jme) = 0
-            ! domain%tend%th_pbl(ims:ime, kms:kme, jms:jme)     = 0
-            ! domain%tend%qc_pbl(ims:ime, kms:kme, jms:jme)     = 0
-            ! domain%tend%qi_pbl(ims:ime, kms:kme, jms:jme)     = 0
-
             ! Richardson number
             call calc_Richardson_nr(Ri,domain%temperature%data_3d, domain%skin_temperature%data_2d, z_atm, windspd)
 
-
-            ! if (options%parameters%debug) then
-            !     ! if(this_image()==1) write(*,*) "   B_ysu: nr Nans in , th: ",   COUNT(ieee_is_nan(domain%potential_temperature%data_3d))
-            !     ! if(this_image()==1) write(*,*) "   B_ysu: nr Nans in lhfx, hfx: ", COUNT(ieee_is_nan(domain%latent_heat%data_2d)),  COUNT(ieee_is_nan(domain%sensible_heat%data_2d))
-            !     if (any(ieee_is_nan(domain%coeff_heat_exchange_3d%data_3d)))  write(*,*) "   B_ysu: nr Nans in coeff_heat_exchange_3d: ", COUNT(ieee_is_nan(domain%coeff_heat_exchange_3d%data_3d)) !,  COUNT(ieee_is_nan(domain%znw))  if(this_image()==1)
-            !     if(this_image()==1) write(*,*) "min max coeff_heat_exchange_3d", minval(domain%coeff_heat_exchange_3d%data_3d), maxval(domain%coeff_heat_exchange_3d%data_3d)
-            !     if(this_image()==1) write(*,*) "   B_ysu: nr Nans in domain%tend%qv_pbl: ", COUNT(ieee_is_nan(domain%tend%qv_pbl)) !
-            ! endif
             ! Copied from WRF, to calc psim and psih. ( Not 100% sure this is the way to go)
             call da_sfc_wtq ( psfc=domain%surface_pressure%data_2d           &
                             , tg=domain%ground_surf_temperature%data_2d     & !?
@@ -323,20 +309,14 @@ contains
                     ,regime=regime                          )!  i/o -- regime	flag indicating pbl regime (stable, unstable, etc.) - not used?
 
 
-            ! if (options%parameters%debug) then
-            !     if(this_image()==1) write(*,*) "   A_ysu: nr Nans in domain%tend%qv_pbl: ", COUNT(ieee_is_nan(domain%tend%qv_pbl)) !
-            !     if(this_image()==1) write(*,*) "min/max tend%qv_pbl *dt:",minval(domain%tend%qv_pbl(:,:,:)*dt_in), maxval(domain%tend%qv_pbl(:,:,:)*dt_in)
-            !     if(this_image()==1) write(*,*) "min/max tend%th * dt:",minval(domain%tend%th_pbl(:,:,:)*dt_in), maxval(domain%tend%th_pbl(:,:,:)*dt_in)
-            !     if(this_image()==1) write(*,*) "min/max tend%u * dt:",minval(domain%tend%u(:,:,:)*dt_in), maxval(domain%tend%u(:,:,:)*dt_in)
-            !     ! if(this_image()==1) write(*,*) " dt_in : ", dt_in
-            ! endif
 
-
-            ! ! ---------  add tendency terms  -------
+            !> ------------  add tendency terms  ------------
             !
-            ! gutmann: "Probably best would just be to call balance_uvw,
-            !           then in the timestep code have it recompute the optimal dt. "
-
+            ! Here the tendency terms that were calculated by the ysu routine are added to the domain-wide fields.
+            ! For u and v, we need to re-balance the uvw fields and re-compute dt after we change them. This is done in the
+            ! step routine in time_step.f90, after the pbl call.
+            !
+            !> -----------------------------------------------
 
             ! Offset u/v tendencies to u and v grid, then add
             call array_offset_x_3d(domain%tend%u , tend_u_ugrid)

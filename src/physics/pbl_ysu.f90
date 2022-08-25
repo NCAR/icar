@@ -540,7 +540,6 @@ contains
           dzq(i,k) = zq(i,k+1)-zq(i,k)
           del(i,k) = p2di(i,k)-p2di(i,k+1)
         enddo
-        ! if(this_image()==1) write(*,*) "   541: nr Nans in del(:,k), k: ", COUNT(ieee_is_nan(del(:,k))), k 
       enddo
 !
       do i = its,ite
@@ -1008,13 +1007,8 @@ contains
        ad(i,k+1) = 1.-al(i,k)
        exch_hx(i,k) = xkzh(i,k)
      enddo
-    !  if(this_image()==1) write(*,*) "   1009: nr Nans in al (k): ", COUNT(ieee_is_nan(al(:,k))) ,k
-    !  if(this_image()==1) write(*,*) "   1009: nr Nans in del (k): ", COUNT(ieee_is_nan(del(:,k))) ,k
-    !  if(this_image()==1) write(*,*) "   1009: nr Nans in dsdz2 (k): ", COUNT(ieee_is_nan(dsdz2(:,k))) ,k
-
-    !  dtodsd*dsdz2
    enddo
-   
+
 !
    if(ncloud.ge.2) then
      do ic = 2,ncloud
@@ -1053,20 +1047,15 @@ contains
 !
 !     recover tendencies of heat and moisture
 !
-  ! if(this_image()==1) write(*,*) "   1049: nr Nans in f3: ", COUNT(ieee_is_nan(f3)) ! yes
-  ! if(this_image()==1) write(*,*) "   1049: nr Nans in qx: ", COUNT(ieee_is_nan(qx)) ! no
-    
    do k = kte,kts,-1
      do i = its,ite
        ttend = (f1(i,k)-thx(i,k)+300.)*rdt*pi2d(i,k)
        qtend = (f3(i,k,1)-qx(i,k))*rdt
        ttnp(i,k) = ttnp(i,k)+ttend
        qtnp(i,k) = qtnp(i,k)+qtend
-      !  if(this_image()==1) write(*,*) "   1055: qtend isNan: ", (ieee_is_nan(qtend)) ! yes
      enddo
    enddo
-  !  if(this_image()==1) write(*,*) "   1055: nr Nans in qtnp: ", COUNT(ieee_is_nan(qtnp)) 
-   
+
 !
    if(ncloud.ge.2) then
      do ic = 2,ncloud

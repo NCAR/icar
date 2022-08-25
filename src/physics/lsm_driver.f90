@@ -332,10 +332,6 @@ contains
                   th            => domain%potential_temperature%data_3d, &
                   qv            => domain%water_vapor%data_3d    &
             )
-        ! if (options%parameters%debug) then
-        !     if(this_image()==1) write(*,*) "   B_Fx: nr Nans in th, dz_i: ", COUNT(ieee_is_nan(th)) , COUNT(ieee_is_nan(dz))!,  COUNT(ieee_is_nan(domain%potential_temperature%data_3d))
-        !     if(this_image()==1) write(*,*) "   B_Fx: nr Nans in  hfx, qfx: ",  COUNT(ieee_is_nan(sensible_heat)),   COUNT(ieee_is_nan(domain%latent_heat%data_2d))
-        ! endif    
 
         ! convert sensible heat flux to a temperature delta term
         ! (J/(s*m^2) * s / (J/(kg*K)) => kg*K/m^2) ... /((kg/m^3) * m) => K
@@ -353,11 +349,6 @@ contains
 
         ! enforce some minimum water vapor content... just in case
         where(qv(its:ite,kts,jts:jte) < SMALL_QV) qv(its:ite,kts,jts:jte) = SMALL_QV
-
-        ! if (options%parameters%debug) then
-        !     if(this_image()==1) write(*,*) "   A_Fx: nr Nans in th, dz_i: ", COUNT(ieee_is_nan(th)) , COUNT(ieee_is_nan(dz))!,  COUNT(ieee_is_nan(domain%potential_temperature%data_3d))
-        !     if(this_image()==1) write(*,*) "   A_Fx: nr Nans in  hfx, qfx: ",  COUNT(ieee_is_nan(sensible_heat)),   COUNT(ieee_is_nan(domain%latent_heat%data_2d))
-        ! endif
 
         end associate
 
@@ -470,7 +461,6 @@ contains
 
         if (this_image()==1) write(*,*) "Initializing LSM"
 
-        
         if (this_image()==1) write(*,*) "    max soil_deep_temperature on init: ", maxval(domain%soil_deep_temperature%data_2d)
         if (this_image()==1) write(*,*) "    max skin_temperature on init: ", maxval(domain%skin_temperature%data_2d)
 
@@ -1088,7 +1078,7 @@ contains
                              domain%cosine_zenith_angle%data_2d,       &
                              domain%latitude%data_2d,                  &
                              domain%longitude%data_2d,                 &
-                             domain%dz_interface%data_3d/2.,              &
+                             domain%dz_interface%data_3d / 2.,              & ! domain%dz_interface%data_3d,              & ! 
                              lsm_dt,                                   &
                              DZS,                                      &
                              num_soil_layers,                          &
