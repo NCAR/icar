@@ -162,9 +162,9 @@ contains
         character(len=16) :: two_d_month_dimensions(3)          = [character(len=16) :: "lon_x","lat_y","month"]
         character(len=16) :: three_d_t_lake_dimensions(4)           = [character(len=16) :: "lon_x","lat_y","nlevlake","time"]
         character(len=16) :: three_d_t_lake_soisno_dimensions(4)    = [character(len=16) :: "lon_x","lat_y","nlevsoisno","time"] !grid_lake_soisno
-        character(len=16) :: three_d_t_lake_soisno_1_dimensions(4)  = [character(len=16) :: "lon_x","lat_y","nlevsoisno_1","time"] 
+        character(len=16) :: three_d_t_lake_soisno_1_dimensions(4)  = [character(len=16) :: "lon_x","lat_y","nlevsoisno_1","time"]
         character(len=16) :: three_d_t_lake_soi_dimensions(4)       = [character(len=16) :: "lon_x","lat_y","nlevsoi_lake","time"] !grid_lake_soi
-        
+
 
         if (allocated(var_meta)) deallocate(var_meta)
 
@@ -2169,7 +2169,7 @@ contains
             var%attributes  = [attribute_t("standard_name", "lake_snow_layer_2d"),           &
                                attribute_t("units",         "-"),                               &
                                attribute_t("coordinates",   "lat lon")]
-        end associate 
+        end associate
         !>------------------------------------------------------------
         !!  lake_t_grnd2d
         !!------------------------------------------------------------
@@ -2297,7 +2297,6 @@ contains
         associate(var=>var_meta(kVARS%lakemask))
             var%name        = "lakemask"
             var%dimensions  = two_d_dimensions
-            var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "lakemask"),     &
                                attribute_t("units",         ""),                               &
                                attribute_t("coordinates",   "lat lon")]
@@ -2308,7 +2307,6 @@ contains
         associate(var=>var_meta(kVARS%lakedepth2d))
             var%name        = "lakedepth2d"
             var%dimensions  = two_d_dimensions
-            var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "lake_depth"),     &
                                attribute_t("units",         "m"),                               &
                                attribute_t("coordinates",   "lat lon")]
@@ -2323,7 +2321,7 @@ contains
             var%attributes  = [attribute_t("standard_name", "savedtke12d"),           &
                                attribute_t("units",         "-?"),                               &
                                attribute_t("coordinates",   "lat lon")]
-        end associate 
+        end associate
         !>------------------------------------------------------------
         !!  Lake: thermal conductivity, saturated soil [W/m-K]
         !!------------------------------------------------------------
@@ -2346,25 +2344,23 @@ contains
                                attribute_t("units",         "?"),                               &
                                attribute_t("coordinates",   "lat lon")]
         end associate
-        
 
 
 
+        !>------------------------------------------------------------
+        !!  Integrated Vapor Transport
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%ivt))
+            var%name        = "ivt"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "integrated_vapor_transport"),  &
+                               attribute_t("units",         "kg m-1 s-1"),                      &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
 
-        
-        ! type(variable_t) :: h2osoi_ice3d
-        ! type(variable_t) :: h2osoi_liq3d! liquid water (kg/m2)
-        ! type(variable_t) :: h2osoi_vol3d! volumetric soil water (0<=h2osoi_vol<=watsat)[m3/m3]
-        ! type(variable_t) :: z3d ! layer depth for snow & soil (m)
-        ! type(variable_t) :: dz3d
 
-        ! type(variable_t) :: watsat3d
-        ! type(variable_t) :: csol3d
-        ! type(variable_t) :: tkmg3d
-        ! type(variable_t) :: lakemask
-        ! type(variable_t) :: tksatu3d
-        ! type(variable_t) :: tkdry3d
-        ! type(variable_t) :: zi3d
+
         !>------------------------------------------------------------
         !!  Binary land mask (water vs land)
         !!------------------------------------------------------------

@@ -234,6 +234,8 @@ module domain_interface
     type(variable_t) :: zi3d
     type(variable_t) :: savedtke12d
     type(variable_t) :: lakedepth2d
+    ! diagnostics
+    type(variable_t) :: ivt
 
     ! link effective radius from microphysics to radiation scheme
     type(variable_t) :: re_cloud

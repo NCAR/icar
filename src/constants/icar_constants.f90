@@ -250,6 +250,7 @@ module icar_constants
         integer :: tkdry3d
         integer :: savedtke12d
         integer :: lakedepth2d
+        integer :: ivt
         integer :: last_var
     end type var_constants_type
 
@@ -276,7 +277,7 @@ module icar_constants
                                                             191, 192, 193, 194, 195, 196, 197, 198, 199, 200,  &
                                                             201, 202, 203, 204, 205, 206, 207, 208, 209, 210,  &
                                                             211, 212, 213, 214, 215, 216, 217, 218, 219, 220,  &
-                                                            221, 222, 223)
+                                                            221, 222, 223, 224)
 
     integer, parameter :: kINTEGER_BITS     = storage_size(kINTEGER_BITS)
     integer, parameter :: kMAX_STORAGE_VARS = storage_size(kVARS) / kINTEGER_BITS

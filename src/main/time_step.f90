@@ -12,7 +12,7 @@ module time_step
     use icar_constants,             only : Rd
     use microphysics,               only : mp
     use advection,                  only : advect
-    use mod_atm_utilities,          only : exner_function
+    use mod_atm_utilities,          only : exner_function, compute_ivt
     use convection,                 only : convect
     use land_surface,               only : lsm
     use planetary_boundary_layer,   only : pbl
@@ -62,6 +62,7 @@ contains
                   dz_interface          => domain%dz_interface%data_3d,         &
                   psfc                  => domain%surface_pressure%data_2d,     &
                   density               => domain%density%data_3d,              &
+                  water_vapor           => domain%water_vapor%data_3d,          &
                   temperature           => domain%temperature%data_3d,          &
                   temperature_i         => domain%temperature_interface%data_3d,&
                   u                     => domain%u%data_3d,                    &
@@ -101,17 +102,6 @@ contains
         endif
 
 
-    ! NOTE: all code below is not implemented in ICAR 2.0 yet
-    ! it is left as a reminder of what needs to be done, and example when the time comes
-    !
-    !     ! update mut
-    !
-    !     domain%p_inter=domain%p
-    !     call update_pressure(domain%p_inter, domain%z, domain%z_inter, domain%t)
-    !     domain%psfc = domain%p_inter(:,1,:)
-    !     ! technically this isn't correct, we should be using update_pressure or similar to solve this
-    !     domain%ptop = 2*domain%p(:,nz,:) - domain%p(:,nz-1,:)
-    !
     !     ! dry mass in the gridcell is equivalent to the difference in pressure from top to bottom
     !     domain%mut(:,1:nz-1,:) = domain%p_inter(:,1:nz-1,:) - domain%p_inter(:,2:nz,:)
     !     domain%mut(:,nz,:) = domain%p_inter(:,nz,:) - domain%ptop
@@ -121,6 +111,10 @@ contains
             allocate( currw( ims+1:ime-1, jms+1:jme-1))
             allocate(    uw( ims+1:ime,   jms+1:jme-1))
             allocate(    vw( ims+1:ime-1, jms+1:jme  ))
+        endif
+
+        if (associated(domain%ivt%data_2d)) then
+            call compute_ivt(domain%ivt%data_2d, water_vapor, u_mass, v_mass, pressure_i)
         endif
 
         ! temporary constant
