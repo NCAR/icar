@@ -65,11 +65,12 @@ module land_surface
     real,allocatable, dimension(:,:)    :: SMSTAV,SFCRUNOFF,UDRUNOFF,                               &
                                            SNOW,SNOWC,SNOWH, ACSNOW, ACSNOM, SNOALB, QFX,           &
                                            QGH, GSW, ALBEDO, ALBBCK, Z0, XICE, EMISS,               &
-                                           EMBCK, QSFC, RAINBL, CHS, CHS2, CQS2, CPM, SR,           &
+                                           EMBCK, QSFC, CHS, CHS2, CQS2, CPM, SR,                   &
                                            CHKLOWQ, LAI, QZ0, VEGFRAC, SHDMIN,SHDMAX,SNOTIME,SNOPCX,&
                                            POTEVP,RIB, NOAHRES,FLX4_2D,FVB_2D,FBUR_2D,              &
                                            FGSN_2D, z_atm,lnz_atm_term,Ri,base_exchange_term,       &
                                            current_precipitation
+    double precision,allocatable, dimension(:,:)    :: RAINBL
 
     integer,allocatable, dimension(:,:) :: rain_bucket ! used to start the previous time step rain bucket
 
@@ -78,7 +79,7 @@ module land_surface
     real,allocatable, dimension(:,:)    :: dTemp,lhdQV, windspd
     real,allocatable, dimension(:)      :: Zs,DZs
     real :: XICE_THRESHOLD
-    integer,allocatable, dimension(:,:) :: IVGTYP,ISLTYP ! IVGTYP not used? 
+    integer,allocatable, dimension(:,:) :: IVGTYP,ISLTYP ! IVGTYP not used?
     integer :: ITIMESTEP, update_interval, cur_vegmonth
 
 !     real, parameter :: kappa=0.4 ! this should be karman from data_structure
@@ -231,12 +232,12 @@ contains
             kVARS%ground_heat_flux, kVARS%snow_water_equivalent, kVARS%t_lake3d, kVARS%dz_lake3d,                   &
             kVARS%t_soisno3d, kVARS%h2osoi_ice3d, kVARS%h2osoi_liq3d, kVARS%h2osoi_vol3d, kVARS%z3d,                &
             kVARS%dz3d, kVARS%watsat3d, kVARS%csol3d, kVARS%tkmg3d, kVARS%lakemask, kVARS%zi3d,                     &
-            kVARS%tksatu3d, kVARS%tkdry3d, kVARS%snl2d, kVARS%t_grnd2d, kVARS%savedtke12d, kVARS%lakedepth2d,       & !kVARS%snowdp2d, kVARS%h2osno2d, 
+            kVARS%tksatu3d, kVARS%tkdry3d, kVARS%snl2d, kVARS%t_grnd2d, kVARS%savedtke12d, kVARS%lakedepth2d,       & !kVARS%snowdp2d, kVARS%h2osno2d,
             kVARS%lake_icefrac3d, kVARS%z_lake3d,kVARS%water_vapor, kVARS%potential_temperature ])
         endif
 
-        
-        
+
+
     end subroutine lsm_var_request
 
     subroutine calc_exchange_coefficient(wind,tskin,airt,exchange_C)
@@ -324,7 +325,7 @@ contains
                 else
                     ! over glacier we don't want to use the bare ground temperature though
                     if ((veg_type(i,j)/=ISICE)           &  ! was /=15  (15=snow/ice in MODIFIED_IGBP_MODIS_NOAH)
-                        .and.(veg_type(i,j)/=ISLAKE)     &  ! was /=21  (ISLAKE  = options%lsm_options%lake_category)   # 17 is water, 21 is lakes (in MODIFIED_IGBP_MODIS_NOAH ) MODIFY FOR GENERIC LU TYPES!! 
+                        .and.(veg_type(i,j)/=ISLAKE)     &  ! was /=21  (ISLAKE  = options%lsm_options%lake_category)   # 17 is water, 21 is lakes (in MODIFIED_IGBP_MODIS_NOAH ) MODIFY FOR GENERIC LU TYPES!!
                         .and.(land_mask(i,j)==kLC_LAND)  &
                         .and.(associated(T2bare))) then
                         T2(i,j) = T2bare(i,j)
@@ -593,7 +594,7 @@ contains
 
 
         allocate(RAINBL(ims:ime,jms:jme))
-        RAINBL = domain%accumulated_precipitation%data_2d  ! used to store last time step accumulated precip so that it can be subtracted from the current step
+        RAINBL = domain%accumulated_precipitation%data_2dd  ! used to store last time step accumulated precip so that it can be subtracted from the current step
                             ! set to domain%rain incase this is a restart run and rain is non-zero to start
         allocate(rain_bucket(ims:ime,jms:jme))
         rain_bucket = domain%precipitation_bucket  ! used to store last time step accumulated precip so that it can be subtracted from the current step
@@ -877,9 +878,9 @@ contains
         if(options%physics%watersurface==kWATER_LAKE) then
         ! ____________ Lake model ______________________
         ! From WRF's /run/README.namelist:  These could at some point become namelist options in ICAR?
-        ! lakedepth_default(max_dom)          = 50,      ! default lake depth (If there is no lake_depth information in the input data, then lake depth is assumed to be 50m)  
+        ! lakedepth_default(max_dom)          = 50,      ! default lake depth (If there is no lake_depth information in the input data, then lake depth is assumed to be 50m)
         ! lake_min_elev(max_dom)              = 5,       ! minimum elevation of lakes. May be used to determine whether a water point is a lake in the absence of lake
-        !                                                  category. If the landuse type includes 'lake' (i.e. Modis_lake and USGS_LAKE), this variable is of no effects. 
+        !                                                  category. If the landuse type includes 'lake' (i.e. Modis_lake and USGS_LAKE), this variable is of no effects.
         ! use_lakedepth (max_dom)             = 1,       ! option to use lake depth data. Lake depth data is available from 3.6 geogrid program. If one didn't process
         !                                                    the lake depth data, but this switch is set to 1, the program will stop and tell one to go back to geogrid
         !                                                     program.
@@ -1044,7 +1045,7 @@ contains
             if(                                                         &
                 (options%physics%watersurface==kWATER_SIMPLE) .or.      &
                 (options%physics%watersurface==kWATER_LAKE)             & ! also call for kWATER_LAKE (for ocean cells)
-            )then 
+            )then
 
                 call water_simple(options,                              &
                                   domain%sst%data_2d,                   &
@@ -1066,13 +1067,13 @@ contains
             endif
 
             !___________________ Lake model _____________________
-            ! This lake model (ported from WRF V4.4) is run for the grid cells that are defined as lake in the hi-res input file. 
+            ! This lake model (ported from WRF V4.4) is run for the grid cells that are defined as lake in the hi-res input file.
             ! It also is advised to supply a lake_depth parameter in the hi-res input, otherwise the default depth of 50m is used (see lakeini above)
             ! It requires the VEGPARM.TBL landuse category to be one which has a separate lake category (i.e. MODIFIED_IGBP_MODIS_NOAH, USGS-RUC or MODI-RUC).
             ! For the grid cells that are defined as water, but not as lake (i.e. oceans), the simple water model above will be run.
             if (options%physics%watersurface==kWATER_LAKE) then    ! WRF's lake model
 
-                ! current_precipitation = (domain%accumulated_precipitation%data_2d-RAINBL)+(domain%precipitation_bucket-rain_bucket)*kPRECIP_BUCKET_SIZE  ! analogous to noah calls
+                ! current_precipitation = (domain%accumulated_precipitation%data_2dd-RAINBL)+(domain%precipitation_bucket-rain_bucket)*kPRECIP_BUCKET_SIZE  ! analogous to noah calls
 
                 call lake( &
                     t_phy=domain%temperature%data_3d                            & !-- t_phy         temperature (K)     !Temprature at the mid points (K)
@@ -1124,7 +1125,7 @@ contains
                     ,lh=domain%latent_heat%data_2d                              & !(OUT)-- LH          net upward latent heat flux at surface (W/m^2)
                     ,grdflx=domain%ground_heat_flux%data_2d                     & !(OUT)-- GRDFLX(I,J) ground heat flux (W m-2)
                     ,tsk=domain%skin_temperature%data_2d                        & !(OUT)-- TSK          skin temperature [K]
-                    ,qfx=QFX                                                    & !(OUT)-- QFX        upward moisture flux at the surface (kg/m^2/s) in 
+                    ,qfx=QFX                                                    & !(OUT)-- QFX        upward moisture flux at the surface (kg/m^2/s) in
                     ,t2= domain%temperature_2m%data_2d                          & !(OUT)-- t2         diagnostic 2-m temperature from surface layer and lsm
                     ,th2=TH2                                                    & !(OUT)-- th2        diagnostic 2-m theta from surface layer and lsm
                     ,q2=domain%humidity_2m%data_2d                              & !(OUT)-- q2         diagnostic 2-m mixing ratio from surface layer and lsm
@@ -1190,16 +1191,16 @@ contains
                     endif
                 endif
 
-                ! if (this_image()==1) write(*,*) "    lsm start: accumulated_precipitation max:", MAXVAL(domain%accumulated_precipitation%data_2d)
+                ! if (this_image()==1) write(*,*) "    lsm start: accumulated_precipitation max:", MAXVAL(domain%accumulated_precipitation%data_2dd)
                 ! if (this_image()==1) write(*,*) "    lsm start: RAINBL max:", MAXVAL(RAINBL)
                 ! if (this_image()==1) write(*,*) "    lsm start: domain%precipitation_bucket max:", MAXVAL(domain%precipitation_bucket)
                 ! if (this_image()==1) write(*,*) "    lsm start: rain_bucket max:", MAXVAL(rain_bucket)
 
 
-                ! RAINBL(i,j) = [kg m-2]   RAINBL = domain%accumulated_precipitation%data_2d  ! used to store last time step accumulated precip so that it can be subtracted from the current step
-                current_precipitation = (domain%accumulated_precipitation%data_2d-RAINBL)+(domain%precipitation_bucket-rain_bucket)*kPRECIP_BUCKET_SIZE
+                ! RAINBL(i,j) = [kg m-2]   RAINBL = domain%accumulated_precipitation%data_2dd  ! used to store last time step accumulated precip so that it can be subtracted from the current step
+                current_precipitation = (domain%accumulated_precipitation%data_2dd-RAINBL)+(domain%precipitation_bucket-rain_bucket)*kPRECIP_BUCKET_SIZE
                 if (allocated(domain%rain_fraction)) current_precipitation = current_precipitation * domain%rain_fraction
-                
+
                 call lsm_noah(domain%dz_interface%data_3d,                &
                             domain%water_vapor%data_3d,                   &
                             domain%pressure_interface%data_3d,            &
@@ -1279,7 +1280,7 @@ contains
 
                 ! note this is more or less just diagnostic and could be removed
                 domain%longwave_up%data_2d = stefan_boltzmann * EMISS * domain%skin_temperature%data_2d**4
-                RAINBL = domain%accumulated_precipitation%data_2d
+                RAINBL = domain%accumulated_precipitation%data_2dd
                 rain_bucket = domain%precipitation_bucket
 
             else if (options%physics%landsurface == kLSM_NOAHMP) then
@@ -1313,7 +1314,7 @@ contains
                 ! if (this_image()==1) write(*,*) "    lsm start: domain%precipitation_bucket max:", MAXVAL(domain%precipitation_bucket)
                 ! if (this_image()==1) write(*,*) "    lsm start: rain_bucket max:", MAXVAL(rain_bucket)
 
-                current_precipitation = (domain%accumulated_precipitation%data_2d-RAINBL)+(domain%precipitation_bucket-rain_bucket)*kPRECIP_BUCKET_SIZE
+                current_precipitation = (domain%accumulated_precipitation%data_2dd-RAINBL)+(domain%precipitation_bucket-rain_bucket)*kPRECIP_BUCKET_SIZE
                 if (allocated(domain%rain_fraction)) current_precipitation = current_precipitation * domain%rain_fraction
 
 !                do I = ims,ime
@@ -1507,7 +1508,7 @@ contains
 
                 ! note this is more or less just diagnostic and could be removed
                 domain%longwave_up%data_2d = stefan_boltzmann * EMISS * domain%skin_temperature%data_2d**4
-                RAINBL = domain%accumulated_precipitation%data_2d
+                RAINBL = domain%accumulated_precipitation%data_2dd
                 rain_bucket = domain%precipitation_bucket
             endif
 
