@@ -1061,18 +1061,6 @@ contains
         Ri = gravity/airt_3d(:,1,:) * (airt_3d(:,1,:)-tskin)*z_atm/(wind_2d**2)
     end subroutine calc_Richardson_nr
 
-    ! elemental function calc_Richardson_nr(airt_3d, tskin, z_atm, wind_2d) result(Ri)
-    !     IMPLICIT NONE
-    !     ! REAL, DIMENSION(:,:), INTENT(INOUT):: Ri
-    !     REAL, DIMENSION(:,:,:), INTENT(IN):: airt_3d
-    !     REAL, DIMENSION(:,:), INTENT(IN):: tskin, wind_2d, z_atm
-    !     real :: Ri
-
-    !     where(wind_2d==0) wind_2d=1e-5
-
-    !     Ri = gravity/airt_3d(:,1,:) * (airt_3d(:,1,:)-tskin)*z_atm/(wind_2d**2)
-
-    ! end function
 
 end module mod_atm_utilities
 

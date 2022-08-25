@@ -9,7 +9,6 @@
 !
 !
 module module_bl_ysu
-  use ieee_arithmetic
 contains
 !
 !-------------------------------------------------------------------
@@ -201,12 +200,9 @@ contains
 !
 !local
    integer ::  i,j,k
-   real,     dimension( its:ite, kts:kte )  ::                       rqibl2dt, & ! org
+   real,     dimension( its:ite, kts:kte )  ::                       rqibl2dt, &
                                                                           pdh
    real,     dimension( its:ite, kts:kte+1 )  ::                         pdhi
-  !  real,     dimension( ims:ime, kts:kte )  ::                       rqibl2dt, &
-  !                                                                         pdh
-  !  real,     dimension( ims:ime, kts:kte+1 )  ::                         pdhi
 
 !
    do j = jts,jte
@@ -226,8 +222,7 @@ contains
           enddo
         enddo
       endif
-      ! write(*,*)" pdhi(its,kts) shape:", shape(pdhi(its,kts))
-      ! write(*,*)" pdhi(i,k) shape:", shape(pdhi(i,k))
+
       call ysu2d(J=j,ux=u3d(ims,kms,j),vx=v3d(ims,kms,j)                       &
               ,tx=t3d(ims,kms,j)                                               &
               ,qx=qv3d(ims,kms,j),qcx=qc3d(ims,kms,j)                          &
@@ -886,7 +881,6 @@ contains
        endif
      enddo
    enddo
-  !  write(*,*)"   min/max xkzh (below pbl)", minval(xkzh),maxval(xkzh) !BK debug
 !
 !     compute diffusion coefficients over pbl (free atmosphere)
 !
@@ -918,14 +912,12 @@ contains
            sri = sqrt(-ri)
            xkzm(i,k) = xkzo+dk*(1+8.*(-ri)/(1+1.746*sri))
            xkzh(i,k) = xkzo+dk*(1+8.*(-ri)/(1+1.286*sri))
-          !  write(*,*)"   unstable xkzh (above pbl)", xkzh(i,k) !BK debug
          else
 ! stable regime
            xkzh(i,k) = xkzo+dk/(1+5.*ri)**2
            prnum = 1.0+2.1*ri
            prnum = min(prnum,prmax)
            xkzm(i,k) = (xkzh(i,k)-xkzo)*prnum+xkzo
-          !  write(*,*)"   stable xkzh", xkzh(i,k)!BK debug
          endif
 !
          xkzm(i,k) = min(xkzm(i,k),xkzmax)

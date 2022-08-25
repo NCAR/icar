@@ -33,7 +33,6 @@ module planetary_boundary_layer
     use mod_atm_utilities, only : calc_Richardson_nr
     use mod_wrf_constants, only : EOMEG
     use icar_constants !, only : karman,stefan_boltzmann
-    use land_surface, only : calc_exchange_coefficient   ! maybe move this to atm_utilities? (some work)
     use mod_pbl_utilities, only : da_sfc_wtq
     use ieee_arithmetic ! for debugging 
     use array_utilities, only : array_offset_x_3d, array_offset_y_3d

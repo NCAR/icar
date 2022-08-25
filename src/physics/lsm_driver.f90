@@ -51,7 +51,7 @@ module land_surface
     implicit none
 
     private
-    public :: lsm_init, lsm, lsm_var_request, calc_exchange_coefficient
+    public :: lsm_init, lsm, lsm_var_request
 
     ! Noah LSM required variables.  Some of these should be stored in domain, but tested here for now
     integer :: ids,ide,jds,jde,kds,kde ! Domain dimensions
@@ -144,7 +144,7 @@ contains
                          kVARS%humidity_2m, kVARS%surface_pressure, kVARS%longwave_up, kVARS%ground_heat_flux,          &
                          kVARS%soil_totalmoisture, kVARS%soil_deep_temperature, kVARS%roughness_z0, kVARS%ustar,        &
                          kVARS%snow_height, kVARS%canopy_vapor_pressure, kVARS%canopy_temperature,                      &
-                         kVARS%veg_leaf_temperature, kVARS%coeff_momentum_drag, kVARS%coeff_heat_exchange,              & ! kVARS%coeff_heat_exchange_3d, & ! 
+                         kVARS%veg_leaf_temperature, kVARS%coeff_momentum_drag, kVARS%coeff_heat_exchange,              &
                          kVARS%canopy_fwet, kVARS%snow_water_eq_prev, kVARS%water_table_depth, kVARS%water_aquifer,     &
                          kVARS%mass_leaf, kVARS%mass_root, kVARS%mass_stem, kVARS%mass_wood, kVARS%soil_carbon_fast,    &
                          kVARS%soil_carbon_stable, kVARS%eq_soil_moisture, kVARS%smc_watertable_deep, kVARS%recharge,   &
@@ -207,7 +207,7 @@ contains
 
     end subroutine lsm_var_request
 
-    subroutine calc_exchange_coefficient(wind,tskin,airt,exchange_C)  ! BK maybe move this to atm_utilities b/c YSU pbl also wants to use this??
+    subroutine calc_exchange_coefficient(wind,tskin,airt,exchange_C)
         implicit none
         real, dimension(:,:),intent(inout) :: wind,tskin
         real, dimension(:,:,:),intent(inout) :: airt
@@ -218,8 +218,8 @@ contains
         exchange_C = 0
 
         Ri = gravity/airt(:,1,:) * (airt(:,1,:)-tskin)*z_atm/(wind**2)
-        ! Ri now is a function in atm_utlilities: 
-        ! Ri = calc_Richardson_nr(airt, tskin, z_atm, wind) 
+        ! Ri now is a function in atm_utlilities:
+        ! calc_Richardson_nr(Ri, airt, tskin, z_atm, wind)
 
         ! "--------------------------------------------------"
         !  "Surface Richardson number"
@@ -743,7 +743,7 @@ contains
                                 domain%canopy_vapor_pressure%data_2d,   &
                                 domain%canopy_temperature%data_2d,      &
                                 domain%coeff_momentum_drag%data_2d,     &
-                                domain%coeff_heat_exchange%data_2d,     & !domain%coeff_heat_exchange_3d%data_3d(:,1,:),     & !
+                                domain%coeff_heat_exchange%data_2d,     &
                                 domain%canopy_fwet%data_2d,             &
                                 domain%snow_water_eq_prev%data_2d,      &
                                 domain%snow_albedo_prev%data_2d,        &
@@ -1157,7 +1157,7 @@ contains
                              domain%canopy_vapor_pressure%data_2d,     &
                              domain%canopy_temperature%data_2d,        &
                              domain%coeff_momentum_drag%data_2d,       &
-                             domain%coeff_heat_exchange%data_2d,     & ! domain%coeff_heat_exchange_3d%data_3d(:,1,:),     & !
+                             domain%coeff_heat_exchange%data_2d,       &
                              domain%canopy_fwet%data_2d,               &
                              domain%snow_water_eq_prev%data_2d,        &
                              domain%snow_albedo_prev%data_2d,          &
