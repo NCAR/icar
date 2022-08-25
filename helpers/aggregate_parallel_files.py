@@ -76,7 +76,7 @@ def set_up_dataset(d):
             data = np.zeros((nt, nz, ny + y_off, nx + x_off))
 
         # print(name, data.shape, dims, attrs)
-        data_vars[v] = xr.DataArray(data.astype(np.float32), dims=dims, name=name, attrs=attrs)#, coords=coords)
+        data_vars[v] = xr.DataArray(data.astype(d[v].dtype), dims=dims, name=name, attrs=attrs)#, coords=coords)
 
     ds = xr.Dataset(data_vars, attrs=d.attrs)
     ds.encoding = d.encoding

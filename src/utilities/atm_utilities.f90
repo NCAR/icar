@@ -52,8 +52,10 @@ contains
         do j = jms, jme
             do k = kms, kme-1
                 do i = ims, ime
-                    if (pi(i,k+1,j) < 50000) then
+                    if (pi(i,k+1,j) > 50000) then
                         ivt(i,j) = ivt(i,j) + ( qv(i,k,j) * sqrt(u(i,k,j)**2 + v(i,k,j)**2) * (pi(i,k,j) - pi(i,k+1,j)) ) / gravity
+                    elseif (pi(i,k,j) > 50000) then
+                        ivt(i,j) = ivt(i,j) + ( qv(i,k,j) * sqrt(u(i,k,j)**2 + v(i,k,j)**2) * (pi(i,k,j) - 50000) ) / gravity
                     endif
                 enddo
             enddo
