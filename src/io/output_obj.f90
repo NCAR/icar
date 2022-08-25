@@ -1,6 +1,7 @@
 submodule(output_interface) output_implementation
-  use output_metadata,          only : get_metadata
-  implicit none
+    use icar_constants,           only : kREAL, kDOUBLE
+    use output_metadata,          only : get_metadata
+    implicit none
 
 contains
 
@@ -277,7 +278,7 @@ contains
         if (0<var_list( kVARS%savedtke12d) )                call this%add_to_output( get_metadata( kVARS%savedtke12d                  , domain%savedtke12d%data_2d))
         if (0<var_list( kVARS%lakedepth2d) )                call this%add_to_output( get_metadata( kVARS%lakedepth2d                  , domain%lakedepth2d%data_2d))
 
-        
+
 
     end subroutine
 
@@ -422,11 +423,21 @@ contains
 
                 elseif (var%two_d) then
                     if (var%unlimited_dim) then
-                        call check( nf90_put_var(this%ncfile_id, var%var_id,  var%data_2d, start_two_D_t),   &
-                                "saving:"//trim(var%name) )
+                        if (var%dtype == kREAL) then
+                            call check( nf90_put_var(this%ncfile_id, var%var_id,  var%data_2d, start_two_D_t),   &
+                                    "saving:"//trim(var%name) )
+                        elseif (var%dtype == kDOUBLE) then
+                            call check( nf90_put_var(this%ncfile_id, var%var_id,  var%data_2dd, start_two_D_t),   &
+                                    "saving:"//trim(var%name) )
+                        endif
                     elseif (this%creating) then
-                        call check( nf90_put_var(this%ncfile_id, var%var_id,  var%data_2d),   &
-                                "saving:"//trim(var%name) )
+                        if (var%dtype == kREAL) then
+                            call check( nf90_put_var(this%ncfile_id, var%var_id,  var%data_2d),   &
+                                    "saving:"//trim(var%name) )
+                        elseif (var%dtype == kDOUBLE) then
+                            call check( nf90_put_var(this%ncfile_id, var%var_id,  var%data_2dd),   &
+                                    "saving:"//trim(var%name) )
+                        endif
                     endif
                 endif
             end associate
@@ -479,8 +490,14 @@ contains
 
         ! if the variable was not found in the netcdf file then we will define it.
         if (err /= NF90_NOERR) then
-            call check( nf90_def_var(this%ncfile_id, var%name, NF90_REAL, var%dim_ids, var%var_id), &
-                        "Defining variable:"//trim(var%name) )
+            if (var%dtype == kREAL) then
+                call check( nf90_def_var(this%ncfile_id, var%name, NF90_REAL, var%dim_ids, var%var_id), &
+                            "Defining variable:"//trim(var%name) )
+            elseif (var%dtype == kDOUBLE) then
+                call check( nf90_def_var(this%ncfile_id, var%name, NF90_DOUBLE, var%dim_ids, var%var_id), &
+                            "Defining variable:"//trim(var%name) )
+            endif
+
 
             ! setup attributes
             do i=1,size(var%attributes)

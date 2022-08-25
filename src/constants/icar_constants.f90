@@ -281,6 +281,9 @@ module icar_constants
     integer, parameter :: kINTEGER_BITS     = storage_size(kINTEGER_BITS)
     integer, parameter :: kMAX_STORAGE_VARS = storage_size(kVARS) / kINTEGER_BITS
 
+    integer, parameter :: kREAL             = 4
+    integer, parameter :: kDOUBLE           = 8
+
     ! Initial number of output variables for which pointers are created
     integer, parameter :: kINITIAL_VAR_SIZE= 128
 
