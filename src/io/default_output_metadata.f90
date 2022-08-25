@@ -38,7 +38,6 @@ contains
         ! set the dimensionality to false
         meta_data%two_d     = .False.
         meta_data%three_d   = .False.
-
     end function get_metadata_nod
 
     !>------------------------------------------------------------
@@ -61,6 +60,7 @@ contains
         if (.not.allocated(var_meta)) call init_var_meta()
 
         meta_data = var_meta(var_idx)
+        meta_data%dtype=kREAL
 
         if (associated(input_data)) then
             meta_data%data_2d   => input_data
@@ -89,6 +89,7 @@ contains
         if (.not.allocated(var_meta)) call init_var_meta()
 
         meta_data = var_meta(var_idx)
+        meta_data%dtype=kDOUBLE
 
         if (associated(input_data)) then
             meta_data%data_2dd  => input_data
@@ -123,6 +124,7 @@ contains
         if (.not.allocated(var_meta)) call init_var_meta()
 
         meta_data = var_meta(var_idx)
+        meta_data%dtype=kREAL
 
         if (associated(input_data)) then
             meta_data%data_3d   => input_data

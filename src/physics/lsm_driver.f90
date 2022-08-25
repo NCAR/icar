@@ -1198,7 +1198,7 @@ contains
 
 
                 ! RAINBL(i,j) = [kg m-2]   RAINBL = domain%accumulated_precipitation%data_2dd  ! used to store last time step accumulated precip so that it can be subtracted from the current step
-                current_precipitation = (domain%accumulated_precipitation%data_2dd-RAINBL)+(domain%precipitation_bucket-rain_bucket)*kPRECIP_BUCKET_SIZE
+                current_precipitation = (domain%accumulated_precipitation%data_2dd - RAINBL) !+(domain%precipitation_bucket-rain_bucket)*kPRECIP_BUCKET_SIZE
                 if (allocated(domain%rain_fraction)) current_precipitation = current_precipitation * domain%rain_fraction
 
                 call lsm_noah(domain%dz_interface%data_3d,                &
@@ -1314,7 +1314,7 @@ contains
                 ! if (this_image()==1) write(*,*) "    lsm start: domain%precipitation_bucket max:", MAXVAL(domain%precipitation_bucket)
                 ! if (this_image()==1) write(*,*) "    lsm start: rain_bucket max:", MAXVAL(rain_bucket)
 
-                current_precipitation = (domain%accumulated_precipitation%data_2dd-RAINBL)+(domain%precipitation_bucket-rain_bucket)*kPRECIP_BUCKET_SIZE
+                current_precipitation = (domain%accumulated_precipitation%data_2dd - RAINBL) !+(domain%precipitation_bucket-rain_bucket)*kPRECIP_BUCKET_SIZE
                 if (allocated(domain%rain_fraction)) current_precipitation = current_precipitation * domain%rain_fraction
 
 !                do I = ims,ime

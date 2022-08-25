@@ -408,7 +408,7 @@ contains
         integer,        intent(in)    :: ids,ide, jds,jde, kds,kde
         real :: precipitation(ims:ime, jms:jme)
 
-
+        precipitation = 0
         ! run the thompson microphysics
         if (options%physics%microphysics==kMP_THOMPSON) then
             ! call the thompson microphysics

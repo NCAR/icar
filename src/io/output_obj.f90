@@ -25,7 +25,7 @@ contains
 
         if (.not.this%is_initialized) call this%init()
 
-        if (associated(variable%data_2d).or.associated(variable%data_3d)) then
+        if (associated(variable%data_2d).or.associated(variable%data_2dd).or.associated(variable%data_3d)) then
 
             if (this%n_variables == size(this%variables)) call this%increase_var_capacity()
 
