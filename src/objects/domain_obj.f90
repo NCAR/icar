@@ -10,7 +10,7 @@
 submodule(domain_interface) domain_implementation
     use assertions_mod,       only : assert, assertions
     use mod_atm_utilities,    only : exner_function, update_pressure
-    use icar_constants,       only : kVARS, kLC_LAND, kLC_WATER, kWATER_LAKE
+    use icar_constants,       only : kVARS, kLC_LAND, kLC_WATER, kWATER_LAKE, kDOUBLE
     use string,               only : str
     use co_util,              only : broadcast
     use io_routines,          only : io_read, io_write
@@ -194,7 +194,7 @@ contains
         if (0<opt%vars_to_allocate( kVARS%snow_number_concentration) )  call setup(this%snow_number,              this%grid )
         if (0<opt%vars_to_allocate( kVARS%graupel_in_air) )             call setup(this%graupel_mass,             this%grid,     forcing_var=opt%parameters%qgvar,      list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%graupel_number_concentration))call setup(this%graupel_number,           this%grid )
-        if (0<opt%vars_to_allocate( kVARS%precipitation) )              call setup(this%accumulated_precipitation,this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%precipitation) )              call setup(this%accumulated_precipitation,this%grid2d, dtype=kDOUBLE )
         if (0<opt%vars_to_allocate( kVARS%convective_precipitation) )   call setup(this%accumulated_convective_pcp,this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%external_precipitation) )     call setup(this%external_precipitation,   this%grid2d,   forcing_var=opt%parameters%rain_var,  list=this%variables_to_force)
         if (0<opt%vars_to_allocate( kVARS%snowfall) )                   call setup(this%accumulated_snowfall,     this%grid2d )
@@ -423,16 +423,21 @@ contains
     !! and the forcing_var is both present and not blank ("")
     !!
     !! -------------------------------
-    subroutine setup_var(var, grid, forcing_var, list, force_boundaries)
+    subroutine setup_var(var, grid, forcing_var, list, force_boundaries, dtype)
         implicit none
         type(variable_t),   intent(inout) :: var
         type(grid_t),       intent(in)    :: grid
         character(len=*),   intent(in),   optional :: forcing_var
         type(var_dict_t),   intent(inout),optional :: list
         logical,            intent(in),   optional :: force_boundaries
+        integer,            intent(in),   optional :: dtype
 
         if (present(forcing_var)) then
-            call var%initialize(grid, forcing_var=forcing_var)
+            if (present(dtype)) then
+                call var%initialize(grid, forcing_var=forcing_var, dtype=dtype)
+            else
+                call var%initialize(grid, forcing_var=forcing_var)
+            endif
 
             if (present(list)) then
                 if (Len(Trim(forcing_var)) /= 0) then
@@ -442,10 +447,15 @@ contains
             endif
         else
 
-            call var%initialize(grid)
+            if (present(dtype)) then
+                call var%initialize(grid, dtype=dtype)
+            else
+                call var%initialize(grid)
+            endif
         endif
 
     end subroutine
+
 
     !> -------------------------------
     !! Setup an exchangeable variable.
@@ -2418,6 +2428,9 @@ contains
         if (associated(this%external_precipitation%data_2d)) then
             if (associated(this%accumulated_precipitation%data_2d)) then
                 this%accumulated_precipitation%data_2d = this%accumulated_precipitation%data_2d + (this%external_precipitation%data_2d * dt%seconds())
+            endif
+            if (associated(this%accumulated_precipitation%data_2dd)) then
+                this%accumulated_precipitation%data_2dd = this%accumulated_precipitation%data_2dd + (this%external_precipitation%data_2d * dt%seconds())
             endif
         endif
 

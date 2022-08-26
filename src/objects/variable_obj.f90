@@ -1,5 +1,6 @@
 submodule(variable_interface) variable_implementation
-    use co_util,    only : broadcast
+    use icar_constants, only : kREAL, kDOUBLE
+    use co_util,        only : broadcast
     implicit none
 
 
@@ -11,14 +12,18 @@ contains
     !! Allocates 2d/3d data structure as appropriate
     !!
     !! -------------------------------
-    module subroutine init_grid(this, grid, forcing_var, force_boundaries)
+    module subroutine init_grid(this, grid, forcing_var, force_boundaries, dtype)
         implicit none
         class(variable_t),  intent(inout) :: this
         type(grid_t),       intent(in)    :: grid
         character(len=*),   intent(in), optional :: forcing_var
         logical,            intent(in), optional :: force_boundaries
+        integer,            intent(in), optional :: dtype
 
         integer :: err
+
+        this%dtype = kREAL
+        if (present(dtype)) this%dtype = dtype
 
         this%dimensions = grid%dimensions
         this%dim_len    = grid%get_dims()
@@ -35,11 +40,19 @@ contains
         if (grid%is2d) then
             this%n_dimensions = 2
             if (associated(this%data_2d)) deallocate(this%data_2d)
-            allocate(this%data_2d(grid%ims:grid%ime,    &
-                                  grid%jms:grid%jme), stat=err)
-            if (err /= 0) stop "variable:grid:2d: Allocation request failed"
+            if (this%dtype == kREAL) then
+                allocate(this%data_2d(grid%ims:grid%ime,    &
+                                      grid%jms:grid%jme), stat=err)
+                if (err /= 0) stop "variable:grid:2d: Allocation request failed"
 
-            this%data_2d = 0
+                this%data_2d = 0
+            elseif (this%dtype == kDOUBLE) then
+                allocate(this%data_2dd(grid%ims:grid%ime,    &
+                                       grid%jms:grid%jme), stat=err)
+                if (err /= 0) stop "variable:grid:2d: Allocation request failed"
+
+                this%data_2dd = 0
+            endif
 
             if (trim(this%forcing_var) /= "") then
                 allocate(this%dqdt_2d(grid%ims:grid%ime,    &
