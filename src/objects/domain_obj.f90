@@ -291,7 +291,8 @@ contains
         if (0<opt%vars_to_allocate( kVARS%v_10m) )                      call setup(this%v_10m,                    this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%coeff_momentum_drag) )        call setup(this%coeff_momentum_drag,      this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%coeff_heat_exchange) )        call setup(this%coeff_heat_exchange,      this%grid2d)
-        if (0<opt%vars_to_allocate( kVARS%coeff_heat_exchange_3d) )        call setup(this%coeff_heat_exchange_3d,      this%grid) ! for pbl ysu - test
+        if (0<opt%vars_to_allocate( kVARS%coeff_heat_exchange_3d) )     call setup(this%coeff_heat_exchange_3d,   this%grid)    ! for pbl ysu 
+        if (0<opt%vars_to_allocate( kVARS%hpbl) )                       call setup(this%hpbl,                     this%grid2d)    ! for pbl ysu 
         if (0<opt%vars_to_allocate( kVARS%surface_rad_temperature) )    call setup(this%surface_rad_temperature,  this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%temperature_2m) )             call setup(this%temperature_2m,           this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%humidity_2m) )                call setup(this%humidity_2m,              this%grid2d)
@@ -371,6 +372,7 @@ contains
         if (0<opt%vars_to_allocate( kVARS%irr_eventno_micro) )          allocate(this%irr_eventno_micro        (ims:ime, jms:jme),          source=0)
         if (0<opt%vars_to_allocate( kVARS%irr_eventno_flood) )          allocate(this%irr_eventno_flood        (ims:ime, jms:jme),          source=0)
         if (0<opt%vars_to_allocate( kVARS%plant_growth_stage) )         allocate(this%plant_growth_stage       (ims:ime, jms:jme),          source=0)
+        if (0<opt%vars_to_allocate( kVARS%kpbl) )                       allocate(this%kpbl                     (ims:ime, jms:jme),          source=0) ! for pbl ysu 
 
         ! tendency variables that don't need to be output... maybe these should be set up the same way
         if (0<opt%vars_to_allocate( kVARS%tend_qv_adv) )                allocate(this%tend%qv_adv(ims:ime, kms:kme, jms:jme),   source=0.0)

@@ -41,7 +41,7 @@ module planetary_boundary_layer
     implicit none
     real,allocatable, dimension(:,:)    ::  windspd, Ri, z_atm, zol, hol, hpbl, psim, &
                                             psih, u10d, v10d, t2d, q2d, gz1oz0, CHS, xland_real,regime
-    integer, allocatable, dimension(:,:) :: kpbl2d
+    ! integer, allocatable, dimension(:,:) :: kpbl2d
     real, allocatable, dimension(:,:,:) :: tend_u_ugrid, tend_v_vgrid
 
     private
@@ -67,10 +67,10 @@ contains
                          kVARS%skin_temperature, kVARS%terrain, kVARS%ground_surf_temperature,              &
                          kVARS%sensible_heat, kVARS%latent_heat, kVARS%u_10m, kVARS%v_10m,                  &
                          kVARS%humidity_2m, kVARS%surface_pressure, kVARS%ground_heat_flux,                 &
-                         kVARS%znu, kVARS%znw, kVARS%roughness_z0, kVARS%ustar, kVARS%cloud_ice,         &
-                         kVARS%tend_th_pbl, kVARS%tend_qc_pbl, kVARS%tend_qi_pbl,  kVARS%temperature_2m,                &
-                         kVARS%tend_u, kVARS%tend_v, kVARS%tend_qv_pbl, kVARS%pressure,                     &
-                         kVARS%land_mask, kVARS%cloud_water, kVARS%coeff_heat_exchange_3d ]) !kVARS%tend_qv_adv,kVARS%tend_qv, kVARS%tend_qs, kVARS%tend_qr,, kVARS%u_mass, kVARS%v_mass,
+                         kVARS%znu, kVARS%znw, kVARS%roughness_z0, kVARS%ustar, kVARS%cloud_ice,            &
+                         kVARS%tend_th_pbl, kVARS%tend_qc_pbl, kVARS%tend_qi_pbl,  kVARS%temperature_2m,    &
+                         kVARS%tend_u, kVARS%tend_v, kVARS%tend_qv_pbl, kVARS%pressure, kVARS%kpbl,         &
+                         kVARS%land_mask, kVARS%cloud_water, kVARS%coeff_heat_exchange_3d, kVARS%hpbl ]) !kVARS%tend_qv_adv,kVARS%tend_qv, kVARS%tend_qs, kVARS%tend_qr,, kVARS%u_mass, kVARS%v_mass,
 !           kVARS%coeff_momentum_drag, ??
              call options%advect_vars([kVARS%potential_temperature, kVARS%water_vapor, kVARS%cloud_ice, kVARS%cloud_water]) !??
 
@@ -80,10 +80,10 @@ contains
                         kVARS%skin_temperature, kVARS%terrain, kVARS%ground_surf_temperature,              &
                         kVARS%sensible_heat, kVARS%latent_heat, kVARS%u_10m, kVARS%v_10m,                  &
                         kVARS%humidity_2m, kVARS%surface_pressure, kVARS%ground_heat_flux,                 &
-                        kVARS%znu, kVARS%znw, kVARS%roughness_z0, kVARS%ustar, kVARS%cloud_ice,         &
-                        kVARS%tend_th_pbl, kVARS%tend_qc_pbl, kVARS%tend_qi_pbl,  kVARS%temperature_2m,                &
-                        kVARS%tend_u, kVARS%tend_v, kVARS%tend_qv_pbl, kVARS%pressure,                     &
-                        kVARS%land_mask, kVARS%cloud_water,kVARS%coeff_heat_exchange_3d  ]) !kVARS%u_mass, kVARS%v_mass,
+                        kVARS%znu, kVARS%znw, kVARS%roughness_z0, kVARS%ustar, kVARS%cloud_ice,            &
+                        kVARS%tend_th_pbl, kVARS%tend_qc_pbl, kVARS%tend_qi_pbl,  kVARS%temperature_2m,    &
+                        kVARS%tend_u, kVARS%tend_v, kVARS%tend_qv_pbl, kVARS%pressure, kVARS%kpbl,         &
+                        kVARS%land_mask, kVARS%cloud_water,kVARS%coeff_heat_exchange_3d, kVARS%hpbl  ]) !kVARS%u_mass, kVARS%v_mass,
         endif
     end subroutine pbl_var_request
 
@@ -123,7 +123,7 @@ contains
             zol = 10
             allocate(hol(ims:ime, jms:jme)) ! hol		pbl height over monin-obukhov length - intent(inout)
             hol = 1000.0
-            allocate(hpbl(ims:ime, jms:jme))  ! this should go to domain object for convective modules!!
+            ! allocate(hpbl(ims:ime, jms:jme))  ! this should go to domain object for convective modules!!
             allocate(psim(ims:ime, jms:jme))
             ! psim= 0.5
             allocate(psih(ims:ime, jms:jme))
@@ -134,7 +134,7 @@ contains
             allocate(q2d(ims:ime, jms:jme))
             allocate(gz1oz0(ims:ime, jms:jme))  !-- gz1oz0      log(z/z0) where z0 is roughness length
             gz1oz0 = log(z_atm / domain%roughness_z0%data_2d)
-            allocate(kpbl2d(ims:ime, jms:jme))
+            ! allocate(kpbl2d(ims:ime, jms:jme)) ! domain%kpbl now
             ! allocate(CHS(ims:ime,jms:jme))
             ! CHS = 0.01
             allocate(xland_real(ims:ime,jms:jme))
@@ -238,7 +238,6 @@ contains
                             ,ims=ims, ime=ime, jms=jms, jme=jme)
 
 
-
             call ysu(u3d=domain%u_mass%data_3d                           & !-- u3d         3d u-velocity interpolated to theta points (m/s)
                     ,v3d=domain%v_mass%data_3d                           & !-- v3d         3d v-velocity interpolated to theta points (m/s)
                     ,th3d=domain%potential_temperature%data_3d           & 
@@ -274,7 +273,7 @@ contains
                     ,ust=domain%ustar                       & ! i/o -- ust		u* in similarity theory (m/s)
                     ,zol=zol                                & ! i/o -- zol		z/l height over monin-obukhov length - intent(inout) - but appears to not be used really?
                     ,hol=hol                                & ! i/o -- hol		pbl height over monin-obukhov length - intent(inout) 
-                    ,hpbl=hpbl                              & ! i/o -- hpbl	pbl height (m) - intent(inout)
+                    ,hpbl=domain%hpbl%data_2d               & ! i/o -- hpbl	pbl height (m) - intent(inout)
                     ,psim=psim                              & !-- psim        similarity stability function for momentum - intent(in)
                     ,psih=psih                              & !-- psih        similarity stability function for heat- intent(in)
                     ,xland=real(domain%land_mask)                               &
@@ -286,7 +285,7 @@ contains
                     ,br=Ri                                  & !-- br          bulk richardson number in surface layer
                     ,dt=dt_in                               & !-- dt		time step (s)
                     ,dtmin=dt_in/60.                        & !-- dtmin	time step (minute)
-                    ,kpbl2d=kpbl2d                          & ! o --     ?? k layer of pbl top?? 
+                    ,kpbl2d=domain%kpbl                          & ! o --     ?? k layer of pbl top?? 
                     ,svp1=SVP1                              & !-- svp1        constant for saturation vapor pressure (kpa)
                     ,svp2=SVP2                              & !-- svp2        constant for saturation vapor pressure (dimensionless)
                     ,svp3=SVP3                              & !-- svp3        constant for saturation vapor pressure (k)
@@ -307,7 +306,7 @@ contains
                 !optional
                     ,regime=regime                          )!  i/o -- regime	flag indicating pbl regime (stable, unstable, etc.) - not used?
 
-
+                    ! if(this_image()==1 .and. options%parameters%debug) write(*,*) "  pbl height/lev is:", maxval(domain%hpbl%data_2d ),"m/", maxval(domain%kpbl)  ! uncomment if you want to see the pbl height. 
 
             !> ------------  add tendency terms  ------------
             !

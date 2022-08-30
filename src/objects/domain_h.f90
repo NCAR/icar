@@ -78,12 +78,13 @@ module domain_interface
     type(variable_t) :: terrain
     type(variable_t) :: forcing_terrain  ! BK 05/2020: The forcing terrain interpolated 2d to the hi-res grid. In order to calculate difference in slope
     type(variable_t) :: forcing_terrain2 ! test 9-6-2020
-        ! type(variable_t) :: forcing_terrain_u1 ! test 9-6-2020
     type(variable_t) :: u_10m
     type(variable_t) :: v_10m
     type(variable_t) :: coeff_momentum_drag
     type(variable_t) :: coeff_heat_exchange
     type(variable_t) :: coeff_heat_exchange_3d ! used in YSU pbl
+    integer,allocatable :: kpbl(:,:)  ! used in YSU pbl / BMJ cu
+    type(variable_t) :: hpbl          ! used in YSU pbl /NSAS cu
     type(variable_t) :: surface_rad_temperature
     type(variable_t) :: temperature_2m
     type(variable_t) :: humidity_2m
