@@ -65,6 +65,11 @@
    REAL    , PARAMETER :: rhowater     = 1000.
    REAL    , PARAMETER :: rhosnow      = 100.
    REAL    , PARAMETER :: rhoair0      = 1.28
+
+   REAL    , PARAMETER :: RE_QC_BG     = 2.49E-6     ! effective radius of cloud for background (m)
+   REAL    , PARAMETER :: RE_QI_BG     = 4.99E-6     ! effective radius of ice for background (m)
+   REAL    , PARAMETER :: RE_QS_BG     = 9.99E-6     ! effective radius of snow for background (m)
+
 !
    REAL    , PARAMETER :: n_ccn0       = 1.0E8
 !

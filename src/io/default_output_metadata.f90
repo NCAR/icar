@@ -160,6 +160,11 @@ contains
         character(len=16) :: three_d_crop_dimensions(3)         = [character(len=16) :: "lon_x","lat_y","crop"]
         character(len=16) :: three_d_t_gecros_dimensions(4)     = [character(len=16) :: "lon_x","lat_y","gecros","time"]
         character(len=16) :: two_d_month_dimensions(3)          = [character(len=16) :: "lon_x","lat_y","month"]
+        character(len=16) :: three_d_t_lake_dimensions(4)           = [character(len=16) :: "lon_x","lat_y","nlevlake","time"]
+        character(len=16) :: three_d_t_lake_soisno_dimensions(4)    = [character(len=16) :: "lon_x","lat_y","nlevsoisno","time"] !grid_lake_soisno
+        character(len=16) :: three_d_t_lake_soisno_1_dimensions(4)  = [character(len=16) :: "lon_x","lat_y","nlevsoisno_1","time"] 
+        character(len=16) :: three_d_t_lake_soi_dimensions(4)       = [character(len=16) :: "lon_x","lat_y","nlevsoi_lake","time"] !grid_lake_soi
+        
 
         if (allocated(var_meta)) deallocate(var_meta)
 
@@ -2143,6 +2148,256 @@ contains
                                attribute_t("units",         "W m-2"),                               &
                                attribute_t("coordinates",   "lat lon")]
         end associate
+        !>------------------------------------------------------------
+        !!  Lake temperature 3d
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%t_lake3d))
+            var%name        = "t_lake3d"
+            var%dimensions  = three_d_t_lake_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "lake_water_temperature"),     &
+                               attribute_t("units",         "K"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Lake lake_icefraction_3d
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%lake_icefrac3d))
+            var%name        = "lake_icefrac3d"
+            var%dimensions  = three_d_t_lake_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "lake_icefraction_3d"),     &
+                               attribute_t("units",         "-"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Lake z_lake3d
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%z_lake3d))
+            var%name        = "z_lake3d"
+            var%dimensions  = three_d_t_lake_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "lake_layer_depth"),     &
+                               attribute_t("units",         "m"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Lake dz_lake3d
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%dz_lake3d))
+            var%name        = "dz_lake3d"
+            var%dimensions  = three_d_t_lake_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "lake_layer_thickness"),     &
+                               attribute_t("units",         "m"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  lake snl2d
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%snl2d))
+            var%name        = "snl2d"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "lake_snow_layer_2d"),           &
+                               attribute_t("units",         "-"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate 
+        !>------------------------------------------------------------
+        !!  lake_t_grnd2d
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%t_grnd2d))
+            var%name        = "t_grnd2d"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "t_grnd2d"),           &
+                               attribute_t("units",         "K"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Lake t_soisno3d
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%t_soisno3d))
+            var%name        = "t_soisno3d"
+            var%dimensions  = three_d_t_lake_soisno_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "temperature_soil_snow_below_or_above_lake"),     &
+                               attribute_t("units",         "K"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Lake h2osoi_ice3d
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%h2osoi_ice3d))
+            var%name        = "h2osoi_ice3d"
+            var%dimensions  = three_d_t_lake_soisno_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "h2osoi_ice3d"),     &
+                               attribute_t("units",         ""),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Lake soil/snowliquid water (kg/m2)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%h2osoi_liq3d))
+            var%name        = "h2osoi_liq3d"
+            var%dimensions  = three_d_t_lake_soisno_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "lake_soil_or_snow_liquid water_content"),     &
+                               attribute_t("units",         "kg/m2"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Lake h2osoi_vol3d volumetric soil water (0<=h2osoi_vol<=watsat)[m3/m3]
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%h2osoi_vol3d))
+            var%name        = "h2osoi_vol3d"
+            var%dimensions  = three_d_t_lake_soisno_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "volumetric_soil_water"),     &
+                               attribute_t("units",         "m3/m3"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Lake z3d
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%z3d))
+            var%name        = "z3d"
+            var%dimensions  = three_d_t_lake_soisno_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "layer_depth_for_lake_snow&soil"),     &
+                               attribute_t("units",         "m"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Lake layer_thickness_for_lake_snow&soil
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%dz3d))
+            var%name        = "dz3d"
+            var%dimensions  = three_d_t_lake_soisno_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "layer_thickness_for_lake_snow&soil"),     &
+                               attribute_t("units",         "m"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Lake z3d
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%zi3d))
+            var%name        = "zi3d"
+            var%dimensions  = three_d_t_lake_soisno_1_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "interface_layer_depth_for_lake_snow&soil"),     &
+                               attribute_t("units",         "m"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Lake watsat3d: volumetric soil water at saturation (porosity)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%watsat3d))
+            var%name        = "watsat3d"
+            var%dimensions  = three_d_t_lake_soi_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "volumetric soil water at saturation (porosity)"),     &
+                               attribute_t("units",         ""),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Lake csol3d: heat capacity, soil solids (J/m**3/Kelvin)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%csol3d))
+            var%name        = "csol3d"
+            var%dimensions  = three_d_t_lake_soi_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "heat capacity, soil solids "),     &
+                               attribute_t("units",         "(J/m**3/Kelvin)"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Lake: thermal conductivity, soil minerals  [W/m-K]
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%tkmg3d))
+            var%name        = "tkmg3d"
+            var%dimensions  = three_d_t_lake_soi_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "thermal conductivity, soil minerals  [W/m-K]"),     &
+                               attribute_t("units",         ""),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Lake lakemask
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%lakemask))
+            var%name        = "lakemask"
+            var%dimensions  = two_d_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "lakemask"),     &
+                               attribute_t("units",         ""),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Lake lakedepth2d
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%lakedepth2d))
+            var%name        = "lakedepth2d"
+            var%dimensions  = two_d_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "lake_depth"),     &
+                               attribute_t("units",         "m"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  lake savedtke12d
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%savedtke12d))
+            var%name        = "savedtke12d"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "savedtke12d"),           &
+                               attribute_t("units",         "-?"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate 
+        !>------------------------------------------------------------
+        !!  Lake: thermal conductivity, saturated soil [W/m-K]
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%tksatu3d))
+            var%name        = "tksatu3d"
+            var%dimensions  = three_d_t_lake_soi_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "thermal conductivity, saturated soil [W/m-K]"),     &
+                               attribute_t("units",         ""),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        !>------------------------------------------------------------
+        !!  Lake tkdry3d: thermal conductivity, dry soil (W/m/Kelvin)
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%tkdry3d))
+            var%name        = "tkdry3d"
+            var%dimensions  = three_d_t_lake_soi_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "thermal conductivity, dry soil (W/m/Kelvin)"),     &
+                               attribute_t("units",         "?"),                               &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+        
+
+
+
+
+        
+        ! type(variable_t) :: h2osoi_ice3d
+        ! type(variable_t) :: h2osoi_liq3d! liquid water (kg/m2)
+        ! type(variable_t) :: h2osoi_vol3d! volumetric soil water (0<=h2osoi_vol<=watsat)[m3/m3]
+        ! type(variable_t) :: z3d ! layer depth for snow & soil (m)
+        ! type(variable_t) :: dz3d
+
+        ! type(variable_t) :: watsat3d
+        ! type(variable_t) :: csol3d
+        ! type(variable_t) :: tkmg3d
+        ! type(variable_t) :: lakemask
+        ! type(variable_t) :: tksatu3d
+        ! type(variable_t) :: tkdry3d
+        ! type(variable_t) :: zi3d
         !>------------------------------------------------------------
         !!  Binary land mask (water vs land)
         !!------------------------------------------------------------

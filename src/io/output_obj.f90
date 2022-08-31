@@ -254,7 +254,30 @@ contains
         if (0<var_list( kVARS%cosine_zenith_angle) )        call this%add_to_output( get_metadata( kVARS%cosine_zenith_angle          , domain%cosine_zenith_angle%data_2d))
         if (0<var_list( kVARS%land_emissivity) )            call this%add_to_output( get_metadata( kVARS%land_emissivity              , domain%land_emissivity%data_2d))
         if (0<var_list( kVARS%temperature_interface) )      call this%add_to_output( get_metadata( kVARS%temperature_interface        , domain%temperature_interface%data_3d))
-        if (0<var_list( kVARS%tend_swrad) )                 call this%add_to_output( get_metadata( kVARS%tend_swrad                  , domain%tend_swrad%data_3d))
+        if (0<var_list( kVARS%tend_swrad) )                 call this%add_to_output( get_metadata( kVARS%tend_swrad                   , domain%tend_swrad%data_3d))
+        if (0<var_list( kVARS%t_lake3d) )                   call this%add_to_output( get_metadata( kVARS%t_lake3d                     , domain%t_lake3d%data_3d))
+        if (0<var_list( kVARS%lake_icefrac3d) )             call this%add_to_output( get_metadata( kVARS%lake_icefrac3d               , domain%lake_icefrac3d%data_3d))
+        if (0<var_list( kVARS%z_lake3d) )                   call this%add_to_output( get_metadata( kVARS%z_lake3d                     , domain%z_lake3d%data_3d))
+        if (0<var_list( kVARS%dz_lake3d) )                  call this%add_to_output( get_metadata( kVARS%dz_lake3d                    , domain%dz_lake3d%data_3d))
+        if (0<var_list( kVARS%snl2d) )                      call this%add_to_output( get_metadata( kVARS%snl2d                        , domain%snl2d%data_2d))
+        if (0<var_list( kVARS%t_grnd2d) )                   call this%add_to_output( get_metadata( kVARS%t_grnd2d                     , domain%t_grnd2d%data_2d))
+        if (0<var_list( kVARS%t_soisno3d) )                 call this%add_to_output( get_metadata( kVARS%t_soisno3d                   , domain%t_soisno3d%data_3d))
+        if (0<var_list( kVARS%h2osoi_ice3d) )               call this%add_to_output( get_metadata( kVARS%h2osoi_ice3d                 , domain%h2osoi_ice3d%data_3d))
+        if (0<var_list( kVARS%h2osoi_liq3d) )               call this%add_to_output( get_metadata( kVARS%h2osoi_liq3d                 , domain%h2osoi_liq3d%data_3d))
+        if (0<var_list( kVARS%h2osoi_vol3d) )               call this%add_to_output( get_metadata( kVARS%h2osoi_vol3d                 , domain%h2osoi_vol3d%data_3d))
+        if (0<var_list( kVARS%z3d) )                        call this%add_to_output( get_metadata( kVARS%z3d                          , domain%z3d%data_3d))
+        if (0<var_list( kVARS%dz3d) )                       call this%add_to_output( get_metadata( kVARS%dz3d                         , domain%dz3d%data_3d))
+        if (0<var_list( kVARS%watsat3d) )                   call this%add_to_output( get_metadata( kVARS%watsat3d                     , domain%watsat3d%data_3d))
+        if (0<var_list( kVARS%csol3d) )                     call this%add_to_output( get_metadata( kVARS%csol3d                       , domain%csol3d%data_3d))
+        if (0<var_list( kVARS%tkmg3d) )                     call this%add_to_output( get_metadata( kVARS%tkmg3d                       , domain%tkmg3d%data_3d))
+        if (0<var_list( kVARS%lakemask) )                   call this%add_to_output( get_metadata( kVARS%lakemask                     , domain%lakemask%data_3d))
+        if (0<var_list( kVARS%tksatu3d) )                   call this%add_to_output( get_metadata( kVARS%tksatu3d                     , domain%tksatu3d%data_3d))
+        if (0<var_list( kVARS%tkdry3d) )                    call this%add_to_output( get_metadata( kVARS%tkdry3d                      , domain%tkdry3d%data_3d))
+        if (0<var_list( kVARS%zi3d) )                       call this%add_to_output( get_metadata( kVARS%zi3d                         , domain%zi3d%data_3d))
+        if (0<var_list( kVARS%savedtke12d) )                call this%add_to_output( get_metadata( kVARS%savedtke12d                  , domain%savedtke12d%data_2d))
+        if (0<var_list( kVARS%lakedepth2d) )                call this%add_to_output( get_metadata( kVARS%lakedepth2d                  , domain%lakedepth2d%data_2d))
+
+        
 
     end subroutine
 
