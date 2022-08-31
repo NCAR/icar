@@ -153,7 +153,7 @@ contains
 !
    real,     dimension( ims:ime, jms:jme )                                   , &
              intent(in   )   ::                                         xland, &
-     			                                                  hfx, &
+     			                                                                hfx, &
                                                                           qfx, &
                                                                          psim, &
                                                                          psih, &
@@ -203,6 +203,7 @@ contains
    real,     dimension( its:ite, kts:kte )  ::                       rqibl2dt, &
                                                                           pdh
    real,     dimension( its:ite, kts:kte+1 )  ::                         pdhi
+
 !
    do j = jts,jte
       if(present(mut))then
@@ -214,13 +215,14 @@ contains
           enddo
         enddo
       else
-        do k = kts,kte+1
+        do k = kts,kte+1 
           do i = its,ite
              if(k.le.kte)pdh(i,k) = p3d(i,k,j)
              pdhi(i,k) = p3di(i,k,j)
           enddo
         enddo
       endif
+
       call ysu2d(J=j,ux=u3d(ims,kms,j),vx=v3d(ims,kms,j)                       &
               ,tx=t3d(ims,kms,j)                                               &
               ,qx=qv3d(ims,kms,j),qcx=qc3d(ims,kms,j)                          &
@@ -965,7 +967,7 @@ contains
      enddo
    endif
 !
-   do k = kts,kte-1
+   do k = kts,kte -1
      do i = its,ite
        dtodsd = dt2/del(i,k)
        dtodsu = dt2/del(i,k+1)
@@ -998,6 +1000,7 @@ contains
        exch_hx(i,k) = xkzh(i,k)
      enddo
    enddo
+
 !
    if(ncloud.ge.2) then
      do ic = 2,ncloud
@@ -1044,6 +1047,7 @@ contains
        qtnp(i,k) = qtnp(i,k)+qtend
      enddo
    enddo
+
 !
    if(ncloud.ge.2) then
      do ic = 2,ncloud

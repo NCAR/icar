@@ -24,14 +24,14 @@ module convection
     logical,allocatable, dimension(:,:) ::  CU_ACT_FLAG
     real,   allocatable, dimension(:,:) ::  XLAND, RAINCV, PRATEC, NCA
     real,   allocatable, dimension(:,:,:):: W0AVG, w_stochastic
-    real,   allocatable, dimension(:,:)::   lowest_convection_layer, highest_convection_layer, hpbl  ! pbl height I guess? Used in NSAS.
+    real,   allocatable, dimension(:,:)::   lowest_convection_layer, highest_convection_layer! , hpbl  ! pbl height I guess? Used in NSAS.
     real,   allocatable, dimension(:,:)::   CLDEFI ! precipitation efficiency (for BMJ scheme) (dimensionless)
     real,   allocatable, dimension(:,:)::   CUBOT,CUTOP, CONVCLD  ! for BMJ scheme
     real,   allocatable, dimension(:,:,:):: CCLDFRA, QCCONV, QICONV ! for BMJ scheme
     integer :: ids,ide,jds,jde,kds,kde ! Domain dimensions
     integer :: ims,ime,jms,jme,kms,kme ! Local Memory dimensions
     integer :: its,ite,jts,jte,kts,kte ! Processing Tile dimensions
-    integer, allocatable, dimension(:,:) :: lowlyr, kpbl  ! for bmj scheme
+    integer, allocatable, dimension(:,:) :: lowlyr   ! for bmj scheme!, kpbl
     logical :: bmj_rad_feedback
 
 contains
@@ -63,14 +63,14 @@ contains
                          kVARS%exner, kVARS%dz_interface, kVARS%density, kVARS%pressure_interface, kVARS%pressure,  &
                          kVARS%sensible_heat, kVARS%latent_heat, kVARS%u, kVARS%v, kVARS%w, kVARS%land_mask,        &
                          kVARS%tend_qv, kVARS%tend_th, kVARS%tend_qc, kVARS%tend_qi, kVARS%tend_qs, kVARS%tend_qr,  &
-                         kVARS%tend_u, kVARS%tend_v])
+                         kVARS%tend_u, kVARS%tend_v, kVARS%hpbl])
 
              call options%advect_vars([kVARS%potential_temperature, kVARS%water_vapor])
 
              call options%restart_vars( &
                          [kVARS%water_vapor, kVARS%potential_temperature, kVARS%temperature,                        &
                          kVARS%cloud_water, kVARS%cloud_ice, kVARS%precipitation, kVARS%convective_precipitation,   &
-                         kVARS%sensible_heat, kVARS%latent_heat, kVARS%u, kVARS%v, kVARS%pressure])
+                         kVARS%sensible_heat, kVARS%latent_heat, kVARS%u, kVARS%v, kVARS%pressure, kVARS%hpbl])
 
         else if (options%physics%convection == kCU_BMJ) then  ! Not checked thoroughly yet
             call options%alloc_vars( &
@@ -79,14 +79,14 @@ contains
                          kVARS%exner, kVARS%dz_interface, kVARS%density, kVARS%pressure_interface, kVARS%pressure,  &
                          kVARS%sensible_heat, kVARS%latent_heat, kVARS%u, kVARS%v, kVARS%w, kVARS%land_mask,        &
                          kVARS%tend_qv, kVARS%tend_th, kVARS%tend_qc, kVARS%tend_qi, kVARS%tend_qs, kVARS%tend_qr,  &
-                         kVARS%tend_u, kVARS%tend_v])
+                         kVARS%tend_u, kVARS%tend_v, kVARS%kpbl])
 
              call options%advect_vars([kVARS%potential_temperature, kVARS%water_vapor])
 
              call options%restart_vars( &
                          [kVARS%water_vapor, kVARS%potential_temperature, kVARS%temperature,                        &
                          kVARS%cloud_water, kVARS%cloud_ice, kVARS%precipitation, kVARS%convective_precipitation,   &
-                         kVARS%sensible_heat, kVARS%latent_heat, kVARS%u, kVARS%v, kVARS%pressure])
+                         kVARS%sensible_heat, kVARS%latent_heat, kVARS%u, kVARS%v, kVARS%pressure, kVARS%kpbl])
 
         endif
 
@@ -173,16 +173,18 @@ contains
         else if (options%physics%convection==kCU_NSAS) then
             if (this_image()==1) write(*,*) "     NSAS Cumulus scheme"
 
-            allocate(hpbl(ims:ime,jms:jme))  ! ?? PBL height I assume? 
+            ! allocate(hpbl(ims:ime,jms:jme))  ! ?? PBL height I assume? 
             allocate(lowest_convection_layer(ims:ime,jms:jme))
             allocate(highest_convection_layer(ims:ime,jms:jme))
 
             ! NSAS expects a PBL height, But since ICAR does not currently compute this, fix at rough esitmate of 1000m ?
-            do i=ims,ime
-                do j=jms,jme
-                    hpbl(i,j)=1000.  ! or take terrain height into account?
+            if (options%physics%boundarylayer/=kPBL_YSU) then
+                do i=ims,ime
+                    do j=jms,jme
+                        domain%hpbl%data_2d(i,j)=1000.  ! or take terrain height into account?
+                    enddo
                 enddo
-            enddo
+            endif
 
             call nsasinit(  rthcuten=domain%tend%th                             &
                             ,rqvcuten=domain%tend%qv                            &
@@ -203,11 +205,6 @@ contains
         else if (options%physics%convection==kCU_BMJ) then
             if (this_image()==1) write(*,*) "     BMJ Cumulus scheme"
 
-            ! TO DO:
-            !   - add kCU_BMJ to options
-            !   - kpbl (layer index of the pbl (top? bottom? ....))
-            !   - ...
-
             allocate( CLDEFI(ims:ime,jms:jme) )
             allocate( CUBOT(IMS:IME,JMS:JME) )
             allocate( CUTOP(IMS:IME,JMS:JME) )  ! INTENT:OUT
@@ -216,17 +213,19 @@ contains
             allocate( QICONV(ims:ime,jms:jme,kms:kme) )
             allocate( CONVCLD(ims:ime,jms:jme) )
             allocate( lowlyr(ims:ime,jms:jme) )
-            allocate( kpbl(ims:ime,jms:jme) )
+            ! allocate( kpbl(ims:ime,jms:jme) ) ! domain%kpbl%data_2d when YSU is selected
 
 
             ! ----- the values below are just educated (or not) guesses. Need to refine.  -------
-            ! INTEGER,DIMENSION(IMS:IME,JMS:JME),INTENT(IN) :: KPBL,LOWLYR
             do i=ims,ime
                 do j=jms,jme
-                    lowlyr(i,j) = 1 ! ???? 
-                    kpbl(i,j) = 10 !????
+                    lowlyr(i,j) = 1 ! ???
+                    if (options%physics%boundarylayer/=kPBL_YSU) domain%kpbl(i,j) = 10 ! without YSU, we assign a stationary value to kpbl
                 enddo
             enddo
+
+
+
             bmj_rad_feedback = .true.  !??
 
             call BMJINIT( rthcuten=domain%tend%th                               &
@@ -355,10 +354,6 @@ subroutine convect(domain,options,dt_in)
 
     elseif (options%physics%convection==kCU_NSAS) then
 
-        ! TO DO:
-        !  - calculate height of PBL
-        !  - use wrf_constants.f90 ?
-
         ! set dx_factor_nsas (cu_nsas.f90 line 567):
         if (domain%dx.le.1000) then
             dx_factor_nsas=1  !       if (dx_factor_nsas == 1) then   dx_factor = 250. / delx ! assume 2.5 ms-1 (1km) and 1.125 cms-1 (200km) (cu_nsas.f90 line 567)
@@ -395,7 +390,7 @@ subroutine convect(domain,options,dt_in)
             ,w=W0AVG                                             & !-- w           vertical velocity (m/s)
             ,u3d=domain%u_mass%data_3d                           & !-- u3d         3d u-velocity interpolated to theta points (m/s)
             ,v3d=domain%v_mass%data_3d                           & !-- v3d         3d v-velocity interpolated to theta points (m/s)
-            ,hpbl=hpbl  &  ! ?? PBL height I assume? But since ICAR does not currently compute this, fix at rough esitmate of 1000m ?
+            ,hpbl=domain%hpbl%data_2d                            &  ! ?? PBL height I assume?
             ,hfx=domain%sensible_heat%data_2d                     & !  HFX  - net upward heat flux at the surface (W/m^2)
             ,qfx=domain%latent_heat%data_2d/LH_vaporization       & !  QFX  - net upward moisture flux at the surface (kg/m^2/s)
             ,mp_physics=5        & ! - sets ncloud: - integer no_cloud(0),no_ice(1),cloud+ice(2) (see ln 141 cu_nsas.f90)  use options%physics%microphysics?
@@ -411,8 +406,8 @@ subroutine convect(domain,options,dt_in)
             ,xlv=2.5E6                                           & ! from wrf_constants.f90
             ,r_d=287.                                            & ! from wrf_constants.f90
             ,r_v=461.6                                           & ! from wrf_constants.f90
-            ,ep_1=461.6/287.-1.                                  & ! EP_1=R_v/R_d-1. (wrf_constants.f90)
-            ,ep_2=287./461.6                                     & ! EP_2=R_d/R_v
+            ,ep_1=EP1                                  & ! EP_1=R_v/R_d-1. (wrf_constants.f90) 461.6/287.-1.
+            ,ep_2=EP2                                     & ! EP_2=R_d/R_v  = 287./461.6
             ,cice=2106.                                           & ! from wrf_constants.f90                                          &
             ,xls=2.85E6                                           & ! from wrf_constants.f90
             ,psat=610.78                                           & ! from wrf_constants.f90
@@ -446,13 +441,13 @@ subroutine convect(domain,options,dt_in)
                 ,dt=dt_in                                       & !-- dt          time step (s)
                 ,ITIMESTEP=itimestep ,STEPCU=stepcu             &
                 ,CUTOP=CUTOP, CUBOT=CUBOT                       &
-                ,KPBL=kpbl                                      &!-- KPBL          layer index of the PBL
+                ,KPBL=domain%kpbl                                      &!-- KPBL INTENT(IN)          layer index of the PBL?
                 ,dz8w=domain%dz_interface%data_3d               &!-- dz8w          dz between full levels (m)
                 ,PINT=domain%pressure_interface%data_3d         &  !-- p8w           pressure at full levels (Pa)
                 ,PMID=domain%pressure%data_3d                   &!-- Pcps        3D hydrostatic pressure at half levels (Pa)
                 ,PI=domain%exner%data_3d                        &   ! exner
                 ,CP=cp ,R=r_d ,ELWV=xlv ,ELIV=xls ,G=gravity    &
-                ,TFRZ=svpt0 ,D608=ep_1 ,CLDEFI=cldefi           &
+                ,TFRZ=svpt0 ,D608=EP1 ,CLDEFI=cldefi           &
                 ,LOWLYR=lowlyr                                  &
                 ,XLAND=XLAND                                    &
                 ,CU_ACT_FLAG=CU_ACT_FLAG                        &
