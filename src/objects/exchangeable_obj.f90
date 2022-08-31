@@ -173,8 +173,7 @@ contains
     if (.not. this%south_boundary) then
         start = lbound(this%data_3d,3)
         nx = size(this%data_3d,1)
-
-        this%halo_north_in(1:nx,:,1:halo_size)[south_neighbor] = this%data_3d(:,:,start+halo_size*2:start+halo_size*2)
+        this%halo_north_in(1:nx,:,1:halo_size)[south_neighbor] = this%data_3d(:,:,start+halo_size+1:start+halo_size*2)
     endif
     if (.not. this%east_boundary)  call this%put_east
     if (.not. this%west_boundary)  call this%put_west
@@ -186,12 +185,13 @@ contains
     if (.not. this%south_boundary) then
         start = lbound(this%data_3d,3)
         nx = size(this%data_3d,1)
-
         this%data_3d(:,:,start:start+halo_size) = this%halo_south_in(:nx,:,1:halo_size+1)
     endif
 
     if (.not. this%east_boundary) call this%retrieve_east_halo
     if (.not. this%west_boundary) call this%retrieve_west_halo
+
+
 
   end subroutine
 
@@ -213,7 +213,7 @@ contains
     if (.not. this%west_boundary) then
         start = lbound(this%data_3d,1)
         ny = size(this%data_3d,3)
-        this%halo_east_in(1:halo_size,:,1:ny)[west_neighbor] = this%data_3d(start+halo_size*2:start+halo_size*2,:,:)
+        this%halo_east_in(1:halo_size,:,1:ny)[west_neighbor] = this%data_3d(start+halo_size+1:start+halo_size*2,:,:)
     endif
 
     sync images( neighbors )
