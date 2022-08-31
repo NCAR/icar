@@ -433,10 +433,10 @@ contains
         U_cor = ABS(domain%u%data_3d(ims:ime,:,jms:jme))/ &
                 (ABS(domain%u%data_3d(ims:ime,:,jms:jme))+ABS(domain%v%data_3d(ims:ime,:,jms:jme)))
 
-        do k = kms,kme
-            do i = ims,ime
-                do j = jms,jme
-                    domain%smooth_height = sum(domain%advection_dz(i,:,j))
+        do i = ims,ime
+            do j = jms,jme
+                domain%smooth_height = sum(domain%advection_dz(i,:,j)) !
+                do k = kms,kme
                     corr_factor = ((sum(domain%advection_dz(i,1:k,j)))/domain%smooth_height)
                     corr_factor = min(corr_factor,1.0)
                     domain%w%data_3d(i,k,j) = domain%w%data_3d(i,k,j) - corr_factor * (domain%w%data_3d(i,wind_k,j))
@@ -444,6 +444,9 @@ contains
                     !if ( (domain%u%data_3d(i,k,j)+domain%v%data_3d(i,k,j)) == 0) U_cor(i,k,j) = 0.5
                 enddo
             enddo
+        enddo
+
+        do k = kms,kme
             ! Compute this now, since it wont change in the loop
             ADJ_coef(:,k,:) = -2/domain%dx
         enddo
