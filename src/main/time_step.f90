@@ -471,17 +471,17 @@ contains
 
                 call pbl(domain, options, real(dt%seconds()))!, halo=1)
                 ! balance u/v and re-calculate dt after winds have been modified by pbl:
-                if (options%physics%boundarylayer==kPBL_YSU) then
-                    call balance_uvw(   domain%u%data_3d,   domain%v%data_3d,   domain%w%data_3d,       &
-                                        domain%jacobian_u,  domain%jacobian_v,  domain%jacobian_w,      &
-                                        domain%advection_dz, domain%dx, domain%jacobian, options    )
-
-                    call update_dt(dt, options, domain, end_time)
-
-                    if ((domain%model_time + dt) > end_time) then
-                        dt = end_time - domain%model_time
-                    endif
-                endif
+                ! if (options%physics%boundarylayer==kPBL_YSU) then
+                !     call balance_uvw(   domain%u%data_3d,   domain%v%data_3d,   domain%w%data_3d,       &
+                !                         domain%jacobian_u,  domain%jacobian_v,  domain%jacobian_w,      &
+                !                         domain%advection_dz, domain%dx, domain%jacobian, options    )
+                !
+                !     call update_dt(dt, options, domain, end_time)
+                !
+                !     if ((domain%model_time + dt) > end_time) then
+                !         dt = end_time - domain%model_time
+                !     endif
+                ! endif
                 if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" pbl")
 
                 call convect(domain, options, real(dt%seconds()))!, halo=1)

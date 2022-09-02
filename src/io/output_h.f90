@@ -58,6 +58,7 @@ module output_interface
       integer :: dim_ids(kMAX_DIMENSIONS)
       ! name of the dimensions in the file
       character(len=kMAX_DIM_LENGTH) :: dimensions(kMAX_DIMENSIONS)
+      character(len=kMAX_NAME_LENGTH) :: time_units
 
   contains
 

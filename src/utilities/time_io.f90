@@ -208,6 +208,7 @@ contains
             ! based off of the string "Days since" (or "seconds" or...)
             calendar_gain = time_gain_from_units(units)
         else
+
             stop "Time variable does not have units attribute"
         endif
 
@@ -231,5 +232,56 @@ contains
         deallocate(temp_times_64, temp_times_128)
 
     end subroutine read_times
+
+    function get_output_time(time, units, round_seconds) result(output_time)
+        implicit none
+        type(Time_type),  intent(in) :: time
+        character(len=*), intent(in), optional :: units
+        logical,          intent(in), optional :: round_seconds
+
+        type(Time_type) :: output_time
+        type(time_delta_t) :: half_minute
+
+        integer :: year, month, day, hour, minute, seconds
+        integer :: year0, month0, day0, hour0, minute0, seconds0
+        character(len=kMAX_NAME_LENGTH) :: use_units
+
+        if (present(units)) then
+            use_units = units
+        else
+            use_units = time%units()
+        endif
+
+        call time%date(year, month, day, hour, minute, seconds)
+        year0 = year_from_units(use_units)
+        month0 = month_from_units(use_units)
+        day0 = day_from_units(use_units)
+        hour0 = hour_from_units(use_units)
+        minute0 = 0 ! minute_from_units(use_units)
+        seconds0 = 0 ! seconds_from_units(use_units)
+
+        call output_time%init(time%get_calendar(), year0, month0, day0, hour0)
+
+        if (present(round_seconds)) then
+            if (round_seconds) then
+                if (seconds > 30) then
+                    call output_time%set(year, month, day, hour, minute, seconds)
+                    call half_minute%set(seconds=30)
+                    output_time = output_time + half_minute
+                    ! get a new date after adding 30 seconds
+                    call output_time%date(year, month, day, hour, minute, seconds)
+                    ! use that date after setting seconds to 0 this rounds the old date up by up to 30s
+                    call output_time%set(year, month, day, hour, minute, 0)
+                else
+                    call output_time%set(year, month, day, hour, minute, 0)
+                endif
+            else
+                call output_time%set(year, month, day, hour, minute, seconds)
+            endif
+        else
+            call output_time%set(year, month, day, hour, minute, seconds)
+        endif
+
+    end function get_output_time
 
 end module time_io

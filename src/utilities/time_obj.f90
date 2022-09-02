@@ -107,6 +107,8 @@ contains
 
     end subroutine time_init_i
 
+
+
     !>------------------------------------------------------------
     !!  Set the calendar from a given name
     !!
@@ -174,6 +176,22 @@ contains
         endif
 
     end subroutine set_calendar
+
+
+    !>------------------------------------------------------------
+    !!  Return the calendar being used by a time object
+    !!
+    !!  Either gregorian, 360-day, or noleap
+    !!
+    !!------------------------------------------------------------
+    module function get_calendar(this) result(calendar)
+        implicit none
+        class(Time_type) :: this
+        integer :: calendar
+
+        calendar = this%calendar
+
+    end function get_calendar
 
 
     !>------------------------------------------------------------

@@ -1,6 +1,7 @@
 submodule(output_interface) output_implementation
-    use icar_constants,           only : kREAL, kDOUBLE
-    use output_metadata,          only : get_metadata
+    use icar_constants,     only : kREAL, kDOUBLE
+    use output_metadata,    only : get_metadata
+    use time_io,            only : get_output_time
     implicit none
 
 contains
@@ -388,7 +389,9 @@ contains
             call check( nf90_put_att(this%ncfile_id, var%var_id,"calendar",trim(calendar)))
             call check( nf90_put_att(this%ncfile_id, var%var_id,"units",time%units()))
             call check( nf90_put_att(this%ncfile_id, var%var_id,"UTCoffset","0"))
-
+            this%time_units = time%units()
+        else
+            err = nf90_get_att(this%ncfile_id, var%var_id, "units", this%time_units)
         endif
         end associate
 
@@ -403,6 +406,7 @@ contains
         integer :: i
         integer :: dim_3d(3)
 
+        type(Time_type) :: output_time
         integer :: start_three_D_t(4) = [1,1,1,1]
         integer :: start_two_D_t(3)  = [1,1,1]
         start_three_D_t(4) = current_step
@@ -442,7 +446,9 @@ contains
             end associate
         end do
 
-        call check( nf90_put_var(this%ncfile_id, this%time%var_id, dble(time%mjd()), [current_step] ),   &
+        output_time = get_output_time(time, units=this%time_units, round_seconds=.True.)
+
+        call check( nf90_put_var(this%ncfile_id, this%time%var_id, dble(output_time%mjd()), [current_step] ),   &
                     "saving:"//trim(this%time%name) )
 
 
