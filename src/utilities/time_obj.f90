@@ -243,7 +243,9 @@ contains
         real(real128) :: julian_day
         real(real128) :: d,m,y
         integer :: a,b
+        real(real128) :: internal_seconds
 
+        internal_seconds = second
         a = (14-month)/12
         y = year+4800-a
         m = month+12*a-3
@@ -254,7 +256,7 @@ contains
         ! Julian calendar
         ! b = day + floor(153*m+2/5) + 365*y + floor(y/4) - 32083
 
-        julian_day = b + (((second/60d+0)+minute)/60d+0 + hour-12)/24.0
+        julian_day = b + (((internal_seconds/60d+0)+minute)/60d+0 + hour-12)/24.0
 
     end function
 
@@ -269,18 +271,19 @@ contains
         implicit none
         class(Time_type), intent(in) :: this
         integer, intent(in) :: year, month, day, hour, minute, second
-        real(real128) :: date_to_mjd
+        real(real128) :: date_to_mjd, internal_seconds
 
+        internal_seconds = second
         if (this%calendar==GREGORIAN) then
             date_to_mjd = gregorian_julian_day(year, month, day, hour, minute, second)
 
             date_to_mjd = date_to_mjd - gregorian_julian_day(this%year_zero, this%month_zero, this%day_zero, this%hour_zero, 0, 0)
 
         else if (this%calendar==NOLEAP) then
-            date_to_mjd = (year*365 + this%month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0) &
+            date_to_mjd = (year*365 + this%month_start(month)-1 + day-1 + (hour + (minute + internal_seconds/60d+0)/60d+0)/24d+0) &
                          - (this%year_zero*365 + this%month_start(this%month_zero)-1 + this%day_zero-1 + (this%hour_zero)/24d+0)
         else if (this%calendar==THREESIXTY) then
-            date_to_mjd = (year*360 + this%month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0) &
+            date_to_mjd = (year*360 + this%month_start(month)-1 + day-1 + (hour + (minute + internal_seconds/60d+0)/60d+0)/24d+0) &
                          - (this%year_zero*360 + this%month_start(this%month_zero)-1 + this%day_zero-1 + (this%hour_zero)/24d+0)
         end if
 
