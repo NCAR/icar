@@ -291,6 +291,8 @@ contains
         if (0<opt%vars_to_allocate( kVARS%v_10m) )                      call setup(this%v_10m,                    this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%coeff_momentum_drag) )        call setup(this%coeff_momentum_drag,      this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%coeff_heat_exchange) )        call setup(this%coeff_heat_exchange,      this%grid2d)
+        if (0<opt%vars_to_allocate( kVARS%coeff_heat_exchange_3d) )     call setup(this%coeff_heat_exchange_3d,   this%grid)    ! for pbl ysu 
+        if (0<opt%vars_to_allocate( kVARS%hpbl) )                       call setup(this%hpbl,                     this%grid2d)    ! for pbl ysu 
         if (0<opt%vars_to_allocate( kVARS%surface_rad_temperature) )    call setup(this%surface_rad_temperature,  this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%temperature_2m) )             call setup(this%temperature_2m,           this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%humidity_2m) )                call setup(this%humidity_2m,              this%grid2d)
@@ -394,12 +396,16 @@ contains
         if (0<opt%vars_to_allocate( kVARS%irr_eventno_micro) )          allocate(this%irr_eventno_micro        (ims:ime, jms:jme),          source=0)
         if (0<opt%vars_to_allocate( kVARS%irr_eventno_flood) )          allocate(this%irr_eventno_flood        (ims:ime, jms:jme),          source=0)
         if (0<opt%vars_to_allocate( kVARS%plant_growth_stage) )         allocate(this%plant_growth_stage       (ims:ime, jms:jme),          source=0)
+        if (0<opt%vars_to_allocate( kVARS%kpbl) )                       allocate(this%kpbl                     (ims:ime, jms:jme),          source=0) ! for pbl ysu 
 
         ! tendency variables that don't need to be output... maybe these should be set up the same way
         if (0<opt%vars_to_allocate( kVARS%tend_qv_adv) )                allocate(this%tend%qv_adv(ims:ime, kms:kme, jms:jme),   source=0.0)
         if (0<opt%vars_to_allocate( kVARS%tend_qv_pbl) )                allocate(this%tend%qv_pbl(ims:ime, kms:kme, jms:jme),   source=0.0)
         if (0<opt%vars_to_allocate( kVARS%tend_qv) )                    allocate(this%tend%qv(ims:ime, kms:kme, jms:jme),       source=0.0)
         if (0<opt%vars_to_allocate( kVARS%tend_th) )                    allocate(this%tend%th(ims:ime, kms:kme, jms:jme),       source=0.0)
+        if (0<opt%vars_to_allocate( kVARS%tend_th_pbl) )                allocate(this%tend%th_pbl(ims:ime, kms:kme, jms:jme),       source=0.0)
+        if (0<opt%vars_to_allocate( kVARS%tend_qc_pbl) )                allocate(this%tend%qc_pbl(ims:ime, kms:kme, jms:jme),       source=0.0)
+        if (0<opt%vars_to_allocate( kVARS%tend_qi_pbl) )                allocate(this%tend%qi_pbl(ims:ime, kms:kme, jms:jme),       source=0.0)
         if (0<opt%vars_to_allocate( kVARS%tend_qc) )                    allocate(this%tend%qc(ims:ime, kms:kme, jms:jme),       source=0.0)
         if (0<opt%vars_to_allocate( kVARS%tend_qi) )                    allocate(this%tend%qi(ims:ime, kms:kme, jms:jme),       source=0.0)
         if (0<opt%vars_to_allocate( kVARS%tend_qs) )                    allocate(this%tend%qs(ims:ime, kms:kme, jms:jme),       source=0.0)
@@ -1952,6 +1958,7 @@ contains
         if (associated(this%canopy_temperature%data_2d)) this%canopy_temperature%data_2d=280
         if (associated(this%coeff_momentum_drag%data_2d)) this%coeff_momentum_drag%data_2d=0
         if (associated(this%coeff_heat_exchange%data_2d)) this%coeff_heat_exchange%data_2d=0
+        if (associated(this%coeff_heat_exchange_3d%data_3d)) this%coeff_heat_exchange_3d%data_3d=0.01
         if (associated(this%canopy_fwet%data_2d)) this%canopy_fwet%data_2d=0
         if (associated(this%snow_water_eq_prev%data_2d)) this%snow_water_eq_prev%data_2d=0
         if (associated(this%snow_albedo_prev%data_2d)) this%snow_albedo_prev%data_2d=0.65

@@ -39,14 +39,13 @@ module land_surface
     ! use module_lsm_simple,   only : lsm_simple, lsm_simple_init
     use module_water_simple, only : water_simple
     use module_water_lake,   only : lake, lakeini, nlevsoil, nlevsnow, nlevlake
-    use mod_atm_utilities,   only : sat_mr
+    use mod_atm_utilities,   only : sat_mr, calc_Richardson_nr
     use time_object,         only : Time_type
     use data_structures
     use icar_constants,      only : kVARS, kLSM_SIMPLE, kLSM_NOAH, kLSM_NOAHMP
     use options_interface,   only : options_t
     use domain_interface,    only : domain_t
     use module_ra_simple, only: calc_solar_elevation
-    use io_routines,          only : io_read, io_write
     use ieee_arithmetic
 
     implicit none
@@ -251,6 +250,8 @@ contains
         exchange_C = 0
 
         Ri = gravity/airt(:,1,:) * (airt(:,1,:)-tskin)*z_atm/(wind**2)
+        ! Ri now is a function in atm_utlilities:
+        ! calc_Richardson_nr(Ri, airt, tskin, z_atm, wind)
 
         ! "--------------------------------------------------"
         !  "Surface Richardson number"
@@ -1336,7 +1337,7 @@ contains
                              domain%cosine_zenith_angle%data_2d,       &
                              domain%latitude%data_2d,                  &
                              domain%longitude%data_2d,                 &
-                             domain%dz_interface%data_3d/2,              &
+                             domain%dz_interface%data_3d / 2.,         & ! domain%dz_interface%data_3d,              & !
                              lsm_dt,                                   &
                              DZS,                                      &
                              num_soil_layers,                          &
@@ -1366,8 +1367,8 @@ contains
                              domain%soil_texture_4%data_2d,            &  ! only used if iopt_soil = 2
                              domain%temperature%data_3d,               &
                              domain%water_vapor%data_3d,               &
-                             domain%u_mass%data_3d*1.5,                    &
-                             domain%v_mass%data_3d*1.5,                    &
+                             domain%u_mass%data_3d*1.5,                &
+                             domain%v_mass%data_3d*1.5,                &
                              domain%shortwave%data_2d,                 &
                              domain%shortwave_direct%data_2d,          &  ! only used in urban modules, which are currently disabled
                              domain%shortwave_diffuse%data_2d,         &  ! only used in urban modules, which are currently disabled
@@ -1495,11 +1496,10 @@ contains
                              ims,ime,  jms,jme,  kms,kme,              &
                              its,ite,  jts,jte,  kts,kte)
 
-
     !         TLE: OMITTING OPTIONAL PRECIP INPUTS FOR NOW
     !                         MP_RAINC, MP_RAINNC, MP_SHCV, MP_SNOW, MP_GRAUP, MP_HAIL     )
 
-                 ! now that znt (roughness_z0) has been updated, we need to recalculate terms
+                ! now that znt (roughness_z0) has been updated, we need to recalculate terms
                 lnz_atm_term = log((z_atm+domain%roughness_z0%data_2d)/domain%roughness_z0%data_2d)
                 if (exchange_term==1) then
                     base_exchange_term=(75*karman**2 * sqrt((z_atm+domain%roughness_z0%data_2d)/domain%roughness_z0%data_2d)) / (lnz_atm_term**2)

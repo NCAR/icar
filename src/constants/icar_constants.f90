@@ -136,6 +136,7 @@ module icar_constants
         integer :: ustar
         integer :: coeff_momentum_drag
         integer :: coeff_heat_exchange
+        integer :: coeff_heat_exchange_3d
         integer :: surface_rad_temperature
         integer :: temperature_2m
         integer :: humidity_2m
@@ -210,8 +211,11 @@ module icar_constants
         integer :: tend_qv_pbl
         integer :: tend_qv
         integer :: tend_th
+        integer :: tend_th_pbl
         integer :: tend_qc
+        integer :: tend_qc_pbl
         integer :: tend_qi
+        integer :: tend_qi_pbl
         integer :: tend_qs
         integer :: tend_qr
         integer :: tend_u
@@ -228,6 +232,8 @@ module icar_constants
         integer :: temperature_interface
         integer :: cosine_zenith_angle
         integer :: tend_swrad
+        integer :: kpbl
+        integer :: hpbl
         integer :: lake_depth
         integer :: t_lake3d
         integer :: snl2d
@@ -277,7 +283,8 @@ module icar_constants
                                                             191, 192, 193, 194, 195, 196, 197, 198, 199, 200,  &
                                                             201, 202, 203, 204, 205, 206, 207, 208, 209, 210,  &
                                                             211, 212, 213, 214, 215, 216, 217, 218, 219, 220,  &
-                                                            221, 222, 223, 224)
+                                                            221, 222, 223, 224, 225, 226, 227, 228, 229, 230)
+
 
     integer, parameter :: kINTEGER_BITS     = storage_size(kINTEGER_BITS)
     integer, parameter :: kMAX_STORAGE_VARS = storage_size(kVARS) / kINTEGER_BITS
