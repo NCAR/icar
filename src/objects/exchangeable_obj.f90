@@ -191,8 +191,6 @@ contains
     if (.not. this%east_boundary) call this%retrieve_east_halo
     if (.not. this%west_boundary) call this%retrieve_west_halo
 
-
-
   end subroutine
 
   module subroutine exchange_u(this)
