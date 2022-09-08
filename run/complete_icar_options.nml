@@ -431,6 +431,12 @@
     ! ice_category   = -1             ! Int: index that defines the ice category in LU_Categories
     ! water_category = -1             ! Int: index that defines the water category in LU_Categories
     ! lake_category  = -1             ! Int: index that defines the lake(s) category in LU_Categories
+
+    lh_feedback_fraction = 1.0        ! fraction of latent heat to feed into the atmosphere to increase water vapor
+    sh_feedback_fraction = 0.625      ! fraction of sensible heat to feed into the atmosphere to increase temperature
+    sfc_layer_thickness  = 400.0      ! thickness of lower atmosphere to spread LH and SH fluxes over [m]
+    dz_lsm_modification  = 0.5        ! multiplier on dz thickness in call to NoahMP, significantly improves ta2m
+    wind_enhancement = 1.5            ! factor to increase wind speeds passed to NoahMP to account for biases in driving model and improve surface fluxes
 /
 
 

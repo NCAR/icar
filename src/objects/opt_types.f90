@@ -131,6 +131,11 @@ module options_types
     ! ------------------------------------------------
     type lsm_options_type
         character (len=MAXVARLENGTH) :: LU_Categories   ! land use categories to read from VEGPARM.tbl (e.g. "USGS")
+        real :: lh_feedback_fraction
+        real :: sh_feedback_fraction
+        real :: sfc_layer_thickness
+        real :: dz_lsm_modification
+        real :: wind_enhancement
         integer :: update_interval                      ! minimum time to let pass before recomputing LSM ~300s (it may be longer)  [s]
         ! the following categories will be set by default if an known LU_Category is used
         integer :: urban_category                       ! LU index value that equals "urban"

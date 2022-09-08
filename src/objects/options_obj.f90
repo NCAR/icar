@@ -1,6 +1,9 @@
 submodule(options_interface) options_implementation
 
-    use icar_constants,             only : kMAINTAIN_LON, MAXFILELENGTH, MAXVARLENGTH, MAX_NUMBER_FILES, MAXLEVELS, kNO_STOCHASTIC, kVERSION_STRING, kMAX_FILE_LENGTH, kMAX_NAME_LENGTH, pi, kWATER_LAKE
+    use icar_constants,             only : kMAINTAIN_LON, MAXFILELENGTH, MAXVARLENGTH, MAX_NUMBER_FILES, MAXLEVELS, &
+                                           kNO_STOCHASTIC, kVERSION_STRING, kMAX_FILE_LENGTH, kMAX_NAME_LENGTH, pi, &
+                                           kWATER_LAKE, &
+                                           kWIND_LINEAR, kLINEAR_ITERATIVE_WINDS, kITERATIVE_WINDS, kCONSERVE_MASS
     use io_routines,                only : io_newunit
     use time_io,                    only : find_timestep_in_file
     use time_delta_object,          only : time_delta_t
@@ -340,8 +343,9 @@ contains
                 stop
             endif
         endif
+
         ! wind calculations almost require fixed_dz_advection settings
-        if ((options%physics%wind.eq.3).and.(.not.options%parameters%fixed_dz_advection)) then
+        if ((options%physics%windtype.eq.kITERATIVE_WINDS).and.(.not.options%parameters%fixed_dz_advection)) then
             if (options%parameters%warning_level>3) then
                 if (this_image()==1) write(*,*) ""
                 if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
@@ -355,7 +359,7 @@ contains
                 stop
             endif
         endif
-        if (((options%physics%wind.eq.1).or.(options%physics%wind.eq.5)).and.(options%parameters%fixed_dz_advection)) then
+        if (((options%physics%windtype.eq.kWIND_LINEAR).or.(options%physics%windtype.eq.kLINEAR_ITERATIVE_WINDS)).and.(options%parameters%fixed_dz_advection)) then
             if (options%parameters%warning_level>3) then
                 if (this_image()==1) write(*,*) ""
                 if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
@@ -370,13 +374,13 @@ contains
                 stop
             endif
         endif
-        if ((options%physics%wind.eq.0).and.(options%parameters%fixed_dz_advection)) then
+        if ((options%physics%windtype.eq.0).and.(options%parameters%fixed_dz_advection)) then
             if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
             if (this_image()==1) write(*,*) "WARNING setting fixed_dz_advection=False for wind=0"
             if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
             options%parameters%fixed_dz_advection = .False.
         endif
-        if ((options%physics%wind.eq.2).and.(.not.options%parameters%fixed_dz_advection)) then
+        if ((options%physics%windtype.eq.kCONSERVE_MASS).and.(.not.options%parameters%fixed_dz_advection)) then
             if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
             if (this_image()==1) write(*,*) "WARNING setting fixed_dz_advection=True for wind=2"
             if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
@@ -1775,6 +1779,11 @@ contains
         integer :: name_unit
 
         character(len=MAXVARLENGTH) :: LU_Categories ! Category definitions (e.g. USGS, MODIFIED_IGBP_MODIS_NOAH)
+        real    :: lh_feedback_fraction
+        real    :: sh_feedback_fraction
+        real    :: sfc_layer_thickness
+        real    :: dz_lsm_modification
+        real    :: wind_enhancement
         logical :: monthly_vegfrac                   ! read in 12 months of vegfrac data
         logical :: monthly_albedo                    ! same for albedo (requires vegfrac be monthly)
         integer :: update_interval                   ! minimum number of seconds between LSM updates
@@ -1784,8 +1793,10 @@ contains
         integer :: lake_category                    ! index that defines the lake category in (some) LU_Categories
 
         ! define the namelist
-        namelist /lsm_parameters/ LU_Categories, update_interval, monthly_vegfrac, &
-                                  urban_category, ice_category, water_category, lake_category, monthly_albedo
+        namelist /lsm_parameters/ LU_Categories, lh_feedback_fraction, sh_feedback_fraction, update_interval, &
+                                  urban_category, ice_category, water_category, lake_category,                &
+                                  monthly_vegfrac, monthly_albedo, sfc_layer_thickness, dz_lsm_modification,  &
+                                  wind_enhancement
 
          ! because adv_options could be in a separate file
          if (options%parameters%use_lsm_options) then
@@ -1807,6 +1818,12 @@ contains
         water_category  = -1
         lake_category   = -1
 
+        lh_feedback_fraction = 1.0
+        sh_feedback_fraction = 0.625
+        sfc_layer_thickness  = 400.0
+        dz_lsm_modification  = 0.5
+        wind_enhancement = 1.5
+
         ! read the namelist options
         if (options%parameters%use_lsm_options) then
             open(io_newunit(name_unit), file=filename)
@@ -1817,14 +1834,19 @@ contains
         call set_default_LU_categories(options, urban_category, ice_category, water_category, LU_Categories, lake_category)
 
         ! store everything in the lsm_options structure
-        lsm_options%LU_Categories   = LU_Categories
-        lsm_options%monthly_vegfrac = monthly_vegfrac
-        lsm_options%monthly_albedo  = monthly_albedo
-        lsm_options%update_interval = update_interval
-        lsm_options%urban_category  = urban_category
-        lsm_options%ice_category    = ice_category
-        lsm_options%water_category  = water_category
-        lsm_options%lake_category   = lake_category
+        lsm_options%LU_Categories        = LU_Categories
+        lsm_options%monthly_vegfrac      = monthly_vegfrac
+        lsm_options%monthly_albedo       = monthly_albedo
+        lsm_options%update_interval      = update_interval
+        lsm_options%urban_category       = urban_category
+        lsm_options%ice_category         = ice_category
+        lsm_options%water_category       = water_category
+        lsm_options%lake_category        = lake_category
+        lsm_options%lh_feedback_fraction = lh_feedback_fraction
+        lsm_options%sh_feedback_fraction = sh_feedback_fraction
+        lsm_options%sfc_layer_thickness  = sfc_layer_thickness
+        lsm_options%dz_lsm_modification  = dz_lsm_modification
+        lsm_options%wind_enhancement     = wind_enhancement
 
         ! copy the data back into the global options data structure
         options%lsm_options = lsm_options
@@ -1898,7 +1920,8 @@ contains
         real, dimension(45) :: fulldz
         logical :: space_varying, fixed_dz_advection, dz_modifies_wind, sleve, use_terrain_difference
 
-        real :: flat_z_height, terrain_smooth_windowsize, terrain_smooth_cycles, decay_rate_L_topo, decay_rate_S_topo, sleve_n
+        real :: flat_z_height, decay_rate_L_topo, decay_rate_S_topo, sleve_n
+        integer :: terrain_smooth_windowsize, terrain_smooth_cycles
 
         namelist /z_info/ dz_levels, space_varying, dz_modifies_wind, flat_z_height, fixed_dz_advection, sleve, terrain_smooth_windowsize, terrain_smooth_cycles, decay_rate_L_topo, decay_rate_S_topo, sleve_n, use_terrain_difference
 

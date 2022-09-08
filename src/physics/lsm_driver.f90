@@ -93,6 +93,8 @@ module land_surface
     integer :: num_soil_layers,ISURBAN,ISICE,ISWATER, ISLAKE
     integer :: exchange_term
     real*8  :: last_model_time
+    real    :: lh_feedback_fraction, sh_feedback_fraction
+    real    :: sfc_layer_thickness
 
     !Noah-MP specific
     integer :: IDVEG,IOPT_CRS,IOPT_BTR,IOPT_RUN,IOPT_SFC,IOPT_FRZ,IOPT_INF,IOPT_RAD,IOPT_ALB,IOPT_SNF,IOPT_TBOT
@@ -361,16 +363,15 @@ contains
         implicit none
         type(domain_t), intent(inout) :: domain
         real, intent(in) :: dt
-        integer :: i,j,k, sfc_layer
+        integer :: i,j,k
         integer, SAVE :: nz = 0
         real :: layer_fraction
 
-        sfc_layer = 400 ! meters
         if (nz==0) then
             layer_fraction = 0
             do k=kts, kte
                 layer_fraction = maxval(domain%dz_interface%data_3d(:,k,:)) + layer_fraction
-                if (layer_fraction < sfc_layer) nz=k
+                if (layer_fraction < sfc_layer_thickness) nz=k
             end do
         end if
 
@@ -389,22 +390,22 @@ contains
         do i = its, ite
             ! compute the fraction of the current gridcell that is within the surface layer
             if (k==kts) Then
-                layer_fraction = min(1.0, sfc_layer / dz(i,k,j))
+                layer_fraction = min(1.0, sfc_layer_thickness / dz(i,k,j))
             else
-                layer_fraction = max(0.0, min(1.0, (sfc_layer - sum(dz(i,kts:k-1,j))) / dz(i,k,j) ) )
+                layer_fraction = max(0.0, min(1.0, (sfc_layer_thickness - sum(dz(i,kts:k-1,j))) / dz(i,k,j) ) )
             endif
 
             ! convert sensible heat flux to a temperature delta term
             ! (J/(s*m^2) * s / (J/(kg*K)) => kg*K/m^2) ... /((kg/m^3) * m) => K
-            dTemp(i,j) = (sensible_heat(i,j) * dt/cp)  &
-                     / (density(i,k,j) * sfc_layer * 1.6)
+            dTemp(i,j) = (sh_feedback_fraction * sensible_heat(i,j) * dt/cp)  &
+                     / (density(i,k,j) * sfc_layer_thickness)
             ! add temperature delta converted back to potential temperature
             th(i,k,j) = th(i,k,j) + (dTemp(i,j) / pii(i,k,j)) * layer_fraction
 
             ! convert latent heat flux to a mixing ratio tendancy term
             ! (J/(s*m^2) * s / (J/kg) => kg/m^2) ... / (kg/m^3 * m) => kg/kg
-            lhdQV(i,j) = (latent_heat(i,j) / LH_vaporization * dt) &
-                    / (density(i,k,j) * sfc_layer)
+            lhdQV(i,j) = (lh_feedback_fraction * latent_heat(i,j) / LH_vaporization * dt) &
+                    / (density(i,k,j) * sfc_layer_thickness)
             ! add water vapor in kg/kg
             qv(i,k,j) = qv(i,k,j) + lhdQV(i,j) * layer_fraction
 
@@ -552,6 +553,10 @@ contains
         jte = domain%grid%jte
         kts = domain%grid%kts
         kte = domain%grid%kte
+
+        lh_feedback_fraction = options%lsm_options%lh_feedback_fraction
+        sh_feedback_fraction = options%lsm_options%sh_feedback_fraction
+        sfc_layer_thickness = options%lsm_options%sfc_layer_thickness
 
         allocate(dTemp(its:ite,jts:jte))
         dTemp = 0
@@ -1337,7 +1342,7 @@ contains
                              domain%cosine_zenith_angle%data_2d,       &
                              domain%latitude%data_2d,                  &
                              domain%longitude%data_2d,                 &
-                             domain%dz_interface%data_3d / 2.,         & ! domain%dz_interface%data_3d,              & !
+                             domain%dz_interface%data_3d * options%lsm_options%dz_lsm_modification, & ! domain%dz_interface%data_3d,              & !
                              lsm_dt,                                   &
                              DZS,                                      &
                              num_soil_layers,                          &
@@ -1367,8 +1372,8 @@ contains
                              domain%soil_texture_4%data_2d,            &  ! only used if iopt_soil = 2
                              domain%temperature%data_3d,               &
                              domain%water_vapor%data_3d,               &
-                             domain%u_mass%data_3d*1.5,                &
-                             domain%v_mass%data_3d*1.5,                &
+                             domain%u_mass%data_3d * options%lsm_options%wind_enhancement, &
+                             domain%v_mass%data_3d * options%lsm_options%wind_enhancement, &
                              domain%shortwave%data_2d,                 &
                              domain%shortwave_direct%data_2d,          &  ! only used in urban modules, which are currently disabled
                              domain%shortwave_diffuse%data_2d,         &  ! only used in urban modules, which are currently disabled
