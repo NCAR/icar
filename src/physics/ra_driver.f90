@@ -341,7 +341,7 @@ contains
                     END IF
                 END IF
 
-                if (.False.) then
+                if (.not.options%rad_options%use_simple_sw) then
                     call RRTMG_SWRAD(rthratensw=domain%tend%th_swrad,         &
     !                swupt, swuptc, swuptcln, swdnt, swdntc, swdntcln, &
     !                swupb, swupbc, swupbcln, swdnb, swdnbc, swdnbcln, &
@@ -448,6 +448,7 @@ contains
                                    ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, &
                                    its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte, F_runlw=.False.)
                 endif ! simple SW only
+                
                 call RRTMG_LWRAD(rthratenlw=domain%tend%th_lwrad,                 &
 !                           lwupt, lwuptc, lwuptcln, lwdnt, lwdntc, lwdntcln,     &        !if lwupt defined, all MUST be defined
 !                           lwupb, lwupbc, lwupbcln, lwdnb, lwdnbc, lwdnbcln,     &

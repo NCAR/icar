@@ -249,6 +249,8 @@
     use_mp_options = true
     !   Read parameters for land surface model
     use_lsm_options = true
+    !   Read parameters for radiation model
+    use_rad_options = true
     !   Read parameters for online bias correction
     use_bias_correction = false
     !   Read parameters for experimental blocked flow parameterization
@@ -347,6 +349,15 @@
     tsoil3D_ext  =  "T_SO"          ! N.B. This will overwrite any input from soil_t_var or soil_deept_var  !!
 /
 
+!---------------------------------------------------------
+!  Optionally specified radiation parameters
+!---------------------------------------------------------
+&rad_parameters
+   update_interval_rrtmg=1800
+   icloud=3
+   read_ghg=.True.
+   use_simple_sw=True
+/
 
 !---------------------------------------------------------
 !   Optionally specified Microphysics parameters (mostly for Thompson)

@@ -1869,8 +1869,9 @@ contains
         integer :: update_interval_rrtmg             ! minimum number of seconds between RRTMG updates
         integer :: icloud                            ! how RRTMG interacts with clouds
         logical :: read_ghg
+        logical :: use_simple_sw
         ! define the namelist
-        namelist /rad_parameters/ update_interval_rrtmg, icloud, read_ghg
+        namelist /rad_parameters/ update_interval_rrtmg, icloud, read_ghg, use_simple_sw
 
 
          ! because adv_options could be in a separate file
@@ -1885,6 +1886,7 @@ contains
         update_interval_rrtmg = 1800 ! 30 minutes
         icloud          = 3    ! effective radius from microphysics scheme
         read_ghg        = .false.
+        use_simple_sw   = .false.
 
         ! read the namelist options
         if (options%parameters%use_rad_options) then
@@ -1897,6 +1899,7 @@ contains
         rad_options%update_interval_rrtmg = update_interval_rrtmg
         rad_options%icloud                = icloud
         rad_options%read_ghg              = read_ghg
+        rad_options%use_simple_sw         = use_simple_sw
 
         ! copy the data back into the global options data structure
         options%rad_options = rad_options

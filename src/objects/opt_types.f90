@@ -156,6 +156,7 @@ module options_types
                                                        ! RRTMG scheme is expensive. Default is 1800s (30 minutes)
        integer :: icloud                               ! How RRTMG interact with clouds
        logical :: read_ghg                             ! Eihter use default green house gas mixing ratio, or read the in from file
+       logical :: use_simple_sw
 
     end type rad_options_type
 
