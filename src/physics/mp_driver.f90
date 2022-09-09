@@ -582,7 +582,9 @@ contains
                               kts = kts, kte = kte)
         endif
 
-        domain%accumulated_precipitation%data_2dd = domain%accumulated_precipitation%data_2dd + precipitation
+        if (associated(domain%accumulated_precipitation%data_2dd)) then
+            domain%accumulated_precipitation%data_2dd = domain%accumulated_precipitation%data_2dd + precipitation
+        endif
         ! needs to be converted to work on specified tile or better, maybe moved out of microphysics driver entirely...
         ! if (options%use_bias_correction) then
         !     call apply_rain_fraction(domain%model_time, domain%rain_fraction, domain%rain, last_rain, precip_delta)
