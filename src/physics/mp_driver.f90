@@ -406,9 +406,11 @@ contains
         integer,        intent(in)    :: its,ite, jts,jte, kts,kte
         integer,        intent(in)    :: ims,ime, jms,jme, kms,kme
         integer,        intent(in)    :: ids,ide, jds,jde, kds,kde
-        real :: precipitation(ims:ime, jms:jme)
+        real :: precipitation(ims:ime, jms:jme), graupel(ims:ime, jms:jme), snowfall(ims:ime, jms:jme)
 
         precipitation = 0
+        graupel = 0
+        snowfall = 0
         ! run the thompson microphysics
         if (options%physics%microphysics==kMP_THOMPSON) then
             ! call the thompson microphysics
@@ -429,8 +431,8 @@ contains
                               RAINNC = precipitation,    &
                               RAINNCV = this_precip,                                & ! not used outside thompson (yet)
                               SR = SR,                                              & ! not used outside thompson (yet)
-                              SNOWNC = domain%accumulated_snowfall%data_2d,         &
-                              GRAUPELNC = domain%graupel%data_2d,       &
+                              SNOWNC = snowfall,         &
+                              GRAUPELNC = graupel,       &
                               ids = ids, ide = ide,                   & ! domain dims
                               jds = jds, jde = jde,                   &
                               kds = kds, kde = kde,                   &
@@ -458,8 +460,8 @@ contains
                                   dz = domain%dz_mass%data_3d,                          &
                                   dt_in = dt,                                           &
                                   RAINNC = precipitation,    &
-                                  SNOWNC = domain%accumulated_snowfall%data_2d,         &
-                                  GRAUPELNC = domain%graupel%data_2d,       &
+                                  SNOWNC = snowfall,         &
+                                  GRAUPELNC = graupel,       &
                                   re_cloud = domain%re_cloud%data_3d,                   &
                                   re_ice   = domain%re_ice%data_3d,                     &
                                   re_snow  = domain%re_snow%data_3d,                    &
@@ -485,7 +487,7 @@ contains
                                   domain%rain_mass%data_3d,                 &
                                   domain%snow_mass%data_3d,                 &
                                   precipitation, &
-                                  domain%accumulated_snowfall%data_2d,      &
+                                  snowfall,      &
                                   dt,                                       &
                                   domain%dz_mass%data_3d,                   &
                                   ims = ims, ime = ime,                   & ! memory dims
@@ -535,8 +537,8 @@ contains
                               rain = precipitation,    &
                               rainncv = this_precip,                                & ! not used outside thompson (yet)
                               sr = SR,                                              & ! not used outside thompson (yet)
-                              snow = domain%accumulated_snowfall%data_2d,         &
-                              graupel = domain%graupel%data_2d,       &
+                              snow = snowfall,         &
+                              graupel = graupel,       &
                               ids = ids, ide = ide,                   & ! domain dims
                               jds = jds, jde = jde,                   &
                               kds = kds, kde = kde,                   &
@@ -568,7 +570,7 @@ contains
                               rain = precipitation,      &
                               rainncv = this_precip,                                & ! not used outside thompson (yet)
                               sr = SR,                                              & ! not used outside thompson (yet)
-                              snow = domain%accumulated_snowfall%data_2d,           &
+                              snow = snowfall,           &
                               snowncv = this_snow,                                  &
                               has_reqc=0, has_reqi=0, has_reqs=0,     &
                               ids = ids, ide = ide,                   & ! domain dims
@@ -584,6 +586,12 @@ contains
 
         if (associated(domain%accumulated_precipitation%data_2dd)) then
             domain%accumulated_precipitation%data_2dd = domain%accumulated_precipitation%data_2dd + precipitation
+        endif
+        if (associated(domain%graupel%data_2dd)) then
+            domain%graupel%data_2dd = domain%graupel%data_2dd + graupel
+        endif
+        if (associated(domain%accumulated_snowfall%data_2dd)) then
+            domain%accumulated_snowfall%data_2dd = domain%accumulated_snowfall%data_2dd + snowfall
         endif
         ! needs to be converted to work on specified tile or better, maybe moved out of microphysics driver entirely...
         ! if (options%use_bias_correction) then
