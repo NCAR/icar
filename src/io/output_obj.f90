@@ -361,7 +361,7 @@ contains
             case(NOLEAP)
                 calendar = "noleap"
             case(THREESIXTY)
-                calendar = "360-day"
+                calendar = "360_day"
             case default
                 calendar = "standard"
         end select
