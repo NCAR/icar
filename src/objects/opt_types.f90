@@ -131,11 +131,12 @@ module options_types
     ! ------------------------------------------------
     type lsm_options_type
         character (len=MAXVARLENGTH) :: LU_Categories   ! land use categories to read from VEGPARM.tbl (e.g. "USGS")
-        real :: lh_feedback_fraction
-        real :: sh_feedback_fraction
-        real :: sfc_layer_thickness
-        real :: dz_lsm_modification
-        real :: wind_enhancement
+        real :: lh_feedback_fraction                    ! fraction of latent heat added back to the atmosphere
+        real :: sh_feedback_fraction                    ! fraction of sensible heat added back to the atmosphere
+        real :: sfc_layer_thickness                     ! thickness of atmosphere to spread heat flux over.
+        real :: dz_lsm_modification                     ! ability to change the apparent thickness of the lowest model level to compensate for issues in the LSM?
+        real :: wind_enhancement                        ! enhancement to winds in LSM to mitigate low bias in driving models
+        real :: max_swe                                 ! maximum value for Snow water equivalent (excess above this is removed)
         integer :: update_interval                      ! minimum time to let pass before recomputing LSM ~300s (it may be longer)  [s]
         ! the following categories will be set by default if an known LU_Category is used
         integer :: urban_category                       ! LU index value that equals "urban"

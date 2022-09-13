@@ -1784,6 +1784,7 @@ contains
         real    :: sfc_layer_thickness
         real    :: dz_lsm_modification
         real    :: wind_enhancement
+        real    :: max_swe
         logical :: monthly_vegfrac                   ! read in 12 months of vegfrac data
         logical :: monthly_albedo                    ! same for albedo (requires vegfrac be monthly)
         integer :: update_interval                   ! minimum number of seconds between LSM updates
@@ -1796,7 +1797,7 @@ contains
         namelist /lsm_parameters/ LU_Categories, lh_feedback_fraction, sh_feedback_fraction, update_interval, &
                                   urban_category, ice_category, water_category, lake_category,                &
                                   monthly_vegfrac, monthly_albedo, sfc_layer_thickness, dz_lsm_modification,  &
-                                  wind_enhancement
+                                  wind_enhancement, max_swe
 
          ! because adv_options could be in a separate file
          if (options%parameters%use_lsm_options) then
@@ -1824,6 +1825,8 @@ contains
         dz_lsm_modification  = 0.5
         wind_enhancement = 1.5
 
+        max_swe = 1e10
+
         ! read the namelist options
         if (options%parameters%use_lsm_options) then
             open(io_newunit(name_unit), file=filename)
@@ -1847,6 +1850,7 @@ contains
         lsm_options%sfc_layer_thickness  = sfc_layer_thickness
         lsm_options%dz_lsm_modification  = dz_lsm_modification
         lsm_options%wind_enhancement     = wind_enhancement
+        lsm_options%max_swe              = max_swe
 
         ! copy the data back into the global options data structure
         options%lsm_options = lsm_options
