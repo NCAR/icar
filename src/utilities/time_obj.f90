@@ -380,6 +380,21 @@ contains
     end subroutine calendar_date
 
 
+    !>---------------------------------
+    !! Convience function, just return the month of the year.
+    !!
+    !!---------------------------------
+    module function get_month(this) result(month)
+        implicit none
+        integer                     :: month
+        class(Time_type), intent(in):: this
+
+        integer :: year, day, hour, minute, second
+
+        call this%date(year, month, day, hour, minute, second)
+
+    end function get_month
+
     !>------------------------------------------------------------
     !!  Return the day of the year corresponding to the current date_time
     !!

@@ -53,6 +53,7 @@ module time_object
         procedure, public  :: units       => units
         procedure, public  :: broadcast   => bcast
         procedure, public  :: get_calendar=> get_calendar
+        procedure, public  :: get_month   => get_month
 
         generic,   public  :: init        => time_init_c
         generic,   public  :: init        => time_init_i
@@ -150,6 +151,18 @@ interface
         real(real128) :: seconds
 
     end function get_seconds
+
+
+    !>---------------------------------
+    !! Convience function, just return the month of the year.
+    !!
+    !!---------------------------------
+    module function get_month(this) result(month)
+        implicit none
+        integer                     :: month
+        class(Time_type), intent(in):: this
+
+    end function get_month
 
 
     !>------------------------------------------------------------
