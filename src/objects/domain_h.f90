@@ -278,7 +278,7 @@ module domain_interface
     double precision,           allocatable :: costheta(:,:)
     double precision,           allocatable :: sintheta(:,:)
     real,                       allocatable :: advection_dz(:,:,:)
-    real,                       allocatable :: rain_fraction(:,:) ! seasonally varying fraction to multiple precipitation  [-]
+    real,                       allocatable :: rain_fraction(:,:,:) ! monthly varying fraction to multiple precipitation  [-]
     ! store the ratio between the average dz and each grid cells topographically modified dz (for space varying dz only)
     real,                       allocatable :: jacobian(:,:,:)
     real,                       allocatable :: jacobian_u(:,:,:)

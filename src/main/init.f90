@@ -302,13 +302,17 @@ contains
         type(options_t), intent(in) :: options
         type(domain_t), intent(inout):: domain
         real, allocatable :: temporary(:,:)
+        integer :: i
 
         if (options%parameters%use_bias_correction) then
 
-            call io_read(options%bias_options%filename, options%bias_options%rain_fraction_var, temporary)
+            allocate(domain%rain_fraction(domain%ims:domain%ime, domain%jms:domain%jme, 12))
 
-            allocate(domain%rain_fraction(domain%ims:domain%ime, domain%jms:domain%jme))
-            domain%rain_fraction = temporary(domain%ims:domain%ime, domain%jms:domain%jme)
+            do i=1,12
+                call io_read(options%bias_options%filename, options%bias_options%rain_fraction_var, temporary, extradim=i)
+
+                domain%rain_fraction(:,:,i) = temporary(domain%ims:domain%ime, domain%jms:domain%jme)
+            end do
 
             where(domain%rain_fraction > 5) domain%rain_fraction = 5
             where(domain%rain_fraction < 0.2) domain%rain_fraction = 0.2
