@@ -530,8 +530,9 @@
     bias_correction_filename = ""
 
     ! name of variable in netcdf file that defines a multiplier for precipitation at each grid point
-    ! variable should have a time dimension that will be interpolated over a one year period to permit a seasonality
-    ! to the bias correction
+    ! variable can have a 12-month time dimension to permit seasonality
+    ! to the bias correction. Data should represent the ratio between ICAR precipitation and Observations
+    ! e.g. icar / obs
     rain_fraction_var = ""
 /
 
