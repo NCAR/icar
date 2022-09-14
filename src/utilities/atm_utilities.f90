@@ -24,6 +24,83 @@ module mod_atm_utilities
 
 contains
 
+    !>----------------------------------------------------------
+    !! Compute column integrated vapor transport (non-directional)
+    !!
+    !! Input humidity is mixing ratio                   [kg/kg]
+    !! Pressures are in Pascals                         [Pa]
+    !! U/V are EW and NS wind on the mass grid          [m/s]
+    !!
+    !!----------------------------------------------------------
+    subroutine compute_ivt(ivt, qv, u, v, pi)
+        implicit none
+        real, intent(in),            dimension(:,:,:)   :: pi, qv, u, v
+        real, intent(inout),         dimension(:,:)   :: ivt
+
+        integer :: i, ims, ime
+        integer :: k, kms, kme
+        integer :: j, jms, jme
+
+        ims = lbound(qv,1)
+        ime = ubound(qv,1)
+        kms = lbound(qv,2)
+        kme = ubound(qv,2)
+        jms = lbound(qv,3)
+        jme = ubound(qv,3)
+
+        ivt = 0
+        do j = jms, jme
+            do k = kms, kme-1
+                do i = ims, ime
+                    if (pi(i,k+1,j) > 50000) then
+                        ivt(i,j) = ivt(i,j) + ( qv(i,k,j) * sqrt(u(i,k,j)**2 + v(i,k,j)**2) * (pi(i,k,j) - pi(i,k+1,j)) ) / gravity
+                    elseif (pi(i,k,j) > 50000) then
+                        ivt(i,j) = ivt(i,j) + ( qv(i,k,j) * sqrt(u(i,k,j)**2 + v(i,k,j)**2) * (pi(i,k,j) - 50000) ) / gravity
+                    endif
+                enddo
+            enddo
+        end do
+
+    end subroutine compute_ivt
+
+    !>----------------------------------------------------------
+    !! Compute column integrated scalar (q)
+    !!
+    !! Input scalar is mixing ratio                     [kg/kg]
+    !! Pressures are in Pascals                         [Pa]
+    !!
+    !!----------------------------------------------------------
+    subroutine compute_iq(iq, q, pi)
+        implicit none
+        real, intent(in),            dimension(:,:,:)   :: pi, q
+        real, intent(inout),         dimension(:,:)   :: iq
+
+        integer :: i, ims, ime
+        integer :: k, kms, kme
+        integer :: j, jms, jme
+
+        ims = lbound(q,1)
+        ime = ubound(q,1)
+        kms = lbound(q,2)
+        kme = ubound(q,2)
+        jms = lbound(q,3)
+        jme = ubound(q,3)
+
+        iq = 0
+        do j = jms, jme
+            do k = kms, kme-1
+                do i = ims, ime
+                    if (pi(i,k+1,j) > 50000) then
+                        iq(i,j) = iq(i,j) + ( q(i,k,j) * (pi(i,k,j) - pi(i,k+1,j)) ) / gravity
+                    elseif (pi(i,k,j) > 50000) then
+                        iq(i,j) = iq(i,j) + ( q(i,k,j) * (pi(i,k,j) - 50000) ) / gravity
+                    endif
+                enddo
+            enddo
+        end do
+
+    end subroutine compute_iq
+
 
     !>----------------------------------------------------------
     !! Compute a 3D height field given a surface (or sea level) pressure
@@ -1063,4 +1140,3 @@ contains
 
 
 end module mod_atm_utilities
-

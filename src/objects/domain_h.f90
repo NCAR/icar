@@ -236,6 +236,11 @@ module domain_interface
     type(variable_t) :: zi3d
     type(variable_t) :: savedtke12d
     type(variable_t) :: lakedepth2d
+    ! diagnostics
+    type(variable_t) :: ivt
+    type(variable_t) :: iwv
+    type(variable_t) :: iwl
+    type(variable_t) :: iwi
 
     ! link effective radius from microphysics to radiation scheme
     type(variable_t) :: re_cloud
@@ -276,6 +281,7 @@ module domain_interface
     double precision,           allocatable :: costheta(:,:)
     double precision,           allocatable :: sintheta(:,:)
     real,                       allocatable :: advection_dz(:,:,:)
+    real,                       allocatable :: rain_fraction(:,:,:) ! monthly varying fraction to multiple precipitation  [-]
     ! store the ratio between the average dz and each grid cells topographically modified dz (for space varying dz only)
     real,                       allocatable :: jacobian(:,:,:)
     real,                       allocatable :: jacobian_u(:,:,:)

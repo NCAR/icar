@@ -11,7 +11,7 @@ module output_metadata
     !! Generic interface to the netcdf read routines
     !!------------------------------------------------------------
     interface get_metadata
-        module procedure get_metadata_2d, get_metadata_3d, get_metadata_nod
+        module procedure get_metadata_2d, get_metadata_2dd, get_metadata_3d, get_metadata_nod
     end interface
 
 
@@ -38,7 +38,6 @@ contains
         ! set the dimensionality to false
         meta_data%two_d     = .False.
         meta_data%three_d   = .False.
-
     end function get_metadata_nod
 
     !>------------------------------------------------------------
@@ -61,6 +60,7 @@ contains
         if (.not.allocated(var_meta)) call init_var_meta()
 
         meta_data = var_meta(var_idx)
+        meta_data%dtype=kREAL
 
         if (associated(input_data)) then
             meta_data%data_2d   => input_data
@@ -73,6 +73,35 @@ contains
         endif
 
     end function get_metadata_2d
+
+    function get_metadata_2dd(var_idx, input_data) result(meta_data)
+        implicit none
+        integer, intent(in)          :: var_idx
+        double precision,    intent(in), pointer :: input_data(:,:)
+
+        type(variable_t) :: meta_data       ! function result
+        integer          :: local_shape(2)  ! store the shape of the input data array
+
+        if (var_idx>kMAX_STORAGE_VARS) then
+            stop "Invalid variable metadata requested"
+        endif
+
+        if (.not.allocated(var_meta)) call init_var_meta()
+
+        meta_data = var_meta(var_idx)
+        meta_data%dtype=kDOUBLE
+
+        if (associated(input_data)) then
+            meta_data%data_2dd  => input_data
+            meta_data%two_d     = .True.
+            meta_data%three_d   = .False.
+            local_shape(1) = size(input_data, 1)
+            local_shape(2) = size(input_data, 2)
+            ! for some reason if shape(input_data) is passed as source, then the dim_len bounds are (0:1) instead of 1:2
+            allocate(meta_data%dim_len, source=local_shape)
+        endif
+
+    end function get_metadata_2dd
 
     !>------------------------------------------------------------
     !! Get generic metadata for a three-dimensional variable
@@ -95,6 +124,7 @@ contains
         if (.not.allocated(var_meta)) call init_var_meta()
 
         meta_data = var_meta(var_idx)
+        meta_data%dtype=kREAL
 
         if (associated(input_data)) then
             meta_data%data_3d   => input_data
@@ -162,9 +192,9 @@ contains
         character(len=16) :: two_d_month_dimensions(3)          = [character(len=16) :: "lon_x","lat_y","month"]
         character(len=16) :: three_d_t_lake_dimensions(4)           = [character(len=16) :: "lon_x","lat_y","nlevlake","time"]
         character(len=16) :: three_d_t_lake_soisno_dimensions(4)    = [character(len=16) :: "lon_x","lat_y","nlevsoisno","time"] !grid_lake_soisno
-        character(len=16) :: three_d_t_lake_soisno_1_dimensions(4)  = [character(len=16) :: "lon_x","lat_y","nlevsoisno_1","time"] 
+        character(len=16) :: three_d_t_lake_soisno_1_dimensions(4)  = [character(len=16) :: "lon_x","lat_y","nlevsoisno_1","time"]
         character(len=16) :: three_d_t_lake_soi_dimensions(4)       = [character(len=16) :: "lon_x","lat_y","nlevsoi_lake","time"] !grid_lake_soi
-        
+
 
         if (allocated(var_meta)) deallocate(var_meta)
 
@@ -2202,7 +2232,7 @@ contains
             var%attributes  = [attribute_t("standard_name", "lake_snow_layer_2d"),           &
                                attribute_t("units",         "-"),                               &
                                attribute_t("coordinates",   "lat lon")]
-        end associate 
+        end associate
         !>------------------------------------------------------------
         !!  lake_t_grnd2d
         !!------------------------------------------------------------
@@ -2330,7 +2360,6 @@ contains
         associate(var=>var_meta(kVARS%lakemask))
             var%name        = "lakemask"
             var%dimensions  = two_d_dimensions
-            var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "lakemask"),     &
                                attribute_t("units",         ""),                               &
                                attribute_t("coordinates",   "lat lon")]
@@ -2341,7 +2370,6 @@ contains
         associate(var=>var_meta(kVARS%lakedepth2d))
             var%name        = "lakedepth2d"
             var%dimensions  = two_d_dimensions
-            var%unlimited_dim=.True.
             var%attributes  = [attribute_t("standard_name", "lake_depth"),     &
                                attribute_t("units",         "m"),                               &
                                attribute_t("coordinates",   "lat lon")]
@@ -2356,7 +2384,7 @@ contains
             var%attributes  = [attribute_t("standard_name", "savedtke12d"),           &
                                attribute_t("units",         "-?"),                               &
                                attribute_t("coordinates",   "lat lon")]
-        end associate 
+        end associate
         !>------------------------------------------------------------
         !!  Lake: thermal conductivity, saturated soil [W/m-K]
         !!------------------------------------------------------------
@@ -2379,25 +2407,57 @@ contains
                                attribute_t("units",         "?"),                               &
                                attribute_t("coordinates",   "lat lon")]
         end associate
-        
 
 
 
+        !>------------------------------------------------------------
+        !!  Integrated Vapor Transport
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%ivt))
+            var%name        = "ivt"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "integrated_vapor_transport"),  &
+                               attribute_t("units",         "kg m-1 s-1"),                      &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
 
-        
-        ! type(variable_t) :: h2osoi_ice3d
-        ! type(variable_t) :: h2osoi_liq3d! liquid water (kg/m2)
-        ! type(variable_t) :: h2osoi_vol3d! volumetric soil water (0<=h2osoi_vol<=watsat)[m3/m3]
-        ! type(variable_t) :: z3d ! layer depth for snow & soil (m)
-        ! type(variable_t) :: dz3d
+        !>------------------------------------------------------------
+        !!  Integrated Water Vapor
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%iwv))
+            var%name        = "iwv"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "atmosphere_mass_content_of_water_vapor"),  &
+                               attribute_t("units",         "kg m-2"),                      &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
 
-        ! type(variable_t) :: watsat3d
-        ! type(variable_t) :: csol3d
-        ! type(variable_t) :: tkmg3d
-        ! type(variable_t) :: lakemask
-        ! type(variable_t) :: tksatu3d
-        ! type(variable_t) :: tkdry3d
-        ! type(variable_t) :: zi3d
+        !>------------------------------------------------------------
+        !!  Integrated Water Liquid
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%iwl))
+            var%name        = "iwl"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "atmosphere_mass_content_of_water_liquid"),  &
+                               attribute_t("units",         "kg m-2"),                      &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+
+        !>------------------------------------------------------------
+        !!  Integrated Water Ice
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%iwi))
+            var%name        = "iwi"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "atmosphere_mass_content_of_water_ice"),  &
+                               attribute_t("units",         "kg m-2"),                      &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+
         !>------------------------------------------------------------
         !!  Binary land mask (water vs land)
         !!------------------------------------------------------------

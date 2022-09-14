@@ -734,10 +734,11 @@ $(BUILD)string.o:$(UTIL)string.f90
 $(BUILD)array_utilities.o:$(UTIL)array_utilities.f90
 
 $(BUILD)atm_utilities.o:$(UTIL)atm_utilities.f90 $(BUILD)icar_constants.o 	\
-					$(BUILD)data_structures.o $(BUILD)options_h.o $(BUILD)mp_thompson.o
+					$(BUILD)data_structures.o $(BUILD)options_h.o $(BUILD)mp_thompson.o \
+					$(BUILD)opt_types.o
 
 $(BUILD)pbl_utilities.o:$(UTIL)pbl_utilities.f90 $(BUILD)icar_constants.o 	\
-					$(BUILD)data_structures.o 
+					$(BUILD)data_structures.o
 
 
 ###################################################################
@@ -809,12 +810,13 @@ $(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o $(BUILD)atm_u
 ###################################################################
 #	Surface code
 ###################################################################
-$(BUILD)lsm_driver.o: $(PHYS)lsm_driver.f90 $(BUILD)data_structures.o \
-						$(BUILD)lsm_noahdrv.o $(BUILD)lsm_noahlsm.o \
+$(BUILD)lsm_driver.o: $(PHYS)lsm_driver.f90 $(BUILD)data_structures.o	\
+						$(BUILD)lsm_noahdrv.o $(BUILD)lsm_noahlsm.o		\
 						$(BUILD)lsm_noahmpdrv.o $(BUILD)lsm_noahmplsm.o \
-						$(BUILD)water_simple.o $(BUILD)water_lake.o	$(BUILD)icar_constants.o \
+						$(BUILD)water_simple.o $(BUILD)water_lake.o		\
 						$(BUILD)domain_h.o $(BUILD)options_h.o			\
-						$(BUILD)atm_utilities.o $(BUILD)ra_simple.o
+						$(BUILD)atm_utilities.o $(BUILD)ra_simple.o		\
+						$(BUILD)opt_types.o	$(BUILD)icar_constants.o
 
 # $(BUILD)lsm_basic.o $(BUILD)lsm_simple.o
 
@@ -844,7 +846,7 @@ $(BUILD)lsm_noahmp_glacier.o: $(PHYS)lsm_noahmp_glacier.f90
 #	Planetary Boundary Layer code
 ###################################################################
 $(BUILD)pbl_driver.o: $(PHYS)pbl_driver.f90 $(BUILD)pbl_simple.o $(BUILD)pbl_ysu.o $(BUILD)domain_h.o \
-					$(BUILD)options_h.o $(BUILD)lsm_driver.o $(BUILD)data_structures.o $(BUILD)atm_utilities.o $(BUILD)pbl_utilities.o 
+					$(BUILD)options_h.o $(BUILD)lsm_driver.o $(BUILD)data_structures.o $(BUILD)atm_utilities.o $(BUILD)pbl_utilities.o
 
 $(BUILD)pbl_simple.o: $(PHYS)pbl_simple.f90 $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)data_structures.o
 

@@ -1,6 +1,8 @@
 submodule(output_interface) output_implementation
-  use output_metadata,          only : get_metadata
-  implicit none
+    use icar_constants,     only : kREAL, kDOUBLE
+    use output_metadata,    only : get_metadata
+    use time_io,            only : get_output_time
+    implicit none
 
 contains
 
@@ -24,7 +26,7 @@ contains
 
         if (.not.this%is_initialized) call this%init()
 
-        if (associated(variable%data_2d).or.associated(variable%data_3d)) then
+        if (associated(variable%data_2d).or.associated(variable%data_2dd).or.associated(variable%data_3d)) then
 
             if (this%n_variables == size(this%variables)) call this%increase_var_capacity()
 
@@ -97,10 +99,10 @@ contains
         if (0<var_list( kVARS%snow_number_concentration) )  call this%add_to_output( get_metadata( kVARS%snow_number_concentration    , domain%snow_number%data_3d))
         if (0<var_list( kVARS%graupel_in_air) )             call this%add_to_output( get_metadata( kVARS%graupel_in_air               , domain%graupel_mass%data_3d))
         if (0<var_list( kVARS%graupel_number_concentration))call this%add_to_output( get_metadata( kVARS%graupel_number_concentration , domain%graupel_number%data_3d))
-        if (0<var_list( kVARS%precipitation) )              call this%add_to_output( get_metadata( kVARS%precipitation                , domain%accumulated_precipitation%data_2d))
+        if (0<var_list( kVARS%precipitation) )              call this%add_to_output( get_metadata( kVARS%precipitation                , domain%accumulated_precipitation%data_2dd))
         if (0<var_list( kVARS%convective_precipitation) )   call this%add_to_output( get_metadata( kVARS%convective_precipitation     , domain%accumulated_convective_pcp%data_2d))
-        if (0<var_list( kVARS%snowfall) )                   call this%add_to_output( get_metadata( kVARS%snowfall                     , domain%accumulated_snowfall%data_2d))
-        if (0<var_list( kVARS%graupel) )                    call this%add_to_output( get_metadata( kVARS%graupel                      , domain%graupel%data_2d))
+        if (0<var_list( kVARS%snowfall) )                   call this%add_to_output( get_metadata( kVARS%snowfall                     , domain%accumulated_snowfall%data_2dd))
+        if (0<var_list( kVARS%graupel) )                    call this%add_to_output( get_metadata( kVARS%graupel                      , domain%graupel%data_2dd))
         if (0<var_list( kVARS%pressure) )                   call this%add_to_output( get_metadata( kVARS%pressure                     , domain%pressure%data_3d))
         if (0<var_list( kVARS%temperature) )                call this%add_to_output( get_metadata( kVARS%temperature                  , domain%temperature%data_3d))
         if (0<var_list( kVARS%exner) )                      call this%add_to_output( get_metadata( kVARS%exner                        , domain%exner%data_3d))
@@ -276,8 +278,10 @@ contains
         if (0<var_list( kVARS%zi3d) )                       call this%add_to_output( get_metadata( kVARS%zi3d                         , domain%zi3d%data_3d))
         if (0<var_list( kVARS%savedtke12d) )                call this%add_to_output( get_metadata( kVARS%savedtke12d                  , domain%savedtke12d%data_2d))
         if (0<var_list( kVARS%lakedepth2d) )                call this%add_to_output( get_metadata( kVARS%lakedepth2d                  , domain%lakedepth2d%data_2d))
-
-        
+        if (0<var_list( kVARS%ivt) )                        call this%add_to_output( get_metadata( kVARS%ivt                          , domain%ivt%data_2d))
+        if (0<var_list( kVARS%iwv) )                        call this%add_to_output( get_metadata( kVARS%iwv                          , domain%iwv%data_2d))
+        if (0<var_list( kVARS%iwl) )                        call this%add_to_output( get_metadata( kVARS%iwl                          , domain%iwl%data_2d))
+        if (0<var_list( kVARS%iwi) )                        call this%add_to_output( get_metadata( kVARS%iwi                          , domain%iwi%data_2d))
 
     end subroutine
 
@@ -360,7 +364,7 @@ contains
             case(NOLEAP)
                 calendar = "noleap"
             case(THREESIXTY)
-                calendar = "360-day"
+                calendar = "360_day"
             case default
                 calendar = "standard"
         end select
@@ -388,7 +392,9 @@ contains
             call check( nf90_put_att(this%ncfile_id, var%var_id,"calendar",trim(calendar)))
             call check( nf90_put_att(this%ncfile_id, var%var_id,"units",time%units()))
             call check( nf90_put_att(this%ncfile_id, var%var_id,"UTCoffset","0"))
-
+            this%time_units = time%units()
+        else
+            err = nf90_get_att(this%ncfile_id, var%var_id, "units", this%time_units)
         endif
         end associate
 
@@ -403,6 +409,7 @@ contains
         integer :: i
         integer :: dim_3d(3)
 
+        type(Time_type) :: output_time
         integer :: start_three_D_t(4) = [1,1,1,1]
         integer :: start_two_D_t(3)  = [1,1,1]
         start_three_D_t(4) = current_step
@@ -422,17 +429,29 @@ contains
 
                 elseif (var%two_d) then
                     if (var%unlimited_dim) then
-                        call check( nf90_put_var(this%ncfile_id, var%var_id,  var%data_2d, start_two_D_t),   &
-                                "saving:"//trim(var%name) )
+                        if (var%dtype == kREAL) then
+                            call check( nf90_put_var(this%ncfile_id, var%var_id,  var%data_2d, start_two_D_t),   &
+                                    "saving:"//trim(var%name) )
+                        elseif (var%dtype == kDOUBLE) then
+                            call check( nf90_put_var(this%ncfile_id, var%var_id,  var%data_2dd, start_two_D_t),   &
+                                    "saving:"//trim(var%name) )
+                        endif
                     elseif (this%creating) then
-                        call check( nf90_put_var(this%ncfile_id, var%var_id,  var%data_2d),   &
-                                "saving:"//trim(var%name) )
+                        if (var%dtype == kREAL) then
+                            call check( nf90_put_var(this%ncfile_id, var%var_id,  var%data_2d),   &
+                                    "saving:"//trim(var%name) )
+                        elseif (var%dtype == kDOUBLE) then
+                            call check( nf90_put_var(this%ncfile_id, var%var_id,  var%data_2dd),   &
+                                    "saving:"//trim(var%name) )
+                        endif
                     endif
                 endif
             end associate
         end do
 
-        call check( nf90_put_var(this%ncfile_id, this%time%var_id, dble(time%mjd()), [current_step] ),   &
+        output_time = get_output_time(time, units=this%time_units, round_seconds=.True.)
+
+        call check( nf90_put_var(this%ncfile_id, this%time%var_id, dble(output_time%mjd()), [current_step] ),   &
                     "saving:"//trim(this%time%name) )
 
 
@@ -479,8 +498,14 @@ contains
 
         ! if the variable was not found in the netcdf file then we will define it.
         if (err /= NF90_NOERR) then
-            call check( nf90_def_var(this%ncfile_id, var%name, NF90_REAL, var%dim_ids, var%var_id), &
-                        "Defining variable:"//trim(var%name) )
+            if (var%dtype == kREAL) then
+                call check( nf90_def_var(this%ncfile_id, var%name, NF90_REAL, var%dim_ids, var%var_id), &
+                            "Defining variable:"//trim(var%name) )
+            elseif (var%dtype == kDOUBLE) then
+                call check( nf90_def_var(this%ncfile_id, var%name, NF90_DOUBLE, var%dim_ids, var%var_id), &
+                            "Defining variable:"//trim(var%name) )
+            endif
+
 
             ! setup attributes
             do i=1,size(var%attributes)

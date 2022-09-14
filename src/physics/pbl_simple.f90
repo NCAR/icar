@@ -21,6 +21,7 @@
 !!----------------------------------------------------------
 module pbl_simple
     use data_structures
+    use icar_constants,     only : kLC_LAND, kLC_WATER
     use domain_interface,   only : domain_t
     use options_interface,  only : options_t
 
@@ -61,11 +62,11 @@ module pbl_simple
     ! note, they actually use 30m because they only use this for free-atmosphere mixing
     ! but they note that 250m is used in the operational model for the full PBL mixing
     real, parameter :: N_substeps=10. ! number of substeps to allow (puts a cap on K to match CFL)
-    real, parameter :: diffusion_reduction=10.0 ! used to reduce diffusion rates
+    real, parameter :: diffusion_reduction=2.0 ! used to reduce diffusion rates
 
 
 contains
-    subroutine simple_pbl(th, qv, cloud, ice, qrain, qsnow, um, vm, pii, rho, z, dz, terrain, its, ite, jts, jte, kts, kte_in, dt, tend_qv_pbl)
+    subroutine simple_pbl(th, qv, cloud, ice, qrain, qsnow, um, vm, pii, rho, z, dz, terrain, land_mask, its, ite, jts, jte, kts, kte_in, dt, tend_qv_pbl)
         real,   intent(inout), dimension(ims:ime, kms:kme, jms:jme) :: th            ! potential temperature [K]
         real,   intent(inout), dimension(ims:ime, kms:kme, jms:jme) :: qv            ! water vapor mixing ratio [kg/kg]
         real,   intent(inout), dimension(ims:ime, kms:kme, jms:jme) :: cloud         ! cloud water mixing ratio [kg/kg]
@@ -79,6 +80,7 @@ contains
         real,   intent(in),    dimension(ims:ime, kms:kme, jms:jme) :: z             ! model level heights [m]
         real,   intent(in),    dimension(ims:ime, kms:kme, jms:jme) :: dz            ! model level thickness [m]
         real,   intent(in),    dimension(ims:ime, jms:jme)          :: terrain       ! terrain height above sea level [m]
+        integer,intent(in),    dimension(ims:ime, jms:jme)          :: land_mask      ! water = 2 (kLC_WATER) land = 1 (kLC_LAND)
         integer,intent(in) :: its, ite, jts, jte, kts, kte_in
         real,   intent(in) :: dt                                 ! time step [s]
         real,   intent(inout), dimension(ims:ime,kms:kme,jms:jme), optional :: tend_qv_pbl   ! output water vapor tendency [kg/kg/s] (for use in other physics)
@@ -89,7 +91,7 @@ contains
         ! don't process the top model level regardless, there shouldn't be any real pbl diffusion occuring there
         kte = min(kme-1, kte_in)
 !       OpenMP parallelization small static chunk size because we typically get a small area that takes most of the time (because of substepping)
-        !$omp parallel shared(th, qv, cloud, ice, qrain, qsnow, um, vm, pii, rho, z, dz, terrain) & !, tend_qv_pbl)     &
+        !$omp parallel shared(land_mask, th, qv, cloud, ice, qrain, qsnow, um, vm, pii, rho, z, dz, terrain) & !, tend_qv_pbl)     &
         !$omp shared(l_m, K_m, Kq_m, stability_m, prandtl_m, virt_pot_temp_zgradient_m, rig_m, shear_m, lastqv_m, ims, ime, jms, jme, kms, kme) &
         !$omp firstprivate(its, ite, jts, jte, kts, kte, dt) private(i, k, j)
 
@@ -113,8 +115,6 @@ contains
                 ! diffusion for scalars
                 Kq_m(its:ite,k,j) = K_m(its:ite,k,j) / prandtl_m(its:ite,k,j)
 
-                ! rescale diffusion to cut down on excessive mixing
-                Kq_m(its:ite,k,j) = Kq_m(its:ite, k,j) / diffusion_reduction
                 Kq_m(its:ite,k,j) = Kq_m(its:ite, k,j) * dt / ((dz(its:ite,k,j) + dz(its:ite,k+1,j))/2)
 
                 ! enforce limits specified in HP96
@@ -124,7 +124,11 @@ contains
                     elseif (Kq_m(i,k,j)<1) then
                         Kq_m(i,k,j)=1
                     endif
+                    if (land_mask(i,j) == kLC_WATER) Kq_m(i,k,j) = Kq_m(i,k,j) / 1000.0
                 enddo
+
+                ! rescale diffusion to cut down on excessive mixing
+                Kq_m(its:ite,k,j) = Kq_m(its:ite, k,j) / diffusion_reduction
             enddo
 
             call pbl_diffusion(qv, th, cloud, ice, qrain, qsnow, rho, dz, its, ite, kts, kte, j)

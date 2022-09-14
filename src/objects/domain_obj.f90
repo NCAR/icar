@@ -10,7 +10,7 @@
 submodule(domain_interface) domain_implementation
     use assertions_mod,       only : assert, assertions
     use mod_atm_utilities,    only : exner_function, update_pressure
-    use icar_constants,       only : kVARS, kLC_LAND, kLC_WATER, kWATER_LAKE
+    use icar_constants,       only : kVARS, kLC_LAND, kLC_WATER, kWATER_LAKE, kDOUBLE
     use string,               only : str
     use co_util,              only : broadcast
     use io_routines,          only : io_read, io_write
@@ -194,10 +194,10 @@ contains
         if (0<opt%vars_to_allocate( kVARS%snow_number_concentration) )  call setup(this%snow_number,              this%grid )
         if (0<opt%vars_to_allocate( kVARS%graupel_in_air) )             call setup(this%graupel_mass,             this%grid,     forcing_var=opt%parameters%qgvar,      list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%graupel_number_concentration))call setup(this%graupel_number,           this%grid )
-        if (0<opt%vars_to_allocate( kVARS%precipitation) )              call setup(this%accumulated_precipitation,this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%precipitation) )              call setup(this%accumulated_precipitation,this%grid2d, dtype=kDOUBLE )
         if (0<opt%vars_to_allocate( kVARS%convective_precipitation) )   call setup(this%accumulated_convective_pcp,this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%external_precipitation) )     call setup(this%external_precipitation,   this%grid2d,   forcing_var=opt%parameters%rain_var,  list=this%variables_to_force)
-        if (0<opt%vars_to_allocate( kVARS%snowfall) )                   call setup(this%accumulated_snowfall,     this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%snowfall) )                   call setup(this%accumulated_snowfall,     this%grid2d, dtype=kDOUBLE )
         if (0<opt%vars_to_allocate( kVARS%pressure) )                   call setup(this%pressure,                 this%grid,     forcing_var=opt%parameters%pvar,       list=this%variables_to_force, force_boundaries=.False.)
         if (0<opt%vars_to_allocate( kVARS%temperature) )                call setup(this%temperature,              this%grid )
         if (0<opt%vars_to_allocate( kVARS%exner) )                      call setup(this%exner,                    this%grid )
@@ -207,7 +207,7 @@ contains
         if (0<opt%vars_to_allocate( kVARS%dz) )                         call setup(this%dz_mass,                  this%grid )
         if (0<opt%vars_to_allocate( kVARS%density) )                    call setup(this%density,                  this%grid )
         if (0<opt%vars_to_allocate( kVARS%pressure_interface) )         call setup(this%pressure_interface,       this%grid )
-        if (0<opt%vars_to_allocate( kVARS%graupel) )                    call setup(this%graupel,                  this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%graupel) )                    call setup(this%graupel,                  this%grid2d, dtype=kDOUBLE )
         if (0<opt%vars_to_allocate( kVARS%cloud_fraction) )             call setup(this%cloud_fraction,           this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%shortwave) )                  call setup(this%shortwave,                this%grid2d,   forcing_var=opt%parameters%swdown_var,  list=this%variables_to_force)
         if (0<opt%vars_to_allocate( kVARS%shortwave_direct) )           call setup(this%shortwave_direct,         this%grid2d)
@@ -291,8 +291,8 @@ contains
         if (0<opt%vars_to_allocate( kVARS%v_10m) )                      call setup(this%v_10m,                    this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%coeff_momentum_drag) )        call setup(this%coeff_momentum_drag,      this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%coeff_heat_exchange) )        call setup(this%coeff_heat_exchange,      this%grid2d)
-        if (0<opt%vars_to_allocate( kVARS%coeff_heat_exchange_3d) )     call setup(this%coeff_heat_exchange_3d,   this%grid)    ! for pbl ysu 
-        if (0<opt%vars_to_allocate( kVARS%hpbl) )                       call setup(this%hpbl,                     this%grid2d)    ! for pbl ysu 
+        if (0<opt%vars_to_allocate( kVARS%coeff_heat_exchange_3d) )     call setup(this%coeff_heat_exchange_3d,   this%grid)    ! for pbl ysu
+        if (0<opt%vars_to_allocate( kVARS%hpbl) )                       call setup(this%hpbl,                     this%grid2d)    ! for pbl ysu
         if (0<opt%vars_to_allocate( kVARS%surface_rad_temperature) )    call setup(this%surface_rad_temperature,  this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%temperature_2m) )             call setup(this%temperature_2m,           this%grid2d)
         if (0<opt%vars_to_allocate( kVARS%humidity_2m) )                call setup(this%humidity_2m,              this%grid2d)
@@ -363,7 +363,7 @@ contains
         if (0<opt%vars_to_allocate( kVARS%t_lake3d) )                   call setup(this%t_lake3d,                this%grid_lake )
         if (0<opt%vars_to_allocate( kVARS%lake_icefrac3d) )             call setup(this%lake_icefrac3d,          this%grid_lake )
         if (0<opt%vars_to_allocate( kVARS%z_lake3d) )                   call setup(this%z_lake3d,                this%grid_lake )
-        if (0<opt%vars_to_allocate( kVARS%dz_lake3d) )                   call setup(this%dz_lake3d,              this%grid_lake )
+        if (0<opt%vars_to_allocate( kVARS%dz_lake3d) )                  call setup(this%dz_lake3d,               this%grid_lake )
         if (0<opt%vars_to_allocate( kVARS%snl2d) )                      call setup(this%snl2d,                   this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%t_grnd2d) )                   call setup(this%t_grnd2d,                this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%t_soisno3d) )                 call setup(this%t_soisno3d,              this%grid_lake_soisno )
@@ -381,6 +381,10 @@ contains
         if (0<opt%vars_to_allocate( kVARS%lakemask) )                   call setup(this%lakemask,                this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%savedtke12d) )                call setup(this%savedtke12d,             this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%lakedepth2d) )                call setup(this%lakedepth2d,             this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%ivt) )                        call setup(this%ivt,                     this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%iwv) )                        call setup(this%iwv,                     this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%iwl) )                        call setup(this%iwl,                     this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%iwi) )                        call setup(this%iwi,                     this%grid2d )
 
         ! integer variable_t types aren't available (yet...)
         if (0<opt%vars_to_allocate( kVARS%convective_precipitation) )   allocate(this%cu_precipitation_bucket  (ims:ime, jms:jme),          source=0)
@@ -395,7 +399,7 @@ contains
         if (0<opt%vars_to_allocate( kVARS%irr_eventno_micro) )          allocate(this%irr_eventno_micro        (ims:ime, jms:jme),          source=0)
         if (0<opt%vars_to_allocate( kVARS%irr_eventno_flood) )          allocate(this%irr_eventno_flood        (ims:ime, jms:jme),          source=0)
         if (0<opt%vars_to_allocate( kVARS%plant_growth_stage) )         allocate(this%plant_growth_stage       (ims:ime, jms:jme),          source=0)
-        if (0<opt%vars_to_allocate( kVARS%kpbl) )                       allocate(this%kpbl                     (ims:ime, jms:jme),          source=0) ! for pbl ysu 
+        if (0<opt%vars_to_allocate( kVARS%kpbl) )                       allocate(this%kpbl                     (ims:ime, jms:jme),          source=0) ! for pbl ysu
 
         ! tendency variables that don't need to be output... maybe these should be set up the same way
         if (0<opt%vars_to_allocate( kVARS%tend_qv_adv) )                allocate(this%tend%qv_adv(ims:ime, kms:kme, jms:jme),   source=0.0)
@@ -428,16 +432,21 @@ contains
     !! and the forcing_var is both present and not blank ("")
     !!
     !! -------------------------------
-    subroutine setup_var(var, grid, forcing_var, list, force_boundaries)
+    subroutine setup_var(var, grid, forcing_var, list, force_boundaries, dtype)
         implicit none
         type(variable_t),   intent(inout) :: var
         type(grid_t),       intent(in)    :: grid
         character(len=*),   intent(in),   optional :: forcing_var
         type(var_dict_t),   intent(inout),optional :: list
         logical,            intent(in),   optional :: force_boundaries
+        integer,            intent(in),   optional :: dtype
 
         if (present(forcing_var)) then
-            call var%initialize(grid, forcing_var=forcing_var)
+            if (present(dtype)) then
+                call var%initialize(grid, forcing_var=forcing_var, dtype=dtype)
+            else
+                call var%initialize(grid, forcing_var=forcing_var)
+            endif
 
             if (present(list)) then
                 if (Len(Trim(forcing_var)) /= 0) then
@@ -447,10 +456,15 @@ contains
             endif
         else
 
-            call var%initialize(grid)
+            if (present(dtype)) then
+                call var%initialize(grid, dtype=dtype)
+            else
+                call var%initialize(grid)
+            endif
         endif
 
     end subroutine
+
 
     !> -------------------------------
     !! Setup an exchangeable variable.
@@ -1685,8 +1699,8 @@ contains
                            temporary_data)
             if (allocated(this%land_mask)) then
                 this%land_mask = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+                where(this%land_mask==0) this%land_mask = kLC_WATER  ! To ensure conisitency. land_mask can be 0 or 2 for water, enforce a single value.
             endif
-            where(this%land_mask==0) this%land_mask = kLC_WATER  ! To ensure conisitency. land_mask can be 0 or 2 for water, enforce a single value.
         endif
 
         if ((options%physics%watersurface==kWATER_LAKE) .AND.(options%parameters%lakedepthvar /= "")) then
@@ -1797,7 +1811,7 @@ contains
 
         else
             if (associated(this%soil_water_content%data_3d)) then
-                this%soil_water_content%data_3d = 0.2
+                this%soil_water_content%data_3d = 0.4
             endif
         endif
 
@@ -1820,13 +1834,12 @@ contains
                     do i=1,size(this%albedo%data_3d, 2)
                         this%albedo%data_3d(:,i,:) = temporary_data_3d(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme,i)
                     enddo
-                endif
 
-                if (maxval(temporary_data_3d) > 1) then
-                    if (this_image()==1) print*, "Changing input ALBEDO % to fraction"
-                    this%albedo%data_3d = this%albedo%data_3d / 100
+                    if (maxval(temporary_data_3d) > 1) then
+                        if (this_image()==1) print*, "Changing input ALBEDO % to fraction"
+                        this%albedo%data_3d = this%albedo%data_3d / 100
+                    endif
                 endif
-
             else
                 call io_read(options%parameters%init_conditions_file,   &
                                options%parameters%albedo_var,          &
@@ -1835,11 +1848,11 @@ contains
                     do i=1,size(this%albedo%data_3d, 2)
                         this%albedo%data_3d(:,i,:) = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
                     enddo
-                endif
 
-                if (maxval(temporary_data) > 1) then
-                    if (this_image()==1) print*, "Changing input ALBEDO % to fraction"
-                    this%albedo%data_3d = this%albedo%data_3d / 100
+                    if (maxval(temporary_data) > 1) then
+                        if (this_image()==1) print*, "Changing input ALBEDO % to fraction"
+                        this%albedo%data_3d = this%albedo%data_3d / 100
+                    endif
                 endif
             endif
 
@@ -2107,7 +2120,8 @@ contains
                       kVARS%latitude,               kVARS%longitude,                &
                       kVARS%u_latitude,             kVARS%u_longitude,              &
                       kVARS%v_latitude,             kVARS%v_longitude,              &
-                      kVars%temperature_interface                                   ])
+                      kVARS%temperature_interface,  kVARS%ivt,                      &
+                      kVARS%iwv,    kVARS%iwl,      kVARS%iwi                      ])
 
         if (trim(options%parameters%rain_var) /= "") call options%alloc_vars([kVARS%external_precipitation])
 
@@ -2185,8 +2199,8 @@ contains
         call this%grid_croptype%set_grid_dimensions(     nx_global, ny_global, 5)
         call this%grid_monthly%set_grid_dimensions(      nx_global, ny_global, 12)
         call this%grid_lake%set_grid_dimensions(         nx_global, ny_global, 10) ! nlevlake=10 (in water_lake.f90: should become nml option?)
-        call this%grid_lake_soisno%set_grid_dimensions(  nx_global, ny_global, 9)! nlevsoil=4; nlevsnow=5   real, dimension( ims:ime,-nlevsnow+1:nlevsoil, jms:jme )  ,INTENT(inout)  :: t_soisno3d,   h2osoi_ice3d, h2osoi_liq3d, h2osoi_vol3d, z3d,   dz3d 
-        call this%grid_lake_soi%set_grid_dimensions(     nx_global, ny_global, 4) ! separate from grid_soil in case we want fewer layers under the lake. 
+        call this%grid_lake_soisno%set_grid_dimensions(  nx_global, ny_global, 9)! nlevsoil=4; nlevsnow=5   real, dimension( ims:ime,-nlevsnow+1:nlevsoil, jms:jme )  ,INTENT(inout)  :: t_soisno3d,   h2osoi_ice3d, h2osoi_liq3d, h2osoi_vol3d, z3d,   dz3d
+        call this%grid_lake_soi%set_grid_dimensions(     nx_global, ny_global, 4) ! separate from grid_soil in case we want fewer layers under the lake.
         call this%grid_lake_soisno_1%set_grid_dimensions(nx_global, ny_global, 10) !soisno+1 (for layer interface depth zi3d)
         deallocate(temporary_data)
 
@@ -2378,7 +2392,7 @@ contains
         ! make sure the dictionary is reset to point to the first variable
         call this%variables_to_force%reset_iterator()
 
-        ! No iterate through the dictionary as long as there are more elements present
+        ! Now iterate through the dictionary as long as there are more elements present
         do while (this%variables_to_force%has_more_elements())
             ! get the next variable
             var_to_update = this%variables_to_force%next()
@@ -2422,7 +2436,12 @@ contains
         var_to_update%data_3d = var_to_update%data_3d + (var_to_update%dqdt_3d * dt%seconds())
 
         if (associated(this%external_precipitation%data_2d)) then
-            this%accumulated_precipitation%data_2d = this%accumulated_precipitation%data_2d + (this%external_precipitation%data_2d * dt%seconds())
+            if (associated(this%accumulated_precipitation%data_2d)) then
+                this%accumulated_precipitation%data_2d = this%accumulated_precipitation%data_2d + (this%external_precipitation%data_2d * dt%seconds())
+            endif
+            if (associated(this%accumulated_precipitation%data_2dd)) then
+                this%accumulated_precipitation%data_2dd = this%accumulated_precipitation%data_2dd + (this%external_precipitation%data_2d * dt%seconds())
+            endif
         endif
 
 

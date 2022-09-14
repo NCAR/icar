@@ -173,7 +173,6 @@ contains
         else if (options%physics%convection==kCU_NSAS) then
             if (this_image()==1) write(*,*) "     NSAS Cumulus scheme"
 
-            ! allocate(hpbl(ims:ime,jms:jme))  ! ?? PBL height I assume? 
             allocate(lowest_convection_layer(ims:ime,jms:jme))
             allocate(highest_convection_layer(ims:ime,jms:jme))
 
@@ -193,13 +192,13 @@ contains
                             ,rucuten=domain%tend%u                              &
                             ,rvcuten=domain%tend%v                              &
                             ,restart=.false.             &  ! options%restart                            &
-                            ,p_qc=1                                             & ! copied from Tiedke; no idea as to what these 3 flags represent. 
+                            ,p_qc=1                                             & ! copied from Tiedke; no idea as to what these 3 flags represent.
                             ,p_qi=1                                             &
                             ,p_first_scalar=0                                   &
                             ,allowed_to_read=.true.                             &
                             ,ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde   &
                             ,ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme   &
-                            ,its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte &  ! -1 or not? 
+                            ,its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte &  ! -1 or not?
                             )
 
         else if (options%physics%convection==kCU_BMJ) then
@@ -208,7 +207,7 @@ contains
             allocate( CLDEFI(ims:ime,jms:jme) )
             allocate( CUBOT(IMS:IME,JMS:JME) )
             allocate( CUTOP(IMS:IME,JMS:JME) )  ! INTENT:OUT
-            allocate( CCLDFRA(ims:ime,jms:jme,kms:kme) )  
+            allocate( CCLDFRA(ims:ime,jms:jme,kms:kme) )
             allocate( QCCONV(ims:ime,jms:jme,kms:kme) )
             allocate( QICONV(ims:ime,jms:jme,kms:kme) )
             allocate( CONVCLD(ims:ime,jms:jme) )
@@ -235,7 +234,7 @@ contains
                          ,cldefi=CLDEFI                                         & !-- CLDEFI        precipitation efficiency (for BMJ scheme) (dimensionless)
                          ,lowlyr=lowlyr                                         & !-- LOWLYR        index of lowest model layer above the ground
                          ,cp=cp                                                 & ! cp  = 1012.0    ! J/kg/K   specific heat capacity of moist STP air?                 CP
-                         ,RD=r_d                      & ! r_d (wrf_constatns) = 287., while Rd  = 287.058 (icar_constants)          
+                         ,RD=r_d                      & ! r_d (wrf_constatns) = 287., while Rd  = 287.058 (icar_constants)
                          ,RESTART= .false.                                      &
                          ,allowed_to_read=.true.                                & !
                          ,ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde  &
@@ -248,7 +247,7 @@ contains
          if ((options%cu_options%stochastic_cu /= kNO_STOCHASTIC) .and.  (this_image()==1)) then
             write(*,*)"      stochastic W pertubation for convection triggering"  ! to check that it actually turns on/of
          elseif ((options%cu_options%stochastic_cu == kNO_STOCHASTIC) .and.  (this_image()==1)) then
-            write(*,*)"      No stochastic W pertubation for convection triggering"  
+            write(*,*)"      No stochastic W pertubation for convection triggering"
          endif
 
     end subroutine init_convection
@@ -319,7 +318,7 @@ subroutine convect(domain,options,dt_in)
                 ,domain%tend%qv_adv                             &
                 ,domain%tend%qv_pbl                             &
                 ,domain%dz_interface%data_3d                    & ! dz8w
-                ,domain%pressure%data_3d                        & ! 
+                ,domain%pressure%data_3d                        & !
                 ,domain%pressure_interface%data_3d              &
                 ,XLAND, CU_ACT_FLAG                             &
                 ,ids,ide, jds,jde, kds,kde                      &
@@ -497,7 +496,7 @@ subroutine convect(domain,options,dt_in)
             !     domain%qrain(:,:,j) =domain%qrain(:,:,j) + domain%tend%Qr(:,:,j)*internal_dt
             ! endif
 
-            domain%accumulated_precipitation%data_2d(:,j)  = domain%accumulated_precipitation%data_2d(:,j) + RAINCV(:,j)
+            domain%accumulated_precipitation%data_2dd(:,j)  = domain%accumulated_precipitation%data_2dd(:,j) + RAINCV(:,j)
             domain%accumulated_convective_pcp%data_2d(:,j) = domain%accumulated_convective_pcp%data_2d(:,j) + RAINCV(:,j)
 
             ! if (options%physics%convection==kCU_TIEDTKE) then

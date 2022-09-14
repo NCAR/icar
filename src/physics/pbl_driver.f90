@@ -34,7 +34,7 @@ module planetary_boundary_layer
     use mod_wrf_constants, only : EOMEG
     use icar_constants !, only : karman,stefan_boltzmann
     use mod_pbl_utilities, only : da_sfc_wtq
-    use ieee_arithmetic ! for debugging 
+    use ieee_arithmetic ! for debugging
     use array_utilities, only : array_offset_x_3d, array_offset_y_3d
 
 
@@ -45,7 +45,7 @@ module planetary_boundary_layer
     real, allocatable, dimension(:,:,:) :: tend_u_ugrid, tend_v_vgrid
 
     private
-    public :: pbl_init, pbl, pbl_finalize, pbl_var_request
+    public :: pbl_var_request, pbl_init, pbl, pbl_finalize
 
     integer :: ids, ide, jds, jde, kds, kde,  &
                ims, ime, jms, jme, kms, kme,  &
@@ -59,6 +59,21 @@ contains
         implicit none
         type(options_t),intent(inout) :: options
 
+        if (options%physics%landsurface == kPBL_SIMPLE) then
+            call options%alloc_vars( &
+                         [kVARS%water_vapor, kVARS%potential_temperature, &
+                         kVARS%cloud_water, kVARS%cloud_ice,              &
+                         kVARS%rain_in_air, kVARS%snow_in_air,            &
+                         kVARS%exner, kVARS%dz_interface, kVARS%density,  &
+                         kVARS%u, kVARS%v, kVARS%land_mask])
+
+             call options%advect_vars([kVARS%potential_temperature, kVARS%water_vapor])
+
+             call options%restart_vars( &
+                         [kVARS%water_vapor, kVARS%potential_temperature, &
+                         kVARS%exner, kVARS%dz_interface, kVARS%density,  &
+                         kVARS%u, kVARS%v, kVARS%land_mask])
+        endif
         if (options%physics%boundarylayer==kPBL_YSU) then
 
             call options%alloc_vars( &
@@ -199,6 +214,7 @@ contains
                             domain% z                     %data_3d,     &
                             domain% dz_mass               %data_3d,     &
                             domain% terrain               %data_2d,     &
+                            domain% land_mask,                          &
                             its, ite, jts, jte, kts, kte,               &
                             dt_in)
                             ! domain% qv_pbl_tendency     %data_3d)
@@ -240,9 +256,9 @@ contains
 
             call ysu(u3d=domain%u_mass%data_3d                           & !-- u3d         3d u-velocity interpolated to theta points (m/s)
                     ,v3d=domain%v_mass%data_3d                           & !-- v3d         3d v-velocity interpolated to theta points (m/s)
-                    ,th3d=domain%potential_temperature%data_3d           & 
-                    ,t3d=domain%temperature%data_3d                      & 
-                    ,qv3d=domain%water_vapor%data_3d                     & 
+                    ,th3d=domain%potential_temperature%data_3d           &
+                    ,t3d=domain%temperature%data_3d                      &
+                    ,qv3d=domain%water_vapor%data_3d                     &
                     ,qc3d=domain%cloud_water_mass%data_3d                & !-- qc3d        cloud water mixing ratio (kg/kg)
                     ,qi3d=domain%cloud_ice_mass%data_3d                  & !-- qi3d        cloud ice mixing ratio (kg/kg)
                     ,p3d=domain%pressure%data_3d                         & !-- p3d         3d pressure (pa)
@@ -265,14 +281,14 @@ contains
                     ,xlv=LH_vaporization                    & !-- xlv         latent heat of vaporization (j/kg)
                     ,rv=Rw                                  &  ! J/(kg K) specific gas constant for wet/moist air
                     ,psfc=domain%surface_pressure%data_2d   &
-                    ,znu=domain%znu                         & ! znu and znw are only used if mut is provided. 
+                    ,znu=domain%znu                         & ! znu and znw are only used if mut is provided.
                     ,znw=domain%znw                         &
                 !   ,mut=""  & ! optional - mass in a cell?
                 !   ,p_top=""  & !,                                           && optional - only if mut is supplied
                     ,znt=domain%roughness_z0%data_2d       &  ! i/o -- znt		roughness length (m) (input only)
                     ,ust=domain%ustar                       & ! i/o -- ust		u* in similarity theory (m/s)
                     ,zol=zol                                & ! i/o -- zol		z/l height over monin-obukhov length - intent(inout) - but appears to not be used really?
-                    ,hol=hol                                & ! i/o -- hol		pbl height over monin-obukhov length - intent(inout) 
+                    ,hol=hol                                & ! i/o -- hol		pbl height over monin-obukhov length - intent(inout)
                     ,hpbl=domain%hpbl%data_2d               & ! i/o -- hpbl	pbl height (m) - intent(inout)
                     ,psim=psim                              & !-- psim        similarity stability function for momentum - intent(in)
                     ,psih=psih                              & !-- psih        similarity stability function for heat- intent(in)
@@ -281,11 +297,11 @@ contains
                     ,qfx=domain%latent_heat%data_2d/LH_vaporization       & !  QFX  - net upward moisture flux at the surface (kg/m^2/s)
                     ,tsk=domain%skin_temperature%data_2d                    &
                     ,gz1oz0=gz1oz0                          & !-- gz1oz0      log(z/z0) where z0 is roughness length
-                    ,wspd=windspd                           & ! i/o -- wspd        wind speed at lowest model level (m/s) 
+                    ,wspd=windspd                           & ! i/o -- wspd        wind speed at lowest model level (m/s)
                     ,br=Ri                                  & !-- br          bulk richardson number in surface layer
                     ,dt=dt_in                               & !-- dt		time step (s)
                     ,dtmin=dt_in/60.                        & !-- dtmin	time step (minute)
-                    ,kpbl2d=domain%kpbl                          & ! o --     ?? k layer of pbl top?? 
+                    ,kpbl2d=domain%kpbl                          & ! o --     ?? k layer of pbl top??
                     ,svp1=SVP1                              & !-- svp1        constant for saturation vapor pressure (kpa)
                     ,svp2=SVP2                              & !-- svp2        constant for saturation vapor pressure (dimensionless)
                     ,svp3=SVP3                              & !-- svp3        constant for saturation vapor pressure (k)
@@ -306,7 +322,7 @@ contains
                 !optional
                     ,regime=regime                          )!  i/o -- regime	flag indicating pbl regime (stable, unstable, etc.) - not used?
 
-                    ! if(this_image()==1 .and. options%parameters%debug) write(*,*) "  pbl height/lev is:", maxval(domain%hpbl%data_2d ),"m/", maxval(domain%kpbl)  ! uncomment if you want to see the pbl height. 
+                    ! if(this_image()==1 .and. options%parameters%debug) write(*,*) "  pbl height/lev is:", maxval(domain%hpbl%data_2d ),"m/", maxval(domain%kpbl)  ! uncomment if you want to see the pbl height.
 
             !> ------------  add tendency terms  ------------
             !
@@ -317,11 +333,11 @@ contains
             !> -----------------------------------------------
 
             ! Offset u/v tendencies to u and v grid, then add
-            call array_offset_x_3d(domain%tend%u , tend_u_ugrid)
-            call array_offset_y_3d(domain%tend%v , tend_v_vgrid)
+            ! call array_offset_x_3d(domain%tend%u , tend_u_ugrid)
+            ! call array_offset_y_3d(domain%tend%v , tend_v_vgrid)
 
-            domain%u%data_3d   =  domain%u%data_3d  +  tend_u_ugrid  * dt_in
-            domain%v%data_3d   =  domain%v%data_3d  +  tend_v_vgrid  * dt_in
+            ! domain%u%data_3d   =  domain%u%data_3d  +  tend_u_ugrid  * dt_in
+            ! domain%v%data_3d   =  domain%v%data_3d  +  tend_v_vgrid  * dt_in
 
             ! add mass grid tendencies
             domain%water_vapor%data_3d            =  domain%water_vapor%data_3d            + domain%tend%qv_pbl  * dt_in

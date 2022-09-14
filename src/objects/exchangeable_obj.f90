@@ -31,6 +31,7 @@ contains
         nullify(this%data_3d)
     endif
 
+    this%dtype = kREAL
     allocate(this%data_3d(grid%ims:grid%ime, &
                           grid%kms:grid%kme, &
                           grid%jms:grid%jme), stat=err)
@@ -124,6 +125,7 @@ contains
 
     this%meta_data%data_3d => this%data_3d
     this%meta_data%three_d = .True.
+    this%meta_data%dtype = this%dtype
 
     if (.not.allocated(this%meta_data%dim_len)) allocate(this%meta_data%dim_len(3))
     this%meta_data%dim_len(1) = size(this%data_3d,1)

@@ -52,6 +52,8 @@ module time_object
         procedure, public  :: equals      => equals_with_precision
         procedure, public  :: units       => units
         procedure, public  :: broadcast   => bcast
+        procedure, public  :: get_calendar=> get_calendar
+        procedure, public  :: get_month   => get_month
 
         generic,   public  :: init        => time_init_c
         generic,   public  :: init        => time_init_i
@@ -116,6 +118,7 @@ interface
 
     end subroutine time_init_i
 
+
     !>------------------------------------------------------------
     !!  Set the calendar from a given name
     !!
@@ -150,6 +153,18 @@ interface
     end function get_seconds
 
 
+    !>---------------------------------
+    !! Convience function, just return the month of the year.
+    !!
+    !!---------------------------------
+    module function get_month(this) result(month)
+        implicit none
+        integer                     :: month
+        class(Time_type), intent(in):: this
+
+    end function get_month
+
+
     !>------------------------------------------------------------
     !!  Return the current date number (days since initial year)
     !!
@@ -164,6 +179,19 @@ interface
 
     end function get_mjd
 
+    !>------------------------------------------------------------
+    !!  Return the calendar being used by a time object
+    !!
+    !!  Either gregorian, 360-day, or noleap
+    !!  GREGORIAN=0, NOLEAP=1, THREESIXTY=2, NOCALENDAR=-1
+    !!
+    !!------------------------------------------------------------
+    module function get_calendar(this) result(calendar)
+        implicit none
+        class(Time_type) :: this
+        integer :: calendar
+
+    end function get_calendar
 
     !>------------------------------------------------------------
     !!  Convert a Year, Month, Day, hour, minute, second into a single number

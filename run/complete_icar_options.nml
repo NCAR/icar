@@ -53,6 +53,7 @@
 
     ! These are the options for output variables.  Though they will only be output if they are computed internally
     ! "u", "v", "w_grid", "w",
+    ! "ivt", "iwv", "iwl", "iwi"
     ! "nsquared", "pressure", "pressure_i", "psfc",
     ! "potential_temperature", "temperature",
     ! "qv", "qc", "nc", "qi", "ni", "qr", "nr", "qs", "ns", "qg", "ng",
@@ -249,6 +250,8 @@
     use_mp_options = true
     !   Read parameters for land surface model
     use_lsm_options = true
+    !   Read parameters for radiation model
+    use_rad_options = true
     !   Read parameters for online bias correction
     use_bias_correction = false
     !   Read parameters for experimental blocked flow parameterization
@@ -347,6 +350,15 @@
     tsoil3D_ext  =  "T_SO"          ! N.B. This will overwrite any input from soil_t_var or soil_deept_var  !!
 /
 
+!---------------------------------------------------------
+!  Optionally specified radiation parameters
+!---------------------------------------------------------
+&rad_parameters
+   update_interval_rrtmg=1800
+   icloud=3
+   read_ghg=.True.
+   use_simple_sw=True
+/
 
 !---------------------------------------------------------
 !   Optionally specified Microphysics parameters (mostly for Thompson)
@@ -431,6 +443,12 @@
     ! ice_category   = -1             ! Int: index that defines the ice category in LU_Categories
     ! water_category = -1             ! Int: index that defines the water category in LU_Categories
     ! lake_category  = -1             ! Int: index that defines the lake(s) category in LU_Categories
+
+    lh_feedback_fraction = 1.0        ! fraction of latent heat to feed into the atmosphere to increase water vapor
+    sh_feedback_fraction = 0.625      ! fraction of sensible heat to feed into the atmosphere to increase temperature
+    sfc_layer_thickness  = 400.0      ! thickness of lower atmosphere to spread LH and SH fluxes over [m]
+    dz_lsm_modification  = 0.5        ! multiplier on dz thickness in call to NoahMP, significantly improves ta2m
+    wind_enhancement = 1.5            ! factor to increase wind speeds passed to NoahMP to account for biases in driving model and improve surface fluxes
 /
 
 
@@ -513,8 +531,9 @@
     bias_correction_filename = ""
 
     ! name of variable in netcdf file that defines a multiplier for precipitation at each grid point
-    ! variable should have a time dimension that will be interpolated over a one year period to permit a seasonality
-    ! to the bias correction
+    ! variable can have a 12-month time dimension to permit seasonality
+    ! to the bias correction. Data should represent the ratio between ICAR precipitation and Observations
+    ! e.g. icar / obs
     rain_fraction_var = ""
 /
 

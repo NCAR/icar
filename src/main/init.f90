@@ -121,7 +121,8 @@ contains
 
         ! call init_physics(options, domain)
 
-        ! call setup_bias_correction(options,domain)
+        call setup_bias_correction(options,domain)
+
         if (this_image()==1) write(*,'(/ A)') "Finished basic initialization"
         if (this_image()==1) write(*,'(A /)') "---------------------------------------"
 
@@ -296,15 +297,28 @@ contains
     !
     ! end subroutine copy_z
 
-    ! subroutine setup_bias_correction(options, domain)
-    !     implicit none
-    !     type(options_t), intent(in) :: options
-    !     type(domain_t), intent(inout):: domain
-    !
-    !     if (options%use_bias_correction) then
-    !         call io_read(options%bias_options%filename, options%bias_options%rain_fraction_var, domain%rain_fraction)
-    !     endif
-    ! end subroutine setup_bias_correction
+    subroutine setup_bias_correction(options, domain)
+        implicit none
+        type(options_t), intent(in) :: options
+        type(domain_t), intent(inout):: domain
+        real, allocatable :: temporary(:,:)
+        integer :: i
+
+        if (options%parameters%use_bias_correction) then
+
+            allocate(domain%rain_fraction(domain%ims:domain%ime, domain%jms:domain%jme, 12))
+
+            do i=1,12
+                call io_read(options%bias_options%filename, options%bias_options%rain_fraction_var, temporary, extradim=i)
+
+                domain%rain_fraction(:,:,i) = temporary(domain%ims:domain%ime, domain%jms:domain%jme)
+            end do
+
+            where(domain%rain_fraction > 5) domain%rain_fraction = 5
+            where(domain%rain_fraction < 0.2) domain%rain_fraction = 0.2
+            domain%rain_fraction = 1 / domain%rain_fraction
+        endif
+    end subroutine setup_bias_correction
     !
     ! subroutine init_domain_land(domain,options)
     !     implicit none
