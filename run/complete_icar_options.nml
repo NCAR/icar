@@ -2,7 +2,7 @@
 !   Model and run meta-data
 !---------------------------------------------------------
 &model_version
-    version = "2.0",                      ! This must match the version of the compiled code
+    version = "2.1",                      ! This must match the version of the compiled code
     comment = "Add your comment here"     ! This will be stored in output files
 /
 
@@ -97,14 +97,28 @@
     ! Warning, convection can be unstable.
     ! wishlist = No Code Present yet
 
-    pbl = 0,  ! 1=legacy (deprecated)      2=Simple (Local HP96)        3=YSU             (N/A)
+    ! Planetary Boundary Layer Scheme
+    pbl = 0,  ! 1=legacy (deprecated)      2=Simple (Local HP96)        3=YSU (work in progress)
+
+    ! Land Surface Model
     lsm = 0,  ! 1=use prescribed fluxes    2=Simple LSM (N/A)           3=Noah LSM                  4=NoahMP
-    water=2,  ! 1=use prescribed (w/lsm=1) 2=Simple sea surface fluxes  3=Lake model (simple ocean)
+
+    ! Open water fluxes
+    water=0,  ! 1=use prescribed (w/lsm=1) 2=Simple sea surface fluxes  3=Lake model (simple ocean)
+
+    ! Microphysics Scheme
     mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison                  4=WSM6      5=Thompson-Eidhammer    6=WSM3
+    ! Radiation Scheme
     rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG
-    conv= 0,  ! 1=Tiedke Scheme            2=Simple Scheme (wishlist)   3=Kain-Fritsch (N/A)        4=NSAS      5=BMJ
-    adv = 1,  ! 1=Upwind                   2=MPDATA                     3=Adams-Bashforth (wishlist)
-    wind= 1   ! 1=Linear Theory
+
+    ! Convection / Cumulus Scheme
+    conv= 0,  ! 1=Tiedke Scheme            2=Simple Scheme (wishlist)   3=Kain-Fritsch              4=NSAS      5=BMJ
+
+    ! Advection Scheme
+    adv = 1,  ! 1=Upwind                   2=MPDATA                     3=Runga-Kutta (in progress?)
+
+    ! Wind field calculations
+    wind= 1   ! 1=Linear Theory            2=grid based,mass-conserving 3=iterative wind solver     4=implicit(in progress)  5=linear+iterative
 /
 
 !---------------------------------------------------------
