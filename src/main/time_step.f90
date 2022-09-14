@@ -137,7 +137,7 @@ contains
             if (associated(domain%cloud_ice_mass%data_3d)) temporary_data = temporary_data + cloud_ice
             if (associated(domain%snow_mass%data_3d)) temporary_data = temporary_data + snow_ice
             if (associated(domain%graupel_mass%data_3d)) temporary_data = temporary_data + graupel_ice
-            call compute_iq(domain%iwi%data_2d, water_vapor, pressure_i)
+            call compute_iq(domain%iwi%data_2d, temporary_data, pressure_i)
         endif
 
         ! temporary constant
