@@ -52,7 +52,8 @@
     names = "u","v","ta2m","hus2m", "precipitation", "swe"
 
     ! These are the options for output variables.  Though they will only be output if they are computed internally
-    ! "u", "v", "w_grid", "w", "ivt"
+    ! "u", "v", "w_grid", "w",
+    ! "ivt", "iwv", "iwl", "iwi"
     ! "nsquared", "pressure", "pressure_i", "psfc",
     ! "potential_temperature", "temperature",
     ! "qv", "qc", "nc", "qi", "ni", "qr", "nr", "qs", "ns", "qg", "ng",
