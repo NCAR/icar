@@ -3,7 +3,7 @@ class ICARoptions:
     def __init__(self,
                  filename = 'icar_options.nml',
                  # model namelist
-                 model_version = 2.0,
+                 model_version = 2.1,
                  model_comment = 'Unit Test Data',
                  # output namelist
                  output_vars = ['u','v','precipitation','swe'],
@@ -63,7 +63,7 @@ class ICARoptions:
                  t_is_potential = 'True',
                  time_varying_z = 'False',
                  ideal='True',
-                 debug='True',        # currently this writes the global jacobian to a netcdf file, and gives min/max values of the jacobian on runtime.  
+                 debug='True',        # currently this writes the global jacobian to a netcdf file, and gives min/max values of the jacobian on runtime.
                  smooth_wind_distance = '72000',
                  use_agl_height = True,   #  Use height above ground level to interpolate the wind field instead of height above sea level.
                  agl_cap = 400,  #   Height at which we switch from AGL-interpolation to using ASL-interpolation
