@@ -382,6 +382,9 @@ contains
         if (0<opt%vars_to_allocate( kVARS%savedtke12d) )                call setup(this%savedtke12d,             this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%lakedepth2d) )                call setup(this%lakedepth2d,             this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%ivt) )                        call setup(this%ivt,                     this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%iwv) )                        call setup(this%iwv,                     this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%iwl) )                        call setup(this%iwl,                     this%grid2d )
+        if (0<opt%vars_to_allocate( kVARS%iwi) )                        call setup(this%iwi,                     this%grid2d )
 
         ! integer variable_t types aren't available (yet...)
         if (0<opt%vars_to_allocate( kVARS%convective_precipitation) )   allocate(this%cu_precipitation_bucket  (ims:ime, jms:jme),          source=0)
@@ -2117,7 +2120,8 @@ contains
                       kVARS%latitude,               kVARS%longitude,                &
                       kVARS%u_latitude,             kVARS%u_longitude,              &
                       kVARS%v_latitude,             kVARS%v_longitude,              &
-                      kVars%temperature_interface,  kVARS%ivt                       ])
+                      kVARS%temperature_interface,  kVARS%ivt,                      &
+                      kVARS%iwv,    kVARS%iwl,      kVARS%iwi                      ])
 
         if (trim(options%parameters%rain_var) /= "") call options%alloc_vars([kVARS%external_precipitation])
 

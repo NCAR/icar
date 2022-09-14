@@ -279,6 +279,9 @@ contains
         if (0<var_list( kVARS%savedtke12d) )                call this%add_to_output( get_metadata( kVARS%savedtke12d                  , domain%savedtke12d%data_2d))
         if (0<var_list( kVARS%lakedepth2d) )                call this%add_to_output( get_metadata( kVARS%lakedepth2d                  , domain%lakedepth2d%data_2d))
         if (0<var_list( kVARS%ivt) )                        call this%add_to_output( get_metadata( kVARS%ivt                          , domain%ivt%data_2d))
+        if (0<var_list( kVARS%iwv) )                        call this%add_to_output( get_metadata( kVARS%iwv                          , domain%iwv%data_2d))
+        if (0<var_list( kVARS%iwl) )                        call this%add_to_output( get_metadata( kVARS%iwl                          , domain%iwl%data_2d))
+        if (0<var_list( kVARS%iwi) )                        call this%add_to_output( get_metadata( kVARS%iwi                          , domain%iwi%data_2d))
 
     end subroutine
 

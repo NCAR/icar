@@ -2422,6 +2422,41 @@ contains
                                attribute_t("coordinates",   "lat lon")]
         end associate
 
+        !>------------------------------------------------------------
+        !!  Integrated Water Vapor
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%iwv))
+            var%name        = "iwv"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "atmosphere_mass_content_of_water_vapor"),  &
+                               attribute_t("units",         "kg m-2"),                      &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+
+        !>------------------------------------------------------------
+        !!  Integrated Water Liquid
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%iwl))
+            var%name        = "iwl"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("non_standard_name", "atmosphere_mass_content_of_water_liquid"),  &
+                               attribute_t("units",         "kg m-2"),                      &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
+
+        !>------------------------------------------------------------
+        !!  Integrated Water Ice
+        !!------------------------------------------------------------
+        associate(var=>var_meta(kVARS%iwi))
+            var%name        = "iwi"
+            var%dimensions  = two_d_t_dimensions
+            var%unlimited_dim=.True.
+            var%attributes  = [attribute_t("standard_name", "atmosphere_mass_content_of_water_ice"),  &
+                               attribute_t("units",         "kg m-2"),                      &
+                               attribute_t("coordinates",   "lat lon")]
+        end associate
 
         !>------------------------------------------------------------
         !!  Binary land mask (water vs land)

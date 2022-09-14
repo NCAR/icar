@@ -238,6 +238,9 @@ module domain_interface
     type(variable_t) :: lakedepth2d
     ! diagnostics
     type(variable_t) :: ivt
+    type(variable_t) :: iwv
+    type(variable_t) :: iwl
+    type(variable_t) :: iwi
 
     ! link effective radius from microphysics to radiation scheme
     type(variable_t) :: re_cloud
