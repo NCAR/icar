@@ -17,6 +17,87 @@ module array_utilities
 
 contains
 
+    subroutine make_2d(lat,lon)
+        implicit none
+        real, intent(inout), allocatable :: lat(:,:), lon(:,:)
+        integer :: ims, ime, jms, jme, i
+        real, allocatable :: temporary_geo_data(:,:)
+
+        if (size(lat,2)==1) then
+
+            ims = lbound(lon,1)
+            ime = ubound(lon,1)
+            jms = lbound(lat,1)
+            jme = ubound(lat,1)
+
+            allocate(temporary_geo_data(ims:ime, jms:jme))
+            do i = jms,jme
+                temporary_geo_data(:,i) = lon(:,1)
+            end do
+
+            deallocate(lon)
+            allocate(lon(ims:ime, jms:jme))
+            lon = temporary_geo_data
+
+            do i = ims, ime
+                temporary_geo_data(i,:) = lat(:,1)
+            end do
+            deallocate(lat)
+            allocate(lat(ims:ime, jms:jme))
+            lat = temporary_geo_data
+
+        endif
+    end subroutine make_2d
+
+    subroutine make_2d_x(dataarray, ms, me)
+        implicit none
+        real, intent(inout), allocatable :: dataarray(:,:)
+        integer, intent(in) :: ms, me
+
+        integer :: ims, ime, j
+        real, allocatable :: temporary_data(:,:)
+
+        if (size(dataarray,2)==1) then
+
+            ims = lbound(dataarray,1)
+            ime = ubound(dataarray,1)
+            allocate(temporary_data(ims:ime, ms:me))
+            do j = ms,me
+                temporary_data(:,j) = dataarray(:,1)
+            end do
+
+            deallocate(dataarray)
+            allocate(dataarray(ims:ime, ms:me))
+            dataarray = temporary_data
+        endif
+
+    end subroutine make_2d_x
+
+    subroutine make_2d_y(dataarray, ms, me)
+        implicit none
+        real, intent(inout), allocatable :: dataarray(:,:)
+        integer, intent(in) :: ms, me
+
+        integer :: jms, jme, j
+        real, allocatable :: temporary_data(:,:)
+
+        if (size(dataarray,2)==1) then
+
+            jms = lbound(dataarray,1)
+            jme = ubound(dataarray,1)
+            allocate(temporary_data(ms:me, jms:jme))
+            do j = jms,jme
+                temporary_data(:,j) = dataarray(j,1)
+            end do
+
+            deallocate(dataarray)
+            allocate(dataarray(ms:me, jms:jme))
+            dataarray = temporary_data
+        endif
+
+    end subroutine make_2d_y
+
+
     subroutine interpolate_in_z(input)
         implicit none
         real, allocatable, intent(inout) :: input(:,:,:)
@@ -90,12 +171,19 @@ contains
         ny = size(input_array,2)
 
         if (allocated(output_array)) deallocate(output_array)
-        allocate(output_array(nx, ny+1))
+        if (ny > 1) then
+            allocate(output_array(nx, ny+1))
 
-        output_array(:,1)    = (1.5 * input_array(:,1)  - 0.5 * input_array(:,2))    ! extrapolate past the end
-        output_array(:,2:ny) = (input_array(:,1:ny-1) + input_array(:,2:ny) ) / 2    ! interpolate between points
-        output_array(:,ny+1) = (1.5 * input_array(:,ny)  - 0.5 * input_array(:,ny-1))! extrapolate past the end
+            output_array(:,1)    = (1.5 * input_array(:,1)  - 0.5 * input_array(:,2))    ! extrapolate past the end
+            output_array(:,2:ny) = (input_array(:,1:ny-1) + input_array(:,2:ny) ) / 2    ! interpolate between points
+            output_array(:,ny+1) = (1.5 * input_array(:,ny)  - 0.5 * input_array(:,ny-1))! extrapolate past the end
+        else ! this came in as essentially a 1D array with y really being in the x position as a result
+            allocate(output_array(nx+1, ny))
 
+            output_array(1,:)    = (1.5 * input_array(1,:)  - 0.5 * input_array(2,:))    ! extrapolate past the end
+            output_array(2:nx,:) = (input_array(1:nx-1,:) + input_array(2:nx,:) ) / 2    ! interpolate between points
+            output_array(nx+1,:) = (1.5 * input_array(nx,:)  - 0.5 * input_array(nx-1,:))! extrapolate past the end
+        endif
     end subroutine
 
     subroutine array_offset_y_3d(input_array, output_array)
@@ -110,6 +198,7 @@ contains
         ny = size(input_array,3)
 
         if (allocated(output_array)) deallocate(output_array)
+
         allocate(output_array(nx, nz, ny+1))
 
         output_array(:,:,1)    = (1.5 * input_array(:,:,1)  - 0.5 * input_array(:,:,2))    ! extrapolate past the end

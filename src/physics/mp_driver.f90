@@ -32,7 +32,8 @@ module microphysics
     use module_mp_thompson_aer,     only: mp_gt_driver_aer, thompson_aer_init
     use module_mp_thompson,         only: mp_gt_driver, thompson_init
     ! use module_mp_morr_two_moment,  only: MORR_TWO_MOMENT_INIT, MP_MORR_TWO_MOMENT
-     use module_mp_wsm6,             only: wsm6, wsm6init
+    use module_mp_wsm6,             only: wsm6, wsm6init
+    use module_mp_wsm3,             only: wsm3, wsm3init
     use module_mp_simple,           only: mp_simple_driver, mp_simple_var_request
     use time_object,                only: Time_type
     use options_interface,          only: options_t
@@ -44,7 +45,7 @@ module microphysics
     integer :: update_interval
     real*8 :: last_model_time
     ! temporary variables
-    real,allocatable,dimension(:,:) :: SR, last_rain, last_snow, this_precip,refl_10cm
+    real,allocatable,dimension(:,:) :: SR, last_rain, last_snow, this_precip, this_snow,refl_10cm
 
 
     ! microphysics specific flag.  If it returns the current hourly precip (e.g. Morrison), then set this to false.
@@ -93,9 +94,16 @@ contains
         !     write(*,*) "    Morrison Microphysics"
         !     call MORR_TWO_MOMENT_INIT(hail_opt=0)
         !     precip_delta=.False.
+
         elseif (options%physics%microphysics==kMP_WSM6) then
             if (this_image()==1) write(*,*) "    WSM6 Microphysics"
             call wsm6init(rhoair0,rhowater,rhosnow,cliq,cpv)
+            precip_delta=.True.
+
+        elseif (options%physics%microphysics==kMP_WSM3) then
+            if (this_image()==1) write(*,*) "    WSM3 Microphysics"
+            call wsm3init(rhoair0,rhowater,rhosnow,cliq,cpv, allowed_to_read=.True.)
+            precip_delta=.True.
         endif
 
         update_interval = options%mp_options%update_interval
@@ -114,7 +122,7 @@ contains
                       kVARS%water_vapor, kVARS%cloud_water,             kVARS%rain_in_air,  kVARS%rain_number_concentration, &
                       kVARS%snow_in_air, kVARS%cloud_ice,               kVARS%w,            kVARS%ice_number_concentration,      &
                       kVARS%snowfall,    kVARS%precipitation,           kVARS%graupel,      kVARS%graupel_in_air,     &
-                      kVARS%dz ])
+                      kVARS%dz, kVARS%re_cloud, kVARS%re_ice, kVARS%re_snow ])
 
         ! List the variables that are required to be advected for the simple microphysics
         call options%advect_vars( &
@@ -128,8 +136,9 @@ contains
                         kVARS%cloud_water,  kVARS%rain_in_air,              kVARS%snow_in_air,   &
                         kVARS%precipitation,kVARS%snowfall,                 kVARS%graupel,       &
                         kVARS%dz,           kVARS%snow_in_air,              kVARS%cloud_ice,     &
-                        kVARS%rain_number_concentration, kVARS%rain_in_air,  &
-                        kVARS%ice_number_concentration,  kVARS%graupel_in_air ] )
+                        kVARS%rain_number_concentration, kVARS%rain_in_air,                      &
+                        kVARS%ice_number_concentration,  kVARS%graupel_in_air,                   &
+                        kVARS%re_cloud, kVARS%re_ice, kVARS%re_snow  ] )
 
 
     end subroutine
@@ -141,10 +150,9 @@ contains
         ! List the variables that are required to be allocated for the simple microphysics
         call options%alloc_vars( &
                      [kVARS%pressure,    kVARS%potential_temperature,   kVARS%exner,        kVARS%density,      &
-                      kVARS%water_vapor, kVARS%cloud_water,             kVARS%rain_in_air,  &
-                      kVARS%snow_in_air, kVARS%cloud_ice,               kVARS%w,            &
-                      kVARS%snowfall,    kVARS%precipitation,           kVARS%graupel,      kVARS%graupel_in_air,     &
-                      kVARS%dz ])
+                      kVARS%water_vapor, kVARS%cloud_water,             kVARS%rain_in_air,                      &
+                      kVARS%snow_in_air, kVARS%cloud_ice,               kVARS%dz,                               &
+                      kVARS%snowfall,    kVARS%precipitation,           kVARS%graupel,      kVARS%graupel_in_air ])
 
         ! List the variables that are required to be advected for the simple microphysics
         call options%advect_vars( &
@@ -159,6 +167,31 @@ contains
                         kVARS%precipitation,kVARS%snowfall,                 kVARS%graupel,       &
                         kVARS%dz,           kVARS%snow_in_air,              kVARS%cloud_ice,     &
                         kVARS%rain_in_air,  kVARS%graupel_in_air ] )
+
+
+    end subroutine
+
+    subroutine mp_wsm3_var_request(options)
+        implicit none
+        type(options_t), intent(inout) :: options
+
+        ! List the variables that are required to be allocated for the simple microphysics
+        call options%alloc_vars( &
+                     [kVARS%pressure,    kVARS%potential_temperature,   kVARS%exner,        kVARS%density,      &
+                      kVARS%water_vapor, kVARS%cloud_water,             kVARS%rain_in_air,                      &
+                      kVARS%dz,          kVARS%snowfall,                kVARS%precipitation ])
+
+        ! List the variables that are required to be advected for the simple microphysics
+        call options%advect_vars( &
+                      [kVARS%potential_temperature, kVARS%water_vapor, kVARS%cloud_water,  &
+                       kVARS%rain_in_air ] )
+
+        ! List the variables that are required to be allocated for the simple microphysics
+        call options%restart_vars( &
+                       [kVARS%pressure,     kVARS%potential_temperature,    kVARS%water_vapor,   &
+                        kVARS%cloud_water,  kVARS%rain_in_air,              kVARS%snow_in_air,   &
+                        kVARS%precipitation,kVARS%snowfall,                 kVARS%graupel,       &
+                        kVARS%dz, kVARS%rain_in_air ] )
 
 
     end subroutine
@@ -179,8 +212,18 @@ contains
 
         elseif (options%physics%microphysics==kMP_MORRISON) then
             stop "Morrison physics not re-implemented yet"
+
         elseif (options%physics%microphysics==kMP_WSM6) then
             call mp_wsm6_var_request(options)
+
+        elseif (options%physics%microphysics==kMP_WSM3) then
+            call mp_wsm3_var_request(options)
+
+        ! For the ideal test case(s), we need to be able to advect qv, without initializing microphysics:
+        elseif (options%parameters%ideal) then
+                if (this_image()==1) write(*,*) "    allocating water vapor for ideal test case."
+                call options%alloc_vars( [kVARS%water_vapor] )
+                call options%advect_vars( [kVARS%water_vapor] )
         endif
 
     end subroutine mp_var_request
@@ -210,6 +253,11 @@ contains
             allocate(this_precip(ims:ime,jms:jme))
             this_precip=0
         endif
+        if (.not.allocated(this_snow)) then
+            allocate(this_snow(ims:ime,jms:jme))
+            this_snow=0
+        endif
+
         if (.not.allocated(refl_10cm)) then
             allocate(refl_10cm(ims:ime,jms:jme))
             refl_10cm=0
@@ -358,8 +406,11 @@ contains
         integer,        intent(in)    :: its,ite, jts,jte, kts,kte
         integer,        intent(in)    :: ims,ime, jms,jme, kms,kme
         integer,        intent(in)    :: ids,ide, jds,jde, kds,kde
+        real :: precipitation(ims:ime, jms:jme), graupel(ims:ime, jms:jme), snowfall(ims:ime, jms:jme)
 
-
+        precipitation = 0
+        graupel = 0
+        snowfall = 0
         ! run the thompson microphysics
         if (options%physics%microphysics==kMP_THOMPSON) then
             ! call the thompson microphysics
@@ -377,11 +428,11 @@ contains
                               dz = domain%dz_mass%data_3d,                          &
                               dt_in = dt,                                           &
                               itimestep = 1,                                        & ! not used in thompson
-                              RAINNC = domain%accumulated_precipitation%data_2d,    &
+                              RAINNC = precipitation,    &
                               RAINNCV = this_precip,                                & ! not used outside thompson (yet)
                               SR = SR,                                              & ! not used outside thompson (yet)
-                              SNOWNC = domain%accumulated_snowfall%data_2d,         &
-                              GRAUPELNC = domain%graupel%data_2d,       &
+                              SNOWNC = snowfall,         &
+                              GRAUPELNC = graupel,       &
                               ids = ids, ide = ide,                   & ! domain dims
                               jds = jds, jde = jde,                   &
                               kds = kds, kde = kde,                   &
@@ -408,10 +459,13 @@ contains
                                   w =  domain%w%data_3d,                                &
                                   dz = domain%dz_mass%data_3d,                          &
                                   dt_in = dt,                                           &
-                                  RAINNC = domain%accumulated_precipitation%data_2d,    &
-                                  SNOWNC = domain%accumulated_snowfall%data_2d,         &
-                                  GRAUPELNC = domain%graupel%data_2d,       &
-                                  has_reqc=0, has_reqi=0, has_reqs=0,                   &
+                                  RAINNC = precipitation,    &
+                                  SNOWNC = snowfall,         &
+                                  GRAUPELNC = graupel,       &
+                                  re_cloud = domain%re_cloud%data_3d,                   &
+                                  re_ice   = domain%re_ice%data_3d,                     &
+                                  re_snow  = domain%re_snow%data_3d,                    &
+                                  has_reqc=1, has_reqi=1, has_reqs=1,                   &
                                   ids = ids, ide = ide,                   & ! domain dims
                                   jds = jds, jde = jde,                   &
                                   kds = kds, kde = kde,                   &
@@ -432,8 +486,8 @@ contains
                                   domain%cloud_water_mass%data_3d,          &
                                   domain%rain_mass%data_3d,                 &
                                   domain%snow_mass%data_3d,                 &
-                                  domain%accumulated_precipitation%data_2d, &
-                                  domain%accumulated_snowfall%data_2d,      &
+                                  precipitation, &
+                                  snowfall,      &
                                   dt,                                       &
                                   domain%dz_mass%data_3d,                   &
                                   ims = ims, ime = ime,                   & ! memory dims
@@ -480,11 +534,11 @@ contains
                               XLS = XLS, XLV0 = XLV, XLF0 = XLF,                    &
                               den0 = rhoair0, denr = rhowater,                  &
                               cliq = cliq, cice = cice, psat = psat,                                   &
-                              rain = domain%accumulated_precipitation%data_2d,    &
+                              rain = precipitation,    &
                               rainncv = this_precip,                                & ! not used outside thompson (yet)
                               sr = SR,                                              & ! not used outside thompson (yet)
-                              snow = domain%accumulated_snowfall%data_2d,         &
-                              graupel = domain%graupel%data_2d,       &
+                              snow = snowfall,         &
+                              graupel = graupel,       &
                               ids = ids, ide = ide,                   & ! domain dims
                               jds = jds, jde = jde,                   &
                               kds = kds, kde = kde,                   &
@@ -495,8 +549,50 @@ contains
                               jts = jts, jte = jte,                   &
                               kts = kts, kte = kte)
 
+        elseif (options%physics%microphysics==kMP_WSM3) then
+
+            call wsm3(        q = domain%water_vapor%data_3d,                       &
+                              th = domain%potential_temperature%data_3d,            &
+                              qci = domain%cloud_water_mass%data_3d,                &
+                              qrs = domain%rain_mass%data_3d,                       &
+                              w = domain%w_real%data_3d,                            &
+                              pii= domain%exner%data_3d,                            &
+                              p =  domain%pressure%data_3d,                         &
+                              delz = domain%dz_mass%data_3d,                        &
+                              den = domain%density%data_3d,                         &
+                              delt = dt,                                            &
+                              g = gravity,                                          &
+                              cpd = cp, cpv = cpv, rd = Rd, rv = Rw, t0c = 273.15,  &
+                              ep1 = EP1, ep2 = EP2, qmin = epsilon,                 &
+                              XLS = XLS, XLV0 = XLV, XLF0 = XLF,                    &
+                              den0 = rhoair0, denr = rhowater,                      &
+                              cliq = cliq, cice = cice, psat = psat,                &
+                              rain = precipitation,      &
+                              rainncv = this_precip,                                & ! not used outside thompson (yet)
+                              sr = SR,                                              & ! not used outside thompson (yet)
+                              snow = snowfall,           &
+                              snowncv = this_snow,                                  &
+                              has_reqc=0, has_reqi=0, has_reqs=0,     &
+                              ids = ids, ide = ide,                   & ! domain dims
+                              jds = jds, jde = jde,                   &
+                              kds = kds, kde = kde,                   &
+                              ims = ims, ime = ime,                   & ! memory dims
+                              jms = jms, jme = jme,                   &
+                              kms = kms, kme = kme,                   &
+                              its = its, ite = ite,                   & ! tile dims
+                              jts = jts, jte = jte,                   &
+                              kts = kts, kte = kte)
         endif
 
+        if (associated(domain%accumulated_precipitation%data_2dd)) then
+            domain%accumulated_precipitation%data_2dd = domain%accumulated_precipitation%data_2dd + precipitation
+        endif
+        if (associated(domain%graupel%data_2dd)) then
+            domain%graupel%data_2dd = domain%graupel%data_2dd + graupel
+        endif
+        if (associated(domain%accumulated_snowfall%data_2dd)) then
+            domain%accumulated_snowfall%data_2dd = domain%accumulated_snowfall%data_2dd + snowfall
+        endif
         ! needs to be converted to work on specified tile or better, maybe moved out of microphysics driver entirely...
         ! if (options%use_bias_correction) then
         !     call apply_rain_fraction(domain%model_time, domain%rain_fraction, domain%rain, last_rain, precip_delta)
@@ -618,10 +714,10 @@ contains
 
             ! If we are going to distribute the current precip over a few grid cells, we need to keep track of
             ! the last_precip so we know how much fell
-            if ((options%mp_options%local_precip_fraction<1).or.(options%parameters%use_bias_correction)) then
-                last_rain = domain%accumulated_precipitation%data_2d
-                last_snow = domain%accumulated_snowfall%data_2d
-            endif
+            ! if (options%mp_options%local_precip_fraction<1) then
+            !     last_rain = domain%accumulated_precipitation%data_2dd
+            !     last_snow = domain%accumulated_snowfall%data_2d
+            ! endif
 
             ! set the current tile to the top layer to process microphysics for
             if (options%mp_options%top_mp_level>0) then
@@ -699,6 +795,9 @@ contains
         endif
         if (allocated(this_precip)) then
             deallocate(this_precip)
+        endif
+        if (allocated(this_snow)) then
+            deallocate(this_snow)
         endif
     end subroutine mp_finish
 end module microphysics

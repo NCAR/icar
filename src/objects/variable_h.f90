@@ -2,6 +2,7 @@ module variable_interface
     use icar_constants,          only : kMAX_DIM_LENGTH, kMAX_STRING_LENGTH, kMAX_NAME_LENGTH
     use grid_interface,          only : grid_t
     use meta_data_interface,     only : meta_data_t
+    use iso_fortran_env,         only : real64
 
     implicit none
 
@@ -11,6 +12,7 @@ module variable_interface
     type, extends(meta_data_t) :: variable_t
         real, pointer :: data_3d(:,:,:) => null()
         real, pointer :: data_2d(:,:)   => null()
+        real(kind=real64), pointer :: data_2dd(:,:) => null()
 
         real, pointer :: dqdt_3d(:,:,:) => null()   ! Note these have to be pointers so they get referenced when variable_t is passed around(?)
         real, pointer :: dqdt_2d(:,:)   => null()   ! Note these have to be pointers so they get referenced when variable_t is passed around(?)
@@ -23,6 +25,7 @@ module variable_interface
         character(len=kMAX_NAME_LENGTH) :: forcing_var = ""
 
         integer :: n_dimensions
+        integer :: dtype
         integer,                        allocatable :: dim_len(:)
         character(len=kMAX_DIM_LENGTH), allocatable :: dimensions(:)
 
@@ -53,12 +56,13 @@ module variable_interface
         end subroutine
 
 
-        module subroutine init_grid(this, grid, forcing_var, force_boundaries)
+        module subroutine init_grid(this, grid, forcing_var, force_boundaries, dtype)
             implicit none
             class(variable_t),  intent(inout) :: this
             type(grid_t),       intent(in)    :: grid
             character(len=*),   intent(in), optional :: forcing_var
             logical,            intent(in), optional :: force_boundaries
+            integer,            intent(in), optional :: dtype
 
         end subroutine
 

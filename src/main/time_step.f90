@@ -12,11 +12,12 @@ module time_step
     use icar_constants,             only : Rd
     use microphysics,               only : mp
     use advection,                  only : advect
-    use mod_atm_utilities,          only : exner_function
+    use mod_atm_utilities,          only : exner_function, compute_ivt, compute_iq
     use convection,                 only : convect
     use land_surface,               only : lsm
     use planetary_boundary_layer,   only : pbl
     use radiation,                  only : rad
+    use wind,                       only : balance_uvw
 
     use domain_interface,           only : domain_t
     use options_interface,          only : options_t
@@ -52,6 +53,7 @@ contains
         integer :: z
 
         logical :: use_delta_terrain
+        real, allocatable :: temporary_data(:,:,:)
 
         associate(ims => domain%ims, ime => domain%ime,                         &
                   jms => domain%jms, jme => domain%jme,                         &
@@ -62,7 +64,14 @@ contains
                   dz_interface          => domain%dz_interface%data_3d,         &
                   psfc                  => domain%surface_pressure%data_2d,     &
                   density               => domain%density%data_3d,              &
+                  water_vapor           => domain%water_vapor%data_3d,          &
+                  cloud_water           => domain%cloud_water_mass%data_3d,     &
+                  rain_water            => domain%rain_mass%data_3d,            &
+                  cloud_ice             => domain%cloud_ice_mass%data_3d,       &
+                  snow_ice              => domain%snow_mass%data_3d,            &
+                  graupel_ice           => domain%graupel_mass%data_3d,         &
                   temperature           => domain%temperature%data_3d,          &
+                  temperature_i         => domain%temperature_interface%data_3d,&
                   u                     => domain%u%data_3d,                    &
                   v                     => domain%v%data_3d,                    &
                   w                     => domain%w%data_3d,                    &
@@ -71,8 +80,9 @@ contains
                   v_mass                => domain%v_mass%data_3d,               &
                   potential_temperature => domain%potential_temperature%data_3d )
 
-        exner = exner_function(pressure)
+        allocate(temporary_data(ims:ime, kms:kme, jms:jme))
 
+        exner = exner_function(pressure)
         ! domain%p_inter=domain%p
         ! call update_pressure(domain%p_inter, domain%z, domain%z_inter, domain%t)
         pressure_i(:,kms+1:kme, :) = (pressure(:,kms:kme-1, :) + pressure(:,kms+1:kme, :)) / 2
@@ -84,6 +94,8 @@ contains
         endif
 
         temperature = potential_temperature * exner
+        temperature_i(:,kms+1:kme, :) = (temperature(:,kms:kme-1, :) + temperature(:,kms+1:kme, :)) / 2
+        temperature_i(:, kms, :) = temperature(:, kms, :) + (temperature(:, kms, :) - temperature(:, kms+1, :)) / 2
 
         if (associated(domain%density%data_3d)) then
             density =  pressure / &
@@ -97,17 +109,6 @@ contains
         endif
 
 
-    ! NOTE: all code below is not implemented in ICAR 2.0 yet
-    ! it is left as a reminder of what needs to be done, and example when the time comes
-    !
-    !     ! update mut
-    !
-    !     domain%p_inter=domain%p
-    !     call update_pressure(domain%p_inter, domain%z, domain%z_inter, domain%t)
-    !     domain%psfc = domain%p_inter(:,1,:)
-    !     ! technically this isn't correct, we should be using update_pressure or similar to solve this
-    !     domain%ptop = 2*domain%p(:,nz,:) - domain%p(:,nz-1,:)
-    !
     !     ! dry mass in the gridcell is equivalent to the difference in pressure from top to bottom
     !     domain%mut(:,1:nz-1,:) = domain%p_inter(:,1:nz-1,:) - domain%p_inter(:,2:nz,:)
     !     domain%mut(:,nz,:) = domain%p_inter(:,nz,:) - domain%ptop
@@ -117,6 +118,26 @@ contains
             allocate( currw( ims+1:ime-1, jms+1:jme-1))
             allocate(    uw( ims+1:ime,   jms+1:jme-1))
             allocate(    vw( ims+1:ime-1, jms+1:jme  ))
+        endif
+
+        if (associated(domain%ivt%data_2d)) then
+            call compute_ivt(domain%ivt%data_2d, water_vapor, u_mass, v_mass, pressure_i)
+        endif
+        if (associated(domain%iwv%data_2d)) then
+            call compute_iq(domain%iwv%data_2d, water_vapor, pressure_i)
+        endif
+        if (associated(domain%iwl%data_2d)) then
+            temporary_data = 0
+            if (associated(domain%cloud_water_mass%data_3d)) temporary_data = temporary_data + cloud_water
+            if (associated(domain%rain_mass%data_3d)) temporary_data = temporary_data + rain_water
+            call compute_iq(domain%iwl%data_2d, temporary_data, pressure_i)
+        endif
+        if (associated(domain%iwi%data_2d)) then
+            temporary_data = 0
+            if (associated(domain%cloud_ice_mass%data_3d)) temporary_data = temporary_data + cloud_ice
+            if (associated(domain%snow_mass%data_3d)) temporary_data = temporary_data + snow_ice
+            if (associated(domain%graupel_mass%data_3d)) temporary_data = temporary_data + graupel_ice
+            call compute_iq(domain%iwi%data_2d, temporary_data, pressure_i)
         endif
 
         ! temporary constant
@@ -471,6 +492,18 @@ contains
                 if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" lsm")
 
                 call pbl(domain, options, real(dt%seconds()))!, halo=1)
+                ! balance u/v and re-calculate dt after winds have been modified by pbl:
+                ! if (options%physics%boundarylayer==kPBL_YSU) then
+                !     call balance_uvw(   domain%u%data_3d,   domain%v%data_3d,   domain%w%data_3d,       &
+                !                         domain%jacobian_u,  domain%jacobian_v,  domain%jacobian_w,      &
+                !                         domain%advection_dz, domain%dx, domain%jacobian, options    )
+                !
+                !     call update_dt(dt, options, domain, end_time)
+                !
+                !     if ((domain%model_time + dt) > end_time) then
+                !         dt = end_time - domain%model_time
+                !     endif
+                ! endif
                 if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" pbl")
 
                 call convect(domain, options, real(dt%seconds()))!, halo=1)

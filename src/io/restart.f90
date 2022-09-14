@@ -36,6 +36,7 @@ subroutine read_restart_data(domain, dataset, filename, time_step)
     integer :: dim_3d(3)
     real, allocatable :: data_3d(:,:,:)
     real, allocatable :: data_2d(:,:)
+    double precision, allocatable :: data_2dd(:,:)
 
     do i=1,dataset%n_variables
 
@@ -48,6 +49,10 @@ subroutine read_restart_data(domain, dataset, filename, time_step)
                 if (associated(var%data_3d)) then
 
                     if (size(var%data_3d) /= size(data_3d)) then
+
+                        write(*,*) var%name, var%dim_len(1), var%dim_len(2), var%dim_len(3)
+                        write(*,*) "size(var%data_3d) , size(data_3d): ", size(var%data_3d) , size(data_3d)
+
                         call restart_domain_error(var%name)
                     endif
 
@@ -62,12 +67,18 @@ subroutine read_restart_data(domain, dataset, filename, time_step)
                 endif
 
             elseif (var%two_d) then
-                call io_read(filename, var%name, data_2d, extradim=time_step)
                 if (associated(var%data_2d)) then
+                    call io_read(filename, var%name, data_2d, extradim=time_step)
                     if (size(var%data_2d) /= size(data_2d)) then
                         call restart_domain_error(var%name)
                     endif
                     var%data_2d = data_2d
+                elseif (associated(var%data_2dd)) then
+                    call io_read(filename, var%name, data_2dd, extradim=time_step)
+                    if (size(var%data_2dd) /= size(data_2dd)) then
+                        call restart_domain_error(var%name)
+                    endif
+                    var%data_2dd = data_2dd
                 else
                     print*, "ERROR, variable not ready to be used:"//trim(var%name)
                 endif

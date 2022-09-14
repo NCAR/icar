@@ -11,7 +11,8 @@
 !!
 !!------------------------------------------------------------
 submodule(time_object) time_implementation
-    use co_util,           only : broadcast
+    use co_util,         only: broadcast
+    use iso_fortran_env, only: real128
 
     implicit none
 
@@ -106,6 +107,8 @@ contains
 
     end subroutine time_init_i
 
+
+
     !>------------------------------------------------------------
     !!  Set the calendar from a given name
     !!
@@ -176,6 +179,22 @@ contains
 
 
     !>------------------------------------------------------------
+    !!  Return the calendar being used by a time object
+    !!
+    !!  Either gregorian, 360-day, or noleap
+    !!
+    !!------------------------------------------------------------
+    module function get_calendar(this) result(calendar)
+        implicit none
+        class(Time_type) :: this
+        integer :: calendar
+
+        calendar = this%calendar
+
+    end function get_calendar
+
+
+    !>------------------------------------------------------------
     !!  Return the current date number (seconds since reference time)
     !!
     !!  For a gregorian calendar, if no year is specified, this will be
@@ -186,7 +205,7 @@ contains
     module function get_seconds(this) result(seconds)
         implicit none
         class(Time_type) :: this
-        double precision :: seconds
+        real(real128) :: seconds
 
         seconds = this%current_date_time * 86400.0D0
     end function get_seconds
@@ -202,13 +221,13 @@ contains
     module function get_mjd(this) result(mjd)
         implicit none
         class(Time_type) :: this
-        double precision :: mjd
+        real(real128) :: mjd
 
         mjd = this%current_date_time
     end function get_mjd
 
     !>------------------------------------------------------------
-    !!  Calcualte the julian day number corresponding to a given year, month and day
+    !!  Calculate the julian day number corresponding to a given year, month and day
     !!  in a gregorian calendar
     !!
     !!   Algorithm from Wikipedia: http://en.wikipedia.org/wiki/Julian_day
@@ -221,10 +240,12 @@ contains
     function gregorian_julian_day(year, month, day, hour, minute, second) result(julian_day)
         implicit none
         integer, intent(in) :: year, month, day, hour, minute, second
-        double precision :: julian_day
-        double precision :: d,m,y
+        real(real128) :: julian_day
+        real(real128) :: d,m,y
         integer :: a,b
+        real(real128) :: internal_seconds
 
+        internal_seconds = second
         a = (14-month)/12
         y = year+4800-a
         m = month+12*a-3
@@ -235,7 +256,7 @@ contains
         ! Julian calendar
         ! b = day + floor(153*m+2/5) + 365*y + floor(y/4) - 32083
 
-        julian_day = b + (((second/60d+0)+minute)/60d+0 + hour-12)/24.0
+        julian_day = b + (((internal_seconds/60d+0)+minute)/60d+0 + hour-12)/24.0
 
     end function
 
@@ -250,18 +271,19 @@ contains
         implicit none
         class(Time_type), intent(in) :: this
         integer, intent(in) :: year, month, day, hour, minute, second
-        double precision :: date_to_mjd
+        real(real128) :: date_to_mjd, internal_seconds
 
+        internal_seconds = second
         if (this%calendar==GREGORIAN) then
             date_to_mjd = gregorian_julian_day(year, month, day, hour, minute, second)
 
             date_to_mjd = date_to_mjd - gregorian_julian_day(this%year_zero, this%month_zero, this%day_zero, this%hour_zero, 0, 0)
 
         else if (this%calendar==NOLEAP) then
-            date_to_mjd = (year*365 + this%month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0) &
+            date_to_mjd = (year*365 + this%month_start(month)-1 + day-1 + (hour + (minute + internal_seconds/60d+0)/60d+0)/24d+0) &
                          - (this%year_zero*365 + this%month_start(this%month_zero)-1 + this%day_zero-1 + (this%hour_zero)/24d+0)
         else if (this%calendar==THREESIXTY) then
-            date_to_mjd = (year*360 + this%month_start(month)-1 + day-1 + (hour + (minute+second/60d+0)/60d+0)/24d+0) &
+            date_to_mjd = (year*360 + this%month_start(month)-1 + day-1 + (hour + (minute + internal_seconds/60d+0)/60d+0)/24d+0) &
                          - (this%year_zero*360 + this%month_start(this%month_zero)-1 + this%day_zero-1 + (this%hour_zero)/24d+0)
         end if
 
@@ -282,7 +304,7 @@ contains
         integer :: y=4716,j=1401,m=2,n=12,r=4,p=1461
         integer :: v=3,u=5,s=153,w=2,B=274277,C=-38
         integer ::f,e,g,h, jday
-        double precision :: day_fraction, mjd
+        real(real128) :: day_fraction, mjd
 
         mjd = this%current_date_time+1d-5 ! add less than one second
 
@@ -358,6 +380,21 @@ contains
     end subroutine calendar_date
 
 
+    !>---------------------------------
+    !! Convience function, just return the month of the year.
+    !!
+    !!---------------------------------
+    module function get_month(this) result(month)
+        implicit none
+        integer                     :: month
+        class(Time_type), intent(in):: this
+
+        integer :: year, day, hour, minute, second
+
+        call this%date(year, month, day, hour, minute, second)
+
+    end function get_month
+
     !>------------------------------------------------------------
     !!  Return the day of the year corresponding to the current date_time
     !!
@@ -403,7 +440,7 @@ contains
         real, intent(in), optional  :: lon
 
         real :: offset
-        double precision :: year_start
+        real(real128) :: year_start
 
         integer :: year, month, day, hour, minute, second
 
@@ -509,7 +546,7 @@ contains
     module subroutine set_from_mjd(this, days)
         implicit none
         class(Time_type), intent(inout) :: this
-        double precision, intent(in) :: days
+        real(real128), intent(in) :: days
         integer :: year, month, day, hour, minute, second
 
         this%current_date_time = days
@@ -832,7 +869,7 @@ contains
         if (((t1%calendar == t2%calendar).and.(t1%year_zero == t2%year_zero)) &
             .and.((t1%month_zero == t2%month_zero).and.(t1%day_zero == t2%day_zero).and.(t1%hour_zero == t2%hour_zero))) then
 
-            call dt%set(seconds=(t1%mjd() - t2%mjd()) * 86400.0D0)
+            call dt%set(seconds=dble((t1%mjd() - t2%mjd())) * 86400.0D0)
         else
             ! if the two time object reference calendars don't match
             ! create a new time object with the same referecnce as t1
@@ -841,7 +878,7 @@ contains
             call t2%date(year, month, day, hour, minute, second)
             call temp_time%set(year, month, day, hour, minute, second)
 
-            call dt%set(seconds=((t1%mjd() - temp_time%mjd()) * 86400.0D0))
+            call dt%set(seconds=dble((t1%mjd() - temp_time%mjd()) * 86400.0D0))
         endif
 
     end function difference

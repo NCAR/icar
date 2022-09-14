@@ -1,6 +1,6 @@
 module exchangeable_interface
   use assertions_mod,          only : assert, assertions
-  use icar_constants,          only : kMAX_NAME_LENGTH
+  use icar_constants,          only : kMAX_NAME_LENGTH, kREAL
   use grid_interface,          only : grid_t
   use variable_interface,      only : variable_t
   implicit none
@@ -23,6 +23,7 @@ module exchangeable_interface
     logical :: south_boundary=.false.
     logical :: east_boundary=.false.
     logical :: west_boundary=.false.
+    integer :: dtype=kREAL
 
   contains
     private

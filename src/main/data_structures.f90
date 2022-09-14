@@ -199,11 +199,12 @@ module data_structures
     ! ------------------------------------------------
     type tendencies_type
         ! 3D atmospheric field tendencies
-        ! These are used by various physics parameterizations
+        ! These are used by various physics parameterizations 
         real,   allocatable, dimension(:,:,:) :: th,qv,qc,qi,u,v,qr,qs
 
-        ! advection and pbl tendencies that need to be saved for the cumulus scheme
-        real, allocatable, dimension(:,:,:) :: qv_adv,qv_pbl
+        ! advection and pbl tendencies that need to be saved for the cumulus/pbl scheme
+        real, allocatable, dimension(:,:,:) :: qv_adv,qv_pbl, th_pbl, qi_pbl, qc_pbl
+        real, allocatable, dimension(:,:,:) :: th_lwrad, th_swrad
     end type tendencies_type
 
     ! ------------------------------------------------

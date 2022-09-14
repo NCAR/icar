@@ -6,6 +6,7 @@ module time_io
     use time_delta_object,  only : time_delta_t
     use string,             only : get_integer
     use io_routines,        only : io_read, io_read_attribute
+    use iso_fortran_env, only: real64, real128
 
     implicit none
 
@@ -73,16 +74,16 @@ contains
     function time_gain_from_units(units) result(gain)
         implicit none
         character(len=*), intent(in) :: units
-        double precision :: gain
+        real(real128) :: gain
 
         if ((units(1:4)=="days").or.(units(1:4)=="Days")) then
-            gain = 1.0D0
+            gain = 1.0Q0
         else if ((units(1:4)=="hour").or.(units(1:4)=="Hour")) then
-            gain = 24.0D0
+            gain = 24.0Q0
         else if ((units(1:3)=="min").or.(units(1:3)=="Min")) then
-            gain = 1440.0D0
+            gain = 1440.0Q0
         else if ((units(1:3)=="sec").or.(units(1:3)=="Sec")) then
-            gain = 86400.0D0
+            gain = 86400.0Q0
         else
             write(*,*) trim(units)
             stop "Error: unknown units"
@@ -170,20 +171,21 @@ contains
         implicit none
         character(len=*),   intent(in) :: filename, varname
         type(Time_type),    intent(inout), allocatable, dimension(:) :: times
-        double precision,   intent(in), optional :: timezone_offset
+        real(real128),      intent(in), optional :: timezone_offset
         integer,            intent(in), optional :: curstep
 
-        double precision, allocatable, dimension(:) :: temp_times
+        real(real64),  allocatable, dimension(:) :: temp_times_64
+        real(real128), allocatable, dimension(:) :: temp_times_128
         integer :: time_idx, error
         integer :: start_year, start_month, start_day, start_hour
         character(len=MAXSTRINGLENGTH) :: calendar, units
-        double precision :: calendar_gain
+        real(real128) :: calendar_gain
 
-        ! first read the time variable (presumebly a 1D double precision array)
+        ! first read the time variable (presumebly a 1D real(real64) array)
         if (present(curstep)) then
-            call io_read(trim(filename), trim(varname), temp_times, curstep=curstep)
+            call io_read(trim(filename), trim(varname), temp_times_64, curstep=curstep)
         else
-            call io_read(trim(filename), trim(varname), temp_times)
+            call io_read(trim(filename), trim(varname), temp_times_64)
         endif
 
         ! attempt to read the calendar attribute from the time variable
@@ -206,27 +208,80 @@ contains
             ! based off of the string "Days since" (or "seconds" or...)
             calendar_gain = time_gain_from_units(units)
         else
+
             stop "Time variable does not have units attribute"
         endif
 
         ! converts the input units to "days since ..."
         ! in case it is in units of e.g. "hours since" or "seconds since"
-        temp_times = temp_times / calendar_gain
+        allocate(temp_times_128(size(temp_times_64)))
+        temp_times_128 = temp_times_64 / calendar_gain
 
         if (present(timezone_offset)) then
-            temp_times = temp_times + timezone_offset / 24.0
+            temp_times_128 = temp_times_128 + timezone_offset / 24.0
         endif
 
         if (allocated(times)) deallocate(times)
-        allocate(times(size(temp_times)))
+        allocate(times(size(temp_times_128)))
 
-        do time_idx = 1, size(temp_times,1)
+        do time_idx = 1, size(temp_times_128,1)
             call times(time_idx)%init(calendar, start_year, start_month, start_day, start_hour)
-            call times(time_idx)%set(days=temp_times(time_idx))
+            call times(time_idx)%set(days=temp_times_128(time_idx))
         end do
 
-        deallocate(temp_times)
+        deallocate(temp_times_64, temp_times_128)
 
     end subroutine read_times
+
+    function get_output_time(time, units, round_seconds) result(output_time)
+        implicit none
+        type(Time_type),  intent(in) :: time
+        character(len=*), intent(in), optional :: units
+        logical,          intent(in), optional :: round_seconds
+
+        type(Time_type) :: output_time
+        type(time_delta_t) :: half_minute
+
+        integer :: year, month, day, hour, minute, seconds
+        integer :: year0, month0, day0, hour0, minute0, seconds0
+        character(len=kMAX_NAME_LENGTH) :: use_units
+
+        if (present(units)) then
+            use_units = units
+        else
+            use_units = time%units()
+        endif
+
+        call time%date(year, month, day, hour, minute, seconds)
+        year0 = year_from_units(use_units)
+        month0 = month_from_units(use_units)
+        day0 = day_from_units(use_units)
+        hour0 = hour_from_units(use_units)
+        minute0 = 0 ! minute_from_units(use_units)
+        seconds0 = 0 ! seconds_from_units(use_units)
+
+        call output_time%init(time%get_calendar(), year0, month0, day0, hour0)
+
+        if (present(round_seconds)) then
+            if (round_seconds) then
+                if (seconds > 30) then
+                    call output_time%set(year, month, day, hour, minute, seconds)
+                    call half_minute%set(seconds=30)
+                    output_time = output_time + half_minute
+                    ! get a new date after adding 30 seconds
+                    call output_time%date(year, month, day, hour, minute, seconds)
+                    ! use that date after setting seconds to 0 this rounds the old date up by up to 30s
+                    call output_time%set(year, month, day, hour, minute, 0)
+                else
+                    call output_time%set(year, month, day, hour, minute, 0)
+                endif
+            else
+                call output_time%set(year, month, day, hour, minute, seconds)
+            endif
+        else
+            call output_time%set(year, month, day, hour, minute, seconds)
+        endif
+
+    end function get_output_time
 
 end module time_io

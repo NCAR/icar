@@ -214,8 +214,9 @@ contains
 
       ! define the halo needed to manage communications between images
       ! perhaps this should be defined in exchangeable instead though?
-      this%ns_halo_nx = this%nx !_global / this%ximages + 1 + nx_e  ! number of grid cells in x in the ns halo
-      this%ew_halo_ny = this%ny !_global / this%yimages + 1 + ny_e  ! number of grid cells in y in the ew halo
+
+      this%ns_halo_nx = this%nx_global / this%ximages + 1 + nx_e  ! number of grid cells in x in the ns halo
+      this%ew_halo_ny = this%ny_global / this%yimages + 1 + ny_e  ! number of grid cells in y in the ew halo
 
 
   end subroutine

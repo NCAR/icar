@@ -2,7 +2,7 @@
 !   Model and run meta-data
 !---------------------------------------------------------
 &model_version
-    version = "2.0",                      ! This must match the version of the compiled code
+    version = "2.1",                      ! This must match the version of the compiled code
     comment = "Add your comment here"     ! This will be stored in output files
 /
 
@@ -21,7 +21,11 @@
 
     ! fixed_dz_advection = .True.
 
-    ! Use a SLEVE vertical coordinate, where the decay of the large- and small-scale terrain influence towards model top is controlled by the decay_rate_L_topo and decay_rate_S_topo respectively (=H/s1 and H/s2), and the exponential factor n that controls compression across the z column. For higher n values, the terrain compression happens more in the mid to upper z levels (but always below flat_z_height), whereas for n=1 it is mainly at the lower levels, which may cause numerical issues if these are very thin. By setting s1=s2 a standard hybrid coordinate is obtained.
+    ! Use a SLEVE vertical coordinate, where the decay of the large- and small-scale terrain influence towards model top is controlled by the
+    !   decay_rate_L_topo and decay_rate_S_topo respectively (=H/s1 and H/s2), and the exponential factor n that controls compression across the z column.
+    !   For higher n values, the terrain compression happens more in the mid to upper z levels (but always below flat_z_height),
+    !   whereas for n=1 it is mainly at the lower levels, which may cause numerical issues if these are very thin. By setting s1=s2 a standard hybrid coordinate is obtained.
+    !   For many atmospheric applications it appears optimal to choose s1 ~10 km and, subsequently, to minimize s2     for a specified value of gamma > 0"
 
     sleve = .True.
     terrain_smooth_windowsize = 4    ! Terrain is smoothed to obtain the large-scale terrain features
@@ -49,6 +53,7 @@
 
     ! These are the options for output variables.  Though they will only be output if they are computed internally
     ! "u", "v", "w_grid", "w",
+    ! "ivt", "iwv", "iwl", "iwi"
     ! "nsquared", "pressure", "pressure_i", "psfc",
     ! "potential_temperature", "temperature",
     ! "qv", "qc", "nc", "qi", "ni", "qr", "nr", "qs", "ns", "qg", "ng",
@@ -59,6 +64,17 @@
     ! "hfss", "hfls", "hfgs", "vegetation_fraction", "veg_type", "lai", "surface_roughness",
     ! "canopy_water", "swe", "soil_water_content", "soil_column_total_water", "soil_temperature", "soil_deep_temperature",
     ! "land_mask", "terrain", "lat", "lon", "u_lat", "u_lon", "v_lat", "v_lon"
+
+    !additional output variable options for NoahMP (check default_output_metadata for complete list)
+    ! "snowfall_ground","rainfall_ground","snow_temperature","snow_layer_depth","snow_layer_ice",
+    ! "snow_layer_liquid_water","canopy_ice","canopy_liquid","snow_height",
+    ! "snow_nlayers","eq_soil_moisture",
+    ! "smc_watertable_deep","recharge","recharge_deep","evap_canopy","evap_soil_surface",
+    ! "transpiration_rate","ground_surf_temperature","runoff_surface","runoff_subsurface"
+
+    !! additional output variable options for water_lake
+    ! "t_lake3d" , "lake_icefrac3d", "snl2d", "t_grnd2d",lake_icefrac3d,z_lake3d,dz_lake3d,t_soisno3d,h2osoi_ice3d
+    ! ,h2osoi_liq3d,h2osoi_vol3d ,z3d,dz3d,watsat3d,csol3d,tkmg3d,lakemask,zi3d,tksatu3d,tkdry3d,lakedepth2d
 
     outputinterval = 3600   ! number of seconds between output time slices
     output_file = "output/icar_out_"    ! prefix name of output file (date will be appended)
@@ -76,19 +92,33 @@
 &physics
     ! Common precipitation downscaling run use pbl=0 lsm=0 mp=1 rad=0 conv=0 adv=1 wind=1
     ! For a FASTER run (simpler physics), set mp=2
-    ! If surface air temperature is important use pbl=2 lsm=3 rad=2 water=2 this requires Noah LSM data
+    ! If surface air temperature is important use pbl=2 lsm=4 rad=3 water=3 this requires Noah MP and lake data
     ! N/A = Not Available or Not fully implemented
     ! Warning, convection can be unstable.
     ! wishlist = No Code Present yet
 
-    pbl = 0,  ! 1=legacy (deprecated)      2=Simple (Local HP96)        3=YSU             (N/A)
-    lsm = 0,  ! 1=use prescribed fluxes    2=Simple LSM (N/A)           3=Noah LSM                  4=NoahMP (wishlist)
-    water=2,  ! 1=use prescribed (w/lsm=1) 2=Simple sea surface fluxes
-    mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison                  4=WSM6      5=Thompson-Eidhammer
-    rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG           (wishlist)
-    conv= 0,  ! 1=Tiedke Scheme            2=Simple Scheme (wishlist)   3=Kain-Fritsch
-    adv = 1,  ! 1=Upwind                   2=MPDATA                     3=Adams-Bashforth (wishlist)
-    wind= 1   ! 1=Linear Theory
+    ! Planetary Boundary Layer Scheme
+    pbl = 0,  ! 1=legacy (deprecated)      2=Simple (Local HP96)        3=YSU (work in progress)
+
+    ! Land Surface Model
+    lsm = 0,  ! 1=use prescribed fluxes    2=Simple LSM (N/A)           3=Noah LSM                  4=NoahMP
+
+    ! Open water fluxes
+    water=0,  ! 1=use prescribed (w/lsm=1) 2=Simple sea surface fluxes  3=Lake model (simple ocean)
+
+    ! Microphysics Scheme
+    mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison                  4=WSM6      5=Thompson-Eidhammer    6=WSM3
+    ! Radiation Scheme
+    rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG
+
+    ! Convection / Cumulus Scheme
+    conv= 0,  ! 1=Tiedke Scheme            2=Simple Scheme (wishlist)   3=Kain-Fritsch              4=NSAS      5=BMJ
+
+    ! Advection Scheme
+    adv = 1,  ! 1=Upwind                   2=MPDATA                     3=Runga-Kutta (in progress?)
+
+    ! Wind field calculations
+    wind= 1   ! 1=Linear Theory            2=grid based,mass-conserving 3=iterative wind solver     4=implicit(in progress)  5=linear+iterative
 /
 
 !---------------------------------------------------------
@@ -234,6 +264,8 @@
     use_mp_options = true
     !   Read parameters for land surface model
     use_lsm_options = true
+    !   Read parameters for radiation model
+    use_rad_options = true
     !   Read parameters for online bias correction
     use_bias_correction = false
     !   Read parameters for experimental blocked flow parameterization
@@ -287,7 +319,8 @@
     lwdown_var = "GLW",     ! Longwave down             [W/m^2]
 
     ! only required for some physics code (Noah LSM, water, Tiedke, KF(?))
-    landvar = "LANDMASK",   ! land-water mask (as in WRF) 1=land, 0 or 2=water
+    landvar = "LANDMASK",          ! land-water mask (as in WRF) 1=land, 0 or 2=water
+    lakedepthvar = "LAKE_DEPTH",   ! depth of the lake [m]
 
     ! NOTE, these variables should be in the high-resolution initial conditions netcdf file
     lat_hi  = "XLAT_M",     ! latitude  (mass grid)         [degrees]
@@ -313,6 +346,11 @@
     ! soil_t_var   = "TSLB",        ! soil temperature (4 levels)   [K]
     ! soil_vwc_var = "SMOIS",       ! soil water content (4 levels) [m^3/m^3]
 
+    ! to use the NoahMP LSM, the following additional fields must be specified or default values will be applied
+    !vegfracmax_var = "VEGMAX", ! maximum annual vegetation fraction (default = 0.8)
+    !lai_var = "LAI",           ! leaf area index (default = 1)
+    !canwat_var = "CANWAT",     ! total canopy water (liquid + ice) (default = 0)
+
     ! variables to read from calibration files, both default to "data"
     ! nsq_calibration_var = "data",
     ! linear_mask_var = "data"
@@ -326,6 +364,15 @@
     tsoil3D_ext  =  "T_SO"          ! N.B. This will overwrite any input from soil_t_var or soil_deept_var  !!
 /
 
+!---------------------------------------------------------
+!  Optionally specified radiation parameters
+!---------------------------------------------------------
+&rad_parameters
+   update_interval_rrtmg=1800
+   icloud=3
+   read_ghg=.True.
+   use_simple_sw=True
+/
 
 !---------------------------------------------------------
 !   Optionally specified Microphysics parameters (mostly for Thompson)
@@ -367,8 +414,8 @@
 !   Optionally specified convection parameters
 !---------------------------------------------------------
 &cu_parameters
-    stochastic_cu = 0
-    tendency_fraction = 1.0
+    stochastic_cu = 0            ! disturbes the W field (randomly; higher value=more disturbance). Triggers convection.
+    tendency_fraction = 1.0      ! scales the q[v/c/i]/th fractions (relative to 1). Lower values lead to more cu_precip.
     tend_qv_fraction = 1.0
     tend_qc_fraction = 1.0
     tend_th_fraction = 1.0
@@ -409,6 +456,13 @@
     ! urban_category = -1             ! Int: index that defines the urban category in LU_Categories
     ! ice_category   = -1             ! Int: index that defines the ice category in LU_Categories
     ! water_category = -1             ! Int: index that defines the water category in LU_Categories
+    ! lake_category  = -1             ! Int: index that defines the lake(s) category in LU_Categories
+
+    lh_feedback_fraction = 1.0        ! fraction of latent heat to feed into the atmosphere to increase water vapor
+    sh_feedback_fraction = 0.625      ! fraction of sensible heat to feed into the atmosphere to increase temperature
+    sfc_layer_thickness  = 400.0      ! thickness of lower atmosphere to spread LH and SH fluxes over [m]
+    dz_lsm_modification  = 0.5        ! multiplier on dz thickness in call to NoahMP, significantly improves ta2m
+    wind_enhancement = 1.5            ! factor to increase wind speeds passed to NoahMP to account for biases in driving model and improve surface fluxes
 /
 
 
@@ -491,8 +545,9 @@
     bias_correction_filename = ""
 
     ! name of variable in netcdf file that defines a multiplier for precipitation at each grid point
-    ! variable should have a time dimension that will be interpolated over a one year period to permit a seasonality
-    ! to the bias correction
+    ! variable can have a 12-month time dimension to permit seasonality
+    ! to the bias correction. Data should represent the ratio between ICAR precipitation and Observations
+    ! e.g. icar / obs
     rain_fraction_var = ""
 /
 
@@ -511,6 +566,11 @@
 
 !---------------------------------------------------------
 !   Optionally specified Restart information
+!
+!   NOTE: If the (original) output file corresponding to the restart time is not removed before restarting, its 'time:units' parameter (i.e.
+!    time:units = "days since 2000-01-01 00:00:00") - is not overwritten, resulting in wrong timestamp for that first file after restart.
+!   CURE: remove output files of the restart time from initial simulation before restarting. Or use the fix_icar_time.py script in icar/helpers/
+!
 !---------------------------------------------------------
 &restart_info
     ! file to read for initial conditions (an ICAR output file will work)

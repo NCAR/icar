@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+
 """
 SYNOPSIS
 
@@ -37,7 +38,6 @@ import traceback
 import argparse
 
 global verbose
-verbose=False
 
 import glob,os,re,sys, fnmatch
 from math import floor
@@ -46,6 +46,7 @@ import xarray as xr
 
 def find_last_output(options_file, skip):
     """docstring for find_last_output"""
+    if(verbose==True): print("looking for last output")
     with open(options_file,"r") as f:
         for l in f:
             ltest = l.split("!")[0] # only look at the line before any comment characters

@@ -38,8 +38,11 @@ import traceback
 import argparse
 import re
 
-def main (options_file, template_file):
+# global verbose
 
+
+def main (options_file, template_file):
+    
     entered_restart_section=False
 
     with open(options_file,"r") as opt:
@@ -50,15 +53,13 @@ def main (options_file, template_file):
                     entered_restart_section=True
 
                 key = (l.split("=")[0]).strip().lower()
-                if key == "restart_file":
-                    if verbose: print("Writing restart_file line")
-                    tmpl.write('    restart_file="__RESTART_FILE__"\n')
-                elif key == "restart_date":
+                ## as long as the default (i.e. restart_file="restart/icar_rst_" ) is used, no need to change.
+                # if key == "restart_file":  
+                #     if verbose: print("Writing restart_file line")
+                #     tmpl.write('    restart_file="__RESTART_FILE__"\n')
+                if key == "restart_date":
                     if verbose: print("Writing restart_date line")
                     tmpl.write('    restart_date= __RESTART_DATE__,\n')
-                elif key == "restart_step":
-                    if verbose: print("Removing restart_step line")
-                    pass
                 elif key == "restart":
                     if verbose: print("Writing restart=true line")
                     tmpl.write('    restart=true,\n')

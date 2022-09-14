@@ -23,7 +23,7 @@ module wind
 
     implicit none
     private
-    public::update_winds, init_winds, wind_var_request
+    public::update_winds, init_winds, wind_var_request, balance_uvw
     real, parameter::deg2rad=0.017453293 !2*pi/360
 contains
 
@@ -62,6 +62,9 @@ contains
             if (options%physics%windtype == kWIND_LINEAR) then
                 call wind_linear_var_request(options)
             endif
+            if (options%physics%windtype == kLINEAR_ITERATIVE_WINDS) then
+                call wind_linear_var_request(options)
+            endif
 
         end subroutine wind_var_request
 
@@ -75,11 +78,11 @@ contains
     !! Starts by setting w out of the ground=0 then works through layers
     !!
     !!------------------------------------------------------------
-    subroutine balance_uvw(u,v,w, jaco_u,jaco_v,jaco_w,dz,dx,jaco,smooth_height, options)
+    subroutine balance_uvw(u,v,w, jaco_u,jaco_v,jaco_w,dz,dx,jaco, options)
         implicit none
         real,           intent(inout) :: u(:,:,:), v(:,:,:), w(:,:,:)
         real,           intent(in)    :: jaco_u(:,:,:), jaco_v(:,:,:), jaco_w(:,:,:), dz(:,:,:), jaco(:,:,:)
-        real,           intent(in)    :: dx, smooth_height
+        real,           intent(in)    :: dx
         type(options_t),intent(in)    :: options
 
         real, allocatable, dimension(:,:) :: rhou, rhov, rhow
@@ -112,7 +115,7 @@ contains
 
         allocate(divergence(ims:ime,kms:kme,jms:jme))
 
-        call calc_divergence(divergence,u,v,w,jaco_u,jaco_v,jaco_w,dz,dx,jaco,smooth_height,horz_only=.True.)
+        call calc_divergence(divergence,u,v,w,jaco_u,jaco_v,jaco_w,dz,dx,jaco,horz_only=.True.)
 
         ! If this becomes a bottle neck in the code it could be parallelized over y
         ! loop over domain levels
@@ -166,11 +169,11 @@ contains
     end subroutine balance_uvw
 
 
-    subroutine calc_divergence(div, u, v, w, jaco_u, jaco_v, jaco_w, dz, dx, jaco, smooth_height,horz_only)
+    subroutine calc_divergence(div, u, v, w, jaco_u, jaco_v, jaco_w, dz, dx, jaco,horz_only)
         implicit none
         real,           intent(inout) :: div(:,:,:)
         real,           intent(in)    :: u(:,:,:), v(:,:,:), w(:,:,:), dz(:,:,:), jaco_u(:,:,:), jaco_v(:,:,:), jaco_w(:,:,:), jaco(:,:,:)
-        real,           intent(in)    :: dx, smooth_height
+        real,           intent(in)    :: dx
         logical, optional, intent(in)  :: horz_only
         ! type(options_t),intent(in)    :: options
 
@@ -207,8 +210,7 @@ contains
         div(ims:ime,kms:kme,jms:jme) = (diff_U+diff_V)/(dx)
 
         if (.NOT.(horz)) then
-            w_met = w * jaco_w !(:,kms:kme-1,:) = w(:,kms:kme-1,:) * (jaco(:,kms:kme-1,:)+jaco(:,kms+1:kme,:))/2
-            !w_met(:,kme,:) = w(:,kme,:) * jaco(:,kme,:)
+            w_met = w * jaco_w
 
             do k = kms,kme
                 if (k == kms) then
@@ -218,6 +220,8 @@ contains
                                    (w_met(ims:ime,k,jms:jme)-w_met(ims:ime,k-1,jms:jme))/(dz(ims:ime,k,jms:jme))
                 endif
             enddo
+            ! If we are doing a full calculation of divergence, and not just U+V differencing for balance_uvw, then divide by
+            ! jacobian at the end
             div = div/jaco
         endif
 
@@ -315,11 +319,17 @@ contains
             elseif (options%physics%windtype==kITERATIVE_WINDS) then
                 call iterative_winds(domain, options)
 
+            elseif (options%physics%windtype==kLINEAR_ITERATIVE_WINDS) then
+                call linear_perturb(domain,options,options%lt_options%vert_smooth,.False.,options%parameters%advect_density, update=.False.)
+                call iterative_winds(domain, options)
+
             endif
             ! else assumes even flow over the mountains
 
             ! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
-            call balance_uvw(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, domain%jacobian_u, domain%jacobian_v, domain%jacobian_w, domain%advection_dz, domain%dx, domain%jacobian, domain%smooth_height, options)
+            call balance_uvw(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d,      &
+                             domain%jacobian_u, domain%jacobian_v, domain%jacobian_w,   &
+                             domain%advection_dz, domain%dx, domain%jacobian, options)
 
         else
 
@@ -340,15 +350,18 @@ contains
             elseif (options%physics%windtype==kITERATIVE_WINDS) then
                 call iterative_winds(domain, options, update_in=.True.)
 
+            elseif (options%physics%windtype==kLINEAR_ITERATIVE_WINDS) then
+                call linear_perturb(domain,options,options%lt_options%vert_smooth,.False.,options%parameters%advect_density, update=.True.)
+                call iterative_winds(domain, options, update_in=.True.)
             endif
-            ! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
 
+            ! use horizontal divergence (convergence) to calculate vertical convergence (divergence)
             call balance_uvw(domain% u %meta_data%dqdt_3d,      &
                              domain% v %meta_data%dqdt_3d,      &
                              domain% w %meta_data%dqdt_3d,      &
                              domain%jacobian_u, domain%jacobian_v, domain%jacobian_w,         &
                              domain%advection_dz, domain%dx,    &
-                             domain%jacobian, domain%smooth_height, options)
+                             domain%jacobian, options)
 
         endif
 
@@ -394,8 +407,9 @@ contains
         call domain%v%exchange_v()
 
         !First call bal_uvw to generate an initial-guess for vertical winds
-        call balance_uvw(domain%u%data_3d,domain%v%data_3d,domain%w%data_3d,domain%jacobian_u,domain%jacobian_v,domain%jacobian_w,domain%advection_dz,&
-                         domain%dx,domain%jacobian,domain%smooth_height,options)
+        call balance_uvw(domain%u%data_3d, domain%v%data_3d, domain%w%data_3d,    &
+                         domain%jacobian_u, domain%jacobian_v, domain%jacobian_w, &
+                         domain%advection_dz, domain%dx, domain%jacobian, options)
 
         allocate(div(ims:ime,kms:kme,jms:jme))
         allocate(ADJ_coef(ims:ime,kms:kme,jms:jme))
@@ -405,28 +419,34 @@ contains
 
         ! Calculate and apply correction to w-winds
         wind_k = kme
-        do k = kms,kme
-            if (sum(domain%advection_dz(ims,1:k,jms)) > domain%smooth_height) then
-                wind_k = k
-                exit
-            endif
-        enddo
-
+        ! previously this code was solving for 0 vertical motion at the flat z height instead of the top boundary.
+        ! left in for now as it could be useful to implement something similar in the future.
+        ! however, this was also creating weird artifacts above the flat z height that need to be fixed if re-implementing.
+        ! do k = kms,kme
+        !     if (sum(domain%advection_dz(ims,1:k,jms)) > domain%smooth_height) then
+        !         wind_k = k
+        !         exit
+        !     endif
+        ! enddo
+        ! domain%smooth_height = sum(domain%advection_dz(ims,:,jms))
         !Compute relative correction factors for U and V based on input speeds
         U_cor = ABS(domain%u%data_3d(ims:ime,:,jms:jme))/ &
                 (ABS(domain%u%data_3d(ims:ime,:,jms:jme))+ABS(domain%v%data_3d(ims:ime,:,jms:jme)))
 
-        do k = kms,kme
-            corr_factor = ((sum(domain%advection_dz(ims,1:k,jms)))/domain%smooth_height)
-            !corr_factor = (k*1.0)/wind_k
-            corr_factor = min(corr_factor,1.0)
-            do i = ims,ime
-                do j = jms,jme
+        do i = ims,ime
+            do j = jms,jme
+                domain%smooth_height = sum(domain%advection_dz(i,:,j)) !
+                do k = kms,kme
+                    corr_factor = ((sum(domain%advection_dz(i,1:k,j)))/domain%smooth_height)
+                    corr_factor = min(corr_factor,1.0)
                     domain%w%data_3d(i,k,j) = domain%w%data_3d(i,k,j) - corr_factor * (domain%w%data_3d(i,wind_k,j))
 
                     !if ( (domain%u%data_3d(i,k,j)+domain%v%data_3d(i,k,j)) == 0) U_cor(i,k,j) = 0.5
                 enddo
             enddo
+        enddo
+
+        do k = kms,kme
             ! Compute this now, since it wont change in the loop
             ADJ_coef(:,k,:) = -2/domain%dx
         enddo
@@ -440,8 +460,9 @@ contains
         ! Now, fixing w-winds, iterate over U/V to reduce divergence with new w-winds
         do it = 0,options%parameters%wind_iterations
             !Compute divergence in new wind field
-            call calc_divergence(div,domain%u%data_3d,domain%v%data_3d,domain%w%data_3d,domain%jacobian_u,domain%jacobian_v,domain%jacobian_w, &
-                                domain%advection_dz,domain%dx,domain%jacobian,domain%smooth_height)
+            call calc_divergence(div, domain%u%data_3d, domain%v%data_3d, domain%w%data_3d, &
+                                domain%jacobian_u, domain%jacobian_v, domain%jacobian_w,    &
+                                domain%advection_dz, domain%dx, domain%jacobian)
 
             !Compute adjustment based on divergence
             ADJ = div/ADJ_coef
@@ -520,7 +541,7 @@ contains
             jms = lbound(domain%latitude%data_2d, 2)
             jme = ubound(domain%latitude%data_2d, 2)
 
-            if (this_image()==1) print*, "Reading Sinalph/cosalpha"
+            if (this_image()==1) print*, "Reading sin/cos alpha"
 
             call io_read(options%parameters%init_conditions_file, options%parameters%sinalpha_var, temporary_2d)
             domain%sintheta = temporary_2d(ims:ime, jms:jme)
@@ -538,6 +559,7 @@ contains
             ime = ubound(lat,1)
             jms = lbound(lat,2)
             jme = ubound(lat,2)
+            if (this_image()==1) print*, "Computing sin/cos alpha"
             do j = jms, jme
                 do i = ims, ime
                     ! in case we are in the first or last grid, reset boundaries

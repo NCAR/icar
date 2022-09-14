@@ -106,9 +106,15 @@ ifndef NETCDF
 		NETCDF=${NETCDF_DIR}
 	endif
 endif
+
 NCDF_PATH = ${NETCDF}
 LIBNETCDF = -L$(NCDF_PATH)/lib -lnetcdff -lnetcdf
 INCNETCDF = -I$(NCDF_PATH)/include
+
+ifdef NETCDFF
+       LIBNETCDF += -L$(NETCDFF)/lib
+       INCNETCDF += -I$(NETCDFF)/include
+endif
 
 USE_ASSERTIONS:=.false.
 
@@ -201,7 +207,7 @@ ifeq ($(MODE), debugslow)
 		LINK=
 	endif
 	ifeq ($(COMPILER), gnu)
-		COMP= -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
+		COMP= -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none -Wconversion
 		LINK=
 	endif
 	ifeq ($(COMPILER), cray)
@@ -217,7 +223,7 @@ ifeq ($(MODE), debug)
 		LINK=
 	endif
 	ifeq ($(COMPILER), gnu)
-		COMP= -c -O2 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none
+		COMP= -c -O2 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none -Wconversion
 		LINK=
 	endif
 	ifeq ($(COMPILER), cray)
@@ -234,7 +240,7 @@ ifeq ($(MODE), debugompslow)
 		LINK= -qopenmp -liomp5
 	endif
 	ifeq ($(COMPILER), gnu)
-		COMP= -fopenmp -lgomp -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none -ffpe-trap=invalid
+		COMP= -fopenmp -lgomp -c -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none -ffpe-trap=invalid -Wconversion
 		LINK= -fopenmp -lgomp
 	endif
 	ifeq ($(COMPILER), cray)
@@ -250,7 +256,7 @@ ifeq ($(MODE), debugomp)
 		LINK= -qopenmp -liomp5
 	endif
 	ifeq ($(COMPILER), gnu)
-		COMP= -fopenmp -lgomp -c -O2 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none -fimplicit-none # -ftree-vectorize -funroll-loops -march=native  -fno-protect-parens
+		COMP= -fopenmp -lgomp -c -O2 -g -fbounds-check -fbacktrace -finit-real=nan -ffree-line-length-none -fimplicit-none -Wconversion # -ftree-vectorize -funroll-loops -march=native  -fno-protect-parens
 		LINK= -fopenmp -lgomp
 		 # -Wall -Wno-unused-variable -Wno-unused-dummy-argument
 	endif
@@ -338,7 +344,7 @@ OBJS=	\
 		$(BUILD)time_step.o			\
 		$(BUILD)debug_utils.o		\
 		$(BUILD)icar_constants.o	\
-		$(BUILD)wrf_constants.o	\
+		$(BUILD)wrf_constants.o		\
 		$(BUILD)model_tracking.o	\
 		$(BUILD)string.o        	\
 		$(BUILD)time_delta_obj.o	\
@@ -368,6 +374,7 @@ OBJS=	\
 		$(BUILD)boundary_obj.o		\
 		$(BUILD)assertions.o		\
 		$(BUILD)atm_utilities.o		\
+		$(BUILD)pbl_utilities.o		\
 		$(BUILD)co_utilities.o		\
 		$(BUILD)default_output_metadata.o\
 		$(BUILD)output_h.o			\
@@ -379,22 +386,34 @@ OBJS=	\
 		$(BUILD)lt_lut_io.o			\
 		$(BUILD)pbl_driver.o		\
 		$(BUILD)pbl_simple.o		\
+		$(BUILD)pbl_ysu.o			\
 		$(BUILD)ra_driver.o			\
 		$(BUILD)ra_simple.o			\
+		$(BUILD)ra_rrtmg_lw.o       \
+		$(BUILD)ra_rrtmg_sw.o       \
+		$(BUILD)ra_clWRF_support.o  \
 		$(BUILD)mp_driver.o			\
 		$(BUILD)mp_simple.o			\
 		$(BUILD)mp_thompson.o		\
 		$(BUILD)mp_thompson_aer.o	\
-		$(BUILD)mp_wsm6.o		\
+		$(BUILD)mp_wsm6.o			\
+		$(BUILD)mp_wsm3.o			\
 		$(BUILD)cu_driver.o			\
 		$(BUILD)cu_tiedtke.o		\
+		$(BUILD)cu_nsas.o			\
+		$(BUILD)cu_bmj.o			\
 		$(BUILD)advection_driver.o	\
 		$(BUILD)advect.o			\
-		$(BUILD)adv_mpdata.o                        \
+		$(BUILD)adv_mpdata.o        \
 		$(BUILD)lsm_driver.o		\
 		$(BUILD)lsm_noahdrv.o		\
 		$(BUILD)lsm_noahlsm.o		\
+		$(BUILD)lsm_noahmpdrv.o  	\
+		$(BUILD)lsm_noahmplsm.o  	\
+		$(BUILD)lsm_noahmp_glacier.o \
+		$(BUILD)lsm_noahmp_gecros.o \
 		$(BUILD)water_simple.o		\
+		$(BUILD)water_lake.o		\
 		$(BUILD)geo_reader.o		\
 		$(BUILD)io_routines.o		\
 		$(BUILD)data_structures.o	\
@@ -416,11 +435,12 @@ CAF_TEST_EXECUTABLES = 	caf_options_test 				\
 
 TEST_EXECUTABLES= 	fftshift_test			\
 	  				calendar_test			\
-	  				fftw_test				\
+	  				fftw_test			\
 					point_in_on_test		\
 	  				array_util_test 		\
 					variable_dict_test		\
 					caf_threads_test		\
+					time_obj_test			\
 					$(CAF_TEST_EXECUTABLES)
 
 # Pre-Coarray Tests that we may want to re-implement
@@ -469,7 +489,10 @@ fftw_test: $(BUILD)test_fftw.o $(OBJS)
 fftshift_test: $(BUILD)test_fftshift.o $(OBJS)
 	${LINKER} $^ -o $@ ${LFLAGS}
 
-calendar_test: $(BUILD)test_calendar.o $(BUILD)time.o
+time_obj_test: $(BUILD)test_time_obj.o $(BUILD)time_obj.o $(BUILD)time_h.o $(BUILD)time_delta_obj.o $(BUILD)co_utilities.o
+	${LINKER} $^ -o $@ ${LFLAGS}
+
+calendar_test: $(BUILD)test_calendar.o $(BUILD)time_obj.o $(BUILD)time_h.o $(BUILD)time_delta_obj.o $(BUILD)co_utilities.o
 	${LINKER} $^ -o $@ ${LFLAGS}
 
 mpdata_test: $(BUILD)test_mpdata.o $(BUILD)adv_mpdata.o
@@ -516,19 +539,22 @@ caf_no_forcing_test: $(BUILD)test_caf_no_forcing.o							\
 					$(BUILD)exchangeable_h.o $(BUILD)exchangeable_obj.o \
 					$(BUILD)icar_constants.o $(BUILD)io_routines.o		\
 					$(BUILD)model_tracking.o $(BUILD)string.o           \
-					$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \
+					$(BUILD)assertions.o	 $(BUILD)atm_utilities.o    \ $(BUILD)pbl_utilities.o		\
 					$(BUILD)co_utilities.o   $(BUILD)default_output_metadata.o \
 					$(BUILD)ra_driver.o      $(BUILD)ra_simple.o		\
-					$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o		\
+					$(BUILD)pbl_driver.o     $(BUILD)pbl_simple.o		$(BUILD)pbl_ysu.o		\
 					$(BUILD)mp_driver.o      $(BUILD)mp_simple.o		\
-					$(BUILD)mp_thompson.o	 $(BUILD)mp_thompson_aer.o   $(BUILD)mp_wsm6.o\
-					$(BUILD)cu_driver.o		 $(BUILD)cu_tiedtke.o		\
+					$(BUILD)mp_thompson.o	 $(BUILD)mp_thompson_aer.o  \
+					$(BUILD)mp_wsm6.o		 $(BUILD)mp_wsm3.o 			\
+					$(BUILD)cu_driver.o		 $(BUILD)cu_tiedtke.o       \
+					$(BUILD)cu_nsas.o		 $(BUILD)cu_bmj.o			\
 					$(BUILD)advection_driver.o $(BUILD)geo_reader.o		\
 					$(BUILD)advect.o		 $(BUILD)data_structures.o	\
 					$(BUILD)vinterp.o		 $(BUILD)array_utilities.o	\
 					$(BUILD)lsm_driver.o	\
 					$(BUILD)lsm_noahdrv.o 	 $(BUILD)lsm_noahlsm.o \
-					$(BUILD)water_simple.o
+					$(BUILD)lsm_noahmpdrv.o  $(BUILD)lsm_noahmplsm.o \
+					$(BUILD)water_simple.o   $(BUILD)water_lake.o
 	${LINKER} $^ -o $@ ${LFLAGS}
 
 caf_domain_init_test: $(BUILD)test_caf_domain_init.o $(OBJS)
@@ -688,8 +714,6 @@ $(BUILD)time_step.o:$(MAIN)time_step.f90 $(BUILD)data_structures.o $(BUILD)wind.
 #	Utility Routines
 ###################################################################
 
-# $(BUILD)time.o:$(UTIL)time.f90
-
 $(BUILD)co_utilities.o:$(UTIL)co_utilities.f90 $(BUILD)icar_constants.o
 
 $(BUILD)time_delta_obj.o:$(UTIL)time_delta_obj.f90 $(BUILD)icar_constants.o
@@ -710,14 +734,16 @@ $(BUILD)string.o:$(UTIL)string.f90
 $(BUILD)array_utilities.o:$(UTIL)array_utilities.f90
 
 $(BUILD)atm_utilities.o:$(UTIL)atm_utilities.f90 $(BUILD)icar_constants.o 	\
-					$(BUILD)data_structures.o $(BUILD)options_h.o
+					$(BUILD)data_structures.o $(BUILD)options_h.o $(BUILD)mp_thompson.o \
+					$(BUILD)opt_types.o
+
+$(BUILD)pbl_utilities.o:$(UTIL)pbl_utilities.f90 $(BUILD)icar_constants.o 	\
+					$(BUILD)data_structures.o
 
 
 ###################################################################
 #	I/O routines
 ###################################################################
-
-$(BUILD)output.o:$(IO)output.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o $(BUILD)time.o $(BUILD)string.o
 
 $(BUILD)io_routines.o:$(IO)io_routines.f90 $(BUILD)data_structures.o
 
@@ -736,15 +762,14 @@ $(BUILD)vinterp.o: $(UTIL)vinterp.f90 $(BUILD)data_structures.o
 ###################################################################
 #	Microphysics code
 ###################################################################
-$(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_simple.o $(BUILD)mp_thompson_aer.o $(BUILD)mp_thompson.o $(BUILD)mp_wsm6.o\
-					$(BUILD)data_structures.o $(BUILD)time.o $(BUILD)domain_h.o  $(BUILD)icar_constants.o\
+$(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_simple.o $(BUILD)mp_thompson_aer.o $(BUILD)mp_thompson.o \
+					$(BUILD)mp_wsm6.o $(BUILD)mp_wsm3.o \
+					$(BUILD)data_structures.o $(BUILD)domain_h.o  $(BUILD)icar_constants.o\
 					$(BUILD)wrf_constants.o
 
-# $(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_thompson.o $(BUILD)mp_simple.o \
-# 					$(BUILD)mp_morrison.o $(BUILD)data_structures.o $(BUILD)mp_wsm6.o $(BUILD)time.o
-# 	${F90} ${FFLAGS} $(PHYS)mp_driver.f90 -o $(BUILD)mp_driver.o
-
 $(BUILD)mp_morrison.o:$(PHYS)mp_morrison.f90 $(BUILD)data_structures.o
+
+$(BUILD)mp_wsm3.o:$(PHYS)mp_wsm3.f90 $(BUILD)wrf_constants.o
 
 $(BUILD)mp_wsm6.o:$(PHYS)mp_wsm6.f90 $(BUILD)wrf_constants.o
 
@@ -757,33 +782,47 @@ $(BUILD)mp_simple.o:$(PHYS)mp_simple.f90 $(BUILD)data_structures.o $(BUILD)optio
 ###################################################################
 #	Convection code
 ###################################################################
-$(BUILD)cu_driver.o:$(PHYS)cu_driver.f90 $(BUILD)cu_tiedtke.o  \
+$(BUILD)cu_driver.o:$(PHYS)cu_driver.f90 $(BUILD)cu_tiedtke.o $(BUILD)cu_nsas.o $(BUILD)cu_bmj.o  \
 					$(BUILD)data_structures.o $(BUILD)icar_constants.o $(BUILD)domain_h.o
 
 $(BUILD)cu_tiedtke.o:$(PHYS)cu_tiedtke.f90
 
 $(BUILD)cu_kf.o:$(PHYS)cu_kf.f90
 
+$(BUILD)cu_nsas.o:$(PHYS)cu_nsas.f90
+
+$(BUILD)cu_bmj.o:$(PHYS)cu_bmj.f90
+
 ###################################################################
 #	Radiation code
 ###################################################################
 
-$(BUILD)ra_driver.o:$(PHYS)ra_driver.f90 $(BUILD)ra_simple.o $(BUILD)data_structures.o $(BUILD)icar_constants.o $(BUILD)options_h.o $(BUILD)domain_h.o
+$(BUILD)ra_driver.o:$(PHYS)ra_driver.f90 $(BUILD)ra_simple.o $(BUILD)ra_rrtmg_lw.o $(BUILD)ra_rrtmg_sw.o $(BUILD)data_structures.o $(BUILD)icar_constants.o $(BUILD)options_h.o $(BUILD)domain_h.o
 
-$(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o $(BUILD)time.o $(BUILD)atm_utilities.o $(BUILD)options_h.o $(BUILD)domain_h.o
+$(BUILD)ra_rrtmg_lw.o:$(PHYS)ra_rrtmg_lw.f90 $(BUILD)ra_clWRF_support.o $(BUILD)io_routines.o
+
+$(BUILD)ra_rrtmg_sw.o:$(PHYS)ra_rrtmg_sw.f90 $(BUILD)ra_clWRF_support.o $(BUILD)io_routines.o $(BUILD)ra_rrtmg_lw.o
+
+$(BUILD)ra_clWRF_support.o:$(PHYS)ra_clWRF_support.f90 $(BUILD)io_routines.o
+
+$(BUILD)ra_simple.o:$(PHYS)ra_simple.f90 $(BUILD)data_structures.o $(BUILD)atm_utilities.o $(BUILD)options_h.o $(BUILD)domain_h.o
 
 ###################################################################
 #	Surface code
 ###################################################################
-$(BUILD)lsm_driver.o: $(PHYS)lsm_driver.f90 $(BUILD)data_structures.o \
-						$(BUILD)lsm_noahdrv.o $(BUILD)lsm_noahlsm.o \
-						$(BUILD)water_simple.o $(BUILD)icar_constants.o \
+$(BUILD)lsm_driver.o: $(PHYS)lsm_driver.f90 $(BUILD)data_structures.o	\
+						$(BUILD)lsm_noahdrv.o $(BUILD)lsm_noahlsm.o		\
+						$(BUILD)lsm_noahmpdrv.o $(BUILD)lsm_noahmplsm.o \
+						$(BUILD)water_simple.o $(BUILD)water_lake.o		\
 						$(BUILD)domain_h.o $(BUILD)options_h.o			\
-						$(BUILD)atm_utilities.o
+						$(BUILD)atm_utilities.o $(BUILD)ra_simple.o		\
+						$(BUILD)opt_types.o	$(BUILD)icar_constants.o
 
 # $(BUILD)lsm_basic.o $(BUILD)lsm_simple.o
 
 $(BUILD)water_simple.o: $(PHYS)water_simple.f90 $(BUILD)data_structures.o
+
+$(BUILD)water_lake.o: $(PHYS)water_lake.f90 $(BUILD)data_structures.o
 
 $(BUILD)lsm_simple.o: $(PHYS)lsm_simple.f90 $(BUILD)data_structures.o
 
@@ -793,11 +832,21 @@ $(BUILD)lsm_noahdrv.o: $(PHYS)lsm_noahdrv.f90 $(BUILD)lsm_noahlsm.o
 
 $(BUILD)lsm_noahlsm.o: $(PHYS)lsm_noahlsm.f90
 
+$(BUILD)lsm_noahmpdrv.o: $(PHYS)lsm_noahmpdrv.f90 $(BUILD)lsm_noahmplsm.o \
+	          $(BUILD)lsm_noahmp_gecros.o $(BUILD)lsm_noahmp_glacier.o
+
+$(BUILD)lsm_noahmplsm.o: $(PHYS)lsm_noahmplsm.f90 $(BUILD)lsm_noahmp_gecros.o \
+	          $(BUILD)lsm_noahmp_glacier.o
+
+$(BUILD)lsm_noahmp_gecros.o: $(PHYS)lsm_noahmp_gecros.f90
+
+$(BUILD)lsm_noahmp_glacier.o: $(PHYS)lsm_noahmp_glacier.f90
 
 ###################################################################
 #	Planetary Boundary Layer code
 ###################################################################
-$(BUILD)pbl_driver.o: $(PHYS)pbl_driver.f90 $(BUILD)pbl_simple.o $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)data_structures.o
+$(BUILD)pbl_driver.o: $(PHYS)pbl_driver.f90 $(BUILD)pbl_simple.o $(BUILD)pbl_ysu.o $(BUILD)domain_h.o \
+					$(BUILD)options_h.o $(BUILD)lsm_driver.o $(BUILD)data_structures.o $(BUILD)atm_utilities.o $(BUILD)pbl_utilities.o
 
 $(BUILD)pbl_simple.o: $(PHYS)pbl_simple.f90 $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)data_structures.o
 
@@ -900,7 +949,7 @@ $(BUILD)test_fftw.o: $(TESTS)test_fftw.f90 $(BUILD)fftw.o
 
 $(BUILD)test_fftshift.o:$(TESTS)test_fftshift.f90 $(BUILD)fftshift.o
 
-$(BUILD)test_calendar.o:$(TESTS)test_calendar.f90 $(BUILD)time.o
+$(BUILD)test_calendar.o:$(TESTS)test_calendar.f90  $(BUILD)time_obj.o $(BUILD)time_h.o $(BUILD)time_delta_obj.o
 
 $(BUILD)test_point_in_on.o:$(TESTS)test_point_in_on.f90 $(BUILD)geo_reader.o
 

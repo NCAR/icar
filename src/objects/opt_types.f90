@@ -131,14 +131,35 @@ module options_types
     ! ------------------------------------------------
     type lsm_options_type
         character (len=MAXVARLENGTH) :: LU_Categories   ! land use categories to read from VEGPARM.tbl (e.g. "USGS")
+        real :: lh_feedback_fraction                    ! fraction of latent heat added back to the atmosphere
+        real :: sh_feedback_fraction                    ! fraction of sensible heat added back to the atmosphere
+        real :: sfc_layer_thickness                     ! thickness of atmosphere to spread heat flux over.
+        real :: dz_lsm_modification                     ! ability to change the apparent thickness of the lowest model level to compensate for issues in the LSM?
+        real :: wind_enhancement                        ! enhancement to winds in LSM to mitigate low bias in driving models
+        real :: max_swe                                 ! maximum value for Snow water equivalent (excess above this is removed)
         integer :: update_interval                      ! minimum time to let pass before recomputing LSM ~300s (it may be longer)  [s]
         ! the following categories will be set by default if an known LU_Category is used
         integer :: urban_category                       ! LU index value that equals "urban"
         integer :: ice_category
         integer :: water_category
+        integer :: lake_category
+        ! integer :: snow_category ! = ice cat
         ! use monthly vegetation fraction data, not just a single value
         logical :: monthly_vegfrac
+        logical :: monthly_albedo
     end type lsm_options_type
+
+    ! ------------------------------------------------
+    ! store Radiation options
+    ! ------------------------------------------------
+    type rad_options_type
+       integer :: update_interval_rrtmg                ! how ofen to update the radiation in seconds.
+                                                       ! RRTMG scheme is expensive. Default is 1800s (30 minutes)
+       integer :: icloud                               ! How RRTMG interact with clouds
+       logical :: read_ghg                             ! Eihter use default green house gas mixing ratio, or read the in from file
+       logical :: use_simple_sw
+
+    end type rad_options_type
 
     ! ------------------------------------------------
     ! store output file related options
@@ -173,13 +194,14 @@ module options_types
         character (len=MAXFILELENGTH), dimension(:), allocatable :: boundary_files, ext_wind_files
 
         ! variable names from init/BC/wind/... files
-        character (len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
+        character (len=MAXVARLENGTH) :: landvar,lakedepthvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon, &
                                         hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi, &
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qsvar,qgvar,hgtvar, &
-                                        pslvar, psvar, &
+                                        pslvar, psvar, snowh_var, &
                                         shvar,lhvar,pblhvar,zvar,zbvar,&
                                         soiltype_var, soil_t_var,soil_vwc_var,swe_var,soil_deept_var, &
-                                        vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var, &
+                                        vegtype_var,vegfrac_var, albedo_var, vegfracmax_var, lai_var, canwat_var, &
+                                        linear_mask_var, nsq_calibration_var, &
                                         swdown_var, lwdown_var, &
                                         sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &
                                         lat_ext, lon_ext, swe_ext, hsnow_ext, rho_snow_ext, tss_ext, &
@@ -194,7 +216,7 @@ module options_types
         ! Filenames for files to read various physics options from
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, adv_options_filename, &
                                         lsm_options_filename, bias_options_filename, block_options_filename, &
-                                        cu_options_filename
+                                        cu_options_filename, rad_options_filename
         character(len=MAXFILELENGTH) :: calendar
 
 
@@ -281,6 +303,7 @@ module options_types
 
         real    :: agl_cap              ! height up to which AGL height is used for vertical interpolation
 
+
         ! physics parameterization options
         logical :: use_mp_options
         logical :: use_cu_options
@@ -288,6 +311,7 @@ module options_types
         logical :: use_block_options
         logical :: use_adv_options
         logical :: use_lsm_options
+        logical :: use_rad_options
         logical :: use_bias_correction
 
         integer :: warning_level        ! level of warnings to issue when checking options settings 0-10.

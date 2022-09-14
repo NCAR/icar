@@ -65,6 +65,11 @@
    REAL    , PARAMETER :: rhowater     = 1000.
    REAL    , PARAMETER :: rhosnow      = 100.
    REAL    , PARAMETER :: rhoair0      = 1.28
+
+   REAL    , PARAMETER :: RE_QC_BG     = 2.49E-6     ! effective radius of cloud for background (m)
+   REAL    , PARAMETER :: RE_QI_BG     = 4.99E-6     ! effective radius of ice for background (m)
+   REAL    , PARAMETER :: RE_QS_BG     = 9.99E-6     ! effective radius of snow for background (m)
+
 !
    REAL    , PARAMETER :: n_ccn0       = 1.0E8
 !
@@ -72,12 +77,12 @@
    REAL    , PARAMETER :: DEGRAD       = piconst/180.
    REAL    , PARAMETER :: DPD          = 360./365.
 
-   ! REAL    , PARAMETER ::  SVP1=0.6112
-   ! REAL    , PARAMETER ::  SVP2=17.67
-   ! REAL    , PARAMETER ::  SVP3=29.65
-   ! REAL    , PARAMETER ::  SVPT0=273.15
-   ! REAL    , PARAMETER ::  EP_1=R_v/R_d-1.
-   ! REAL    , PARAMETER ::  EP_2=R_d/R_v
+!    REAL    , PARAMETER ::  SVP1=0.6112    ! for YSU pbl 
+!    REAL    , PARAMETER ::  SVP2=17.67
+!    REAL    , PARAMETER ::  SVP3=29.65
+!    REAL    , PARAMETER ::  SVPT0=273.15
+!    REAL    , PARAMETER ::  EP_1=R_v/R_d-1. !-- ep1         constant for virtual temperature (r_v/r_d - 1) (dimensionless)
+!    REAL    , PARAMETER ::  EP_2=R_d/R_v    !-- ep2         constant for specific humidity calculation
    ! REAL    , PARAMETER ::  KARMAN=0.4
    REAL    , PARAMETER ::  EOMEG=7.2921E-5
    REAL    , PARAMETER ::  STBOLT=5.67051E-8

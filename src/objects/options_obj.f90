@@ -1,6 +1,9 @@
 submodule(options_interface) options_implementation
 
-    use icar_constants,             only : kMAINTAIN_LON, MAXFILELENGTH, MAXVARLENGTH, MAX_NUMBER_FILES, MAXLEVELS, kNO_STOCHASTIC, kVERSION_STRING, kMAX_FILE_LENGTH, kMAX_NAME_LENGTH, pi
+    use icar_constants,             only : kMAINTAIN_LON, MAXFILELENGTH, MAXVARLENGTH, MAX_NUMBER_FILES, MAXLEVELS, &
+                                           kNO_STOCHASTIC, kVERSION_STRING, kMAX_FILE_LENGTH, kMAX_NAME_LENGTH, pi, &
+                                           kWATER_LAKE, &
+                                           kWIND_LINEAR, kLINEAR_ITERATIVE_WINDS, kITERATIVE_WINDS, kCONSERVE_MASS
     use io_routines,                only : io_newunit
     use time_io,                    only : find_timestep_in_file
     use time_delta_object,          only : time_delta_t
@@ -14,6 +17,7 @@ submodule(options_interface) options_implementation
     use microphysics,               only : mp_var_request
     use advection,                  only : adv_var_request
     use wind,                       only : wind_var_request
+    use planetary_boundary_layer,   only : pbl_var_request
 
     use output_metadata,            only : get_varname
 
@@ -64,6 +68,7 @@ contains
         call lsm_parameters_namelist(   this%parameters%lsm_options_filename,   this)
         call cu_parameters_namelist(    this%parameters%cu_options_filename,    this)
         call bias_parameters_namelist(  this%parameters%bias_options_filename,  this)
+        call rad_parameters_namelist(   this%parameters%rad_options_filename,   this)
 
         if (this%parameters%restart) then
             ! if (this_image()==1) write(*,*) "  (opt) Restart = ", this%parameters%restart
@@ -92,10 +97,12 @@ contains
 
         call ra_var_request(options)
         call lsm_var_request(options)
+        call pbl_var_request(options)
         call cu_var_request(options)
         call mp_var_request(options)
         call adv_var_request(options)
         call wind_var_request(options)
+        call pbl_var_request(options)
 
     end subroutine
 
@@ -336,6 +343,50 @@ contains
                 stop
             endif
         endif
+
+        ! wind calculations almost require fixed_dz_advection settings
+        if ((options%physics%windtype.eq.kITERATIVE_WINDS).and.(.not.options%parameters%fixed_dz_advection)) then
+            if (options%parameters%warning_level>3) then
+                if (this_image()==1) write(*,*) ""
+                if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
+                if (this_image()==1) write(*,*) "WARNING, wind=3 setting is best used with fixed_dz_advection=.True."
+                if (this_image()==1) write(*,*) "WARNING, setting fixed_dz_advection=.True."
+                if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
+                options%parameters%fixed_dz_advection = .True.
+            endif
+            if (options%parameters%warning_level==10) then
+                if (this_image()==1) write(*,*) "Set warning_level<10 to continue"
+                stop
+            endif
+        endif
+        if (((options%physics%windtype.eq.kWIND_LINEAR).or.(options%physics%windtype.eq.kLINEAR_ITERATIVE_WINDS)).and.(options%parameters%fixed_dz_advection)) then
+            if (options%parameters%warning_level>3) then
+                if (this_image()==1) write(*,*) ""
+                if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
+                if (this_image()==1) write(*,*) "WARNING, wind=1 or 5 setting is best used with fixed_dz_advection=.False."
+                if (this_image()==1) write(*,*) "WARNING, setting fixed_dz_advection=.False."
+                if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
+                if (this_image()==1) write(*,*) ""
+                options%parameters%fixed_dz_advection = .False.
+            endif
+            if (options%parameters%warning_level==10) then
+                if (this_image()==1) write(*,*) "Set warning_level<10 to continue"
+                stop
+            endif
+        endif
+        if ((options%physics%windtype.eq.0).and.(options%parameters%fixed_dz_advection)) then
+            if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
+            if (this_image()==1) write(*,*) "WARNING setting fixed_dz_advection=False for wind=0"
+            if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
+            options%parameters%fixed_dz_advection = .False.
+        endif
+        if ((options%physics%windtype.eq.kCONSERVE_MASS).and.(.not.options%parameters%fixed_dz_advection)) then
+            if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
+            if (this_image()==1) write(*,*) "WARNING setting fixed_dz_advection=True for wind=2"
+            if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
+            options%parameters%fixed_dz_advection = .True.
+        endif
+
         ! if using a real LSM, feedback will probably keep hot-air from getting even hotter, so not likely a problem
         if ((options%physics%landsurface>1).and.(options%physics%boundarylayer==0)) then
             if (options%parameters%warning_level>2) then
@@ -522,6 +573,7 @@ contains
         water =0! 0 = no open water fluxes,
                 ! 1 = Fluxes from GCM, (needs lsm=1)
                 ! 2 = Simple fluxes (needs SST in forcing data)
+                ! 3 = WRF's lake model (needs lake depth in hi-res data)
 
         mp  = 1 ! 0 = no MP,
                 ! 1 = Thompson et al (2008),
@@ -532,6 +584,7 @@ contains
         rad = 0 ! 0 = no RAD,
                 ! 1 = Surface fluxes from GCM, (radiative cooling ~1K/day in LSM=1 module),
                 ! 2 = cloud fraction based radiation + radiative cooling
+                ! 3 = RRTMG
 
         conv= 0 ! 0 = no CONV,
                 ! 1 = Tiedke scheme
@@ -667,21 +720,21 @@ contains
         character(len=*),             intent(in)    :: filename
         type(parameter_options_type), intent(inout) :: options
         integer :: name_unit, i, j
-        character(len=MAXVARLENGTH) :: landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar,  &
+        character(len=MAXVARLENGTH) :: landvar,lakedepthvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar,  &
                                         hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
                                         pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qgvar,qsvar,hgtvar,shvar,lhvar,pblhvar,   &
-                                        psvar, pslvar, &
+                                        psvar, pslvar, snowh_var, &
                                         soiltype_var, soil_t_var,soil_vwc_var,swe_var, soil_deept_var,           &
-                                        vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
+                                        vegtype_var,vegfrac_var, vegfracmax_var, albedo_var, lai_var, canwat_var, linear_mask_var, nsq_calibration_var,  &
                                         swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &
                                         lat_ext, lon_ext, swe_ext, hsnow_ext, rho_snow_ext, tss_ext, tsoil2D_ext, tsoil3D_ext, z_ext, time_ext
 
         namelist /var_list/ pvar,pbvar,tvar,qvvar,qcvar,qivar,qrvar,qgvar,qsvar,hgtvar,shvar,lhvar,pblhvar,   &
-                            landvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar, &
-                            psvar, pslvar, &
+                            landvar,lakedepthvar,latvar,lonvar,uvar,ulat,ulon,vvar,vlat,vlon,zvar,zbvar, &
+                            psvar, pslvar, snowh_var, &
                             hgt_hi,lat_hi,lon_hi,ulat_hi,ulon_hi,vlat_hi,vlon_hi,           &
                             soiltype_var, soil_t_var,soil_vwc_var,swe_var,soil_deept_var,           &
-                            vegtype_var,vegfrac_var, linear_mask_var, nsq_calibration_var,  &
+                            vegtype_var,vegfrac_var, vegfracmax_var, albedo_var, lai_var, canwat_var, linear_mask_var, nsq_calibration_var,  &
                             swdown_var, lwdown_var, sst_var, rain_var, time_var, sinalpha_var, cosalpha_var, &
                             lat_ext, lon_ext, swe_ext, hsnow_ext, rho_snow_ext, tss_ext, tsoil2D_ext, tsoil3D_ext,  z_ext, time_ext
 
@@ -717,6 +770,7 @@ contains
         pblhvar=""
         hgt_hi=""
         landvar=""
+        lakedepthvar=""
         lat_hi=""
         lon_hi=""
         ulat_hi=""
@@ -727,9 +781,14 @@ contains
         soil_t_var=""
         soil_vwc_var=""
         swe_var=""
+        snowh_var=""
         soil_deept_var=""
         vegtype_var=""
         vegfrac_var=""
+        vegfracmax_var=""
+        albedo_var=""
+        lai_var=""
+        canwat_var=""
         linear_mask_var=""
         nsq_calibration_var=""
         rain_var=""
@@ -847,6 +906,7 @@ contains
         ! variable names for the high resolution domain
         options%hgt_hi          = hgt_hi
         options%landvar         = landvar
+        options%lakedepthvar    = lakedepthvar
         options%lat_hi          = lat_hi
         options%lon_hi          = lon_hi
         options%ulat_hi         = ulat_hi
@@ -858,13 +918,18 @@ contains
         options%cosalpha_var    = cosalpha_var
 
         ! soil and vegetation parameters
-        options%soiltype_var    = soiltype_var
-        options%soil_t_var      = soil_t_var
-        options%soil_vwc_var    = soil_vwc_var
-        options%swe_var         = swe_var
-        options%soil_deept_var  = soil_deept_var
-        options%vegtype_var     = vegtype_var
-        options%vegfrac_var     = vegfrac_var
+        options%soiltype_var       = soiltype_var
+        options%soil_t_var         = soil_t_var
+        options%soil_vwc_var       = soil_vwc_var
+        options%swe_var            = swe_var
+        options%snowh_var          = snowh_var
+        options%soil_deept_var     = soil_deept_var
+        options%vegtype_var        = vegtype_var
+        options%vegfrac_var        = vegfrac_var
+        options%vegfracmax_var     = vegfracmax_var
+        options%albedo_var         = albedo_var
+        options%lai_var            = lai_var
+        options%canwat_var         = canwat_var
 
         ! optional calibration variables for linear wind solution
         options%linear_mask_var     = linear_mask_var
@@ -918,14 +983,14 @@ contains
                    high_res_soil_state, use_agl_height, time_varying_z, t_is_potential, qv_is_spec_humidity, &
                    qv_is_relative_humidity, &
                    use_mp_options, use_lt_options, use_adv_options, use_lsm_options, use_bias_correction, &
-                   use_block_options, use_cu_options
+                   use_block_options, use_cu_options, use_rad_options
 
         character(len=MAXFILELENGTH) :: date, calendar, start_date, forcing_start_date, end_date
         integer :: year, month, day, hour, minute, second
         character(len=MAXFILELENGTH) :: mp_options_filename, lt_options_filename, &
                                         adv_options_filename, lsm_options_filename, &
                                         bias_options_filename, block_options_filename, &
-                                        cu_options_filename
+                                        cu_options_filename, rad_options_filename
 
 
         namelist /parameters/ ntimesteps, wind_iterations, outputinterval, frames_per_outfile, inputinterval, surface_io_only,                &
@@ -944,7 +1009,8 @@ contains
                               lsm_options_filename,     use_lsm_options,    &
                               adv_options_filename,     use_adv_options,    &
                               bias_options_filename,    use_bias_correction,&
-                              cu_options_filename,      use_cu_options
+                              cu_options_filename,      use_cu_options,     &
+                              rad_options_filename,     use_rad_options
 
 !       default parameters
         surface_io_only     = .False.
@@ -1004,6 +1070,9 @@ contains
         use_lsm_options=.False.
         lsm_options_filename = filename
 
+        use_rad_options=.False.
+        rad_options_filename = filename
+
         use_bias_correction=.False.
         bias_options_filename = filename
 
@@ -1015,7 +1084,7 @@ contains
         close(name_unit)
 
         if (ideal) then
-            if (this_image()==1) write(*,*) " Running Idealized simulation (time step does not advance)"
+            if (this_image()==1) write(*,*) " Running Idealized simulation "
         endif
 
         if ((trim(date)=="").and.(trim(start_date)/="")) date = start_date
@@ -1127,7 +1196,6 @@ contains
         options%cfl_reduction_factor = cfl_reduction_factor
         options%cfl_strictness = cfl_strictness
 
-
         options%use_mp_options      = use_mp_options
         options%mp_options_filename = mp_options_filename
 
@@ -1142,6 +1210,9 @@ contains
 
         options%use_lsm_options     = use_lsm_options
         options%lsm_options_filename= lsm_options_filename
+
+        options%use_rad_options     = use_rad_options
+        options%rad_options_filename= rad_options_filename
 
         options%use_bias_correction  = use_bias_correction
         options%bias_options_filename= bias_options_filename
@@ -1595,41 +1666,50 @@ contains
     !! Sets the default value for each of three land use categories depending on the LU_Categories input
     !!
     !! -------------------------------
-    subroutine set_default_LU_categories(urban_category, ice_category, water_category, LU_Categories)
+    subroutine set_default_LU_categories(options, urban_category, ice_category, water_category, LU_Categories, lake_category)
         ! if various LU categories were not defined in the namelist (i.e. they == -1) then attempt
         ! to define default values for them based on the LU_Categories variable supplied.
         implicit none
-        integer, intent(inout) :: urban_category, ice_category, water_category
+        type(options_t),    intent(inout)::options
+        integer, intent(inout) :: urban_category, ice_category, water_category, lake_category
         character(len=MAXVARLENGTH), intent(in) :: LU_Categories
 
         if (trim(LU_Categories)=="MODIFIED_IGBP_MODIS_NOAH") then
             if (urban_category==-1) urban_category = 13
             if (ice_category==-1)   ice_category = 15
             if (water_category==-1) water_category = 17
+            if (lake_category==-1) lake_category = 21
 
         elseif (trim(LU_Categories)=="USGS") then
             if (urban_category==-1) urban_category = 1
             if (ice_category==-1)   ice_category = -1
             if (water_category==-1) water_category = 16
+            ! if (lake_category==-1) lake_category = 16  ! No separate lake category!
+            if((options%physics%watersurface==kWATER_LAKE) .AND. (this_image()==1)) then
+                write(*,*) "WARNING: Lake model selected (water=3), but USGS LU-categories has no lake category"
+            endif
 
         elseif (trim(LU_Categories)=="USGS-RUC") then
             if (urban_category==-1) urban_category = 1
             if (ice_category==-1)   ice_category = 24
             if (water_category==-1) water_category = 16
+            if (lake_category==-1) lake_category = 28
             ! also note, lakes_category = 28
-            write(*,*) "WARNING: not handling lake category (28)"
+            ! write(*,*) "WARNING: not handling lake category (28)"
 
         elseif (trim(LU_Categories)=="MODI-RUC") then
             if (urban_category==-1) urban_category = 13
             if (ice_category==-1)   ice_category = 15
             if (water_category==-1) water_category = 17
+            if (lake_category==-1) lake_category = 21
             ! also note, lakes_category = 21
-            write(*,*) "WARNING: not handling lake category (21)"
+            ! write(*,*) "WARNING: not handling lake category (21)"
 
         elseif (trim(LU_Categories)=="NLCD40") then
             if (urban_category==-1) urban_category = 13
             if (ice_category==-1)   ice_category = 15 ! and 22?
-            if (water_category==-1) water_category = 17 ! and 21
+            ! if (water_category==-1) water_category = 17 ! and 21 'Open Water'
+            if(options%physics%watersurface==kWATER_LAKE) write(*,*) "WARNING: Lake model selected (water=3), but NLCD40 LU-categories has no lake category"
             write(*,*) "WARNING: not handling all varients of categories (e.g. permanent_snow=15 is, but permanent_snow_ice=22 is not)"
         endif
 
@@ -1699,15 +1779,25 @@ contains
         integer :: name_unit
 
         character(len=MAXVARLENGTH) :: LU_Categories ! Category definitions (e.g. USGS, MODIFIED_IGBP_MODIS_NOAH)
+        real    :: lh_feedback_fraction
+        real    :: sh_feedback_fraction
+        real    :: sfc_layer_thickness
+        real    :: dz_lsm_modification
+        real    :: wind_enhancement
+        real    :: max_swe
         logical :: monthly_vegfrac                   ! read in 12 months of vegfrac data
+        logical :: monthly_albedo                    ! same for albedo (requires vegfrac be monthly)
         integer :: update_interval                   ! minimum number of seconds between LSM updates
         integer :: urban_category                    ! index that defines the urban category in LU_Categories
         integer :: ice_category                      ! index that defines the ice category in LU_Categories
         integer :: water_category                    ! index that defines the water category in LU_Categories
+        integer :: lake_category                    ! index that defines the lake category in (some) LU_Categories
 
         ! define the namelist
-        namelist /lsm_parameters/ LU_Categories, update_interval, monthly_vegfrac, &
-                                  urban_category, ice_category, water_category
+        namelist /lsm_parameters/ LU_Categories, lh_feedback_fraction, sh_feedback_fraction, update_interval, &
+                                  urban_category, ice_category, water_category, lake_category,                &
+                                  monthly_vegfrac, monthly_albedo, sfc_layer_thickness, dz_lsm_modification,  &
+                                  wind_enhancement, max_swe
 
          ! because adv_options could be in a separate file
          if (options%parameters%use_lsm_options) then
@@ -1721,11 +1811,21 @@ contains
         LU_Categories   = "MODIFIED_IGBP_MODIS_NOAH"
         update_interval = 300 ! 5 minutes
         monthly_vegfrac = .False.
+        monthly_albedo = .False.
 
         ! default values for these will be set after reading LU_Categories
         urban_category  = -1
         ice_category    = -1
         water_category  = -1
+        lake_category   = -1
+
+        lh_feedback_fraction = 1.0
+        sh_feedback_fraction = 0.625
+        sfc_layer_thickness  = 400.0
+        dz_lsm_modification  = 0.5
+        wind_enhancement = 1.5
+
+        max_swe = 1e10
 
         ! read the namelist options
         if (options%parameters%use_lsm_options) then
@@ -1734,19 +1834,81 @@ contains
             close(name_unit)
         endif
 
-        call set_default_LU_categories(urban_category, ice_category, water_category, LU_Categories)
+        call set_default_LU_categories(options, urban_category, ice_category, water_category, LU_Categories, lake_category)
 
         ! store everything in the lsm_options structure
-        lsm_options%LU_Categories   = LU_Categories
-        lsm_options%monthly_vegfrac = monthly_vegfrac
-        lsm_options%update_interval = update_interval
-        lsm_options%urban_category  = urban_category
-        lsm_options%ice_category    = ice_category
-        lsm_options%water_category  = water_category
+        lsm_options%LU_Categories        = LU_Categories
+        lsm_options%monthly_vegfrac      = monthly_vegfrac
+        lsm_options%monthly_albedo       = monthly_albedo
+        lsm_options%update_interval      = update_interval
+        lsm_options%urban_category       = urban_category
+        lsm_options%ice_category         = ice_category
+        lsm_options%water_category       = water_category
+        lsm_options%lake_category        = lake_category
+        lsm_options%lh_feedback_fraction = lh_feedback_fraction
+        lsm_options%sh_feedback_fraction = sh_feedback_fraction
+        lsm_options%sfc_layer_thickness  = sfc_layer_thickness
+        lsm_options%dz_lsm_modification  = dz_lsm_modification
+        lsm_options%wind_enhancement     = wind_enhancement
+        lsm_options%max_swe              = max_swe
 
         ! copy the data back into the global options data structure
         options%lsm_options = lsm_options
     end subroutine lsm_parameters_namelist
+
+
+    !> -------------------------------
+    !! Initialize the radiation model options
+    !!
+    !! Reads the rad_parameters namelist or sets default values
+    !! -------------------------------
+    subroutine rad_parameters_namelist(filename, options)
+        implicit none
+        character(len=*),   intent(in)   :: filename
+        type(options_t),    intent(inout)::options
+
+        type(rad_options_type) :: rad_options
+        integer :: name_unit
+
+        integer :: update_interval_rrtmg             ! minimum number of seconds between RRTMG updates
+        integer :: icloud                            ! how RRTMG interacts with clouds
+        logical :: read_ghg
+        logical :: use_simple_sw
+        ! define the namelist
+        namelist /rad_parameters/ update_interval_rrtmg, icloud, read_ghg, use_simple_sw
+
+
+         ! because adv_options could be in a separate file
+         if (options%parameters%use_rad_options) then
+             if (trim(filename)/=trim(get_options_file())) then
+                 call version_check(filename,options%parameters)
+             endif
+         endif
+
+
+        ! set default values
+        update_interval_rrtmg = 1800 ! 30 minutes
+        icloud          = 3    ! effective radius from microphysics scheme
+        read_ghg        = .false.
+        use_simple_sw   = .false.
+
+        ! read the namelist options
+        if (options%parameters%use_rad_options) then
+            open(io_newunit(name_unit), file=filename)
+            read(name_unit,nml=rad_parameters)
+            close(name_unit)
+        endif
+
+        ! store everything in the radiation_options structure
+        rad_options%update_interval_rrtmg = update_interval_rrtmg
+        rad_options%icloud                = icloud
+        rad_options%read_ghg              = read_ghg
+        rad_options%use_simple_sw         = use_simple_sw
+
+        ! copy the data back into the global options data structure
+        options%rad_options = rad_options
+    end subroutine rad_parameters_namelist
+
 
 
     !> -------------------------------
@@ -1765,7 +1927,8 @@ contains
         real, dimension(45) :: fulldz
         logical :: space_varying, fixed_dz_advection, dz_modifies_wind, sleve, use_terrain_difference
 
-        real :: flat_z_height, terrain_smooth_windowsize, terrain_smooth_cycles, decay_rate_L_topo, decay_rate_S_topo, sleve_n
+        real :: flat_z_height, decay_rate_L_topo, decay_rate_S_topo, sleve_n
+        integer :: terrain_smooth_windowsize, terrain_smooth_cycles
 
         namelist /z_info/ dz_levels, space_varying, dz_modifies_wind, flat_z_height, fixed_dz_advection, sleve, terrain_smooth_windowsize, terrain_smooth_cycles, decay_rate_L_topo, decay_rate_S_topo, sleve_n, use_terrain_difference
 

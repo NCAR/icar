@@ -31,6 +31,7 @@ contains
         nullify(this%data_3d)
     endif
 
+    this%dtype = kREAL
     allocate(this%data_3d(grid%ims:grid%ime, &
                           grid%kms:grid%kme, &
                           grid%jms:grid%jme), stat=err)
@@ -124,6 +125,7 @@ contains
 
     this%meta_data%data_3d => this%data_3d
     this%meta_data%three_d = .True.
+    this%meta_data%dtype = this%dtype
 
     if (.not.allocated(this%meta_data%dim_len)) allocate(this%meta_data%dim_len(3))
     this%meta_data%dim_len(1) = size(this%data_3d,1)
@@ -173,8 +175,7 @@ contains
     if (.not. this%south_boundary) then
         start = lbound(this%data_3d,3)
         nx = size(this%data_3d,1)
-
-        this%halo_north_in(1:nx,:,1:halo_size)[south_neighbor] = this%data_3d(:,:,start+halo_size*2:start+halo_size*2)
+        this%halo_north_in(1:nx,:,1:halo_size)[south_neighbor] = this%data_3d(:,:,start+halo_size+1:start+halo_size*2)
     endif
     if (.not. this%east_boundary)  call this%put_east
     if (.not. this%west_boundary)  call this%put_west
@@ -186,7 +187,6 @@ contains
     if (.not. this%south_boundary) then
         start = lbound(this%data_3d,3)
         nx = size(this%data_3d,1)
-
         this%data_3d(:,:,start:start+halo_size) = this%halo_south_in(:nx,:,1:halo_size+1)
     endif
 
@@ -213,7 +213,7 @@ contains
     if (.not. this%west_boundary) then
         start = lbound(this%data_3d,1)
         ny = size(this%data_3d,3)
-        this%halo_east_in(1:halo_size,:,1:ny)[west_neighbor] = this%data_3d(start+halo_size*2:start+halo_size*2,:,:)
+        this%halo_east_in(1:halo_size,:,1:ny)[west_neighbor] = this%data_3d(start+halo_size+1:start+halo_size*2,:,:)
     endif
 
     sync images( neighbors )

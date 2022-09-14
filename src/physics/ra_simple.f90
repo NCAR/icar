@@ -56,7 +56,7 @@ module module_ra_simple
     real, allocatable, dimension(:,:) :: cos_lat_m,sin_lat_m
     integer :: nrad_layers
     real, parameter :: So = 1367.0  ! Solar "constant" W/m^2
-    real, parameter :: qcmin = 1e-5 ! Minimum "cloud" water content to affect radiation
+    real, parameter :: qcmin = 1e-6 ! Minimum "cloud" water content to affect radiation
 contains
 
     subroutine ra_simple_init(domain,options)
@@ -97,8 +97,8 @@ contains
 
         shortwave(its:ite) = So * (1 + 0.035 * cos(day_frac(its:ite) * 2*pi)) * sin_solar_elev * (0.48 + 0.29 * sin_solar_elev)
 
-        ! note it is cloud_cover**3.4 in Reiff, but this makes almost no difference and integer powers are fast
-        shortwave(its:ite) = shortwave(its:ite) * (1 - (0.75 * (cloud_cover(its:ite)**3)) )
+        ! note it is cloud_cover**3.4 in Reiff, but this makes almost no difference and integer powers are fast so could use **3
+        shortwave(its:ite) = shortwave(its:ite) * (1 - (0.75 * (cloud_cover(its:ite)**3.4)) )
 
     end function shortwave
 
@@ -136,9 +136,9 @@ contains
         where(temporary < 0.0001) temporary=0.0001
 
         cloudfrac(its:ite) = qc(its:ite) - qcmin
-        where(cloudfrac < 0) cloudfrac = 0
+        where(cloudfrac < 5e-8) cloudfrac = 5e-8
 
-        cloudfrac(its:ite) = (rh(its:ite)**0.25) * (1-exp((-2000*(cloudfrac(its:ite))) / temporary))
+        cloudfrac(its:ite) = (rh(its:ite)**0.25) * (1 - exp((-2000*(cloudfrac(its:ite))) / temporary))
 
         where(cloudfrac < 0) cloudfrac = 0
         where(cloudfrac > 1) cloudfrac = 1
@@ -190,7 +190,8 @@ contains
 
     subroutine ra_simple(theta, pii, qv, qc, qs, qr, p, swdown, lwdown, cloud_cover, lat, lon, date, options, dt, &
                 ims, ime, jms, jme, kms, kme, &
-                its, ite, jts, jte, kts, kte)
+                its, ite, jts, jte, kts, kte, &
+                F_runlw)
         implicit none
         real, intent(inout):: theta (ims:ime, kms:kme, jms:jme)
         real, intent(in)   :: pii   (ims:ime, kms:kme, jms:jme)
@@ -209,15 +210,20 @@ contains
         real,               intent(in) :: dt
         integer,            intent(in) :: ims, ime, jms, jme, kms, kme
         integer,            intent(in) :: its, ite, jts, jte, kts, kte
+        logical,            intent(in), optional :: F_runlw
 
+        logical :: runlw
         real :: coolingrate
         integer :: j, k
         real, allocatable, dimension(:) :: rh, T_air, solar_elevation, hydrometeors, day_frac
 
 
+        runlw = .True.
+        if (present(F_runlw)) runlw = F_runlw
+
         !$omp parallel private(j,k,rh,T_air,solar_elevation,hydrometeors,day_frac,coolingrate) &
         !$omp shared(theta,pii,qv,p,qc,qs,qr,date,lon,cloud_cover,swdown,lwdown)                      &
-        !$omp firstprivate(ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+        !$omp firstprivate(runlw, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
 
         allocate(rh             (ims:ime))
         allocate(T_air          (ims:ime))
@@ -251,11 +257,12 @@ contains
 
             cloud_cover(:,j) = cloudfrac(rh, hydrometeors, ims,ime, its,ite)
             swdown(:,j)      = shortwave(day_frac, cloud_cover(:,j), solar_elevation, ims,ime, its,ite)
-            lwdown(:,j)      = longwave(T_air, cloud_cover(:,j), ims,ime, its,ite)
+            if (runlw) then
+                lwdown(:,j)      = longwave(T_air, cloud_cover(:,j), ims,ime, its,ite)
 
-            ! apply a simple radiative cooling to the atmosphere
-            theta(its:ite, kts:kte, j) = theta(its:ite, kts:kte, j) - (((theta(its:ite, kts:kte, j) * pii(its:ite, kts:kte, j)) ** 4) * coolingrate)
-
+                ! apply a simple radiative cooling to the atmosphere
+                theta(its:ite, kts:kte, j) = theta(its:ite, kts:kte, j) - (((theta(its:ite, kts:kte, j) * pii(its:ite, kts:kte, j)) ** 4) * coolingrate)
+            endif
         end do
         !$omp end do
 
