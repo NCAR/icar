@@ -90,7 +90,7 @@ contains
 
         ! interpolate external variables to the hi-res grid
         call this%interpolate_external( external_conditions, options)
-        ! if (this_image()==1) print*, " interpolating exteral conditions"
+        ! if (this_image()==1) write(*,*) " interpolating exteral conditions"
       endif
 
       ! - - - - - - - - - - - - - - - - - - -  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -993,14 +993,6 @@ contains
 
             ! Still not 100% convinced this works well in cases other than flat_z_height = 0 (w sleve). So for now best to keep at 0 when using sleve?
             max_level = find_flat_model_level(options, nz, dz)
-            ! if(max_level /= nz) then
-            !     if (this_image()==1) then
-            !         print*, "    flat z height ", options%parameters%flat_z_height
-            !         print*, "    flat z height set to 0 to comply with SLEVE coordinate calculation "
-            !         print*, "    flat z height now", nz
-            !     end if
-            !     max_level = nz
-            ! end if
 
             smooth_height = sum(dz(1:max_level)) !sum(global_terrain) / size(global_terrain) + sum(dz(1:max_level))
 
@@ -1049,14 +1041,14 @@ contains
             !    Decay Rate for Large-Scale Topography: svc1 = 10000.0000
             !    Decay Rate for Small-Scale Topography: svc2 =  3300.0000
             if ((this_image()==1)) then
-                print*, "    Using a SLEVE coordinate with a Decay height for Large-Scale Topography: (s1) of ", s1, " m."
-                print*, "    Using a SLEVE coordinate with a Decay height for Small-Scale Topography: (s2) of ", s2, " m."
-                print*, "    Using a sleve_n of ", options%parameters%sleve_n
+                write(*,*) "    Using a SLEVE coordinate with a Decay height for Large-Scale Topography: (s1) of ", s1, " m."
+                write(*,*) "    Using a SLEVE coordinate with a Decay height for Small-Scale Topography: (s2) of ", s2, " m."
+                write(*,*) "    Using a sleve_n of ", options%parameters%sleve_n
                 write(*,*) "    Smooth height is ", smooth_height, "m.a.s.l     (model top ", sum(dz(1:nz)), "m.a.s.l.)"
                 write(*,*) "    invertibility parameter gamma is: ", gamma_min
-                if(gamma_min <= 0) print*, " CAUTION: coordinate transformation is not invertible (gamma <= 0 ) !!! reduce decay rate(s), and/or increase flat_z_height!"
+                if(gamma_min <= 0) write(*,*) " CAUTION: coordinate transformation is not invertible (gamma <= 0 ) !!! reduce decay rate(s), and/or increase flat_z_height!"
                 ! if(options%parameters%debug)  write(*,*) "   (for (debugging) reference: 'gamma(n=1)'= ", gamma,")"
-                print*, ""
+                write(*,*) ""
             endif
 
             ! - - - - -   Mass grid calculations for lowest level (i=kms)  - - - - -
@@ -1133,10 +1125,8 @@ contains
                     if ( ANY(dz_interface(:,i,:)<0) ) then   ! Eror catching. Probably good to engage.
                     if (this_image()==1) then
                         write(*,*) "Error: dz_interface below zero (for level  ",i,")"
-                        print*, "min max dz_interface: ",MINVAL(dz_interface(:,i,:)),MAXVAL(dz_interface(:,i,:))
+                        write(*,*)  "min max dz_interface: ",MINVAL(dz_interface(:,i,:)),MAXVAL(dz_interface(:,i,:))
                         error stop
-                        print*, dz_interface(:,i,:)
-                        print*,""
                     endif
                     else if ( ANY(global_dz_interface(:,i,:)<=0.01) ) then
                     if (this_image()==1)  write(*,*) "WARNING: dz_interface very low (at level ",i,")"
@@ -1525,8 +1515,8 @@ contains
         endif
 
         if ((this_image()==1)) then
-          print*, "  Setting up the SLEVE vertical coordinate:"
-          print*, "    Smoothing large-scale terrain (h1) with a windowsize of ", &
+          write(*,*) "  Setting up the SLEVE vertical coordinate:"
+          write(*,*) "    Smoothing large-scale terrain (h1) with a windowsize of ", &
                   options%parameters%terrain_smooth_windowsize, " for ",        &
                   options%parameters%terrain_smooth_cycles, " smoothing cylces."
         endif
@@ -1566,9 +1556,9 @@ contains
         ! endif
 
         if (this_image()==1) then
-           print*, "       Max of full topography", MAXVAL(global_terrain )
-           print*, "       Max of large-scale topography (h1)  ", MAXVAL(h1)
-           print*, "       Max of small-scale topography (h2)  ", MAXVAL(h2)
+           write(*,*) "       Max of full topography", MAXVAL(global_terrain )
+           write(*,*) "       Max of large-scale topography (h1)  ", MAXVAL(h1)
+           write(*,*) "       Max of small-scale topography (h2)  ", MAXVAL(h2)
         end if
 
         end associate
@@ -1732,8 +1722,8 @@ contains
                 this%soil_deep_temperature%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
 
                 if (minval(temporary_data)< 200) then
-                    if (this_image()==1) print*, "WARNING, VERY COLD SOIL TEMPERATURES SPECIFIED:", minval(temporary_data)
-                    if (this_image()==1) print*, trim(options%parameters%init_conditions_file),"  ",trim(options%parameters%soil_deept_var)
+                    if (this_image()==1) write(*,*) "WARNING, VERY COLD SOIL TEMPERATURES SPECIFIED:", minval(temporary_data)
+                    if (this_image()==1) write(*,*) trim(options%parameters%init_conditions_file),"  ",trim(options%parameters%soil_deept_var)
                 endif
                 if (minval(this%soil_deep_temperature%data_2d)< 200) then
                     where(this%soil_deep_temperature%data_2d<200) this%soil_deep_temperature%data_2d=280 ! <200 is just broken, set to mean annual air temperature at mid-latidudes
@@ -1836,7 +1826,7 @@ contains
                     enddo
 
                     if (maxval(temporary_data_3d) > 1) then
-                        if (this_image()==1) print*, "Changing input ALBEDO % to fraction"
+                        if (this_image()==1) write(*,*) "Changing input ALBEDO % to fraction"
                         this%albedo%data_3d = this%albedo%data_3d / 100
                     endif
                 endif
@@ -1850,7 +1840,7 @@ contains
                     enddo
 
                     if (maxval(temporary_data) > 1) then
-                        if (this_image()==1) print*, "Changing input ALBEDO % to fraction"
+                        if (this_image()==1) write(*,*) "Changing input ALBEDO % to fraction"
                         this%albedo%data_3d = this%albedo%data_3d / 100
                     endif
                 endif
@@ -2324,6 +2314,8 @@ contains
             call geo_interp(forcing%geo%z, forcing%z, forcing%geo%geolut)
             call vLUT(this%geo,   forcing%geo)
 
+            allocate(forcing%interpolated_z(nx, size(this%geo%z,2), ny))
+            call vinterp(forcing%interpolated_z, forcing%geo%z, forcing%geo%vert_lut)
         end if
 
     end subroutine
@@ -2462,17 +2454,13 @@ contains
         type(variable_t) :: external_var, external_var2
         ! real, allocatable :: ext_snowheight_int(:,:)
 
-        ! do i = 1, external_conditions%variables%n_vars
-        !     print*, "    interpolating external_conditions for ", trim(external_conditions%variables%var_list(i)%name)
-        ! end do
-        ! nsoil=4
         if(options%parameters%external_files/="MISSING") then
           ! -------  repeat this code block for other external variables?   -----------------
           if(options%parameters%swe_ext/="") then
 
             varname = options%parameters%swe_ext   !   options%ext_var_list(j)
 
-            if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " for initial conditions"
+            if (this_image()==1) write(*,*) "    interpolating external var ", trim(varname) , " for initial conditions"
             external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
 
             if (associated(this%snow_water_equivalent%data_2d)) then
@@ -2488,7 +2476,7 @@ contains
 
             varname = options%parameters%hsnow_ext   !   options%ext_var_list(j)
 
-            if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " for initial conditions"
+            if (this_image()==1) write(*,*) "    interpolating external var ", trim(varname) , " for initial conditions"
             external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
 
             if (associated(this%snow_height%data_2d)) then
@@ -2501,7 +2489,7 @@ contains
 
             varname = options%parameters%rho_snow_ext   !   options%ext_var_list(j)
 
-            if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " to calculate initial snow height"
+            if (this_image()==1) write(*,*) "    interpolating external var ", trim(varname) , " to calculate initial snow height"
             external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
             external_var2 =external_conditions%variables%get_var(trim(options%parameters%swe_ext))  ! the external swe
             if (associated(this%snow_height%data_2d)) then
@@ -2516,7 +2504,7 @@ contains
 
             varname = options%parameters%tsoil2D_ext   !   options%ext_var_list(j)
 
-            if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " for initial conditions"
+            if (this_image()==1) write(*,*) "    interpolating external var ", trim(varname) , " for initial conditions"
             external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
 
             if (associated(this%soil_deep_temperature%data_2d)) then
@@ -2535,7 +2523,7 @@ contains
 
             varname = options%parameters%tsoil3D_ext
 
-            if (this_image()==1) print*, "    interpolating external var ", trim(varname) , " for initial conditions"
+            if (this_image()==1) write(*,*) "    interpolating external var ", trim(varname) , " for initial conditions"
             external_var =external_conditions%variables%get_var(trim(varname))  ! the external variable
 
             if (associated(this%soil_deep_temperature%data_2d)) then
@@ -2564,14 +2552,14 @@ contains
 
         ! internal field always present for value of optional "update"
         logical :: update_only
-        logical :: var_is_not_pressure
+        logical :: var_is_pressure
         ! temporary to hold the variable to be interpolated to
         type(variable_t) :: var_to_interpolate
         ! temporary to hold the forcing variable to be interpolated from
         type(variable_t) :: input_data, forcing_temperature
         real, allocatable, dimension(:,:,:) :: potential_temperature
         ! number of layers has to be used when subsetting for update_pressure (for now)
-        integer :: nz
+        integer :: i, nz
         logical :: var_is_u, var_is_v
 
         update_only = .False.
@@ -2600,8 +2588,8 @@ contains
                 endif
 
             else
-                ! if this is the pressure variable, then don't perform vertical interpolation, adjust the pressure directly
-                var_is_not_pressure = (trim(var_to_interpolate%forcing_var) /= trim(this%pressure%forcing_var))
+                ! if this is the pressure variable, then adjust the pressure directly
+                var_is_pressure = (trim(var_to_interpolate%forcing_var) == trim(this%pressure%forcing_var))
 
                 var_is_u = (trim(var_to_interpolate%forcing_var) == trim(this%u%meta_data%forcing_var))
                 var_is_v = (trim(var_to_interpolate%forcing_var) == trim(this%v%meta_data%forcing_var))
@@ -2610,30 +2598,31 @@ contains
                 if (update_only) then
 
                     call interpolate_variable(var_to_interpolate%dqdt_3d, input_data, forcing, this, &
-                                    vert_interp=var_is_not_pressure, var_is_u=var_is_u, var_is_v=var_is_v, nsmooth=this%nsmooth)
+                                    vert_interp=.True., var_is_u=var_is_u, var_is_v=var_is_v, nsmooth=this%nsmooth)
 
                     ! because pressure needs to be adjusted for grid points that fall below the forcing lowest level, we adjust it separately.
-                    if (.not.var_is_not_pressure) then
+                    if (var_is_pressure) then
                         allocate(potential_temperature, mold=var_to_interpolate%dqdt_3d)
-                        ! to improve the pressure adjustment, we need to get forcing potential temperature on the ICAR grid WITHOUT vertical interpolation
+                        ! to improve the pressure adjustment, we need to get forcing potential temperature on the ICAR grid
                         call interpolate_variable(potential_temperature, forcing_temperature, forcing, this, &
-                                        vert_interp=.False., var_is_u=.False., var_is_v=.False., nsmooth=this%nsmooth)
+                                        vert_interp=.True., var_is_u=.False., var_is_v=.False., nsmooth=this%nsmooth)
 
-                        call adjust_pressure(var_to_interpolate%dqdt_3d, forcing%geo%z, this%geo%z, potential_temperature)
+                        call adjust_pressure(var_to_interpolate%dqdt_3d, forcing%interpolated_z, this%geo%z, potential_temperature)
+
                     endif
 
                 else
                     call interpolate_variable(var_to_interpolate%data_3d, input_data, forcing, this, &
-                                    vert_interp=var_is_not_pressure, var_is_u=var_is_u, var_is_v=var_is_v, nsmooth=this%nsmooth)
+                                    vert_interp=.True., var_is_u=var_is_u, var_is_v=var_is_v, nsmooth=this%nsmooth)
 
                     ! because pressure needs to be adjusted for grid points that fall below the forcing lowest level, we adjust it separately.
-                    if (.not.var_is_not_pressure) then
+                    if (var_is_pressure) then
                         allocate(potential_temperature, mold=var_to_interpolate%dqdt_3d)
-                        ! to improve the pressure adjustment, we need to get forcing potential temperature on the ICAR grid WITHOUT vertical interpolation
+                        ! to improve the pressure adjustment, we need to get forcing potential temperature on the ICAR grid
                         call interpolate_variable(potential_temperature, forcing_temperature, forcing, this, &
-                                        vert_interp=.False., var_is_u=.False., var_is_v=.False., nsmooth=this%nsmooth)
+                                        vert_interp=.True., var_is_u=.False., var_is_v=.False., nsmooth=this%nsmooth)
 
-                        call adjust_pressure(var_to_interpolate%data_3d, forcing%geo%z, this%geo%z, potential_temperature)
+                        call adjust_pressure(var_to_interpolate%data_3d, forcing%interpolated_z, this%geo%z, potential_temperature)
                     endif
                 endif
 
@@ -2881,12 +2870,12 @@ contains
         e = 1.2  ! <- first guess
         if (MAXVAL(global_terrain) *e < s1 ) then
             wind_top = s1
-            if (this_image()==1) print*, "  horizontally accelerating winds below:", wind_top, "m. " !,"(Factor H/s:", H/s ,")"
+            if (this_image()==1) write(*,*) "  horizontally accelerating winds below:", wind_top, "m. " !,"(Factor H/s:", H/s ,")"
         else
             wind_top = MAXVAL(global_terrain) * e !**2
-            if (this_image()==1 )   print*, "  adjusting wind top upward from ",s1 ," to ", wind_top  ,"m. Horizontally accelerating winds below this level."
+            if (this_image()==1 )   write(*,*) "  adjusting wind top upward from ",s1 ," to ", wind_top  ,"m. Horizontally accelerating winds below this level."
         endif
-        ! if (this_image()==1) print*, "  s_accel max: ", wind_top, "  - h max:", MAXVAL(global_terrain)
+        ! if (this_image()==1) write(*,*) "  s_accel max: ", wind_top, "  - h max:", MAXVAL(global_terrain)
 
 
         !_________ 1. Calculate delta_dzdx for w_real calculation - CURRENTLY NOT USED- reconsider  _________

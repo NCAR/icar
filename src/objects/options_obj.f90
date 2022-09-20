@@ -974,7 +974,7 @@ contains
         ! parameters to read
 
         real    :: dx, dxlow, outputinterval, restartinterval, inputinterval, t_offset, smooth_wind_distance, frames_per_outfile, agl_cap
-        real    :: cfl_reduction_factor
+        real    :: cfl_reduction_factor, rh_limit
         integer :: ntimesteps, wind_iterations
         integer :: longitude_system
         integer :: nz, n_ext_winds,buffer, warning_level, cfl_strictness
@@ -994,7 +994,7 @@ contains
 
 
         namelist /parameters/ ntimesteps, wind_iterations, outputinterval, frames_per_outfile, inputinterval, surface_io_only,                &
-                              dx, dxlow, ideal, readz, readdz, nz, t_offset,                             &
+                              dx, dxlow, ideal, readz, readdz, nz, t_offset, rh_limit,                   &
                               debug, warning_level, interactive, restart,                                &
                               external_winds, buffer, n_ext_winds, advect_density, smooth_wind_distance, &
                               mean_winds, mean_fields, z_is_geopotential, z_is_on_interface,             &
@@ -1019,6 +1019,7 @@ contains
         external_winds      = .False.
         n_ext_winds         = 1
         t_offset            = (-9999)
+        rh_limit            = -1
         buffer              = 0
         advect_density      = .False.
         t_is_potential      = .True.
@@ -1111,6 +1112,12 @@ contains
         endif
 
         options%t_offset=t_offset
+
+        if (rh_limit > 5) then
+            write(*,*) "RH limit >5 specified, assuming it is in %"
+            rh_limit = rh_limit/100
+        endif
+        options%rh_limit=rh_limit
         if (smooth_wind_distance<0) then
             write(*,*) " Wind smoothing must be a positive number"
             write(*,*) " smooth_wind_distance = ",smooth_wind_distance
@@ -2002,12 +2009,6 @@ contains
         options%decay_rate_S_topo = decay_rate_S_topo ! decay_rate_small_scale_topography !
         options%sleve_n = sleve_n
         options%use_terrain_difference = use_terrain_difference
-
-        !if (fixed_dz_advection) then
-        !    print*, "WARNING: setting fixed_dz_advection to true is not recommended, use wind = 2 instead"
-        !    print*, "if you want to continue and enable this, you will need to change this code in the options_obj"
-        !    error stop
-        !endif
 
 
         if (dz_modifies_wind) then
