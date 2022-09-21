@@ -569,6 +569,7 @@ contains
 
         call make_2d_y(temporary_data, this%grid%ims, this%grid%ime)
         this%latitude%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
+        allocate(this%latitude_global, source=temporary_data)
 
         ! Read the longitude data
         call load_data(options%parameters%init_conditions_file,   &
@@ -576,7 +577,7 @@ contains
                        temporary_data, this%grid)
         call make_2d_x(temporary_data, this%grid%jms, this%grid%jme)
         this%longitude%data_2d = temporary_data(this%grid%ims:this%grid%ime, this%grid%jms:this%grid%jme)
-
+        allocate(this%longitude_global, source=temporary_data)
 
         !-----------------------------------------
         !
