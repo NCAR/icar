@@ -12,7 +12,7 @@ submodule(boundary_interface) boundary_implementation
     use time_io,                only : read_times, find_timestep_in_file
     use co_util,                only : broadcast
     use string,                 only : str
-    use mod_atm_utilities,      only : rh_to_mr, compute_3d_p, compute_3d_z, exner_function
+    use mod_atm_utilities,      only : rh_to_mr, relative_humidity, compute_3d_p, compute_3d_z, exner_function
     use geo,                    only : standardize_coordinates
     use vertical_interpolation, only : vLUT, vinterp
 
@@ -175,7 +175,7 @@ contains
         ! else
             ! print *, "  ext var = 2D"
             if ( (size(this%lat,2)==1) .and. (size(this%lon,2)==1) ) then
-                if (this_image()==1) print*, "  external conditions provided on regular 1D grid"
+                if (this_image()==1) write(*,*) "  external conditions provided on regular 1D grid"
                 nx = size(this%lon,1)
                 ny = size(this%lat,1)
                 nz = 0
@@ -192,7 +192,6 @@ contains
         do i=1, size(var_list)
 
             call add_var_to_dict(this%variables, file_list(this%curfile), var_list(i), dim_list(i), this%curstep, [nx, nz, ny])
-            ! if (this_image()==1)  print*, i," var_list(i): ",trim(var_list(i)), " dim_list(i): ", dim_list(i), " this%curstep ", this%curstep
 
         end do
 
@@ -328,13 +327,12 @@ contains
 
         if (ndims==2) then
             call io_read(file_name, var_name, temp_2d_data, timestep)
-            ! print*, "    file_name, var_name ", file_name, trim(var_name)
 
             call new_variable%initialize( shape( temp_2d_data ) )
             new_variable%data_2d = temp_2d_data
 
             call var_dict%add_var(var_name, new_variable)
-            ! print*, "    added boundary variable ", trim(var_name), " to dict with shape ", shape( temp_2d_data )
+
             ! do not deallocate data arrays because they are pointed to inside the var_dict now
             ! deallocate(new_variable%data_2d)
 
@@ -549,6 +547,10 @@ contains
             tvar%data_3d = tvar%data_3d / exner_function(pvar%data_3d)
         endif
 
+        call limit_rh(list, options)
+        call limit_2d_var(list, options%parameters%sst_var, min_val=options%parameters%sst_min_limit)
+        call limit_2d_var(list, options%parameters%rain_var, max_val=options%parameters%cp_limit)
+
         end associate
 
     end subroutine update_computed_vars
@@ -579,6 +581,64 @@ contains
 
     end subroutine compute_mixing_ratio_from_rh
 
+
+    subroutine limit_rh(list, options)
+        implicit none
+        type(var_dict_t),   intent(inout)   :: list
+        type(options_t),    intent(in)      :: options
+
+        integer           :: err
+        type(variable_t)  :: pvar, tvar, qvar
+        real :: rh, t
+        integer :: i,j,k
+
+        if (options%parameters%rh_limit<0) return
+
+        tvar = list%get_var(options%parameters%tvar)
+        pvar = list%get_var(options%parameters%pvar)
+        qvar = list%get_var(options%parameters%qvvar)
+
+        do j = lbound(tvar%data_3d, 3), ubound(tvar%data_3d, 3)
+            do k = lbound(tvar%data_3d, 2), ubound(tvar%data_3d, 2)
+                do i = lbound(tvar%data_3d, 1), ubound(tvar%data_3d, 1)
+
+                    t = tvar%data_3d(i,k,j) * exner_function(pvar%data_3d(i,k,j))
+
+                    rh = relative_humidity(t, qvar%data_3d(i,k,j), pvar%data_3d(i,k,j))
+
+                    if (rh > options%parameters%rh_limit) then
+                        qvar%data_3d = rh_to_mr(options%parameters%rh_limit, t, pvar%data_3d(i,k,j))
+                    endif
+
+                enddo
+            enddo
+        enddo
+
+    end subroutine limit_rh
+
+    ! set minimum and/or maximum values on any 2D forcing variable (e.g. sst_var, rain_var)
+    subroutine limit_2d_var(list, varname, min_val, max_val)
+        implicit none
+        type(var_dict_t),   intent(inout)   :: list
+        character(len=*),   intent(in)      :: varname
+        real, optional,     intent(in)      :: min_val
+        real, optional,     intent(in)      :: max_val
+
+        type(variable_t)  :: var
+
+        if (trim(varname) == "") return
+
+        var = list%get_var(varname)
+
+        if (present(min_val)) then
+            where(var%data_2d < min_val) var%data_2d = min_val
+        endif
+
+        if (present(max_val)) then
+            where(var%data_2d > max_val) var%data_2d = max_val
+        endif
+
+    end subroutine limit_2d_var
 
     subroutine compute_mixing_ratio_from_sh(list, options)
         implicit none

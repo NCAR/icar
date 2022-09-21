@@ -281,6 +281,10 @@ module options_types
         type(Time_type) :: end_time     ! End point for the model simulation
 
         real :: t_offset                ! offset to temperature because WRF outputs potential temperature-300
+        real :: rh_limit                ! limit to impose on relative humidity in the forcing data
+        real :: cp_limit      ! [ mm/hr ] limit to impose on externally supplied convective precipitation in the forcing data in case bad values (e.g. 1e10 mm) are present
+        real :: sst_min_limit   ! [ K ]   limit to impose on minimum SST in the forcing data in case any non-sensical values (e.g. 200 K) are present
+
 
         ! note this can't be allocatable because gfortran does not support allocatable components inside derived type coarrays...
         real, dimension(MAXLEVELS)::dz_levels ! model layer thicknesses to be read from namelist

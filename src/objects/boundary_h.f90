@@ -34,7 +34,8 @@ module boundary_interface
 
         ! boundary data coordinate system
         real, dimension(:,:),   allocatable :: lat, lon
-        real, dimension(:,:,:), allocatable :: z
+        real, dimension(:,:,:), allocatable :: z            ! 3D z elevation data on the forcing grid
+        real, dimension(:,:,:), allocatable :: interpolated_z ! 3D z interpolated to the model grid (horizontally and vertically)
 
         type(interpolable_type) :: geo
         type(interpolable_type) :: geo_u
