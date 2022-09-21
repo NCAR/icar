@@ -217,6 +217,16 @@
     !   t_offset will be added to the forcing temperature data.  Defaults to 0
     ! t_offset = 300, ! [K]
 
+    ! limit to impose on relative humidity in the forcing data in case some weird values (e.g. 200% RH) are present
+    rh_limit = 1.2    ! [ fractional ]
+
+    ! limit to impose on externally supplied convective precipitation in the forcing data in case bad values (e.g. 1e10 mm) are present
+    cp_limit = 500    ! [ mm/hr ]
+
+    ! limit to impose on minimum SST in the forcing data in case any non-sensical values (e.g. 200 K) are present
+    sst_min_limit = 273    ! [ k ]
+
+
     !   If the temperature field in the forcing data is not potential temperature, then set this flag to False
     ! t_is_potential = .True.
 

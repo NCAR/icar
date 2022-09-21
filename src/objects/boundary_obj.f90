@@ -548,6 +548,8 @@ contains
         endif
 
         call limit_rh(list, options)
+        call limit_2d_var(list, options%parameters%sst_var, min_val=options%parameters%sst_min_limit)
+        call limit_2d_var(list, options%parameters%rain_var, max_val=options%parameters%cp_limit)
 
         end associate
 
@@ -596,7 +598,6 @@ contains
         pvar = list%get_var(options%parameters%pvar)
         qvar = list%get_var(options%parameters%qvvar)
 
-
         do j = lbound(tvar%data_3d, 3), ubound(tvar%data_3d, 3)
             do k = lbound(tvar%data_3d, 2), ubound(tvar%data_3d, 2)
                 do i = lbound(tvar%data_3d, 1), ubound(tvar%data_3d, 1)
@@ -615,6 +616,29 @@ contains
 
     end subroutine limit_rh
 
+    ! set minimum and/or maximum values on any 2D forcing variable (e.g. sst_var, rain_var)
+    subroutine limit_2d_var(list, varname, min_val, max_val)
+        implicit none
+        type(var_dict_t),   intent(inout)   :: list
+        character(len=*),   intent(in)      :: varname
+        real, optional,     intent(in)      :: min_val
+        real, optional,     intent(in)      :: max_val
+
+        type(variable_t)  :: var
+
+        if (trim(varname) == "") return
+
+        var = list%get_var(varname)
+
+        if (present(min_val)) then
+            where(var%data_2d < min_val) var%data_2d = min_val
+        endif
+
+        if (present(max_val)) then
+            where(var%data_2d > max_val) var%data_2d = max_val
+        endif
+
+    end subroutine limit_2d_var
 
     subroutine compute_mixing_ratio_from_sh(list, options)
         implicit none
