@@ -552,19 +552,17 @@ contains
             deallocate(temporary_2d)
         else
 
-            associate(lat => domain%latitude%data_2d,  &
-                      lon => domain%longitude%data_2d  )
+            associate(lat => domain%latitude_global,  &
+                      lon => domain%longitude_global,  &
+                      grid => domain%grid)
 
-            ims = lbound(lat,1)
-            ime = ubound(lat,1)
-            jms = lbound(lat,2)
-            jme = ubound(lat,2)
             if (this_image()==1) print*, "Computing sin/cos alpha"
-            do j = jms, jme
-                do i = ims, ime
+
+            do j = grid%jms, grid%jme
+                do i = grid%ims, grid%ime
                     ! in case we are in the first or last grid, reset boundaries
-                    starti = max(ims, i-2)
-                    endi   = min(ime, i+2)
+                    starti = max(grid%ids, i-2)
+                    endi   = min(grid%ide, i+2)
 
                     ! change in latitude
                     dlat = DBLE(lat(endi,j)) - lat(starti,j)
@@ -576,12 +574,17 @@ contains
                     ! sin/cos of angles for use in rotating fields later
                     domain%costheta(i, j) = abs(dlon / dist)
                     domain%sintheta(i, j) = (-1) * dlat / dist
-
                 enddo
             enddo
 
             end associate
         endif
+
+        if (allocated(domain%latitude_global)) &
+            deallocate(domain%latitude_global)
+        if (allocated(domain%longitude_global)) &
+            deallocate(domain%longitude_global)
+
         if (options%parameters%debug .and.(this_image()==1)) then
             print*, ""
             print*, "Domain Geometry"

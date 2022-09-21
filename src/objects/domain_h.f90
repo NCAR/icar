@@ -257,6 +257,8 @@ module domain_interface
     integer,allocatable :: land_mask(:,:)
     type(variable_t) :: latitude
     type(variable_t) :: longitude
+    real, allocatable :: latitude_global(:,:)
+    real, allocatable :: longitude_global(:,:)
     type(variable_t) :: u_latitude
     type(variable_t) :: u_longitude
     type(variable_t) :: v_latitude
