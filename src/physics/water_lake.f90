@@ -307,6 +307,8 @@ MODULE module_water_lake
            LWDN    = GLW(I,J)*EMISSI
            PRCP    = RAINBL(i,j)/dtbl
            SOLDN   = SWDOWN(I,J)                        ! SOLDN is total incoming solar
+           albedo(i,j) = ( 0.6 * lake_icefrac3d(I,1,J) ) + ( (1.0-lake_icefrac3d(I,1,J)) * 0.08)
+           if ((snowdp2d(i,j)>0.01).and.(albedo(i,j)<0.6)) albedo(i,j) = 0.6 ! enforce a minimum albedo when snow is present
            SOLNET  = SOLDN*(1.-ALBEDO(I,J))             ! use mid-day albedo to determine net downward solar
                                                         ! (no solar zenith angle correction)
 !        IF (XLAND(I,J).GT.1.5) THEN
