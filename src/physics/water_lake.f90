@@ -307,8 +307,12 @@ MODULE module_water_lake
            LWDN    = GLW(I,J)*EMISSI
            PRCP    = RAINBL(i,j)/dtbl
            SOLDN   = SWDOWN(I,J)                        ! SOLDN is total incoming solar
-           albedo(i,j) = ( 0.6 * lake_icefrac3d(I,1,J) ) + ( (1.0-lake_icefrac3d(I,1,J)) * 0.08)
-           if ((snowdp2d(i,j)>0.01).and.(albedo(i,j)<0.6)) albedo(i,j) = 0.6 ! enforce a minimum albedo when snow is present
+           if (snowdp2d(i,j)>0.001) then
+               albedo(i,j) = ( 0.9 * lake_icefrac3d(I,1,J) ) + ( (1.0-lake_icefrac3d(I,1,J)) * 0.08)
+           else
+               albedo(i,j) = ( 0.6 * lake_icefrac3d(I,1,J) ) + ( (1.0-lake_icefrac3d(I,1,J)) * 0.08)
+           endif
+           if ((snowdp2d(i,j)>0).and.(albedo(i,j)<0.6)) albedo(i,j) = 0.6 ! enforce a minimum albedo when snow is present
            SOLNET  = SOLDN*(1.-ALBEDO(I,J))             ! use mid-day albedo to determine net downward solar
                                                         ! (no solar zenith angle correction)
 !        IF (XLAND(I,J).GT.1.5) THEN
@@ -1785,6 +1789,7 @@ SUBROUTINE ShalLakeTemperature(t_grnd,h2osno,sabg,dz,dz_lake,z,zi,           & !
     call Tridiagonal(lbc, ubc, -nlevsnow + 1, nlevlake + nlevsoil, jtop, num_shlakec, filter_shlakec, &
                      a, b, c1, r, tx)
 
+
     ! Set t_soisno and t_lake
     do j = -nlevsnow+1, nlevlake + nlevsoil
 !dir$ concurrent
@@ -1798,6 +1803,7 @@ SUBROUTINE ShalLakeTemperature(t_grnd,h2osno,sabg,dz,dz_lake,z,zi,           & !
           if (j >= jtop(c)) then
              if (j < 1) then !snow layer
              t_soisno(c,j) = tx(c,j)
+             ! if (t_soisno(c,j)>280) t_soisno(c,j) = 280  ! prevent snow temperatures from going crazy with thin snow layers and too much energy input
              else if (j <= nlevlake) then !lake layer
              t_lake(c,j)   = tx(c,j)
              else !soil layer
@@ -3775,9 +3781,9 @@ SUBROUTINE ShalLakeTemperature(t_grnd,h2osno,sabg,dz,dz_lake,z,zi,           & !
 
              ! Allow compaction only for non-saturated node and higher ice lens node.
              if (void > 0.001 .and. h2osoi_ice(c,j) > .1) then
-                bi = h2osoi_ice(c,j) / dz(c,j)
+                bi = h2osoi_ice(c,j) / max(0.0001,dz(c,j))
                 fi = h2osoi_ice(c,j) / wx
-                td = tfrz-t_soisno(c,j)
+                td = max(0.0,min(20.0,tfrz-t_soisno(c,j)))
                 dexpf = exp(-c4*td)
 
                 ! Settling as a result of destructive metamorphism
@@ -3791,7 +3797,11 @@ SUBROUTINE ShalLakeTemperature(t_grnd,h2osno,sabg,dz,dz_lake,z,zi,           & !
 
                 ! Compaction due to overburden
 
-                ddz2 = -burden(c)*exp(-0.08*td - c2*bi)/eta0
+                if (burden(c) > 0) then
+                    ddz2 = -burden(c)*exp(-0.08*td - c2*bi)/eta0
+                else
+                    ddz2 = 0._r8
+                endif
 
                 ! Compaction occurring during melt
 
