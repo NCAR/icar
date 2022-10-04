@@ -509,22 +509,24 @@ contains
                 call convect(domain, options, real(dt%seconds()))!, halo=1)
                 if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" convect")
 
-                call mp(domain, options, real(dt%seconds()), halo=1)
+                call domain%halo_exchange_big()
+
+                call mp(domain, options, real(dt%seconds()))!, halo=1)
                 if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" mp_halo", fix=.True.)
 
-                call domain%halo_send()
-                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" domain%halo_send", fix=.True.)
+                !call domain%halo_send()
+                !if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" domain%halo_send", fix=.True.)
 
                 ! call rad(domain, options, real(dt%seconds()), subset=1)
                 ! call lsm(domain, options, real(dt%seconds()))!, subset=1)
                 ! call pbl(domain, options, real(dt%seconds()))!, subset=1)
                 ! call convect(domain, options, real(dt%seconds()), subset=1)
 
-                call mp(domain, options, real(dt%seconds()), subset=1)
-                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" mp(domain", fix=.True.)
+                !call mp(domain, options, real(dt%seconds()), subset=1)
+                !if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" mp(domain", fix=.True.)
 
-                call domain%halo_retrieve()
-                if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" domain%halo_retrieve", fix=.True.)
+                !call domain%halo_retrieve()
+                !if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" domain%halo_retrieve", fix=.True.)
 
                 call advect(domain, options, real(dt%seconds()))
                 if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" advect(domain", fix=.True.)

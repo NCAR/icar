@@ -1,5 +1,4 @@
 submodule(output_interface) output_implementation
-    use icar_constants,     only : kREAL, kDOUBLE
     use output_metadata,    only : get_metadata
     use time_io,            only : get_output_time
     implicit none

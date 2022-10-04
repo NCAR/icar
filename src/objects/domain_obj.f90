@@ -10,7 +10,7 @@
 submodule(domain_interface) domain_implementation
     use assertions_mod,       only : assert, assertions
     use mod_atm_utilities,    only : exner_function, update_pressure
-    use icar_constants,       only : kVARS, kLC_LAND, kLC_WATER, kWATER_LAKE, kDOUBLE
+    use icar_constants
     use string,               only : str
     use co_util,              only : broadcast
     use io_routines,          only : io_read, io_write
@@ -50,7 +50,49 @@ contains
 
         call setup_meta_data(this, options)
 
+        call set_adv_vars(this, options)
+
     end subroutine
+
+    module subroutine set_adv_vars(this, options)
+        class(domain_t), intent(inout) :: this
+        type(options_t), intent(in)    :: options
+
+
+        if (options%vars_to_advect(kVARS%water_vapor)>0) call this%adv_vars%add_var('qv', this%water_vapor%meta_data)
+        
+        if (options%vars_to_advect(kVARS%potential_temperature)>0) call this%adv_vars%add_var('theta', this%potential_temperature%meta_data) 
+        if (options%vars_to_advect(kVARS%cloud_water)>0) call this%adv_vars%add_var('qc', this%cloud_water_mass%meta_data)                  
+        if (options%vars_to_advect(kVARS%rain_in_air)>0) call this%adv_vars%add_var('qr', this%rain_mass%meta_data)                    
+        if (options%vars_to_advect(kVARS%snow_in_air)>0) call this%adv_vars%add_var('qs', this%snow_mass%meta_data)                    
+        if (options%vars_to_advect(kVARS%cloud_ice)>0) call this%adv_vars%add_var('qi', this%cloud_ice_mass%meta_data)                      
+        if (options%vars_to_advect(kVARS%graupel_in_air)>0) call this%adv_vars%add_var('qg', this%graupel_mass%meta_data)                 
+        if (options%vars_to_advect(kVARS%ice_number_concentration)>0)  call this%adv_vars%add_var('ni', this%cloud_ice_number%meta_data)       
+        if (options%vars_to_advect(kVARS%rain_number_concentration)>0) call this%adv_vars%add_var('nr', this%rain_number%meta_data)      
+        if (options%vars_to_advect(kVARS%snow_number_concentration)>0) call this%adv_vars%add_var('ns', this%snow_number%meta_data)      
+        if (options%vars_to_advect(kVARS%graupel_number_concentration)>0) call this%adv_vars%add_var('ng', this%graupel_number%meta_data)   
+        !to be uncommented later once ISHMAEL is readded
+        !if (options%vars_to_advect(kVARS%ice1_a)>0) call this%adv_vars%add_var('ice1_a', this%ice1_a%meta_data)   
+        !if (options%vars_to_advect(kVARS%ice1_c)>0) call this%adv_vars%add_var('ice1_c', this%ice1_c%meta_data)   
+        !if (options%vars_to_advect(kVARS%ice2_mass)>0) call this%adv_vars%add_var('ice2_mass', this%ice2_mass%meta_data)   
+        !if (options%vars_to_advect(kVARS%ice2_number)>0) call this%adv_vars%add_var('ice2_number', this%ice2_number%meta_data)   
+        !if (options%vars_to_advect(kVARS%ice2_a)>0) call this%adv_vars%add_var('ice2_a', this%ice2_a%meta_data)   
+        !if (options%vars_to_advect(kVARS%ice2_c)>0) call this%adv_vars%add_var('ice2_c', this%ice2_c%meta_data)   
+        !if (options%vars_to_advect(kVARS%ice3_mass)>0) call this%adv_vars%add_var('ice3_mass', this%ice3_mass%meta_data)   
+        !if (options%vars_to_advect(kVARS%ice3_number)>0) call this%adv_vars%add_var('ice3_number', this%ice3_number%meta_data)   
+        !if (options%vars_to_advect(kVARS%ice3_a)>0) call this%adv_vars%add_var('ice3_a', this%ice3_a%meta_data)   
+        !if (options%vars_to_advect(kVARS%ice3_c)>0) call this%adv_vars%add_var('ice3_c', this%ice3_c%meta_data)   
+
+        allocate(this%north_in(this%adv_vars%n_vars,1:(this%grid%ns_halo_nx+this%grid%halo_size*2),&
+                            this%kms:this%kme,1:this%grid%halo_size)[*])
+        allocate(this%south_in(this%adv_vars%n_vars,1:(this%grid%ns_halo_nx+this%grid%halo_size*2),&
+                            this%kms:this%kme,1:this%grid%halo_size)[*])
+        allocate(this%east_in(this%adv_vars%n_vars,1:this%grid%halo_size,&
+                            this%kms:this%kme,1:(this%grid%ew_halo_ny+this%grid%halo_size*2))[*])
+        allocate(this%west_in(this%adv_vars%n_vars,1:this%grid%halo_size,&
+                            this%kms:this%kme,1:(this%grid%ew_halo_ny+this%grid%halo_size*2))[*])
+
+    end subroutine set_adv_vars
 
 
     !> -------------------------------
@@ -154,6 +196,74 @@ contains
       call this%halo_retrieve()
     end subroutine
 
+
+    !> -------------------------------
+    !! Send and get the halos from all exchangable objects to/from their neighbors
+    !!
+    !! -------------------------------
+    module subroutine halo_exchange_big(this)
+        class(domain_t), intent(inout) :: this
+        type(variable_t) :: var_to_advect
+
+        real, allocatable :: temp_north(:,:,:,:)
+        real, allocatable :: temp_south(:,:,:,:)
+        real, allocatable :: temp_east(:,:,:,:)
+        real, allocatable :: temp_west(:,:,:,:)
+
+        integer :: n
+
+        allocate(temp_north(this%adv_vars%n_vars,1:(this%grid%ns_halo_nx+this%grid%halo_size*2),&
+                            this%kms:this%kme,1:this%grid%halo_size))
+        allocate(temp_south(this%adv_vars%n_vars,1:(this%grid%ns_halo_nx+this%grid%halo_size*2),&
+                            this%kms:this%kme,1:this%grid%halo_size))
+        allocate(temp_east(this%adv_vars%n_vars,1:this%grid%halo_size,&
+                            this%kms:this%kme,1:(this%grid%ew_halo_ny+this%grid%halo_size*2)))
+        allocate(temp_west(this%adv_vars%n_vars,1:this%grid%halo_size,&
+                            this%kms:this%kme,1:(this%grid%ew_halo_ny+this%grid%halo_size*2)))
+
+        call this%adv_vars%reset_iterator()
+        n = 1
+        ! Now iterate through the dictionary as long as there are more elements present
+        do while (this%adv_vars%has_more_elements())
+            ! get the next variable
+            var_to_advect = this%adv_vars%next()
+            if (.not.(this%north_boundary)) temp_north(n,1:(this%ite-this%its+1),:,:) = &
+                    var_to_advect%data_3d(this%its:this%ite,:,(this%jte-this%grid%halo_size+1):this%jte)
+            if (.not.(this%south_boundary)) temp_south(n,1:(this%ite-this%its+1),:,:) = &
+                    var_to_advect%data_3d(this%its:this%ite,:,this%jts:(this%jts+this%grid%halo_size-1))
+            if (.not.(this%east_boundary)) temp_east(n,:,:,1:(this%jte-this%jts+1)) = &
+                    var_to_advect%data_3d((this%ite-this%grid%halo_size+1):this%ite,:,this%jts:this%jte)
+            if (.not.(this%west_boundary)) temp_west(n,:,:,1:(this%jte-this%jts+1)) = &
+                    var_to_advect%data_3d(this%its:(this%its+this%grid%halo_size)-1,:,this%jts:this%jte)
+
+            n = n+1
+        enddo
+        if (.not.(this%south_boundary)) this%north_in(:,:,:,:)[this%south_neighbor] = temp_south(:,:,:,:)
+        if (.not.(this%north_boundary)) this%south_in(:,:,:,:)[this%north_neighbor] = temp_north(:,:,:,:)
+        if (.not.(this%west_boundary)) this%east_in(:,:,:,:)[this%west_neighbor] = temp_west(:,:,:,:)
+        if (.not.(this%east_boundary)) this%west_in(:,:,:,:)[this%east_neighbor] = temp_east(:,:,:,:)
+
+        sync images( this%neighbors )
+
+        call this%adv_vars%reset_iterator()
+        n = 1
+        ! Now iterate through the dictionary as long as there are more elements present
+        do while (this%adv_vars%has_more_elements())
+            ! get the next variable
+            var_to_advect = this%adv_vars%next()
+
+            if (.not.(this%north_boundary)) var_to_advect%data_3d(this%its:this%ite,:,(this%jte+1):this%jme) = &
+                    this%north_in(n,1:(this%ite-this%its+1),:,:)
+            if (.not.(this%south_boundary)) var_to_advect%data_3d(this%its:this%ite,:,this%jms:(this%jts-1)) = &
+                    this%south_in(n,1:(this%ite-this%its+1),:,:)
+            if (.not.(this%east_boundary)) var_to_advect%data_3d((this%ite+1):this%ime,:,this%jts:this%jte) = &
+                    this%east_in(n,:,:,1:(this%jte-this%jts+1))
+            if (.not.(this%west_boundary)) var_to_advect%data_3d(this%ims:(this%its-1),:,this%jts:this%jte) = &
+                    this%west_in(n,:,:,1:(this%jte-this%jts+1))
+            n = n+1
+        enddo
+
+    end subroutine
 
     !> -------------------------------
     !! Allocate and or initialize all domain variables if they have been requested
@@ -2147,7 +2257,7 @@ contains
         type(options_t), intent(in)     :: options
 
         real, allocatable :: temporary_data(:,:)
-        integer :: nx_global, ny_global, nz_global, nsmooth
+        integer :: nx_global, ny_global, nz_global, nsmooth, n_neighbors, current
 
         nsmooth = max(1, int(options%parameters%smooth_wind_distance / options%parameters%dx))
         this%nsmooth = nsmooth
@@ -2216,6 +2326,41 @@ contains
         this%kme = this%grid%kme; this%kte = this%grid%kte; this%kde = this%grid%kde
         this%jms = this%grid%jms; this%jts = this%grid%jts; this%jds = this%grid%jds
         this%jme = this%grid%jme; this%jte = this%grid%jte; this%jde = this%grid%jde
+
+        if (.not.(this%south_boundary)) this%south_neighbor = this_image() - this%grid%ximages
+        if (.not.(this%north_boundary)) this%north_neighbor = this_image() + this%grid%ximages
+        if (.not.(this%east_boundary)) this%east_neighbor  = this_image() + 1
+        if (.not.(this%west_boundary)) this%west_neighbor  = this_image() - 1
+
+        n_neighbors = merge(0,1,this%south_boundary)  &
+                     +merge(0,1,this%north_boundary)  &
+                     +merge(0,1,this%east_boundary)   &
+                     +merge(0,1,this%west_boundary)
+        n_neighbors = max(1, n_neighbors)
+
+        allocate(this%neighbors(n_neighbors))
+
+        current = 1
+        if (.not. this%south_boundary) then
+            this%neighbors(current) = this%south_neighbor
+            current = current+1
+        endif
+        if (.not. this%north_boundary) then
+            this%neighbors(current) = this%north_neighbor
+            current = current+1
+        endif
+        if (.not. this%east_boundary) then
+            this%neighbors(current) = this%east_neighbor
+            current = current+1
+        endif
+        if (.not. this%west_boundary) then
+            this%neighbors(current) = this%west_neighbor
+            current = current+1
+        endif
+        ! if current = 1 then all of the boundaries were set, just store ourself as our "neighbor"
+        if (current == 1) then
+            this%neighbors(current) = this_image()
+        endif
 
     end subroutine
 

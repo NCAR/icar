@@ -270,6 +270,9 @@ module domain_interface
 
     type(var_dict_t) :: variables_to_force
 
+    ! Array listing variables to advect with pointers to local data
+    type(var_dict_t) :: adv_vars
+
     type(interpolable_type) :: geo
     type(interpolable_type) :: geo_u
     type(interpolable_type) :: geo_v
@@ -326,12 +329,18 @@ module domain_interface
     ! real, allocatable :: transfer_3d(:,:,:)[:]
     ! real, allocatable :: transfer_2d(:,:)[:]
 
-    ! Array listing variables to advect with pointers to local data
-    type(variable_t), allocatable :: advected_species(:)
+    ! Neighboring images of this image
+    integer, allocatable :: neighbors(:)
+
+    real, allocatable :: south_in(:,:,:,:)[:]
+    real, allocatable :: north_in(:,:,:,:)[:]
+    real, allocatable :: west_in(:,:,:,:)[:]
+    real, allocatable :: east_in(:,:,:,:)[:]
 
     ! contains the size of the domain (or the local tile?)
     integer :: nx, ny, nz, nx_global, ny_global
     integer :: ximg, ximages, yimg, yimages
+    integer :: north_neighbor, south_neighbor, east_neighbor, west_neighbor
 
     logical :: north_boundary = .True.
     logical :: south_boundary = .True.
@@ -350,6 +359,7 @@ module domain_interface
     procedure :: halo_send
     procedure :: halo_retrieve
     procedure :: halo_exchange
+    procedure :: halo_exchange_big
     procedure :: enforce_limits
 
     procedure :: get_initial_conditions
@@ -415,6 +425,12 @@ module domain_interface
 
     ! Exchange subdomain boundary information
     module subroutine halo_exchange(this)
+        implicit none
+        class(domain_t), intent(inout) :: this
+    end subroutine
+
+    ! Exchange subdomain boundary information efficiently
+    module subroutine halo_exchange_big(this)
         implicit none
         class(domain_t), intent(inout) :: this
     end subroutine

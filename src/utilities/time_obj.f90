@@ -12,7 +12,6 @@
 !!------------------------------------------------------------
 submodule(time_object) time_implementation
     use co_util,         only: broadcast
-    use iso_fortran_env, only: real128
 
     implicit none
 
