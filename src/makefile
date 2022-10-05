@@ -820,7 +820,7 @@ $(BUILD)lsm_driver.o: $(PHYS)lsm_driver.f90 $(BUILD)data_structures.o	\
 
 # $(BUILD)lsm_basic.o $(BUILD)lsm_simple.o
 
-$(BUILD)water_simple.o: $(PHYS)water_simple.f90 $(BUILD)data_structures.o
+$(BUILD)water_simple.o: $(PHYS)water_simple.f90 $(BUILD)data_structures.o $(BUILD)options_h.o
 
 $(BUILD)water_lake.o: $(PHYS)water_lake.f90 $(BUILD)data_structures.o
 
