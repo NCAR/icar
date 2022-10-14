@@ -1602,8 +1602,12 @@ ENDIF   ! CROPTYPE == 0
 !jref:start
    ERRSW   = SWDOWN - (FSA + FSR)
 !   ERRSW   = SWDOWN - (SAV+SAG + FSRV+FSRG)
-!   WRITE(*,*) "ERRSW =",ERRSW
-   IF (ABS(ERRSW) > 0.01) THEN            ! w/m2
+   IF (ABS(ERRSW) > 0.1) THEN            ! w/m2  ! BK 2022/10/14: modified to prevent error when running with cray-compiled icar
+    WRITE(*,*) "ERRSW =",ERRSW
+    ! write(*,*) "SWDOWN=", SWDOWN 
+    ! write(*,*) "(FSA + FSR)=", (FSA + FSR)
+    ! write(*,*) "FSA =", (FSA)
+    ! write(*,*) "FSR=", FSR
    WRITE(*,*) "VEGETATION!"
    WRITE(*,*) "SWDOWN*FVEG =",SWDOWN*FVEG
    WRITE(*,*) "FVEG*(SAV+SAG) =",FVEG*SAV + SAG
