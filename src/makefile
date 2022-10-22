@@ -193,7 +193,7 @@ endif
 
 # Cray fortran
 ifeq ($(COMPILER), cray)
-	COMP= -h omp vector2 -O2 -c -eI -hfp1
+	COMP= -h omp vector2 -O2 -c -eI -hfp0
 	LINK= -fopenmp
 	PREPROC= -eZ
 	MODOUTPUT= -J $(BUILD) -em
@@ -211,7 +211,7 @@ ifeq ($(MODE), debugslow)
 		LINK=
 	endif
 	ifeq ($(COMPILER), cray)
-		COMP=-h noomp -c -g -h develop -m 0 -R bcsp -M 399
+		COMP=-h noomp -c -g -h develop -m 0 -R bcsp -M 399 -hfp0
 		LINK=-h noomp
 		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
@@ -227,7 +227,7 @@ ifeq ($(MODE), debug)
 		LINK=
 	endif
 	ifeq ($(COMPILER), cray)
-		COMP=-O2 -h noomp -c -g
+		COMP=-O2 -h noomp -c -g -hfp0
 		LINK=-h noomp
 		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
@@ -244,7 +244,7 @@ ifeq ($(MODE), debugompslow)
 		LINK= -fopenmp -lgomp
 	endif
 	ifeq ($(COMPILER), cray)
-		COMP=-c -g -m 0 -h develop -R bcsp -M 399
+		COMP=-c -g -m 0 -h develop -R bcsp -M 399 -hfp0
 		LINK=
 		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
@@ -261,7 +261,7 @@ ifeq ($(MODE), debugomp)
 		 # -Wall -Wno-unused-variable -Wno-unused-dummy-argument
 	endif
 	ifeq ($(COMPILER), cray)
-		COMP=-O1 -c -g
+		COMP=-O1 -c -g -hfp0
 		LINK=
 		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
