@@ -601,7 +601,6 @@ MODULE module_water_lake
                           eflx_lh_grnd,t_veg,t_ref2m,q_ref2m,taux,tauy,   &
                           ram1,ws,ks,eflx_gnet,z0mg)
 
-
     CALL ShalLakeTemperature(t_grnd,h2osno,sabg,dz,dz_lake,z,zi,             & !i
                                  z_lake,ws,ks,snl,eflx_gnet,lakedepth,       &
                                  lake_icefrac,snowdp,                        & !i&o
@@ -609,7 +608,6 @@ MODULE module_water_lake
                                  t_lake,t_soisno,h2osoi_liq,                 &
                                  h2osoi_ice,savedtke1,                       &
                                  frac_iceold,qflx_snomelt,imelt)
-
 
 
     CALL ShalLakeHydrology(dz_lake,forc_rain,forc_snow,                          & !i
@@ -1068,7 +1066,8 @@ SUBROUTINE ShalLakeFluxes(forc_t,forc_pbot,forc_psrf,forc_hgt,forc_hgt_q,       
 !#else
 !       if ( t_lake(c,1) <= tfrz .and. t_grnd(c) > tfrz) then
 !#endif
-          t_grnd_temp = t_grnd(c)
+          ! for flux calculations set a maximum snow temperature.
+          t_grnd_temp = min(280.0, t_grnd(c))
           t_grnd(c) = tfrz
           eflx_sh_grnd(p) = forc_rho(g)*cpair*(t_grnd(c)-thm(c))/rah(p)
           qflx_evap_soi(p) = forc_rho(g)*(qsatg(c)+qsatgdT(c)*(t_grnd(c)-t_grnd_temp) - forc_q(g))/raw(p)
@@ -1751,6 +1750,13 @@ SUBROUTINE ShalLakeTemperature(t_grnd,h2osno,sabg,dz,dz_lake,z,zi,           & !
        enddo
     end do
 
+    ! where (factx<0) factx = 0
+    ! where (factx>0.1) factx = 0.1
+    ! where (fnx<0) fnx = 0
+    ! where (phix<1e-10) phix = 1e-10
+    ! where (tkix<1e-10) tkix = 1e-10
+    ! where (tkix>10) tkix = 10
+
     do j = -nlevsnow+1,nlevlake+nlevsoil
 !dir$ prefervector
 !dir$ concurrent
@@ -1785,10 +1791,8 @@ SUBROUTINE ShalLakeTemperature(t_grnd,h2osno,sabg,dz,dz_lake,z,zi,           & !
 
 
     ! 7!) Solve for tdsolution
-
     call Tridiagonal(lbc, ubc, -nlevsnow + 1, nlevlake + nlevsoil, jtop, num_shlakec, filter_shlakec, &
                      a, b, c1, r, tx)
-
 
     ! Set t_soisno and t_lake
     do j = -nlevsnow+1, nlevlake + nlevsoil
@@ -1803,7 +1807,7 @@ SUBROUTINE ShalLakeTemperature(t_grnd,h2osno,sabg,dz,dz_lake,z,zi,           & !
           if (j >= jtop(c)) then
              if (j < 1) then !snow layer
              t_soisno(c,j) = tx(c,j)
-             ! if (t_soisno(c,j)>280) t_soisno(c,j) = 280  ! prevent snow temperatures from going crazy with thin snow layers and too much energy input
+             if (t_soisno(c,j)>280) t_soisno(c,j) = 280  ! prevent snow temperatures from going crazy with thin snow layers and too much energy input
              else if (j <= nlevlake) then !lake layer
              t_lake(c,j)   = tx(c,j)
              else !soil layer
