@@ -1750,12 +1750,6 @@ SUBROUTINE ShalLakeTemperature(t_grnd,h2osno,sabg,dz,dz_lake,z,zi,           & !
        enddo
     end do
 
-    ! where (factx<0) factx = 0
-    ! where (factx>0.1) factx = 0.1
-    ! where (fnx<0) fnx = 0
-    ! where (phix<1e-10) phix = 1e-10
-    ! where (tkix<1e-10) tkix = 1e-10
-    ! where (tkix>10) tkix = 10
 
     do j = -nlevsnow+1,nlevlake+nlevsoil
 !dir$ prefervector
