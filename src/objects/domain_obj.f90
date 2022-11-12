@@ -1324,7 +1324,7 @@ contains
         call allocate_z_arrays(this)
 
         ! Setup the vertical grid structure, either as a SLEVE coordinate, or a more 'simple' vertical structure:
-        if (options%parameters%sleve) then
+        if (options%parameters%sleve .and. options%parameters%space_varying_dz ) then
 
             call split_topography(this, options)  ! here h1 and h2 are calculated
             call setup_sleve(this, options)
