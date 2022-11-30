@@ -595,7 +595,7 @@ CONTAINS
         kwork1(i) = mstep(i)
         if(mstep(i).ne.0) then
           if (w(i,mstep(i)).gt.0.) then
-            kwork1(i) = mstep(i) + 1
+            kwork1(i) = min(kte, mstep(i) + 1)
           endif
         endif
       enddo
