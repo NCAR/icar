@@ -9,8 +9,8 @@
 !!------------------------------------------------------------
 submodule(domain_interface) domain_implementation
     use assertions_mod,       only : assert, assertions
-    use mod_atm_utilities,    only : exner_function, update_pressure
-    use icar_constants,       only : kVARS, kLC_LAND, kLC_WATER, kWATER_LAKE, kDOUBLE
+    use mod_atm_utilities,    only : exner_function, update_pressure, compute_ivt, compute_iq
+    use icar_constants
     use string,               only : str
     use co_util,              only : broadcast
     use io_routines,          only : io_read, io_write
@@ -50,8 +50,28 @@ contains
 
         call setup_meta_data(this, options)
 
+        call set_var_lists(this, options)
     end subroutine
 
+    subroutine set_var_lists(this, options)
+        class(domain_t), intent(inout) :: this
+        type(options_t), intent(in)    :: options
+
+        integer :: var_list(kMAX_STORAGE_VARS)
+
+        if (options%vars_to_advect(kVARS%water_vapor)>0) call this%adv_vars%add_var('qv', this%water_vapor%meta_data)
+        
+        if (options%vars_to_advect(kVARS%potential_temperature)>0) call this%adv_vars%add_var('theta', this%potential_temperature%meta_data) 
+        if (options%vars_to_advect(kVARS%cloud_water)>0) call this%adv_vars%add_var('qc', this%cloud_water_mass%meta_data)                  
+        if (options%vars_to_advect(kVARS%rain_in_air)>0) call this%adv_vars%add_var('qr', this%rain_mass%meta_data)                    
+        if (options%vars_to_advect(kVARS%snow_in_air)>0) call this%adv_vars%add_var('qs', this%snow_mass%meta_data)                    
+        if (options%vars_to_advect(kVARS%cloud_ice)>0) call this%adv_vars%add_var('qi', this%cloud_ice_mass%meta_data)                      
+        if (options%vars_to_advect(kVARS%graupel_in_air)>0) call this%adv_vars%add_var('qg', this%graupel_mass%meta_data)                 
+        if (options%vars_to_advect(kVARS%ice_number_concentration)>0)  call this%adv_vars%add_var('ni', this%cloud_ice_number%meta_data)       
+        if (options%vars_to_advect(kVARS%rain_number_concentration)>0) call this%adv_vars%add_var('nr', this%rain_number%meta_data)      
+        if (options%vars_to_advect(kVARS%snow_number_concentration)>0) call this%adv_vars%add_var('ns', this%snow_number%meta_data)      
+        if (options%vars_to_advect(kVARS%graupel_number_concentration)>0) call this%adv_vars%add_var('ng', this%graupel_number%meta_data)   
+    end subroutine set_var_lists
 
     !> -------------------------------
     !! Set up the initial conditions for the domain
@@ -94,10 +114,142 @@ contains
       endif
 
       ! - - - - - - - - - - - - - - - - - - -  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+      call diagnostic_update(this,options)
 
     end subroutine
 
 
+    !>------------------------------------------------------------
+    !! Update model diagnostic fields
+    !!
+    !! Calculates most model diagnostic fields such as Psfc, 10m height winds and ustar
+    !!
+    !! @param domain    Model domain data structure to be updated
+    !! @param options   Model options (not used at present)
+    !!
+    !!------------------------------------------------------------
+    module subroutine diagnostic_update(this, options)
+        implicit none
+        class(domain_t),  intent(inout)   :: this
+        type(options_t), intent(in)      :: options
+        integer :: z
+        real, allocatable :: temp_1(:,:), temp_2(:,:), temporary_data(:,:,:), qsum(:,:,:)
+        logical :: use_delta_terrain
+
+        associate(ims => this%ims, ime => this%ime,                             &
+                  jms => this%jms, jme => this%jme,                             &
+                  kms => this%kms, kme => this%kme,                             &
+                  its => this%its, ite => this%ite,                             &
+                  jts => this%jts, jte => this%jte,                             &
+                  exner                 => this%exner%data_3d,                  &
+                  pressure              => this%pressure%data_3d,               &
+                  pressure_i            => this%pressure_interface%data_3d,     &
+                  dz_i                  => this%dz_interface%data_3d,           &
+                  dz_mass               => this%dz_mass%data_3d,                &
+                  psfc                  => this%surface_pressure%data_2d,       &
+                  density               => this%density%data_3d,                &
+                  temperature           => this%temperature%data_3d,            &
+                  qv                    => this%water_vapor%data_3d,            &  
+                  cloud_water           => this%cloud_water_mass%data_3d,       &
+                  rain_water            => this%rain_mass%data_3d,              &
+                  cloud_ice             => this%cloud_ice_mass%data_3d,         &
+                  snow_ice              => this%snow_mass%data_3d,              &
+                  graupel_ice           => this%graupel_mass%data_3d,           &
+                  temperature_i         => this%temperature_interface%data_3d,  &
+                  u                     => this%u%data_3d,                      &
+                  v                     => this%v%data_3d,                      &
+                  u_mass                => this%u_mass%data_3d,                 &
+                  v_mass                => this%v_mass%data_3d,                 &
+                  potential_temperature => this%potential_temperature%data_3d )
+
+        allocate(temporary_data(ims:ime, kms:kme, jms:jme))
+
+        exner = exner_function(pressure)
+
+        temperature = potential_temperature * exner
+        temperature_i(:,kms+1:kme, :) = (temperature(:,kms:kme-1, :) + temperature(:,kms+1:kme, :)) / 2
+        temperature_i(:, kms, :) = temperature(:, kms, :) + (temperature(:, kms, :) - temperature(:, kms+1, :)) / 2
+
+        if (associated(this%density%data_3d)) then
+            allocate( qsum( ims:ime, kms:kme, jms:jme))
+            qsum = qv
+            if(associated(this%cloud_water_mass%data_3d)) then
+                qsum = qsum + this%cloud_water_mass%data_3d
+            endif
+            if(associated(this%cloud_ice_mass%data_3d)) then
+                qsum = qsum + this%cloud_ice_mass%data_3d
+            endif
+            if(associated(this%rain_mass%data_3d)) then
+                qsum = qsum + this%rain_mass%data_3d
+            endif
+            if(associated(this%snow_mass%data_3d)) then
+                qsum = qsum + this%snow_mass%data_3d
+            endif
+            if(associated(this%graupel_mass%data_3d)) then
+                qsum = qsum + this%graupel_mass%data_3d
+            endif
+            density =  pressure / &
+                        (Rd * temperature*(1+qsum)) ! kg/m^3
+        endif
+        if (associated(this%u_mass%data_3d)) then
+            u_mass = (u(ims+1:ime+1,:,:) + u(ims:ime,:,:)) / 2
+        endif
+        if (associated(this%v_mass%data_3d)) then
+            v_mass = (v(:,:,jms+1:jme+1) + v(:,:,jms:jme)) / 2
+        endif
+
+        pressure_i(:,kms+1:kme, :) = (pressure(:,kms:kme-1, :) + pressure(:,kms+1:kme, :)) / 2
+        pressure_i(:, kms, :) = pressure(:, kms, :) + (pressure(:, kms, :) - pressure(:, kms+1, :)) / 2
+        
+        if (associated(this%surface_pressure%data_2d)) then
+            psfc = pressure_i(:, kms, :)
+        endif
+        if (associated(this%ivt%data_2d)) then
+            call compute_ivt(this%ivt%data_2d, qv, u_mass, v_mass, pressure_i)
+        endif
+        if (associated(this%iwv%data_2d)) then
+            call compute_iq(this%iwv%data_2d, qv, pressure_i)
+        endif
+        if (associated(this%iwl%data_2d)) then
+            temporary_data = 0
+            if (associated(this%cloud_water_mass%data_3d)) temporary_data = temporary_data + cloud_water
+            if (associated(this%rain_mass%data_3d)) temporary_data = temporary_data + rain_water
+            call compute_iq(this%iwl%data_2d, temporary_data, pressure_i)
+        endif
+        if (associated(this%iwi%data_2d)) then
+            temporary_data = 0
+            if (associated(this%cloud_ice_mass%data_3d)) temporary_data = temporary_data + cloud_ice
+            if (associated(this%snow_mass%data_3d)) temporary_data = temporary_data + snow_ice
+            if (associated(this%graupel_mass%data_3d)) temporary_data = temporary_data + graupel_ice
+            call compute_iq(this%iwi%data_2d, temporary_data, pressure_i)
+        endif
+        
+        allocate( temp_1( its:ite, jts:jte))
+        allocate( temp_2( its:ite, jts:jte))
+
+        ! temporary constant
+        if (associated(this%roughness_z0%data_2d)) then
+            ! use log-law of the wall to convert from first model level to surface
+            temp_1 = karman / log((this%z%data_3d(its:ite,kms,jts:jte) - this%terrain%data_2d(its:ite,jts:jte)) / this%roughness_z0%data_2d(its:ite,jts:jte))
+            ! use log-law of the wall to convert from surface to 10m height
+            temp_2 = log(10.0 / this%roughness_z0%data_2d(its:ite,jts:jte)) / karman
+        endif
+
+        if (associated(this%u_10m%data_2d)) then
+            this%ustar        (its:ite,jts:jte) = u_mass      (its:ite,kms,jts:jte) * temp_1
+            this%u_10m%data_2d(its:ite,jts:jte) = this%ustar(its:ite,jts:jte)     * temp_2
+            this%ustar        (its:ite,jts:jte) = v_mass      (its:ite,kms,jts:jte) * temp_1
+            this%v_10m%data_2d(its:ite,jts:jte) = this%ustar(its:ite,jts:jte)     * temp_2
+        endif
+
+        if (allocated(this%ustar)) then
+            ! now calculate master ustar based on U and V combined in quadrature
+            this%ustar(its:ite,jts:jte) = sqrt(u_mass(its:ite,kms,jts:jte)**2 + v_mass(its:ite,kms,jts:jte)**2) * temp_1
+        endif
+
+        end associate
+
+    end subroutine diagnostic_update
 
 
 
@@ -2147,7 +2299,7 @@ contains
         type(options_t), intent(in)     :: options
 
         real, allocatable :: temporary_data(:,:)
-        integer :: nx_global, ny_global, nz_global, nsmooth
+        integer :: nx_global, ny_global, nz_global, nsmooth, adv_order
 
         nsmooth = max(1, int(options%parameters%smooth_wind_distance / options%parameters%dx))
         this%nsmooth = nsmooth
@@ -2162,19 +2314,30 @@ contains
         ny_global = size(temporary_data,2)
         nz_global = options%parameters%nz
 
-        call this%grid%set_grid_dimensions(         nx_global, ny_global, nz_global)
+        adv_order = max(options%adv_options%h_order,options%adv_options%v_order)
+        
+        !If we are using the monotonic flux limiter, it is necesarry to calculate the fluxes one location deep into the
+        !halo. Thus, we need one extra cell in each halo direction to support the finite difference stencil
+        !This is achieved here by artificially inflating the adv_order which is passed to the grid setup
+        if (options%adv_options%flux_corr==kFLUXCOR_MONO) adv_order = adv_order+2
+        
+        !If using MPDATA, we need a halo of size 2 to support the difference stencil
+        if (options%physics%advection==kADV_MPDATA) adv_order = 4
 
-        call this%u_grid%set_grid_dimensions(       nx_global, ny_global, nz_global, nx_extra = 1)
-        call this%v_grid%set_grid_dimensions(       nx_global, ny_global, nz_global, ny_extra = 1)
+        call this%grid%set_grid_dimensions(   nx_global, ny_global, nz_global,adv_order=adv_order)
+
+        call this%u_grid%set_grid_dimensions( nx_global, ny_global, nz_global,adv_order=adv_order, nx_extra = 1)
+        call this%v_grid%set_grid_dimensions( nx_global, ny_global, nz_global,adv_order=adv_order, ny_extra = 1)
 
         ! for 2D mass variables
-        call this%grid2d%set_grid_dimensions(       nx_global, ny_global, 0)
+        call this%grid2d%set_grid_dimensions( nx_global, ny_global, 0,adv_order=adv_order)
 
         ! setup a 2D lat/lon grid extended by nsmooth grid cells so that smoothing can take place "across" images
         ! This just sets up the fields to interpolate u and v to so that the input data are handled on an extended
         ! grid.  They are then subset to the u_grid and v_grids above before actual use.
-        call this%u_grid2d%set_grid_dimensions(     nx_global, ny_global, 0, nx_extra = 1)
-        call this%u_grid2d_ext%set_grid_dimensions( nx_global, ny_global, 0, nx_extra = 1)
+        call this%u_grid2d%set_grid_dimensions(     nx_global, ny_global, 0,adv_order=adv_order, nx_extra = 1)
+        call this%u_grid2d_ext%set_grid_dimensions( nx_global, ny_global, 0,adv_order=adv_order, nx_extra = 1)
+
         ! extend by nsmooth, but bound to the domain grid
         this%u_grid2d_ext%ims = max(this%u_grid2d%ims - nsmooth, this%u_grid2d%ids)
         this%u_grid2d_ext%ime = min(this%u_grid2d%ime + nsmooth, this%u_grid2d%ide)
@@ -2182,8 +2345,8 @@ contains
         this%u_grid2d_ext%jme = min(this%u_grid2d%jme + nsmooth, this%u_grid2d%jde)
 
         ! handle the v-grid too
-        call this%v_grid2d%set_grid_dimensions(     nx_global, ny_global, 0, ny_extra = 1)
-        call this%v_grid2d_ext%set_grid_dimensions( nx_global, ny_global, 0, ny_extra = 1)
+        call this%v_grid2d%set_grid_dimensions(     nx_global, ny_global, 0,adv_order=adv_order, ny_extra = 1)
+        call this%v_grid2d_ext%set_grid_dimensions( nx_global, ny_global, 0,adv_order=adv_order, ny_extra = 1)
         ! extend by nsmooth, but bound to the domain grid
         this%v_grid2d_ext%ims = max(this%v_grid2d%ims - nsmooth, this%v_grid2d%ids)
         this%v_grid2d_ext%ime = min(this%v_grid2d%ime + nsmooth, this%v_grid2d%ide)

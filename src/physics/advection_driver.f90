@@ -78,14 +78,12 @@ contains
         
         !Allocate storage variable for temp-quantities
         if (options%time_options%RK3) allocate(temp(domain%ims:domain%ime,domain%kms:domain%kme,domain%jms:domain%jme))
-
         if (options%physics%advection==kADV_STD) then
             call adv_std_compute_wind(domain,options,dt)
         else if(options%physics%advection==kADV_MPDATA) then
             call mpdata_compute_wind(domain,options,dt)
         endif
-        
-
+        if (this_image()==1) write(*,*) 'adv winds computed'
         !Loop through all vars to advect
                 
         ! make sure the dictionary is reset to point to the first variable

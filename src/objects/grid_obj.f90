@@ -153,7 +153,7 @@ contains
       halo_size = kDEFAULT_HALO_SIZE
       if (present(adv_order)) halo_size = ceiling(adv_order/2.0)
 
-      image = max(1,FINDLOC(DOM_IMG_INDX,this_image(),dim=1))
+      image = this_image()
       if (present(for_image)) image = for_image
 
       nx_e = 0
@@ -161,7 +161,7 @@ contains
       if (present(nx_extra)) nx_e = nx_extra ! used to add 1 to the u-field staggered grid
       if (present(ny_extra)) ny_e = ny_extra ! used to add 1 to the v-field staggered grid
 
-      call this%domain_decomposition(nx, ny, kNUM_COMPUTE, for_image=image)
+      call this%domain_decomposition(nx, ny, num_images(), for_image=image)
 
       if (nz<1) then
           this%is2d = .True.

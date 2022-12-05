@@ -28,174 +28,8 @@ module time_step
     private
     public :: step
 
-    !  temporary variables used to update the w_real state. This should move to mod_atm_utilities
-    real, allocatable :: lastw(:,:)
-    real, allocatable :: currw(:,:)
-    real, allocatable :: uw(:,:)
-    real, allocatable :: vw(:,:)
-
 contains
 
-
-    !>------------------------------------------------------------
-    !! Update model diagnostic fields
-    !!
-    !! Calculates most model diagnostic fields such as Psfc, 10m height winds and ustar
-    !!
-    !! @param domain    Model domain data structure to be updated
-    !! @param options   Model options (not used at present)
-    !!
-    !!------------------------------------------------------------
-    subroutine diagnostic_update(domain, options)
-        implicit none
-        type(domain_t),  intent(inout)   :: domain
-        type(options_t), intent(in)      :: options
-        integer :: z
-
-        logical :: use_delta_terrain
-        real, allocatable :: temporary_data(:,:,:)
-
-        associate(ims => domain%ims, ime => domain%ime,                         &
-                  jms => domain%jms, jme => domain%jme,                         &
-                  kms => domain%kms, kme => domain%kme,                         &
-                  exner                 => domain%exner%data_3d,                &
-                  pressure              => domain%pressure%data_3d,             &
-                  pressure_i            => domain%pressure_interface%data_3d,   &
-                  dz_interface          => domain%dz_interface%data_3d,         &
-                  psfc                  => domain%surface_pressure%data_2d,     &
-                  density               => domain%density%data_3d,              &
-                  water_vapor           => domain%water_vapor%data_3d,          &
-                  cloud_water           => domain%cloud_water_mass%data_3d,     &
-                  rain_water            => domain%rain_mass%data_3d,            &
-                  cloud_ice             => domain%cloud_ice_mass%data_3d,       &
-                  snow_ice              => domain%snow_mass%data_3d,            &
-                  graupel_ice           => domain%graupel_mass%data_3d,         &
-                  temperature           => domain%temperature%data_3d,          &
-                  temperature_i         => domain%temperature_interface%data_3d,&
-                  u                     => domain%u%data_3d,                    &
-                  v                     => domain%v%data_3d,                    &
-                  w                     => domain%w%data_3d,                    &
-                  w_real                => domain%w_real%data_3d,               &
-                  u_mass                => domain%u_mass%data_3d,               &
-                  v_mass                => domain%v_mass%data_3d,               &
-                  potential_temperature => domain%potential_temperature%data_3d )
-
-        allocate(temporary_data(ims:ime, kms:kme, jms:jme))
-
-        exner = exner_function(pressure)
-        ! domain%p_inter=domain%p
-        ! call update_pressure(domain%p_inter, domain%z, domain%z_inter, domain%t)
-        pressure_i(:,kms+1:kme, :) = (pressure(:,kms:kme-1, :) + pressure(:,kms+1:kme, :)) / 2
-        pressure_i(:, kms, :) = pressure(:, kms, :) + (pressure(:, kms, :) - pressure(:, kms+1, :)) / 2
-        ! this isn't correct, we should be using update_pressure or similar to solve this
-        ! domain%ptop = 2*domain%p(:,nz,:) - domain%p(:,nz-1,:)
-        if (associated(domain%surface_pressure%data_2d)) then
-            psfc = pressure_i(:, kms, :)
-        endif
-
-        temperature = potential_temperature * exner
-        temperature_i(:,kms+1:kme, :) = (temperature(:,kms:kme-1, :) + temperature(:,kms+1:kme, :)) / 2
-        temperature_i(:, kms, :) = temperature(:, kms, :) + (temperature(:, kms, :) - temperature(:, kms+1, :)) / 2
-
-        if (associated(domain%density%data_3d)) then
-            density =  pressure / &
-                        (Rd * temperature) ! kg/m^3
-        endif
-        if (associated(domain%u_mass%data_3d)) then
-            u_mass = (u(ims+1:ime+1,:,:) + u(ims:ime,:,:)) / 2
-        endif
-        if (associated(domain%v_mass%data_3d)) then
-            v_mass = (v(:,:,jms+1:jme+1) + v(:,:,jms:jme)) / 2
-        endif
-
-
-    !     ! dry mass in the gridcell is equivalent to the difference in pressure from top to bottom
-    !     domain%mut(:,1:nz-1,:) = domain%p_inter(:,1:nz-1,:) - domain%p_inter(:,2:nz,:)
-    !     domain%mut(:,nz,:) = domain%p_inter(:,nz,:) - domain%ptop
-    !
-        if (.not.allocated(lastw)) then
-            allocate( lastw( ims+1:ime-1, jms+1:jme-1))
-            allocate( currw( ims+1:ime-1, jms+1:jme-1))
-            allocate(    uw( ims+1:ime,   jms+1:jme-1))
-            allocate(    vw( ims+1:ime-1, jms+1:jme  ))
-        endif
-
-        if (associated(domain%ivt%data_2d)) then
-            call compute_ivt(domain%ivt%data_2d, water_vapor, u_mass, v_mass, pressure_i)
-        endif
-        if (associated(domain%iwv%data_2d)) then
-            call compute_iq(domain%iwv%data_2d, water_vapor, pressure_i)
-        endif
-        if (associated(domain%iwl%data_2d)) then
-            temporary_data = 0
-            if (associated(domain%cloud_water_mass%data_3d)) temporary_data = temporary_data + cloud_water
-            if (associated(domain%rain_mass%data_3d)) temporary_data = temporary_data + rain_water
-            call compute_iq(domain%iwl%data_2d, temporary_data, pressure_i)
-        endif
-        if (associated(domain%iwi%data_2d)) then
-            temporary_data = 0
-            if (associated(domain%cloud_ice_mass%data_3d)) temporary_data = temporary_data + cloud_ice
-            if (associated(domain%snow_mass%data_3d)) temporary_data = temporary_data + snow_ice
-            if (associated(domain%graupel_mass%data_3d)) temporary_data = temporary_data + graupel_ice
-            call compute_iq(domain%iwi%data_2d, temporary_data, pressure_i)
-        endif
-
-        ! temporary constant
-        if (associated(domain%roughness_z0%data_2d)) then
-            ! use log-law of the wall to convert from first model level to surface
-            currw = karman / log((domain%z%data_3d(ims+1:ime-1,kms,jms+1:jme-1) - domain%terrain%data_2d(ims+1:ime-1,jms+1:jme-1)) / domain%roughness_z0%data_2d(ims+1:ime-1,jms+1:jme-1))
-            ! use log-law of the wall to convert from surface to 10m height
-            lastw = log(10.0 / domain%roughness_z0%data_2d(ims+1:ime-1,jms+1:jme-1)) / karman
-        endif
-
-        if (associated(domain%u_10m%data_2d)) then
-            domain%ustar        (ims+1:ime-1,jms+1:jme-1) = u_mass      (ims+1:ime-1,kms,jms+1:jme-1) * currw
-            domain%u_10m%data_2d(ims+1:ime-1,jms+1:jme-1) = domain%ustar(ims+1:ime-1,jms+1:jme-1)     * lastw
-            domain%ustar        (ims+1:ime-1,jms+1:jme-1) = v_mass      (ims+1:ime-1,kms,jms+1:jme-1) * currw
-            domain%v_10m%data_2d(ims+1:ime-1,jms+1:jme-1) = domain%ustar(ims+1:ime-1,jms+1:jme-1)     * lastw
-        endif
-
-        if (allocated(domain%ustar)) then
-            ! now calculate master ustar based on U and V combined in quadrature
-            domain%ustar(ims+1:ime-1,jms+1:jme-1) = sqrt(u_mass(ims+1:ime-1,kms,jms+1:jme-1)**2 + v_mass(ims+1:ime-1,kms,jms+1:jme-1)**2) * currw
-        endif
-
-        ! finally, calculate the real vertical motions (including U*dzdx + V*dzdy)
-        lastw = 0
-        do z = kms, kme
-
-            ! ! if(options%parameters%use_terrain_difference) then
-            !                 ! compute the U * dz/dx component of vertical motion
-            !     uw    = u(ims+1:ime,   z, jms+1:jme-1) * domain%delta_dzdx(:,z,jms+1:jme-1)
-            !     ! compute the V * dz/dy component of vertical motion
-            !     vw    = v(ims+1:ime-1, z, jms+1:jme  ) * domain%delta_dzdy(ims+1:ime-1,z,:)
-            ! else
-                ! compute the U * dz/dx component of vertical motion
-                uw    = u(ims+1:ime,   z, jms+1:jme-1) * domain%dzdx(ims+1:ime,z,jms+1:jme-1)
-                ! compute the V * dz/dy component of vertical motion
-                vw    = v(ims+1:ime-1, z, jms+1:jme  ) * domain%dzdy(ims+1:ime-1,z,jms+1:jme)
-            ! endif
-            ! ! convert the W grid relative motion to m/s
-            ! currw = w(ims+1:ime-1, z, jms+1:jme-1) * dz_interface(ims+1:ime-1, z, jms+1:jme-1) / domain%dx
-
-            ! the W grid relative motion
-            currw = w(ims+1:ime-1, z, jms+1:jme-1)
-
-            ! if (options%physics%convection>0) then
-            !     currw = currw + domain%w_cu(2:nx-1,z,2:ny-1) * domain%dz_inter(2:nx-1,z,2:ny-1) / domain%dx
-            ! endif
-
-            ! compute the real vertical velocity of air by combining the different components onto the mass grid
-            ! includes vertical interpolation between w_z-1/2 and w_z+1/2
-            w_real(ims+1:ime-1, z, jms+1:jme-1) = (uw(ims+1:ime-1,:) + uw(ims+2:ime,:))*0.5 &
-                                                 +(vw(:,jms+1:jme-1) + vw(:,jms+2:jme))*0.5 &
-                                                 +domain%jacobian(ims+1:ime-1,z,jms+1:jme-1)*(lastw + currw) * 0.5
-            lastw = currw ! could avoid this memcopy cost using pointers or a single manual loop unroll
-        end do
-
-        end associate
-
-    end subroutine diagnostic_update
 
 
     !>------------------------------------------------------------
@@ -471,8 +305,10 @@ contains
             endif
 
             ! ensure internal model consistency
-            call diagnostic_update(domain, options)
+            call domain%diagnostic_update(options)
 
+            ! if using advect_density winds need to be balanced at each update
+            ! if (options%parameters%advect_density) call balance_uvw(domain,options)
 
             ! if an interactive run was requested than print status updates everytime at least 5% of the progress has been made
             if (options%parameters%interactive .and. (this_image()==1)) then

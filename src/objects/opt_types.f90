@@ -23,6 +23,12 @@ module options_types
         integer::windtype
     end type physics_type
 
+    type time_options_type
+        logical :: RK3  !Logical of whether ot use RK3 time stepping for advection terms
+        real :: cfl_reduction_factor    ! amount to multiple CFL by to improve stability (typically 1)
+        integer :: cfl_strictness       ! CFL method 1=3D from 1D*sqrt(3), 2=ave.3D wind*sqrt(3), 3=sum.3D wind, 4=opt3 * sqrt(3), 5 = sum(max.3d)
+    end type time_options_type
+
 
     ! ------------------------------------------------
     ! store Microphysics sensitivity options
@@ -100,8 +106,11 @@ module options_types
     ! ------------------------------------------------
     type adv_options_type
         logical :: boundary_buffer          ! buffer to smooth a bit to cut down on oscillations at the border if FCT is not used
-        logical :: flux_corrected_transport ! use Flux Corrected Transport (FCT) to maintain stability and prevent any wild oscllations
+        logical :: MPDATA_FCT               ! use Flux Corrected Transport (FCT) to maintain stability and prevent any wild oscllations
         integer :: mpdata_order             ! accuracy order for MP_DATA advection scheme.
+        integer :: flux_corr                ! Designates which flux-correction scheme to use
+        integer :: h_order                  ! Designates which order the horizontal advection should be
+        integer :: v_order                  ! Designates which order the vertical advection should be
     end type adv_options_type
 
 
@@ -268,8 +277,6 @@ module options_types
 
         real :: smooth_wind_distance    ! distance over which to smooth the forcing wind field (m)
         logical :: time_varying_z       ! read in a new z coordinate every time step and interpolate accordingly
-        real :: cfl_reduction_factor    ! amount to multiple CFL by to improve stability (typically 1)
-        integer :: cfl_strictness       ! CFL method 1=3D from 1D*sqrt(3), 2=ave.3D wind*sqrt(3), 3=sum.3D wind, 4=opt3 * sqrt(3), 5 = sum(max.3d)
 
         integer :: longitude_system     ! specify center for longitude system
                                         ! 0 = kPRIME_CENTERED    (-180 - 180)
