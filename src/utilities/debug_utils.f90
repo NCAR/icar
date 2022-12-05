@@ -133,7 +133,7 @@ contains
         character(len=*),   intent(in)                      :: name, msg
         real,               intent(in),    optional         :: greater_than, less_than
         logical,            intent(in),    optional         :: fix
-        integer :: n
+        integer :: n, i, j
         real :: vmax, vmin
         logical :: printed
 
@@ -149,6 +149,17 @@ contains
             ! IsNanIdx = PACK( (/(i,i=1,SIZE(var))/), MASK=IsNan(var) )  ! if someone can get this to work it would be nice to have.
             write(*,*) trim(msg)
             write(*,*) trim(name)//" has", n," NaN(s) "
+            if (n < 9) then
+                do j = lbound(var,2), ubound(var,2)
+                    do i = lbound(var,1), ubound(var,1)
+                        if (ieee_is_nan(var(i,j))) print*, "NaN in ",i,j
+                    enddo
+                enddo
+            else
+                print*, "Too many NaNs, stopping on image:", this_image()
+                error stop
+            endif
+
         endif
     end subroutine check_var2d
 

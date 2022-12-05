@@ -6,7 +6,7 @@
 !!
 !!----------------------------------------------------------
 module module_water_simple
-    use data_structures,
+    use data_structures
     use options_interface,   only : options_t
     use icar_constants
     implicit none

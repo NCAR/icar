@@ -193,7 +193,7 @@ endif
 
 # Cray fortran
 ifeq ($(COMPILER), cray)
-	COMP= -h omp vector2 -O2 -c -eI
+	COMP= -h omp vector2 -O2 -c -eI -hfp0
 	LINK= -fopenmp
 	PREPROC= -eZ
 	MODOUTPUT= -J $(BUILD) -em
@@ -211,7 +211,7 @@ ifeq ($(MODE), debugslow)
 		LINK=
 	endif
 	ifeq ($(COMPILER), cray)
-		COMP=-h noomp -c -g -h develop -m 0 -R bcsp -M 399
+		COMP=-h noomp -c -g -h develop -m 0 -R bcsp -M 399 -hfp0
 		LINK=-h noomp
 		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
@@ -227,7 +227,7 @@ ifeq ($(MODE), debug)
 		LINK=
 	endif
 	ifeq ($(COMPILER), cray)
-		COMP=-O2 -h noomp -c -g
+		COMP=-O2 -h noomp -c -g -hfp0
 		LINK=-h noomp
 		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
@@ -244,7 +244,7 @@ ifeq ($(MODE), debugompslow)
 		LINK= -fopenmp -lgomp
 	endif
 	ifeq ($(COMPILER), cray)
-		COMP=-c -g -m 0 -h develop -R bcsp -M 399
+		COMP=-c -g -m 0 -h develop -R bcsp -M 399 -hfp0
 		LINK=
 		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
@@ -261,7 +261,7 @@ ifeq ($(MODE), debugomp)
 		 # -Wall -Wno-unused-variable -Wno-unused-dummy-argument
 	endif
 	ifeq ($(COMPILER), cray)
-		COMP=-O1 -c -g
+		COMP=-O1 -c -g -hfp0
 		LINK=
 		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
@@ -766,7 +766,7 @@ $(BUILD)vinterp.o: $(UTIL)vinterp.f90 $(BUILD)data_structures.o
 $(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_simple.o $(BUILD)mp_thompson_aer.o $(BUILD)mp_thompson.o \
 					$(BUILD)mp_wsm6.o $(BUILD)mp_wsm3.o \
 					$(BUILD)data_structures.o $(BUILD)domain_h.o  $(BUILD)icar_constants.o\
-					$(BUILD)wrf_constants.o
+					$(BUILD)wrf_constants.o $(BUILD)options_h.o
 
 $(BUILD)mp_morrison.o:$(PHYS)mp_morrison.f90 $(BUILD)data_structures.o
 
@@ -784,7 +784,7 @@ $(BUILD)mp_simple.o:$(PHYS)mp_simple.f90 $(BUILD)data_structures.o $(BUILD)optio
 #	Convection code
 ###################################################################
 $(BUILD)cu_driver.o:$(PHYS)cu_driver.f90 $(BUILD)cu_tiedtke.o $(BUILD)cu_nsas.o $(BUILD)cu_bmj.o  \
-					$(BUILD)data_structures.o $(BUILD)icar_constants.o $(BUILD)domain_h.o
+					$(BUILD)data_structures.o $(BUILD)icar_constants.o $(BUILD)domain_h.o $(BUILD)options_h.o
 
 $(BUILD)cu_tiedtke.o:$(PHYS)cu_tiedtke.f90
 
@@ -798,7 +798,9 @@ $(BUILD)cu_bmj.o:$(PHYS)cu_bmj.f90
 #	Radiation code
 ###################################################################
 
-$(BUILD)ra_driver.o:$(PHYS)ra_driver.f90 $(BUILD)ra_simple.o $(BUILD)ra_rrtmg_lw.o $(BUILD)ra_rrtmg_sw.o $(BUILD)data_structures.o $(BUILD)icar_constants.o $(BUILD)options_h.o $(BUILD)domain_h.o
+$(BUILD)ra_driver.o:$(PHYS)ra_driver.f90 $(BUILD)ra_simple.o $(BUILD)ra_rrtmg_lw.o $(BUILD)ra_rrtmg_sw.o \
+					$(BUILD)data_structures.o $(BUILD)icar_constants.o $(BUILD)options_h.o 				 \
+					$(BUILD)domain_h.o
 
 $(BUILD)ra_rrtmg_lw.o:$(PHYS)ra_rrtmg_lw.f90 $(BUILD)ra_clWRF_support.o $(BUILD)io_routines.o
 
@@ -821,7 +823,7 @@ $(BUILD)lsm_driver.o: $(PHYS)lsm_driver.f90 $(BUILD)data_structures.o	\
 
 # $(BUILD)lsm_basic.o $(BUILD)lsm_simple.o
 
-$(BUILD)water_simple.o: $(PHYS)water_simple.f90 $(BUILD)data_structures.o
+$(BUILD)water_simple.o: $(PHYS)water_simple.f90 $(BUILD)data_structures.o $(BUILD)options_h.o
 
 $(BUILD)water_lake.o: $(PHYS)water_lake.f90 $(BUILD)data_structures.o
 
@@ -847,7 +849,8 @@ $(BUILD)lsm_noahmp_glacier.o: $(PHYS)lsm_noahmp_glacier.f90
 #	Planetary Boundary Layer code
 ###################################################################
 $(BUILD)pbl_driver.o: $(PHYS)pbl_driver.f90 $(BUILD)pbl_simple.o $(BUILD)pbl_ysu.o $(BUILD)domain_h.o \
-					$(BUILD)options_h.o $(BUILD)lsm_driver.o $(BUILD)data_structures.o $(BUILD)atm_utilities.o $(BUILD)pbl_utilities.o
+					$(BUILD)options_h.o $(BUILD)lsm_driver.o $(BUILD)data_structures.o 				  \
+					$(BUILD)atm_utilities.o $(BUILD)pbl_utilities.o
 
 $(BUILD)pbl_simple.o: $(PHYS)pbl_simple.f90 $(BUILD)domain_h.o $(BUILD)options_h.o $(BUILD)data_structures.o
 
