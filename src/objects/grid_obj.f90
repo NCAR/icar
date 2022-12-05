@@ -25,6 +25,7 @@ contains
             dims(3) = this%jme - this%jms + 1
         endif
     end function
+    
 
     !> -------------------------------
     !! Decompose the domain into as even a set of tiles as possible in two dimensions
@@ -136,23 +137,23 @@ contains
         memory_start = (me-1)*(base_n) + min(me-1,mod(n_global,nimg)) + 1
 
     end function my_start
-
+    
     !> -------------------------------
     !! Generate the domain decomposition mapping and compute the indicies for local memory
     !!
     !! -------------------------------
-    module subroutine set_grid_dimensions(this, nx, ny, nz, nx_extra, ny_extra, halo_width, for_image)
+    module subroutine set_grid_dimensions(this, nx, ny, nz, adv_order, nx_extra, ny_extra, for_image)
       class(grid_t),   intent(inout) :: this
       integer,         intent(in)    :: nx, ny, nz
-      integer,         intent(in), optional :: nx_extra, ny_extra, halo_width, for_image
+      integer,         intent(in), optional :: adv_order, nx_extra, ny_extra, for_image
 
       integer :: nx_e, ny_e, halo_size
       integer :: image
 
       halo_size = kDEFAULT_HALO_SIZE
-      if (present(halo_width)) halo_size = halo_width
+      if (present(adv_order)) halo_size = ceiling(adv_order/2.0)
 
-      image = this_image()
+      image = max(1,FINDLOC(DOM_IMG_INDX,this_image(),dim=1))
       if (present(for_image)) image = for_image
 
       nx_e = 0
@@ -160,7 +161,7 @@ contains
       if (present(nx_extra)) nx_e = nx_extra ! used to add 1 to the u-field staggered grid
       if (present(ny_extra)) ny_e = ny_extra ! used to add 1 to the v-field staggered grid
 
-      call this%domain_decomposition(nx, ny, num_images(), for_image=image)
+      call this%domain_decomposition(nx, ny, kNUM_COMPUTE, for_image=image)
 
       if (nz<1) then
           this%is2d = .True.
@@ -244,10 +245,10 @@ contains
       grid%jme = grid%jme + merge(0, halo_size, north_boundary)
 
       ! if this is on a boundary, we should skip 1 grid cell (the boundary conditions) else we should skip the halo
-      grid%its = grid%ims + merge(1, halo_size, west_boundary)
-      grid%ite = grid%ime - merge(1, halo_size, east_boundary)
-      grid%jts = grid%jms + merge(1, halo_size, south_boundary)
-      grid%jte = grid%jme - merge(1, halo_size, north_boundary)
+      grid%its = grid%ims + halo_size !merge(1, halo_size, west_boundary)
+      grid%ite = grid%ime - halo_size !merge(1, halo_size, east_boundary)
+      grid%jts = grid%jms + halo_size !merge(1, halo_size, south_boundary)
+      grid%jte = grid%jme - halo_size !merge(1, halo_size, north_boundary)
 
       grid%nx = grid%ime - grid%ims + 1
       grid%ny = grid%jme - grid%jms + 1

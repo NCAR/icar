@@ -398,8 +398,8 @@ contains
                   w          => domain%w%data_3d,                       &
                   density    => domain%density%data_3d,                 &
                   dz         => options%parameters%dz_levels,           &
-                  reduction  => options%parameters%cfl_reduction_factor,&
-                  strictness => options%parameters%cfl_strictness       &
+                  reduction  => options%time_options%cfl_reduction_factor,&
+                  strictness => options%time_options%cfl_strictness       &
             )
 
             seconds = compute_dt(dx, u, v, w, density, dz, reduction, &

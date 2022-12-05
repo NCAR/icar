@@ -7,13 +7,25 @@ module icar_constants
     implicit none
 
     character(len=5) :: kVERSION_STRING = "2.1"
-
+    
+    ! Define team IDs for coarray teams
+    integer, parameter :: kCOMPUTE_TEAM = 1
+    integer, parameter :: kIO_TEAM = 2
+    integer, allocatable :: DOM_IMG_INDX(:)
+    integer :: kNUM_SERVERS = 0
+    integer :: kNUM_COMPUTE = 0
+    integer :: kNUM_PROC_PER_NODE = 0
+    integer :: kTIMEOUT = 600 !timeout timer in seconds
+    
+    !Flag-value to indicate a part of a read-write buffer which was never filled
+    real, parameter :: kEMPT_BUFF = -123456789.0
+    
     ! string lengths
     integer, parameter :: kMAX_FILE_LENGTH = 1024
     integer, parameter :: kMAX_DIM_LENGTH  = 1024
     integer, parameter :: kMAX_NAME_LENGTH = 1024
     integer, parameter :: kMAX_ATTR_LENGTH = 1024
-
+    
     !>--------------------------------------------
     ! list of integer constants to be used when accessing various arrays that track variable allocation, usage, etc. requests
     !
@@ -47,6 +59,16 @@ module icar_constants
         integer :: snow_number_concentration
         integer :: graupel_in_air
         integer :: graupel_number_concentration
+        integer :: ice1_a
+        integer :: ice1_c
+        integer :: ice2_mass
+        integer :: ice2_number
+        integer :: ice2_a
+        integer :: ice2_c
+        integer :: ice3_mass
+        integer :: ice3_number
+        integer :: ice3_a
+        integer :: ice3_c
         integer :: precipitation
         integer :: convective_precipitation
         integer :: external_precipitation
@@ -287,7 +309,8 @@ module icar_constants
                                                             201, 202, 203, 204, 205, 206, 207, 208, 209, 210,  &
                                                             211, 212, 213, 214, 215, 216, 217, 218, 219, 220,  &
                                                             221, 222, 223, 224, 225, 226, 227, 228, 229, 230,  &
-                                                            231, 232, 233)
+                                                            231, 232, 233, 234, 235, 236, 237, 238, 239, 240,  &
+                                                            241, 242, 243)
 
 
     integer, parameter :: kINTEGER_BITS     = storage_size(kINTEGER_BITS)
@@ -350,10 +373,12 @@ module icar_constants
     integer, parameter :: kMP_WSM6       = 4
     integer, parameter :: kMP_THOMP_AER  = 5
     integer, parameter :: kMP_WSM3       = 6
-
-    integer, parameter :: kPBL_BASIC     = 1
-    integer, parameter :: kPBL_SIMPLE    = 2
-    integer, parameter :: kPBL_YSU       = 3
+    integer, parameter :: kMP_ISHMAEL    = 7
+ 
+    integer, parameter :: kPBL_BASIC       = 1
+    integer, parameter :: kPBL_SIMPLE      = 2
+    integer, parameter :: kPBL_YSU         = 3
+    integer, parameter :: kPBL_DIAGNOSTIC  = 4
 
     integer, parameter :: kWATER_BASIC   = 1
     integer, parameter :: kWATER_SIMPLE  = 2
@@ -368,16 +393,35 @@ module icar_constants
     integer, parameter :: kRA_SIMPLE     = 2
     integer, parameter :: kRA_RRTMG      = 3
 
-    integer, parameter :: kADV_UPWIND    = 1
+    integer, parameter :: kADV_STD       = 1
     integer, parameter :: kADV_MPDATA    = 2
+
+    integer, parameter :: kFLUXCOR_MONO   = 1
 
     integer, parameter :: kWIND_LINEAR   = 1
     integer, parameter :: kCONSERVE_MASS = 2
-    integer, parameter :: kITERATIVE_WINDS = 3
-    integer, parameter :: kLINEAR_ITERATIVE_WINDS = 5
+    integer, parameter :: kOBRIEN_WINDS = 3
+    integer, parameter :: kITERATIVE_WINDS = 4
+    integer, parameter :: kLINEAR_OBRIEN_WINDS = 5
+    integer, parameter :: kLINEAR_ITERATIVE_WINDS = 6
 
     integer, parameter :: kLC_LAND       = 1
     integer, parameter :: kLC_WATER      = 2 ! 0  ! This should maybe become an argument in the namelist if we use different hi-es files?
+
+    ! the fixed lengths of various land-surface grids
+    integer, parameter :: kSOIL_GRID_Z       = 4
+    integer, parameter :: kSNOW_GRID_Z       = 3
+    integer, parameter :: kSNOWSOIL_GRID_Z   = 7
+    integer, parameter :: kCROP_GRID_Z       = 5
+    integer, parameter :: kMONTH_GRID_Z      = 12
+    integer, parameter :: kGECROS_GRID_Z     = 60
+    integer, parameter :: kSOILCOMP_GRID_Z   = 8
+    
+    integer, parameter :: kLAKE_Z            = 10
+    integer, parameter :: kLAKE_SOISNO_Z     = 9
+    integer, parameter :: kLAKE_SOI_Z        = 4
+    integer, parameter :: kLAKE_SOISNO_1_Z   = 10
+
 
     ! mm of accumulated precip before "tipping" into the bucket
     ! only performed on output operations
@@ -388,9 +432,9 @@ module icar_constants
 ! ------------------------------------------------
     real, parameter :: LH_vaporization=2260000.0 ! J/kg
     ! could be calculated as 2.5E6 + (-2112.0)*temp_degC ?
-    real, parameter :: Rd  = 287.058   ! J/(kg K) specific gas constant for dry air
-    real, parameter :: Rw  = 461.5     ! J/(kg K) specific gas constant for moist air
-    real, parameter :: cp  = 1012.0    ! J/kg/K   specific heat capacity of moist STP air?
+    real, parameter :: Rd  = 287   ! J/(kg K) specific gas constant for dry air
+    real, parameter :: Rw  = 461.6     ! J/(kg K) specific gas constant for moist air
+    real, parameter :: cp  = 1004.5    ! J/kg/K   specific heat capacity of moist STP air?
     real, parameter :: gravity= 9.81   ! m/s^2    gravity
     real, parameter :: pi  = 3.1415927 ! pi
     real, parameter :: stefan_boltzmann = 5.67e-8 ! the Stefan-Boltzmann constant

@@ -82,7 +82,7 @@
 !    REAL    , PARAMETER ::  SVP3=29.65
 !    REAL    , PARAMETER ::  SVPT0=273.15
 !    REAL    , PARAMETER ::  EP_1=R_v/R_d-1. !-- ep1         constant for virtual temperature (r_v/r_d - 1) (dimensionless)
-!    REAL    , PARAMETER ::  EP_2=R_d/R_v    !-- ep2         constant for specific humidity calculation
+   REAL    , PARAMETER ::  EP_2=R_d/R_v    !-- ep2         constant for specific humidity calculation
    ! REAL    , PARAMETER ::  KARMAN=0.4
    REAL    , PARAMETER ::  EOMEG=7.2921E-5
    REAL    , PARAMETER ::  STBOLT=5.67051E-8
