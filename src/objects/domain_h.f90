@@ -48,6 +48,16 @@ module domain_interface
     type(exchangeable_t) :: snow_number
     type(exchangeable_t) :: graupel_mass
     type(exchangeable_t) :: graupel_number
+    type(exchangeable_t) :: ice1_a
+    type(exchangeable_t) :: ice1_c
+    type(exchangeable_t) :: ice2_mass
+    type(exchangeable_t) :: ice2_number
+    type(exchangeable_t) :: ice2_a
+    type(exchangeable_t) :: ice2_c
+    type(exchangeable_t) :: ice3_mass
+    type(exchangeable_t) :: ice3_number
+    type(exchangeable_t) :: ice3_a
+    type(exchangeable_t) :: ice3_c
 
     ! other model variables (not advected)
     type(variable_t) :: exner

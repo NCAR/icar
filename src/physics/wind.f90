@@ -23,7 +23,7 @@ module wind
 
     implicit none
     private
-    public::update_winds, init_winds, wind_var_request, balance_uvw
+    public::update_winds, calc_w_real, init_winds, wind_var_request, balance_uvw
     real, parameter::deg2rad=0.017453293 !2*pi/360
 contains
 
@@ -367,6 +367,63 @@ contains
 
 
     end subroutine update_winds
+
+    subroutine calc_w_real(u,v,w_grid,w_real,dzdx,dzdy,jaco_w,ims,ime,kms,kme,jms,jme,its, ite, jts, jte)
+
+        implicit none
+        real, intent(in), dimension(ims:ime,kms:kme,jms:jme)   :: w_grid,jaco_w
+        real, intent(in), dimension(ims:ime+1,kms:kme,jms:jme) :: u,dzdx
+        real, intent(in), dimension(ims:ime,kms:kme,jms:jme+1) :: v,dzdy
+        real, intent(inout)                                    :: w_real(ims:ime,kms:kme,jms:jme)
+
+        real, allocatable :: lastw(:,:)
+        real, allocatable :: currw(:,:)
+        real, allocatable :: uw(:,:)
+        real, allocatable :: vw(:,:)
+        integer :: z, ims, ime, kms, kme, jms, jme, its, ite, jts, jte
+
+        if (.not.allocated(lastw)) then
+            allocate( lastw( its:ite  , jts:jte  ))
+            allocate( currw( its:ite  , jts:jte  ))
+            allocate(    uw( its:ite+1, jts:jte  ))
+            allocate(    vw( its:ite  , jts:jte+1))
+        endif
+
+        !calculate the real vertical motions (including U*dzdx + V*dzdy)
+        lastw = 0
+        do z = kms, kme
+
+            ! ! if(options%parameters%use_terrain_difference) then
+            !                 ! compute the U * dz/dx component of vertical motion
+            !     uw    = u(its:ime,   z, jts:jts) * domain%delta_dzdx(:,z,jts:jts)
+            !     ! compute the V * dz/dy component of vertical motion
+            !     vw    = v(its:its, z, jts:jme  ) * domain%delta_dzdy(its:its,z,:)
+            ! else    
+                ! compute the U * dz/dx component of vertical motion
+                uw    = u(its:ite+1,   z, jts:jte) * dzdx(its:ite+1,z,jts:jte)
+                ! compute the V * dz/dy component of vertical motion
+                vw    = v(its:ite, z,   jts:jte+1) * dzdy(its:ite,z,jts:jte+1)
+            ! endif    
+            ! ! convert the W grid relative motion to m/s
+            ! currw = w(its:its, z, jts:jts) * dz_interface(its:its, z, jts:jts) / domain%dx
+
+            ! the W grid relative motion
+            currw = w_grid(its:ite, z, jts:jte) * jaco_w(its:ite, z, jts:jte)
+
+            ! if (options%physics%convection>0) then
+            !     currw = currw + domain%w_cu(2:nx-1,z,2:ny-1) * domain%dz_inter(2:nx-1,z,2:ny-1) / domain%dx
+            ! endif
+
+            ! compute the real vertical velocity of air by combining the different components onto the mass grid
+            ! includes vertical interpolation between w_z-1/2 and w_z+1/2
+            w_real(its:ite, z, jts:jte) = (uw(its:ite,:) + uw(its+1:ite+1,:))*0.5 &
+                                                 +(vw(:,jts:jte) + vw(:,jts+1:jte+1))*0.5 &
+                                                 +(lastw + currw) * 0.5
+            lastw = currw ! could avoid this memcopy cost using pointers or a single manual loop unroll
+        end do
+
+    end subroutine calc_w_real
+
 
     subroutine iterative_winds(domain, options, update_in)
         implicit none
