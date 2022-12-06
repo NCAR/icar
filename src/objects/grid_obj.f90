@@ -142,16 +142,16 @@ contains
     !! Generate the domain decomposition mapping and compute the indicies for local memory
     !!
     !! -------------------------------
-    module subroutine set_grid_dimensions(this, nx, ny, nz, adv_order, nx_extra, ny_extra, for_image)
+    module subroutine set_grid_dimensions(this, nx, ny, nz, halo_width, nx_extra, ny_extra, for_image)
       class(grid_t),   intent(inout) :: this
       integer,         intent(in)    :: nx, ny, nz
-      integer,         intent(in), optional :: adv_order, nx_extra, ny_extra, for_image
+      integer,         intent(in), optional :: halo_width, nx_extra, ny_extra, for_image
 
       integer :: nx_e, ny_e, halo_size
       integer :: image
 
       halo_size = kDEFAULT_HALO_SIZE
-      if (present(adv_order)) halo_size = ceiling(adv_order/2.0)
+      if (present(halo_width)) halo_size = halo_width
 
       image = this_image()
       if (present(for_image)) image = for_image

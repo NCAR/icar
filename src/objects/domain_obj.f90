@@ -2290,7 +2290,7 @@ contains
         type(options_t), intent(in)     :: options
 
         real, allocatable :: temporary_data(:,:)
-        integer :: nx_global, ny_global, nz_global, nsmooth, adv_order
+        integer :: nx_global, ny_global, nz_global, nsmooth, halo_width
 
         nsmooth = max(1, int(options%parameters%smooth_wind_distance / options%parameters%dx))
         this%nsmooth = nsmooth
@@ -2305,29 +2305,29 @@ contains
         ny_global = size(temporary_data,2)
         nz_global = options%parameters%nz
 
-        adv_order = max(options%adv_options%h_order,options%adv_options%v_order)
+        halo_width = ceiling(max(options%adv_options%h_order,options%adv_options%v_order)/2.0)
         
         !If we are using the monotonic flux limiter, it is necesarry to calculate the fluxes one location deep into the
         !halo. Thus, we need one extra cell in each halo direction to support the finite difference stencil
-        !This is achieved here by artificially inflating the adv_order which is passed to the grid setup
-        if (options%adv_options%flux_corr==kFLUXCOR_MONO) adv_order = adv_order+2
+        !This is achieved here by artificially inflating the halo_width which is passed to the grid setup
+        if (options%adv_options%flux_corr==kFLUXCOR_MONO) halo_width = halo_width+1
         
         !If using MPDATA, we need a halo of size 2 to support the difference stencil
-        if (options%physics%advection==kADV_MPDATA) adv_order = 4
+        if (options%physics%advection==kADV_MPDATA) halo_width = 2
 
-        call this%grid%set_grid_dimensions(   nx_global, ny_global, nz_global,adv_order=adv_order)
+        call this%grid%set_grid_dimensions(   nx_global, ny_global, nz_global,halo_width=halo_width)
 
-        call this%u_grid%set_grid_dimensions( nx_global, ny_global, nz_global,adv_order=adv_order, nx_extra = 1)
-        call this%v_grid%set_grid_dimensions( nx_global, ny_global, nz_global,adv_order=adv_order, ny_extra = 1)
+        call this%u_grid%set_grid_dimensions( nx_global, ny_global, nz_global,halo_width=halo_width, nx_extra = 1)
+        call this%v_grid%set_grid_dimensions( nx_global, ny_global, nz_global,halo_width=halo_width, ny_extra = 1)
 
         ! for 2D mass variables
-        call this%grid2d%set_grid_dimensions( nx_global, ny_global, 0,adv_order=adv_order)
+        call this%grid2d%set_grid_dimensions( nx_global, ny_global, 0,halo_width=halo_width)
 
         ! setup a 2D lat/lon grid extended by nsmooth grid cells so that smoothing can take place "across" images
         ! This just sets up the fields to interpolate u and v to so that the input data are handled on an extended
         ! grid.  They are then subset to the u_grid and v_grids above before actual use.
-        call this%u_grid2d%set_grid_dimensions(     nx_global, ny_global, 0,adv_order=adv_order, nx_extra = 1)
-        call this%u_grid2d_ext%set_grid_dimensions( nx_global, ny_global, 0,adv_order=adv_order, nx_extra = 1)
+        call this%u_grid2d%set_grid_dimensions(     nx_global, ny_global, 0,halo_width=halo_width, nx_extra = 1)
+        call this%u_grid2d_ext%set_grid_dimensions( nx_global, ny_global, 0,halo_width=halo_width, nx_extra = 1)
 
         ! extend by nsmooth, but bound to the domain grid
         this%u_grid2d_ext%ims = max(this%u_grid2d%ims - nsmooth, this%u_grid2d%ids)
@@ -2336,8 +2336,8 @@ contains
         this%u_grid2d_ext%jme = min(this%u_grid2d%jme + nsmooth, this%u_grid2d%jde)
 
         ! handle the v-grid too
-        call this%v_grid2d%set_grid_dimensions(     nx_global, ny_global, 0,adv_order=adv_order, ny_extra = 1)
-        call this%v_grid2d_ext%set_grid_dimensions( nx_global, ny_global, 0,adv_order=adv_order, ny_extra = 1)
+        call this%v_grid2d%set_grid_dimensions(     nx_global, ny_global, 0,halo_width=halo_width, ny_extra = 1)
+        call this%v_grid2d_ext%set_grid_dimensions( nx_global, ny_global, 0,halo_width=halo_width, ny_extra = 1)
         ! extend by nsmooth, but bound to the domain grid
         this%v_grid2d_ext%ims = max(this%v_grid2d%ims - nsmooth, this%v_grid2d%ids)
         this%v_grid2d_ext%ime = min(this%v_grid2d%ime + nsmooth, this%v_grid2d%ide)

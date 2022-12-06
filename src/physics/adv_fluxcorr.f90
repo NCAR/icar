@@ -89,7 +89,8 @@ contains
         where (u(its-1:ite+1,:,:) > 0)
             qmax(:,:,:) = max(q(its-2:ite,:,jts-1:jte+1),qmax(:,:,:))
             qmin(:,:,:) = min(q(its-2:ite,:,jts-1:jte+1),qmin(:,:,:))
-        else where (u(its:ite+2,:,:) < 0)
+        end where
+        where (u(its:ite+2,:,:) < 0)
             qmax(:,:,:) = max(q(its:ite+2,:,jts-1:jte+1),qmax(:,:,:))
             qmin(:,:,:) = min(q(its:ite+2,:,jts-1:jte+1),qmin(:,:,:))
         end where
@@ -97,7 +98,8 @@ contains
         where (v(:,:,jts-1:jte+1) > 0)
             qmax(:,:,:) = max(q(its-1:ite+1,:,jts-2:jte),qmax(:,:,:))
             qmin(:,:,:) = min(q(its-1:ite+1,:,jts-2:jte),qmin(:,:,:))
-        else where (v(:,:,jts:jte+2) < 0)
+        end where
+        where (v(:,:,jts:jte+2) < 0)
             qmax(:,:,:) = max(q(its-1:ite+1,:,jts:jte+2),qmax(:,:,:))
             qmin(:,:,:) = min(q(its-1:ite+1,:,jts:jte+2),qmin(:,:,:))
         end where
@@ -105,7 +107,8 @@ contains
         where (w(:,kms:kme-1,:) > 0)
             qmax(:,kms+1:kme,:) = max(q(its-1:ite+1,kms:kme-1,jts-1:jte+1),qmax(:,kms+1:kme,:))
             qmin(:,kms+1:kme,:) = min(q(its-1:ite+1,kms:kme-1,jts-1:jte+1),qmin(:,kms+1:kme,:))
-        else where (w(:,kms:kme-1,:) < 0)
+        end where
+        where (w(:,kms:kme-1,:) < 0)
             qmax(:,kms:kme-1,:) = max(q(its-1:ite+1,kms+1:kme,jts-1:jte+1),qmax(:,kms:kme-1,:))
             qmin(:,kms:kme-1,:) = min(q(its-1:ite+1,kms+1:kme,jts-1:jte+1),qmin(:,kms:kme-1,:))
         end where
