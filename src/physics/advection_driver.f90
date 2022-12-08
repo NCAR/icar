@@ -83,7 +83,6 @@ contains
         else if(options%physics%advection==kADV_MPDATA) then
             call mpdata_compute_wind(domain,options,dt)
         endif
-        if (this_image()==1) write(*,*) 'adv winds computed'
         !Loop through all vars to advect
                 
         ! make sure the dictionary is reset to point to the first variable
