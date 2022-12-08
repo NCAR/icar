@@ -768,7 +768,7 @@ $(BUILD)vinterp.o: $(UTIL)vinterp.f90 $(BUILD)data_structures.o
 $(BUILD)mp_driver.o:$(PHYS)mp_driver.f90 $(BUILD)mp_simple.o $(BUILD)mp_thompson_aer.o $(BUILD)mp_thompson.o \
 					$(BUILD)mp_wsm6.o $(BUILD)mp_wsm3.o $(BUILD)mp_morrison.o $(BUILD)mp_jensen_ishmael.o \
 					$(BUILD)data_structures.o $(BUILD)domain_h.o  $(BUILD)icar_constants.o\
-					$(BUILD)wrf_constants.o $(BUILD)options_h.o
+					$(BUILD)wrf_constants.o $(BUILD)options_h.o $(BUILD)wind.o
 
 $(BUILD)mp_morrison.o:$(PHYS)mp_morrison.f90 $(BUILD)wrf_constants.o
 

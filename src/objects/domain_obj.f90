@@ -1081,12 +1081,19 @@ contains
         allocate(this%jacobian_w(this% ims : this% ime, &
                                     this% kms : this% kme, &
                                     this% jms : this% jme) )
-
-        allocate(this%dzdx(this% ims : this% ime+1, &
+        allocate(this%dzdx(this% ims : this% ime, &
                            this% kms : this% kme, &
                            this% jms : this% jme) )
 
         allocate(this%dzdy(this% ims : this% ime, &
+                           this% kms : this% kme, &
+                           this% jms : this% jme) )
+
+        allocate(this%dzdx_u(this% ims : this% ime+1, &
+                           this% kms : this% kme, &
+                           this% jms : this% jme) )
+
+        allocate(this%dzdy_v(this% ims : this% ime, &
                            this% kms : this% kme, &
                            this% jms : this% jme+1) )
 
@@ -1620,11 +1627,40 @@ contains
         global_dzdx = 0
         global_dzdy = 0
 
-        global_dzdx(this%ids+1:this%ide,:,:) = (global_z(this%ids+1:this%ide,:,:) - global_z(this%ids:this%ide-1,:,:)) / this%dx
-        global_dzdy(:,:,this%jds+1:this%jde) = (global_z(:,:,this%jds+1:this%jde) - global_z(:,:,this%jds:this%jde-1)) / this%dx
+        !For dzdx
+        global_dzdx(this%ids+1:this%ide-1,:,:) = (global_z(this%ids+2:this%ide,:,:) - &
+                                                           global_z(this%ids:this%ide-2,:,:))/(2*this%dx)
 
-        this%dzdx(:,:,:) = global_dzdx(this%ims:this%ime+1,:,this%jms:this%jme)
-        this%dzdy(:,:,:) = global_dzdy(this%ims:this%ime,:,this%jms:this%jme+1)
+        global_dzdx(this%ids,:,:) = (-3*global_z(this%ids,:,:) + &
+                                          4*global_z(this%ids+1,:,:) - global_z(this%ids+2,:,:)) / (2*this%dx)
+
+        global_dzdx(this%ide,:,:) = (3*global_z(this%ide,:,:) - &
+                                         4*global_z(this%ide-1,:,:) + global_z(this%ide-2,:,:)) / (2*this%dx)
+        this%dzdx(:,:,:) = global_dzdx(this%ims:this%ime,:,this%jms:this%jme)
+
+
+        global_dzdx(this%ids+1:this%ide,:,:) = (global_dzdx(this%ids+1:this%ide,:,:) + global_dzdx(this%ids:this%ide-1,:,:))/2.0
+        global_dzdx(this%ids,:,:) = global_dzdx(this%ids+1,:,:)
+        global_dzdx(this%ide+1,:,:) = global_dzdx(this%ide,:,:)
+
+        this%dzdx_u(:,:,:) = global_dzdx(this%ims:this%ime+1,:,this%jms:this%jme)
+
+        !For dzdy
+        global_dzdy(:,:,this%jds+1:this%jde-1) = (global_z(:,:,this%jds+2:this%jde) - &
+                                                           global_z(:,:,this%jds:this%jde-2))/(2*this%dx)
+        global_dzdy(:,:,this%jds) = (-3*global_z(:,:,this%jms) + &
+                                          4*global_z(:,:,this%jms+1) - global_z(:,:,this%jms+2)) / (2*this%dx)
+
+        global_dzdy(:,:,this%jde) = (3*global_z(:,:,this%jde) - &
+                                         4*global_z(:,:,this%jde-1) + global_z(:,:,this%jde-2)) / (2*this%dx)
+        this%dzdy(:,:,:) = global_dzdy(this%ims:this%ime,:,this%jms:this%jme)
+
+        global_dzdy(:,:,this%jds+1:this%jde) = (global_dzdy(:,:,this%jds+1:this%jde) + global_dzdy(:,:,this%jds:this%jde-1))/2.0
+        global_dzdy(:,:,this%jds) = global_dzdy(:,:,this%jds+1)
+        global_dzdy(:,:,this%jde+1) = global_dzdy(:,:,this%jde)
+
+        this%dzdy_v(:,:,:) = global_dzdy(this%ims:this%ime,:,this%jms:this%jme+1)
+
 
         deallocate(global_z)
         deallocate(global_dzdx)
