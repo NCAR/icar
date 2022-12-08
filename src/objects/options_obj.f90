@@ -447,6 +447,13 @@ contains
             elseif (max(options%adv_options%h_order,options%adv_options%v_order)==3) then
                 options%time_options%cfl_reduction_factor = min(1.6,options%time_options%cfl_reduction_factor)
             endif
+
+            if (options%physics%advection==kADV_MPDATA) then
+                if (this_image()==1) write(*,*) 'WARNING MPDATA and RK3 time stepping is not tested/implemented.'
+                if (this_image()==1) write(*,*) 'WARNING Switching to normal time stepping'
+                options%time_options%RK3 = .False.
+                options%time_options%cfl_reduction_factor = min(1.0,options%time_options%cfl_reduction_factor)
+            endif
         endif
 
 
