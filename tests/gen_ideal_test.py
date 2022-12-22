@@ -98,6 +98,9 @@ def main():
                     qv_is_relative_humidity ='false',
                     output_interval = 1200,
                     end_date = '2020-12-01 02:00:00',
+                    time_RK3 = ".True.",
+                    time_cfl_strictness = 4,
+                    time_cfl_reduction_factor = 1.4
 )
     print("Generated icar_options.nml")
 

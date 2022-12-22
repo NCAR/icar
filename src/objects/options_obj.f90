@@ -3,7 +3,8 @@ submodule(options_interface) options_implementation
     use icar_constants,             only : kMAINTAIN_LON, MAXFILELENGTH, MAXVARLENGTH, MAX_NUMBER_FILES, MAXLEVELS, &
                                            kNO_STOCHASTIC, kVERSION_STRING, kMAX_FILE_LENGTH, kMAX_NAME_LENGTH, pi, &
                                            kWATER_LAKE, &
-                                           kWIND_LINEAR, kLINEAR_ITERATIVE_WINDS, kITERATIVE_WINDS, kCONSERVE_MASS
+                                           kWIND_LINEAR, kLINEAR_ITERATIVE_WINDS, kITERATIVE_WINDS, kCONSERVE_MASS, &
+                                           kADV_MPDATA
     use io_routines,                only : io_newunit
     use time_io,                    only : find_timestep_in_file
     use time_delta_object,          only : time_delta_t
@@ -992,7 +993,7 @@ contains
 
         real    :: dx, dxlow, outputinterval, restartinterval, inputinterval, t_offset, smooth_wind_distance, frames_per_outfile, agl_cap
         real    :: rh_limit, sst_min_limit, cp_limit
-        
+
         integer :: ntimesteps, wind_iterations
         integer :: longitude_system
         integer :: nz, n_ext_winds,buffer, warning_level
@@ -1591,7 +1592,7 @@ contains
         logical :: MPDATA_FCT ! use the flux corrected transport option in MPDATA
         ! MPDATA order of correction (e.g. 1st=upwind, 2nd=classic, 3rd=better)
         integer :: mpdata_order, flux_corr, h_order, v_order
-        
+
         ! define the namelist
         namelist /adv_parameters/ boundary_buffer, MPDATA_FCT, mpdata_order, flux_corr, h_order, v_order
 
@@ -2179,27 +2180,27 @@ contains
         implicit none
         character(len=*),             intent(in)    :: filename
         type(options_t),              intent(inout) :: options
-        
+
         integer :: name_unit                            ! logical unit number for namelist
         !Define parameters
         integer :: cfl_strictness
-        real :: cfl_reduction_factor    
+        real :: cfl_reduction_factor
         logical :: RK3
-        
+
         !Make name-list
         namelist /time_parameters/ cfl_strictness, cfl_reduction_factor, RK3
-        
+
         !Set defaults
         cfl_reduction_factor=  0.9
         cfl_strictness      =  3
         RK3 = .False.
-        
+
         !Read namelist file
         open(io_newunit(name_unit), file=filename)
         read(name_unit,nml=time_parameters)
         close(name_unit)
-                
-        
+
+
         !Store into options object
         options%time_options%cfl_strictness = cfl_strictness
         options%time_options%cfl_reduction_factor = cfl_reduction_factor
