@@ -316,6 +316,15 @@ contains
         step_size = min(minimum_step, minval(z_top - z_bottom))
         if (step_size < 5) then
             if (this_image()==1) write(*,*) "WARNING: Very small vertical step size in linear winds, check layer thicknesses in output"
+            ! BK in certrain (fringe?) cases, very small differences occur here that do not occur in the actual grid object (because we have warnings for that)
+            !  Need to check consistency of dz_interface(i)/z_interface(i) for the top layer, where this tends to happen (z+1?)
+            if (this_image()==1) then
+                write(*,*)  "      minval(z_top - z_bottom)=",minval(z_top - z_bottom)
+                write(*,*)  "      minval(z_top)",minval(z_top)
+                write(*,*)  "      minval(z_bottom)=",minval(z_bottom)
+                write(*,*)  "   Try setting flat_z_height = -1 or reduce Sleve decay rates"
+            endif
+            error stop
         endif
 
         current_z = start_z + step_size/2 ! we want the value in the middle of each theoretical layer
@@ -325,6 +334,8 @@ contains
         lt_data%v_accumulator = 0
 
         do while (current_z < end_z)
+
+            ! if (this_image()==1) write(*,*) "      current_z, end_z, step_size:", current_z, end_z, step_size
 
             call linear_perturbation_at_height(U,V,Nsq,current_z, fourier_terrain, lt_data)
 
@@ -739,8 +750,9 @@ contains
 
                         ! call update_irregular_grid(u,v, nsq_values(j), z, domain, minimum_layer_size)
                         call linear_perturbation(u, v, exp(nsq_values(j)),                                                                      &
-                                                 domain%global_z_interface(:,z,:) - domain%global_terrain,                                      &
-                                                 domain%global_z_interface(:,z,:) - domain%global_terrain + domain%global_dz_interface(:,z,:),  &
+                                                 domain%global_z_interface(:,z,:) - domain%global_terrain,                                      &   ! z_bottom
+                                                 domain%global_z_interface(:,z,:) - domain%global_terrain + domain%global_dz_interface(:,z,:),  &   ! z_top
+                                                !  domain%global_z_interface(:,z+1,:) - domain%global_terrain ,  &   ! z_top : Maybe this is a better definition?? should be the same...
                                                  minimum_layer_size, domain%terrain_frequency, lt_data_m)
 
                     else
