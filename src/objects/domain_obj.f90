@@ -2345,17 +2345,17 @@ contains
         this%v_grid2d_ext%jme = min(this%v_grid2d%jme + nsmooth, this%v_grid2d%jde)
 
 
-        call this%grid_soil%set_grid_dimensions(         nx_global, ny_global, 4)
-        call this%grid_snow%set_grid_dimensions(         nx_global, ny_global, 3)
-        call this%grid_snowsoil%set_grid_dimensions(     nx_global, ny_global, 7)
-        call this%grid_soilcomp%set_grid_dimensions(     nx_global, ny_global, 8)
-        call this%grid_gecros%set_grid_dimensions(       nx_global, ny_global, 60)
-        call this%grid_croptype%set_grid_dimensions(     nx_global, ny_global, 5)
-        call this%grid_monthly%set_grid_dimensions(      nx_global, ny_global, 12)
-        call this%grid_lake%set_grid_dimensions(         nx_global, ny_global, 10) ! nlevlake=10 (in water_lake.f90: should become nml option?)
-        call this%grid_lake_soisno%set_grid_dimensions(  nx_global, ny_global, 9)! nlevsoil=4; nlevsnow=5   real, dimension( ims:ime,-nlevsnow+1:nlevsoil, jms:jme )  ,INTENT(inout)  :: t_soisno3d,   h2osoi_ice3d, h2osoi_liq3d, h2osoi_vol3d, z3d,   dz3d
-        call this%grid_lake_soi%set_grid_dimensions(     nx_global, ny_global, 4) ! separate from grid_soil in case we want fewer layers under the lake.
-        call this%grid_lake_soisno_1%set_grid_dimensions(nx_global, ny_global, 10) !soisno+1 (for layer interface depth zi3d)
+        call this%grid_soil%set_grid_dimensions(         nx_global, ny_global, 4, halo_width=halo_width)
+        call this%grid_snow%set_grid_dimensions(         nx_global, ny_global, 3, halo_width=halo_width)
+        call this%grid_snowsoil%set_grid_dimensions(     nx_global, ny_global, 7, halo_width=halo_width)
+        call this%grid_soilcomp%set_grid_dimensions(     nx_global, ny_global, 8, halo_width=halo_width)
+        call this%grid_gecros%set_grid_dimensions(       nx_global, ny_global, 60, halo_width=halo_width)
+        call this%grid_croptype%set_grid_dimensions(     nx_global, ny_global, 5, halo_width=halo_width)
+        call this%grid_monthly%set_grid_dimensions(      nx_global, ny_global, 12, halo_width=halo_width)
+        call this%grid_lake%set_grid_dimensions(         nx_global, ny_global, 10, halo_width=halo_width) ! nlevlake=10 (in water_lake.f90: should become nml option?)
+        call this%grid_lake_soisno%set_grid_dimensions(  nx_global, ny_global, 9, halo_width=halo_width)! nlevsoil=4; nlevsnow=5   real, dimension( ims:ime,-nlevsnow+1:nlevsoil, jms:jme )  ,INTENT(inout)  :: t_soisno3d,   h2osoi_ice3d, h2osoi_liq3d, h2osoi_vol3d, z3d,   dz3d
+        call this%grid_lake_soi%set_grid_dimensions(     nx_global, ny_global, 4, halo_width=halo_width) ! separate from grid_soil in case we want fewer layers under the lake.
+        call this%grid_lake_soisno_1%set_grid_dimensions(nx_global, ny_global, 10, halo_width=halo_width) !soisno+1 (for layer interface depth zi3d)
         deallocate(temporary_data)
 
 
