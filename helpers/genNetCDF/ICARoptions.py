@@ -49,6 +49,10 @@ class ICARoptions:
                  forc_lon_hi_var = 'lon_hi',
                  forc_hgt_hi_var = 'hgt_hi',
                  forc_time_var = 'time',
+                 # time parameters namelist
+                 time_RK3 = '.False.',
+                 time_cfl_strictness = 4,
+                 time_cfl_reduction_factor = 1.4,
                  # parameters namelist
                  start_date = '2020-12-01 00:00:00',
                  end_date = '2020-12-02 00:00:00',
@@ -92,6 +96,12 @@ class ICARoptions:
                                         conv=phys_opt_conv,
                                         adv=phys_opt_adv,
                                         wind=phys_opt_wind)
+
+        self.time_list = TimeList(filename=f,
+                                  RK3=time_RK3,
+                                  cfl_strictness=time_cfl_strictness,
+                                  cfl_reduction_factor=time_cfl_reduction_factor
+                                  )
 
         self.files_list = FilesList(filename=f,
                                     init_conditions_file=init_conditions_file,
@@ -163,6 +173,7 @@ class ICARoptions:
         self.model_version.gen()
         self.output_list.gen()
         self.physics_list.gen()
+        self.time_list.gen()
         self.files_list.gen()
         self.z_info_list.gen()
         self.forcing_var_list.gen()
@@ -243,6 +254,10 @@ class FilesList(Namelist):
                 self.nml[name] = '"' + val + '"'
         super().gen()
 
+class TimeList(Namelist):
+    def __init__(self, **kargs):
+        Namelist.__init__(self, kargs)
+        self.nml['name'] = 'time_parameters'
 
 class ZInfoList(Namelist):
     def __init__(self, **kargs):

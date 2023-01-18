@@ -1,6 +1,6 @@
 module grid_interface
 
-    use icar_constants, only : kDEFAULT_HALO_SIZE, kMAX_DIM_LENGTH
+    use icar_constants
 
     implicit none
 
@@ -45,11 +45,11 @@ interface
         integer,        intent(in), optional :: for_image
     end subroutine
 
-    module subroutine set_grid_dimensions(this, nx, ny, nz, nx_extra, ny_extra, halo_width, for_image)
+    module subroutine set_grid_dimensions(this, nx, ny, nz, halo_width, nx_extra, ny_extra, for_image)
         implicit none
         class(grid_t),   intent(inout) :: this
         integer,         intent(in)    :: nx, ny, nz
-        integer,         intent(in), optional :: nx_extra, ny_extra, halo_width, for_image
+        integer,         intent(in), optional :: halo_width, nx_extra, ny_extra, for_image
     end subroutine
 end interface
 end module

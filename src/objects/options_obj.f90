@@ -3,7 +3,8 @@ submodule(options_interface) options_implementation
     use icar_constants,             only : kMAINTAIN_LON, MAXFILELENGTH, MAXVARLENGTH, MAX_NUMBER_FILES, MAXLEVELS, &
                                            kNO_STOCHASTIC, kVERSION_STRING, kMAX_FILE_LENGTH, kMAX_NAME_LENGTH, pi, &
                                            kWATER_LAKE, &
-                                           kWIND_LINEAR, kLINEAR_ITERATIVE_WINDS, kITERATIVE_WINDS, kCONSERVE_MASS
+                                           kWIND_LINEAR, kLINEAR_ITERATIVE_WINDS, kITERATIVE_WINDS, kCONSERVE_MASS, &
+                                           kADV_MPDATA
     use io_routines,                only : io_newunit
     use time_io,                    only : find_timestep_in_file
     use time_delta_object,          only : time_delta_t
@@ -61,6 +62,7 @@ contains
         call output_namelist(       options_filename,   this%output_options)
         call model_levels_namelist( options_filename,   this%parameters)
 
+        call time_parameters_namelist(         options_filename,   this)
         call lt_parameters_namelist(    this%parameters%lt_options_filename,    this)
         call block_parameters_namelist( this%parameters%block_options_filename, this)
         call mp_parameters_namelist(    this%parameters%mp_options_filename,    this)
@@ -439,6 +441,22 @@ contains
                 if (this_image()==1) write(*,*) "WARNING WARNING WARNING"
             endif
         endif
+
+        if (options%time_options%RK3) then
+            if (max(options%adv_options%h_order,options%adv_options%v_order)==5) then
+                options%time_options%cfl_reduction_factor = min(1.4,options%time_options%cfl_reduction_factor)
+            elseif (max(options%adv_options%h_order,options%adv_options%v_order)==3) then
+                options%time_options%cfl_reduction_factor = min(1.6,options%time_options%cfl_reduction_factor)
+            endif
+
+            if (options%physics%advection==kADV_MPDATA) then
+                if (this_image()==1) write(*,*) 'WARNING MPDATA and RK3 time stepping is not tested/implemented.'
+                if (this_image()==1) write(*,*) 'WARNING Switching to normal time stepping'
+                options%time_options%RK3 = .False.
+                options%time_options%cfl_reduction_factor = min(1.0,options%time_options%cfl_reduction_factor)
+            endif
+        endif
+
 
     end subroutine options_check
 
@@ -974,10 +992,11 @@ contains
         ! parameters to read
 
         real    :: dx, dxlow, outputinterval, restartinterval, inputinterval, t_offset, smooth_wind_distance, frames_per_outfile, agl_cap
-        real    :: cfl_reduction_factor, rh_limit, sst_min_limit, cp_limit
+        real    :: rh_limit, sst_min_limit, cp_limit
+
         integer :: ntimesteps, wind_iterations
         integer :: longitude_system
-        integer :: nz, n_ext_winds,buffer, warning_level, cfl_strictness
+        integer :: nz, n_ext_winds,buffer, warning_level
         logical :: ideal, readz, readdz, interactive, debug, external_winds, surface_io_only, &
                    mean_winds, mean_fields, restart, advect_density, z_is_geopotential, z_is_on_interface,&
                    high_res_soil_state, use_agl_height, time_varying_z, t_is_potential, qv_is_spec_humidity, &
@@ -1002,7 +1021,6 @@ contains
                               qv_is_relative_humidity, qv_is_spec_humidity,                              &
                               use_agl_height, agl_cap, start_date, forcing_start_date, end_date,         &
                               time_varying_z,  longitude_system,            &
-                              cfl_reduction_factor,     cfl_strictness,     &
                               mp_options_filename,      use_mp_options,     &
                               block_options_filename,   use_block_options,  &
                               lt_options_filename,      use_lt_options,     &
@@ -1050,8 +1068,6 @@ contains
         forcing_start_date  = ""
         end_date            = ""
         time_varying_z      = .False.
-        cfl_reduction_factor=  0.9
-        cfl_strictness      =  3
         inputinterval       =  3600
         outputinterval      =  3600
         frames_per_outfile  =  24
@@ -1206,9 +1222,6 @@ contains
         options%wind_iterations = wind_iterations
         options%high_res_soil_state = high_res_soil_state
         options%time_varying_z = time_varying_z
-
-        options%cfl_reduction_factor = cfl_reduction_factor
-        options%cfl_strictness = cfl_strictness
 
         options%use_mp_options      = use_mp_options
         options%mp_options_filename = mp_options_filename
@@ -1574,12 +1587,14 @@ contains
         type(adv_options_type)::adv_options
         integer :: name_unit
 
+
         logical :: boundary_buffer          ! apply some smoothing to the x and y boundaries in MPDATA
-        logical :: flux_corrected_transport ! use the flux corrected transport option in MPDATA
-        integer :: mpdata_order             ! MPDATA order of correction (e.g. 1st=upwind, 2nd=classic, 3rd=better)
+        logical :: MPDATA_FCT ! use the flux corrected transport option in MPDATA
+        ! MPDATA order of correction (e.g. 1st=upwind, 2nd=classic, 3rd=better)
+        integer :: mpdata_order, flux_corr, h_order, v_order
 
         ! define the namelist
-        namelist /adv_parameters/ boundary_buffer, flux_corrected_transport, mpdata_order
+        namelist /adv_parameters/ boundary_buffer, MPDATA_FCT, mpdata_order, flux_corr, h_order, v_order
 
          ! because adv_options could be in a separate file
          if (options%parameters%use_adv_options) then
@@ -1591,8 +1606,12 @@ contains
 
         ! set default values
         boundary_buffer = .False.
-        flux_corrected_transport = .True.
+        MPDATA_FCT = .True.
         mpdata_order = 2
+        flux_corr    = 0
+        h_order = 1
+        v_order = 1
+
 
         ! read the namelist options
         if (options%parameters%use_adv_options) then
@@ -1603,8 +1622,12 @@ contains
 
         ! store everything in the adv_options structure
         adv_options%boundary_buffer = boundary_buffer
-        adv_options%flux_corrected_transport = flux_corrected_transport
+        adv_options%MPDATA_FCT = MPDATA_FCT
         adv_options%mpdata_order = mpdata_order
+        adv_options%flux_corr = flux_corr
+        adv_options%h_order = h_order
+        adv_options%v_order = v_order
+
 
         ! copy the data back into the global options data structure
         options%adv_options = adv_options
@@ -2152,6 +2175,37 @@ contains
             deallocate(ext_wind_files)
         endif
     end subroutine filename_namelist
+
+    subroutine time_parameters_namelist(filename, options)
+        implicit none
+        character(len=*),             intent(in)    :: filename
+        type(options_t),              intent(inout) :: options
+
+        integer :: name_unit                            ! logical unit number for namelist
+        !Define parameters
+        integer :: cfl_strictness
+        real :: cfl_reduction_factor
+        logical :: RK3
+
+        !Make name-list
+        namelist /time_parameters/ cfl_strictness, cfl_reduction_factor, RK3
+
+        !Set defaults
+        cfl_reduction_factor=  0.9
+        cfl_strictness      =  3
+        RK3 = .False.
+
+        !Read namelist file
+        open(io_newunit(name_unit), file=filename)
+        read(name_unit,nml=time_parameters)
+        close(name_unit)
+
+
+        !Store into options object
+        options%time_options%cfl_strictness = cfl_strictness
+        options%time_options%cfl_reduction_factor = cfl_reduction_factor
+        options%time_options%RK3 = RK3
+    end subroutine time_parameters_namelist
 
 
 end submodule

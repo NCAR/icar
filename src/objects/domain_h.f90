@@ -270,6 +270,9 @@ module domain_interface
 
     type(tendencies_type) :: tend
 
+    ! Array listing variables to advect with pointers to local data
+    type(var_dict_t) :: adv_vars
+
     type(var_dict_t) :: variables_to_force
 
     type(interpolable_type) :: geo
@@ -353,7 +356,7 @@ module domain_interface
     procedure :: halo_retrieve
     procedure :: halo_exchange
     procedure :: enforce_limits
-
+    procedure :: diagnostic_update
     procedure :: get_initial_conditions
     procedure :: interpolate_forcing
     procedure :: interpolate_external
@@ -381,6 +384,12 @@ module domain_interface
         class(domain_t),  intent(inout) :: this
         type(boundary_t), intent(inout) :: forcing
         type(boundary_t), intent(inout), optional :: external_conditions  ! external data such as SWE
+        type(options_t),  intent(in)    :: options
+    end subroutine
+
+    module subroutine diagnostic_update(this,options)
+        implicit none
+        class(domain_t),  intent(inout) :: this
         type(options_t),  intent(in)    :: options
     end subroutine
 

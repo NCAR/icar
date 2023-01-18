@@ -131,6 +131,7 @@ program icar
             if (this_image()==1) write(*,*) "Updating Boundary conditions"
             call boundary%update_forcing(options)
             call domain%interpolate_forcing(boundary, update=.True.)
+            call domain%diagnostic_update(options)
             call update_winds(domain, options)
 
             ! Make the boundary condition dXdt values into units of [X]/s
