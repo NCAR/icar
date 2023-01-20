@@ -345,7 +345,7 @@ contains
                 call convect(domain, options, real(dt%seconds()))!, halo=1)
                 if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" convect")
 
-                call mp(domain, options, real(dt%seconds()), halo=1)
+                call mp(domain, options, real(dt%seconds()), halo=domain%grid%halo_size)
                 if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" mp_halo", fix=.True.)
 
                 call domain%halo_send()
@@ -356,7 +356,7 @@ contains
                 ! call pbl(domain, options, real(dt%seconds()))!, subset=1)
                 ! call convect(domain, options, real(dt%seconds()), subset=1)
 
-                call mp(domain, options, real(dt%seconds()), subset=1)
+                call mp(domain, options, real(dt%seconds()), subset=domain%grid%halo_size)
                 if (options%parameters%debug) call domain_check(domain, "img: "//trim(str(this_image()))//" mp(domain", fix=.True.)
 
                 call domain%halo_retrieve()

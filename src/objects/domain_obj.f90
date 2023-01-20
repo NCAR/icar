@@ -1545,6 +1545,7 @@ contains
                   jms => this%jms,      jme => this%jme,                        &
                   kms => this%kms,      kme => this%kme,                        &
                   z                     => this%z%data_3d,                      &
+                  dz_i                  => this%dz_interface%data_3d,           &
                   global_jacobian       => this%global_jacobian,                &
                   jacobian              => this%jacobian,                       &
                   jacobian_u            => this%jacobian_u,                     &
@@ -1568,10 +1569,10 @@ contains
                                                 global_jacobian(this%ids:this%ide,:,this%jds:this%jde-1))/2
             jacobian_v = temp(ims:ime,:,jms:jme+1)
 
-            temp(this%ids:this%ide,this%kme,this%jds) = global_jacobian(this%ids:this%ide,this%kme,this%jds)
-            temp(this%ids:this%ide,this%kms:this%kme-1,this%jds:this%jde) = (global_jacobian(this%ids:this%ide,this%kms:this%kme-1,this%jds:this%jde) + &
-                                                                            global_jacobian(this%ids:this%ide,this%kms+1:this%kme,this%jds:this%jde))/2
-            jacobian_w = temp(ims:ime,:,jms:jme)
+            jacobian_w(:,this%kme,:) = jacobian(:,this%kme,:)
+            jacobian_w(:,this%kms:this%kme-1,:) = (dz_i(:,this%kms:this%kme-1,:)* jacobian(:,this%kms:this%kme-1,:) + &
+                                                   dz_i(:,this%kms+1:this%kme,:)* jacobian(:,this%kms+1:this%kme,:))/ &
+                                                                                (dz_i(:,this%kms:this%kme-1,:)+dz_i(:,this%kms+1:this%kme,:))
 
             call setup_dzdxy(this, options)
 
@@ -2380,7 +2381,7 @@ contains
         ny_global = size(temporary_data,2)
         nz_global = options%parameters%nz
 
-        halo_width = ceiling(max(options%adv_options%h_order,options%adv_options%v_order)/2.0)
+        halo_width = ceiling(options%adv_options%h_order/2.0)
         
         !If we are using the monotonic flux limiter, it is necesarry to calculate the fluxes one location deep into the
         !halo. Thus, we need one extra cell in each halo direction to support the finite difference stencil
