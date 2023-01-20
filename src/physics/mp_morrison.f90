@@ -89,15 +89,15 @@ MODULE MODULE_MP_MORR_TWO_MOMENT
    ! USE module_mp_radar
 
 ! USE WRF PHYSICS CONSTANTS taken from ICAR data_structures module
-  use data_structures, ONLY: CP, G=>gravity, R => Rd, RV => Rw, EP_2=>EP2
+  use mod_wrf_constants, ONLY: CP=>wrf_cp, G=>wrf_gravity, R => r_d, RV => r_v, EP_2
 !  USE module_state_description
 
    IMPLICIT NONE
+   PUBLIC  ::  MP_MORR_TWO_MOMENT, MORR_TWO_MOMENT_INIT
 
    REAL, PARAMETER :: PI = 3.1415926535897932384626434
    REAL, PARAMETER :: SQRTPI = 0.9189385332046727417803297
 
-   PUBLIC  ::  MP_MORR_TWO_MOMENT
    PUBLIC  ::  POLYSVP
 
    PRIVATE :: GAMMA, DERF1
@@ -554,7 +554,8 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
                 TH, QV, QC, QR, QI, QS, QG, NI, NS, NR, NG, &
                 RHO, PII, P, DT_IN, DZ, W,          &
                 RAINNC, RAINNCV, SR,                    &
-		SNOWNC,SNOWNCV,GRAUPELNC,GRAUPELNCV,    & ! hm added 7/13/13
+                SNOWNC,SNOWNCV,GRAUPELNC,GRAUPELNCV,    & ! hm added 7/13/13
+                EFFC, EFFI, EFFS,                       & ! particle radiuses for radiation
                 refl_10cm, diagflag, do_radar_ref,      & ! GT added for reflectivity calcs
                 qrcuten, qscuten, qicuten & ! mu           & ! hm added
 !               ,F_QNDROP, qndrop                        & ! hm added, wrf-chem
@@ -639,7 +640,7 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
 ! Temporary changed from INOUT to IN
 
    REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(INOUT):: &
-                          qv, qc, qr, qi, qs, qg, ni, ns, nr, TH, NG
+                          qv, qc, qr, qi, qs, qg, ni, ns, nr, TH, NG, EFFC, EFFI, EFFS
 !jdf                      qndrop ! hm added, wrf-chem
    ! REAL, DIMENSION(ims:ime, kms:kme, jms:jme), optional,INTENT(INOUT):: qndrop
 !jdf  REAL, DIMENSION(ims:ime, kms:kme, jms:jme),INTENT(INOUT):: CSED3D, &
@@ -666,10 +667,7 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
    ! LOCAL VARIABLES
 
    REAL, DIMENSION(its:ite, kts:kte, jts:jte)::                     &
-                      effi, effs, effr, EFFG
-
-   REAL, DIMENSION(its:ite, kts:kte, jts:jte)::                     &
-                      T, WVAR, EFFC
+                      T, WVAR, EFFR, EFFG
 
    REAL, DIMENSION(kts:kte) ::                                                                &
                             QC_TEND1D, QI_TEND1D, QNI_TEND1D, QR_TEND1D,                      &
@@ -776,7 +774,6 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
           QR1D(k)       = QR(i,k,j)
 
           NI1D(k)       = NI(i,k,j)
-
           NS1D(k)       = NS(i,k,j)
           NR1D(k)       = NR(i,k,j)
 ! HM ADD GRAUPEL
@@ -785,6 +782,10 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
           QG_TEND1D(K)  = 0.
           NG_TEND1D(K)  = 0.
 
+          EFFC1D(k)     = EFFC(i,k,j)
+          EFFS1D(k)     = EFFS(i,k,j)
+          EFFI1D(k)     = EFFI(i,k,j)
+          
           T1D(k)        = T(i,k,j)
           QV1D(k)       = QV(i,k,j)
           P1D(k)        = P(i,k,j)
@@ -878,6 +879,12 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
         !   IF ( PRESENT( PRECG ) ) PRECG(I,K,J) = GSED(K)
 ! EFFECTIVE RADIUS FOR RADIATION CODE (currently not coupled)
 ! HM, ADD LIMIT TO PREVENT BLOWING UP OPTICAL PROPERTIES, 8/18/07
+          EFFC(I,K,J)     = MIN(EFFC(I,K,J),50.)*1.E-6
+          EFFC(I,K,J)     = MAX(EFFC(I,K,J),2.5)*1.E-6
+          EFFI(I,K,J)     = MIN(EFFI(I,K,J),125.)*1.E-6
+          EFFI(I,K,J)     = MAX(EFFI(I,K,J),5.)*1.E-6
+          EFFS(I,K,J)     = MIN(EFFS(I,K,J),1000.)*1.E-6
+          EFFS(I,K,J)     = MAX(EFFS(I,K,J),10.)*1.E-6
 !          EFFCS(I,K,J)     = MIN(EFFC(I,K,J),50.)
 !          EFFCS(I,K,J)     = MAX(EFFCS(I,K,J),1.)
 !          EFFIS(I,K,J)     = MIN(EFFI(I,K,J),130.)
