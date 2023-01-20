@@ -222,7 +222,7 @@ contains
             enddo
             ! If we are doing a full calculation of divergence, and not just U+V differencing for balance_uvw, then divide by
             ! jacobian at the end
-            div = div/jaco
+            !div = div/jaco
         endif
 
     end subroutine calc_divergence
@@ -525,13 +525,9 @@ contains
 
         call allocate_winds(domain)
 
-        if (options%parameters%fixed_dz_advection) then
-            do i=domain%grid%kms, domain%grid%kme
-                domain%advection_dz(:,i,:) = options%parameters%dz_levels(i)
-            enddo
-        else
-            domain%advection_dz = domain%dz_interface%data_3d
-        endif
+        do i=domain%grid%kms, domain%grid%kme
+            domain%advection_dz(:,i,:) = options%parameters%dz_levels(i)
+        enddo
 
 
 
