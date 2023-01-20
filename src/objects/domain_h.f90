@@ -48,6 +48,16 @@ module domain_interface
     type(exchangeable_t) :: snow_number
     type(exchangeable_t) :: graupel_mass
     type(exchangeable_t) :: graupel_number
+    type(exchangeable_t) :: ice1_a
+    type(exchangeable_t) :: ice1_c
+    type(exchangeable_t) :: ice2_mass
+    type(exchangeable_t) :: ice2_number
+    type(exchangeable_t) :: ice2_a
+    type(exchangeable_t) :: ice2_c
+    type(exchangeable_t) :: ice3_mass
+    type(exchangeable_t) :: ice3_number
+    type(exchangeable_t) :: ice3_a
+    type(exchangeable_t) :: ice3_c
 
     ! other model variables (not advected)
     type(variable_t) :: exner
@@ -296,6 +306,9 @@ module domain_interface
     real,                       allocatable :: zr_v(:,:,:)
     real,                       allocatable :: dzdx(:,:,:) ! change in height with change in x/y position (used to calculate w_real vertical motions)
     real,                       allocatable :: dzdy(:,:,:) ! change in height with change in x/y position (used to calculate w_real vertical motions)
+    real,                       allocatable :: dzdx_u(:,:,:) ! change in height with change in x/y position on u-grid
+    real,                       allocatable :: dzdy_v(:,:,:) ! change in height with change in x/y position on v-grid
+
     ! BK 2020/05
     real,                       allocatable :: delta_dzdx(:,:,:) ! change in height difference (between hi and lo-res data) with change in x/y position (used to calculate w_real vertical motions)
     real,                       allocatable :: delta_dzdy(:,:,:) ! change in height difference (between hi and lo-res data) with change in x/y position (used to calculate w_real vertical motions)

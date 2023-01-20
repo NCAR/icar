@@ -31,13 +31,16 @@ module microphysics
     use mod_wrf_constants
     use module_mp_thompson_aer,     only: mp_gt_driver_aer, thompson_aer_init
     use module_mp_thompson,         only: mp_gt_driver, thompson_init
-    ! use module_mp_morr_two_moment,  only: MORR_TWO_MOMENT_INIT, MP_MORR_TWO_MOMENT
+    use MODULE_MP_MORR_TWO_MOMENT,  only: MORR_TWO_MOMENT_INIT, MP_MORR_TWO_MOMENT
     use module_mp_wsm6,             only: wsm6, wsm6init
     use module_mp_wsm3,             only: wsm3, wsm3init
     use module_mp_simple,           only: mp_simple_driver, mp_simple_var_request
+    use module_mp_jensen_ishmael,   only: mp_jensen_ishmael, jensen_ishmael_init
+
     use time_object,                only: Time_type
     use options_interface,          only: options_t
     use domain_interface,           only: domain_t
+    use wind,                       only: calc_w_real
 
     implicit none
 
@@ -81,25 +84,24 @@ contains
             if (this_image()==1) write(*,*) "    Thompson Microphysics"
             call thompson_init(options%mp_options)
             precip_delta=.True.
-
         elseif (options%physics%microphysics    == kMP_THOMP_AER) then
             if (this_image()==1) write(*,*) "    Thompson Eidhammer Microphysics"
             call thompson_aer_init()
             precip_delta=.True.
-
         elseif (options%physics%microphysics == kMP_SB04) then
             if (this_image()==1) write(*,*) "    Simple Microphysics"
             precip_delta=.True.
-        ! elseif (options%physics%microphysics==kMP_MORRISON) then
-        !     write(*,*) "    Morrison Microphysics"
-        !     call MORR_TWO_MOMENT_INIT(hail_opt=0)
-        !     precip_delta=.False.
-
+        elseif (options%physics%microphysics==kMP_MORRISON) then
+            if (this_image()==1) write(*,*) "    Morrison Microphysics"
+            call MORR_TWO_MOMENT_INIT(hail_opt=1)
+            precip_delta=.False.
+        elseif (options%physics%microphysics==kMP_ISHMAEL) then
+            if (this_image()==1) write(*,*) "    Jensen-Ischmael Microphysics"
+            call jensen_ishmael_init()
         elseif (options%physics%microphysics==kMP_WSM6) then
             if (this_image()==1) write(*,*) "    WSM6 Microphysics"
             call wsm6init(rhoair0,rhowater,rhosnow,cliq,cpv)
             precip_delta=.True.
-
         elseif (options%physics%microphysics==kMP_WSM3) then
             if (this_image()==1) write(*,*) "    WSM3 Microphysics"
             call wsm3init(rhoair0,rhowater,rhosnow,cliq,cpv, allowed_to_read=.True.)
@@ -171,6 +173,7 @@ contains
 
     end subroutine
 
+
     subroutine mp_wsm3_var_request(options)
         implicit none
         type(options_t), intent(inout) :: options
@@ -196,6 +199,74 @@ contains
 
     end subroutine
 
+    subroutine mp_ishmael_var_request(options)
+        implicit none
+        type(options_t), intent(inout) :: options
+
+        ! List the variables that are required to be allocated for the simple microphysics
+        call options%alloc_vars( &
+                     [kVARS%pressure,    kVARS%potential_temperature,   kVARS%exner,        kVARS%density, kVARS%w,     &
+                       kVARS%water_vapor, kVARS%cloud_water,  kVARS%rain_number_concentration, &
+                       kVARS%cloud_ice,   kVARS%rain_in_air,           kVARS%ice_number_concentration, kVARS%ice1_a, &
+                       kVARS%ice1_c, kVARS%ice2_mass, kVARS%ice2_number, kVARS%ice2_a, kVARS%ice2_c, &
+                       kVARS%ice3_mass, kVARS%ice3_number, kVARS%ice3_a, kVARS%ice3_c, &
+                       kVARS%snowfall,    kVARS%precipitation,  kVARS%dz,   kVARS%re_cloud, kVARS%re_ice, kVARS%re_snow    ])
+
+        ! List the variables that are required to be advected for the simple microphysics
+        call options%advect_vars( &
+                      [kVARS%potential_temperature, kVARS%water_vapor, kVARS%cloud_water,  kVARS%rain_number_concentration, &
+                       kVARS%cloud_ice,   kVARS%rain_in_air,           kVARS%ice_number_concentration, kVARS%ice1_a, &
+                       kVARS%ice1_c, kVARS%ice2_mass, kVARS%ice2_number, kVARS%ice2_a, kVARS%ice2_c, &
+                       kVARS%ice3_mass, kVARS%ice3_number, kVARS%ice3_a, kVARS%ice3_c] )
+
+        ! List the variables that are required to be allocated for the simple microphysics
+        call options%restart_vars( &
+                     [kVARS%pressure,    kVARS%potential_temperature,   kVARS%exner,        kVARS%density, kVARS%w,     &
+                       kVARS%water_vapor, kVARS%cloud_water,  kVARS%rain_number_concentration, &
+                       kVARS%cloud_ice,   kVARS%rain_in_air,           kVARS%ice_number_concentration, kVARS%ice1_a, &
+                       kVARS%ice1_c, kVARS%ice2_mass, kVARS%ice2_number, kVARS%ice2_a, kVARS%ice2_c, &
+                       kVARS%ice3_mass, kVARS%ice3_number, kVARS%ice3_a, kVARS%ice3_c, &
+                       kVARS%snowfall,    kVARS%precipitation,  kVARS%dz,   kVARS%re_cloud, kVARS%re_ice, kVARS%re_snow    ])
+
+
+
+    end subroutine
+
+    subroutine mp_morr_var_request(options)
+        implicit none
+        type(options_t), intent(inout) :: options
+
+        ! List the variables that are required to be allocated for the simple microphysics
+        call options%alloc_vars( &
+                     [kVARS%pressure,    kVARS%potential_temperature,   kVARS%exner,        kVARS%density,      &
+                      kVARS%water_vapor, kVARS%cloud_water,             kVARS%rain_in_air,  kVARS%rain_number_concentration, &
+                      kVARS%snow_in_air, kVARS%cloud_ice,               kVARS%w,            kVARS%ice_number_concentration,      &
+                      kVARS%snowfall,    kVARS%precipitation,           kVARS%graupel,      kVARS%graupel_in_air,     &
+                      kVARS%graupel_number_concentration, kVARS%snow_number_concentration, &
+                      kVARS%tend_qr, kVARS%tend_qs, kVARS%tend_qi, kVARS%dz,   &
+                      kVARS%re_cloud, kVARS%re_ice, kVARS%re_snow    ])
+
+        ! List the variables that are required to be advected for the simple microphysics
+        call options%advect_vars( &
+                      [kVARS%potential_temperature, kVARS%water_vapor, kVARS%cloud_water,  kVARS%rain_number_concentration, &
+                       kVARS%snow_in_air,           kVARS%cloud_ice,   &
+                       kVARS%rain_in_air,           kVARS%ice_number_concentration, kVARS%graupel_in_air, &
+                       kVARS%graupel_number_concentration, kVARS%snow_number_concentration] )
+
+        ! List the variables that are required to be allocated for the simple microphysics
+        call options%restart_vars( &
+                       [kVARS%pressure,     kVARS%potential_temperature,    kVARS%water_vapor,   &
+                        kVARS%cloud_water,  kVARS%rain_in_air,              kVARS%snow_in_air,   &
+                        kVARS%precipitation,kVARS%snowfall,                 kVARS%graupel,       &
+                        kVARS%dz,           kVARS%snow_in_air,              kVARS%cloud_ice,     &
+                        kVARS%rain_number_concentration, kVARS%rain_in_air,  &
+                        kVARS%ice_number_concentration,  kVARS%graupel_in_air, &
+                        kVARS%snow_number_concentration, kVARS%graupel_number_concentration, &
+                        kVARS%re_cloud, kVARS%re_ice, kVARS%re_snow   ] )
+
+
+
+    end subroutine
 
     subroutine mp_var_request(options)
         implicit none
@@ -203,19 +274,16 @@ contains
 
         if (options%physics%microphysics    == kMP_THOMPSON) then
             call mp_thompson_aer_var_request(options)
-
         elseif (options%physics%microphysics    == kMP_THOMP_AER) then
             call mp_thompson_aer_var_request(options)
-
         elseif (options%physics%microphysics == kMP_SB04) then
             call mp_simple_var_request(options)
-
         elseif (options%physics%microphysics==kMP_MORRISON) then
-            stop "Morrison physics not re-implemented yet"
-
+            call mp_morr_var_request(options)
+        elseif (options%physics%microphysics==kMP_ISHMAEL) then
+            call mp_ishmael_var_request(options)
         elseif (options%physics%microphysics==kMP_WSM6) then
             call mp_wsm6_var_request(options)
-
         elseif (options%physics%microphysics==kMP_WSM3) then
             call mp_wsm3_var_request(options)
 
@@ -411,6 +479,7 @@ contains
         precipitation = 0
         graupel = 0
         snowfall = 0
+        
         ! run the thompson microphysics
         if (options%physics%microphysics==kMP_THOMPSON) then
             ! call the thompson microphysics
@@ -456,8 +525,8 @@ contains
                                   qg = domain%graupel_mass%data_3d,                     &
                                   pii= domain%exner%data_3d,                            &
                                   p =  domain%pressure%data_3d,                         &
-                                  w =  domain%w%data_3d,                                &
-                                  dz = domain%dz_mass%data_3d,                          &
+                                  w =  domain%w_real%data_3d,                           &
+                                  dz = domain%dz_interface%data_3d,                     &
                                   dt_in = dt,                                           &
                                   RAINNC = precipitation,    &
                                   SNOWNC = snowfall,         &
@@ -497,24 +566,95 @@ contains
                                   jts = jts, jte = jte,                   &
                                   kts = kts, kte = kte)
 
-        ! elseif (options%physics%microphysics==kMP_MORRISON) then
-        !     call MP_MORR_TWO_MOMENT(itimestep,                         &
-        !                     domain%th, domain%qv, domain%cloud,     &
-        !                     domain%qrain, domain%ice, domain%qsnow, &
-        !                     domain%qgrau, domain%nice, domain%nsnow,&
-        !                     domain%nrain, domain%ngraupel,          &
-        !                     domain%rho, domain%pii, domain%p,       &
-        !                     mp_dt, domain%dz_inter, domain%w,       &
-        !                     domain%rain, last_rain, SR,             &
-        !                     domain%snow, last_snow, domain%graupel, &
-        !                     this_precip,                            & ! hm added 7/13/13
-        !                     refl_10cm, .False., 0,                  & ! GT added for reflectivity calcs
-        !                     domain%tend%qr, domain%tend%qs,         &
-        !                     domain%tend%qi                          &
-        !                    ,IDS,IDE, JDS,JDE, KDS,KDE               & ! domain dims
-        !                    ,IDS,IDE, JDS,JDE, KDS,KDE               & ! memory dims
-        !                    ,ITS,ITE, JTS,JTE, KTS,KTE               & ! tile   dims            )
-        !                )
+        elseif (options%physics%microphysics==kMP_MORRISON) then
+            call MP_MORR_TWO_MOMENT(ITIMESTEP = 1,                   &
+                             TH = domain%potential_temperature%data_3d,   &
+                             QV = domain%water_vapor%data_3d,             &
+                             QC = domain%cloud_water_mass%data_3d,        &
+                             QR = domain%rain_mass%data_3d,               &
+                             QI = domain%cloud_ice_mass%data_3d,          &
+                             QS = domain%snow_mass%data_3d,               &
+                             QG = domain%graupel_mass%data_3d,            &
+                             NI = domain%cloud_ice_number%data_3d,        &
+                             NS = domain%snow_number%data_3d,             &
+                             NR = domain%rain_number%data_3d,             &
+                             NG = domain%graupel_number%data_3d,          &
+                             RHO = domain%density%data_3d,                &
+                             PII = domain%exner%data_3d,                  &
+                             P = domain%pressure%data_3d,                 &
+                             DT_IN = dt, DZ = domain%dz_interface%data_3d,     &
+                             W = domain%w_real%data_3d,                        &
+                             RAINNC = precipitation, &
+                             RAINNCV = last_rain, SR=SR,                  &
+                             SNOWNC = snowfall,&
+                             SNOWNCV = last_snow,                         &
+                             GRAUPELNC = graupel,          &
+                             GRAUPELNCV = this_precip,                    & ! hm added 7/13/13
+                             EFFC = domain%re_cloud%data_3d,          &
+                             EFFI = domain%re_ice%data_3d,            &
+                             EFFS = domain%re_snow%data_3d,           &
+                             refl_10cm = refl_10cm, diagflag = .False.,   &
+                             do_radar_ref=0,                              & ! GT added for reflectivity calcs
+                             qrcuten=domain%tend%qr,                      &
+                             qscuten=domain%tend%qs,                      &
+                             qicuten=domain%tend%qi,                      &
+                             ids = ids, ide = ide,                   & ! domain dims
+                             jds = jds, jde = jde,                   &
+                             kds = kds, kde = kde,                   &
+                             ims = ims, ime = ime,                   & ! memory dims
+                             jms = jms, jme = jme,                   &
+                             kms = kms, kme = kme,                   &
+                             its = its, ite = ite,                   & ! tile dims
+                             jts = jts, jte = jte,                   &
+                             kts = kts, kte = kte)
+        elseif (options%physics%microphysics==kMP_ISHMAEL) then
+            call mp_jensen_ishmael(ITIMESTEP=1,                &  !*                                                                         
+                             DT_IN=dt,                           &  !*
+                             P=domain%pressure%data_3d,                                &  !*
+                             DZ=domain%dz_interface%data_3d,                            &  !* !
+                             TH= domain%potential_temperature%data_3d,                              &  !*
+                             QV = domain%water_vapor%data_3d,             &
+                             QC = domain%cloud_water_mass%data_3d,        &
+                             QR = domain%rain_mass%data_3d,               &
+                             NR = domain%rain_number%data_3d,             &
+                             QI1 = domain%cloud_ice_mass%data_3d,          &
+                             NI1 = domain%cloud_ice_number%data_3d,        &
+                             AI1 = domain%ice1_a%data_3d,                     &  !*
+                             CI1 = domain%ice1_c%data_3d,                     &  !*
+                             QI2 = domain%ice2_mass%data_3d,                     &  !*
+                             NI2 = domain%ice2_number%data_3d,                     &  !*
+                             AI2 = domain%ice2_a%data_3d,                     &  !*
+                             CI2 = domain%ice2_c%data_3d,                     &  !*
+                             QI3 = domain%ice3_mass%data_3d,                     &  !*
+                             NI3 = domain%ice3_number%data_3d,                     &  !*
+                             AI3 = domain%ice3_a%data_3d,                     &  !*
+                             CI3 = domain%ice3_c%data_3d,                     &  !*
+                             IDS=ids,IDE=ide, JDS=jds,JDE=jde, KDS=kds,KDE=kde, &
+                             IMS=ims,IME=ime, JMS=jms,JME=jme, KMS=kms,KME=kme, &
+                             ITS=its,ITE=ite, JTS=jts,JTE=jte, KTS=kts,KTE=kte, &
+                             RAINNC = precipitation, &
+                             RAINNCV = last_rain,                    &
+                             SNOWNC = snowfall,&
+                             SNOWNCV = last_snow,                         &
+                             diag_effc3d=domain%re_cloud%data_3d,               &
+                             diag_effi3d=domain%re_ice%data_3d                  &
+                             !diag_dbz3d=refl_10cm,               &
+                             !diag_vmi3d_1=vmi3d,                 &
+                             !diag_di3d_1=di3d,                   &
+                             !diag_rhopo3d_1=rhopo3d,             &
+                             !diag_phii3d_1=phii3d,               &
+                             !diag_vmi3d_2=vmi3d_2,               &
+                             !diag_di3d_2=di3d_2,                 &
+                             !diag_rhopo3d_2=rhopo3d_2,           &
+                             !diag_phii3d_2=phii3d_2,             &
+                             !diag_vmi3d_3=vmi3d_3,               &
+                             !diag_di3d_3=di3d_3,                 &
+                             !diag_rhopo3d_3=rhopo3d_3,           &
+                             !diag_phii3d_3=phii3d_3,             &
+                             !diag_itype_1=itype,                 &
+                             !diag_itype_2=itype_2,               &
+                             !diag_itype_3=itype_3                &
+                             )
         elseif (options%physics%microphysics==kMP_WSM6) then
             call wsm6(q = domain%water_vapor%data_3d,                      &
                               th = domain%potential_temperature%data_3d,            &
@@ -525,7 +665,7 @@ contains
                               qg = domain%graupel_mass%data_3d,                     &
                               pii= domain%exner%data_3d,                            &
                               p =  domain%pressure%data_3d,                         &
-                              delz = domain%dz_mass%data_3d,                          &
+                              delz = domain%dz_interface%data_3d,                          &
                               den = domain%density%data_3d,                   &
                               delt = dt,                                           &
                               g = gravity,                                          &
@@ -706,12 +846,7 @@ contains
             ! calculate the actual time step for the microphysics
             mp_dt = domain%model_time%seconds()-last_model_time
 
-            ! reset the counter so we know that *this* is the last time we've run the microphysics
-            ! NOTE, ONLY reset this when running the inner subset... ideally probably need a separate counter for the halo and subset
-            if (.not.present(halo)) then
-                last_model_time = domain%model_time%seconds()
-            endif
-
+            
             ! If we are going to distribute the current precip over a few grid cells, we need to keep track of
             ! the last_precip so we know how much fell
             ! if (options%mp_options%local_precip_fraction<1) then
@@ -724,8 +859,19 @@ contains
                 kte = min(kte, options%mp_options%top_mp_level)
             endif
 
-
+            ! reset the counter so we know that *this* is the last time we've run the microphysics
+            ! NOTE, ONLY reset this when running the inner subset... ideally probably need a separate counter for the halo and subset
+            !last_model_time = domain%model_time%seconds()
             if (present(subset)) then
+                last_model_time = domain%model_time%seconds()
+                call calc_w_real(domain% u %data_3d,      &
+                             domain% v %data_3d,      &
+                             domain% w %data_3d,      &
+                             domain% w_real %data_3d,      &
+                             domain%dzdx_u, domain%dzdy_v,    &
+                             domain%jacobian_w,domain%ims,domain%ime,domain%kms,domain%kme,&
+                             domain%jms,domain%jme,domain%its,domain%ite,domain%jts,domain%jte)
+                             
                 call process_subdomain(domain, options, mp_dt,                 &
                                        its = its + subset, ite = ite - subset, &
                                        jts = jts + subset, jte = jte - subset, &
@@ -739,6 +885,14 @@ contains
             endif
 
             if (present(halo)) then
+                call calc_w_real(domain% u %data_3d,      &
+                             domain% v %data_3d,      &
+                             domain% w %data_3d,      &
+                             domain% w_real %data_3d,      &
+                             domain%dzdx_u, domain%dzdy_v,    &
+                             domain%jacobian_w,domain%ims,domain%ime,domain%kms,domain%kme,&
+                             domain%jms,domain%jme,domain%its,domain%ite,domain%jts,domain%jte)
+                             
                 call process_halo(domain, options, mp_dt, halo, &
                                        its = its, ite = ite,    &
                                        jts = jts, jte = jte,    &
@@ -753,7 +907,15 @@ contains
             endif
 
             if ((.not.present(halo)).and.(.not.present(subset))) then
-
+                last_model_time = domain%model_time%seconds()
+                call calc_w_real(domain% u %data_3d,      &
+                             domain% v %data_3d,      &
+                             domain% w %data_3d,      &
+                             domain% w_real %data_3d,      &
+                             domain%dzdx_u, domain%dzdy_v,    &
+                             domain%jacobian_w,domain%ims,domain%ime,domain%kms,domain%kme,&
+                             domain%jms,domain%jme,domain%its,domain%ite,domain%jts,domain%jte)
+                             
                 call process_subdomain(domain, options, mp_dt,  &
                                         its = its, ite = ite,    &
                                         jts = jts, jte = jte,    &

@@ -71,6 +71,16 @@ contains
         if (options%vars_to_advect(kVARS%rain_number_concentration)>0) call this%adv_vars%add_var('nr', this%rain_number%meta_data)      
         if (options%vars_to_advect(kVARS%snow_number_concentration)>0) call this%adv_vars%add_var('ns', this%snow_number%meta_data)      
         if (options%vars_to_advect(kVARS%graupel_number_concentration)>0) call this%adv_vars%add_var('ng', this%graupel_number%meta_data)   
+        if (options%vars_to_advect(kVARS%ice1_a)>0) call this%adv_vars%add_var('ice1_a', this%ice1_a%meta_data)   
+        if (options%vars_to_advect(kVARS%ice1_c)>0) call this%adv_vars%add_var('ice1_c', this%ice1_c%meta_data)   
+        if (options%vars_to_advect(kVARS%ice2_mass)>0) call this%adv_vars%add_var('ice2_mass', this%ice2_mass%meta_data)   
+        if (options%vars_to_advect(kVARS%ice2_number)>0) call this%adv_vars%add_var('ice2_number', this%ice2_number%meta_data)   
+        if (options%vars_to_advect(kVARS%ice2_a)>0) call this%adv_vars%add_var('ice2_a', this%ice2_a%meta_data)   
+        if (options%vars_to_advect(kVARS%ice2_c)>0) call this%adv_vars%add_var('ice2_c', this%ice2_c%meta_data)   
+        if (options%vars_to_advect(kVARS%ice3_mass)>0) call this%adv_vars%add_var('ice3_mass', this%ice3_mass%meta_data)   
+        if (options%vars_to_advect(kVARS%ice3_number)>0) call this%adv_vars%add_var('ice3_number', this%ice3_number%meta_data)   
+        if (options%vars_to_advect(kVARS%ice3_a)>0) call this%adv_vars%add_var('ice3_a', this%ice3_a%meta_data)   
+        if (options%vars_to_advect(kVARS%ice3_c)>0) call this%adv_vars%add_var('ice3_c', this%ice3_c%meta_data)   
     end subroutine set_var_lists
 
     !> -------------------------------
@@ -272,7 +282,16 @@ contains
       if (associated(this%snow_number%data_3d))           call this%snow_number%send()
       if (associated(this%graupel_mass%data_3d))          call this%graupel_mass%send()
       if (associated(this%graupel_number%data_3d))        call this%graupel_number%send()
-
+      if (associated(this%ice1_a%data_3d))                call this%ice1_a%send()
+      if (associated(this%ice1_c%data_3d))                call this%ice1_c%send()
+      if (associated(this%ice2_mass%data_3d))             call this%ice2_mass%send()
+      if (associated(this%ice2_number%data_3d))           call this%ice2_number%send()
+      if (associated(this%ice2_a%data_3d))                call this%ice2_a%send()
+      if (associated(this%ice2_c%data_3d))                call this%ice2_c%send()
+      if (associated(this%ice3_mass%data_3d))             call this%ice3_mass%send()
+      if (associated(this%ice3_number%data_3d))           call this%ice3_number%send()
+      if (associated(this%ice3_a%data_3d))                call this%ice3_a%send()
+      if (associated(this%ice3_c%data_3d))                call this%ice3_c%send()
     end subroutine
 
     !> -------------------------------
@@ -293,6 +312,16 @@ contains
       if (associated(this%snow_number%data_3d))           call this%snow_number%retrieve(no_sync=.True.)
       if (associated(this%graupel_mass%data_3d))          call this%graupel_mass%retrieve(no_sync=.True.)
       if (associated(this%graupel_number%data_3d))        call this%graupel_number%retrieve(no_sync=.True.)
+      if (associated(this%ice1_a%data_3d))                call this%ice1_a%retrieve(no_sync=.True.)
+      if (associated(this%ice1_c%data_3d))                call this%ice1_c%retrieve(no_sync=.True.)
+      if (associated(this%ice2_mass%data_3d))             call this%ice2_mass%retrieve(no_sync=.True.)
+      if (associated(this%ice2_number%data_3d))           call this%ice2_number%retrieve(no_sync=.True.)
+      if (associated(this%ice2_a%data_3d))                call this%ice2_a%retrieve(no_sync=.True.)
+      if (associated(this%ice2_c%data_3d))                call this%ice2_c%retrieve(no_sync=.True.)
+      if (associated(this%ice3_mass%data_3d))             call this%ice3_mass%retrieve(no_sync=.True.)
+      if (associated(this%ice3_number%data_3d))           call this%ice3_number%retrieve(no_sync=.True.)
+      if (associated(this%ice3_a%data_3d))                call this%ice3_a%retrieve(no_sync=.True.)
+      if (associated(this%ice3_c%data_3d))                call this%ice3_c%retrieve(no_sync=.True.)
     end subroutine
 
     !> -------------------------------
@@ -337,15 +366,25 @@ contains
         if (0<opt%vars_to_allocate( kVARS%water_vapor) )                call setup(this%water_vapor,              this%grid,     forcing_var=opt%parameters%qvvar,      list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%potential_temperature) )      call setup(this%potential_temperature,    this%grid,     forcing_var=opt%parameters%tvar,       list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%cloud_water) )                call setup(this%cloud_water_mass,         this%grid,     forcing_var=opt%parameters%qcvar,      list=this%variables_to_force, force_boundaries=.True.)
-        if (0<opt%vars_to_allocate( kVARS%cloud_number_concentration))  call setup(this%cloud_number,             this%grid )
+        if (0<opt%vars_to_allocate( kVARS%cloud_number_concentration))  call setup(this%cloud_number,             this%grid,     forcing_var=opt%parameters%qncvar,      list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%cloud_ice) )                  call setup(this%cloud_ice_mass,           this%grid,     forcing_var=opt%parameters%qivar,      list=this%variables_to_force, force_boundaries=.True.)
-        if (0<opt%vars_to_allocate( kVARS%ice_number_concentration))    call setup(this%cloud_ice_number,         this%grid )
+        if (0<opt%vars_to_allocate( kVARS%ice_number_concentration))    call setup(this%cloud_ice_number,         this%grid,     forcing_var=opt%parameters%qnivar,      list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%rain_in_air) )                call setup(this%rain_mass,                this%grid,     forcing_var=opt%parameters%qrvar,      list=this%variables_to_force, force_boundaries=.True.)
-        if (0<opt%vars_to_allocate( kVARS%rain_number_concentration))   call setup(this%rain_number,              this%grid )
+        if (0<opt%vars_to_allocate( kVARS%rain_number_concentration))   call setup(this%rain_number,              this%grid,     forcing_var=opt%parameters%qnrvar,      list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%snow_in_air) )                call setup(this%snow_mass,                this%grid,     forcing_var=opt%parameters%qsvar,      list=this%variables_to_force, force_boundaries=.True.)
-        if (0<opt%vars_to_allocate( kVARS%snow_number_concentration) )  call setup(this%snow_number,              this%grid )
+        if (0<opt%vars_to_allocate( kVARS%snow_number_concentration) )  call setup(this%snow_number,              this%grid,     forcing_var=opt%parameters%qnsvar,      list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%graupel_in_air) )             call setup(this%graupel_mass,             this%grid,     forcing_var=opt%parameters%qgvar,      list=this%variables_to_force, force_boundaries=.True.)
-        if (0<opt%vars_to_allocate( kVARS%graupel_number_concentration))call setup(this%graupel_number,           this%grid )
+        if (0<opt%vars_to_allocate( kVARS%graupel_number_concentration))call setup(this%graupel_number,           this%grid,     forcing_var=opt%parameters%qngvar,      list=this%variables_to_force, force_boundaries=.True.)
+        if (0<opt%vars_to_allocate( kVARS%ice1_a))                      call setup(this%ice1_a,           this%grid,     forcing_var=opt%parameters%i1avar,      list=this%variables_to_force, force_boundaries=.True.)
+        if (0<opt%vars_to_allocate( kVARS%ice1_c))                      call setup(this%ice1_c,           this%grid,     forcing_var=opt%parameters%i1cvar,      list=this%variables_to_force, force_boundaries=.True.)
+        if (0<opt%vars_to_allocate( kVARS%ice2_mass))                   call setup(this%ice2_mass,        this%grid,     forcing_var=opt%parameters%i2mvar,      list=this%variables_to_force, force_boundaries=.True.)
+        if (0<opt%vars_to_allocate( kVARS%ice2_number))                 call setup(this%ice2_number,      this%grid,     forcing_var=opt%parameters%i2nvar,      list=this%variables_to_force, force_boundaries=.True.)
+        if (0<opt%vars_to_allocate( kVARS%ice2_a))                      call setup(this%ice2_a,           this%grid,     forcing_var=opt%parameters%i2avar,      list=this%variables_to_force, force_boundaries=.True.)
+        if (0<opt%vars_to_allocate( kVARS%ice2_c))                      call setup(this%ice2_c,           this%grid,     forcing_var=opt%parameters%i2cvar,      list=this%variables_to_force, force_boundaries=.True.)
+        if (0<opt%vars_to_allocate( kVARS%ice3_mass))                   call setup(this%ice3_mass,        this%grid,     forcing_var=opt%parameters%i3mvar,      list=this%variables_to_force, force_boundaries=.True.)
+        if (0<opt%vars_to_allocate( kVARS%ice3_number))                 call setup(this%ice3_number,      this%grid,     forcing_var=opt%parameters%i3nvar,      list=this%variables_to_force, force_boundaries=.True.)
+        if (0<opt%vars_to_allocate( kVARS%ice3_a))                      call setup(this%ice3_a,           this%grid,     forcing_var=opt%parameters%i3avar,      list=this%variables_to_force, force_boundaries=.True.)
+        if (0<opt%vars_to_allocate( kVARS%ice3_c))                      call setup(this%ice3_c,           this%grid,     forcing_var=opt%parameters%i3cvar,      list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%precipitation) )              call setup(this%accumulated_precipitation,this%grid2d, dtype=kDOUBLE )
         if (0<opt%vars_to_allocate( kVARS%convective_precipitation) )   call setup(this%accumulated_convective_pcp,this%grid2d )
         if (0<opt%vars_to_allocate( kVARS%external_precipitation) )     call setup(this%external_precipitation,   this%grid2d,   forcing_var=opt%parameters%rain_var,  list=this%variables_to_force)
@@ -1042,12 +1081,19 @@ contains
         allocate(this%jacobian_w(this% ims : this% ime, &
                                     this% kms : this% kme, &
                                     this% jms : this% jme) )
-
-        allocate(this%dzdx(this% ims : this% ime+1, &
+        allocate(this%dzdx(this% ims : this% ime, &
                            this% kms : this% kme, &
                            this% jms : this% jme) )
 
         allocate(this%dzdy(this% ims : this% ime, &
+                           this% kms : this% kme, &
+                           this% jms : this% jme) )
+
+        allocate(this%dzdx_u(this% ims : this% ime+1, &
+                           this% kms : this% kme, &
+                           this% jms : this% jme) )
+
+        allocate(this%dzdy_v(this% ims : this% ime, &
                            this% kms : this% kme, &
                            this% jms : this% jme+1) )
 
@@ -1581,11 +1627,40 @@ contains
         global_dzdx = 0
         global_dzdy = 0
 
-        global_dzdx(this%ids+1:this%ide,:,:) = (global_z(this%ids+1:this%ide,:,:) - global_z(this%ids:this%ide-1,:,:)) / this%dx
-        global_dzdy(:,:,this%jds+1:this%jde) = (global_z(:,:,this%jds+1:this%jde) - global_z(:,:,this%jds:this%jde-1)) / this%dx
+        !For dzdx
+        global_dzdx(this%ids+1:this%ide-1,:,:) = (global_z(this%ids+2:this%ide,:,:) - &
+                                                           global_z(this%ids:this%ide-2,:,:))/(2*this%dx)
 
-        this%dzdx(:,:,:) = global_dzdx(this%ims:this%ime+1,:,this%jms:this%jme)
-        this%dzdy(:,:,:) = global_dzdy(this%ims:this%ime,:,this%jms:this%jme+1)
+        global_dzdx(this%ids,:,:) = (-3*global_z(this%ids,:,:) + &
+                                          4*global_z(this%ids+1,:,:) - global_z(this%ids+2,:,:)) / (2*this%dx)
+
+        global_dzdx(this%ide,:,:) = (3*global_z(this%ide,:,:) - &
+                                         4*global_z(this%ide-1,:,:) + global_z(this%ide-2,:,:)) / (2*this%dx)
+        this%dzdx(:,:,:) = global_dzdx(this%ims:this%ime,:,this%jms:this%jme)
+
+
+        global_dzdx(this%ids+1:this%ide,:,:) = (global_dzdx(this%ids+1:this%ide,:,:) + global_dzdx(this%ids:this%ide-1,:,:))/2.0
+        global_dzdx(this%ids,:,:) = global_dzdx(this%ids+1,:,:)
+        global_dzdx(this%ide+1,:,:) = global_dzdx(this%ide,:,:)
+
+        this%dzdx_u(:,:,:) = global_dzdx(this%ims:this%ime+1,:,this%jms:this%jme)
+
+        !For dzdy
+        global_dzdy(:,:,this%jds+1:this%jde-1) = (global_z(:,:,this%jds+2:this%jde) - &
+                                                           global_z(:,:,this%jds:this%jde-2))/(2*this%dx)
+        global_dzdy(:,:,this%jds) = (-3*global_z(:,:,this%jms) + &
+                                          4*global_z(:,:,this%jms+1) - global_z(:,:,this%jms+2)) / (2*this%dx)
+
+        global_dzdy(:,:,this%jde) = (3*global_z(:,:,this%jde) - &
+                                         4*global_z(:,:,this%jde-1) + global_z(:,:,this%jde-2)) / (2*this%dx)
+        this%dzdy(:,:,:) = global_dzdy(this%ims:this%ime,:,this%jms:this%jme)
+
+        global_dzdy(:,:,this%jds+1:this%jde) = (global_dzdy(:,:,this%jds+1:this%jde) + global_dzdy(:,:,this%jds:this%jde-1))/2.0
+        global_dzdy(:,:,this%jds) = global_dzdy(:,:,this%jds+1)
+        global_dzdy(:,:,this%jde+1) = global_dzdy(:,:,this%jde)
+
+        this%dzdy_v(:,:,:) = global_dzdy(this%ims:this%ime,:,this%jms:this%jme+1)
+
 
         deallocate(global_z)
         deallocate(global_dzdx)
@@ -2393,6 +2468,16 @@ contains
       if (associated(this%snow_number%data_3d)           ) where(this%snow_number%data_3d < 0)             this%snow_number%data_3d = 0
       if (associated(this%graupel_mass%data_3d)          ) where(this%graupel_mass%data_3d < 0)            this%graupel_mass%data_3d = 0
       if (associated(this%graupel_number%data_3d)        ) where(this%graupel_number%data_3d < 0)          this%graupel_number%data_3d = 0
+      if (associated(this%ice1_a%data_3d)                ) where(this%ice1_a%data_3d < 0)                  this%ice1_a%data_3d = 0
+      if (associated(this%ice1_c%data_3d)                ) where(this%ice1_c%data_3d < 0)                  this%ice1_c%data_3d = 0
+      if (associated(this%ice2_mass%data_3d)             ) where(this%ice2_mass%data_3d < 0)               this%ice2_mass%data_3d = 0
+      if (associated(this%ice2_number%data_3d)           ) where(this%ice2_number%data_3d < 0)             this%ice2_number%data_3d = 0
+      if (associated(this%ice2_a%data_3d)                ) where(this%ice2_a%data_3d < 0)                  this%ice2_a%data_3d = 0
+      if (associated(this%ice2_c%data_3d)                ) where(this%ice2_c%data_3d < 0)                  this%ice2_c%data_3d = 0
+      if (associated(this%ice3_mass%data_3d)             ) where(this%ice3_mass%data_3d < 0)               this%ice3_mass%data_3d = 0
+      if (associated(this%ice3_number%data_3d)           ) where(this%ice3_number%data_3d < 0)             this%ice3_number%data_3d = 0
+      if (associated(this%ice3_a%data_3d)                ) where(this%ice3_a%data_3d < 0)                  this%ice3_a%data_3d = 0
+      if (associated(this%ice3_c%data_3d)                ) where(this%ice3_c%data_3d < 0)                  this%ice3_c%data_3d = 0
 
     end subroutine
 
