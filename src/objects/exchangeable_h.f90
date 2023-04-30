@@ -48,7 +48,6 @@ module exchangeable_interface
   end type
 
   integer, parameter :: space_dim=3
-  integer, parameter :: uv_comm_n_times=2
 
   interface
 
