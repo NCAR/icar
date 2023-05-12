@@ -24,6 +24,7 @@ module exchangeable_interface
     logical :: east_boundary=.false.
     logical :: west_boundary=.false.
     integer :: dtype=kREAL
+    integer :: halo_size
 
   contains
     private
@@ -34,6 +35,7 @@ module exchangeable_interface
     procedure, public :: exchange
     procedure, public :: exchange_u
     procedure, public :: exchange_v
+    procedure, public :: exchange_directional_sync
     procedure, public :: set_outputdata
     generic,   public :: initialize=>const
 
@@ -96,6 +98,11 @@ module exchangeable_interface
     module subroutine exchange_v(this)
       implicit none
       class(exchangeable_t), intent(inout) :: this
+    end subroutine
+
+    module subroutine exchange_directional_sync(this)
+        implicit none
+        class(exchangeable_t), intent(inout) :: this
     end subroutine
 
     module subroutine put_north(this)
