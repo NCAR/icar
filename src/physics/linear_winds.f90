@@ -978,7 +978,10 @@ contains
 
         ! smooth array has it's own parallelization, so this probably can't go in a critical section
         if (smooth_nsq) then
-            call smooth_array(nsquared, winsz, ydim=3)
+            domain%smooth_nsquared%data_3d(ims:ime,:,jms:jme) = nsquared(:,:,:)
+            call domain%smooth_nsquared%exchange_directional_sync()
+            call smooth_array(domain%smooth_nsquared%data_3d, winsz, ydim=3)
+            nsquared(:,:,:) = domain%smooth_nsquared%data_3d(ims:ime,:,jms:jme)
         endif
 
         !$omp parallel firstprivate(ims, ime, jms, jme, ims_u, ime_u, jms_v, jme_v, kms, kme, nx,nxu,ny,nyv,nz), &
