@@ -2167,7 +2167,7 @@ contains
         call this%v_grid%set_grid_dimensions(       nx_global, ny_global, nz_global, ny_extra = 1)
 
         call this%grid_smooth_nsquared%set_grid_dimensions(nx_global, ny_global, nz_global, &
-             halo_width = (nsmooth+2)*2)
+             halo_width = options%lt_options%stability_window_size )
 
         ! for 2D mass variables
         call this%grid2d%set_grid_dimensions(       nx_global, ny_global, 0)
