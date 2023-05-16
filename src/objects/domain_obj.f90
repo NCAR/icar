@@ -182,6 +182,7 @@ contains
         if (0<opt%vars_to_allocate( kVARS%w) )                          call setup(this%w,                        this%grid )
         if (0<opt%vars_to_allocate( kVARS%w) )                          call setup(this%w_real,                   this%grid )
         if (0<opt%vars_to_allocate( kVARS%nsquared) )                   call setup(this%nsquared,                 this%grid )
+        if (0<opt%vars_to_allocate( kVARS%nsquared) )                   call setup(this%smooth_nsquared,          this%grid_smooth_nsquared)
         if (0<opt%vars_to_allocate( kVARS%water_vapor) )                call setup(this%water_vapor,              this%grid,     forcing_var=opt%parameters%qvvar,      list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%potential_temperature) )      call setup(this%potential_temperature,    this%grid,     forcing_var=opt%parameters%tvar,       list=this%variables_to_force, force_boundaries=.True.)
         if (0<opt%vars_to_allocate( kVARS%cloud_water) )                call setup(this%cloud_water_mass,         this%grid,     forcing_var=opt%parameters%qcvar,      list=this%variables_to_force, force_boundaries=.True.)
@@ -2164,6 +2165,9 @@ contains
 
         call this%u_grid%set_grid_dimensions(       nx_global, ny_global, nz_global, nx_extra = 1)
         call this%v_grid%set_grid_dimensions(       nx_global, ny_global, nz_global, ny_extra = 1)
+
+        call this%grid_smooth_nsquared%set_grid_dimensions(nx_global, ny_global, nz_global, &
+             halo_width = options%lt_options%stability_window_size )
 
         ! for 2D mass variables
         call this%grid2d%set_grid_dimensions(       nx_global, ny_global, 0)

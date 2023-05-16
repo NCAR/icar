@@ -24,6 +24,7 @@ module domain_interface
     type(grid_t)         :: grid_snow, grid_snowsoil
     type(grid_t)         :: grid_soilcomp, grid_gecros, grid_croptype
     type(grid_t)         :: grid_lake , grid_lake_soisno, grid_lake_soi, grid_lake_soisno_1
+    type(grid_t)         :: grid_smooth_nsquared
 
     type(Time_type) :: model_time
 
@@ -60,6 +61,7 @@ module domain_interface
     type(variable_t) :: z_interface
     type(variable_t) :: dz_mass
     type(variable_t) :: nsquared
+    type(exchangeable_t) :: smooth_nsquared
     type(variable_t) :: graupel
     type(variable_t) :: accumulated_precipitation
     integer,allocatable :: precipitation_bucket(:,:)

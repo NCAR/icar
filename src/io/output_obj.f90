@@ -1,5 +1,5 @@
 submodule(output_interface) output_implementation
-    use icar_constants,     only : kREAL, kDOUBLE
+    ! use icar_constants,     only : kREAL, kDOUBLE ! these are included in output_interface already
     use output_metadata,    only : get_metadata
     use time_io,            only : get_output_time
     implicit none
@@ -303,6 +303,10 @@ contains
         call check( nf90_put_att(ncid,NF90_GLOBAL,"Conventions","CF-1.6"), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"title","Intermediate Complexity Atmospheric Research (ICAR) model output"), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"institution","National Center for Atmospheric Research"), trim(err))
+        ! initialize todays_date_time variable before use as attribute
+        call date_and_time(values=date_time,zone=UTCoffset)
+        date_format='(I4,"/",I2.2,"/",I2.2," ",I2.2,":",I2.2,":",I2.2)'
+        write(todays_date_time,date_format) date_time(1:3),date_time(5:7)
         call check( nf90_put_att(ncid,NF90_GLOBAL,"history","Created:"//todays_date_time//UTCoffset), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"references", &
                     "Gutmann et al. 2016: The Intermediate Complexity Atmospheric Model (ICAR). J.Hydrometeor. doi:10.1175/JHM-D-15-0155.1, 2016."), trim(err))
@@ -319,11 +323,6 @@ contains
             enddo
         endif
 
-        call date_and_time(values=date_time,zone=UTCoffset)
-        date_format='(I4,"/",I2.2,"/",I2.2," ",I2.2,":",I2.2,":",I2.2)'
-        write(todays_date_time,date_format) date_time(1:3),date_time(5:7)
-
-        call check(nf90_put_att(this%ncfile_id, NF90_GLOBAL,"history","Created:"//todays_date_time//UTCoffset), "global attr")
         call check(nf90_put_att(this%ncfile_id, NF90_GLOBAL, "image", this_image()))
 
     end subroutine add_global_attributes

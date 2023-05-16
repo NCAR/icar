@@ -3,7 +3,6 @@ submodule(exchangeable_interface) exchangeable_implementation
   implicit none
 
   ! these are all global for a given image, so we save them in the module instead of in the individual objects
-  integer, save :: halo_size
   integer, save :: north_neighbor, south_neighbor
   integer, save :: east_neighbor, west_neighbor
   integer, save, allocatable :: neighbors(:)
@@ -16,10 +15,10 @@ contains
     type(variable_t),                intent(in),    optional :: metadata
     character(len=kMAX_NAME_LENGTH), intent(in),    optional :: forcing_var
 
-    integer :: err
+    integer :: err, halo_size
 
-    halo_size = grid%halo_size
-
+    this%halo_size = grid%halo_size
+    halo_size = this%halo_size
 
     this%north_boundary = (grid%yimg == grid%yimages)
     this%south_boundary = (grid%yimg == 1)
@@ -163,9 +162,13 @@ contains
 
   module subroutine exchange_v(this)
     class(exchangeable_t), intent(inout) :: this
-    integer :: n, nx, start
+
+    integer :: n, nx, start, halo_size
+    halo_size = this%halo_size
     !When exchanging for the v-field, we want a full exchange in the y-direction,
     ! and an exchange in the x-direction of just the outer-most values
+    !Performing north/south communication before east/west so corner halo
+    !  region from diagonal neighbor is communicated
 
     if (.not. this%north_boundary) then
         n = ubound(this%data_3d,3)
@@ -177,39 +180,53 @@ contains
         nx = size(this%data_3d,1)
         this%halo_north_in(1:nx,:,1:halo_size)[south_neighbor] = this%data_3d(:,:,start+halo_size+1:start+halo_size*2)
     endif
-    if (.not. this%east_boundary)  call this%put_east
-    if (.not. this%west_boundary)  call this%put_west
 
     sync images( neighbors )
 
     if (.not. this%north_boundary) call this%retrieve_north_halo
-
     if (.not. this%south_boundary) then
         start = lbound(this%data_3d,3)
         nx = size(this%data_3d,1)
         this%data_3d(:,:,start:start+halo_size) = this%halo_south_in(:nx,:,1:halo_size+1)
     endif
 
+    sync images( neighbors )
+
+    if (.not. this%east_boundary)  call this%put_east
+    if (.not. this%west_boundary)  call this%put_west
+
+    sync images( neighbors )
+
     if (.not. this%east_boundary) call this%retrieve_east_halo
     if (.not. this%west_boundary) call this%retrieve_west_halo
-
+    sync images( neighbors )
   end subroutine
 
   module subroutine exchange_u(this)
     class(exchangeable_t), intent(inout) :: this
-    integer :: n, ny, start
+
+    integer :: n, ny, start, halo_size
+    halo_size = this%halo_size
     !When exchanging for the u-field, we want a full exchange in the x-direction,
     ! and an exchange in the y-direction of just the outer-most values
+    !Performing north/south communication before east/west so corner halo
+    !  region from diagonal neighbor is communicated
 
     if (.not. this%north_boundary)  call this%put_north
     if (.not. this%south_boundary)  call this%put_south
+
+    sync images( neighbors )
+
+    if (.not. this%north_boundary) call this%retrieve_north_halo
+    if (.not. this%south_boundary) call this%retrieve_south_halo
+
+    sync images( neighbors )
 
     if (.not. this%east_boundary) then
         n = ubound(this%data_3d,1)
         ny = size(this%data_3d,3)
         this%halo_west_in(1:halo_size+1,:,1:ny)[east_neighbor] = this%data_3d(n-(halo_size)*2:n-(halo_size),:,:)
     endif
-
     if (.not. this%west_boundary) then
         start = lbound(this%data_3d,1)
         ny = size(this%data_3d,3)
@@ -218,17 +235,14 @@ contains
 
     sync images( neighbors )
 
-    if (.not. this%north_boundary) call this%retrieve_north_halo
-    if (.not. this%south_boundary) call this%retrieve_south_halo
     if (.not. this%east_boundary) call this%retrieve_east_halo
-
     if (.not. this%west_boundary)  then
         start = lbound(this%data_3d,1)
         ny = size(this%data_3d,3)
         this%data_3d(start:start+halo_size,:,:) = this%halo_west_in(1:halo_size+1,:,1:ny)
     endif
 
-
+    sync images( neighbors )
   end subroutine
 
   module subroutine exchange(this)
@@ -246,12 +260,32 @@ contains
     if (.not. this%west_boundary)  call this%retrieve_west_halo
   end subroutine
 
+  ! exchange north/south boundaries before exchanging east/west
+  module subroutine exchange_directional_sync(this)
+    class(exchangeable_t), intent(inout) :: this
+    if (.not. this%north_boundary) call this%put_north
+    if (.not. this%south_boundary) call this%put_south
+    sync images( neighbors )
+    if (.not. this%north_boundary) call this%retrieve_north_halo
+    if (.not. this%south_boundary) call this%retrieve_south_halo
+
+    sync images( neighbors ) ! north/south complete, perform east/west
+
+    if (.not. this%east_boundary)  call this%put_east
+    if (.not. this%west_boundary)  call this%put_west
+    sync images( neighbors )
+    if (.not. this%east_boundary)  call this%retrieve_east_halo
+    if (.not. this%west_boundary)  call this%retrieve_west_halo
+
+  end subroutine
+
   module subroutine put_north(this)
       class(exchangeable_t), intent(inout) :: this
-      integer :: n, nx
+
+      integer :: n, nx, halo_size
       n = ubound(this%data_3d,3)
       nx = size(this%data_3d,1)
-
+      halo_size = this%halo_size
       ! if (assertions) then
       !   !! gfortran 6.3.0 doesn't check coarray shape conformity with -fcheck=all so we verify with an assertion
       !   call assert( shape(this%halo_south_in(:nx,:,1:halo_size)[north_neighbor]) &
@@ -266,10 +300,10 @@ contains
   module subroutine put_south(this)
       class(exchangeable_t), intent(inout) :: this
 
-      integer :: start, nx
+      integer :: start, nx, halo_size
       start = lbound(this%data_3d,3)
       nx = size(this%data_3d,1)
-
+      halo_size = this%halo_size
       ! if (assertions) then
       !   ! gfortran 6.3.0 doesn't check coarray shape conformity with -fcheck=all so we verify with an assertion
       !   call assert( shape(this%halo_north_in(:nx,:,1:halo_size)[south_neighbor]) &
@@ -283,9 +317,10 @@ contains
   module subroutine retrieve_north_halo(this)
       class(exchangeable_t), intent(inout) :: this
 
-      integer :: n, nx
+      integer :: n, nx, halo_size
       n = ubound(this%data_3d,3)
       nx = size(this%data_3d,1)
+      halo_size = this%halo_size
 
       this%data_3d(:,:,n-halo_size+1:n) = this%halo_north_in(:nx,:,1:halo_size)
   end subroutine
@@ -293,19 +328,21 @@ contains
   module subroutine retrieve_south_halo(this)
       class(exchangeable_t), intent(inout) :: this
 
-      integer :: start, nx
+      integer :: start, nx, halo_size
       start = lbound(this%data_3d,3)
       nx = size(this%data_3d,1)
+      halo_size = this%halo_size
 
       this%data_3d(:,:,start:start+halo_size-1) = this%halo_south_in(:nx,:,1:halo_size)
   end subroutine
 
   module subroutine put_east(this)
       class(exchangeable_t), intent(inout) :: this
-      integer :: n, ny
+
+      integer :: n, ny, halo_size
       n = ubound(this%data_3d,1)
       ny = size(this%data_3d,3)
-
+      halo_size = this%halo_size
       ! if (assertions) then
       !   !! gfortran 6.3.0 doesn't check coarray shape conformity with -fcheck=all so we verify with an assertion
       !   call assert( shape(this%halo_west_in(1:halo_size,:,:ny)[east_neighbor])       &
@@ -320,10 +357,10 @@ contains
   module subroutine put_west(this)
       class(exchangeable_t), intent(inout) :: this
 
-      integer :: start, ny
+      integer :: start, ny, halo_size
       start = lbound(this%data_3d,1)
       ny = size(this%data_3d,3)
-
+      halo_size = this%halo_size
       ! if (assertions) then
       !   !! gfortran 6.3.0 doesn't check coarray shape conformity with -fcheck=all so we verify with an assertion
       !   call assert( shape(this%halo_east_in(1:halo_size,:,:ny)[west_neighbor])               &
@@ -338,9 +375,10 @@ contains
   module subroutine retrieve_east_halo(this)
       class(exchangeable_t), intent(inout) :: this
 
-      integer :: n, ny
+      integer :: n, ny, halo_size
       n = ubound(this%data_3d,1)
       ny = size(this%data_3d,3)
+      halo_size = this%halo_size
 
       this%data_3d(n-halo_size+1:n,:,:) = this%halo_east_in(1:halo_size,:,1:ny)
   end subroutine
@@ -348,9 +386,10 @@ contains
   module subroutine retrieve_west_halo(this)
       class(exchangeable_t), intent(inout) :: this
 
-      integer :: start, ny
+      integer :: start, ny, halo_size
       start = lbound(this%data_3d,1)
       ny = size(this%data_3d,3)
+      halo_size = this%halo_size
 
       this%data_3d(start:start+halo_size-1,:,:) = this%halo_west_in(1:halo_size,:,1:ny)
   end subroutine
