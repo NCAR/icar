@@ -1016,9 +1016,8 @@ contains
             ! ( Although an argument could be made to calculate this on the offset (u/v) grid b/c that is most
             !   relevant for advection? In reality this is probably a sufficient approximation, as long as we
             !   aren't pushing the gamma factor too close to zero )
-            ! allocate(gamma_n(this%kds : this%kde+1))
-            allocate(gamma_n(this%kms : max_level))  ! max_level +1 maybe??
-            ! if (options%parameters%debug .and. this_image()==1) write(*,*) " gamma_n: ", gamma_n
+            allocate(gamma_n(this%kms : max_level))  
+
 
             i=kms
             gamma_n(i) =  1                                                     &
@@ -1055,7 +1054,6 @@ contains
                 write(*,*) "    Smooth height is ", smooth_height, "m.a.s.l     (model top ", sum(dz(1:nz)), "m.a.s.l.)"
                 write(*,*) "    invertibility parameter gamma is: ", gamma_min
                 if(gamma_min <= 0) write(*,*) " CAUTION: coordinate transformation is not invertible (gamma <= 0 ) !!! reduce decay rate(s), and/or increase flat_z_height!"
-                ! if(options%parameters%debug)  write(*,*) "   (for (debugging) reference: 'gamma(n=1)'= ", gamma,")"
                 write(*,*) ""
             endif
 
@@ -1130,15 +1128,15 @@ contains
 
                     endif
 
-                    warn_threshold_dz=0.75
+                    warn_threshold_dz=0.75  !  Maybe this should search for dz/dx < threshold in the future?
                     if ( ANY(dz_interface(:,i,:)<0) ) then   ! Eror catching. Probably good to engage.
-                    if (this_image()==1) then
-                        write(*,*) "Error: dz_interface below zero (for level  ",i,")"
-                        write(*,*)  "min max dz_interface: ",MINVAL(dz_interface(:,i,:)),MAXVAL(dz_interface(:,i,:))
-                        error stop
-                    endif
+                        if (this_image()==1) then
+                            write(*,*) "Error: dz_interface below zero (for level  ",i,")"
+                            write(*,*)  "min max dz_interface: ",MINVAL(dz_interface(:,i,:)),MAXVAL(dz_interface(:,i,:))
+                            error stop
+                        endif
                     else if ( ANY(global_dz_interface(:,i,:)<=warn_threshold_dz) ) then
-                    if (this_image()==1)  write(*,*) "WARNING: dz_interface below ", warn_threshold_dz, "m (at level ",i,")"
+                        if (this_image()==1)  write(*,*) "WARNING: dz_interface below ", warn_threshold_dz, "m (at level ",i,")"
                     endif
 
                     ! - - - - -   u/v grid calculations - - - - -

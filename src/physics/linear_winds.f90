@@ -335,8 +335,6 @@ contains
 
         do while (current_z < end_z)
 
-            ! if (this_image()==1) write(*,*) "      current_z, end_z, step_size:", current_z, end_z, step_size
-
             call linear_perturbation_at_height(U,V,Nsq,current_z, fourier_terrain, lt_data)
 
             layer_fraction = max(0.0,                                                                                       &
@@ -752,7 +750,6 @@ contains
                         call linear_perturbation(u, v, exp(nsq_values(j)),                                                                      &
                                                  domain%global_z_interface(:,z,:) - domain%global_terrain,                                      &   ! z_bottom
                                                  domain%global_z_interface(:,z,:) - domain%global_terrain + domain%global_dz_interface(:,z,:),  &   ! z_top
-                                                !  domain%global_z_interface(:,z+1,:) - domain%global_terrain ,  &   ! z_top : Maybe this is a better definition?? should be the same...
                                                  minimum_layer_size, domain%terrain_frequency, lt_data_m)
 
                     else
