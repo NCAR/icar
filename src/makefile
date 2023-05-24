@@ -211,7 +211,7 @@ ifeq ($(MODE), debugslow)
 		LINK=
 	endif
 	ifeq ($(COMPILER), cray)
-		COMP=-h noomp -c -g -h develop -m 0 -R bcsp -M 399 -hfp0
+		COMP=-h noomp -c -g -h develop -m 0 -R csp -M 399 -hfp0
 		LINK=-h noomp
 		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
@@ -244,7 +244,7 @@ ifeq ($(MODE), debugompslow)
 		LINK= -fopenmp -lgomp
 	endif
 	ifeq ($(COMPILER), cray)
-		COMP=-c -g -m 0 -h develop -R bcsp -M 399 -hfp0
+		COMP=-c -g -m 0 -h develop -R csp -M 399 -hfp0
 		LINK=
 		PREPROC=-eZ
 		MODOUTPUT=-e m -J $(BUILD)
