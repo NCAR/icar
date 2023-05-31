@@ -4,6 +4,8 @@ import argparse
 import numpy as np
 
 from bunch import Bunch
+import sys
+sys.path.append('../lib') # required to find mygis.py. Update as required.
 import mygis
 
 import io_routines as io
