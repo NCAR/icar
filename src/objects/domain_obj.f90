@@ -959,7 +959,7 @@ contains
 
         real, allocatable :: temp(:,:,:), gamma_n(:)
         integer :: i, max_level
-        real :: s, n, s1, s2, gamma, gamma_min
+        real :: s, n, s1, s2, gamma, gamma_min, warn_threshold_dz
         logical :: SLEVE
 
         associate(ims => this%ims,      ime => this%ime,                        &
@@ -1016,20 +1016,25 @@ contains
             ! ( Although an argument could be made to calculate this on the offset (u/v) grid b/c that is most
             !   relevant for advection? In reality this is probably a sufficient approximation, as long as we
             !   aren't pushing the gamma factor too close to zero )
-            allocate(gamma_n(this%kds : this%kde+1))
+            allocate(gamma_n(this%kms : max_level))  
+
+
             i=kms
             gamma_n(i) =  1                                                     &
                 - MAXVAL(h1) * n/(s1**n)                                        &
                 * COSH((smooth_height/s1)**n) / SINH((smooth_height/s1)**n)     &
                 - MAXVAL(h2) * n/(s2**n)                                        &
                 * COSH((smooth_height/s2)**n) / SINH((smooth_height/s2)**n)
+            if (options%parameters%debug .and. this_image()==1) write(*,*) " k, gamma: ", i, gamma_n(i)
 
-            do i = this%grid%kds, this%grid%kde
+            ! do i = this%grid%kds, this%grid%kde 
+            do i = this%grid%kms, max_level-1 ! account for flat z < 0, otherwise gamma can blow up if flat z < 0.
                 gamma_n(i+1)  =  1                                    &    ! # for i != kds !!
                 - MAXVAL(h1) * n/(s1**n) * sum(dz_scl(1:i))**(n-1)                                             &
                 * COSH((smooth_height/s1)**n -(sum(dz_scl(1:i))/s1)**n ) / SINH((smooth_height/s1)**n)    &
                 - MAXVAL(h2) * n/(s2**n) *  sum(dz_scl(1:i))**(n-1)                                            &
                 * COSH((smooth_height/s2)**n -(sum(dz_scl(1:i))/s2)**n ) / SINH((smooth_height/s2)**n)
+                ! if (options%parameters%debug .and. this_image()==1) write(*,*) " k, gamma: ", i, gamma_n(i)
             enddo
 
             if (n==1) then
@@ -1049,7 +1054,6 @@ contains
                 write(*,*) "    Smooth height is ", smooth_height, "m.a.s.l     (model top ", sum(dz(1:nz)), "m.a.s.l.)"
                 write(*,*) "    invertibility parameter gamma is: ", gamma_min
                 if(gamma_min <= 0) write(*,*) " CAUTION: coordinate transformation is not invertible (gamma <= 0 ) !!! reduce decay rate(s), and/or increase flat_z_height!"
-                ! if(options%parameters%debug)  write(*,*) "   (for (debugging) reference: 'gamma(n=1)'= ", gamma,")"
                 write(*,*) ""
             endif
 
@@ -1124,14 +1128,15 @@ contains
 
                     endif
 
+                    warn_threshold_dz=0.75  !  Maybe this should search for dz/dx < threshold in the future?
                     if ( ANY(dz_interface(:,i,:)<0) ) then   ! Eror catching. Probably good to engage.
-                    if (this_image()==1) then
-                        write(*,*) "Error: dz_interface below zero (for level  ",i,")"
-                        write(*,*)  "min max dz_interface: ",MINVAL(dz_interface(:,i,:)),MAXVAL(dz_interface(:,i,:))
-                        error stop
-                    endif
-                    else if ( ANY(global_dz_interface(:,i,:)<=0.01) ) then
-                    if (this_image()==1)  write(*,*) "WARNING: dz_interface very low (at level ",i,")"
+                        if (this_image()==1) then
+                            write(*,*) "Error: dz_interface below zero (for level  ",i,")"
+                            write(*,*)  "min max dz_interface: ",MINVAL(dz_interface(:,i,:)),MAXVAL(dz_interface(:,i,:))
+                            error stop
+                        endif
+                    else if ( ANY(global_dz_interface(:,i,:)<=warn_threshold_dz) ) then
+                        if (this_image()==1)  write(*,*) "WARNING: dz_interface below ", warn_threshold_dz, "m (at level ",i,")"
                     endif
 
                     ! - - - - -   u/v grid calculations - - - - -
@@ -1325,7 +1330,7 @@ contains
         call allocate_z_arrays(this)
 
         ! Setup the vertical grid structure, either as a SLEVE coordinate, or a more 'simple' vertical structure:
-        if (options%parameters%sleve) then
+        if (options%parameters%sleve .and. options%parameters%space_varying_dz ) then
 
             call split_topography(this, options)  ! here h1 and h2 are calculated
             call setup_sleve(this, options)
