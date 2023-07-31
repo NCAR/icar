@@ -4,7 +4,7 @@ submodule(options_interface) options_implementation
                                            kNO_STOCHASTIC, kVERSION_STRING, kMAX_FILE_LENGTH, kMAX_NAME_LENGTH, pi, &
                                            kWATER_LAKE, &
                                            kWIND_LINEAR, kLINEAR_ITERATIVE_WINDS, kITERATIVE_WINDS, kCONSERVE_MASS
-    use io_routines,                only : io_newunit
+    use io_routines,                only : io_newunit, check_writeable_path
     use time_io,                    only : find_timestep_in_file
     use time_delta_object,          only : time_delta_t
     use time_object,                only : Time_type
@@ -510,7 +510,7 @@ contains
         restart_file = get_image_filename(this_image(), restart_file, restart_time)
         restart_step = find_timestep_in_file(restart_file, 'time', restart_time, time_at_step)
 
-        ! check to see if we actually udpated the restart date and print if in a more verbose mode
+        ! check to see if we actually updated the restart date and print if in a more verbose mode
         if (options%debug) then
             if (restart_time /= time_at_step) then
                 if (this_image()==1) write(*,*) " updated restart date: ", trim(time_at_step%as_string())
@@ -702,9 +702,12 @@ contains
             options%restart_count = max(24, nint(restartinterval))
         endif
 
+        ! check if directory paths to output and restart file strings exist
+        ! stop and report error if they do not rather than failing at write step
+        call check_writeable_path(output_file)
+        call check_writeable_path(restart_file)
         options%output_file = output_file
         options%restart_file = restart_file
-
 
     end subroutine output_namelist
 
