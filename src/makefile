@@ -745,7 +745,7 @@ $(BUILD)pbl_utilities.o:$(UTIL)pbl_utilities.f90 $(BUILD)icar_constants.o 	\
 #	I/O routines
 ###################################################################
 
-$(BUILD)io_routines.o:$(IO)io_routines.f90 $(BUILD)data_structures.o
+$(BUILD)io_routines.o:$(IO)io_routines.f90 $(BUILD)data_structures.o $(BUILD)icar_constants.o
 
 $(BUILD)lt_lut_io.o: $(IO)lt_lut_io.f90 $(BUILD)data_structures.o $(BUILD)io_routines.o \
 				$(BUILD)string.o $(BUILD)opt_types.o $(BUILD)icar_constants.o
