@@ -1619,4 +1619,28 @@ contains
         if (present(unit)) unit=io_newunit
     end function io_newunit
 
+    !>------------------------------------------------------------
+    !! Checks if path exists from filename string
+    !!
+    !! If directory does not exist print error message and stop program
+    !!
+    !! @param filename string of path to write output/restart files to
+    !!
+    !!------------------------------------------------------------
+    subroutine check_writeable_path(filename)
+        use icar_constants, only : kMAX_FILE_LENGTH
+        implicit none
+        character(len=kMAX_FILE_LENGTH), intent(in) :: filename
+        character(len=kMAX_FILE_LENGTH) :: dir_path
+        integer :: dir_separator
+        logical :: dir_exists
+        dir_separator = index(filename, '/', back=.true.)
+        if (dir_separator > 0) then
+            dir_path = filename(1:dir_separator)
+            inquire(file=dir_path, exist=dir_exists)
+            if (dir_exists .eqv. .false.) then
+               stop "Following directory does not exist to write to: " // dir_path
+            end if
+         end if
+    end subroutine check_writeable_path
 end module io_routines
