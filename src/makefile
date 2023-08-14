@@ -136,6 +136,9 @@ ifndef COMPILER
 	ifeq ($(F90),ifort)
 		COMPILER=intel
 	endif
+	ifeq ($(F90),ifx)
+		COMPILER=intel
+	endif
 	ifeq ($(F90),ftn)
 		COMPILER=cray
 	endif
@@ -203,7 +206,7 @@ endif
 # Various compiling options.  Set the MODE variable with "make MODE=debugslow" etc.
 ifeq ($(MODE), debugslow)
 	ifeq ($(COMPILER), intel)
-		COMP= -debug -debug-parameters all -traceback -ftrapuv -g -fpe0 -c -u -check all -check noarg_temp_created -CB
+		COMP= -debug -O0 -debug-parameters all -traceback -ftrapuv -g -fpe0 -c -u -check all -check noarg_temp_created -CB
 		LINK=
 	endif
 	ifeq ($(COMPILER), gnu)
@@ -334,6 +337,7 @@ $(info $$FFTW_PATH   = ${FFTW_PATH})
 $(info $$NCDF_PATH   = ${NCDF_PATH})
 $(info $$GIT_VERSION = ${GIT_VERSION})
 $(info $$COMP        = ${COMP})
+$(info $$CAF_FLAG    = ${CAF_FLAG})
 $(info $$LINK        = ${LINK})
 $(info $$MODE        = ${MODE})
 

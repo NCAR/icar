@@ -16,7 +16,8 @@ submodule(domain_interface) domain_implementation
     use io_routines,          only : io_read, io_write
     use geo,                  only : geo_lut, geo_interp, geo_interp2d, standardize_coordinates
     use array_utilities,      only : array_offset_x, array_offset_y, smooth_array, make_2d_x, make_2d_y
-    use vertical_interpolation,only : vinterp, vLUT
+    use vertical_interpolation,only: vinterp, vLUT
+    use variable_interface,   only : variable_t
 
     implicit none
 
@@ -1016,7 +1017,7 @@ contains
             ! ( Although an argument could be made to calculate this on the offset (u/v) grid b/c that is most
             !   relevant for advection? In reality this is probably a sufficient approximation, as long as we
             !   aren't pushing the gamma factor too close to zero )
-            allocate(gamma_n(this%kms : max_level))  
+            allocate(gamma_n(this%kms : max_level))
 
 
             i=kms
@@ -1027,7 +1028,7 @@ contains
                 * COSH((smooth_height/s2)**n) / SINH((smooth_height/s2)**n)
             if (options%parameters%debug .and. this_image()==1) write(*,*) " k, gamma: ", i, gamma_n(i)
 
-            ! do i = this%grid%kds, this%grid%kde 
+            ! do i = this%grid%kds, this%grid%kde
             do i = this%grid%kms, max_level-1 ! account for flat z < 0, otherwise gamma can blow up if flat z < 0.
                 gamma_n(i+1)  =  1                                    &    ! # for i != kds !!
                 - MAXVAL(h1) * n/(s1**n) * sum(dz_scl(1:i))**(n-1)                                             &
