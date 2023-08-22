@@ -1,8 +1,9 @@
 site_name: ICAR
-pages:
+nav:
 - Home: index.md
 - Compiling: compiling.md
-- Running: running.md
+- Running: running/running.md
+- Settings Documentation: running/settings_documentation.md
 - Developing: developing.md
 - Errors: errors.md
 theme: readthedocs
