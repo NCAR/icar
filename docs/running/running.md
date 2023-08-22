@@ -69,3 +69,28 @@ LONG    = Longitude on ICAR mass grid               (degrees)
 [SOIL]  = Soil type classification for land surface model
 ```
 Must be in a (nearly) constant dx,dy projection (e.g. Lambert Conformal Conic)
+
+
+### Derecho System Specifics
+In the following examples one Derecho node is used with 128 processes.
+See [instructions](../compiling.md#derecho-system-specifics) for compiling ICAR on Derecho and the list of modules to use.
+#### Cray Compiler
+``` bash
+mpiexec -np 128 ./icar icar_options.nml
+```
+
+#### GNU Compiler
+``` bash
+cafrun -n 128 ./icar icar_options.nml
+```
+
+#### Intel Compilers
+##### Classic
+``` bash
+FOR_COARRAY_NUM_IMAGES=128 ./icar icar_options.nml
+```
+
+##### OneAPI
+``` bash
+FOR_COARRAY_NUM_IMAGES=128 ./icar icar_options.nml
+```
