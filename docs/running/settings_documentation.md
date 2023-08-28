@@ -1,6 +1,6 @@
 ## ICAR settings file documentation
 
-Reading the comments in the run/short_icar_options.nml or run/complete_icar_options.nml files may be some of the best documentation available.
+Reading the comments in the [run/short_icar_options.nml](https://github.com/NCAR/icar/blob/main/run/short_icar_options.nml) or [run/complete_icar_options.nml](https://github.com/NCAR/icar/blob/main/run/complete_icar_options.nml) files may be some of the best documentation available.
 
 ### Main Namelists
 __REQUIRED__:
