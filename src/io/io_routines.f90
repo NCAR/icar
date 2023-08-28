@@ -186,7 +186,7 @@ contains
         implicit none
         ! This is the name of the data_in file and variable we will read.
         character(len=*),  intent(in)  :: filename, varname
-        real, allocatable, intent(inout) :: data_in(:,:,:,:,:,:)[:]
+        real, allocatable, intent(inout) :: data_in(:,:,:,:,:,:)
         integer, optional, intent(in)  :: extradim
 
         integer, dimension(io_maxDims)  :: diminfo !will hold dimension lengths
@@ -205,7 +205,7 @@ contains
         call io_getdims(filename,varname,diminfo)
 
         if (allocated(data_in)) deallocate(data_in)
-        allocate(data_in(diminfo(2),diminfo(3),diminfo(4),diminfo(5),diminfo(6),diminfo(7))[*])
+        allocate(data_in(diminfo(2),diminfo(3),diminfo(4),diminfo(5),diminfo(6),diminfo(7)))
 
         ! Open the file. NF90_NOWRITE tells netCDF we want read-only access to the file.
         call check(nf90_open(filename, NF90_NOWRITE, ncid),filename)
