@@ -8,7 +8,7 @@ ICAR is a simplified atmospheric model designed primarily for climate downscalin
 
 In ICAR 2.0 (currently early alpha), ICAR supports parallelization across hundreds of computing nodes (the basic physics have been shown to scale up to nearly 100,000 processors) using coarray fortran. This version of the code has a significant overhaul of the original code base, and as a result not all functionality has been restored yet.
 
-Documentation is (slowly) being built on [readthedocs](http://icar.readthedocs.org/en/develop/) and doxygen based documentation can be built now by running "make doc", and is available through [github-pages](http://NCAR.github.io/icar).
+Documentation is (slowly) being built on [readthedocs](http://icar.readthedocs.org/en/latest/) and doxygen based documentation can be built now by running "make doc", and is available through [github-pages](http://NCAR.github.io/icar).
 
 #### Requirements
 To run the model 3D time-varying atmospheric data are required, though an ideal test case can be generated for simple simulations as well.  See "Running the Model" below. There are some sample python scripts to help make input forcing files, but the WRF pre-processing system can also be used.  Low-resolution WRF output files can be used directly, various reanalysis and GCM output files can be used with minimal pre-processing (just get all the variables in the same netcdf file.)  In addition, a high-resolution netCDF topography file is required.  This will define the grid that ICAR will run on.  Finally and ICAR options file is used to specify various parameters for the model.  A sample options file is provided in the run/ directory.

@@ -1,10 +1,16 @@
 site_name: ICAR
 nav:
-- Home: index.md
-- Compiling: compiling.md
-- Running: running/running.md
-- Settings Documentation: running/settings_documentation.md
-- Developing: developing.md
-- Errors: errors.md
+  - Home: index.md
+  - ICAR Code Overview: icar_code_overview.md
+  - Compiling: compiling.md
+  - Running: running/running.md
+  - Settings Documentation: running/settings_documentation.md
+  - Developing: developing.md
+  - Errors: errors.md
+  - FAQ: FAQ.md
+  - How To:
+    - Build MkDocs: howto/build_mkdocs.md
+    - ICAR and Git: howto/icar_and_git_howto.md
+    - ICAR Git Workflow: howto/icar_git_workflow.md
 theme: readthedocs
-google_analytics: ['UA-108421993-4', 'icar.readthedocs.org']
+# google_analytics: ['UA-108421993-4', 'icar.readthedocs.org']
