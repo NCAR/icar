@@ -1554,6 +1554,9 @@ contains
                 endif
             endif
 
+            ! check if directory paths to LUT file strings exist, if not fails before write step
+            call check_writeable_path(u_LUT_Filename)
+            call check_writeable_path(v_LUT_Filename)
             opt%u_LUT_Filename = u_LUT_Filename
             opt%v_LUT_Filename = v_LUT_Filename
             opt%overwrite_lt_lut = overwrite_lt_lut
