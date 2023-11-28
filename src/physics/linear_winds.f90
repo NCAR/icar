@@ -90,7 +90,9 @@ module linear_theory_winds
     !! Linear wind look up table values and tables
     real, allocatable,          dimension(:)           :: dir_values, nsq_values, spd_values
     ! Look Up Tables for linear perturbation are nspd x n_dir_values x n_nsq_values x nx x nz x ny
-    real, allocatable,          dimension(:,:,:,:,:,:) :: hi_u_LUT[:], hi_v_LUT[:] !, rev_u_LUT, rev_v_LUT
+    real, allocatable,          dimension(:,:,:,:,:,:) :: hi_u_LUT, hi_v_LUT
+    real, allocatable,          dimension(:,:,:) :: hi_u_LUT_co[:], hi_v_LUT_co[:]
+    integer, allocatable,       dimension(:,:) :: LUT_index_co[:]
     ! real, pointer,              dimension(:,:,:,:,:,:) :: u_LUT, v_LUT
     real, allocatable,          dimension(:,:)         :: linear_mask, nsq_calibration
 
@@ -574,28 +576,50 @@ contains
 
     end subroutine setup_remote_grids
 
-    subroutine copy_data_to_remote(wind, grids, LUT, i,j,k, z)
+    subroutine copy_data_to_remote(wind, grids, LUT, LUT_co, LUT_index_co, i, j, k, z)
         implicit none
         real,           intent(in)  :: wind(:,:)
         type(grid_t),   intent(in)  :: grids(:)
-        real,           intent(inout):: LUT(:,:,:,:,:,:)[*]
-        integer,        intent(in)  :: i,j,k, z
+        real,           intent(inout):: LUT(:,:,:,:,:,:)
+        real,           intent(inout):: LUT_co(:,:,:)[*]
+        integer,        intent(inout):: LUT_index_co(:,:)[*]
+        integer,        intent(in)  :: i, j, k, z
+        integer :: img, LUT_i, LUT_j, LUT_k, LUT_z
 
-        integer :: img
-
+        ! each image will communicate the wind values it has calculated for an ijkz
+        ! location to the other images, the ijkz values are also sent so the receiving
+        ! images know where to put the incoming values
         do img = 1, num_images()
             associate(ims => grids(img)%ims, &
                       ime => grids(img)%ime, &
                       jms => grids(img)%jms, &
                       jme => grids(img)%jme  &
                 )
-            !$omp critical
-            LUT(k,i,j, 1:ime-ims+1, z, 1:jme-jms+1)[img] = wind(ims:ime,jms:jme)
-            !$omp end critical
+            LUT_co(1:ime-ims+1, 1:jme-jms+1, this_image())[img] = wind(ims:ime,jms:jme)
 
-            end associate
+            LUT_index_co(this_image(), 1)[img] = i
+            LUT_index_co(this_image(), 2)[img] = j
+            LUT_index_co(this_image(), 3)[img] = k
+            LUT_index_co(this_image(), 4)[img] = z
+           end associate
         enddo
 
+        sync all
+
+        associate(ims => grids(this_image())%ims, &
+                  ime => grids(this_image())%ime, &
+                  jms => grids(this_image())%jms, &
+                  jme => grids(this_image())%jme  &
+            )
+            do img = 1, num_images()
+                LUT_i = LUT_index_co(img, 1)
+                LUT_j = LUT_index_co(img, 2)
+                LUT_k = LUT_index_co(img, 3)
+                LUT_z = LUT_index_co(img, 4)
+                LUT(LUT_k, LUT_i, LUT_j, 1:ime-ims+1, LUT_z, 1:jme-jms+1) = LUT_co(1:ime-ims+1, 1:jme-jms+1, img)
+            end do
+        end associate
+        sync all
     end subroutine copy_data_to_remote
 
     !>----------------------------------------------------------
@@ -670,8 +694,11 @@ contains
 
         ! Allocate the (LARGE) look up tables for both U and V
         if (.not.options%lt_options%read_LUT) then
-            allocate(hi_u_LUT(n_spd_values, n_dir_values, n_nsq_values, nxu, nz, ny)[*], source=0.0)
-            allocate(hi_v_LUT(n_spd_values, n_dir_values, n_nsq_values, nx,  nz, nyv)[*], source=0.0)
+            allocate(hi_u_LUT(n_spd_values, n_dir_values, n_nsq_values, nxu, nz, ny), source=0.0)
+            allocate(hi_v_LUT(n_spd_values, n_dir_values, n_nsq_values, nx,  nz, nyv), source=0.0)
+            allocate(hi_u_LUT_co(nxu, ny, num_images())[*], source=0.0)
+            allocate(hi_v_LUT_co(nx, nyv, num_images())[*], source=0.0)
+            allocate(LUT_index_co(num_images(), 4)[*], source=0)
             error=0
         else
             if (this_image()==1) write(*,*) "    Reading LUT from file: ", trim(LUT_file)
@@ -680,10 +707,18 @@ contains
             if (error/=0) then
                 if (this_image()==1) write(*,*) "WARNING: LUT on disk does not match that specified in the namelist or does not exist."
                 if (this_image()==1) write(*,*) "    LUT will be recreated"
+
+                if (allocated(hi_u_LUT_co)) deallocate(hi_u_LUT_co)
+                allocate(hi_u_LUT_co(nxu, ny, num_images())[*], source=0.0)
+                if (allocated(hi_v_LUT_co)) deallocate(hi_v_LUT_co)
+                allocate(hi_v_LUT_co(nx, nyv, num_images())[*], source=0.0)
+
+                if (allocated(LUT_index_co)) deallocate(LUT_index_co)
+                allocate(LUT_index_co(num_images(), 4)[*], source=0)
                 if (allocated(hi_u_LUT)) deallocate(hi_u_LUT)
-                allocate(hi_u_LUT(n_spd_values, n_dir_values, n_nsq_values, nxu, nz, ny)[*], source=0.0)
+                allocate(hi_u_LUT(n_spd_values, n_dir_values, n_nsq_values, nxu, nz, ny), source=0.0)
                 if (allocated(hi_v_LUT)) deallocate(hi_v_LUT)
-                allocate(hi_v_LUT(n_spd_values, n_dir_values, n_nsq_values, nx,  nz, nyv)[*], source=0.0)
+                allocate(hi_v_LUT(n_spd_values, n_dir_values, n_nsq_values, nx,  nz, nyv), source=0.0)
             endif
         endif
 
@@ -693,7 +728,6 @@ contains
         if (this_image()==1) write(*,*) "Directions:",360*dir_values/(2*pi)
         if (this_image()==1) write(*,*) "Stabilities:",exp(nsq_values)
         ! endif
-
 
         if (reverse.or.(.not.((options%lt_options%read_LUT).and.(error==0)))) then
             ! loop over combinations of U, V, and Nsq values
@@ -780,8 +814,9 @@ contains
                                 ( lt_data_m%v_perturb(1+buffer:fftnx-buffer,     buffer:fftny-buffer)         &
                                 + lt_data_m%v_perturb(1+buffer:fftnx-buffer,     1+buffer:fftny-buffer+1)) )) / 2
 
-                        call copy_data_to_remote(temporary_u, u_grids, hi_u_LUT, i,j,k, z)
-                        call copy_data_to_remote(temporary_v, v_grids, hi_v_LUT, i,j,k, z)
+                        call copy_data_to_remote(temporary_u, u_grids, hi_u_LUT, hi_u_LUT_co, LUT_index_co, i, j, k, z)
+                        call copy_data_to_remote(temporary_v, v_grids, hi_v_LUT, hi_v_LUT_co, LUT_index_co, i, j, k, z)
+                        sync all
 
                     else
                         stop "ERROR: linear wind LUT creation not set up for non-staggered grids yet"

@@ -195,7 +195,7 @@ endif
 ifeq ($(COMPILER), cray)
 	COMP= -h omp vector2 -O2 -c -eI -hfp0
 	LINK= -fopenmp
-	PREPROC= -eZ
+	PREPROC= -eT
 	MODOUTPUT= -J $(BUILD) -em
 endif
 
@@ -213,7 +213,7 @@ ifeq ($(MODE), debugslow)
 	ifeq ($(COMPILER), cray)
 		COMP=-h noomp -c -g -h develop -m 0 -R csp -M 399 -hfp0
 		LINK=-h noomp
-		PREPROC=-eZ
+		PREPROC=-eT
 		MODOUTPUT=-e m -J $(BUILD)
 	endif
 endif
@@ -229,7 +229,7 @@ ifeq ($(MODE), debug)
 	ifeq ($(COMPILER), cray)
 		COMP=-O2 -h noomp -c -g -hfp0
 		LINK=-h noomp
-		PREPROC=-eZ
+		PREPROC=-eT
 		MODOUTPUT=-e m -J $(BUILD)
 	endif
 endif
@@ -246,7 +246,7 @@ ifeq ($(MODE), debugompslow)
 	ifeq ($(COMPILER), cray)
 		COMP=-c -g -m 0 -h develop -R csp -M 399 -hfp0
 		LINK=
-		PREPROC=-eZ
+		PREPROC=-eT
 		MODOUTPUT=-e m -J $(BUILD)
 	endif
 endif
@@ -263,7 +263,7 @@ ifeq ($(MODE), debugomp)
 	ifeq ($(COMPILER), cray)
 		COMP=-O1 -c -g -hfp0
 		LINK=
-		PREPROC=-eZ
+		PREPROC=-eT
 		MODOUTPUT=-e m -J $(BUILD)
 	endif
 endif
@@ -454,7 +454,6 @@ TEST_EXECUTABLES= 	fftshift_test			\
 
 icar:${OBJS} $(BUILD)driver.o
 	${LINKER} $^ -o icar ${LFLAGS}
-	make move_i
 
 all:icar test
 
@@ -462,18 +461,15 @@ install:icar
 	mkdir -p ${INSTALLDIR}
 	${CP} icar ${INSTALLDIR}
 
-move_i:
-	$(ECHO_MOVE) *.i ${BUILD} 2>/dev/null || true
-
 clean:
-	${RM} $(BUILD)*.o $(BUILD)*.mod $(BUILD)*.smod *.i *.lst docs/doxygen_sqlite3.db 2>/dev/null ||:
+	${RM} $(BUILD)*.o $(BUILD)*.mod $(BUILD)*.smod *.lst docs/doxygen_sqlite3.db 2>/dev/null ||:
 
 allclean:cleanall
 
 cleanall:clean
 	${RM} icar $(TEST_EXECUTABLES) 2>/dev/null ||:
 
-test: $(TEST_EXECUTABLES) move_i
+test: $(TEST_EXECUTABLES)
 
 caf_tests:	$(CAF_TEST_EXECUTABLES)
 
