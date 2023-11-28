@@ -328,6 +328,14 @@ ASSERT=-DUSE_ASSERTIONS=$(USE_ASSERTIONS)
 LFLAGS=$(LINK) $(PROF) $(CAF_FLAG) $(CAF_LINK) $(LIBNETCDF) $(LIBFFT)
 FFLAGS=$(COMP) $(PROF) $(CAF_FLAG) $(PREPROC) -DVERSION=\"$(GIT_VERSION)\" $(INCNETCDF) $(INCFFT) $(MODOUTPUT) $(ASSERT)
 
+# this line is to handle the fact the Cray compiler does optimizations that
+# make setting logical values in derived types unrealiable in options_obs.F90
+ifeq ($(COMPILER), cray)
+	OPTIONS_FLAGS=${FFLAGS} -O0
+else
+	OPTIONS_FLAGS=${FFLAGS}
+endif
+
 $(info $$NODENAME    = ${NODENAME})
 $(info $$FC          = ${F90})
 $(info $$FFTW_PATH   = ${FFTW_PATH})
@@ -591,6 +599,9 @@ caf_threads_test: $(BUILD)test_caf_threads.o
 ###################################################################
 #	Generic compilation rules
 ###################################################################
+
+$(BUILD)options_obj.o: $(OBJECTS)options_obj.f90
+	${F90} ${OPTIONS_FLAGS} $< -o $@
 
 $(BUILD)%.o: $(UTIL)%.f90
 	${F90} ${FFLAGS} $< -o $@
