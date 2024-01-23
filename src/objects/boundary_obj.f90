@@ -15,7 +15,8 @@ submodule(boundary_interface) boundary_implementation
     use mod_atm_utilities,      only : rh_to_mr, relative_humidity, compute_3d_p, compute_3d_z, exner_function
     use geo,                    only : standardize_coordinates
     use vertical_interpolation, only : vLUT, vinterp
-
+    use time_object,            only : Time_type
+    use variable_interface,     only : variable_t
     implicit none
 contains
 

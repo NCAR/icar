@@ -80,10 +80,10 @@ contains
         z0 = 8e-6 / max(ustar,1e-7)
     end function ocean_roughness
 
-    module subroutine water_simple(options, sst, psfc, wind, ustar, qv, temperature,  &
+    subroutine water_simple(options, sst, psfc, wind, ustar, qv, temperature, &
                             sensible_heat, latent_heat, &
                             z_atm, Z0, landmask, &
-                            qv_surf, evap_flux, tskin, vegtype ) 
+                            qv_surf, evap_flux, tskin, vegtype )
         implicit none
         type(options_t),intent(in)    :: options
         real,    dimension(:,:,:),intent(in)    :: qv, temperature

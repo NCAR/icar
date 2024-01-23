@@ -431,9 +431,13 @@ contains
         integer,          intent(in)    :: source_image, first_image, last_image
         logical,          intent(in)    :: create_co_array
 
+! ifx currently breaks when accessing allocatable character coarrays
+#ifdef __INTEL_LLVM_COMPILER
+        character(len=kMAX_STRING_LENGTH), save :: coscalar[*]
+#else
         character(len=kMAX_STRING_LENGTH), allocatable :: coscalar[:]
-
         allocate(coscalar[*])
+#endif
         coscalar = scalar
 
         !call co_broadcast(coscalar, source_image)
@@ -442,7 +446,9 @@ contains
         call broadcast(coscalar, source_image, first_image, last_image)
 
         scalar = coscalar
+#ifndef __INTEL_LLVM_COMPILER
         deallocate(coscalar)
+#endif
     end subroutine
 
     subroutine print_in_image_order(input)

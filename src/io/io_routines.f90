@@ -1637,9 +1637,16 @@ contains
         dir_separator = index(filename, '/', back=.true.)
         if (dir_separator > 0) then
             dir_path = filename(1:dir_separator)
+
+! Intel compiler has non-standard conforming 'directory' argument
+#ifdef __INTEL_COMPILER
+            inquire(directory=dir_path, exist=dir_exists)
+#else
             inquire(file=dir_path, exist=dir_exists)
+#endif
             if (dir_exists .eqv. .false.) then
-               stop "Following directory does not exist to write to: " // dir_path
+               print *, "Following directory does not exist to write to: ", dir_path
+               stop "Error: unwritable file path"
             end if
          end if
     end subroutine check_writeable_path
