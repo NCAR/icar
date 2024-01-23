@@ -597,10 +597,7 @@ contains
                 )
             LUT_co(1:ime-ims+1, 1:jme-jms+1, this_image())[img] = wind(ims:ime,jms:jme)
 
-            LUT_index_co(this_image(), 1)[img] = i
-            LUT_index_co(this_image(), 2)[img] = j
-            LUT_index_co(this_image(), 3)[img] = k
-            LUT_index_co(this_image(), 4)[img] = z
+            LUT_index_co(this_image(), :)[img] = [i, j, k, z]
            end associate
         enddo
 
