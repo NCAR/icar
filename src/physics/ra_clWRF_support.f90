@@ -11,6 +11,7 @@
 !-----------------------------------------------------------------------
 MODULE module_ra_clWRF_support
 
+  use iso_fortran_env, only: iostat_end
   !USE module_wrf_error
 
   IMPLICIT NONE
@@ -113,6 +114,7 @@ CONTAINS
     !INTEGER, EXTERNAL                                :: get_unused_unit
 
     INTEGER                                          :: istatus, iunit, idata
+    CHARACTER(LEN=1024)                              :: imessage
 !ccc VARCAM_in_years is a module variable, needs something else here!
     INTEGER, SAVE                             :: max_years
     integer                                          :: nyrm, nyrp, njulm, njulp
@@ -151,7 +153,7 @@ CONTAINS
              istatus = 0
              idata = 1
              DO WHILE (istatus == 0)
-                READ(UNIT=iunit, FMT='(I4, 1x, F8.3,1x, 4(F10.3,1x))', IOSTAT=istatus)    &
+                READ(UNIT=iunit, FMT='(I4, 1x, F8.3,1x, 4(F10.3,1x))', IOSTAT=istatus, IOMSG=imessage) &
                      yrdata(idata), co2r(idata), n2or(idata), ch4r(idata), cfc11r(idata), &
                      cfc12r(idata)
                 if (istatus==0) then
@@ -171,10 +173,10 @@ CONTAINS
              END DO
              if (this_image()==1) print*,"CLWRF read:",idata-1, " lines"
 
-             IF (istatus /= -1) THEN
+             IF (istatus /= iostat_end) THEN
                 PRINT *,'CLWRF -- clwrf -- CLWRF ALERT!'
                 PRINT *,"   Not normal ending of 'CAMtr_volume_mixing_ratio' file"
-                PRINT *,"   Lecture ends with 'IOSTAT'=",istatus
+                PRINT *,"   Lecture ends with 'IOSTAT'=",istatus, "and IOMSG=", trim(imessage)
              END IF
              max_years = idata - 1
              CLOSE(iunit)
