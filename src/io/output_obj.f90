@@ -47,10 +47,16 @@ contains
 
         if (.not.this%is_initialized) call this%init()
 
-        ! open file
+        err = 0
         this%filename = filename
-        err = nf90_open(filename, NF90_WRITE, this%ncfile_id)
-        if (err /= NF90_NOERR) then
+        ! if hour of the day is 0 file will never be opened but clobbered if
+        ! it exists, otherwise open file
+        if (time%hour /= 0) then
+           err = nf90_open(filename, NF90_WRITE, this%ncfile_id)
+        end if
+
+        ! create new file if first output of the day or error opening
+        if (err /= NF90_NOERR .or. (time%hour == 0)) then
             call check( nf90_create(filename, NF90_CLOBBER, this%ncfile_id), "Opening:"//trim(filename))
             this%creating=.True.
         else
