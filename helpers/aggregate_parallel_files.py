@@ -159,6 +159,23 @@ def agg_file(first_file, verbose=True):
     print(outputfile)
     data_set.to_netcdf(outputfile)
 
+# removing the last aggregated file to fix negative precip
+def remove_last_two_aggregated_files(file_search):
+    # switch from looking for every ranks output to every aggregated file
+    aggregated_file_search = file_search.replace("_*", "-*")
+    last_file_search = aggregated_file_search.format(ens="[1-2][0-9][0-9][0-9]")
+    sorted_aggregated_files = sorted(glob.glob(last_file_search))
+
+    # if list is not empty, remove last two files
+    if sorted_aggregated_files:
+        last_aggregated_file = sorted_aggregated_files.pop()
+        os.remove(last_aggregated_file)
+        print("removed last aggregated file", last_aggregated_file)
+        if sorted_aggregated_files:
+            last_aggregated_file = sorted_aggregated_files.pop()
+            os.remove(last_aggregated_file)
+            print("removed second to last aggregated file", last_aggregated_file)
+
 def main(file_search = "icar_out_{ens}_*"):
     first_files = glob.glob(file_search.format(ens="000001"))
     first_files.sort()
@@ -166,6 +183,8 @@ def main(file_search = "icar_out_{ens}_*"):
     # For some reason running the parallelization this far out seems to have far worse performance...
     #  would map_async be faster for some reason?  I assume map is still parallel.
     # pool.map(agg_file, first_files)
+
+    remove_last_two_aggregated_files(file_search)
 
     for f in first_files:
         agg_file(f)
