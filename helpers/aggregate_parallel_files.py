@@ -64,15 +64,15 @@ def set_up_dataset(d):
         x_off, y_off = get_dim_offset(dims)
 
         if len(dims) == 1:
-            nt = d.dims[dims[0]]
+            nt = d.sizes[dims[0]]
             data = np.zeros((nt))
         if len(dims) == 2:
             data = np.zeros((ny + y_off, nx + x_off))
         if len(dims) == 3:
-            data = np.zeros((d.dims[dims[0]], ny + y_off, nx + x_off))
+            data = np.zeros((d.sizes[dims[0]], ny + y_off, nx + x_off))
         if len(dims) == 4:
-            nt = d.dims[dims[0]]
-            nz = d.dims[dims[1]]
+            nt = d.sizes[dims[0]]
+            nz = d.sizes[dims[1]]
             data = np.zeros((nt, nz, ny + y_off, nx + x_off))
 
         # print(name, data.shape, dims, attrs)
