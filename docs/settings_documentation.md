@@ -104,7 +104,7 @@ This optional namelist specifies various parameters that are used in the advecti
     water=2,  ! 1=use prescribed (w/lsm=1) 2=Simple sea surface fluxes
     mp  = 1,  ! 1=Thompson                 2=Simple (SB04)              3=Morrison        (wishlist)
     rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG           (wishlist)
-    conv= 0,  ! 1=Tiedke Scheme            2=Simple Scheme (wishlist)   3=Kain-Fritsch
+    conv= 0,  ! 1=Tiedtke Scheme           2=Simple Scheme (wishlist)   3=Kain-Fritsch
     adv = 1,  ! 1=Upwind                   2=MPDATA                     3=Adams-Bashforth (wishlist)
     wind= 1   ! 1=Linear Theory            2=INFORM style (wishlist)    3=Dynamical?      (wishlist)
 /
@@ -274,7 +274,7 @@ This optional namelist specifies various parameters that are used in the advecti
     swdown_var = "SWDOWN",  ! Shortwave down            [W/m^2]
     lwdown_var = "GLW",     ! Longwave down             [W/m^2]
 
-    ! only required for some physics code (Noah LSM, water, Tiedke, KF(?))
+    ! only required for some physics code (Noah LSM, water, Tiedtke, KF(?))
     landvar = "LANDMASK",   ! land-water mask (as in WRF) 1=land, 0 or 2=water
 
     ! NOTE, these variables should be in the high-resolution initial conditions netcdf file

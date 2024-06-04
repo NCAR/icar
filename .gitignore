@@ -12,3 +12,7 @@ docs/doxygen_sqlite3.db
 *~
 *.pyc
 *.ipynb
+
+# ignore files generated during ideal testing
+tests/*.nc
+tests/icar_options.nml

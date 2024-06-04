@@ -112,7 +112,7 @@
     rad = 0,  ! 1=use prescribed fluxes    2=Simple (empirical)         3=RRTMG
 
     ! Convection / Cumulus Scheme
-    conv= 0,  ! 1=Tiedke Scheme            2=Simple Scheme (wishlist)   3=Kain-Fritsch              4=NSAS      5=BMJ
+    conv= 0,  ! 1=Tiedtke Scheme           2=Simple Scheme (wishlist)   3=Kain-Fritsch              4=NSAS      5=BMJ
 
     ! Advection Scheme
     adv = 1,  ! 1=Upwind                   2=MPDATA                     3=Runga-Kutta (in progress?)
@@ -328,7 +328,7 @@
     swdown_var = "SWDOWN",  ! Shortwave down            [W/m^2]
     lwdown_var = "GLW",     ! Longwave down             [W/m^2]
 
-    ! only required for some physics code (Noah LSM, water, Tiedke, KF(?))
+    ! only required for some physics code (Noah LSM, water, Tiedtke, KF(?))
     landvar = "LANDMASK",          ! land-water mask (as in WRF) 1=land, 0 or 2=water
     lakedepthvar = "LAKE_DEPTH",   ! depth of the lake [m]
 

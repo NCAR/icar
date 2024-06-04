@@ -1,0 +1,9 @@
+name: icarenv
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.8
+  - matplotlib
+  - netCDF4
+  - numpy
+  - xarray

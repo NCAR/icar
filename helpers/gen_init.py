@@ -26,47 +26,47 @@ def update_base(base,filename,nz):
 def main():
     filename="init"
     nx,nz,ny=(200.,10.,200)
-    dims=[nz,ny,nx]
-    
+    dims=[int(nz),int(ny),int(nx)]
+
     lonmin=-110.0; lonmax=-100.0; dlon=(lonmax-lonmin)/nx
     latmin=35.0; latmax=45.0; dlat=(latmax-latmin)/ny
 
     base=Bunch(u=10.0,w=0.0,v=0.0,
                qv=0.0013,qc=0.0,
                p=100000.0,
-               th=np.arange(273.0,300,(300-273.0)/nz).reshape((nz,1,1)),
+               th=np.arange(273.0,300,(300-273.0)/nz).reshape((int(nz),1,1)),
                dz=400.0)
     base.z=np.arange(0,nz*base.dz,base.dz)
     if glob.glob("sounding.txt"):
         update_base(base,"sounding.txt",nz)
         nz=base.th.size
         dims=[nz,ny,nx]
-    
+
     u=np.zeros(dims,dtype="f")+base.u
     w=np.zeros(dims,dtype="f")+base.w
     v=np.zeros(dims,dtype="f")+base.v
     qv=np.zeros(dims,dtype="f")+base.qv
     qc=np.zeros(dims,dtype="f")+base.qc
     coscurve=np.cos(np.arange(dims[2])/dims[2]*2*np.pi+np.pi)+1
-    hgt=(coscurve*1000).reshape((1,nx)).repeat(ny,axis=0)
-    
+    hgt=(coscurve*1000).reshape((1,int(nx))).repeat(ny,axis=0)
+
     lon=np.arange(lonmin,lonmax,dlon)
     lat=np.arange(latmin,latmax,dlat)
     lon,lat=np.meshgrid(lon,lat)
-    
+
     dz=np.zeros(dims)+base.dz
-    z=np.zeros(dims,dtype="f")+base.z.reshape((nz,1,1))+hgt.reshape((1,ny,nx))
-    
+    z=np.zeros(dims,dtype="f")+base.z.reshape((int(nz),1,1))+hgt.reshape((1,int(ny),int(nx)))
+
     layer1=(dz[0,:,:]/2)
     z[0,:,:]+=layer1
     for i in range(1,int(nz)):
         z[i,:,:]=z[i-1,:,:]+(dz[i-1,:,:]+dz[i,:,:])/2.0
-    
+
     p=np.zeros(dims,dtype="f")+base.p
     adjust_p(p,0.0,z)
     th=np.zeros(dims,dtype="f")+base.th
-    
-    
+
+
     d3dname=("z","y","x")
     d2dname=("y","x")
     othervars=[Bunch(data=v,  name="V",     dims=d3dname,dtype="f",attributes=dict(units="m/s",  description="Horizontal (y) wind speed")),
@@ -85,7 +85,7 @@ def main():
     if fileexists:
         print("Removing : "+fileexists[0])
         os.remove(fileexists[0])
-    
+
     io.write(filename,  u,varname="U", dims=d3dname,dtype="f",attributes=dict(units="m/s",description="Horizontal (x) wind speed"),
             extravars=othervars)
 

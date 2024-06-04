@@ -3,7 +3,7 @@
 !!
 !! Initialize options and memory in init_model
 !! Read initial conditions in bc_init (from a restart file if requested)
-!! initialize physics packages in init_physics (e.g. tiedke and thompson if used)
+!! initialize physics packages in init_physics (e.g. tiedtke and thompson if used)
 !! If this run is a restart run, then set start to the restart timestep
 !!      in otherwords, ntimesteps is the number of BC updates from the beginning of the entire model
 !!      run, not just from the begining of this restart run
@@ -72,11 +72,8 @@ program icar
         if (this_image()==1) print*,"  frames per output file= ", options%parameters%frames_per_outfile
     end if
 
-    call restart_dataset%set_domain(domain)
-    call restart_dataset%add_variables(options%vars_for_restart, domain)
-
-    call output_dataset%set_domain(domain)
-    call output_dataset%add_variables(options%output_options%vars_for_output, domain)
+    call restart_dataset%init(domain, options, file_date_format)
+    call output_dataset%init(domain, options, file_date_format)
 
     if (options%parameters%restart) then
         if (this_image()==1) write(*,*) "Reading restart data"

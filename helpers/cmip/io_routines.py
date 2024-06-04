@@ -17,9 +17,9 @@ def read_nc(filename,var="data",proj=None,returnNCvar=False):
         data:raw data as an array
         proj:string representation of the projection information
         atts:data attribute dictionary (if any)
-    if (returnNCvar==True) then the netCDF4 file is note closed and the netCDF4 
-        representation of the variable is returned instead of being read into 
-        memory immediately.  
+    if (returnNCvar==True) then the netCDF4 file is note closed and the netCDF4
+        representation of the variable is returned instead of being read into
+        memory immediately.
     '''
     d=netCDF4.Dataset(filename, mode='r',format="nc")
     outputdata=None
@@ -39,8 +39,8 @@ def read_nc(filename,var="data",proj=None,returnNCvar=False):
     if proj!=None:
         projection=d.variables[proj]
         outputproj=str(projection)
-    
-    
+
+
     if returnNCvar:
         return Bunch(data=outputdata,proj=outputproj,ncfile=d,atts=attributes)
     d.close()
@@ -53,7 +53,7 @@ def find_atm_file(time,varname,info):
     file_base= file_base.replace("_Y_",str(time.year))
     file_base= file_base.replace("_EXP_",info.experiment)
     atm_file = file_base.replace("_ENS_",info.ensemble)
-    
+
     print(atm_file)
     filelist = glob.glob(atm_file)
     filelist.sort()
@@ -67,7 +67,7 @@ def find_sst_file(time,info):
     file_base= file_base.replace("_Y_",str(time.year))
     file_base= file_base.replace("_EXP_",info.experiment)
     sst_file = file_base.replace("_ENS_",info.ensemble)
-    
+
     print(sst_file)
     filelist=glob.glob(sst_file)
     filelist.sort()
@@ -76,7 +76,7 @@ def find_sst_file(time,info):
 
 def load_atm(time,info):
     """Load atmospheric variable from a netcdf file"""
-    
+
     outputdata=Bunch()
 
     for s,v in zip(icar_atm_var,atmvarlist):
@@ -98,24 +98,24 @@ def load_atm(time,info):
             outputdata[varname]=np.concatenate([outputdata[varname],newdata])
         else:
             outputdata[varname]=newdata
-        
+
         varname="p"
         newdata=info.read_pressure(atmfile)[:,:,info.ymin:info.ymax,info.xmin:info.xmax]
         if varname in outputdata:
             outputdata[varname]=np.concatenate([outputdata[varname],newdata])
         else:
             outputdata[varname]=newdata
-            
+
         outputdata.ntimes = outputdata.p.shape[0]
-        
+
     # outputdata.times=info.read_time(atmfile)
     try:
         calendar = mygis.read_attr(atmfile_list[0], "calendar", varname="time")
-    except KeyError,IndexError:
+    except (KeyError,IndexError):
         calendar = None
-    
+
     outputdata.calendar = calendar
-    
+
     return outputdata
 
 def load_sfc(time,info):
@@ -137,5 +137,3 @@ def load_data(time,info):
     atm=load_atm(time,info)
     sfc=load_sfc(time,info)
     return Bunch(sfc=sfc,atm=atm)
-
-

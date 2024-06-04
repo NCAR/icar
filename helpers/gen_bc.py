@@ -26,8 +26,8 @@ def update_base(base,filename,nz):
 def main():
     filename="bc"
     nx,ny,nz,nt=(20.,20,10,24)
-    dims=[nt,nz,ny,nx]
-    
+    dims=[nt,nz,ny,int(nx)]
+
     lonmin=-110.0; lonmax=-100.0; dlon=(lonmax-lonmin)/nx
     latmin=35.0; latmax=45.0; dlat=(latmax-latmin)/ny
 
@@ -41,32 +41,32 @@ def main():
         update_base(base,"sounding.txt",nz)
         nz=base.th.size
         dims=[nt,nz,ny,nx]
-    
+
     u=np.zeros(dims,dtype="f")+base.u
     w=np.zeros(dims,dtype="f")+base.w
     v=np.zeros(dims,dtype="f")+base.v
     qv=np.zeros(dims,dtype="f")+base.qv
     qc=np.zeros(dims,dtype="f")+base.qc
     coscurve=np.cos(np.arange(dims[2])/dims[2]*2*np.pi+np.pi)+1
-    hgt=(coscurve*1000).reshape((1,nx)).repeat(ny,axis=0)
-    
+    hgt=(coscurve*1000).reshape((1,int(nx))).repeat(ny,axis=0)
+
     lon=np.arange(lonmin,lonmax,dlon)
     lat=np.arange(latmin,latmax,dlat)
     lon,lat=np.meshgrid(lon,lat)
-    
+
     dz=np.zeros(dims)+base.dz
-    z=np.zeros(dims,dtype="f")+base.z.reshape((1,nz,1,1))+hgt.reshape((1,1,ny,nx))
-    
+    z=np.zeros(dims,dtype="f")+base.z.reshape((1,nz,1,1))+hgt.reshape((1,1,ny,int(nx)))
+
     layer1=(dz[0,0,:,:]/2)
     z[0,0,:,:]+=layer1
     for i in range(1,int(nz)):
         z[:,i,:,:]=z[:,i-1,:,:]+(dz[:,i-1,:,:]+dz[:,i,:,:])/2.0
-    
+
     p=np.zeros(dims,dtype="f")+base.p
     adjust_p(p,0.0,z)
     th=np.zeros(dims,dtype="f")+base.th
-    
-    
+
+
     d4dname=("t","z","y","x")
     d3dname=("z","y","x")
     d2dname=("y","x")
@@ -86,7 +86,7 @@ def main():
     if fileexists:
         print("Removing : "+fileexists[0])
         os.remove(fileexists[0])
-    
+
     io.write(filename,  u,varname="U", dims=d4dname,dtype="f",attributes=dict(units="m/s",description="Horizontal (x) wind speed"),
             extravars=othervars)
 

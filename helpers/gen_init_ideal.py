@@ -26,7 +26,7 @@ def update_base(base,filename,nz):
 def main():
     filename="init"
     nx,nz,ny=(20.,10.,19)
-    dims=[nx,nz,ny]
+    dims=[int(nx),int(nz),int(ny)]
 
     # po=np.log(100000.0)
     # p1=np.log(50000.0)
@@ -55,13 +55,13 @@ def main():
     qc=np.zeros(dims,dtype="f")+base.qc
     coscurve=np.cos(np.arange(dims[0])/dims[0]*2*np.pi+np.pi)+1
     # p-=coscurve.reshape((nx,1,1))*15000
-    hgt=(coscurve*1000).reshape((nx,1)).repeat(ny,axis=1)
+    hgt=(coscurve*1000).reshape((int(nx),1)).repeat(ny,axis=1)
 
     lon=np.arange(lonmin,lonmax,dlon)
     lat=np.arange(latmin,latmax,dlat)
     lat,lon=np.meshgrid(lat,lon) #note that this appears "backwards" but these are C-style, fortran will be reversed
     dz=np.zeros(dims)+base.dz
-    z=np.zeros(dims,dtype="f")+base.z.reshape((1,nz,1))+hgt.reshape((nx,1,ny))
+    z=np.zeros(dims,dtype="f")+base.z.reshape((1,int(nz),1))+hgt.reshape((int(nx),1,int(ny)))
 
     layer1=(dz[:,0,:]/2)
     z[:,0,:]+=layer1
@@ -70,7 +70,7 @@ def main():
 
     p=np.zeros(dims,dtype="f")+base.p# .reshape((1,nz,1))
     adjust_p(p,0.0,z)
-    th=np.zeros(dims,dtype="f")+base.th.reshape((1,nz,1))
+    th=np.zeros(dims,dtype="f")+base.th.reshape((1,int(nz),1))
 
 
     d3dname=("x","z","y")

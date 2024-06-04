@@ -30,7 +30,7 @@ def adjust_p(p,h,dz):
 
 def update_base(base,filename,nz):
     """update the base information using data from a sounding file
-    
+
     filename should be a space delimited text file with 3 columns
         height [m], potential temperature [K], and specific humidity [g/kg]"""
     print("Using Sounding from : "+filename)
@@ -43,7 +43,7 @@ def update_base(base,filename,nz):
 
 def build_topography(experiment,dims):
     """create the topography to be used for a given case study"""
-    
+
     # experiment                        D1      D2      D3
     # h         height of the hill    1800    1400    1040   [meters]
     # sigma     half-width              60      40       3.1 [grid cells]
@@ -60,8 +60,8 @@ def build_topography(experiment,dims):
     x     = np.linspace(0,Lx,Nx)                  # % distance array (m)
     zo    = [1700.0,2000.0,2200.0][experiment]    # mountain base height (m) NOT REALLY USED CORRECTLY YET, NEED to truncate the sounding...
     zo    = 0.0
-    
-    
+
+
     zs=hm/(1.0+((x/dx-xm)/am)**2.)
     # zs-=zs[0]
     zs=zs.reshape((1,dims[3])).repeat(dims[2],axis=0)
@@ -71,8 +71,8 @@ def main():
     filename="ideal_{}_{}".format(case_study,int(wind_speed))
     print(filename)
     nx,nz,ny=master_dims[case_study]
-    dims=[1,nz,ny,nx]
-    
+    dims=[1,int(nz),int(ny),int(nx)]
+
     # this is just arbitrary for now
     dlon=dx/111.1
     dlat=dx/111.1
@@ -89,7 +89,7 @@ def main():
         update_base(base,"sounding.txt",nz)
         nz=base.th.size
         dims=[1,nz,ny,nx]
-    
+
     udims=copy(dims)
     udims[-1]+=1
     vdims=copy(dims)
@@ -99,40 +99,40 @@ def main():
     v=np.zeros(vdims,dtype="f")+base.v
     qv=np.zeros(dims,dtype="f")+base.qv
     qc=np.zeros(dims,dtype="f")+base.qc
-    
+
     # simple topography = a cosine
     # coscurve=np.cos(np.arange(dims[3])/dims[3]*2*np.pi+np.pi)+1
     # hgt=(coscurve*1000).reshape((1,nx)).repeat(ny,axis=0)
     hgt=build_topography(case_study,dims)
-    
-    lon=np.arange(lonmin,lonmax,dlon)[:nx]
+
+    lon=np.arange(lonmin,lonmax,dlon)[:int(nx)]
     lat=np.arange(latmin,latmax,dlat)[:ny]
     lon,lat=np.meshgrid(lon,lat)
 
-    ulon=np.arange(lonmin-dlon/2,lonmax+dlon/2,dlon)[:nx+1]
+    ulon=np.arange(lonmin-dlon/2,lonmax+dlon/2,dlon)[:int(nx)+1]
     ulat=np.arange(latmin,latmax,dlat)[:ny]
     ulon,ulat=np.meshgrid(ulon,ulat)
 
-    vlon=np.arange(lonmin,lonmax,dlon)[:nx]
+    vlon=np.arange(lonmin,lonmax,dlon)[:int(nx)]
     vlat=np.arange(latmin-dlat/2,latmax+dlat/2,dlat)[:ny+1]
     vlon,vlat=np.meshgrid(vlon,vlat)
-    
+
     dz=np.zeros(dims)+base.dz
-    z=np.zeros(dims,dtype="f")+base.z.reshape((1,nz,1,1))+hgt.reshape((1,1,ny,nx))
-    
+    z=np.zeros(dims,dtype="f")+base.z.reshape((1,nz,1,1))+hgt.reshape((1,1,ny,int(nx)))
+
     layer1=(dz[0,:,:]/2)
     z[0,:,:]+=layer1
     for i in range(1,int(nz)):
         z[:,i,:,:]=z[:,i-1,:,:]+(dz[:,i-1,:,:]+dz[:,i,:,:])/2.0
-    
+
     p=np.zeros(dims,dtype="f")+base.p
     adjust_p(p,0.0,z)
     th=np.zeros(dims,dtype="f")+base.th
-    
-    lat=lat.reshape((1,ny,nx))
-    lon=lon.reshape((1,ny,nx))
-    hgt=hgt.reshape((1,ny,nx))
-    
+
+    lat=lat.reshape((1,ny,int(nx)))
+    lon=lon.reshape((1,ny,int(nx)))
+    hgt=hgt.reshape((1,ny,int(nx)))
+
     d3dname=("t","z","y","x")
     ud3dname=("t","z","y","xu")
     ud2dname=("t","y","xu")
@@ -164,13 +164,12 @@ def main():
     if fileexists:
         print("Removing : "+fileexists[0])
         os.remove(fileexists[0])
-    
+
     io.write(filename,  u,varname="U", dims=ud3dname,dtype="f",attributes=dict(units="m/s",description="Horizontal (x) wind speed"),
             extravars=othervars)
 
 
 if __name__ == '__main__':
-    global wind_speed, case_study
     for case in range(3):
         for ws in [5,10,15,25]:
             wind_speed=float(ws)

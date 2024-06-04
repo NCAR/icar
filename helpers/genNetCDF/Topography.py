@@ -1,4 +1,4 @@
-import pandas as pd
+import datetime as dt
 import xarray as xr
 import numpy as np
 
@@ -34,11 +34,8 @@ class Topography:
         # Create and define variables for datafile
         # --------------------------------------------------------------
         # create time
-        time_end   = time_start
-        time_series = pd.date_range(start=str(time_start),
-                                    end=str(time_end),
-                                    freq='D').strftime('%Y-%m-%d_%H:%M:%S')
-        time = time_series.astype(np.unicode_)
+        time_s = dt.datetime.strptime(str(time_start), '%Y%m%d')
+        time = [time_s.strftime('%Y-%m-%d_%H:%M:%S')]
 
         # create longitude and latitude
         # lon_tmp = np.arange(lon0,lon0+(nx*dx),dx)[:nx] #[np.newaxis,:nx].repeat(ny,axis=0)
@@ -49,19 +46,19 @@ class Topography:
         # (of latitude) and 111,111 * cos(latitude) meters in the x direction is 1 degree (of longitude).
         lon_tmp = np.arange(lon0-(nx/2*dx/111111/np.cos(np.radians(lat0))),
                     lon0+(nx/2*dx/111111/np.cos(np.radians(lat0))),
-                    dx/111111/np.cos(np.radians(lat0)) 
+                    dx/111111/np.cos(np.radians(lat0))
                   )[:nx]
         lat_tmp = np.arange(lat0-(ny/2*dy/111111),
                             lat0+(ny/2*dy/111111),
                             dy/111111
                         )[:ny]
-        # print(" lat_hi min/max: ", np.amin(lat_tmp),  np.amax(lat_tmp))    
+        # print(" lat_hi min/max: ", np.amin(lat_tmp),  np.amax(lat_tmp))
         lon_tmp, lat_tmp = np.meshgrid(lon_tmp, lat_tmp)
 
 
-        i = (np.arange(self.nx) - self.nx/2) * dx   
+        i = (np.arange(self.nx) - self.nx/2) * dx
         j = (np.arange(self.ny) - self.ny/2) * dy    # dx=dy
-        
+
         X, Y = np.meshgrid(i,j)
 
         self.define_data_variables(lat_tmp, lon_tmp, X, Y, height_value, hill_height, n_hills, Schaer_test, dx)
@@ -105,7 +102,7 @@ class Topography:
                                   'description':'Longitude on mass grid',
                                   })
 
-        print("   hires lon/lat min/max:  ", np.min(lon_tmp), np.max(lon_tmp), np.min(lat_tmp), np.max(lat_tmp) )                                  
+        print("   hires lon/lat min/max:  ", np.min(lon_tmp), np.max(lon_tmp), np.min(lat_tmp), np.max(lat_tmp) )
 
         # --- hgt_m
         # hgt = np.full([self.nt,self.nx,self.ny], height_value)
@@ -147,7 +144,7 @@ class Topography:
         ig, jg = np.meshgrid(i,j)
 
         hgt = ((np.cos(ig)+1) * (np.cos(jg)+1))/4 * hill_height
-        
+
         return hgt
 
 
@@ -167,23 +164,23 @@ class Topography:
             ( np.cos(jg/c) )**2 * np.exp(-(jg/c)**2/sigma)
         ) * hill_height
         print("   generated ", n_hills," hills w max hgt: ", np.amax(hgt), " (hh=", hill_height, ")")
-        return hgt   
+        return hgt
 
 
     # Topo for Schär's advection test
     def gen_adv_test_topo(self, hill_height, dx):
-        i = (np.arange(self.nx) - self.nx/2) * dx  # / self.nx * np.pi * 2  
+        i = (np.arange(self.nx) - self.nx/2) * dx  # / self.nx * np.pi * 2
         j = (np.arange(self.ny) - self.ny/2) * dx  # / self.ny * np.pi * 2  # dx=dy
         ig, jg = np.meshgrid(i,j)
-        
+
         lmbda = 8000
         a     = 25000
-        adv_3D = False  # should become an argument (maybe) 
+        adv_3D = False  # should become an argument (maybe)
 
         if adv_3D==True:
             hgt = (
                 hill_height *
-                self.h_x(ig,  lmbda) * self.h_x_star( ig,  a) 
+                self.h_x(ig,  lmbda) * self.h_x_star( ig,  a)
                 * self.h_x(jg, lmbda) * self.h_x_star( jg,  a)
             )
             j_a =  np.where(abs(j)>a)[0]  # satisfy the hgt=0 for |x|>a  condition (eqn 26b in Schaer 2002)
@@ -191,21 +188,21 @@ class Topography:
         elif adv_3D==False:  # generate 2D topo:
             hgt = (
                 hill_height *
-                self.h_x(ig,  lmbda) * self.h_x_star( ig,  a) 
+                self.h_x(ig,  lmbda) * self.h_x_star( ig,  a)
             )
 
         # satisfy the hgt=0 for |x|>a  condition  (eqn 26b): (could be done more elegantly)
-        i_a =  np.where(abs(i)>a)[0]       
+        i_a =  np.where(abs(i)>a)[0]
         hgt[:,i_a] = 0
 
-        
-        print("   generated Schaer Topo w max hgt: ", np.amax(hgt), " (hh=", hill_height, ")")
-        return hgt    
 
-    def h_x(self, x,lmbda):   
+        print("   generated Schaer Topo w max hgt: ", np.amax(hgt), " (hh=", hill_height, ")")
+        return hgt
+
+    def h_x(self, x,lmbda):
         h_x = (np.cos(np.pi*x /lmbda))**2
         return h_x
-        
+
     def h_x_star(self, x, a):
 
         h_x = (np.cos(np.pi*x/2/a))**2

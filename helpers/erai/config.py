@@ -3,9 +3,8 @@ import argparse
 
 import numpy as np
 
-from bunch import Bunch
 import sys
-sys.path.append('../lib') # required to find mygis.py. Update as required.
+from bunch import Bunch
 import mygis
 
 import io_routines as io
@@ -53,7 +52,7 @@ def set_bounds(info):
 def make_timelist(info):
     hrs=6.0
     dt=datetime.timedelta(hrs/24)
-    info.ntimes=np.int(np.round((info.end_date-info.start_date).total_seconds()/60./60./hrs))
+    info.ntimes=np.int64(np.round((info.end_date-info.start_date).total_seconds()/60./60./hrs))
     info.times=[info.start_date+dt*i for i in range(info.ntimes)]
 
 def update_info(info):

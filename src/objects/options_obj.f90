@@ -587,7 +587,7 @@ contains
                 ! 3 = RRTMG
 
         conv= 0 ! 0 = no CONV,
-                ! 1 = Tiedke scheme
+                ! 1 = Tiedtke scheme
                 ! 2 = Kain-Fritsch scheme
 
         adv = 1 ! 0 = no ADV,

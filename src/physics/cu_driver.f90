@@ -192,7 +192,7 @@ contains
                             ,rucuten=domain%tend%u                              &
                             ,rvcuten=domain%tend%v                              &
                             ,restart=.false.             &  ! options%restart                            &
-                            ,p_qc=1                                             & ! copied from Tiedke; no idea as to what these 3 flags represent.
+                            ,p_qc=1                                             & ! copied from Tiedtke; no idea as to what these 3 flags represent.
                             ,p_qi=1                                             &
                             ,p_first_scalar=0                                   &
                             ,allowed_to_read=.true.                             &
@@ -394,7 +394,7 @@ subroutine convect(domain,options,dt_in)
             ,qfx=domain%latent_heat%data_2d/LH_vaporization       & !  QFX  - net upward moisture flux at the surface (kg/m^2/s)
             ,mp_physics=5        & ! - sets ncloud: - integer no_cloud(0),no_ice(1),cloud+ice(2) (see ln 141 cu_nsas.f90)  use options%physics%microphysics?
             ,dx_factor_nsas=dx_factor_nsas                       & !
-            ,p_qc=1                                              & ! copied from Tiedke; no idea as to what these 3 flags represent.
+            ,p_qc=1                                              & ! copied from Tiedtke; no idea as to what these 3 flags represent.
             ,p_qi=1                                              &
             ,p_first_scalar=0                                    &
             ! ,pgcon=""                                            & ! pgcon_use  = 0.55  ! Zhang & Wu (2003,JAS) ! 0.55 is a physically-based value used by GFS

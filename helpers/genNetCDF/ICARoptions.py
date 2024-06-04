@@ -207,8 +207,8 @@ class ModelVersion(Namelist):
 
     def gen(self):
         for name, val in self.nml.items():
-            if name == 'comment':
-                self.nml[name] = '"' + val + '"'
+            if name in ['version', 'comment']:
+                self.nml[name] = '"' + str(val) + '"'
         super().gen()
 
 

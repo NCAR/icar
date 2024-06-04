@@ -6,7 +6,6 @@ import numpy as np
 
 from bunch import Bunch
 import mygis
-import units
 
 g=9.81
 
@@ -34,14 +33,14 @@ def main(inputfile,sounding_file=None):
     p   =mygis.read_nc(inputfile,"P").data.repeat(2,axis=yaxis) + pb
     phb =mygis.read_nc(inputfile,"PHB").data.repeat(2,axis=yaxis)
     ph  =mygis.read_nc(inputfile,"PH").data.repeat(2,axis=yaxis) + phb
-    
+
     hgt =mygis.read_nc(inputfile,"HGT").data.repeat(2,axis=yaxis2d)
     land=mygis.read_nc(inputfile,"XLAND").data.repeat(2,axis=yaxis2d)
-    
+
     nt,nz,ny,nx=qv.shape
     print(nx,ny,nz)
     dims=np.array(qv.shape)
-    
+
     z=(ph)/g
     dz=np.diff(z,axis=1)
     # dz shape = (time,nz-1,ny,nx)
@@ -53,7 +52,7 @@ def main(inputfile,sounding_file=None):
     # wrfz[:,0,...]=dz[:,0,...]/2+hgt
     # for i in range(1,nz):
         # wrfz[:,i,:,:]=(dz[:,i,:,:]+dz[:,i-1,:,:])/2+wrfz[:,i-1,:,:]
-    
+
     mean_dz=dz[0,...].mean(axis=1).mean(axis=1)
     print("MEAN LEVELS:")
     print("dz_levels=[")
@@ -67,7 +66,7 @@ def main(inputfile,sounding_file=None):
     else:
         print("]")
 
-    
+
     print("FIRST LEVELS:")
     print("dz_levels=[")
     for i in range(0,nz,10):
@@ -79,17 +78,17 @@ def main(inputfile,sounding_file=None):
         print(",".join(curlist)+"]")
     else:
         print("]")
-    
-    
+
+
     # dz=np.zeros(dz.shape)+mean_dz[np.newaxis,:,np.newaxis,np.newaxis]
     dz=np.zeros(dz.shape)+dz[:,:,:,np.newaxis,0]
     z=np.zeros(dz.shape)
     z[:,0,...]=dz[:,0,...]/2+hgt
     for i in range(1,nz):
         z[:,i,:,:]=(dz[:,i,:,:]+dz[:,i-1,:,:])/2+z[:,i-1,:,:]
-    
+
     # adjust_p(p,wrfz,z)
-    
+
     dx=mygis.read_attr(inputfile,"DX")
     if type(dx)==np.ndarray:
         dx=dx[0]
@@ -97,7 +96,7 @@ def main(inputfile,sounding_file=None):
     dlat=dx/111.1
     lonmin=-110.0; lonmax=lonmin+nx*dlon
     latmin=40.0; latmax=latmin+ny*dlat
-    
+
     udims=copy(dims)
     udims[-1]+=1
     vdims=copy(dims)
@@ -114,18 +113,18 @@ def main(inputfile,sounding_file=None):
     vlon=np.arange(lonmin,lonmax,dlon)[:nx]
     vlat=np.arange(latmin-dlat/2,latmax+dlat/2,dlat)[:ny+1]
     vlon,vlat=np.meshgrid(vlon,vlat)
-        
+
     lat=lat.reshape((1,ny,nx))
     lon=lon.reshape((1,ny,nx))
     hgt=hgt.reshape((1,ny,nx))
-    
+
     d3dname=("t","z","y","x")
     ud3dname=("t","z","y","xu")
     ud2dname=("t","y","xu")
     vd3dname=("t","z","yv","x")
     vd2dname=("t","yv","x")
     d2dname=("t","y","x")
-    
+
     othervars=[Bunch(data=v,   name="V",      dims=vd3dname,dtype="f",attributes=dict(units="m/s",  description="Horizontal (y) wind speed")),
                # Bunch(data=w,   name="W",      dims=d3dname, dtype="f",attributes=dict(units="m/s",  description="Vertical wind speed")),
                Bunch(data=qv,  name="QVAPOR", dims=d3dname, dtype="f",attributes=dict(units="kg/kg",description="Water vapor mixing ratio")),
@@ -152,7 +151,7 @@ def main(inputfile,sounding_file=None):
     if fileexists:
         print("Removing : "+fileexists[0])
         os.remove(fileexists[0])
-    
+
     mygis.write(filename,  u,varname="U", dims=ud3dname,dtype="f",attributes=dict(units="m/s",description="Horizontal (x) wind speed"),
             extravars=othervars)
 
@@ -166,6 +165,5 @@ if __name__ == '__main__':
         sounding_file=sys.argv[2]
     else:
         sounding_file=None
-        
-    main(filename,sounding_file)
 
+    main(filename,sounding_file)

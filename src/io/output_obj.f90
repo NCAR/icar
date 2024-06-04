@@ -6,12 +6,23 @@ submodule(output_interface) output_implementation
 
 contains
 
+    module subroutine init(this, domain, options, file_date_format)
+        implicit none
+        class(output_t),   intent(inout)  :: this
+        type(domain_t),    intent(in)     :: domain
+        type(options_t),   intent(in)     :: options
+        character(len=49), intent(in)     :: file_date_format
+        call this%set_domain(domain)
+        call this%add_variables(options%vars_for_restart, domain)
+        call this%set_restart_variable(options%parameters%restart_time%as_string(file_date_format))
+    end subroutine init
+
     module subroutine set_domain(this, domain)
         class(output_t),  intent(inout)  :: this
         type(domain_t),   intent(in)     :: domain
         integer :: i
 
-        if (.not.this%is_initialized) call this%init()
+        if (.not.this%is_initialized) call this%init_variables()
 
         do i=1,domain%info%n_attrs
             call this%add_attribute(domain%info%attributes(i)%name, domain%info%attributes(i)%value)
@@ -19,12 +30,23 @@ contains
 
     end subroutine
 
+    module subroutine set_restart_variable(this, restart_time)
+        class(output_t),  intent(inout)  :: this
+        character(len=25), intent(in) :: restart_time
+
+        if (index(restart_time, "0-00-00_00-00-00") /= 0) then
+           this%restarted_from = "Not Restarted"
+        else
+           this%restarted_from = restart_time
+        end if
+    end subroutine set_restart_variable
+
 
     module subroutine add_to_output(this, variable)
         class(output_t),   intent(inout) :: this
         type(variable_t),  intent(in)     :: variable
 
-        if (.not.this%is_initialized) call this%init()
+        if (.not.this%is_initialized) call this%init_variables()
 
         if (associated(variable%data_2d).or.associated(variable%data_2dd).or.associated(variable%data_3d)) then
 
@@ -45,7 +67,7 @@ contains
         type(Time_type),  intent(in)    :: time
         integer :: err
 
-        if (.not.this%is_initialized) call this%init()
+        if (.not.this%is_initialized) call this%init_variables()
 
         ! open file
         this%filename = filename
@@ -61,11 +83,9 @@ contains
         ! define variables or find variable IDs (and dimensions)
         call setup_variables(this, time)
 
-        if (this%creating) then
-            ! add global attributes such as the image number, domain dimension, creation time
-            call add_global_attributes(this)
+        ! add global attributes such as the image number, domain dimension, creation time
+        call add_global_attributes(this)
 
-        endif
         ! End define mode. This tells netCDF we are done defining metadata.
         call check( nf90_enddef(this%ncfile_id), "end define mode" )
 
@@ -297,8 +317,14 @@ contains
         character(len=64)       :: err
         integer                 :: ncid
 
-        ncid = this%ncfile_id
+        ! if not creating the file, only update restarted_from attribute. It
+        ! could be opening a previous file whose restart needs to updated
+        if (this%creating .eqv. .false.) then
+            call check(nf90_put_att(this%ncfile_id, NF90_GLOBAL, "restarted_from", this%restarted_from))
+            return
+        end if
 
+        ncid = this%ncfile_id
         err="Creating global attributes"
         call check( nf90_put_att(ncid,NF90_GLOBAL,"Conventions","CF-1.6"), trim(err))
         call check( nf90_put_att(ncid,NF90_GLOBAL,"title","Intermediate Complexity Atmospheric Research (ICAR) model output"), trim(err))
@@ -324,6 +350,7 @@ contains
         endif
 
         call check(nf90_put_att(this%ncfile_id, NF90_GLOBAL, "image", this_image()))
+        call check(nf90_put_att(this%ncfile_id, NF90_GLOBAL, "restarted_from", this%restarted_from))
 
     end subroutine add_global_attributes
 
@@ -518,7 +545,7 @@ contains
 
     end subroutine setup_variable
 
-    module subroutine init(this)
+    module subroutine init_variables(this)
         implicit none
         class(output_t),   intent(inout)  :: this
 

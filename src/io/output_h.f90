@@ -18,6 +18,7 @@ module output_interface
   use variable_interface, only : variable_t
   use domain_interface,   only : domain_t
   use meta_data_interface,only : meta_data_t
+  use options_interface,  only : options_t
   use time_object,        only : Time_type, THREESIXTY, GREGORIAN, NOCALENDAR, NOLEAP
 
   implicit none
@@ -59,25 +60,42 @@ module output_interface
       ! name of the dimensions in the file
       character(len=kMAX_DIM_LENGTH) :: dimensions(kMAX_DIMENSIONS)
       character(len=kMAX_NAME_LENGTH) :: time_units
+      ! global attribute restarted_from
+      ! values: 2000-01-01_00:00:00 or "Not Restarted"
+      character(len=20) :: restarted_from
 
   contains
 
+      procedure, public  :: init
       procedure, public  :: add_to_output
       procedure, public  :: add_variables
-      procedure, public  :: set_domain
       procedure, public  :: save_file
+      procedure, public  :: set_domain
+      procedure, public  :: set_restart_variable
 
-      procedure, private :: init
+      procedure, private :: init_variables
       procedure, private :: increase_var_capacity
   end type
 
   interface
 
       !>----------------------------------------------------------
+      !! Initialize the object: set domain, add variables, set restart variable
+      !!
+      !!----------------------------------------------------------
+      module subroutine init(this, domain, options, file_date_format)
+          implicit none
+          class(output_t),   intent(inout)  :: this
+          type(domain_t),    intent(in)     :: domain
+          type(options_t),   intent(in)     :: options
+          character(len=49), intent(in)     :: file_date_format
+      end subroutine
+
+      !>----------------------------------------------------------
       !! Initialize the object (e.g. allocate the variables array)
       !!
       !!----------------------------------------------------------
-      module subroutine init(this)
+      module subroutine init_variables(this)
           implicit none
           class(output_t),   intent(inout)  :: this
       end subroutine
@@ -99,6 +117,16 @@ module output_interface
           implicit none
           class(output_t),  intent(inout)  :: this
           type(domain_t),   intent(in)     :: domain
+      end subroutine
+
+      !>----------------------------------------------------------
+      !! Set the restart variable to be used when writing global
+      !! attributes
+      !!----------------------------------------------------------
+      module subroutine set_restart_variable(this, restart_time)
+          implicit none
+          class(output_t),  intent(inout)  :: this
+          character(len=25), intent(in) :: restart_time
       end subroutine
 
       !>----------------------------------------------------------
