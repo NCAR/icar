@@ -6,7 +6,7 @@
 !!
 !!----------------------------------------------------------
 module module_water_simple
-    use data_structures,
+    use data_structures
     use options_interface,   only : options_t
     use icar_constants
     implicit none
@@ -80,10 +80,10 @@ contains
         z0 = 8e-6 / max(ustar,1e-7)
     end function ocean_roughness
 
-    module subroutine water_simple(options, sst, psfc, wind, ustar, qv, temperature,  &
+    subroutine water_simple(options, sst, psfc, wind, ustar, qv, temperature,  &
                             sensible_heat, latent_heat, &
                             z_atm, Z0, landmask, &
-                            qv_surf, evap_flux, tskin, vegtype ) 
+                            qv_surf, evap_flux, tskin, vegtype )
         implicit none
         type(options_t),intent(in)    :: options
         real,    dimension(:,:,:),intent(in)    :: qv, temperature
