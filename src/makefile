@@ -72,6 +72,7 @@ CP=/bin/cp
 # doxygen only required to enable "make doc"
 DOXYGEN=doxygen
 
+# default values for FC and F90 if undefined
 ifndef FC
 	FC=gfortran
 endif
@@ -79,12 +80,45 @@ ifndef F90
 	F90=${FC}
 endif
 
-ifeq ($(PE_ENV),CRAY)
+# check PE_ENV variable definition for Cray systems
+ifdef PE_ENV
 	FC=ftn
 	F90=ftn
+	LINKER=ftn
 	ECHO_MOVE=/bin/mv
 endif
+ifeq ($(PE_ENV),CRAY)
+	COMPILER=cray
+endif
+ifeq ($(PE_ENV),GNU)
+	COMPILER=gnu
+endif
+ifeq ($(PE_ENV),INTEL)
+	COMPILER=intel
+endif
 
+# if not set, set COMPILER and LINKER
+ifndef COMPILER
+        find_gfortran=$(findstring gfortran, $(filter gfortran%,$(F90)))
+        ifeq (gfortran, $(find_gfortran))
+                COMPILER=gnu
+        endif
+	ifeq ($(F90),ifort)
+		COMPILER=intel
+	endif
+	ifeq ($(F90),ftn)
+		COMPILER=cray
+	endif
+endif
+
+ifndef LINKER
+	LINKER=mpifort
+	ifeq ($(COMPILER), intel)
+		LINKER=mpiifort
+	endif
+endif
+
+# handle dependency variables
 ifndef FFTW
 	FFTW=${HOME}/usr/local
 endif
@@ -127,19 +161,6 @@ endif
 # Try to find the machine information
 ########################################################################################
 NODENAME := $(shell uname -n)
-
-ifndef COMPILER
-        find_gfortran=$(findstring gfortran, $(filter gfortran%,$(F90)))
-        ifeq (gfortran, $(find_gfortran))
-                COMPILER=gnu
-        endif
-	ifeq ($(F90),ifort)
-		COMPILER=intel
-	endif
-	ifeq ($(F90),ftn)
-		COMPILER=cray
-	endif
-endif
 
 # get GIT version info
 GIT_VERSION := $(shell git describe --long --dirty --all --always | sed -e's/heads\///')
@@ -298,9 +319,6 @@ ifeq ($(COMPILER), gnu)
 			endif
 			CAF_FLAG=-fcoarray=lib
 			CAF_LINK=-L${CAF_DIR} -lcaf_mpi
-			ifneq ($(F90), ftn)
-				LINKER=mpif90
-			endif
 		endif
 	endif
 endif
@@ -310,7 +328,6 @@ ifeq ($(COMPILER), intel)
 		CAF_FLAG=-coarray=single
 	else
 		CAF_FLAG=-coarray=distributed
-		LINKER=mpiifort
 	endif
 endif
 
@@ -330,6 +347,8 @@ FFLAGS=$(COMP) $(PROF) $(CAF_FLAG) $(PREPROC) -DVERSION=\"$(GIT_VERSION)\" $(INC
 
 $(info $$NODENAME    = ${NODENAME})
 $(info $$FC          = ${F90})
+$(info $$LINKER      = ${LINKER})
+$(info $$COMPILER    = ${COMPILER})
 $(info $$FFTW_PATH   = ${FFTW_PATH})
 $(info $$NCDF_PATH   = ${NCDF_PATH})
 $(info $$GIT_VERSION = ${GIT_VERSION})
@@ -466,7 +485,7 @@ move_i:
 	$(ECHO_MOVE) *.i ${BUILD} 2>/dev/null || true
 
 clean:
-	${RM} $(BUILD)*.o $(BUILD)*.mod $(BUILD)*.smod *.i *.lst docs/doxygen_sqlite3.db 2>/dev/null ||:
+	${RM} $(BUILD)*.o $(BUILD)*.mod $(BUILD)*.smod *.mod *.i *.lst docs/doxygen_sqlite3.db 2>/dev/null ||:
 
 allclean:cleanall
 
