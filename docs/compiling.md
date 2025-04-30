@@ -45,10 +45,13 @@ make -j 4
 
 #### GNU Compiler
 ``` bash
-module load gcc ncarenv/23.09 cray-mpich netcdf fftw opencoarrays
+module load ncarenv gcc cray-mpich netcdf fftw opencoarrays
 COMPILER=gnu make -j 4
 ```
 
+#### Intel Compiler
+<span style="color: red;">Warning</span>: ICAR will compile with `ifx` but not on Derecho.
+The Intel coarray implementation requires the Intel MPI library, which Derecho does not have.
 
 ### Derecho Debugging
 When running ICAR on larger domains there is a chance the program will run out of memory available for coarrays.
