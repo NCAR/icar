@@ -3,7 +3,7 @@
 set -e
 set -x
 
-export FC=gfortran-9
+export FC=gfortran-12
 # see link for size of runner
 # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources
 export JN=-j
